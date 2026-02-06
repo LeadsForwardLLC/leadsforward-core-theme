@@ -1,0 +1,585 @@
+/**
+ * LeadsForward design system: layout, sections, header/footer variants, blocks.
+ * Conversion-focused; tokens control everything. One file, no layout shift, no icon fonts.
+ */
+
+/* -------------------------------------------------------------------------
+   Design tokens (extend theme.json + variation-tokens)
+   ------------------------------------------------------------------------- */
+:root {
+	--lf-container-narrow: 720px;
+	--lf-container-wide: 960px;
+	--lf-container-full: 1200px;
+	--lf-spacing-tight: calc(0.75rem * var(--lf-spacing-density, 1));
+	--lf-spacing-normal: calc(1.25rem * var(--lf-spacing-density, 1));
+	--lf-spacing-loose: calc(2rem * var(--lf-spacing-density, 1));
+	--lf-section-padding-y: calc(2rem * var(--lf-spacing-density, 1));
+	--lf-section-padding-x: 1rem;
+	--lf-gap-tight: 0.5rem;
+	--lf-gap-normal: 1rem;
+	--lf-gap-loose: 1.5rem;
+	--lf-body-bg: var(--wp--preset--color--background, #fff);
+	--lf-text: var(--wp--preset--color--foreground, #0f172a);
+	--lf-primary: var(--wp--preset--color--primary, #2563eb);
+	--lf-accent: var(--wp--preset--color--accent, var(--lf-primary));
+	--lf-muted: var(--wp--preset--color--muted, #64748b);
+	--lf-heading-weight: var(--lf-heading-weight, 700);
+	--lf-button-radius: var(--lf-button-radius, 0.25rem);
+	--lf-focus-outline: 2px solid var(--lf-accent);
+	--lf-focus-offset: 2px;
+}
+
+/* -------------------------------------------------------------------------
+   Global & focus (accessibility)
+   ------------------------------------------------------------------------- */
+body {
+	background-color: var(--lf-body-bg);
+	color: var(--lf-text);
+	line-height: 1.6;
+}
+
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+	outline: var(--lf-focus-outline);
+	outline-offset: var(--lf-focus-offset);
+}
+
+/* -------------------------------------------------------------------------
+   Layout: containers & vertical rhythm
+   ------------------------------------------------------------------------- */
+.lf-container {
+	width: 100%;
+	max-width: var(--lf-container-wide);
+	margin-left: auto;
+	margin-right: auto;
+	padding-left: var(--lf-section-padding-x);
+	padding-right: var(--lf-section-padding-x);
+}
+
+.lf-container--narrow {
+	max-width: var(--lf-container-narrow);
+}
+
+.lf-container--full {
+	max-width: var(--lf-container-full);
+}
+
+.lf-section {
+	padding-top: var(--lf-section-padding-y);
+	padding-bottom: var(--lf-section-padding-y);
+}
+
+.lf-section--tight {
+	padding-top: calc(var(--lf-section-padding-y) * 0.75);
+	padding-bottom: calc(var(--lf-section-padding-y) * 0.75);
+}
+
+.lf-section--loose {
+	padding-top: calc(var(--lf-section-padding-y) * 1.5);
+	padding-bottom: calc(var(--lf-section-padding-y) * 1.5);
+}
+
+.lf-section--alt {
+	background-color: var(--wp--preset--color--neutral-light, #f1f5f9);
+}
+
+/* Reserve space to avoid CLS: section min-height where blocks render async */
+.site-main {
+	min-height: 1px;
+	padding-top: var(--lf-section-padding-y);
+	padding-bottom: var(--lf-section-padding-y);
+}
+
+/* Single / page entry content: container + vertical rhythm */
+.site-main .entry-header {
+	margin-bottom: var(--lf-spacing-normal);
+}
+
+.site-main .entry-title {
+	font-size: var(--wp--preset--font-size--h1, 2.25rem);
+	font-weight: var(--lf-heading-weight);
+	line-height: 1.2;
+	margin: 0;
+}
+
+.site-main .entry-content,
+.site-main .entry-summary {
+	max-width: var(--lf-container-narrow);
+	margin-left: auto;
+	margin-right: auto;
+	padding-left: var(--lf-section-padding-x);
+	padding-right: var(--lf-section-padding-x);
+}
+
+.site-main .entry-content > * + *,
+.site-main .entry-content p + p {
+	margin-top: var(--lf-spacing-tight);
+}
+
+.site-main .entry-summary {
+	margin-bottom: var(--lf-spacing-normal);
+}
+
+/* -------------------------------------------------------------------------
+   Header variants (layout: logo left / center; CTA; phone)
+   ------------------------------------------------------------------------- */
+.site-header {
+	background-color: var(--lf-body-bg);
+	border-bottom: 1px solid var(--wp--preset--color--neutral-light, #f1f5f9);
+	padding: var(--lf-spacing-tight) var(--lf-section-padding-x);
+}
+
+.site-header .lf-container {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--lf-gap-normal);
+}
+
+/* Variant: logo left (default) */
+.site-header[data-layout="left"] .header-nav {
+	margin-left: auto;
+}
+
+/* Variant: logo center */
+.site-header[data-layout="center"] .lf-container {
+	justify-content: center;
+	text-align: center;
+}
+
+.site-header[data-layout="center"] .header-nav {
+	width: 100%;
+	justify-content: center;
+}
+
+.header-menu,
+.utility-menu {
+	display: flex;
+	flex-wrap: wrap;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	gap: var(--lf-gap-normal);
+}
+
+.header-menu a,
+.utility-menu a {
+	color: var(--lf-text);
+	text-decoration: none;
+	font-weight: var(--wp--preset--font-weight--normal, 400);
+}
+
+.header-menu a:hover,
+.utility-menu a:hover {
+	text-decoration: underline;
+}
+
+/* Header CTA button */
+.site-header .lf-header-cta {
+	display: inline-block;
+	background-color: var(--lf-primary);
+	color: #fff;
+	padding: 0.5rem 1rem;
+	border-radius: var(--lf-button-radius);
+	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	text-decoration: none;
+	border: none;
+	cursor: pointer;
+}
+
+.site-header .lf-header-cta:hover {
+	background-color: var(--wp--preset--color--neutral-dark, #1e293b);
+	color: #fff;
+	text-decoration: none;
+}
+
+/* Phone in header */
+.site-header .lf-header-phone {
+	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	text-decoration: none;
+	color: var(--lf-text);
+}
+
+/* -------------------------------------------------------------------------
+   Footer variants (NAP, service/area links, legal)
+   ------------------------------------------------------------------------- */
+.site-footer {
+	background-color: var(--wp--preset--color--neutral-dark, #1e293b);
+	color: #fff;
+	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+	margin-top: auto;
+}
+
+.site-footer a {
+	color: #fff;
+	text-decoration: none;
+}
+
+.site-footer a:hover {
+	text-decoration: underline;
+}
+
+.footer-nav .footer-menu {
+	display: flex;
+	flex-wrap: wrap;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	gap: var(--lf-gap-normal) var(--lf-gap-loose);
+}
+
+.footer-menu a {
+	opacity: 0.9;
+}
+
+.lf-footer-nap {
+	font-style: normal;
+	margin-bottom: var(--lf-spacing-normal);
+}
+
+.lf-footer-nap span,
+.lf-footer-nap a {
+	display: block;
+}
+
+/* -------------------------------------------------------------------------
+   Block: Hero (2–3 variants)
+   ------------------------------------------------------------------------- */
+.lf-block-hero {
+	text-align: center;
+	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+}
+
+.lf-block-hero__inner {
+	max-width: var(--lf-container-narrow);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.lf-block-hero__title {
+	font-size: var(--wp--preset--font-size--h1, 2.25rem);
+	font-weight: var(--lf-heading-weight);
+	line-height: 1.2;
+	margin: 0 0 var(--lf-spacing-tight);
+	color: var(--lf-text);
+}
+
+.lf-block-hero__subtitle {
+	font-size: var(--wp--preset--font-size--large, 1.25rem);
+	color: var(--lf-muted);
+	margin: 0 0 var(--lf-spacing-normal);
+}
+
+.lf-block-hero__cta {
+	margin-top: var(--lf-spacing-normal);
+}
+
+.lf-block-hero__cta-link,
+.lf-block-hero__cta-text {
+	display: inline-block;
+	background-color: var(--lf-primary);
+	color: #fff;
+	padding: 0.625rem 1.25rem;
+	border-radius: var(--lf-button-radius);
+	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	text-decoration: none;
+}
+
+.lf-block-hero__cta-link:hover {
+	background-color: var(--wp--preset--color--neutral-dark, #1e293b);
+	color: #fff;
+	text-decoration: none;
+}
+
+/* Hero variant: compact */
+.lf-block-hero--a .lf-block-hero__title { font-size: var(--wp--preset--font-size--h2, 1.875rem); }
+.lf-block-hero--a { padding-top: calc(var(--lf-section-padding-y) * 0.75); padding-bottom: calc(var(--lf-section-padding-y) * 0.75); }
+
+/* Hero variant: bold (default) */
+.lf-block-hero--default .lf-block-hero__title { font-weight: 700; }
+
+/* Hero variant: b (high contrast) */
+.lf-block-hero--b .lf-block-hero__cta-link,
+.lf-block-hero--b .lf-block-hero__cta-text {
+	background-color: var(--lf-cta-accent, var(--wp--preset--color--secondary, #475569));
+}
+
+/* -------------------------------------------------------------------------
+   Block: Service Grid (2–3 variants)
+   ------------------------------------------------------------------------- */
+.lf-block-service-grid__inner {
+	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+}
+
+.lf-block-service-grid__list {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: var(--lf-gap-normal);
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	max-width: var(--lf-container-wide);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.lf-block-service-grid__link {
+	display: block;
+	padding: var(--lf-spacing-normal);
+	background-color: var(--wp--preset--color--neutral-light, #f1f5f9);
+	color: var(--lf-primary);
+	text-decoration: none;
+	border-radius: var(--lf-button-radius);
+	font-weight: var(--wp--preset--font-weight--semibold, 600);
+}
+
+.lf-block-service-grid__link:hover {
+	background-color: var(--lf-primary);
+	color: #fff;
+	text-decoration: none;
+}
+
+.lf-block-service-grid__empty {
+	margin: 0;
+	padding: var(--lf-section-padding-x);
+	color: var(--lf-muted);
+}
+
+/* Variant: list-like */
+.lf-block-service-grid--a .lf-block-service-grid__list {
+	grid-template-columns: 1fr;
+}
+
+/* -------------------------------------------------------------------------
+   Block: Trust / Reviews (stars, minimal clutter)
+   ------------------------------------------------------------------------- */
+.lf-block-trust-reviews__inner {
+	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+	max-width: var(--lf-container-wide);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.lf-block-trust-reviews__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: var(--lf-spacing-loose);
+}
+
+@media (min-width: 640px) {
+	.lf-block-trust-reviews__list {
+		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	}
+}
+
+.lf-block-trust-reviews__quote {
+	margin: 0;
+	padding: var(--lf-spacing-normal);
+	background-color: var(--wp--preset--color--neutral-light, #f1f5f9);
+	border-radius: var(--lf-button-radius);
+	border-left: 4px solid var(--lf-primary);
+}
+
+.lf-block-trust-reviews__text {
+	margin: 0 0 var(--lf-spacing-tight);
+	font-size: var(--wp--preset--font-size--body, 1rem);
+}
+
+.lf-block-trust-reviews__cite {
+	margin: 0;
+	font-size: var(--wp--preset--font-size--small, 0.875rem);
+	color: var(--lf-muted);
+}
+
+.lf-block-trust-reviews__cite cite {
+	font-style: normal;
+	font-weight: var(--wp--preset--font-weight--semibold, 600);
+}
+
+/* Star rating: inline text (no icon font; optional SVG via CSS later) */
+.lf-block-trust-reviews__rating {
+	display: inline-block;
+	margin-left: 0.25rem;
+}
+
+.lf-block-trust-reviews__rating::before {
+	content: "★";
+	color: var(--wp--preset--color--warning, #a16207);
+}
+
+.lf-block-trust-reviews__empty {
+	margin: 0;
+	padding: var(--lf-section-padding-x);
+	color: var(--lf-muted);
+}
+
+/* -------------------------------------------------------------------------
+   Block: CTA (contrast enforcement, primary stands out)
+   ------------------------------------------------------------------------- */
+.lf-block-cta__inner {
+	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+	text-align: center;
+	max-width: var(--lf-container-narrow);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.lf-block-cta__primary {
+	font-size: var(--wp--preset--font-size--large, 1.25rem);
+	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	margin: 0 0 var(--lf-spacing-tight);
+}
+
+.lf-block-cta__primary-link {
+	display: inline-block;
+	background-color: var(--lf-primary);
+	color: #fff;
+	padding: 0.625rem 1.25rem;
+	border-radius: var(--lf-button-radius);
+	text-decoration: none;
+}
+
+.lf-block-cta__primary-link:hover {
+	background-color: var(--wp--preset--color--neutral-dark, #1e293b);
+	color: #fff;
+	text-decoration: none;
+}
+
+.lf-block-cta__secondary {
+	margin: 0;
+	font-size: var(--wp--preset--font-size--small, 0.875rem);
+	color: var(--lf-muted);
+}
+
+.lf-block-cta__embed {
+	margin-top: var(--lf-spacing-normal);
+}
+
+/* CTA variant: b (bold) */
+.lf-block-cta--b .lf-block-cta__primary-link {
+	padding: 0.75rem 1.5rem;
+	font-size: var(--wp--preset--font-size--medium, 1.125rem);
+}
+
+/* -------------------------------------------------------------------------
+   Block: FAQ Accordion (minimal markup, no JS-dependent styling)
+   ------------------------------------------------------------------------- */
+.lf-block-faq-accordion__inner {
+	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+	max-width: var(--lf-container-narrow);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.lf-block-faq-accordion__list {
+	margin: 0;
+	padding: 0;
+}
+
+.lf-block-faq-accordion__item {
+	margin: 0;
+	padding: var(--lf-spacing-normal) 0;
+	border-bottom: 1px solid var(--wp--preset--color--neutral-light, #f1f5f9);
+}
+
+.lf-block-faq-accordion__item:first-child {
+	padding-top: 0;
+}
+
+.lf-block-faq-accordion__question {
+	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	font-size: var(--wp--preset--font-size--body, 1rem);
+	margin: 0 0 0.25rem;
+}
+
+.lf-block-faq-accordion__answer {
+	margin: 0;
+	font-size: var(--wp--preset--font-size--small, 0.875rem);
+	color: var(--lf-muted);
+	line-height: 1.5;
+}
+
+.lf-block-faq-accordion__empty {
+	margin: 0;
+	color: var(--lf-muted);
+}
+
+/* -------------------------------------------------------------------------
+   Block: Map + NAP
+   ------------------------------------------------------------------------- */
+.lf-block-map-nap__inner {
+	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+	max-width: var(--lf-container-wide);
+	margin-left: auto;
+	margin-right: auto;
+	display: grid;
+	gap: var(--lf-gap-loose);
+}
+
+@media (min-width: 640px) {
+	.lf-block-map-nap__inner {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+.lf-block-map-nap__address {
+	font-style: normal;
+}
+
+.lf-block-map-nap__name {
+	display: block;
+	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	margin-bottom: var(--lf-spacing-tight);
+}
+
+.lf-block-map-nap__street,
+.lf-block-map-nap__phone,
+.lf-block-map-nap__email {
+	display: block;
+	margin-bottom: 0.25rem;
+}
+
+.lf-block-map-nap__phone,
+.lf-block-map-nap__email {
+	color: var(--lf-primary);
+	text-decoration: none;
+}
+
+.lf-block-map-nap__phone:hover,
+.lf-block-map-nap__email:hover {
+	text-decoration: underline;
+}
+
+.lf-block-map-nap__map {
+	min-height: 200px;
+	background-color: var(--wp--preset--color--neutral-light, #f1f5f9);
+	border-radius: var(--lf-button-radius);
+}
+
+.lf-block-map-nap__map-fallback {
+	margin: 0;
+	padding: var(--lf-spacing-normal);
+	color: var(--lf-muted);
+	font-size: var(--wp--preset--font-size--small, 0.875rem);
+}
+
+/* -------------------------------------------------------------------------
+   Conversion: button hover (enforcement)
+   ------------------------------------------------------------------------- */
+.lf-block-hero__cta-link:focus-visible,
+.lf-block-cta__primary-link:focus-visible,
+.site-header .lf-header-cta:focus-visible {
+	outline: var(--lf-focus-outline);
+	outline-offset: var(--lf-focus-offset);
+}
+
+/* -------------------------------------------------------------------------
+   Images: lazy by default (theme does not override core loading="lazy")
+   ------------------------------------------------------------------------- */
+img[loading="lazy"] {
+	content-visibility: auto;
+}

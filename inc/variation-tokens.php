@@ -34,7 +34,7 @@ function lf_variation_body_data_attribute(): string {
 }
 
 /**
- * Enqueue minimal CSS that sets tokens per profile. One small file.
+ * Enqueue design system: variation tokens first, then layout + blocks (one file).
  */
 function lf_enqueue_variation_tokens_css(): void {
 	$path = LF_THEME_DIR . '/assets/css/variation-tokens.css';
@@ -47,4 +47,13 @@ function lf_enqueue_variation_tokens_css(): void {
 		[],
 		(string) filemtime($path)
 	);
+	$ds = LF_THEME_DIR . '/assets/css/design-system.css';
+	if (is_readable($ds)) {
+		wp_enqueue_style(
+			'lf-design-system',
+			LF_THEME_URI . '/assets/css/design-system.css',
+			['lf-variation-tokens'],
+			(string) filemtime($ds)
+		);
+	}
 }
