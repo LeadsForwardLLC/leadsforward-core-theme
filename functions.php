@@ -77,3 +77,12 @@ lf_load_inc('niches/wizard.php');
 
 // Safety: CPT protect, admin notices, ACF-off fallbacks.
 lf_load_inc('guardrails.php');
+
+// AI-assisted editing (admin only): editable vs locked rules, prompt guardrails, apply/rollback.
+if (is_admin()) {
+	lf_load_inc('ai-editing/field-rules.php');
+	lf_load_inc('ai-editing/prompt-builder.php');
+	lf_load_inc('ai-editing/logging.php');
+	lf_load_inc('ai-editing/handler.php');
+	lf_load_inc('ai-editing/admin-ui.php');
+}
