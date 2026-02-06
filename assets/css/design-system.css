@@ -1,54 +1,99 @@
 /**
- * LeadsForward design system: layout, sections, header/footer variants, blocks.
- * Conversion-focused; tokens control everything. One file, no layout shift, no icon fonts.
+ * LeadsForward design system. All styling from theme.json tokens only.
+ * No magic numbers; no per-page CSS; no JS for visuals.
  */
 
 /* -------------------------------------------------------------------------
-   Design tokens (extend theme.json + variation-tokens)
+   Design tokens (theme.json + layout only)
    ------------------------------------------------------------------------- */
 :root {
+	/* Layout: from theme.json layout.contentSize / wideSize */
 	--lf-container-narrow: 720px;
 	--lf-container-wide: 960px;
 	--lf-container-full: 1200px;
-	--lf-spacing-tight: calc(0.75rem * var(--lf-spacing-density, 1));
-	--lf-spacing-normal: calc(1.25rem * var(--lf-spacing-density, 1));
-	--lf-spacing-loose: calc(2rem * var(--lf-spacing-density, 1));
-	--lf-section-padding-y: calc(2rem * var(--lf-spacing-density, 1));
-	--lf-section-padding-y-tight: calc(1.25rem * var(--lf-spacing-density, 1));
-	--lf-section-padding-y-cta: calc(1.5rem * var(--lf-spacing-density, 1));
-	--lf-section-padding-x: 1rem;
-	--lf-gap-tight: 0.5rem;
-	--lf-gap-normal: 1rem;
-	--lf-gap-loose: 1.5rem;
-	--lf-body-bg: var(--wp--preset--color--background, #fff);
-	--lf-text: var(--wp--preset--color--foreground, #0f172a);
-	--lf-primary: var(--wp--preset--color--primary, #2563eb);
-	--lf-accent: var(--wp--preset--color--accent, var(--lf-primary));
-	--lf-muted: var(--wp--preset--color--muted, #64748b);
-	--lf-heading-weight: var(--lf-heading-weight, 700);
-	--lf-button-radius: var(--lf-button-radius, 0.25rem);
-	--lf-focus-outline: 2px solid var(--lf-accent);
-	--lf-focus-offset: 2px;
-	/* Hero: full-width background (solid or subtle gradient) */
-	--lf-hero-bg: var(--wp--preset--color--neutral-light, #f1f5f9);
-	--lf-hero-bg-subtle: linear-gradient(180deg, var(--lf-hero-bg) 0%, var(--wp--preset--color--background, #fff) 100%);
+
+	/* Spacing: section padding (XS/SM/MD/LG) from preset scale */
+	--lf-section-padding-xs: var(--wp--preset--spacing--50);
+	--lf-section-padding-sm: var(--wp--preset--spacing--60);
+	--lf-section-padding-md: var(--wp--preset--spacing--70);
+	--lf-section-padding-lg: var(--wp--preset--spacing--80);
+	--lf-section-padding-y: var(--lf-section-padding-md);
+	--lf-section-padding-y-tight: var(--lf-section-padding-sm);
+	--lf-section-padding-y-cta: var(--lf-section-padding-sm);
+	--lf-section-padding-x: var(--wp--preset--spacing--40);
+
+	/* Component gaps & stack spacing */
+	--lf-gap-xs: var(--wp--preset--spacing--15);
+	--lf-gap-tight: var(--wp--preset--spacing--20);
+	--lf-gap-normal: var(--wp--preset--spacing--40);
+	--lf-gap-loose: var(--wp--preset--spacing--60);
+	--lf-spacing-tight: var(--wp--preset--spacing--30);
+	--lf-spacing-normal: var(--wp--preset--spacing--50);
+	--lf-spacing-loose: var(--wp--preset--spacing--70);
+
+	/* Colors: roles from theme.json */
+	--lf-body-bg: var(--wp--preset--color--background);
+	--lf-text: var(--wp--preset--color--foreground);
+	--lf-primary: var(--wp--preset--color--primary);
+	--lf-secondary: var(--wp--preset--color--secondary);
+	--lf-accent: var(--wp--preset--color--accent);
+	--lf-muted: var(--wp--preset--color--muted);
+	--lf-neutral-100: var(--wp--preset--color--neutral-100);
+	--lf-neutral-300: var(--wp--preset--color--neutral-300);
+	--lf-neutral-700: var(--wp--preset--color--neutral-700);
+	--lf-neutral-900: var(--wp--preset--color--neutral-900);
+	--lf-heading-weight: var(--wp--preset--font-weight--bold);
+
+	/* Focus (accessibility) */
+	--lf-border-width: 1px;
+	--lf-border-width-focus: 2px;
+	--lf-border-width-accent: 4px;
+	--lf-focus-outline: var(--lf-border-width-focus) solid var(--lf-accent);
+	--lf-focus-offset: var(--wp--preset--spacing--20);
+
+	/* Opacity (de-emphasis) */
+	--lf-opacity-muted: 0.9;
+	--lf-opacity-legal: 0.65;
+	--lf-opacity-footer-link: 0.85;
+
+	/* Border radius (override per variation profile in variation-tokens.css) */
+	--lf-button-radius: 0.25rem;
+
+	/* Hero */
+	--lf-hero-bg: var(--wp--preset--color--neutral-100);
+	--lf-hero-bg-subtle: linear-gradient(180deg, var(--lf-hero-bg) 0%, var(--wp--preset--color--background) 100%);
+
 	/* Cards */
-	--lf-card-bg: var(--wp--preset--color--background, #fff);
-	--lf-card-border: 1px solid var(--wp--preset--color--neutral-light, #e2e8f0);
+	--lf-card-bg: var(--wp--preset--color--background);
+	--lf-card-border: var(--lf-border-width) solid var(--wp--preset--color--neutral-300);
 	--lf-card-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+
 	/* CTA block */
-	--lf-cta-block-bg: var(--wp--preset--color--neutral-dark, #1e293b);
-	--lf-cta-block-text: #fff;
-	/* Touch target minimum */
+	--lf-cta-block-bg: var(--wp--preset--color--neutral-dark);
+	--lf-cta-block-text: var(--wp--preset--color--cta-primary);
+	--lf-cta-block-text-muted: var(--wp--preset--color--cta-secondary);
+
+	/* Touch target minimum (WCAG) */
 	--lf-touch-min: 48px;
+
+	/* Hero min-height (CLS-safe) */
+	--lf-hero-min-height: 18rem;
+	--lf-hero-min-height--compact: 15rem;
+
+	/* Grid: min column width */
+	--lf-grid-min: 12.5rem;
+	--lf-grid-min-wide: 17.5rem;
 }
 
 /* -------------------------------------------------------------------------
-   Global & focus (accessibility)
+   Global base (body, links, buttons, focus, containers)
    ------------------------------------------------------------------------- */
 body {
 	background-color: var(--lf-body-bg);
 	color: var(--lf-text);
+	font-size: var(--wp--preset--font-size--body);
+	font-family: var(--wp--preset--font-family--system);
+	font-weight: var(--wp--preset--font-weight--normal);
 	line-height: 1.6;
 }
 
@@ -59,9 +104,7 @@ button:focus-visible,
 	outline-offset: var(--lf-focus-offset);
 }
 
-/* -------------------------------------------------------------------------
-   Layout: containers & vertical rhythm
-   ------------------------------------------------------------------------- */
+/* Containers */
 .lf-container {
 	width: 100%;
 	max-width: var(--lf-container-wide);
@@ -85,33 +128,31 @@ button:focus-visible,
 }
 
 .lf-section--tight {
-	padding-top: calc(var(--lf-section-padding-y) * 0.75);
-	padding-bottom: calc(var(--lf-section-padding-y) * 0.75);
+	padding-top: var(--lf-section-padding-sm);
+	padding-bottom: var(--lf-section-padding-sm);
 }
 
 .lf-section--loose {
-	padding-top: calc(var(--lf-section-padding-y) * 1.5);
-	padding-bottom: calc(var(--lf-section-padding-y) * 1.5);
+	padding-top: var(--lf-section-padding-lg);
+	padding-bottom: var(--lf-section-padding-lg);
 }
 
 .lf-section--alt {
-	background-color: var(--wp--preset--color--neutral-light, #f1f5f9);
+	background-color: var(--lf-neutral-100);
 }
 
-/* Reserve space to avoid CLS: section min-height where blocks render async */
 .site-main {
 	min-height: 1px;
 	padding-top: var(--lf-section-padding-y);
 	padding-bottom: var(--lf-section-padding-y);
 }
 
-/* Single / page entry content: container + vertical rhythm */
 .site-main .entry-header {
 	margin-bottom: var(--lf-spacing-normal);
 }
 
 .site-main .entry-title {
-	font-size: var(--wp--preset--font-size--h1, 2.25rem);
+	font-size: var(--wp--preset--font-size--h1);
 	font-weight: var(--lf-heading-weight);
 	line-height: 1.2;
 	margin: 0;
@@ -136,11 +177,11 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Header variants (layout: logo left / center; CTA; phone)
+   Header
    ------------------------------------------------------------------------- */
 .site-header {
 	background-color: var(--lf-body-bg);
-	border-bottom: 1px solid var(--wp--preset--color--neutral-light, #f1f5f9);
+	border-bottom: var(--lf-border-width) solid var(--lf-neutral-300);
 	padding: var(--lf-spacing-tight) var(--lf-section-padding-x);
 }
 
@@ -152,12 +193,10 @@ button:focus-visible,
 	gap: var(--lf-gap-normal);
 }
 
-/* Variant: logo left (default) */
 .site-header[data-layout="left"] .header-nav {
 	margin-left: auto;
 }
 
-/* Variant: logo center */
 .site-header[data-layout="center"] .lf-container {
 	justify-content: center;
 	text-align: center;
@@ -182,7 +221,7 @@ button:focus-visible,
 .utility-menu a {
 	color: var(--lf-text);
 	text-decoration: none;
-	font-weight: var(--wp--preset--font-weight--normal, 400);
+	font-weight: var(--wp--preset--font-weight--normal);
 }
 
 .header-menu a:hover,
@@ -190,38 +229,38 @@ button:focus-visible,
 	text-decoration: underline;
 }
 
-/* Header CTA button */
 .site-header .lf-header-cta {
 	display: inline-block;
 	background-color: var(--lf-primary);
-	color: #fff;
-	padding: 0.5rem 1rem;
+	color: var(--wp--preset--color--cta-primary);
+	padding: var(--wp--preset--spacing--30) var(--wp--preset--spacing--40);
 	border-radius: var(--lf-button-radius);
-	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	font-weight: var(--wp--preset--font-weight--semibold);
+	font-size: var(--wp--preset--font-size--body);
 	text-decoration: none;
 	border: none;
-	cursor: pointer;
+	min-height: var(--lf-touch-min);
+	box-sizing: border-box;
 }
 
 .site-header .lf-header-cta:hover {
-	background-color: var(--wp--preset--color--neutral-dark, #1e293b);
-	color: #fff;
+	background-color: var(--wp--preset--color--neutral-dark);
+	color: var(--wp--preset--color--cta-primary);
 	text-decoration: none;
 }
 
-/* Phone in header */
 .site-header .lf-header-phone {
-	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	font-weight: var(--wp--preset--font-weight--semibold);
 	text-decoration: none;
 	color: var(--lf-text);
 }
 
 /* -------------------------------------------------------------------------
-   Footer variants (NAP, service/area links, legal)
+   Footer (muted background, clear NAP, link grouping)
    ------------------------------------------------------------------------- */
 .site-footer {
-	background-color: var(--wp--preset--color--neutral-dark, #1e293b);
-	color: #fff;
+	background-color: var(--wp--preset--color--neutral-dark);
+	color: var(--wp--preset--color--cta-primary);
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
 	margin-top: auto;
 }
@@ -239,7 +278,7 @@ button:focus-visible,
 }
 
 .site-footer a {
-	color: #fff;
+	color: var(--wp--preset--color--cta-primary);
 	text-decoration: none;
 }
 
@@ -252,29 +291,29 @@ button:focus-visible,
 }
 
 .lf-footer-nap__name {
-	font-weight: var(--wp--preset--font-weight--semibold, 600);
-	font-size: var(--wp--preset--font-size--body, 1rem);
+	font-weight: var(--wp--preset--font-weight--semibold);
+	font-size: var(--wp--preset--font-size--body);
 	margin-bottom: var(--lf-spacing-tight);
 }
 
 .lf-footer-nap__address {
 	display: block;
 	margin-bottom: var(--lf-spacing-tight);
-	opacity: 0.9;
-	font-size: var(--wp--preset--font-size--small, 0.875rem);
+	opacity: var(--lf-opacity-muted);
+	font-size: var(--wp--preset--font-size--small);
 }
 
 .lf-footer-nap__phone {
 	display: inline-block;
-	font-weight: var(--wp--preset--font-weight--bold, 700);
-	font-size: var(--wp--preset--font-size--large, 1.25rem);
-	margin-bottom: 0.25rem;
+	font-weight: var(--wp--preset--font-weight--bold);
+	font-size: var(--wp--preset--font-size--large);
+	margin-bottom: var(--lf-gap-xs);
 }
 
 .lf-footer-nap__email {
 	display: block;
-	font-size: var(--wp--preset--font-size--small, 0.875rem);
-	opacity: 0.9;
+	font-size: var(--wp--preset--font-size--small);
+	opacity: var(--lf-opacity-muted);
 }
 
 .footer-nav .footer-menu {
@@ -287,24 +326,27 @@ button:focus-visible,
 }
 
 .footer-menu a {
-	opacity: 0.85;
-	font-size: var(--wp--preset--font-size--small, 0.875rem);
+	opacity: var(--lf-opacity-footer-link);
+	font-size: var(--wp--preset--font-size--small);
 }
 
-/* Optional: add CSS class "legal-link" to Privacy/Terms menu items in WP Admin to de-emphasize */
 .footer-menu .legal-link a {
-	opacity: 0.65;
-	font-size: 0.8125rem;
+	opacity: var(--lf-opacity-legal);
+	font-size: var(--wp--preset--font-size--small);
 }
 
 /* -------------------------------------------------------------------------
-   Block: Hero (full-width bg, trust strip, secondary CTA, CLS-safe)
+   Block: Hero (hierarchy, CTA emphasis, background layer)
    ------------------------------------------------------------------------- */
+.lf-block + .lf-block {
+	margin-top: 0;
+}
+
 .lf-block-hero {
 	position: relative;
 	text-align: center;
 	padding: var(--lf-section-padding-y-tight) var(--lf-section-padding-x) var(--lf-section-padding-y);
-	min-height: 280px;
+	min-height: var(--lf-hero-min-height);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -328,7 +370,7 @@ button:focus-visible,
 }
 
 .lf-block-hero__title {
-	font-size: clamp(1.75rem, 5vw, var(--wp--preset--font-size--h1, 2.25rem));
+	font-size: clamp(var(--wp--preset--font-size--h2), 5vw, var(--wp--preset--font-size--h1));
 	font-weight: var(--lf-heading-weight);
 	line-height: 1.2;
 	margin: 0 0 var(--lf-spacing-tight);
@@ -336,7 +378,7 @@ button:focus-visible,
 }
 
 .lf-block-hero__subtitle {
-	font-size: var(--wp--preset--font-size--large, 1.25rem);
+	font-size: var(--wp--preset--font-size--large);
 	color: var(--lf-muted);
 	margin: 0 0 var(--lf-spacing-normal);
 	line-height: 1.4;
@@ -350,21 +392,21 @@ button:focus-visible,
 .lf-block-hero__cta-text {
 	display: inline-block;
 	background-color: var(--lf-primary);
-	color: #fff;
-	padding: 0.75rem 1.5rem;
+	color: var(--wp--preset--color--cta-primary);
+	padding: var(--wp--preset--spacing--30) var(--wp--preset--spacing--70);
 	min-height: var(--lf-touch-min);
 	box-sizing: border-box;
 	line-height: 1.25;
 	vertical-align: middle;
 	border-radius: var(--lf-button-radius);
-	font-weight: var(--wp--preset--font-weight--semibold, 600);
-	font-size: var(--wp--preset--font-size--body, 1rem);
+	font-weight: var(--wp--preset--font-weight--semibold);
+	font-size: var(--wp--preset--font-size--body);
 	text-decoration: none;
 }
 
 .lf-block-hero__cta-link:hover {
-	background-color: var(--wp--preset--color--neutral-dark, #1e293b);
-	color: #fff;
+	background-color: var(--wp--preset--color--neutral-dark);
+	color: var(--wp--preset--color--cta-primary);
 	text-decoration: none;
 }
 
@@ -375,8 +417,8 @@ button:focus-visible,
 .lf-block-hero__phone {
 	color: var(--lf-muted);
 	text-decoration: none;
-	font-weight: var(--wp--preset--font-weight--semibold, 600);
-	font-size: var(--wp--preset--font-size--body, 1rem);
+	font-weight: var(--wp--preset--font-weight--semibold);
+	font-size: var(--wp--preset--font-size--body);
 }
 
 .lf-block-hero__phone:hover {
@@ -388,40 +430,34 @@ button:focus-visible,
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 0.375rem;
+	gap: var(--wp--preset--spacing--30);
 	margin-top: var(--lf-spacing-normal);
-	font-size: var(--wp--preset--font-size--small, 0.875rem);
+	font-size: var(--wp--preset--font-size--small);
 	color: var(--lf-muted);
 }
 
 .lf-block-hero__stars {
 	display: inline-flex;
-	gap: 0.125rem;
+	gap: var(--lf-gap-xs);
 }
 
 .lf-block-hero__star {
-	color: var(--wp--preset--color--warning, #a16207);
+	color: var(--wp--preset--color--warning);
 }
 
-/* Hero variant: compact */
-.lf-block-hero--a .lf-block-hero__title { font-size: var(--wp--preset--font-size--h2, 1.875rem); }
-.lf-block-hero--a { padding-top: var(--lf-section-padding-y-tight); padding-bottom: calc(var(--lf-section-padding-y) * 0.75); min-height: 240px; }
-
-/* Hero variant: b (high contrast) */
-.lf-block-hero--b .lf-block-hero__cta-link,
-.lf-block-hero--b .lf-block-hero__cta-text {
-	background-color: var(--lf-cta-accent, var(--wp--preset--color--secondary, #475569));
+/* Hero variant: compact (1 alternative only) */
+.lf-block-hero--a .lf-block-hero__title {
+	font-size: var(--wp--preset--font-size--h2);
 }
 
-/* -------------------------------------------------------------------------
-   Section spacing & rhythm (tokens only; no fixed pixel margins)
-   ------------------------------------------------------------------------- */
-.lf-block + .lf-block {
-	margin-top: 0;
+.lf-block-hero--a {
+	padding-top: var(--lf-section-padding-y-tight);
+	padding-bottom: var(--lf-section-padding-sm);
+	min-height: var(--lf-hero-min-height--compact);
 }
 
 /* -------------------------------------------------------------------------
-   Block: Service Grid (cards, shadow/border, full-card clickable)
+   Block: Service Grid (cards, full-card clickable, hover clarity)
    ------------------------------------------------------------------------- */
 .lf-block-service-grid__inner {
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
@@ -429,7 +465,7 @@ button:focus-visible,
 
 .lf-block-service-grid__list {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(var(--lf-grid-min), 1fr));
 	gap: var(--lf-gap-loose);
 	list-style: none;
 	margin: 0;
@@ -448,15 +484,15 @@ button:focus-visible,
 	color: var(--lf-text);
 	text-decoration: none;
 	border-radius: var(--lf-button-radius);
-	font-weight: var(--wp--preset--font-weight--semibold, 600);
-	font-size: var(--wp--preset--font-size--body, 1rem);
+	font-weight: var(--wp--preset--font-weight--semibold);
+	font-size: var(--wp--preset--font-size--body);
 	min-height: var(--lf-touch-min);
 	box-sizing: border-box;
 }
 
 .lf-block-service-grid__link:hover {
 	background-color: var(--lf-primary);
-	color: #fff;
+	color: var(--wp--preset--color--cta-primary);
 	text-decoration: none;
 	border-color: var(--lf-primary);
 }
@@ -472,13 +508,12 @@ button:focus-visible,
 	color: var(--lf-muted);
 }
 
-/* Variant: list-like */
 .lf-block-service-grid--a .lf-block-service-grid__list {
 	grid-template-columns: 1fr;
 }
 
 /* -------------------------------------------------------------------------
-   Block: Service Areas (homepage section, card grid like service grid)
+   Block: Service Areas
    ------------------------------------------------------------------------- */
 .lf-block-service-areas__inner {
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
@@ -486,13 +521,13 @@ button:focus-visible,
 
 .lf-block-service-areas__title {
 	margin: 0 0 var(--lf-spacing-normal);
-	font-size: var(--wp--preset--font-size--large, 1.25rem);
+	font-size: var(--wp--preset--font-size--large);
 	font-weight: var(--lf-heading-weight);
 }
 
 .lf-block-service-areas__list {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(var(--lf-grid-min), 1fr));
 	gap: var(--lf-gap-loose);
 	list-style: none;
 	margin: 0;
@@ -508,14 +543,14 @@ button:focus-visible,
 	color: var(--lf-text);
 	text-decoration: none;
 	border-radius: var(--lf-button-radius);
-	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	font-weight: var(--wp--preset--font-weight--semibold);
 	min-height: var(--lf-touch-min);
 	box-sizing: border-box;
 }
 
 .lf-block-service-areas__link:hover {
 	background-color: var(--lf-primary);
-	color: #fff;
+	color: var(--wp--preset--color--cta-primary);
 	border-color: var(--lf-primary);
 }
 
@@ -525,7 +560,7 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Block: Trust / Reviews (stars, minimal clutter)
+   Block: Trust / Reviews (stars SVG, review count, no-reviews state)
    ------------------------------------------------------------------------- */
 .lf-block-trust-reviews__inner {
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
@@ -544,7 +579,7 @@ button:focus-visible,
 
 @media (min-width: 640px) {
 	.lf-block-trust-reviews__list {
-		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(var(--lf-grid-min-wide), 1fr));
 	}
 }
 
@@ -555,12 +590,12 @@ button:focus-visible,
 	border: var(--lf-card-border);
 	box-shadow: var(--lf-card-shadow);
 	border-radius: var(--lf-button-radius);
-	border-left: 4px solid var(--lf-primary);
+	border-left: var(--lf-border-width-accent) solid var(--lf-primary);
 }
 
 .lf-block-trust-reviews__text {
 	margin: 0 0 var(--lf-spacing-tight);
-	font-size: var(--wp--preset--font-size--body, 1rem);
+	font-size: var(--wp--preset--font-size--body);
 	line-height: 1.5;
 	color: var(--lf-text);
 }
@@ -569,47 +604,47 @@ button:focus-visible,
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 0.5rem;
+	gap: var(--lf-gap-tight);
 	margin: 0;
-	font-size: var(--wp--preset--font-size--small, 0.875rem);
+	font-size: var(--wp--preset--font-size--small);
 	color: var(--lf-muted);
 }
 
 .lf-block-trust-reviews__stars {
 	display: inline-flex;
-	gap: 0.125rem;
+	gap: var(--lf-gap-xs);
 }
 
 .lf-block-trust-reviews__star {
-	color: var(--wp--preset--color--neutral-light, #e2e8f0);
+	color: var(--lf-neutral-300);
 }
 
 .lf-block-trust-reviews__star--filled {
-	color: var(--wp--preset--color--warning, #a16207);
+	color: var(--wp--preset--color--warning);
 }
 
 .lf-block-trust-reviews__cite cite {
 	font-style: normal;
-	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	font-weight: var(--wp--preset--font-weight--semibold);
 }
 
 .lf-block-trust-reviews__empty {
 	margin: 0;
 	padding: var(--lf-spacing-loose);
 	text-align: center;
-	background-color: var(--wp--preset--color--neutral-light, #f8fafc);
+	background-color: var(--lf-neutral-100);
 	border: var(--lf-card-border);
 	border-radius: var(--lf-button-radius);
 }
 
 .lf-block-trust-reviews__empty-text {
 	margin: 0;
-	font-size: var(--wp--preset--font-size--body, 1rem);
+	font-size: var(--wp--preset--font-size--body);
 	color: var(--lf-muted);
 }
 
 /* -------------------------------------------------------------------------
-   Block: CTA (strong contrast, large buttons, mobile-first)
+   Block: CTA (high contrast, clear spacing, mobile-first buttons)
    ------------------------------------------------------------------------- */
 .lf-block-cta {
 	background-color: var(--lf-cta-block-bg);
@@ -625,50 +660,49 @@ button:focus-visible,
 }
 
 .lf-block-cta__primary {
-	font-size: var(--wp--preset--font-size--large, 1.25rem);
-	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	font-size: var(--wp--preset--font-size--large);
+	font-weight: var(--wp--preset--font-weight--semibold);
 	margin: 0 0 var(--lf-spacing-tight);
 }
 
 .lf-block-cta__primary-link {
 	display: inline-block;
-	background-color: #fff;
+	background-color: var(--wp--preset--color--cta-primary);
 	color: var(--lf-cta-block-bg);
-	padding: 0.75rem 1.5rem;
+	padding: var(--wp--preset--spacing--30) var(--wp--preset--spacing--70);
 	min-height: var(--lf-touch-min);
 	box-sizing: border-box;
 	line-height: 1.25;
 	vertical-align: middle;
 	border-radius: var(--lf-button-radius);
-	font-weight: var(--wp--preset--font-weight--semibold, 600);
-	font-size: var(--wp--preset--font-size--body, 1rem);
+	font-weight: var(--wp--preset--font-weight--semibold);
+	font-size: var(--wp--preset--font-size--body);
 	text-decoration: none;
 }
 
 .lf-block-cta__primary-link:hover {
-	background-color: var(--wp--preset--color--neutral-light, #f1f5f9);
+	background-color: var(--wp--preset--color--cta-secondary);
 	color: var(--lf-cta-block-bg);
 	text-decoration: none;
 }
 
 .lf-block-cta__secondary {
 	margin: 0;
-	font-size: var(--wp--preset--font-size--small, 0.875rem);
-	opacity: 0.9;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--cta-secondary);
 }
 
 .lf-block-cta__embed {
 	margin-top: var(--lf-spacing-normal);
 }
 
-/* CTA variant: b (bold) */
 .lf-block-cta--b .lf-block-cta__primary-link {
-	padding: 0.875rem 1.75rem;
-	font-size: var(--wp--preset--font-size--medium, 1.125rem);
+	padding: var(--wp--preset--spacing--30) var(--wp--preset--spacing--80);
+	font-size: var(--wp--preset--font-size--medium);
 }
 
 /* -------------------------------------------------------------------------
-   Block: FAQ Accordion (details/summary, CSS-only expand, clear question)
+   Block: FAQ Accordion (clean, visual separation, CSS-only)
    ------------------------------------------------------------------------- */
 .lf-block-faq-accordion__inner {
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
@@ -683,7 +717,7 @@ button:focus-visible,
 }
 
 .lf-block-faq-accordion__item {
-	margin: 0 0 1px;
+	margin: 0 0 var(--lf-border-width);
 	border: var(--lf-card-border);
 	border-radius: var(--lf-button-radius);
 	background-color: var(--lf-card-bg);
@@ -698,8 +732,8 @@ button:focus-visible,
 	display: block;
 	width: 100%;
 	padding: var(--lf-spacing-normal) var(--lf-spacing-loose);
-	font-weight: var(--wp--preset--font-weight--semibold, 600);
-	font-size: var(--wp--preset--font-size--body, 1rem);
+	font-weight: var(--wp--preset--font-weight--semibold);
+	font-size: var(--wp--preset--font-size--body);
 	text-align: left;
 	cursor: pointer;
 	list-style: none;
@@ -735,7 +769,7 @@ button:focus-visible,
 .lf-block-faq-accordion__answer {
 	margin: 0;
 	padding: 0 var(--lf-spacing-loose) var(--lf-spacing-normal);
-	font-size: var(--wp--preset--font-size--body, 1rem);
+	font-size: var(--wp--preset--font-size--body);
 	color: var(--lf-muted);
 	line-height: 1.5;
 }
@@ -774,7 +808,7 @@ button:focus-visible,
 
 .lf-block-map-nap__name {
 	display: block;
-	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	font-weight: var(--wp--preset--font-weight--semibold);
 	margin-bottom: var(--lf-spacing-tight);
 }
 
@@ -782,7 +816,7 @@ button:focus-visible,
 .lf-block-map-nap__phone,
 .lf-block-map-nap__email {
 	display: block;
-	margin-bottom: 0.25rem;
+	margin-bottom: var(--lf-gap-xs);
 }
 
 .lf-block-map-nap__phone,
@@ -797,8 +831,8 @@ button:focus-visible,
 }
 
 .lf-block-map-nap__map {
-	min-height: 200px;
-	background-color: var(--wp--preset--color--neutral-light, #f1f5f9);
+	min-height: 12.5rem;
+	background-color: var(--lf-neutral-100);
 	border-radius: var(--lf-button-radius);
 }
 
@@ -806,11 +840,11 @@ button:focus-visible,
 	margin: 0;
 	padding: var(--lf-spacing-normal);
 	color: var(--lf-muted);
-	font-size: var(--wp--preset--font-size--small, 0.875rem);
+	font-size: var(--wp--preset--font-size--small);
 }
 
 /* -------------------------------------------------------------------------
-   Conversion: button hover (enforcement)
+   Focus (buttons / CTAs)
    ------------------------------------------------------------------------- */
 .lf-block-hero__cta-link:focus-visible,
 .lf-block-cta__primary-link:focus-visible,
@@ -820,21 +854,17 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Images: lazy by default (theme does not override core loading="lazy")
+   Images
    ------------------------------------------------------------------------- */
 img[loading="lazy"] {
 	content-visibility: auto;
 }
 
 /* -------------------------------------------------------------------------
-   Mobile pass (hero stacks, thumb-friendly CTAs, no tiny text, no overflow)
+   Mobile (no overflow, thumb-friendly, no tiny text)
    ------------------------------------------------------------------------- */
 html {
 	overflow-x: hidden;
-}
-
-body {
-	font-size: var(--wp--preset--font-size--body, 1rem);
 }
 
 @media (max-width: 639px) {
@@ -860,7 +890,8 @@ body {
 		padding-right: var(--lf-section-padding-x);
 	}
 
-	.lf-block-service-grid__list {
+	.lf-block-service-grid__list,
+	.lf-block-service-areas__list {
 		grid-template-columns: 1fr;
 	}
 
