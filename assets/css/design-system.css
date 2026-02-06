@@ -461,6 +461,24 @@ button:focus-visible,
    ------------------------------------------------------------------------- */
 .lf-block-service-grid__inner {
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+	max-width: var(--lf-container-wide);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.lf-block-service-grid__title {
+	margin: 0 0 var(--lf-spacing-tight);
+	font-size: var(--wp--preset--font-size--h2);
+	font-weight: var(--lf-heading-weight);
+	color: var(--lf-text);
+}
+
+.lf-block-service-grid__intro {
+	margin: 0 0 var(--lf-spacing-loose);
+	font-size: var(--wp--preset--font-size--body);
+	color: var(--lf-muted);
+	line-height: 1.5;
+	max-width: var(--lf-container-narrow);
 }
 
 .lf-block-service-grid__list {
@@ -520,9 +538,17 @@ button:focus-visible,
 }
 
 .lf-block-service-areas__title {
-	margin: 0 0 var(--lf-spacing-normal);
-	font-size: var(--wp--preset--font-size--large);
+	margin: 0 0 var(--lf-spacing-tight);
+	font-size: var(--wp--preset--font-size--h2);
 	font-weight: var(--lf-heading-weight);
+	color: var(--lf-text);
+}
+
+.lf-block-service-areas__intro {
+	margin: 0 0 var(--lf-spacing-loose);
+	font-size: var(--wp--preset--font-size--body);
+	color: var(--lf-muted);
+	line-height: 1.5;
 }
 
 .lf-block-service-areas__list {
@@ -564,9 +590,17 @@ button:focus-visible,
    ------------------------------------------------------------------------- */
 .lf-block-trust-reviews__inner {
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
-	max-width: var(--lf-container-wide);
+	max-width: var(--lf-container-narrow);
 	margin-left: auto;
 	margin-right: auto;
+}
+
+.lf-block-trust-reviews__title {
+	margin: 0 0 var(--lf-spacing-loose);
+	font-size: var(--wp--preset--font-size--h2);
+	font-weight: var(--lf-heading-weight);
+	color: var(--lf-text);
+	text-align: center;
 }
 
 .lf-block-trust-reviews__list {

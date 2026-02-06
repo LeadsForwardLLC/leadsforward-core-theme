@@ -21,6 +21,8 @@ if (!empty($section['trust_max_items'])) {
 	$max = (int) $block['attributes']['max_items'];
 }
 $max = max(1, min(10, $max));
+$heading = !empty($section['trust_heading']) ? $section['trust_heading'] : __('What Our Customers Say', 'leadsforward-core');
+
 $query = new WP_Query([
 	'post_type'      => 'lf_testimonial',
 	'posts_per_page' => $max,
@@ -32,6 +34,7 @@ $query = new WP_Query([
 ?>
 <section class="lf-block lf-block-trust-reviews lf-block-trust-reviews--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-trust-reviews__inner">
+		<h2 class="lf-block-trust-reviews__title"><?php echo esc_html($heading); ?></h2>
 		<?php if ($query->have_posts()) : ?>
 			<ul class="lf-block-trust-reviews__list">
 				<?php while ($query->have_posts()) : $query->the_post();

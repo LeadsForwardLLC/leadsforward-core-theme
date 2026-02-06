@@ -20,16 +20,17 @@ const LF_HOMEPAGE_CONFIG_OPTION = 'lf_homepage_section_config';
 const LF_HOMEPAGE_NICHE_OPTION = 'lf_homepage_niche_slug';
 
 /**
- * Fixed section order. No drag-and-drop; theme controls layout.
+ * Canonical section order: Hero → Services → Service Areas → Social Proof → FAQs → Final CTA.
+ * map_nap is available but off by default (no duplicate/redundant sections).
  *
  * @return string[]
  */
 function lf_homepage_controller_order(): array {
 	return [
 		'hero',
-		'trust_reviews',
 		'service_grid',
 		'service_areas',
+		'trust_reviews',
 		'faq_accordion',
 		'cta',
 		'map_nap',
@@ -69,9 +70,20 @@ function lf_homepage_default_section_config(string $section_type): array {
 				'hero_cta_override' => '',
 			]);
 		case 'trust_reviews':
-			return array_merge($base, ['trust_max_items' => 3]);
+			return array_merge($base, [
+				'trust_max_items' => 1,
+				'trust_heading'   => __('What Our Customers Say', 'leadsforward-core'),
+			]);
 		case 'service_grid':
+			return array_merge($base, [
+				'section_heading' => __('Our Services', 'leadsforward-core'),
+				'section_intro'   => __('We offer professional landscaping and lawn care tailored to your property.', 'leadsforward-core'),
+			]);
 		case 'service_areas':
+			return array_merge($base, [
+				'section_heading' => __('Service Areas', 'leadsforward-core'),
+				'section_intro'   => __('Proudly serving the following communities and surrounding areas.', 'leadsforward-core'),
+			]);
 		case 'faq_accordion':
 		case 'map_nap':
 			return $base;
@@ -111,6 +123,8 @@ function lf_homepage_default_config(?string $niche_slug = null): array {
 		}
 		$config[$type] = $sec;
 	}
+	// Canonical layout: map_nap off by default (no duplicate sections).
+	$config['map_nap']['enabled'] = false;
 	return $config;
 }
 
@@ -210,7 +224,10 @@ function lf_homepage_migrate_from_acf(): ?array {
 			'hero_headline'     => $row['hero_headline'] ?? '',
 			'hero_subheadline'  => $row['hero_subheadline'] ?? '',
 			'hero_cta_override' => $row['hero_cta_override'] ?? '',
-			'trust_max_items'   => isset($row['trust_max_items']) ? (int) $row['trust_max_items'] : 3,
+			'trust_max_items'   => isset($row['trust_max_items']) ? (int) $row['trust_max_items'] : 1,
+			'trust_heading'     => $row['trust_heading'] ?? '',
+			'section_heading'   => $row['section_heading'] ?? '',
+			'section_intro'     => $row['section_intro'] ?? '',
 			'cta_primary_override'   => $row['cta_primary_override'] ?? '',
 			'cta_secondary_override' => $row['cta_secondary_override'] ?? '',
 			'cta_ghl_override'      => $row['cta_ghl_override'] ?? '',

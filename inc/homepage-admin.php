@@ -66,8 +66,17 @@ function lf_homepage_admin_save(): void {
 			$config[$type]['hero_cta_override'] = isset($_POST['lf_hp_hero_cta_override']) ? sanitize_text_field($_POST['lf_hp_hero_cta_override']) : '';
 		}
 		if ($type === 'trust_reviews') {
-			$n = isset($_POST['lf_hp_trust_max_items']) ? (int) $_POST['lf_hp_trust_max_items'] : 3;
+			$n = isset($_POST['lf_hp_trust_max_items']) ? (int) $_POST['lf_hp_trust_max_items'] : 1;
 			$config[$type]['trust_max_items'] = max(1, min(10, $n));
+			$config[$type]['trust_heading'] = isset($_POST['lf_hp_trust_heading']) ? sanitize_text_field($_POST['lf_hp_trust_heading']) : '';
+		}
+		if ($type === 'service_grid') {
+			$config[$type]['section_heading'] = isset($_POST['lf_hp_services_heading']) ? sanitize_text_field($_POST['lf_hp_services_heading']) : '';
+			$config[$type]['section_intro'] = isset($_POST['lf_hp_services_intro']) ? sanitize_textarea_field($_POST['lf_hp_services_intro']) : '';
+		}
+		if ($type === 'service_areas') {
+			$config[$type]['section_heading'] = isset($_POST['lf_hp_areas_heading']) ? sanitize_text_field($_POST['lf_hp_areas_heading']) : '';
+			$config[$type]['section_intro'] = isset($_POST['lf_hp_areas_intro']) ? sanitize_textarea_field($_POST['lf_hp_areas_intro']) : '';
 		}
 		if ($type === 'cta') {
 			$config[$type]['cta_primary_override'] = isset($_POST['lf_hp_cta_primary']) ? sanitize_text_field($_POST['lf_hp_cta_primary']) : '';
@@ -148,10 +157,34 @@ function lf_homepage_admin_render(): void {
 						<td><input type="text" class="regular-text" name="lf_hp_hero_cta_override" id="lf_hp_hero_cta_override" value="<?php echo esc_attr($sec['hero_cta_override'] ?? ''); ?>" /> <span class="description"><?php esc_html_e('Leave blank to use homepage CTA.', 'leadsforward-core'); ?></span></td>
 					</tr>
 					<?php endif; ?>
+					<?php if ($type === 'service_grid') : ?>
+					<tr>
+						<th scope="row"><label for="lf_hp_services_heading"><?php esc_html_e('Services section heading', 'leadsforward-core'); ?></label></th>
+						<td><input type="text" class="large-text" name="lf_hp_services_heading" id="lf_hp_services_heading" value="<?php echo esc_attr($sec['section_heading'] ?? ''); ?>" placeholder="<?php esc_attr_e('Our Services', 'leadsforward-core'); ?>" /></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="lf_hp_services_intro"><?php esc_html_e('Services intro text', 'leadsforward-core'); ?></label></th>
+						<td><textarea class="large-text" name="lf_hp_services_intro" id="lf_hp_services_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
+					</tr>
+					<?php endif; ?>
+					<?php if ($type === 'service_areas') : ?>
+					<tr>
+						<th scope="row"><label for="lf_hp_areas_heading"><?php esc_html_e('Service areas heading', 'leadsforward-core'); ?></label></th>
+						<td><input type="text" class="large-text" name="lf_hp_areas_heading" id="lf_hp_areas_heading" value="<?php echo esc_attr($sec['section_heading'] ?? ''); ?>" placeholder="<?php esc_attr_e('Service Areas', 'leadsforward-core'); ?>" /></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="lf_hp_areas_intro"><?php esc_html_e('Service areas intro', 'leadsforward-core'); ?></label></th>
+						<td><textarea class="large-text" name="lf_hp_areas_intro" id="lf_hp_areas_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
+					</tr>
+					<?php endif; ?>
 					<?php if ($type === 'trust_reviews') : ?>
 					<tr>
+						<th scope="row"><label for="lf_hp_trust_heading"><?php esc_html_e('Social proof heading', 'leadsforward-core'); ?></label></th>
+						<td><input type="text" class="large-text" name="lf_hp_trust_heading" id="lf_hp_trust_heading" value="<?php echo esc_attr($sec['trust_heading'] ?? ''); ?>" placeholder="<?php esc_attr_e('What Our Customers Say', 'leadsforward-core'); ?>" /></td>
+					</tr>
+					<tr>
 						<th scope="row"><label for="lf_hp_trust_max_items"><?php esc_html_e('Max reviews to show', 'leadsforward-core'); ?></label></th>
-						<td><input type="number" name="lf_hp_trust_max_items" id="lf_hp_trust_max_items" value="<?php echo esc_attr((string) ($sec['trust_max_items'] ?? 3)); ?>" min="1" max="10" /> (1–10)</td>
+						<td><input type="number" name="lf_hp_trust_max_items" id="lf_hp_trust_max_items" value="<?php echo esc_attr((string) ($sec['trust_max_items'] ?? 1)); ?>" min="1" max="10" /> (1–10)</td>
 					</tr>
 					<?php endif; ?>
 					<?php if ($type === 'cta') : ?>

@@ -78,11 +78,6 @@ $show_trust_strip = $review_count > 0;
 				<?php endif; ?>
 			</div>
 		<?php endif; ?>
-		<?php if ($cta_phone && $cta_phone !== $cta_text) : ?>
-			<p class="lf-block-hero__secondary">
-				<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-hero__phone"><?php echo esc_html($cta_phone); ?></a>
-			</p>
-		<?php endif; ?>
 		<?php if ($show_trust_strip) : ?>
 			<div class="lf-block-hero__trust">
 				<span class="lf-block-hero__stars" aria-hidden="true">
@@ -92,6 +87,11 @@ $show_trust_strip = $review_count > 0;
 				</span>
 				<span class="lf-block-hero__review-count"><?php echo esc_html(sprintf(_n('%d review', '%d reviews', $review_count, 'leadsforward-core'), $review_count)); ?></span>
 			</div>
+		<?php endif; ?>
+		<?php if ($cta_phone && $cta_phone !== $cta_text) : ?>
+			<p class="lf-block-hero__secondary">
+				<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-hero__phone"><?php echo esc_html($cta_phone); ?></a>
+			</p>
 		<?php endif; ?>
 	</div>
 </section>

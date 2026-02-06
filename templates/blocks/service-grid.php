@@ -1,9 +1,10 @@
 <?php
 /**
- * Block: Service Grid. Links to lf_service posts.
+ * Block: Service Grid. Section heading + intro, links to lf_service posts (decision elements).
  *
  * @var array $block
  * @var bool  $is_preview
+ * @var array $block['context']['section'] homepage section overrides (section_heading, section_intro)
  * @package LeadsForward_Core
  */
 
@@ -12,6 +13,11 @@ if (!defined('ABSPATH')) {
 }
 
 $variant = $block['variant'] ?? 'default';
+$context = $block['context'] ?? [];
+$section = $context['section'] ?? [];
+$heading = !empty($section['section_heading']) ? $section['section_heading'] : __('Our Services', 'leadsforward-core');
+$intro   = !empty($section['section_intro']) ? $section['section_intro'] : '';
+
 $query = new WP_Query([
 	'post_type'      => 'lf_service',
 	'posts_per_page' => -1,
@@ -23,6 +29,10 @@ $query = new WP_Query([
 ?>
 <section class="lf-block lf-block-service-grid lf-block-service-grid--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-service-grid__inner">
+		<h2 class="lf-block-service-grid__title"><?php echo esc_html($heading); ?></h2>
+		<?php if ($intro !== '') : ?>
+			<p class="lf-block-service-grid__intro"><?php echo esc_html($intro); ?></p>
+		<?php endif; ?>
 		<?php if ($query->have_posts()) : ?>
 			<ul class="lf-block-service-grid__list">
 				<?php while ($query->have_posts()) : $query->the_post(); ?>
