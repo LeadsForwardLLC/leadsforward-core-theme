@@ -30,7 +30,7 @@ $query = new WP_Query([
 	'post_status'    => 'publish',
 ]);
 ?>
-<section class="lf-block lf-block-trust-reviews lf-block-trust-reviews--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>">
+<section class="lf-block lf-block-trust-reviews lf-block-trust-reviews--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-trust-reviews__inner">
 		<?php if ($query->have_posts()) : ?>
 			<ul class="lf-block-trust-reviews__list">

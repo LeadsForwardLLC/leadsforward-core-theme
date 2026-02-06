@@ -21,7 +21,7 @@ $query = new WP_Query([
 	'no_found_rows'  => true,
 ]);
 ?>
-<section class="lf-block lf-block-service-grid lf-block-service-grid--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>">
+<section class="lf-block lf-block-service-grid lf-block-service-grid--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-service-grid__inner">
 		<?php if ($query->have_posts()) : ?>
 			<ul class="lf-block-service-grid__list">

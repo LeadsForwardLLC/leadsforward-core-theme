@@ -89,5 +89,12 @@ function lf_register_acf_options_pages(): void {
 		'menu_slug'   => 'lf-homepage',
 		'parent_slug' => 'lf-theme-options',
 	]);
+	// Variation: site-wide profile, section ordering, copy templates.
+	acf_add_options_sub_page([
+		'page_title'  => __('Variation', 'leadsforward-core'),
+		'menu_title'  => __('Variation', 'leadsforward-core'),
+		'menu_slug'   => 'lf-variation',
+		'parent_slug' => 'lf-theme-options',
+	]);
 }
 add_action('acf/init', 'lf_register_acf_options_pages');

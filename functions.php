@@ -53,6 +53,7 @@ lf_load_inc('acf/options-business.php');
 lf_load_inc('acf/options-ctas.php');
 lf_load_inc('acf/options-schema.php');
 lf_load_inc('acf/options-homepage.php');
+lf_load_inc('acf/options-variation.php');
 lf_load_inc('acf/field-group-service.php');
 lf_load_inc('acf/field-group-service-area.php');
 lf_load_inc('acf/field-group-testimonial.php');
@@ -60,9 +61,14 @@ lf_load_inc('acf/field-group-faq.php');
 
 // ACF blocks (server-rendered).
 lf_load_inc('blocks/register.php');
+lf_load_inc('blocks/variants.php');
+
+// Variation tokens: body class, data-variation, CSS vars.
+lf_load_inc('variation-tokens.php');
 
 // Homepage section registry, defaults, CTA resolution.
 lf_load_inc('homepage.php');
+lf_load_inc('variation-copy.php');
 
 // Safety: CPT protect, admin notices, ACF-off fallbacks.
 lf_load_inc('guardrails.php');

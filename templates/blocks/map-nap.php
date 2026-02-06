@@ -18,7 +18,7 @@ $email   = function_exists('lf_get_option') ? lf_get_option('lf_business_email',
 $address = function_exists('lf_get_option') ? lf_get_option('lf_business_address', 'option') : '';
 $geo     = function_exists('lf_get_option') ? lf_get_option('lf_business_geo', 'option') : null;
 ?>
-<section class="lf-block lf-block-map-nap lf-block-map-nap--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>">
+<section class="lf-block lf-block-map-nap lf-block-map-nap--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-map-nap__inner">
 		<address class="lf-block-map-nap__address">
 			<?php if ($name) : ?>

@@ -43,15 +43,68 @@ function lf_get_default_homepage_sections(): array {
 }
 
 /**
+ * Recommended order for "middle" sections (safe to reorder) per variation profile.
+ * Hero never moves off first; final section (last CTA or map) never moves off last.
+ */
+function lf_get_profile_section_order(string $profile): array {
+	$orders = [
+		'a' => ['trust_reviews', 'service_grid', 'cta', 'faq_accordion', 'map_nap'],
+		'b' => ['service_grid', 'trust_reviews', 'cta', 'faq_accordion', 'map_nap'],
+		'c' => ['trust_reviews', 'cta', 'service_grid', 'faq_accordion', 'map_nap'], // Trust Heavy: trust early
+		'd' => ['service_grid', 'trust_reviews', 'cta', 'faq_accordion', 'map_nap'], // Service Heavy: services early
+		'e' => ['cta', 'trust_reviews', 'service_grid', 'faq_accordion', 'map_nap'], // Offer/Promo: CTA early
+	];
+	return $orders[$profile] ?? $orders['a'];
+}
+
+/**
+ * Reorder sections safely: first stays first, last stays last, middle reordered by profile.
+ */
+function lf_apply_profile_section_order(array $sections): array {
+	if (count($sections) <= 2) {
+		return $sections;
+	}
+	$profile = function_exists('lf_get_variation_profile') ? lf_get_variation_profile() : 'a';
+	$order = lf_get_profile_section_order($profile);
+	$first = array_shift($sections);
+	$last  = array_pop($sections);
+	$middle = $sections;
+	$by_type = [];
+	foreach ($middle as $sec) {
+		$t = $sec['section_type'] ?? '';
+		if ($t !== '') {
+			$by_type[$t] = $by_type[$t] ?? [];
+			$by_type[$t][] = $sec;
+		}
+	}
+	$reordered = [];
+	foreach ($order as $type) {
+		if (isset($by_type[$type])) {
+			foreach ($by_type[$type] as $sec) {
+				$reordered[] = $sec;
+			}
+			unset($by_type[$type]);
+		}
+	}
+	foreach ($by_type as $rest) {
+		foreach ($rest as $sec) {
+			$reordered[] = $sec;
+		}
+	}
+	return array_merge([$first], $reordered, [$last]);
+}
+
+/**
  * Get homepage sections from ACF option or default. Only runs when on front; no query if not needed.
+ * When auto_order_sections is on, middle sections are reordered by variation profile (Hero first, last section last).
  */
 function lf_get_homepage_sections(): array {
 	if (!is_front_page()) {
 		return [];
 	}
 	$raw = function_exists('get_field') ? get_field('homepage_sections', 'option') : null;
+	$out = [];
 	if (!empty($raw) && is_array($raw)) {
-		$out = [];
 		foreach ($raw as $row) {
 			if (empty($row['section_type'])) {
 				continue;
@@ -68,9 +121,15 @@ function lf_get_homepage_sections(): array {
 				'cta_ghl_override'       => $row['cta_ghl_override'] ?? '',
 			];
 		}
-		return $out;
 	}
-	return lf_get_default_homepage_sections();
+	if (empty($out)) {
+		$out = lf_get_default_homepage_sections();
+	}
+	$auto_order = function_exists('get_field') ? get_field('auto_order_sections', 'option') : false;
+	if ($auto_order && count($out) > 2) {
+		$out = lf_apply_profile_section_order($out);
+	}
+	return $out;
 }
 
 /**
@@ -137,7 +196,7 @@ function lf_get_cta_phone(): string {
 }
 
 /**
- * Render one homepage section. Maps section_type to template, passes variant + overrides as context.
+ * Render one homepage section. Maps section_type to template; variant from registry (profile + override).
  */
 function lf_render_homepage_section(array $section, int $index): void {
 	$map = lf_homepage_section_template_map();
@@ -146,7 +205,8 @@ function lf_render_homepage_section(array $section, int $index): void {
 		return;
 	}
 	$template = $map[$type];
-	$variant = $section['layout_variant'] ?? 'default';
+	$override_variant = $section['layout_variant'] ?? 'default';
+	$variant = function_exists('lf_get_block_variant') ? lf_get_block_variant($template, $override_variant) : $override_variant;
 	$block = [
 		'id'         => 'homepage-section-' . $index,
 		'variant'    => $variant,

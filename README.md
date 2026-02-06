@@ -18,6 +18,7 @@ LeadsForward Core provides:
 - **Server-rendered blocks:** Hero, Trust/Reviews, Service Grid, CTA, FAQ Accordion, Map+NAP
 - **Modular homepage:** Section order and overrides via Theme Options → Homepage (no hardcoded layout)
 - **SEO & schema:** JSON-LD (LocalBusiness, Service, FAQPage, Review), canonical, noindex, NAP/geo helpers
+- **Controlled variation:** Site-wide profile (A–E), block variant registry, safe section ordering, style tokens, copy template slots (no randomness)
 - **Safety:** CPT delete protection, admin notices for missing SEO-critical fields, graceful fallback when ACF is off
 
 ---
@@ -35,7 +36,7 @@ LeadsForward Core provides:
 ```
 leadsforward-core-theme/
 ├── assets/
-│   ├── css/          # editor.css, future front-end CSS
+│   ├── css/          # editor.css, variation-tokens.css, future front-end CSS
 │   ├── js/
 │   └── images/
 ├── inc/
@@ -51,12 +52,16 @@ leadsforward-core-theme/
 │   │   ├── options-ctas.php      # Primary/secondary CTA, type (call/form/text), GHL embed
 │   │   ├── options-schema.php    # Schema on/off toggles
 │   │   ├── options-homepage.php  # Homepage CTA overrides + flexible content sections
+│   │   ├── options-variation.php # Variation profile, auto-order, copy template selects
 │   │   ├── field-group-service.php
 │   │   ├── field-group-service-area.php
 │   │   ├── field-group-testimonial.php
 │   │   └── field-group-faq.php
 │   ├── blocks/
-│   │   └── register.php  # ACF block registration, lf_render_block_template()
+│   │   ├── register.php  # ACF block registration, lf_render_block_template()
+│   │   └── variants.php  # Block variant registry, lf_get_block_variant(), profile defaults
+│   ├── variation-tokens.php # Body class, data-variation, CSS var enqueue
+│   ├── variation-copy.php   # lf_copy_template(), copy template definitions
 │   └── cpt/
 │       ├── services.php
 │       ├── service-areas.php
@@ -90,6 +95,20 @@ Under **Theme Options**:
 | **CTAs** | Primary CTA text, primary type (text / call / form), secondary CTA text, default GHL form embed. Single source for embed; no duplication. |
 | **Schema** | Toggles for Organization, LocalBusiness, FAQ, and Review schema output. |
 | **Homepage** | Homepage primary/secondary CTA and GHL overrides; primary CTA type override; **Homepage sections** (flexible content). |
+| **Variation** | **Variation profile** (A–E), **Auto-order sections** toggle, **Hero headline style**, **CTA microcopy style**, **Trust badge style** (dropdown templates). |
+
+---
+
+## Controlled variation (site-wide)
+
+Set once per site in **Theme Options → Variation**. No runtime randomness; all changes are deterministic and admin-controlled.
+
+- **Variation profile:** A = Clean + Minimal, B = Bold + High Contrast, C = Trust Heavy, D = Service Heavy, E = Offer/Promo Heavy. Drives block variant defaults and style tokens.
+- **Block variant registry** (`inc/blocks/variants.php`): `lf_get_block_variant($block_name, $override_variant)` returns the variant to use (valid override > profile default > `default`). Trust Heavy pushes hero variant with review emphasis and trust block early; Service Heavy pushes service grid earlier.
+- **Safe section ordering:** When **Auto-order homepage sections** is on, only the middle sections (trust, services, CTA, FAQ, map) are reordered by profile. Hero always first; last section always last. URL structure, H1, and schema are unchanged.
+- **Token variation** (`assets/css/variation-tokens.css`): Body gets `data-variation="A"` (etc.) and class `variation-profile-a`. CSS variables: `--lf-spacing-density`, `--lf-button-radius`, `--lf-heading-weight`, `--lf-accent-*`. Profiles map to spacing/radius/weight presets.
+- **Copy template slots:** Dropdown-selected templates for hero headline, CTA microcopy, trust badge label. `lf_copy_template($key, $fallback, $context)` returns the template string with placeholders replaced (e.g. `{business_name}`, `{service}`, `{city}`). Hero and CTA blocks use these when no manual override.
+- **Footprint hygiene:** Body classes and `data-variant` on block sections so markup differs slightly per profile/variant without affecting schema or internal linking.
 
 ---
 

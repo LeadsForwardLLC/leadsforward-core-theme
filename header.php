@@ -19,6 +19,6 @@ if (!defined('ABSPATH')) {
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<?php wp_head(); ?>
 </head>
-<body <?php body_class(); ?>>
+<body <?php body_class(); ?><?php echo function_exists('lf_variation_body_data_attribute') ? lf_variation_body_data_attribute() : ''; ?>>
 <?php wp_body_open(); ?>
 <?php get_template_part('templates/parts/header'); ?>

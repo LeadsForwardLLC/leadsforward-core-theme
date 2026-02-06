@@ -1,0 +1,52 @@
+/**
+ * Variation tokens. Set once per site via Theme Options > Variation.
+ * Spacing density, button radius, heading weight, accent. Minimal footprint.
+ */
+
+:root {
+	--lf-spacing-density: 1;
+	--lf-button-radius: 0.25rem;
+	--lf-heading-weight: 700;
+	--lf-accent-primary: var(--wp--preset--color--primary, #2563eb);
+	--lf-accent-secondary: var(--wp--preset--color--secondary, #64748b);
+}
+
+/* Profile A: Clean + Minimal */
+[data-variation="A"] {
+	--lf-spacing-density: 0.9;
+	--lf-button-radius: 0.2rem;
+	--lf-heading-weight: 600;
+}
+
+/* Profile B: Bold + High Contrast */
+[data-variation="B"] {
+	--lf-spacing-density: 1.1;
+	--lf-button-radius: 0.5rem;
+	--lf-heading-weight: 700;
+}
+
+/* Profile C: Trust Heavy */
+[data-variation="C"] {
+	--lf-spacing-density: 1;
+	--lf-button-radius: 0.375rem;
+	--lf-heading-weight: 700;
+}
+
+/* Profile D: Service Heavy */
+[data-variation="D"] {
+	--lf-spacing-density: 1.05;
+	--lf-button-radius: 0.25rem;
+	--lf-heading-weight: 700;
+}
+
+/* Profile E: Offer/Promo Heavy */
+[data-variation="E"] {
+	--lf-spacing-density: 1.1;
+	--lf-button-radius: 0.5rem;
+	--lf-heading-weight: 700;
+}
+
+/* Optional: accent swap (use secondary as primary CTA tint) - Profile B */
+[data-variation="B"] {
+	--lf-cta-accent: var(--lf-accent-secondary);
+}
