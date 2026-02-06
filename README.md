@@ -19,6 +19,7 @@ LeadsForward Core provides:
 - **Modular homepage:** Section order and overrides via Theme Options → Homepage (no hardcoded layout)
 - **SEO & schema:** JSON-LD (LocalBusiness, Service, FAQPage, Review), canonical, noindex, NAP/geo helpers
 - **Controlled variation:** Site-wide profile (A–E), block variant registry, safe section ordering, style tokens, copy template slots (no randomness)
+- **Setup wizard:** One-time niche-aware init (Appearance → LeadsForward Setup): select niche, NAP, services/areas, profile → generate pages, menus, CPTs, internal links
 - **Safety:** CPT delete protection, admin notices for missing SEO-critical fields, graceful fallback when ACF is off
 
 ---
@@ -62,6 +63,10 @@ leadsforward-core-theme/
 │   │   └── variants.php  # Block variant registry, lf_get_block_variant(), profile defaults
 │   ├── variation-tokens.php # Body class, data-variation, CSS var enqueue
 │   ├── variation-copy.php   # lf_copy_template(), copy template definitions
+│   ├── niches/
+│   │   ├── registry.php    # Niche definitions (services, pages, profile, CTA defaults)
+│   │   ├── setup-runner.php # lf_run_setup(): pages, CPTs, menus, ACF seed, relationships
+│   │   └── wizard.php      # Admin wizard UI, completion flag, step flow
 │   └── cpt/
 │       ├── services.php
 │       ├── service-areas.php
@@ -183,8 +188,23 @@ All use `show_in_rest => true` and clean rewrites.
 
 ---
 
+## Setup wizard
+
+After theme activation, **Appearance → LeadsForward Setup** runs a one-time flow:
+
+1. **Select niche** — Roofing, Plumbing, HVAC, or General (from `inc/niches/registry.php`). Each niche defines core services, default CTA copy, recommended variation profile, and homepage section order.
+2. **Business info (NAP)** — Name, phone, email, address, opening hours. Saved to Theme Options → Business Info.
+3. **Confirm services & service areas** — Services come from the niche; add service areas (one per line, optional `City, ST`). Creates `lf_service` and `lf_service_area` posts.
+4. **Variation profile** — Pre-selected from niche; can override.
+5. **Generate site** — Creates pages (Home, About Us, Our Services, Our Service Areas, Contact, Privacy Policy, Terms of Use, Thank You), sets Home as front page, creates Header and Footer menus and assigns them, seeds service ↔ service area relationships, updates ACF options (NAP, CTAs, variation, schema, homepage sections). Idempotent: existing pages/CPTs by slug are reused; no duplicates.
+
+Completion is stored in option `lf_setup_wizard_complete`. The wizard does not show again unless you use “Show wizard again” (which clears the flag). No frontend JS, no cron; all actions are explicit and logged in the runner return value.
+
+---
+
 ## Extending
 
+- **New niche:** Add an entry to `lf_get_niche_registry()` in `inc/niches/registry.php` with `name`, `slug`, `services`, `required_pages` (optional), `homepage_section_order`, `variation_profile`, `cta_primary_default`, `cta_secondary_default`, `schema_review_enabled`. No change to wizard or runner logic required.
 - **New section type:** Add to `lf_homepage_section_template_map()` in `inc/homepage.php` and add a layout/overrides in `inc/acf/options-homepage.php`.
 - **New block:** Register in `inc/blocks/register.php` and add a template in `templates/blocks/`.
 - **FAQ schema on custom pages:** Use filter `lf_faq_schema_items` to pass FAQ items.

@@ -70,5 +70,10 @@ lf_load_inc('variation-tokens.php');
 lf_load_inc('homepage.php');
 lf_load_inc('variation-copy.php');
 
+// Niche registry and setup wizard.
+lf_load_inc('niches/registry.php');
+lf_load_inc('niches/setup-runner.php');
+lf_load_inc('niches/wizard.php');
+
 // Safety: CPT protect, admin notices, ACF-off fallbacks.
 lf_load_inc('guardrails.php');
