@@ -18,6 +18,7 @@ $query = new WP_Query([
 	'orderby'        => 'menu_order title',
 	'order'          => 'ASC',
 	'post_status'    => 'publish',
+	'no_found_rows'  => true,
 ]);
 ?>
 <section class="lf-block lf-block-service-grid lf-block-service-grid--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>">

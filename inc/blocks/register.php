@@ -112,9 +112,9 @@ function lf_register_blocks(): void {
 }
 
 /**
- * Load block PHP template. Passes $block and $is_preview. Fail gracefully if ACF off.
+ * Load block PHP template. Passes $block, $is_preview, optional $context (homepage section overrides).
  */
-function lf_render_block_template(string $name, array $block, bool $is_preview = false): void {
+function lf_render_block_template(string $name, array $block, bool $is_preview = false, array $context = []): void {
 	$path = LF_THEME_DIR . '/templates/blocks/' . $name . '.php';
 	if (!is_readable($path)) {
 		if (current_user_can('edit_posts')) {
@@ -124,7 +124,8 @@ function lf_render_block_template(string $name, array $block, bool $is_preview =
 	}
 	$block_id     = $block['id'] ?? '';
 	$block_attrs  = $block['attributes'] ?? [];
-	$variant      = $block_attrs['variant'] ?? $block_attrs['layout'] ?? 'default';
+	$variant      = $block_attrs['variant'] ?? $block_attrs['layout'] ?? ($block['variant'] ?? 'default');
 	$block['variant'] = $variant;
+	$block['context'] = $context;
 	include $path;
 }

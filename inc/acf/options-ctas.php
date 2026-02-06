@@ -30,6 +30,19 @@ function lf_acf_add_options_ctas_fields(): void {
 				'type'  => 'text',
 			],
 			[
+				'key'     => 'field_lf_cta_primary_type',
+				'label'   => __('Primary CTA type', 'leadsforward-core'),
+				'name'    => 'lf_cta_primary_type',
+				'type'    => 'select',
+				'choices' => [
+					'text' => __('Text only', 'leadsforward-core'),
+					'call' => __('Call (phone link)', 'leadsforward-core'),
+					'form' => __('Form / GHL embed', 'leadsforward-core'),
+				],
+				'default_value' => 'text',
+				'instructions'  => __('Call uses Business Info phone; Form shows GHL embed below.', 'leadsforward-core'),
+			],
+			[
 				'key'   => 'field_lf_cta_secondary_text',
 				'label' => __('Secondary CTA text', 'leadsforward-core'),
 				'name'  => 'lf_cta_secondary_text',

@@ -82,5 +82,12 @@ function lf_register_acf_options_pages(): void {
 		'menu_slug'   => 'lf-schema',
 		'parent_slug' => 'lf-theme-options',
 	]);
+	// Homepage: section order, layout variants, CTA overrides.
+	acf_add_options_sub_page([
+		'page_title'  => __('Homepage', 'leadsforward-core'),
+		'menu_title'  => __('Homepage', 'leadsforward-core'),
+		'menu_slug'   => 'lf-homepage',
+		'parent_slug' => 'lf-theme-options',
+	]);
 }
 add_action('acf/init', 'lf_register_acf_options_pages');

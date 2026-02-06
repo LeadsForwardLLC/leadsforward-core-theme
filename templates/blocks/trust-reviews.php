@@ -12,10 +12,19 @@ if (!defined('ABSPATH')) {
 }
 
 $variant = $block['variant'] ?? 'default';
-$max = isset($block['attributes']['max_items']) ? (int) $block['attributes']['max_items'] : 3;
+$context = $block['context'] ?? [];
+$section = $context['section'] ?? [];
+$max = 3;
+if (!empty($section['trust_max_items'])) {
+	$max = (int) $section['trust_max_items'];
+} elseif (isset($block['attributes']['max_items'])) {
+	$max = (int) $block['attributes']['max_items'];
+}
+$max = max(1, min(10, $max));
 $query = new WP_Query([
 	'post_type'      => 'lf_testimonial',
 	'posts_per_page' => $max,
+	'no_found_rows'  => true,
 	'orderby'        => 'date',
 	'order'          => 'DESC',
 	'post_status'    => 'publish',
