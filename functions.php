@@ -88,4 +88,6 @@ if (is_admin()) {
 	lf_load_inc('ai-editing/logging.php');
 	lf_load_inc('ai-editing/handler.php');
 	lf_load_inc('ai-editing/admin-ui.php');
+	// Bulk-safe ops: export/import config, bulk actions, audit log.
+	lf_load_inc('ops.php');
 }
