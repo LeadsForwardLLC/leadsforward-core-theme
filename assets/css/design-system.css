@@ -1,18 +1,20 @@
 /**
  * LeadsForward design system. All styling from theme.json tokens only.
  * No magic numbers; no per-page CSS; no JS for visuals.
+ *
+ * Core layer: spacing system, typography scale, buttons, containers, vertical rhythm.
  */
 
 /* -------------------------------------------------------------------------
    Design tokens (theme.json + layout only)
    ------------------------------------------------------------------------- */
 :root {
-	/* Layout: from theme.json layout.contentSize / wideSize */
+	/* Layout: theme.json layout.contentSize / wideSize */
 	--lf-container-narrow: 720px;
 	--lf-container-wide: 960px;
 	--lf-container-full: 1200px;
 
-	/* Spacing: section padding (XS/SM/MD/LG) from preset scale */
+	/* Spacing: section padding (intentional, not default WP) from preset scale */
 	--lf-section-padding-xs: var(--wp--preset--spacing--50);
 	--lf-section-padding-sm: var(--wp--preset--spacing--60);
 	--lf-section-padding-md: var(--wp--preset--spacing--70);
@@ -83,6 +85,82 @@
 	/* Grid: min column width */
 	--lf-grid-min: 12.5rem;
 	--lf-grid-min-wide: 17.5rem;
+}
+
+/* -------------------------------------------------------------------------
+   Core design system: vertical rhythm, typography scale, buttons, containers
+   ------------------------------------------------------------------------- */
+.site-main {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+}
+
+.lf-block + .lf-block {
+	margin-top: var(--wp--preset--spacing--70);
+}
+
+.site-main h1,
+.site-main h2,
+.site-main h3,
+.site-main h4 {
+	font-weight: var(--lf-heading-weight);
+	line-height: 1.2;
+	margin: 0 0 var(--lf-spacing-tight);
+	color: var(--lf-text);
+}
+
+.site-main h1 { font-size: var(--wp--preset--font-size--h1); }
+.site-main h2 { font-size: var(--wp--preset--font-size--h2); }
+.site-main h3 { font-size: var(--wp--preset--font-size--h3); }
+.site-main h4 { font-size: var(--wp--preset--font-size--h4); }
+
+.site-main h1:last-child,
+.site-main h2:last-child,
+.site-main h3:last-child,
+.site-main h4:last-child {
+	margin-bottom: 0;
+}
+
+.lf-btn {
+	display: inline-block;
+	padding: var(--wp--preset--spacing--30) var(--wp--preset--spacing--60);
+	min-height: var(--lf-touch-min);
+	box-sizing: border-box;
+	border-radius: var(--lf-button-radius);
+	font-family: var(--wp--preset--font-family--system);
+	font-size: var(--wp--preset--font-size--body);
+	font-weight: var(--wp--preset--font-weight--semibold);
+	line-height: 1.25;
+	text-decoration: none;
+	border: none;
+	cursor: pointer;
+}
+
+.lf-btn:focus-visible {
+	outline: var(--lf-focus-outline);
+	outline-offset: var(--lf-focus-offset);
+}
+
+.lf-btn--primary {
+	background-color: var(--lf-primary);
+	color: var(--wp--preset--color--cta-primary);
+}
+
+.lf-btn--primary:hover {
+	background-color: var(--wp--preset--color--neutral-dark);
+	color: var(--wp--preset--color--cta-primary);
+}
+
+.lf-btn--secondary {
+	background-color: var(--wp--preset--color--neutral-100);
+	color: var(--lf-text);
+	border: var(--lf-border-width) solid var(--lf-neutral-300);
+}
+
+.lf-btn--secondary:hover {
+	background-color: var(--lf-neutral-300);
+	color: var(--lf-text);
 }
 
 /* -------------------------------------------------------------------------
@@ -338,10 +416,6 @@ button:focus-visible,
 /* -------------------------------------------------------------------------
    Block: Hero (hierarchy, CTA emphasis, background layer)
    ------------------------------------------------------------------------- */
-.lf-block + .lf-block {
-	margin-top: 0;
-}
-
 .lf-block-hero {
 	position: relative;
 	text-align: center;
