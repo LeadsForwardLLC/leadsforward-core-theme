@@ -1,7 +1,6 @@
 <?php
 /**
- * SEO foundation. Hooks and filters for meta, titles, and AI tooling.
- * No logic yet; prepared for future meta tags and canonical handling.
+ * SEO: canonical, noindex, meta; NAP helpers; geo; internal linking; Rank Math breadcrumb compatibility.
  *
  * @package LeadsForward_Core
  * @since 0.1.0
@@ -13,4 +12,231 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-// Future: lf_meta_description(), lf_canonical(), lf_robots_meta(), etc.
+// Canonical and noindex.
+add_action('wp_head', 'lf_canonical_tag', 1);
+add_action('wp_head', 'lf_robots_noindex_where_needed', 2);
+
+/**
+ * Output canonical URL. Compatible with Rank Math: use add_filter('lf_output_canonical', '__return_false')
+ * if Rank Math (or another plugin) outputs its own canonical.
+ */
+function lf_canonical_tag(): void {
+	if (!apply_filters('lf_output_canonical', true)) {
+		return;
+	}
+	// Rank Math may output its own; we run early so they can remove or override.
+	$url = lf_get_canonical_url();
+	if (empty($url)) {
+		return;
+	}
+	echo '<link rel="canonical" href="' . esc_url($url) . '" />' . "\n";
+}
+
+/**
+ * Get canonical URL for current request. Singular = permalink; archive = archive link; front = home.
+ */
+function lf_get_canonical_url(): string {
+	if (is_singular()) {
+		return (string) get_permalink();
+	}
+	if (is_home() && !is_front_page()) {
+		return (string) get_permalink(get_option('page_for_posts'));
+	}
+	if (is_post_type_archive()) {
+		return (string) get_post_type_archive_link(get_post_type());
+	}
+	if (is_front_page()) {
+		return (string) home_url('/');
+	}
+	if (is_search() || is_404()) {
+		return '';
+	}
+	return (string) home_url(wp_unslash($_SERVER['REQUEST_URI'] ?? ''));
+}
+
+/**
+ * Noindex for non-ranking content: search, 404, private CPT (testimonials not public).
+ */
+function lf_robots_noindex_where_needed(): void {
+	if (!apply_filters('lf_output_noindex_where_needed', true)) {
+		return;
+	}
+	$noindex = false;
+	if (is_search() || is_404()) {
+		$noindex = true;
+	}
+	// Testimonials are private; if any URL ever shows them, noindex. (Currently no single/archive for them.)
+	if (is_singular('lf_testimonial') || is_post_type_archive('lf_testimonial')) {
+		$noindex = true;
+	}
+	$noindex = apply_filters('lf_noindex_current_request', $noindex);
+	if ($noindex) {
+		echo '<meta name="robots" content="noindex, follow" />' . "\n";
+	}
+}
+
+/**
+ * NAP: name, address, phone. Returns associative array for flexible output.
+ */
+function lf_nap_data(): array {
+	return [
+		'name'    => lf_get_option('lf_business_name', 'option'),
+		'address' => lf_get_option('lf_business_address', 'option'),
+		'phone'   => lf_get_option('lf_business_phone', 'option'),
+		'email'   => lf_get_option('lf_business_email', 'option'),
+	];
+}
+
+/**
+ * NAP as plain text (one line or multiline). For schema or meta.
+ */
+function lf_nap_plain(string $separator = "\n"): string {
+	$nap = lf_nap_data();
+	$parts = array_filter([$nap['name'], $nap['address'], $nap['phone'], $nap['email']]);
+	return implode($separator, $parts);
+}
+
+/**
+ * NAP as semantic HTML (address block with optional links for phone/email).
+ */
+function lf_nap_html(array $args = []): string {
+	$nap = lf_nap_data();
+	$show_phone_link = $args['phone_link'] ?? true;
+	$show_email_link = $args['email_link'] ?? true;
+	$class = $args['class'] ?? 'lf-nap';
+	$parts = [];
+	if (!empty($nap['name'])) {
+		$parts[] = '<span class="' . esc_attr($class) . '__name">' . esc_html($nap['name']) . '</span>';
+	}
+	if (!empty($nap['address'])) {
+		$parts[] = '<span class="' . esc_attr($class) . '__address">' . nl2br(esc_html($nap['address'])) . '</span>';
+	}
+	if (!empty($nap['phone'])) {
+		$tel = preg_replace('/\s+/', '', $nap['phone']);
+		if ($show_phone_link && $tel) {
+			$parts[] = '<a href="tel:' . esc_attr($tel) . '" class="' . esc_attr($class) . '__phone">' . esc_html($nap['phone']) . '</a>';
+		} else {
+			$parts[] = '<span class="' . esc_attr($class) . '__phone">' . esc_html($nap['phone']) . '</span>';
+		}
+	}
+	if (!empty($nap['email'])) {
+		if ($show_email_link) {
+			$parts[] = '<a href="mailto:' . esc_attr($nap['email']) . '" class="' . esc_attr($class) . '__email">' . esc_html($nap['email']) . '</a>';
+		} else {
+			$parts[] = '<span class="' . esc_attr($class) . '__email">' . esc_html($nap['email']) . '</span>';
+		}
+	}
+	if (empty($parts)) {
+		return '';
+	}
+	return '<address class="' . esc_attr($class) . '">' . implode(' ', $parts) . '</address>';
+}
+
+/**
+ * Geo coordinates from global options or current service area. Returns [lat, lng] or null.
+ */
+function lf_geo_data(?int $context_post_id = null): ?array {
+	if ($context_post_id) {
+		$geo = function_exists('get_field') ? get_field('lf_service_area_geo', $context_post_id) : null;
+		if (is_array($geo) && isset($geo['lat'], $geo['lng']) && $geo['lat'] !== '' && $geo['lng'] !== '') {
+			return [(float) $geo['lat'], (float) $geo['lng']];
+		}
+	}
+	$geo = lf_get_option('lf_business_geo', 'option');
+	if (is_array($geo) && isset($geo['lat'], $geo['lng']) && $geo['lat'] !== '' && $geo['lng'] !== '') {
+		return [(float) $geo['lat'], (float) $geo['lng']];
+	}
+	return null;
+}
+
+/**
+ * Output geo meta tags (ICBM, geo.region, geo.placename) when appropriate.
+ */
+function lf_geo_meta(): void {
+	$post_id = null;
+	if (is_singular('lf_service_area')) {
+		$post_id = get_queried_object_id();
+	}
+	$geo = lf_geo_data($post_id);
+	if (!$geo) {
+		return;
+	}
+	list($lat, $lng) = $geo;
+	echo '<meta name="geo.region" content="US" />' . "\n";
+	echo '<meta name="ICBM" content="' . esc_attr($lat . ', ' . $lng) . '" />' . "\n";
+	$placename = '';
+	if ($post_id) {
+		$placename = get_the_title($post_id);
+	} else {
+		$placename = lf_get_option('lf_business_name', 'option');
+	}
+	if ($placename) {
+		echo '<meta name="geo.placename" content="' . esc_attr($placename) . '" />' . "\n";
+	}
+}
+add_action('wp_head', 'lf_geo_meta', 3);
+
+/**
+ * Related services for a service area (IDs or post objects). For internal linking.
+ */
+function lf_related_services_for_area(int $service_area_id): array {
+	$ids = function_exists('get_field') ? get_field('lf_service_area_services', $service_area_id) : null;
+	if (empty($ids) || !is_array($ids)) {
+		return [];
+	}
+	$posts = array_filter(array_map('get_post', $ids));
+	return array_values(array_filter($posts, fn($p) => $p && $p->post_status === 'publish'));
+}
+
+/**
+ * Related service areas for a service (IDs or post objects). For internal linking.
+ */
+function lf_related_areas_for_service(int $service_id): array {
+	$ids = function_exists('get_field') ? get_field('lf_service_related_areas', $service_id) : null;
+	if (empty($ids) || !is_array($ids)) {
+		return [];
+	}
+	$posts = array_filter(array_map('get_post', $ids));
+	return array_values(array_filter($posts, fn($p) => $p && $p->post_status === 'publish'));
+}
+
+/**
+ * Breadcrumb items for current request. Rank Math–compatible: array of [label, url].
+ * Filter lf_breadcrumb_items to extend or override.
+ */
+function lf_breadcrumb_items(): array {
+	$items = [];
+	$items[] = ['label' => get_bloginfo('name'), 'url' => home_url('/')];
+
+	if (is_front_page()) {
+		return apply_filters('lf_breadcrumb_items', $items);
+	}
+	if (is_singular()) {
+		$post = get_queried_object();
+		if ($post->post_type === 'lf_service') {
+			$items[] = ['label' => __('Services', 'leadsforward-core'), 'url' => get_post_type_archive_link('lf_service')];
+		} elseif ($post->post_type === 'lf_service_area') {
+			$items[] = ['label' => __('Service Areas', 'leadsforward-core'), 'url' => get_post_type_archive_link('lf_service_area')];
+		} elseif ($post->post_type === 'lf_faq') {
+			$items[] = ['label' => __('FAQs', 'leadsforward-core'), 'url' => get_post_type_archive_link('lf_faq')];
+		} elseif ($post->post_type === 'page' && $post->post_parent) {
+			$ancestors = get_post_ancestors($post);
+			foreach (array_reverse($ancestors) as $aid) {
+				$items[] = ['label' => get_the_title($aid), 'url' => get_permalink($aid)];
+			}
+		}
+		$items[] = ['label' => get_the_title(), 'url' => ''];
+		return apply_filters('lf_breadcrumb_items', $items);
+	}
+	if (is_post_type_archive()) {
+		$type = get_post_type();
+		$items[] = ['label' => post_type_archive_title('', false), 'url' => ''];
+		return apply_filters('lf_breadcrumb_items', $items);
+	}
+	if (is_home()) {
+		$items[] = ['label' => get_the_title(get_option('page_for_posts')), 'url' => ''];
+		return apply_filters('lf_breadcrumb_items', $items);
+	}
+
+	return apply_filters('lf_breadcrumb_items', $items);
+}

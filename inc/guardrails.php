@@ -55,7 +55,7 @@ add_filter('map_meta_cap', 'lf_map_meta_cap_for_cpt_delete', 10, 4);
  */
 function lf_admin_notice_missing_options(): void {
 	$screen = get_current_screen();
-	if (!$screen || strpos($screen->id, 'lf-theme-options') === false && strpos($screen->id, 'lf-business-info') === false) {
+	if (!$screen || (strpos($screen->id, 'lf-theme-options') === false && strpos($screen->id, 'lf-business-info') === false)) {
 		return;
 	}
 	if (!function_exists('get_field')) {
@@ -77,3 +77,53 @@ function lf_admin_notice_missing_options(): void {
 	echo '<div class="notice notice-info"><p>' . esc_html__('LeadsForward Core: For best SEO and schema, fill in:', 'leadsforward-core') . ' ' . esc_html(implode(', ', $missing)) . '</p></div>';
 }
 add_action('admin_notices', 'lf_admin_notice_missing_options');
+
+/**
+ * Admin warnings for SEO-critical fields: global NAP + service/area titles.
+ * Shown on Theme Options and on edit screens for Service / Service Area.
+ */
+function lf_admin_notice_seo_critical(): void {
+	if (!function_exists('get_field')) {
+		return;
+	}
+	$screen = get_current_screen();
+	if (!$screen) {
+		return;
+	}
+	$warnings = [];
+
+	// Global: NAP and address for LocalBusiness schema.
+	if (strpos($screen->id, 'lf-theme-options') !== false || strpos($screen->id, 'lf-business-info') !== false) {
+		if (empty(lf_get_option('lf_business_name', 'option'))) {
+			$warnings[] = __('Business Name is required for LocalBusiness schema.', 'leadsforward-core');
+		}
+		if (empty(lf_get_option('lf_business_address', 'option'))) {
+			$warnings[] = __('Address (NAP) improves local SEO and schema.', 'leadsforward-core');
+		}
+		if (empty(lf_get_option('lf_business_phone', 'option'))) {
+			$warnings[] = __('Phone is recommended for local SEO.', 'leadsforward-core');
+		}
+	}
+
+	// Service: title used as H1/SEO if SEO H1 empty.
+	if ($screen->id === 'lf_service' && isset($_GET['post'])) {
+		$post_id = (int) $_GET['post'];
+		if ($post_id && empty(get_post($post_id)->post_title)) {
+			$warnings[] = __('Service title is used for URL and H1; add a title.', 'leadsforward-core');
+		}
+	}
+
+	// Service Area: title = city name.
+	if ($screen->id === 'lf_service_area' && isset($_GET['post'])) {
+		$post_id = (int) $_GET['post'];
+		if ($post_id && empty(get_post($post_id)->post_title)) {
+			$warnings[] = __('Service area title is the city name (used for URL and H1).', 'leadsforward-core');
+		}
+	}
+
+	if (empty($warnings)) {
+		return;
+	}
+	echo '<div class="notice notice-warning"><p><strong>' . esc_html__('LeadsForward SEO:', 'leadsforward-core') . '</strong> ' . esc_html(implode(' ', $warnings)) . '</p></div>';
+}
+add_action('admin_notices', 'lf_admin_notice_seo_critical');
