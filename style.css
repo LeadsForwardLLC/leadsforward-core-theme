@@ -1,0 +1,19 @@
+/*
+Theme Name: LeadsForward Core
+Theme URI: https://leadsforward.com
+Author: LeadsForward
+Author URI: https://leadsforward.com
+Description: Ultra-lightweight, SEO-first WordPress theme for local lead-gen sites. Built to scale across thousands of sites. No page builder. Infrastructure only.
+Version: 0.1.0
+Requires at least: 6.0
+Tested up to: 6.4
+Requires PHP: 8.0
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: leadsforward-core
+*/
+
+/* ==========================================================================
+   LeadsForward Core — Base styles loaded via theme.json and block/component CSS.
+   No global CSS here; keep frontend minimal.
+   ========================================================================== */
