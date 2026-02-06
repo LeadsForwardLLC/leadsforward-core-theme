@@ -74,10 +74,20 @@
 	--lf-card-border: var(--lf-border-width) solid var(--lf-neutral-300);
 	--lf-card-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
 
-	/* CTA block */
+	/* Decision cards (Services + Service Areas: clickable, conversion-focused) */
+	--lf-card-decision-padding-y: var(--lf-spacing-normal);
+	--lf-card-decision-padding-x: var(--lf-spacing-loose);
+	--lf-card-decision-radius: 0.375rem;
+	--lf-card-decision-border: var(--lf-border-width) solid var(--lf-neutral-300);
+	--lf-card-decision-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+	--lf-card-decision-shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.12);
+
+	/* CTA block (final section: high contrast, strong close) */
 	--lf-cta-block-bg: var(--wp--preset--color--neutral-dark, #1e293b);
 	--lf-cta-block-text: var(--wp--preset--color--cta-primary, #ffffff);
 	--lf-cta-block-text-muted: var(--wp--preset--color--cta-secondary, #e2e8f0);
+	--lf-cta-block-padding-y: var(--lf-section-padding-lg);
+	--lf-cta-block-separation: var(--lf-section-padding-lg);
 
 	/* Typography (theme.json when available; fallbacks so type always works) */
 	--lf-font-system: var(--wp--preset--font-family--system, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
@@ -98,7 +108,18 @@
 	--lf-btn-pad-x: var(--wp--preset--spacing--60, 1.5rem);
 	--lf-btn-pad-x-lg: var(--wp--preset--spacing--70, 2rem);
 	--lf-block-gap: var(--wp--preset--spacing--70, 2rem);
+	--lf-homepage-section-gap: var(--wp--preset--spacing--50, 1.25rem);
 	--lf-gap-30: var(--wp--preset--spacing--30, 0.75rem);
+
+	/* Section surfaces (homepage flow) */
+	--lf-section-surface-tint: var(--lf-neutral-100);
+	--lf-section-spotlight-shadow: 0 4px 20px rgba(15, 23, 42, 0.12);
+
+	/* Typography rhythm */
+	--lf-line-height-heading: 1.2;
+	--lf-line-height-body: 1.6;
+	--lf-line-height-tight: 1.4;
+	--lf-section-heading-margin: var(--lf-spacing-normal);
 
 	/* Touch target minimum (WCAG) */
 	--lf-touch-min: 48px;
@@ -125,12 +146,22 @@
 	margin-top: var(--lf-block-gap);
 }
 
+/* Homepage: intentional section flow (no excess vertical space) */
+.site-main--homepage {
+	padding-top: 0;
+	padding-bottom: 0;
+}
+
+.site-main--homepage .lf-block + .lf-block {
+	margin-top: var(--lf-homepage-section-gap);
+}
+
 .site-main h1,
 .site-main h2,
 .site-main h3,
 .site-main h4 {
 	font-weight: var(--lf-heading-weight);
-	line-height: 1.2;
+	line-height: var(--lf-line-height-heading);
 	margin: 0 0 var(--lf-spacing-tight);
 	color: var(--lf-text);
 }
@@ -197,7 +228,7 @@ body {
 	font-size: var(--lf-fs-body);
 	font-family: var(--lf-font-system);
 	font-weight: var(--lf-fw-normal);
-	line-height: 1.6;
+	line-height: var(--lf-line-height-body);
 }
 
 a:focus-visible,
@@ -257,7 +288,7 @@ button:focus-visible,
 .site-main .entry-title {
 	font-size: var(--lf-fs-h1);
 	font-weight: var(--lf-heading-weight);
-	line-height: 1.2;
+	line-height: var(--lf-line-height-heading);
 	margin: 0;
 }
 
@@ -277,6 +308,25 @@ button:focus-visible,
 
 .site-main .entry-summary {
 	margin-bottom: var(--lf-spacing-normal);
+}
+
+/* -------------------------------------------------------------------------
+   Homepage section surfaces (alternating for flow; no reorder)
+   ------------------------------------------------------------------------- */
+.lf-block-service-grid {
+	background-color: var(--lf-body-bg);
+}
+
+.lf-block-service-areas {
+	background-color: var(--lf-section-surface-tint);
+}
+
+.lf-block-trust-reviews {
+	background-color: var(--lf-section-surface-tint);
+}
+
+.lf-block-faq-accordion {
+	background-color: var(--lf-body-bg);
 }
 
 /* -------------------------------------------------------------------------
@@ -473,7 +523,7 @@ button:focus-visible,
 .lf-block-hero__title {
 	font-size: clamp(var(--lf-fs-h2), 5vw, var(--lf-fs-h1));
 	font-weight: var(--lf-heading-weight);
-	line-height: 1.2;
+	line-height: var(--lf-line-height-heading);
 	margin: 0 0 var(--lf-hero-stack-after-title);
 	color: var(--lf-text);
 }
@@ -482,7 +532,7 @@ button:focus-visible,
 	font-size: var(--lf-fs-large);
 	color: var(--lf-muted);
 	margin: 0 0 var(--lf-hero-stack-after-subtitle);
-	line-height: 1.4;
+	line-height: var(--lf-line-height-tight);
 }
 
 .lf-block-hero__cta {
@@ -554,17 +604,19 @@ button:focus-visible,
 }
 
 .lf-block-service-grid__title {
-	margin: 0 0 var(--lf-spacing-tight);
+	margin: 0 0 var(--lf-section-heading-margin);
 	font-size: var(--lf-fs-h2);
 	font-weight: var(--lf-heading-weight);
+	line-height: var(--lf-line-height-heading);
 	color: var(--lf-text);
 }
 
 .lf-block-service-grid__intro {
 	margin: 0 0 var(--lf-spacing-loose);
 	font-size: var(--lf-fs-body);
+	font-weight: var(--lf-fw-normal);
 	color: var(--lf-muted);
-	line-height: 1.5;
+	line-height: var(--lf-line-height-body);
 	max-width: var(--lf-container-narrow);
 }
 
@@ -580,29 +632,39 @@ button:focus-visible,
 	margin-right: auto;
 }
 
-.lf-block-service-grid__link {
-	display: block;
-	padding: var(--lf-spacing-loose);
+/* Shared decision card base (Services + Service Areas) */
+.lf-block-service-grid__link,
+.lf-block-service-areas__link {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: var(--lf-touch-min);
+	padding: var(--lf-card-decision-padding-y) var(--lf-card-decision-padding-x);
 	background-color: var(--lf-card-bg);
-	border: var(--lf-card-border);
-	box-shadow: var(--lf-card-shadow);
+	border: var(--lf-card-decision-border);
+	border-radius: var(--lf-card-decision-radius);
+	box-shadow: var(--lf-card-decision-shadow);
 	color: var(--lf-text);
 	text-decoration: none;
-	border-radius: var(--lf-button-radius);
 	font-weight: var(--lf-fw-semibold);
 	font-size: var(--lf-fs-body);
-	min-height: var(--lf-touch-min);
+	line-height: 1.25;
+	text-align: center;
 	box-sizing: border-box;
+	transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
 }
 
-.lf-block-service-grid__link:hover {
+.lf-block-service-grid__link:hover,
+.lf-block-service-areas__link:hover {
 	background-color: var(--lf-primary);
 	color: var(--lf-cta-block-text);
 	text-decoration: none;
 	border-color: var(--lf-primary);
+	box-shadow: var(--lf-card-decision-shadow-hover);
 }
 
-.lf-block-service-grid__link:focus-visible {
+.lf-block-service-grid__link:focus-visible,
+.lf-block-service-areas__link:focus-visible {
 	outline: var(--lf-focus-outline);
 	outline-offset: var(--lf-focus-offset);
 }
@@ -622,20 +684,25 @@ button:focus-visible,
    ------------------------------------------------------------------------- */
 .lf-block-service-areas__inner {
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+	max-width: var(--lf-container-wide);
+	margin-left: auto;
+	margin-right: auto;
 }
 
 .lf-block-service-areas__title {
-	margin: 0 0 var(--lf-spacing-tight);
+	margin: 0 0 var(--lf-section-heading-margin);
 	font-size: var(--lf-fs-h2);
 	font-weight: var(--lf-heading-weight);
+	line-height: var(--lf-line-height-heading);
 	color: var(--lf-text);
 }
 
 .lf-block-service-areas__intro {
 	margin: 0 0 var(--lf-spacing-loose);
 	font-size: var(--lf-fs-body);
+	font-weight: var(--lf-fw-normal);
 	color: var(--lf-muted);
-	line-height: 1.5;
+	line-height: var(--lf-line-height-body);
 }
 
 .lf-block-service-areas__list {
@@ -647,33 +714,13 @@ button:focus-visible,
 	padding: 0;
 }
 
-.lf-block-service-areas__link {
-	display: block;
-	padding: var(--lf-spacing-loose);
-	background-color: var(--lf-card-bg);
-	border: var(--lf-card-border);
-	box-shadow: var(--lf-card-shadow);
-	color: var(--lf-text);
-	text-decoration: none;
-	border-radius: var(--lf-button-radius);
-	font-weight: var(--lf-fw-semibold);
-	min-height: var(--lf-touch-min);
-	box-sizing: border-box;
-}
-
-.lf-block-service-areas__link:hover {
-	background-color: var(--lf-primary);
-	color: var(--lf-cta-block-text);
-	border-color: var(--lf-primary);
-}
-
 .lf-block-service-areas__empty {
 	margin: 0;
 	color: var(--lf-muted);
 }
 
 /* -------------------------------------------------------------------------
-   Block: Trust / Reviews (stars SVG, review count, no-reviews state)
+   Block: Trust / Reviews (single highlighted quote; emphasis on content)
    ------------------------------------------------------------------------- */
 .lf-block-trust-reviews__inner {
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
@@ -683,9 +730,10 @@ button:focus-visible,
 }
 
 .lf-block-trust-reviews__title {
-	margin: 0 0 var(--lf-spacing-loose);
+	margin: 0 0 var(--lf-section-heading-margin);
 	font-size: var(--lf-fs-h2);
 	font-weight: var(--lf-heading-weight);
+	line-height: var(--lf-line-height-heading);
 	color: var(--lf-text);
 	text-align: center;
 }
@@ -704,21 +752,23 @@ button:focus-visible,
 	}
 }
 
+/* Quote prominent; container minimal so section tint and content stand out */
 .lf-block-trust-reviews__quote {
 	margin: 0;
-	padding: var(--lf-spacing-loose);
-	background-color: var(--lf-card-bg);
-	border: var(--lf-card-border);
-	box-shadow: var(--lf-card-shadow);
-	border-radius: var(--lf-button-radius);
+	padding: var(--lf-spacing-loose) var(--lf-spacing-loose) var(--lf-spacing-loose) calc(var(--lf-spacing-loose) + var(--lf-border-width-accent));
+	background-color: transparent;
+	border: none;
 	border-left: var(--lf-border-width-accent) solid var(--lf-primary);
+	border-radius: 0;
+	box-shadow: none;
 }
 
 .lf-block-trust-reviews__text {
-	margin: 0 0 var(--lf-spacing-tight);
-	font-size: var(--lf-fs-body);
-	line-height: 1.5;
+	margin: 0 0 var(--lf-spacing-normal);
+	font-size: var(--lf-fs-large);
+	line-height: var(--lf-line-height-body);
 	color: var(--lf-text);
+	font-weight: var(--lf-fw-normal);
 }
 
 .lf-block-trust-reviews__cite {
@@ -728,7 +778,9 @@ button:focus-visible,
 	gap: var(--lf-gap-tight);
 	margin: 0;
 	font-size: var(--lf-fs-small);
+	font-weight: var(--lf-fw-normal);
 	color: var(--lf-muted);
+	line-height: var(--lf-line-height-tight);
 }
 
 .lf-block-trust-reviews__stars {
@@ -753,9 +805,9 @@ button:focus-visible,
 	margin: 0;
 	padding: var(--lf-spacing-loose);
 	text-align: center;
-	background-color: var(--lf-neutral-100);
-	border: var(--lf-card-border);
-	border-radius: var(--lf-button-radius);
+	background-color: transparent;
+	border: none;
+	border-radius: 0;
 }
 
 .lf-block-trust-reviews__empty-text {
@@ -765,15 +817,19 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Block: CTA (high contrast, clear spacing, mobile-first buttons)
+   Block: CTA (strong close: high contrast, clear primary, separation)
    ------------------------------------------------------------------------- */
 .lf-block-cta {
 	background-color: var(--lf-cta-block-bg);
 	color: var(--lf-cta-block-text);
 }
 
+.site-main--homepage .lf-block-cta {
+	margin-top: var(--lf-cta-block-separation);
+}
+
 .lf-block-cta__inner {
-	padding: var(--lf-section-padding-y-cta) var(--lf-section-padding-x);
+	padding: var(--lf-cta-block-padding-y) var(--lf-section-padding-x);
 	text-align: center;
 	max-width: var(--lf-container-narrow);
 	margin-left: auto;
@@ -781,9 +837,7 @@ button:focus-visible,
 }
 
 .lf-block-cta__primary {
-	font-size: var(--lf-fs-large);
-	font-weight: var(--lf-fw-semibold);
-	margin: 0 0 var(--lf-spacing-tight);
+	margin: 0 0 var(--lf-spacing-normal);
 }
 
 .lf-block-cta__primary-link,
@@ -798,7 +852,7 @@ button:focus-visible,
 	vertical-align: middle;
 	border-radius: var(--lf-button-radius);
 	font-weight: var(--lf-fw-semibold);
-	font-size: var(--lf-fs-body);
+	font-size: var(--lf-fs-medium);
 	text-decoration: none;
 }
 
@@ -809,7 +863,7 @@ button:focus-visible,
 }
 
 .lf-block-cta__secondary {
-	margin: 0;
+	margin: var(--lf-spacing-tight) 0 0;
 	font-size: var(--lf-fs-small);
 	color: var(--lf-cta-block-text-muted);
 }
@@ -825,7 +879,7 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Block: FAQ Accordion (clean, visual separation, CSS-only)
+   Block: FAQ Accordion (clean spacing, low noise, schema-safe markup)
    ------------------------------------------------------------------------- */
 .lf-block-faq-accordion__inner {
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
@@ -834,27 +888,35 @@ button:focus-visible,
 	margin-right: auto;
 }
 
+.lf-block-faq-accordion__title {
+	margin: 0 0 var(--lf-section-heading-margin);
+	font-size: var(--lf-fs-h2);
+	font-weight: var(--lf-heading-weight);
+	line-height: var(--lf-line-height-heading);
+	color: var(--lf-text);
+}
+
 .lf-block-faq-accordion__list {
 	margin: 0;
 	padding: 0;
 }
 
 .lf-block-faq-accordion__item {
-	margin: 0 0 var(--lf-border-width);
-	border: var(--lf-card-border);
-	border-radius: var(--lf-button-radius);
-	background-color: var(--lf-card-bg);
+	margin: 0;
+	border-bottom: var(--lf-border-width) solid var(--lf-neutral-300);
+	background: none;
 	overflow: hidden;
 }
 
-.lf-block-faq-accordion__item + .lf-block-faq-accordion__item {
-	margin-top: var(--lf-gap-tight);
+.lf-block-faq-accordion__item:first-child {
+	border-top: var(--lf-border-width) solid var(--lf-neutral-300);
 }
 
 .lf-block-faq-accordion__question {
 	display: block;
 	width: 100%;
-	padding: var(--lf-spacing-normal) var(--lf-spacing-loose);
+	padding: var(--lf-spacing-normal) 0;
+	padding-right: 2rem;
 	font-weight: var(--lf-fw-semibold);
 	font-size: var(--lf-fs-body);
 	text-align: left;
@@ -865,9 +927,10 @@ button:focus-visible,
 	border: none;
 	color: var(--lf-text);
 	font-family: inherit;
-	line-height: 1.4;
+	line-height: var(--lf-line-height-tight);
 	min-height: var(--lf-touch-min);
 	box-sizing: border-box;
+	position: relative;
 }
 
 .lf-block-faq-accordion__question::-webkit-details-marker {
@@ -880,9 +943,14 @@ button:focus-visible,
 
 .lf-block-faq-accordion__question::after {
 	content: "+";
-	float: right;
-	font-weight: 400;
+	position: absolute;
+	right: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	font-weight: var(--lf-fw-normal);
+	font-size: var(--lf-fs-large);
 	color: var(--lf-muted);
+	line-height: 1;
 }
 
 .lf-block-faq-accordion__item[open] .lf-block-faq-accordion__question::after {
@@ -891,10 +959,11 @@ button:focus-visible,
 
 .lf-block-faq-accordion__answer {
 	margin: 0;
-	padding: 0 var(--lf-spacing-loose) var(--lf-spacing-normal);
+	padding: 0 0 var(--lf-spacing-normal);
 	font-size: var(--lf-fs-body);
+	font-weight: var(--lf-fw-normal);
 	color: var(--lf-muted);
-	line-height: 1.5;
+	line-height: var(--lf-line-height-body);
 }
 
 .lf-block-faq-accordion__answer > * + * {
@@ -903,7 +972,8 @@ button:focus-visible,
 
 .lf-block-faq-accordion__empty {
 	margin: 0;
-	padding: var(--lf-section-padding-x);
+	padding: var(--lf-section-padding-x) 0;
+	font-size: var(--lf-fs-body);
 	color: var(--lf-muted);
 }
 
@@ -992,6 +1062,10 @@ html {
 }
 
 @media (max-width: 639px) {
+	.site-main--homepage .lf-block:last-child {
+		padding-bottom: var(--lf-section-padding-x);
+	}
+
 	.lf-block-hero__inner {
 		padding-left: var(--lf-section-padding-x);
 		padding-right: var(--lf-section-padding-x);
@@ -1001,6 +1075,14 @@ html {
 		display: block;
 		width: 100%;
 		text-align: center;
+		padding-left: var(--lf-section-padding-x);
+		padding-right: var(--lf-section-padding-x);
+	}
+
+	.lf-block-service-grid__inner,
+	.lf-block-service-areas__inner,
+	.lf-block-trust-reviews__inner,
+	.lf-block-faq-accordion__inner {
 		padding-left: var(--lf-section-padding-x);
 		padding-right: var(--lf-section-padding-x);
 	}
