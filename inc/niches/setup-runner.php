@@ -152,10 +152,17 @@ function lf_run_setup(array $data): array {
 	}
 
 	$success = empty($log['errors']);
+	// IDs to track for dev reset: all pages/services/areas used by this run (created or existing).
+	$ids = [
+		'page_ids'         => array_values($created_pages),
+		'service_ids'      => $created_services,
+		'service_area_ids' => $created_areas,
+	];
 	return [
 		'success' => $success,
 		'message' => $success ? __('Site setup complete.', 'leadsforward-core') : __('Setup finished with some errors.', 'leadsforward-core'),
 		'created' => $log['created'],
+		'ids'     => $ids,
 		'errors'  => $log['errors'],
 	];
 }

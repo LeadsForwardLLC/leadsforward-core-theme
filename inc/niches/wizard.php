@@ -70,6 +70,9 @@ function lf_wizard_handle_post(): void {
 		$result = lf_run_setup($data);
 		if (!empty($result['success'])) {
 			update_option('lf_setup_wizard_complete', true);
+			if (!empty($result['ids']) && is_array($result['ids'])) {
+				update_option('lf_wizard_created_ids', $result['ids']);
+			}
 			wp_redirect(admin_url('themes.php?page=lf-setup-wizard&done=1'));
 			exit;
 		}
