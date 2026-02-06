@@ -75,10 +75,8 @@ lf_load_inc('niches/registry.php');
 lf_load_inc('niches/setup-runner.php');
 lf_load_inc('niches/wizard.php');
 
-// Dev-only site reset (rerun wizard). Only when WP_DEBUG or WP_ENV=local.
-if ((defined('WP_DEBUG') && WP_DEBUG === true) || (defined('WP_ENV') && WP_ENV === 'local')) {
-	lf_load_inc('niches/reset-dev.php');
-}
+// Dev-only site reset (rerun wizard). Always load; visibility gated inside reset-dev.php.
+lf_load_inc('niches/reset-dev.php');
 
 // Safety: CPT protect, admin notices, ACF-off fallbacks.
 lf_load_inc('guardrails.php');

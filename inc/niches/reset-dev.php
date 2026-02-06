@@ -19,13 +19,16 @@ const LF_DEV_RESET_MENU_NAMES  = ['Header Menu', 'Footer Menu'];
 const LF_DEV_RESET_MENU_LOCATIONS = ['header_menu', 'footer_menu'];
 
 /**
- * True only when WP_DEBUG === true OR WP_ENV === 'local'. Used for visibility and abort.
+ * True only when WP_DEBUG, WP_ENV=local, or LF_DEV_RESET_ENABLED. Used for visibility and abort.
  */
 function lf_dev_reset_allowed(): bool {
 	if (defined('WP_DEBUG') && WP_DEBUG === true) {
 		return true;
 	}
 	if (defined('WP_ENV') && WP_ENV === 'local') {
+		return true;
+	}
+	if (defined('LF_DEV_RESET_ENABLED') && LF_DEV_RESET_ENABLED === true) {
 		return true;
 	}
 	return false;
@@ -95,6 +98,7 @@ function lf_dev_reset_render_page(): void {
 
 /**
  * Delete wizard content, menus, reset ACF options, clear wizard flag, log.
+ * Uses stored IDs when present; otherwise finds wizard pages by slug and all services/service areas.
  */
 function lf_dev_reset_run(): void {
 	if (!lf_dev_reset_allowed()) {
@@ -102,18 +106,51 @@ function lf_dev_reset_run(): void {
 	}
 
 	$ids = get_option(LF_DEV_RESET_OPTION_IDS, []);
-	if (is_array($ids)) {
-		foreach ($ids['page_ids'] ?? [] as $id) {
+	$ids = is_array($ids) ? $ids : [];
+
+	$page_ids    = $ids['page_ids'] ?? [];
+	$service_ids = $ids['service_ids'] ?? [];
+	$area_ids    = $ids['service_area_ids'] ?? [];
+
+	// Fallback when no IDs were ever stored (e.g. site set up before tracking): delete by convention.
+	if (empty($page_ids) && empty($service_ids) && empty($area_ids)) {
+		$slugs = function_exists('lf_wizard_required_page_slugs') ? lf_wizard_required_page_slugs() : [];
+		foreach ($slugs as $slug) {
+			$page = get_page_by_path($slug, OBJECT, 'page');
+			if ($page && $page->ID) {
+				wp_delete_post($page->ID, true);
+			}
+		}
+		$services = get_posts([
+			'post_type'      => 'lf_service',
+			'post_status'    => 'any',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		]);
+		foreach ($services as $id) {
+			wp_delete_post((int) $id, true);
+		}
+		$areas = get_posts([
+			'post_type'      => 'lf_service_area',
+			'post_status'    => 'any',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		]);
+		foreach ($areas as $id) {
+			wp_delete_post((int) $id, true);
+		}
+	} else {
+		foreach ($page_ids as $id) {
 			if (is_numeric($id)) {
 				wp_delete_post((int) $id, true);
 			}
 		}
-		foreach ($ids['service_ids'] ?? [] as $id) {
+		foreach ($service_ids as $id) {
 			if (is_numeric($id)) {
 				wp_delete_post((int) $id, true);
 			}
 		}
-		foreach ($ids['service_area_ids'] ?? [] as $id) {
+		foreach ($area_ids as $id) {
 			if (is_numeric($id)) {
 				wp_delete_post((int) $id, true);
 			}

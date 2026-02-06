@@ -94,7 +94,11 @@ function lf_wizard_render_page(): void {
 	if ($complete && !isset($_GET['done'])) {
 		echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
 		echo '<p>' . esc_html__('Setup is already complete. Your site has the required pages, menus, and structure.', 'leadsforward-core') . '</p>';
-		echo '<p><a href="' . esc_url(admin_url('themes.php?page=lf-setup-wizard&reset=1')) . '" class="button">' . esc_html__('Show wizard again', 'leadsforward-core') . '</a></p></div>';
+		echo '<p><a href="' . esc_url(admin_url('themes.php?page=lf-setup-wizard&reset=1')) . '" class="button">' . esc_html__('Show wizard again', 'leadsforward-core') . '</a>';
+		if (function_exists('lf_dev_reset_allowed') && lf_dev_reset_allowed() && current_user_can('manage_options')) {
+			echo ' <a href="' . esc_url(admin_url('themes.php?page=lf-dev-reset')) . '" class="button" style="background:#b32d2e;border-color:#b32d2e;color:#fff;">' . esc_html__('RESET SITE (DEV ONLY)', 'leadsforward-core') . '</a>';
+		}
+		echo '</p></div>';
 		return;
 	}
 	if (isset($_GET['reset']) && current_user_can('edit_theme_options')) {
