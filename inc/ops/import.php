@@ -33,15 +33,16 @@ function lf_ops_import_handle(): void {
 	}
 	delete_transient($transient_key);
 	$allowed = array_flip(lf_ops_exportable_option_keys());
+	$wp_option_keys = function_exists('lf_ops_wp_option_keys') ? lf_ops_wp_option_keys() : [];
 	$previous = [];
 	foreach ($data['config'] as $key => $value) {
 		if (!isset($allowed[$key])) {
 			continue;
 		}
-		if (function_exists('get_field')) {
-			$previous[$key] = get_field($key, 'option');
-		}
-		if (function_exists('update_field')) {
+		$previous[$key] = in_array($key, $wp_option_keys, true) ? get_option($key, null) : (function_exists('get_field') ? get_field($key, 'option') : null);
+		if (in_array($key, $wp_option_keys, true)) {
+			update_option($key, $value, true);
+		} elseif (function_exists('update_field')) {
 			update_field($key, $value, 'option');
 		}
 	}

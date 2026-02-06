@@ -478,6 +478,53 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
+   Block: Service Areas (homepage section, card grid like service grid)
+   ------------------------------------------------------------------------- */
+.lf-block-service-areas__inner {
+	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+}
+
+.lf-block-service-areas__title {
+	margin: 0 0 var(--lf-spacing-normal);
+	font-size: var(--wp--preset--font-size--large, 1.25rem);
+	font-weight: var(--lf-heading-weight);
+}
+
+.lf-block-service-areas__list {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: var(--lf-gap-loose);
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.lf-block-service-areas__link {
+	display: block;
+	padding: var(--lf-spacing-loose);
+	background-color: var(--lf-card-bg);
+	border: var(--lf-card-border);
+	box-shadow: var(--lf-card-shadow);
+	color: var(--lf-text);
+	text-decoration: none;
+	border-radius: var(--lf-button-radius);
+	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	min-height: var(--lf-touch-min);
+	box-sizing: border-box;
+}
+
+.lf-block-service-areas__link:hover {
+	background-color: var(--lf-primary);
+	color: #fff;
+	border-color: var(--lf-primary);
+}
+
+.lf-block-service-areas__empty {
+	margin: 0;
+	color: var(--lf-muted);
+}
+
+/* -------------------------------------------------------------------------
    Block: Trust / Reviews (stars, minimal clutter)
    ------------------------------------------------------------------------- */
 .lf-block-trust-reviews__inner {

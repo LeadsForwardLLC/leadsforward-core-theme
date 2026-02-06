@@ -56,4 +56,12 @@ function lf_ops_register_menu(): void {
 		'lf-ops-audit',
 		'lf_ops_audit_render'
 	);
+	add_submenu_page(
+		'lf-ops',
+		__('Homepage', 'leadsforward-core'),
+		__('Homepage', 'leadsforward-core'),
+		LF_OPS_CAP,
+		'lf-homepage-settings',
+		'lf_homepage_admin_render'
+	);
 }

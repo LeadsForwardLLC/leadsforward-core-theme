@@ -184,6 +184,13 @@ function lf_dev_reset_run(): void {
 		update_field('lf_homepage_cta_secondary', '', 'option');
 	}
 
+	if (defined('LF_HOMEPAGE_CONFIG_OPTION')) {
+		delete_option(LF_HOMEPAGE_CONFIG_OPTION);
+	}
+	if (defined('LF_HOMEPAGE_NICHE_OPTION')) {
+		delete_option(LF_HOMEPAGE_NICHE_OPTION);
+	}
+
 	update_option('show_on_front', 'posts');
 	update_option('page_on_front', 0);
 	delete_option('lf_setup_wizard_complete');

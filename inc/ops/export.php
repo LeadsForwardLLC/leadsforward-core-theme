@@ -38,9 +38,14 @@ function lf_ops_export_handle_download(): void {
 		'exported_at'   => gmdate('c'),
 		'config'        => [],
 	];
+	$wp_option_keys = function_exists('lf_ops_wp_option_keys') ? lf_ops_wp_option_keys() : [];
 	if (function_exists('get_field')) {
 		foreach ($keys as $key) {
-			$value = get_field($key, 'option');
+			if (in_array($key, $wp_option_keys, true)) {
+				$value = get_option($key, null);
+			} else {
+				$value = get_field($key, 'option');
+			}
 			if ($value !== null) {
 				$data['config'][$key] = $value;
 			}

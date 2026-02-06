@@ -128,8 +128,9 @@ function lf_run_setup(array $data): array {
 		$profile = $data['variation_profile_override'] ?? $niche['variation_profile'] ?? 'a';
 		update_field('variation_profile', $profile, 'option');
 		update_field('lf_schema_review', !empty($niche['schema_review_enabled']), 'option');
-		$section_order = lf_niche_homepage_section_order($data['niche_slug']);
-		lf_wizard_seed_homepage_sections($section_order, 'option');
+		if (function_exists('lf_homepage_apply_niche_config')) {
+			lf_homepage_apply_niche_config($data['niche_slug'], $data);
+		}
 	}
 
 	// 5. Internal linking: service ↔ service area relationships

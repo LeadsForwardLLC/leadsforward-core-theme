@@ -1,7 +1,7 @@
 <?php
 /**
- * Homepage section registry, default sections, CTA resolution, section renderer.
- * No hardcoded layout; sections driven by ACF flexible content or defaults.
+ * Homepage controller: locked structure, config-driven sections, no Gutenberg.
+ * Section order is fixed; content from structured config (option + niche defaults).
  *
  * @package LeadsForward_Core
  * @since 0.1.0
@@ -13,14 +13,38 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+/** Option key for section config (keyed by section type). */
+const LF_HOMEPAGE_CONFIG_OPTION = 'lf_homepage_section_config';
+
+/** Option key for last applied niche (wizard source of truth). */
+const LF_HOMEPAGE_NICHE_OPTION = 'lf_homepage_niche_slug';
+
 /**
- * Map section type (ACF value) to block template name. Used for front-page and block render.
+ * Fixed section order. No drag-and-drop; theme controls layout.
+ *
+ * @return string[]
+ */
+function lf_homepage_controller_order(): array {
+	return [
+		'hero',
+		'trust_reviews',
+		'service_grid',
+		'service_areas',
+		'faq_accordion',
+		'cta',
+		'map_nap',
+	];
+}
+
+/**
+ * Map section type to block template name.
  */
 function lf_homepage_section_template_map(): array {
 	return [
-		'hero'          => 'hero',
-		'trust_reviews' => 'trust-reviews',
+		'hero'           => 'hero',
+		'trust_reviews'  => 'trust-reviews',
 		'service_grid'  => 'service-grid',
+		'service_areas' => 'service-areas',
 		'cta'           => 'cta',
 		'faq_accordion' => 'faq-accordion',
 		'map_nap'       => 'map-nap',
@@ -28,113 +52,208 @@ function lf_homepage_section_template_map(): array {
 }
 
 /**
- * Conversion-optimized default sections when none are set. Order: hero, trust, services, CTA, FAQ, CTA, map.
+ * Default config for one section (enabled, variant, and type-specific fields).
+ *
+ * @return array<string, mixed>
  */
-function lf_get_default_homepage_sections(): array {
-	return [
-		['section_type' => 'hero',          'layout_variant' => 'default'],
-		['section_type' => 'trust_reviews', 'layout_variant' => 'default'],
-		['section_type' => 'service_grid',  'layout_variant' => 'default'],
-		['section_type' => 'cta',           'layout_variant' => 'default'],
-		['section_type' => 'faq_accordion', 'layout_variant' => 'default'],
-		['section_type' => 'cta',           'layout_variant' => 'b'],
-		['section_type' => 'map_nap',       'layout_variant' => 'default'],
+function lf_homepage_default_section_config(string $section_type): array {
+	$base = [
+		'enabled' => true,
+		'variant' => 'default',
 	];
+	switch ($section_type) {
+		case 'hero':
+			return array_merge($base, [
+				'hero_headline'     => '',
+				'hero_subheadline'  => '',
+				'hero_cta_override' => '',
+			]);
+		case 'trust_reviews':
+			return array_merge($base, ['trust_max_items' => 3]);
+		case 'service_grid':
+		case 'service_areas':
+		case 'faq_accordion':
+		case 'map_nap':
+			return $base;
+		case 'cta':
+			return array_merge($base, [
+				'cta_primary_override'   => '',
+				'cta_secondary_override' => '',
+				'cta_ghl_override'      => '',
+			]);
+		default:
+			return $base;
+	}
 }
 
 /**
- * Recommended order for "middle" sections (safe to reorder) per variation profile.
- * Hero never moves off first; final section (last CTA or map) never moves off last.
+ * Build full default config for all section types (optionally from niche).
+ *
+ * @return array<string, array<string, mixed>>
  */
-function lf_get_profile_section_order(string $profile): array {
-	$orders = [
-		'a' => ['trust_reviews', 'service_grid', 'cta', 'faq_accordion', 'map_nap'],
-		'b' => ['service_grid', 'trust_reviews', 'cta', 'faq_accordion', 'map_nap'],
-		'c' => ['trust_reviews', 'cta', 'service_grid', 'faq_accordion', 'map_nap'], // Trust Heavy: trust early
-		'd' => ['service_grid', 'trust_reviews', 'cta', 'faq_accordion', 'map_nap'], // Service Heavy: services early
-		'e' => ['cta', 'trust_reviews', 'service_grid', 'faq_accordion', 'map_nap'], // Offer/Promo: CTA early
-	];
-	return $orders[$profile] ?? $orders['a'];
-}
-
-/**
- * Reorder sections safely: first stays first, last stays last, middle reordered by profile.
- */
-function lf_apply_profile_section_order(array $sections): array {
-	if (count($sections) <= 2) {
-		return $sections;
-	}
-	$profile = function_exists('lf_get_variation_profile') ? lf_get_variation_profile() : 'a';
-	$order = lf_get_profile_section_order($profile);
-	$first = array_shift($sections);
-	$last  = array_pop($sections);
-	$middle = $sections;
-	$by_type = [];
-	foreach ($middle as $sec) {
-		$t = $sec['section_type'] ?? '';
-		if ($t !== '') {
-			$by_type[$t] = $by_type[$t] ?? [];
-			$by_type[$t][] = $sec;
-		}
-	}
-	$reordered = [];
+function lf_homepage_default_config(?string $niche_slug = null): array {
+	$order = lf_homepage_controller_order();
+	$config = [];
+	$niche = $niche_slug && function_exists('lf_get_niche') ? lf_get_niche($niche_slug) : null;
+	$section_enabled = $niche['section_enabled'] ?? null;
 	foreach ($order as $type) {
-		if (isset($by_type[$type])) {
-			foreach ($by_type[$type] as $sec) {
-				$reordered[] = $sec;
+		$sec = lf_homepage_default_section_config($type);
+		if (is_array($section_enabled) && array_key_exists($type, $section_enabled)) {
+			$sec['enabled'] = (bool) $section_enabled[$type];
+		}
+		if ($niche && $type === 'hero') {
+			if (!empty($niche['hero_headline_default'])) {
+				$sec['hero_headline'] = $niche['hero_headline_default'];
 			}
-			unset($by_type[$type]);
+			if (!empty($niche['hero_subheadline_default'])) {
+				$sec['hero_subheadline'] = $niche['hero_subheadline_default'];
+			}
 		}
+		$config[$type] = $sec;
 	}
-	foreach ($by_type as $rest) {
-		foreach ($rest as $sec) {
-			$reordered[] = $sec;
-		}
-	}
-	return array_merge([$first], $reordered, [$last]);
+	return $config;
 }
 
 /**
- * Get homepage sections from ACF option or default. Only runs when on front; no query if not needed.
- * When auto_order_sections is on, middle sections are reordered by variation profile (Hero first, last section last).
+ * Apply niche defaults to homepage config and save. Used by setup wizard.
+ * Optionally substitutes [Your City] in hero headline with first service area name.
+ *
+ * @param string     $niche_slug Niche identifier from registry.
+ * @param array|null $wizard_data Optional wizard payload (e.g. service_areas for city substitution).
+ */
+function lf_homepage_apply_niche_config(string $niche_slug, ?array $wizard_data = null): void {
+	$config = lf_homepage_default_config($niche_slug);
+	$city_placeholder = '[Your City]';
+	$first_area_name = '';
+	if (!empty($wizard_data['service_areas']) && is_array($wizard_data['service_areas'])) {
+		$first = reset($wizard_data['service_areas']);
+		if (is_array($first)) {
+			$first_area_name = $first['name'] ?? '';
+		} else {
+			$first_area_name = trim((string) $first);
+			if (preg_match('/^(.+),\s*[A-Za-z]{2}$/', $first_area_name, $m)) {
+				$first_area_name = trim($m[1]);
+			}
+		}
+	}
+	if ($first_area_name !== '' && isset($config['hero']['hero_headline'])) {
+		$config['hero']['hero_headline'] = str_replace($city_placeholder, $first_area_name, $config['hero']['hero_headline']);
+	}
+	if ($first_area_name !== '' && isset($config['hero']['hero_subheadline'])) {
+		$config['hero']['hero_subheadline'] = str_replace($city_placeholder, $first_area_name, $config['hero']['hero_subheadline']);
+	}
+	update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+	update_option(LF_HOMEPAGE_NICHE_OPTION, $niche_slug, true);
+}
+
+/**
+ * Get stored homepage section config (option). Migrates from ACF flexible content once if empty.
+ *
+ * @return array<string, array<string, mixed>>
+ */
+function lf_get_homepage_section_config(): array {
+	$stored = get_option(LF_HOMEPAGE_CONFIG_OPTION, null);
+	if (is_array($stored) && !empty($stored)) {
+		return lf_homepage_merge_config_with_defaults($stored);
+	}
+	$migrated = lf_homepage_migrate_from_acf();
+	if (is_array($migrated) && !empty($migrated)) {
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $migrated, true);
+		return lf_homepage_merge_config_with_defaults($migrated);
+	}
+	$niche = get_option(LF_HOMEPAGE_NICHE_OPTION, '');
+	return lf_homepage_default_config($niche ?: null);
+}
+
+/**
+ * Merge stored config with defaults so new section types and keys always exist.
+ *
+ * @param array<string, array<string, mixed>> $stored
+ * @return array<string, array<string, mixed>>
+ */
+function lf_homepage_merge_config_with_defaults(array $stored): array {
+	$order = lf_homepage_controller_order();
+	$out = [];
+	foreach ($order as $type) {
+		$default = lf_homepage_default_section_config($type);
+		$row = $stored[$type] ?? [];
+		if (!is_array($row)) {
+			$row = [];
+		}
+		$out[$type] = array_merge($default, $row);
+	}
+	return $out;
+}
+
+/**
+ * Migrate from legacy ACF homepage_sections flexible content to option.
+ *
+ * @return array<string, array<string, mixed>>|null
+ */
+function lf_homepage_migrate_from_acf(): ?array {
+	if (!function_exists('get_field')) {
+		return null;
+	}
+	$raw = get_field('homepage_sections', 'option');
+	if (empty($raw) || !is_array($raw)) {
+		return null;
+	}
+	$by_type = [];
+	foreach ($raw as $row) {
+		$type = $row['section_type'] ?? '';
+		if ($type === '') {
+			continue;
+		}
+		$by_type[$type] = [
+			'enabled' => true,
+			'variant' => $row['layout_variant'] ?? 'default',
+			'hero_headline'     => $row['hero_headline'] ?? '',
+			'hero_subheadline'  => $row['hero_subheadline'] ?? '',
+			'hero_cta_override' => $row['hero_cta_override'] ?? '',
+			'trust_max_items'   => isset($row['trust_max_items']) ? (int) $row['trust_max_items'] : 3,
+			'cta_primary_override'   => $row['cta_primary_override'] ?? '',
+			'cta_secondary_override' => $row['cta_secondary_override'] ?? '',
+			'cta_ghl_override'      => $row['cta_ghl_override'] ?? '',
+		];
+	}
+	$order = lf_homepage_controller_order();
+	$config = [];
+	foreach ($order as $type) {
+		$default = lf_homepage_default_section_config($type);
+		$config[$type] = array_merge($default, $by_type[$type] ?? []);
+	}
+	return $config;
+}
+
+/**
+ * Get homepage sections in fixed order, enabled only. Only runs on front; no query when not needed.
+ *
+ * @return array<int, array<string, mixed>>
  */
 function lf_get_homepage_sections(): array {
 	if (!is_front_page()) {
 		return [];
 	}
-	$raw = function_exists('get_field') ? get_field('homepage_sections', 'option') : null;
+	$config = lf_get_homepage_section_config();
+	$order = lf_homepage_controller_order();
 	$out = [];
-	if (!empty($raw) && is_array($raw)) {
-		foreach ($raw as $row) {
-			if (empty($row['section_type'])) {
-				continue;
-			}
-			$out[] = [
-				'section_type'            => $row['section_type'],
-				'layout_variant'          => $row['layout_variant'] ?? 'default',
-				'hero_headline'           => $row['hero_headline'] ?? '',
-				'hero_subheadline'        => $row['hero_subheadline'] ?? '',
-				'hero_cta_override'       => $row['hero_cta_override'] ?? '',
-				'trust_max_items'         => isset($row['trust_max_items']) ? (int) $row['trust_max_items'] : 3,
-				'cta_primary_override'    => $row['cta_primary_override'] ?? '',
-				'cta_secondary_override'  => $row['cta_secondary_override'] ?? '',
-				'cta_ghl_override'       => $row['cta_ghl_override'] ?? '',
-			];
+	$index = 0;
+	foreach ($order as $type) {
+		$sec = $config[$type] ?? null;
+		if (!is_array($sec) || empty($sec['enabled'])) {
+			continue;
 		}
-	}
-	if (empty($out)) {
-		$out = lf_get_default_homepage_sections();
-	}
-	$auto_order = function_exists('get_field') ? get_field('auto_order_sections', 'option') : false;
-	if ($auto_order && count($out) > 2) {
-		$out = lf_apply_profile_section_order($out);
+		$out[] = array_merge(
+			['section_type' => $type, 'layout_variant' => $sec['variant'] ?? 'default'],
+			$sec
+		);
+		$index++;
 	}
 	return $out;
 }
 
 /**
  * Resolved CTA: section > homepage > global. Returns primary_text, secondary_text, ghl_embed, primary_type.
- * Single source for GHL; no duplicated embed.
  */
 function lf_get_resolved_cta(array $context = []): array {
 	$section = $context['section'] ?? null;
@@ -188,7 +307,7 @@ function lf_get_resolved_cta(array $context = []): array {
 }
 
 /**
- * Phone number for call CTA. From Business Info; no duplication.
+ * Phone number for call CTA. From Business Info.
  */
 function lf_get_cta_phone(): string {
 	$phone = lf_get_option('lf_business_phone', 'option');
@@ -196,7 +315,7 @@ function lf_get_cta_phone(): string {
 }
 
 /**
- * Render one homepage section. Maps section_type to template; variant from registry (profile + override).
+ * Render one homepage section. Maps section_type to template; variant from block registry.
  */
 function lf_render_homepage_section(array $section, int $index): void {
 	$map = lf_homepage_section_template_map();
@@ -211,7 +330,7 @@ function lf_render_homepage_section(array $section, int $index): void {
 		'id'         => 'homepage-section-' . $index,
 		'variant'    => $variant,
 		'attributes' => ['variant' => $variant, 'layout' => $variant],
-		'context'   => [
+		'context'    => [
 			'homepage' => true,
 			'section'  => $section,
 			'index'    => $index,

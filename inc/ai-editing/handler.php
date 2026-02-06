@@ -16,19 +16,18 @@ if (!defined('ABSPATH')) {
 const LF_AI_PROPOSED_TRANSIENT_PREFIX = 'lf_ai_proposed_';
 
 /**
- * Get first hero row from homepage_sections (for reading/writing hero_* in options).
+ * Get hero section from homepage config (for reading/writing hero_* in options).
  */
 function lf_ai_get_homepage_hero_row(): ?array {
-	$sections = function_exists('get_field') ? get_field('homepage_sections', 'option') : null;
-	if (empty($sections) || !is_array($sections)) {
+	if (!function_exists('lf_get_homepage_section_config')) {
 		return null;
 	}
-	foreach ($sections as $row) {
-		if (($row['section_type'] ?? '') === 'hero') {
-			return $row;
-		}
+	$config = lf_get_homepage_section_config();
+	$hero = $config['hero'] ?? null;
+	if (!is_array($hero)) {
+		return null;
 	}
-	return null;
+	return array_merge(['section_type' => 'hero'], $hero);
 }
 
 /**
@@ -106,23 +105,14 @@ function lf_ai_apply_proposal(string $context_type, $context_id, array $proposed
 	$current = lf_ai_get_current_values($context_type, $context_id, array_keys($to_apply));
 	if ($context_type === 'homepage') {
 		$hero_keys = ['hero_headline', 'hero_subheadline', 'hero_cta_override'];
-		$sections = function_exists('get_field') ? get_field('homepage_sections', 'option') : [];
-		$updated_sections = false;
-		if (!empty($sections) && is_array($sections)) {
-			foreach ($sections as $i => $row) {
-				if (($row['section_type'] ?? '') === 'hero') {
-					foreach ($hero_keys as $hk) {
-						if (isset($to_apply[$hk])) {
-							$sections[$i][$hk] = $to_apply[$hk];
-							$updated_sections = true;
-						}
-					}
-					break;
+		$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
+		if (!empty($config['hero'])) {
+			foreach ($hero_keys as $hk) {
+				if (isset($to_apply[$hk])) {
+					$config['hero'][$hk] = $to_apply[$hk];
 				}
 			}
-			if ($updated_sections && function_exists('update_field')) {
-				update_field('homepage_sections', $sections, 'option');
-			}
+			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 		}
 		foreach ($to_apply as $key => $value) {
 			if (in_array($key, $hero_keys, true)) {

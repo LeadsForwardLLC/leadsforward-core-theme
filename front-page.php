@@ -25,7 +25,7 @@ $sections = lf_get_homepage_sections();
 		<?php endforeach; ?>
 	<?php else : ?>
 		<section class="lf-homepage-empty" aria-label="<?php esc_attr_e('Homepage', 'leadsforward-core'); ?>">
-			<p><?php esc_html_e('Configure homepage sections in Theme Options → Homepage.', 'leadsforward-core'); ?></p>
+			<p><?php esc_html_e('Configure homepage sections in LeadsForward → Homepage.', 'leadsforward-core'); ?></p>
 		</section>
 	<?php endif; ?>
 </main>

@@ -197,18 +197,10 @@ function lf_health_check_homepage_links_services(): array {
 	if ($front_id === 0) {
 		return ['status' => lf_health_status_warning(), 'label' => __('Homepage links to services', 'leadsforward-core'), 'message' => __('No static front page set.', 'leadsforward-core'), 'fix_link' => admin_url('options-reading.php')];
 	}
-	$sections = function_exists('get_field') ? get_field('homepage_sections', 'option') : [];
-	$has_service = false;
-	if (is_array($sections)) {
-		foreach ($sections as $row) {
-			if (($row['section_type'] ?? '') === 'service_grid') {
-				$has_service = true;
-				break;
-			}
-		}
-	}
-	if (!$has_service && !empty($sections)) {
-		return ['status' => lf_health_status_warning(), 'label' => __('Homepage links to services', 'leadsforward-core'), 'message' => __('Homepage has no Service Grid section.', 'leadsforward-core'), 'fix_link' => admin_url('admin.php?page=lf-homepage')];
+	$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
+	$has_service = !empty($config['service_grid']['enabled']);
+	if (!$has_service && !empty($config)) {
+		return ['status' => lf_health_status_warning(), 'label' => __('Homepage links to services', 'leadsforward-core'), 'message' => __('Homepage has no Service Grid section.', 'leadsforward-core'), 'fix_link' => admin_url('admin.php?page=lf-homepage-settings')];
 	}
 	return ['status' => lf_health_status_pass(), 'label' => __('Homepage links to services', 'leadsforward-core'), 'message' => $has_service ? __('Service grid present.', 'leadsforward-core') : __('No sections configured.', 'leadsforward-core'), 'fix_link' => ''];
 }

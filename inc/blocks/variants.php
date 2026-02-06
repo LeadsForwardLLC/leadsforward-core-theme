@@ -18,12 +18,13 @@ if (!defined('ABSPATH')) {
  */
 function lf_get_allowed_block_variants(): array {
 	return [
-		'hero'          => ['default', 'a', 'b', 'c'],
-		'trust-reviews' => ['default', 'a', 'b', 'c'],
-		'service-grid'  => ['default', 'a', 'b', 'c'],
-		'cta'           => ['default', 'a', 'b', 'c'],
-		'faq-accordion' => ['default', 'a', 'b', 'c'],
-		'map-nap'       => ['default', 'a', 'b', 'c'],
+		'hero'           => ['default', 'a', 'b', 'c'],
+		'trust-reviews'  => ['default', 'a', 'b', 'c'],
+		'service-grid'   => ['default', 'a', 'b', 'c'],
+		'service-areas'  => ['default', 'a', 'b', 'c'],
+		'cta'            => ['default', 'a', 'b', 'c'],
+		'faq-accordion'  => ['default', 'a', 'b', 'c'],
+		'map-nap'        => ['default', 'a', 'b', 'c'],
 	];
 }
 
@@ -33,12 +34,13 @@ function lf_get_allowed_block_variants(): array {
  */
 function lf_get_profile_block_defaults(string $profile): array {
 	$defaults = [
-		'hero'          => 'default',
-		'trust-reviews' => 'default',
-		'service-grid'  => 'default',
-		'cta'           => 'default',
-		'faq-accordion' => 'default',
-		'map-nap'       => 'default',
+		'hero'           => 'default',
+		'trust-reviews'  => 'default',
+		'service-grid'   => 'default',
+		'service-areas'  => 'default',
+		'cta'            => 'default',
+		'faq-accordion'  => 'default',
+		'map-nap'        => 'default',
 	];
 	switch ($profile) {
 		case 'a': // Clean + Minimal

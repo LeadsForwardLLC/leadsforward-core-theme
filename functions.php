@@ -88,6 +88,8 @@ if (is_admin()) {
 	lf_load_inc('ai-editing/logging.php');
 	lf_load_inc('ai-editing/handler.php');
 	lf_load_inc('ai-editing/admin-ui.php');
+	// Homepage controller admin UI (must load before ops menu).
+	lf_load_inc('homepage-admin.php');
 	// Bulk-safe ops: export/import config, bulk actions, audit log.
 	lf_load_inc('ops.php');
 	// Site health: dashboard, pre-launch checks, QA audit trail.
