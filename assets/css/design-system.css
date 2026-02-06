@@ -14,6 +14,8 @@
 	--lf-spacing-normal: calc(1.25rem * var(--lf-spacing-density, 1));
 	--lf-spacing-loose: calc(2rem * var(--lf-spacing-density, 1));
 	--lf-section-padding-y: calc(2rem * var(--lf-spacing-density, 1));
+	--lf-section-padding-y-tight: calc(1.25rem * var(--lf-spacing-density, 1));
+	--lf-section-padding-y-cta: calc(1.5rem * var(--lf-spacing-density, 1));
 	--lf-section-padding-x: 1rem;
 	--lf-gap-tight: 0.5rem;
 	--lf-gap-normal: 1rem;
@@ -27,6 +29,18 @@
 	--lf-button-radius: var(--lf-button-radius, 0.25rem);
 	--lf-focus-outline: 2px solid var(--lf-accent);
 	--lf-focus-offset: 2px;
+	/* Hero: full-width background (solid or subtle gradient) */
+	--lf-hero-bg: var(--wp--preset--color--neutral-light, #f1f5f9);
+	--lf-hero-bg-subtle: linear-gradient(180deg, var(--lf-hero-bg) 0%, var(--wp--preset--color--background, #fff) 100%);
+	/* Cards */
+	--lf-card-bg: var(--wp--preset--color--background, #fff);
+	--lf-card-border: 1px solid var(--wp--preset--color--neutral-light, #e2e8f0);
+	--lf-card-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+	/* CTA block */
+	--lf-cta-block-bg: var(--wp--preset--color--neutral-dark, #1e293b);
+	--lf-cta-block-text: #fff;
+	/* Touch target minimum */
+	--lf-touch-min: 48px;
 }
 
 /* -------------------------------------------------------------------------
@@ -212,6 +226,18 @@ button:focus-visible,
 	margin-top: auto;
 }
 
+.site-footer .lf-container {
+	display: grid;
+	gap: var(--lf-spacing-loose);
+}
+
+@media (min-width: 640px) {
+	.site-footer .lf-container {
+		grid-template-columns: 1fr auto;
+		align-items: start;
+	}
+}
+
 .site-footer a {
 	color: #fff;
 	text-decoration: none;
@@ -219,6 +245,36 @@ button:focus-visible,
 
 .site-footer a:hover {
 	text-decoration: underline;
+}
+
+.lf-footer-nap {
+	font-style: normal;
+}
+
+.lf-footer-nap__name {
+	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	font-size: var(--wp--preset--font-size--body, 1rem);
+	margin-bottom: var(--lf-spacing-tight);
+}
+
+.lf-footer-nap__address {
+	display: block;
+	margin-bottom: var(--lf-spacing-tight);
+	opacity: 0.9;
+	font-size: var(--wp--preset--font-size--small, 0.875rem);
+}
+
+.lf-footer-nap__phone {
+	display: inline-block;
+	font-weight: var(--wp--preset--font-weight--bold, 700);
+	font-size: var(--wp--preset--font-size--large, 1.25rem);
+	margin-bottom: 0.25rem;
+}
+
+.lf-footer-nap__email {
+	display: block;
+	font-size: var(--wp--preset--font-size--small, 0.875rem);
+	opacity: 0.9;
 }
 
 .footer-nav .footer-menu {
@@ -231,35 +287,48 @@ button:focus-visible,
 }
 
 .footer-menu a {
-	opacity: 0.9;
+	opacity: 0.85;
+	font-size: var(--wp--preset--font-size--small, 0.875rem);
 }
 
-.lf-footer-nap {
-	font-style: normal;
-	margin-bottom: var(--lf-spacing-normal);
-}
-
-.lf-footer-nap span,
-.lf-footer-nap a {
-	display: block;
+/* Optional: add CSS class "legal-link" to Privacy/Terms menu items in WP Admin to de-emphasize */
+.footer-menu .legal-link a {
+	opacity: 0.65;
+	font-size: 0.8125rem;
 }
 
 /* -------------------------------------------------------------------------
-   Block: Hero (2–3 variants)
+   Block: Hero (full-width bg, trust strip, secondary CTA, CLS-safe)
    ------------------------------------------------------------------------- */
 .lf-block-hero {
+	position: relative;
 	text-align: center;
-	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+	padding: var(--lf-section-padding-y-tight) var(--lf-section-padding-x) var(--lf-section-padding-y);
+	min-height: 280px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.lf-block-hero__bg {
+	position: absolute;
+	inset: 0;
+	background: var(--lf-hero-bg-subtle);
+	background-color: var(--lf-hero-bg);
+	z-index: 0;
 }
 
 .lf-block-hero__inner {
+	position: relative;
+	z-index: 1;
 	max-width: var(--lf-container-narrow);
 	margin-left: auto;
 	margin-right: auto;
+	width: 100%;
 }
 
 .lf-block-hero__title {
-	font-size: var(--wp--preset--font-size--h1, 2.25rem);
+	font-size: clamp(1.75rem, 5vw, var(--wp--preset--font-size--h1, 2.25rem));
 	font-weight: var(--lf-heading-weight);
 	line-height: 1.2;
 	margin: 0 0 var(--lf-spacing-tight);
@@ -270,6 +339,7 @@ button:focus-visible,
 	font-size: var(--wp--preset--font-size--large, 1.25rem);
 	color: var(--lf-muted);
 	margin: 0 0 var(--lf-spacing-normal);
+	line-height: 1.4;
 }
 
 .lf-block-hero__cta {
@@ -281,9 +351,14 @@ button:focus-visible,
 	display: inline-block;
 	background-color: var(--lf-primary);
 	color: #fff;
-	padding: 0.625rem 1.25rem;
+	padding: 0.75rem 1.5rem;
+	min-height: var(--lf-touch-min);
+	box-sizing: border-box;
+	line-height: 1.25;
+	vertical-align: middle;
 	border-radius: var(--lf-button-radius);
 	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	font-size: var(--wp--preset--font-size--body, 1rem);
 	text-decoration: none;
 }
 
@@ -293,12 +368,44 @@ button:focus-visible,
 	text-decoration: none;
 }
 
+.lf-block-hero__secondary {
+	margin: var(--lf-spacing-tight) 0 0;
+}
+
+.lf-block-hero__phone {
+	color: var(--lf-muted);
+	text-decoration: none;
+	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	font-size: var(--wp--preset--font-size--body, 1rem);
+}
+
+.lf-block-hero__phone:hover {
+	text-decoration: underline;
+	color: var(--lf-text);
+}
+
+.lf-block-hero__trust {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.375rem;
+	margin-top: var(--lf-spacing-normal);
+	font-size: var(--wp--preset--font-size--small, 0.875rem);
+	color: var(--lf-muted);
+}
+
+.lf-block-hero__stars {
+	display: inline-flex;
+	gap: 0.125rem;
+}
+
+.lf-block-hero__star {
+	color: var(--wp--preset--color--warning, #a16207);
+}
+
 /* Hero variant: compact */
 .lf-block-hero--a .lf-block-hero__title { font-size: var(--wp--preset--font-size--h2, 1.875rem); }
-.lf-block-hero--a { padding-top: calc(var(--lf-section-padding-y) * 0.75); padding-bottom: calc(var(--lf-section-padding-y) * 0.75); }
-
-/* Hero variant: bold (default) */
-.lf-block-hero--default .lf-block-hero__title { font-weight: 700; }
+.lf-block-hero--a { padding-top: var(--lf-section-padding-y-tight); padding-bottom: calc(var(--lf-section-padding-y) * 0.75); min-height: 240px; }
 
 /* Hero variant: b (high contrast) */
 .lf-block-hero--b .lf-block-hero__cta-link,
@@ -307,7 +414,14 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Block: Service Grid (2–3 variants)
+   Section spacing & rhythm (tokens only; no fixed pixel margins)
+   ------------------------------------------------------------------------- */
+.lf-block + .lf-block {
+	margin-top: 0;
+}
+
+/* -------------------------------------------------------------------------
+   Block: Service Grid (cards, shadow/border, full-card clickable)
    ------------------------------------------------------------------------- */
 .lf-block-service-grid__inner {
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
@@ -316,7 +430,7 @@ button:focus-visible,
 .lf-block-service-grid__list {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-	gap: var(--lf-gap-normal);
+	gap: var(--lf-gap-loose);
 	list-style: none;
 	margin: 0;
 	padding: 0;
@@ -327,18 +441,29 @@ button:focus-visible,
 
 .lf-block-service-grid__link {
 	display: block;
-	padding: var(--lf-spacing-normal);
-	background-color: var(--wp--preset--color--neutral-light, #f1f5f9);
-	color: var(--lf-primary);
+	padding: var(--lf-spacing-loose);
+	background-color: var(--lf-card-bg);
+	border: var(--lf-card-border);
+	box-shadow: var(--lf-card-shadow);
+	color: var(--lf-text);
 	text-decoration: none;
 	border-radius: var(--lf-button-radius);
 	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	font-size: var(--wp--preset--font-size--body, 1rem);
+	min-height: var(--lf-touch-min);
+	box-sizing: border-box;
 }
 
 .lf-block-service-grid__link:hover {
 	background-color: var(--lf-primary);
 	color: #fff;
 	text-decoration: none;
+	border-color: var(--lf-primary);
+}
+
+.lf-block-service-grid__link:focus-visible {
+	outline: var(--lf-focus-outline);
+	outline-offset: var(--lf-focus-offset);
 }
 
 .lf-block-service-grid__empty {
@@ -378,8 +503,10 @@ button:focus-visible,
 
 .lf-block-trust-reviews__quote {
 	margin: 0;
-	padding: var(--lf-spacing-normal);
-	background-color: var(--wp--preset--color--neutral-light, #f1f5f9);
+	padding: var(--lf-spacing-loose);
+	background-color: var(--lf-card-bg);
+	border: var(--lf-card-border);
+	box-shadow: var(--lf-card-shadow);
 	border-radius: var(--lf-button-radius);
 	border-left: 4px solid var(--lf-primary);
 }
@@ -387,12 +514,31 @@ button:focus-visible,
 .lf-block-trust-reviews__text {
 	margin: 0 0 var(--lf-spacing-tight);
 	font-size: var(--wp--preset--font-size--body, 1rem);
+	line-height: 1.5;
+	color: var(--lf-text);
 }
 
 .lf-block-trust-reviews__cite {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
 	margin: 0;
 	font-size: var(--wp--preset--font-size--small, 0.875rem);
 	color: var(--lf-muted);
+}
+
+.lf-block-trust-reviews__stars {
+	display: inline-flex;
+	gap: 0.125rem;
+}
+
+.lf-block-trust-reviews__star {
+	color: var(--wp--preset--color--neutral-light, #e2e8f0);
+}
+
+.lf-block-trust-reviews__star--filled {
+	color: var(--wp--preset--color--warning, #a16207);
 }
 
 .lf-block-trust-reviews__cite cite {
@@ -400,28 +546,31 @@ button:focus-visible,
 	font-weight: var(--wp--preset--font-weight--semibold, 600);
 }
 
-/* Star rating: inline text (no icon font; optional SVG via CSS later) */
-.lf-block-trust-reviews__rating {
-	display: inline-block;
-	margin-left: 0.25rem;
-}
-
-.lf-block-trust-reviews__rating::before {
-	content: "★";
-	color: var(--wp--preset--color--warning, #a16207);
-}
-
 .lf-block-trust-reviews__empty {
 	margin: 0;
-	padding: var(--lf-section-padding-x);
+	padding: var(--lf-spacing-loose);
+	text-align: center;
+	background-color: var(--wp--preset--color--neutral-light, #f8fafc);
+	border: var(--lf-card-border);
+	border-radius: var(--lf-button-radius);
+}
+
+.lf-block-trust-reviews__empty-text {
+	margin: 0;
+	font-size: var(--wp--preset--font-size--body, 1rem);
 	color: var(--lf-muted);
 }
 
 /* -------------------------------------------------------------------------
-   Block: CTA (contrast enforcement, primary stands out)
+   Block: CTA (strong contrast, large buttons, mobile-first)
    ------------------------------------------------------------------------- */
+.lf-block-cta {
+	background-color: var(--lf-cta-block-bg);
+	color: var(--lf-cta-block-text);
+}
+
 .lf-block-cta__inner {
-	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+	padding: var(--lf-section-padding-y-cta) var(--lf-section-padding-x);
 	text-align: center;
 	max-width: var(--lf-container-narrow);
 	margin-left: auto;
@@ -436,23 +585,29 @@ button:focus-visible,
 
 .lf-block-cta__primary-link {
 	display: inline-block;
-	background-color: var(--lf-primary);
-	color: #fff;
-	padding: 0.625rem 1.25rem;
+	background-color: #fff;
+	color: var(--lf-cta-block-bg);
+	padding: 0.75rem 1.5rem;
+	min-height: var(--lf-touch-min);
+	box-sizing: border-box;
+	line-height: 1.25;
+	vertical-align: middle;
 	border-radius: var(--lf-button-radius);
+	font-weight: var(--wp--preset--font-weight--semibold, 600);
+	font-size: var(--wp--preset--font-size--body, 1rem);
 	text-decoration: none;
 }
 
 .lf-block-cta__primary-link:hover {
-	background-color: var(--wp--preset--color--neutral-dark, #1e293b);
-	color: #fff;
+	background-color: var(--wp--preset--color--neutral-light, #f1f5f9);
+	color: var(--lf-cta-block-bg);
 	text-decoration: none;
 }
 
 .lf-block-cta__secondary {
 	margin: 0;
 	font-size: var(--wp--preset--font-size--small, 0.875rem);
-	color: var(--lf-muted);
+	opacity: 0.9;
 }
 
 .lf-block-cta__embed {
@@ -461,12 +616,12 @@ button:focus-visible,
 
 /* CTA variant: b (bold) */
 .lf-block-cta--b .lf-block-cta__primary-link {
-	padding: 0.75rem 1.5rem;
+	padding: 0.875rem 1.75rem;
 	font-size: var(--wp--preset--font-size--medium, 1.125rem);
 }
 
 /* -------------------------------------------------------------------------
-   Block: FAQ Accordion (minimal markup, no JS-dependent styling)
+   Block: FAQ Accordion (details/summary, CSS-only expand, clear question)
    ------------------------------------------------------------------------- */
 .lf-block-faq-accordion__inner {
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
@@ -481,30 +636,70 @@ button:focus-visible,
 }
 
 .lf-block-faq-accordion__item {
-	margin: 0;
-	padding: var(--lf-spacing-normal) 0;
-	border-bottom: 1px solid var(--wp--preset--color--neutral-light, #f1f5f9);
+	margin: 0 0 1px;
+	border: var(--lf-card-border);
+	border-radius: var(--lf-button-radius);
+	background-color: var(--lf-card-bg);
+	overflow: hidden;
 }
 
-.lf-block-faq-accordion__item:first-child {
-	padding-top: 0;
+.lf-block-faq-accordion__item + .lf-block-faq-accordion__item {
+	margin-top: var(--lf-gap-tight);
 }
 
 .lf-block-faq-accordion__question {
+	display: block;
+	width: 100%;
+	padding: var(--lf-spacing-normal) var(--lf-spacing-loose);
 	font-weight: var(--wp--preset--font-weight--semibold, 600);
 	font-size: var(--wp--preset--font-size--body, 1rem);
-	margin: 0 0 0.25rem;
+	text-align: left;
+	cursor: pointer;
+	list-style: none;
+	margin: 0;
+	background: none;
+	border: none;
+	color: var(--lf-text);
+	font-family: inherit;
+	line-height: 1.4;
+	min-height: var(--lf-touch-min);
+	box-sizing: border-box;
+}
+
+.lf-block-faq-accordion__question::-webkit-details-marker {
+	display: none;
+}
+
+.lf-block-faq-accordion__question::marker {
+	content: none;
+}
+
+.lf-block-faq-accordion__question::after {
+	content: "+";
+	float: right;
+	font-weight: 400;
+	color: var(--lf-muted);
+}
+
+.lf-block-faq-accordion__item[open] .lf-block-faq-accordion__question::after {
+	content: "−";
 }
 
 .lf-block-faq-accordion__answer {
 	margin: 0;
-	font-size: var(--wp--preset--font-size--small, 0.875rem);
+	padding: 0 var(--lf-spacing-loose) var(--lf-spacing-normal);
+	font-size: var(--wp--preset--font-size--body, 1rem);
 	color: var(--lf-muted);
 	line-height: 1.5;
 }
 
+.lf-block-faq-accordion__answer > * + * {
+	margin-top: var(--lf-spacing-tight);
+}
+
 .lf-block-faq-accordion__empty {
 	margin: 0;
+	padding: var(--lf-section-padding-x);
 	color: var(--lf-muted);
 }
 
@@ -582,4 +777,47 @@ button:focus-visible,
    ------------------------------------------------------------------------- */
 img[loading="lazy"] {
 	content-visibility: auto;
+}
+
+/* -------------------------------------------------------------------------
+   Mobile pass (hero stacks, thumb-friendly CTAs, no tiny text, no overflow)
+   ------------------------------------------------------------------------- */
+html {
+	overflow-x: hidden;
+}
+
+body {
+	font-size: var(--wp--preset--font-size--body, 1rem);
+}
+
+@media (max-width: 639px) {
+	.lf-block-hero__inner {
+		padding-left: var(--lf-section-padding-x);
+		padding-right: var(--lf-section-padding-x);
+	}
+
+	.lf-block-hero__cta-link,
+	.lf-block-hero__cta-text {
+		display: block;
+		width: 100%;
+		text-align: center;
+		padding-left: var(--lf-section-padding-x);
+		padding-right: var(--lf-section-padding-x);
+	}
+
+	.lf-block-cta__primary-link {
+		display: block;
+		width: 100%;
+		text-align: center;
+		padding-left: var(--lf-section-padding-x);
+		padding-right: var(--lf-section-padding-x);
+	}
+
+	.lf-block-service-grid__list {
+		grid-template-columns: 1fr;
+	}
+
+	.site-footer .lf-container {
+		grid-template-columns: 1fr;
+	}
 }

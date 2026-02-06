@@ -31,10 +31,10 @@ if (!$has_footer_menu && !$has_nap) {
 					<span class="lf-footer-nap__address"><?php echo nl2br(esc_html($nap['address'])); ?></span>
 				<?php endif; ?>
 				<?php if (!empty($nap['phone'])) : ?>
-					<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $nap['phone'])); ?>"><?php echo esc_html($nap['phone']); ?></a>
+					<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $nap['phone'])); ?>" class="lf-footer-nap__phone"><?php echo esc_html($nap['phone']); ?></a>
 				<?php endif; ?>
 				<?php if (!empty($nap['email'])) : ?>
-					<a href="mailto:<?php echo esc_attr($nap['email']); ?>"><?php echo esc_html($nap['email']); ?></a>
+					<a href="mailto:<?php echo esc_attr($nap['email']); ?>" class="lf-footer-nap__email"><?php echo esc_html($nap['email']); ?></a>
 				<?php endif; ?>
 			</address>
 		<?php endif; ?>

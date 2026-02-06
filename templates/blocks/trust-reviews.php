@@ -50,10 +50,14 @@ $query = new WP_Query([
 						<blockquote class="lf-block-trust-reviews__quote">
 							<p class="lf-block-trust-reviews__text"><?php echo esc_html($text); ?></p>
 							<footer class="lf-block-trust-reviews__cite">
-								<cite><?php echo esc_html($name); ?></cite>
 								<?php if ($rating) : ?>
-									<span class="lf-block-trust-reviews__rating" aria-label="<?php echo esc_attr(sprintf(__('%d stars', 'leadsforward-core'), $rating)); ?>"><?php echo esc_html((string) $rating); ?></span>
+									<span class="lf-block-trust-reviews__stars" aria-label="<?php echo esc_attr(sprintf(__('%d stars', 'leadsforward-core'), $rating)); ?>">
+										<?php for ($s = 1; $s <= 5; $s++) : ?>
+											<svg class="lf-block-trust-reviews__star<?php echo $s <= $rating ? ' lf-block-trust-reviews__star--filled' : ''; ?>" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+										<?php endfor; ?>
+									</span>
 								<?php endif; ?>
+								<cite><?php echo esc_html($name); ?></cite>
 								<?php if ($source) : ?>
 									<span class="lf-block-trust-reviews__source"><?php echo esc_html($source); ?></span>
 								<?php endif; ?>
@@ -64,7 +68,9 @@ $query = new WP_Query([
 			</ul>
 			<?php wp_reset_postdata(); ?>
 		<?php else : ?>
-			<p class="lf-block-trust-reviews__empty"><?php esc_html_e('No reviews yet.', 'leadsforward-core'); ?></p>
+			<div class="lf-block-trust-reviews__empty" role="status">
+				<p class="lf-block-trust-reviews__empty-text"><?php esc_html_e('No reviews yet.', 'leadsforward-core'); ?></p>
+			</div>
 		<?php endif; ?>
 	</div>
 </section>

@@ -54,8 +54,16 @@ $cta_resolved_for_type = function_exists('lf_get_resolved_cta') ? lf_get_resolve
 $cta_phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
 $cta_type = $cta_resolved_for_type['primary_type'] ?? 'text';
 $use_phone_link = $cta_type === 'call' && $cta_phone && $cta_text;
+$secondary_text = $cta_resolved_for_type['secondary_text'] ?? '';
+$review_count = 0;
+if (function_exists('wp_count_posts')) {
+	$counts = wp_count_posts('lf_testimonial');
+	$review_count = isset($counts->publish) ? (int) $counts->publish : 0;
+}
+$show_trust_strip = $review_count > 0;
 ?>
 <section class="lf-block lf-block-hero lf-block-hero--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
+	<div class="lf-block-hero__bg" aria-hidden="true"></div>
 	<div class="lf-block-hero__inner">
 		<h1 class="lf-block-hero__title"><?php echo esc_html($heading); ?></h1>
 		<?php if ($subheading !== '') : ?>
@@ -68,6 +76,21 @@ $use_phone_link = $cta_type === 'call' && $cta_phone && $cta_text;
 				<?php else : ?>
 					<span class="lf-block-hero__cta-text"><?php echo esc_html($cta_text); ?></span>
 				<?php endif; ?>
+			</div>
+		<?php endif; ?>
+		<?php if ($cta_phone && $cta_phone !== $cta_text) : ?>
+			<p class="lf-block-hero__secondary">
+				<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-hero__phone"><?php echo esc_html($cta_phone); ?></a>
+			</p>
+		<?php endif; ?>
+		<?php if ($show_trust_strip) : ?>
+			<div class="lf-block-hero__trust">
+				<span class="lf-block-hero__stars" aria-hidden="true">
+					<?php for ($i = 0; $i < 5; $i++) : ?>
+						<svg class="lf-block-hero__star" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+					<?php endfor; ?>
+				</span>
+				<span class="lf-block-hero__review-count"><?php echo esc_html(sprintf(_n('%d review', '%d reviews', $review_count, 'leadsforward-core'), $review_count)); ?></span>
 			</div>
 		<?php endif; ?>
 	</div>
