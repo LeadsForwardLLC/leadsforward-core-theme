@@ -1,6 +1,7 @@
 <?php
 /**
  * Block: Hero. Section-level overrides from context (homepage); CTA from resolved stack.
+ * Layout: H1 → Subheadline → Primary + secondary CTA buttons → Trust row (stars + count).
  * Any image added here must use loading="lazy".
  *
  * @var array $block
@@ -13,9 +14,10 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-$context = $block['context'] ?? [];
-$section = $context['section'] ?? [];
-$variant = $block['variant'] ?? 'default';
+$context  = $block['context'] ?? [];
+$section  = $context['section'] ?? [];
+$variant  = $block['variant'] ?? 'default';
+$block_id = $block['id'] ?? '';
 
 $heading = get_the_title() ?: __('Welcome', 'leadsforward-core');
 $subheading = '';
@@ -69,12 +71,17 @@ $show_trust_strip = $review_count > 0;
 		<?php if ($subheading !== '') : ?>
 			<p class="lf-block-hero__subtitle"><?php echo esc_html($subheading); ?></p>
 		<?php endif; ?>
-		<?php if ($cta_text) : ?>
+		<?php if ($cta_text || $secondary_text !== '') : ?>
 			<div class="lf-block-hero__cta">
-				<?php if ($use_phone_link) : ?>
-					<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-hero__cta-link"><?php echo esc_html($cta_text); ?></a>
-				<?php else : ?>
-					<span class="lf-block-hero__cta-text"><?php echo esc_html($cta_text); ?></span>
+				<?php if ($cta_text) : ?>
+					<?php if ($use_phone_link) : ?>
+						<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-hero__cta-link lf-btn lf-btn--primary"><?php echo esc_html($cta_text); ?></a>
+					<?php else : ?>
+						<span class="lf-block-hero__cta-text lf-btn lf-btn--primary"><?php echo esc_html($cta_text); ?></span>
+					<?php endif; ?>
+				<?php endif; ?>
+				<?php if ($secondary_text !== '') : ?>
+					<span class="lf-block-hero__cta-secondary lf-btn lf-btn--secondary"><?php echo esc_html($secondary_text); ?></span>
 				<?php endif; ?>
 			</div>
 		<?php endif; ?>
@@ -89,7 +96,7 @@ $show_trust_strip = $review_count > 0;
 			</div>
 		<?php endif; ?>
 		<?php if ($cta_phone && $cta_phone !== $cta_text) : ?>
-			<p class="lf-block-hero__secondary">
+			<p class="lf-block-hero__phone-wrap">
 				<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-hero__phone"><?php echo esc_html($cta_phone); ?></a>
 			</p>
 		<?php endif; ?>

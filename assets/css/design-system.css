@@ -65,6 +65,9 @@
 	/* Hero */
 	--lf-hero-bg: var(--wp--preset--color--neutral-100, #f1f5f9);
 	--lf-hero-bg-subtle: linear-gradient(180deg, var(--lf-hero-bg) 0%, var(--lf-body-bg) 100%);
+	--lf-hero-stack-after-title: var(--lf-spacing-normal);
+	--lf-hero-stack-after-subtitle: var(--lf-spacing-loose);
+	--lf-hero-stack-after-cta: var(--lf-spacing-normal);
 
 	/* Cards */
 	--lf-card-bg: var(--wp--preset--color--background, #ffffff);
@@ -436,12 +439,12 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Block: Hero (hierarchy, CTA emphasis, background layer)
+   Block: Hero (conversion-focused: H1 → subheadline → CTAs → trust)
    ------------------------------------------------------------------------- */
 .lf-block-hero {
 	position: relative;
 	text-align: center;
-	padding: var(--lf-section-padding-y-tight) var(--lf-section-padding-x) var(--lf-section-padding-y);
+	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
 	min-height: var(--lf-hero-min-height);
 	display: flex;
 	align-items: center;
@@ -463,51 +466,58 @@ button:focus-visible,
 	margin-left: auto;
 	margin-right: auto;
 	width: 100%;
+	padding-left: var(--lf-section-padding-x);
+	padding-right: var(--lf-section-padding-x);
 }
 
 .lf-block-hero__title {
 	font-size: clamp(var(--lf-fs-h2), 5vw, var(--lf-fs-h1));
 	font-weight: var(--lf-heading-weight);
 	line-height: 1.2;
-	margin: 0 0 var(--lf-spacing-tight);
+	margin: 0 0 var(--lf-hero-stack-after-title);
 	color: var(--lf-text);
 }
 
 .lf-block-hero__subtitle {
 	font-size: var(--lf-fs-large);
 	color: var(--lf-muted);
-	margin: 0 0 var(--lf-spacing-normal);
+	margin: 0 0 var(--lf-hero-stack-after-subtitle);
 	line-height: 1.4;
 }
 
 .lf-block-hero__cta {
-	margin-top: var(--lf-spacing-normal);
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: var(--lf-gap-normal);
+	margin: 0 0 var(--lf-hero-stack-after-cta);
 }
 
-.lf-block-hero__cta-link,
-.lf-block-hero__cta-text {
-	display: inline-block;
-	background-color: var(--lf-primary);
-	color: var(--lf-cta-block-text);
-	padding: var(--lf-btn-pad-y) var(--lf-btn-pad-x-lg);
-	min-height: var(--lf-touch-min);
-	box-sizing: border-box;
-	line-height: 1.25;
-	vertical-align: middle;
-	border-radius: var(--lf-button-radius);
-	font-weight: var(--lf-fw-semibold);
-	font-size: var(--lf-fs-body);
-	text-decoration: none;
+.lf-block-hero__cta .lf-btn {
+	white-space: nowrap;
 }
 
-.lf-block-hero__cta-link:hover {
-	background-color: var(--lf-cta-block-bg);
-	color: var(--lf-cta-block-text);
-	text-decoration: none;
+.lf-block-hero__trust {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--lf-gap-30);
+	font-size: var(--lf-fs-small);
+	color: var(--lf-muted);
 }
 
-.lf-block-hero__secondary {
-	margin: var(--lf-spacing-tight) 0 0;
+.lf-block-hero__stars {
+	display: inline-flex;
+	gap: var(--lf-gap-xs);
+}
+
+.lf-block-hero__star {
+	color: var(--lf-warning);
+}
+
+.lf-block-hero__phone-wrap {
+	margin: var(--lf-spacing-normal) 0 0;
 }
 
 .lf-block-hero__phone {
@@ -522,26 +532,7 @@ button:focus-visible,
 	color: var(--lf-text);
 }
 
-.lf-block-hero__trust {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: var(--lf-gap-30);
-	margin-top: var(--lf-spacing-normal);
-	font-size: var(--lf-fs-small);
-	color: var(--lf-muted);
-}
-
-.lf-block-hero__stars {
-	display: inline-flex;
-	gap: var(--lf-gap-xs);
-}
-
-.lf-block-hero__star {
-	color: var(--lf-warning);
-}
-
-/* Hero variant: compact (1 alternative only) */
+/* Hero variant: compact */
 .lf-block-hero--a .lf-block-hero__title {
 	font-size: var(--lf-fs-h2);
 }
@@ -978,7 +969,7 @@ button:focus-visible,
 /* -------------------------------------------------------------------------
    Focus (buttons / CTAs)
    ------------------------------------------------------------------------- */
-.lf-block-hero__cta-link:focus-visible,
+.lf-block-hero .lf-btn:focus-visible,
 .lf-block-cta__primary-link:focus-visible,
 .lf-block-cta__primary-text:focus-visible,
 .site-header .lf-header-cta:focus-visible {
@@ -1006,8 +997,7 @@ html {
 		padding-right: var(--lf-section-padding-x);
 	}
 
-	.lf-block-hero__cta-link,
-	.lf-block-hero__cta-text {
+	.lf-block-hero__cta .lf-btn {
 		display: block;
 		width: 100%;
 		text-align: center;
