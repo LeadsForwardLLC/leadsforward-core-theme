@@ -47,18 +47,40 @@ function lf_theme_setup(): void {
 add_action('after_setup_theme', 'lf_theme_setup');
 
 /**
- * Register ACF Options page only when ACF is active. Keeps theme decoupled.
+ * Register ACF Options pages when ACF is active. Global Business Info, CTAs, Schema.
  */
-function lf_register_acf_options_page(): void {
+function lf_register_acf_options_pages(): void {
 	if (!function_exists('acf_add_options_page')) {
 		return;
 	}
+	// Parent: Theme Options (container only; redirects to first child).
 	acf_add_options_page([
 		'page_title' => __('Theme Options', 'leadsforward-core'),
 		'menu_title' => __('Theme Options', 'leadsforward-core'),
 		'menu_slug'  => 'lf-theme-options',
 		'capability' => 'edit_theme_options',
-		'redirect'   => false,
+		'redirect'   => true,
+	]);
+	// Global Business Info: NAP, geo, hours.
+	acf_add_options_sub_page([
+		'page_title'  => __('Global Business Info', 'leadsforward-core'),
+		'menu_title'  => __('Business Info', 'leadsforward-core'),
+		'menu_slug'   => 'lf-business-info',
+		'parent_slug' => 'lf-theme-options',
+	]);
+	// Global CTAs: primary/secondary text, GHL form.
+	acf_add_options_sub_page([
+		'page_title'  => __('Global CTAs', 'leadsforward-core'),
+		'menu_title'  => __('CTAs', 'leadsforward-core'),
+		'menu_slug'   => 'lf-ctas',
+		'parent_slug' => 'lf-theme-options',
+	]);
+	// Schema controls: on/off toggles per schema type.
+	acf_add_options_sub_page([
+		'page_title'  => __('Schema Controls', 'leadsforward-core'),
+		'menu_title'  => __('Schema', 'leadsforward-core'),
+		'menu_slug'   => 'lf-schema',
+		'parent_slug' => 'lf-theme-options',
 	]);
 }
-add_action('acf/init', 'lf_register_acf_options_page');
+add_action('acf/init', 'lf_register_acf_options_pages');
