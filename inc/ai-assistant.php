@@ -14,6 +14,7 @@ if (!defined('ABSPATH')) {
 
 add_action('admin_menu', 'lf_ai_assistant_register_menu', 12);
 add_action('admin_enqueue_scripts', 'lf_ai_assistant_assets');
+add_action('admin_init', 'lf_ai_assistant_save_settings');
 
 function lf_ai_assistant_register_menu(): void {
 	if (!current_user_can('edit_theme_options')) {
@@ -64,12 +65,30 @@ function lf_ai_assistant_render_page(): void {
 	if (!current_user_can('edit_theme_options')) {
 		return;
 	}
+	$saved = isset($_GET['saved']) && $_GET['saved'] === '1';
+	$has_key = get_option('lf_openai_api_key', '') !== '';
 	$log = function_exists('lf_ai_get_log') ? lf_ai_get_log() : [];
 	$log = is_array($log) ? array_slice($log, 0, 5) : [];
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('AI Assistant', 'leadsforward-core'); ?></h1>
 		<p class="description"><?php esc_html_e('Use AI to refine copy and CTA messaging. This assistant only edits text fields and requires confirmation before applying changes.', 'leadsforward-core'); ?></p>
+		<?php if ($saved) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('AI settings saved.', 'leadsforward-core'); ?></p></div>
+		<?php endif; ?>
+		<form method="post" style="margin:1rem 0 1.5rem;">
+			<?php wp_nonce_field('lf_ai_assistant_settings', 'lf_ai_assistant_settings_nonce'); ?>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><label for="lf_openai_api_key"><?php esc_html_e('OpenAI API key', 'leadsforward-core'); ?></label></th>
+					<td>
+						<input type="password" class="regular-text" id="lf_openai_api_key" name="lf_openai_api_key" value="" placeholder="<?php echo $has_key ? esc_attr__('Saved (hidden)', 'leadsforward-core') : esc_attr__('sk-...', 'leadsforward-core'); ?>" />
+						<p class="description"><?php esc_html_e('Required to generate suggestions. Key is stored securely in WordPress options.', 'leadsforward-core'); ?></p>
+					</td>
+				</tr>
+			</table>
+			<p class="submit"><button type="submit" class="button button-primary"><?php esc_html_e('Save AI Settings', 'leadsforward-core'); ?></button></p>
+		</form>
 		<div class="lf-ai-editing" data-context-type="homepage" data-context-id="homepage">
 			<p class="lf-ai-description"><?php esc_html_e('Describe the change you want. Allowed fields: hero headline/subheadline, hero CTA override, homepage CTA labels.', 'leadsforward-core'); ?></p>
 			<div class="lf-ai-presets">
@@ -127,4 +146,22 @@ function lf_ai_assistant_render_page(): void {
 		});
 	</script>
 	<?php
+}
+
+function lf_ai_assistant_save_settings(): void {
+	if (!isset($_POST['lf_ai_assistant_settings_nonce'])) {
+		return;
+	}
+	if (!current_user_can('edit_theme_options')) {
+		return;
+	}
+	if (!wp_verify_nonce($_POST['lf_ai_assistant_settings_nonce'], 'lf_ai_assistant_settings')) {
+		return;
+	}
+	$key = isset($_POST['lf_openai_api_key']) ? trim(sanitize_text_field(wp_unslash($_POST['lf_openai_api_key']))) : '';
+	if ($key !== '') {
+		update_option('lf_openai_api_key', $key);
+	}
+	wp_safe_redirect(admin_url('admin.php?page=lf-ai-assistant&saved=1'));
+	exit;
 }

@@ -67,9 +67,23 @@ function lf_ai_generate_proposal(string $context_type, $context_id, string $user
 	if (empty($editable)) {
 		return ['success' => false, 'proposed' => [], 'error' => __('No editable fields for this context.', 'leadsforward-core')];
 	}
+	$prompt = trim($user_prompt);
+	if ($prompt === '') {
+		return ['success' => false, 'proposed' => [], 'error' => __('Prompt cannot be empty.', 'leadsforward-core')];
+	}
+	// Rate-limit per user to prevent abuse.
+	$rl_key = 'lf_ai_rl_' . get_current_user_id();
+	if (get_transient($rl_key)) {
+		return ['success' => false, 'proposed' => [], 'error' => __('Please wait a few seconds before generating again.', 'leadsforward-core')];
+	}
+	set_transient($rl_key, true, 5);
+	// Clamp prompt length for safety.
+	if (strlen($prompt) > 800) {
+		$prompt = substr($prompt, 0, 800);
+	}
 	$system = lf_ai_build_system_prompt($context_type, $context_id, $editable);
 	$current = lf_ai_get_current_values($context_type, $context_id, array_keys($editable));
-	$user_message = $user_prompt . "\n\nCurrent values (for reference):\n" . wp_json_encode($current);
+	$user_message = $prompt . "\n\nCurrent values (for reference):\n" . wp_json_encode($current);
 
 	// Plugin or mu-plugin should add filter: add_filter('lf_ai_completion', fn($r, $sys, $user, $ctx_type, $ctx_id) => call_api($sys, $user), 10, 5);
 	// Return raw JSON string; theme validates and strips disallowed keys. No API key in theme.

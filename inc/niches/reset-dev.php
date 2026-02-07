@@ -180,6 +180,7 @@ function lf_dev_reset_run(): void {
 		update_field('lf_homepage_cta_primary_type', '', 'option');
 	}
 	delete_option('lf_maps_api_key');
+	delete_option('lf_openai_api_key');
 	// Clear global settings (logo + header CTA).
 	$global_keys = ['lf_global_logo', 'lf_header_cta_label', 'lf_header_cta_url'];
 	if (function_exists('update_field')) {

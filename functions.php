@@ -91,6 +91,7 @@ if (is_admin()) {
 	lf_load_inc('ai-editing/prompt-builder.php');
 	lf_load_inc('ai-editing/logging.php');
 	lf_load_inc('ai-editing/handler.php');
+	lf_load_inc('ai-editing/provider-openai.php');
 	lf_load_inc('ai-editing/admin-ui.php');
 	lf_load_inc('ai-assistant.php');
 	// Homepage controller admin UI (must load before ops menu).
