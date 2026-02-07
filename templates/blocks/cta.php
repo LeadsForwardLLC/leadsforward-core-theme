@@ -70,26 +70,26 @@ $show_form = ($cta_type === 'form' && $ghl_embed) || ($cta_type !== 'call' && $g
 					<?php if ($primary) : ?>
 						<div class="lf-block-cta__primary">
 							<?php if ($use_phone_link) : ?>
-								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-cta__primary-link"><?php echo esc_html($primary); ?></a>
+								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-cta__primary-link lf-btn lf-btn--primary"><?php echo esc_html($primary); ?></a>
 							<?php elseif ($cta_action === 'quote') : ?>
-								<button type="button" class="lf-block-cta__primary-text" data-lf-quote-trigger="1" data-lf-quote-source="cta"><?php echo esc_html($primary); ?></button>
+								<button type="button" class="lf-block-cta__primary-text lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="cta"><?php echo esc_html($primary); ?></button>
 							<?php elseif ($cta_url !== '') : ?>
-								<a href="<?php echo esc_url($cta_url); ?>" class="lf-block-cta__primary-link"><?php echo esc_html($primary); ?></a>
+								<a href="<?php echo esc_url($cta_url); ?>" class="lf-block-cta__primary-link lf-btn lf-btn--primary"><?php echo esc_html($primary); ?></a>
 							<?php else : ?>
-								<span class="lf-block-cta__primary-text"><?php echo esc_html($primary); ?></span>
+								<span class="lf-block-cta__primary-text lf-btn lf-btn--primary"><?php echo esc_html($primary); ?></span>
 							<?php endif; ?>
 						</div>
 					<?php endif; ?>
 					<?php if ($secondary) : ?>
 						<div class="lf-block-cta__secondary">
 							<?php if ($cta_secondary_action === 'quote') : ?>
-								<button type="button" class="lf-block-cta__secondary-link" data-lf-quote-trigger="1" data-lf-quote-source="cta-secondary"><?php echo esc_html($secondary); ?></button>
+								<button type="button" class="lf-block-cta__secondary-link lf-btn lf-btn--secondary" data-lf-quote-trigger="1" data-lf-quote-source="cta-secondary"><?php echo esc_html($secondary); ?></button>
 							<?php elseif ($cta_secondary_action === 'call' && $cta_phone) : ?>
-								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-cta__secondary-link"><?php echo esc_html($secondary); ?></a>
+								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-cta__secondary-link lf-btn lf-btn--secondary"><?php echo esc_html($secondary); ?></a>
 							<?php elseif ($cta_secondary_action === 'link' && $cta_secondary_url !== '') : ?>
-								<a href="<?php echo esc_url($cta_secondary_url); ?>" class="lf-block-cta__secondary-link"><?php echo esc_html($secondary); ?></a>
+								<a href="<?php echo esc_url($cta_secondary_url); ?>" class="lf-block-cta__secondary-link lf-btn lf-btn--secondary"><?php echo esc_html($secondary); ?></a>
 							<?php else : ?>
-								<span class="lf-block-cta__secondary-link"><?php echo esc_html($secondary); ?></span>
+								<span class="lf-block-cta__secondary-link lf-btn lf-btn--secondary"><?php echo esc_html($secondary); ?></span>
 							<?php endif; ?>
 						</div>
 					<?php endif; ?>

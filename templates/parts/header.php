@@ -64,7 +64,7 @@ if ($logo_text === '') {
 					$label = $cta_label !== '' ? $cta_label : $cta_text;
 					$href = $cta_url !== '' ? $cta_url : ($cta_phone ? 'tel:' . preg_replace('/\s+/', '', $cta_phone) : '#');
 					?>
-					<a class="site-header__cta" href="<?php echo esc_url($href); ?>"><?php echo esc_html($label); ?></a>
+					<a class="site-header__cta lf-btn lf-btn--primary" href="<?php echo esc_url($href); ?>"><?php echo esc_html($label); ?></a>
 				<?php endif; ?>
 			</div>
 			<?php if ($has_utility_menu) : ?>

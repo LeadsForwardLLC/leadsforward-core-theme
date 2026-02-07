@@ -131,11 +131,12 @@
 	--lf-fw-bold: var(--wp--preset--font-weight--bold, 700);
 
 	/* 4) BUTTON HIERARCHY — primary dominant, secondary clear */
-	--lf-btn-pad-y: var(--wp--preset--spacing--30, 0.75rem);
-	--lf-btn-pad-x: var(--wp--preset--spacing--60, 1.5rem);
-	--lf-btn-pad-x-lg: var(--wp--preset--spacing--70, 2rem);
-	--lf-btn-primary-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
-	--lf-btn-primary-shadow-hover: 0 4px 12px rgba(37, 99, 235, 0.4);
+	--lf-btn-pad-y: 0.9rem;
+	--lf-btn-pad-x: 2rem;
+	--lf-btn-pad-x-lg: 2.25rem;
+	--lf-btn-primary-shadow: none;
+	--lf-btn-primary-shadow-hover: none;
+	--lf-btn-min-height: 3.25rem;
 	--lf-block-gap: var(--wp--preset--spacing--70, 2rem);
 	--lf-homepage-section-gap: var(--lf-space-section);
 	--lf-gap-30: var(--wp--preset--spacing--30, 0.75rem);
@@ -217,9 +218,11 @@
 }
 
 .lf-btn {
-	display: inline-block;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	padding: var(--lf-btn-pad-y) var(--lf-btn-pad-x);
-	min-height: var(--lf-touch-min);
+	min-height: var(--lf-btn-min-height);
 	box-sizing: border-box;
 	border-radius: var(--lf-button-radius);
 	font-family: var(--lf-font-system);
@@ -238,25 +241,39 @@
 
 .lf-btn--primary {
 	background-color: var(--lf-primary);
-	color: var(--lf-cta-block-text);
-	box-shadow: var(--lf-btn-primary-shadow);
+	color: #fff;
+	border: 2px solid var(--lf-primary);
+	box-shadow: none;
 }
 
 .lf-btn--primary:hover {
-	background-color: var(--lf-cta-block-bg);
-	color: var(--lf-cta-block-text);
-	box-shadow: var(--lf-btn-primary-shadow-hover);
+	background-color: var(--lf-color-secondary);
+	border-color: var(--lf-color-secondary);
+	color: #fff;
+	box-shadow: none;
 }
 
 .lf-btn--secondary {
-	background-color: var(--lf-neutral-100);
-	color: var(--lf-text);
-	border: var(--lf-border-width) solid var(--lf-neutral-300);
+	background-color: transparent;
+	color: var(--lf-primary);
+	border: 2px solid var(--lf-primary);
+	box-shadow: none;
 }
 
 .lf-btn--secondary:hover {
-	background-color: var(--lf-neutral-300);
-	color: var(--lf-text);
+	background-color: rgba(37, 99, 235, 0.08);
+	color: var(--lf-primary);
+	box-shadow: none;
+}
+
+.lf-block-cta .lf-btn--secondary {
+	color: #fff;
+	border-color: rgba(255, 255, 255, 0.6);
+}
+
+.lf-block-cta .lf-btn--secondary:hover {
+	background: rgba(255, 255, 255, 0.12);
+	border-color: rgba(255, 255, 255, 0.8);
 }
 
 /* -------------------------------------------------------------------------
@@ -501,16 +518,10 @@ button:focus-visible,
 }
 
 .site-header__cta {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	background: var(--lf-primary);
-	color: var(--lf-text-inverse);
-	padding: 0.6rem 1.2rem;
-	border-radius: 999px;
-	font-weight: 700;
-	text-decoration: none;
-	box-shadow: 0 8px 20px rgba(37,99,235,0.25);
+	padding: var(--lf-btn-pad-y) var(--lf-btn-pad-x);
+	min-height: var(--lf-btn-min-height);
+	border-radius: var(--lf-button-radius);
+	box-shadow: none;
 }
 
 .site-header__cta:hover {
@@ -558,8 +569,8 @@ button:focus-visible,
 	.site-header__cta {
 		width: 100%;
 		justify-content: center;
-		padding: 0.9rem 1rem;
-		border-radius: 16px;
+		padding: var(--lf-btn-pad-y) var(--lf-btn-pad-x);
+		border-radius: var(--lf-button-radius);
 	}
 }
 
@@ -731,22 +742,7 @@ button:focus-visible,
 
 .lf-block-hero__cta-link,
 .lf-block-hero__cta-text {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	min-height: 3.25rem;
-	padding: var(--lf-hero-cta-primary-pad-y) var(--lf-hero-cta-primary-pad-x);
-	font-size: var(--lf-hero-cta-primary-size);
-	font-weight: 700;
 	white-space: nowrap;
-	border-radius: 0.5rem;
-	box-shadow: none;
-	text-decoration: none;
-	background: var(--lf-primary);
-	color: #fff;
-	border: none;
-	cursor: pointer;
-	transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
 .lf-block-hero__cta-link:hover,
@@ -757,20 +753,9 @@ button:focus-visible,
 }
 
 .lf-block-hero__cta-secondary {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	min-height: 3.25rem;
-	padding: var(--lf-hero-cta-primary-pad-y) var(--lf-hero-cta-primary-pad-x);
-	font-size: var(--lf-hero-cta-primary-size);
-	font-weight: 700;
 	white-space: nowrap;
-	border-radius: 999px;
-	background: transparent;
-	color: var(--lf-primary);
-	border: 2px solid var(--lf-primary);
-	box-shadow: none;
-	transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+	border-radius: var(--lf-button-radius);
+	transition: transform 0.2s ease, background 0.2s ease;
 }
 
 .lf-block-hero__cta-secondary:hover {
@@ -1374,36 +1359,13 @@ button:focus-visible,
 /* Primary CTA button: brand accent, high contrast, unmistakable */
 .lf-block-cta__primary-link,
 .lf-block-cta__primary-text {
-	display: inline-block;
-	background: var(--lf-primary, #2563eb);
-	color: #ffffff !important;
-	padding: 1.25rem 2.75rem;
-	min-height: 3.5rem;
-	box-sizing: border-box;
-	line-height: 1.25;
-	vertical-align: middle;
-	border-radius: 0.5rem;
-	font-weight: 700;
-	font-size: 1.25rem;
-	text-decoration: none;
-	border: none;
-	box-shadow: none;
-	transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-	cursor: pointer;
-	white-space: normal;
-	overflow: visible;
-	text-align: center;
-	width: auto;
-	max-width: 100%;
+	display: inline-flex;
+	white-space: nowrap;
 }
 
 .lf-block-cta__primary-link:hover,
 .lf-block-cta__primary-text:hover {
-	background: var(--lf-color-secondary);
-	color: #ffffff !important;
 	text-decoration: none;
-	transform: translateY(-3px);
-	box-shadow: none;
 }
 
 .lf-block-cta__buttons {
@@ -1416,25 +1378,11 @@ button:focus-visible,
 
 .lf-block-cta__secondary-link {
 	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	padding: 1.15rem 2.25rem;
-	min-height: 3.5rem;
-	border-radius: 999px;
-	border: 2px solid rgba(255,255,255,0.4);
-	color: #ffffff !important;
-	background: transparent;
-	font-weight: 700;
-	font-size: 1.125rem;
-	text-decoration: none;
-	cursor: pointer;
-	transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+	white-space: nowrap;
 }
 
 .lf-block-cta__secondary-link:hover {
-	background: rgba(255,255,255,0.12);
-	border-color: rgba(255,255,255,0.6);
-	transform: translateY(-2px);
+	text-decoration: none;
 }
 
 .lf-block-cta__embed {
