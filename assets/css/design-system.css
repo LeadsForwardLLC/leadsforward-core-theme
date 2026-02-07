@@ -420,6 +420,8 @@ button:focus-visible,
 
 .lf-block-trust-reviews {
 	background-color: var(--lf-surface-soft);
+	border-top: var(--lf-surface-soft-border);
+	border-bottom: var(--lf-surface-soft-border);
 }
 
 .lf-block-faq-accordion {
@@ -972,22 +974,26 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Block: Trust / Reviews (single highlighted quote; emphasis on content)
+   Block: Trust / Reviews (1–3 testimonials; quote-first, earned trust)
    ------------------------------------------------------------------------- */
 .lf-block-trust-reviews__inner {
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
-	max-width: var(--lf-container-narrow);
+	max-width: var(--lf-container-wide);
 	margin-left: auto;
 	margin-right: auto;
 }
 
+.lf-block-trust-reviews__header {
+	margin-bottom: var(--lf-spacing-loose);
+	text-align: center;
+}
+
 .lf-block-trust-reviews__title {
-	margin: 0 0 var(--lf-section-heading-margin);
+	margin: 0;
 	font-size: var(--lf-fs-h2);
 	font-weight: var(--lf-heading-weight);
 	line-height: var(--lf-line-height-heading);
 	color: var(--lf-text);
-	text-align: center;
 }
 
 .lf-block-trust-reviews__list {
@@ -995,26 +1001,56 @@ button:focus-visible,
 	margin: 0;
 	padding: 0;
 	display: grid;
-	gap: var(--lf-spacing-loose);
+	gap: var(--lf-gap-loose);
+	grid-template-columns: 1fr;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 40rem) {
 	.lf-block-trust-reviews__list {
-		grid-template-columns: repeat(auto-fill, minmax(var(--lf-grid-min-wide), 1fr));
+		grid-template-columns: repeat(2, 1fr);
 	}
 }
 
-/* Quote: extends card spotlight; only margin reset */
+@media (min-width: 64rem) {
+	.lf-block-trust-reviews__list {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+/* Single testimonial: narrow, centered (no grid overload) */
+.lf-block-trust-reviews__list:has(.lf-block-trust-reviews__item:only-child) {
+	max-width: var(--lf-container-narrow);
+	margin-left: auto;
+	margin-right: auto;
+}
+
 .lf-block-trust-reviews__quote {
 	margin: 0;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
 }
 
 .lf-block-trust-reviews__text {
+	position: relative;
 	margin: 0 0 var(--lf-spacing-normal);
+	padding-top: 0.25em;
 	font-size: var(--lf-fs-large);
-	line-height: var(--lf-line-height-body);
+	line-height: 1.5;
 	color: var(--lf-text);
 	font-weight: var(--lf-fw-normal);
+	flex-grow: 1;
+}
+
+.lf-block-trust-reviews__text::before {
+	content: "\201C";
+	position: absolute;
+	top: -0.05em;
+	left: 0;
+	font-size: 1.5em;
+	line-height: 1;
+	color: var(--lf-neutral-300);
+	font-family: Georgia, serif;
 }
 
 .lf-block-trust-reviews__cite {
@@ -1031,10 +1067,12 @@ button:focus-visible,
 
 .lf-block-trust-reviews__stars {
 	display: inline-flex;
-	gap: var(--lf-gap-xs);
+	gap: 2px;
 }
 
 .lf-block-trust-reviews__star {
+	width: 12px;
+	height: 12px;
 	color: var(--lf-neutral-300);
 }
 
@@ -1045,6 +1083,11 @@ button:focus-visible,
 .lf-block-trust-reviews__cite cite {
 	font-style: normal;
 	font-weight: var(--lf-fw-semibold);
+	color: var(--lf-text);
+}
+
+.lf-block-trust-reviews__source {
+	opacity: 0.9;
 }
 
 .lf-block-trust-reviews__empty {

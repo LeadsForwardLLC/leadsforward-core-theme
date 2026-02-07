@@ -11,6 +11,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+$block_id = $block['id'] ?? '';
 $variant = $block['variant'] ?? 'default';
 $context = $block['context'] ?? [];
 $section = $context['section'] ?? [];
@@ -34,9 +35,11 @@ $query = new WP_Query([
 ?>
 <section class="lf-block lf-block-trust-reviews lf-surface-soft lf-block-trust-reviews--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-trust-reviews__inner">
-		<h2 class="lf-block-trust-reviews__title"><?php echo esc_html($heading); ?></h2>
+		<header class="lf-block-trust-reviews__header">
+			<h2 class="lf-block-trust-reviews__title"><?php echo esc_html($heading); ?></h2>
+		</header>
 		<?php if ($query->have_posts()) : ?>
-			<ul class="lf-block-trust-reviews__list">
+			<ul class="lf-block-trust-reviews__list" role="list">
 				<?php while ($query->have_posts()) : $query->the_post();
 					$name = function_exists('get_field') ? get_field('lf_testimonial_reviewer_name') : '';
 					$rating = function_exists('get_field') ? (int) get_field('lf_testimonial_rating') : 5;

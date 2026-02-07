@@ -71,7 +71,7 @@ function lf_homepage_default_section_config(string $section_type): array {
 			]);
 		case 'trust_reviews':
 			return array_merge($base, [
-				'trust_max_items' => 1,
+				'trust_max_items' => 3,
 				'trust_heading'   => __('What Our Customers Say', 'leadsforward-core'),
 			]);
 		case 'service_grid':
