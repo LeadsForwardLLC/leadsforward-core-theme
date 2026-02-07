@@ -53,55 +53,63 @@ function lf_register_acf_options_pages(): void {
 	if (!function_exists('acf_add_options_page')) {
 		return;
 	}
-	// Parent: Theme Options (container only; redirects to first child).
-	acf_add_options_page([
-		'page_title' => __('Theme Options', 'leadsforward-core'),
-		'menu_title' => __('Theme Options', 'leadsforward-core'),
-		'menu_slug'  => 'lf-theme-options',
-		'capability' => 'edit_theme_options',
-		'redirect'   => true,
-	]);
+	// All options live under LeadsForward.
+	$parent = 'lf-ops';
 	// Global Business Info: NAP, geo, hours.
 	acf_add_options_sub_page([
 		'page_title'  => __('Global Business Info', 'leadsforward-core'),
 		'menu_title'  => __('Business Info', 'leadsforward-core'),
 		'menu_slug'   => 'lf-business-info',
-		'parent_slug' => 'lf-theme-options',
+		'parent_slug' => $parent,
+		'capability'  => 'edit_theme_options',
+	]);
+	// Global Settings: logo + header CTA.
+	acf_add_options_sub_page([
+		'page_title'  => __('Global Settings', 'leadsforward-core'),
+		'menu_title'  => __('Global Settings', 'leadsforward-core'),
+		'menu_slug'   => 'lf-global',
+		'parent_slug' => $parent,
+		'capability'  => 'edit_theme_options',
 	]);
 	// Branding: global colors and surfaces.
 	acf_add_options_sub_page([
 		'page_title'  => __('Branding', 'leadsforward-core'),
 		'menu_title'  => __('Branding', 'leadsforward-core'),
 		'menu_slug'   => 'lf-branding',
-		'parent_slug' => 'lf-theme-options',
+		'parent_slug' => $parent,
+		'capability'  => 'edit_theme_options',
 	]);
 	// Global CTAs: primary/secondary text, GHL form.
 	acf_add_options_sub_page([
 		'page_title'  => __('Global CTAs', 'leadsforward-core'),
 		'menu_title'  => __('CTAs', 'leadsforward-core'),
 		'menu_slug'   => 'lf-ctas',
-		'parent_slug' => 'lf-theme-options',
+		'parent_slug' => $parent,
+		'capability'  => 'edit_theme_options',
 	]);
 	// Schema controls: on/off toggles per schema type.
 	acf_add_options_sub_page([
 		'page_title'  => __('Schema Controls', 'leadsforward-core'),
 		'menu_title'  => __('Schema', 'leadsforward-core'),
 		'menu_slug'   => 'lf-schema',
-		'parent_slug' => 'lf-theme-options',
+		'parent_slug' => $parent,
+		'capability'  => 'edit_theme_options',
 	]);
 	// Homepage: section order, layout variants, CTA overrides.
 	acf_add_options_sub_page([
 		'page_title'  => __('Homepage', 'leadsforward-core'),
 		'menu_title'  => __('Homepage', 'leadsforward-core'),
 		'menu_slug'   => 'lf-homepage',
-		'parent_slug' => 'lf-theme-options',
+		'parent_slug' => $parent,
+		'capability'  => 'edit_theme_options',
 	]);
 	// Variation: site-wide profile, section ordering, copy templates.
 	acf_add_options_sub_page([
 		'page_title'  => __('Variation', 'leadsforward-core'),
 		'menu_title'  => __('Variation', 'leadsforward-core'),
 		'menu_slug'   => 'lf-variation',
-		'parent_slug' => 'lf-theme-options',
+		'parent_slug' => $parent,
+		'capability'  => 'edit_theme_options',
 	]);
 }
 add_action('acf/init', 'lf_register_acf_options_pages');

@@ -179,7 +179,7 @@ jQuery(function ($) {
 		var isCollapsed = !!collapsed[type];
 		var $rows = $('.lf-homepage-section-fields[data-parent="' + type + '"]');
 		$rows.toggleClass('lf-homepage-fields--collapsed', isCollapsed);
-		var $header = $('.lf-homepage-section-row[data-section="' + type + '"]');
+		var $header = $('.lf-homepage-section-row[data-section="' + type + '"], .lf-homepage-panel[data-section="' + type + '"]');
 		$header.toggleClass('lf-homepage-row--collapsed', isCollapsed);
 		var $toggle = $header.find('.lf-homepage-toggle');
 		$toggle.attr('aria-expanded', (!isCollapsed).toString());
@@ -207,7 +207,7 @@ jQuery(function ($) {
 	});
 
 	$('.lf-homepage-expand-all').on('click', function () {
-		$('.lf-homepage-section-row').each(function () {
+	$('.lf-homepage-section-row, .lf-homepage-panel').each(function () {
 			var type = $(this).data('section');
 			if (type) {
 				collapsed[type] = false;
@@ -220,7 +220,7 @@ jQuery(function ($) {
 	});
 
 	$('.lf-homepage-collapse-all').on('click', function () {
-		$('.lf-homepage-section-row').each(function () {
+	$('.lf-homepage-section-row, .lf-homepage-panel').each(function () {
 			var type = $(this).data('section');
 			if (type) {
 				collapsed[type] = true;
@@ -333,6 +333,10 @@ function lf_homepage_admin_render(): void {
 			.lf-homepage-section-row th,
 			.lf-homepage-section-row td { padding: 0.85rem 1rem; }
 			.lf-homepage-section-head { display: flex; align-items: center; gap: 0.6rem; }
+			.lf-homepage-panel { background: #fff; border-radius: 14px; box-shadow: 0 10px 24px rgba(15,23,42,0.08); padding: 1rem; margin: 1rem 0 1.5rem; }
+			.lf-homepage-panel-header { display: flex; align-items: center; gap: 0.75rem; }
+			.lf-homepage-panel-header h2 { margin: 0; }
+			.lf-homepage-panel-body { margin-top: 0.75rem; }
 			.lf-homepage-drag { cursor: grab; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: #f1f5f9; color: #64748b; }
 			.lf-homepage-drag:active { cursor: grabbing; }
 			.lf-homepage-section-row:hover .lf-homepage-drag { color: #0f172a; }
@@ -377,54 +381,64 @@ function lf_homepage_admin_render(): void {
 		$map_embed        = is_string($map_embed) ? $map_embed : '';
 		$maps_api_key     = is_string($maps_api_key) ? $maps_api_key : '';
 		?>
-		<h2 id="lf-business-info" class="title"><?php esc_html_e('Business Info', 'leadsforward-core'); ?></h2>
-		<p class="description"><?php esc_html_e('Used site-wide: footer, Map + NAP section, schema, and CTAs. Same data as the startup wizard—edit here anytime.', 'leadsforward-core'); ?> <?php esc_html_e('Kept consistent for local SEO: NAP (name, address, phone) is output in one format everywhere and in LocalBusiness schema.', 'leadsforward-core'); ?></p>
-		<table class="form-table" role="presentation">
-			<tbody>
-				<tr>
-					<th scope="row"><label for="lf_business_name"><?php esc_html_e('Business name', 'leadsforward-core'); ?></label></th>
-					<td><input type="text" class="large-text" name="lf_business_name" id="lf_business_name" value="<?php echo esc_attr($business_name); ?>" /></td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_business_phone"><?php esc_html_e('Phone', 'leadsforward-core'); ?></label></th>
-					<td><input type="text" class="regular-text" name="lf_business_phone" id="lf_business_phone" value="<?php echo esc_attr($business_phone); ?>" /></td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_business_email"><?php esc_html_e('Email', 'leadsforward-core'); ?></label></th>
-					<td><input type="email" class="regular-text" name="lf_business_email" id="lf_business_email" value="<?php echo esc_attr($business_email); ?>" /></td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_business_address"><?php esc_html_e('Address (NAP)', 'leadsforward-core'); ?></label></th>
-					<td><textarea class="large-text" name="lf_business_address" id="lf_business_address" rows="3"><?php echo esc_textarea($business_address); ?></textarea></td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_maps_api_key"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></label></th>
-					<td>
-						<input type="text" class="large-text" name="lf_maps_api_key" id="lf_maps_api_key" value="<?php echo esc_attr($maps_api_key); ?>" placeholder="AIza..." />
-						<p class="description"><?php esc_html_e('Required to search Google Maps and render the embed. Use a restricted key with Places + Maps Embed APIs enabled.', 'leadsforward-core'); ?></p>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_business_place_search"><?php esc_html_e('Search business on Google Maps', 'leadsforward-core'); ?></label></th>
-					<td>
-						<input type="text" class="large-text" id="lf_business_place_search" placeholder="<?php esc_attr_e('Start typing your business name...', 'leadsforward-core'); ?>" value="<?php echo esc_attr($place_name); ?>" />
-						<input type="hidden" name="lf_business_place_id" id="lf_business_place_id" value="<?php echo esc_attr($place_id); ?>" />
-						<input type="hidden" name="lf_business_place_name" id="lf_business_place_name" value="<?php echo esc_attr($place_name); ?>" />
-						<input type="hidden" name="lf_business_place_address" id="lf_business_place_address" value="<?php echo esc_attr($place_address); ?>" />
-						<p class="description" id="lf_place_selected">
-							<?php echo $place_name !== '' ? esc_html(sprintf(__('Selected: %1$s (%2$s)', 'leadsforward-core'), $place_name, $place_address)) : esc_html__('No place selected yet.', 'leadsforward-core'); ?>
-						</p>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_business_map_embed"><?php esc_html_e('Map embed override (optional)', 'leadsforward-core'); ?></label></th>
-					<td>
-						<textarea class="large-text" name="lf_business_map_embed" id="lf_business_map_embed" rows="3"><?php echo esc_textarea($map_embed); ?></textarea>
-						<p class="description"><?php esc_html_e('Paste a custom iframe embed if you prefer. If empty, the selected Google Maps place will be used.', 'leadsforward-core'); ?></p>
-					</td>
-				</tr>
-			</tbody>
-		</table>
+		<div class="lf-homepage-panel lf-homepage-panel--business" data-section="business_info">
+			<div class="lf-homepage-panel-header">
+				<h2 id="lf-business-info" class="title"><?php esc_html_e('Business Info', 'leadsforward-core'); ?></h2>
+				<button type="button" class="lf-homepage-toggle" data-target="business_info" aria-expanded="true">
+					<span class="lf-homepage-toggle-icon">▾</span>
+					<span class="lf-homepage-toggle-label"><?php esc_html_e('Collapse', 'leadsforward-core'); ?></span>
+				</button>
+			</div>
+			<div class="lf-homepage-panel-body lf-homepage-section-fields" data-parent="business_info">
+				<p class="description"><?php esc_html_e('Used site-wide: footer, Map + NAP section, schema, and CTAs. Same data as the startup wizard—edit here anytime.', 'leadsforward-core'); ?> <?php esc_html_e('Kept consistent for local SEO: NAP (name, address, phone) is output in one format everywhere and in LocalBusiness schema.', 'leadsforward-core'); ?></p>
+				<table class="form-table" role="presentation">
+					<tbody>
+						<tr>
+							<th scope="row"><label for="lf_business_name"><?php esc_html_e('Business name', 'leadsforward-core'); ?></label></th>
+							<td><input type="text" class="large-text" name="lf_business_name" id="lf_business_name" value="<?php echo esc_attr($business_name); ?>" /></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_phone"><?php esc_html_e('Phone', 'leadsforward-core'); ?></label></th>
+							<td><input type="text" class="regular-text" name="lf_business_phone" id="lf_business_phone" value="<?php echo esc_attr($business_phone); ?>" /></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_email"><?php esc_html_e('Email', 'leadsforward-core'); ?></label></th>
+							<td><input type="email" class="regular-text" name="lf_business_email" id="lf_business_email" value="<?php echo esc_attr($business_email); ?>" /></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_address"><?php esc_html_e('Address (NAP)', 'leadsforward-core'); ?></label></th>
+							<td><textarea class="large-text" name="lf_business_address" id="lf_business_address" rows="3"><?php echo esc_textarea($business_address); ?></textarea></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_maps_api_key"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></label></th>
+							<td>
+								<input type="text" class="large-text" name="lf_maps_api_key" id="lf_maps_api_key" value="<?php echo esc_attr($maps_api_key); ?>" placeholder="AIza..." />
+								<p class="description"><?php esc_html_e('Required to search Google Maps and render the embed. Use a restricted key with Places + Maps Embed APIs enabled.', 'leadsforward-core'); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_place_search"><?php esc_html_e('Search business on Google Maps', 'leadsforward-core'); ?></label></th>
+							<td>
+								<input type="text" class="large-text" id="lf_business_place_search" placeholder="<?php esc_attr_e('Start typing your business name...', 'leadsforward-core'); ?>" value="<?php echo esc_attr($place_name); ?>" />
+								<input type="hidden" name="lf_business_place_id" id="lf_business_place_id" value="<?php echo esc_attr($place_id); ?>" />
+								<input type="hidden" name="lf_business_place_name" id="lf_business_place_name" value="<?php echo esc_attr($place_name); ?>" />
+								<input type="hidden" name="lf_business_place_address" id="lf_business_place_address" value="<?php echo esc_attr($place_address); ?>" />
+								<p class="description" id="lf_place_selected">
+									<?php echo $place_name !== '' ? esc_html(sprintf(__('Selected: %1$s (%2$s)', 'leadsforward-core'), $place_name, $place_address)) : esc_html__('No place selected yet.', 'leadsforward-core'); ?>
+								</p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_map_embed"><?php esc_html_e('Map embed override (optional)', 'leadsforward-core'); ?></label></th>
+							<td>
+								<textarea class="large-text" name="lf_business_map_embed" id="lf_business_map_embed" rows="3"><?php echo esc_textarea($map_embed); ?></textarea>
+								<p class="description"><?php esc_html_e('Paste a custom iframe embed if you prefer. If empty, the selected Google Maps place will be used.', 'leadsforward-core'); ?></p>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
 
 		<h2 class="title"><?php esc_html_e('Homepage sections', 'leadsforward-core'); ?></h2>
 			<table class="form-table lf-homepage-sections" role="presentation">
@@ -551,7 +565,7 @@ function lf_homepage_admin_render(): void {
 				<button type="submit" class="button button-primary"><?php esc_html_e('Save Homepage Settings', 'leadsforward-core'); ?></button>
 			</p>
 		</form>
-		<p class="description"><?php esc_html_e('Homepage CTA overrides (primary/secondary text, type) are in Theme Options → Homepage.', 'leadsforward-core'); ?></p>
+		<p class="description"><?php esc_html_e('Homepage CTA overrides (primary/secondary text, type) are in LeadsForward → Homepage Options.', 'leadsforward-core'); ?></p>
 	</div>
 	<?php
 }

@@ -50,6 +50,7 @@ lf_load_inc('cpt/faqs.php');
 
 // ACF options + field groups (load only when ACF present; guardrails handle fallback).
 lf_load_inc('acf/options-business.php');
+lf_load_inc('acf/options-global.php');
 lf_load_inc('acf/options-branding.php');
 lf_load_inc('acf/options-ctas.php');
 lf_load_inc('acf/options-schema.php');
@@ -67,6 +68,7 @@ lf_load_inc('blocks/variants.php');
 // Variation tokens: body class, data-variation, CSS vars.
 lf_load_inc('variation-tokens.php');
 lf_load_inc('branding.php');
+lf_load_inc('global-settings.php');
 
 // Homepage section registry, defaults, CTA resolution.
 lf_load_inc('homepage.php');

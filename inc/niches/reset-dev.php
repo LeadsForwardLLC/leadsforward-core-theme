@@ -180,6 +180,20 @@ function lf_dev_reset_run(): void {
 		update_field('lf_homepage_cta_primary_type', '', 'option');
 	}
 	delete_option('lf_maps_api_key');
+	// Clear global settings (logo + header CTA).
+	$global_keys = ['lf_global_logo', 'lf_header_cta_label', 'lf_header_cta_url'];
+	if (function_exists('update_field')) {
+		foreach ($global_keys as $key) {
+			update_field($key, '', 'lf-global');
+			update_field($key, '', 'options_lf_global');
+			update_field($key, '', 'options_lf-global');
+		}
+	}
+	foreach ($global_keys as $key) {
+		delete_option('options_' . $key);
+		delete_option('options_lf_global_' . $key);
+		delete_option('options_lf-global_' . $key);
+	}
 	// Clear branding options (ACF + raw options).
 	$branding_keys = [
 		'lf_brand_primary',
