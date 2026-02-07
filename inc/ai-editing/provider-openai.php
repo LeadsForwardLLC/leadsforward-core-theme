@@ -50,12 +50,34 @@ function lf_ai_openai_completion($response, string $system, string $user, string
 	$body = wp_remote_retrieve_body($result);
 	if ($code < 200 || $code >= 300) {
 		$detail = '';
+		$type = '';
+		$err_code = '';
 		$data = json_decode($body, true);
-		if (is_array($data) && !empty($data['error']['message'])) {
-			$detail = (string) $data['error']['message'];
+		if (is_array($data) && !empty($data['error'])) {
+			if (!empty($data['error']['message'])) {
+				$detail = (string) $data['error']['message'];
+			}
+			if (!empty($data['error']['type'])) {
+				$type = (string) $data['error']['type'];
+			}
+			if (!empty($data['error']['code'])) {
+				$err_code = (string) $data['error']['code'];
+			}
 		}
 		$detail = $detail !== '' ? $detail : __('Check your key, model access, and billing.', 'leadsforward-core');
-		return new WP_Error('lf_ai_http', sprintf(__('OpenAI API error (%d): %s', 'leadsforward-core'), $code, $detail));
+		$meta = [];
+		if ($type !== '') {
+			$meta[] = 'type=' . sanitize_text_field($type);
+		}
+		if ($err_code !== '') {
+			$meta[] = 'code=' . sanitize_text_field($err_code);
+		}
+		$request_id = wp_remote_retrieve_header($result, 'x-request-id');
+		if (is_string($request_id) && $request_id !== '') {
+			$meta[] = 'request_id=' . sanitize_text_field($request_id);
+		}
+		$meta_text = !empty($meta) ? ' [' . implode(' ', $meta) . ']' : '';
+		return new WP_Error('lf_ai_http', sprintf(__('OpenAI API error (%d): %s%s', 'leadsforward-core'), $code, $detail, $meta_text));
 	}
 	$data = json_decode($body, true);
 	if (!is_array($data) || empty($data['choices'][0]['message']['content'])) {
