@@ -73,7 +73,21 @@ $areas_query = new WP_Query([
 			<div class="lf-block-map-nap__card">
 				<?php if (is_string($map_embed_override) && $map_embed_override !== '') : ?>
 					<div class="lf-block-map-nap__map">
-						<?php echo wp_kses_post($map_embed_override); ?>
+						<?php
+						$allowed_embed = [
+							'iframe' => [
+								'src' => true,
+								'width' => true,
+								'height' => true,
+								'style' => true,
+								'loading' => true,
+								'referrerpolicy' => true,
+								'allowfullscreen' => true,
+								'title' => true,
+							],
+						];
+						echo wp_kses($map_embed_override, $allowed_embed);
+						?>
 					</div>
 				<?php elseif ($map_embed_url !== '') : ?>
 					<div class="lf-block-map-nap__map">

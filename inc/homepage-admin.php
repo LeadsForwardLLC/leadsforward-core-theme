@@ -152,7 +152,7 @@ jQuery(function ($) {
 	var $table = $('.lf-homepage-sections tbody');
 	if ($table.length && $table.sortable) {
 		$table.sortable({
-			items: 'tr:not(.lf-homepage-row--fixed)',
+			items: 'tr',
 			handle: '.lf-homepage-drag',
 			axis: 'y',
 			cancel: 'input,select,textarea,button,label,a',
@@ -280,7 +280,12 @@ function lf_homepage_admin_render(): void {
 	$config = lf_get_homepage_section_config();
 	$order = lf_homepage_controller_order();
 	$labels = lf_homepage_admin_section_labels();
-	$variants = ['default' => __('Default', 'leadsforward-core'), 'a' => __('Variant A', 'leadsforward-core'), 'b' => __('Variant B', 'leadsforward-core'), 'c' => __('Variant C', 'leadsforward-core')];
+	$variants = [
+		'default' => __('Authority Split (Recommended)', 'leadsforward-core'),
+		'a'       => __('Conversion Stack', 'leadsforward-core'),
+		'b'       => __('Form First', 'leadsforward-core'),
+		'c'       => __('Visual Proof', 'leadsforward-core'),
+	];
 	$saved = isset($_GET['saved']) && $_GET['saved'] === '1';
 	?>
 	<div class="wrap">
@@ -288,11 +293,9 @@ function lf_homepage_admin_render(): void {
 		<?php if ($saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Settings saved.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
-		<p class="description"><?php esc_html_e('Drag and drop sections to reorder. The Hero banner stays at the top. Turn sections on or off and edit copy below.', 'leadsforward-core'); ?></p>
+		<p class="description"><?php esc_html_e('Drag and drop sections to reorder. A recommended default order is provided, but you control the layout. Turn sections on or off and edit copy below.', 'leadsforward-core'); ?></p>
 		<style>
 			.lf-homepage-drag { cursor: grab; display: inline-flex; align-items: center; justify-content: center; width: 24px; margin-right: 6px; color: #6b7280; }
-			.lf-homepage-row--fixed .lf-homepage-drag { cursor: not-allowed; opacity: 0.4; }
-			.lf-homepage-row--fixed .lf-homepage-fixed { margin-left: 6px; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.06em; }
 			.lf-homepage-sections tr { background: #fff; }
 			.lf-homepage-sections tr.ui-sortable-helper { box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
 			.lf-homepage-toggle { margin-left: 8px; font-size: 12px; text-decoration: none; }
@@ -384,16 +387,12 @@ function lf_homepage_admin_render(): void {
 					$enabled = !empty($sec['enabled']);
 					$variant = $sec['variant'] ?? 'default';
 					$label = $labels[$type] ?? $type;
-					$is_fixed = $type === 'hero';
 				?>
-					<tr class="lf-homepage-section-row<?php echo $is_fixed ? ' lf-homepage-row--fixed' : ''; ?>" data-section="<?php echo esc_attr($type); ?>">
+					<tr class="lf-homepage-section-row" data-section="<?php echo esc_attr($type); ?>">
 						<th scope="row">
 							<span class="lf-homepage-drag" aria-hidden="true">⋮⋮</span>
 							<label for="lf_hp_enabled_<?php echo esc_attr($type); ?>"><?php echo esc_html($label); ?></label>
 							<button type="button" class="button-link lf-homepage-toggle" data-target="<?php echo esc_attr($type); ?>" aria-expanded="true"><?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
-							<?php if ($is_fixed) : ?>
-								<span class="lf-homepage-fixed"><?php esc_html_e('Fixed', 'leadsforward-core'); ?></span>
-							<?php endif; ?>
 						</th>
 						<td>
 							<input type="hidden" name="lf_hp_order[]" value="<?php echo esc_attr($type); ?>" />
@@ -407,7 +406,7 @@ function lf_homepage_admin_render(): void {
 								</select>
 							</label>
 							<?php if ($type === 'map_nap') : ?>
-								<p class="description" style="margin: 0.5em 0 0;"><?php esc_html_e('Content comes from Business Info above. Fill that in and save to show name, address, and phone on the homepage.', 'leadsforward-core'); ?></p>
+								<p class="description" style="margin: 0.5em 0 0;"><?php esc_html_e('Service areas and map come from Business Info + Service Areas. Select a place above to show the map.', 'leadsforward-core'); ?></p>
 							<?php endif; ?>
 						</td>
 					</tr>

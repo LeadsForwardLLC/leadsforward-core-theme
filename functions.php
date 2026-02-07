@@ -50,6 +50,7 @@ lf_load_inc('cpt/faqs.php');
 
 // ACF options + field groups (load only when ACF present; guardrails handle fallback).
 lf_load_inc('acf/options-business.php');
+lf_load_inc('acf/options-branding.php');
 lf_load_inc('acf/options-ctas.php');
 lf_load_inc('acf/options-schema.php');
 lf_load_inc('acf/options-homepage.php');
@@ -65,6 +66,7 @@ lf_load_inc('blocks/variants.php');
 
 // Variation tokens: body class, data-variation, CSS vars.
 lf_load_inc('variation-tokens.php');
+lf_load_inc('branding.php');
 
 // Homepage section registry, defaults, CTA resolution.
 lf_load_inc('homepage.php');
@@ -88,6 +90,7 @@ if (is_admin()) {
 	lf_load_inc('ai-editing/logging.php');
 	lf_load_inc('ai-editing/handler.php');
 	lf_load_inc('ai-editing/admin-ui.php');
+	lf_load_inc('ai-assistant.php');
 	// Homepage controller admin UI (must load before ops menu).
 	lf_load_inc('homepage-admin.php');
 	// Bulk-safe ops: export/import config, bulk actions, audit log.

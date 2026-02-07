@@ -40,13 +40,13 @@
 	--lf-spacing-normal: var(--lf-space-card);
 	--lf-spacing-loose: var(--lf-space-section);
 
-	/* Colors: theme.json when available; fallbacks so layout always works */
-	--lf-body-bg: var(--wp--preset--color--background, #ffffff);
-	--lf-text: var(--wp--preset--color--foreground, #0f172a);
-	--lf-primary: var(--wp--preset--color--primary, #2563eb);
-	--lf-secondary: var(--wp--preset--color--secondary, #475569);
-	--lf-accent: var(--wp--preset--color--accent, #2563eb);
-	--lf-muted: var(--wp--preset--color--muted, #64748b);
+	/* Colors: branding tokens (with safe fallbacks) */
+	--lf-body-bg: var(--lf-surface-light, #ffffff);
+	--lf-text: var(--lf-text-primary, #0f172a);
+	--lf-primary: var(--lf-color-primary, #2563eb);
+	--lf-secondary: var(--lf-color-secondary, #0ea5e9);
+	--lf-accent: var(--lf-color-tertiary, #f97316);
+	--lf-muted: var(--lf-text-muted, #64748b);
 	--lf-neutral-100: var(--wp--preset--color--neutral-100, #f1f5f9);
 	--lf-neutral-300: var(--wp--preset--color--neutral-300, #cbd5e1);
 	--lf-neutral-700: var(--wp--preset--color--neutral-700, #334155);
@@ -83,13 +83,13 @@
 	--lf-hero-title-size: clamp(2.25rem, 6vw, 4rem);
 
 	/* 3) SURFACE STYLES — white, soft, dark (no section is plain text on white) */
-	--lf-surface-white: var(--wp--preset--color--background, #ffffff);
-	--lf-surface-soft: var(--wp--preset--color--neutral-100, #f1f5f9);
-	--lf-surface-dark: var(--wp--preset--color--neutral-dark, #1e293b);
+	--lf-surface-white: var(--lf-surface-light, #ffffff);
+	--lf-surface-soft: var(--lf-surface-soft, #f8fafc);
+	--lf-surface-dark: var(--lf-surface-dark, #0f172a);
 	--lf-surface-soft-border: var(--lf-border-width) solid var(--lf-neutral-300);
 
 	/* 5) CARD SYSTEM — one system for services, areas, testimonials */
-	--lf-card-bg: var(--lf-surface-white);
+	--lf-card-bg: var(--lf-surface-card, #ffffff);
 	--lf-card-border: var(--lf-border-width) solid var(--lf-neutral-300);
 	--lf-card-radius: 0.5rem;
 	--lf-card-padding: var(--lf-space-card);
@@ -551,36 +551,46 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Block: Hero — Full-bleed, high-impact, conversion above the fold
+   Block: Hero — Authority split with modular variants
    ------------------------------------------------------------------------- */
 .lf-block-hero {
 	position: relative;
-	text-align: center;
 	min-height: var(--lf-hero-min-height);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	padding: 5rem 1.5rem;
+	padding: 5.5rem 1.5rem;
 	overflow: hidden;
+	background: var(--lf-hero-bg);
 }
 
 .lf-block-hero__bg {
 	position: absolute;
 	inset: 0;
 	background: var(--lf-hero-bg-gradient);
-	background-color: var(--lf-hero-bg);
+	opacity: 0.9;
 	z-index: 0;
 }
 
 .lf-block-hero__inner {
 	position: relative;
 	z-index: 1;
-	max-width: 44rem;
-	margin-left: auto;
-	margin-right: auto;
+	max-width: var(--lf-container-wide);
+	margin: 0 auto;
 	width: 100%;
-	padding-left: 1rem;
-	padding-right: 1rem;
+}
+
+.lf-block-hero__grid {
+	display: grid;
+	gap: 2.5rem;
+	align-items: center;
+}
+
+@media (min-width: 900px) {
+	.lf-block-hero__grid {
+		grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+	}
+}
+
+.lf-block-hero__content {
+	text-align: left;
 }
 
 .lf-block-hero__title {
@@ -588,43 +598,42 @@ button:focus-visible,
 	font-weight: 800;
 	line-height: 1.05;
 	letter-spacing: -0.04em;
-	margin: 0 0 var(--lf-hero-stack-after-title);
-	color: #0f172a;
-	text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+	margin: 0 0 1rem;
+	color: var(--lf-text-primary);
 }
 
 .lf-block-hero__subtitle {
-	font-size: 1.25rem;
-	color: #475569;
+	font-size: 1.2rem;
+	color: var(--lf-text-muted);
 	font-weight: 500;
-	line-height: 1.5;
+	line-height: 1.55;
 	max-width: 34em;
-	margin: 0 auto var(--lf-hero-stack-after-subtitle);
+	margin: 0 0 1.75rem;
 }
 
 .lf-block-hero__eyebrow {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	margin: 0 auto 1rem;
+	margin: 0 0 1rem;
 	padding: 0.35rem 0.9rem;
 	border-radius: 999px;
-	background: rgba(255,255,255,0.9);
+	background: var(--lf-surface-light);
 	border: 1px solid rgba(15,23,42,0.1);
-	font-size: 0.75rem;
+	font-size: 0.72rem;
 	font-weight: 700;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
-	color: #0f172a;
+	color: var(--lf-text-primary);
 }
 
 .lf-block-hero__cta {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	justify-content: center;
+	justify-content: flex-start;
 	gap: 1rem;
-	margin: 0 0 var(--lf-hero-stack-after-cta);
+	margin: 0 0 1.5rem;
 }
 
 .lf-block-hero__cta-link,
@@ -664,8 +673,8 @@ button:focus-visible,
 	font-weight: 600;
 	white-space: nowrap;
 	border-radius: 0.5rem;
-	background: rgba(255,255,255,0.95);
-	color: #0f172a;
+	background: var(--lf-surface-light);
+	color: var(--lf-text-primary);
 	border: 2px solid rgba(15,23,42,0.15);
 	box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 	transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -680,12 +689,12 @@ button:focus-visible,
 .lf-block-hero__trust {
 	display: inline-flex;
 	align-items: center;
-	justify-content: center;
+	justify-content: flex-start;
 	flex-wrap: wrap;
 	gap: var(--lf-hero-trust-gap);
 	font-size: 0.9375rem;
 	font-weight: 600;
-	color: #334155;
+	color: var(--lf-text-muted);
 }
 
 .lf-block-hero__stars {
@@ -705,7 +714,7 @@ button:focus-visible,
 	display: inline-flex;
 	align-items: center;
 	padding: 0.4em 1em;
-	background: rgba(255,255,255,0.95);
+	background: var(--lf-surface-card);
 	border: 1px solid rgba(15,23,42,0.1);
 	border-radius: 9999px;
 	box-shadow: 0 2px 8px rgba(0,0,0,0.06);
@@ -713,68 +722,38 @@ button:focus-visible,
 	font-weight: 600;
 }
 
-.lf-block-hero__phone-wrap { margin: 1.25rem 0 0; }
+.lf-block-hero__phone-wrap { margin: 1rem 0 0; }
 .lf-block-hero__phone {
-	color: #475569;
+	color: var(--lf-text-muted);
 	text-decoration: none;
 	font-weight: 600;
 	font-size: 1rem;
 }
-.lf-block-hero__phone:hover { text-decoration: underline; color: #0f172a; }
+.lf-block-hero__phone:hover { text-decoration: underline; color: var(--lf-text-primary); }
 
-.lf-block-hero--a .lf-block-hero__title { font-size: 1.875rem; }
-.lf-block-hero--a { padding: 3rem 1.5rem; min-height: var(--lf-hero-min-height--compact); }
-
-.lf-block-hero--b {
-	text-align: left;
-	padding: 5.5rem 1.5rem;
+.lf-block-hero__proof {
+	display: grid;
+	gap: 1.25rem;
 }
 
-.lf-block-hero--b .lf-block-hero__inner {
-	max-width: 54rem;
-	margin-left: 0;
-}
-
-.lf-block-hero--b .lf-block-hero__eyebrow {
-	justify-content: flex-start;
-	margin-left: 0;
-}
-
-.lf-block-hero--b .lf-block-hero__subtitle {
-	margin-left: 0;
-}
-
-.lf-block-hero--b .lf-block-hero__cta,
-.lf-block-hero--b .lf-block-hero__trust {
-	justify-content: flex-start;
-}
-
-.lf-block-hero--b .lf-block-hero__bg {
-	background: radial-gradient(circle at 15% 15%, rgba(37, 99, 235, 0.2), transparent 55%), linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-}
-
-.lf-block-hero__offer {
-	margin: 1.5rem auto 0;
-	padding: 1.25rem 1.5rem;
-	max-width: 28rem;
-	text-align: left;
+.lf-block-hero__card,
+.lf-block-hero__form,
+.lf-block-hero__quote {
+	background: var(--lf-surface-card);
 	border-radius: 1rem;
-	background: rgba(255,255,255,0.95);
-	border: 1px solid rgba(15,23,42,0.1);
-	box-shadow: 0 12px 24px rgba(15,23,42,0.1);
+	border: 1px solid rgba(15,23,42,0.08);
+	box-shadow: 0 12px 30px rgba(15,23,42,0.08);
+	padding: 1.5rem;
 }
 
-.lf-block-hero__offer-label {
-	display: inline-block;
-	font-size: 0.75rem;
+.lf-block-hero__card-title {
 	font-weight: 700;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
-	color: #1e293b;
+	font-size: 1.1rem;
 	margin-bottom: 0.75rem;
 }
 
-.lf-block-hero__offer-list {
+.lf-block-hero__card-list,
+.lf-block-hero__card-services {
 	list-style: none;
 	padding: 0;
 	margin: 0;
@@ -782,19 +761,61 @@ button:focus-visible,
 	gap: 0.5rem;
 }
 
-.lf-block-hero__offer-item {
-	position: relative;
-	padding-left: 1.5rem;
-	color: #0f172a;
-	font-weight: 600;
+.lf-block-hero__card-list li::before {
+	content: "✓";
+	color: var(--lf-primary);
+	margin-right: 0.5rem;
 }
 
-.lf-block-hero__offer-item::before {
-	content: "✓";
-	position: absolute;
-	left: 0;
-	top: 0;
+.lf-block-hero__card-subtitle {
+	margin-top: 1rem;
+	font-weight: 700;
+	font-size: 0.95rem;
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero__card-services a {
+	color: var(--lf-text-primary);
+	text-decoration: none;
+}
+
+.lf-block-hero__card-services a:hover {
 	color: var(--lf-primary);
+}
+
+.lf-block-hero__quote-text {
+	font-size: 1.05rem;
+	line-height: 1.6;
+	margin: 0 0 1rem;
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero__quote-meta {
+	margin: 0;
+	font-weight: 700;
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero__form-head {
+	font-weight: 700;
+	margin-bottom: 1rem;
+}
+
+.lf-block-hero--a .lf-block-hero__grid {
+	grid-template-columns: 1fr;
+}
+
+.lf-block-hero--a .lf-block-hero__content {
+	text-align: center;
+}
+
+.lf-block-hero--a .lf-block-hero__cta,
+.lf-block-hero--a .lf-block-hero__trust {
+	justify-content: center;
+}
+
+.lf-block-hero--b .lf-block-hero__bg {
+	background: radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.2), transparent 50%), linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
 }
 
 .lf-block-hero--c .lf-block-hero__bg {
@@ -805,7 +826,7 @@ button:focus-visible,
    Block: Services — Decision drivers, premium cards
    ------------------------------------------------------------------------- */
 .lf-block-service-grid {
-	background: #fff;
+	background: var(--lf-surface-light);
 }
 
 .lf-block-service-grid__inner {
@@ -826,14 +847,14 @@ button:focus-visible,
 	font-weight: 800;
 	line-height: 1.15;
 	letter-spacing: -0.03em;
-	color: #0f172a;
+	color: var(--lf-text-primary);
 }
 
 .lf-block-service-grid__intro {
 	margin: 0;
 	font-size: 1.125rem;
 	line-height: 1.6;
-	color: #64748b;
+	color: var(--lf-text-muted);
 }
 
 .lf-block-service-grid__list {
@@ -860,8 +881,8 @@ button:focus-visible,
 	text-align: left;
 	min-height: var(--lf-touch-min);
 	padding: 1.75rem 1.75rem;
-	background: #fff;
-	border: 1px solid #e2e8f0;
+	background: var(--lf-surface-card);
+	border: 1px solid var(--lf-neutral-300);
 	border-left: 4px solid var(--lf-primary);
 	border-radius: 0.5rem;
 	box-shadow: 0 4px 6px -1px rgba(15,23,42,0.07), 0 10px 20px -5px rgba(15,23,42,0.06);
@@ -913,13 +934,13 @@ button:focus-visible,
 	padding: 1.5rem 1.75rem;
 	border-left-width: 0;
 	border-radius: 0.75rem;
-	background: #f8fafc;
+	background: var(--lf-surface-soft);
 	box-shadow: 0 10px 24px rgba(15,23,42,0.08);
 }
 
 .lf-block-service-grid--a .lf-block-service-grid__link:hover {
-	background: #eef2ff;
-	color: #0f172a;
+	background: var(--lf-surface-soft);
+	color: var(--lf-text-primary);
 	box-shadow: 0 16px 32px rgba(15,23,42,0.12);
 	transform: translateY(-2px);
 }
@@ -946,7 +967,7 @@ button:focus-visible,
    Block: Service Areas — Local trust, same card language
    ------------------------------------------------------------------------- */
 .lf-block-service-areas {
-	background: #f8fafc;
+	background: var(--lf-surface-soft);
 }
 
 .lf-block-service-areas__inner {
@@ -967,14 +988,14 @@ button:focus-visible,
 	font-weight: 800;
 	line-height: 1.15;
 	letter-spacing: -0.03em;
-	color: #0f172a;
+	color: var(--lf-text-primary);
 }
 
 .lf-block-service-areas__intro {
 	margin: 0;
 	font-size: 1.125rem;
 	line-height: 1.6;
-	color: #64748b;
+	color: var(--lf-text-muted);
 }
 
 .lf-block-service-areas__list {
@@ -1001,8 +1022,8 @@ button:focus-visible,
 	text-align: left;
 	min-height: var(--lf-touch-min);
 	padding: 1.75rem 1.75rem;
-	background: #fff;
-	border: 1px solid #e2e8f0;
+	background: var(--lf-surface-card);
+	border: 1px solid var(--lf-neutral-300);
 	border-left: 4px solid var(--lf-primary);
 	border-radius: 0.5rem;
 	box-shadow: 0 4px 6px -1px rgba(15,23,42,0.07), 0 10px 20px -5px rgba(15,23,42,0.06);
@@ -1103,7 +1124,7 @@ button:focus-visible,
 	font-weight: 800;
 	line-height: 1.15;
 	letter-spacing: -0.03em;
-	color: #0f172a;
+	color: var(--lf-text-primary);
 }
 
 .lf-block-trust-reviews__list {
@@ -1133,7 +1154,7 @@ button:focus-visible,
 	height: 100%;
 	display: flex;
 	flex-direction: column;
-	background: #fff;
+	background: var(--lf-surface-card);
 	border-radius: 0.75rem;
 	padding: 2.25rem 2rem;
 	box-shadow: 0 4px 6px -1px rgba(15,23,42,0.08), 0 12px 24px -5px rgba(15,23,42,0.06);
@@ -1176,9 +1197,9 @@ button:focus-visible,
 }
 
 .lf-block-trust-reviews__stars { display: inline-flex; gap: 2px; }
-.lf-block-trust-reviews__star { width: 12px; height: 12px; color: #cbd5e1; }
+.lf-block-trust-reviews__star { width: 12px; height: 12px; color: var(--lf-neutral-300); }
 .lf-block-trust-reviews__star--filled { color: var(--lf-warning); }
-.lf-block-trust-reviews__cite cite { font-style: normal; font-weight: 700; color: #0f172a; }
+.lf-block-trust-reviews__cite cite { font-style: normal; font-weight: 700; color: var(--lf-text-primary); }
 .lf-block-trust-reviews__source { opacity: 0.9; }
 .lf-block-trust-reviews__empty { margin: 0; padding: 2rem; text-align: center; }
 .lf-block-trust-reviews__empty-text { margin: 0; font-size: 1rem; color: var(--lf-muted); }
@@ -1187,8 +1208,8 @@ button:focus-visible,
    Block: Final CTA — The close: high-contrast dark band, one clear action
    ------------------------------------------------------------------------- */
 .lf-block-cta {
-	background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-	color: #ffffff;
+	background: var(--lf-surface-dark);
+	color: var(--lf-text-inverse);
 }
 
 /* Force all text in CTA to be readable on dark (override theme/global) */
@@ -1246,7 +1267,7 @@ button:focus-visible,
 	font-weight: 800;
 	line-height: 1.15;
 	letter-spacing: -0.03em;
-	color: #ffffff !important;
+	color: var(--lf-text-inverse) !important;
 	text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
@@ -1282,7 +1303,7 @@ button:focus-visible,
 
 .lf-block-cta__primary-link:hover,
 .lf-block-cta__primary-text:hover {
-	background: #3b82f6;
+	background: var(--lf-color-secondary);
 	color: #ffffff !important;
 	text-decoration: none;
 	transform: translateY(-3px);
@@ -1292,9 +1313,10 @@ button:focus-visible,
 .lf-block-cta__secondary {
 	margin: 1rem 0 0;
 	font-size: 1.0625rem;
-	color: #e2e8f0 !important;
+	color: var(--lf-text-inverse) !important;
 	line-height: 1.5;
 	text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+	opacity: 0.85;
 }
 
 .lf-block-cta__embed {
@@ -1374,7 +1396,7 @@ button:focus-visible,
    Block: FAQ — Objection handling, clean typography, schema-safe
    ------------------------------------------------------------------------- */
 .lf-block-faq-accordion {
-	background: #fff;
+	background: var(--lf-surface-light);
 }
 
 .lf-block-faq-accordion__inner {
@@ -1394,14 +1416,14 @@ button:focus-visible,
 	font-weight: 800;
 	line-height: 1.15;
 	letter-spacing: -0.03em;
-	color: #0f172a;
+	color: var(--lf-text-primary);
 }
 
 .lf-block-faq-accordion__intro {
 	margin: 0;
 	font-size: 1.125rem;
 	line-height: 1.6;
-	color: #64748b;
+	color: var(--lf-text-muted);
 }
 
 .lf-block-faq-accordion__list {
@@ -1504,14 +1526,14 @@ button:focus-visible,
 	font-weight: 800;
 	line-height: 1.15;
 	letter-spacing: -0.02em;
-	color: #0f172a;
+	color: var(--lf-text-primary);
 }
 
 .lf-block-map-nap__intro {
 	margin: 0;
 	font-size: 1.1rem;
 	line-height: 1.6;
-	color: #64748b;
+	color: var(--lf-text-muted);
 }
 
 .lf-block-map-nap__areas-list {
@@ -1542,7 +1564,7 @@ button:focus-visible,
 }
 
 .lf-block-map-nap__card {
-	background: #fff;
+	background: var(--lf-surface-card);
 	border-radius: 1rem;
 	border: 1px solid rgba(15,23,42,0.08);
 	box-shadow: 0 10px 30px rgba(15,23,42,0.08);
@@ -1553,7 +1575,7 @@ button:focus-visible,
 
 .lf-block-map-nap__map {
 	min-height: 14rem;
-	background-color: var(--lf-neutral-100);
+	background-color: var(--lf-surface-soft);
 	border-radius: 0.75rem;
 	overflow: hidden;
 }

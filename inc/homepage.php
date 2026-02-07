@@ -26,16 +26,15 @@ const LF_HOMEPAGE_ORDER_OPTION = 'lf_homepage_section_order';
 const LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION = 'lf_homepage_manual_override';
 
 /**
- * Canonical section order: Hero → Services → Service Areas → Social Proof → FAQs → Final CTA.
- * map_nap is available but off by default (no duplicate/redundant sections).
+ * Recommended default order: Hero → Services → Social Proof → FAQs → Final CTA → Areas + Map.
+ * Drag-and-drop order is stored in options and always respected.
  *
  * @return string[]
  */
-function lf_homepage_canonical_order(): array {
+function lf_homepage_default_order(): array {
 	return [
 		'hero',
 		'service_grid',
-		'service_areas',
 		'trust_reviews',
 		'faq_accordion',
 		'cta',
@@ -50,7 +49,7 @@ function lf_homepage_canonical_order(): array {
  * @return string[]
  */
 function lf_homepage_sanitize_order(array $order): array {
-	$canonical = lf_homepage_canonical_order();
+	$canonical = lf_homepage_default_order();
 	$clean = [];
 	foreach ($order as $item) {
 		if (!is_string($item)) {
@@ -61,8 +60,6 @@ function lf_homepage_sanitize_order(array $order): array {
 			$clean[] = $item;
 		}
 	}
-	$clean = array_values(array_diff($clean, ['hero']));
-	array_unshift($clean, 'hero');
 	foreach ($canonical as $type) {
 		if (!in_array($type, $clean, true)) {
 			$clean[] = $type;
@@ -81,7 +78,7 @@ function lf_homepage_controller_order(): array {
 	if (is_array($stored) && !empty($stored)) {
 		return lf_homepage_sanitize_order($stored);
 	}
-	return lf_homepage_canonical_order();
+	return lf_homepage_default_order();
 }
 
 /**
@@ -112,8 +109,8 @@ function lf_homepage_default_section_config(string $section_type): array {
 	switch ($section_type) {
 		case 'hero':
 			return array_merge($base, [
-				'hero_headline'     => __('Professional Roofing & Home Services in Your City', 'leadsforward-core'),
-				'hero_subheadline'  => __('Licensed, insured, and trusted by hundreds of local homeowners. Free estimates and same-day quotes available.', 'leadsforward-core'),
+				'hero_headline'     => __('Trusted Local Home Services in [Your City]', 'leadsforward-core'),
+				'hero_subheadline'  => __('Fast response times, clear pricing, and workmanship backed by warranty. Get expert help from a local team you can rely on.', 'leadsforward-core'),
 				'hero_cta_override' => '',
 			]);
 		case 'trust_reviews':
@@ -123,27 +120,27 @@ function lf_homepage_default_section_config(string $section_type): array {
 			]);
 		case 'service_grid':
 			return array_merge($base, [
-				'section_heading' => __('Services We Offer', 'leadsforward-core'),
-				'section_intro'   => __('From repairs to full replacements, we handle it all. Licensed professionals with transparent pricing and no hidden fees.', 'leadsforward-core'),
+				'section_heading' => __('Services Built for Local Homeowners', 'leadsforward-core'),
+				'section_intro'   => __('From quick fixes to full projects, we handle the work start-to-finish with clear scopes and professional crews.', 'leadsforward-core'),
 			]);
 		case 'service_areas':
 			return array_merge($base, [
 				'section_heading' => __('Areas We Serve', 'leadsforward-core'),
-				'section_intro'   => __('We’re your local team. Proudly serving these communities and the surrounding region. Contact us to confirm we cover your area.', 'leadsforward-core'),
+				'section_intro'   => __('Local, responsive, and nearby. If you’re close, chances are we already serve your neighborhood.', 'leadsforward-core'),
 			]);
 		case 'faq_accordion':
 			return array_merge($base, [
 				'section_heading' => __('Frequently Asked Questions', 'leadsforward-core'),
-				'section_intro'   => __("Common questions from homeowners like you. Don't see your question? Call or request a free quote—we're happy to help.", 'leadsforward-core'),
+				'section_intro'   => __('Straight answers to common questions. If you need details for your project, we can help fast.', 'leadsforward-core'),
 			]);
 		case 'map_nap':
 			return array_merge($base, [
 				'section_heading' => __('Areas We Serve', 'leadsforward-core'),
-				'section_intro'   => __('Find us on the map and see the communities we serve.', 'leadsforward-core'),
+				'section_intro'   => __('Find us on the map and explore the neighborhoods we serve every day.', 'leadsforward-core'),
 			]);
 		case 'cta':
 			return array_merge($base, [
-				'cta_headline'          => __('Get Your Free Estimate Today', 'leadsforward-core'),
+				'cta_headline'          => __('Get Your Fast, No-Obligation Estimate', 'leadsforward-core'),
 				'cta_primary_override'  => '',
 				'cta_secondary_override' => '',
 				'cta_ghl_override'      => '',
@@ -254,7 +251,7 @@ function lf_get_homepage_section_config(): array {
 		$manual = (bool) get_option(LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION, false);
 		$wizard_done = (bool) get_option('lf_setup_wizard_complete', false);
 		$has_enabled = false;
-		foreach (lf_homepage_canonical_order() as $type) {
+		foreach (lf_homepage_default_order() as $type) {
 			if (!empty($config[$type]['enabled'])) {
 				$has_enabled = true;
 				break;

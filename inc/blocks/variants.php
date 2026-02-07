@@ -30,7 +30,7 @@ function lf_get_allowed_block_variants(): array {
 
 /**
  * Profile-based default variant per block. When no override, use this.
- * Trust Heavy (c): hero with review snippet (b), trust early. Service Heavy (d): service grid earlier, more links.
+ * Variants: default = Authority Split, a = Conversion Stack, b = Form First, c = Visual Proof.
  */
 function lf_get_profile_block_defaults(string $profile): array {
 	$defaults = [
@@ -44,26 +44,26 @@ function lf_get_profile_block_defaults(string $profile): array {
 	];
 	switch ($profile) {
 		case 'a': // Clean + Minimal
+			$defaults['hero'] = 'default';
+			$defaults['cta']  = 'default';
+			break;
+		case 'b': // Bold + High Contrast
 			$defaults['hero'] = 'a';
 			$defaults['cta']  = 'a';
 			break;
-		case 'b': // Bold + High Contrast
-			$defaults['hero'] = 'b';
-			$defaults['cta']  = 'b';
-			break;
 		case 'c': // Trust Heavy — hero variant with review snippet, testimonial early
-			$defaults['hero'] = 'b';
+			$defaults['hero'] = 'c';
 			$defaults['trust-reviews'] = 'a';
 			$defaults['cta'] = 'default';
 			break;
 		case 'd': // Service Heavy — service grid earlier, more internal links
-			$defaults['hero'] = 'a';
+			$defaults['hero'] = 'default';
 			$defaults['service-grid'] = 'a';
-			$defaults['cta'] = 'a';
+			$defaults['cta'] = 'default';
 			break;
 		case 'e': // Offer/Promo Heavy
-			$defaults['hero'] = 'c';
-			$defaults['cta']  = 'c';
+			$defaults['hero'] = 'b';
+			$defaults['cta']  = 'b';
 			break;
 	}
 	return $defaults;

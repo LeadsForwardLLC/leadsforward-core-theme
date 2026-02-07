@@ -68,6 +68,13 @@ function lf_register_acf_options_pages(): void {
 		'menu_slug'   => 'lf-business-info',
 		'parent_slug' => 'lf-theme-options',
 	]);
+	// Branding: global colors and surfaces.
+	acf_add_options_sub_page([
+		'page_title'  => __('Branding', 'leadsforward-core'),
+		'menu_title'  => __('Branding', 'leadsforward-core'),
+		'menu_slug'   => 'lf-branding',
+		'parent_slug' => 'lf-theme-options',
+	]);
 	// Global CTAs: primary/secondary text, GHL form.
 	acf_add_options_sub_page([
 		'page_title'  => __('Global CTAs', 'leadsforward-core'),
