@@ -32,7 +32,7 @@ $query = new WP_Query([
 	'post_status'    => 'publish',
 ]);
 ?>
-<section class="lf-block lf-block-trust-reviews lf-block-trust-reviews--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
+<section class="lf-block lf-block-trust-reviews lf-surface-soft lf-block-trust-reviews--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-trust-reviews__inner">
 		<h2 class="lf-block-trust-reviews__title"><?php echo esc_html($heading); ?></h2>
 		<?php if ($query->have_posts()) : ?>
@@ -50,7 +50,7 @@ $query = new WP_Query([
 					}
 				?>
 					<li class="lf-block-trust-reviews__item">
-						<blockquote class="lf-block-trust-reviews__quote">
+						<blockquote class="lf-card lf-card--spotlight lf-block-trust-reviews__quote">
 							<p class="lf-block-trust-reviews__text"><?php echo esc_html($text); ?></p>
 							<footer class="lf-block-trust-reviews__cite">
 								<?php if ($rating) : ?>

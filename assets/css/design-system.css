@@ -27,7 +27,8 @@
  */
 
 /* -------------------------------------------------------------------------
-   Design tokens (theme.json + layout only)
+   FOUNDATIONAL DESIGN SYSTEM
+   Scale: section | container | card. Surfaces: white | soft | dark.
    ------------------------------------------------------------------------- */
 :root {
 	/* Layout: theme.json layout.contentSize / wideSize */
@@ -35,15 +36,22 @@
 	--lf-container-wide: 960px;
 	--lf-container-full: 1200px;
 
-	/* Spacing: section padding (intentional, not default WP); fallbacks if theme.json not injected */
-	--lf-section-padding-xs: var(--wp--preset--spacing--50, 1.25rem);
-	--lf-section-padding-sm: var(--wp--preset--spacing--60, 1.5rem);
-	--lf-section-padding-md: var(--wp--preset--spacing--70, 2rem);
-	--lf-section-padding-lg: var(--wp--preset--spacing--80, 2.5rem);
-	--lf-section-padding-y: var(--lf-section-padding-md);
-	--lf-section-padding-y-tight: var(--lf-section-padding-sm);
-	--lf-section-padding-y-cta: var(--lf-section-padding-sm);
-	--lf-section-padding-x: var(--wp--preset--spacing--40, 1rem);
+	/* 1) SPACING SCALE — section, container, card (from theme.json presets) */
+	--lf-space-section-sm: var(--wp--preset--spacing--60, 1.5rem);
+	--lf-space-section: var(--wp--preset--spacing--70, 2rem);
+	--lf-space-section-lg: var(--wp--preset--spacing--80, 2.5rem);
+	--lf-space-container: var(--wp--preset--spacing--40, 1rem);
+	--lf-space-card: var(--wp--preset--spacing--50, 1.25rem);
+	--lf-space-card-lg: var(--wp--preset--spacing--60, 1.5rem);
+	/* Aliases for existing usage */
+	--lf-section-padding-xs: var(--lf-space-card);
+	--lf-section-padding-sm: var(--lf-space-section-sm);
+	--lf-section-padding-md: var(--lf-space-section);
+	--lf-section-padding-lg: var(--lf-space-section-lg);
+	--lf-section-padding-y: var(--lf-space-section);
+	--lf-section-padding-y-tight: var(--lf-space-section-sm);
+	--lf-section-padding-y-cta: var(--lf-space-section-sm);
+	--lf-section-padding-x: var(--lf-space-container);
 
 	/* Component gaps & stack spacing */
 	--lf-gap-xs: var(--wp--preset--spacing--15, 0.25rem);
@@ -51,8 +59,8 @@
 	--lf-gap-normal: var(--wp--preset--spacing--40, 1rem);
 	--lf-gap-loose: var(--wp--preset--spacing--60, 1.5rem);
 	--lf-spacing-tight: var(--wp--preset--spacing--30, 0.75rem);
-	--lf-spacing-normal: var(--wp--preset--spacing--50, 1.25rem);
-	--lf-spacing-loose: var(--wp--preset--spacing--70, 2rem);
+	--lf-spacing-normal: var(--lf-space-card);
+	--lf-spacing-loose: var(--lf-space-section);
 
 	/* Colors: theme.json when available; fallbacks so layout always works */
 	--lf-body-bg: var(--wp--preset--color--background, #ffffff);
@@ -90,27 +98,39 @@
 	--lf-hero-stack-after-subtitle: var(--lf-spacing-loose);
 	--lf-hero-stack-after-cta: var(--lf-spacing-normal);
 
-	/* Cards */
-	--lf-card-bg: var(--wp--preset--color--background, #ffffff);
+	/* 3) SURFACE STYLES — white, soft, dark (no section is plain text on white) */
+	--lf-surface-white: var(--wp--preset--color--background, #ffffff);
+	--lf-surface-soft: var(--wp--preset--color--neutral-100, #f1f5f9);
+	--lf-surface-dark: var(--wp--preset--color--neutral-dark, #1e293b);
+	--lf-surface-soft-border: var(--lf-border-width) solid var(--lf-neutral-300);
+
+	/* 5) CARD SYSTEM — one system for services, areas, testimonials */
+	--lf-card-bg: var(--lf-surface-white);
 	--lf-card-border: var(--lf-border-width) solid var(--lf-neutral-300);
-	--lf-card-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+	--lf-card-radius: 0.5rem;
+	--lf-card-padding: var(--lf-space-card);
+	--lf-card-padding-lg: var(--lf-space-card-lg);
+	--lf-card-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+	--lf-card-shadow-hover: 0 8px 24px rgba(15, 23, 42, 0.12);
+	--lf-card-shadow-spotlight: 0 4px 20px rgba(15, 23, 42, 0.1);
+	--lf-card-accent-left: var(--lf-border-width-accent) solid var(--lf-primary);
 
-	/* Decision cards (Services + Service Areas: clickable, conversion-focused) */
-	--lf-card-decision-padding-y: var(--lf-spacing-normal);
-	--lf-card-decision-padding-x: var(--lf-spacing-loose);
-	--lf-card-decision-radius: 0.375rem;
-	--lf-card-decision-border: var(--lf-border-width) solid var(--lf-neutral-300);
-	--lf-card-decision-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-	--lf-card-decision-shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.12);
+	/* Decision cards (Services + Areas): use card system */
+	--lf-card-decision-padding-y: var(--lf-card-padding);
+	--lf-card-decision-padding-x: var(--lf-card-padding-lg);
+	--lf-card-decision-radius: var(--lf-card-radius);
+	--lf-card-decision-border: var(--lf-card-border);
+	--lf-card-decision-shadow: var(--lf-card-shadow);
+	--lf-card-decision-shadow-hover: var(--lf-card-shadow-hover);
 
-	/* CTA block (final section: high contrast, strong close) */
-	--lf-cta-block-bg: var(--wp--preset--color--neutral-dark, #1e293b);
+	/* CTA block (final section: uses surface dark) */
+	--lf-cta-block-bg: var(--lf-surface-dark);
 	--lf-cta-block-text: var(--wp--preset--color--cta-primary, #ffffff);
 	--lf-cta-block-text-muted: var(--wp--preset--color--cta-secondary, #e2e8f0);
 	--lf-cta-block-padding-y: var(--lf-section-padding-lg);
 	--lf-cta-block-separation: var(--lf-section-padding-lg);
 
-	/* Typography (theme.json when available; fallbacks so type always works) */
+	/* 2) TYPOGRAPHY HIERARCHY — premium, readable (theme.json + display) */
 	--lf-font-system: var(--wp--preset--font-family--system, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
 	--lf-fs-small: var(--wp--preset--font-size--small, 0.875rem);
 	--lf-fs-body: var(--wp--preset--font-size--body, 1rem);
@@ -120,21 +140,23 @@
 	--lf-fs-h2: var(--wp--preset--font-size--h2, 1.875rem);
 	--lf-fs-h3: var(--wp--preset--font-size--h3, 1.5rem);
 	--lf-fs-h4: var(--wp--preset--font-size--h4, 1.25rem);
+	--lf-fs-display: var(--wp--preset--font-size--display, 2.75rem);
 	--lf-fw-normal: var(--wp--preset--font-weight--normal, 400);
 	--lf-fw-semibold: var(--wp--preset--font-weight--semibold, 600);
 	--lf-fw-bold: var(--wp--preset--font-weight--bold, 700);
 
-	/* Button padding (from spacing scale) */
+	/* 4) BUTTON HIERARCHY — primary dominant, secondary clear */
 	--lf-btn-pad-y: var(--wp--preset--spacing--30, 0.75rem);
 	--lf-btn-pad-x: var(--wp--preset--spacing--60, 1.5rem);
 	--lf-btn-pad-x-lg: var(--wp--preset--spacing--70, 2rem);
+	--lf-btn-primary-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+	--lf-btn-primary-shadow-hover: 0 4px 12px rgba(37, 99, 235, 0.4);
 	--lf-block-gap: var(--wp--preset--spacing--70, 2rem);
 	--lf-homepage-section-gap: var(--wp--preset--spacing--50, 1.25rem);
 	--lf-gap-30: var(--wp--preset--spacing--30, 0.75rem);
 
-	/* Section surfaces (homepage flow) */
-	--lf-section-surface-tint: var(--lf-neutral-100);
-	--lf-section-spotlight-shadow: 0 4px 20px rgba(15, 23, 42, 0.12);
+	/* Section surfaces (homepage flow) — alias */
+	--lf-section-surface-tint: var(--lf-surface-soft);
 
 	/* Typography rhythm */
 	--lf-line-height-heading: 1.2;
@@ -148,7 +170,7 @@
 	/* Hero min-height (CLS-safe) */
 	--lf-hero-min-height: 18rem;
 	--lf-hero-min-height--compact: 15rem;
-	--lf-hero-title-max: 2.75rem;
+	--lf-hero-title-max: var(--lf-fs-display);
 
 	/* Grid: min column width */
 	--lf-grid-min: 12.5rem;
@@ -231,11 +253,13 @@
 .lf-btn--primary {
 	background-color: var(--lf-primary);
 	color: var(--lf-cta-block-text);
+	box-shadow: var(--lf-btn-primary-shadow);
 }
 
 .lf-btn--primary:hover {
 	background-color: var(--lf-cta-block-bg);
 	color: var(--lf-cta-block-text);
+	box-shadow: var(--lf-btn-primary-shadow-hover);
 }
 
 .lf-btn--secondary {
@@ -268,24 +292,6 @@ button:focus-visible,
 	outline-offset: var(--lf-focus-offset);
 }
 
-/* Containers */
-.lf-container {
-	width: 100%;
-	max-width: var(--lf-container-wide);
-	margin-left: auto;
-	margin-right: auto;
-	padding-left: var(--lf-section-padding-x);
-	padding-right: var(--lf-section-padding-x);
-}
-
-.lf-container--narrow {
-	max-width: var(--lf-container-narrow);
-}
-
-.lf-container--full {
-	max-width: var(--lf-container-full);
-}
-
 .lf-section {
 	padding-top: var(--lf-section-padding-y);
 	padding-bottom: var(--lf-section-padding-y);
@@ -302,7 +308,58 @@ button:focus-visible,
 }
 
 .lf-section--alt {
-	background-color: var(--lf-neutral-100);
+	background-color: var(--lf-surface-soft);
+}
+
+/* Surface utilities — every section has an intentional surface */
+.lf-surface-white {
+	background-color: var(--lf-surface-white);
+}
+
+.lf-surface-soft {
+	background-color: var(--lf-surface-soft);
+}
+
+.lf-surface-dark {
+	background-color: var(--lf-surface-dark);
+	color: var(--lf-cta-block-text);
+}
+
+/* Containers visually anchor content */
+.lf-container {
+	width: 100%;
+	max-width: var(--lf-container-wide);
+	margin-left: auto;
+	margin-right: auto;
+	padding-left: var(--lf-space-container);
+	padding-right: var(--lf-space-container);
+}
+
+.lf-container--narrow {
+	max-width: var(--lf-container-narrow);
+}
+
+.lf-container--full {
+	max-width: var(--lf-container-full);
+}
+
+/* Card system — base + modifiers (services, areas, testimonial) */
+.lf-card {
+	background-color: var(--lf-card-bg);
+	border: var(--lf-card-border);
+	border-radius: var(--lf-card-radius);
+	box-shadow: var(--lf-card-shadow);
+	padding: var(--lf-card-padding);
+}
+
+.lf-card--interactive:hover {
+	box-shadow: var(--lf-card-shadow-hover);
+}
+
+.lf-card--spotlight {
+	box-shadow: var(--lf-card-shadow-spotlight);
+	border-left: var(--lf-card-accent-left);
+	padding-left: calc(var(--lf-card-padding-lg) + var(--lf-border-width-accent));
 }
 
 /* Readable prose (intro / long-form text) */
@@ -347,22 +404,22 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Homepage section surfaces (alternating for flow; no reorder)
+   Homepage section surfaces (intentional: white, soft, dark — no plain text on white)
    ------------------------------------------------------------------------- */
 .lf-block-service-grid {
-	background-color: var(--lf-body-bg);
+	background-color: var(--lf-surface-white);
 }
 
 .lf-block-service-areas {
-	background-color: var(--lf-section-surface-tint);
+	background-color: var(--lf-surface-soft);
 }
 
 .lf-block-trust-reviews {
-	background-color: var(--lf-section-surface-tint);
+	background-color: var(--lf-surface-soft);
 }
 
 .lf-block-faq-accordion {
-	background-color: var(--lf-body-bg);
+	background-color: var(--lf-surface-white);
 }
 
 /* -------------------------------------------------------------------------
@@ -792,15 +849,9 @@ button:focus-visible,
 	}
 }
 
-/* Quote prominent; container minimal so section tint and content stand out */
+/* Quote: extends card spotlight; only margin reset */
 .lf-block-trust-reviews__quote {
 	margin: 0;
-	padding: var(--lf-spacing-loose) var(--lf-spacing-loose) var(--lf-spacing-loose) calc(var(--lf-spacing-loose) + var(--lf-border-width-accent));
-	background-color: transparent;
-	border: none;
-	border-left: var(--lf-border-width-accent) solid var(--lf-primary);
-	border-radius: 0;
-	box-shadow: none;
 }
 
 .lf-block-trust-reviews__text {

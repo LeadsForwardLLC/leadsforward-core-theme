@@ -22,7 +22,7 @@ $query = new WP_Query([
 	'no_found_rows'  => true,
 ]);
 ?>
-<section class="lf-block lf-block-faq-accordion lf-block-faq-accordion--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" aria-label="<?php esc_attr_e('FAQs', 'leadsforward-core'); ?>">
+<section class="lf-block lf-block-faq-accordion lf-surface-white lf-block-faq-accordion--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" aria-label="<?php esc_attr_e('FAQs', 'leadsforward-core'); ?>">
 	<div class="lf-block-faq-accordion__inner">
 		<h2 class="lf-block-faq-accordion__title"><?php esc_html_e('Frequently Asked Questions', 'leadsforward-core'); ?></h2>
 		<?php if ($query->have_posts()) : ?>

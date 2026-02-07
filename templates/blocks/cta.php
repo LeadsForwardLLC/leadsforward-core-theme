@@ -35,7 +35,7 @@ $cta_phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
 $use_phone_link = $cta_type === 'call' && $cta_phone && $primary;
 $show_form = ($cta_type === 'form' && $ghl_embed) || ($cta_type !== 'call' && $ghl_embed);
 ?>
-<section class="lf-block lf-block-cta lf-block-cta--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
+<section class="lf-block lf-block-cta lf-surface-dark lf-block-cta--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-cta__inner">
 		<?php if ($primary) : ?>
 			<p class="lf-block-cta__primary">
