@@ -16,28 +16,15 @@ get_header();
 ?>
 
 <main id="main" class="site-main" role="main">
-	<?php while (have_posts()) : the_post();
-		$h1 = function_exists('get_field') ? get_field('lf_service_seo_h1') : '';
-		if (!$h1) {
-			$h1 = get_the_title();
-		}
-		$short_desc = function_exists('get_field') ? get_field('lf_service_short_desc') : '';
-		$long_content = function_exists('get_field') ? get_field('lf_service_long_content') : '';
-		if (!$long_content) {
-			$long_content = get_the_content();
-		}
-	?>
+	<?php while (have_posts()) : the_post(); ?>
 		<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
-			<header class="entry-header">
-				<h1 class="entry-title"><?php echo esc_html($h1); ?></h1>
-			</header>
-			<?php if ($short_desc) : ?>
-				<p class="entry-summary"><?php echo esc_html($short_desc); ?></p>
-			<?php endif; ?>
-			<div class="entry-content">
-				<?php echo wp_kses_post($long_content); ?>
-			</div>
-			<?php get_template_part('templates/parts/related-service-areas'); ?>
+			<?php
+			if (function_exists('lf_pb_render_sections')) {
+				lf_pb_render_sections(get_post());
+			} else {
+				the_content();
+			}
+			?>
 		</article>
 	<?php endwhile; ?>
 </main>
