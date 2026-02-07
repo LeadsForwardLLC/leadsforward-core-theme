@@ -1168,7 +1168,7 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Block: FAQ Accordion (clean spacing, low noise, schema-safe markup)
+   Block: FAQ Accordion (objection handling; question emphasis, calm, schema-safe)
    ------------------------------------------------------------------------- */
 .lf-block-faq-accordion__inner {
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
@@ -1177,12 +1177,25 @@ button:focus-visible,
 	margin-right: auto;
 }
 
+.lf-block-faq-accordion__header {
+	margin-bottom: var(--lf-spacing-loose);
+}
+
 .lf-block-faq-accordion__title {
 	margin: 0 0 var(--lf-section-heading-margin);
 	font-size: var(--lf-fs-h2);
 	font-weight: var(--lf-heading-weight);
 	line-height: var(--lf-line-height-heading);
 	color: var(--lf-text);
+}
+
+.lf-block-faq-accordion__intro {
+	margin: 0;
+	font-size: var(--lf-fs-body);
+	font-weight: var(--lf-fw-normal);
+	color: var(--lf-muted);
+	line-height: var(--lf-line-height-body);
+	max-width: 38em;
 }
 
 .lf-block-faq-accordion__list {
@@ -1201,13 +1214,14 @@ button:focus-visible,
 	border-top: var(--lf-border-width) solid var(--lf-neutral-300);
 }
 
+/* Question: clear emphasis so each reads as the objection being addressed */
 .lf-block-faq-accordion__question {
 	display: block;
 	width: 100%;
-	padding: var(--lf-spacing-normal) 0;
-	padding-right: 2rem;
+	padding: var(--lf-spacing-normal) 2.5rem 0 0;
+	padding-bottom: var(--lf-spacing-normal);
 	font-weight: var(--lf-fw-semibold);
-	font-size: var(--lf-fs-body);
+	font-size: var(--lf-fs-medium);
 	text-align: left;
 	cursor: pointer;
 	list-style: none;
@@ -1216,7 +1230,7 @@ button:focus-visible,
 	border: none;
 	color: var(--lf-text);
 	font-family: inherit;
-	line-height: var(--lf-line-height-tight);
+	line-height: 1.35;
 	min-height: var(--lf-touch-min);
 	box-sizing: border-box;
 	position: relative;
@@ -1238,7 +1252,7 @@ button:focus-visible,
 	transform: translateY(-50%);
 	font-weight: var(--lf-fw-normal);
 	font-size: var(--lf-fs-large);
-	color: var(--lf-muted);
+	color: var(--lf-neutral-300);
 	line-height: 1;
 }
 
@@ -1246,12 +1260,13 @@ button:focus-visible,
 	content: "−";
 }
 
+/* Answer: calm, readable (not faded so it feels substantive) */
 .lf-block-faq-accordion__answer {
 	margin: 0;
-	padding: 0 0 var(--lf-spacing-normal);
+	padding: 0 0 var(--lf-spacing-loose);
 	font-size: var(--lf-fs-body);
 	font-weight: var(--lf-fw-normal);
-	color: var(--lf-muted);
+	color: var(--lf-text);
 	line-height: var(--lf-line-height-body);
 }
 

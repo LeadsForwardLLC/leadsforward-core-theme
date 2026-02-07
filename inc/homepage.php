@@ -85,6 +85,10 @@ function lf_homepage_default_section_config(string $section_type): array {
 				'section_intro'   => __('We’re your local team. These cities and the surrounding region—contact us to confirm we serve your area.', 'leadsforward-core'),
 			]);
 		case 'faq_accordion':
+			return array_merge($base, [
+				'section_heading' => __('Frequently Asked Questions', 'leadsforward-core'),
+				'section_intro'   => __('Quick answers to the questions we hear most. Can’t find what you need? Get in touch.', 'leadsforward-core'),
+			]);
 		case 'map_nap':
 			return $base;
 		case 'cta':
