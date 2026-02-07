@@ -87,7 +87,7 @@ function lf_homepage_default_section_config(string $section_type): array {
 		case 'faq_accordion':
 			return array_merge($base, [
 				'section_heading' => __('Frequently Asked Questions', 'leadsforward-core'),
-				'section_intro'   => __('Common questions from homeowners like you. Don't see your question? Call or request a free quote—we're happy to help.', 'leadsforward-core'),
+				'section_intro'   => __("Common questions from homeowners like you. Don't see your question? Call or request a free quote—we're happy to help.", 'leadsforward-core'),
 			]);
 		case 'map_nap':
 			return $base;

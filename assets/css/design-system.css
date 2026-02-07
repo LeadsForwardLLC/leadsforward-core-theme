@@ -1,17 +1,8 @@
 /**
  * LeadsForward design system. Home-services skin: agency-grade homepage.
- *
- * HOMEPAGE STRUCTURE (locked order)
- * 1. Hero — full-bleed gradient, bold H1, dominant CTA, trust strip
- * 2. Services — white surface, premium decision cards, 3-col grid
- * 3. Service Areas — soft surface, same card language, local trust
- * 4. Social Proof — soft surface, quote-forward testimonials (1–3)
- * 5. FAQ — white surface, objection handling, schema-safe
- * 6. Final CTA — dark band, one clear action
- *
- * Surfaces: white (#fff), soft (#f8fafc, #f1f5f9), dark (#1e293b).
- * No sliders/JS. Section toggles, wizard, and data sources unchanged.
+ * Premium typography (Plus Jakarta Sans), high-contrast surfaces, conversion-focused.
  */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 /* -------------------------------------------------------------------------
    FOUNDATIONAL DESIGN SYSTEM
@@ -78,18 +69,18 @@
 	/* Border radius (override per variation profile in variation-tokens.css) */
 	--lf-button-radius: 0.25rem;
 
-	/* Hero — full-bleed, agency-grade: gradient, display type, dominant CTA */
-	--lf-hero-bg: #e2e8f0;
-	--lf-hero-bg-gradient: linear-gradient(165deg, #f1f5f9 0%, #e2e8f0 35%, #f8fafc 100%);
-	--lf-hero-stack-after-title: 1.25rem;
-	--lf-hero-stack-after-subtitle: 1.75rem;
-	--lf-hero-stack-after-cta: 2rem;
-	--lf-hero-cta-primary-size: 1.125rem;
-	--lf-hero-cta-primary-pad-y: 1rem;
-	--lf-hero-cta-primary-pad-x: 2.25rem;
+	/* Hero — bold gradient, display type, dominant CTA */
+	--lf-hero-bg: #cbd5e1;
+	--lf-hero-bg-gradient: linear-gradient(160deg, #e2e8f0 0%, #cbd5e1 40%, #94a3b8 100%);
+	--lf-hero-stack-after-title: 1rem;
+	--lf-hero-stack-after-subtitle: 1.5rem;
+	--lf-hero-stack-after-cta: 1.75rem;
+	--lf-hero-cta-primary-size: 1.25rem;
+	--lf-hero-cta-primary-pad-y: 1.125rem;
+	--lf-hero-cta-primary-pad-x: 2.5rem;
 	--lf-hero-trust-gap: 0.75rem;
-	--lf-hero-min-height: 22rem;
-	--lf-hero-title-size: clamp(2rem, 5.5vw, 3.25rem);
+	--lf-hero-min-height: 28rem;
+	--lf-hero-title-size: clamp(2.25rem, 6vw, 4rem);
 
 	/* 3) SURFACE STYLES — white, soft, dark (no section is plain text on white) */
 	--lf-surface-white: var(--wp--preset--color--background, #ffffff);
@@ -123,8 +114,9 @@
 	--lf-cta-block-padding-y: var(--lf-section-padding-lg);
 	--lf-cta-block-separation: var(--lf-section-padding-lg);
 
-	/* 2) TYPOGRAPHY HIERARCHY — premium, readable (theme.json + display) */
-	--lf-font-system: var(--wp--preset--font-family--system, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+	/* 2) TYPOGRAPHY — Plus Jakarta Sans for headings, system for body */
+	--lf-font-heading: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+	--lf-font-system: var(--wp--preset--font-family--system, 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif);
 	--lf-fs-small: var(--wp--preset--font-size--small, 0.875rem);
 	--lf-fs-body: var(--wp--preset--font-size--body, 1rem);
 	--lf-fs-medium: var(--wp--preset--font-size--medium, 1.125rem);
@@ -184,20 +176,22 @@
 /* Homepage: intentional section flow, consistent rhythm */
 .site-main--homepage {
 	padding-top: 0;
-	padding-bottom: var(--lf-section-padding-y);
+	padding-bottom: 0;
 }
 
 .site-main--homepage .lf-block + .lf-block {
 	margin-top: 0;
 }
 
-/* Homepage base skin: section headings as clear chapter markers */
+/* Homepage: premium heading font + tight tracking */
+.site-main--homepage .lf-block-hero__title,
 .site-main--homepage .lf-block-service-grid__title,
 .site-main--homepage .lf-block-service-areas__title,
 .site-main--homepage .lf-block-trust-reviews__title,
 .site-main--homepage .lf-block-faq-accordion__title,
 .site-main--homepage .lf-block-cta__headline {
-	letter-spacing: -0.02em;
+	font-family: var(--lf-font-heading);
+	letter-spacing: -0.03em;
 }
 
 .site-main h1,
@@ -275,6 +269,8 @@ body {
 	font-family: var(--lf-font-system);
 	font-weight: var(--lf-fw-normal);
 	line-height: var(--lf-line-height-body);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
 a:focus-visible,
@@ -555,7 +551,7 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Block: Hero — Full-bleed, conversion above the fold (agency-grade)
+   Block: Hero — Full-bleed, high-impact, conversion above the fold
    ------------------------------------------------------------------------- */
 .lf-block-hero {
 	position: relative;
@@ -564,7 +560,7 @@ button:focus-visible,
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	padding: 4rem 1.5rem;
+	padding: 5rem 1.5rem;
 	overflow: hidden;
 }
 
@@ -579,7 +575,7 @@ button:focus-visible,
 .lf-block-hero__inner {
 	position: relative;
 	z-index: 1;
-	max-width: 42rem;
+	max-width: 44rem;
 	margin-left: auto;
 	margin-right: auto;
 	width: 100%;
@@ -590,17 +586,19 @@ button:focus-visible,
 .lf-block-hero__title {
 	font-size: var(--lf-hero-title-size);
 	font-weight: 800;
-	line-height: 1.1;
-	letter-spacing: -0.03em;
+	line-height: 1.05;
+	letter-spacing: -0.04em;
 	margin: 0 0 var(--lf-hero-stack-after-title);
-	color: var(--lf-text);
+	color: #0f172a;
+	text-shadow: 0 1px 2px rgba(255,255,255,0.5);
 }
 
 .lf-block-hero__subtitle {
-	font-size: 1.125rem;
-	color: var(--lf-muted);
-	line-height: 1.6;
-	max-width: 32em;
+	font-size: 1.25rem;
+	color: #475569;
+	font-weight: 500;
+	line-height: 1.5;
+	max-width: 34em;
 	margin: 0 auto var(--lf-hero-stack-after-subtitle);
 }
 
@@ -618,23 +616,25 @@ button:focus-visible,
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	min-height: var(--lf-touch-min);
-	padding: 1rem 2.25rem;
-	font-size: 1.125rem;
+	min-height: 3.25rem;
+	padding: var(--lf-hero-cta-primary-pad-y) var(--lf-hero-cta-primary-pad-x);
+	font-size: var(--lf-hero-cta-primary-size);
 	font-weight: 700;
 	white-space: nowrap;
-	border-radius: 0.375rem;
-	box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+	border-radius: 0.5rem;
+	box-shadow: 0 10px 30px -5px rgba(37, 99, 235, 0.5), 0 4px 12px -2px rgba(37, 99, 235, 0.3);
 	text-decoration: none;
 	background: var(--lf-primary);
 	color: #fff;
 	border: none;
 	cursor: pointer;
+	transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
 .lf-block-hero__cta-link:hover,
 .lf-block-hero__cta-text:hover {
-	box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+	transform: translateY(-2px);
+	box-shadow: 0 16px 40px -5px rgba(37, 99, 235, 0.55), 0 6px 16px -2px rgba(37, 99, 235, 0.35);
 	filter: brightness(1.05);
 }
 
@@ -643,19 +643,22 @@ button:focus-visible,
 	align-items: center;
 	justify-content: center;
 	min-height: var(--lf-touch-min);
-	padding: 0.75rem 1.5rem;
-	font-size: 1rem;
+	padding: 0.875rem 1.75rem;
+	font-size: 1.0625rem;
 	font-weight: 600;
 	white-space: nowrap;
-	border-radius: 0.375rem;
-	background: #fff;
-	color: var(--lf-text);
-	border: 2px solid var(--lf-neutral-300);
+	border-radius: 0.5rem;
+	background: rgba(255,255,255,0.95);
+	color: #0f172a;
+	border: 2px solid rgba(15,23,42,0.15);
+	box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .lf-block-hero__cta-secondary:hover {
 	border-color: var(--lf-primary);
 	color: var(--lf-primary);
+	box-shadow: 0 4px 12px rgba(37,99,235,0.15);
 }
 
 .lf-block-hero__trust {
@@ -666,7 +669,7 @@ button:focus-visible,
 	gap: var(--lf-hero-trust-gap);
 	font-size: 0.9375rem;
 	font-weight: 600;
-	color: var(--lf-text);
+	color: #334155;
 }
 
 .lf-block-hero__stars {
@@ -676,7 +679,7 @@ button:focus-visible,
 }
 
 .lf-block-hero__star {
-	color: var(--lf-warning);
+	color: #ca8a04;
 	flex-shrink: 0;
 	width: 1.125rem;
 	height: 1.125rem;
@@ -685,29 +688,23 @@ button:focus-visible,
 .lf-block-hero__badge {
 	display: inline-flex;
 	align-items: center;
-	padding: 0.35em 0.85em;
-	background: #fff;
-	border: 1px solid var(--lf-neutral-300);
+	padding: 0.4em 1em;
+	background: rgba(255,255,255,0.95);
+	border: 1px solid rgba(15,23,42,0.1);
 	border-radius: 9999px;
-	box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-	color: var(--lf-text);
+	box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+	color: #0f172a;
+	font-weight: 600;
 }
 
-.lf-block-hero__phone-wrap {
-	margin: 1.25rem 0 0;
-}
-
+.lf-block-hero__phone-wrap { margin: 1.25rem 0 0; }
 .lf-block-hero__phone {
-	color: var(--lf-muted);
+	color: #475569;
 	text-decoration: none;
 	font-weight: 600;
 	font-size: 1rem;
 }
-
-.lf-block-hero__phone:hover {
-	text-decoration: underline;
-	color: var(--lf-text);
-}
+.lf-block-hero__phone:hover { text-decoration: underline; color: #0f172a; }
 
 .lf-block-hero--a .lf-block-hero__title { font-size: 1.875rem; }
 .lf-block-hero--a { padding: 3rem 1.5rem; min-height: var(--lf-hero-min-height--compact); }
@@ -733,18 +730,18 @@ button:focus-visible,
 
 .lf-block-service-grid__title {
 	margin: 0 0 0.75rem;
-	font-size: 2rem;
-	font-weight: 700;
-	line-height: 1.2;
-	letter-spacing: -0.02em;
-	color: var(--lf-text);
+	font-size: 2.25rem;
+	font-weight: 800;
+	line-height: 1.15;
+	letter-spacing: -0.03em;
+	color: #0f172a;
 }
 
 .lf-block-service-grid__intro {
 	margin: 0;
-	font-size: 1.0625rem;
+	font-size: 1.125rem;
 	line-height: 1.6;
-	color: var(--lf-muted);
+	color: #64748b;
 }
 
 .lf-block-service-grid__list {
@@ -770,27 +767,28 @@ button:focus-visible,
 	justify-content: space-between;
 	text-align: left;
 	min-height: var(--lf-touch-min);
-	padding: 1.5rem 1.5rem;
+	padding: 1.75rem 1.75rem;
 	background: #fff;
 	border: 1px solid #e2e8f0;
+	border-left: 4px solid var(--lf-primary);
 	border-radius: 0.5rem;
-	box-shadow: 0 1px 3px rgba(15,23,42,0.06);
-	color: var(--lf-text);
+	box-shadow: 0 4px 6px -1px rgba(15,23,42,0.07), 0 10px 20px -5px rgba(15,23,42,0.06);
+	color: #0f172a;
 	text-decoration: none;
 	font-weight: 600;
-	font-size: 1rem;
+	font-size: 1.0625rem;
 	line-height: 1.35;
 	box-sizing: border-box;
 	cursor: pointer;
-	transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+	transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
 .lf-block-service-grid__link:hover {
 	background: var(--lf-primary);
 	color: #fff;
-	border-color: var(--lf-primary);
-	box-shadow: 0 12px 32px rgba(37,99,235,0.25);
-	transform: translateY(-3px);
+	border-left-color: var(--lf-primary);
+	box-shadow: 0 20px 40px -10px rgba(37,99,235,0.3), 0 8px 20px -5px rgba(37,99,235,0.2);
+	transform: translateY(-4px);
 }
 
 .lf-block-service-grid__link:focus-visible {
@@ -840,18 +838,18 @@ button:focus-visible,
 
 .lf-block-service-areas__title {
 	margin: 0 0 0.75rem;
-	font-size: 2rem;
-	font-weight: 700;
-	line-height: 1.2;
-	letter-spacing: -0.02em;
-	color: var(--lf-text);
+	font-size: 2.25rem;
+	font-weight: 800;
+	line-height: 1.15;
+	letter-spacing: -0.03em;
+	color: #0f172a;
 }
 
 .lf-block-service-areas__intro {
 	margin: 0;
-	font-size: 1.0625rem;
+	font-size: 1.125rem;
 	line-height: 1.6;
-	color: var(--lf-muted);
+	color: #64748b;
 }
 
 .lf-block-service-areas__list {
@@ -877,27 +875,28 @@ button:focus-visible,
 	justify-content: space-between;
 	text-align: left;
 	min-height: var(--lf-touch-min);
-	padding: 1.5rem 1.5rem;
+	padding: 1.75rem 1.75rem;
 	background: #fff;
 	border: 1px solid #e2e8f0;
+	border-left: 4px solid var(--lf-primary);
 	border-radius: 0.5rem;
-	box-shadow: 0 1px 3px rgba(15,23,42,0.06);
-	color: var(--lf-text);
+	box-shadow: 0 4px 6px -1px rgba(15,23,42,0.07), 0 10px 20px -5px rgba(15,23,42,0.06);
+	color: #0f172a;
 	text-decoration: none;
 	font-weight: 600;
-	font-size: 1rem;
+	font-size: 1.0625rem;
 	line-height: 1.35;
 	box-sizing: border-box;
 	cursor: pointer;
-	transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+	transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
 .lf-block-service-areas__link:hover {
 	background: var(--lf-primary);
 	color: #fff;
-	border-color: var(--lf-primary);
-	box-shadow: 0 12px 32px rgba(37,99,235,0.25);
-	transform: translateY(-3px);
+	border-left-color: var(--lf-primary);
+	box-shadow: 0 20px 40px -10px rgba(37,99,235,0.3), 0 8px 20px -5px rgba(37,99,235,0.2);
+	transform: translateY(-4px);
 }
 
 .lf-block-service-areas__link:focus-visible {
@@ -915,28 +914,28 @@ button:focus-visible,
    Block: Social Proof — Quote-forward, 1–3 testimonials, distinct surface
    ------------------------------------------------------------------------- */
 .lf-block-trust-reviews {
-	background: #f1f5f9;
+	background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
 }
 
 .lf-block-trust-reviews__inner {
-	padding: 4rem 1.5rem;
+	padding: 5rem 1.5rem;
 	max-width: 72rem;
 	margin-left: auto;
 	margin-right: auto;
 }
 
 .lf-block-trust-reviews__header {
-	margin-bottom: 2.5rem;
+	margin-bottom: 2.75rem;
 	text-align: center;
 }
 
 .lf-block-trust-reviews__title {
 	margin: 0;
-	font-size: 2rem;
-	font-weight: 700;
-	line-height: 1.2;
-	letter-spacing: -0.02em;
-	color: var(--lf-text);
+	font-size: 2.25rem;
+	font-weight: 800;
+	line-height: 1.15;
+	letter-spacing: -0.03em;
+	color: #0f172a;
 }
 
 .lf-block-trust-reviews__list {
@@ -967,31 +966,33 @@ button:focus-visible,
 	display: flex;
 	flex-direction: column;
 	background: #fff;
-	border-radius: 0.5rem;
-	padding: 2rem 1.75rem;
-	box-shadow: 0 1px 3px rgba(15,23,42,0.06);
-	border: 1px solid #e2e8f0;
+	border-radius: 0.75rem;
+	padding: 2.25rem 2rem;
+	box-shadow: 0 4px 6px -1px rgba(15,23,42,0.08), 0 12px 24px -5px rgba(15,23,42,0.06);
+	border: 1px solid rgba(15,23,42,0.06);
+	border-left: 4px solid var(--lf-primary);
 }
 
 .lf-block-trust-reviews__text {
 	position: relative;
-	margin: 0 0 1.25rem;
-	padding-top: 0.15em;
-	font-size: 1.125rem;
+	margin: 0 0 1.5rem;
+	padding-top: 0.1em;
+	font-size: 1.25rem;
 	line-height: 1.55;
-	color: var(--lf-text);
-	font-weight: 400;
+	color: #1e293b;
+	font-weight: 500;
 	flex-grow: 1;
 }
 
 .lf-block-trust-reviews__text::before {
 	content: "\201C";
 	position: absolute;
-	top: -0.1em;
+	top: -0.15em;
 	left: 0;
-	font-size: 2.5rem;
+	font-size: 3.5rem;
 	line-height: 1;
-	color: #cbd5e1;
+	color: var(--lf-primary);
+	opacity: 0.35;
 	font-family: Georgia, serif;
 }
 
@@ -1009,38 +1010,45 @@ button:focus-visible,
 .lf-block-trust-reviews__stars { display: inline-flex; gap: 2px; }
 .lf-block-trust-reviews__star { width: 12px; height: 12px; color: #cbd5e1; }
 .lf-block-trust-reviews__star--filled { color: var(--lf-warning); }
-.lf-block-trust-reviews__cite cite { font-style: normal; font-weight: 600; color: var(--lf-text); }
+.lf-block-trust-reviews__cite cite { font-style: normal; font-weight: 700; color: #0f172a; }
 .lf-block-trust-reviews__source { opacity: 0.9; }
 .lf-block-trust-reviews__empty { margin: 0; padding: 2rem; text-align: center; }
 .lf-block-trust-reviews__empty-text { margin: 0; font-size: 1rem; color: var(--lf-muted); }
 
 /* -------------------------------------------------------------------------
-   Block: Final CTA — The close: dark band, one clear action
+   Block: Final CTA — The close: high-contrast dark band, one clear action
    ------------------------------------------------------------------------- */
 .lf-block-cta {
-	background: #1e293b;
+	background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
 	color: #fff;
 }
 
 .site-main--homepage .lf-block-cta {
 	margin-top: 0;
+	margin-bottom: 0;
+}
+
+/* No gap between final CTA and footer on homepage */
+.site-main--homepage + .site-footer {
+	margin-top: 0;
 }
 
 .lf-block-cta__inner {
-	padding: 4rem 1.5rem;
+	padding: 5rem 1.5rem;
 	text-align: center;
-	max-width: 36rem;
+	max-width: 38rem;
 	margin-left: auto;
 	margin-right: auto;
 }
 
 .lf-block-cta__headline {
 	margin: 0 0 1.5rem;
-	font-size: 2rem;
-	font-weight: 700;
-	line-height: 1.2;
-	letter-spacing: -0.02em;
-	color: #fff;
+	font-size: 2.25rem;
+	font-weight: 800;
+	line-height: 1.15;
+	letter-spacing: -0.03em;
+	color: #ffffff;
+	text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
 .lf-block-cta__primary {
@@ -1051,32 +1059,34 @@ button:focus-visible,
 .lf-block-cta__primary-text {
 	display: inline-block;
 	background: #fff;
-	color: #1e293b;
-	padding: 1rem 2.25rem;
-	min-height: var(--lf-touch-min);
+	color: #0f172a;
+	padding: 1.125rem 2.5rem;
+	min-height: 3.25rem;
 	box-sizing: border-box;
 	line-height: 1.25;
 	vertical-align: middle;
-	border-radius: 0.375rem;
+	border-radius: 0.5rem;
 	font-weight: 700;
-	font-size: 1.125rem;
+	font-size: 1.25rem;
 	text-decoration: none;
-	transition: filter 0.2s ease, box-shadow 0.2s ease;
+	box-shadow: 0 10px 30px -5px rgba(0,0,0,0.35), 0 4px 12px -2px rgba(0,0,0,0.2);
+	transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
 .lf-block-cta__primary-link:hover {
-	background: #f1f5f9;
-	color: #1e293b;
+	background: #f8fafc;
+	color: #0f172a;
 	text-decoration: none;
+	transform: translateY(-2px);
+	box-shadow: 0 16px 40px -5px rgba(0,0,0,0.4), 0 6px 16px -2px rgba(0,0,0,0.25);
 	filter: brightness(1.02);
-	box-shadow: 0 4px 14px rgba(0,0,0,0.2);
 }
 
 .lf-block-cta__secondary {
-	margin: 0.5rem 0 0;
-	font-size: 0.9375rem;
-	color: #94a3b8;
-	line-height: 1.4;
+	margin: 0.75rem 0 0;
+	font-size: 1rem;
+	color: #cbd5e1;
+	line-height: 1.5;
 }
 
 .lf-block-cta__embed {
@@ -1109,18 +1119,18 @@ button:focus-visible,
 
 .lf-block-faq-accordion__title {
 	margin: 0 0 0.75rem;
-	font-size: 2rem;
-	font-weight: 700;
-	line-height: 1.2;
-	letter-spacing: -0.02em;
-	color: var(--lf-text);
+	font-size: 2.25rem;
+	font-weight: 800;
+	line-height: 1.15;
+	letter-spacing: -0.03em;
+	color: #0f172a;
 }
 
 .lf-block-faq-accordion__intro {
 	margin: 0;
-	font-size: 1.0625rem;
+	font-size: 1.125rem;
 	line-height: 1.6;
-	color: var(--lf-muted);
+	color: #64748b;
 }
 
 .lf-block-faq-accordion__list {
@@ -1141,16 +1151,16 @@ button:focus-visible,
 .lf-block-faq-accordion__question {
 	display: block;
 	width: 100%;
-	padding: 1.25rem 2.5rem 1.25rem 0;
-	font-weight: 600;
-	font-size: 1.0625rem;
+	padding: 1.375rem 2.5rem 1.375rem 0;
+	font-weight: 700;
+	font-size: 1.125rem;
 	text-align: left;
 	cursor: pointer;
 	list-style: none;
 	margin: 0;
 	background: none;
 	border: none;
-	color: var(--lf-text);
+	color: #0f172a;
 	font-family: inherit;
 	line-height: 1.35;
 	min-height: var(--lf-touch-min);
