@@ -140,17 +140,27 @@ function lf_homepage_admin_render(): void {
 			<?php wp_nonce_field('lf_homepage_settings', 'lf_homepage_settings_nonce'); ?>
 		<?php
 		$business_slug    = defined('LF_OPTIONS_PAGE_BUSINESS') ? LF_OPTIONS_PAGE_BUSINESS : 'lf-business-info';
-		$business_name    = function_exists('get_field') ? get_field('lf_business_name', $business_slug) : '';
-		$business_phone   = function_exists('get_field') ? get_field('lf_business_phone', $business_slug) : '';
-		$business_email   = function_exists('get_field') ? get_field('lf_business_email', $business_slug) : '';
-		$business_address = function_exists('get_field') ? get_field('lf_business_address', $business_slug) : '';
-		$business_geo     = function_exists('get_field') ? get_field('lf_business_geo', $business_slug) : null;
+		$get_business = function (string $key) use ($business_slug) {
+			if (!function_exists('get_field')) {
+				return '';
+			}
+			$val = get_field($key, $business_slug);
+			if ($val === null || $val === false || $val === '') {
+				$val = get_field($key, 'option');
+			}
+			return is_string($val) ? $val : (is_array($val) ? $val : '');
+		};
+		$business_name    = $get_business('lf_business_name');
+		$business_phone   = $get_business('lf_business_phone');
+		$business_email   = $get_business('lf_business_email');
+		$business_address = $get_business('lf_business_address');
+		$business_geo     = function_exists('get_field') ? (get_field('lf_business_geo', $business_slug) ?: get_field('lf_business_geo', 'option')) : null;
 		$geo_lat          = is_array($business_geo) ? ($business_geo['lat'] ?? '') : '';
 		$geo_lng          = is_array($business_geo) ? ($business_geo['lng'] ?? '') : '';
-		if (!is_string($business_name)) { $business_name = ''; }
-		if (!is_string($business_phone)) { $business_phone = ''; }
-		if (!is_string($business_email)) { $business_email = ''; }
-		if (!is_string($business_address)) { $business_address = ''; }
+		$business_name    = is_string($business_name) ? $business_name : '';
+		$business_phone   = is_string($business_phone) ? $business_phone : '';
+		$business_email   = is_string($business_email) ? $business_email : '';
+		$business_address = is_string($business_address) ? $business_address : '';
 		?>
 		<h2 id="lf-business-info" class="title"><?php esc_html_e('Business Info', 'leadsforward-core'); ?></h2>
 		<p class="description"><?php esc_html_e('Used site-wide: footer, Map + NAP section, schema, and CTAs. Same data as the startup wizard—edit here anytime.', 'leadsforward-core'); ?> <?php esc_html_e('Kept consistent for local SEO: NAP (name, address, phone) is output in one format everywhere and in LocalBusiness schema.', 'leadsforward-core'); ?></p>

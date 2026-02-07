@@ -58,6 +58,17 @@ function lf_wizard_handle_post(): void {
 		];
 		$result = lf_run_setup($data);
 		if (!empty($result['success'])) {
+			// Ensure business info is saved where LeadsForward → Homepage (Business Info) reads from
+			$business_slug = defined('LF_OPTIONS_PAGE_BUSINESS') ? LF_OPTIONS_PAGE_BUSINESS : 'lf-business-info';
+			if (function_exists('update_field')) {
+				update_field('lf_business_name', $data['business_name'] ?? '', $business_slug);
+				update_field('lf_business_phone', $data['business_phone'] ?? '', $business_slug);
+				update_field('lf_business_email', $data['business_email'] ?? '', $business_slug);
+				update_field('lf_business_address', $data['business_address'] ?? '', $business_slug);
+				if (array_key_exists('business_hours', $data) && $data['business_hours'] !== '') {
+					update_field('lf_business_hours', $data['business_hours'], $business_slug);
+				}
+			}
 			update_option('lf_setup_wizard_complete', true);
 			if (!empty($result['ids']) && is_array($result['ids'])) {
 				update_option('lf_wizard_created_ids', $result['ids']);
@@ -129,21 +140,33 @@ function lf_wizard_render_page(): void {
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Next', 'leadsforward-core') . '" /></p></form>';
 	} elseif ($step === 2) {
 		$niche = $niche ?: array_key_first(lf_get_niche_registry());
-		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-ops')) . '">';
-		echo '<input type="hidden" name="page" value="lf-ops" />';
-		echo '<input type="hidden" name="step" value="3" />';
-		echo '<input type="hidden" name="niche" value="' . esc_attr($niche) . '" />';
+		// Defaults: schema-friendly format examples (pre-fill when empty so user sees how to format)
+		$default_name    = __('Quality Roofing of Sarasota', 'leadsforward-core');
+		$default_phone   = __('(941) 555-0123', 'leadsforward-core');
+		$default_email   = __('contact@yourbusiness.com', 'leadsforward-core');
+		$default_address = __("123 Main Street\nSarasota, FL 34232", 'leadsforward-core');
+		$default_hours   = __("Mon–Fri 8am–6pm\nSat 9am–2pm", 'leadsforward-core');
 		$bn = sanitize_text_field($_GET['lf_business_name'] ?? '');
 		$bp = sanitize_text_field($_GET['lf_business_phone'] ?? '');
 		$be = sanitize_email($_GET['lf_business_email'] ?? '');
 		$ba = sanitize_textarea_field($_GET['lf_business_address'] ?? '');
 		$bh = sanitize_textarea_field($_GET['lf_business_hours'] ?? '');
+		if ($bn === '') { $bn = $default_name; }
+		if ($bp === '') { $bp = $default_phone; }
+		if ($be === '') { $be = $default_email; }
+		if ($ba === '') { $ba = $default_address; }
+		if ($bh === '') { $bh = $default_hours; }
+		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-ops')) . '">';
+		echo '<input type="hidden" name="page" value="lf-ops" />';
+		echo '<input type="hidden" name="step" value="3" />';
+		echo '<input type="hidden" name="niche" value="' . esc_attr($niche) . '" />';
+		echo '<p class="description">' . esc_html__('Used for schema, footer, and Map + NAP. Replace with your real business info—these show the recommended format.', 'leadsforward-core') . '</p>';
 		echo '<table class="form-table">';
-		echo '<tr><th scope="row"><label for="lf_business_name">' . esc_html__('Business name', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_business_name" name="lf_business_name" class="regular-text" value="' . esc_attr($bn) . '" required /></td></tr>';
-		echo '<tr><th scope="row"><label for="lf_business_phone">' . esc_html__('Phone', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_business_phone" name="lf_business_phone" class="regular-text" value="' . esc_attr($bp) . '" required /></td></tr>';
-		echo '<tr><th scope="row"><label for="lf_business_email">' . esc_html__('Email', 'leadsforward-core') . '</label></th><td><input type="email" id="lf_business_email" name="lf_business_email" class="regular-text" value="' . esc_attr($be) . '" /></td></tr>';
-		echo '<tr><th scope="row"><label for="lf_business_address">' . esc_html__('Address', 'leadsforward-core') . '</label></th><td><textarea id="lf_business_address" name="lf_business_address" rows="3" class="large-text">' . esc_textarea($ba) . '</textarea></td></tr>';
-		echo '<tr><th scope="row"><label for="lf_business_hours">' . esc_html__('Opening hours', 'leadsforward-core') . '</label></th><td><textarea id="lf_business_hours" name="lf_business_hours" rows="2" class="large-text">' . esc_textarea($bh) . '</textarea></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_name">' . esc_html__('Business name', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_business_name" name="lf_business_name" class="regular-text" value="' . esc_attr($bn) . '" required placeholder="' . esc_attr($default_name) . '" /></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_phone">' . esc_html__('Phone', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_business_phone" name="lf_business_phone" class="regular-text" value="' . esc_attr($bp) . '" required placeholder="(XXX) XXX-XXXX" /></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_email">' . esc_html__('Email', 'leadsforward-core') . '</label></th><td><input type="email" id="lf_business_email" name="lf_business_email" class="regular-text" value="' . esc_attr($be) . '" placeholder="contact@yourbusiness.com" /></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_address">' . esc_html__('Address (NAP)', 'leadsforward-core') . '</label></th><td><textarea id="lf_business_address" name="lf_business_address" rows="3" class="large-text" placeholder="' . esc_attr(preg_replace('/\s+/', ' ', $default_address)) . '">' . esc_textarea($ba) . '</textarea><br /><span class="description">' . esc_html__('Street, then city/state/zip on following lines. Used in schema and Map + NAP.', 'leadsforward-core') . '</span></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_hours">' . esc_html__('Opening hours', 'leadsforward-core') . '</label></th><td><textarea id="lf_business_hours" name="lf_business_hours" rows="3" class="large-text" placeholder="Mon–Fri 8am–6pm">' . esc_textarea($bh) . '</textarea><br /><span class="description">' . esc_html__('Human-readable hours for schema (e.g. Mon–Fri 8am–6pm). One line per rule.', 'leadsforward-core') . '</span></td></tr>';
 		echo '</table>';
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Next', 'leadsforward-core') . '" /></p></form>';
 	} elseif ($step === 3) {
