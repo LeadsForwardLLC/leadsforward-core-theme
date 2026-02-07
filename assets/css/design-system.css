@@ -1478,6 +1478,9 @@ button:focus-visible,
 	max-width: var(--lf-container-wide);
 	margin-left: auto;
 	margin-right: auto;
+}
+
+.lf-block-map-nap__grid {
 	display: grid;
 	gap: var(--lf-gap-loose);
 }
@@ -1490,9 +1493,82 @@ button:focus-visible,
 	line-height: 1.5;
 }
 
-@media (min-width: 640px) {
-	.lf-block-map-nap__inner {
-		grid-template-columns: 1fr 1fr;
+.lf-block-map-nap__header {
+	margin-bottom: 1.5rem;
+	max-width: 32rem;
+}
+
+.lf-block-map-nap__title {
+	margin: 0 0 0.5rem;
+	font-size: 2rem;
+	font-weight: 800;
+	line-height: 1.15;
+	letter-spacing: -0.02em;
+	color: #0f172a;
+}
+
+.lf-block-map-nap__intro {
+	margin: 0;
+	font-size: 1.1rem;
+	line-height: 1.6;
+	color: #64748b;
+}
+
+.lf-block-map-nap__areas-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: grid;
+	gap: 0.75rem;
+}
+
+.lf-block-map-nap__areas-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	font-weight: 600;
+	color: #0f172a;
+	text-decoration: none;
+}
+
+.lf-block-map-nap__areas-link::after {
+	content: "→";
+	font-size: 0.9em;
+	opacity: 0.8;
+}
+
+.lf-block-map-nap__areas-link:hover {
+	color: var(--lf-primary);
+}
+
+.lf-block-map-nap__card {
+	background: #fff;
+	border-radius: 1rem;
+	border: 1px solid rgba(15,23,42,0.08);
+	box-shadow: 0 10px 30px rgba(15,23,42,0.08);
+	padding: 1.5rem;
+	display: grid;
+	gap: 1.25rem;
+}
+
+.lf-block-map-nap__map {
+	min-height: 14rem;
+	background-color: var(--lf-neutral-100);
+	border-radius: 0.75rem;
+	overflow: hidden;
+}
+
+.lf-block-map-nap__map iframe {
+	width: 100%;
+	height: 100%;
+	border: 0;
+	min-height: 14rem;
+}
+
+@media (min-width: 900px) {
+	.lf-block-map-nap__grid {
+		grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+		align-items: start;
 	}
 }
 
@@ -1522,12 +1598,6 @@ button:focus-visible,
 .lf-block-map-nap__phone:hover,
 .lf-block-map-nap__email:hover {
 	text-decoration: underline;
-}
-
-.lf-block-map-nap__map {
-	min-height: 12.5rem;
-	background-color: var(--lf-neutral-100);
-	border-radius: var(--lf-button-radius);
 }
 
 .lf-block-map-nap__map-fallback {

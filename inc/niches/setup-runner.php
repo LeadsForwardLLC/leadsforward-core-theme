@@ -116,13 +116,14 @@ function lf_run_setup(array $data): array {
 
 	// 4. ACF options: business, CTAs, variation, schema, homepage sections
 	if (function_exists('update_field')) {
-		$business_slug = defined('LF_OPTIONS_PAGE_BUSINESS') ? LF_OPTIONS_PAGE_BUSINESS : 'lf-business-info';
-		update_field('lf_business_name', $data['business_name'] ?? '', $business_slug);
-		update_field('lf_business_phone', $data['business_phone'] ?? '', $business_slug);
-		update_field('lf_business_email', $data['business_email'] ?? '', $business_slug);
-		update_field('lf_business_address', $data['business_address'] ?? '', $business_slug);
-		if (!empty($data['business_hours'])) {
-			update_field('lf_business_hours', $data['business_hours'], $business_slug);
+		if (function_exists('lf_update_business_info_value')) {
+			lf_update_business_info_value('lf_business_name', $data['business_name'] ?? '');
+			lf_update_business_info_value('lf_business_phone', $data['business_phone'] ?? '');
+			lf_update_business_info_value('lf_business_email', $data['business_email'] ?? '');
+			lf_update_business_info_value('lf_business_address', $data['business_address'] ?? '');
+			if (!empty($data['business_hours'])) {
+				lf_update_business_info_value('lf_business_hours', $data['business_hours']);
+			}
 		}
 		update_field('lf_cta_primary_text', $niche['cta_primary_default'] ?? '', 'option');
 		update_field('lf_cta_secondary_text', $niche['cta_secondary_default'] ?? '', 'option');

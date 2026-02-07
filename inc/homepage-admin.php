@@ -13,6 +13,7 @@ if (!defined('ABSPATH')) {
 }
 
 add_action('admin_init', 'lf_homepage_admin_save');
+add_action('admin_enqueue_scripts', 'lf_homepage_admin_assets');
 
 /**
  * Show notice on front page edit screen: content is controlled by LeadsForward.
@@ -53,20 +54,38 @@ function lf_homepage_admin_save(): void {
 	}
 
 	/* Save Business Info globally (same storage as Theme Options → Business Info: lf-business-info) */
-	if (function_exists('update_field')) {
-		$business_slug = defined('LF_OPTIONS_PAGE_BUSINESS') ? LF_OPTIONS_PAGE_BUSINESS : 'lf-business-info';
-		update_field('lf_business_name', isset($_POST['lf_business_name']) ? sanitize_text_field(wp_unslash($_POST['lf_business_name'])) : '', $business_slug);
-		update_field('lf_business_phone', isset($_POST['lf_business_phone']) ? sanitize_text_field(wp_unslash($_POST['lf_business_phone'])) : '', $business_slug);
-		update_field('lf_business_email', isset($_POST['lf_business_email']) ? sanitize_email(wp_unslash($_POST['lf_business_email'])) : '', $business_slug);
-		update_field('lf_business_address', isset($_POST['lf_business_address']) ? sanitize_textarea_field(wp_unslash($_POST['lf_business_address'])) : '', $business_slug);
-		$lat = isset($_POST['lf_business_geo_lat']) ? sanitize_text_field(wp_unslash($_POST['lf_business_geo_lat'])) : '';
-		$lng = isset($_POST['lf_business_geo_lng']) ? sanitize_text_field(wp_unslash($_POST['lf_business_geo_lng'])) : '';
-		update_field('lf_business_geo', ['lat' => $lat !== '' ? (float) $lat : '', 'lng' => $lng !== '' ? (float) $lng : ''], $business_slug);
+	if (function_exists('lf_update_business_info_value')) {
+		$allowed_embed = [
+			'iframe' => [
+				'src' => true,
+				'width' => true,
+				'height' => true,
+				'style' => true,
+				'loading' => true,
+				'referrerpolicy' => true,
+				'allowfullscreen' => true,
+				'title' => true,
+			],
+		];
+		lf_update_business_info_value('lf_business_name', isset($_POST['lf_business_name']) ? sanitize_text_field(wp_unslash($_POST['lf_business_name'])) : '');
+		lf_update_business_info_value('lf_business_phone', isset($_POST['lf_business_phone']) ? sanitize_text_field(wp_unslash($_POST['lf_business_phone'])) : '');
+		lf_update_business_info_value('lf_business_email', isset($_POST['lf_business_email']) ? sanitize_email(wp_unslash($_POST['lf_business_email'])) : '');
+		lf_update_business_info_value('lf_business_address', isset($_POST['lf_business_address']) ? sanitize_textarea_field(wp_unslash($_POST['lf_business_address'])) : '');
+		lf_update_business_info_value('lf_business_place_id', isset($_POST['lf_business_place_id']) ? sanitize_text_field(wp_unslash($_POST['lf_business_place_id'])) : '');
+		lf_update_business_info_value('lf_business_place_name', isset($_POST['lf_business_place_name']) ? sanitize_text_field(wp_unslash($_POST['lf_business_place_name'])) : '');
+		lf_update_business_info_value('lf_business_place_address', isset($_POST['lf_business_place_address']) ? sanitize_text_field(wp_unslash($_POST['lf_business_place_address'])) : '');
+		$embed = isset($_POST['lf_business_map_embed']) ? wp_kses(wp_unslash($_POST['lf_business_map_embed']), $allowed_embed) : '';
+		lf_update_business_info_value('lf_business_map_embed', $embed);
 	}
+	update_option('lf_maps_api_key', isset($_POST['lf_maps_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_maps_api_key'])) : '');
 
 	$order = lf_homepage_controller_order();
 	$config = lf_get_homepage_section_config();
 	$allowed_variants = ['default', 'a', 'b', 'c'];
+	$order_input = isset($_POST['lf_hp_order']) ? array_map('sanitize_text_field', (array) $_POST['lf_hp_order']) : [];
+	$order = function_exists('lf_homepage_sanitize_order') ? lf_homepage_sanitize_order($order_input) : $order;
+	update_option(LF_HOMEPAGE_ORDER_OPTION, $order, true);
+	update_option(LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION, true, true);
 	foreach ($order as $type) {
 		$key_enabled = 'lf_hp_enabled_' . $type;
 		$key_variant = 'lf_hp_variant_' . $type;
@@ -90,6 +109,10 @@ function lf_homepage_admin_save(): void {
 		if ($type === 'service_areas') {
 			$config[$type]['section_heading'] = isset($_POST['lf_hp_areas_heading']) ? sanitize_text_field($_POST['lf_hp_areas_heading']) : '';
 			$config[$type]['section_intro'] = isset($_POST['lf_hp_areas_intro']) ? sanitize_textarea_field($_POST['lf_hp_areas_intro']) : '';
+		}
+		if ($type === 'map_nap') {
+			$config[$type]['section_heading'] = isset($_POST['lf_hp_map_heading']) ? sanitize_text_field($_POST['lf_hp_map_heading']) : '';
+			$config[$type]['section_intro'] = isset($_POST['lf_hp_map_intro']) ? sanitize_textarea_field($_POST['lf_hp_map_intro']) : '';
 		}
 		if ($type === 'faq_accordion') {
 			$config[$type]['section_heading'] = isset($_POST['lf_hp_faq_heading']) ? sanitize_text_field($_POST['lf_hp_faq_heading']) : '';
@@ -115,8 +138,139 @@ function lf_homepage_admin_section_labels(): array {
 		'service_areas'  => __('Service Areas', 'leadsforward-core'),
 		'faq_accordion'  => __('FAQ Accordion', 'leadsforward-core'),
 		'cta'            => __('Final CTA', 'leadsforward-core'),
-		'map_nap'        => __('Map + NAP', 'leadsforward-core'),
+		'map_nap'        => __('Service Areas + Map', 'leadsforward-core'),
 	];
+}
+
+function lf_homepage_admin_assets(): void {
+	if (!isset($_GET['page']) || $_GET['page'] !== 'lf-homepage-settings') {
+		return;
+	}
+	wp_enqueue_script('jquery-ui-sortable');
+	$script = <<<'JS'
+jQuery(function ($) {
+	var $table = $('.lf-homepage-sections tbody');
+	if ($table.length && $table.sortable) {
+		$table.sortable({
+			items: 'tr:not(.lf-homepage-row--fixed)',
+			handle: '.lf-homepage-drag',
+			axis: 'y',
+			cancel: 'input,select,textarea,button,label,a',
+			helper: function (e, tr) {
+				var $originals = tr.children();
+				var $helper = tr.clone();
+				$helper.children().each(function (index) {
+					$(this).width($originals.eq(index).width());
+				});
+				return $helper;
+			}
+		});
+	}
+
+	var storageKey = 'lf_homepage_collapsed';
+	var collapsed = {};
+	try {
+		collapsed = JSON.parse(window.localStorage.getItem(storageKey) || '{}') || {};
+	} catch (e) {
+		collapsed = {};
+	}
+
+	function applyCollapse(type) {
+		var isCollapsed = !!collapsed[type];
+		var $rows = $('.lf-homepage-section-fields[data-parent="' + type + '"]');
+		$rows.toggleClass('lf-homepage-fields--collapsed', isCollapsed);
+		var $toggle = $('.lf-homepage-toggle[data-target="' + type + '"]');
+		$toggle.attr('aria-expanded', (!isCollapsed).toString());
+		$toggle.text(isCollapsed ? 'Expand' : 'Collapse');
+	}
+
+	$('.lf-homepage-toggle').each(function () {
+		var type = $(this).data('target');
+		if (type) {
+			applyCollapse(type);
+		}
+	});
+
+	$(document).on('click', '.lf-homepage-toggle', function () {
+		var type = $(this).data('target');
+		if (!type) {
+			return;
+		}
+		collapsed[type] = !collapsed[type];
+		try {
+			window.localStorage.setItem(storageKey, JSON.stringify(collapsed));
+		} catch (e) {}
+		applyCollapse(type);
+	});
+
+	function loadPlacesApi(key, callback) {
+		if (window.google && window.google.maps && window.google.maps.places) {
+			callback();
+			return;
+		}
+		if (!key) {
+			return;
+		}
+		var scriptId = 'lf-maps-places';
+		if (document.getElementById(scriptId)) {
+			return;
+		}
+		var script = document.createElement('script');
+		script.id = scriptId;
+		script.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&libraries=places';
+		script.async = true;
+		script.onload = callback;
+		document.head.appendChild(script);
+	}
+
+	function initPlacesSearch() {
+		var input = document.getElementById('lf_business_place_search');
+		var keyInput = document.getElementById('lf_maps_api_key');
+		var placeId = document.getElementById('lf_business_place_id');
+		var placeName = document.getElementById('lf_business_place_name');
+		var placeAddress = document.getElementById('lf_business_place_address');
+		var businessName = document.getElementById('lf_business_name');
+		var businessAddress = document.getElementById('lf_business_address');
+		var selected = document.getElementById('lf_place_selected');
+		if (!input || !keyInput) {
+			return;
+		}
+		var key = keyInput.value.trim();
+		if (!key) {
+			if (selected) {
+				selected.textContent = 'Add a Google Maps API key to enable search.';
+			}
+			return;
+		}
+		loadPlacesApi(key, function () {
+			if (!window.google || !google.maps || !google.maps.places) {
+				return;
+			}
+			var ac = new google.maps.places.Autocomplete(input, {
+				fields: ['place_id', 'name', 'formatted_address']
+			});
+			ac.addListener('place_changed', function () {
+				var place = ac.getPlace();
+				if (!place || !place.place_id) {
+					return;
+				}
+				if (placeId) placeId.value = place.place_id || '';
+				if (placeName) placeName.value = place.name || '';
+				if (placeAddress) placeAddress.value = place.formatted_address || '';
+				if (businessName && !businessName.value) businessName.value = place.name || '';
+				if (businessAddress && !businessAddress.value) businessAddress.value = place.formatted_address || '';
+				if (selected) {
+					selected.textContent = 'Selected: ' + (place.name || '') + (place.formatted_address ? ' (' + place.formatted_address + ')' : '');
+				}
+			});
+		});
+	}
+
+	initPlacesSearch();
+	$('#lf_maps_api_key').on('change', initPlacesSearch);
+});
+JS;
+	wp_add_inline_script('jquery-ui-sortable', $script);
 }
 
 function lf_homepage_admin_render(): void {
@@ -134,33 +288,44 @@ function lf_homepage_admin_render(): void {
 		<?php if ($saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Settings saved.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
-		<p class="description"><?php esc_html_e('Sections appear in a fixed order. Turn sections on or off and edit copy below. Layout order cannot be changed.', 'leadsforward-core'); ?></p>
+		<p class="description"><?php esc_html_e('Drag and drop sections to reorder. The Hero banner stays at the top. Turn sections on or off and edit copy below.', 'leadsforward-core'); ?></p>
+		<style>
+			.lf-homepage-drag { cursor: grab; display: inline-flex; align-items: center; justify-content: center; width: 24px; margin-right: 6px; color: #6b7280; }
+			.lf-homepage-row--fixed .lf-homepage-drag { cursor: not-allowed; opacity: 0.4; }
+			.lf-homepage-row--fixed .lf-homepage-fixed { margin-left: 6px; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.06em; }
+			.lf-homepage-sections tr { background: #fff; }
+			.lf-homepage-sections tr.ui-sortable-helper { box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+			.lf-homepage-toggle { margin-left: 8px; font-size: 12px; text-decoration: none; }
+			.lf-homepage-fields--collapsed { display: none; }
+		</style>
 
 		<form method="post" action="">
 			<?php wp_nonce_field('lf_homepage_settings', 'lf_homepage_settings_nonce'); ?>
 		<?php
-		$business_slug    = defined('LF_OPTIONS_PAGE_BUSINESS') ? LF_OPTIONS_PAGE_BUSINESS : 'lf-business-info';
-		$get_business = function (string $key) use ($business_slug) {
-			if (!function_exists('get_field')) {
-				return '';
+		$get_business = function (string $key) {
+			if (function_exists('lf_get_business_info_value')) {
+				return lf_get_business_info_value($key, '');
 			}
-			$val = get_field($key, $business_slug);
-			if ($val === null || $val === false || $val === '') {
-				$val = get_field($key, 'option');
-			}
-			return is_string($val) ? $val : (is_array($val) ? $val : '');
+			return '';
 		};
 		$business_name    = $get_business('lf_business_name');
 		$business_phone   = $get_business('lf_business_phone');
 		$business_email   = $get_business('lf_business_email');
 		$business_address = $get_business('lf_business_address');
-		$business_geo     = function_exists('get_field') ? (get_field('lf_business_geo', $business_slug) ?: get_field('lf_business_geo', 'option')) : null;
-		$geo_lat          = is_array($business_geo) ? ($business_geo['lat'] ?? '') : '';
-		$geo_lng          = is_array($business_geo) ? ($business_geo['lng'] ?? '') : '';
+		$place_id         = $get_business('lf_business_place_id');
+		$place_name       = $get_business('lf_business_place_name');
+		$place_address    = $get_business('lf_business_place_address');
+		$map_embed        = $get_business('lf_business_map_embed');
+		$maps_api_key     = get_option('lf_maps_api_key', '');
 		$business_name    = is_string($business_name) ? $business_name : '';
 		$business_phone   = is_string($business_phone) ? $business_phone : '';
 		$business_email   = is_string($business_email) ? $business_email : '';
 		$business_address = is_string($business_address) ? $business_address : '';
+		$place_id         = is_string($place_id) ? $place_id : '';
+		$place_name       = is_string($place_name) ? $place_name : '';
+		$place_address    = is_string($place_address) ? $place_address : '';
+		$map_embed        = is_string($map_embed) ? $map_embed : '';
+		$maps_api_key     = is_string($maps_api_key) ? $maps_api_key : '';
 		?>
 		<h2 id="lf-business-info" class="title"><?php esc_html_e('Business Info', 'leadsforward-core'); ?></h2>
 		<p class="description"><?php esc_html_e('Used site-wide: footer, Map + NAP section, schema, and CTAs. Same data as the startup wizard—edit here anytime.', 'leadsforward-core'); ?> <?php esc_html_e('Kept consistent for local SEO: NAP (name, address, phone) is output in one format everywhere and in LocalBusiness schema.', 'leadsforward-core'); ?></p>
@@ -183,11 +348,29 @@ function lf_homepage_admin_render(): void {
 					<td><textarea class="large-text" name="lf_business_address" id="lf_business_address" rows="3"><?php echo esc_textarea($business_address); ?></textarea></td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="lf_business_geo_lat"><?php esc_html_e('Map coordinates (optional)', 'leadsforward-core'); ?></label></th>
+					<th scope="row"><label for="lf_maps_api_key"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></label></th>
 					<td>
-						<label><?php esc_html_e('Latitude', 'leadsforward-core'); ?> <input type="text" class="small-text" name="lf_business_geo_lat" id="lf_business_geo_lat" value="<?php echo esc_attr($geo_lat); ?>" placeholder="e.g. 27.3364" /></label>
-						&nbsp;
-						<label><?php esc_html_e('Longitude', 'leadsforward-core'); ?> <input type="text" class="small-text" name="lf_business_geo_lng" id="lf_business_geo_lng" value="<?php echo esc_attr($geo_lng); ?>" placeholder="e.g. -82.5307" /></label>
+						<input type="text" class="large-text" name="lf_maps_api_key" id="lf_maps_api_key" value="<?php echo esc_attr($maps_api_key); ?>" placeholder="AIza..." />
+						<p class="description"><?php esc_html_e('Required to search Google Maps and render the embed. Use a restricted key with Places + Maps Embed APIs enabled.', 'leadsforward-core'); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_business_place_search"><?php esc_html_e('Search business on Google Maps', 'leadsforward-core'); ?></label></th>
+					<td>
+						<input type="text" class="large-text" id="lf_business_place_search" placeholder="<?php esc_attr_e('Start typing your business name...', 'leadsforward-core'); ?>" value="<?php echo esc_attr($place_name); ?>" />
+						<input type="hidden" name="lf_business_place_id" id="lf_business_place_id" value="<?php echo esc_attr($place_id); ?>" />
+						<input type="hidden" name="lf_business_place_name" id="lf_business_place_name" value="<?php echo esc_attr($place_name); ?>" />
+						<input type="hidden" name="lf_business_place_address" id="lf_business_place_address" value="<?php echo esc_attr($place_address); ?>" />
+						<p class="description" id="lf_place_selected">
+							<?php echo $place_name !== '' ? esc_html(sprintf(__('Selected: %1$s (%2$s)', 'leadsforward-core'), $place_name, $place_address)) : esc_html__('No place selected yet.', 'leadsforward-core'); ?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_business_map_embed"><?php esc_html_e('Map embed override (optional)', 'leadsforward-core'); ?></label></th>
+					<td>
+						<textarea class="large-text" name="lf_business_map_embed" id="lf_business_map_embed" rows="3"><?php echo esc_textarea($map_embed); ?></textarea>
+						<p class="description"><?php esc_html_e('Paste a custom iframe embed if you prefer. If empty, the selected Google Maps place will be used.', 'leadsforward-core'); ?></p>
 					</td>
 				</tr>
 			</tbody>
@@ -201,12 +384,19 @@ function lf_homepage_admin_render(): void {
 					$enabled = !empty($sec['enabled']);
 					$variant = $sec['variant'] ?? 'default';
 					$label = $labels[$type] ?? $type;
+					$is_fixed = $type === 'hero';
 				?>
-					<tr class="lf-homepage-section-row">
+					<tr class="lf-homepage-section-row<?php echo $is_fixed ? ' lf-homepage-row--fixed' : ''; ?>" data-section="<?php echo esc_attr($type); ?>">
 						<th scope="row">
+							<span class="lf-homepage-drag" aria-hidden="true">⋮⋮</span>
 							<label for="lf_hp_enabled_<?php echo esc_attr($type); ?>"><?php echo esc_html($label); ?></label>
+							<button type="button" class="button-link lf-homepage-toggle" data-target="<?php echo esc_attr($type); ?>" aria-expanded="true"><?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
+							<?php if ($is_fixed) : ?>
+								<span class="lf-homepage-fixed"><?php esc_html_e('Fixed', 'leadsforward-core'); ?></span>
+							<?php endif; ?>
 						</th>
 						<td>
+							<input type="hidden" name="lf_hp_order[]" value="<?php echo esc_attr($type); ?>" />
 							<label><input type="checkbox" name="lf_hp_enabled_<?php echo esc_attr($type); ?>" id="lf_hp_enabled_<?php echo esc_attr($type); ?>" value="1" <?php checked($enabled); ?> /> <?php esc_html_e('Show this section', 'leadsforward-core'); ?></label>
 							&nbsp;&nbsp;
 							<label><?php esc_html_e('Variant', 'leadsforward-core'); ?>
@@ -222,73 +412,83 @@ function lf_homepage_admin_render(): void {
 						</td>
 					</tr>
 					<?php if ($type === 'hero') : ?>
-					<tr class="lf-homepage-section-fields lf-homepage-hero-fields">
+					<tr class="lf-homepage-section-fields lf-homepage-hero-fields" data-parent="hero">
 						<th scope="row"><label for="lf_hp_hero_headline"><?php esc_html_e('Hero headline', 'leadsforward-core'); ?></label></th>
 						<td><input type="text" class="large-text" name="lf_hp_hero_headline" id="lf_hp_hero_headline" value="<?php echo esc_attr($sec['hero_headline'] ?? ''); ?>" placeholder="<?php esc_attr_e('e.g. Quality Roofing in [City]', 'leadsforward-core'); ?>" /></td>
 					</tr>
-					<tr>
+					<tr class="lf-homepage-section-fields" data-parent="hero">
 						<th scope="row"><label for="lf_hp_hero_subheadline"><?php esc_html_e('Hero subheadline', 'leadsforward-core'); ?></label></th>
 						<td><input type="text" class="large-text" name="lf_hp_hero_subheadline" id="lf_hp_hero_subheadline" value="<?php echo esc_attr($sec['hero_subheadline'] ?? ''); ?>" /></td>
 					</tr>
-					<tr>
+					<tr class="lf-homepage-section-fields" data-parent="hero">
 						<th scope="row"><label for="lf_hp_hero_cta_override"><?php esc_html_e('Hero CTA override', 'leadsforward-core'); ?></label></th>
 						<td><input type="text" class="regular-text" name="lf_hp_hero_cta_override" id="lf_hp_hero_cta_override" value="<?php echo esc_attr($sec['hero_cta_override'] ?? ''); ?>" /> <span class="description"><?php esc_html_e('Leave blank to use homepage CTA.', 'leadsforward-core'); ?></span></td>
 					</tr>
 					<?php endif; ?>
 					<?php if ($type === 'service_grid') : ?>
-					<tr>
+					<tr class="lf-homepage-section-fields" data-parent="service_grid">
 						<th scope="row"><label for="lf_hp_services_heading"><?php esc_html_e('Services section heading', 'leadsforward-core'); ?></label></th>
 						<td><input type="text" class="large-text" name="lf_hp_services_heading" id="lf_hp_services_heading" value="<?php echo esc_attr($sec['section_heading'] ?? ''); ?>" placeholder="<?php esc_attr_e('Our Services', 'leadsforward-core'); ?>" /></td>
 					</tr>
-					<tr>
+					<tr class="lf-homepage-section-fields" data-parent="service_grid">
 						<th scope="row"><label for="lf_hp_services_intro"><?php esc_html_e('Services intro text', 'leadsforward-core'); ?></label></th>
 						<td><textarea class="large-text" name="lf_hp_services_intro" id="lf_hp_services_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
 					</tr>
 					<?php endif; ?>
 					<?php if ($type === 'service_areas') : ?>
-					<tr>
+					<tr class="lf-homepage-section-fields" data-parent="service_areas">
 						<th scope="row"><label for="lf_hp_areas_heading"><?php esc_html_e('Service areas heading', 'leadsforward-core'); ?></label></th>
 						<td><input type="text" class="large-text" name="lf_hp_areas_heading" id="lf_hp_areas_heading" value="<?php echo esc_attr($sec['section_heading'] ?? ''); ?>" placeholder="<?php esc_attr_e('Service Areas', 'leadsforward-core'); ?>" /></td>
 					</tr>
-					<tr>
+					<tr class="lf-homepage-section-fields" data-parent="service_areas">
 						<th scope="row"><label for="lf_hp_areas_intro"><?php esc_html_e('Service areas intro', 'leadsforward-core'); ?></label></th>
 						<td><textarea class="large-text" name="lf_hp_areas_intro" id="lf_hp_areas_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
 					</tr>
 					<?php endif; ?>
+					<?php if ($type === 'map_nap') : ?>
+					<tr class="lf-homepage-section-fields" data-parent="map_nap">
+						<th scope="row"><label for="lf_hp_map_heading"><?php esc_html_e('Map section heading', 'leadsforward-core'); ?></label></th>
+						<td><input type="text" class="large-text" name="lf_hp_map_heading" id="lf_hp_map_heading" value="<?php echo esc_attr($sec['section_heading'] ?? ''); ?>" placeholder="<?php esc_attr_e('Areas We Serve', 'leadsforward-core'); ?>" /></td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="map_nap">
+						<th scope="row"><label for="lf_hp_map_intro"><?php esc_html_e('Map section intro', 'leadsforward-core'); ?></label></th>
+						<td><textarea class="large-text" name="lf_hp_map_intro" id="lf_hp_map_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
+					</tr>
+					<?php endif; ?>
 					<?php if ($type === 'trust_reviews') : ?>
-					<tr>
+					<tr class="lf-homepage-section-fields" data-parent="trust_reviews">
 						<th scope="row"><label for="lf_hp_trust_heading"><?php esc_html_e('Social proof heading', 'leadsforward-core'); ?></label></th>
 						<td><input type="text" class="large-text" name="lf_hp_trust_heading" id="lf_hp_trust_heading" value="<?php echo esc_attr($sec['trust_heading'] ?? ''); ?>" placeholder="<?php esc_attr_e('What Our Customers Say', 'leadsforward-core'); ?>" /></td>
 					</tr>
-					<tr>
+					<tr class="lf-homepage-section-fields" data-parent="trust_reviews">
 						<th scope="row"><label for="lf_hp_trust_max_items"><?php esc_html_e('Max reviews to show', 'leadsforward-core'); ?></label></th>
 						<td><input type="number" name="lf_hp_trust_max_items" id="lf_hp_trust_max_items" value="<?php echo esc_attr((string) ($sec['trust_max_items'] ?? 1)); ?>" min="1" max="10" /> (1–10)</td>
 					</tr>
 					<?php endif; ?>
 					<?php if ($type === 'faq_accordion') : ?>
-					<tr>
+					<tr class="lf-homepage-section-fields" data-parent="faq_accordion">
 						<th scope="row"><label for="lf_hp_faq_heading"><?php esc_html_e('FAQ section heading', 'leadsforward-core'); ?></label></th>
 						<td><input type="text" class="large-text" name="lf_hp_faq_heading" id="lf_hp_faq_heading" value="<?php echo esc_attr($sec['section_heading'] ?? ''); ?>" placeholder="<?php esc_attr_e('Frequently Asked Questions', 'leadsforward-core'); ?>" /></td>
 					</tr>
-					<tr>
+					<tr class="lf-homepage-section-fields" data-parent="faq_accordion">
 						<th scope="row"><label for="lf_hp_faq_intro"><?php esc_html_e('FAQ intro', 'leadsforward-core'); ?></label></th>
 						<td><textarea class="large-text" name="lf_hp_faq_intro" id="lf_hp_faq_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
 					</tr>
 					<?php endif; ?>
 					<?php if ($type === 'cta') : ?>
-					<tr>
+					<tr class="lf-homepage-section-fields" data-parent="cta">
 						<th scope="row"><label for="lf_hp_cta_headline"><?php esc_html_e('CTA headline', 'leadsforward-core'); ?></label></th>
 						<td><input type="text" class="large-text" name="lf_hp_cta_headline" id="lf_hp_cta_headline" value="<?php echo esc_attr($sec['cta_headline'] ?? ''); ?>" placeholder="<?php esc_attr_e('Ready to get started?', 'leadsforward-core'); ?>" /></td>
 					</tr>
-					<tr>
+					<tr class="lf-homepage-section-fields" data-parent="cta">
 						<th scope="row"><label for="lf_hp_cta_primary"><?php esc_html_e('Section primary CTA', 'leadsforward-core'); ?></label></th>
 						<td><input type="text" class="regular-text" name="lf_hp_cta_primary" id="lf_hp_cta_primary" value="<?php echo esc_attr($sec['cta_primary_override'] ?? ''); ?>" /></td>
 					</tr>
-					<tr>
+					<tr class="lf-homepage-section-fields" data-parent="cta">
 						<th scope="row"><label for="lf_hp_cta_secondary"><?php esc_html_e('Section secondary CTA', 'leadsforward-core'); ?></label></th>
 						<td><input type="text" class="regular-text" name="lf_hp_cta_secondary" id="lf_hp_cta_secondary" value="<?php echo esc_attr($sec['cta_secondary_override'] ?? ''); ?>" /></td>
 					</tr>
-					<tr>
+					<tr class="lf-homepage-section-fields" data-parent="cta">
 						<th scope="row"><label for="lf_hp_cta_ghl"><?php esc_html_e('Section GHL embed override', 'leadsforward-core'); ?></label></th>
 						<td><textarea class="large-text code" name="lf_hp_cta_ghl" id="lf_hp_cta_ghl" rows="4"><?php echo esc_textarea($sec['cta_ghl_override'] ?? ''); ?></textarea></td>
 					</tr>

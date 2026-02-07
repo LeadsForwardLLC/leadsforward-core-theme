@@ -13,53 +13,117 @@ if (!defined('ABSPATH')) {
 
 $block_id = $block['id'] ?? '';
 $variant  = $block['variant'] ?? 'default';
+$context  = $block['context'] ?? [];
+$section  = $context['section'] ?? [];
 $name     = function_exists('lf_get_option') ? lf_get_option('lf_business_name', 'option') : '';
 $phone    = function_exists('lf_get_option') ? lf_get_option('lf_business_phone', 'option') : '';
 $email    = function_exists('lf_get_option') ? lf_get_option('lf_business_email', 'option') : '';
 $address  = function_exists('lf_get_option') ? lf_get_option('lf_business_address', 'option') : '';
-$geo      = function_exists('lf_get_option') ? lf_get_option('lf_business_geo', 'option') : null;
+$place_id = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_id', '') : '';
+$place_name = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_name', '') : '';
+$place_address = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_address', '') : '';
+$map_embed_override = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_map_embed', '') : '';
+$maps_api_key = get_option('lf_maps_api_key', '');
+$maps_api_key = is_string($maps_api_key) ? $maps_api_key : '';
+$heading = !empty($section['section_heading']) ? $section['section_heading'] : __('Areas We Serve', 'leadsforward-core');
+$intro   = !empty($section['section_intro']) ? $section['section_intro'] : '';
 
 $has_nap = ($name !== '' || $address !== '' || $phone !== '' || $email !== '');
+$map_embed_url = '';
+if (is_string($map_embed_override) && $map_embed_override !== '') {
+	$map_embed_url = '';
+} elseif (is_string($place_id) && $place_id !== '' && $maps_api_key !== '') {
+	$map_embed_url = 'https://www.google.com/maps/embed/v1/place?key=' . rawurlencode($maps_api_key) . '&q=place_id:' . rawurlencode($place_id);
+} elseif (is_string($place_id) && $place_id !== '') {
+	$map_embed_url = 'https://www.google.com/maps?q=place_id:' . rawurlencode($place_id) . '&output=embed';
+}
+
+$areas_query = new WP_Query([
+	'post_type'      => 'lf_service_area',
+	'posts_per_page' => -1,
+	'orderby'        => 'menu_order title',
+	'order'          => 'ASC',
+	'post_status'    => 'publish',
+	'no_found_rows'  => true,
+]);
 ?>
 <section class="lf-block lf-block-map-nap lf-block-map-nap--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-map-nap__inner">
-		<?php if ($has_nap) : ?>
-		<address class="lf-block-map-nap__address">
-			<?php if ($name !== '') : ?>
-				<span class="lf-block-map-nap__name"><?php echo esc_html($name); ?></span>
-			<?php endif; ?>
-			<?php if ($address !== '') : ?>
-				<span class="lf-block-map-nap__street"><?php echo nl2br(esc_html($address)); ?></span>
-			<?php endif; ?>
-			<?php if ($phone !== '') : ?>
-				<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $phone)); ?>" class="lf-block-map-nap__phone"><?php echo esc_html($phone); ?></a>
-			<?php endif; ?>
-			<?php if ($email !== '') : ?>
-				<a href="mailto:<?php echo esc_attr($email); ?>" class="lf-block-map-nap__email"><?php echo esc_html($email); ?></a>
-			<?php endif; ?>
-		</address>
-		<?php else : ?>
-		<p class="lf-block-map-nap__empty">
-			<?php
-			if (current_user_can('edit_theme_options')) {
-				echo wp_kses(
-					sprintf(
-						/* translators: %s: link to Business Info on Homepage settings */
-						__('Add your business name, address, and phone in <strong>Business Info</strong> on <a href="%s">LeadsForward → Homepage</a> so they appear here and site-wide.', 'leadsforward-core'),
-						esc_url(admin_url('admin.php?page=lf-homepage-settings#lf-business-info'))
-					),
-					['a' => ['href' => true], 'strong' => []]
-				);
-			} else {
-				esc_html_e('Contact information will appear here.', 'leadsforward-core');
-			}
-			?>
-		</p>
-		<?php endif; ?>
-		<?php if ($geo && !empty($geo['lat']) && !empty($geo['lng'])) : ?>
-			<div class="lf-block-map-nap__map" data-lat="<?php echo esc_attr((string) $geo['lat']); ?>" data-lng="<?php echo esc_attr((string) $geo['lng']); ?>">
-				<p class="lf-block-map-nap__map-fallback"><?php esc_html_e('Map placeholder (embed or iframe can be added via options).', 'leadsforward-core'); ?></p>
+		<div class="lf-block-map-nap__grid">
+			<div class="lf-block-map-nap__areas">
+				<header class="lf-block-map-nap__header">
+					<h2 class="lf-block-map-nap__title"><?php echo esc_html($heading); ?></h2>
+					<?php if ($intro !== '') : ?>
+						<p class="lf-block-map-nap__intro"><?php echo esc_html($intro); ?></p>
+					<?php endif; ?>
+				</header>
+				<?php if ($areas_query->have_posts()) : ?>
+					<ul class="lf-block-map-nap__areas-list" role="list">
+						<?php while ($areas_query->have_posts()) : $areas_query->the_post(); ?>
+							<li class="lf-block-map-nap__areas-item">
+								<a href="<?php the_permalink(); ?>" class="lf-block-map-nap__areas-link"><?php the_title(); ?></a>
+							</li>
+						<?php endwhile; ?>
+					</ul>
+					<?php wp_reset_postdata(); ?>
+				<?php else : ?>
+					<p class="lf-block-map-nap__empty"><?php esc_html_e('No service areas yet.', 'leadsforward-core'); ?></p>
+				<?php endif; ?>
 			</div>
-		<?php endif; ?>
+			<div class="lf-block-map-nap__card">
+				<?php if (is_string($map_embed_override) && $map_embed_override !== '') : ?>
+					<div class="lf-block-map-nap__map">
+						<?php echo wp_kses_post($map_embed_override); ?>
+					</div>
+				<?php elseif ($map_embed_url !== '') : ?>
+					<div class="lf-block-map-nap__map">
+						<iframe title="<?php echo esc_attr($place_name !== '' ? $place_name : __('Business location', 'leadsforward-core')); ?>" src="<?php echo esc_url($map_embed_url); ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+					</div>
+				<?php else : ?>
+					<p class="lf-block-map-nap__empty">
+						<?php
+						if (current_user_can('edit_theme_options')) {
+							echo wp_kses(
+								sprintf(
+									/* translators: %s: link to Business Info on Homepage settings */
+									__('Add your Google Maps API key and select a place in <strong>Business Info</strong> on <a href="%s">LeadsForward → Homepage</a> to show the map.', 'leadsforward-core'),
+									esc_url(admin_url('admin.php?page=lf-homepage-settings#lf-business-info'))
+								),
+								['a' => ['href' => true], 'strong' => []]
+							);
+						} else {
+							esc_html_e('Map will appear here.', 'leadsforward-core');
+						}
+						?>
+					</p>
+				<?php endif; ?>
+
+				<?php if ($has_nap) : ?>
+					<address class="lf-block-map-nap__address">
+						<?php if ($name !== '') : ?>
+							<span class="lf-block-map-nap__name"><?php echo esc_html($name); ?></span>
+						<?php endif; ?>
+						<?php if ($address !== '') : ?>
+							<span class="lf-block-map-nap__street"><?php echo nl2br(esc_html($address)); ?></span>
+						<?php endif; ?>
+						<?php if ($phone !== '') : ?>
+							<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $phone)); ?>" class="lf-block-map-nap__phone"><?php echo esc_html($phone); ?></a>
+						<?php endif; ?>
+						<?php if ($email !== '') : ?>
+							<a href="mailto:<?php echo esc_attr($email); ?>" class="lf-block-map-nap__email"><?php echo esc_html($email); ?></a>
+						<?php endif; ?>
+					</address>
+				<?php elseif ($place_name || $place_address) : ?>
+					<address class="lf-block-map-nap__address">
+						<?php if ($place_name !== '') : ?>
+							<span class="lf-block-map-nap__name"><?php echo esc_html($place_name); ?></span>
+						<?php endif; ?>
+						<?php if ($place_address !== '') : ?>
+							<span class="lf-block-map-nap__street"><?php echo esc_html($place_address); ?></span>
+						<?php endif; ?>
+					</address>
+				<?php endif; ?>
+			</div>
+		</div>
 	</div>
 </section>

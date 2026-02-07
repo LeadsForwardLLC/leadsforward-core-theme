@@ -17,7 +17,90 @@ define('LF_OPTIONS_PAGE_BUSINESS', 'lf-business-info');
 
 /** Field names stored on the Business Info options page. */
 function lf_business_option_selectors(): array {
-	return ['lf_business_name', 'lf_business_phone', 'lf_business_email', 'lf_business_address', 'lf_business_geo', 'lf_business_hours'];
+	return [
+		'lf_business_name',
+		'lf_business_phone',
+		'lf_business_email',
+		'lf_business_address',
+		'lf_business_geo',
+		'lf_business_hours',
+		'lf_business_place_id',
+		'lf_business_place_name',
+		'lf_business_place_address',
+		'lf_business_map_embed',
+	];
+}
+
+/**
+ * Possible ACF post_id values for Business Info options page.
+ * ACF varies between "option", "options", and "options_{slug}" for subpages.
+ *
+ * @return array<int, string>
+ */
+function lf_business_info_post_ids(): array {
+	$slug = defined('LF_OPTIONS_PAGE_BUSINESS') ? LF_OPTIONS_PAGE_BUSINESS : 'lf-business-info';
+	$base = str_starts_with($slug, 'options_') ? substr($slug, 8) : $slug;
+	$base_us = str_replace('-', '_', $base);
+	$ids = [$slug, 'options_' . $base, 'options_' . $base_us, 'option', 'options'];
+	return array_values(array_unique(array_filter($ids)));
+}
+
+/**
+ * Get Business Info field from any valid options storage.
+ *
+ * @param string $selector
+ * @param mixed  $default
+ * @return mixed
+ */
+function lf_get_business_info_value(string $selector, $default = null) {
+	if (function_exists('get_field')) {
+		foreach (lf_business_info_post_ids() as $post_id) {
+			$value = get_field($selector, $post_id);
+			if ($value !== null && $value !== false && $value !== '') {
+				return $value;
+			}
+		}
+	}
+	// Fallback to raw options in case ACF field resolution failed.
+	$option_keys = ['options_' . $selector];
+	foreach (lf_business_info_post_ids() as $post_id) {
+		if (str_starts_with($post_id, 'options_')) {
+			$option_keys[] = $post_id . '_' . $selector;
+		}
+	}
+	foreach (array_unique($option_keys) as $key) {
+		$value = get_option($key, null);
+		if ($value !== null && $value !== false && $value !== '') {
+			return $value;
+		}
+	}
+	return $default;
+}
+
+/**
+ * Update Business Info field in all valid options storages.
+ *
+ * @param string $selector
+ * @param mixed  $value
+ */
+function lf_update_business_info_value(string $selector, $value): void {
+	$post_ids = lf_business_info_post_ids();
+	$has_acf = function_exists('update_field');
+	$option_keys = ['options_' . $selector];
+	foreach ($post_ids as $post_id) {
+		if ($has_acf) {
+			update_field($selector, $value, $post_id);
+		}
+		if ($post_id === 'option' || $post_id === 'options') {
+			$option_keys[] = 'options_' . $selector;
+		}
+		if (str_starts_with($post_id, 'options_')) {
+			$option_keys[] = $post_id . '_' . $selector;
+		}
+	}
+	foreach (array_unique($option_keys) as $key) {
+		update_option($key, $value);
+	}
 }
 
 /**
@@ -26,8 +109,10 @@ function lf_business_option_selectors(): array {
  */
 function lf_get_option(string $selector, string $options_page_slug = 'option', $default = null) {
 	if (function_exists('get_field')) {
-		$storage = in_array($selector, lf_business_option_selectors(), true) ? LF_OPTIONS_PAGE_BUSINESS : $options_page_slug;
-		$value = get_field($selector, $storage);
+		if (in_array($selector, lf_business_option_selectors(), true)) {
+			return lf_get_business_info_value($selector, $default);
+		}
+		$value = get_field($selector, $options_page_slug);
 		return $value !== null && $value !== false && $value !== '' ? $value : $default;
 	}
 	return $default;

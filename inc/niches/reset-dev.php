@@ -157,12 +157,14 @@ function lf_dev_reset_run(): void {
 	set_theme_mod('nav_menu_locations', $locations);
 
 	if (function_exists('update_field')) {
-		$business_slug = defined('LF_OPTIONS_PAGE_BUSINESS') ? LF_OPTIONS_PAGE_BUSINESS : 'lf-business-info';
-		update_field('lf_business_name', '', $business_slug);
-		update_field('lf_business_phone', '', $business_slug);
-		update_field('lf_business_email', '', $business_slug);
-		update_field('lf_business_address', '', $business_slug);
-		update_field('lf_business_hours', '', $business_slug);
+		if (function_exists('lf_update_business_info_value')) {
+			lf_update_business_info_value('lf_business_name', '');
+			lf_update_business_info_value('lf_business_phone', '');
+			lf_update_business_info_value('lf_business_email', '');
+			lf_update_business_info_value('lf_business_address', '');
+			lf_update_business_info_value('lf_business_hours', '');
+			lf_update_business_info_value('lf_business_geo', ['lat' => '', 'lng' => '']);
+		}
 		update_field('lf_cta_primary_text', '', 'option');
 		update_field('lf_cta_secondary_text', '', 'option');
 		update_field('variation_profile', 'a', 'option');
@@ -185,6 +187,12 @@ function lf_dev_reset_run(): void {
 	}
 	if (defined('LF_HOMEPAGE_NICHE_OPTION')) {
 		delete_option(LF_HOMEPAGE_NICHE_OPTION);
+	}
+	if (defined('LF_HOMEPAGE_ORDER_OPTION')) {
+		delete_option(LF_HOMEPAGE_ORDER_OPTION);
+	}
+	if (defined('LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION')) {
+		delete_option(LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION);
 	}
 
 	update_option('show_on_front', 'posts');

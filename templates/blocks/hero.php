@@ -37,6 +37,10 @@ if ($variant === 'b') {
 $heading = get_the_title() ?: __('Quality Local Service', 'leadsforward-core');
 $subheading = '';
 $cta_text = function_exists('lf_get_option') ? lf_get_option('lf_cta_primary_text', 'option') : '';
+$business_name = function_exists('lf_get_option') ? lf_get_option('lf_business_name', 'option') : '';
+if (!is_string($business_name) || $business_name === '') {
+	$business_name = get_bloginfo('name') ?: '';
+}
 
 if (!empty($context['homepage']) && !empty($section)) {
 	if (!empty($section['hero_headline'])) {
@@ -65,6 +69,10 @@ if (!empty($context['homepage']) && !empty($section)) {
 } elseif (function_exists('lf_get_resolved_cta')) {
 	$cta_resolved = lf_get_resolved_cta([]);
 	$cta_text = $cta_resolved['primary_text'];
+}
+
+if ($business_name !== '') {
+	$heading = str_replace(['[Your Business]', '[Your Business Name]', '{business_name}'], $business_name, $heading);
 }
 
 $cta_resolved_for_type = function_exists('lf_get_resolved_cta') ? lf_get_resolved_cta($context) : [];

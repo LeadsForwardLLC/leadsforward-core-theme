@@ -59,15 +59,18 @@ function lf_wizard_handle_post(): void {
 		$result = lf_run_setup($data);
 		if (!empty($result['success'])) {
 			// Ensure business info is saved where LeadsForward → Homepage (Business Info) reads from
-			$business_slug = defined('LF_OPTIONS_PAGE_BUSINESS') ? LF_OPTIONS_PAGE_BUSINESS : 'lf-business-info';
-			if (function_exists('update_field')) {
-				update_field('lf_business_name', $data['business_name'] ?? '', $business_slug);
-				update_field('lf_business_phone', $data['business_phone'] ?? '', $business_slug);
-				update_field('lf_business_email', $data['business_email'] ?? '', $business_slug);
-				update_field('lf_business_address', $data['business_address'] ?? '', $business_slug);
+			if (function_exists('lf_update_business_info_value')) {
+				lf_update_business_info_value('lf_business_name', $data['business_name'] ?? '');
+				lf_update_business_info_value('lf_business_phone', $data['business_phone'] ?? '');
+				lf_update_business_info_value('lf_business_email', $data['business_email'] ?? '');
+				lf_update_business_info_value('lf_business_address', $data['business_address'] ?? '');
 				if (array_key_exists('business_hours', $data) && $data['business_hours'] !== '') {
-					update_field('lf_business_hours', $data['business_hours'], $business_slug);
+					lf_update_business_info_value('lf_business_hours', $data['business_hours']);
 				}
+			}
+			// Force homepage sections to initialize after wizard (ensures front-end renders).
+			if (function_exists('lf_homepage_apply_niche_config')) {
+				lf_homepage_apply_niche_config($data['niche_slug'], $data);
 			}
 			update_option('lf_setup_wizard_complete', true);
 			if (!empty($result['ids']) && is_array($result['ids'])) {

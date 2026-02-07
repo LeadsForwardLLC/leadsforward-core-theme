@@ -1,7 +1,7 @@
 <?php
 /**
  * Homepage controller: locked structure, config-driven sections, no Gutenberg.
- * Section order is fixed; content from structured config (option + niche defaults).
+ * Section order is configurable (hero fixed); content from structured config (option + niche defaults).
  *
  * @package LeadsForward_Core
  * @since 0.1.0
@@ -19,13 +19,19 @@ const LF_HOMEPAGE_CONFIG_OPTION = 'lf_homepage_section_config';
 /** Option key for last applied niche (wizard source of truth). */
 const LF_HOMEPAGE_NICHE_OPTION = 'lf_homepage_niche_slug';
 
+/** Option key for section order (drag-and-drop on Homepage admin). */
+const LF_HOMEPAGE_ORDER_OPTION = 'lf_homepage_section_order';
+
+/** Option key to track manual overrides (admin saves). */
+const LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION = 'lf_homepage_manual_override';
+
 /**
  * Canonical section order: Hero → Services → Service Areas → Social Proof → FAQs → Final CTA.
  * map_nap is available but off by default (no duplicate/redundant sections).
  *
  * @return string[]
  */
-function lf_homepage_controller_order(): array {
+function lf_homepage_canonical_order(): array {
 	return [
 		'hero',
 		'service_grid',
@@ -35,6 +41,47 @@ function lf_homepage_controller_order(): array {
 		'cta',
 		'map_nap',
 	];
+}
+
+/**
+ * Sanitize section order: keep hero first, drop unknowns, append missing.
+ *
+ * @param array $order
+ * @return string[]
+ */
+function lf_homepage_sanitize_order(array $order): array {
+	$canonical = lf_homepage_canonical_order();
+	$clean = [];
+	foreach ($order as $item) {
+		if (!is_string($item)) {
+			continue;
+		}
+		$item = trim($item);
+		if ($item !== '' && in_array($item, $canonical, true) && !in_array($item, $clean, true)) {
+			$clean[] = $item;
+		}
+	}
+	$clean = array_values(array_diff($clean, ['hero']));
+	array_unshift($clean, 'hero');
+	foreach ($canonical as $type) {
+		if (!in_array($type, $clean, true)) {
+			$clean[] = $type;
+		}
+	}
+	return $clean;
+}
+
+/**
+ * Return section order (stored order if present; hero fixed).
+ *
+ * @return string[]
+ */
+function lf_homepage_controller_order(): array {
+	$stored = get_option(LF_HOMEPAGE_ORDER_OPTION, null);
+	if (is_array($stored) && !empty($stored)) {
+		return lf_homepage_sanitize_order($stored);
+	}
+	return lf_homepage_canonical_order();
 }
 
 /**
@@ -90,7 +137,10 @@ function lf_homepage_default_section_config(string $section_type): array {
 				'section_intro'   => __("Common questions from homeowners like you. Don't see your question? Call or request a free quote—we're happy to help.", 'leadsforward-core'),
 			]);
 		case 'map_nap':
-			return $base;
+			return array_merge($base, [
+				'section_heading' => __('Areas We Serve', 'leadsforward-core'),
+				'section_intro'   => __('Find us on the map and see the communities we serve.', 'leadsforward-core'),
+			]);
 		case 'cta':
 			return array_merge($base, [
 				'cta_headline'          => __('Get Your Free Estimate Today', 'leadsforward-core'),
@@ -189,6 +239,7 @@ function lf_homepage_apply_niche_config(string $niche_slug, ?array $wizard_data 
 	}
 	update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 	update_option(LF_HOMEPAGE_NICHE_OPTION, $niche_slug, true);
+	update_option(LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION, false, true);
 }
 
 /**
@@ -199,7 +250,22 @@ function lf_homepage_apply_niche_config(string $niche_slug, ?array $wizard_data 
 function lf_get_homepage_section_config(): array {
 	$stored = get_option(LF_HOMEPAGE_CONFIG_OPTION, null);
 	if (is_array($stored) && !empty($stored)) {
-		return lf_homepage_merge_config_with_defaults($stored);
+		$config = lf_homepage_merge_config_with_defaults($stored);
+		$manual = (bool) get_option(LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION, false);
+		$wizard_done = (bool) get_option('lf_setup_wizard_complete', false);
+		$has_enabled = false;
+		foreach (lf_homepage_canonical_order() as $type) {
+			if (!empty($config[$type]['enabled'])) {
+				$has_enabled = true;
+				break;
+			}
+		}
+		if (!$has_enabled && !$manual && $wizard_done) {
+			$niche = get_option(LF_HOMEPAGE_NICHE_OPTION, '');
+			$config = lf_homepage_default_config($niche ?: null);
+			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		}
+		return $config;
 	}
 	$migrated = lf_homepage_migrate_from_acf();
 	if (is_array($migrated) && !empty($migrated)) {

@@ -46,6 +46,7 @@ function lf_ops_exportable_option_keys(): array {
 		'lf_homepage_cta_ghl',
 		'homepage_sections',
 		'lf_homepage_section_config',
+		'lf_homepage_section_order',
 		'lf_homepage_niche_slug',
 	];
 }
@@ -80,13 +81,14 @@ function lf_ops_option_labels(): array {
 		'lf_homepage_cta_ghl'       => __('Homepage GHL override', 'leadsforward-core'),
 		'homepage_sections'         => __('Homepage sections', 'leadsforward-core'),
 		'lf_homepage_section_config' => __('Homepage section config', 'leadsforward-core'),
+		'lf_homepage_section_order'  => __('Homepage section order', 'leadsforward-core'),
 		'lf_homepage_niche_slug'     => __('Homepage niche', 'leadsforward-core'),
 	];
 }
 
 /** WP options (not ACF) included in export/import. */
 function lf_ops_wp_option_keys(): array {
-	return ['lf_homepage_section_config', 'lf_homepage_niche_slug'];
+	return ['lf_homepage_section_config', 'lf_homepage_section_order', 'lf_homepage_niche_slug'];
 }
 
 /**
