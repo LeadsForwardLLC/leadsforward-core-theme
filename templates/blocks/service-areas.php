@@ -28,16 +28,21 @@ $query = new WP_Query([
 ]);
 ?>
 <section class="lf-block lf-block-service-areas lf-surface-soft lf-block-service-areas--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
-	<div class="lf-block-service-areas__inner lf-container">
-		<h2 class="lf-block-service-areas__title"><?php echo esc_html($heading); ?></h2>
-		<?php if ($intro !== '') : ?>
-			<p class="lf-block-service-areas__intro"><?php echo esc_html($intro); ?></p>
-		<?php endif; ?>
+	<div class="lf-block-service-areas__inner">
+		<header class="lf-block-service-areas__header">
+			<h2 class="lf-block-service-areas__title"><?php echo esc_html($heading); ?></h2>
+			<?php if ($intro !== '') : ?>
+				<p class="lf-block-service-areas__intro"><?php echo esc_html($intro); ?></p>
+			<?php endif; ?>
+		</header>
 		<?php if ($query->have_posts()) : ?>
-			<ul class="lf-block-service-areas__list">
+			<ul class="lf-block-service-areas__list" role="list">
 				<?php while ($query->have_posts()) : $query->the_post(); ?>
 					<li class="lf-block-service-areas__item">
-						<a href="<?php the_permalink(); ?>" class="lf-block-service-areas__link"><?php the_title(); ?></a>
+						<a href="<?php the_permalink(); ?>" class="lf-block-service-areas__link">
+							<span class="lf-block-service-areas__card-title"><?php the_title(); ?></span>
+							<span class="lf-block-service-areas__card-action" aria-hidden="true"><?php esc_html_e('View area', 'leadsforward-core'); ?></span>
+						</a>
 					</li>
 				<?php endwhile; ?>
 			</ul>

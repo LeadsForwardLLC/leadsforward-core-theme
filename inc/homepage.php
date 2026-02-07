@@ -81,8 +81,8 @@ function lf_homepage_default_section_config(string $section_type): array {
 			]);
 		case 'service_areas':
 			return array_merge($base, [
-				'section_heading' => __('Areas We Serve', 'leadsforward-core'),
-				'section_intro'   => __('Proudly serving these communities and the surrounding region. Contact us to confirm coverage.', 'leadsforward-core'),
+				'section_heading' => __('Proudly Serving Our Community', 'leadsforward-core'),
+				'section_intro'   => __('We’re your local team. These cities and the surrounding region—contact us to confirm we serve your area.', 'leadsforward-core'),
 			]);
 		case 'faq_accordion':
 		case 'map_nap':

@@ -846,40 +846,6 @@ button:focus-visible,
 	opacity: 1;
 }
 
-/* Shared decision card base (Service Areas only; Services use rules above) */
-.lf-block-service-areas__link {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	min-height: var(--lf-touch-min);
-	padding: var(--lf-card-decision-padding-y) var(--lf-card-decision-padding-x);
-	background-color: var(--lf-card-bg);
-	border: var(--lf-card-decision-border);
-	border-radius: var(--lf-card-decision-radius);
-	box-shadow: var(--lf-card-decision-shadow);
-	color: var(--lf-text);
-	text-decoration: none;
-	font-weight: var(--lf-fw-semibold);
-	font-size: var(--lf-fs-body);
-	line-height: 1.25;
-	text-align: center;
-	box-sizing: border-box;
-	transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
-}
-
-.lf-block-service-areas__link:hover {
-	background-color: var(--lf-primary);
-	color: var(--lf-cta-block-text);
-	text-decoration: none;
-	border-color: var(--lf-primary);
-	box-shadow: var(--lf-card-decision-shadow-hover);
-}
-
-.lf-block-service-areas__link:focus-visible {
-	outline: var(--lf-focus-outline);
-	outline-offset: var(--lf-focus-offset);
-}
-
 .lf-block-service-grid__empty {
 	margin: 0;
 	padding: var(--lf-section-padding-x);
@@ -891,13 +857,17 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Block: Service Areas
+   Block: Service Areas (local presence, city cards, SEO + trust)
    ------------------------------------------------------------------------- */
 .lf-block-service-areas__inner {
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
 	max-width: var(--lf-container-wide);
 	margin-left: auto;
 	margin-right: auto;
+}
+
+.lf-block-service-areas__header {
+	margin-bottom: var(--lf-spacing-loose);
 }
 
 .lf-block-service-areas__title {
@@ -909,7 +879,7 @@ button:focus-visible,
 }
 
 .lf-block-service-areas__intro {
-	margin: 0 0 var(--lf-spacing-loose);
+	margin: 0;
 	font-size: var(--lf-fs-body);
 	font-weight: var(--lf-fw-normal);
 	color: var(--lf-muted);
@@ -924,6 +894,76 @@ button:focus-visible,
 	list-style: none;
 	margin: 0;
 	padding: 0;
+	max-width: var(--lf-container-wide);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+@media (min-width: 64rem) {
+	.lf-block-service-areas__list {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+/* Service Areas: city cards (visual consistency with Services, not pills) */
+.lf-block-service-areas__link {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: space-between;
+	text-align: left;
+	min-height: var(--lf-touch-min);
+	padding: var(--lf-card-decision-padding-y) var(--lf-card-decision-padding-x);
+	background-color: var(--lf-card-bg);
+	border: var(--lf-card-decision-border);
+	border-radius: var(--lf-card-decision-radius);
+	box-shadow: var(--lf-card-decision-shadow);
+	color: var(--lf-text);
+	text-decoration: none;
+	font-weight: var(--lf-fw-semibold);
+	font-size: var(--lf-fs-body);
+	line-height: 1.25;
+	box-sizing: border-box;
+	cursor: pointer;
+	transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.lf-block-service-areas__link:hover {
+	background-color: var(--lf-primary);
+	color: var(--lf-cta-block-text);
+	text-decoration: none;
+	border-color: var(--lf-primary);
+	box-shadow: var(--lf-card-decision-shadow-hover);
+	transform: translateY(-2px);
+}
+
+.lf-block-service-areas__link:focus-visible {
+	outline: var(--lf-focus-outline);
+	outline-offset: var(--lf-focus-offset);
+}
+
+.lf-block-service-areas__card-title {
+	display: block;
+	font-weight: var(--lf-fw-semibold);
+	margin-bottom: var(--lf-gap-tight);
+}
+
+.lf-block-service-areas__card-action {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--lf-gap-xs);
+	font-size: var(--lf-fs-small);
+	font-weight: var(--lf-fw-medium);
+	opacity: 0.9;
+}
+
+.lf-block-service-areas__card-action::after {
+	content: "→";
+}
+
+.lf-block-service-areas__link:hover .lf-block-service-areas__card-action,
+.lf-block-service-areas__link:focus-visible .lf-block-service-areas__card-action {
+	opacity: 1;
 }
 
 .lf-block-service-areas__empty {
