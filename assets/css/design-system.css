@@ -156,7 +156,7 @@
 	--lf-btn-primary-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
 	--lf-btn-primary-shadow-hover: 0 4px 12px rgba(37, 99, 235, 0.4);
 	--lf-block-gap: var(--wp--preset--spacing--70, 2rem);
-	--lf-homepage-section-gap: var(--wp--preset--spacing--50, 1.25rem);
+	--lf-homepage-section-gap: var(--lf-space-section);
 	--lf-gap-30: var(--wp--preset--spacing--30, 0.75rem);
 
 	/* Section surfaces (homepage flow) — alias */
@@ -194,10 +194,10 @@
 	margin-top: var(--lf-block-gap);
 }
 
-/* Homepage: intentional section flow (no excess vertical space) */
+/* Homepage: intentional section flow, consistent rhythm */
 .site-main--homepage {
 	padding-top: 0;
-	padding-bottom: 0;
+	padding-bottom: var(--lf-section-padding-y);
 }
 
 .site-main--homepage .lf-block + .lf-block {
@@ -208,7 +208,8 @@
 .site-main--homepage .lf-block-service-grid__title,
 .site-main--homepage .lf-block-service-areas__title,
 .site-main--homepage .lf-block-trust-reviews__title,
-.site-main--homepage .lf-block-faq-accordion__title {
+.site-main--homepage .lf-block-faq-accordion__title,
+.site-main--homepage .lf-block-cta__headline {
 	letter-spacing: -0.02em;
 }
 
@@ -597,7 +598,7 @@ button:focus-visible,
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	padding: var(--lf-space-section-lg) var(--lf-space-container);
+	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
 }
 
 .lf-block-hero__bg {
@@ -615,8 +616,8 @@ button:focus-visible,
 	margin-left: auto;
 	margin-right: auto;
 	width: 100%;
-	padding-left: var(--lf-space-container);
-	padding-right: var(--lf-space-container);
+	padding-left: var(--lf-section-padding-x);
+	padding-right: var(--lf-section-padding-x);
 }
 
 .lf-block-hero__title {
@@ -1368,7 +1369,7 @@ img[loading="lazy"] {
 }
 
 /* -------------------------------------------------------------------------
-   Mobile (no overflow, thumb-friendly, no tiny text)
+   Mobile (no overflow, thumb-friendly tap targets, consistent padding)
    ------------------------------------------------------------------------- */
 html {
 	overflow-x: hidden;
@@ -1376,10 +1377,16 @@ html {
 
 @media (max-width: 639px) {
 	.site-main--homepage .lf-block:last-child {
-		padding-bottom: var(--lf-section-padding-x);
+		padding-bottom: var(--lf-section-padding-y);
 	}
 
-	.lf-block-hero__inner {
+	/* Section inners: consistent horizontal padding */
+	.lf-block-hero__inner,
+	.lf-block-service-grid__inner,
+	.lf-block-service-areas__inner,
+	.lf-block-trust-reviews__inner,
+	.lf-block-faq-accordion__inner,
+	.lf-block-cta__inner {
 		padding-left: var(--lf-section-padding-x);
 		padding-right: var(--lf-section-padding-x);
 	}
@@ -1388,14 +1395,7 @@ html {
 		display: block;
 		width: 100%;
 		text-align: center;
-		padding-left: var(--lf-section-padding-x);
-		padding-right: var(--lf-section-padding-x);
-	}
-
-	.lf-block-service-grid__inner,
-	.lf-block-service-areas__inner,
-	.lf-block-trust-reviews__inner,
-	.lf-block-faq-accordion__inner {
+		min-height: var(--lf-touch-min);
 		padding-left: var(--lf-section-padding-x);
 		padding-right: var(--lf-section-padding-x);
 	}
@@ -1405,6 +1405,7 @@ html {
 		display: block;
 		width: 100%;
 		text-align: center;
+		min-height: var(--lf-touch-min);
 		padding-left: var(--lf-section-padding-x);
 		padding-right: var(--lf-section-padding-x);
 	}
@@ -1412,6 +1413,11 @@ html {
 	.lf-block-service-grid__list,
 	.lf-block-service-areas__list {
 		grid-template-columns: 1fr;
+	}
+
+	.lf-block-service-grid__link,
+	.lf-block-service-areas__link {
+		min-height: var(--lf-touch-min);
 	}
 
 	.site-footer .lf-container {
