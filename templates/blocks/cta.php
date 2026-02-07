@@ -12,8 +12,11 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+$block_id = $block['id'] ?? '';
 $context = $block['context'] ?? [];
+$section = $context['section'] ?? [];
 $variant = $block['variant'] ?? 'default';
+$headline = !empty($section['cta_headline']) ? $section['cta_headline'] : '';
 
 $cta = function_exists('lf_get_resolved_cta') ? lf_get_resolved_cta($context) : [
 	'primary_text'   => lf_get_option('lf_cta_primary_text', 'option'),
@@ -35,8 +38,11 @@ $cta_phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
 $use_phone_link = $cta_type === 'call' && $cta_phone && $primary;
 $show_form = ($cta_type === 'form' && $ghl_embed) || ($cta_type !== 'call' && $ghl_embed);
 ?>
-<section class="lf-block lf-block-cta lf-surface-dark lf-block-cta--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
+<section class="lf-block lf-block-cta lf-surface-dark lf-block-cta--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" aria-label="<?php esc_attr_e('Call to action', 'leadsforward-core'); ?>">
 	<div class="lf-block-cta__inner">
+		<?php if ($headline !== '') : ?>
+			<h2 class="lf-block-cta__headline"><?php echo esc_html($headline); ?></h2>
+		<?php endif; ?>
 		<?php if ($primary) : ?>
 			<p class="lf-block-cta__primary">
 				<?php if ($use_phone_link) : ?>

@@ -93,7 +93,8 @@ function lf_homepage_default_section_config(string $section_type): array {
 			return $base;
 		case 'cta':
 			return array_merge($base, [
-				'cta_primary_override'   => '',
+				'cta_headline'          => __('Ready to get started?', 'leadsforward-core'),
+				'cta_primary_override'  => '',
 				'cta_secondary_override' => '',
 				'cta_ghl_override'      => '',
 			]);

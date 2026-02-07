@@ -1106,7 +1106,7 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Block: CTA (strong close: high contrast, clear primary, separation)
+   Block: CTA (true close: high contrast, strong headline + action, minimal copy)
    ------------------------------------------------------------------------- */
 .lf-block-cta {
 	background-color: var(--lf-cta-block-bg);
@@ -1125,8 +1125,16 @@ button:focus-visible,
 	margin-right: auto;
 }
 
-.lf-block-cta__primary {
+.lf-block-cta__headline {
 	margin: 0 0 var(--lf-spacing-normal);
+	font-size: var(--lf-fs-h2);
+	font-weight: var(--lf-heading-weight);
+	line-height: 1.2;
+	color: var(--lf-cta-block-text);
+}
+
+.lf-block-cta__primary {
+	margin: 0 0 var(--lf-spacing-tight);
 }
 
 .lf-block-cta__primary-link,
@@ -1134,14 +1142,14 @@ button:focus-visible,
 	display: inline-block;
 	background-color: var(--lf-cta-block-text);
 	color: var(--lf-cta-block-bg);
-	padding: calc(var(--lf-btn-pad-y) * 1.25) var(--lf-btn-pad-x-lg);
+	padding: calc(var(--lf-btn-pad-y) * 1.5) var(--lf-btn-pad-x-lg);
 	min-height: var(--lf-touch-min);
 	box-sizing: border-box;
 	line-height: 1.25;
 	vertical-align: middle;
 	border-radius: var(--lf-button-radius);
 	font-weight: var(--lf-fw-semibold);
-	font-size: var(--lf-fs-medium);
+	font-size: var(--lf-fs-large);
 	text-decoration: none;
 }
 
@@ -1155,16 +1163,17 @@ button:focus-visible,
 	margin: var(--lf-spacing-tight) 0 0;
 	font-size: var(--lf-fs-small);
 	color: var(--lf-cta-block-text-muted);
+	line-height: 1.4;
 }
 
 .lf-block-cta__embed {
-	margin-top: var(--lf-spacing-normal);
+	margin-top: var(--lf-spacing-loose);
 }
 
 .lf-block-cta--b .lf-block-cta__primary-link,
 .lf-block-cta--b .lf-block-cta__primary-text {
 	padding: var(--lf-btn-pad-y) var(--lf-section-padding-lg);
-	font-size: var(--lf-fs-medium);
+	font-size: var(--lf-fs-large);
 }
 
 /* -------------------------------------------------------------------------
