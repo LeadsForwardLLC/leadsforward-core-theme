@@ -1,29 +1,16 @@
 /**
- * LeadsForward design system. All styling from theme.json tokens only.
- * No magic numbers; no per-page CSS; no JS for visuals.
+ * LeadsForward design system. Home-services skin: agency-grade homepage.
  *
- * Core layer: spacing system, typography scale, buttons, containers, vertical rhythm.
+ * HOMEPAGE STRUCTURE (locked order)
+ * 1. Hero — full-bleed gradient, bold H1, dominant CTA, trust strip
+ * 2. Services — white surface, premium decision cards, 3-col grid
+ * 3. Service Areas — soft surface, same card language, local trust
+ * 4. Social Proof — soft surface, quote-forward testimonials (1–3)
+ * 5. FAQ — white surface, objection handling, schema-safe
+ * 6. Final CTA — dark band, one clear action
  *
- * -------------------------------------------------------------------------
- * HOMEPAGE BASE SKIN — Visual language & layout philosophy
- * -------------------------------------------------------------------------
- * This is the default home-services skin. Niches extend from it.
- *
- * VISUAL LANGUAGE
- * - Typography: One clear H1 (hero). Section H2s as chapter markers. Body readable.
- * - Color: Primary = action/trust. White/off-white sections. Dark CTA band. Muted secondary.
- * - Spacing: Generous rhythm. Content constrained (narrow/wide). Sections breathe.
- * - Components: Cards = tappable. CTAs = obvious buttons. Trust = visible but not noisy.
- *
- * LAYOUT PHILOSOPHY
- * - Above fold: One value prop, one primary CTA, optional trust line.
- * - Sections: Single-column focus. Clear section titles. Services/areas = choice grids.
- *   One testimonial spotlight. FAQ scannable. Final CTA = full-bleed conversion band.
- * - Conversion hierarchy: Hero CTA + Final CTA = conversion peaks. Service/area links =
- *   consideration. Trust supports credibility.
- * - Mobile-first: Same hierarchy, stacked. Touch targets, no horizontal scroll.
- *
- * -------------------------------------------------------------------------
+ * Surfaces: white (#fff), soft (#f8fafc, #f1f5f9), dark (#1e293b).
+ * No sliders/JS. Section toggles, wizard, and data sources unchanged.
  */
 
 /* -------------------------------------------------------------------------
@@ -91,16 +78,18 @@
 	/* Border radius (override per variation profile in variation-tokens.css) */
 	--lf-button-radius: 0.25rem;
 
-	/* Hero — full-width surface, strong rhythm, dominant CTA */
-	--lf-hero-bg: var(--wp--preset--color--neutral-100, #f1f5f9);
-	--lf-hero-bg-subtle: linear-gradient(180deg, var(--lf-hero-bg) 0%, rgba(255,255,255,0.97) 50%, var(--lf-body-bg) 100%);
-	--lf-hero-stack-after-title: var(--lf-space-container);
-	--lf-hero-stack-after-subtitle: var(--lf-space-section-sm);
-	--lf-hero-stack-after-cta: var(--lf-space-section);
-	--lf-hero-cta-primary-size: var(--lf-fs-large);
+	/* Hero — full-bleed, agency-grade: gradient, display type, dominant CTA */
+	--lf-hero-bg: #e2e8f0;
+	--lf-hero-bg-gradient: linear-gradient(165deg, #f1f5f9 0%, #e2e8f0 35%, #f8fafc 100%);
+	--lf-hero-stack-after-title: 1.25rem;
+	--lf-hero-stack-after-subtitle: 1.75rem;
+	--lf-hero-stack-after-cta: 2rem;
+	--lf-hero-cta-primary-size: 1.125rem;
 	--lf-hero-cta-primary-pad-y: 1rem;
-	--lf-hero-cta-primary-pad-x: 2rem;
-	--lf-hero-trust-gap: var(--lf-gap-normal);
+	--lf-hero-cta-primary-pad-x: 2.25rem;
+	--lf-hero-trust-gap: 0.75rem;
+	--lf-hero-min-height: 22rem;
+	--lf-hero-title-size: clamp(2rem, 5.5vw, 3.25rem);
 
 	/* 3) SURFACE STYLES — white, soft, dark (no section is plain text on white) */
 	--lf-surface-white: var(--wp--preset--color--background, #ffffff);
@@ -171,9 +160,7 @@
 	/* Touch target minimum (WCAG) */
 	--lf-touch-min: 48px;
 
-	/* Hero min-height (CLS-safe) */
-	--lf-hero-min-height: 18rem;
-	--lf-hero-min-height--compact: 15rem;
+	--lf-hero-min-height--compact: 18rem;
 	--lf-hero-title-max: var(--lf-fs-display);
 
 	/* Grid: min column width */
@@ -201,7 +188,7 @@
 }
 
 .site-main--homepage .lf-block + .lf-block {
-	margin-top: var(--lf-homepage-section-gap);
+	margin-top: 0;
 }
 
 /* Homepage base skin: section headings as clear chapter markers */
@@ -409,27 +396,6 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Homepage section surfaces (intentional: white, soft, dark — no plain text on white)
-   ------------------------------------------------------------------------- */
-.lf-block-service-grid {
-	background-color: var(--lf-surface-white);
-}
-
-.lf-block-service-areas {
-	background-color: var(--lf-surface-soft);
-}
-
-.lf-block-trust-reviews {
-	background-color: var(--lf-surface-soft);
-	border-top: var(--lf-surface-soft-border);
-	border-bottom: var(--lf-surface-soft-border);
-}
-
-.lf-block-faq-accordion {
-	background-color: var(--lf-surface-white);
-}
-
-/* -------------------------------------------------------------------------
    Header
    ------------------------------------------------------------------------- */
 .site-header {
@@ -589,7 +555,7 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Block: Hero (best-in-class: service + location, trust, dominant CTAs)
+   Block: Hero — Full-bleed, conversion above the fold (agency-grade)
    ------------------------------------------------------------------------- */
 .lf-block-hero {
 	position: relative;
@@ -598,13 +564,14 @@ button:focus-visible,
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+	padding: 4rem 1.5rem;
+	overflow: hidden;
 }
 
 .lf-block-hero__bg {
 	position: absolute;
 	inset: 0;
-	background: var(--lf-hero-bg-subtle);
+	background: var(--lf-hero-bg-gradient);
 	background-color: var(--lf-hero-bg);
 	z-index: 0;
 }
@@ -612,31 +579,29 @@ button:focus-visible,
 .lf-block-hero__inner {
 	position: relative;
 	z-index: 1;
-	max-width: var(--lf-container-narrow);
+	max-width: 42rem;
 	margin-left: auto;
 	margin-right: auto;
 	width: 100%;
-	padding-left: var(--lf-section-padding-x);
-	padding-right: var(--lf-section-padding-x);
+	padding-left: 1rem;
+	padding-right: 1rem;
 }
 
 .lf-block-hero__title {
-	font-size: clamp(var(--lf-fs-h2), 5vw, var(--lf-hero-title-max));
-	font-weight: var(--lf-heading-weight);
-	line-height: 1.15;
+	font-size: var(--lf-hero-title-size);
+	font-weight: 800;
+	line-height: 1.1;
+	letter-spacing: -0.03em;
 	margin: 0 0 var(--lf-hero-stack-after-title);
 	color: var(--lf-text);
-	letter-spacing: -0.025em;
 }
 
 .lf-block-hero__subtitle {
-	font-size: var(--lf-fs-large);
+	font-size: 1.125rem;
 	color: var(--lf-muted);
-	margin: 0 0 var(--lf-hero-stack-after-subtitle);
-	line-height: var(--lf-line-height-body);
-	max-width: 36em;
-	margin-left: auto;
-	margin-right: auto;
+	line-height: 1.6;
+	max-width: 32em;
+	margin: 0 auto var(--lf-hero-stack-after-subtitle);
 }
 
 .lf-block-hero__cta {
@@ -644,7 +609,7 @@ button:focus-visible,
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: center;
-	gap: var(--lf-gap-normal);
+	gap: 1rem;
 	margin: 0 0 var(--lf-hero-stack-after-cta);
 }
 
@@ -654,17 +619,23 @@ button:focus-visible,
 	align-items: center;
 	justify-content: center;
 	min-height: var(--lf-touch-min);
-	padding: var(--lf-hero-cta-primary-pad-y) var(--lf-hero-cta-primary-pad-x);
-	font-size: var(--lf-hero-cta-primary-size);
-	font-weight: var(--lf-fw-bold);
+	padding: 1rem 2.25rem;
+	font-size: 1.125rem;
+	font-weight: 700;
 	white-space: nowrap;
-	border-radius: var(--lf-button-radius);
-	box-shadow: var(--lf-btn-primary-shadow);
+	border-radius: 0.375rem;
+	box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+	text-decoration: none;
+	background: var(--lf-primary);
+	color: #fff;
+	border: none;
+	cursor: pointer;
 }
 
 .lf-block-hero__cta-link:hover,
 .lf-block-hero__cta-text:hover {
-	box-shadow: var(--lf-btn-primary-shadow-hover);
+	box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+	filter: brightness(1.05);
 }
 
 .lf-block-hero__cta-secondary {
@@ -672,11 +643,19 @@ button:focus-visible,
 	align-items: center;
 	justify-content: center;
 	min-height: var(--lf-touch-min);
-	padding: var(--lf-btn-pad-y) var(--lf-btn-pad-x-lg);
-	font-size: var(--lf-fs-body);
-	font-weight: var(--lf-fw-semibold);
+	padding: 0.75rem 1.5rem;
+	font-size: 1rem;
+	font-weight: 600;
 	white-space: nowrap;
-	border-radius: var(--lf-button-radius);
+	border-radius: 0.375rem;
+	background: #fff;
+	color: var(--lf-text);
+	border: 2px solid var(--lf-neutral-300);
+}
+
+.lf-block-hero__cta-secondary:hover {
+	border-color: var(--lf-primary);
+	color: var(--lf-primary);
 }
 
 .lf-block-hero__trust {
@@ -685,42 +664,44 @@ button:focus-visible,
 	justify-content: center;
 	flex-wrap: wrap;
 	gap: var(--lf-hero-trust-gap);
-	font-size: var(--lf-fs-small);
-	font-weight: var(--lf-fw-semibold);
+	font-size: 0.9375rem;
+	font-weight: 600;
 	color: var(--lf-text);
 }
 
 .lf-block-hero__stars {
 	display: inline-flex;
 	align-items: center;
-	gap: var(--lf-gap-xs);
+	gap: 0.125rem;
 }
 
 .lf-block-hero__star {
 	color: var(--lf-warning);
 	flex-shrink: 0;
+	width: 1.125rem;
+	height: 1.125rem;
 }
 
 .lf-block-hero__badge {
 	display: inline-flex;
 	align-items: center;
-	padding: 0.25em 0.75em;
-	background-color: var(--lf-surface-white);
-	border: var(--lf-card-border);
+	padding: 0.35em 0.85em;
+	background: #fff;
+	border: 1px solid var(--lf-neutral-300);
 	border-radius: 9999px;
-	box-shadow: var(--lf-card-shadow);
+	box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 	color: var(--lf-text);
 }
 
 .lf-block-hero__phone-wrap {
-	margin: var(--lf-space-section-sm) 0 0;
+	margin: 1.25rem 0 0;
 }
 
 .lf-block-hero__phone {
 	color: var(--lf-muted);
 	text-decoration: none;
-	font-weight: var(--lf-fw-semibold);
-	font-size: var(--lf-fs-body);
+	font-weight: 600;
+	font-size: 1rem;
 }
 
 .lf-block-hero__phone:hover {
@@ -728,67 +709,60 @@ button:focus-visible,
 	color: var(--lf-text);
 }
 
-/* Hero variant: compact */
-.lf-block-hero--a .lf-block-hero__title {
-	font-size: var(--lf-fs-h2);
-}
-
-.lf-block-hero--a {
-	padding-top: var(--lf-section-padding-y-tight);
-	padding-bottom: var(--lf-space-section-sm);
-	min-height: var(--lf-hero-min-height--compact);
-}
+.lf-block-hero--a .lf-block-hero__title { font-size: 1.875rem; }
+.lf-block-hero--a { padding: 3rem 1.5rem; min-height: var(--lf-hero-min-height--compact); }
 
 /* -------------------------------------------------------------------------
-   Block: Service Grid (cards, full-card clickable, hover clarity)
+   Block: Services — Decision drivers, premium cards
    ------------------------------------------------------------------------- */
+.lf-block-service-grid {
+	background: #fff;
+}
+
 .lf-block-service-grid__inner {
-	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
-	max-width: var(--lf-container-wide);
+	padding: 4rem 1.5rem;
+	max-width: 72rem;
 	margin-left: auto;
 	margin-right: auto;
 }
 
 .lf-block-service-grid__header {
-	margin-bottom: var(--lf-spacing-loose);
+	margin-bottom: 2.5rem;
+	max-width: 36rem;
 }
 
 .lf-block-service-grid__title {
-	margin: 0 0 var(--lf-section-heading-margin);
-	font-size: var(--lf-fs-h2);
-	font-weight: var(--lf-heading-weight);
-	line-height: var(--lf-line-height-heading);
+	margin: 0 0 0.75rem;
+	font-size: 2rem;
+	font-weight: 700;
+	line-height: 1.2;
+	letter-spacing: -0.02em;
 	color: var(--lf-text);
 }
 
 .lf-block-service-grid__intro {
 	margin: 0;
-	font-size: var(--lf-fs-body);
-	font-weight: var(--lf-fw-normal);
+	font-size: 1.0625rem;
+	line-height: 1.6;
 	color: var(--lf-muted);
-	line-height: var(--lf-line-height-body);
-	max-width: var(--lf-container-narrow);
 }
 
 .lf-block-service-grid__list {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(var(--lf-grid-min), 1fr));
-	gap: var(--lf-gap-loose);
+	grid-template-columns: 1fr;
+	gap: 1.25rem;
 	list-style: none;
 	margin: 0;
 	padding: 0;
-	max-width: var(--lf-container-wide);
-	margin-left: auto;
-	margin-right: auto;
 }
 
+@media (min-width: 48rem) {
+	.lf-block-service-grid__list { grid-template-columns: repeat(2, 1fr); }
+}
 @media (min-width: 64rem) {
-	.lf-block-service-grid__list {
-		grid-template-columns: repeat(3, 1fr);
-	}
+	.lf-block-service-grid__list { grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
 }
 
-/* Service Grid: decision cards with title + action (curated offering) */
 .lf-block-service-grid__link {
 	display: flex;
 	flex-direction: column;
@@ -796,119 +770,106 @@ button:focus-visible,
 	justify-content: space-between;
 	text-align: left;
 	min-height: var(--lf-touch-min);
-	padding: var(--lf-card-decision-padding-y) var(--lf-card-decision-padding-x);
-	background-color: var(--lf-card-bg);
-	border: var(--lf-card-decision-border);
-	border-radius: var(--lf-card-decision-radius);
-	box-shadow: var(--lf-card-decision-shadow);
+	padding: 1.5rem 1.5rem;
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 0.5rem;
+	box-shadow: 0 1px 3px rgba(15,23,42,0.06);
 	color: var(--lf-text);
 	text-decoration: none;
-	font-weight: var(--lf-fw-semibold);
-	font-size: var(--lf-fs-body);
-	line-height: 1.25;
+	font-weight: 600;
+	font-size: 1rem;
+	line-height: 1.35;
 	box-sizing: border-box;
 	cursor: pointer;
-	transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.2s ease;
+	transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
 .lf-block-service-grid__link:hover {
-	background-color: var(--lf-primary);
-	color: var(--lf-cta-block-text);
-	text-decoration: none;
+	background: var(--lf-primary);
+	color: #fff;
 	border-color: var(--lf-primary);
-	box-shadow: var(--lf-card-decision-shadow-hover);
-	transform: translateY(-2px);
+	box-shadow: 0 12px 32px rgba(37,99,235,0.25);
+	transform: translateY(-3px);
 }
 
 .lf-block-service-grid__link:focus-visible {
-	outline: var(--lf-focus-outline);
-	outline-offset: var(--lf-focus-offset);
+	outline: 2px solid var(--lf-primary);
+	outline-offset: 2px;
 }
 
 .lf-block-service-grid__card-title {
 	display: block;
-	font-weight: var(--lf-fw-semibold);
-	margin-bottom: var(--lf-gap-tight);
+	font-weight: 600;
+	margin-bottom: 0.5rem;
 }
 
 .lf-block-service-grid__card-action {
 	display: inline-flex;
 	align-items: center;
-	gap: var(--lf-gap-xs);
-	font-size: var(--lf-fs-small);
-	font-weight: var(--lf-fw-medium);
+	gap: 0.25rem;
+	font-size: 0.875rem;
+	font-weight: 500;
 	opacity: 0.9;
 }
 
-.lf-block-service-grid__card-action::after {
-	content: "→";
-}
+.lf-block-service-grid__card-action::after { content: "→"; }
+.lf-block-service-grid__link:hover .lf-block-service-grid__card-action { opacity: 1; }
 
-.lf-block-service-grid__link:hover .lf-block-service-grid__card-action,
-.lf-block-service-grid__link:focus-visible .lf-block-service-grid__card-action {
-	opacity: 1;
-}
-
-.lf-block-service-grid__empty {
-	margin: 0;
-	padding: var(--lf-section-padding-x);
-	color: var(--lf-muted);
-}
-
-.lf-block-service-grid--a .lf-block-service-grid__list {
-	grid-template-columns: 1fr;
-}
+.lf-block-service-grid__empty { margin: 0; color: var(--lf-muted); }
+.lf-block-service-grid--a .lf-block-service-grid__list { grid-template-columns: 1fr; }
 
 /* -------------------------------------------------------------------------
-   Block: Service Areas (local presence, city cards, SEO + trust)
+   Block: Service Areas — Local trust, same card language
    ------------------------------------------------------------------------- */
+.lf-block-service-areas {
+	background: #f8fafc;
+}
+
 .lf-block-service-areas__inner {
-	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
-	max-width: var(--lf-container-wide);
+	padding: 4rem 1.5rem;
+	max-width: 72rem;
 	margin-left: auto;
 	margin-right: auto;
 }
 
 .lf-block-service-areas__header {
-	margin-bottom: var(--lf-spacing-loose);
+	margin-bottom: 2.5rem;
+	max-width: 36rem;
 }
 
 .lf-block-service-areas__title {
-	margin: 0 0 var(--lf-section-heading-margin);
-	font-size: var(--lf-fs-h2);
-	font-weight: var(--lf-heading-weight);
-	line-height: var(--lf-line-height-heading);
+	margin: 0 0 0.75rem;
+	font-size: 2rem;
+	font-weight: 700;
+	line-height: 1.2;
+	letter-spacing: -0.02em;
 	color: var(--lf-text);
 }
 
 .lf-block-service-areas__intro {
 	margin: 0;
-	font-size: var(--lf-fs-body);
-	font-weight: var(--lf-fw-normal);
+	font-size: 1.0625rem;
+	line-height: 1.6;
 	color: var(--lf-muted);
-	line-height: var(--lf-line-height-body);
-	max-width: var(--lf-container-narrow);
 }
 
 .lf-block-service-areas__list {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(var(--lf-grid-min), 1fr));
-	gap: var(--lf-gap-loose);
+	grid-template-columns: 1fr;
+	gap: 1.25rem;
 	list-style: none;
 	margin: 0;
 	padding: 0;
-	max-width: var(--lf-container-wide);
-	margin-left: auto;
-	margin-right: auto;
 }
 
+@media (min-width: 48rem) {
+	.lf-block-service-areas__list { grid-template-columns: repeat(2, 1fr); }
+}
 @media (min-width: 64rem) {
-	.lf-block-service-areas__list {
-		grid-template-columns: repeat(3, 1fr);
-	}
+	.lf-block-service-areas__list { grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
 }
 
-/* Service Areas: city cards (visual consistency with Services, not pills) */
 .lf-block-service-areas__link {
 	display: flex;
 	flex-direction: column;
@@ -916,84 +877,65 @@ button:focus-visible,
 	justify-content: space-between;
 	text-align: left;
 	min-height: var(--lf-touch-min);
-	padding: var(--lf-card-decision-padding-y) var(--lf-card-decision-padding-x);
-	background-color: var(--lf-card-bg);
-	border: var(--lf-card-decision-border);
-	border-radius: var(--lf-card-decision-radius);
-	box-shadow: var(--lf-card-decision-shadow);
+	padding: 1.5rem 1.5rem;
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 0.5rem;
+	box-shadow: 0 1px 3px rgba(15,23,42,0.06);
 	color: var(--lf-text);
 	text-decoration: none;
-	font-weight: var(--lf-fw-semibold);
-	font-size: var(--lf-fs-body);
-	line-height: 1.25;
+	font-weight: 600;
+	font-size: 1rem;
+	line-height: 1.35;
 	box-sizing: border-box;
 	cursor: pointer;
-	transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.2s ease;
+	transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
 .lf-block-service-areas__link:hover {
-	background-color: var(--lf-primary);
-	color: var(--lf-cta-block-text);
-	text-decoration: none;
+	background: var(--lf-primary);
+	color: #fff;
 	border-color: var(--lf-primary);
-	box-shadow: var(--lf-card-decision-shadow-hover);
-	transform: translateY(-2px);
+	box-shadow: 0 12px 32px rgba(37,99,235,0.25);
+	transform: translateY(-3px);
 }
 
 .lf-block-service-areas__link:focus-visible {
-	outline: var(--lf-focus-outline);
-	outline-offset: var(--lf-focus-offset);
+	outline: 2px solid var(--lf-primary);
+	outline-offset: 2px;
 }
 
-.lf-block-service-areas__card-title {
-	display: block;
-	font-weight: var(--lf-fw-semibold);
-	margin-bottom: var(--lf-gap-tight);
-}
-
-.lf-block-service-areas__card-action {
-	display: inline-flex;
-	align-items: center;
-	gap: var(--lf-gap-xs);
-	font-size: var(--lf-fs-small);
-	font-weight: var(--lf-fw-medium);
-	opacity: 0.9;
-}
-
-.lf-block-service-areas__card-action::after {
-	content: "→";
-}
-
-.lf-block-service-areas__link:hover .lf-block-service-areas__card-action,
-.lf-block-service-areas__link:focus-visible .lf-block-service-areas__card-action {
-	opacity: 1;
-}
-
-.lf-block-service-areas__empty {
-	margin: 0;
-	color: var(--lf-muted);
-}
+.lf-block-service-areas__card-title { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+.lf-block-service-areas__card-action { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.875rem; font-weight: 500; opacity: 0.9; }
+.lf-block-service-areas__card-action::after { content: "→"; }
+.lf-block-service-areas__link:hover .lf-block-service-areas__card-action { opacity: 1; }
+.lf-block-service-areas__empty { margin: 0; color: var(--lf-muted); }
 
 /* -------------------------------------------------------------------------
-   Block: Trust / Reviews (1–3 testimonials; quote-first, earned trust)
+   Block: Social Proof — Quote-forward, 1–3 testimonials, distinct surface
    ------------------------------------------------------------------------- */
+.lf-block-trust-reviews {
+	background: #f1f5f9;
+}
+
 .lf-block-trust-reviews__inner {
-	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
-	max-width: var(--lf-container-wide);
+	padding: 4rem 1.5rem;
+	max-width: 72rem;
 	margin-left: auto;
 	margin-right: auto;
 }
 
 .lf-block-trust-reviews__header {
-	margin-bottom: var(--lf-spacing-loose);
+	margin-bottom: 2.5rem;
 	text-align: center;
 }
 
 .lf-block-trust-reviews__title {
 	margin: 0;
-	font-size: var(--lf-fs-h2);
-	font-weight: var(--lf-heading-weight);
-	line-height: var(--lf-line-height-heading);
+	font-size: 2rem;
+	font-weight: 700;
+	line-height: 1.2;
+	letter-spacing: -0.02em;
 	color: var(--lf-text);
 }
 
@@ -1002,25 +944,19 @@ button:focus-visible,
 	margin: 0;
 	padding: 0;
 	display: grid;
-	gap: var(--lf-gap-loose);
+	gap: 2rem;
 	grid-template-columns: 1fr;
 }
 
 @media (min-width: 40rem) {
-	.lf-block-trust-reviews__list {
-		grid-template-columns: repeat(2, 1fr);
-	}
+	.lf-block-trust-reviews__list { grid-template-columns: repeat(2, 1fr); }
 }
-
 @media (min-width: 64rem) {
-	.lf-block-trust-reviews__list {
-		grid-template-columns: repeat(3, 1fr);
-	}
+	.lf-block-trust-reviews__list { grid-template-columns: repeat(3, 1fr); }
 }
 
-/* Single testimonial: narrow, centered (no grid overload) */
 .lf-block-trust-reviews__list:has(.lf-block-trust-reviews__item:only-child) {
-	max-width: var(--lf-container-narrow);
+	max-width: 32rem;
 	margin-left: auto;
 	margin-right: auto;
 }
@@ -1030,27 +966,32 @@ button:focus-visible,
 	height: 100%;
 	display: flex;
 	flex-direction: column;
+	background: #fff;
+	border-radius: 0.5rem;
+	padding: 2rem 1.75rem;
+	box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+	border: 1px solid #e2e8f0;
 }
 
 .lf-block-trust-reviews__text {
 	position: relative;
-	margin: 0 0 var(--lf-spacing-normal);
-	padding-top: 0.25em;
-	font-size: var(--lf-fs-large);
-	line-height: 1.5;
+	margin: 0 0 1.25rem;
+	padding-top: 0.15em;
+	font-size: 1.125rem;
+	line-height: 1.55;
 	color: var(--lf-text);
-	font-weight: var(--lf-fw-normal);
+	font-weight: 400;
 	flex-grow: 1;
 }
 
 .lf-block-trust-reviews__text::before {
 	content: "\201C";
 	position: absolute;
-	top: -0.05em;
+	top: -0.1em;
 	left: 0;
-	font-size: 1.5em;
+	font-size: 2.5rem;
 	line-height: 1;
-	color: var(--lf-neutral-300);
+	color: #cbd5e1;
 	font-family: Georgia, serif;
 }
 
@@ -1058,154 +999,128 @@ button:focus-visible,
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: var(--lf-gap-tight);
+	gap: 0.5rem;
 	margin: 0;
-	font-size: var(--lf-fs-small);
-	font-weight: var(--lf-fw-normal);
+	font-size: 0.875rem;
 	color: var(--lf-muted);
-	line-height: var(--lf-line-height-tight);
+	line-height: 1.4;
 }
 
-.lf-block-trust-reviews__stars {
-	display: inline-flex;
-	gap: 2px;
-}
-
-.lf-block-trust-reviews__star {
-	width: 12px;
-	height: 12px;
-	color: var(--lf-neutral-300);
-}
-
-.lf-block-trust-reviews__star--filled {
-	color: var(--lf-warning);
-}
-
-.lf-block-trust-reviews__cite cite {
-	font-style: normal;
-	font-weight: var(--lf-fw-semibold);
-	color: var(--lf-text);
-}
-
-.lf-block-trust-reviews__source {
-	opacity: 0.9;
-}
-
-.lf-block-trust-reviews__empty {
-	margin: 0;
-	padding: var(--lf-spacing-loose);
-	text-align: center;
-	background-color: transparent;
-	border: none;
-	border-radius: 0;
-}
-
-.lf-block-trust-reviews__empty-text {
-	margin: 0;
-	font-size: var(--lf-fs-body);
-	color: var(--lf-muted);
-}
+.lf-block-trust-reviews__stars { display: inline-flex; gap: 2px; }
+.lf-block-trust-reviews__star { width: 12px; height: 12px; color: #cbd5e1; }
+.lf-block-trust-reviews__star--filled { color: var(--lf-warning); }
+.lf-block-trust-reviews__cite cite { font-style: normal; font-weight: 600; color: var(--lf-text); }
+.lf-block-trust-reviews__source { opacity: 0.9; }
+.lf-block-trust-reviews__empty { margin: 0; padding: 2rem; text-align: center; }
+.lf-block-trust-reviews__empty-text { margin: 0; font-size: 1rem; color: var(--lf-muted); }
 
 /* -------------------------------------------------------------------------
-   Block: CTA (true close: high contrast, strong headline + action, minimal copy)
+   Block: Final CTA — The close: dark band, one clear action
    ------------------------------------------------------------------------- */
 .lf-block-cta {
-	background-color: var(--lf-cta-block-bg);
-	color: var(--lf-cta-block-text);
+	background: #1e293b;
+	color: #fff;
 }
 
 .site-main--homepage .lf-block-cta {
-	margin-top: var(--lf-cta-block-separation);
+	margin-top: 0;
 }
 
 .lf-block-cta__inner {
-	padding: var(--lf-cta-block-padding-y) var(--lf-section-padding-x);
+	padding: 4rem 1.5rem;
 	text-align: center;
-	max-width: var(--lf-container-narrow);
+	max-width: 36rem;
 	margin-left: auto;
 	margin-right: auto;
 }
 
 .lf-block-cta__headline {
-	margin: 0 0 var(--lf-spacing-normal);
-	font-size: var(--lf-fs-h2);
-	font-weight: var(--lf-heading-weight);
+	margin: 0 0 1.5rem;
+	font-size: 2rem;
+	font-weight: 700;
 	line-height: 1.2;
-	color: var(--lf-cta-block-text);
+	letter-spacing: -0.02em;
+	color: #fff;
 }
 
 .lf-block-cta__primary {
-	margin: 0 0 var(--lf-spacing-tight);
+	margin: 0 0 0.75rem;
 }
 
 .lf-block-cta__primary-link,
 .lf-block-cta__primary-text {
 	display: inline-block;
-	background-color: var(--lf-cta-block-text);
-	color: var(--lf-cta-block-bg);
-	padding: calc(var(--lf-btn-pad-y) * 1.5) var(--lf-btn-pad-x-lg);
+	background: #fff;
+	color: #1e293b;
+	padding: 1rem 2.25rem;
 	min-height: var(--lf-touch-min);
 	box-sizing: border-box;
 	line-height: 1.25;
 	vertical-align: middle;
-	border-radius: var(--lf-button-radius);
-	font-weight: var(--lf-fw-semibold);
-	font-size: var(--lf-fs-large);
+	border-radius: 0.375rem;
+	font-weight: 700;
+	font-size: 1.125rem;
 	text-decoration: none;
+	transition: filter 0.2s ease, box-shadow 0.2s ease;
 }
 
 .lf-block-cta__primary-link:hover {
-	background-color: var(--lf-cta-block-text-muted);
-	color: var(--lf-cta-block-bg);
+	background: #f1f5f9;
+	color: #1e293b;
 	text-decoration: none;
+	filter: brightness(1.02);
+	box-shadow: 0 4px 14px rgba(0,0,0,0.2);
 }
 
 .lf-block-cta__secondary {
-	margin: var(--lf-spacing-tight) 0 0;
-	font-size: var(--lf-fs-small);
-	color: var(--lf-cta-block-text-muted);
+	margin: 0.5rem 0 0;
+	font-size: 0.9375rem;
+	color: #94a3b8;
 	line-height: 1.4;
 }
 
 .lf-block-cta__embed {
-	margin-top: var(--lf-spacing-loose);
+	margin-top: 2rem;
 }
 
 .lf-block-cta--b .lf-block-cta__primary-link,
 .lf-block-cta--b .lf-block-cta__primary-text {
-	padding: var(--lf-btn-pad-y) var(--lf-section-padding-lg);
-	font-size: var(--lf-fs-large);
+	padding: 1rem 2.5rem;
+	font-size: 1.125rem;
 }
 
 /* -------------------------------------------------------------------------
-   Block: FAQ Accordion (objection handling; question emphasis, calm, schema-safe)
+   Block: FAQ — Objection handling, clean typography, schema-safe
    ------------------------------------------------------------------------- */
+.lf-block-faq-accordion {
+	background: #fff;
+}
+
 .lf-block-faq-accordion__inner {
-	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
-	max-width: var(--lf-container-narrow);
+	padding: 4rem 1.5rem;
+	max-width: 40rem;
 	margin-left: auto;
 	margin-right: auto;
 }
 
 .lf-block-faq-accordion__header {
-	margin-bottom: var(--lf-spacing-loose);
+	margin-bottom: 2.5rem;
 }
 
 .lf-block-faq-accordion__title {
-	margin: 0 0 var(--lf-section-heading-margin);
-	font-size: var(--lf-fs-h2);
-	font-weight: var(--lf-heading-weight);
-	line-height: var(--lf-line-height-heading);
+	margin: 0 0 0.75rem;
+	font-size: 2rem;
+	font-weight: 700;
+	line-height: 1.2;
+	letter-spacing: -0.02em;
 	color: var(--lf-text);
 }
 
 .lf-block-faq-accordion__intro {
 	margin: 0;
-	font-size: var(--lf-fs-body);
-	font-weight: var(--lf-fw-normal);
+	font-size: 1.0625rem;
+	line-height: 1.6;
 	color: var(--lf-muted);
-	line-height: var(--lf-line-height-body);
-	max-width: 38em;
 }
 
 .lf-block-faq-accordion__list {
@@ -1215,23 +1130,20 @@ button:focus-visible,
 
 .lf-block-faq-accordion__item {
 	margin: 0;
-	border-bottom: var(--lf-border-width) solid var(--lf-neutral-300);
-	background: none;
+	border-bottom: 1px solid #e2e8f0;
 	overflow: hidden;
 }
 
 .lf-block-faq-accordion__item:first-child {
-	border-top: var(--lf-border-width) solid var(--lf-neutral-300);
+	border-top: 1px solid #e2e8f0;
 }
 
-/* Question: clear emphasis so each reads as the objection being addressed */
 .lf-block-faq-accordion__question {
 	display: block;
 	width: 100%;
-	padding: var(--lf-spacing-normal) 2.5rem 0 0;
-	padding-bottom: var(--lf-spacing-normal);
-	font-weight: var(--lf-fw-semibold);
-	font-size: var(--lf-fs-medium);
+	padding: 1.25rem 2.5rem 1.25rem 0;
+	font-weight: 600;
+	font-size: 1.0625rem;
 	text-align: left;
 	cursor: pointer;
 	list-style: none;
@@ -1246,13 +1158,8 @@ button:focus-visible,
 	position: relative;
 }
 
-.lf-block-faq-accordion__question::-webkit-details-marker {
-	display: none;
-}
-
-.lf-block-faq-accordion__question::marker {
-	content: none;
-}
+.lf-block-faq-accordion__question::-webkit-details-marker,
+.lf-block-faq-accordion__question::marker { display: none; content: none; }
 
 .lf-block-faq-accordion__question::after {
 	content: "+";
@@ -1260,36 +1167,23 @@ button:focus-visible,
 	right: 0;
 	top: 50%;
 	transform: translateY(-50%);
-	font-weight: var(--lf-fw-normal);
-	font-size: var(--lf-fs-large);
-	color: var(--lf-neutral-300);
+	font-size: 1.25rem;
+	color: #94a3b8;
 	line-height: 1;
 }
 
-.lf-block-faq-accordion__item[open] .lf-block-faq-accordion__question::after {
-	content: "−";
-}
+.lf-block-faq-accordion__item[open] .lf-block-faq-accordion__question::after { content: "−"; }
 
-/* Answer: calm, readable (not faded so it feels substantive) */
 .lf-block-faq-accordion__answer {
 	margin: 0;
-	padding: 0 0 var(--lf-spacing-loose);
-	font-size: var(--lf-fs-body);
-	font-weight: var(--lf-fw-normal);
+	padding: 0 0 1.5rem;
+	font-size: 1rem;
+	line-height: 1.6;
 	color: var(--lf-text);
-	line-height: var(--lf-line-height-body);
 }
 
-.lf-block-faq-accordion__answer > * + * {
-	margin-top: var(--lf-spacing-tight);
-}
-
-.lf-block-faq-accordion__empty {
-	margin: 0;
-	padding: var(--lf-section-padding-x) 0;
-	font-size: var(--lf-fs-body);
-	color: var(--lf-muted);
-}
+.lf-block-faq-accordion__answer > * + * { margin-top: 0.5rem; }
+.lf-block-faq-accordion__empty { margin: 0; padding: 1rem 0; font-size: 1rem; color: var(--lf-muted); }
 
 /* -------------------------------------------------------------------------
    Block: Map + NAP

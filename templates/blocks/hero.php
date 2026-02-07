@@ -85,16 +85,18 @@ $show_trust_strip = $review_count > 0;
 				<?php endif; ?>
 			</div>
 		<?php endif; ?>
-		<?php if ($show_trust_strip) : ?>
-			<div class="lf-block-hero__trust" role="group" aria-label="<?php esc_attr_e('Customer reviews', 'leadsforward-core'); ?>">
+		<div class="lf-block-hero__trust" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
+			<?php if ($show_trust_strip) : ?>
 				<span class="lf-block-hero__stars" aria-hidden="true">
 					<?php for ($i = 0; $i < 5; $i++) : ?>
 						<svg class="lf-block-hero__star" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
 					<?php endfor; ?>
 				</span>
 				<span class="lf-block-hero__badge"><?php echo esc_html(sprintf(_n('%d review', '%d reviews', $review_count, 'leadsforward-core'), $review_count)); ?></span>
-			</div>
-		<?php endif; ?>
+			<?php else : ?>
+				<span class="lf-block-hero__badge"><?php esc_html_e('Licensed & Insured', 'leadsforward-core'); ?></span>
+			<?php endif; ?>
+		</div>
 		<?php if ($cta_phone && $cta_phone !== $cta_text) : ?>
 			<p class="lf-block-hero__phone-wrap">
 				<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-hero__phone"><?php echo esc_html($cta_phone); ?></a>

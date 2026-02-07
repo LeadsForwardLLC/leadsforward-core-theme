@@ -65,8 +65,8 @@ function lf_homepage_default_section_config(string $section_type): array {
 	switch ($section_type) {
 		case 'hero':
 			return array_merge($base, [
-				'hero_headline'     => __('Professional Home Services in Your Area', 'leadsforward-core'),
-				'hero_subheadline'  => __('Trusted by local homeowners. Get a free quote or schedule service today.', 'leadsforward-core'),
+				'hero_headline'     => __('Professional Roofing & Home Services in Your City', 'leadsforward-core'),
+				'hero_subheadline'  => __('Licensed, insured, and trusted by hundreds of local homeowners. Free estimates and same-day quotes available.', 'leadsforward-core'),
 				'hero_cta_override' => '',
 			]);
 		case 'trust_reviews':
@@ -76,24 +76,24 @@ function lf_homepage_default_section_config(string $section_type): array {
 			]);
 		case 'service_grid':
 			return array_merge($base, [
-				'section_heading' => __('Our Services', 'leadsforward-core'),
-				'section_intro'   => __('Professional service you can trust. We handle the work so you can focus on what matters.', 'leadsforward-core'),
+				'section_heading' => __('Services We Offer', 'leadsforward-core'),
+				'section_intro'   => __('From repairs to full replacements, we handle it all. Licensed professionals with transparent pricing and no hidden fees.', 'leadsforward-core'),
 			]);
 		case 'service_areas':
 			return array_merge($base, [
-				'section_heading' => __('Proudly Serving Our Community', 'leadsforward-core'),
-				'section_intro'   => __('We’re your local team. These cities and the surrounding region—contact us to confirm we serve your area.', 'leadsforward-core'),
+				'section_heading' => __('Areas We Serve', 'leadsforward-core'),
+				'section_intro'   => __('We’re your local team. Proudly serving these communities and the surrounding region. Contact us to confirm we cover your area.', 'leadsforward-core'),
 			]);
 		case 'faq_accordion':
 			return array_merge($base, [
 				'section_heading' => __('Frequently Asked Questions', 'leadsforward-core'),
-				'section_intro'   => __('Quick answers to the questions we hear most. Can’t find what you need? Get in touch.', 'leadsforward-core'),
+				'section_intro'   => __('Common questions from homeowners like you. Don't see your question? Call or request a free quote—we're happy to help.', 'leadsforward-core'),
 			]);
 		case 'map_nap':
 			return $base;
 		case 'cta':
 			return array_merge($base, [
-				'cta_headline'          => __('Ready to get started?', 'leadsforward-core'),
+				'cta_headline'          => __('Get Your Free Estimate Today', 'leadsforward-core'),
 				'cta_primary_override'  => '',
 				'cta_secondary_override' => '',
 				'cta_ghl_override'      => '',

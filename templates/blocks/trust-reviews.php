@@ -53,7 +53,7 @@ $query = new WP_Query([
 					}
 				?>
 					<li class="lf-block-trust-reviews__item">
-						<blockquote class="lf-card lf-card--spotlight lf-block-trust-reviews__quote">
+						<blockquote class="lf-block-trust-reviews__quote">
 							<p class="lf-block-trust-reviews__text"><?php echo esc_html($text); ?></p>
 							<footer class="lf-block-trust-reviews__cite">
 								<?php if ($rating) : ?>
