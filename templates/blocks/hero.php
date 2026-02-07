@@ -65,6 +65,8 @@ if ($business_name !== '') {
 $cta_resolved_for_type = function_exists('lf_get_resolved_cta') ? lf_get_resolved_cta($context) : [];
 $cta_phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
 $cta_type = $cta_resolved_for_type['primary_type'] ?? 'text';
+$cta_action = $cta_resolved_for_type['primary_action'] ?? 'link';
+$cta_url = $cta_resolved_for_type['primary_url'] ?? '';
 $use_phone_link = $cta_type === 'call' && $cta_phone && $cta_text;
 $secondary_text = $cta_resolved_for_type['secondary_text'] ?? '';
 $review_count = 0;
@@ -112,8 +114,12 @@ $show_form_in_hero = $cta_type === 'form' && !empty($cta_resolved_for_type['ghl_
 				<?php if ($cta_text || $secondary_text !== '') : ?>
 					<div class="lf-block-hero__cta">
 						<?php if ($cta_text) : ?>
-							<?php if ($use_phone_link) : ?>
+							<?php if ($cta_action === 'quote') : ?>
+								<button type="button" class="lf-block-hero__cta-text lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="hero"><?php echo esc_html($cta_text); ?></button>
+							<?php elseif ($use_phone_link) : ?>
 								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-hero__cta-link lf-btn lf-btn--primary"><?php echo esc_html($cta_text); ?></a>
+							<?php elseif ($cta_url !== '') : ?>
+								<a href="<?php echo esc_url($cta_url); ?>" class="lf-block-hero__cta-link lf-btn lf-btn--primary"><?php echo esc_html($cta_text); ?></a>
 							<?php else : ?>
 								<span class="lf-block-hero__cta-text lf-btn lf-btn--primary"><?php echo esc_html($cta_text); ?></span>
 							<?php endif; ?>

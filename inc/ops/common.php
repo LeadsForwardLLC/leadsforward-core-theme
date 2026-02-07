@@ -30,6 +30,8 @@ function lf_ops_exportable_option_keys(): array {
 		'lf_cta_primary_text',
 		'lf_cta_secondary_text',
 		'lf_cta_primary_type',
+		'lf_cta_primary_action',
+		'lf_cta_primary_url',
 		'lf_cta_ghl_embed',
 		'variation_profile',
 		'auto_order_sections',
@@ -43,11 +45,14 @@ function lf_ops_exportable_option_keys(): array {
 		'lf_homepage_cta_primary',
 		'lf_homepage_cta_secondary',
 		'lf_homepage_cta_primary_type',
+		'lf_homepage_cta_primary_action',
+		'lf_homepage_cta_primary_url',
 		'lf_homepage_cta_ghl',
 		'homepage_sections',
 		'lf_homepage_section_config',
 		'lf_homepage_section_order',
 		'lf_homepage_niche_slug',
+		'lf_quote_builder_config',
 	];
 }
 
@@ -65,6 +70,8 @@ function lf_ops_option_labels(): array {
 		'lf_cta_primary_text'       => __('Primary CTA text', 'leadsforward-core'),
 		'lf_cta_secondary_text'     => __('Secondary CTA text', 'leadsforward-core'),
 		'lf_cta_primary_type'       => __('Primary CTA type', 'leadsforward-core'),
+		'lf_cta_primary_action'     => __('Primary CTA action', 'leadsforward-core'),
+		'lf_cta_primary_url'        => __('Primary CTA URL', 'leadsforward-core'),
 		'lf_cta_ghl_embed'          => __('Default GHL embed', 'leadsforward-core'),
 		'variation_profile'         => __('Variation profile', 'leadsforward-core'),
 		'auto_order_sections'       => __('Auto-order homepage sections', 'leadsforward-core'),
@@ -78,17 +85,20 @@ function lf_ops_option_labels(): array {
 		'lf_homepage_cta_primary'   => __('Homepage primary CTA', 'leadsforward-core'),
 		'lf_homepage_cta_secondary' => __('Homepage secondary CTA', 'leadsforward-core'),
 		'lf_homepage_cta_primary_type' => __('Homepage primary CTA type', 'leadsforward-core'),
+		'lf_homepage_cta_primary_action' => __('Homepage primary CTA action', 'leadsforward-core'),
+		'lf_homepage_cta_primary_url'    => __('Homepage primary CTA URL', 'leadsforward-core'),
 		'lf_homepage_cta_ghl'       => __('Homepage GHL override', 'leadsforward-core'),
 		'homepage_sections'         => __('Homepage sections', 'leadsforward-core'),
 		'lf_homepage_section_config' => __('Homepage section config', 'leadsforward-core'),
 		'lf_homepage_section_order'  => __('Homepage section order', 'leadsforward-core'),
 		'lf_homepage_niche_slug'     => __('Homepage niche', 'leadsforward-core'),
+		'lf_quote_builder_config'    => __('Quote builder config', 'leadsforward-core'),
 	];
 }
 
 /** WP options (not ACF) included in export/import. */
 function lf_ops_wp_option_keys(): array {
-	return ['lf_homepage_section_config', 'lf_homepage_section_order', 'lf_homepage_niche_slug'];
+	return ['lf_homepage_section_config', 'lf_homepage_section_order', 'lf_homepage_niche_slug', 'lf_quote_builder_config'];
 }
 
 /**

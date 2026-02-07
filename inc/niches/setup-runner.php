@@ -135,6 +135,10 @@ function lf_run_setup(array $data): array {
 	if (function_exists('lf_homepage_apply_niche_config')) {
 		lf_homepage_apply_niche_config($data['niche_slug'], $data);
 	}
+	// Quote Builder config: apply default flow for this niche.
+	if (function_exists('lf_quote_builder_apply_niche_config')) {
+		lf_quote_builder_apply_niche_config($data['niche_slug']);
+	}
 
 	// 5. Internal linking: service ↔ service area relationships
 	foreach ($created_services as $sid) {

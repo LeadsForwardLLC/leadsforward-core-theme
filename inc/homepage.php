@@ -112,6 +112,8 @@ function lf_homepage_default_section_config(string $section_type): array {
 				'hero_headline'     => __('Trusted Local Home Services in [Your City]', 'leadsforward-core'),
 				'hero_subheadline'  => __('Fast response times, clear pricing, and workmanship backed by warranty. Get expert help from a local team you can rely on.', 'leadsforward-core'),
 				'hero_cta_override' => '',
+				'hero_cta_action'   => '',
+				'hero_cta_url'      => '',
 			]);
 		case 'trust_reviews':
 			return array_merge($base, [
@@ -144,6 +146,8 @@ function lf_homepage_default_section_config(string $section_type): array {
 				'cta_primary_override'  => '',
 				'cta_secondary_override' => '',
 				'cta_ghl_override'      => '',
+				'cta_primary_action'    => '',
+				'cta_primary_url'       => '',
 			]);
 		default:
 			return $base;
@@ -318,6 +322,8 @@ function lf_homepage_migrate_from_acf(): ?array {
 			'hero_headline'     => $row['hero_headline'] ?? '',
 			'hero_subheadline'  => $row['hero_subheadline'] ?? '',
 			'hero_cta_override' => $row['hero_cta_override'] ?? '',
+			'hero_cta_action'   => $row['hero_cta_action'] ?? '',
+			'hero_cta_url'      => $row['hero_cta_url'] ?? '',
 			'trust_max_items'   => isset($row['trust_max_items']) ? (int) $row['trust_max_items'] : 1,
 			'trust_heading'     => $row['trust_heading'] ?? '',
 			'section_heading'   => $row['section_heading'] ?? '',
@@ -325,6 +331,8 @@ function lf_homepage_migrate_from_acf(): ?array {
 			'cta_primary_override'   => $row['cta_primary_override'] ?? '',
 			'cta_secondary_override' => $row['cta_secondary_override'] ?? '',
 			'cta_ghl_override'      => $row['cta_ghl_override'] ?? '',
+			'cta_primary_action'     => $row['cta_primary_action'] ?? '',
+			'cta_primary_url'        => $row['cta_primary_url'] ?? '',
 		];
 	}
 	$order = lf_homepage_controller_order();
@@ -374,12 +382,16 @@ function lf_get_resolved_cta(array $context = []): array {
 	$secondary = lf_get_option('lf_cta_secondary_text', 'option');
 	$ghl       = lf_get_option('lf_cta_ghl_embed', 'option');
 	$type      = lf_get_option('lf_cta_primary_type', 'option') ?: 'text';
+	$action    = lf_get_option('lf_cta_primary_action', 'option', 'link') ?: 'link';
+	$url       = lf_get_option('lf_cta_primary_url', 'option', '') ?: '';
 
 	if ($is_homepage && function_exists('get_field')) {
 		$hp_primary = get_field('lf_homepage_cta_primary', 'option');
 		$hp_secondary = get_field('lf_homepage_cta_secondary', 'option');
 		$hp_ghl = get_field('lf_homepage_cta_ghl', 'option');
 		$hp_type = get_field('lf_homepage_cta_primary_type', 'option');
+		$hp_action = get_field('lf_homepage_cta_primary_action', 'option');
+		$hp_url = get_field('lf_homepage_cta_primary_url', 'option');
 		if ($hp_primary !== null && $hp_primary !== '') {
 			$primary = $hp_primary;
 		}
@@ -391,6 +403,12 @@ function lf_get_resolved_cta(array $context = []): array {
 		}
 		if ($hp_type !== null && $hp_type !== '') {
 			$type = $hp_type;
+		}
+		if ($hp_action !== null && $hp_action !== '') {
+			$action = $hp_action;
+		}
+		if ($hp_url !== null && $hp_url !== '') {
+			$url = $hp_url;
 		}
 	}
 
@@ -404,8 +422,20 @@ function lf_get_resolved_cta(array $context = []): array {
 		if (!empty($section['cta_ghl_override'])) {
 			$ghl = $section['cta_ghl_override'];
 		}
+		if (!empty($section['cta_primary_action'])) {
+			$action = $section['cta_primary_action'];
+		}
+		if (!empty($section['cta_primary_url'])) {
+			$url = $section['cta_primary_url'];
+		}
 		if (!empty($section['hero_cta_override'])) {
 			$primary = $section['hero_cta_override'];
+		}
+		if (!empty($section['hero_cta_action'])) {
+			$action = $section['hero_cta_action'];
+		}
+		if (!empty($section['hero_cta_url'])) {
+			$url = $section['hero_cta_url'];
 		}
 	}
 
@@ -414,6 +444,8 @@ function lf_get_resolved_cta(array $context = []): array {
 		'secondary_text' => is_string($secondary) ? $secondary : '',
 		'ghl_embed'      => is_string($ghl) ? $ghl : '',
 		'primary_type'   => in_array($type, ['call', 'form', 'text'], true) ? $type : 'text',
+		'primary_action' => in_array($action, ['link', 'quote'], true) ? $action : 'link',
+		'primary_url'    => is_string($url) ? $url : '',
 	];
 }
 

@@ -96,6 +96,9 @@ function lf_homepage_admin_save(): void {
 			$config[$type]['hero_headline'] = isset($_POST['lf_hp_hero_headline']) ? sanitize_text_field($_POST['lf_hp_hero_headline']) : '';
 			$config[$type]['hero_subheadline'] = isset($_POST['lf_hp_hero_subheadline']) ? sanitize_text_field($_POST['lf_hp_hero_subheadline']) : '';
 			$config[$type]['hero_cta_override'] = isset($_POST['lf_hp_hero_cta_override']) ? sanitize_text_field($_POST['lf_hp_hero_cta_override']) : '';
+			$hero_action = isset($_POST['lf_hp_hero_cta_action']) ? sanitize_text_field($_POST['lf_hp_hero_cta_action']) : '';
+			$config[$type]['hero_cta_action'] = in_array($hero_action, ['link', 'quote'], true) ? $hero_action : '';
+			$config[$type]['hero_cta_url'] = isset($_POST['lf_hp_hero_cta_url']) ? esc_url_raw(wp_unslash($_POST['lf_hp_hero_cta_url'])) : '';
 		}
 		if ($type === 'trust_reviews') {
 			$n = isset($_POST['lf_hp_trust_max_items']) ? (int) $_POST['lf_hp_trust_max_items'] : 1;
@@ -123,6 +126,9 @@ function lf_homepage_admin_save(): void {
 			$config[$type]['cta_primary_override'] = isset($_POST['lf_hp_cta_primary']) ? sanitize_text_field($_POST['lf_hp_cta_primary']) : '';
 			$config[$type]['cta_secondary_override'] = isset($_POST['lf_hp_cta_secondary']) ? sanitize_text_field($_POST['lf_hp_cta_secondary']) : '';
 			$config[$type]['cta_ghl_override'] = isset($_POST['lf_hp_cta_ghl']) ? wp_kses_post($_POST['lf_hp_cta_ghl']) : '';
+			$cta_action = isset($_POST['lf_hp_cta_primary_action']) ? sanitize_text_field($_POST['lf_hp_cta_primary_action']) : '';
+			$config[$type]['cta_primary_action'] = in_array($cta_action, ['link', 'quote'], true) ? $cta_action : '';
+			$config[$type]['cta_primary_url'] = isset($_POST['lf_hp_cta_primary_url']) ? esc_url_raw(wp_unslash($_POST['lf_hp_cta_primary_url'])) : '';
 		}
 	}
 	update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
@@ -522,6 +528,21 @@ function lf_homepage_admin_render(): void {
 						<th scope="row"><label for="lf_hp_hero_cta_override"><?php esc_html_e('Hero CTA override', 'leadsforward-core'); ?></label></th>
 						<td><input type="text" class="regular-text" name="lf_hp_hero_cta_override" id="lf_hp_hero_cta_override" value="<?php echo esc_attr($sec['hero_cta_override'] ?? ''); ?>" /> <span class="description"><?php esc_html_e('Leave blank to use homepage CTA.', 'leadsforward-core'); ?></span></td>
 					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="hero">
+						<th scope="row"><label for="lf_hp_hero_cta_action"><?php esc_html_e('Hero CTA action', 'leadsforward-core'); ?></label></th>
+						<td>
+							<select name="lf_hp_hero_cta_action" id="lf_hp_hero_cta_action">
+								<option value=""><?php esc_html_e('Use global/homepage setting', 'leadsforward-core'); ?></option>
+								<option value="link" <?php selected(($sec['hero_cta_action'] ?? ''), 'link'); ?>><?php esc_html_e('Link', 'leadsforward-core'); ?></option>
+								<option value="quote" <?php selected(($sec['hero_cta_action'] ?? ''), 'quote'); ?>><?php esc_html_e('Open Quote Builder', 'leadsforward-core'); ?></option>
+							</select>
+							<span class="description"><?php esc_html_e('Controls whether this CTA opens the Quote Builder modal.', 'leadsforward-core'); ?></span>
+						</td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="hero">
+						<th scope="row"><label for="lf_hp_hero_cta_url"><?php esc_html_e('Hero CTA URL', 'leadsforward-core'); ?></label></th>
+						<td><input type="url" class="large-text" name="lf_hp_hero_cta_url" id="lf_hp_hero_cta_url" value="<?php echo esc_attr($sec['hero_cta_url'] ?? ''); ?>" placeholder="https://example.com" /></td>
+					</tr>
 					<?php endif; ?>
 					<?php if ($type === 'service_grid') : ?>
 					<tr class="lf-homepage-section-fields" data-parent="service_grid">
@@ -589,6 +610,20 @@ function lf_homepage_admin_render(): void {
 					<tr class="lf-homepage-section-fields" data-parent="cta">
 						<th scope="row"><label for="lf_hp_cta_ghl"><?php esc_html_e('Section GHL embed override', 'leadsforward-core'); ?></label></th>
 						<td><textarea class="large-text code" name="lf_hp_cta_ghl" id="lf_hp_cta_ghl" rows="4"><?php echo esc_textarea($sec['cta_ghl_override'] ?? ''); ?></textarea></td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="cta">
+						<th scope="row"><label for="lf_hp_cta_primary_action"><?php esc_html_e('Section primary CTA action', 'leadsforward-core'); ?></label></th>
+						<td>
+							<select name="lf_hp_cta_primary_action" id="lf_hp_cta_primary_action">
+								<option value=""><?php esc_html_e('Use global/homepage setting', 'leadsforward-core'); ?></option>
+								<option value="link" <?php selected(($sec['cta_primary_action'] ?? ''), 'link'); ?>><?php esc_html_e('Link', 'leadsforward-core'); ?></option>
+								<option value="quote" <?php selected(($sec['cta_primary_action'] ?? ''), 'quote'); ?>><?php esc_html_e('Open Quote Builder', 'leadsforward-core'); ?></option>
+							</select>
+						</td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="cta">
+						<th scope="row"><label for="lf_hp_cta_primary_url"><?php esc_html_e('Section primary CTA URL', 'leadsforward-core'); ?></label></th>
+						<td><input type="url" class="large-text" name="lf_hp_cta_primary_url" id="lf_hp_cta_primary_url" value="<?php echo esc_attr($sec['cta_primary_url'] ?? ''); ?>" placeholder="https://example.com" /></td>
 					</tr>
 					<?php endif; ?>
 				<?php endforeach; ?>

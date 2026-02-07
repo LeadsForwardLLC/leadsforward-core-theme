@@ -54,6 +54,25 @@ function lf_acf_add_options_homepage_fields(): void {
 				'type'  => 'text',
 			],
 			[
+				'key'     => 'field_lf_homepage_cta_primary_action',
+				'label'   => __('Homepage primary CTA action', 'leadsforward-core'),
+				'name'    => 'lf_homepage_cta_primary_action',
+				'type'    => 'select',
+				'choices' => [
+					''      => __('Use global setting', 'leadsforward-core'),
+					'link'  => __('Link', 'leadsforward-core'),
+					'quote' => __('Open Quote Builder', 'leadsforward-core'),
+				],
+				'instructions' => __('Overrides the global CTA action on homepage only.', 'leadsforward-core'),
+			],
+			[
+				'key'   => 'field_lf_homepage_cta_primary_url',
+				'label' => __('Homepage primary CTA URL', 'leadsforward-core'),
+				'name'  => 'lf_homepage_cta_primary_url',
+				'type'  => 'url',
+				'instructions' => __('Used when homepage CTA action is Link.', 'leadsforward-core'),
+			],
+			[
 				'key'         => 'field_lf_homepage_cta_ghl',
 				'label'       => __('Homepage GHL form override', 'leadsforward-core'),
 				'name'        => 'lf_homepage_cta_ghl',

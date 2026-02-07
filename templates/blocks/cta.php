@@ -48,6 +48,8 @@ if (!empty($context['homepage']) && function_exists('lf_copy_template')) {
 }
 $ghl_embed = $cta['ghl_embed'] ?? '';
 $cta_type  = $cta['primary_type'] ?? 'text';
+$cta_action = $cta['primary_action'] ?? 'link';
+$cta_url = $cta['primary_url'] ?? '';
 $cta_phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
 $use_phone_link = $cta_type === 'call' && $cta_phone && $primary;
 $show_form = ($cta_type === 'form' && $ghl_embed) || ($cta_type !== 'call' && $ghl_embed);
@@ -63,8 +65,12 @@ $show_form = ($cta_type === 'form' && $ghl_embed) || ($cta_type !== 'call' && $g
 			<?php endif; ?>
 			<?php if ($primary) : ?>
 				<p class="lf-block-cta__primary">
-					<?php if ($use_phone_link) : ?>
+					<?php if ($cta_action === 'quote') : ?>
+						<button type="button" class="lf-block-cta__primary-text" data-lf-quote-trigger="1" data-lf-quote-source="cta"><?php echo esc_html($primary); ?></button>
+					<?php elseif ($use_phone_link) : ?>
 						<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-cta__primary-link"><?php echo esc_html($primary); ?></a>
+					<?php elseif ($cta_url !== '') : ?>
+						<a href="<?php echo esc_url($cta_url); ?>" class="lf-block-cta__primary-link"><?php echo esc_html($primary); ?></a>
 					<?php else : ?>
 						<span class="lf-block-cta__primary-text"><?php echo esc_html($primary); ?></span>
 					<?php endif; ?>

@@ -19,7 +19,7 @@ function lf_ops_export_render(): void {
 		return;
 	}
 	echo '<div class="wrap"><h1>' . esc_html__('Export Config', 'leadsforward-core') . '</h1>';
-	echo '<p>' . esc_html__('Download a JSON file of your theme configuration: business info, CTAs, variation profile, homepage sections, and schema toggles. URLs, slugs, post IDs, and user data are never included.', 'leadsforward-core') . '</p>';
+	echo '<p>' . esc_html__('Download a JSON file of your theme configuration: business info, CTAs, quote builder, variation profile, homepage sections, and schema toggles. URLs, slugs, post IDs, and user data are never included.', 'leadsforward-core') . '</p>';
 	echo '<form method="post" action="">';
 	wp_nonce_field('lf_ops_export', 'lf_ops_export_nonce');
 	echo '<p><input type="submit" name="lf_ops_download" class="button button-primary" value="' . esc_attr__('Download Config', 'leadsforward-core') . '" /></p>';

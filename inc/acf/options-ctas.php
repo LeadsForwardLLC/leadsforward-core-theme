@@ -43,6 +43,26 @@ function lf_acf_add_options_ctas_fields(): void {
 				'instructions'  => __('Call uses Business Info phone; Form shows GHL embed below.', 'leadsforward-core'),
 			],
 			[
+				'key'     => 'field_lf_cta_primary_action',
+				'label'   => __('Primary CTA action', 'leadsforward-core'),
+				'name'    => 'lf_cta_primary_action',
+				'type'    => 'select',
+				'choices' => [
+					'link'  => __('Link', 'leadsforward-core'),
+					'quote' => __('Open Quote Builder', 'leadsforward-core'),
+				],
+				'default_value' => 'link',
+				'instructions'  => __('When set to Quote Builder, the primary CTA opens the modal.', 'leadsforward-core'),
+			],
+			[
+				'key'   => 'field_lf_cta_primary_url',
+				'label' => __('Primary CTA URL', 'leadsforward-core'),
+				'name'  => 'lf_cta_primary_url',
+				'type'  => 'url',
+				'instructions' => __('Used when CTA action is Link.', 'leadsforward-core'),
+				'conditional_logic' => [['field' => 'field_lf_cta_primary_action', 'operator' => '==', 'value' => 'link']],
+			],
+			[
 				'key'   => 'field_lf_cta_secondary_text',
 				'label' => __('Secondary CTA text', 'leadsforward-core'),
 				'name'  => 'lf_cta_secondary_text',

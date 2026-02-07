@@ -58,6 +58,15 @@ function lf_ops_register_menu(): void {
 		'lf-homepage-settings',
 		'lf_homepage_admin_render'
 	);
+	// 4. Quote Builder
+	add_submenu_page(
+		'lf-ops',
+		__('Quote Builder', 'leadsforward-core'),
+		__('Quote Builder', 'leadsforward-core'),
+		LF_OPS_CAP,
+		'lf-quote-builder',
+		'lf_quote_builder_render_admin'
+	);
 	$has_acf_options = function_exists('acf_options_page_html');
 	// Remaining ACF option pages (only render if ACF options pages exist).
 	if ($has_acf_options) {

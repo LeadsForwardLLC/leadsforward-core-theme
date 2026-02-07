@@ -69,6 +69,7 @@ lf_load_inc('blocks/variants.php');
 lf_load_inc('variation-tokens.php');
 lf_load_inc('branding.php');
 lf_load_inc('global-settings.php');
+lf_load_inc('quote-builder.php');
 
 // Homepage section registry, defaults, CTA resolution.
 lf_load_inc('homepage.php');

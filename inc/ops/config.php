@@ -48,7 +48,7 @@ function lf_ops_config_render(): void {
 	}
 
 	echo '<div class="wrap"><h1>' . esc_html__('Config', 'leadsforward-core') . '</h1>';
-	echo '<p>' . esc_html__('Export or import your theme configuration. Config files never include URLs, slugs, post IDs, or user data.', 'leadsforward-core') . '</p>';
+	echo '<p>' . esc_html__('Export or import your theme configuration, including the Quote Builder. Config files never include URLs, slugs, post IDs, or user data.', 'leadsforward-core') . '</p>';
 
 	if ($success) {
 		echo '<div class="notice notice-success"><p>' . esc_html__('Configuration imported successfully.', 'leadsforward-core') . '</p></div>';
@@ -65,7 +65,7 @@ function lf_ops_config_render(): void {
 
 	echo '<div class="card" style="max-width:980px;padding:16px;margin:16px 0;">';
 	echo '<h2 style="margin-top:0;">' . esc_html__('Export', 'leadsforward-core') . '</h2>';
-	echo '<p>' . esc_html__('Download a JSON file of business info, CTAs, variation profile, homepage sections, and schema toggles.', 'leadsforward-core') . '</p>';
+	echo '<p>' . esc_html__('Download a JSON file of business info, CTAs, Quote Builder, variation profile, homepage sections, and schema toggles.', 'leadsforward-core') . '</p>';
 	echo '<form method="post" action="">';
 	wp_nonce_field('lf_ops_export', 'lf_ops_export_nonce');
 	echo '<p><input type="submit" name="lf_ops_download" class="button button-primary" value="' . esc_attr__('Download Config', 'leadsforward-core') . '" /></p>';

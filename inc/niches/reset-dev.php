@@ -153,11 +153,15 @@ function lf_dev_reset_run(): void {
 		}
 		update_field('lf_cta_primary_text', '', 'option');
 		update_field('lf_cta_secondary_text', '', 'option');
+		update_field('lf_cta_primary_action', '', 'option');
+		update_field('lf_cta_primary_url', '', 'option');
 		update_field('variation_profile', 'a', 'option');
 		update_field('lf_schema_review', false, 'option');
 		update_field('homepage_sections', [], 'option');
 		update_field('lf_homepage_cta_primary', '', 'option');
 		update_field('lf_homepage_cta_secondary', '', 'option');
+		update_field('lf_homepage_cta_primary_action', '', 'option');
+		update_field('lf_homepage_cta_primary_url', '', 'option');
 		update_field('lf_homepage_cta_ghl', '', 'option');
 		update_field('lf_homepage_cta_primary_type', '', 'option');
 	}
@@ -220,6 +224,15 @@ function lf_dev_reset_run(): void {
 	}
 	if (defined('LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION')) {
 		delete_option(LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION);
+	}
+	if (defined('LF_QUOTE_BUILDER_OPTION')) {
+		delete_option(LF_QUOTE_BUILDER_OPTION);
+	}
+	if (defined('LF_QUOTE_BUILDER_MANUAL_OPTION')) {
+		delete_option(LF_QUOTE_BUILDER_MANUAL_OPTION);
+	}
+	if (defined('LF_QUOTE_BUILDER_SUBMISSIONS')) {
+		delete_option(LF_QUOTE_BUILDER_SUBMISSIONS);
 	}
 
 	update_option('show_on_front', 'posts');
