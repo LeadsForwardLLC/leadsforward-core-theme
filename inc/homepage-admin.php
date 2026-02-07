@@ -338,6 +338,8 @@ function lf_homepage_admin_render(): void {
 	$config = lf_get_homepage_section_config();
 	$order = lf_homepage_controller_order();
 	$labels = lf_homepage_admin_section_labels();
+	$maps_api_key = get_option('lf_maps_api_key', '');
+	$maps_api_key = is_string($maps_api_key) ? $maps_api_key : '';
 	$variants = [
 		'default' => __('Authority Split (Recommended)', 'leadsforward-core'),
 		'a'       => __('Conversion Stack', 'leadsforward-core'),
@@ -399,7 +401,6 @@ function lf_homepage_admin_render(): void {
 		$place_name       = $get_business('lf_business_place_name');
 		$place_address    = $get_business('lf_business_place_address');
 		$map_embed        = $get_business('lf_business_map_embed');
-		$maps_api_key     = get_option('lf_maps_api_key', '');
 		$business_name    = is_string($business_name) ? $business_name : '';
 		$business_phone   = is_string($business_phone) ? $business_phone : '';
 		$business_email   = is_string($business_email) ? $business_email : '';
@@ -408,7 +409,6 @@ function lf_homepage_admin_render(): void {
 		$place_name       = is_string($place_name) ? $place_name : '';
 		$place_address    = is_string($place_address) ? $place_address : '';
 		$map_embed        = is_string($map_embed) ? $map_embed : '';
-		$maps_api_key     = is_string($maps_api_key) ? $maps_api_key : '';
 		?>
 		<div class="lf-homepage-panel lf-homepage-panel--business" data-section="business_info">
 			<div class="lf-homepage-panel-header">
