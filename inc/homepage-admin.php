@@ -179,9 +179,12 @@ jQuery(function ($) {
 		var isCollapsed = !!collapsed[type];
 		var $rows = $('.lf-homepage-section-fields[data-parent="' + type + '"]');
 		$rows.toggleClass('lf-homepage-fields--collapsed', isCollapsed);
-		var $toggle = $('.lf-homepage-toggle[data-target="' + type + '"]');
+		var $header = $('.lf-homepage-section-row[data-section="' + type + '"]');
+		$header.toggleClass('lf-homepage-row--collapsed', isCollapsed);
+		var $toggle = $header.find('.lf-homepage-toggle');
 		$toggle.attr('aria-expanded', (!isCollapsed).toString());
-		$toggle.text(isCollapsed ? 'Expand' : 'Collapse');
+		$toggle.find('.lf-homepage-toggle-icon').text(isCollapsed ? '▸' : '▾');
+		$toggle.find('.lf-homepage-toggle-label').text(isCollapsed ? 'Expand' : 'Collapse');
 	}
 
 	$('.lf-homepage-toggle').each(function () {
@@ -201,6 +204,32 @@ jQuery(function ($) {
 			window.localStorage.setItem(storageKey, JSON.stringify(collapsed));
 		} catch (e) {}
 		applyCollapse(type);
+	});
+
+	$('.lf-homepage-expand-all').on('click', function () {
+		$('.lf-homepage-section-row').each(function () {
+			var type = $(this).data('section');
+			if (type) {
+				collapsed[type] = false;
+				applyCollapse(type);
+			}
+		});
+		try {
+			window.localStorage.setItem(storageKey, JSON.stringify(collapsed));
+		} catch (e) {}
+	});
+
+	$('.lf-homepage-collapse-all').on('click', function () {
+		$('.lf-homepage-section-row').each(function () {
+			var type = $(this).data('section');
+			if (type) {
+				collapsed[type] = true;
+				applyCollapse(type);
+			}
+		});
+		try {
+			window.localStorage.setItem(storageKey, JSON.stringify(collapsed));
+		} catch (e) {}
 	});
 
 	function loadPlacesApi(key, callback) {
@@ -295,12 +324,30 @@ function lf_homepage_admin_render(): void {
 		<?php endif; ?>
 		<p class="description"><?php esc_html_e('Drag and drop sections to reorder. A recommended default order is provided, but you control the layout. Turn sections on or off and edit copy below.', 'leadsforward-core'); ?></p>
 		<style>
-			.lf-homepage-drag { cursor: grab; display: inline-flex; align-items: center; justify-content: center; width: 24px; margin-right: 6px; color: #6b7280; }
+			.lf-homepage-panel-controls { display: flex; gap: 0.5rem; margin: 1rem 0 1.25rem; }
+			.lf-homepage-panel-controls .button { font-size: 12px; }
+			.lf-homepage-sections { border-collapse: separate; border-spacing: 0 0.75rem; }
 			.lf-homepage-sections tr { background: #fff; }
-			.lf-homepage-sections tr.ui-sortable-helper { box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
-			.lf-homepage-toggle { margin-left: 8px; font-size: 12px; text-decoration: none; }
+			.lf-homepage-sections tr.ui-sortable-helper { box-shadow: 0 16px 30px rgba(0,0,0,0.18); border-radius: 12px; }
+			.lf-homepage-section-row { box-shadow: 0 10px 24px rgba(15,23,42,0.08); border-radius: 14px; overflow: hidden; }
+			.lf-homepage-section-row th,
+			.lf-homepage-section-row td { padding: 0.85rem 1rem; }
+			.lf-homepage-section-head { display: flex; align-items: center; gap: 0.6rem; }
+			.lf-homepage-drag { cursor: grab; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: #f1f5f9; color: #64748b; }
+			.lf-homepage-drag:active { cursor: grabbing; }
+			.lf-homepage-section-row:hover .lf-homepage-drag { color: #0f172a; }
+			.lf-homepage-toggle { margin-left: auto; font-size: 12px; text-decoration: none; padding: 0.35rem 0.65rem; border-radius: 999px; border: 1px solid #e2e8f0; background: #f8fafc; color: #0f172a; }
+			.lf-homepage-toggle:hover { background: #e2e8f0; }
+			.lf-homepage-toggle .lf-homepage-toggle-icon { margin-right: 4px; }
+			.lf-homepage-row--collapsed .lf-homepage-toggle { background: #0f172a; color: #fff; border-color: #0f172a; }
 			.lf-homepage-fields--collapsed { display: none; }
+			.lf-homepage-section-fields td { background: #f8fafc; }
+			.lf-homepage-section-fields th { background: #f8fafc; }
 		</style>
+		<div class="lf-homepage-panel-controls">
+			<button type="button" class="button lf-homepage-expand-all"><?php esc_html_e('Expand all', 'leadsforward-core'); ?></button>
+			<button type="button" class="button lf-homepage-collapse-all"><?php esc_html_e('Collapse all', 'leadsforward-core'); ?></button>
+		</div>
 
 		<form method="post" action="">
 			<?php wp_nonce_field('lf_homepage_settings', 'lf_homepage_settings_nonce'); ?>
@@ -390,9 +437,14 @@ function lf_homepage_admin_render(): void {
 				?>
 					<tr class="lf-homepage-section-row" data-section="<?php echo esc_attr($type); ?>">
 						<th scope="row">
-							<span class="lf-homepage-drag" aria-hidden="true">⋮⋮</span>
-							<label for="lf_hp_enabled_<?php echo esc_attr($type); ?>"><?php echo esc_html($label); ?></label>
-							<button type="button" class="button-link lf-homepage-toggle" data-target="<?php echo esc_attr($type); ?>" aria-expanded="true"><?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
+							<div class="lf-homepage-section-head">
+								<span class="lf-homepage-drag" aria-hidden="true">⋮⋮</span>
+								<label for="lf_hp_enabled_<?php echo esc_attr($type); ?>"><?php echo esc_html($label); ?></label>
+								<button type="button" class="lf-homepage-toggle" data-target="<?php echo esc_attr($type); ?>" aria-expanded="true">
+									<span class="lf-homepage-toggle-icon">▾</span>
+									<span class="lf-homepage-toggle-label"><?php esc_html_e('Collapse', 'leadsforward-core'); ?></span>
+								</button>
+							</div>
 						</th>
 						<td>
 							<input type="hidden" name="lf_hp_order[]" value="<?php echo esc_attr($type); ?>" />
