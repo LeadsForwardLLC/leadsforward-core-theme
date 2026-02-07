@@ -164,6 +164,10 @@ function lf_dev_reset_run(): void {
 			lf_update_business_info_value('lf_business_address', '');
 			lf_update_business_info_value('lf_business_hours', '');
 			lf_update_business_info_value('lf_business_geo', ['lat' => '', 'lng' => '']);
+			lf_update_business_info_value('lf_business_place_id', '');
+			lf_update_business_info_value('lf_business_place_name', '');
+			lf_update_business_info_value('lf_business_place_address', '');
+			lf_update_business_info_value('lf_business_map_embed', '');
 		}
 		update_field('lf_cta_primary_text', '', 'option');
 		update_field('lf_cta_secondary_text', '', 'option');
@@ -174,6 +178,32 @@ function lf_dev_reset_run(): void {
 		update_field('lf_homepage_cta_secondary', '', 'option');
 		update_field('lf_homepage_cta_ghl', '', 'option');
 		update_field('lf_homepage_cta_primary_type', '', 'option');
+	}
+	delete_option('lf_maps_api_key');
+	// Clear branding options (ACF + raw options).
+	$branding_keys = [
+		'lf_brand_primary',
+		'lf_brand_secondary',
+		'lf_brand_tertiary',
+		'lf_surface_light',
+		'lf_surface_soft',
+		'lf_surface_dark',
+		'lf_surface_card',
+		'lf_text_primary',
+		'lf_text_muted',
+		'lf_text_inverse',
+	];
+	if (function_exists('update_field')) {
+		foreach ($branding_keys as $key) {
+			update_field($key, '', 'lf-branding');
+			update_field($key, '', 'options_lf_branding');
+			update_field($key, '', 'options_lf-branding');
+		}
+	}
+	foreach ($branding_keys as $key) {
+		delete_option('options_' . $key);
+		delete_option('options_lf_branding_' . $key);
+		delete_option('options_lf-branding_' . $key);
 	}
 
 	// Clear homepage section config so LeadsForward → Homepage shows empty (all sections off, no copy)
