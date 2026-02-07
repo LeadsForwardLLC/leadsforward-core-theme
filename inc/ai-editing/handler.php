@@ -85,11 +85,17 @@ function lf_ai_generate_proposal(string $context_type, $context_id, string $user
 	$current = lf_ai_get_current_values($context_type, $context_id, array_keys($editable));
 	$user_message = $prompt . "\n\nCurrent values (for reference):\n" . wp_json_encode($current);
 
-	// Plugin or mu-plugin should add filter: add_filter('lf_ai_completion', fn($r, $sys, $user, $ctx_type, $ctx_id) => call_api($sys, $user), 10, 5);
-	// Return raw JSON string; theme validates and strips disallowed keys. No API key in theme.
+	// AI providers hook into lf_ai_completion. The OpenAI provider is bundled; others may override.
+	// Return raw JSON string; theme validates and strips disallowed keys.
 	$response = apply_filters('lf_ai_completion', '', $system, $user_message, $context_type, $context_id);
+	if (is_wp_error($response)) {
+		return ['success' => false, 'proposed' => [], 'error' => $response->get_error_message()];
+	}
 	if (!is_string($response) || $response === '') {
-		return ['success' => false, 'proposed' => [], 'error' => __('AI is not available. Install an AI provider plugin or add the lf_ai_completion filter.', 'leadsforward-core')];
+		if (!has_filter('lf_ai_completion')) {
+			return ['success' => false, 'proposed' => [], 'error' => __('AI is not available. Add an AI provider for lf_ai_completion.', 'leadsforward-core')];
+		}
+		return ['success' => false, 'proposed' => [], 'error' => __('AI request failed. Check your OpenAI key, model access, and billing.', 'leadsforward-core')];
 	}
 
 	$proposed = lf_ai_validate_response($response, $context_id);
