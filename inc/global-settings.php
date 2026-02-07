@@ -26,3 +26,12 @@ function lf_get_global_option(string $key, $default = null) {
 	$opt = get_option('options_' . $key, $default);
 	return $opt !== null ? $opt : $default;
 }
+
+function lf_maybe_hide_admin_bar(bool $show): bool {
+	if (is_admin()) {
+		return $show;
+	}
+	$hide = get_option('lf_hide_admin_bar', '0') === '1';
+	return $hide ? false : $show;
+}
+add_filter('show_admin_bar', 'lf_maybe_hide_admin_bar', 20);

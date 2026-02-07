@@ -254,17 +254,19 @@ jQuery(function ($) {
 
 	function initPlacesSearch() {
 		var input = document.getElementById('lf_business_place_search');
-		var keyInput = document.getElementById('lf_maps_api_key');
+		var keyInput = null;
 		var placeId = document.getElementById('lf_business_place_id');
 		var placeName = document.getElementById('lf_business_place_name');
 		var placeAddress = document.getElementById('lf_business_place_address');
 		var businessName = document.getElementById('lf_business_name');
 		var businessAddress = document.getElementById('lf_business_address');
 		var selected = document.getElementById('lf_place_selected');
-		if (!input || !keyInput) {
+		if (!input) {
 			return;
 		}
-		var key = keyInput.value.trim();
+		var form = input.closest('form');
+		var key = form ? (form.getAttribute('data-maps-key') || '') : '';
+		key = key.trim();
 		if (!key) {
 			if (selected) {
 				selected.textContent = 'Add a Google Maps API key to enable search.';
@@ -353,7 +355,7 @@ function lf_homepage_admin_render(): void {
 			<button type="button" class="button lf-homepage-collapse-all"><?php esc_html_e('Collapse all', 'leadsforward-core'); ?></button>
 		</div>
 
-		<form method="post" action="">
+		<form method="post" action="" data-maps-key="<?php echo esc_attr($maps_api_key); ?>">
 			<?php wp_nonce_field('lf_homepage_settings', 'lf_homepage_settings_nonce'); ?>
 		<?php
 		$get_business = function (string $key) {
@@ -410,10 +412,13 @@ function lf_homepage_admin_render(): void {
 							<td><textarea class="large-text" name="lf_business_address" id="lf_business_address" rows="3"><?php echo esc_textarea($business_address); ?></textarea></td>
 						</tr>
 						<tr>
-							<th scope="row"><label for="lf_maps_api_key"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></label></th>
+							<th scope="row"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></th>
 							<td>
-								<input type="text" class="large-text" name="lf_maps_api_key" id="lf_maps_api_key" value="<?php echo esc_attr($maps_api_key); ?>" placeholder="AIza..." />
-								<p class="description"><?php esc_html_e('Required to search Google Maps and render the embed. Use a restricted key with Places + Maps Embed APIs enabled.', 'leadsforward-core'); ?></p>
+								<?php if ($maps_api_key) : ?>
+									<p class="description"><?php esc_html_e('Key is set in LeadsForward → Setup.', 'leadsforward-core'); ?></p>
+								<?php else : ?>
+									<p class="description"><?php esc_html_e('Add your Google Maps API key in LeadsForward → Setup to enable place search + embeds.', 'leadsforward-core'); ?></p>
+								<?php endif; ?>
 							</td>
 						</tr>
 						<tr>

@@ -14,6 +14,7 @@ if (!defined('ABSPATH')) {
 }
 
 add_action('admin_init', 'lf_wizard_handle_post');
+add_action('admin_init', 'lf_wizard_handle_setup_settings');
 add_action('admin_notices', 'lf_wizard_admin_notice');
 add_action('after_switch_theme', 'lf_wizard_on_activation');
 
@@ -84,6 +85,36 @@ function lf_wizard_handle_post(): void {
 	}
 }
 
+function lf_wizard_handle_setup_settings(): void {
+	if (!isset($_POST['lf_setup_settings_nonce']) || !current_user_can('edit_theme_options')) {
+		return;
+	}
+	if (!wp_verify_nonce($_POST['lf_setup_settings_nonce'], 'lf_setup_settings')) {
+		return;
+	}
+	$maps_key = isset($_POST['lf_maps_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_maps_api_key'])) : '';
+	$maps_clear = !empty($_POST['lf_maps_api_key_clear']);
+	if ($maps_clear) {
+		delete_option('lf_maps_api_key');
+	} elseif ($maps_key !== '') {
+		update_option('lf_maps_api_key', $maps_key);
+	}
+
+	$openai_key = isset($_POST['lf_openai_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_openai_api_key'])) : '';
+	$openai_clear = !empty($_POST['lf_openai_api_key_clear']);
+	if ($openai_clear) {
+		delete_option('lf_openai_api_key');
+	} elseif ($openai_key !== '') {
+		update_option('lf_openai_api_key', $openai_key);
+	}
+
+	$hide_bar = !empty($_POST['lf_hide_admin_bar']) ? '1' : '0';
+	update_option('lf_hide_admin_bar', $hide_bar);
+
+	wp_safe_redirect(admin_url('admin.php?page=lf-ops&settings_saved=1'));
+	exit;
+}
+
 function lf_wizard_sanitize_areas($input): array {
 	if (is_array($input)) {
 		return array_filter(array_map('sanitize_text_field', $input));
@@ -94,8 +125,13 @@ function lf_wizard_sanitize_areas($input): array {
 
 function lf_wizard_render_page(): void {
 	$complete = (bool) get_option('lf_setup_wizard_complete', false);
+	$settings_saved = isset($_GET['settings_saved']) && $_GET['settings_saved'] === '1';
 	if ($complete && !isset($_GET['done'])) {
 		echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
+		if ($settings_saved) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Settings saved.', 'leadsforward-core') . '</p></div>';
+		}
+		lf_wizard_render_setup_settings_panel();
 		echo '<p>' . esc_html__('Setup is already complete. Your site has the required pages, menus, and structure.', 'leadsforward-core') . '</p>';
 		echo '<p><a href="' . esc_url(admin_url('admin.php?page=lf-ops&reset=1')) . '" class="button">' . esc_html__('Show wizard again', 'leadsforward-core') . '</a>';
 		if (function_exists('lf_dev_reset_allowed') && lf_dev_reset_allowed() && current_user_can('manage_options')) {
@@ -111,6 +147,10 @@ function lf_wizard_render_page(): void {
 	}
 	if (isset($_GET['done'])) {
 		echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
+		if ($settings_saved) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Settings saved.', 'leadsforward-core') . '</p></div>';
+		}
+		lf_wizard_render_setup_settings_panel();
 		echo '<p class="notice notice-success">' . esc_html__('Site setup complete. You can now customize Theme Options and edit pages.', 'leadsforward-core') . '</p>';
 		echo '<p><a href="' . esc_url(get_permalink(get_option('page_on_front'))) . '" class="button button-primary">' . esc_html__('View site', 'leadsforward-core') . '</a> ';
 		echo '<a href="' . esc_url(admin_url('admin.php?page=lf-theme-options')) . '" class="button">' . esc_html__('Theme Options', 'leadsforward-core') . '</a></p></div>';
@@ -121,6 +161,10 @@ function lf_wizard_render_page(): void {
 	$errors = isset($_GET['errors']) ? sanitize_text_field($_GET['msg'] ?? '') : '';
 
 	echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
+	if ($settings_saved) {
+		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Settings saved.', 'leadsforward-core') . '</p></div>';
+	}
+	lf_wizard_render_setup_settings_panel();
 	if ($errors) {
 		echo '<div class="notice notice-error"><p>' . esc_html($errors) . '</p></div>';
 	}
@@ -230,4 +274,44 @@ function lf_wizard_render_page(): void {
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Generate site', 'leadsforward-core') . '" /></p></form>';
 	}
 	echo '</div>';
+}
+
+function lf_wizard_render_setup_settings_panel(): void {
+	$maps_key = (string) get_option('lf_maps_api_key', '');
+	$openai_key_set = get_option('lf_openai_api_key', '') !== '';
+	$hide_bar = get_option('lf_hide_admin_bar', '0') === '1';
+	?>
+	<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
+		<h2 style="margin-top:0;"><?php esc_html_e('Global API & Admin Settings', 'leadsforward-core'); ?></h2>
+		<p class="description"><?php esc_html_e('These settings apply site‑wide and are required for maps and AI copy suggestions.', 'leadsforward-core'); ?></p>
+		<form method="post">
+			<?php wp_nonce_field('lf_setup_settings', 'lf_setup_settings_nonce'); ?>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><label for="lf_maps_api_key"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></label></th>
+					<td>
+						<input type="text" class="regular-text" id="lf_maps_api_key" name="lf_maps_api_key" value="<?php echo esc_attr($maps_key); ?>" />
+						<label style="margin-left:8px;"><input type="checkbox" name="lf_maps_api_key_clear" value="1" /> <?php esc_html_e('Clear', 'leadsforward-core'); ?></label>
+						<p class="description"><?php esc_html_e('Required for Google Maps search + embed. Enable Places and Maps Embed APIs.', 'leadsforward-core'); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_openai_api_key"><?php esc_html_e('OpenAI API key', 'leadsforward-core'); ?></label></th>
+					<td>
+						<input type="password" class="regular-text" id="lf_openai_api_key" name="lf_openai_api_key" value="" placeholder="<?php echo $openai_key_set ? esc_attr__('Saved (hidden)', 'leadsforward-core') : esc_attr__('sk-...', 'leadsforward-core'); ?>" />
+						<label style="margin-left:8px;"><input type="checkbox" name="lf_openai_api_key_clear" value="1" /> <?php esc_html_e('Clear', 'leadsforward-core'); ?></label>
+						<p class="description"><?php esc_html_e('Required for AI Assistant suggestions. Key is stored securely in options.', 'leadsforward-core'); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e('Hide admin bar on front end', 'leadsforward-core'); ?></th>
+					<td>
+						<label><input type="checkbox" name="lf_hide_admin_bar" value="1" <?php checked($hide_bar); ?> /> <?php esc_html_e('Enable', 'leadsforward-core'); ?></label>
+					</td>
+				</tr>
+			</table>
+			<p class="submit"><button type="submit" class="button button-primary"><?php esc_html_e('Save Settings', 'leadsforward-core'); ?></button></p>
+		</form>
+	</div>
+	<?php
 }
