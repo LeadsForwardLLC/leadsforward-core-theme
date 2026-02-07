@@ -17,24 +17,24 @@ if (!defined('ABSPATH')) {
 add_action('admin_menu', 'lf_ops_register_menu', 10);
 
 function lf_ops_register_menu(): void {
-	// Parent: first submenu below becomes the default when clicking "LeadsForward"
+	// Parent: slug lf-ops so first submenu with same slug (Setup) is the default — no redirect, avoids "headers already sent"
 	add_menu_page(
 		__('LeadsForward', 'leadsforward-core'),
 		__('LeadsForward', 'leadsforward-core'),
 		LF_OPS_CAP,
 		'lf-ops',
-		'lf_ops_default_render',
+		'lf_wizard_render_page',
 		'dashicons-admin-generic',
 		59
 	);
 
-	// 1. Setup (one-time wizard) — default landing
+	// 1. Setup — same slug as parent so clicking "LeadsForward" shows this; only this item highlights when on page=lf-ops
 	add_submenu_page(
 		'lf-ops',
 		__('Setup', 'leadsforward-core'),
 		__('Setup', 'leadsforward-core'),
 		'edit_theme_options',
-		'lf-setup-wizard',
+		'lf-ops',
 		'lf_wizard_render_page'
 	);
 	// 2. Homepage (sections, business info)
@@ -46,13 +46,13 @@ function lf_ops_register_menu(): void {
 		'lf-homepage-settings',
 		'lf_homepage_admin_render'
 	);
-	// 3. Export Config (duplicate slug so parent link works for existing bookmarks)
+	// 3. Export Config (own slug so it doesn’t highlight when parent is clicked)
 	add_submenu_page(
 		'lf-ops',
 		__('Export Config', 'leadsforward-core'),
 		__('Export Config', 'leadsforward-core'),
 		LF_OPS_CAP,
-		'lf-ops',
+		'lf-ops-export',
 		'lf_ops_export_render'
 	);
 	add_submenu_page(
@@ -90,17 +90,4 @@ function lf_ops_register_menu(): void {
 			'lf_dev_reset_render_page'
 		);
 	}
-}
-
-/**
- * Default page when clicking LeadsForward menu (redirect to Setup or Export).
- */
-function lf_ops_default_render(): void {
-	// Send to Setup if wizard not complete, else Export
-	if (!get_option('lf_setup_wizard_complete', false)) {
-		wp_safe_redirect(admin_url('admin.php?page=lf-setup-wizard'));
-		exit;
-	}
-	wp_safe_redirect(admin_url('admin.php?page=lf-ops'));
-	exit;
 }

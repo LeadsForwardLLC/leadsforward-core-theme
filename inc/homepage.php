@@ -134,6 +134,32 @@ function lf_homepage_default_config(?string $niche_slug = null): array {
 }
 
 /**
+ * Empty config for post-reset: all sections disabled, all copy empty. Used by Reset site (dev).
+ *
+ * @return array<string, array<string, mixed>>
+ */
+function lf_homepage_empty_config(): array {
+	$order = lf_homepage_controller_order();
+	$config = [];
+	foreach ($order as $type) {
+		$default = lf_homepage_default_section_config($type);
+		$empty = [
+			'enabled' => false,
+			'variant' => 'default',
+		];
+		foreach ($default as $key => $value) {
+			if ($key === 'enabled' || $key === 'variant') {
+				continue;
+			}
+			// Keep numeric fields at safe minimum (e.g. trust_max_items has min 1 in admin)
+			$empty[$key] = is_int($value) ? 1 : '';
+		}
+		$config[$type] = $empty;
+	}
+	return $config;
+}
+
+/**
  * Apply niche defaults to homepage config and save. Used by setup wizard.
  * Optionally substitutes [Your City] in hero headline with first service area name.
  *

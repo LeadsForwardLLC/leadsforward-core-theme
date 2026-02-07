@@ -67,7 +67,7 @@ function lf_dev_reset_render_page(): void {
 	echo '<div class="wrap"><h1>' . esc_html__('Reset site (dev only)', 'leadsforward-core') . '</h1>';
 	if ($done) {
 		echo '<div class="notice notice-success"><p>' . esc_html__('Site reset complete. You can run the setup wizard again.', 'leadsforward-core') . '</p></div>';
-		echo '<p><a href="' . esc_url(admin_url('admin.php?page=lf-setup-wizard')) . '" class="button button-primary">' . esc_html__('Run setup wizard', 'leadsforward-core') . '</a></p></div>';
+		echo '<p><a href="' . esc_url(admin_url('admin.php?page=lf-ops')) . '" class="button button-primary">' . esc_html__('Run setup wizard', 'leadsforward-core') . '</a></p></div>';
 		return;
 	}
 	if ($error === 'confirm') {
@@ -170,9 +170,17 @@ function lf_dev_reset_run(): void {
 		update_field('homepage_sections', [], 'option');
 		update_field('lf_homepage_cta_primary', '', 'option');
 		update_field('lf_homepage_cta_secondary', '', 'option');
+		update_field('lf_homepage_cta_ghl', '', 'option');
+		update_field('lf_homepage_cta_primary_type', '', 'option');
 	}
 
-	if (defined('LF_HOMEPAGE_CONFIG_OPTION')) {
+	// Clear homepage section config so LeadsForward → Homepage shows empty (all sections off, no copy)
+	if (function_exists('lf_homepage_empty_config')) {
+		$empty_config = lf_homepage_empty_config();
+		if (defined('LF_HOMEPAGE_CONFIG_OPTION')) {
+			update_option(LF_HOMEPAGE_CONFIG_OPTION, $empty_config, true);
+		}
+	} elseif (defined('LF_HOMEPAGE_CONFIG_OPTION')) {
 		delete_option(LF_HOMEPAGE_CONFIG_OPTION);
 	}
 	if (defined('LF_HOMEPAGE_NICHE_OPTION')) {
