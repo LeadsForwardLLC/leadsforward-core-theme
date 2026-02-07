@@ -91,12 +91,16 @@
 	/* Border radius (override per variation profile in variation-tokens.css) */
 	--lf-button-radius: 0.25rem;
 
-	/* Hero */
+	/* Hero — full-width surface, strong rhythm, dominant CTA */
 	--lf-hero-bg: var(--wp--preset--color--neutral-100, #f1f5f9);
-	--lf-hero-bg-subtle: linear-gradient(180deg, var(--lf-hero-bg) 0%, var(--lf-body-bg) 100%);
-	--lf-hero-stack-after-title: var(--lf-spacing-normal);
-	--lf-hero-stack-after-subtitle: var(--lf-spacing-loose);
-	--lf-hero-stack-after-cta: var(--lf-spacing-normal);
+	--lf-hero-bg-subtle: linear-gradient(180deg, var(--lf-hero-bg) 0%, rgba(255,255,255,0.97) 50%, var(--lf-body-bg) 100%);
+	--lf-hero-stack-after-title: var(--lf-space-container);
+	--lf-hero-stack-after-subtitle: var(--lf-space-section-sm);
+	--lf-hero-stack-after-cta: var(--lf-space-section);
+	--lf-hero-cta-primary-size: var(--lf-fs-large);
+	--lf-hero-cta-primary-pad-y: 1rem;
+	--lf-hero-cta-primary-pad-x: 2rem;
+	--lf-hero-trust-gap: var(--lf-gap-normal);
 
 	/* 3) SURFACE STYLES — white, soft, dark (no section is plain text on white) */
 	--lf-surface-white: var(--wp--preset--color--background, #ffffff);
@@ -582,16 +586,16 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
-   Block: Hero (conversion-focused: H1 → subheadline → CTAs → trust)
+   Block: Hero (best-in-class: service + location, trust, dominant CTAs)
    ------------------------------------------------------------------------- */
 .lf-block-hero {
 	position: relative;
 	text-align: center;
-	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
 	min-height: var(--lf-hero-min-height);
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	padding: var(--lf-space-section-lg) var(--lf-space-container);
 }
 
 .lf-block-hero__bg {
@@ -609,24 +613,27 @@ button:focus-visible,
 	margin-left: auto;
 	margin-right: auto;
 	width: 100%;
-	padding-left: var(--lf-section-padding-x);
-	padding-right: var(--lf-section-padding-x);
+	padding-left: var(--lf-space-container);
+	padding-right: var(--lf-space-container);
 }
 
 .lf-block-hero__title {
-	font-size: clamp(var(--lf-fs-h2), 4.5vw, var(--lf-hero-title-max));
+	font-size: clamp(var(--lf-fs-h2), 5vw, var(--lf-hero-title-max));
 	font-weight: var(--lf-heading-weight);
-	line-height: var(--lf-line-height-heading);
+	line-height: 1.15;
 	margin: 0 0 var(--lf-hero-stack-after-title);
 	color: var(--lf-text);
-	letter-spacing: -0.02em;
+	letter-spacing: -0.025em;
 }
 
 .lf-block-hero__subtitle {
 	font-size: var(--lf-fs-large);
 	color: var(--lf-muted);
 	margin: 0 0 var(--lf-hero-stack-after-subtitle);
-	line-height: var(--lf-line-height-tight);
+	line-height: var(--lf-line-height-body);
+	max-width: 36em;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 .lf-block-hero__cta {
@@ -638,32 +645,72 @@ button:focus-visible,
 	margin: 0 0 var(--lf-hero-stack-after-cta);
 }
 
-.lf-block-hero__cta .lf-btn {
+.lf-block-hero__cta-link,
+.lf-block-hero__cta-text {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: var(--lf-touch-min);
+	padding: var(--lf-hero-cta-primary-pad-y) var(--lf-hero-cta-primary-pad-x);
+	font-size: var(--lf-hero-cta-primary-size);
+	font-weight: var(--lf-fw-bold);
 	white-space: nowrap;
-	font-size: var(--lf-fs-medium);
+	border-radius: var(--lf-button-radius);
+	box-shadow: var(--lf-btn-primary-shadow);
+}
+
+.lf-block-hero__cta-link:hover,
+.lf-block-hero__cta-text:hover {
+	box-shadow: var(--lf-btn-primary-shadow-hover);
+}
+
+.lf-block-hero__cta-secondary {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: var(--lf-touch-min);
 	padding: var(--lf-btn-pad-y) var(--lf-btn-pad-x-lg);
+	font-size: var(--lf-fs-body);
+	font-weight: var(--lf-fw-semibold);
+	white-space: nowrap;
+	border-radius: var(--lf-button-radius);
 }
 
 .lf-block-hero__trust {
-	display: flex;
+	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: var(--lf-gap-30);
+	flex-wrap: wrap;
+	gap: var(--lf-hero-trust-gap);
 	font-size: var(--lf-fs-small);
-	color: var(--lf-muted);
+	font-weight: var(--lf-fw-semibold);
+	color: var(--lf-text);
 }
 
 .lf-block-hero__stars {
 	display: inline-flex;
+	align-items: center;
 	gap: var(--lf-gap-xs);
 }
 
 .lf-block-hero__star {
 	color: var(--lf-warning);
+	flex-shrink: 0;
+}
+
+.lf-block-hero__badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.25em 0.75em;
+	background-color: var(--lf-surface-white);
+	border: var(--lf-card-border);
+	border-radius: 9999px;
+	box-shadow: var(--lf-card-shadow);
+	color: var(--lf-text);
 }
 
 .lf-block-hero__phone-wrap {
-	margin: var(--lf-spacing-normal) 0 0;
+	margin: var(--lf-space-section-sm) 0 0;
 }
 
 .lf-block-hero__phone {
@@ -685,7 +732,7 @@ button:focus-visible,
 
 .lf-block-hero--a {
 	padding-top: var(--lf-section-padding-y-tight);
-	padding-bottom: var(--lf-section-padding-sm);
+	padding-bottom: var(--lf-space-section-sm);
 	min-height: var(--lf-hero-min-height--compact);
 }
 
