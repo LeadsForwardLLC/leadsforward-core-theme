@@ -112,8 +112,11 @@ function lf_homepage_default_section_config(string $section_type): array {
 				'hero_headline'     => __('Trusted Local Home Services in [Your City]', 'leadsforward-core'),
 				'hero_subheadline'  => __('Fast response times, clear pricing, and workmanship backed by warranty. Get expert help from a local team you can rely on.', 'leadsforward-core'),
 				'hero_cta_override' => '',
+				'hero_cta_secondary_override' => '',
 				'hero_cta_action'   => '',
 				'hero_cta_url'      => '',
+				'hero_cta_secondary_action' => '',
+				'hero_cta_secondary_url'    => '',
 			]);
 		case 'trust_reviews':
 			return array_merge($base, [
@@ -148,6 +151,8 @@ function lf_homepage_default_section_config(string $section_type): array {
 				'cta_ghl_override'      => '',
 				'cta_primary_action'    => '',
 				'cta_primary_url'       => '',
+				'cta_secondary_action'  => '',
+				'cta_secondary_url'     => '',
 			]);
 		default:
 			return $base;
@@ -322,8 +327,11 @@ function lf_homepage_migrate_from_acf(): ?array {
 			'hero_headline'     => $row['hero_headline'] ?? '',
 			'hero_subheadline'  => $row['hero_subheadline'] ?? '',
 			'hero_cta_override' => $row['hero_cta_override'] ?? '',
+			'hero_cta_secondary_override' => $row['hero_cta_secondary_override'] ?? '',
 			'hero_cta_action'   => $row['hero_cta_action'] ?? '',
 			'hero_cta_url'      => $row['hero_cta_url'] ?? '',
+			'hero_cta_secondary_action' => $row['hero_cta_secondary_action'] ?? '',
+			'hero_cta_secondary_url'    => $row['hero_cta_secondary_url'] ?? '',
 			'trust_max_items'   => isset($row['trust_max_items']) ? (int) $row['trust_max_items'] : 1,
 			'trust_heading'     => $row['trust_heading'] ?? '',
 			'section_heading'   => $row['section_heading'] ?? '',
@@ -333,6 +341,8 @@ function lf_homepage_migrate_from_acf(): ?array {
 			'cta_ghl_override'      => $row['cta_ghl_override'] ?? '',
 			'cta_primary_action'     => $row['cta_primary_action'] ?? '',
 			'cta_primary_url'        => $row['cta_primary_url'] ?? '',
+			'cta_secondary_action'   => $row['cta_secondary_action'] ?? '',
+			'cta_secondary_url'      => $row['cta_secondary_url'] ?? '',
 		];
 	}
 	$order = lf_homepage_controller_order();
@@ -382,8 +392,10 @@ function lf_get_resolved_cta(array $context = []): array {
 	$secondary = lf_get_option('lf_cta_secondary_text', 'option');
 	$ghl       = lf_get_option('lf_cta_ghl_embed', 'option');
 	$type      = lf_get_option('lf_cta_primary_type', 'option') ?: 'text';
-	$action    = lf_get_option('lf_cta_primary_action', 'option', 'link') ?: 'link';
+	$action    = lf_get_option('lf_cta_primary_action', 'option', 'quote') ?: 'quote';
 	$url       = lf_get_option('lf_cta_primary_url', 'option', '') ?: '';
+	$secondary_action = lf_get_option('lf_cta_secondary_action', 'option', 'call') ?: 'call';
+	$secondary_url    = lf_get_option('lf_cta_secondary_url', 'option', '') ?: '';
 
 	if ($is_homepage && function_exists('get_field')) {
 		$hp_primary = get_field('lf_homepage_cta_primary', 'option');
@@ -392,6 +404,8 @@ function lf_get_resolved_cta(array $context = []): array {
 		$hp_type = get_field('lf_homepage_cta_primary_type', 'option');
 		$hp_action = get_field('lf_homepage_cta_primary_action', 'option');
 		$hp_url = get_field('lf_homepage_cta_primary_url', 'option');
+		$hp_secondary_action = get_field('lf_homepage_cta_secondary_action', 'option');
+		$hp_secondary_url = get_field('lf_homepage_cta_secondary_url', 'option');
 		if ($hp_primary !== null && $hp_primary !== '') {
 			$primary = $hp_primary;
 		}
@@ -409,6 +423,12 @@ function lf_get_resolved_cta(array $context = []): array {
 		}
 		if ($hp_url !== null && $hp_url !== '') {
 			$url = $hp_url;
+		}
+		if ($hp_secondary_action !== null && $hp_secondary_action !== '') {
+			$secondary_action = $hp_secondary_action;
+		}
+		if ($hp_secondary_url !== null && $hp_secondary_url !== '') {
+			$secondary_url = $hp_secondary_url;
 		}
 	}
 
@@ -428,14 +448,29 @@ function lf_get_resolved_cta(array $context = []): array {
 		if (!empty($section['cta_primary_url'])) {
 			$url = $section['cta_primary_url'];
 		}
+		if (!empty($section['cta_secondary_action'])) {
+			$secondary_action = $section['cta_secondary_action'];
+		}
+		if (!empty($section['cta_secondary_url'])) {
+			$secondary_url = $section['cta_secondary_url'];
+		}
 		if (!empty($section['hero_cta_override'])) {
 			$primary = $section['hero_cta_override'];
+		}
+		if (!empty($section['hero_cta_secondary_override'])) {
+			$secondary = $section['hero_cta_secondary_override'];
 		}
 		if (!empty($section['hero_cta_action'])) {
 			$action = $section['hero_cta_action'];
 		}
 		if (!empty($section['hero_cta_url'])) {
 			$url = $section['hero_cta_url'];
+		}
+		if (!empty($section['hero_cta_secondary_action'])) {
+			$secondary_action = $section['hero_cta_secondary_action'];
+		}
+		if (!empty($section['hero_cta_secondary_url'])) {
+			$secondary_url = $section['hero_cta_secondary_url'];
 		}
 	}
 
@@ -444,8 +479,10 @@ function lf_get_resolved_cta(array $context = []): array {
 		'secondary_text' => is_string($secondary) ? $secondary : '',
 		'ghl_embed'      => is_string($ghl) ? $ghl : '',
 		'primary_type'   => in_array($type, ['call', 'form', 'text'], true) ? $type : 'text',
-		'primary_action' => in_array($action, ['link', 'quote'], true) ? $action : 'link',
+		'primary_action' => in_array($action, ['link', 'quote'], true) ? $action : 'quote',
 		'primary_url'    => is_string($url) ? $url : '',
+		'secondary_action' => in_array($secondary_action, ['link', 'quote', 'call'], true) ? $secondary_action : 'call',
+		'secondary_url'    => is_string($secondary_url) ? $secondary_url : '',
 	];
 }
 

@@ -155,6 +155,8 @@ function lf_dev_reset_run(): void {
 		update_field('lf_cta_secondary_text', '', 'option');
 		update_field('lf_cta_primary_action', '', 'option');
 		update_field('lf_cta_primary_url', '', 'option');
+		update_field('lf_cta_secondary_action', '', 'option');
+		update_field('lf_cta_secondary_url', '', 'option');
 		update_field('variation_profile', 'a', 'option');
 		update_field('lf_schema_review', false, 'option');
 		update_field('homepage_sections', [], 'option');
@@ -162,6 +164,8 @@ function lf_dev_reset_run(): void {
 		update_field('lf_homepage_cta_secondary', '', 'option');
 		update_field('lf_homepage_cta_primary_action', '', 'option');
 		update_field('lf_homepage_cta_primary_url', '', 'option');
+		update_field('lf_homepage_cta_secondary_action', '', 'option');
+		update_field('lf_homepage_cta_secondary_url', '', 'option');
 		update_field('lf_homepage_cta_ghl', '', 'option');
 		update_field('lf_homepage_cta_primary_type', '', 'option');
 	}

@@ -51,7 +51,7 @@ function lf_acf_add_options_ctas_fields(): void {
 					'link'  => __('Link', 'leadsforward-core'),
 					'quote' => __('Open Quote Builder', 'leadsforward-core'),
 				],
-				'default_value' => 'link',
+				'default_value' => 'quote',
 				'instructions'  => __('When set to Quote Builder, the primary CTA opens the modal.', 'leadsforward-core'),
 			],
 			[
@@ -67,6 +67,26 @@ function lf_acf_add_options_ctas_fields(): void {
 				'label' => __('Secondary CTA text', 'leadsforward-core'),
 				'name'  => 'lf_cta_secondary_text',
 				'type'  => 'text',
+			],
+			[
+				'key'     => 'field_lf_cta_secondary_action',
+				'label'   => __('Secondary CTA action', 'leadsforward-core'),
+				'name'    => 'lf_cta_secondary_action',
+				'type'    => 'select',
+				'choices' => [
+					'call'  => __('Call now', 'leadsforward-core'),
+					'quote' => __('Open Quote Builder', 'leadsforward-core'),
+					'link'  => __('Link', 'leadsforward-core'),
+				],
+				'default_value' => 'call',
+			],
+			[
+				'key'   => 'field_lf_cta_secondary_url',
+				'label' => __('Secondary CTA URL', 'leadsforward-core'),
+				'name'  => 'lf_cta_secondary_url',
+				'type'  => 'url',
+				'instructions' => __('Used when secondary action is Link.', 'leadsforward-core'),
+				'conditional_logic' => [['field' => 'field_lf_cta_secondary_action', 'operator' => '==', 'value' => 'link']],
 			],
 			[
 				'key'         => 'field_lf_cta_ghl_embed',

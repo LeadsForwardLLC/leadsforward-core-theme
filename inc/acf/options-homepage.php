@@ -66,11 +66,31 @@ function lf_acf_add_options_homepage_fields(): void {
 				'instructions' => __('Overrides the global CTA action on homepage only.', 'leadsforward-core'),
 			],
 			[
+				'key'     => 'field_lf_homepage_cta_secondary_action',
+				'label'   => __('Homepage secondary CTA action', 'leadsforward-core'),
+				'name'    => 'lf_homepage_cta_secondary_action',
+				'type'    => 'select',
+				'choices' => [
+					''      => __('Use global setting', 'leadsforward-core'),
+					'call'  => __('Call now', 'leadsforward-core'),
+					'quote' => __('Open Quote Builder', 'leadsforward-core'),
+					'link'  => __('Link', 'leadsforward-core'),
+				],
+				'instructions' => __('Overrides the global secondary CTA action on homepage only.', 'leadsforward-core'),
+			],
+			[
 				'key'   => 'field_lf_homepage_cta_primary_url',
 				'label' => __('Homepage primary CTA URL', 'leadsforward-core'),
 				'name'  => 'lf_homepage_cta_primary_url',
 				'type'  => 'url',
 				'instructions' => __('Used when homepage CTA action is Link.', 'leadsforward-core'),
+			],
+			[
+				'key'   => 'field_lf_homepage_cta_secondary_url',
+				'label' => __('Homepage secondary CTA URL', 'leadsforward-core'),
+				'name'  => 'lf_homepage_cta_secondary_url',
+				'type'  => 'url',
+				'instructions' => __('Used when homepage secondary CTA action is Link.', 'leadsforward-core'),
 			],
 			[
 				'key'         => 'field_lf_homepage_cta_ghl',
