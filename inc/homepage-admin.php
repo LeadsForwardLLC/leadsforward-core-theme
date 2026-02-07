@@ -77,7 +77,7 @@ function lf_homepage_admin_save(): void {
 		$embed = isset($_POST['lf_business_map_embed']) ? wp_kses(wp_unslash($_POST['lf_business_map_embed']), $allowed_embed) : '';
 		lf_update_business_info_value('lf_business_map_embed', $embed);
 	}
-	update_option('lf_maps_api_key', isset($_POST['lf_maps_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_maps_api_key'])) : '');
+	// Maps API key is managed in LeadsForward → Setup.
 
 	$order = lf_homepage_controller_order();
 	$config = lf_get_homepage_section_config();
@@ -233,11 +233,15 @@ jQuery(function ($) {
 	});
 
 	function loadPlacesApi(key, callback) {
+		var status = document.getElementById('lf_maps_status');
 		if (window.google && window.google.maps && window.google.maps.places) {
 			callback();
 			return;
 		}
 		if (!key) {
+			if (status) {
+				status.textContent = 'Add your Google Maps API key in LeadsForward → Setup to enable search.';
+			}
 			return;
 		}
 		var scriptId = 'lf-maps-places';
@@ -248,6 +252,11 @@ jQuery(function ($) {
 		script.id = scriptId;
 		script.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&libraries=places';
 		script.async = true;
+		script.onerror = function () {
+			if (status) {
+				status.textContent = 'Failed to load Google Maps. Check API key restrictions and billing.';
+			}
+		};
 		script.onload = callback;
 		document.head.appendChild(script);
 	}
@@ -261,6 +270,7 @@ jQuery(function ($) {
 		var businessName = document.getElementById('lf_business_name');
 		var businessAddress = document.getElementById('lf_business_address');
 		var selected = document.getElementById('lf_place_selected');
+		var status = document.getElementById('lf_maps_status');
 		if (!input) {
 			return;
 		}
@@ -269,13 +279,30 @@ jQuery(function ($) {
 		key = key.trim();
 		if (!key) {
 			if (selected) {
-				selected.textContent = 'Add a Google Maps API key to enable search.';
+				selected.textContent = 'Add your Google Maps API key in LeadsForward → Setup to enable search.';
+			}
+			if (status) {
+				status.textContent = '';
 			}
 			return;
 		}
+		if (status) {
+			status.textContent = 'Loading Google Maps…';
+		}
+		window.gm_authFailure = function () {
+			if (status) {
+				status.textContent = 'Google Maps auth failed. Check key restrictions and billing.';
+			}
+		};
 		loadPlacesApi(key, function () {
 			if (!window.google || !google.maps || !google.maps.places) {
+				if (status) {
+					status.textContent = 'Google Maps loaded without Places library. Check API settings.';
+				}
 				return;
+			}
+			if (status) {
+				status.textContent = '';
 			}
 			var ac = new google.maps.places.Autocomplete(input, {
 				fields: ['place_id', 'name', 'formatted_address']
@@ -298,7 +325,7 @@ jQuery(function ($) {
 	}
 
 	initPlacesSearch();
-	$('#lf_maps_api_key').on('change', initPlacesSearch);
+	// Maps API key changes are handled in LeadsForward → Setup.
 });
 JS;
 	wp_add_inline_script('jquery-ui-sortable', $script);
@@ -431,6 +458,7 @@ function lf_homepage_admin_render(): void {
 								<p class="description" id="lf_place_selected">
 									<?php echo $place_name !== '' ? esc_html(sprintf(__('Selected: %1$s (%2$s)', 'leadsforward-core'), $place_name, $place_address)) : esc_html__('No place selected yet.', 'leadsforward-core'); ?>
 								</p>
+								<p class="description" id="lf_maps_status" style="color:#b45309;"></p>
 							</td>
 						</tr>
 						<tr>
