@@ -29,15 +29,20 @@ $query = new WP_Query([
 ?>
 <section class="lf-block lf-block-service-grid lf-surface-white lf-block-service-grid--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-service-grid__inner">
-		<h2 class="lf-block-service-grid__title"><?php echo esc_html($heading); ?></h2>
-		<?php if ($intro !== '') : ?>
-			<p class="lf-block-service-grid__intro"><?php echo esc_html($intro); ?></p>
-		<?php endif; ?>
+		<header class="lf-block-service-grid__header">
+			<h2 class="lf-block-service-grid__title"><?php echo esc_html($heading); ?></h2>
+			<?php if ($intro !== '') : ?>
+				<p class="lf-block-service-grid__intro"><?php echo esc_html($intro); ?></p>
+			<?php endif; ?>
+		</header>
 		<?php if ($query->have_posts()) : ?>
-			<ul class="lf-block-service-grid__list">
+			<ul class="lf-block-service-grid__list" role="list">
 				<?php while ($query->have_posts()) : $query->the_post(); ?>
 					<li class="lf-block-service-grid__item">
-						<a href="<?php the_permalink(); ?>" class="lf-block-service-grid__link"><?php the_title(); ?></a>
+						<a href="<?php the_permalink(); ?>" class="lf-block-service-grid__link">
+							<span class="lf-block-service-grid__card-title"><?php the_title(); ?></span>
+							<span class="lf-block-service-grid__card-action" aria-hidden="true"><?php esc_html_e('View', 'leadsforward-core'); ?></span>
+						</a>
 					</li>
 				<?php endwhile; ?>
 			</ul>

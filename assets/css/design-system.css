@@ -746,6 +746,10 @@ button:focus-visible,
 	margin-right: auto;
 }
 
+.lf-block-service-grid__header {
+	margin-bottom: var(--lf-spacing-loose);
+}
+
 .lf-block-service-grid__title {
 	margin: 0 0 var(--lf-section-heading-margin);
 	font-size: var(--lf-fs-h2);
@@ -755,7 +759,7 @@ button:focus-visible,
 }
 
 .lf-block-service-grid__intro {
-	margin: 0 0 var(--lf-spacing-loose);
+	margin: 0;
 	font-size: var(--lf-fs-body);
 	font-weight: var(--lf-fw-normal);
 	color: var(--lf-muted);
@@ -775,8 +779,74 @@ button:focus-visible,
 	margin-right: auto;
 }
 
-/* Shared decision card base (Services + Service Areas) */
-.lf-block-service-grid__link,
+@media (min-width: 64rem) {
+	.lf-block-service-grid__list {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+/* Service Grid: decision cards with title + action (curated offering) */
+.lf-block-service-grid__link {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: space-between;
+	text-align: left;
+	min-height: var(--lf-touch-min);
+	padding: var(--lf-card-decision-padding-y) var(--lf-card-decision-padding-x);
+	background-color: var(--lf-card-bg);
+	border: var(--lf-card-decision-border);
+	border-radius: var(--lf-card-decision-radius);
+	box-shadow: var(--lf-card-decision-shadow);
+	color: var(--lf-text);
+	text-decoration: none;
+	font-weight: var(--lf-fw-semibold);
+	font-size: var(--lf-fs-body);
+	line-height: 1.25;
+	box-sizing: border-box;
+	cursor: pointer;
+	transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.lf-block-service-grid__link:hover {
+	background-color: var(--lf-primary);
+	color: var(--lf-cta-block-text);
+	text-decoration: none;
+	border-color: var(--lf-primary);
+	box-shadow: var(--lf-card-decision-shadow-hover);
+	transform: translateY(-2px);
+}
+
+.lf-block-service-grid__link:focus-visible {
+	outline: var(--lf-focus-outline);
+	outline-offset: var(--lf-focus-offset);
+}
+
+.lf-block-service-grid__card-title {
+	display: block;
+	font-weight: var(--lf-fw-semibold);
+	margin-bottom: var(--lf-gap-tight);
+}
+
+.lf-block-service-grid__card-action {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--lf-gap-xs);
+	font-size: var(--lf-fs-small);
+	font-weight: var(--lf-fw-medium);
+	opacity: 0.9;
+}
+
+.lf-block-service-grid__card-action::after {
+	content: "→";
+}
+
+.lf-block-service-grid__link:hover .lf-block-service-grid__card-action,
+.lf-block-service-grid__link:focus-visible .lf-block-service-grid__card-action {
+	opacity: 1;
+}
+
+/* Shared decision card base (Service Areas only; Services use rules above) */
 .lf-block-service-areas__link {
 	display: flex;
 	align-items: center;
@@ -797,7 +867,6 @@ button:focus-visible,
 	transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
 }
 
-.lf-block-service-grid__link:hover,
 .lf-block-service-areas__link:hover {
 	background-color: var(--lf-primary);
 	color: var(--lf-cta-block-text);
@@ -806,7 +875,6 @@ button:focus-visible,
 	box-shadow: var(--lf-card-decision-shadow-hover);
 }
 
-.lf-block-service-grid__link:focus-visible,
 .lf-block-service-areas__link:focus-visible {
 	outline: var(--lf-focus-outline);
 	outline-offset: var(--lf-focus-offset);
