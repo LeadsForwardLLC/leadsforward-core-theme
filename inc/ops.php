@@ -19,6 +19,7 @@ if (!is_admin()) {
 lf_load_inc('ops/common.php');
 lf_load_inc('ops/export.php');
 lf_load_inc('ops/import.php');
+lf_load_inc('ops/config.php');
 lf_load_inc('ops/bulk-actions.php');
 lf_load_inc('ops/audit-log.php');
 lf_load_inc('ops/menu.php');

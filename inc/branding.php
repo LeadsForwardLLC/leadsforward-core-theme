@@ -81,3 +81,144 @@ function lf_enqueue_branding_tokens(): void {
 }
 add_action('wp_enqueue_scripts', 'lf_enqueue_branding_tokens', 6);
 add_action('enqueue_block_editor_assets', 'lf_enqueue_branding_tokens', 6);
+
+/**
+ * Auto-generate branding colors from an uploaded logo.
+ */
+function lf_branding_auto_from_logo(int $attachment_id): bool {
+	$palette = lf_branding_extract_logo_palette($attachment_id);
+	if (empty($palette)) {
+		return false;
+	}
+	$primary = $palette[0] ?? '#2563eb';
+	$secondary = $palette[1] ?? lf_branding_shift_color($primary, 0.18);
+	$tertiary = $palette[2] ?? lf_branding_shift_color($primary, -0.12);
+	$updates = [
+		'lf_brand_primary'   => $primary,
+		'lf_brand_secondary' => $secondary,
+		'lf_brand_tertiary'  => $tertiary,
+	];
+	foreach ($updates as $key => $value) {
+		update_option('options_' . $key, $value);
+		if (function_exists('update_field')) {
+			foreach (['lf-branding', 'options_lf_branding', 'options_lf-branding', 'option', 'options'] as $post_id) {
+				update_field($key, $value, $post_id);
+			}
+		}
+	}
+	return true;
+}
+
+function lf_branding_extract_logo_palette(int $attachment_id): array {
+	if (!function_exists('imagecreatefromstring')) {
+		return [];
+	}
+	$path = get_attached_file($attachment_id);
+	if (!$path || !is_readable($path)) {
+		return [];
+	}
+	$data = @file_get_contents($path);
+	if ($data === false) {
+		return [];
+	}
+	$image = @imagecreatefromstring($data);
+	if (!$image) {
+		return [];
+	}
+	$width = imagesx($image);
+	$height = imagesy($image);
+	if (!$width || !$height) {
+		imagedestroy($image);
+		return [];
+	}
+	$max_size = 48;
+	$scale = min($max_size / $width, $max_size / $height, 1);
+	$sample_w = max(1, (int) round($width * $scale));
+	$sample_h = max(1, (int) round($height * $scale));
+	$sample = imagecreatetruecolor($sample_w, $sample_h);
+	imagealphablending($sample, false);
+	imagesavealpha($sample, true);
+	imagecopyresampled($sample, $image, 0, 0, 0, 0, $sample_w, $sample_h, $width, $height);
+	imagedestroy($image);
+
+	$buckets = [];
+	$step = 32;
+	for ($y = 0; $y < $sample_h; $y++) {
+		for ($x = 0; $x < $sample_w; $x++) {
+			$rgba = imagecolorsforindex($sample, imagecolorat($sample, $x, $y));
+			if (!is_array($rgba)) {
+				continue;
+			}
+			$alpha = $rgba['alpha'] ?? 0;
+			if ($alpha >= 100) {
+				continue;
+			}
+			$r = (int) $rgba['red'];
+			$g = (int) $rgba['green'];
+			$b = (int) $rgba['blue'];
+			$brightness = ($r * 299 + $g * 587 + $b * 114) / 1000;
+			if ($brightness > 245) {
+				continue;
+			}
+			$r = (int) (round($r / $step) * $step);
+			$g = (int) (round($g / $step) * $step);
+			$b = (int) (round($b / $step) * $step);
+			$r = min(255, max(0, $r));
+			$g = min(255, max(0, $g));
+			$b = min(255, max(0, $b));
+			$key = $r . ',' . $g . ',' . $b;
+			$buckets[$key] = ($buckets[$key] ?? 0) + 1;
+		}
+	}
+	imagedestroy($sample);
+
+	if (empty($buckets)) {
+		return [];
+	}
+	arsort($buckets);
+	$colors = [];
+	foreach ($buckets as $key => $count) {
+		[$r, $g, $b] = array_map('intval', explode(',', $key));
+		$hex = sprintf('#%02x%02x%02x', $r, $g, $b);
+		if (!in_array($hex, $colors, true)) {
+			$colors[] = $hex;
+		}
+		if (count($colors) >= 3) {
+			break;
+		}
+	}
+	return $colors;
+}
+
+function lf_branding_shift_color(string $hex, float $percent): string {
+	$hex = ltrim($hex, '#');
+	if (strlen($hex) === 3) {
+		$hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+	}
+	if (strlen($hex) !== 6) {
+		return '#2563eb';
+	}
+	$r = hexdec(substr($hex, 0, 2));
+	$g = hexdec(substr($hex, 2, 2));
+	$b = hexdec(substr($hex, 4, 2));
+	if ($percent >= 0) {
+		$r = (int) round($r + (255 - $r) * $percent);
+		$g = (int) round($g + (255 - $g) * $percent);
+		$b = (int) round($b + (255 - $b) * $percent);
+	} else {
+		$r = (int) round($r * (1 + $percent));
+		$g = (int) round($g * (1 + $percent));
+		$b = (int) round($b * (1 + $percent));
+	}
+	return sprintf('#%02x%02x%02x', max(0, min(255, $r)), max(0, min(255, $g)), max(0, min(255, $b)));
+}
+
+if (function_exists('add_filter')) {
+	add_filter('acf/update_value/name=lf_global_logo', function ($value) {
+		$logo_id = (int) $value;
+		if ($logo_id > 0) {
+			lf_branding_auto_from_logo($logo_id);
+		}
+		return $value;
+	}, 20, 1);
+}

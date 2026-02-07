@@ -98,7 +98,7 @@ function lf_acf_add_options_branding_fields(): void {
 				[
 					'param'    => 'options_page',
 					'operator' => '==',
-					'value'    => 'lf-branding',
+					'value'    => 'lf-global',
 				],
 			],
 		],

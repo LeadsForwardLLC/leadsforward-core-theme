@@ -35,7 +35,6 @@ function lf_dev_reset_allowed(): bool {
 }
 
 add_action('admin_init', 'lf_dev_reset_handle_post', 5);
-// Menu item is registered under LeadsForward → Reset site (dev) in inc/ops/menu.php
 
 function lf_dev_reset_handle_post(): void {
 	if (!lf_dev_reset_allowed()) {
@@ -48,13 +47,13 @@ function lf_dev_reset_handle_post(): void {
 		return;
 	}
 	if (!isset($_POST['lf_dev_reset_confirm']) || trim($_POST['lf_dev_reset_confirm']) !== 'RESET') {
-		wp_safe_redirect(admin_url('admin.php?page=lf-dev-reset&error=confirm'));
+		wp_safe_redirect(admin_url('admin.php?page=lf-ops&reset_error=confirm'));
 		exit;
 	}
 	check_admin_referer('lf_dev_reset', 'lf_dev_reset_nonce');
 
 	lf_dev_reset_run();
-	wp_safe_redirect(admin_url('admin.php?page=lf-dev-reset&reset=1'));
+	wp_safe_redirect(admin_url('admin.php?page=lf-ops&reset_done=1'));
 	exit;
 }
 
@@ -62,25 +61,8 @@ function lf_dev_reset_render_page(): void {
 	if (!lf_dev_reset_allowed() || !current_user_can('manage_options')) {
 		return;
 	}
-	$error = isset($_GET['error']) ? sanitize_text_field($_GET['error']) : '';
-	$done  = isset($_GET['reset']) && $_GET['reset'] === '1';
-	echo '<div class="wrap"><h1>' . esc_html__('Reset site (dev only)', 'leadsforward-core') . '</h1>';
-	if ($done) {
-		echo '<div class="notice notice-success"><p>' . esc_html__('Site reset complete. You can run the setup wizard again.', 'leadsforward-core') . '</p></div>';
-		echo '<p><a href="' . esc_url(admin_url('admin.php?page=lf-ops')) . '" class="button button-primary">' . esc_html__('Run setup wizard', 'leadsforward-core') . '</a></p></div>';
-		return;
-	}
-	if ($error === 'confirm') {
-		echo '<div class="notice notice-error"><p>' . esc_html__('You must type RESET exactly to confirm.', 'leadsforward-core') . '</p></div>';
-	}
-	echo '<p>' . esc_html__('This will delete all content, menus, and options created by the setup wizard. Only available when WP_DEBUG is true or WP_ENV is local.', 'leadsforward-core') . '</p>';
-	echo '<form method="post" action="' . esc_url(admin_url('admin.php?page=lf-dev-reset')) . '">';
-	wp_nonce_field('lf_dev_reset', 'lf_dev_reset_nonce');
-	echo '<input type="hidden" name="lf_dev_reset" value="1" />';
-	echo '<p><label for="lf_dev_reset_confirm">' . esc_html__('Type RESET to confirm:', 'leadsforward-core') . '</label><br />';
-	echo '<input type="text" id="lf_dev_reset_confirm" name="lf_dev_reset_confirm" value="" autocomplete="off" style="text-transform:uppercase;" /></p>';
-	echo '<p><input type="submit" class="button" value="' . esc_attr__('RESET SITE (DEV ONLY)', 'leadsforward-core') . '" style="background:#b32d2e;border-color:#b32d2e;color:#fff;" /></p>';
-	echo '</form></div>';
+	wp_safe_redirect(admin_url('admin.php?page=lf-ops'));
+	exit;
 }
 
 /**

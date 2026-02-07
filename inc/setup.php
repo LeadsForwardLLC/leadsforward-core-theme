@@ -63,22 +63,8 @@ function lf_register_acf_options_pages(): void {
 		'parent_slug' => $parent,
 		'capability'  => 'edit_theme_options',
 	]);
-	// Global Settings: logo + header CTA.
-	acf_add_options_sub_page([
-		'page_title'  => __('Global Settings', 'leadsforward-core'),
-		'menu_title'  => __('Global Settings', 'leadsforward-core'),
-		'menu_slug'   => 'lf-global',
-		'parent_slug' => $parent,
-		'capability'  => 'edit_theme_options',
-	]);
-	// Branding: global colors and surfaces.
-	acf_add_options_sub_page([
-		'page_title'  => __('Branding', 'leadsforward-core'),
-		'menu_title'  => __('Branding', 'leadsforward-core'),
-		'menu_slug'   => 'lf-branding',
-		'parent_slug' => $parent,
-		'capability'  => 'edit_theme_options',
-	]);
+	// Global Settings is rendered as a custom page (see inc/ops/menu.php).
+	// Branding fields are now included inside Global Settings.
 	// Global CTAs: primary/secondary text, GHL form.
 	acf_add_options_sub_page([
 		'page_title'  => __('Global CTAs', 'leadsforward-core'),

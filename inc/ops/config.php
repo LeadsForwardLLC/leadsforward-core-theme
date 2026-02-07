@@ -1,6 +1,6 @@
 <?php
 /**
- * Config import: upload JSON, preview, confirm, apply. Safe mode; only allowed fields.
+ * Config tools: Export + Import combined UI.
  *
  * @package LeadsForward_Core
  * @since 0.1.0
@@ -12,46 +12,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-const LF_OPS_IMPORT_TRANSIENT = 'lf_ops_import_payload_';
-
-add_action('admin_init', 'lf_ops_import_handle');
-
-function lf_ops_import_handle(): void {
-	if (!isset($_POST['lf_ops_import_apply']) || !current_user_can(LF_OPS_CAP)) {
-		return;
-	}
-	check_admin_referer('lf_ops_import_apply', 'lf_ops_import_nonce');
-	if (empty($_POST['lf_ops_import_confirm']) || $_POST['lf_ops_import_confirm'] !== '1') {
-		wp_safe_redirect(admin_url('admin.php?page=lf-ops-config&error=confirm'));
-		exit;
-	}
-	$transient_key = LF_OPS_IMPORT_TRANSIENT . get_current_user_id();
-	$data = get_transient($transient_key);
-	if (!is_array($data) || empty($data['config'])) {
-		wp_safe_redirect(admin_url('admin.php?page=lf-ops-config&error=invalid'));
-		exit;
-	}
-	delete_transient($transient_key);
-	$allowed = array_flip(lf_ops_exportable_option_keys());
-	$wp_option_keys = function_exists('lf_ops_wp_option_keys') ? lf_ops_wp_option_keys() : [];
-	$previous = [];
-	foreach ($data['config'] as $key => $value) {
-		if (!isset($allowed[$key])) {
-			continue;
-		}
-		$previous[$key] = in_array($key, $wp_option_keys, true) ? get_option($key, null) : (function_exists('get_field') ? get_field($key, 'option') : null);
-		if (in_array($key, $wp_option_keys, true)) {
-			update_option($key, $value, true);
-		} elseif (function_exists('update_field')) {
-			update_field($key, $value, 'option');
-		}
-	}
-	lf_ops_audit_log('config_import', ['keys_updated' => array_keys($previous)], $previous);
-	wp_safe_redirect(admin_url('admin.php?page=lf-ops-config&success=1'));
-	exit;
-}
-
-function lf_ops_import_render(): void {
+function lf_ops_config_render(): void {
 	if (!current_user_can(LF_OPS_CAP)) {
 		return;
 	}
@@ -60,7 +21,6 @@ function lf_ops_import_render(): void {
 	$preview = [];
 	$will_overwrite = [];
 	$will_ignore = [];
-	$stored_json = '';
 
 	if (isset($_POST['lf_ops_import_preview']) && check_admin_referer('lf_ops_import_preview', 'lf_ops_import_nonce', false)) {
 		$upload = $_FILES['lf_ops_import_file'] ?? null;
@@ -87,7 +47,9 @@ function lf_ops_import_render(): void {
 		}
 	}
 
-	echo '<div class="wrap"><h1>' . esc_html__('Import Config', 'leadsforward-core') . '</h1>';
+	echo '<div class="wrap"><h1>' . esc_html__('Config', 'leadsforward-core') . '</h1>';
+	echo '<p>' . esc_html__('Export or import your theme configuration. Config files never include URLs, slugs, post IDs, or user data.', 'leadsforward-core') . '</p>';
+
 	if ($success) {
 		echo '<div class="notice notice-success"><p>' . esc_html__('Configuration imported successfully.', 'leadsforward-core') . '</p></div>';
 	}
@@ -98,9 +60,19 @@ function lf_ops_import_render(): void {
 		echo '<div class="notice notice-error"><p>' . esc_html__('Please choose a JSON file to upload.', 'leadsforward-core') . '</p></div>';
 	}
 	if ($error === 'invalid' || $error === 'no_data') {
-		echo '<div class="notice notice-error"><p>' . esc_html__('Invalid or empty config file. Use a JSON file exported from Export Config.', 'leadsforward-core') . '</p></div>';
+		echo '<div class="notice notice-error"><p>' . esc_html__('Invalid or empty config file. Use a JSON file exported from this screen.', 'leadsforward-core') . '</p></div>';
 	}
 
+	echo '<div class="card" style="max-width:980px;padding:16px;margin:16px 0;">';
+	echo '<h2 style="margin-top:0;">' . esc_html__('Export', 'leadsforward-core') . '</h2>';
+	echo '<p>' . esc_html__('Download a JSON file of business info, CTAs, variation profile, homepage sections, and schema toggles.', 'leadsforward-core') . '</p>';
+	echo '<form method="post" action="">';
+	wp_nonce_field('lf_ops_export', 'lf_ops_export_nonce');
+	echo '<p><input type="submit" name="lf_ops_download" class="button button-primary" value="' . esc_attr__('Download Config', 'leadsforward-core') . '" /></p>';
+	echo '</form></div>';
+
+	echo '<div class="card" style="max-width:980px;padding:16px;margin:16px 0;">';
+	echo '<h2 style="margin-top:0;">' . esc_html__('Import', 'leadsforward-core') . '</h2>';
 	if (empty($preview)) {
 		echo '<p>' . esc_html__('Upload a JSON config file exported from another site. You will see a preview before applying.', 'leadsforward-core') . '</p>';
 		echo '<form method="post" action="" enctype="multipart/form-data">';
@@ -108,7 +80,7 @@ function lf_ops_import_render(): void {
 		echo '<p><input type="file" name="lf_ops_import_file" accept=".json" required /> <input type="submit" name="lf_ops_import_preview" class="button button-primary" value="' . esc_attr__('Preview import', 'leadsforward-core') . '" /></p>';
 		echo '</form>';
 	} else {
-		echo '<h2>' . esc_html__('Preview', 'leadsforward-core') . '</h2>';
+		echo '<h3>' . esc_html__('Preview', 'leadsforward-core') . '</h3>';
 		echo '<p><strong>' . esc_html__('Fields to be overwritten:', 'leadsforward-core') . '</strong></p><ul>';
 		foreach ($will_overwrite as $key => $info) {
 			$preview_val = is_scalar($info['new']) ? $info['new'] : wp_json_encode($info['new']);
@@ -128,5 +100,5 @@ function lf_ops_import_render(): void {
 		echo '<p><input type="submit" name="lf_ops_import_apply" class="button button-primary" value="' . esc_attr__('Apply import', 'leadsforward-core') . '" /> <a href="' . esc_url(admin_url('admin.php?page=lf-ops-config')) . '" class="button">' . esc_html__('Cancel', 'leadsforward-core') . '</a></p>';
 		echo '</form>';
 	}
-	echo '</div>';
+	echo '</div></div>';
 }

@@ -126,18 +126,22 @@ function lf_wizard_sanitize_areas($input): array {
 function lf_wizard_render_page(): void {
 	$complete = (bool) get_option('lf_setup_wizard_complete', false);
 	$settings_saved = isset($_GET['settings_saved']) && $_GET['settings_saved'] === '1';
+	$reset_done = isset($_GET['reset_done']) && $_GET['reset_done'] === '1';
+	$reset_error = isset($_GET['reset_error']) ? sanitize_text_field($_GET['reset_error']) : '';
 	if ($complete && !isset($_GET['done'])) {
 		echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
 		if ($settings_saved) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Settings saved.', 'leadsforward-core') . '</p></div>';
 		}
+		if ($reset_done) {
+			echo '<div class="notice notice-success"><p>' . esc_html__('Site reset complete. You can run the setup wizard again.', 'leadsforward-core') . '</p></div>';
+		}
+		if ($reset_error === 'confirm') {
+			echo '<div class="notice notice-error"><p>' . esc_html__('You must type RESET exactly to confirm.', 'leadsforward-core') . '</p></div>';
+		}
 		lf_wizard_render_setup_settings_panel();
 		echo '<p>' . esc_html__('Setup is already complete. Your site has the required pages, menus, and structure.', 'leadsforward-core') . '</p>';
-		echo '<p><a href="' . esc_url(admin_url('admin.php?page=lf-ops&reset=1')) . '" class="button">' . esc_html__('Show wizard again', 'leadsforward-core') . '</a>';
-		if (function_exists('lf_dev_reset_allowed') && lf_dev_reset_allowed() && current_user_can('manage_options')) {
-			echo ' <a href="' . esc_url(admin_url('admin.php?page=lf-dev-reset')) . '" class="button" style="background:#b32d2e;border-color:#b32d2e;color:#fff;">' . esc_html__('RESET SITE (DEV ONLY)', 'leadsforward-core') . '</a>';
-		}
-		echo '</p></div>';
+		echo '<p><a href="' . esc_url(admin_url('admin.php?page=lf-ops&reset=1')) . '" class="button">' . esc_html__('Show wizard again', 'leadsforward-core') . '</a></p></div>';
 		return;
 	}
 	if (isset($_GET['reset']) && current_user_can('edit_theme_options')) {
@@ -149,6 +153,12 @@ function lf_wizard_render_page(): void {
 		echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
 		if ($settings_saved) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Settings saved.', 'leadsforward-core') . '</p></div>';
+		}
+		if ($reset_done) {
+			echo '<div class="notice notice-success"><p>' . esc_html__('Site reset complete. You can run the setup wizard again.', 'leadsforward-core') . '</p></div>';
+		}
+		if ($reset_error === 'confirm') {
+			echo '<div class="notice notice-error"><p>' . esc_html__('You must type RESET exactly to confirm.', 'leadsforward-core') . '</p></div>';
 		}
 		lf_wizard_render_setup_settings_panel();
 		echo '<p class="notice notice-success">' . esc_html__('Site setup complete. You can now customize Theme Options and edit pages.', 'leadsforward-core') . '</p>';
@@ -163,6 +173,12 @@ function lf_wizard_render_page(): void {
 	echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
 	if ($settings_saved) {
 		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Settings saved.', 'leadsforward-core') . '</p></div>';
+	}
+	if ($reset_done) {
+		echo '<div class="notice notice-success"><p>' . esc_html__('Site reset complete. You can run the setup wizard again.', 'leadsforward-core') . '</p></div>';
+	}
+	if ($reset_error === 'confirm') {
+		echo '<div class="notice notice-error"><p>' . esc_html__('You must type RESET exactly to confirm.', 'leadsforward-core') . '</p></div>';
 	}
 	lf_wizard_render_setup_settings_panel();
 	if ($errors) {
@@ -313,5 +329,18 @@ function lf_wizard_render_setup_settings_panel(): void {
 			<p class="submit"><button type="submit" class="button button-primary"><?php esc_html_e('Save Settings', 'leadsforward-core'); ?></button></p>
 		</form>
 	</div>
+	<?php if (function_exists('lf_dev_reset_allowed') && lf_dev_reset_allowed() && current_user_can('manage_options')) : ?>
+		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0; border-left: 4px solid #b32d2e;">
+			<h2 style="margin-top:0;"><?php esc_html_e('Reset site (dev only)', 'leadsforward-core'); ?></h2>
+			<p class="description"><?php esc_html_e('Deletes content, menus, and options created by the setup wizard. Available only in local/dev environments.', 'leadsforward-core'); ?></p>
+			<form method="post" action="<?php echo esc_url(admin_url('admin.php?page=lf-ops')); ?>">
+				<?php wp_nonce_field('lf_dev_reset', 'lf_dev_reset_nonce'); ?>
+				<input type="hidden" name="lf_dev_reset" value="1" />
+				<p><label for="lf_dev_reset_confirm"><?php esc_html_e('Type RESET to confirm:', 'leadsforward-core'); ?></label><br />
+					<input type="text" id="lf_dev_reset_confirm" name="lf_dev_reset_confirm" value="" autocomplete="off" style="text-transform:uppercase;" /></p>
+				<p><input type="submit" class="button" value="<?php esc_attr_e('RESET SITE (DEV ONLY)', 'leadsforward-core'); ?>" style="background:#b32d2e;border-color:#b32d2e;color:#fff;" /></p>
+			</form>
+		</div>
+	<?php endif; ?>
 	<?php
 }
