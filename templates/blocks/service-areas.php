@@ -15,7 +15,7 @@ $block_id = $block['id'] ?? '';
 $variant = $block['variant'] ?? 'default';
 $context = $block['context'] ?? [];
 $section = $context['section'] ?? [];
-$heading = !empty($section['section_heading']) ? $section['section_heading'] : __('Service Areas', 'leadsforward-core');
+$heading = !empty($section['section_heading']) ? $section['section_heading'] : __('Areas We Serve', 'leadsforward-core');
 $intro   = !empty($section['section_intro']) ? $section['section_intro'] : '';
 
 $query = new WP_Query([

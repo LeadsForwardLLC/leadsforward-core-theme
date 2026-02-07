@@ -65,8 +65,8 @@ function lf_homepage_default_section_config(string $section_type): array {
 	switch ($section_type) {
 		case 'hero':
 			return array_merge($base, [
-				'hero_headline'     => '',
-				'hero_subheadline'  => '',
+				'hero_headline'     => __('Professional Home Services in Your Area', 'leadsforward-core'),
+				'hero_subheadline'  => __('Trusted by local homeowners. Get a free quote or schedule service today.', 'leadsforward-core'),
 				'hero_cta_override' => '',
 			]);
 		case 'trust_reviews':
@@ -77,12 +77,12 @@ function lf_homepage_default_section_config(string $section_type): array {
 		case 'service_grid':
 			return array_merge($base, [
 				'section_heading' => __('Our Services', 'leadsforward-core'),
-				'section_intro'   => __('We offer professional landscaping and lawn care tailored to your property.', 'leadsforward-core'),
+				'section_intro'   => __('Professional service you can trust. We handle the work so you can focus on what matters.', 'leadsforward-core'),
 			]);
 		case 'service_areas':
 			return array_merge($base, [
-				'section_heading' => __('Service Areas', 'leadsforward-core'),
-				'section_intro'   => __('Proudly serving the following communities and surrounding areas.', 'leadsforward-core'),
+				'section_heading' => __('Areas We Serve', 'leadsforward-core'),
+				'section_intro'   => __('Proudly serving these communities and the surrounding region. Contact us to confirm coverage.', 'leadsforward-core'),
 			]);
 		case 'faq_accordion':
 		case 'map_nap':

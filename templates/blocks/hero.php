@@ -19,7 +19,7 @@ $section  = $context['section'] ?? [];
 $variant  = $block['variant'] ?? 'default';
 $block_id = $block['id'] ?? '';
 
-$heading = get_the_title() ?: __('Welcome', 'leadsforward-core');
+$heading = get_the_title() ?: __('Quality Local Service', 'leadsforward-core');
 $subheading = '';
 $cta_text = function_exists('lf_get_option') ? lf_get_option('lf_cta_primary_text', 'option') : '';
 
@@ -27,7 +27,7 @@ if (!empty($context['homepage']) && !empty($section)) {
 	if (!empty($section['hero_headline'])) {
 		$heading = $section['hero_headline'];
 	} else {
-		$default_heading = lf_get_option('lf_business_name', 'option') ?: get_bloginfo('name') ?: __('Welcome', 'leadsforward-core');
+		$default_heading = lf_get_option('lf_business_name', 'option') ?: get_bloginfo('name') ?: __('Quality Local Service', 'leadsforward-core');
 		$heading = function_exists('lf_copy_template') ? lf_copy_template('hero_headline', $default_heading, [
 			'business_name' => lf_get_option('lf_business_name', 'option'),
 			'service'       => '',

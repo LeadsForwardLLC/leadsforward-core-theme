@@ -3,6 +3,27 @@
  * No magic numbers; no per-page CSS; no JS for visuals.
  *
  * Core layer: spacing system, typography scale, buttons, containers, vertical rhythm.
+ *
+ * -------------------------------------------------------------------------
+ * HOMEPAGE BASE SKIN — Visual language & layout philosophy
+ * -------------------------------------------------------------------------
+ * This is the default home-services skin. Niches extend from it.
+ *
+ * VISUAL LANGUAGE
+ * - Typography: One clear H1 (hero). Section H2s as chapter markers. Body readable.
+ * - Color: Primary = action/trust. White/off-white sections. Dark CTA band. Muted secondary.
+ * - Spacing: Generous rhythm. Content constrained (narrow/wide). Sections breathe.
+ * - Components: Cards = tappable. CTAs = obvious buttons. Trust = visible but not noisy.
+ *
+ * LAYOUT PHILOSOPHY
+ * - Above fold: One value prop, one primary CTA, optional trust line.
+ * - Sections: Single-column focus. Clear section titles. Services/areas = choice grids.
+ *   One testimonial spotlight. FAQ scannable. Final CTA = full-bleed conversion band.
+ * - Conversion hierarchy: Hero CTA + Final CTA = conversion peaks. Service/area links =
+ *   consideration. Trust supports credibility.
+ * - Mobile-first: Same hierarchy, stacked. Touch targets, no horizontal scroll.
+ *
+ * -------------------------------------------------------------------------
  */
 
 /* -------------------------------------------------------------------------
@@ -127,6 +148,7 @@
 	/* Hero min-height (CLS-safe) */
 	--lf-hero-min-height: 18rem;
 	--lf-hero-min-height--compact: 15rem;
+	--lf-hero-title-max: 2.75rem;
 
 	/* Grid: min column width */
 	--lf-grid-min: 12.5rem;
@@ -154,6 +176,14 @@
 
 .site-main--homepage .lf-block + .lf-block {
 	margin-top: var(--lf-homepage-section-gap);
+}
+
+/* Homepage base skin: section headings as clear chapter markers */
+.site-main--homepage .lf-block-service-grid__title,
+.site-main--homepage .lf-block-service-areas__title,
+.site-main--homepage .lf-block-trust-reviews__title,
+.site-main--homepage .lf-block-faq-accordion__title {
+	letter-spacing: -0.02em;
 }
 
 .site-main h1,
@@ -273,6 +303,12 @@ button:focus-visible,
 
 .lf-section--alt {
 	background-color: var(--lf-neutral-100);
+}
+
+/* Readable prose (intro / long-form text) */
+.lf-prose {
+	max-width: var(--lf-container-narrow);
+	line-height: var(--lf-line-height-body);
 }
 
 .site-main {
@@ -521,11 +557,12 @@ button:focus-visible,
 }
 
 .lf-block-hero__title {
-	font-size: clamp(var(--lf-fs-h2), 5vw, var(--lf-fs-h1));
+	font-size: clamp(var(--lf-fs-h2), 4.5vw, var(--lf-hero-title-max));
 	font-weight: var(--lf-heading-weight);
 	line-height: var(--lf-line-height-heading);
 	margin: 0 0 var(--lf-hero-stack-after-title);
 	color: var(--lf-text);
+	letter-spacing: -0.02em;
 }
 
 .lf-block-hero__subtitle {
@@ -546,6 +583,8 @@ button:focus-visible,
 
 .lf-block-hero__cta .lf-btn {
 	white-space: nowrap;
+	font-size: var(--lf-fs-medium);
+	padding: var(--lf-btn-pad-y) var(--lf-btn-pad-x-lg);
 }
 
 .lf-block-hero__trust {
@@ -703,6 +742,7 @@ button:focus-visible,
 	font-weight: var(--lf-fw-normal);
 	color: var(--lf-muted);
 	line-height: var(--lf-line-height-body);
+	max-width: var(--lf-container-narrow);
 }
 
 .lf-block-service-areas__list {
@@ -845,7 +885,7 @@ button:focus-visible,
 	display: inline-block;
 	background-color: var(--lf-cta-block-text);
 	color: var(--lf-cta-block-bg);
-	padding: var(--lf-btn-pad-y) var(--lf-btn-pad-x-lg);
+	padding: calc(var(--lf-btn-pad-y) * 1.25) var(--lf-btn-pad-x-lg);
 	min-height: var(--lf-touch-min);
 	box-sizing: border-box;
 	line-height: 1.25;
