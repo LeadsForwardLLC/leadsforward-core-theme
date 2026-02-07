@@ -1020,7 +1020,15 @@ button:focus-visible,
    ------------------------------------------------------------------------- */
 .lf-block-cta {
 	background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-	color: #fff;
+	color: #ffffff;
+}
+
+/* Force all text in CTA to be readable on dark (override theme/global) */
+.lf-block-cta .lf-block-cta__inner,
+.lf-block-cta .lf-block-cta__headline,
+.lf-block-cta .lf-block-cta__primary,
+.lf-block-cta .lf-block-cta__secondary {
+	color: inherit;
 }
 
 .site-main--homepage .lf-block-cta {
@@ -1043,25 +1051,26 @@ button:focus-visible,
 
 .lf-block-cta__headline {
 	margin: 0 0 1.5rem;
-	font-size: 2.25rem;
+	font-size: clamp(1.75rem, 4vw, 2.5rem);
 	font-weight: 800;
 	line-height: 1.15;
 	letter-spacing: -0.03em;
-	color: #ffffff;
-	text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+	color: #ffffff !important;
+	text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 .lf-block-cta__primary {
-	margin: 0 0 0.75rem;
+	margin: 0 0 1rem;
 }
 
+/* Primary CTA button: brand accent, high contrast, unmistakable */
 .lf-block-cta__primary-link,
 .lf-block-cta__primary-text {
 	display: inline-block;
-	background: #fff;
-	color: #0f172a;
-	padding: 1.125rem 2.5rem;
-	min-height: 3.25rem;
+	background: var(--lf-primary, #2563eb);
+	color: #ffffff !important;
+	padding: 1.25rem 2.75rem;
+	min-height: 3.5rem;
 	box-sizing: border-box;
 	line-height: 1.25;
 	vertical-align: middle;
@@ -1069,24 +1078,32 @@ button:focus-visible,
 	font-weight: 700;
 	font-size: 1.25rem;
 	text-decoration: none;
-	box-shadow: 0 10px 30px -5px rgba(0,0,0,0.35), 0 4px 12px -2px rgba(0,0,0,0.2);
-	transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+	border: none;
+	box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.45), 0 10px 30px -5px rgba(0,0,0,0.4);
+	transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+	cursor: pointer;
+	white-space: normal;
+	overflow: visible;
+	text-align: center;
+	width: auto;
+	max-width: 100%;
 }
 
-.lf-block-cta__primary-link:hover {
-	background: #f8fafc;
-	color: #0f172a;
+.lf-block-cta__primary-link:hover,
+.lf-block-cta__primary-text:hover {
+	background: #3b82f6;
+	color: #ffffff !important;
 	text-decoration: none;
-	transform: translateY(-2px);
-	box-shadow: 0 16px 40px -5px rgba(0,0,0,0.4), 0 6px 16px -2px rgba(0,0,0,0.25);
-	filter: brightness(1.02);
+	transform: translateY(-3px);
+	box-shadow: 0 8px 24px 0 rgba(37, 99, 235, 0.5), 0 16px 40px -5px rgba(0,0,0,0.45);
 }
 
 .lf-block-cta__secondary {
-	margin: 0.75rem 0 0;
-	font-size: 1rem;
-	color: #cbd5e1;
+	margin: 1rem 0 0;
+	font-size: 1.0625rem;
+	color: #e2e8f0 !important;
 	line-height: 1.5;
+	text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
 .lf-block-cta__embed {
@@ -1095,8 +1112,8 @@ button:focus-visible,
 
 .lf-block-cta--b .lf-block-cta__primary-link,
 .lf-block-cta--b .lf-block-cta__primary-text {
-	padding: 1rem 2.5rem;
-	font-size: 1.125rem;
+	padding: 1.25rem 2.75rem;
+	font-size: 1.25rem;
 }
 
 /* -------------------------------------------------------------------------
@@ -1198,6 +1215,10 @@ button:focus-visible,
 /* -------------------------------------------------------------------------
    Block: Map + NAP
    ------------------------------------------------------------------------- */
+.lf-block-map-nap {
+	min-height: 6rem;
+}
+
 .lf-block-map-nap__inner {
 	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
 	max-width: var(--lf-container-wide);
@@ -1205,6 +1226,14 @@ button:focus-visible,
 	margin-right: auto;
 	display: grid;
 	gap: var(--lf-gap-loose);
+}
+
+.lf-block-map-nap__empty {
+	margin: 0;
+	padding: 1rem 0;
+	font-size: 1rem;
+	color: var(--lf-muted);
+	line-height: 1.5;
 }
 
 @media (min-width: 640px) {
@@ -1306,12 +1335,12 @@ html {
 
 	.lf-block-cta__primary-link,
 	.lf-block-cta__primary-text {
-		display: block;
-		width: 100%;
+		display: inline-block;
+		width: auto;
+		max-width: 100%;
 		text-align: center;
 		min-height: var(--lf-touch-min);
-		padding-left: var(--lf-section-padding-x);
-		padding-right: var(--lf-section-padding-x);
+		padding: 1rem 1.5rem;
 	}
 
 	.lf-block-service-grid__list,

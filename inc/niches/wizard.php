@@ -13,7 +13,6 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-add_action('admin_menu', 'lf_wizard_add_menu');
 add_action('admin_init', 'lf_wizard_handle_post');
 add_action('admin_notices', 'lf_wizard_admin_notice');
 add_action('after_switch_theme', 'lf_wizard_on_activation');
@@ -30,25 +29,15 @@ function lf_wizard_admin_notice(): void {
 		return;
 	}
 	$screen = get_current_screen();
-	if (!$screen || $screen->id !== 'appearance_page_lf-setup-wizard') {
-		echo '<div class="notice notice-info"><p>' . sprintf(
-			/* translators: %s: link to setup wizard */
-			esc_html__('LeadsForward: Complete your site setup in one go. %s', 'leadsforward-core'),
-			'<a href="' . esc_url(admin_url('themes.php?page=lf-setup-wizard')) . '">' . esc_html__('Run setup wizard', 'leadsforward-core') . '</a>'
-		) . '</p></div>';
+	// Hide notice on any LeadsForward admin page (Setup lives under LeadsForward menu)
+	if ($screen && strpos($screen->id, 'lf-ops') !== false) {
+		return;
 	}
-}
-
-function lf_wizard_add_menu(): void {
-	$complete = (bool) get_option('lf_setup_wizard_complete', false);
-	$title = $complete ? __('LeadsForward Setup', 'leadsforward-core') : __('LeadsForward Setup', 'leadsforward-core');
-	add_theme_page(
-		$title,
-		$title,
-		'edit_theme_options',
-		'lf-setup-wizard',
-		'lf_wizard_render_page'
-	);
+	echo '<div class="notice notice-info"><p>' . sprintf(
+		/* translators: %s: link to setup wizard */
+		esc_html__('LeadsForward: Complete your site setup in one go. %s', 'leadsforward-core'),
+		'<a href="' . esc_url(admin_url('admin.php?page=lf-setup-wizard')) . '">' . esc_html__('Run setup wizard', 'leadsforward-core') . '</a>'
+	) . '</p></div>';
 }
 
 function lf_wizard_handle_post(): void {
@@ -73,10 +62,10 @@ function lf_wizard_handle_post(): void {
 			if (!empty($result['ids']) && is_array($result['ids'])) {
 				update_option('lf_wizard_created_ids', $result['ids']);
 			}
-			wp_redirect(admin_url('themes.php?page=lf-setup-wizard&done=1'));
+			wp_redirect(admin_url('admin.php?page=lf-setup-wizard&done=1'));
 			exit;
 		}
-		wp_redirect(admin_url('themes.php?page=lf-setup-wizard&step=5&errors=1&msg=' . urlencode(implode('; ', $result['errors']))));
+		wp_redirect(admin_url('admin.php?page=lf-setup-wizard&step=5&errors=1&msg=' . urlencode(implode('; ', $result['errors']))));
 		exit;
 	}
 }
@@ -94,16 +83,16 @@ function lf_wizard_render_page(): void {
 	if ($complete && !isset($_GET['done'])) {
 		echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
 		echo '<p>' . esc_html__('Setup is already complete. Your site has the required pages, menus, and structure.', 'leadsforward-core') . '</p>';
-		echo '<p><a href="' . esc_url(admin_url('themes.php?page=lf-setup-wizard&reset=1')) . '" class="button">' . esc_html__('Show wizard again', 'leadsforward-core') . '</a>';
+		echo '<p><a href="' . esc_url(admin_url('admin.php?page=lf-setup-wizard&reset=1')) . '" class="button">' . esc_html__('Show wizard again', 'leadsforward-core') . '</a>';
 		if (function_exists('lf_dev_reset_allowed') && lf_dev_reset_allowed() && current_user_can('manage_options')) {
-			echo ' <a href="' . esc_url(admin_url('themes.php?page=lf-dev-reset')) . '" class="button" style="background:#b32d2e;border-color:#b32d2e;color:#fff;">' . esc_html__('RESET SITE (DEV ONLY)', 'leadsforward-core') . '</a>';
+			echo ' <a href="' . esc_url(admin_url('admin.php?page=lf-dev-reset')) . '" class="button" style="background:#b32d2e;border-color:#b32d2e;color:#fff;">' . esc_html__('RESET SITE (DEV ONLY)', 'leadsforward-core') . '</a>';
 		}
 		echo '</p></div>';
 		return;
 	}
 	if (isset($_GET['reset']) && current_user_can('edit_theme_options')) {
 		delete_option('lf_setup_wizard_complete');
-		wp_redirect(admin_url('themes.php?page=lf-setup-wizard'));
+		wp_redirect(admin_url('admin.php?page=lf-setup-wizard'));
 		exit;
 	}
 	if (isset($_GET['done'])) {
@@ -124,12 +113,12 @@ function lf_wizard_render_page(): void {
 	echo '<p>' . esc_html__('Step', 'leadsforward-core') . ' ' . $step . ' / 5</p>';
 
 	$method = 'post';
-	$action = admin_url('themes.php?page=lf-setup-wizard');
+	$action = admin_url('admin.php?page=lf-setup-wizard');
 	$niche = isset($_GET['niche']) ? sanitize_text_field($_GET['niche']) : '';
 	$profiles = ['a' => __('Clean + Minimal', 'leadsforward-core'), 'b' => __('Bold + High Contrast', 'leadsforward-core'), 'c' => __('Trust Heavy', 'leadsforward-core'), 'd' => __('Service Heavy', 'leadsforward-core'), 'e' => __('Offer/Promo Heavy', 'leadsforward-core')];
 
 	if ($step === 1) {
-		echo '<form method="get" action="' . esc_url(admin_url('themes.php')) . '">';
+		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup-wizard')) . '">';
 		echo '<input type="hidden" name="page" value="lf-setup-wizard" />';
 		echo '<input type="hidden" name="step" value="2" />';
 		echo '<table class="form-table"><tr><th scope="row">' . esc_html__('Niche', 'leadsforward-core') . '</th><td><select name="niche" required>';
@@ -140,7 +129,7 @@ function lf_wizard_render_page(): void {
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Next', 'leadsforward-core') . '" /></p></form>';
 	} elseif ($step === 2) {
 		$niche = $niche ?: array_key_first(lf_get_niche_registry());
-		echo '<form method="get" action="' . esc_url(admin_url('themes.php')) . '">';
+		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup-wizard')) . '">';
 		echo '<input type="hidden" name="page" value="lf-setup-wizard" />';
 		echo '<input type="hidden" name="step" value="3" />';
 		echo '<input type="hidden" name="niche" value="' . esc_attr($niche) . '" />';
@@ -161,7 +150,7 @@ function lf_wizard_render_page(): void {
 		$niche = $niche ?: array_key_first(lf_get_niche_registry());
 		$n = lf_get_niche($niche);
 		$services_list = $n ? implode(', ', $n['services']) : '';
-		echo '<form method="get" action="' . esc_url(admin_url('themes.php')) . '">';
+		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup-wizard')) . '">';
 		echo '<input type="hidden" name="page" value="lf-setup-wizard" />';
 		echo '<input type="hidden" name="step" value="4" />';
 		echo '<input type="hidden" name="niche" value="' . esc_attr($niche) . '" />';
@@ -178,7 +167,7 @@ function lf_wizard_render_page(): void {
 		$niche = $niche ?: array_key_first(lf_get_niche_registry());
 		$n = lf_get_niche($niche);
 		$rec = $n['variation_profile'] ?? 'a';
-		echo '<form method="get" action="' . esc_url(admin_url('themes.php')) . '">';
+		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup-wizard')) . '">';
 		echo '<input type="hidden" name="page" value="lf-setup-wizard" />';
 		echo '<input type="hidden" name="step" value="5" />';
 		echo '<input type="hidden" name="niche" value="' . esc_attr($niche) . '" />';
@@ -198,7 +187,7 @@ function lf_wizard_render_page(): void {
 	} else {
 		$step = 5;
 		$niche = $niche ?: array_key_first(lf_get_niche_registry());
-		echo '<form method="post" action="' . esc_url(admin_url('themes.php?page=lf-setup-wizard')) . '">';
+		echo '<form method="post" action="' . esc_url(admin_url('admin.php?page=lf-setup-wizard')) . '">';
 		wp_nonce_field('lf_wizard_generate', 'lf_wizard_nonce');
 		echo '<input type="hidden" name="lf_wizard_step" value="5" />';
 		echo '<input type="hidden" name="lf_wizard_generate" value="1" />';

@@ -12,13 +12,22 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+/** ACF options page slug for Global Business Info (NAP, geo, hours). */
+define('LF_OPTIONS_PAGE_BUSINESS', 'lf-business-info');
+
+/** Field names stored on the Business Info options page. */
+function lf_business_option_selectors(): array {
+	return ['lf_business_name', 'lf_business_phone', 'lf_business_email', 'lf_business_address', 'lf_business_geo', 'lf_business_hours'];
+}
+
 /**
  * Get ACF option. Works when ACF is disabled (returns default). Use for global Business/CTA/Schema.
- * ACF stores all options under 'option'; slug is for field group location only.
+ * Business Info fields are stored on the lf-business-info options page; others use the passed slug (default 'option').
  */
 function lf_get_option(string $selector, string $options_page_slug = 'option', $default = null) {
 	if (function_exists('get_field')) {
-		$value = get_field($selector, 'option');
+		$storage = in_array($selector, lf_business_option_selectors(), true) ? LF_OPTIONS_PAGE_BUSINESS : $options_page_slug;
+		$value = get_field($selector, $storage);
 		return $value !== null && $value !== false && $value !== '' ? $value : $default;
 	}
 	return $default;

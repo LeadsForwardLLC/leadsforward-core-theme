@@ -51,6 +51,19 @@ function lf_homepage_admin_save(): void {
 	if (!wp_verify_nonce($_POST['lf_homepage_settings_nonce'], 'lf_homepage_settings')) {
 		return;
 	}
+
+	/* Save Business Info globally (same storage as Theme Options → Business Info: lf-business-info) */
+	if (function_exists('update_field')) {
+		$business_slug = defined('LF_OPTIONS_PAGE_BUSINESS') ? LF_OPTIONS_PAGE_BUSINESS : 'lf-business-info';
+		update_field('lf_business_name', isset($_POST['lf_business_name']) ? sanitize_text_field(wp_unslash($_POST['lf_business_name'])) : '', $business_slug);
+		update_field('lf_business_phone', isset($_POST['lf_business_phone']) ? sanitize_text_field(wp_unslash($_POST['lf_business_phone'])) : '', $business_slug);
+		update_field('lf_business_email', isset($_POST['lf_business_email']) ? sanitize_email(wp_unslash($_POST['lf_business_email'])) : '', $business_slug);
+		update_field('lf_business_address', isset($_POST['lf_business_address']) ? sanitize_textarea_field(wp_unslash($_POST['lf_business_address'])) : '', $business_slug);
+		$lat = isset($_POST['lf_business_geo_lat']) ? sanitize_text_field(wp_unslash($_POST['lf_business_geo_lat'])) : '';
+		$lng = isset($_POST['lf_business_geo_lng']) ? sanitize_text_field(wp_unslash($_POST['lf_business_geo_lng'])) : '';
+		update_field('lf_business_geo', ['lat' => $lat !== '' ? (float) $lat : '', 'lng' => $lng !== '' ? (float) $lng : ''], $business_slug);
+	}
+
 	$order = lf_homepage_controller_order();
 	$config = lf_get_homepage_section_config();
 	$allowed_variants = ['default', 'a', 'b', 'c'];
@@ -122,8 +135,55 @@ function lf_homepage_admin_render(): void {
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Settings saved.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
 		<p class="description"><?php esc_html_e('Sections appear in a fixed order. Turn sections on or off and edit copy below. Layout order cannot be changed.', 'leadsforward-core'); ?></p>
+
 		<form method="post" action="">
 			<?php wp_nonce_field('lf_homepage_settings', 'lf_homepage_settings_nonce'); ?>
+		<?php
+		$business_slug    = defined('LF_OPTIONS_PAGE_BUSINESS') ? LF_OPTIONS_PAGE_BUSINESS : 'lf-business-info';
+		$business_name    = function_exists('get_field') ? get_field('lf_business_name', $business_slug) : '';
+		$business_phone   = function_exists('get_field') ? get_field('lf_business_phone', $business_slug) : '';
+		$business_email   = function_exists('get_field') ? get_field('lf_business_email', $business_slug) : '';
+		$business_address = function_exists('get_field') ? get_field('lf_business_address', $business_slug) : '';
+		$business_geo     = function_exists('get_field') ? get_field('lf_business_geo', $business_slug) : null;
+		$geo_lat          = is_array($business_geo) ? ($business_geo['lat'] ?? '') : '';
+		$geo_lng          = is_array($business_geo) ? ($business_geo['lng'] ?? '') : '';
+		if (!is_string($business_name)) { $business_name = ''; }
+		if (!is_string($business_phone)) { $business_phone = ''; }
+		if (!is_string($business_email)) { $business_email = ''; }
+		if (!is_string($business_address)) { $business_address = ''; }
+		?>
+		<h2 id="lf-business-info" class="title"><?php esc_html_e('Business Info', 'leadsforward-core'); ?></h2>
+		<p class="description"><?php esc_html_e('Used site-wide: footer, Map + NAP section, schema, and CTAs. Same data as the startup wizard—edit here anytime.', 'leadsforward-core'); ?> <?php esc_html_e('Kept consistent for local SEO: NAP (name, address, phone) is output in one format everywhere and in LocalBusiness schema.', 'leadsforward-core'); ?></p>
+		<table class="form-table" role="presentation">
+			<tbody>
+				<tr>
+					<th scope="row"><label for="lf_business_name"><?php esc_html_e('Business name', 'leadsforward-core'); ?></label></th>
+					<td><input type="text" class="large-text" name="lf_business_name" id="lf_business_name" value="<?php echo esc_attr($business_name); ?>" /></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_business_phone"><?php esc_html_e('Phone', 'leadsforward-core'); ?></label></th>
+					<td><input type="text" class="regular-text" name="lf_business_phone" id="lf_business_phone" value="<?php echo esc_attr($business_phone); ?>" /></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_business_email"><?php esc_html_e('Email', 'leadsforward-core'); ?></label></th>
+					<td><input type="email" class="regular-text" name="lf_business_email" id="lf_business_email" value="<?php echo esc_attr($business_email); ?>" /></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_business_address"><?php esc_html_e('Address (NAP)', 'leadsforward-core'); ?></label></th>
+					<td><textarea class="large-text" name="lf_business_address" id="lf_business_address" rows="3"><?php echo esc_textarea($business_address); ?></textarea></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_business_geo_lat"><?php esc_html_e('Map coordinates (optional)', 'leadsforward-core'); ?></label></th>
+					<td>
+						<label><?php esc_html_e('Latitude', 'leadsforward-core'); ?> <input type="text" class="small-text" name="lf_business_geo_lat" id="lf_business_geo_lat" value="<?php echo esc_attr($geo_lat); ?>" placeholder="e.g. 27.3364" /></label>
+						&nbsp;
+						<label><?php esc_html_e('Longitude', 'leadsforward-core'); ?> <input type="text" class="small-text" name="lf_business_geo_lng" id="lf_business_geo_lng" value="<?php echo esc_attr($geo_lng); ?>" placeholder="e.g. -82.5307" /></label>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<h2 class="title"><?php esc_html_e('Homepage sections', 'leadsforward-core'); ?></h2>
 			<table class="form-table lf-homepage-sections" role="presentation">
 				<tbody>
 				<?php foreach ($order as $type) :
@@ -146,6 +206,9 @@ function lf_homepage_admin_render(): void {
 									<?php endforeach; ?>
 								</select>
 							</label>
+							<?php if ($type === 'map_nap') : ?>
+								<p class="description" style="margin: 0.5em 0 0;"><?php esc_html_e('Content comes from Business Info above. Fill that in and save to show name, address, and phone on the homepage.', 'leadsforward-core'); ?></p>
+							<?php endif; ?>
 						</td>
 					</tr>
 					<?php if ($type === 'hero') : ?>
