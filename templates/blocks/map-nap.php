@@ -110,7 +110,7 @@ $areas_query = new WP_Query([
 					<p class="lf-block-map-nap__empty"><?php esc_html_e('No service areas yet.', 'leadsforward-core'); ?></p>
 				<?php endif; ?>
 			</div>
-			<div class="lf-block-map-nap__card">
+			<div class="lf-block-map-nap__panel">
 				<div class="lf-block-map-nap__map-shell">
 					<?php if (is_string($map_embed_override) && $map_embed_override !== '') : ?>
 						<div class="lf-block-map-nap__map">
@@ -175,91 +175,6 @@ $areas_query = new WP_Query([
 						</div>
 					<?php endif; ?>
 				</div>
-
-				<?php if ($has_nap) : ?>
-					<address class="lf-block-map-nap__address">
-						<?php if ($name !== '') : ?>
-							<span class="lf-block-map-nap__name"><?php echo esc_html($name); ?></span>
-						<?php endif; ?>
-						<?php if ($address !== '') : ?>
-							<span class="lf-block-map-nap__street"><?php echo nl2br(esc_html($address)); ?></span>
-						<?php endif; ?>
-						<?php if ($phone !== '') : ?>
-							<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $phone)); ?>" class="lf-block-map-nap__phone"><?php echo esc_html($phone); ?></a>
-						<?php endif; ?>
-						<?php if ($email !== '') : ?>
-							<a href="mailto:<?php echo esc_attr($email); ?>" class="lf-block-map-nap__email"><?php echo esc_html($email); ?></a>
-						<?php endif; ?>
-					</address>
-				<?php elseif ($place_name || $place_address) : ?>
-					<address class="lf-block-map-nap__address">
-						<?php if ($place_name !== '') : ?>
-							<span class="lf-block-map-nap__name"><?php echo esc_html($place_name); ?></span>
-						<?php endif; ?>
-						<?php if ($place_address !== '') : ?>
-							<span class="lf-block-map-nap__street"><?php echo esc_html($place_address); ?></span>
-						<?php endif; ?>
-					</address>
-				<?php endif; ?>
-
-				<?php if ($reviews_query->have_posts()) : ?>
-					<div class="lf-block-map-nap__reviews">
-						<div class="lf-block-map-nap__reviews-head">
-							<span class="lf-block-map-nap__reviews-title"><?php esc_html_e('Customer reviews', 'leadsforward-core'); ?></span>
-							<?php if ($avg_rating > 0 || $reviews_total > 0) : ?>
-								<span class="lf-block-map-nap__reviews-summary">
-									<?php if ($avg_rating > 0) : ?>
-										<span class="lf-block-map-nap__reviews-score"><?php echo esc_html(number_format($avg_rating, 1)); ?></span>
-										<span class="lf-block-map-nap__reviews-stars" aria-hidden="true">
-											<?php
-											$filled = (int) round($avg_rating);
-											for ($s = 1; $s <= 5; $s++) :
-											?>
-												<svg class="lf-block-map-nap__reviews-star<?php echo $s <= $filled ? ' lf-block-map-nap__reviews-star--filled' : ''; ?>" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-											<?php endfor; ?>
-										</span>
-									<?php endif; ?>
-									<?php if ($reviews_total > 0) : ?>
-										<span class="lf-block-map-nap__reviews-count"><?php echo esc_html(sprintf(_n('%d review', '%d reviews', $reviews_total, 'leadsforward-core'), $reviews_total)); ?></span>
-									<?php endif; ?>
-								</span>
-							<?php endif; ?>
-						</div>
-						<ul class="lf-block-map-nap__review-list" role="list">
-							<?php while ($reviews_query->have_posts()) : $reviews_query->the_post();
-								$review_name = function_exists('get_field') ? get_field('lf_testimonial_reviewer_name') : '';
-								$review_rating = function_exists('get_field') ? (int) get_field('lf_testimonial_rating') : 5;
-								$review_text = function_exists('get_field') ? get_field('lf_testimonial_review_text') : get_the_excerpt();
-								$review_source = function_exists('get_field') ? get_field('lf_testimonial_source') : '';
-								if (!$review_name) {
-									$review_name = get_the_title();
-								}
-								if (!$review_text) {
-									$review_text = get_the_content();
-								}
-								$review_text = wp_trim_words($review_text, 22, '...');
-							?>
-								<li class="lf-block-map-nap__review-card">
-									<p class="lf-block-map-nap__review-text"><?php echo esc_html($review_text); ?></p>
-									<div class="lf-block-map-nap__review-meta">
-										<?php if ($review_rating) : ?>
-											<span class="lf-block-map-nap__review-stars" aria-label="<?php echo esc_attr(sprintf(__('%d stars', 'leadsforward-core'), $review_rating)); ?>">
-												<?php for ($s = 1; $s <= 5; $s++) : ?>
-													<svg class="lf-block-map-nap__review-star<?php echo $s <= $review_rating ? ' lf-block-map-nap__review-star--filled' : ''; ?>" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-												<?php endfor; ?>
-											</span>
-										<?php endif; ?>
-										<span class="lf-block-map-nap__review-name"><?php echo esc_html($review_name); ?></span>
-										<?php if ($review_source) : ?>
-											<span class="lf-block-map-nap__review-source"><?php echo esc_html($review_source); ?></span>
-										<?php endif; ?>
-									</div>
-								</li>
-							<?php endwhile; ?>
-						</ul>
-						<?php wp_reset_postdata(); ?>
-					</div>
-				<?php endif; ?>
 			</div>
 		</div>
 	</div>

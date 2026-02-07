@@ -1656,12 +1656,7 @@ button:focus-visible,
 	color: var(--lf-primary);
 }
 
-.lf-block-map-nap__card {
-	background: var(--lf-surface-card);
-	border-radius: 1rem;
-	border: 1px solid rgba(15,23,42,0.08);
-	box-shadow: 0 10px 30px rgba(15,23,42,0.08);
-	padding: 1.5rem;
+.lf-block-map-nap__panel {
 	display: grid;
 	gap: 1.25rem;
 }
@@ -1745,99 +1740,6 @@ button:focus-visible,
 		grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
 		align-items: start;
 	}
-}
-
-.lf-block-map-nap__reviews {
-	display: grid;
-	gap: 0.75rem;
-	padding-top: 0.5rem;
-	border-top: 1px solid rgba(15,23,42,0.08);
-}
-
-.lf-block-map-nap__reviews-head {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 1rem;
-	flex-wrap: wrap;
-}
-
-.lf-block-map-nap__reviews-title {
-	font-weight: 700;
-	color: var(--lf-text-primary);
-}
-
-.lf-block-map-nap__reviews-summary {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.4rem;
-	color: var(--lf-text-muted);
-	font-size: 0.9rem;
-}
-
-.lf-block-map-nap__reviews-stars,
-.lf-block-map-nap__review-stars {
-	display: inline-flex;
-	gap: 2px;
-	color: #f59e0b;
-}
-
-.lf-block-map-nap__reviews-star {
-	opacity: 0.3;
-}
-
-.lf-block-map-nap__reviews-star--filled {
-	opacity: 1;
-}
-
-.lf-block-map-nap__review-list {
-	list-style: none;
-	padding: 0;
-	margin: 0;
-	display: grid;
-	gap: 0.75rem;
-}
-
-.lf-block-map-nap__review-card {
-	padding: 0.85rem 1rem;
-	border-radius: 0.9rem;
-	background: var(--lf-surface-soft);
-	border: 1px solid rgba(15,23,42,0.08);
-}
-
-.lf-block-map-nap__review-text {
-	margin: 0 0 0.5rem;
-	color: var(--lf-text-primary);
-	font-size: 0.95rem;
-	line-height: 1.5;
-}
-
-.lf-block-map-nap__review-meta {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	flex-wrap: wrap;
-	font-size: 0.85rem;
-	color: var(--lf-text-muted);
-}
-
-.lf-block-map-nap__review-star {
-	opacity: 0.3;
-}
-
-.lf-block-map-nap__review-star--filled {
-	opacity: 1;
-}
-
-.lf-block-map-nap__review-name {
-	font-weight: 600;
-	color: var(--lf-text-primary);
-}
-
-.lf-block-map-nap__review-source {
-	padding: 0.15rem 0.5rem;
-	border-radius: 999px;
-	background: rgba(15,23,42,0.08);
 }
 
 .lf-block-map-nap__address {
