@@ -602,6 +602,22 @@ button:focus-visible,
 	margin: 0 auto var(--lf-hero-stack-after-subtitle);
 }
 
+.lf-block-hero__eyebrow {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0 auto 1rem;
+	padding: 0.35rem 0.9rem;
+	border-radius: 999px;
+	background: rgba(255,255,255,0.9);
+	border: 1px solid rgba(15,23,42,0.1);
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: #0f172a;
+}
+
 .lf-block-hero__cta {
 	display: flex;
 	flex-wrap: wrap;
@@ -708,6 +724,82 @@ button:focus-visible,
 
 .lf-block-hero--a .lf-block-hero__title { font-size: 1.875rem; }
 .lf-block-hero--a { padding: 3rem 1.5rem; min-height: var(--lf-hero-min-height--compact); }
+
+.lf-block-hero--b {
+	text-align: left;
+	padding: 5.5rem 1.5rem;
+}
+
+.lf-block-hero--b .lf-block-hero__inner {
+	max-width: 54rem;
+	margin-left: 0;
+}
+
+.lf-block-hero--b .lf-block-hero__eyebrow {
+	justify-content: flex-start;
+	margin-left: 0;
+}
+
+.lf-block-hero--b .lf-block-hero__subtitle {
+	margin-left: 0;
+}
+
+.lf-block-hero--b .lf-block-hero__cta,
+.lf-block-hero--b .lf-block-hero__trust {
+	justify-content: flex-start;
+}
+
+.lf-block-hero--b .lf-block-hero__bg {
+	background: radial-gradient(circle at 15% 15%, rgba(37, 99, 235, 0.2), transparent 55%), linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.lf-block-hero__offer {
+	margin: 1.5rem auto 0;
+	padding: 1.25rem 1.5rem;
+	max-width: 28rem;
+	text-align: left;
+	border-radius: 1rem;
+	background: rgba(255,255,255,0.95);
+	border: 1px solid rgba(15,23,42,0.1);
+	box-shadow: 0 12px 24px rgba(15,23,42,0.1);
+}
+
+.lf-block-hero__offer-label {
+	display: inline-block;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #1e293b;
+	margin-bottom: 0.75rem;
+}
+
+.lf-block-hero__offer-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: grid;
+	gap: 0.5rem;
+}
+
+.lf-block-hero__offer-item {
+	position: relative;
+	padding-left: 1.5rem;
+	color: #0f172a;
+	font-weight: 600;
+}
+
+.lf-block-hero__offer-item::before {
+	content: "✓";
+	position: absolute;
+	left: 0;
+	top: 0;
+	color: var(--lf-primary);
+}
+
+.lf-block-hero--c .lf-block-hero__bg {
+	background: linear-gradient(120deg, rgba(37, 99, 235, 0.15) 0%, rgba(14, 165, 233, 0.15) 100%), #f8fafc;
+}
 
 /* -------------------------------------------------------------------------
    Block: Services — Decision drivers, premium cards
@@ -816,6 +908,39 @@ button:focus-visible,
 
 .lf-block-service-grid__empty { margin: 0; color: var(--lf-muted); }
 .lf-block-service-grid--a .lf-block-service-grid__list { grid-template-columns: 1fr; }
+
+.lf-block-service-grid--a .lf-block-service-grid__link {
+	padding: 1.5rem 1.75rem;
+	border-left-width: 0;
+	border-radius: 0.75rem;
+	background: #f8fafc;
+	box-shadow: 0 10px 24px rgba(15,23,42,0.08);
+}
+
+.lf-block-service-grid--a .lf-block-service-grid__link:hover {
+	background: #eef2ff;
+	color: #0f172a;
+	box-shadow: 0 16px 32px rgba(15,23,42,0.12);
+	transform: translateY(-2px);
+}
+
+.lf-block-service-grid--a .lf-block-service-grid__card-action {
+	opacity: 1;
+}
+
+.lf-block-service-grid__card-index {
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: #94a3b8;
+}
+
+.lf-block-service-grid__card-desc {
+	font-size: 0.95rem;
+	line-height: 1.6;
+	color: #475569;
+}
 
 /* -------------------------------------------------------------------------
    Block: Service Areas — Local trust, same card language
@@ -927,6 +1052,49 @@ button:focus-visible,
 .lf-block-trust-reviews__header {
 	margin-bottom: 2.75rem;
 	text-align: center;
+}
+
+.lf-block-trust-reviews__summary {
+	margin-top: 1.25rem;
+	display: inline-flex;
+	align-items: center;
+	gap: 1rem;
+	flex-wrap: wrap;
+	background: rgba(255,255,255,0.9);
+	border: 1px solid rgba(15,23,42,0.08);
+	border-radius: 0.75rem;
+	padding: 0.75rem 1rem;
+	box-shadow: 0 6px 18px rgba(15,23,42,0.06);
+}
+
+.lf-block-trust-reviews__summary-score {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.15rem;
+	font-weight: 800;
+	color: #0f172a;
+}
+
+.lf-block-trust-reviews__summary-rating {
+	font-size: 1.5rem;
+}
+
+.lf-block-trust-reviews__summary-max {
+	font-size: 0.95rem;
+	opacity: 0.8;
+}
+
+.lf-block-trust-reviews__summary-meta {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	font-size: 0.9rem;
+	color: #475569;
+}
+
+.lf-block-trust-reviews__summary-count {
+	font-weight: 700;
+	color: #0f172a;
 }
 
 .lf-block-trust-reviews__title {
@@ -1042,11 +1210,34 @@ button:focus-visible,
 }
 
 .lf-block-cta__inner {
+	display: grid;
+	gap: 2rem;
 	padding: 5rem 1.5rem;
 	text-align: center;
 	max-width: 38rem;
 	margin-left: auto;
 	margin-right: auto;
+}
+
+.lf-block-cta__content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.lf-block-cta__eyebrow {
+	margin: 0 0 0.75rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.35rem 0.9rem;
+	border-radius: 999px;
+	background: rgba(255,255,255,0.1);
+	border: 1px solid rgba(255,255,255,0.2);
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
 }
 
 .lf-block-cta__headline {
@@ -1107,13 +1298,76 @@ button:focus-visible,
 }
 
 .lf-block-cta__embed {
-	margin-top: 2rem;
+	margin-top: 0;
+}
+
+.lf-block-cta__form {
+	background: rgba(255,255,255,0.08);
+	border: 1px solid rgba(255,255,255,0.12);
+	border-radius: 1rem;
+	padding: 1.5rem;
+}
+
+.lf-block-cta__offer {
+	margin-top: 1.5rem;
+	padding: 1rem 1.25rem;
+	border-radius: 0.9rem;
+	background: rgba(255,255,255,0.1);
+	border: 1px solid rgba(255,255,255,0.2);
+	text-align: left;
+}
+
+.lf-block-cta__offer-label {
+	display: inline-block;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	margin-bottom: 0.5rem;
+}
+
+.lf-block-cta__offer-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 0.4rem;
+}
+
+.lf-block-cta__offer-item {
+	position: relative;
+	padding-left: 1.25rem;
+	font-weight: 600;
+}
+
+.lf-block-cta__offer-item::before {
+	content: "✓";
+	position: absolute;
+	left: 0;
+	top: 0;
+	color: #22d3ee;
 }
 
 .lf-block-cta--b .lf-block-cta__primary-link,
 .lf-block-cta--b .lf-block-cta__primary-text {
 	padding: 1.25rem 2.75rem;
 	font-size: 1.25rem;
+}
+
+@media (min-width: 60rem) {
+	.lf-block-cta--b .lf-block-cta__inner {
+		grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+		max-width: 72rem;
+		text-align: left;
+		align-items: center;
+	}
+	.lf-block-cta--b .lf-block-cta__content {
+		align-items: flex-start;
+	}
+}
+
+.lf-block-cta--c {
+	background: linear-gradient(120deg, #0f172a 0%, #1e293b 60%, #0b3a4e 100%);
 }
 
 /* -------------------------------------------------------------------------

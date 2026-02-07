@@ -12,6 +12,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+$block_id = $block['id'] ?? '';
 $variant = $block['variant'] ?? 'default';
 $context = $block['context'] ?? [];
 $section = $context['section'] ?? [];
@@ -37,10 +38,23 @@ $query = new WP_Query([
 		</header>
 		<?php if ($query->have_posts()) : ?>
 			<ul class="lf-block-service-grid__list" role="list">
-				<?php while ($query->have_posts()) : $query->the_post(); ?>
+				<?php $index = 0; ?>
+				<?php while ($query->have_posts()) : $query->the_post();
+					$index++;
+					$excerpt = '';
+					if ($variant === 'a') {
+						$excerpt = wp_strip_all_tags(get_the_excerpt());
+					}
+				?>
 					<li class="lf-block-service-grid__item">
 						<a href="<?php the_permalink(); ?>" class="lf-block-service-grid__link">
+							<?php if ($variant === 'a') : ?>
+								<span class="lf-block-service-grid__card-index"><?php echo esc_html(str_pad((string) $index, 2, '0', STR_PAD_LEFT)); ?></span>
+							<?php endif; ?>
 							<span class="lf-block-service-grid__card-title"><?php the_title(); ?></span>
+							<?php if ($variant === 'a' && $excerpt !== '') : ?>
+								<span class="lf-block-service-grid__card-desc"><?php echo esc_html($excerpt); ?></span>
+							<?php endif; ?>
 							<span class="lf-block-service-grid__card-action" aria-hidden="true"><?php esc_html_e('View', 'leadsforward-core'); ?></span>
 						</a>
 					</li>

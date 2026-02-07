@@ -129,9 +129,10 @@ function lf_run_setup(array $data): array {
 		$profile = $data['variation_profile_override'] ?? $niche['variation_profile'] ?? 'a';
 		update_field('variation_profile', $profile, 'option');
 		update_field('lf_schema_review', !empty($niche['schema_review_enabled']), 'option');
-		if (function_exists('lf_homepage_apply_niche_config')) {
-			lf_homepage_apply_niche_config($data['niche_slug'], $data);
-		}
+	}
+	// Homepage section config: always apply so front shows sections (does not require ACF).
+	if (function_exists('lf_homepage_apply_niche_config')) {
+		lf_homepage_apply_niche_config($data['niche_slug'], $data);
 	}
 
 	// 5. Internal linking: service ↔ service area relationships

@@ -32,11 +32,38 @@ $query = new WP_Query([
 	'order'          => 'DESC',
 	'post_status'    => 'publish',
 ]);
+$review_total = is_array($query->posts) ? count($query->posts) : 0;
+$ratings_total = 0;
+$ratings_count = 0;
+if ($review_total > 0) {
+	foreach ($query->posts as $post) {
+		$rating = function_exists('get_field') ? (int) get_field('lf_testimonial_rating', $post->ID) : 5;
+		if ($rating > 0) {
+			$ratings_total += $rating;
+			$ratings_count++;
+		}
+	}
+}
+$avg_rating = $ratings_count > 0 ? round($ratings_total / $ratings_count, 1) : 0;
 ?>
 <section class="lf-block lf-block-trust-reviews lf-surface-soft lf-block-trust-reviews--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-trust-reviews__inner">
 		<header class="lf-block-trust-reviews__header">
 			<h2 class="lf-block-trust-reviews__title"><?php echo esc_html($heading); ?></h2>
+			<?php if ($variant === 'a' && $review_total > 0) : ?>
+				<div class="lf-block-trust-reviews__summary" role="note" aria-label="<?php esc_attr_e('Review summary', 'leadsforward-core'); ?>">
+					<?php if ($avg_rating > 0) : ?>
+						<div class="lf-block-trust-reviews__summary-score">
+							<span class="lf-block-trust-reviews__summary-rating"><?php echo esc_html(number_format($avg_rating, 1)); ?></span>
+							<span class="lf-block-trust-reviews__summary-max">/5</span>
+						</div>
+					<?php endif; ?>
+					<div class="lf-block-trust-reviews__summary-meta">
+						<span class="lf-block-trust-reviews__summary-count"><?php echo esc_html(sprintf(_n('%d review', '%d reviews', $review_total, 'leadsforward-core'), $review_total)); ?></span>
+						<span class="lf-block-trust-reviews__summary-label"><?php esc_html_e('Verified feedback', 'leadsforward-core'); ?></span>
+					</div>
+				</div>
+			<?php endif; ?>
 		</header>
 		<?php if ($query->have_posts()) : ?>
 			<ul class="lf-block-trust-reviews__list" role="list">

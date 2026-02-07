@@ -19,6 +19,21 @@ $section  = $context['section'] ?? [];
 $variant  = $block['variant'] ?? 'default';
 $block_id = $block['id'] ?? '';
 
+$eyebrow = '';
+$offer_label = '';
+$offer_items = [];
+if ($variant === 'b') {
+	$eyebrow = __('Trusted local specialists', 'leadsforward-core');
+} elseif ($variant === 'c') {
+	$eyebrow = __('Limited appointments available', 'leadsforward-core');
+	$offer_label = __('Offer highlights', 'leadsforward-core');
+	$offer_items = [
+		__('Fast, no-obligation estimate', 'leadsforward-core'),
+		__('Clear next steps in one call', 'leadsforward-core'),
+		__('Priority scheduling window', 'leadsforward-core'),
+	];
+}
+
 $heading = get_the_title() ?: __('Quality Local Service', 'leadsforward-core');
 $subheading = '';
 $cta_text = function_exists('lf_get_option') ? lf_get_option('lf_cta_primary_text', 'option') : '';
@@ -67,6 +82,9 @@ $show_trust_strip = $review_count > 0;
 <section class="lf-block lf-block-hero lf-block-hero--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-hero__bg" aria-hidden="true"></div>
 	<div class="lf-block-hero__inner">
+		<?php if ($eyebrow !== '') : ?>
+			<p class="lf-block-hero__eyebrow"><?php echo esc_html($eyebrow); ?></p>
+		<?php endif; ?>
 		<h1 class="lf-block-hero__title"><?php echo esc_html($heading); ?></h1>
 		<?php if ($subheading !== '') : ?>
 			<p class="lf-block-hero__subtitle"><?php echo esc_html($subheading); ?></p>
@@ -83,6 +101,16 @@ $show_trust_strip = $review_count > 0;
 				<?php if ($secondary_text !== '') : ?>
 					<span class="lf-block-hero__cta-secondary lf-btn lf-btn--secondary"><?php echo esc_html($secondary_text); ?></span>
 				<?php endif; ?>
+			</div>
+		<?php endif; ?>
+		<?php if ($variant === 'c' && !empty($offer_items)) : ?>
+			<div class="lf-block-hero__offer" role="note" aria-label="<?php esc_attr_e('Offer highlights', 'leadsforward-core'); ?>">
+				<span class="lf-block-hero__offer-label"><?php echo esc_html($offer_label); ?></span>
+				<ul class="lf-block-hero__offer-list" role="list">
+					<?php foreach ($offer_items as $item) : ?>
+						<li class="lf-block-hero__offer-item"><?php echo esc_html($item); ?></li>
+					<?php endforeach; ?>
+				</ul>
 			</div>
 		<?php endif; ?>
 		<div class="lf-block-hero__trust" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
