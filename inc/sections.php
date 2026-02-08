@@ -13,11 +13,28 @@ if (!defined('ABSPATH')) {
 }
 
 function lf_sections_registry(): array {
+	$bg_field = [
+		'key' => 'section_background',
+		'label' => __('Background', 'leadsforward-core'),
+		'type' => 'select',
+		'default' => 'light',
+		'options' => [
+			'light' => __('Light', 'leadsforward-core'),
+			'soft'  => __('Soft', 'leadsforward-core'),
+			'dark'  => __('Dark', 'leadsforward-core'),
+			'card'  => __('Card', 'leadsforward-core'),
+		],
+	];
+	$bg_soft = $bg_field;
+	$bg_soft['default'] = 'soft';
+	$bg_dark = $bg_field;
+	$bg_dark['default'] = 'dark';
 	return [
 		'hero' => [
 			'label' => __('Hero', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area'],
 			'fields' => [
+				$bg_soft,
 				['key' => 'hero_headline', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_subheadline', 'label' => __('Subheadline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'cta_primary_override', 'label' => __('Primary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
@@ -41,6 +58,7 @@ function lf_sections_registry(): array {
 			'label' => __('Trust Bar', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area'],
 			'fields' => [
+				$bg_field,
 				['key' => 'trust_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Trusted by local homeowners', 'leadsforward-core')],
 				['key' => 'trust_badges', 'label' => __('Badges (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Licensed & Insured' . "\n" . '5-Star Rated' . "\n" . 'Fast Response', 'leadsforward-core')],
 				['key' => 'trust_rating', 'label' => __('Rating override (optional)', 'leadsforward-core'), 'type' => 'number', 'default' => ''],
@@ -52,6 +70,7 @@ function lf_sections_registry(): array {
 			'label' => __('Benefits / Why Choose Us', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area'],
 			'fields' => [
+				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Why Homeowners Choose Us', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Clear pricing, fast response, and workmanship you can trust.', 'leadsforward-core')],
 				['key' => 'benefits_items', 'label' => __('Benefits (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Fast response windows' . "\n" . 'Licensed, insured professionals' . "\n" . 'Upfront pricing before work starts', 'leadsforward-core')],
@@ -62,6 +81,7 @@ function lf_sections_registry(): array {
 			'label' => __('Service Details', 'leadsforward-core'),
 			'contexts' => ['homepage'],
 			'fields' => [
+				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Service Details', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Everything you need to know before scheduling.', 'leadsforward-core')],
 				['key' => 'service_details_body', 'label' => __('Body copy', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
@@ -72,13 +92,16 @@ function lf_sections_registry(): array {
 		'content' => [
 			'label' => __('Content', 'leadsforward-core'),
 			'contexts' => ['service', 'service_area'],
-			'fields' => [],
+			'fields' => [
+				$bg_field,
+			],
 			'render' => 'lf_sections_render_content',
 		],
 		'process' => [
 			'label' => __('Process', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area'],
 			'fields' => [
+				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Our Process', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Simple, clear steps from first call to completion.', 'leadsforward-core')],
 				['key' => 'process_steps', 'label' => __('Steps (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Tell us what you need' . "\n" . 'Get a fast, clear estimate' . "\n" . 'Schedule and complete the work', 'leadsforward-core')],
@@ -89,6 +112,7 @@ function lf_sections_registry(): array {
 			'label' => __('FAQ', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area'],
 			'fields' => [
+				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Frequently Asked Questions', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Answers to common questions about scheduling and service.', 'leadsforward-core')],
 				['key' => 'faq_max_items', 'label' => __('Max items', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
@@ -99,6 +123,7 @@ function lf_sections_registry(): array {
 			'label' => __('CTA Band', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area'],
 			'fields' => [
+				$bg_dark,
 				['key' => 'cta_headline', 'label' => __('CTA headline', 'leadsforward-core'), 'type' => 'text', 'default' => __('Get a fast, no-obligation estimate', 'leadsforward-core')],
 				['key' => 'cta_subheadline', 'label' => __('Supporting text (optional)', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				['key' => 'cta_primary_override', 'label' => __('Primary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
@@ -124,6 +149,7 @@ function lf_sections_registry(): array {
 			'label' => __('Related Links', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area'],
 			'fields' => [
+				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Explore More', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Browse related services and areas we serve.', 'leadsforward-core')],
 				['key' => 'related_links_mode', 'label' => __('Links to show', 'leadsforward-core'), 'type' => 'select', 'default' => 'both', 'options' => [
@@ -138,6 +164,7 @@ function lf_sections_registry(): array {
 			'label' => __('Services Offered Here', 'leadsforward-core'),
 			'contexts' => ['service_area'],
 			'fields' => [
+				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Services in this area', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Explore the services available in your area.', 'leadsforward-core')],
 			],
@@ -147,6 +174,7 @@ function lf_sections_registry(): array {
 			'label' => __('Nearby Areas', 'leadsforward-core'),
 			'contexts' => ['service_area'],
 			'fields' => [
+				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Nearby service areas', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('We also serve these nearby locations.', 'leadsforward-core')],
 				['key' => 'nearby_areas_max', 'label' => __('Max areas', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
@@ -157,6 +185,7 @@ function lf_sections_registry(): array {
 			'label' => __('Service Areas + Map', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service'],
 			'fields' => [
+				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Areas We Serve', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Find us on the map and explore nearby neighborhoods.', 'leadsforward-core')],
 			],
@@ -253,6 +282,20 @@ function lf_sections_parse_lines(string $value): array {
 	return array_values(array_map('sanitize_text_field', $lines));
 }
 
+function lf_sections_bg_class(?string $value): string {
+	switch ($value) {
+		case 'soft':
+			return 'lf-surface-soft';
+		case 'dark':
+			return 'lf-surface-dark';
+		case 'card':
+			return 'lf-surface-card';
+		case 'light':
+		default:
+			return 'lf-surface-light';
+	}
+}
+
 function lf_sections_render_section(string $section_id, string $context, array $settings, \WP_Post $post): void {
 	$section = lf_sections_registry()[$section_id] ?? null;
 	if (!$section) {
@@ -264,9 +307,10 @@ function lf_sections_render_section(string $section_id, string $context, array $
 	}
 }
 
-function lf_sections_render_shell_open(string $id, string $title = '', string $intro = ''): void {
+function lf_sections_render_shell_open(string $id, string $title = '', string $intro = '', string $background = 'light'): void {
+	$bg_class = lf_sections_bg_class($background);
 	?>
-	<section class="lf-section lf-section--<?php echo esc_attr($id); ?>">
+	<section class="lf-section lf-section--<?php echo esc_attr($id); ?> <?php echo esc_attr($bg_class); ?>">
 		<div class="lf-section__inner">
 			<?php if ($title || $intro) : ?>
 				<header class="lf-section__header">
@@ -344,7 +388,8 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 	$secondary_url = $resolved['secondary_url'] ?? '';
 	$phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
 	?>
-	<section class="lf-section lf-section--hero">
+	<?php $bg_class = lf_sections_bg_class($settings['section_background'] ?? 'soft'); ?>
+	<section class="lf-section lf-section--hero <?php echo esc_attr($bg_class); ?>">
 		<div class="lf-section__inner">
 			<<?php echo $heading_tag; ?> class="lf-section__title"><?php echo esc_html($heading); ?></<?php echo $heading_tag; ?>>
 			<?php if ($sub) : ?><p class="lf-section__intro"><?php echo esc_html($sub); ?></p><?php endif; ?>
@@ -406,7 +451,7 @@ function lf_sections_render_trust_bar(string $context, array $settings, \WP_Post
 		$badges = [__('Licensed & Insured', 'leadsforward-core'), __('5-Star Rated', 'leadsforward-core')];
 	}
 	$title = $settings['trust_heading'] ?? '';
-	lf_sections_render_shell_open('trust-bar', $title, '');
+	lf_sections_render_shell_open('trust-bar', $title, '', $settings['section_background'] ?? 'light');
 	?>
 	<div class="lf-trust-bar">
 		<div class="lf-trust-bar__rating">
@@ -432,7 +477,7 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
 	$items = lf_sections_parse_lines((string) ($settings['benefits_items'] ?? ''));
-	lf_sections_render_shell_open('benefits', $title, $intro);
+	lf_sections_render_shell_open('benefits', $title, $intro, $settings['section_background'] ?? 'light');
 	?>
 	<div class="lf-benefits">
 		<?php foreach ($items as $item) : ?>
@@ -455,7 +500,7 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 		$body = wpautop($body);
 	}
 	$checklist = lf_sections_parse_lines((string) ($settings['service_details_checklist'] ?? ''));
-	lf_sections_render_shell_open('service-details', $title, $intro);
+	lf_sections_render_shell_open('service-details', $title, $intro, $settings['section_background'] ?? 'light');
 	?>
 	<div class="lf-service-details">
 		<?php if ($body) : ?>
@@ -478,7 +523,7 @@ function lf_sections_render_content(string $context, array $settings, \WP_Post $
 	if ($body === '') {
 		return;
 	}
-	lf_sections_render_shell_open('content', '', '');
+	lf_sections_render_shell_open('content', '', '', $settings['section_background'] ?? 'light');
 	?>
 	<div class="lf-prose"><?php echo wp_kses_post($body); ?></div>
 	<?php
@@ -488,7 +533,7 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
 	$steps = lf_sections_parse_lines((string) ($settings['process_steps'] ?? ''));
-	lf_sections_render_shell_open('process', $title, $intro);
+	lf_sections_render_shell_open('process', $title, $intro, $settings['section_background'] ?? 'light');
 	?>
 	<ol class="lf-process">
 		<?php foreach ($steps as $step) : ?>
@@ -505,6 +550,7 @@ function lf_sections_render_faq(string $context, array $settings, \WP_Post $post
 			'section_heading' => $settings['section_heading'] ?? '',
 			'section_intro' => $settings['section_intro'] ?? '',
 			'faq_max_items' => $settings['faq_max_items'] ?? '',
+			'section_background' => $settings['section_background'] ?? 'light',
 		];
 		$block = [
 			'id'         => 'lf-faq',
@@ -527,6 +573,7 @@ function lf_sections_render_cta_band(string $context, array $settings, \WP_Post 
 			'cta_primary_url' => $settings['cta_primary_url'] ?? '',
 			'cta_secondary_action' => $settings['cta_secondary_action'] ?? '',
 			'cta_secondary_url' => $settings['cta_secondary_url'] ?? '',
+			'section_background' => $settings['section_background'] ?? 'dark',
 		];
 		$block = [
 			'id'         => 'lf-cta-band',
@@ -575,7 +622,7 @@ function lf_sections_render_related_links(string $context, array $settings, \WP_
 	if (empty($links)) {
 		return;
 	}
-	lf_sections_render_shell_open('related-links', $title, $intro);
+	lf_sections_render_shell_open('related-links', $title, $intro, $settings['section_background'] ?? 'light');
 	?>
 	<ul class="lf-related-links" role="list">
 		<?php foreach ($links as $link) : ?>
@@ -597,7 +644,7 @@ function lf_sections_render_service_areas_served(string $context, array $setting
 function lf_sections_render_services_offered(string $context, array $settings, \WP_Post $post): void {
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
-	lf_sections_render_shell_open('services-offered', $title, $intro);
+	lf_sections_render_shell_open('services-offered', $title, $intro, $settings['section_background'] ?? 'light');
 	get_template_part('templates/parts/related-services');
 	lf_sections_render_shell_close();
 }
@@ -618,7 +665,7 @@ function lf_sections_render_nearby_areas(string $context, array $settings, \WP_P
 	if (!$query->have_posts()) {
 		return;
 	}
-	lf_sections_render_shell_open('nearby-areas', $title, $intro);
+	lf_sections_render_shell_open('nearby-areas', $title, $intro, $settings['section_background'] ?? 'light');
 	?>
 	<ul class="lf-related-links" role="list">
 		<?php while ($query->have_posts()) : $query->the_post(); ?>
@@ -635,6 +682,7 @@ function lf_sections_render_map_nap(string $context, array $settings, \WP_Post $
 		$section = [
 			'section_heading' => $settings['section_heading'] ?? '',
 			'section_intro'   => $settings['section_intro'] ?? '',
+			'section_background' => $settings['section_background'] ?? 'light',
 		];
 		$block = [
 			'id'         => 'lf-map-nap',

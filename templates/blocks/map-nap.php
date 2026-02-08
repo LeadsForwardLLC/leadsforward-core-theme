@@ -15,6 +15,7 @@ $block_id = $block['id'] ?? '';
 $variant  = $block['variant'] ?? 'default';
 $context  = $block['context'] ?? [];
 $section  = $context['section'] ?? [];
+$bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'light') : '';
 $name     = function_exists('lf_get_option') ? lf_get_option('lf_business_name', 'option') : '';
 $phone    = function_exists('lf_get_option') ? lf_get_option('lf_business_phone', 'option') : '';
 $email    = function_exists('lf_get_option') ? lf_get_option('lf_business_email', 'option') : '';
@@ -87,7 +88,7 @@ $areas_query = new WP_Query([
 	'no_found_rows'  => true,
 ]);
 ?>
-<section class="lf-block lf-block-map-nap lf-block-map-nap--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
+<section class="lf-block lf-block-map-nap <?php echo esc_attr($bg_class ?: 'lf-surface-light'); ?> lf-block-map-nap--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-map-nap__inner">
 		<div class="lf-block-map-nap__grid">
 			<div class="lf-block-map-nap__areas">

@@ -16,6 +16,7 @@ $block_id = $block['id'] ?? '';
 $context = $block['context'] ?? [];
 $section = $context['section'] ?? [];
 $variant = $block['variant'] ?? 'default';
+$bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'dark') : '';
 $headline = !empty($section['cta_headline']) ? $section['cta_headline'] : '';
 $subheadline = !empty($section['cta_subheadline']) ? $section['cta_subheadline'] : '';
 $eyebrow = '';
@@ -57,7 +58,7 @@ $cta_phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
 $use_phone_link = $cta_type === 'call' && $cta_phone && $primary;
 $show_form = ($cta_type === 'form' && $ghl_embed) || ($cta_type !== 'call' && $ghl_embed);
 ?>
-<section class="lf-block lf-block-cta lf-surface-dark lf-block-cta--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" aria-label="<?php esc_attr_e('Call to action', 'leadsforward-core'); ?>">
+<section class="lf-block lf-block-cta <?php echo esc_attr($bg_class ?: 'lf-surface-dark'); ?> lf-block-cta--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" aria-label="<?php esc_attr_e('Call to action', 'leadsforward-core'); ?>">
 	<div class="lf-block-cta__inner">
 		<div class="lf-block-cta__content">
 			<?php if ($eyebrow !== '') : ?>

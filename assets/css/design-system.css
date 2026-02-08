@@ -298,8 +298,8 @@ button:focus-visible,
 }
 
 .lf-section {
-	padding-top: var(--lf-section-padding-y);
-	padding-bottom: var(--lf-section-padding-y);
+	padding-top: var(--lf-section-padding-lg);
+	padding-bottom: var(--lf-section-padding-lg);
 	background: var(--lf-surface-light);
 }
 
@@ -359,7 +359,6 @@ button:focus-visible,
 }
 
 .lf-section--hero {
-	background: var(--lf-surface-soft);
 	border-bottom: 1px solid var(--lf-neutral-100);
 }
 
@@ -549,6 +548,10 @@ button:focus-visible,
 }
 
 /* Surface utilities — every section has an intentional surface */
+.lf-surface-light {
+	background-color: var(--lf-surface-light);
+}
+
 .lf-surface-white {
 	background-color: var(--lf-surface-white);
 }
@@ -560,6 +563,10 @@ button:focus-visible,
 .lf-surface-dark {
 	background-color: var(--lf-surface-dark);
 	color: var(--lf-cta-block-text);
+}
+
+.lf-surface-card {
+	background-color: var(--lf-surface-card, var(--lf-card-bg));
 }
 
 /* Containers visually anchor content */
@@ -1521,6 +1528,27 @@ button:focus-visible,
 	color: var(--lf-text-inverse);
 }
 
+/* CTA band on light surfaces */
+.lf-block-cta.lf-surface-light,
+.lf-block-cta.lf-surface-soft,
+.lf-block-cta.lf-surface-card {
+	background: inherit;
+	color: var(--lf-text);
+}
+
+.lf-block-cta.lf-surface-light .lf-block-cta__headline,
+.lf-block-cta.lf-surface-soft .lf-block-cta__headline,
+.lf-block-cta.lf-surface-card .lf-block-cta__headline {
+	color: var(--lf-text-primary) !important;
+	text-shadow: none;
+}
+
+.lf-block-cta.lf-surface-light .lf-block-cta__subheadline,
+.lf-block-cta.lf-surface-soft .lf-block-cta__subheadline,
+.lf-block-cta.lf-surface-card .lf-block-cta__subheadline {
+	color: var(--lf-text-muted);
+}
+
 /* Force all text in CTA to be readable on dark (override theme/global) */
 .lf-block-cta .lf-block-cta__inner,
 .lf-block-cta .lf-block-cta__headline,
@@ -1542,7 +1570,7 @@ button:focus-visible,
 .lf-block-cta__inner {
 	display: grid;
 	gap: 2rem;
-	padding: 5rem 1.5rem;
+	padding: var(--lf-section-padding-lg) var(--lf-section-padding-x);
 	text-align: center;
 	max-width: 38rem;
 	margin-left: auto;
@@ -1702,11 +1730,11 @@ button:focus-visible,
    Block: FAQ — Objection handling, clean typography, schema-safe
    ------------------------------------------------------------------------- */
 .lf-block-faq-accordion {
-	background: var(--lf-surface-light);
+	background: inherit;
 }
 
 .lf-block-faq-accordion__inner {
-	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+	padding: var(--lf-section-padding-lg) var(--lf-section-padding-x);
 	max-width: var(--lf-container-wide);
 	margin-left: auto;
 	margin-right: auto;
@@ -1816,7 +1844,7 @@ button:focus-visible,
 }
 
 .lf-block-map-nap__inner {
-	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+	padding: var(--lf-section-padding-lg) var(--lf-section-padding-x);
 	max-width: var(--lf-container-wide);
 	margin-left: auto;
 	margin-right: auto;

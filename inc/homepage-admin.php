@@ -92,6 +92,8 @@ function lf_homepage_admin_save(): void {
 		$config[$type]['enabled'] = !empty($_POST[$key_enabled]);
 		$v = isset($_POST[$key_variant]) && in_array($_POST[$key_variant], $allowed_variants, true) ? $_POST[$key_variant] : 'default';
 		$config[$type]['variant'] = $v;
+		$bg_value = isset($_POST['lf_hp_bg_' . $type]) ? sanitize_text_field($_POST['lf_hp_bg_' . $type]) : 'light';
+		$config[$type]['section_background'] = in_array($bg_value, ['light', 'soft', 'dark', 'card'], true) ? $bg_value : 'light';
 		if ($type === 'hero') {
 			$config[$type]['hero_headline'] = isset($_POST['lf_hp_hero_headline']) ? sanitize_text_field($_POST['lf_hp_hero_headline']) : '';
 			$config[$type]['hero_subheadline'] = isset($_POST['lf_hp_hero_subheadline']) ? sanitize_text_field($_POST['lf_hp_hero_subheadline']) : '';
@@ -377,6 +379,12 @@ function lf_homepage_admin_render(): void {
 		'b'       => __('Form First', 'leadsforward-core'),
 		'c'       => __('Visual Proof', 'leadsforward-core'),
 	];
+	$bg_options = [
+		'light' => __('Light', 'leadsforward-core'),
+		'soft'  => __('Soft', 'leadsforward-core'),
+		'dark'  => __('Dark', 'leadsforward-core'),
+		'card'  => __('Card', 'leadsforward-core'),
+	];
 	$saved = isset($_GET['saved']) && $_GET['saved'] === '1';
 	?>
 	<div class="wrap">
@@ -538,6 +546,17 @@ function lf_homepage_admin_render(): void {
 							<?php if ($type === 'map_nap') : ?>
 								<p class="description" style="margin: 0.5em 0 0;"><?php esc_html_e('Service areas and map come from Business Info + Service Areas. Select a place above to show the map.', 'leadsforward-core'); ?></p>
 							<?php endif; ?>
+						</td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="<?php echo esc_attr($type); ?>">
+						<th scope="row"><label for="lf_hp_bg_<?php echo esc_attr($type); ?>"><?php esc_html_e('Background', 'leadsforward-core'); ?></label></th>
+						<td>
+							<?php $bg_val = $sec['section_background'] ?? 'light'; ?>
+							<select name="lf_hp_bg_<?php echo esc_attr($type); ?>" id="lf_hp_bg_<?php echo esc_attr($type); ?>">
+								<?php foreach ($bg_options as $bg_key => $bg_label) : ?>
+									<option value="<?php echo esc_attr($bg_key); ?>" <?php selected($bg_val, $bg_key); ?>><?php echo esc_html($bg_label); ?></option>
+								<?php endforeach; ?>
+							</select>
 						</td>
 					</tr>
 					<?php if ($type === 'hero') : ?>

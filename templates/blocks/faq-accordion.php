@@ -15,6 +15,7 @@ $variant  = $block['variant'] ?? 'default';
 $block_id = $block['id'] ?? '';
 $context  = $block['context'] ?? [];
 $section  = $context['section'] ?? [];
+$bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'light') : '';
 $heading  = !empty($section['section_heading']) ? $section['section_heading'] : __('Frequently Asked Questions', 'leadsforward-core');
 $intro    = !empty($section['section_intro']) ? $section['section_intro'] : '';
 $max_items = isset($section['faq_max_items']) ? (int) $section['faq_max_items'] : -1;
@@ -30,7 +31,7 @@ $query = new WP_Query([
 	'no_found_rows'  => true,
 ]);
 ?>
-<section class="lf-block lf-block-faq-accordion lf-surface-white lf-block-faq-accordion--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" aria-label="<?php esc_attr_e('FAQs', 'leadsforward-core'); ?>">
+<section class="lf-block lf-block-faq-accordion <?php echo esc_attr($bg_class ?: 'lf-surface-light'); ?> lf-block-faq-accordion--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" aria-label="<?php esc_attr_e('FAQs', 'leadsforward-core'); ?>">
 	<div class="lf-block-faq-accordion__inner">
 		<header class="lf-block-faq-accordion__header">
 			<h2 class="lf-block-faq-accordion__title"><?php echo esc_html($heading); ?></h2>

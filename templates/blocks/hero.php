@@ -18,6 +18,7 @@ $context  = $block['context'] ?? [];
 $section  = $context['section'] ?? [];
 $variant  = $block['variant'] ?? 'default';
 $block_id = $block['id'] ?? '';
+$bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'soft') : '';
 
 $eyebrow = __('Licensed • Insured • Local', 'leadsforward-core');
 
@@ -101,7 +102,7 @@ if (post_type_exists('lf_testimonial')) {
 }
 $show_form_in_hero = $cta_type === 'form' && !empty($cta_resolved_for_type['ghl_embed']);
 ?>
-<section class="lf-block lf-block-hero lf-block-hero--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
+<section class="lf-block lf-block-hero <?php echo esc_attr($bg_class ?: 'lf-surface-soft'); ?> lf-block-hero--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-hero__bg" aria-hidden="true"></div>
 	<div class="lf-block-hero__inner">
 		<div class="lf-block-hero__grid">
