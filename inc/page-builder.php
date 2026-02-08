@@ -176,43 +176,6 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 							<label><strong><?php echo esc_html($field['label']); ?></strong></label>
 							<?php if ($type === 'textarea' || $type === 'list') : ?>
 								<textarea class="widefat" rows="2" name="lf_pb_sections[<?php echo esc_attr($section_id); ?>][settings][<?php echo esc_attr($key); ?>]"><?php echo esc_textarea($value); ?></textarea>
-							<?php elseif ($type === 'post_multi') : ?>
-								<?php
-								$post_type = $field['post_type'] ?? 'post';
-								$posts = get_posts([
-									'post_type'      => $post_type,
-									'posts_per_page' => 50,
-									'orderby'        => 'menu_order title',
-									'order'          => 'ASC',
-									'post_status'    => 'publish',
-									'no_found_rows'  => true,
-								]);
-								$selected = is_array($value) ? $value : [];
-								?>
-								<select name="lf_pb_sections[<?php echo esc_attr($section_id); ?>][settings][<?php echo esc_attr($key); ?>][]" multiple size="6" class="widefat">
-									<?php foreach ($posts as $p) : ?>
-										<option value="<?php echo esc_attr((string) $p->ID); ?>" <?php echo in_array($p->ID, $selected, true) ? 'selected' : ''; ?>><?php echo esc_html(get_the_title($p)); ?></option>
-									<?php endforeach; ?>
-								</select>
-							<?php elseif ($type === 'post_single') : ?>
-								<?php
-								$post_type = $field['post_type'] ?? 'post';
-								$posts = get_posts([
-									'post_type'      => $post_type,
-									'posts_per_page' => 50,
-									'orderby'        => 'menu_order title',
-									'order'          => 'ASC',
-									'post_status'    => 'publish',
-									'no_found_rows'  => true,
-								]);
-								$selected_id = (int) $value;
-								?>
-								<select name="lf_pb_sections[<?php echo esc_attr($section_id); ?>][settings][<?php echo esc_attr($key); ?>]" class="widefat">
-									<option value="0"><?php esc_html_e('— Select —', 'leadsforward-core'); ?></option>
-									<?php foreach ($posts as $p) : ?>
-										<option value="<?php echo esc_attr((string) $p->ID); ?>" <?php selected($selected_id, $p->ID); ?>><?php echo esc_html(get_the_title($p)); ?></option>
-									<?php endforeach; ?>
-								</select>
 							<?php elseif ($type === 'select') : ?>
 								<select name="lf_pb_sections[<?php echo esc_attr($section_id); ?>][settings][<?php echo esc_attr($key); ?>]">
 									<?php foreach (($field['options'] ?? []) as $opt_val => $opt_label) : ?>
