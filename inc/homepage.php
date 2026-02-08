@@ -432,8 +432,8 @@ function lf_get_resolved_cta(array $context = []): array {
 	$section = $context['section'] ?? null;
 	$is_homepage = $context['homepage'] ?? is_front_page();
 
-	$primary   = lf_get_option('lf_cta_primary_text', 'option');
-	$secondary = lf_get_option('lf_cta_secondary_text', 'option');
+	$primary   = lf_get_option('lf_cta_primary_text', 'option', __('Get a free estimate', 'leadsforward-core'));
+	$secondary = lf_get_option('lf_cta_secondary_text', 'option', __('Call now', 'leadsforward-core'));
 	$ghl       = lf_get_option('lf_cta_ghl_embed', 'option');
 	$type      = lf_get_option('lf_cta_primary_type', 'option') ?: 'text';
 	$action    = lf_get_option('lf_cta_primary_action', 'option', 'quote') ?: 'quote';

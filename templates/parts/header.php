@@ -61,10 +61,13 @@ if ($logo_text === '') {
 				<?php endif; ?>
 				<?php if ($show_cta) : ?>
 					<?php
-					$label = $cta_label !== '' ? $cta_label : $cta_text;
-					$href = $cta_url !== '' ? $cta_url : ($cta_phone ? 'tel:' . preg_replace('/\s+/', '', $cta_phone) : '#');
+				$label = $cta_label !== '' ? $cta_label : ($cta_text ?: __('Free Estimate', 'leadsforward-core'));
 					?>
-					<a class="site-header__cta lf-btn lf-btn--primary" href="<?php echo esc_url($href); ?>"><?php echo esc_html($label); ?></a>
+				<?php if ($cta_url !== '') : ?>
+					<a class="site-header__cta lf-btn lf-btn--primary" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($label); ?></a>
+				<?php else : ?>
+					<button type="button" class="site-header__cta lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="header"><?php echo esc_html($label); ?></button>
+				<?php endif; ?>
 				<?php endif; ?>
 			</div>
 			<?php if ($has_utility_menu) : ?>

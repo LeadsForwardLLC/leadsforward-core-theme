@@ -28,6 +28,7 @@ function lf_acf_add_options_ctas_fields(): void {
 				'label' => __('Primary CTA text', 'leadsforward-core'),
 				'name'  => 'lf_cta_primary_text',
 				'type'  => 'text',
+				'default_value' => __('Get a free estimate', 'leadsforward-core'),
 			],
 			[
 				'key'     => 'field_lf_cta_primary_type',
@@ -67,6 +68,7 @@ function lf_acf_add_options_ctas_fields(): void {
 				'label' => __('Secondary CTA text', 'leadsforward-core'),
 				'name'  => 'lf_cta_secondary_text',
 				'type'  => 'text',
+				'default_value' => __('Call now', 'leadsforward-core'),
 			],
 			[
 				'key'     => 'field_lf_cta_secondary_action',
