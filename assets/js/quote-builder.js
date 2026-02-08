@@ -44,7 +44,8 @@
 		fetch(window.lfQuoteBuilder.ajax_url, {
 			method: 'POST',
 			credentials: 'same-origin',
-			body: data
+			body: data,
+			keepalive: true
 		}).catch(function () {});
 	}
 

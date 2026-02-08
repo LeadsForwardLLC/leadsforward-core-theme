@@ -284,7 +284,7 @@ function lf_quote_builder_integrations_handle_save(): void {
 
 	if ($enabled && $webhook === '') {
 		update_option('lf_quote_builder_integrations_error', __('Please provide a valid GHL webhook URL.', 'leadsforward-core'), true);
-		wp_safe_redirect(admin_url('admin.php?page=lf-quote-builder-integrations&saved=0'));
+		wp_safe_redirect(admin_url('admin.php?page=lf-quote-builder&section=integrations&saved=0'));
 		exit;
 	}
 
@@ -297,7 +297,7 @@ function lf_quote_builder_integrations_handle_save(): void {
 	];
 	update_option(LF_QUOTE_BUILDER_INTEGRATIONS, $settings, true);
 	delete_option('lf_quote_builder_integrations_error');
-	wp_safe_redirect(admin_url('admin.php?page=lf-quote-builder-integrations&saved=1'));
+	wp_safe_redirect(admin_url('admin.php?page=lf-quote-builder&section=integrations&saved=1'));
 	exit;
 }
 
@@ -385,11 +385,13 @@ function lf_quote_builder_sanitize_config($input, array $defaults): array {
 }
 
 function lf_quote_builder_maybe_create_analytics_table(): void {
-	if (get_option('lf_qb_analytics_ready')) {
-		return;
-	}
 	global $wpdb;
 	$table = $wpdb->prefix . LF_QUOTE_BUILDER_ANALYTICS_TABLE;
+	$exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+	if ($exists === $table) {
+		update_option('lf_qb_analytics_ready', 1, true);
+		return;
+	}
 	$charset = $wpdb->get_charset_collate();
 	$sql = "CREATE TABLE $table (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -406,7 +408,10 @@ function lf_quote_builder_maybe_create_analytics_table(): void {
 	) $charset;";
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 	dbDelta($sql);
-	update_option('lf_qb_analytics_ready', 1, true);
+	$exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+	if ($exists === $table) {
+		update_option('lf_qb_analytics_ready', 1, true);
+	}
 }
 
 function lf_quote_builder_record_event(string $event, string $step_id, string $context, int $duration = 0, string $niche = '', string $variant = ''): void {
@@ -723,73 +728,84 @@ function lf_quote_builder_handle_submit(): void {
 	]);
 	$log = array_slice($log, 0, 50);
 	update_option(LF_QUOTE_BUILDER_SUBMISSIONS, $log, false);
+	lf_quote_builder_maybe_create_analytics_table();
+	lf_quote_builder_record_event(
+		'complete',
+		'form',
+		$clean['page_context'] ?? '',
+		0,
+		(string) get_option('lf_homepage_niche_slug', ''),
+		lf_quote_builder_get_form_variant()
+	);
 	lf_quote_builder_send_ghl($clean);
 	do_action('lf_quote_builder_submission', $clean);
 	wp_send_json_success(['ok' => true]);
 }
 
-function lf_quote_builder_render_integrations(): void {
+function lf_quote_builder_render_integrations(bool $embedded = false): void {
 	if (!current_user_can('edit_theme_options')) {
 		return;
 	}
 	$settings = lf_quote_builder_get_integrations();
-	$saved = isset($_GET['saved']) && $_GET['saved'] === '1';
-	$error = get_option('lf_quote_builder_integrations_error', '');
+	$section = isset($_GET['section']) ? sanitize_key((string) $_GET['section']) : '';
+	$saved = isset($_GET['saved']) && $_GET['saved'] === '1' && $section === 'integrations';
+	$error = ($section === 'integrations') ? get_option('lf_quote_builder_integrations_error', '') : '';
 	$errors = get_option(LF_QUOTE_BUILDER_GHL_ERRORS, []);
 	if (!is_array($errors)) {
 		$errors = [];
 	}
-	?>
-	<div class="wrap">
-		<h1><?php esc_html_e('Quote Builder — Integrations', 'leadsforward-core'); ?></h1>
-		<p class="description"><?php esc_html_e('Configure lead delivery integrations. Webhook errors are logged for admins only.', 'leadsforward-core'); ?></p>
-		<?php if ($saved) : ?>
-			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Integration settings saved.', 'leadsforward-core'); ?></p></div>
-		<?php elseif ($error) : ?>
-			<div class="notice notice-error is-dismissible"><p><?php echo esc_html($error); ?></p></div>
-		<?php endif; ?>
-		<form method="post">
-			<?php wp_nonce_field('lf_quote_builder_integrations_save', 'lf_quote_builder_integrations_nonce'); ?>
-			<table class="form-table" role="presentation">
+	if (!$embedded) {
+		echo '<div class="wrap"><h1>' . esc_html__('Quote Builder — Integrations', 'leadsforward-core') . '</h1>';
+		echo '<p class="description">' . esc_html__('Configure lead delivery integrations. Webhook errors are logged for admins only.', 'leadsforward-core') . '</p>';
+	}
+	if ($saved) : ?>
+		<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Integration settings saved.', 'leadsforward-core'); ?></p></div>
+	<?php elseif ($error) : ?>
+		<div class="notice notice-error is-dismissible"><p><?php echo esc_html($error); ?></p></div>
+	<?php endif; ?>
+	<form method="post">
+		<?php wp_nonce_field('lf_quote_builder_integrations_save', 'lf_quote_builder_integrations_nonce'); ?>
+		<table class="form-table" role="presentation">
+			<tr>
+				<th scope="row"><?php esc_html_e('Enable GHL integration', 'leadsforward-core'); ?></th>
+				<td><label><input type="checkbox" name="lf_qb_ghl_enabled" value="1" <?php checked(!empty($settings['ghl_enabled'])); ?> /> <?php esc_html_e('Send completed quotes to GoHighLevel', 'leadsforward-core'); ?></label></td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="lf_qb_ghl_webhook"><?php esc_html_e('GHL Webhook URL', 'leadsforward-core'); ?></label></th>
+				<td><input type="url" class="large-text" id="lf_qb_ghl_webhook" name="lf_qb_ghl_webhook" value="<?php echo esc_attr($settings['ghl_webhook'] ?? ''); ?>" placeholder="https://hooks.leadconnectorhq.com/..." /></td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="lf_qb_ghl_pipeline"><?php esc_html_e('Pipeline ID (optional)', 'leadsforward-core'); ?></label></th>
+				<td><input type="text" class="regular-text" id="lf_qb_ghl_pipeline" name="lf_qb_ghl_pipeline" value="<?php echo esc_attr($settings['ghl_pipeline'] ?? ''); ?>" /></td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="lf_qb_ghl_tags"><?php esc_html_e('Tag(s) (optional)', 'leadsforward-core'); ?></label></th>
+				<td><input type="text" class="large-text" id="lf_qb_ghl_tags" name="lf_qb_ghl_tags" value="<?php echo esc_attr($settings['ghl_tags'] ?? ''); ?>" placeholder="<?php esc_attr_e('e.g. Quote Lead, Website', 'leadsforward-core'); ?>" /></td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="lf_qb_ghl_source"><?php esc_html_e('Source label', 'leadsforward-core'); ?></label></th>
+				<td><input type="text" class="regular-text" id="lf_qb_ghl_source" name="lf_qb_ghl_source" value="<?php echo esc_attr($settings['ghl_source'] ?? __('Website Quote', 'leadsforward-core')); ?>" /></td>
+			</tr>
+		</table>
+		<p class="submit"><button type="submit" class="button button-primary"><?php esc_html_e('Save Integrations', 'leadsforward-core'); ?></button></p>
+	</form>
+	<?php if (!empty($errors)) : ?>
+		<h3><?php esc_html_e('Recent webhook errors', 'leadsforward-core'); ?></h3>
+		<table class="widefat striped">
+			<thead><tr><th><?php esc_html_e('Time', 'leadsforward-core'); ?></th><th><?php esc_html_e('Message', 'leadsforward-core'); ?></th></tr></thead>
+			<tbody>
+			<?php foreach ($errors as $entry) : ?>
 				<tr>
-					<th scope="row"><?php esc_html_e('Enable GHL integration', 'leadsforward-core'); ?></th>
-					<td><label><input type="checkbox" name="lf_qb_ghl_enabled" value="1" <?php checked(!empty($settings['ghl_enabled'])); ?> /> <?php esc_html_e('Send completed quotes to GoHighLevel', 'leadsforward-core'); ?></label></td>
+					<td><?php echo esc_html(wp_date('Y-m-d H:i', (int) ($entry['time'] ?? time()))); ?></td>
+					<td><?php echo esc_html((string) ($entry['message'] ?? '')); ?></td>
 				</tr>
-				<tr>
-					<th scope="row"><label for="lf_qb_ghl_webhook"><?php esc_html_e('GHL Webhook URL', 'leadsforward-core'); ?></label></th>
-					<td><input type="url" class="large-text" id="lf_qb_ghl_webhook" name="lf_qb_ghl_webhook" value="<?php echo esc_attr($settings['ghl_webhook'] ?? ''); ?>" placeholder="https://hooks.leadconnectorhq.com/..." /></td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_qb_ghl_pipeline"><?php esc_html_e('Pipeline ID (optional)', 'leadsforward-core'); ?></label></th>
-					<td><input type="text" class="regular-text" id="lf_qb_ghl_pipeline" name="lf_qb_ghl_pipeline" value="<?php echo esc_attr($settings['ghl_pipeline'] ?? ''); ?>" /></td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_qb_ghl_tags"><?php esc_html_e('Tag(s) (optional)', 'leadsforward-core'); ?></label></th>
-					<td><input type="text" class="large-text" id="lf_qb_ghl_tags" name="lf_qb_ghl_tags" value="<?php echo esc_attr($settings['ghl_tags'] ?? ''); ?>" placeholder="<?php esc_attr_e('e.g. Quote Lead, Website', 'leadsforward-core'); ?>" /></td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_qb_ghl_source"><?php esc_html_e('Source label', 'leadsforward-core'); ?></label></th>
-					<td><input type="text" class="regular-text" id="lf_qb_ghl_source" name="lf_qb_ghl_source" value="<?php echo esc_attr($settings['ghl_source'] ?? __('Website Quote', 'leadsforward-core')); ?>" /></td>
-				</tr>
-			</table>
-			<p class="submit"><button type="submit" class="button button-primary"><?php esc_html_e('Save Integrations', 'leadsforward-core'); ?></button></p>
-		</form>
-		<?php if (!empty($errors)) : ?>
-			<h2><?php esc_html_e('Recent webhook errors', 'leadsforward-core'); ?></h2>
-			<table class="widefat striped">
-				<thead><tr><th><?php esc_html_e('Time', 'leadsforward-core'); ?></th><th><?php esc_html_e('Message', 'leadsforward-core'); ?></th></tr></thead>
-				<tbody>
-				<?php foreach ($errors as $entry) : ?>
-					<tr>
-						<td><?php echo esc_html(wp_date('Y-m-d H:i', (int) ($entry['time'] ?? time()))); ?></td>
-						<td><?php echo esc_html((string) ($entry['message'] ?? '')); ?></td>
-					</tr>
-				<?php endforeach; ?>
-				</tbody>
-			</table>
-		<?php endif; ?>
-	</div>
-	<?php
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+	<?php endif;
+	if (!$embedded) {
+		echo '</div>';
+	}
 }
 
 function lf_quote_builder_get_range_totals(int $days): array {
@@ -837,10 +853,14 @@ function lf_quote_builder_get_step_stats(int $days): array {
 	return $stats;
 }
 
-function lf_quote_builder_render_analytics(): void {
+function lf_quote_builder_render_analytics(bool $embedded = false): void {
 	if (!current_user_can('edit_theme_options')) {
 		return;
 	}
+	lf_quote_builder_maybe_create_analytics_table();
+	global $wpdb;
+	$table = $wpdb->prefix . LF_QUOTE_BUILDER_ANALYTICS_TABLE;
+	$exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
 	$range_days = [7, 30, 90];
 	$totals = [];
 	foreach ($range_days as $days) {
@@ -874,9 +894,14 @@ function lf_quote_builder_render_analytics(): void {
 		}
 	}
 	?>
-	<div class="wrap">
-		<h1><?php esc_html_e('Quote Builder — Analytics', 'leadsforward-core'); ?></h1>
-		<p class="description"><?php esc_html_e('Aggregated, first-party analytics for Quote Builder performance. No PII is stored or shown.', 'leadsforward-core'); ?></p>
+	<?php if (!$embedded) : ?>
+		<div class="wrap">
+			<h1><?php esc_html_e('Quote Builder — Analytics', 'leadsforward-core'); ?></h1>
+			<p class="description"><?php esc_html_e('Aggregated, first-party analytics for Quote Builder performance. No PII is stored or shown.', 'leadsforward-core'); ?></p>
+	<?php endif; ?>
+		<?php if ($exists !== $table) : ?>
+			<div class="notice notice-error"><p><?php esc_html_e('Analytics storage table is missing. Try reloading this page or re-saving the theme settings.', 'leadsforward-core'); ?></p></div>
+		<?php endif; ?>
 		<h2><?php esc_html_e('Totals', 'leadsforward-core'); ?></h2>
 		<table class="widefat striped">
 			<thead>
@@ -938,7 +963,9 @@ function lf_quote_builder_render_analytics(): void {
 		<?php if ($most_exit !== '') : ?>
 			<p class="description"><?php echo esc_html(sprintf(__('Most common exit step: %s', 'leadsforward-core'), $step_labels[$most_exit] ?? $most_exit)); ?></p>
 		<?php endif; ?>
-	</div>
+	<?php if (!$embedded) : ?>
+		</div>
+	<?php endif; ?>
 	<?php
 }
 
@@ -948,14 +975,20 @@ function lf_quote_builder_render_admin(): void {
 	}
 	$config = lf_quote_builder_get_config();
 	$steps = $config['steps'] ?? [];
-	$saved = isset($_GET['saved']) && $_GET['saved'] === '1';
+	$section = isset($_GET['section']) ? sanitize_key((string) $_GET['section']) : '';
+	$saved = isset($_GET['saved']) && $_GET['saved'] === '1' && $section !== 'integrations';
 	echo '<div class="wrap"><h1>' . esc_html__('Quote Builder', 'leadsforward-core') . '</h1>';
 	echo '<p class="description">' . esc_html__('Configure the multi-step Quote Builder. This is a structured, safe editor—no HTML, no layout changes.', 'leadsforward-core') . '</p>';
-	if ($saved) {
-		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Quote Builder settings saved.', 'leadsforward-core') . '</p></div>';
-	}
 	?>
 	<style>
+		.lf-qb-panel { background:#fff; border:1px solid #e2e8f0; border-radius:14px; margin:1.25rem 0; overflow:hidden; }
+		.lf-qb-panel-header { display:flex; align-items:center; gap:0.75rem; padding:1rem 1.25rem; border-bottom:1px solid #e2e8f0; }
+		.lf-qb-panel-header h2 { margin:0; font-size:1.1rem; }
+		.lf-qb-panel-toggle { margin-left:auto; font-size:12px; text-decoration:none; padding:0.35rem 0.65rem; border-radius:999px; border:1px solid #e2e8f0; background:#f8fafc; color:#0f172a; }
+		.lf-qb-panel-toggle:hover { background:#e2e8f0; }
+		.lf-qb-panel--collapsed .lf-qb-panel-body { display:none; }
+		.lf-qb-panel--collapsed .lf-qb-panel-toggle { background:#0f172a; color:#fff; border-color:#0f172a; }
+		.lf-qb-panel-body { padding:1rem 1.25rem; }
 		.lf-qb-step { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1rem 1.25rem; margin:1rem 0; }
 		.lf-qb-step-header { display:flex; align-items:center; gap:0.75rem; }
 		.lf-qb-step-header h2 { margin:0; font-size:1.1rem; }
@@ -966,79 +999,110 @@ function lf_quote_builder_render_admin(): void {
 		.lf-qb-field { border:1px solid #e2e8f0; border-radius:10px; padding:0.75rem 1rem; margin:0.75rem 0; }
 		.lf-qb-field h4 { margin:0 0 0.5rem; }
 	</style>
-	<form method="post">
-		<?php wp_nonce_field('lf_quote_builder_save', 'lf_quote_builder_nonce'); ?>
-		<?php foreach ($steps as $index => $step) :
-			$step_id = $step['id'];
-			$enabled = !empty($step['enabled']);
-			?>
-			<div class="lf-qb-step" data-step="<?php echo esc_attr($step_id); ?>">
-				<div class="lf-qb-step-header">
-					<h2><?php echo esc_html(sprintf(__('Step %d', 'leadsforward-core'), $index + 1)); ?> — <?php echo esc_html($step['title'] ?? ''); ?></h2>
-					<label><input type="checkbox" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][enabled]" value="1" <?php checked($enabled); ?> /> <?php esc_html_e('Enabled', 'leadsforward-core'); ?></label>
-					<button type="button" class="lf-qb-toggle" data-target="<?php echo esc_attr($step_id); ?>" aria-expanded="true">▾ <?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
-				</div>
-				<div class="lf-qb-step-body">
-					<table class="form-table" role="presentation">
-						<tr>
-							<th scope="row"><label><?php esc_html_e('Step title', 'leadsforward-core'); ?></label></th>
-							<td><input type="text" class="large-text" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][title]" value="<?php echo esc_attr($step['title'] ?? ''); ?>" /></td>
-						</tr>
-						<tr>
-							<th scope="row"><label><?php esc_html_e('Helper text', 'leadsforward-core'); ?></label></th>
-							<td><textarea class="large-text" rows="2" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][helper]"><?php echo esc_textarea($step['helper'] ?? ''); ?></textarea></td>
-						</tr>
-						<?php if (($step['type'] ?? '') === 'confirmation') : ?>
-							<tr>
-								<th scope="row"><label><?php esc_html_e('Confirmation title', 'leadsforward-core'); ?></label></th>
-								<td><input type="text" class="large-text" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][confirmation_title]" value="<?php echo esc_attr($step['confirmation_title'] ?? ''); ?>" /></td>
-							</tr>
-							<tr>
-								<th scope="row"><label><?php esc_html_e('Confirmation message', 'leadsforward-core'); ?></label></th>
-								<td><textarea class="large-text" rows="2" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][confirmation_body]"><?php echo esc_textarea($step['confirmation_body'] ?? ''); ?></textarea></td>
-							</tr>
-						<?php endif; ?>
-					</table>
-					<?php if (($step['type'] ?? '') !== 'confirmation') : ?>
-						<?php foreach (($step['fields'] ?? []) as $field) :
-							$key = $field['key'];
-							$type = $field['type'];
-							?>
-							<div class="lf-qb-field">
-								<h4><?php echo esc_html($field['label'] ?? $key); ?> <span class="description">(<?php echo esc_html($type); ?>)</span></h4>
-								<table class="form-table" role="presentation">
+	<div class="lf-qb-panel" data-panel="builder">
+		<div class="lf-qb-panel-header">
+			<h2><?php esc_html_e('Builder', 'leadsforward-core'); ?></h2>
+			<button type="button" class="lf-qb-panel-toggle" data-target="builder" aria-expanded="true">▾ <?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
+		</div>
+		<div class="lf-qb-panel-body">
+			<?php if ($saved) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Quote Builder settings saved.', 'leadsforward-core'); ?></p></div>
+			<?php endif; ?>
+			<form method="post">
+				<?php wp_nonce_field('lf_quote_builder_save', 'lf_quote_builder_nonce'); ?>
+				<?php foreach ($steps as $index => $step) :
+					$step_id = $step['id'];
+					$enabled = !empty($step['enabled']);
+					?>
+					<div class="lf-qb-step" data-step="<?php echo esc_attr($step_id); ?>">
+						<div class="lf-qb-step-header">
+							<h2><?php echo esc_html(sprintf(__('Step %d', 'leadsforward-core'), $index + 1)); ?> — <?php echo esc_html($step['title'] ?? ''); ?></h2>
+							<label><input type="checkbox" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][enabled]" value="1" <?php checked($enabled); ?> /> <?php esc_html_e('Enabled', 'leadsforward-core'); ?></label>
+							<button type="button" class="lf-qb-toggle" data-target="<?php echo esc_attr($step_id); ?>" aria-expanded="true">▾ <?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
+						</div>
+						<div class="lf-qb-step-body">
+							<table class="form-table" role="presentation">
+								<tr>
+									<th scope="row"><label><?php esc_html_e('Step title', 'leadsforward-core'); ?></label></th>
+									<td><input type="text" class="large-text" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][title]" value="<?php echo esc_attr($step['title'] ?? ''); ?>" /></td>
+								</tr>
+								<tr>
+									<th scope="row"><label><?php esc_html_e('Helper text', 'leadsforward-core'); ?></label></th>
+									<td><textarea class="large-text" rows="2" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][helper]"><?php echo esc_textarea($step['helper'] ?? ''); ?></textarea></td>
+								</tr>
+								<?php if (($step['type'] ?? '') === 'confirmation') : ?>
 									<tr>
-										<th scope="row"><label><?php esc_html_e('Label', 'leadsforward-core'); ?></label></th>
-										<td><input type="text" class="regular-text" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][fields][<?php echo esc_attr($key); ?>][label]" value="<?php echo esc_attr($field['label'] ?? ''); ?>" /></td>
+										<th scope="row"><label><?php esc_html_e('Confirmation title', 'leadsforward-core'); ?></label></th>
+										<td><input type="text" class="large-text" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][confirmation_title]" value="<?php echo esc_attr($step['confirmation_title'] ?? ''); ?>" /></td>
 									</tr>
 									<tr>
-										<th scope="row"><?php esc_html_e('Required', 'leadsforward-core'); ?></th>
-										<td><label><input type="checkbox" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][fields][<?php echo esc_attr($key); ?>][required]" value="1" <?php checked(!empty($field['required'])); ?> /> <?php esc_html_e('Yes', 'leadsforward-core'); ?></label></td>
+										<th scope="row"><label><?php esc_html_e('Confirmation message', 'leadsforward-core'); ?></label></th>
+										<td><textarea class="large-text" rows="2" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][confirmation_body]"><?php echo esc_textarea($step['confirmation_body'] ?? ''); ?></textarea></td>
 									</tr>
-									<tr>
-										<th scope="row"><label><?php esc_html_e('Default value', 'leadsforward-core'); ?></label></th>
-										<td><input type="text" class="regular-text" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][fields][<?php echo esc_attr($key); ?>][default]" value="<?php echo esc_attr($field['default'] ?? ''); ?>" /></td>
-									</tr>
-									<?php if ($type !== 'choice') : ?>
-										<tr>
-											<th scope="row"><label><?php esc_html_e('Placeholder', 'leadsforward-core'); ?></label></th>
-											<td><input type="text" class="regular-text" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][fields][<?php echo esc_attr($key); ?>][placeholder]" value="<?php echo esc_attr($field['placeholder'] ?? ''); ?>" /></td>
-										</tr>
-									<?php else : ?>
-										<tr>
-											<th scope="row"><label><?php esc_html_e('Choices (one per line)', 'leadsforward-core'); ?></label></th>
-											<td><textarea class="large-text" rows="3" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][fields][<?php echo esc_attr($key); ?>][options]"><?php echo esc_textarea(implode("\n", $field['options'] ?? [])); ?></textarea></td>
-										</tr>
-									<?php endif; ?>
-								</table>
-							</div>
-						<?php endforeach; ?>
-					<?php endif; ?>
-				</div>
-			</div>
-		<?php endforeach; ?>
-		<p class="submit"><button type="submit" class="button button-primary"><?php esc_html_e('Save Quote Builder', 'leadsforward-core'); ?></button></p>
-	</form>
+								<?php endif; ?>
+							</table>
+							<?php if (($step['type'] ?? '') !== 'confirmation') : ?>
+								<?php foreach (($step['fields'] ?? []) as $field) :
+									$key = $field['key'];
+									$type = $field['type'];
+									?>
+									<div class="lf-qb-field">
+										<h4><?php echo esc_html($field['label'] ?? $key); ?> <span class="description">(<?php echo esc_html($type); ?>)</span></h4>
+										<table class="form-table" role="presentation">
+											<tr>
+												<th scope="row"><label><?php esc_html_e('Label', 'leadsforward-core'); ?></label></th>
+												<td><input type="text" class="regular-text" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][fields][<?php echo esc_attr($key); ?>][label]" value="<?php echo esc_attr($field['label'] ?? ''); ?>" /></td>
+											</tr>
+											<tr>
+												<th scope="row"><?php esc_html_e('Required', 'leadsforward-core'); ?></th>
+												<td><label><input type="checkbox" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][fields][<?php echo esc_attr($key); ?>][required]" value="1" <?php checked(!empty($field['required'])); ?> /> <?php esc_html_e('Yes', 'leadsforward-core'); ?></label></td>
+											</tr>
+											<tr>
+												<th scope="row"><label><?php esc_html_e('Default value', 'leadsforward-core'); ?></label></th>
+												<td><input type="text" class="regular-text" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][fields][<?php echo esc_attr($key); ?>][default]" value="<?php echo esc_attr($field['default'] ?? ''); ?>" /></td>
+											</tr>
+											<?php if ($type !== 'choice') : ?>
+												<tr>
+													<th scope="row"><label><?php esc_html_e('Placeholder', 'leadsforward-core'); ?></label></th>
+													<td><input type="text" class="regular-text" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][fields][<?php echo esc_attr($key); ?>][placeholder]" value="<?php echo esc_attr($field['placeholder'] ?? ''); ?>" /></td>
+												</tr>
+											<?php else : ?>
+												<tr>
+													<th scope="row"><label><?php esc_html_e('Choices (one per line)', 'leadsforward-core'); ?></label></th>
+													<td><textarea class="large-text" rows="3" name="lf_qb_steps[<?php echo esc_attr($step_id); ?>][fields][<?php echo esc_attr($key); ?>][options]"><?php echo esc_textarea(implode("\n", $field['options'] ?? [])); ?></textarea></td>
+												</tr>
+											<?php endif; ?>
+										</table>
+									</div>
+								<?php endforeach; ?>
+							<?php endif; ?>
+						</div>
+					</div>
+				<?php endforeach; ?>
+				<p class="submit"><button type="submit" class="button button-primary"><?php esc_html_e('Save Quote Builder', 'leadsforward-core'); ?></button></p>
+			</form>
+		</div>
+	</div>
+
+	<div class="lf-qb-panel" data-panel="integrations">
+		<div class="lf-qb-panel-header">
+			<h2><?php esc_html_e('Integrations', 'leadsforward-core'); ?></h2>
+			<button type="button" class="lf-qb-panel-toggle" data-target="integrations" aria-expanded="true">▾ <?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
+		</div>
+		<div class="lf-qb-panel-body">
+			<?php lf_quote_builder_render_integrations(true); ?>
+		</div>
+	</div>
+
+	<div class="lf-qb-panel" data-panel="analytics">
+		<div class="lf-qb-panel-header">
+			<h2><?php esc_html_e('Analytics', 'leadsforward-core'); ?></h2>
+			<button type="button" class="lf-qb-panel-toggle" data-target="analytics" aria-expanded="true">▾ <?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
+		</div>
+		<div class="lf-qb-panel-body">
+			<?php lf_quote_builder_render_analytics(true); ?>
+		</div>
+	</div>
 	<script>
 		(function () {
 			var storageKey = 'lf_quote_builder_collapsed';
@@ -1060,12 +1124,46 @@ function lf_quote_builder_render_admin(): void {
 				if (type) applyCollapse(type);
 			});
 			document.addEventListener('click', function (e) {
-				if (!e.target || !e.target.classList.contains('lf-qb-toggle')) return;
+				if (e.target && e.target.classList.contains('lf-qb-toggle')) {
+					var type = e.target.getAttribute('data-target');
+					if (!type) return;
+					collapsed[type] = !collapsed[type];
+					try { window.localStorage.setItem(storageKey, JSON.stringify(collapsed)); } catch (e) {}
+					applyCollapse(type);
+				}
+			});
+		})();
+		(function () {
+			var storageKey = 'lf_quote_builder_panels';
+			var collapsed = {};
+			try { collapsed = JSON.parse(window.localStorage.getItem(storageKey) || '{}') || {}; } catch (e) { collapsed = {}; }
+			var forceOpen = '<?php echo esc_js($section); ?>';
+			if (forceOpen) {
+				collapsed[forceOpen] = false;
+				try { window.localStorage.setItem(storageKey, JSON.stringify(collapsed)); } catch (e) {}
+			}
+			function applyPanel(type) {
+				var panel = document.querySelector('.lf-qb-panel[data-panel="' + type + '"]');
+				if (!panel) return;
+				var isCollapsed = !!collapsed[type];
+				panel.classList.toggle('lf-qb-panel--collapsed', isCollapsed);
+				var toggle = panel.querySelector('.lf-qb-panel-toggle');
+				if (toggle) {
+					toggle.setAttribute('aria-expanded', (!isCollapsed).toString());
+					toggle.textContent = (isCollapsed ? '▸ ' : '▾ ') + (isCollapsed ? '<?php echo esc_js(__('Expand', 'leadsforward-core')); ?>' : '<?php echo esc_js(__('Collapse', 'leadsforward-core')); ?>');
+				}
+			}
+			document.querySelectorAll('.lf-qb-panel').forEach(function (panel) {
+				var type = panel.getAttribute('data-panel');
+				if (type) applyPanel(type);
+			});
+			document.addEventListener('click', function (e) {
+				if (!e.target || !e.target.classList.contains('lf-qb-panel-toggle')) return;
 				var type = e.target.getAttribute('data-target');
 				if (!type) return;
 				collapsed[type] = !collapsed[type];
 				try { window.localStorage.setItem(storageKey, JSON.stringify(collapsed)); } catch (e) {}
-				applyCollapse(type);
+				applyPanel(type);
 			});
 		})();
 	</script>

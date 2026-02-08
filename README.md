@@ -113,9 +113,7 @@ Under **LeadsForward**:
 | **Setup** | Setup wizard, API keys (Google Maps/OpenAI), admin bar toggle, reset tools. |
 | **Global Settings** | Logo + Branding colors (core/surface/text) mapped to CSS variables. |
 | **Homepage** | Homepage builder: section order, toggles, backgrounds, copy, CTA actions. |
-| **Quote Builder** | Multi-step modal configuration; safe fields only. |
-| **Quote Builder — Integrations** | GHL webhook delivery settings. |
-| **Quote Builder — Analytics** | Aggregated funnel analytics dashboard. |
+| **Quote Builder** | Builder config plus integrations + analytics panels. |
 | **AI Assistant** | Bounded copy tools (text-only changes, confirmations). |
 | **Config** | Export/Import config. |
 | **Schema** | Schema toggles and outputs. |
@@ -191,9 +189,9 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 ## Quote Builder
 
 - **Modal:** Full-screen, multi-step quote flow (CTA action `quote`).
-- **Admin:** Structured configuration in **LeadsForward → Quote Builder**.
-- **Integrations:** GHL webhook delivery via **LeadsForward → Quote Builder → Integrations** (toggle + URL + pipeline/tags/source).
-- **Analytics:** First-party aggregated funnel metrics in **LeadsForward → Quote Builder → Analytics** (no PII).
+- **Admin:** Structured configuration in **LeadsForward → Quote Builder** (Builder, Integrations, Analytics panels).
+- **Integrations:** GHL webhook delivery (toggle + URL + pipeline/tags/source).
+- **Analytics:** First-party aggregated funnel metrics (no PII).
 
 ---
 
