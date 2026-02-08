@@ -17,6 +17,36 @@
 	var index = 0;
 	var lastFocus = null;
 	var isOpen = false;
+	var hasCompleted = false;
+	var stepStart = {};
+	var context = (window.lfQuoteBuilder && window.lfQuoteBuilder.context) ? window.lfQuoteBuilder.context : {};
+	var sessionKey = 'lf_qb_session';
+	var sessionId = (window.sessionStorage && window.sessionStorage.getItem(sessionKey)) || '';
+	if (!sessionId) {
+		sessionId = 'qb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+		if (window.sessionStorage) {
+			window.sessionStorage.setItem(sessionKey, sessionId);
+		}
+	}
+
+	function trackEvent(type, payload) {
+		if (!window.lfQuoteBuilder || !window.lfQuoteBuilder.ajax_url) return;
+		var data = new FormData();
+		data.append('action', 'lf_quote_builder_event');
+		data.append('nonce', window.lfQuoteBuilder.nonce || '');
+		data.append('event', type);
+		data.append('context', context.page_context || '');
+		data.append('niche', context.niche || '');
+		data.append('variant', context.form_variant || '');
+		data.append('session_id', sessionId);
+		if (payload && payload.step_id) data.append('step_id', payload.step_id);
+		if (payload && payload.duration) data.append('duration', payload.duration);
+		fetch(window.lfQuoteBuilder.ajax_url, {
+			method: 'POST',
+			credentials: 'same-origin',
+			body: data
+		}).catch(function () {});
+	}
 
 	function setStatus(msg, isError) {
 		if (!status) return;
@@ -46,11 +76,13 @@
 	function openModal() {
 		if (isOpen) return;
 		isOpen = true;
+		hasCompleted = false;
 		lastFocus = document.activeElement;
 		modal.classList.add('is-open');
 		body.classList.add('lf-quote-open');
 		modal.setAttribute('aria-hidden', 'false');
 		index = 0;
+		trackEvent('open');
 		updateStep();
 		setTimeout(function () {
 			if (dialog) dialog.focus();
@@ -65,6 +97,11 @@
 		body.classList.remove('lf-quote-open');
 		modal.setAttribute('aria-hidden', 'true');
 		setStatus('');
+		if (!hasCompleted) {
+			var current = steps[index];
+			var stepId = current ? current.getAttribute('data-step-id') : '';
+			trackEvent('abandon', { step_id: stepId });
+		}
 		if (lastFocus && lastFocus.focus) lastFocus.focus();
 		document.removeEventListener('keydown', onKeyDown);
 	}
@@ -96,6 +133,11 @@
 		}
 		var current = steps[index];
 		var isConfirm = current && current.getAttribute('data-step-type') === 'confirmation';
+		var stepId = current ? current.getAttribute('data-step-id') : '';
+		if (current && !isConfirm) {
+			stepStart[stepId] = Date.now();
+			trackEvent('step_view', { step_id: stepId });
+		}
 		if (nextBtn) {
 			if (isConfirm) {
 				nextBtn.textContent = 'Close';
@@ -155,6 +197,8 @@
 				return res.json();
 			}).then(function (json) {
 				if (json && json.success) {
+					hasCompleted = true;
+					trackEvent('complete');
 					resolve();
 				} else {
 					reject((json && json.data && json.data.message) ? json.data.message : 'Submission failed.');
@@ -174,6 +218,10 @@
 			return;
 		}
 		if (!validateStep()) return;
+		var stepId = current.getAttribute('data-step-id') || '';
+		var startedAt = stepStart[stepId] || Date.now();
+		var duration = Date.now() - startedAt;
+		trackEvent('step_complete', { step_id: stepId, duration: duration });
 		var next = steps[index + 1];
 		var nextIsConfirm = next && next.getAttribute('data-step-type') === 'confirmation';
 		if (nextIsConfirm) {

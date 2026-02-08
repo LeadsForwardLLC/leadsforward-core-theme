@@ -15,12 +15,19 @@ if (!defined('ABSPATH')) {
 const LF_QUOTE_BUILDER_OPTION = 'lf_quote_builder_config';
 const LF_QUOTE_BUILDER_MANUAL_OPTION = 'lf_quote_builder_manual_override';
 const LF_QUOTE_BUILDER_SUBMISSIONS = 'lf_quote_builder_submissions';
+const LF_QUOTE_BUILDER_INTEGRATIONS = 'lf_quote_builder_integrations';
+const LF_QUOTE_BUILDER_GHL_ERRORS = 'lf_quote_builder_ghl_errors';
+const LF_QUOTE_BUILDER_ANALYTICS_TABLE = 'lf_quote_builder_analytics';
 
 add_action('admin_init', 'lf_quote_builder_handle_save');
+add_action('admin_init', 'lf_quote_builder_integrations_handle_save');
+add_action('admin_init', 'lf_quote_builder_maybe_create_analytics_table');
 add_action('wp_enqueue_scripts', 'lf_quote_builder_enqueue_assets');
 add_action('wp_footer', 'lf_quote_builder_render_modal', 20);
 add_action('wp_ajax_lf_quote_builder_submit', 'lf_quote_builder_handle_submit');
 add_action('wp_ajax_nopriv_lf_quote_builder_submit', 'lf_quote_builder_handle_submit');
+add_action('wp_ajax_lf_quote_builder_event', 'lf_quote_builder_handle_event');
+add_action('wp_ajax_nopriv_lf_quote_builder_event', 'lf_quote_builder_handle_event');
 
 function lf_quote_builder_default_config(?string $niche_slug = null): array {
 	$config = [
@@ -229,6 +236,97 @@ function lf_quote_builder_apply_niche_config(string $niche_slug): void {
 	update_option(LF_QUOTE_BUILDER_MANUAL_OPTION, false, true);
 }
 
+function lf_quote_builder_get_integrations(): array {
+	$defaults = [
+		'ghl_enabled' => false,
+		'ghl_webhook' => '',
+		'ghl_pipeline' => '',
+		'ghl_tags' => '',
+		'ghl_source' => __('Website Quote', 'leadsforward-core'),
+	];
+	$stored = get_option(LF_QUOTE_BUILDER_INTEGRATIONS, []);
+	if (!is_array($stored)) {
+		return $defaults;
+	}
+	return array_merge($defaults, $stored);
+}
+
+function lf_quote_builder_validate_webhook_url(string $url): string {
+	$url = esc_url_raw($url);
+	if ($url === '' || !wp_http_validate_url($url)) {
+		return '';
+	}
+	$scheme = wp_parse_url($url, PHP_URL_SCHEME);
+	if (!in_array($scheme, ['http', 'https'], true)) {
+		return '';
+	}
+	return $url;
+}
+
+function lf_quote_builder_integrations_handle_save(): void {
+	if (!isset($_POST['lf_quote_builder_integrations_nonce'])) {
+		return;
+	}
+	if (!current_user_can('edit_theme_options')) {
+		return;
+	}
+	if (!wp_verify_nonce($_POST['lf_quote_builder_integrations_nonce'], 'lf_quote_builder_integrations_save')) {
+		return;
+	}
+	$enabled = !empty($_POST['lf_qb_ghl_enabled']);
+	$webhook = isset($_POST['lf_qb_ghl_webhook']) ? lf_quote_builder_validate_webhook_url(wp_unslash((string) $_POST['lf_qb_ghl_webhook'])) : '';
+	$pipeline = isset($_POST['lf_qb_ghl_pipeline']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_qb_ghl_pipeline'])) : '';
+	$tags = isset($_POST['lf_qb_ghl_tags']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_qb_ghl_tags'])) : '';
+	$source = isset($_POST['lf_qb_ghl_source']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_qb_ghl_source'])) : '';
+	if ($source === '') {
+		$source = __('Website Quote', 'leadsforward-core');
+	}
+
+	if ($enabled && $webhook === '') {
+		update_option('lf_quote_builder_integrations_error', __('Please provide a valid GHL webhook URL.', 'leadsforward-core'), true);
+		wp_safe_redirect(admin_url('admin.php?page=lf-quote-builder-integrations&saved=0'));
+		exit;
+	}
+
+	$settings = [
+		'ghl_enabled' => (bool) $enabled,
+		'ghl_webhook' => $webhook,
+		'ghl_pipeline' => $pipeline,
+		'ghl_tags' => $tags,
+		'ghl_source' => $source,
+	];
+	update_option(LF_QUOTE_BUILDER_INTEGRATIONS, $settings, true);
+	delete_option('lf_quote_builder_integrations_error');
+	wp_safe_redirect(admin_url('admin.php?page=lf-quote-builder-integrations&saved=1'));
+	exit;
+}
+
+function lf_quote_builder_get_page_context_data(): array {
+	$context = 'page';
+	if (is_front_page()) {
+		$context = 'homepage';
+	} elseif (is_singular('lf_service')) {
+		$context = 'service';
+	} elseif (is_singular('lf_service_area')) {
+		$context = 'service_area';
+	}
+	$page_id = (int) get_queried_object_id();
+	$page_title = $page_id ? get_the_title($page_id) : '';
+	$page_url = $page_id ? get_permalink($page_id) : '';
+	return [
+		'context' => $context,
+		'page_id' => $page_id,
+		'page_title' => is_string($page_title) ? $page_title : '',
+		'page_url' => is_string($page_url) ? $page_url : '',
+	];
+}
+
+function lf_quote_builder_get_form_variant(): string {
+	$config = lf_quote_builder_get_config();
+	$version = isset($config['version']) ? (int) $config['version'] : 1;
+	return 'v' . $version;
+}
+
 function lf_quote_builder_handle_save(): void {
 	if (!isset($_POST['lf_quote_builder_nonce'])) {
 		return;
@@ -286,6 +384,78 @@ function lf_quote_builder_sanitize_config($input, array $defaults): array {
 	return $out;
 }
 
+function lf_quote_builder_maybe_create_analytics_table(): void {
+	if (get_option('lf_qb_analytics_ready')) {
+		return;
+	}
+	global $wpdb;
+	$table = $wpdb->prefix . LF_QUOTE_BUILDER_ANALYTICS_TABLE;
+	$charset = $wpdb->get_charset_collate();
+	$sql = "CREATE TABLE $table (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		event_date date NOT NULL,
+		event_type varchar(32) NOT NULL,
+		step_id varchar(64) NOT NULL DEFAULT '',
+		context varchar(32) NOT NULL DEFAULT '',
+		niche varchar(32) NOT NULL DEFAULT '',
+		form_variant varchar(32) NOT NULL DEFAULT '',
+		count bigint(20) unsigned NOT NULL DEFAULT 0,
+		total_time bigint(20) unsigned NOT NULL DEFAULT 0,
+		PRIMARY KEY  (id),
+		UNIQUE KEY lf_qb_unique (event_date, event_type, step_id, context, niche, form_variant)
+	) $charset;";
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+	dbDelta($sql);
+	update_option('lf_qb_analytics_ready', 1, true);
+}
+
+function lf_quote_builder_record_event(string $event, string $step_id, string $context, int $duration = 0, string $niche = '', string $variant = ''): void {
+	global $wpdb;
+	$event = sanitize_text_field($event);
+	$step_id = sanitize_text_field($step_id);
+	$context = sanitize_text_field($context);
+	$niche = sanitize_text_field($niche);
+	$variant = sanitize_text_field($variant);
+	$duration = max(0, (int) $duration);
+	if ($event === '') {
+		return;
+	}
+	$table = $wpdb->prefix . LF_QUOTE_BUILDER_ANALYTICS_TABLE;
+	$date = wp_date('Y-m-d');
+	$wpdb->query(
+		$wpdb->prepare(
+			"INSERT INTO $table (event_date, event_type, step_id, context, niche, form_variant, count, total_time)
+			 VALUES (%s, %s, %s, %s, %s, %s, 1, %d)
+			 ON DUPLICATE KEY UPDATE count = count + 1, total_time = total_time + %d",
+			$date,
+			$event,
+			$step_id,
+			$context,
+			$niche,
+			$variant,
+			$duration,
+			$duration
+		)
+	);
+}
+
+function lf_quote_builder_handle_event(): void {
+	check_ajax_referer('lf_quote_builder', 'nonce');
+	lf_quote_builder_maybe_create_analytics_table();
+	$event = isset($_POST['event']) ? sanitize_text_field(wp_unslash((string) $_POST['event'])) : '';
+	$allowed = ['open', 'step_view', 'step_complete', 'abandon', 'complete'];
+	if (!in_array($event, $allowed, true)) {
+		wp_send_json_success(['ok' => true]);
+	}
+	$step_id = isset($_POST['step_id']) ? sanitize_text_field(wp_unslash((string) $_POST['step_id'])) : '';
+	$context = isset($_POST['context']) ? sanitize_text_field(wp_unslash((string) $_POST['context'])) : '';
+	$niche = isset($_POST['niche']) ? sanitize_text_field(wp_unslash((string) $_POST['niche'])) : '';
+	$variant = isset($_POST['variant']) ? sanitize_text_field(wp_unslash((string) $_POST['variant'])) : '';
+	$duration = isset($_POST['duration']) ? (int) $_POST['duration'] : 0;
+	lf_quote_builder_record_event($event, $step_id, $context, $duration, $niche, $variant);
+	wp_send_json_success(['ok' => true]);
+}
+
 function lf_quote_builder_enqueue_assets(): void {
 	if (is_admin()) {
 		return;
@@ -293,9 +463,18 @@ function lf_quote_builder_enqueue_assets(): void {
 	$handle = 'lf-quote-builder';
 	$src = LF_THEME_URI . '/assets/js/quote-builder.js';
 	wp_enqueue_script($handle, $src, [], LF_THEME_VERSION, true);
+	$context = lf_quote_builder_get_page_context_data();
 	wp_localize_script($handle, 'lfQuoteBuilder', [
 		'ajax_url' => admin_url('admin-ajax.php'),
 		'nonce'    => wp_create_nonce('lf_quote_builder'),
+		'context'  => [
+			'page_context' => $context['context'],
+			'page_id' => $context['page_id'],
+			'page_title' => $context['page_title'],
+			'page_url' => $context['page_url'],
+			'niche' => (string) get_option('lf_homepage_niche_slug', ''),
+			'form_variant' => lf_quote_builder_get_form_variant(),
+		],
 	]);
 }
 
@@ -323,6 +502,13 @@ function lf_quote_builder_render_modal(): void {
 				<div class="lf-quote-modal__bar"><span class="lf-quote-modal__bar-fill" style="width:<?php echo esc_attr((string) (100 / max(1, $total))); ?>%"></span></div>
 			</div>
 			<form class="lf-quote-form" autocomplete="on">
+				<?php
+				$context = lf_quote_builder_get_page_context_data();
+				?>
+				<input type="hidden" name="lf_quote[page_context]" value="<?php echo esc_attr($context['context']); ?>" />
+				<input type="hidden" name="lf_quote[page_id]" value="<?php echo esc_attr((string) $context['page_id']); ?>" />
+				<input type="hidden" name="lf_quote[page_title]" value="<?php echo esc_attr($context['page_title']); ?>" />
+				<input type="hidden" name="lf_quote[page_url]" value="<?php echo esc_attr($context['page_url']); ?>" />
 				<?php foreach ($steps as $index => $step) :
 					$step_id = $step['id'] ?? 'step-' . $index;
 					$step_type = $step['type'] ?? 'standard';
@@ -389,6 +575,88 @@ function lf_quote_builder_render_modal(): void {
 	<?php
 }
 
+function lf_quote_builder_log_ghl_error(string $message, array $context = []): void {
+	$log = get_option(LF_QUOTE_BUILDER_GHL_ERRORS, []);
+	if (!is_array($log)) {
+		$log = [];
+	}
+	array_unshift($log, [
+		'time' => time(),
+		'message' => $message,
+		'context' => $context,
+	]);
+	$log = array_slice($log, 0, 20);
+	update_option(LF_QUOTE_BUILDER_GHL_ERRORS, $log, false);
+}
+
+function lf_quote_builder_send_ghl(array $clean): void {
+	$settings = lf_quote_builder_get_integrations();
+	if (empty($settings['ghl_enabled'])) {
+		return;
+	}
+	$webhook = $settings['ghl_webhook'] ?? '';
+	if ($webhook === '') {
+		return;
+	}
+
+	$full_name = $clean['full_name'] ?? '';
+	$first = '';
+	$last = '';
+	if ($full_name) {
+		$parts = preg_split('/\s+/', (string) $full_name);
+		$first = $parts[0] ?? '';
+		$last = isset($parts[1]) ? implode(' ', array_slice($parts, 1)) : '';
+	}
+	$address = trim(
+		implode(', ', array_filter([
+			$clean['address_street'] ?? '',
+			$clean['address_city'] ?? '',
+			$clean['address_zip'] ?? '',
+		]))
+	);
+
+	$payload = [
+		'firstName' => $first,
+		'lastName'  => $last,
+		'name'      => $full_name,
+		'email'     => $clean['email'] ?? '',
+		'phone'     => $clean['phone'] ?? '',
+		'address1'  => $clean['address_street'] ?? '',
+		'city'      => $clean['address_city'] ?? '',
+		'postalCode'=> $clean['address_zip'] ?? '',
+		'source'    => $settings['ghl_source'] ?? __('Website Quote', 'leadsforward-core'),
+		'pipelineId'=> $settings['ghl_pipeline'] ?? '',
+		'tags'      => array_values(array_filter(array_map('trim', explode(',', (string) ($settings['ghl_tags'] ?? ''))))),
+		'customData'=> [
+			'service_type' => $clean['service_type'] ?? '',
+			'address' => $address,
+			'page_context' => $clean['page_context'] ?? '',
+			'page_title' => $clean['page_title'] ?? '',
+			'page_url' => $clean['page_url'] ?? '',
+			'timestamp' => wp_date('c'),
+			'site_identifier' => home_url('/'),
+		],
+	];
+
+	$args = [
+		'method'  => 'POST',
+		'timeout' => 3,
+		'headers' => [
+			'Content-Type' => 'application/json; charset=utf-8',
+		],
+		'body'    => wp_json_encode($payload),
+	];
+	$response = wp_remote_post($webhook, $args);
+	if (is_wp_error($response)) {
+		lf_quote_builder_log_ghl_error($response->get_error_message(), ['payload' => $payload]);
+		return;
+	}
+	$code = wp_remote_retrieve_response_code($response);
+	if ($code < 200 || $code >= 300) {
+		lf_quote_builder_log_ghl_error('GHL webhook error: ' . $code, ['payload' => $payload]);
+	}
+}
+
 function lf_quote_builder_handle_submit(): void {
 	check_ajax_referer('lf_quote_builder', 'nonce');
 	$payload = $_POST['lf_quote'] ?? [];
@@ -413,6 +681,10 @@ function lf_quote_builder_handle_submit(): void {
 	}
 	$allowed = array_unique($allowed);
 	$required = array_unique($required);
+	$meta_keys = ['page_context', 'page_id', 'page_title', 'page_url'];
+	$allowed = array_unique(array_merge($allowed, $meta_keys));
+	$meta_keys = ['page_context', 'page_id', 'page_title', 'page_url'];
+	$allowed = array_unique(array_merge($allowed, $meta_keys));
 	$clean = [];
 	foreach ($allowed as $key) {
 		if (!isset($payload[$key])) {
@@ -421,6 +693,14 @@ function lf_quote_builder_handle_submit(): void {
 		$val = $payload[$key];
 		if (is_array($val)) {
 			$val = wp_json_encode($val);
+		}
+		if ($key === 'page_id') {
+			$clean[$key] = (string) absint($val);
+			continue;
+		}
+		if ($key === 'page_url') {
+			$clean[$key] = esc_url_raw(wp_unslash((string) $val));
+			continue;
 		}
 		$clean[$key] = sanitize_text_field(wp_unslash((string) $val));
 	}
@@ -443,8 +723,223 @@ function lf_quote_builder_handle_submit(): void {
 	]);
 	$log = array_slice($log, 0, 50);
 	update_option(LF_QUOTE_BUILDER_SUBMISSIONS, $log, false);
+	lf_quote_builder_send_ghl($clean);
 	do_action('lf_quote_builder_submission', $clean);
 	wp_send_json_success(['ok' => true]);
+}
+
+function lf_quote_builder_render_integrations(): void {
+	if (!current_user_can('edit_theme_options')) {
+		return;
+	}
+	$settings = lf_quote_builder_get_integrations();
+	$saved = isset($_GET['saved']) && $_GET['saved'] === '1';
+	$error = get_option('lf_quote_builder_integrations_error', '');
+	$errors = get_option(LF_QUOTE_BUILDER_GHL_ERRORS, []);
+	if (!is_array($errors)) {
+		$errors = [];
+	}
+	?>
+	<div class="wrap">
+		<h1><?php esc_html_e('Quote Builder — Integrations', 'leadsforward-core'); ?></h1>
+		<p class="description"><?php esc_html_e('Configure lead delivery integrations. Webhook errors are logged for admins only.', 'leadsforward-core'); ?></p>
+		<?php if ($saved) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Integration settings saved.', 'leadsforward-core'); ?></p></div>
+		<?php elseif ($error) : ?>
+			<div class="notice notice-error is-dismissible"><p><?php echo esc_html($error); ?></p></div>
+		<?php endif; ?>
+		<form method="post">
+			<?php wp_nonce_field('lf_quote_builder_integrations_save', 'lf_quote_builder_integrations_nonce'); ?>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><?php esc_html_e('Enable GHL integration', 'leadsforward-core'); ?></th>
+					<td><label><input type="checkbox" name="lf_qb_ghl_enabled" value="1" <?php checked(!empty($settings['ghl_enabled'])); ?> /> <?php esc_html_e('Send completed quotes to GoHighLevel', 'leadsforward-core'); ?></label></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_qb_ghl_webhook"><?php esc_html_e('GHL Webhook URL', 'leadsforward-core'); ?></label></th>
+					<td><input type="url" class="large-text" id="lf_qb_ghl_webhook" name="lf_qb_ghl_webhook" value="<?php echo esc_attr($settings['ghl_webhook'] ?? ''); ?>" placeholder="https://hooks.leadconnectorhq.com/..." /></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_qb_ghl_pipeline"><?php esc_html_e('Pipeline ID (optional)', 'leadsforward-core'); ?></label></th>
+					<td><input type="text" class="regular-text" id="lf_qb_ghl_pipeline" name="lf_qb_ghl_pipeline" value="<?php echo esc_attr($settings['ghl_pipeline'] ?? ''); ?>" /></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_qb_ghl_tags"><?php esc_html_e('Tag(s) (optional)', 'leadsforward-core'); ?></label></th>
+					<td><input type="text" class="large-text" id="lf_qb_ghl_tags" name="lf_qb_ghl_tags" value="<?php echo esc_attr($settings['ghl_tags'] ?? ''); ?>" placeholder="<?php esc_attr_e('e.g. Quote Lead, Website', 'leadsforward-core'); ?>" /></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_qb_ghl_source"><?php esc_html_e('Source label', 'leadsforward-core'); ?></label></th>
+					<td><input type="text" class="regular-text" id="lf_qb_ghl_source" name="lf_qb_ghl_source" value="<?php echo esc_attr($settings['ghl_source'] ?? __('Website Quote', 'leadsforward-core')); ?>" /></td>
+				</tr>
+			</table>
+			<p class="submit"><button type="submit" class="button button-primary"><?php esc_html_e('Save Integrations', 'leadsforward-core'); ?></button></p>
+		</form>
+		<?php if (!empty($errors)) : ?>
+			<h2><?php esc_html_e('Recent webhook errors', 'leadsforward-core'); ?></h2>
+			<table class="widefat striped">
+				<thead><tr><th><?php esc_html_e('Time', 'leadsforward-core'); ?></th><th><?php esc_html_e('Message', 'leadsforward-core'); ?></th></tr></thead>
+				<tbody>
+				<?php foreach ($errors as $entry) : ?>
+					<tr>
+						<td><?php echo esc_html(wp_date('Y-m-d H:i', (int) ($entry['time'] ?? time()))); ?></td>
+						<td><?php echo esc_html((string) ($entry['message'] ?? '')); ?></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+		<?php endif; ?>
+	</div>
+	<?php
+}
+
+function lf_quote_builder_get_range_totals(int $days): array {
+	global $wpdb;
+	$table = $wpdb->prefix . LF_QUOTE_BUILDER_ANALYTICS_TABLE;
+	$since = wp_date('Y-m-d', strtotime('-' . $days . ' days'));
+	$rows = $wpdb->get_results(
+		$wpdb->prepare("SELECT event_type, SUM(count) AS total_count FROM $table WHERE event_date >= %s GROUP BY event_type", $since),
+		ARRAY_A
+	);
+	$totals = ['open' => 0, 'complete' => 0];
+	foreach ($rows as $row) {
+		$type = $row['event_type'] ?? '';
+		if (isset($totals[$type])) {
+			$totals[$type] = (int) ($row['total_count'] ?? 0);
+		}
+	}
+	return $totals;
+}
+
+function lf_quote_builder_get_step_stats(int $days): array {
+	global $wpdb;
+	$table = $wpdb->prefix . LF_QUOTE_BUILDER_ANALYTICS_TABLE;
+	$since = wp_date('Y-m-d', strtotime('-' . $days . ' days'));
+	$rows = $wpdb->get_results(
+		$wpdb->prepare("SELECT event_type, step_id, SUM(count) AS total_count, SUM(total_time) AS total_time FROM $table WHERE event_date >= %s GROUP BY event_type, step_id", $since),
+		ARRAY_A
+	);
+	$stats = [];
+	foreach ($rows as $row) {
+		$type = $row['event_type'] ?? '';
+		$step = $row['step_id'] ?? '';
+		if (!isset($stats[$step])) {
+			$stats[$step] = ['views' => 0, 'completes' => 0, 'abandons' => 0, 'time' => 0];
+		}
+		if ($type === 'step_view') {
+			$stats[$step]['views'] = (int) ($row['total_count'] ?? 0);
+		} elseif ($type === 'step_complete') {
+			$stats[$step]['completes'] = (int) ($row['total_count'] ?? 0);
+			$stats[$step]['time'] = (int) ($row['total_time'] ?? 0);
+		} elseif ($type === 'abandon') {
+			$stats[$step]['abandons'] = (int) ($row['total_count'] ?? 0);
+		}
+	}
+	return $stats;
+}
+
+function lf_quote_builder_render_analytics(): void {
+	if (!current_user_can('edit_theme_options')) {
+		return;
+	}
+	$range_days = [7, 30, 90];
+	$totals = [];
+	foreach ($range_days as $days) {
+		$totals[$days] = lf_quote_builder_get_range_totals($days);
+	}
+	$config = lf_quote_builder_get_config();
+	$steps = array_values(array_filter($config['steps'] ?? [], function ($step) {
+		return !empty($step['enabled']) && ($step['type'] ?? '') !== 'confirmation';
+	}));
+	$stats = lf_quote_builder_get_step_stats(30);
+	$weakest = '';
+	$weakest_rate = -1;
+	$most_exit = '';
+	$most_exit_count = -1;
+	$step_labels = [];
+	foreach ($steps as $step) {
+		$step_id = $step['id'] ?? '';
+		$step_labels[$step_id] = $step['title'] ?? $step_id;
+		$view = $stats[$step_id]['views'] ?? 0;
+		$complete = $stats[$step_id]['completes'] ?? 0;
+		$drop = max(0, $view - $complete);
+		$rate = $view > 0 ? $drop / $view : 0;
+		if ($rate > $weakest_rate) {
+			$weakest_rate = $rate;
+			$weakest = $step_id;
+		}
+		$abandon = $stats[$step_id]['abandons'] ?? 0;
+		if ($abandon > $most_exit_count) {
+			$most_exit_count = $abandon;
+			$most_exit = $step_id;
+		}
+	}
+	?>
+	<div class="wrap">
+		<h1><?php esc_html_e('Quote Builder — Analytics', 'leadsforward-core'); ?></h1>
+		<p class="description"><?php esc_html_e('Aggregated, first-party analytics for Quote Builder performance. No PII is stored or shown.', 'leadsforward-core'); ?></p>
+		<h2><?php esc_html_e('Totals', 'leadsforward-core'); ?></h2>
+		<table class="widefat striped">
+			<thead>
+				<tr>
+					<th><?php esc_html_e('Range', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Opens', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Completions', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Conversion', 'leadsforward-core'); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ($range_days as $days) :
+					$open = $totals[$days]['open'] ?? 0;
+					$complete = $totals[$days]['complete'] ?? 0;
+					$rate = $open > 0 ? round(($complete / $open) * 100, 1) : 0;
+					?>
+					<tr>
+						<td><?php echo esc_html(sprintf(__('%d days', 'leadsforward-core'), $days)); ?></td>
+						<td><?php echo esc_html((string) $open); ?></td>
+						<td><?php echo esc_html((string) $complete); ?></td>
+						<td><?php echo esc_html($rate . '%'); ?></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+
+		<h2><?php esc_html_e('Funnel (last 30 days)', 'leadsforward-core'); ?></h2>
+		<table class="widefat striped">
+			<thead>
+				<tr>
+					<th><?php esc_html_e('Step', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Viewed', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Completed', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Drop-off', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Avg time', 'leadsforward-core'); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ($steps as $step) :
+					$step_id = $step['id'] ?? '';
+					$label = $step['title'] ?? $step_id;
+					$view = $stats[$step_id]['views'] ?? 0;
+					$complete = $stats[$step_id]['completes'] ?? 0;
+					$drop = max(0, $view - $complete);
+					$drop_rate = $view > 0 ? round(($drop / $view) * 100, 1) : 0;
+					$avg_time = $complete > 0 ? round(($stats[$step_id]['time'] ?? 0) / $complete / 1000, 1) : 0;
+					$row_style = ($step_id === $weakest && $view > 0) ? ' style="background:#fef9c3;"' : '';
+					?>
+					<tr<?php echo $row_style; ?>>
+						<td><?php echo esc_html($label); ?></td>
+						<td><?php echo esc_html((string) $view); ?></td>
+						<td><?php echo esc_html((string) $complete); ?></td>
+						<td><?php echo esc_html($drop_rate . '%'); ?></td>
+						<td><?php echo esc_html($avg_time . 's'); ?></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+		<?php if ($most_exit !== '') : ?>
+			<p class="description"><?php echo esc_html(sprintf(__('Most common exit step: %s', 'leadsforward-core'), $step_labels[$most_exit] ?? $most_exit)); ?></p>
+		<?php endif; ?>
+	</div>
+	<?php
 }
 
 function lf_quote_builder_render_admin(): void {

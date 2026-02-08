@@ -67,6 +67,22 @@ function lf_ops_register_menu(): void {
 		'lf-quote-builder',
 		'lf_quote_builder_render_admin'
 	);
+	add_submenu_page(
+		'lf-ops',
+		__('Quote Builder Integrations', 'leadsforward-core'),
+		__('Quote Builder — Integrations', 'leadsforward-core'),
+		LF_OPS_CAP,
+		'lf-quote-builder-integrations',
+		'lf_quote_builder_render_integrations'
+	);
+	add_submenu_page(
+		'lf-ops',
+		__('Quote Builder Analytics', 'leadsforward-core'),
+		__('Quote Builder — Analytics', 'leadsforward-core'),
+		LF_OPS_CAP,
+		'lf-quote-builder-analytics',
+		'lf_quote_builder_render_analytics'
+	);
 	$has_acf_options = function_exists('acf_options_page_html');
 	// Remaining ACF option pages (only render if ACF options pages exist).
 	if ($has_acf_options) {

@@ -19,7 +19,7 @@ LeadsForward Core provides:
 - **Image system:** Media Library–only images with Unsplash placeholder seeding
 - **Homepage builder:** Drag/drop order, per-section toggles, backgrounds, and copy
 - **Page Builder Framework:** Instance-based sections for service + service area pages
-- **Quote Builder:** Full-screen modal with multi-step flow + CTA actions (quote/call/link)
+- **Quote Builder:** Full-screen modal with multi-step flow, GHL webhook delivery, and first-party analytics
 - **AI Assistant (bounded):** Safe copy suggestions + field edits only (no layout/CSS changes)
 - **Server-rendered blocks:** Hero, Trust/Reviews, CTA, FAQ Accordion, Map+NAP
 - **SEO & schema:** JSON-LD (LocalBusiness, Service, FAQPage, Review), canonical, noindex, NAP/geo helpers
@@ -114,6 +114,8 @@ Under **LeadsForward**:
 | **Global Settings** | Logo + Branding colors (core/surface/text) mapped to CSS variables. |
 | **Homepage** | Homepage builder: section order, toggles, backgrounds, copy, CTA actions. |
 | **Quote Builder** | Multi-step modal configuration; safe fields only. |
+| **Quote Builder — Integrations** | GHL webhook delivery settings. |
+| **Quote Builder — Analytics** | Aggregated funnel analytics dashboard. |
 | **AI Assistant** | Bounded copy tools (text-only changes, confirmations). |
 | **Config** | Export/Import config. |
 | **Schema** | Schema toggles and outputs. |
@@ -190,7 +192,8 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 
 - **Modal:** Full-screen, multi-step quote flow (CTA action `quote`).
 - **Admin:** Structured configuration in **LeadsForward → Quote Builder**.
-- **Data:** Stored locally (no external sends yet).
+- **Integrations:** GHL webhook delivery via **LeadsForward → Quote Builder → Integrations** (toggle + URL + pipeline/tags/source).
+- **Analytics:** First-party aggregated funnel metrics in **LeadsForward → Quote Builder → Analytics** (no PII).
 
 ---
 
