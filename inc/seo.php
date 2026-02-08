@@ -111,6 +111,25 @@ function lf_get_pb_hero_subheadline(int $post_id): string {
 	return '';
 }
 
+function lf_get_pb_hero_headline(int $post_id): string {
+	$config = get_post_meta($post_id, LF_PB_META_KEY, true);
+	if (!is_array($config)) {
+		return '';
+	}
+	$order = $config['order'] ?? [];
+	$sections = $config['sections'] ?? [];
+	foreach ($order as $instance_id) {
+		$section = $sections[$instance_id] ?? null;
+		if (!$section || ($section['type'] ?? '') !== 'hero') {
+			continue;
+		}
+		$settings = $section['settings'] ?? [];
+		$headline = $settings['hero_headline'] ?? '';
+		return is_string($headline) ? $headline : '';
+	}
+	return '';
+}
+
 function lf_filter_document_title(string $title): string {
 	if (!is_singular(['page', 'post'])) {
 		return $title;
@@ -122,6 +141,10 @@ function lf_filter_document_title(string $title): string {
 	$seo = lf_get_pb_seo_overrides($post_id);
 	if (!empty($seo['title'])) {
 		return $seo['title'];
+	}
+	$hero = lf_get_pb_hero_headline($post_id);
+	if ($hero !== '') {
+		return $hero;
 	}
 	return $title;
 }

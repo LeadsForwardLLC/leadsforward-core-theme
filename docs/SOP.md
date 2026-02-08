@@ -232,6 +232,7 @@ SEO best practices (per core page):
 - **Contact:** Include phone and service area in the hero subheadline.
 - **Privacy/Terms:** Use clear legal titles; keep these pages simple.
 - **Thank You:** Confirm next steps; avoid aggressive sales copy.
+ - **Meta title default:** Uses the Hero headline if set; otherwise the page title.
 
 Conversion best practices (per core page):
 - Keep one primary CTA near the end of each core page.
