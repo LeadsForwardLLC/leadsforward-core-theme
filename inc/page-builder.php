@@ -315,13 +315,17 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 			}
 			if ($list.length && $list.sortable) {
 				$list.sortable({
-					items: '.lf-pb-section',
+					items: '> li:not(.lf-pb-empty)',
 					handle: '.lf-pb-drag',
 					axis: 'y',
 					placeholder: 'lf-pb-placeholder',
+					tolerance: 'pointer',
 					receive: function (e, ui) {
-						var type = ui.item.data('sectionType');
-						if (!type) return;
+						var type = ui.item.attr('data-section-type') || ui.item.data('sectionType');
+						if (!type) {
+							ui.item.remove();
+							return;
+						}
 						$list.find('.lf-pb-empty').remove();
 						var id = makeId(type);
 						var html = templates[type] ? templates[type].replace(/__ID__/g, id) : '';
