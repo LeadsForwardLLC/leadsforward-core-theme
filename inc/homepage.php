@@ -32,14 +32,7 @@ const LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION = 'lf_homepage_manual_override';
  * @return string[]
  */
 function lf_homepage_default_order(): array {
-	return [
-		'hero',
-		'service_grid',
-		'trust_reviews',
-		'faq_accordion',
-		'cta',
-		'map_nap',
-	];
+	return lf_sections_default_order('homepage');
 }
 
 /**
@@ -84,18 +77,6 @@ function lf_homepage_controller_order(): array {
 /**
  * Map section type to block template name.
  */
-function lf_homepage_section_template_map(): array {
-	return [
-		'hero'           => 'hero',
-		'trust_reviews'  => 'trust-reviews',
-		'service_grid'  => 'service-grid',
-		'service_areas' => 'service-areas',
-		'cta'           => 'cta',
-		'faq_accordion' => 'faq-accordion',
-		'map_nap'       => 'map-nap',
-	];
-}
-
 /**
  * Default config for one section (enabled, variant, and type-specific fields).
  *
@@ -106,6 +87,24 @@ function lf_homepage_default_section_config(string $section_type): array {
 		'enabled' => true,
 		'variant' => 'default',
 	];
+	$defaults = lf_sections_defaults_for($section_type);
+	if (!empty($defaults)) {
+		$config = array_merge($base, $defaults);
+		if ($section_type === 'hero') {
+			$config['hero_headline'] = __('Trusted Local Home Services in [Your City]', 'leadsforward-core');
+			$config['hero_subheadline'] = __('Fast response times, clear pricing, and workmanship backed by warranty. Get expert help from a local team you can rely on.', 'leadsforward-core');
+			$config['hero_cta_override'] = '';
+			$config['hero_cta_secondary_override'] = '';
+			$config['hero_cta_action'] = '';
+			$config['hero_cta_url'] = '';
+			$config['hero_cta_secondary_action'] = '';
+			$config['hero_cta_secondary_url'] = '';
+		}
+		if ($section_type === 'cta' && !array_key_exists('cta_ghl_override', $config)) {
+			$config['cta_ghl_override'] = '';
+		}
+		return $config;
+	}
 	switch ($section_type) {
 		case 'hero':
 			return array_merge($base, [
@@ -184,8 +183,9 @@ function lf_homepage_default_config(?string $niche_slug = null): array {
 		}
 		$config[$type] = $sec;
 	}
-	// Canonical layout: map_nap off by default (no duplicate sections).
-	$config['map_nap']['enabled'] = false;
+	if (isset($config['map_nap'])) {
+		$config['map_nap']['enabled'] = true;
+	}
 	return $config;
 }
 
@@ -289,6 +289,7 @@ function lf_get_homepage_section_config(): array {
  * @return array<string, array<string, mixed>>
  */
 function lf_homepage_merge_config_with_defaults(array $stored): array {
+	$stored = lf_homepage_upgrade_legacy_config($stored);
 	$order = lf_homepage_controller_order();
 	$out = [];
 	foreach ($order as $type) {
@@ -300,6 +301,46 @@ function lf_homepage_merge_config_with_defaults(array $stored): array {
 		$out[$type] = array_merge($default, $row);
 	}
 	return $out;
+}
+
+/**
+ * Upgrade legacy section IDs into the shared section library IDs.
+ *
+ * @param array<string, array<string, mixed>> $stored
+ * @return array<string, array<string, mixed>>
+ */
+function lf_homepage_upgrade_legacy_config(array $stored): array {
+	if (!isset($stored['trust_bar']) && isset($stored['trust_reviews']) && is_array($stored['trust_reviews'])) {
+		$legacy = $stored['trust_reviews'];
+		$stored['trust_bar'] = [
+			'enabled' => !empty($legacy['enabled']),
+			'variant' => $legacy['variant'] ?? 'default',
+			'trust_heading' => $legacy['trust_heading'] ?? '',
+			'trust_badges' => '',
+			'trust_rating' => '',
+			'trust_review_count' => '',
+		];
+	}
+	if (!isset($stored['benefits']) && isset($stored['service_grid']) && is_array($stored['service_grid'])) {
+		$legacy = $stored['service_grid'];
+		$stored['benefits'] = [
+			'enabled' => !empty($legacy['enabled']),
+			'variant' => $legacy['variant'] ?? 'default',
+			'section_heading' => $legacy['section_heading'] ?? '',
+			'section_intro' => $legacy['section_intro'] ?? '',
+			'benefits_items' => '',
+		];
+	}
+	if (!isset($stored['map_nap']) && isset($stored['service_areas']) && is_array($stored['service_areas'])) {
+		$legacy = $stored['service_areas'];
+		$stored['map_nap'] = [
+			'enabled' => !empty($legacy['enabled']),
+			'variant' => $legacy['variant'] ?? 'default',
+			'section_heading' => $legacy['section_heading'] ?? '',
+			'section_intro' => $legacy['section_intro'] ?? '',
+		];
+	}
+	return $stored;
 }
 
 /**
@@ -474,12 +515,16 @@ function lf_get_resolved_cta(array $context = []): array {
 		}
 	}
 
+	if ($action === 'call') {
+		$type = 'call';
+	}
+
 	return [
 		'primary_text'   => is_string($primary) ? $primary : '',
 		'secondary_text' => is_string($secondary) ? $secondary : '',
 		'ghl_embed'      => is_string($ghl) ? $ghl : '',
 		'primary_type'   => in_array($type, ['call', 'form', 'text'], true) ? $type : 'text',
-		'primary_action' => in_array($action, ['link', 'quote'], true) ? $action : 'quote',
+		'primary_action' => in_array($action, ['link', 'quote', 'call'], true) ? $action : 'quote',
 		'primary_url'    => is_string($url) ? $url : '',
 		'secondary_action' => in_array($secondary_action, ['link', 'quote', 'call'], true) ? $secondary_action : 'call',
 		'secondary_url'    => is_string($secondary_url) ? $secondary_url : '',
@@ -498,23 +543,13 @@ function lf_get_cta_phone(): string {
  * Render one homepage section. Maps section_type to template; variant from block registry.
  */
 function lf_render_homepage_section(array $section, int $index): void {
-	$map = lf_homepage_section_template_map();
 	$type = $section['section_type'] ?? '';
-	if (!isset($map[$type])) {
+	if ($type === '') {
 		return;
 	}
-	$template = $map[$type];
-	$override_variant = $section['layout_variant'] ?? 'default';
-	$variant = function_exists('lf_get_block_variant') ? lf_get_block_variant($template, $override_variant) : $override_variant;
-	$block = [
-		'id'         => 'homepage-section-' . $index,
-		'variant'    => $variant,
-		'attributes' => ['variant' => $variant, 'layout' => $variant],
-		'context'    => [
-			'homepage' => true,
-			'section'  => $section,
-			'index'    => $index,
-		],
-	];
-	lf_render_block_template($template, $block, false, $block['context']);
+	$post = get_post();
+	if (!$post instanceof \WP_Post) {
+		return;
+	}
+	lf_sections_render_section($type, 'homepage', $section, $post);
 }

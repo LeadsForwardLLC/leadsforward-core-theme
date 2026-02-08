@@ -70,6 +70,7 @@ lf_load_inc('variation-tokens.php');
 lf_load_inc('branding.php');
 lf_load_inc('global-settings.php');
 lf_load_inc('quote-builder.php');
+lf_load_inc('sections.php');
 lf_load_inc('page-builder.php');
 
 // Homepage section registry, defaults, CTA resolution.

@@ -98,24 +98,38 @@ function lf_homepage_admin_save(): void {
 			$config[$type]['hero_cta_override'] = isset($_POST['lf_hp_hero_cta_override']) ? sanitize_text_field($_POST['lf_hp_hero_cta_override']) : '';
 			$config[$type]['hero_cta_secondary_override'] = isset($_POST['lf_hp_hero_cta_secondary_override']) ? sanitize_text_field($_POST['lf_hp_hero_cta_secondary_override']) : '';
 			$hero_action = isset($_POST['lf_hp_hero_cta_action']) ? sanitize_text_field($_POST['lf_hp_hero_cta_action']) : '';
-			$config[$type]['hero_cta_action'] = in_array($hero_action, ['link', 'quote'], true) ? $hero_action : '';
+			$config[$type]['hero_cta_action'] = in_array($hero_action, ['link', 'quote', 'call'], true) ? $hero_action : '';
 			$config[$type]['hero_cta_url'] = isset($_POST['lf_hp_hero_cta_url']) ? esc_url_raw(wp_unslash($_POST['lf_hp_hero_cta_url'])) : '';
 			$hero_secondary_action = isset($_POST['lf_hp_hero_cta_secondary_action']) ? sanitize_text_field($_POST['lf_hp_hero_cta_secondary_action']) : '';
 			$config[$type]['hero_cta_secondary_action'] = in_array($hero_secondary_action, ['link', 'quote', 'call'], true) ? $hero_secondary_action : '';
 			$config[$type]['hero_cta_secondary_url'] = isset($_POST['lf_hp_hero_cta_secondary_url']) ? esc_url_raw(wp_unslash($_POST['lf_hp_hero_cta_secondary_url'])) : '';
 		}
-		if ($type === 'trust_reviews') {
-			$n = isset($_POST['lf_hp_trust_max_items']) ? (int) $_POST['lf_hp_trust_max_items'] : 1;
-			$config[$type]['trust_max_items'] = max(1, min(10, $n));
+		if ($type === 'trust_bar') {
 			$config[$type]['trust_heading'] = isset($_POST['lf_hp_trust_heading']) ? sanitize_text_field($_POST['lf_hp_trust_heading']) : '';
+			$config[$type]['trust_badges'] = isset($_POST['lf_hp_trust_badges']) ? sanitize_textarea_field($_POST['lf_hp_trust_badges']) : '';
+			$config[$type]['trust_rating'] = isset($_POST['lf_hp_trust_rating']) ? sanitize_text_field($_POST['lf_hp_trust_rating']) : '';
+			$config[$type]['trust_review_count'] = isset($_POST['lf_hp_trust_review_count']) ? sanitize_text_field($_POST['lf_hp_trust_review_count']) : '';
 		}
-		if ($type === 'service_grid') {
-			$config[$type]['section_heading'] = isset($_POST['lf_hp_services_heading']) ? sanitize_text_field($_POST['lf_hp_services_heading']) : '';
-			$config[$type]['section_intro'] = isset($_POST['lf_hp_services_intro']) ? sanitize_textarea_field($_POST['lf_hp_services_intro']) : '';
+		if ($type === 'benefits') {
+			$config[$type]['section_heading'] = isset($_POST['lf_hp_benefits_heading']) ? sanitize_text_field($_POST['lf_hp_benefits_heading']) : '';
+			$config[$type]['section_intro'] = isset($_POST['lf_hp_benefits_intro']) ? sanitize_textarea_field($_POST['lf_hp_benefits_intro']) : '';
+			$config[$type]['benefits_items'] = isset($_POST['lf_hp_benefits_items']) ? sanitize_textarea_field($_POST['lf_hp_benefits_items']) : '';
 		}
-		if ($type === 'service_areas') {
-			$config[$type]['section_heading'] = isset($_POST['lf_hp_areas_heading']) ? sanitize_text_field($_POST['lf_hp_areas_heading']) : '';
-			$config[$type]['section_intro'] = isset($_POST['lf_hp_areas_intro']) ? sanitize_textarea_field($_POST['lf_hp_areas_intro']) : '';
+		if ($type === 'service_details') {
+			$config[$type]['section_heading'] = isset($_POST['lf_hp_details_heading']) ? sanitize_text_field($_POST['lf_hp_details_heading']) : '';
+			$config[$type]['section_intro'] = isset($_POST['lf_hp_details_intro']) ? sanitize_textarea_field($_POST['lf_hp_details_intro']) : '';
+			$config[$type]['service_details_body'] = isset($_POST['lf_hp_details_body']) ? sanitize_textarea_field($_POST['lf_hp_details_body']) : '';
+			$config[$type]['service_details_checklist'] = isset($_POST['lf_hp_details_checklist']) ? sanitize_textarea_field($_POST['lf_hp_details_checklist']) : '';
+		}
+		if ($type === 'process') {
+			$config[$type]['section_heading'] = isset($_POST['lf_hp_process_heading']) ? sanitize_text_field($_POST['lf_hp_process_heading']) : '';
+			$config[$type]['section_intro'] = isset($_POST['lf_hp_process_intro']) ? sanitize_textarea_field($_POST['lf_hp_process_intro']) : '';
+			$config[$type]['process_steps'] = isset($_POST['lf_hp_process_steps']) ? sanitize_textarea_field($_POST['lf_hp_process_steps']) : '';
+		}
+		if ($type === 'related_links') {
+			$config[$type]['section_heading'] = isset($_POST['lf_hp_related_heading']) ? sanitize_text_field($_POST['lf_hp_related_heading']) : '';
+			$config[$type]['section_intro'] = isset($_POST['lf_hp_related_intro']) ? sanitize_textarea_field($_POST['lf_hp_related_intro']) : '';
+			$config[$type]['related_links_mode'] = isset($_POST['lf_hp_related_mode']) ? sanitize_text_field($_POST['lf_hp_related_mode']) : 'both';
 		}
 		if ($type === 'map_nap') {
 			$config[$type]['section_heading'] = isset($_POST['lf_hp_map_heading']) ? sanitize_text_field($_POST['lf_hp_map_heading']) : '';
@@ -124,6 +138,7 @@ function lf_homepage_admin_save(): void {
 		if ($type === 'faq_accordion') {
 			$config[$type]['section_heading'] = isset($_POST['lf_hp_faq_heading']) ? sanitize_text_field($_POST['lf_hp_faq_heading']) : '';
 			$config[$type]['section_intro'] = isset($_POST['lf_hp_faq_intro']) ? sanitize_textarea_field($_POST['lf_hp_faq_intro']) : '';
+			$config[$type]['faq_max_items'] = isset($_POST['lf_hp_faq_max']) ? sanitize_text_field($_POST['lf_hp_faq_max']) : '';
 		}
 		if ($type === 'cta') {
 			$config[$type]['cta_headline'] = isset($_POST['lf_hp_cta_headline']) ? sanitize_text_field($_POST['lf_hp_cta_headline']) : '';
@@ -131,7 +146,7 @@ function lf_homepage_admin_save(): void {
 			$config[$type]['cta_secondary_override'] = isset($_POST['lf_hp_cta_secondary']) ? sanitize_text_field($_POST['lf_hp_cta_secondary']) : '';
 			$config[$type]['cta_ghl_override'] = isset($_POST['lf_hp_cta_ghl']) ? wp_kses_post($_POST['lf_hp_cta_ghl']) : '';
 			$cta_action = isset($_POST['lf_hp_cta_primary_action']) ? sanitize_text_field($_POST['lf_hp_cta_primary_action']) : '';
-			$config[$type]['cta_primary_action'] = in_array($cta_action, ['link', 'quote'], true) ? $cta_action : '';
+			$config[$type]['cta_primary_action'] = in_array($cta_action, ['link', 'quote', 'call'], true) ? $cta_action : '';
 			$config[$type]['cta_primary_url'] = isset($_POST['lf_hp_cta_primary_url']) ? esc_url_raw(wp_unslash($_POST['lf_hp_cta_primary_url'])) : '';
 			$cta_secondary_action = isset($_POST['lf_hp_cta_secondary_action']) ? sanitize_text_field($_POST['lf_hp_cta_secondary_action']) : '';
 			$config[$type]['cta_secondary_action'] = in_array($cta_secondary_action, ['link', 'quote', 'call'], true) ? $cta_secondary_action : '';
@@ -146,11 +161,13 @@ function lf_homepage_admin_save(): void {
 function lf_homepage_admin_section_labels(): array {
 	return [
 		'hero'           => __('Hero', 'leadsforward-core'),
-		'trust_reviews'  => __('Trust / Reviews', 'leadsforward-core'),
-		'service_grid'   => __('Service Grid', 'leadsforward-core'),
-		'service_areas'  => __('Service Areas', 'leadsforward-core'),
-		'faq_accordion'  => __('FAQ Accordion', 'leadsforward-core'),
-		'cta'            => __('Final CTA', 'leadsforward-core'),
+		'trust_bar'      => __('Trust Bar', 'leadsforward-core'),
+		'benefits'       => __('Benefits / Why Choose Us', 'leadsforward-core'),
+		'service_details' => __('Service Details', 'leadsforward-core'),
+		'process'        => __('Process', 'leadsforward-core'),
+		'faq_accordion'  => __('FAQ', 'leadsforward-core'),
+		'cta'            => __('CTA Band', 'leadsforward-core'),
+		'related_links'  => __('Related Links', 'leadsforward-core'),
 		'map_nap'        => __('Service Areas + Map', 'leadsforward-core'),
 	];
 }
@@ -544,8 +561,9 @@ function lf_homepage_admin_render(): void {
 						<td>
 							<select name="lf_hp_hero_cta_action" id="lf_hp_hero_cta_action">
 								<option value=""><?php esc_html_e('Use global/homepage setting', 'leadsforward-core'); ?></option>
-								<option value="link" <?php selected(($sec['hero_cta_action'] ?? ''), 'link'); ?>><?php esc_html_e('Link', 'leadsforward-core'); ?></option>
 								<option value="quote" <?php selected(($sec['hero_cta_action'] ?? ''), 'quote'); ?>><?php esc_html_e('Open Quote Builder', 'leadsforward-core'); ?></option>
+								<option value="call" <?php selected(($sec['hero_cta_action'] ?? ''), 'call'); ?>><?php esc_html_e('Call now', 'leadsforward-core'); ?></option>
+								<option value="link" <?php selected(($sec['hero_cta_action'] ?? ''), 'link'); ?>><?php esc_html_e('Link', 'leadsforward-core'); ?></option>
 							</select>
 							<span class="description"><?php esc_html_e('Controls whether this CTA opens the Quote Builder modal.', 'leadsforward-core'); ?></span>
 						</td>
@@ -570,24 +588,89 @@ function lf_homepage_admin_render(): void {
 						<td><input type="url" class="large-text" name="lf_hp_hero_cta_secondary_url" id="lf_hp_hero_cta_secondary_url" value="<?php echo esc_attr($sec['hero_cta_secondary_url'] ?? ''); ?>" placeholder="https://example.com" /></td>
 					</tr>
 					<?php endif; ?>
-					<?php if ($type === 'service_grid') : ?>
-					<tr class="lf-homepage-section-fields" data-parent="service_grid">
-						<th scope="row"><label for="lf_hp_services_heading"><?php esc_html_e('Services section heading', 'leadsforward-core'); ?></label></th>
-						<td><input type="text" class="large-text" name="lf_hp_services_heading" id="lf_hp_services_heading" value="<?php echo esc_attr($sec['section_heading'] ?? ''); ?>" placeholder="<?php esc_attr_e('Our Services', 'leadsforward-core'); ?>" /></td>
+					<?php if ($type === 'trust_bar') : ?>
+					<tr class="lf-homepage-section-fields" data-parent="trust_bar">
+						<th scope="row"><label for="lf_hp_trust_heading"><?php esc_html_e('Trust bar heading', 'leadsforward-core'); ?></label></th>
+						<td><input type="text" class="large-text" name="lf_hp_trust_heading" id="lf_hp_trust_heading" value="<?php echo esc_attr($sec['trust_heading'] ?? ''); ?>" /></td>
 					</tr>
-					<tr class="lf-homepage-section-fields" data-parent="service_grid">
-						<th scope="row"><label for="lf_hp_services_intro"><?php esc_html_e('Services intro text', 'leadsforward-core'); ?></label></th>
-						<td><textarea class="large-text" name="lf_hp_services_intro" id="lf_hp_services_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
+					<tr class="lf-homepage-section-fields" data-parent="trust_bar">
+						<th scope="row"><label for="lf_hp_trust_badges"><?php esc_html_e('Badges (one per line)', 'leadsforward-core'); ?></label></th>
+						<td><textarea class="large-text" name="lf_hp_trust_badges" id="lf_hp_trust_badges" rows="3"><?php echo esc_textarea($sec['trust_badges'] ?? ''); ?></textarea></td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="trust_bar">
+						<th scope="row"><label for="lf_hp_trust_rating"><?php esc_html_e('Rating override (optional)', 'leadsforward-core'); ?></label></th>
+						<td><input type="number" step="0.1" name="lf_hp_trust_rating" id="lf_hp_trust_rating" value="<?php echo esc_attr((string) ($sec['trust_rating'] ?? '')); ?>" /></td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="trust_bar">
+						<th scope="row"><label for="lf_hp_trust_review_count"><?php esc_html_e('Review count override (optional)', 'leadsforward-core'); ?></label></th>
+						<td><input type="number" name="lf_hp_trust_review_count" id="lf_hp_trust_review_count" value="<?php echo esc_attr((string) ($sec['trust_review_count'] ?? '')); ?>" /></td>
 					</tr>
 					<?php endif; ?>
-					<?php if ($type === 'service_areas') : ?>
-					<tr class="lf-homepage-section-fields" data-parent="service_areas">
-						<th scope="row"><label for="lf_hp_areas_heading"><?php esc_html_e('Service areas heading', 'leadsforward-core'); ?></label></th>
-						<td><input type="text" class="large-text" name="lf_hp_areas_heading" id="lf_hp_areas_heading" value="<?php echo esc_attr($sec['section_heading'] ?? ''); ?>" placeholder="<?php esc_attr_e('Service Areas', 'leadsforward-core'); ?>" /></td>
+					<?php if ($type === 'benefits') : ?>
+					<tr class="lf-homepage-section-fields" data-parent="benefits">
+						<th scope="row"><label for="lf_hp_benefits_heading"><?php esc_html_e('Benefits heading', 'leadsforward-core'); ?></label></th>
+						<td><input type="text" class="large-text" name="lf_hp_benefits_heading" id="lf_hp_benefits_heading" value="<?php echo esc_attr($sec['section_heading'] ?? ''); ?>" /></td>
 					</tr>
-					<tr class="lf-homepage-section-fields" data-parent="service_areas">
-						<th scope="row"><label for="lf_hp_areas_intro"><?php esc_html_e('Service areas intro', 'leadsforward-core'); ?></label></th>
-						<td><textarea class="large-text" name="lf_hp_areas_intro" id="lf_hp_areas_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
+					<tr class="lf-homepage-section-fields" data-parent="benefits">
+						<th scope="row"><label for="lf_hp_benefits_intro"><?php esc_html_e('Benefits intro', 'leadsforward-core'); ?></label></th>
+						<td><textarea class="large-text" name="lf_hp_benefits_intro" id="lf_hp_benefits_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="benefits">
+						<th scope="row"><label for="lf_hp_benefits_items"><?php esc_html_e('Benefits (one per line)', 'leadsforward-core'); ?></label></th>
+						<td><textarea class="large-text" name="lf_hp_benefits_items" id="lf_hp_benefits_items" rows="3"><?php echo esc_textarea($sec['benefits_items'] ?? ''); ?></textarea></td>
+					</tr>
+					<?php endif; ?>
+					<?php if ($type === 'service_details') : ?>
+					<tr class="lf-homepage-section-fields" data-parent="service_details">
+						<th scope="row"><label for="lf_hp_details_heading"><?php esc_html_e('Service details heading', 'leadsforward-core'); ?></label></th>
+						<td><input type="text" class="large-text" name="lf_hp_details_heading" id="lf_hp_details_heading" value="<?php echo esc_attr($sec['section_heading'] ?? ''); ?>" /></td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="service_details">
+						<th scope="row"><label for="lf_hp_details_intro"><?php esc_html_e('Service details intro', 'leadsforward-core'); ?></label></th>
+						<td><textarea class="large-text" name="lf_hp_details_intro" id="lf_hp_details_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="service_details">
+						<th scope="row"><label for="lf_hp_details_body"><?php esc_html_e('Service details body', 'leadsforward-core'); ?></label></th>
+						<td><textarea class="large-text" name="lf_hp_details_body" id="lf_hp_details_body" rows="4"><?php echo esc_textarea($sec['service_details_body'] ?? ''); ?></textarea></td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="service_details">
+						<th scope="row"><label for="lf_hp_details_checklist"><?php esc_html_e('Checklist (one per line)', 'leadsforward-core'); ?></label></th>
+						<td><textarea class="large-text" name="lf_hp_details_checklist" id="lf_hp_details_checklist" rows="3"><?php echo esc_textarea($sec['service_details_checklist'] ?? ''); ?></textarea></td>
+					</tr>
+					<?php endif; ?>
+					<?php if ($type === 'process') : ?>
+					<tr class="lf-homepage-section-fields" data-parent="process">
+						<th scope="row"><label for="lf_hp_process_heading"><?php esc_html_e('Process heading', 'leadsforward-core'); ?></label></th>
+						<td><input type="text" class="large-text" name="lf_hp_process_heading" id="lf_hp_process_heading" value="<?php echo esc_attr($sec['section_heading'] ?? ''); ?>" /></td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="process">
+						<th scope="row"><label for="lf_hp_process_intro"><?php esc_html_e('Process intro', 'leadsforward-core'); ?></label></th>
+						<td><textarea class="large-text" name="lf_hp_process_intro" id="lf_hp_process_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="process">
+						<th scope="row"><label for="lf_hp_process_steps"><?php esc_html_e('Process steps (one per line)', 'leadsforward-core'); ?></label></th>
+						<td><textarea class="large-text" name="lf_hp_process_steps" id="lf_hp_process_steps" rows="3"><?php echo esc_textarea($sec['process_steps'] ?? ''); ?></textarea></td>
+					</tr>
+					<?php endif; ?>
+					<?php if ($type === 'related_links') : ?>
+					<tr class="lf-homepage-section-fields" data-parent="related_links">
+						<th scope="row"><label for="lf_hp_related_heading"><?php esc_html_e('Related links heading', 'leadsforward-core'); ?></label></th>
+						<td><input type="text" class="large-text" name="lf_hp_related_heading" id="lf_hp_related_heading" value="<?php echo esc_attr($sec['section_heading'] ?? ''); ?>" /></td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="related_links">
+						<th scope="row"><label for="lf_hp_related_intro"><?php esc_html_e('Related links intro', 'leadsforward-core'); ?></label></th>
+						<td><textarea class="large-text" name="lf_hp_related_intro" id="lf_hp_related_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="related_links">
+						<th scope="row"><label for="lf_hp_related_mode"><?php esc_html_e('Links to show', 'leadsforward-core'); ?></label></th>
+						<td>
+							<select name="lf_hp_related_mode" id="lf_hp_related_mode">
+								<?php $related_mode = $sec['related_links_mode'] ?? 'both'; ?>
+								<option value="services" <?php selected($related_mode, 'services'); ?>><?php esc_html_e('Services', 'leadsforward-core'); ?></option>
+								<option value="areas" <?php selected($related_mode, 'areas'); ?>><?php esc_html_e('Service Areas', 'leadsforward-core'); ?></option>
+								<option value="both" <?php selected($related_mode, 'both'); ?>><?php esc_html_e('Both', 'leadsforward-core'); ?></option>
+							</select>
+						</td>
 					</tr>
 					<?php endif; ?>
 					<?php if ($type === 'map_nap') : ?>
@@ -600,16 +683,6 @@ function lf_homepage_admin_render(): void {
 						<td><textarea class="large-text" name="lf_hp_map_intro" id="lf_hp_map_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
 					</tr>
 					<?php endif; ?>
-					<?php if ($type === 'trust_reviews') : ?>
-					<tr class="lf-homepage-section-fields" data-parent="trust_reviews">
-						<th scope="row"><label for="lf_hp_trust_heading"><?php esc_html_e('Social proof heading', 'leadsforward-core'); ?></label></th>
-						<td><input type="text" class="large-text" name="lf_hp_trust_heading" id="lf_hp_trust_heading" value="<?php echo esc_attr($sec['trust_heading'] ?? ''); ?>" placeholder="<?php esc_attr_e('What Our Customers Say', 'leadsforward-core'); ?>" /></td>
-					</tr>
-					<tr class="lf-homepage-section-fields" data-parent="trust_reviews">
-						<th scope="row"><label for="lf_hp_trust_max_items"><?php esc_html_e('Max reviews to show', 'leadsforward-core'); ?></label></th>
-						<td><input type="number" name="lf_hp_trust_max_items" id="lf_hp_trust_max_items" value="<?php echo esc_attr((string) ($sec['trust_max_items'] ?? 1)); ?>" min="1" max="10" /> (1–10)</td>
-					</tr>
-					<?php endif; ?>
 					<?php if ($type === 'faq_accordion') : ?>
 					<tr class="lf-homepage-section-fields" data-parent="faq_accordion">
 						<th scope="row"><label for="lf_hp_faq_heading"><?php esc_html_e('FAQ section heading', 'leadsforward-core'); ?></label></th>
@@ -618,6 +691,10 @@ function lf_homepage_admin_render(): void {
 					<tr class="lf-homepage-section-fields" data-parent="faq_accordion">
 						<th scope="row"><label for="lf_hp_faq_intro"><?php esc_html_e('FAQ intro', 'leadsforward-core'); ?></label></th>
 						<td><textarea class="large-text" name="lf_hp_faq_intro" id="lf_hp_faq_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
+					</tr>
+					<tr class="lf-homepage-section-fields" data-parent="faq_accordion">
+						<th scope="row"><label for="lf_hp_faq_max"><?php esc_html_e('Max FAQ items', 'leadsforward-core'); ?></label></th>
+						<td><input type="number" name="lf_hp_faq_max" id="lf_hp_faq_max" value="<?php echo esc_attr((string) ($sec['faq_max_items'] ?? '6')); ?>" min="1" max="20" /></td>
 					</tr>
 					<?php endif; ?>
 					<?php if ($type === 'cta') : ?>
@@ -642,8 +719,9 @@ function lf_homepage_admin_render(): void {
 						<td>
 							<select name="lf_hp_cta_primary_action" id="lf_hp_cta_primary_action">
 								<option value=""><?php esc_html_e('Use global/homepage setting', 'leadsforward-core'); ?></option>
-								<option value="link" <?php selected(($sec['cta_primary_action'] ?? ''), 'link'); ?>><?php esc_html_e('Link', 'leadsforward-core'); ?></option>
 								<option value="quote" <?php selected(($sec['cta_primary_action'] ?? ''), 'quote'); ?>><?php esc_html_e('Open Quote Builder', 'leadsforward-core'); ?></option>
+								<option value="call" <?php selected(($sec['cta_primary_action'] ?? ''), 'call'); ?>><?php esc_html_e('Call now', 'leadsforward-core'); ?></option>
+								<option value="link" <?php selected(($sec['cta_primary_action'] ?? ''), 'link'); ?>><?php esc_html_e('Link', 'leadsforward-core'); ?></option>
 							</select>
 						</td>
 					</tr>

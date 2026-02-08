@@ -17,9 +17,13 @@ $context  = $block['context'] ?? [];
 $section  = $context['section'] ?? [];
 $heading  = !empty($section['section_heading']) ? $section['section_heading'] : __('Frequently Asked Questions', 'leadsforward-core');
 $intro    = !empty($section['section_intro']) ? $section['section_intro'] : '';
+$max_items = isset($section['faq_max_items']) ? (int) $section['faq_max_items'] : -1;
+if ($max_items === 0) {
+	$max_items = -1;
+}
 $query = new WP_Query([
 	'post_type'      => 'lf_faq',
-	'posts_per_page' => -1,
+	'posts_per_page' => $max_items > 0 ? $max_items : -1,
 	'orderby'        => 'menu_order title',
 	'order'          => 'ASC',
 	'post_status'    => 'publish',

@@ -22,139 +22,11 @@ function lf_pb_registry(): array {
 	return [
 		'service' => [
 			'label' => __('Service Page', 'leadsforward-core'),
-			'sections' => [
-				[
-					'id' => 'hero',
-					'label' => __('Hero', 'leadsforward-core'),
-					'enabled' => true,
-					'fields' => [
-						['key' => 'heading', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-						['key' => 'subheading', 'label' => __('Subheadline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-						['key' => 'cta_primary_override', 'label' => __('Primary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-						['key' => 'cta_secondary_override', 'label' => __('Secondary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-						['key' => 'cta_primary_action', 'label' => __('Primary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => 'quote', 'options' => [
-							'quote' => __('Open Quote Builder', 'leadsforward-core'),
-							'call'  => __('Call now', 'leadsforward-core'),
-							'link'  => __('Link', 'leadsforward-core'),
-						]],
-						['key' => 'cta_primary_url', 'label' => __('Primary CTA URL', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
-						['key' => 'cta_secondary_action', 'label' => __('Secondary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => 'call', 'options' => [
-							'call'  => __('Call now', 'leadsforward-core'),
-							'quote' => __('Open Quote Builder', 'leadsforward-core'),
-							'link'  => __('Link', 'leadsforward-core'),
-						]],
-						['key' => 'cta_secondary_url', 'label' => __('Secondary CTA URL', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
-					],
-					'render' => 'lf_pb_render_service_hero',
-				],
-				[
-					'id' => 'content',
-					'label' => __('Content', 'leadsforward-core'),
-					'enabled' => true,
-					'fields' => [],
-					'render' => 'lf_pb_render_service_content',
-				],
-				[
-					'id' => 'cta',
-					'label' => __('Final CTA', 'leadsforward-core'),
-					'enabled' => true,
-					'fields' => [
-						['key' => 'cta_headline', 'label' => __('CTA headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-						['key' => 'cta_primary_override', 'label' => __('Primary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-						['key' => 'cta_secondary_override', 'label' => __('Secondary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-						['key' => 'cta_primary_action', 'label' => __('Primary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => '', 'options' => [
-							''      => __('Use global', 'leadsforward-core'),
-							'quote' => __('Open Quote Builder', 'leadsforward-core'),
-							'call'  => __('Call now', 'leadsforward-core'),
-							'link'  => __('Link', 'leadsforward-core'),
-						]],
-						['key' => 'cta_primary_url', 'label' => __('Primary CTA URL', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
-						['key' => 'cta_secondary_action', 'label' => __('Secondary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => '', 'options' => [
-							''      => __('Use global', 'leadsforward-core'),
-							'call'  => __('Call now', 'leadsforward-core'),
-							'quote' => __('Open Quote Builder', 'leadsforward-core'),
-							'link'  => __('Link', 'leadsforward-core'),
-						]],
-						['key' => 'cta_secondary_url', 'label' => __('Secondary CTA URL', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
-					],
-					'render' => 'lf_pb_render_cta_block',
-				],
-				[
-					'id' => 'related_areas',
-					'label' => __('Related Service Areas', 'leadsforward-core'),
-					'enabled' => true,
-					'fields' => [],
-					'render' => 'lf_pb_render_related_areas',
-				],
-			],
+			'sections' => array_values(lf_sections_get_context_sections('service')),
 		],
 		'service_area' => [
 			'label' => __('Service Area Page', 'leadsforward-core'),
-			'sections' => [
-				[
-					'id' => 'hero',
-					'label' => __('Hero', 'leadsforward-core'),
-					'enabled' => true,
-					'fields' => [
-						['key' => 'heading', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-						['key' => 'subheading', 'label' => __('Subheadline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-						['key' => 'cta_primary_override', 'label' => __('Primary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-						['key' => 'cta_secondary_override', 'label' => __('Secondary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-						['key' => 'cta_primary_action', 'label' => __('Primary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => 'quote', 'options' => [
-							'quote' => __('Open Quote Builder', 'leadsforward-core'),
-							'call'  => __('Call now', 'leadsforward-core'),
-							'link'  => __('Link', 'leadsforward-core'),
-						]],
-						['key' => 'cta_primary_url', 'label' => __('Primary CTA URL', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
-						['key' => 'cta_secondary_action', 'label' => __('Secondary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => 'call', 'options' => [
-							'call'  => __('Call now', 'leadsforward-core'),
-							'quote' => __('Open Quote Builder', 'leadsforward-core'),
-							'link'  => __('Link', 'leadsforward-core'),
-						]],
-						['key' => 'cta_secondary_url', 'label' => __('Secondary CTA URL', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
-					],
-					'render' => 'lf_pb_render_area_hero',
-				],
-				[
-					'id' => 'content',
-					'label' => __('Content', 'leadsforward-core'),
-					'enabled' => true,
-					'fields' => [],
-					'render' => 'lf_pb_render_area_content',
-				],
-				[
-					'id' => 'cta',
-					'label' => __('Final CTA', 'leadsforward-core'),
-					'enabled' => true,
-					'fields' => [
-						['key' => 'cta_headline', 'label' => __('CTA headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-						['key' => 'cta_primary_override', 'label' => __('Primary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-						['key' => 'cta_secondary_override', 'label' => __('Secondary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-						['key' => 'cta_primary_action', 'label' => __('Primary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => '', 'options' => [
-							''      => __('Use global', 'leadsforward-core'),
-							'quote' => __('Open Quote Builder', 'leadsforward-core'),
-							'call'  => __('Call now', 'leadsforward-core'),
-							'link'  => __('Link', 'leadsforward-core'),
-						]],
-						['key' => 'cta_primary_url', 'label' => __('Primary CTA URL', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
-						['key' => 'cta_secondary_action', 'label' => __('Secondary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => '', 'options' => [
-							''      => __('Use global', 'leadsforward-core'),
-							'call'  => __('Call now', 'leadsforward-core'),
-							'quote' => __('Open Quote Builder', 'leadsforward-core'),
-							'link'  => __('Link', 'leadsforward-core'),
-						]],
-						['key' => 'cta_secondary_url', 'label' => __('Secondary CTA URL', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
-					],
-					'render' => 'lf_pb_render_cta_block',
-				],
-				[
-					'id' => 'related_services',
-					'label' => __('Related Services', 'leadsforward-core'),
-					'enabled' => true,
-					'fields' => [],
-					'render' => 'lf_pb_render_related_services',
-				],
-			],
+			'sections' => array_values(lf_sections_get_context_sections('service_area')),
 		],
 	];
 }
@@ -170,19 +42,13 @@ function lf_pb_get_context_for_post(\WP_Post $post): string {
 }
 
 function lf_pb_default_config(string $context): array {
-	$registry = lf_pb_registry();
-	$sections = $registry[$context]['sections'] ?? [];
-	$order = [];
+	$sections = lf_sections_get_context_sections($context);
+	$order = lf_sections_default_order($context);
 	$config = [];
-	foreach ($sections as $section) {
-		$id = $section['id'];
-		$order[] = $id;
-		$settings = [];
-		foreach ($section['fields'] as $field) {
-			$settings[$field['key']] = $field['default'] ?? '';
-		}
+	foreach ($order as $id) {
+		$settings = lf_sections_defaults_for($id);
 		$config[$id] = [
-			'enabled' => !empty($section['enabled']),
+			'enabled' => true,
 			'settings' => $settings,
 		];
 	}
@@ -308,7 +174,7 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 						?>
 						<div class="lf-pb-field">
 							<label><strong><?php echo esc_html($field['label']); ?></strong></label>
-							<?php if ($type === 'textarea') : ?>
+							<?php if ($type === 'textarea' || $type === 'list') : ?>
 								<textarea class="widefat" rows="2" name="lf_pb_sections[<?php echo esc_attr($section_id); ?>][settings][<?php echo esc_attr($key); ?>]"><?php echo esc_textarea($value); ?></textarea>
 							<?php elseif ($type === 'select') : ?>
 								<select name="lf_pb_sections[<?php echo esc_attr($section_id); ?>][settings][<?php echo esc_attr($key); ?>]">
@@ -384,27 +250,8 @@ function lf_pb_handle_save(int $post_id, \WP_Post $post): void {
 		$id = $section['id'];
 		$raw_section = is_array($input[$id] ?? null) ? $input[$id] : [];
 		$enabled = !empty($raw_section['enabled']);
-		$settings = [];
-		foreach ($section['fields'] as $field) {
-			$key = $field['key'];
-			$raw_value = $raw_section['settings'][$key] ?? ($field['default'] ?? '');
-			switch ($field['type']) {
-				case 'textarea':
-					$settings[$key] = sanitize_textarea_field(wp_unslash((string) $raw_value));
-					break;
-				case 'url':
-					$settings[$key] = esc_url_raw(wp_unslash((string) $raw_value));
-					break;
-				case 'select':
-					$options = $field['options'] ?? [];
-					$val = sanitize_text_field(wp_unslash((string) $raw_value));
-					$settings[$key] = array_key_exists($val, $options) ? $val : ($field['default'] ?? '');
-					break;
-				default:
-					$settings[$key] = sanitize_text_field(wp_unslash((string) $raw_value));
-					break;
-			}
-		}
+		$raw_settings = is_array($raw_section['settings'] ?? null) ? $raw_section['settings'] : [];
+		$settings = lf_sections_sanitize_settings($id, $raw_settings);
 		$clean_sections[$id] = ['enabled' => $enabled, 'settings' => $settings];
 	}
 	update_post_meta($post_id, LF_PB_META_KEY, ['order' => $order, 'sections' => $clean_sections]);
@@ -418,192 +265,12 @@ function lf_pb_render_sections(\WP_Post $post): void {
 	$config = lf_pb_get_post_config($post->ID, $context);
 	$order = $config['order'] ?? [];
 	$sections = $config['sections'] ?? [];
-	$registry = lf_pb_registry();
-	$defs = [];
-	foreach ($registry[$context]['sections'] ?? [] as $section) {
-		$defs[$section['id']] = $section;
-	}
 	foreach ($order as $section_id) {
-		$def = $defs[$section_id] ?? null;
 		$sec_cfg = $sections[$section_id] ?? null;
-		if (!$def || !$sec_cfg || empty($sec_cfg['enabled'])) {
+		if (!$sec_cfg || empty($sec_cfg['enabled'])) {
 			continue;
 		}
-		$callback = $def['render'] ?? '';
-		if (is_callable($callback)) {
-			call_user_func($callback, $post, $sec_cfg['settings'] ?? []);
-		}
+		lf_sections_render_section($section_id, $context, $sec_cfg['settings'] ?? [], $post);
 	}
 }
 
-function lf_pb_resolve_cta(array $settings): array {
-	$section = [
-		'cta_primary_override' => $settings['cta_primary_override'] ?? '',
-		'cta_secondary_override' => $settings['cta_secondary_override'] ?? '',
-		'cta_primary_action' => $settings['cta_primary_action'] ?? '',
-		'cta_primary_url' => $settings['cta_primary_url'] ?? '',
-		'cta_secondary_action' => $settings['cta_secondary_action'] ?? '',
-		'cta_secondary_url' => $settings['cta_secondary_url'] ?? '',
-	];
-	return function_exists('lf_get_resolved_cta') ? lf_get_resolved_cta(['section' => $section, 'homepage' => false]) : [];
-}
-
-function lf_pb_render_service_hero(\WP_Post $post, array $settings): void {
-	$h1 = function_exists('get_field') ? get_field('lf_service_seo_h1', $post->ID) : '';
-	if (!$h1) {
-		$h1 = get_the_title($post);
-	}
-	$short_desc = function_exists('get_field') ? get_field('lf_service_short_desc', $post->ID) : '';
-	$heading = $settings['heading'] ?? '';
-	$subheading = $settings['subheading'] ?? '';
-	$cta = lf_pb_resolve_cta($settings);
-	$primary = $cta['primary_text'] ?? '';
-	$secondary = $cta['secondary_text'] ?? '';
-	$action = $cta['primary_action'] ?? 'quote';
-	$secondary_action = $cta['secondary_action'] ?? 'call';
-	$primary_url = $cta['primary_url'] ?? '';
-	$secondary_url = $cta['secondary_url'] ?? '';
-	$phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
-	?>
-	<section class="lf-pb-section lf-pb-hero">
-		<div class="lf-pb-hero__inner">
-			<h1 class="lf-pb-hero__title"><?php echo esc_html($heading !== '' ? $heading : $h1); ?></h1>
-			<?php if ($subheading !== '' || $short_desc) : ?>
-				<p class="lf-pb-hero__subtitle"><?php echo esc_html($subheading !== '' ? $subheading : $short_desc); ?></p>
-			<?php endif; ?>
-			<div class="lf-pb-hero__cta">
-				<?php if ($primary) : ?>
-					<?php if ($action === 'quote') : ?>
-						<button type="button" class="lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="service-hero"><?php echo esc_html($primary); ?></button>
-					<?php elseif ($action === 'call' && $phone) : ?>
-						<a href="tel:<?php echo esc_attr($phone); ?>" class="lf-btn lf-btn--primary"><?php echo esc_html($primary); ?></a>
-					<?php elseif ($action === 'link' && $primary_url !== '') : ?>
-						<a href="<?php echo esc_url($primary_url); ?>" class="lf-btn lf-btn--primary"><?php echo esc_html($primary); ?></a>
-					<?php endif; ?>
-				<?php endif; ?>
-				<?php if ($secondary) : ?>
-					<?php if ($secondary_action === 'call' && $phone) : ?>
-						<a href="tel:<?php echo esc_attr($phone); ?>" class="lf-btn lf-btn--secondary"><?php echo esc_html($secondary); ?></a>
-					<?php elseif ($secondary_action === 'quote') : ?>
-						<button type="button" class="lf-btn lf-btn--secondary" data-lf-quote-trigger="1" data-lf-quote-source="service-hero-secondary"><?php echo esc_html($secondary); ?></button>
-					<?php elseif ($secondary_action === 'link' && $secondary_url !== '') : ?>
-						<a href="<?php echo esc_url($secondary_url); ?>" class="lf-btn lf-btn--secondary"><?php echo esc_html($secondary); ?></a>
-					<?php endif; ?>
-				<?php endif; ?>
-			</div>
-		</div>
-	</section>
-	<?php
-}
-
-function lf_pb_render_area_hero(\WP_Post $post, array $settings): void {
-	$state = function_exists('get_field') ? get_field('lf_service_area_state', $post->ID) : '';
-	$heading = $settings['heading'] ?? '';
-	$subheading = $settings['subheading'] ?? '';
-	$title = $heading !== '' ? $heading : get_the_title($post);
-	$sub = $subheading !== '' ? $subheading : ($state ? sprintf(__('Serving %1$s, %2$s', 'leadsforward-core'), get_the_title($post), $state) : '');
-	$cta = lf_pb_resolve_cta($settings);
-	$primary = $cta['primary_text'] ?? '';
-	$secondary = $cta['secondary_text'] ?? '';
-	$action = $cta['primary_action'] ?? 'quote';
-	$secondary_action = $cta['secondary_action'] ?? 'call';
-	$primary_url = $cta['primary_url'] ?? '';
-	$secondary_url = $cta['secondary_url'] ?? '';
-	$phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
-	?>
-	<section class="lf-pb-section lf-pb-hero">
-		<div class="lf-pb-hero__inner">
-			<h1 class="lf-pb-hero__title"><?php echo esc_html($title); ?></h1>
-			<?php if ($sub) : ?>
-				<p class="lf-pb-hero__subtitle"><?php echo esc_html($sub); ?></p>
-			<?php endif; ?>
-			<div class="lf-pb-hero__cta">
-				<?php if ($primary) : ?>
-					<?php if ($action === 'quote') : ?>
-						<button type="button" class="lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="area-hero"><?php echo esc_html($primary); ?></button>
-					<?php elseif ($action === 'call' && $phone) : ?>
-						<a href="tel:<?php echo esc_attr($phone); ?>" class="lf-btn lf-btn--primary"><?php echo esc_html($primary); ?></a>
-					<?php elseif ($action === 'link' && $primary_url !== '') : ?>
-						<a href="<?php echo esc_url($primary_url); ?>" class="lf-btn lf-btn--primary"><?php echo esc_html($primary); ?></a>
-					<?php endif; ?>
-				<?php endif; ?>
-				<?php if ($secondary) : ?>
-					<?php if ($secondary_action === 'call' && $phone) : ?>
-						<a href="tel:<?php echo esc_attr($phone); ?>" class="lf-btn lf-btn--secondary"><?php echo esc_html($secondary); ?></a>
-					<?php elseif ($secondary_action === 'quote') : ?>
-						<button type="button" class="lf-btn lf-btn--secondary" data-lf-quote-trigger="1" data-lf-quote-source="area-hero-secondary"><?php echo esc_html($secondary); ?></button>
-					<?php elseif ($secondary_action === 'link' && $secondary_url !== '') : ?>
-						<a href="<?php echo esc_url($secondary_url); ?>" class="lf-btn lf-btn--secondary"><?php echo esc_html($secondary); ?></a>
-					<?php endif; ?>
-				<?php endif; ?>
-			</div>
-		</div>
-	</section>
-	<?php
-}
-
-function lf_pb_render_service_content(\WP_Post $post, array $settings): void {
-	$long_content = function_exists('get_field') ? get_field('lf_service_long_content', $post->ID) : '';
-	if (!$long_content) {
-		$long_content = apply_filters('the_content', $post->post_content);
-	}
-	?>
-	<section class="lf-pb-section lf-pb-content">
-		<div class="lf-pb-content__inner">
-			<?php echo wp_kses_post($long_content); ?>
-		</div>
-	</section>
-	<?php
-}
-
-function lf_pb_render_area_content(\WP_Post $post, array $settings): void {
-	$content = apply_filters('the_content', $post->post_content);
-	?>
-	<section class="lf-pb-section lf-pb-content">
-		<div class="lf-pb-content__inner">
-			<?php echo wp_kses_post($content); ?>
-		</div>
-	</section>
-	<?php
-}
-
-function lf_pb_render_related_areas(\WP_Post $post, array $settings): void {
-	?>
-	<section class="lf-pb-section lf-pb-related">
-		<div class="lf-pb-content__inner">
-			<?php get_template_part('templates/parts/related-service-areas'); ?>
-		</div>
-	</section>
-	<?php
-}
-
-function lf_pb_render_related_services(\WP_Post $post, array $settings): void {
-	?>
-	<section class="lf-pb-section lf-pb-related">
-		<div class="lf-pb-content__inner">
-			<?php get_template_part('templates/parts/related-services'); ?>
-		</div>
-	</section>
-	<?php
-}
-
-function lf_pb_render_cta_block(\WP_Post $post, array $settings): void {
-	$section = [
-		'cta_headline' => $settings['cta_headline'] ?? '',
-		'cta_primary_override' => $settings['cta_primary_override'] ?? '',
-		'cta_secondary_override' => $settings['cta_secondary_override'] ?? '',
-		'cta_primary_action' => $settings['cta_primary_action'] ?? '',
-		'cta_primary_url' => $settings['cta_primary_url'] ?? '',
-		'cta_secondary_action' => $settings['cta_secondary_action'] ?? '',
-		'cta_secondary_url' => $settings['cta_secondary_url'] ?? '',
-	];
-	$block = [
-		'id'         => 'pb-cta-' . $post->ID,
-		'variant'    => 'default',
-		'attributes' => ['variant' => 'default', 'layout' => 'default'],
-		'context'    => ['homepage' => false, 'section' => $section],
-	];
-	if (function_exists('lf_render_block_template')) {
-		lf_render_block_template('cta', $block, false, $block['context']);
-	}
-}
