@@ -1571,13 +1571,21 @@ button:focus-visible,
 }
 
 .lf-block-cta__headline {
-	margin: 0 0 1.5rem;
+	margin: 0 0 0.9rem;
 	font-size: clamp(1.75rem, 4vw, 2.5rem);
 	font-weight: 800;
 	line-height: 1.15;
 	letter-spacing: -0.03em;
 	color: var(--lf-text-inverse) !important;
 	text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.lf-block-cta__subheadline {
+	margin: 0 0 1.8rem;
+	font-size: 1.05rem;
+	line-height: 1.6;
+	color: rgba(255,255,255,0.82);
+	max-width: 36rem;
 }
 
 .lf-block-cta__primary {

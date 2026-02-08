@@ -17,6 +17,7 @@ $context = $block['context'] ?? [];
 $section = $context['section'] ?? [];
 $variant = $block['variant'] ?? 'default';
 $headline = !empty($section['cta_headline']) ? $section['cta_headline'] : '';
+$subheadline = !empty($section['cta_subheadline']) ? $section['cta_subheadline'] : '';
 $eyebrow = '';
 $offer_label = '';
 $offer_items = [];
@@ -64,6 +65,9 @@ $show_form = ($cta_type === 'form' && $ghl_embed) || ($cta_type !== 'call' && $g
 			<?php endif; ?>
 			<?php if ($headline !== '') : ?>
 				<h2 class="lf-block-cta__headline"><?php echo esc_html($headline); ?></h2>
+			<?php endif; ?>
+			<?php if ($subheadline !== '') : ?>
+				<p class="lf-block-cta__subheadline"><?php echo esc_html($subheadline); ?></p>
 			<?php endif; ?>
 			<?php if ($primary || $secondary) : ?>
 				<div class="lf-block-cta__buttons">
