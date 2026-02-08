@@ -520,6 +520,7 @@ function lf_sections_render_cta_band(string $context, array $settings, \WP_Post 
 	if (function_exists('lf_render_block_template')) {
 		$section = [
 			'cta_headline' => $settings['cta_headline'] ?? '',
+			'cta_subheadline' => $settings['cta_subheadline'] ?? '',
 			'cta_primary_override' => $settings['cta_primary_override'] ?? '',
 			'cta_secondary_override' => $settings['cta_secondary_override'] ?? '',
 			'cta_primary_action' => $settings['cta_primary_action'] ?? '',

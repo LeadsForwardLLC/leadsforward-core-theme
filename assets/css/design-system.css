@@ -1571,7 +1571,7 @@ button:focus-visible,
 }
 
 .lf-block-cta__headline {
-	margin: 0 0 0.9rem;
+	margin: 0 0 1.35rem;
 	font-size: clamp(1.75rem, 4vw, 2.5rem);
 	font-weight: 800;
 	line-height: 1.15;
@@ -1581,7 +1581,7 @@ button:focus-visible,
 }
 
 .lf-block-cta__subheadline {
-	margin: 0 0 1.8rem;
+	margin: 0 0 2.25rem;
 	font-size: 1.05rem;
 	line-height: 1.6;
 	color: rgba(255,255,255,0.82);

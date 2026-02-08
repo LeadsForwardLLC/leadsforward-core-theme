@@ -103,6 +103,9 @@ function lf_homepage_default_section_config(string $section_type): array {
 		if ($section_type === 'cta' && !array_key_exists('cta_ghl_override', $config)) {
 			$config['cta_ghl_override'] = '';
 		}
+		if ($section_type === 'cta' && !array_key_exists('cta_subheadline', $config)) {
+			$config['cta_subheadline'] = '';
+		}
 		return $config;
 	}
 	switch ($section_type) {
