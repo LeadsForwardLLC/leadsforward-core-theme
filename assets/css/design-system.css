@@ -300,6 +300,11 @@ button:focus-visible,
 .lf-section {
 	padding-top: var(--lf-section-padding-y);
 	padding-bottom: var(--lf-section-padding-y);
+	background: var(--lf-surface-light);
+}
+
+.lf-section + .lf-section {
+	border-top: 1px solid var(--lf-neutral-100);
 }
 
 .lf-section--tight {
@@ -353,6 +358,11 @@ button:focus-visible,
 	margin-top: 1rem;
 }
 
+.lf-section--hero {
+	background: var(--lf-surface-soft);
+	border-bottom: 1px solid var(--lf-neutral-100);
+}
+
 .lf-section--hero .lf-section__title {
 	font-size: var(--lf-fs-h1);
 }
@@ -370,6 +380,7 @@ button:focus-visible,
 	border: var(--lf-card-border);
 	border-radius: 999px;
 	padding: 0.75rem 1.25rem;
+	box-shadow: var(--lf-card-shadow);
 }
 
 .lf-trust-bar__rating {
@@ -410,6 +421,10 @@ button:focus-visible,
 	border-radius: var(--lf-card-radius);
 	padding: 1rem 1.25rem;
 	font-weight: var(--lf-fw-semibold);
+	box-shadow: var(--lf-card-shadow);
+	min-height: 72px;
+	display: flex;
+	align-items: center;
 }
 
 .lf-service-details {
@@ -451,6 +466,10 @@ button:focus-visible,
 	border: var(--lf-card-border);
 	border-radius: var(--lf-card-radius);
 	padding: 0.85rem 1rem;
+	box-shadow: var(--lf-card-shadow);
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
 }
 
 .lf-process__step::before {
@@ -467,21 +486,51 @@ button:focus-visible,
 	margin: 0;
 	padding: 0;
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-	gap: 0.5rem 1rem;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 0.75rem;
 }
 
 .lf-related-links a {
-	display: inline-flex;
+	display: flex;
 	align-items: center;
-	gap: 0.5rem;
+	justify-content: space-between;
+	gap: 0.75rem;
+	width: 100%;
 	color: var(--lf-text);
 	text-decoration: none;
-	padding: 0.25rem 0;
+	padding: 0.75rem 1rem;
+	background: var(--lf-card-bg);
+	border: var(--lf-card-border);
+	border-radius: var(--lf-card-radius);
+	box-shadow: var(--lf-card-shadow);
+	transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
 .lf-related-links a:hover {
 	color: var(--lf-accent);
+	border-color: var(--lf-accent);
+	box-shadow: var(--lf-card-shadow-hover);
+	transform: translateY(-1px);
+}
+
+.lf-related-links a::after {
+	content: '↗';
+	font-size: 0.9em;
+	color: var(--lf-text-muted);
+}
+
+@media (max-width: 720px) {
+	.lf-section__buttons {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	.lf-trust-bar {
+		border-radius: 16px;
+		padding: 0.85rem 1rem;
+	}
+	.lf-related-links {
+		grid-template-columns: 1fr;
+	}
 }
 
 /* Surface utilities — every section has an intentional surface */
