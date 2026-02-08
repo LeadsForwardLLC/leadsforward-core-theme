@@ -21,7 +21,7 @@ function lf_acf_add_service_fields(): void {
 	}
 	acf_add_local_field_group([
 		'key'                   => 'group_lf_service',
-		'title'                 => __('Service Details', 'leadsforward-core'),
+		'title'                 => __('Service Content', 'leadsforward-core'),
 		'fields'                => [
 			[
 				'key'           => 'field_lf_service_seo_h1',
@@ -47,25 +47,6 @@ function lf_acf_add_service_fields(): void {
 				'toolbar' => 'full',
 				'media_upload' => 1,
 				'delay' => 0,
-			],
-			[
-				'key'   => 'field_lf_service_cta_override',
-				'label' => __('Service-specific CTA override', 'leadsforward-core'),
-				'name'  => 'lf_service_cta_override',
-				'type'  => 'wysiwyg',
-				'instructions' => __('Override global CTA for this service. Leave blank to use global.', 'leadsforward-core'),
-				'tabs'  => 'all',
-				'toolbar' => 'full',
-				'media_upload' => 0,
-			],
-			[
-				'key'       => 'field_lf_service_related_areas',
-				'label'     => __('Related service areas', 'leadsforward-core'),
-				'name'      => 'lf_service_related_areas',
-				'type'      => 'relationship',
-				'post_type' => ['lf_service_area'],
-				'return_format' => 'id',
-				'multiple'  => 1,
 			],
 		],
 		'location'              => [

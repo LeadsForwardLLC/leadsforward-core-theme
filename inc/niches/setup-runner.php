@@ -140,12 +140,7 @@ function lf_run_setup(array $data): array {
 		lf_quote_builder_apply_niche_config($data['niche_slug']);
 	}
 
-	// 5. Internal linking: service ↔ service area relationships
-	foreach ($created_services as $sid) {
-		if (function_exists('update_field') && !empty($created_areas)) {
-			update_field('lf_service_related_areas', $created_areas, $sid);
-		}
-	}
+	// 5. Internal linking: service area → services
 	foreach ($created_areas as $aid) {
 		if (function_exists('update_field') && !empty($created_services)) {
 			update_field('lf_service_area_services', $created_services, $aid);

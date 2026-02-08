@@ -192,10 +192,15 @@ function lf_related_services_for_area(int $service_area_id): array {
  * Related service areas for a service (IDs or post objects). For internal linking.
  */
 function lf_related_areas_for_service(int $service_id): array {
-	$ids = function_exists('get_field') ? get_field('lf_service_related_areas', $service_id) : null;
-	if (empty($ids) || !is_array($ids)) {
-		return [];
-	}
+	$ids = get_posts([
+		'post_type'      => 'lf_service_area',
+		'posts_per_page' => -1,
+		'fields'         => 'ids',
+		'post_status'    => 'publish',
+		'no_found_rows'  => true,
+		'orderby'        => 'menu_order title',
+		'order'          => 'ASC',
+	]);
 	$posts = array_filter(array_map('get_post', $ids));
 	return array_values(array_filter($posts, fn($p) => $p && $p->post_status === 'publish'));
 }

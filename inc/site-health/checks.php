@@ -175,24 +175,6 @@ function lf_health_check_dom_manual(): array {
 
 // --- Internal links ---
 
-function lf_health_check_services_link_areas(): array {
-	$services = get_posts(['post_type' => 'lf_service', 'post_status' => 'publish', 'posts_per_page' => -1, 'fields' => 'ids']);
-	$orphans = 0;
-	foreach ($services as $id) {
-		$areas = function_exists('get_field') ? get_field('lf_service_related_areas', $id) : null;
-		if (empty($areas) || !is_array($areas)) {
-			$orphans++;
-		}
-	}
-	if ($orphans > 0 && count($services) > 0) {
-		return ['status' => lf_health_status_warning(), 'label' => __('Services link to areas', 'leadsforward-core'), 'message' => sprintf(__('%1$d of %2$d services have no service area links.', 'leadsforward-core'), $orphans, count($services)), 'fix_link' => admin_url('admin.php?page=lf-ops-bulk')];
-	}
-	if (count($services) === 0) {
-		return ['status' => lf_health_status_pass(), 'label' => __('Services link to areas', 'leadsforward-core'), 'message' => __('No services yet.', 'leadsforward-core'), 'fix_link' => ''];
-	}
-	return ['status' => lf_health_status_pass(), 'label' => __('Services link to areas', 'leadsforward-core'), 'message' => __('All services linked.', 'leadsforward-core'), 'fix_link' => ''];
-}
-
 function lf_health_check_homepage_links_services(): array {
 	$front_id = (int) get_option('page_on_front');
 	if ($front_id === 0) {
@@ -261,7 +243,6 @@ function lf_health_prelaunch_checks(): array {
 			lf_health_check_dom_manual(),
 		],
 		'links' => [
-			lf_health_check_services_link_areas(),
 			lf_health_check_homepage_links_services(),
 			lf_health_check_footer_links(),
 			lf_health_check_orphaned_services(),

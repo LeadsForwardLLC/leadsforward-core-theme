@@ -116,13 +116,10 @@ function lf_ops_bulk_rebuild_linking(): array {
 	if (!function_exists('update_field')) {
 		return ['services' => 0, 'areas' => 0, 'error' => 'ACF not available'];
 	}
-	foreach ($services as $sid) {
-		update_field('lf_service_related_areas', $areas, $sid);
-	}
 	foreach ($areas as $aid) {
 		update_field('lf_service_area_services', $services, $aid);
 	}
-	return ['services' => count($services), 'areas' => count($areas)];
+	return ['services' => 0, 'areas' => count($areas)];
 }
 
 function lf_ops_bulk_render(): void {

@@ -60,7 +60,7 @@ function lf_sections_registry(): array {
 		],
 		'service_details' => [
 			'label' => __('Service Details', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area'],
+			'contexts' => ['homepage'],
 			'fields' => [
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Service Details', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Everything you need to know before scheduling.', 'leadsforward-core')],
@@ -68,6 +68,12 @@ function lf_sections_registry(): array {
 				['key' => 'service_details_checklist', 'label' => __('Checklist (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Transparent scope and pricing' . "\n" . 'Clean, respectful crews' . "\n" . 'Work backed by warranty', 'leadsforward-core')],
 			],
 			'render' => 'lf_sections_render_service_details',
+		],
+		'content' => [
+			'label' => __('Content', 'leadsforward-core'),
+			'contexts' => ['service', 'service_area'],
+			'fields' => [],
+			'render' => 'lf_sections_render_content',
 		],
 		'process' => [
 			'label' => __('Process', 'leadsforward-core'),
@@ -127,15 +133,6 @@ function lf_sections_registry(): array {
 			],
 			'render' => 'lf_sections_render_related_links',
 		],
-		'service_areas_served' => [
-			'label' => __('Service Areas Served', 'leadsforward-core'),
-			'contexts' => ['service'],
-			'fields' => [
-				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Service Areas', 'leadsforward-core')],
-				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Nearby cities and neighborhoods we serve.', 'leadsforward-core')],
-			],
-			'render' => 'lf_sections_render_service_areas_served',
-		],
 		'services_offered_here' => [
 			'label' => __('Services Offered Here', 'leadsforward-core'),
 			'contexts' => ['service_area'],
@@ -157,7 +154,7 @@ function lf_sections_registry(): array {
 		],
 		'map_nap' => [
 			'label' => __('Service Areas + Map', 'leadsforward-core'),
-			'contexts' => ['homepage'],
+			'contexts' => ['homepage', 'service'],
 			'fields' => [
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Areas We Serve', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Find us on the map and explore nearby neighborhoods.', 'leadsforward-core')],
@@ -168,16 +165,22 @@ function lf_sections_registry(): array {
 }
 
 function lf_sections_default_order(string $context): array {
-	$base = ['hero', 'trust_bar', 'benefits', 'service_details', 'process', 'faq_accordion', 'cta', 'related_links'];
+	$base = ['hero', 'trust_bar', 'benefits', 'process', 'faq_accordion', 'cta', 'related_links'];
+	if ($context === 'homepage') {
+		array_splice($base, 3, 0, ['service_details']);
+		$base[] = 'map_nap';
+		return $base;
+	}
 	if ($context === 'service') {
-		$base[] = 'service_areas_served';
+		array_splice($base, 3, 0, ['content']);
+		$base[] = 'map_nap';
+		return $base;
 	}
 	if ($context === 'service_area') {
+		array_splice($base, 3, 0, ['content']);
 		$base[] = 'services_offered_here';
 		$base[] = 'nearby_areas';
-	}
-	if ($context === 'homepage') {
-		$base[] = 'map_nap';
+		return $base;
 	}
 	return $base;
 }
@@ -471,6 +474,23 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 	lf_sections_render_shell_close();
 }
 
+function lf_sections_render_content(string $context, array $settings, \WP_Post $post): void {
+	$body = '';
+	if ($post->post_type === 'lf_service' && function_exists('get_field')) {
+		$body = get_field('lf_service_long_content', $post->ID) ?: '';
+	}
+	if ($body === '') {
+		$body = apply_filters('the_content', $post->post_content);
+	}
+	if ($body === '') {
+		return;
+	}
+	lf_sections_render_shell_open('content', '', '');
+	?>
+	<div class="lf-prose"><?php echo wp_kses_post($body); ?></div>
+	<?php
+	lf_sections_render_shell_close();
+}
 function lf_sections_render_process(string $context, array $settings, \WP_Post $post): void {
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
@@ -626,7 +646,7 @@ function lf_sections_render_map_nap(string $context, array $settings, \WP_Post $
 			'id'         => 'lf-map-nap',
 			'variant'    => 'default',
 			'attributes' => ['variant' => 'default', 'layout' => 'default'],
-			'context'    => ['homepage' => true, 'section' => $section],
+			'context'    => ['homepage' => ($context === 'homepage'), 'section' => $section],
 		];
 		lf_render_block_template('map-nap', $block, false, $block['context']);
 	}
