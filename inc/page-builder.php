@@ -56,6 +56,7 @@ function lf_pb_default_config(string $context): array {
 		$sections[$instance_id] = [
 			'type' => $type,
 			'enabled' => true,
+			'deletable' => false,
 			'settings' => lf_sections_defaults_for($type),
 		];
 		$order[] = $instance_id;
@@ -94,6 +95,7 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 			$sections_out[$instance_id] = [
 				'type' => $type,
 				'enabled' => !empty($row['enabled']),
+				'deletable' => false,
 				'settings' => is_array($row['settings'] ?? null) ? $row['settings'] : [],
 			];
 			$order_out[] = $instance_id;
@@ -111,6 +113,7 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 			$sections_out[$instance_id] = [
 				'type' => $type,
 				'enabled' => !empty($row['enabled']),
+				'deletable' => !empty($row['deletable']),
 				'settings' => is_array($row['settings'] ?? null) ? $row['settings'] : [],
 			];
 		}
@@ -180,6 +183,7 @@ function lf_pb_render_section_item(string $instance_id, array $def, array $secti
 	$type = $def['id'] ?? '';
 	$label = $def['label'] ?? $type;
 	$enabled = $is_template ? true : !empty($section['enabled']);
+	$deletable = $is_template ? true : !empty($section['deletable']);
 	$settings = $is_template ? lf_sections_defaults_for($type) : ($section['settings'] ?? []);
 	?>
 	<li class="lf-pb-section" data-instance="<?php echo esc_attr($instance_id); ?>" data-type="<?php echo esc_attr($type); ?>">
@@ -188,9 +192,12 @@ function lf_pb_render_section_item(string $instance_id, array $def, array $secti
 			<strong><?php echo esc_html($label); ?></strong>
 			<label><input type="checkbox" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][enabled]" value="1" <?php checked($enabled); ?> /> <?php esc_html_e('Enabled', 'leadsforward-core'); ?></label>
 			<button type="button" class="lf-pb-toggle" data-target="<?php echo esc_attr($instance_id); ?>" aria-expanded="true">▾ <?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
-			<button type="button" class="lf-pb-remove" aria-label="<?php esc_attr_e('Remove section', 'leadsforward-core'); ?>">✕</button>
+			<?php if ($deletable) : ?>
+				<button type="button" class="lf-pb-remove" aria-label="<?php esc_attr_e('Remove section', 'leadsforward-core'); ?>">✕</button>
+			<?php endif; ?>
 			<input type="hidden" name="lf_pb_order[]" value="<?php echo esc_attr($instance_id); ?>" />
 			<input type="hidden" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][type]" value="<?php echo esc_attr($type); ?>" />
+			<input type="hidden" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][deletable]" value="<?php echo $deletable ? '1' : '0'; ?>" />
 		</div>
 		<div class="lf-pb-section-body">
 			<?php foreach ($def['fields'] as $field) :
@@ -247,6 +254,7 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 		.lf-pb-section--collapsed .lf-pb-toggle { background: #0f172a; color: #fff; border-color: #0f172a; }
 		.lf-pb-field { border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.75rem 1rem; margin: 0.75rem 0; }
 		.lf-pb-placeholder { border: 2px dashed #94a3b8; border-radius: 14px; height: 58px; margin-bottom: 1rem; background: #f8fafc; }
+		.lf-pb-section--ghost { opacity: 0.85; border-style: dashed; }
 		.lf-pb-library { position: sticky; top: 12px; background: #0f172a; color: #fff; border-radius: 16px; padding: 1rem; }
 		.lf-pb-library h4 { margin: 0 0 0.5rem; font-size: 14px; }
 		.lf-pb-library p { margin: 0 0 0.75rem; color: #cbd5f5; font-size: 12px; }
@@ -315,7 +323,7 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 			}
 			if ($list.length && $list.sortable) {
 				$list.sortable({
-					items: '> li:not(.lf-pb-empty)',
+					items: '> li.lf-pb-section',
 					handle: '.lf-pb-drag',
 					axis: 'y',
 					placeholder: 'lf-pb-placeholder',
@@ -339,10 +347,14 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 				});
 			}
 			$('.lf-pb-library__item').draggable({
-				helper: 'clone',
+				helper: function () {
+					return $(this).clone().addClass('lf-pb-section lf-pb-section--ghost');
+				},
+				appendTo: 'body',
 				connectToSortable: '.lf-pb-sections',
 				revert: 'invalid',
-				cancel: '.lf-pb-library__add'
+				cancel: '.lf-pb-library__add',
+				zIndex: 9999
 			});
 			$(document).on('click', '.lf-pb-library__add', function () {
 				var type = $(this).closest('.lf-pb-library__item').data('sectionType');
@@ -403,11 +415,13 @@ function lf_pb_handle_save(int $post_id, \WP_Post $post): void {
 			continue;
 		}
 		$enabled = !empty($raw_section['enabled']);
+		$deletable = !empty($raw_section['deletable']);
 		$raw_settings = is_array($raw_section['settings'] ?? null) ? $raw_section['settings'] : [];
 		$settings = lf_sections_sanitize_settings($type, $raw_settings);
 		$clean_sections[$instance_id] = [
 			'type' => $type,
 			'enabled' => $enabled,
+			'deletable' => $deletable,
 			'settings' => $settings,
 		];
 	}
