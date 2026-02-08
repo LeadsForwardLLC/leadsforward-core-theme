@@ -195,6 +195,24 @@
 	letter-spacing: -0.03em;
 }
 
+/* Unified heading styling across homepage + service templates */
+.site-main .lf-section__title,
+.site-main .lf-block-hero__title,
+.site-main .lf-block-service-grid__title,
+.site-main .lf-block-service-areas__title,
+.site-main .lf-block-trust-reviews__title,
+.site-main .lf-block-faq-accordion__title,
+.site-main .lf-block-cta__headline,
+.site-main .lf-block-map-nap__title {
+	font-family: var(--lf-font-heading);
+	letter-spacing: -0.03em;
+}
+
+.lf-surface-dark .lf-section__title,
+.lf-surface-dark .lf-section__intro {
+	color: var(--lf-text-inverse);
+}
+
 .site-main h1,
 .site-main h2,
 .site-main h3,
@@ -899,7 +917,7 @@ button:focus-visible,
 .lf-block-hero {
 	position: relative;
 	min-height: var(--lf-hero-min-height);
-	padding: 5.5rem 1.5rem;
+	padding: 5.5rem var(--lf-section-padding-x);
 	overflow: hidden;
 	background: var(--lf-hero-bg);
 }
@@ -1061,7 +1079,7 @@ button:focus-visible,
 }
 
 .lf-block-hero__star {
-	color: #ca8a04;
+	color: var(--lf-accent);
 	flex-shrink: 0;
 	width: 1.125rem;
 	height: 1.125rem;
@@ -1070,13 +1088,14 @@ button:focus-visible,
 .lf-block-hero__badge {
 	display: inline-flex;
 	align-items: center;
-	padding: 0.4em 1em;
-	background: var(--lf-surface-card);
-	border: 1px solid rgba(15,23,42,0.1);
+	padding: 0.35em 0.9em;
+	background: var(--lf-surface-soft);
+	border: var(--lf-card-border);
 	border-radius: 9999px;
-	box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-	color: #0f172a;
+	box-shadow: var(--lf-card-shadow);
+	color: var(--lf-text);
 	font-weight: 600;
+	font-size: var(--lf-fs-small);
 }
 
 .lf-block-hero__phone-wrap { margin: 1rem 0 0; }
@@ -1970,8 +1989,10 @@ button:focus-visible,
 	align-items: center;
 	gap: 0.35rem;
 	font-weight: 600;
-	color: #0f172a;
+	color: var(--lf-text);
 	text-decoration: none;
+	padding: 0.35rem 0;
+	min-height: var(--lf-touch-min);
 }
 
 .lf-block-map-nap__areas-link::after {

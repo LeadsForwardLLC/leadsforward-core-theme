@@ -21,11 +21,8 @@ if (empty($areas)) {
 	return;
 }
 ?>
-<section class="related-service-areas" aria-label="<?php esc_attr_e('Related service areas', 'leadsforward-core'); ?>">
-	<h2 class="related-service-areas__title"><?php esc_html_e('Service Areas', 'leadsforward-core'); ?></h2>
-	<ul class="related-service-areas__list">
-		<?php foreach ($areas as $area) : if (!$area || $area->post_status !== 'publish') continue; ?>
-			<li><a href="<?php echo esc_url(get_permalink($area)); ?>"><?php echo esc_html($area->post_title); ?></a></li>
-		<?php endforeach; ?>
-	</ul>
-</section>
+<ul class="lf-related-links" role="list" aria-label="<?php esc_attr_e('Related service areas', 'leadsforward-core'); ?>">
+	<?php foreach ($areas as $area) : if (!$area || $area->post_status !== 'publish') continue; ?>
+		<li><a href="<?php echo esc_url(get_permalink($area)); ?>"><?php echo esc_html($area->post_title); ?></a></li>
+	<?php endforeach; ?>
+</ul>

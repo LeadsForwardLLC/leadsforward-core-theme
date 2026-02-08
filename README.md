@@ -14,12 +14,16 @@ Ultra-lightweight, SEO-first WordPress theme for local lead-gen sites. Built to 
 LeadsForward Core provides:
 
 - **Custom post types:** Services, Service Areas, Testimonials, FAQs (all REST-ready)
-- **ACF-driven options:** Global business info, CTAs, schema toggles, **homepage sections**
-- **Server-rendered blocks:** Hero, Trust/Reviews, Service Grid, CTA, FAQ Accordion, Map+NAP
-- **Modular homepage:** Section order and overrides via Theme Options → Homepage (no hardcoded layout)
+- **Global settings & branding:** Logo + color tokens mapped to CSS variables (core, surface, text)
+- **Shared section registry:** Universal section definitions + defaults used by homepage and page builders
+- **Homepage builder:** Drag/drop order, per-section toggles, backgrounds, and copy
+- **Page Builder Framework:** Instance-based sections for service + service area pages
+- **Quote Builder:** Full-screen modal with multi-step flow + CTA actions (quote/call/link)
+- **AI Assistant (bounded):** Safe copy suggestions + field edits only (no layout/CSS changes)
+- **Server-rendered blocks:** Hero, Trust/Reviews, CTA, FAQ Accordion, Map+NAP
 - **SEO & schema:** JSON-LD (LocalBusiness, Service, FAQPage, Review), canonical, noindex, NAP/geo helpers
 - **Controlled variation:** Site-wide profile (A–E), block variant registry, safe section ordering, style tokens, copy template slots (no randomness)
-- **Setup wizard:** One-time niche-aware init (Appearance → LeadsForward Setup): select niche, NAP, services/areas, profile → generate pages, menus, CPTs, internal links
+- **Setup wizard:** Niche-aware init; seeds pages, CPTs, menus, page builder defaults, and copy templates
 - **Safety:** CPT delete protection, admin notices for missing SEO-critical fields, graceful fallback when ACF is off
 
 ---
@@ -28,7 +32,7 @@ LeadsForward Core provides:
 
 - **WordPress** 6.0+
 - **PHP** 8.0+
-- **Advanced Custom Fields (ACF)** — required for Theme Options, CPT fields, blocks, and homepage sections. The theme degrades without ACF (no options UI, blocks/sections not available).
+- **Advanced Custom Fields (ACF)** — required for options UI, CPT fields, and blocks. The theme degrades without ACF (options UI and custom fields unavailable).
 
 ---
 
@@ -41,32 +45,40 @@ leadsforward-core-theme/
 │   ├── js/
 │   └── images/
 ├── inc/
-│   ├── setup.php     # Theme support, menus, ACF options pages
-│   ├── cleanup.php   # Emoji/oEmbed/dashicons removal, optional block CSS
-│   ├── performance.php # Defer scripts, heartbeat, head cleanup, critical CSS hook
-│   ├── seo.php       # Canonical, noindex, NAP/geo, breadcrumb helpers
-│   ├── schema.php    # JSON-LD: LocalBusiness, Service, FAQPage, Review
-│   ├── homepage.php  # Section registry, default sections, CTA resolution, section renderer
-│   ├── guardrails.php # lf_get_option, CPT protect, admin notices
+│   ├── setup.php        # Theme support, menus, ACF options pages
+│   ├── cleanup.php      # Emoji/oEmbed/dashicons removal, optional block CSS
+│   ├── performance.php  # Defer scripts, heartbeat, head cleanup, critical CSS hook
+│   ├── seo.php          # Canonical, noindex, NAP/geo, breadcrumb helpers
+│   ├── schema.php       # JSON-LD: LocalBusiness, Service, FAQPage, Review
+│   ├── sections.php     # Shared section registry + renderers
+│   ├── homepage.php     # Homepage config + CTA resolution
+│   ├── homepage-admin.php # Homepage builder UI
+│   ├── page-builder.php # Service + service area page builder UI + renderer
+│   ├── quote-builder.php # Quote modal + admin configuration
+│   ├── ai-assistant.php # AI assistant settings + guardrails
+│   ├── branding.php     # Branding tokens → CSS variables
+│   ├── guardrails.php   # lf_get_option, CPT protect, admin notices, migrations
 │   ├── acf/
-│   │   ├── options-business.php   # Business Name, Phone, Email, NAP, Geo, Hours
-│   │   ├── options-ctas.php      # Primary/secondary CTA, type (call/form/text), GHL embed
-│   │   ├── options-schema.php    # Schema on/off toggles
-│   │   ├── options-homepage.php  # Homepage CTA overrides + flexible content sections
-│   │   ├── options-variation.php # Variation profile, auto-order, copy template selects
-│   │   ├── field-group-service.php
+│   │   ├── options-business.php   # Business Name, Phone, Email, NAP, Hours
+│   │   ├── options-ctas.php       # Primary/secondary CTA defaults
+│   │   ├── options-schema.php     # Schema on/off toggles
+│   │   ├── options-branding.php   # Branding colors (CSS vars)
+│   │   ├── options-variation.php  # Variation profile, copy template selects
 │   │   ├── field-group-service-area.php
 │   │   ├── field-group-testimonial.php
 │   │   └── field-group-faq.php
+│   ├── ai-editing/
+│   │   ├── admin-ui.php  # AI Assistant UI
+│   │   └── provider-openai.php # OpenAI provider + errors
 │   ├── blocks/
 │   │   ├── register.php  # ACF block registration, lf_render_block_template()
-│   │   └── variants.php  # Block variant registry, lf_get_block_variant(), profile defaults
+│   │   └── variants.php  # Block variant registry, profile defaults
 │   ├── variation-tokens.php # Body class, data-variation, CSS var enqueue
 │   ├── variation-copy.php   # lf_copy_template(), copy template definitions
 │   ├── niches/
-│   │   ├── registry.php    # Niche definitions (services, pages, profile, CTA defaults)
-│   │   ├── setup-runner.php # lf_run_setup(): pages, CPTs, menus, ACF seed, relationships
-│   │   └── wizard.php      # Admin wizard UI, completion flag, step flow
+│   │   ├── registry.php     # Niche definitions (services, pages, CTA defaults)
+│   │   ├── setup-runner.php # Pages/CPTs/menus + page builder defaults
+│   │   └── wizard.php       # Admin wizard UI, completion flow
 │   └── cpt/
 │       ├── services.php
 │       ├── service-areas.php
@@ -90,23 +102,26 @@ leadsforward-core-theme/
 
 ---
 
-## Theme Options (ACF)
+## LeadsForward Admin (Settings)
 
-Under **Theme Options**:
+Under **LeadsForward**:
 
 | Page | Purpose |
 |------|--------|
-| **Business Info** | Business name, phone, email, address (NAP), geo coordinates, opening hours. Used for schema, NAP output, and call CTAs. |
-| **CTAs** | Primary CTA text, primary type (text / call / form), secondary CTA text, default GHL form embed. Single source for embed; no duplication. |
-| **Schema** | Toggles for Organization, LocalBusiness, FAQ, and Review schema output. |
-| **Homepage** | Homepage primary/secondary CTA and GHL overrides; primary CTA type override; **Homepage sections** (flexible content). |
-| **Variation** | **Variation profile** (A–E), **Auto-order sections** toggle, **Hero headline style**, **CTA microcopy style**, **Trust badge style** (dropdown templates). |
+| **Setup** | Setup wizard, API keys (Google Maps/OpenAI), admin bar toggle, reset tools. |
+| **Global Settings** | Logo + Branding colors (core/surface/text) mapped to CSS variables. |
+| **Homepage** | Homepage builder: section order, toggles, backgrounds, copy, CTA actions. |
+| **Quote Builder** | Multi-step modal configuration; safe fields only. |
+| **AI Assistant** | Bounded copy tools (text-only changes, confirmations). |
+| **Config** | Export/Import config. |
+| **Schema** | Schema toggles and outputs. |
+| **Variation** | Variation profile and copy templates (A–E). |
 
 ---
 
 ## Controlled variation (site-wide)
 
-Set once per site in **Theme Options → Variation**. No runtime randomness; all changes are deterministic and admin-controlled.
+Set once per site in **LeadsForward → Variation**. No runtime randomness; all changes are deterministic and admin-controlled.
 
 - **Variation profile:** A = Clean + Minimal, B = Bold + High Contrast, C = Trust Heavy, D = Service Heavy, E = Offer/Promo Heavy. Drives block variant defaults and style tokens.
 - **Block variant registry** (`inc/blocks/variants.php`): `lf_get_block_variant($block_name, $override_variant)` returns the variant to use (valid override > profile default > `default`). Trust Heavy pushes hero variant with review emphasis and trust block early; Service Heavy pushes service grid earlier.
@@ -119,24 +134,57 @@ Set once per site in **Theme Options → Variation**. No runtime randomness; all
 
 ## Homepage System
 
-- **Template:** `front-page.php` (used when a static page is set as the front page in Settings → Reading).
-- **Sections:** Configured in **Theme Options → Homepage → Homepage sections**. Each row:
-  - **Section type:** Hero, Trust/Reviews, Service Grid, CTA, FAQ Accordion, Map+NAP
-  - **Layout variant:** Default, A, B, or C (structure only; styling later)
-  - **Section-level overrides:** e.g. Hero headline/subheadline/CTA, Trust max items, CTA primary/secondary/GHL
-- **Defaults:** If no sections are set, the theme renders a conversion-optimized order: Hero → Trust → Service Grid → CTA → FAQ → CTA (variant B) → Map+NAP.
-- **CTA resolution:** Section overrides → Homepage overrides → Global (Theme Options → CTAs). GHL embed is resolved the same way; only one embed is output per CTA section.
-- **Phone linking:** When primary CTA type is “Call”, the primary CTA text is wrapped in a `tel:` link using Business Info phone. Works on all devices; no duplicate embed.
+- **Template:** `front-page.php` (static front page).
+- **Sections:** Configured in **LeadsForward → Homepage** via drag/drop.
+  - Shared section registry in `inc/sections.php`.
+  - Per-section toggle, variant, background, and copy fields.
+  - CTA actions: `quote`, `call`, `link`.
+- **Defaults:** If no config exists, a conversion-optimized default order is seeded.
+- **CTA resolution:** Section overrides → Homepage overrides → Global defaults.
+- **Phone linking:** When CTA action is `call`, uses Business Info phone for a `tel:` link.
 
 ---
 
 ## CTA Intelligence
 
-- **Global default:** Theme Options → CTAs (primary text, type, secondary, GHL).
-- **Homepage override:** Theme Options → Homepage (primary, secondary, GHL, primary type).
-- **Section override:** Per-section in the flexible content (Hero CTA override; CTA section: primary, secondary, GHL).
+- **Global default:** LeadsForward → Global Settings (CTAs).
+- **Homepage override:** LeadsForward → Homepage.
+- **Section override:** Per-section in the homepage builder and page builder settings.
+- **Primary action:** `quote` | `call` | `link`. `quote` opens the modal.
 - **Primary type:** `text` | `call` | `form`. `call` uses Business Info phone for `tel:` link; `form` shows GHL embed when set.
 - **GHL:** Stored once per scope (global, homepage, or section); no duplicated embed code.
+
+---
+
+## Page Builder Framework (Service + Service Area)
+
+- **Meta key:** `lf_pb_config` stores instance-based sections and order.
+- **Shared sections:** From `inc/sections.php` (hero, trust, benefits, process, FAQ, CTA, related, map, etc).
+- **Admin UI:** Right-side Section Library, add/remove sections, per-section settings, drag to reorder.
+- **Renderer:** `lf_pb_render_sections()` respects section order and enabled state.
+
+---
+
+## Branding System
+
+- **Global CSS tokens:** Core, surface, and text colors mapped to CSS variables.
+- **Single source of truth:** `inc/branding.php` outputs variables; CSS + `theme.json` consume them.
+- **Goal:** Safe, consistent theming without per-section overrides.
+
+---
+
+## Quote Builder
+
+- **Modal:** Full-screen, multi-step quote flow (CTA action `quote`).
+- **Admin:** Structured configuration in **LeadsForward → Quote Builder**.
+- **Data:** Stored locally (no external sends yet).
+
+---
+
+## AI Assistant
+
+- **Scope:** Copy-only suggestions and edits (no layout, CSS, or slugs).
+- **Safety:** Predefined actions with confirmation + reversal.
 
 ---
 
@@ -161,8 +209,8 @@ Blocks receive optional `$block['context']` when rendered from the homepage (sec
 
 | CPT | Slug | Use |
 |-----|------|-----|
-| Service | `lf_service` | `/services/service-name/`; SEO H1, short/long content, CTA override, related service areas |
-| Service Area | `lf_service_area` | `/service-areas/city-name/`; state, geo, related services, map override |
+| Service | `lf_service` | `/services/service-name/`; rendered by the Page Builder framework |
+| Service Area | `lf_service_area` | `/service-areas/city-name/`; rendered by the Page Builder framework |
 | Testimonial | `lf_testimonial` | Private; reviewer name, rating, review text, source (Google/Facebook/etc.) |
 | FAQ | `lf_faq` | `/faqs/`; question, answer, optional service/area association |
 
@@ -172,7 +220,7 @@ All use `show_in_rest => true` and clean rewrites.
 
 ## SEO & Schema
 
-- **Schema (JSON-LD):** LocalBusiness (global), Service (single service), FAQPage (single/archive FAQ or filter), Review/AggregateRating (from testimonials). Toggleable in Theme Options → Schema; fails silently if data is incomplete.
+- **Schema (JSON-LD):** LocalBusiness (global), Service (single service), FAQPage (single/archive FAQ or filter), Review/AggregateRating (from testimonials). Toggleable in LeadsForward → Schema; fails silently if data is incomplete.
 - **Canonical:** Output in `wp_head`. Use `add_filter('lf_output_canonical', '__return_false')` to let Rank Math (or another plugin) handle it.
 - **Noindex:** Applied to search, 404, and testimonial single/archive.
 - **NAP/Geo:** `lf_nap_data()`, `lf_nap_plain()`, `lf_nap_html()`, `lf_geo_data()`, `lf_geo_meta()`; internal linking helpers `lf_related_services_for_area()`, `lf_related_areas_for_service()`; `lf_breadcrumb_items()` for Rank Math–compatible breadcrumbs.
@@ -193,10 +241,10 @@ All use `show_in_rest => true` and clean rewrites.
 After theme activation, **Appearance → LeadsForward Setup** runs a one-time flow:
 
 1. **Select niche** — Roofing, Plumbing, HVAC, or General (from `inc/niches/registry.php`). Each niche defines core services, default CTA copy, recommended variation profile, and homepage section order.
-2. **Business info (NAP)** — Name, phone, email, address, opening hours. Saved to Theme Options → Business Info.
+2. **Business info (NAP)** — Name, phone, email, address, opening hours. Saved to global business info options and editable in LeadsForward settings.
 3. **Confirm services & service areas** — Services come from the niche; add service areas (one per line, optional `City, ST`). Creates `lf_service` and `lf_service_area` posts.
 4. **Variation profile** — Pre-selected from niche; can override.
-5. **Generate site** — Creates pages (Home, About Us, Our Services, Our Service Areas, Contact, Privacy Policy, Terms of Use, Thank You), sets Home as front page, creates Header and Footer menus and assigns them, seeds service ↔ service area relationships, updates ACF options (NAP, CTAs, variation, schema, homepage sections). Idempotent: existing pages/CPTs by slug are reused; no duplicates.
+5. **Generate site** — Creates pages (Home, About Us, Our Services, Our Service Areas, Contact, Privacy Policy, Terms of Use, Thank You), sets Home as front page, creates Header and Footer menus and assigns them, seeds service ↔ service area relationships, updates options (NAP, CTAs, variation, schema, homepage config), and seeds **page builder defaults** for services and areas. Idempotent: existing pages/CPTs by slug are reused; no duplicates.
 
 Completion is stored in option `lf_setup_wizard_complete`. The wizard does not show again unless you use “Show wizard again” (which clears the flag). No frontend JS, no cron; all actions are explicit and logged in the runner return value.
 
@@ -205,7 +253,7 @@ Completion is stored in option `lf_setup_wizard_complete`. The wizard does not s
 ## Extending
 
 - **New niche:** Add an entry to `lf_get_niche_registry()` in `inc/niches/registry.php` with `name`, `slug`, `services`, `required_pages` (optional), `homepage_section_order`, `variation_profile`, `cta_primary_default`, `cta_secondary_default`, `schema_review_enabled`. No change to wizard or runner logic required.
-- **New section type:** Add to `lf_homepage_section_template_map()` in `inc/homepage.php` and add a layout/overrides in `inc/acf/options-homepage.php`.
+- **New section type:** Add to `lf_sections_registry()` in `inc/sections.php`, include defaults, and update homepage/page builder admin UI as needed for new fields.
 - **New block:** Register in `inc/blocks/register.php` and add a template in `templates/blocks/`.
 - **FAQ schema on custom pages:** Use filter `lf_faq_schema_items` to pass FAQ items.
 - **Breadcrumbs:** Filter `lf_breadcrumb_items` to adjust or extend items.

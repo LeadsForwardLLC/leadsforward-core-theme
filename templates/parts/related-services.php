@@ -21,11 +21,8 @@ if (empty($services)) {
 	return;
 }
 ?>
-<section class="related-services" aria-label="<?php esc_attr_e('Related services', 'leadsforward-core'); ?>">
-	<h2 class="related-services__title"><?php esc_html_e('Services', 'leadsforward-core'); ?></h2>
-	<ul class="related-services__list">
-		<?php foreach ($services as $service) : if (!$service || $service->post_status !== 'publish') continue; ?>
-			<li><a href="<?php echo esc_url(get_permalink($service)); ?>"><?php echo esc_html($service->post_title); ?></a></li>
-		<?php endforeach; ?>
-	</ul>
-</section>
+<ul class="lf-related-links" role="list" aria-label="<?php esc_attr_e('Related services', 'leadsforward-core'); ?>">
+	<?php foreach ($services as $service) : if (!$service || $service->post_status !== 'publish') continue; ?>
+		<li><a href="<?php echo esc_url(get_permalink($service)); ?>"><?php echo esc_html($service->post_title); ?></a></li>
+	<?php endforeach; ?>
+</ul>
