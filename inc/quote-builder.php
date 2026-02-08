@@ -22,6 +22,7 @@ const LF_QUOTE_BUILDER_ANALYTICS_TABLE = 'lf_quote_builder_analytics';
 add_action('admin_init', 'lf_quote_builder_handle_save');
 add_action('admin_init', 'lf_quote_builder_integrations_handle_save');
 add_action('admin_init', 'lf_quote_builder_maybe_create_analytics_table');
+add_action('admin_init', 'lf_quote_builder_redirect_legacy_pages');
 add_action('wp_enqueue_scripts', 'lf_quote_builder_enqueue_assets');
 add_action('wp_footer', 'lf_quote_builder_render_modal', 20);
 add_action('wp_ajax_lf_quote_builder_submit', 'lf_quote_builder_handle_submit');
@@ -299,6 +300,20 @@ function lf_quote_builder_integrations_handle_save(): void {
 	delete_option('lf_quote_builder_integrations_error');
 	wp_safe_redirect(admin_url('admin.php?page=lf-quote-builder&section=integrations&saved=1'));
 	exit;
+}
+
+function lf_quote_builder_redirect_legacy_pages(): void {
+	if (!is_admin() || !current_user_can('edit_theme_options')) {
+		return;
+	}
+	if (empty($_GET['page'])) {
+		return;
+	}
+	$page = sanitize_key((string) $_GET['page']);
+	if (in_array($page, ['lf-quote-builder-integrations', 'lf-quote-builder-analytics'], true)) {
+		wp_safe_redirect(admin_url('admin.php?page=lf-quote-builder&section=' . ($page === 'lf-quote-builder-integrations' ? 'integrations' : 'analytics')));
+		exit;
+	}
 }
 
 function lf_quote_builder_get_page_context_data(): array {
