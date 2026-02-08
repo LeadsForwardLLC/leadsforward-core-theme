@@ -904,6 +904,47 @@ button:focus-visible,
 	background: var(--lf-hero-bg);
 }
 
+.lf-block-hero.lf-surface-light {
+	background: var(--lf-surface-light);
+}
+
+.lf-block-hero.lf-surface-soft {
+	background: var(--lf-surface-soft);
+}
+
+.lf-block-hero.lf-surface-card {
+	background: var(--lf-surface-card, var(--lf-card-bg));
+}
+
+.lf-block-hero.lf-surface-dark {
+	background: var(--lf-surface-dark);
+	color: var(--lf-text-inverse);
+}
+
+.lf-block-hero.lf-surface-light .lf-block-hero__bg,
+.lf-block-hero.lf-surface-soft .lf-block-hero__bg,
+.lf-block-hero.lf-surface-card .lf-block-hero__bg,
+.lf-block-hero.lf-surface-dark .lf-block-hero__bg {
+	background: none;
+	opacity: 0;
+}
+
+.lf-block-hero.lf-surface-dark .lf-block-hero__title,
+.lf-block-hero.lf-surface-dark .lf-block-hero__subtitle,
+.lf-block-hero.lf-surface-dark .lf-block-hero__trust {
+	color: var(--lf-text-inverse);
+}
+
+.lf-block-hero.lf-surface-dark .lf-block-hero__subtitle {
+	color: var(--lf-cta-block-text-muted);
+}
+
+.lf-block-hero.lf-surface-dark .lf-block-hero__eyebrow {
+	background: rgba(255, 255, 255, 0.12);
+	border-color: rgba(255, 255, 255, 0.25);
+	color: var(--lf-text-inverse);
+}
+
 .lf-block-hero__bg {
 	position: absolute;
 	inset: 0;
@@ -1532,8 +1573,16 @@ button:focus-visible,
 .lf-block-cta.lf-surface-light,
 .lf-block-cta.lf-surface-soft,
 .lf-block-cta.lf-surface-card {
-	background: inherit;
+	background: var(--lf-surface-light);
 	color: var(--lf-text);
+}
+
+.lf-block-cta.lf-surface-soft {
+	background: var(--lf-surface-soft);
+}
+
+.lf-block-cta.lf-surface-card {
+	background: var(--lf-surface-card, var(--lf-card-bg));
 }
 
 .lf-block-cta.lf-surface-light .lf-block-cta__headline,
@@ -1730,7 +1779,31 @@ button:focus-visible,
    Block: FAQ — Objection handling, clean typography, schema-safe
    ------------------------------------------------------------------------- */
 .lf-block-faq-accordion {
-	background: inherit;
+	background: var(--lf-surface-light);
+}
+
+.lf-block-faq-accordion.lf-surface-soft {
+	background: var(--lf-surface-soft);
+}
+
+.lf-block-faq-accordion.lf-surface-dark {
+	background: var(--lf-surface-dark);
+	color: var(--lf-text-inverse);
+}
+
+.lf-block-faq-accordion.lf-surface-dark .lf-block-faq-accordion__title,
+.lf-block-faq-accordion.lf-surface-dark .lf-block-faq-accordion__intro,
+.lf-block-faq-accordion.lf-surface-dark .lf-block-faq-accordion__question,
+.lf-block-faq-accordion.lf-surface-dark .lf-block-faq-accordion__answer {
+	color: var(--lf-text-inverse);
+}
+
+.lf-block-faq-accordion.lf-surface-dark .lf-block-faq-accordion__question::after {
+	color: var(--lf-cta-block-text-muted);
+}
+
+.lf-block-faq-accordion.lf-surface-card {
+	background: var(--lf-surface-card, var(--lf-card-bg));
 }
 
 .lf-block-faq-accordion__inner {
