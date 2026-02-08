@@ -219,6 +219,23 @@ function lf_core_page_editor_notice(\WP_Post $post): void {
 add_action('edit_form_after_title', 'lf_core_page_editor_notice', 5);
 
 /**
+ * Hide Page Attributes + Featured Image for core pages.
+ */
+function lf_hide_core_page_metaboxes(): void {
+	$screen = function_exists('get_current_screen') ? get_current_screen() : null;
+	if (!$screen || !in_array($screen->base, ['post', 'post-new'], true)) {
+		return;
+	}
+	global $post;
+	if (!lf_should_hide_editor_for_core_page($post)) {
+		return;
+	}
+	remove_meta_box('pageparentdiv', 'page', 'side');
+	remove_meta_box('postimagediv', 'page', 'side');
+}
+add_action('add_meta_boxes', 'lf_hide_core_page_metaboxes', 99);
+
+/**
  * Hide deprecated Service Content ACF group if it exists in DB.
  */
 add_filter('acf/get_field_groups', function (array $groups): array {

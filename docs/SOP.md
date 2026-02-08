@@ -245,3 +245,7 @@ Final QA checklist before launch:
 - CTAs open the Quote Builder or call the business phone.
 - Service pages and service areas link to each other.
 - Homepage links to top services and areas.
+
+Content fields policy:
+- Page Attributes and Featured Image are hidden for core pages.
+- Featured Image remains available for blog posts only.
