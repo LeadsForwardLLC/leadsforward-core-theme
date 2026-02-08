@@ -130,8 +130,44 @@ function lf_get_pb_hero_headline(int $post_id): string {
 	return '';
 }
 
+function lf_get_homepage_hero_headline(): string {
+	if (!function_exists('lf_get_homepage_section_config')) {
+		return '';
+	}
+	$config = lf_get_homepage_section_config();
+	$hero = $config['hero']['hero_headline'] ?? '';
+	return is_string($hero) ? $hero : '';
+}
+
+function lf_get_homepage_hero_subheadline(): string {
+	if (!function_exists('lf_get_homepage_section_config')) {
+		return '';
+	}
+	$config = lf_get_homepage_section_config();
+	$sub = $config['hero']['hero_subheadline'] ?? '';
+	return is_string($sub) ? $sub : '';
+}
+
 function lf_filter_document_title(string $title): string {
-	if (!is_singular(['page', 'post'])) {
+	if (is_front_page()) {
+		$hero = lf_get_homepage_hero_headline();
+		return $hero !== '' ? $hero : $title;
+	}
+	if (is_home()) {
+		$page_for_posts = (int) get_option('page_for_posts');
+		if ($page_for_posts) {
+			$seo = lf_get_pb_seo_overrides($page_for_posts);
+			if (!empty($seo['title'])) {
+				return $seo['title'];
+			}
+			$hero = lf_get_pb_hero_headline($page_for_posts);
+			if ($hero !== '') {
+				return $hero;
+			}
+		}
+		return $title;
+	}
+	if (!is_singular(['page', 'post', 'lf_service', 'lf_service_area'])) {
 		return $title;
 	}
 	$post_id = get_queried_object_id();
@@ -166,17 +202,31 @@ function lf_meta_description_tag(): void {
 	if (!apply_filters('lf_output_meta_description', true)) {
 		return;
 	}
-	if (!is_singular(['page', 'post'])) {
-		return;
+	$desc = '';
+	if (is_front_page()) {
+		$desc = lf_get_homepage_hero_subheadline();
 	}
-	$post_id = get_queried_object_id();
-	if (!$post_id) {
-		return;
+	if ($desc === '' && is_home()) {
+		$page_for_posts = (int) get_option('page_for_posts');
+		if ($page_for_posts) {
+			$seo = lf_get_pb_seo_overrides($page_for_posts);
+			$desc = $seo['description'] ?? '';
+			if ($desc === '') {
+				$hero = lf_get_pb_hero_subheadline($page_for_posts);
+				$desc = $hero !== '' ? $hero : lf_get_meta_description_default($page_for_posts);
+			}
+		}
 	}
-	$seo = lf_get_pb_seo_overrides($post_id);
-	$desc = $seo['description'] ?? '';
-	if ($desc === '') {
-		$desc = lf_get_meta_description_default($post_id);
+	if ($desc === '' && is_singular(['page', 'post', 'lf_service', 'lf_service_area'])) {
+		$post_id = get_queried_object_id();
+		if ($post_id) {
+			$seo = lf_get_pb_seo_overrides($post_id);
+			$desc = $seo['description'] ?? '';
+			if ($desc === '') {
+				$hero = lf_get_pb_hero_subheadline($post_id);
+				$desc = $hero !== '' ? $hero : lf_get_meta_description_default($post_id);
+			}
+		}
 	}
 	$desc = trim(preg_replace('/\s+/', ' ', (string) $desc));
 	if ($desc === '') {
