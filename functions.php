@@ -56,7 +56,6 @@ lf_load_inc('acf/options-ctas.php');
 lf_load_inc('acf/options-schema.php');
 lf_load_inc('acf/options-homepage.php');
 lf_load_inc('acf/options-variation.php');
-lf_load_inc('acf/field-group-service.php');
 lf_load_inc('acf/field-group-service-area.php');
 lf_load_inc('acf/field-group-testimonial.php');
 lf_load_inc('acf/field-group-faq.php');

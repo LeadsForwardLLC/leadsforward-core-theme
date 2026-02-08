@@ -120,7 +120,10 @@ function lf_build_service_schema(): array {
 		return [];
 	}
 	$name = get_the_title($post);
-	$desc = function_exists('get_field') ? get_field('lf_service_short_desc', $post) : '';
+	$desc = get_the_excerpt($post) ?: '';
+	if ($desc === '') {
+		$desc = wp_trim_words(wp_strip_all_tags(get_post_field('post_content', $post)), 30);
+	}
 	if (!$desc) {
 		$desc = wp_trim_words(get_the_excerpt($post), 30);
 	}

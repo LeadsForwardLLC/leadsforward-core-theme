@@ -309,17 +309,12 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 	$heading = $settings['hero_headline'] ?? '';
 	$sub = $settings['hero_subheadline'] ?? '';
 	if ($heading === '') {
-		if ($post->post_type === 'lf_service' && function_exists('get_field')) {
-			$seo_h1 = get_field('lf_service_seo_h1', $post->ID);
-			$heading = $seo_h1 ?: get_the_title($post);
-		} else {
-			$heading = get_the_title($post);
-		}
+		$heading = get_the_title($post);
 	}
 	if ($sub === '') {
-		if ($post->post_type === 'lf_service' && function_exists('get_field')) {
-			$short_desc = get_field('lf_service_short_desc', $post->ID);
-			$sub = $short_desc ?: '';
+		if ($post->post_type === 'lf_service') {
+			$excerpt = get_the_excerpt($post);
+			$sub = $excerpt !== '' ? $excerpt : wp_trim_words(wp_strip_all_tags($post->post_content), 22);
 		}
 		if ($post->post_type === 'lf_service_area' && function_exists('get_field')) {
 			$state = get_field('lf_service_area_state', $post->ID);
@@ -475,13 +470,7 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 }
 
 function lf_sections_render_content(string $context, array $settings, \WP_Post $post): void {
-	$body = '';
-	if ($post->post_type === 'lf_service' && function_exists('get_field')) {
-		$body = get_field('lf_service_long_content', $post->ID) ?: '';
-	}
-	if ($body === '') {
-		$body = apply_filters('the_content', $post->post_content);
-	}
+	$body = apply_filters('the_content', $post->post_content);
 	if ($body === '') {
 		return;
 	}

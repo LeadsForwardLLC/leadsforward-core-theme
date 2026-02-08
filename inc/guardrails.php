@@ -119,6 +119,16 @@ function lf_get_option(string $selector, string $options_page_slug = 'option', $
 }
 
 /**
+ * Hide deprecated Service Content ACF group if it exists in DB.
+ */
+add_filter('acf/get_field_groups', function (array $groups): array {
+	return array_values(array_filter($groups, function ($group) {
+		$key = is_array($group) ? ($group['key'] ?? '') : '';
+		return $key !== 'group_lf_service';
+	}));
+});
+
+/**
  * Core CPTs that must not be permanently deleted. Trash allowed; permanent delete blocked.
  */
 function lf_protected_post_types(): array {

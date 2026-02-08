@@ -19,7 +19,6 @@ function lf_ai_locked_field_keys(): array {
 	$locked = [
 		'post_title',           // Drives slug / H1 unless overridden
 		'post_name',            // URL slug
-		'lf_service_seo_h1',   // SEO H1 (locked unless allow_ai_h1_edit)
 		'lf_service_area_state',
 		'lf_service_area_services',
 		'lf_faq_associated_service',
@@ -51,8 +50,6 @@ function lf_ai_locked_field_keys(): array {
  */
 function lf_ai_editable_field_keys(): array {
 	return [
-		'lf_service_short_desc',
-		'lf_service_long_content',
 		'lf_service_area_map_override', // Supporting / embed copy only
 		'lf_faq_question',
 		'lf_faq_answer',
@@ -74,9 +71,6 @@ function lf_ai_editable_field_keys(): array {
 function lf_is_field_ai_editable(string $field_key): bool {
 	$locked = lf_ai_locked_field_keys();
 	if (!empty($locked[$field_key])) {
-		if ($field_key === 'lf_service_seo_h1' && apply_filters('lf_allow_ai_h1_edit', false)) {
-			return true;
-		}
 		return false;
 	}
 	$editable = array_flip(lf_ai_editable_field_keys());
@@ -89,8 +83,6 @@ function lf_is_field_ai_editable(string $field_key): bool {
 function lf_get_ai_editable_fields($post_id): array {
 	$editable_keys = lf_ai_editable_field_keys();
 	$labels = [
-		'lf_service_short_desc'     => __('Short service description', 'leadsforward-core'),
-		'lf_service_long_content'  => __('Long service content', 'leadsforward-core'),
 		'lf_service_area_map_override' => __('Map embed override', 'leadsforward-core'),
 		'lf_faq_question'         => __('FAQ question', 'leadsforward-core'),
 		'lf_faq_answer'            => __('FAQ answer', 'leadsforward-core'),
@@ -111,7 +103,7 @@ function lf_get_ai_editable_fields($post_id): array {
 	foreach ($editable_keys as $key) {
 		$allowed = false;
 		if ($context === 'lf_service') {
-			$allowed = in_array($key, ['lf_service_short_desc', 'lf_service_long_content', 'post_content'], true);
+			$allowed = in_array($key, ['post_content'], true);
 		} elseif ($context === 'lf_service_area') {
 			$allowed = in_array($key, ['lf_service_area_map_override', 'post_content'], true);
 		} elseif ($context === 'lf_faq') {
