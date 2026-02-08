@@ -90,8 +90,12 @@ function lf_homepage_admin_save(): void {
 		$key_enabled = 'lf_hp_enabled_' . $type;
 		$key_variant = 'lf_hp_variant_' . $type;
 		$config[$type]['enabled'] = !empty($_POST[$key_enabled]);
-		$v = isset($_POST[$key_variant]) && in_array($_POST[$key_variant], $allowed_variants, true) ? $_POST[$key_variant] : 'default';
-		$config[$type]['variant'] = $v;
+		if ($type === 'hero') {
+			$v = isset($_POST[$key_variant]) && in_array($_POST[$key_variant], $allowed_variants, true) ? $_POST[$key_variant] : 'default';
+			$config[$type]['variant'] = $v;
+		} else {
+			$config[$type]['variant'] = 'default';
+		}
 		$bg_value = isset($_POST['lf_hp_bg_' . $type]) ? sanitize_text_field($_POST['lf_hp_bg_' . $type]) : 'light';
 		$config[$type]['section_background'] = in_array($bg_value, ['light', 'soft', 'dark', 'card'], true) ? $bg_value : 'light';
 		if ($type === 'hero') {
@@ -670,13 +674,15 @@ function lf_homepage_admin_render(): void {
 							<span class="lf-homepage-drag" aria-hidden="true">⋮⋮</span>
 							<strong><?php echo esc_html($label); ?></strong>
 							<label><input type="checkbox" name="lf_hp_enabled_<?php echo esc_attr($type); ?>" id="lf_hp_enabled_<?php echo esc_attr($type); ?>" value="1" <?php checked($enabled); ?> /> <?php esc_html_e('Show this section', 'leadsforward-core'); ?></label>
-							<label><?php esc_html_e('Variant', 'leadsforward-core'); ?>
-								<select name="lf_hp_variant_<?php echo esc_attr($type); ?>">
-									<?php foreach ($variants as $v => $vlabel) : ?>
-										<option value="<?php echo esc_attr($v); ?>" <?php selected($variant, $v); ?>><?php echo esc_html($vlabel); ?></option>
-									<?php endforeach; ?>
-								</select>
-							</label>
+							<?php if ($type === 'hero') : ?>
+								<label><?php esc_html_e('Variant', 'leadsforward-core'); ?>
+									<select name="lf_hp_variant_<?php echo esc_attr($type); ?>">
+										<?php foreach ($variants as $v => $vlabel) : ?>
+											<option value="<?php echo esc_attr($v); ?>" <?php selected($variant, $v); ?>><?php echo esc_html($vlabel); ?></option>
+										<?php endforeach; ?>
+									</select>
+								</label>
+							<?php endif; ?>
 							<button type="button" class="lf-homepage-toggle" data-target="<?php echo esc_attr($type); ?>" aria-expanded="true">
 								<span class="lf-homepage-toggle-icon">▾</span>
 								<span class="lf-homepage-toggle-label"><?php esc_html_e('Collapse', 'leadsforward-core'); ?></span>

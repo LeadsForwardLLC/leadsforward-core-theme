@@ -139,7 +139,8 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 - **Template:** `front-page.php` (static front page).
 - **Sections:** Configured in **LeadsForward → Homepage** via drag/drop.
   - Shared section registry in `inc/sections.php`.
-  - Per-section toggle, variant, background, and copy fields.
+  - Per-section toggle, background, and copy fields.
+  - **Hero only:** Variant selector (Authority Split, Conversion Stack, Form First, Visual Proof).
   - CTA actions: `quote`, `call`, `link`.
 - **Media sections:** Content with Image + Image with Content use Media Library images with a placeholder fallback.
 - **Defaults:** If no config exists, a conversion-optimized default order is seeded.

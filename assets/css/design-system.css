@@ -67,7 +67,7 @@
 	--lf-opacity-footer-link: 0.85;
 
 	/* Border radius (override per variation profile in variation-tokens.css) */
-	--lf-button-radius: 0.25rem;
+	--lf-button-radius: 0.35rem;
 
 	/* Hero — bold gradient, display type, dominant CTA */
 	--lf-hero-bg: #cbd5e1;
@@ -265,8 +265,8 @@
 }
 
 .lf-btn--primary:hover {
-	background-color: var(--lf-color-secondary);
-	border-color: var(--lf-color-secondary);
+	background-color: color-mix(in srgb, var(--lf-primary) 88%, #000);
+	border-color: color-mix(in srgb, var(--lf-primary) 88%, #000);
 	color: #fff;
 	box-shadow: none;
 }
@@ -1150,9 +1150,7 @@ button:focus-visible,
 
 .lf-block-hero__cta-link:hover,
 .lf-block-hero__cta-text:hover {
-	transform: translateY(-2px);
 	box-shadow: none;
-	filter: brightness(1.05);
 }
 
 .lf-block-hero__cta-secondary {
