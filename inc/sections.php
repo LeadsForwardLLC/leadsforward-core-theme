@@ -57,7 +57,7 @@ function lf_sections_registry(): array {
 	return [
 		'hero' => [
 			'label' => __('Hero', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area', 'page'],
+			'contexts' => ['homepage', 'service', 'service_area', 'page', 'post'],
 			'fields' => [
 				$bg_soft,
 				['key' => 'hero_headline', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
@@ -128,7 +128,7 @@ function lf_sections_registry(): array {
 		],
 		'content' => [
 			'label' => __('Content', 'leadsforward-core'),
-			'contexts' => ['service', 'service_area'],
+			'contexts' => ['service', 'service_area', 'page', 'post'],
 			'fields' => [
 				$bg_field,
 			],
@@ -158,7 +158,7 @@ function lf_sections_registry(): array {
 		],
 		'cta' => [
 			'label' => __('CTA Band', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area', 'page'],
+			'contexts' => ['homepage', 'service', 'service_area', 'page', 'post'],
 			'fields' => [
 				$bg_dark,
 				['key' => 'cta_headline', 'label' => __('CTA headline', 'leadsforward-core'), 'type' => 'text', 'default' => __('Get a fast, no-obligation estimate', 'leadsforward-core')],
@@ -223,9 +223,19 @@ function lf_sections_registry(): array {
 			],
 			'render' => 'lf_sections_render_blog_posts',
 		],
+		'sitemap_links' => [
+			'label' => __('Sitemap Links', 'leadsforward-core'),
+			'contexts' => ['page'],
+			'fields' => [
+				$bg_field,
+				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Quick links', 'leadsforward-core')],
+				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Browse the full site from one place.', 'leadsforward-core')],
+			],
+			'render' => 'lf_sections_render_sitemap_links',
+		],
 		'related_links' => [
 			'label' => __('Related Links', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area', 'page'],
+			'contexts' => ['homepage', 'service', 'service_area', 'page', 'post'],
 			'fields' => [
 				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Explore More', 'leadsforward-core')],
@@ -293,6 +303,9 @@ function lf_sections_default_order(string $context): array {
 	if ($context === 'page') {
 		array_splice($base, 3, 0, ['content_image', 'image_content']);
 		return $base;
+	}
+	if ($context === 'post') {
+		return ['hero', 'content', 'related_links', 'cta'];
 	}
 	return $base;
 }
@@ -880,6 +893,59 @@ function lf_sections_render_blog_posts(string $context, array $settings, \WP_Pos
 	} else {
 		echo '<p>' . esc_html__('No posts yet.', 'leadsforward-core') . '</p>';
 	}
+	lf_sections_render_shell_close();
+}
+
+function lf_sections_render_sitemap_links(string $context, array $settings, \WP_Post $post): void {
+	$title = $settings['section_heading'] ?? '';
+	$intro = $settings['section_intro'] ?? '';
+	lf_sections_render_shell_open('sitemap-links', $title, $intro, $settings['section_background'] ?? 'light');
+
+	$pages = get_pages(['post_status' => 'publish', 'sort_order' => 'ASC', 'sort_column' => 'menu_order,post_title']);
+	$services = get_posts([
+		'post_type' => 'lf_service',
+		'posts_per_page' => -1,
+		'post_status' => 'publish',
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+		'no_found_rows' => true,
+	]);
+	$areas = get_posts([
+		'post_type' => 'lf_service_area',
+		'posts_per_page' => -1,
+		'post_status' => 'publish',
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+		'no_found_rows' => true,
+	]);
+
+	echo '<div class="lf-sitemap">';
+	if (!empty($pages)) {
+		echo '<h3>' . esc_html__('Pages', 'leadsforward-core') . '</h3>';
+		echo '<ul class="lf-related-links" role="list">';
+		foreach ($pages as $page) {
+			echo '<li><a href="' . esc_url(get_permalink($page)) . '">' . esc_html(get_the_title($page)) . '</a></li>';
+		}
+		echo '</ul>';
+	}
+	if (!empty($services)) {
+		echo '<h3>' . esc_html__('Services', 'leadsforward-core') . '</h3>';
+		echo '<ul class="lf-related-links" role="list">';
+		foreach ($services as $svc) {
+			echo '<li><a href="' . esc_url(get_permalink($svc)) . '">' . esc_html(get_the_title($svc)) . '</a></li>';
+		}
+		echo '</ul>';
+	}
+	if (!empty($areas)) {
+		echo '<h3>' . esc_html__('Service Areas', 'leadsforward-core') . '</h3>';
+		echo '<ul class="lf-related-links" role="list">';
+		foreach ($areas as $area) {
+			echo '<li><a href="' . esc_url(get_permalink($area)) . '">' . esc_html(get_the_title($area)) . '</a></li>';
+		}
+		echo '</ul>';
+	}
+	echo '</div>';
+
 	lf_sections_render_shell_close();
 }
 

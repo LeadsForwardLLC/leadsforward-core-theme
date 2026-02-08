@@ -613,7 +613,7 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 
 	return [
 		'about-us' => [
-			'order' => ['hero', 'content_image', 'benefits', 'cta'],
+			'order' => ['hero', 'content_image', 'benefits', 'related_links', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'About ' . $business,
@@ -629,14 +629,23 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'section_intro' => 'Clear communication, honest pricing, and consistent results.',
 					'benefits_items' => 'Licensed and insured professionals' . "\n" . 'Upfront pricing before work starts' . "\n" . 'Respectful, clean crews',
 				],
+				'related_links' => [
+					'section_heading' => 'Explore our services',
+					'section_intro' => 'Browse popular services and nearby areas.',
+					'related_links_mode' => 'both',
+				],
 				'cta' => [
 					'cta_headline' => $cta_headline,
 					'cta_subheadline' => 'Request a free estimate and get a clear next step.',
 				],
 			],
+			'seo' => [
+				'title' => $business ? 'About ' . $business . ($city ? ' | ' . $city : '') : 'About Us',
+				'description' => 'Learn about our team, process, and what makes us the trusted local choice' . $city_line . '.',
+			],
 		],
 		'our-services' => [
-			'order' => ['hero', 'service_grid', 'cta'],
+			'order' => ['hero', 'service_grid', 'related_links', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Services' . ($business ? ' by ' . $business : ''),
@@ -646,14 +655,23 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'section_heading' => 'Service options',
 					'section_intro' => 'Choose the service you need and view details.',
 				],
+				'related_links' => [
+					'section_heading' => 'Related service areas',
+					'section_intro' => 'See the areas we serve near you.',
+					'related_links_mode' => 'areas',
+				],
 				'cta' => [
 					'cta_headline' => $cta_headline,
 					'cta_subheadline' => 'Fast response times and transparent pricing.',
 				],
 			],
+			'seo' => [
+				'title' => $business ? 'Services | ' . $business : 'Our Services',
+				'description' => 'Browse our services and request a fast, free estimate' . $city_line . '.',
+			],
 		],
 		'our-service-areas' => [
-			'order' => ['hero', 'service_areas', 'map_nap', 'cta'],
+			'order' => ['hero', 'service_areas', 'map_nap', 'related_links', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Service areas' . ($business ? ' for ' . $business : ''),
@@ -667,14 +685,23 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'section_heading' => 'Find us on the map',
 					'section_intro' => 'View our primary service area and nearby neighborhoods.',
 				],
+				'related_links' => [
+					'section_heading' => 'Explore services',
+					'section_intro' => 'Browse popular services we offer.',
+					'related_links_mode' => 'services',
+				],
 				'cta' => [
 					'cta_headline' => $cta_headline,
 					'cta_subheadline' => 'Schedule service anywhere we operate.',
 				],
 			],
+			'seo' => [
+				'title' => $business ? 'Service Areas | ' . $business : 'Service Areas',
+				'description' => 'See all service areas we cover' . $city_line . ' and request service today.',
+			],
 		],
 		'reviews' => [
-			'order' => ['hero', 'trust_reviews', 'cta'],
+			'order' => ['hero', 'trust_reviews', 'related_links', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Customer reviews',
@@ -684,14 +711,23 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'trust_heading' => 'What customers are saying',
 					'trust_max_items' => 6,
 				],
+				'related_links' => [
+					'section_heading' => 'Explore services',
+					'section_intro' => 'See services and areas customers trust.',
+					'related_links_mode' => 'both',
+				],
 				'cta' => [
 					'cta_headline' => $cta_headline,
 					'cta_subheadline' => 'Join our list of happy customers.',
 				],
 			],
+			'seo' => [
+				'title' => $business ? 'Reviews | ' . $business : 'Reviews',
+				'description' => 'Read verified reviews from homeowners' . $city_line . '.',
+			],
 		],
 		'blog' => [
-			'order' => ['hero', 'blog_posts', 'cta'],
+			'order' => ['hero', 'blog_posts', 'related_links', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Home service tips & updates',
@@ -702,28 +738,40 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'section_intro' => 'Helpful resources from our team.',
 					'posts_per_page' => 6,
 				],
+				'related_links' => [
+					'section_heading' => 'Explore services',
+					'section_intro' => 'See what we can help with today.',
+					'related_links_mode' => 'services',
+				],
 				'cta' => [
 					'cta_headline' => $cta_headline,
 					'cta_subheadline' => 'Ready for a quote? We’re here to help.',
 				],
 			],
+			'seo' => [
+				'title' => $business ? 'Blog | ' . $business : 'Blog',
+				'description' => 'Tips and updates from our local home-service team.',
+			],
 		],
 		'sitemap' => [
-			'order' => ['hero', 'content_image'],
+			'order' => ['hero', 'sitemap_links'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Sitemap',
 					'hero_subheadline' => 'Find every key page, service, and location on this site.',
 				],
-				'content_image' => [
+				'sitemap_links' => [
 					'section_heading' => 'Quick links',
-					'section_intro' => 'Navigate the full site from one place.',
-					'section_body' => lf_wizard_build_sitemap_body($created_pages),
+					'section_intro' => 'Browse the full site from one place.',
 				],
+			],
+			'seo' => [
+				'title' => $business ? 'Sitemap | ' . $business : 'Sitemap',
+				'description' => 'Browse all pages, services, and service areas.',
 			],
 		],
 		'contact' => [
-			'order' => ['hero', 'content_image', 'map_nap', 'cta'],
+			'order' => ['hero', 'content_image', 'map_nap', 'related_links', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Contact ' . $business,
@@ -742,10 +790,19 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'section_heading' => 'Our service area',
 					'section_intro' => 'See the areas we cover and find us on the map.',
 				],
+				'related_links' => [
+					'section_heading' => 'Explore services',
+					'section_intro' => 'Browse services and areas we cover.',
+					'related_links_mode' => 'both',
+				],
 				'cta' => [
 					'cta_headline' => $cta_headline,
 					'cta_subheadline' => 'Prefer a quick estimate? Start here.',
 				],
+			],
+			'seo' => [
+				'title' => $business ? 'Contact | ' . $business : 'Contact',
+				'description' => 'Contact our team for fast scheduling and clear pricing' . $city_line . '.',
 			],
 		],
 		'privacy-policy' => [
@@ -761,6 +818,10 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'section_body' => 'We respect your privacy and never share your information without permission. Replace this section with your official legal policy.',
 				],
 			],
+			'seo' => [
+				'title' => $business ? 'Privacy Policy | ' . $business : 'Privacy Policy',
+				'description' => 'Read how we collect, use, and protect your information.',
+			],
 		],
 		'terms-of-service' => [
 			'order' => ['hero', 'content_image'],
@@ -775,9 +836,13 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'section_body' => 'These terms outline the use of this website and our services. Replace this section with your official legal terms.',
 				],
 			],
+			'seo' => [
+				'title' => $business ? 'Terms of Service | ' . $business : 'Terms of Service',
+				'description' => 'Read the terms governing use of this site and our services.',
+			],
 		],
 		'thank-you' => [
-			'order' => ['hero', 'content_image', 'cta'],
+			'order' => ['hero', 'content_image', 'related_links', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Thanks — we received your request',
@@ -788,10 +853,19 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'section_intro' => 'We will review your details and respond quickly.',
 					'section_body' => 'If you have an urgent request, please call us directly and we will prioritize your service.',
 				],
+				'related_links' => [
+					'section_heading' => 'Explore services',
+					'section_intro' => 'Browse services and areas we cover.',
+					'related_links_mode' => 'both',
+				],
 				'cta' => [
 					'cta_headline' => 'Need immediate help?',
 					'cta_subheadline' => 'Call us now and we will assist you.',
 				],
+			],
+			'seo' => [
+				'title' => $business ? 'Thank You | ' . $business : 'Thank You',
+				'description' => 'Thanks for your request. We will follow up shortly.',
 			],
 		],
 	];
@@ -808,6 +882,7 @@ function lf_wizard_seed_page_pb_config(int $post_id, string $slug, array $data, 
 	$blueprint = $blueprints[$slug];
 	$order = $blueprint['order'] ?? [];
 	$overrides = $blueprint['overrides'] ?? [];
+	$seo = is_array($blueprint['seo'] ?? null) ? $blueprint['seo'] : ['title' => '', 'description' => ''];
 
 	$sections = [];
 	$counts = [];
@@ -821,7 +896,7 @@ function lf_wizard_seed_page_pb_config(int $post_id, string $slug, array $data, 
 			'settings' => array_merge(lf_sections_defaults_for($type), $overrides[$type] ?? []),
 		];
 	}
-	update_post_meta($post_id, LF_PB_META_KEY, ['order' => array_keys($sections), 'sections' => $sections]);
+	update_post_meta($post_id, LF_PB_META_KEY, ['order' => array_keys($sections), 'sections' => $sections, 'seo' => $seo]);
 }
 
 /**

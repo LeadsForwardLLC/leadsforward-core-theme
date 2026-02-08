@@ -18,7 +18,7 @@ LeadsForward Core provides:
 - **Shared section registry:** Universal section definitions + defaults used by homepage and page builders
 - **Image system:** Media Library–only images with Unsplash placeholder seeding
 - **Homepage builder:** Drag/drop order, per-section toggles, backgrounds, and copy
-- **Page Builder Framework:** Instance-based sections for core pages, services, and service areas
+- **Page Builder Framework:** Instance-based sections for core pages, posts, services, and service areas
 - **Quote Builder:** Full-screen modal with multi-step flow, GHL webhook delivery, and first-party analytics
 - **AI Assistant (bounded):** Safe copy suggestions + field edits only (no layout/CSS changes)
 - **Server-rendered blocks:** Hero, Trust/Reviews, CTA, FAQ Accordion, Map+NAP

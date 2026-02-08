@@ -77,7 +77,9 @@ function lf_get_niche_registry(): array {
 			'services'                => [
 				__('Roof Repair', 'leadsforward-core'),
 				__('Roof Replacement', 'leadsforward-core'),
+				__('Storm Damage', 'leadsforward-core'),
 				__('Emergency Roofing', 'leadsforward-core'),
+				__('Commercial Roofing', 'leadsforward-core'),
 			],
 			'required_pages'          => [],
 			'homepage_section_order'  => ['hero', 'trust_reviews', 'service_grid', 'service_areas', 'cta', 'faq_accordion', 'cta', 'map_nap'],
@@ -95,7 +97,7 @@ function lf_get_niche_registry(): array {
 			'services'                => [
 				__('Drain Cleaning', 'leadsforward-core'),
 				__('Water Heater Repair', 'leadsforward-core'),
-				__('Pipe Repair', 'leadsforward-core'),
+				__('Leak Detection', 'leadsforward-core'),
 				__('Emergency Plumbing', 'leadsforward-core'),
 			],
 			'required_pages'          => [],
@@ -113,9 +115,9 @@ function lf_get_niche_registry(): array {
 			'slug'                    => 'hvac',
 			'services'                => [
 				__('AC Repair', 'leadsforward-core'),
+				__('AC Installation', 'leadsforward-core'),
 				__('Heating Repair', 'leadsforward-core'),
-				__('HVAC Installation', 'leadsforward-core'),
-				__('Emergency HVAC', 'leadsforward-core'),
+				__('Maintenance Plans', 'leadsforward-core'),
 			],
 			'required_pages'          => [],
 			'homepage_section_order'  => ['hero', 'service_grid', 'trust_reviews', 'service_areas', 'cta', 'faq_accordion', 'cta', 'map_nap'],
@@ -133,7 +135,8 @@ function lf_get_niche_registry(): array {
 			'services'                => [
 				__('Lawn Care', 'leadsforward-core'),
 				__('Landscape Design', 'leadsforward-core'),
-				__('Garden Maintenance', 'leadsforward-core'),
+				__('Hardscaping', 'leadsforward-core'),
+				__('Seasonal Cleanup', 'leadsforward-core'),
 			],
 			'required_pages'          => [],
 			'homepage_section_order'  => ['hero', 'service_grid', 'service_areas', 'trust_reviews', 'faq_accordion', 'cta', 'map_nap'],

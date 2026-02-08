@@ -32,6 +32,10 @@ function lf_pb_registry(): array {
 			'label' => __('Page', 'leadsforward-core'),
 			'sections' => array_values(lf_sections_get_context_sections('page')),
 		],
+		'post' => [
+			'label' => __('Post', 'leadsforward-core'),
+			'sections' => array_values(lf_sections_get_context_sections('post')),
+		],
 	];
 }
 
@@ -51,6 +55,9 @@ function lf_pb_get_context_for_post(\WP_Post $post): string {
 		if (!empty($has_config) || in_array($post->post_name, $core_slugs, true)) {
 			return 'page';
 		}
+	}
+	if ($post->post_type === 'post') {
+		return 'post';
 	}
 	return '';
 }
@@ -75,7 +82,14 @@ function lf_pb_default_config(string $context): array {
 		];
 		$order[] = $instance_id;
 	}
-	return ['order' => $order, 'sections' => $sections];
+	return [
+		'order' => $order,
+		'sections' => $sections,
+		'seo' => [
+			'title' => '',
+			'description' => '',
+		],
+	];
 }
 
 function lf_pb_get_post_config(int $post_id, string $context): array {
@@ -88,6 +102,10 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 	$allowed_types = array_keys(lf_sections_get_context_sections($context));
 	$sections_out = [];
 	$order_out = [];
+	$seo_out = [
+		'title' => '',
+		'description' => '',
+	];
 
 	$is_legacy = false;
 	if (isset($stored['sections']) && is_array($stored['sections'])) {
@@ -134,7 +152,12 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 		$order_out = is_array($stored['order'] ?? null) ? $stored['order'] : array_keys($sections_out);
 	}
 
+	if (isset($stored['seo']) && is_array($stored['seo'])) {
+		$seo_out['title'] = sanitize_text_field((string) ($stored['seo']['title'] ?? ''));
+		$seo_out['description'] = sanitize_textarea_field((string) ($stored['seo']['description'] ?? ''));
+	}
 	if (empty($sections_out)) {
+		$default['seo'] = $seo_out;
 		return $default;
 	}
 
@@ -144,7 +167,7 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 	}
 
 	$order_out = lf_pb_sanitize_order($order_out, array_keys($sections_out));
-	return ['order' => $order_out, 'sections' => $sections_out];
+	return ['order' => $order_out, 'sections' => $sections_out, 'seo' => $seo_out];
 }
 
 function lf_pb_sanitize_order(array $order, array $allowed): array {
@@ -168,7 +191,7 @@ function lf_pb_sanitize_order(array $order, array $allowed): array {
 
 function lf_pb_register_meta_box(): void {
 	$screen = get_current_screen();
-	if (!$screen || !in_array($screen->post_type, ['lf_service', 'lf_service_area', 'page'], true)) {
+	if (!$screen || !in_array($screen->post_type, ['lf_service', 'lf_service_area', 'page', 'post'], true)) {
 		return;
 	}
 	add_meta_box(
@@ -186,7 +209,7 @@ function lf_pb_admin_assets(string $hook): void {
 		return;
 	}
 	$screen = get_current_screen();
-	if (!$screen || !in_array($screen->post_type, ['lf_service', 'lf_service_area', 'page'], true)) {
+	if (!$screen || !in_array($screen->post_type, ['lf_service', 'lf_service_area', 'page', 'post'], true)) {
 		return;
 	}
 	wp_enqueue_script('jquery-ui-sortable');
@@ -268,6 +291,7 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 	$config = lf_pb_get_post_config($post->ID, $context);
 	$order = $config['order'] ?? [];
 	$saved_sections = $config['sections'] ?? [];
+	$seo = is_array($config['seo'] ?? null) ? $config['seo'] : ['title' => '', 'description' => ''];
 	wp_nonce_field('lf_pb_save', 'lf_pb_nonce');
 	?>
 	<style>
@@ -299,10 +323,32 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 		.lf-media-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
 		.lf-media-preview__empty { font-size: 12px; color: #64748b; text-align: center; padding: 0 0.5rem; }
 		.lf-media-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+		.lf-pb-section-body[data-panel="seo-panel"] { padding: 0.5rem 0 0; }
 	</style>
 	<div class="lf-pb-grid">
 		<div class="lf-pb-main">
 			<p class="description"><?php esc_html_e('Drag to reorder sections. Use the Add buttons on the right to insert new sections (duplicates allowed).', 'leadsforward-core'); ?></p>
+			<?php if (in_array($context, ['page', 'post'], true)) : ?>
+				<div class="lf-pb-section">
+					<div class="lf-pb-section-header">
+						<span class="lf-pb-drag" aria-hidden="true">🔒</span>
+						<strong><?php esc_html_e('SEO Overrides', 'leadsforward-core'); ?></strong>
+						<button type="button" class="lf-pb-toggle" data-target="seo-panel" aria-expanded="true">▾ <?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
+					</div>
+					<div class="lf-pb-section-body" data-panel="seo-panel">
+						<table class="form-table" role="presentation">
+							<tr>
+								<th scope="row"><label><?php esc_html_e('Meta title', 'leadsforward-core'); ?></label></th>
+								<td><input type="text" class="large-text" name="lf_pb_seo_title" value="<?php echo esc_attr((string) ($seo['title'] ?? '')); ?>" placeholder="<?php esc_attr_e('Leave blank to use the page title', 'leadsforward-core'); ?>" /></td>
+							</tr>
+							<tr>
+								<th scope="row"><label><?php esc_html_e('Meta description', 'leadsforward-core'); ?></label></th>
+								<td><textarea class="large-text" rows="2" name="lf_pb_seo_description" placeholder="<?php esc_attr_e('Leave blank to use the hero subheadline or page excerpt', 'leadsforward-core'); ?>"><?php echo esc_textarea((string) ($seo['description'] ?? '')); ?></textarea></td>
+							</tr>
+						</table>
+					</div>
+				</div>
+			<?php endif; ?>
 			<ul class="lf-pb-sections">
 				<?php if (empty($order)) : ?>
 					<li class="lf-pb-empty"><?php esc_html_e('Drag sections here to start building.', 'leadsforward-core'); ?></li>
@@ -448,7 +494,7 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 }
 
 function lf_pb_handle_save(int $post_id, \WP_Post $post): void {
-	if (!in_array($post->post_type, ['lf_service', 'lf_service_area', 'page'], true)) {
+	if (!in_array($post->post_type, ['lf_service', 'lf_service_area', 'page', 'post'], true)) {
 		return;
 	}
 	if (!isset($_POST['lf_pb_nonce']) || !wp_verify_nonce($_POST['lf_pb_nonce'], 'lf_pb_save')) {
@@ -487,7 +533,15 @@ function lf_pb_handle_save(int $post_id, \WP_Post $post): void {
 	}
 	$order_raw = isset($_POST['lf_pb_order']) ? (array) $_POST['lf_pb_order'] : [];
 	$order = lf_pb_sanitize_order(array_map('sanitize_text_field', $order_raw), array_keys($clean_sections));
-	update_post_meta($post_id, LF_PB_META_KEY, ['order' => $order, 'sections' => $clean_sections]);
+	$seo = [
+		'title' => '',
+		'description' => '',
+	];
+	if (in_array($context, ['page', 'post'], true)) {
+		$seo['title'] = isset($_POST['lf_pb_seo_title']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_pb_seo_title'])) : '';
+		$seo['description'] = isset($_POST['lf_pb_seo_description']) ? sanitize_textarea_field(wp_unslash((string) $_POST['lf_pb_seo_description'])) : '';
+	}
+	update_post_meta($post_id, LF_PB_META_KEY, ['order' => $order, 'sections' => $clean_sections, 'seo' => $seo]);
 }
 
 function lf_pb_render_sections(\WP_Post $post): void {

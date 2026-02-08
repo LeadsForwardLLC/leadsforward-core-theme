@@ -15,6 +15,8 @@ if (!defined('ABSPATH')) {
 // Canonical and noindex.
 add_action('wp_head', 'lf_canonical_tag', 1);
 add_action('wp_head', 'lf_robots_noindex_where_needed', 2);
+add_action('wp_head', 'lf_meta_description_tag', 4);
+add_filter('pre_get_document_title', 'lf_filter_document_title', 20);
 
 /**
  * Output canonical URL. Compatible with Rank Math: use add_filter('lf_output_canonical', '__return_false')
@@ -73,6 +75,91 @@ function lf_robots_noindex_where_needed(): void {
 	if ($noindex) {
 		echo '<meta name="robots" content="noindex, follow" />' . "\n";
 	}
+}
+
+/**
+ * SEO overrides from Page Builder config (pages/posts).
+ */
+function lf_get_pb_seo_overrides(int $post_id): array {
+	$config = get_post_meta($post_id, LF_PB_META_KEY, true);
+	if (!is_array($config)) {
+		return ['title' => '', 'description' => ''];
+	}
+	$seo = is_array($config['seo'] ?? null) ? $config['seo'] : [];
+	return [
+		'title' => sanitize_text_field((string) ($seo['title'] ?? '')),
+		'description' => sanitize_textarea_field((string) ($seo['description'] ?? '')),
+	];
+}
+
+function lf_get_pb_hero_subheadline(int $post_id): string {
+	$config = get_post_meta($post_id, LF_PB_META_KEY, true);
+	if (!is_array($config)) {
+		return '';
+	}
+	$order = $config['order'] ?? [];
+	$sections = $config['sections'] ?? [];
+	foreach ($order as $instance_id) {
+		$section = $sections[$instance_id] ?? null;
+		if (!$section || ($section['type'] ?? '') !== 'hero') {
+			continue;
+		}
+		$settings = $section['settings'] ?? [];
+		$sub = $settings['hero_subheadline'] ?? '';
+		return is_string($sub) ? $sub : '';
+	}
+	return '';
+}
+
+function lf_filter_document_title(string $title): string {
+	if (!is_singular(['page', 'post'])) {
+		return $title;
+	}
+	$post_id = get_queried_object_id();
+	if (!$post_id) {
+		return $title;
+	}
+	$seo = lf_get_pb_seo_overrides($post_id);
+	if (!empty($seo['title'])) {
+		return $seo['title'];
+	}
+	return $title;
+}
+
+function lf_get_meta_description_default(int $post_id): string {
+	$sub = lf_get_pb_hero_subheadline($post_id);
+	if ($sub !== '') {
+		return $sub;
+	}
+	$excerpt = get_the_excerpt($post_id);
+	if ($excerpt !== '') {
+		return $excerpt;
+	}
+	$content = wp_strip_all_tags(get_post_field('post_content', $post_id));
+	return wp_trim_words($content, 28);
+}
+
+function lf_meta_description_tag(): void {
+	if (!apply_filters('lf_output_meta_description', true)) {
+		return;
+	}
+	if (!is_singular(['page', 'post'])) {
+		return;
+	}
+	$post_id = get_queried_object_id();
+	if (!$post_id) {
+		return;
+	}
+	$seo = lf_get_pb_seo_overrides($post_id);
+	$desc = $seo['description'] ?? '';
+	if ($desc === '') {
+		$desc = lf_get_meta_description_default($post_id);
+	}
+	$desc = trim(preg_replace('/\s+/', ' ', (string) $desc));
+	if ($desc === '') {
+		return;
+	}
+	echo '<meta name="description" content="' . esc_attr($desc) . '" />' . "\n";
 }
 
 /**

@@ -166,3 +166,81 @@ This keeps the site consistent, fast, and safe.
 Append‑Only Change Log
 ----------------------
 2026‑02‑08 — SOP created.
+
+2026‑02‑08 — Niche page matrices added.
+
+---
+
+Niche Selection Addendum (Append‑Only)
+-------------------------------------
+When you select a niche, the wizard adds niche‑specific service pages in addition to the General pages.
+These are created automatically and pre‑configured with the Page Builder Framework.
+
+Roofing adds:
+- Roof Repair
+- Roof Replacement
+- Storm Damage
+- Emergency Roofing
+- Commercial Roofing
+
+Plumbing adds:
+- Drain Cleaning
+- Water Heater Repair
+- Leak Detection
+- Emergency Plumbing
+
+HVAC adds:
+- AC Repair
+- AC Installation
+- Heating Repair
+- Maintenance Plans
+
+Landscaping adds:
+- Lawn Care
+- Landscape Design
+- Hardscaping
+- Seasonal Cleanup
+
+Operator customization rules:
+- You MAY reorder sections, edit copy, and toggle sections ON/OFF.
+- You MAY update branding, CTAs, and global business info.
+- You MAY add/remove services and service areas through the structured UI.
+- You MUST NOT edit theme templates, PHP, or CSS files.
+- You MUST NOT change core page slugs or delete core pages.
+
+Internal linking rules:
+- Service pages link to service areas (via the Map + Areas section).
+- Service areas link back to services (via Services Offered Here).
+- Homepage links to top services and areas (Related Links + Map section).
+
+---
+
+Core Pages Editing & SEO Addendum (Append‑Only)
+-----------------------------------------------
+Editing core pages safely:
+- Use the Page Builder panel on each core page.
+- Adjust section order, headings, and copy only in the structured fields.
+- Do NOT use Gutenberg blocks for layout or custom HTML.
+
+SEO best practices (per core page):
+- **About Us:** Keep the H1 clear (About {Business}); describe what makes you credible.
+- **Services:** Use a short H1, then list services; keep the meta description concise.
+- **Service Areas:** Mention the primary city/area in the hero subheadline.
+- **Reviews:** Emphasize trust; keep descriptions factual and short.
+- **Blog:** Focus on helpful, local advice; keep titles readable.
+- **Contact:** Include phone and service area in the hero subheadline.
+- **Privacy/Terms:** Use clear legal titles; keep these pages simple.
+- **Thank You:** Confirm next steps; avoid aggressive sales copy.
+
+Conversion best practices (per core page):
+- Keep one primary CTA near the end of each core page.
+- Use the Quote Builder CTA on About, Services, Areas, Reviews, and Blog.
+- Include internal links to services and areas where relevant.
+
+Final QA checklist before launch:
+- All core pages exist and use the Page Builder.
+- H1 appears only once per page (hero section).
+- Meta titles/descriptions are set or have sensible defaults.
+- CTAs open the Quote Builder or call the business phone.
+- Service pages and service areas link to each other.
+- Homepage links to top services and areas.
