@@ -410,10 +410,11 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 			'hero_cta_secondary_action' => $settings['cta_secondary_action'] ?? '',
 			'hero_cta_secondary_url' => $settings['cta_secondary_url'] ?? '',
 		];
+		$variant = $settings['variant'] ?? 'default';
 		$block = [
 			'id'         => 'lf-hero',
-			'variant'    => 'default',
-			'attributes' => ['variant' => 'default', 'layout' => 'default'],
+			'variant'    => $variant,
+			'attributes' => ['variant' => $variant, 'layout' => $variant],
 			'context'    => ['homepage' => true, 'section' => $section],
 		];
 		lf_render_block_template('hero', $block, false, $block['context']);

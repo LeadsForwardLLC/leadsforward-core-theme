@@ -1301,6 +1301,280 @@ button:focus-visible,
 	background: linear-gradient(120deg, rgba(37, 99, 235, 0.15) 0%, rgba(14, 165, 233, 0.15) 100%), #f8fafc;
 }
 
+/* Hero variants: distinct layouts */
+.lf-hero-split {
+	display: grid;
+	grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+	gap: var(--lf-gap-loose);
+	align-items: center;
+}
+
+.lf-hero-split__content {
+	display: flex;
+	flex-direction: column;
+	gap: var(--lf-gap-tight);
+}
+
+.lf-hero-split__title {
+	font-size: var(--lf-hero-title-size);
+	font-weight: 800;
+	line-height: 1.05;
+	letter-spacing: -0.04em;
+	margin: 0;
+	color: var(--lf-text-primary);
+}
+
+.lf-hero-split__subtitle {
+	margin: 0;
+	font-size: 1.2rem;
+	color: var(--lf-text-muted);
+	font-weight: 500;
+	line-height: 1.55;
+	max-width: 34em;
+}
+
+.lf-hero-split__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+}
+
+.lf-hero-split__trust {
+	display: inline-flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--lf-hero-trust-gap);
+	font-size: 0.9375rem;
+	font-weight: 600;
+	color: var(--lf-text-muted);
+}
+
+.lf-hero-split__phone {
+	margin: 0.75rem 0 0;
+	font-weight: 600;
+}
+
+.lf-hero-split__phone a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.lf-hero-stack {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	gap: 0.9rem;
+	max-width: 720px;
+	margin: 0 auto;
+}
+
+.lf-hero-stack__eyebrow,
+.lf-hero-split__eyebrow,
+.lf-hero-form__eyebrow,
+.lf-hero-visual__eyebrow {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0;
+	padding: 0.35rem 0.9rem;
+	border-radius: 999px;
+	background: var(--lf-surface-light);
+	border: 1px solid rgba(15,23,42,0.1);
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--lf-text-primary);
+}
+
+.lf-hero-stack__title,
+.lf-hero-form__title,
+.lf-hero-visual__title {
+	margin: 0;
+	font-size: var(--lf-hero-title-size);
+	font-weight: 800;
+	line-height: 1.05;
+	letter-spacing: -0.04em;
+	color: var(--lf-text-primary);
+}
+
+.lf-hero-stack__subtitle,
+.lf-hero-form__subtitle,
+.lf-hero-visual__subtitle {
+	margin: 0;
+	font-size: 1.15rem;
+	color: var(--lf-text-muted);
+	line-height: 1.55;
+}
+
+.lf-hero-stack__trust {
+	display: inline-flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--lf-hero-trust-gap);
+	font-weight: 600;
+	color: var(--lf-text-muted);
+}
+
+.lf-hero-stack__actions {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	width: 100%;
+	max-width: 360px;
+}
+
+.lf-hero-stack__actions .lf-btn {
+	width: 100%;
+}
+
+.lf-hero-stack__phone {
+	margin: 0;
+	font-weight: 600;
+}
+
+.lf-hero-stack__phone a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.lf-hero-form {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+	gap: var(--lf-gap-loose);
+	align-items: center;
+}
+
+.lf-hero-form__content {
+	display: flex;
+	flex-direction: column;
+	gap: var(--lf-gap-tight);
+}
+
+.lf-hero-form__trust {
+	display: inline-flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--lf-hero-trust-gap);
+	font-weight: 600;
+	color: var(--lf-text-muted);
+}
+
+.lf-hero-form__panel {
+	background: var(--lf-surface-card);
+	border: var(--lf-card-border);
+	box-shadow: var(--lf-card-shadow-spotlight);
+	border-radius: 16px;
+	padding: 1.5rem;
+}
+
+.lf-hero-form__panel-inner {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.lf-hero-form__panel-title {
+	margin: 0;
+	font-size: 1.2rem;
+	font-weight: 700;
+}
+
+.lf-hero-form__panel-text {
+	margin: 0;
+	color: var(--lf-text-muted);
+}
+
+.lf-hero-form__panel-button,
+.lf-hero-form__panel-secondary {
+	width: 100%;
+}
+
+.lf-hero-form__panel-note {
+	margin: 0;
+	font-size: 0.95rem;
+	color: var(--lf-text-muted);
+	text-align: center;
+}
+
+.lf-hero-visual {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: var(--lf-gap-loose);
+	align-items: center;
+}
+
+.lf-hero-visual__content {
+	display: flex;
+	flex-direction: column;
+	gap: var(--lf-gap-tight);
+}
+
+.lf-hero-visual__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+}
+
+.lf-hero-visual__trust {
+	display: inline-flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--lf-hero-trust-gap);
+	font-weight: 600;
+	color: var(--lf-text-muted);
+}
+
+.lf-hero-visual__media {
+	position: relative;
+}
+
+.lf-hero-visual__image {
+	border-radius: 18px;
+	border: var(--lf-card-border);
+	box-shadow: var(--lf-card-shadow-spotlight);
+	overflow: hidden;
+	aspect-ratio: 4 / 3;
+	background: var(--lf-surface-card);
+}
+
+.lf-hero-visual__image img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.lf-hero-visual__overlay {
+	position: absolute;
+	bottom: 1rem;
+	left: 1rem;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 0.85rem;
+	background: rgba(15, 23, 42, 0.78);
+	color: #fff;
+	border-radius: 999px;
+	font-size: 0.9rem;
+}
+
+.lf-hero-visual__overlay-text {
+	font-weight: 600;
+}
+
+@media (max-width: 960px) {
+	.lf-hero-split,
+	.lf-hero-form,
+	.lf-hero-visual {
+		grid-template-columns: 1fr;
+	}
+	.lf-hero-stack__actions {
+		max-width: 100%;
+	}
+}
+
 /* -------------------------------------------------------------------------
    Block: Services — Decision drivers, premium cards
    ------------------------------------------------------------------------- */

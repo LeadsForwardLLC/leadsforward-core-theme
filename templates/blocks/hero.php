@@ -101,46 +101,22 @@ if (post_type_exists('lf_testimonial')) {
 	}
 }
 $show_form_in_hero = $cta_type === 'form' && !empty($cta_resolved_for_type['ghl_embed']);
+$placeholder_id = function_exists('lf_get_placeholder_image_id') ? lf_get_placeholder_image_id() : 0;
+$placeholder_alt = $business_name ? $business_name : __('Trusted local service', 'leadsforward-core');
 ?>
 <section class="lf-block lf-block-hero <?php echo esc_attr($bg_class ?: 'lf-surface-soft'); ?> lf-block-hero--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-hero__bg" aria-hidden="true"></div>
 	<div class="lf-block-hero__inner">
-		<div class="lf-block-hero__grid">
-			<div class="lf-block-hero__content">
+		<?php if ($variant === 'a') : ?>
+			<div class="lf-hero-stack">
 				<?php if ($eyebrow !== '') : ?>
-					<p class="lf-block-hero__eyebrow"><?php echo esc_html($eyebrow); ?></p>
+					<p class="lf-hero-stack__eyebrow"><?php echo esc_html($eyebrow); ?></p>
 				<?php endif; ?>
-				<h1 class="lf-block-hero__title"><?php echo esc_html($heading); ?></h1>
+				<h1 class="lf-hero-stack__title"><?php echo esc_html($heading); ?></h1>
 				<?php if ($subheading !== '') : ?>
-					<p class="lf-block-hero__subtitle"><?php echo esc_html($subheading); ?></p>
+					<p class="lf-hero-stack__subtitle"><?php echo esc_html($subheading); ?></p>
 				<?php endif; ?>
-				<?php if ($cta_text || $secondary_text !== '') : ?>
-					<div class="lf-block-hero__cta">
-						<?php if ($cta_text) : ?>
-							<?php if ($use_phone_link) : ?>
-								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-hero__cta-link lf-btn lf-btn--primary"><?php echo esc_html($cta_text); ?></a>
-							<?php elseif ($cta_action === 'quote') : ?>
-								<button type="button" class="lf-block-hero__cta-text lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="hero"><?php echo esc_html($cta_text); ?></button>
-							<?php elseif ($cta_url !== '') : ?>
-								<a href="<?php echo esc_url($cta_url); ?>" class="lf-block-hero__cta-link lf-btn lf-btn--primary"><?php echo esc_html($cta_text); ?></a>
-							<?php else : ?>
-								<span class="lf-block-hero__cta-text lf-btn lf-btn--primary"><?php echo esc_html($cta_text); ?></span>
-							<?php endif; ?>
-						<?php endif; ?>
-						<?php if ($secondary_text !== '') : ?>
-							<?php if ($secondary_action === 'quote') : ?>
-								<button type="button" class="lf-block-hero__cta-secondary lf-btn lf-btn--secondary" data-lf-quote-trigger="1" data-lf-quote-source="hero-secondary"><?php echo esc_html($secondary_text); ?></button>
-							<?php elseif ($secondary_action === 'call' && $cta_phone) : ?>
-								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-hero__cta-secondary lf-btn lf-btn--secondary"><?php echo esc_html($secondary_text); ?></a>
-							<?php elseif ($secondary_action === 'link' && $secondary_url !== '') : ?>
-								<a href="<?php echo esc_url($secondary_url); ?>" class="lf-block-hero__cta-secondary lf-btn lf-btn--secondary"><?php echo esc_html($secondary_text); ?></a>
-							<?php else : ?>
-								<span class="lf-block-hero__cta-secondary lf-btn lf-btn--secondary"><?php echo esc_html($secondary_text); ?></span>
-							<?php endif; ?>
-						<?php endif; ?>
-					</div>
-				<?php endif; ?>
-				<div class="lf-block-hero__trust" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
+				<div class="lf-hero-stack__trust" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
 					<?php if ($show_trust_strip) : ?>
 						<span class="lf-block-hero__stars" aria-hidden="true">
 							<?php for ($i = 0; $i < 5; $i++) : ?>
@@ -152,24 +128,207 @@ $show_form_in_hero = $cta_type === 'form' && !empty($cta_resolved_for_type['ghl_
 						<span class="lf-block-hero__badge"><?php esc_html_e('Trusted local service', 'leadsforward-core'); ?></span>
 					<?php endif; ?>
 				</div>
+				<?php if ($cta_text || $secondary_text !== '') : ?>
+					<div class="lf-hero-stack__actions">
+						<?php if ($cta_text) : ?>
+							<?php if ($use_phone_link) : ?>
+								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-btn lf-btn--primary lf-hero-stack__primary"><?php echo esc_html($cta_text); ?></a>
+							<?php elseif ($cta_action === 'quote') : ?>
+								<button type="button" class="lf-btn lf-btn--primary lf-hero-stack__primary" data-lf-quote-trigger="1" data-lf-quote-source="hero-stack"><?php echo esc_html($cta_text); ?></button>
+							<?php elseif ($cta_url !== '') : ?>
+								<a href="<?php echo esc_url($cta_url); ?>" class="lf-btn lf-btn--primary lf-hero-stack__primary"><?php echo esc_html($cta_text); ?></a>
+							<?php endif; ?>
+						<?php endif; ?>
+						<?php if ($secondary_text !== '') : ?>
+							<?php if ($secondary_action === 'quote') : ?>
+								<button type="button" class="lf-btn lf-btn--secondary lf-hero-stack__secondary" data-lf-quote-trigger="1" data-lf-quote-source="hero-stack-secondary"><?php echo esc_html($secondary_text); ?></button>
+							<?php elseif ($secondary_action === 'call' && $cta_phone) : ?>
+								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-btn lf-btn--secondary lf-hero-stack__secondary"><?php echo esc_html($secondary_text); ?></a>
+							<?php elseif ($secondary_action === 'link' && $secondary_url !== '') : ?>
+								<a href="<?php echo esc_url($secondary_url); ?>" class="lf-btn lf-btn--secondary lf-hero-stack__secondary"><?php echo esc_html($secondary_text); ?></a>
+							<?php endif; ?>
+						<?php endif; ?>
+					</div>
+				<?php endif; ?>
 				<?php if ($cta_phone && $cta_phone !== $cta_text) : ?>
-					<p class="lf-block-hero__phone-wrap">
-						<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-hero__phone"><?php echo esc_html($cta_phone); ?></a>
+					<p class="lf-hero-stack__phone">
+						<a href="tel:<?php echo esc_attr($cta_phone); ?>"><?php echo esc_html($cta_phone); ?></a>
 					</p>
 				<?php endif; ?>
 			</div>
-			<div class="lf-block-hero__proof">
-				<?php if ($variant === 'b' && $show_form_in_hero) : ?>
-					<div class="lf-block-hero__form">
-						<div class="lf-block-hero__form-head"><?php esc_html_e('Get a fast response', 'leadsforward-core'); ?></div>
-						<?php echo wp_kses_post($cta_resolved_for_type['ghl_embed']); ?>
+		<?php elseif ($variant === 'b') : ?>
+			<div class="lf-hero-form">
+				<div class="lf-hero-form__content">
+					<?php if ($eyebrow !== '') : ?>
+						<p class="lf-hero-form__eyebrow"><?php echo esc_html($eyebrow); ?></p>
+					<?php endif; ?>
+					<h1 class="lf-hero-form__title"><?php echo esc_html($heading); ?></h1>
+					<?php if ($subheading !== '') : ?>
+						<p class="lf-hero-form__subtitle"><?php echo esc_html($subheading); ?></p>
+					<?php endif; ?>
+					<div class="lf-hero-form__trust" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
+						<?php if ($show_trust_strip) : ?>
+							<span class="lf-block-hero__stars" aria-hidden="true">
+								<?php for ($i = 0; $i < 5; $i++) : ?>
+									<svg class="lf-block-hero__star" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+								<?php endfor; ?>
+							</span>
+							<span class="lf-block-hero__badge"><?php echo esc_html(sprintf(_n('%d review', '%d reviews', $review_count, 'leadsforward-core'), $review_count)); ?></span>
+						<?php else : ?>
+							<span class="lf-block-hero__badge"><?php esc_html_e('Trusted local service', 'leadsforward-core'); ?></span>
+						<?php endif; ?>
 					</div>
-				<?php elseif ($variant === 'c' && $latest_testimonial) : ?>
-					<div class="lf-block-hero__quote">
-						<p class="lf-block-hero__quote-text"><?php echo esc_html(get_the_excerpt($latest_testimonial)); ?></p>
-						<p class="lf-block-hero__quote-meta"><?php echo esc_html(get_the_title($latest_testimonial)); ?></p>
+				</div>
+				<div class="lf-hero-form__panel">
+					<div class="lf-hero-form__panel-inner">
+						<p class="lf-hero-form__panel-title"><?php esc_html_e('Start your free estimate', 'leadsforward-core'); ?></p>
+						<p class="lf-hero-form__panel-text"><?php esc_html_e('Get a fast response with clear pricing and next steps.', 'leadsforward-core'); ?></p>
+						<?php if ($cta_text) : ?>
+							<button type="button" class="lf-btn lf-btn--primary lf-hero-form__panel-button" data-lf-quote-trigger="1" data-lf-quote-source="hero-form"><?php echo esc_html($cta_text); ?></button>
+						<?php endif; ?>
+						<?php if ($secondary_text !== '') : ?>
+							<?php if ($secondary_action === 'call' && $cta_phone) : ?>
+								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-btn lf-btn--secondary lf-hero-form__panel-secondary"><?php echo esc_html($secondary_text); ?></a>
+							<?php elseif ($secondary_action === 'quote') : ?>
+								<button type="button" class="lf-btn lf-btn--secondary lf-hero-form__panel-secondary" data-lf-quote-trigger="1" data-lf-quote-source="hero-form-secondary"><?php echo esc_html($secondary_text); ?></button>
+							<?php elseif ($secondary_action === 'link' && $secondary_url !== '') : ?>
+								<a href="<?php echo esc_url($secondary_url); ?>" class="lf-btn lf-btn--secondary lf-hero-form__panel-secondary"><?php echo esc_html($secondary_text); ?></a>
+							<?php endif; ?>
+						<?php endif; ?>
+						<?php if ($cta_phone && $cta_phone !== $cta_text) : ?>
+							<p class="lf-hero-form__panel-note"><?php echo esc_html($cta_phone); ?></p>
+						<?php endif; ?>
 					</div>
-				<?php else : ?>
+				</div>
+			</div>
+		<?php elseif ($variant === 'c') : ?>
+			<div class="lf-hero-visual">
+				<div class="lf-hero-visual__content">
+					<?php if ($eyebrow !== '') : ?>
+						<p class="lf-hero-visual__eyebrow"><?php echo esc_html($eyebrow); ?></p>
+					<?php endif; ?>
+					<h1 class="lf-hero-visual__title"><?php echo esc_html($heading); ?></h1>
+					<?php if ($subheading !== '') : ?>
+						<p class="lf-hero-visual__subtitle"><?php echo esc_html($subheading); ?></p>
+					<?php endif; ?>
+					<?php if ($cta_text || $secondary_text !== '') : ?>
+						<div class="lf-hero-visual__actions">
+							<?php if ($cta_text) : ?>
+								<?php if ($use_phone_link) : ?>
+									<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-btn lf-btn--primary"><?php echo esc_html($cta_text); ?></a>
+								<?php elseif ($cta_action === 'quote') : ?>
+									<button type="button" class="lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="hero-visual"><?php echo esc_html($cta_text); ?></button>
+								<?php elseif ($cta_url !== '') : ?>
+									<a href="<?php echo esc_url($cta_url); ?>" class="lf-btn lf-btn--primary"><?php echo esc_html($cta_text); ?></a>
+								<?php endif; ?>
+							<?php endif; ?>
+							<?php if ($secondary_text !== '') : ?>
+								<?php if ($secondary_action === 'quote') : ?>
+									<button type="button" class="lf-btn lf-btn--secondary" data-lf-quote-trigger="1" data-lf-quote-source="hero-visual-secondary"><?php echo esc_html($secondary_text); ?></button>
+								<?php elseif ($secondary_action === 'call' && $cta_phone) : ?>
+									<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-btn lf-btn--secondary"><?php echo esc_html($secondary_text); ?></a>
+								<?php elseif ($secondary_action === 'link' && $secondary_url !== '') : ?>
+									<a href="<?php echo esc_url($secondary_url); ?>" class="lf-btn lf-btn--secondary"><?php echo esc_html($secondary_text); ?></a>
+								<?php endif; ?>
+							<?php endif; ?>
+						</div>
+					<?php endif; ?>
+					<div class="lf-hero-visual__trust" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
+						<?php if ($show_trust_strip) : ?>
+							<span class="lf-block-hero__stars" aria-hidden="true">
+								<?php for ($i = 0; $i < 5; $i++) : ?>
+									<svg class="lf-block-hero__star" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+								<?php endfor; ?>
+							</span>
+							<span class="lf-block-hero__badge"><?php echo esc_html(sprintf(_n('%d review', '%d reviews', $review_count, 'leadsforward-core'), $review_count)); ?></span>
+						<?php else : ?>
+							<span class="lf-block-hero__badge"><?php esc_html_e('Trusted local service', 'leadsforward-core'); ?></span>
+						<?php endif; ?>
+					</div>
+				</div>
+				<div class="lf-hero-visual__media">
+					<div class="lf-hero-visual__image">
+						<?php if ($placeholder_id) : ?>
+							<?php echo wp_get_attachment_image($placeholder_id, 'large', false, ['loading' => 'lazy', 'decoding' => 'async', 'alt' => esc_attr($placeholder_alt)]); ?>
+						<?php elseif ($latest_testimonial) : ?>
+							<div class="lf-block-hero__quote">
+								<p class="lf-block-hero__quote-text"><?php echo esc_html(get_the_excerpt($latest_testimonial)); ?></p>
+								<p class="lf-block-hero__quote-meta"><?php echo esc_html(get_the_title($latest_testimonial)); ?></p>
+							</div>
+						<?php else : ?>
+							<div class="lf-block-hero__card">
+								<div class="lf-block-hero__card-title"><?php esc_html_e('Why homeowners choose us', 'leadsforward-core'); ?></div>
+								<ul class="lf-block-hero__card-list" role="list">
+									<li><?php esc_html_e('Fast response and clear pricing', 'leadsforward-core'); ?></li>
+									<li><?php esc_html_e('Licensed, insured, and local', 'leadsforward-core'); ?></li>
+									<li><?php esc_html_e('Clean work backed by warranty', 'leadsforward-core'); ?></li>
+								</ul>
+							</div>
+						<?php endif; ?>
+					</div>
+					<?php if ($review_count > 0) : ?>
+						<div class="lf-hero-visual__overlay">
+							<span class="lf-block-hero__stars" aria-hidden="true">
+								<?php for ($i = 0; $i < 5; $i++) : ?>
+									<svg class="lf-block-hero__star" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+								<?php endfor; ?>
+							</span>
+							<span class="lf-hero-visual__overlay-text"><?php echo esc_html(sprintf(_n('%d review', '%d reviews', $review_count, 'leadsforward-core'), $review_count)); ?></span>
+						</div>
+					<?php endif; ?>
+				</div>
+			</div>
+		<?php else : ?>
+			<div class="lf-hero-split">
+				<div class="lf-hero-split__content">
+					<?php if ($eyebrow !== '') : ?>
+						<p class="lf-hero-split__eyebrow"><?php echo esc_html($eyebrow); ?></p>
+					<?php endif; ?>
+					<h1 class="lf-hero-split__title"><?php echo esc_html($heading); ?></h1>
+					<?php if ($subheading !== '') : ?>
+						<p class="lf-hero-split__subtitle"><?php echo esc_html($subheading); ?></p>
+					<?php endif; ?>
+					<?php if ($cta_text || $secondary_text !== '') : ?>
+						<div class="lf-hero-split__actions">
+							<?php if ($cta_text) : ?>
+								<?php if ($use_phone_link) : ?>
+									<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-btn lf-btn--primary"><?php echo esc_html($cta_text); ?></a>
+								<?php elseif ($cta_action === 'quote') : ?>
+									<button type="button" class="lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="hero-split"><?php echo esc_html($cta_text); ?></button>
+								<?php elseif ($cta_url !== '') : ?>
+									<a href="<?php echo esc_url($cta_url); ?>" class="lf-btn lf-btn--primary"><?php echo esc_html($cta_text); ?></a>
+								<?php endif; ?>
+							<?php endif; ?>
+							<?php if ($secondary_text !== '') : ?>
+								<?php if ($secondary_action === 'quote') : ?>
+									<button type="button" class="lf-btn lf-btn--secondary" data-lf-quote-trigger="1" data-lf-quote-source="hero-split-secondary"><?php echo esc_html($secondary_text); ?></button>
+								<?php elseif ($secondary_action === 'call' && $cta_phone) : ?>
+									<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-btn lf-btn--secondary"><?php echo esc_html($secondary_text); ?></a>
+								<?php elseif ($secondary_action === 'link' && $secondary_url !== '') : ?>
+									<a href="<?php echo esc_url($secondary_url); ?>" class="lf-btn lf-btn--secondary"><?php echo esc_html($secondary_text); ?></a>
+								<?php endif; ?>
+							<?php endif; ?>
+						</div>
+					<?php endif; ?>
+					<div class="lf-hero-split__trust" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
+						<?php if ($show_trust_strip) : ?>
+							<span class="lf-block-hero__stars" aria-hidden="true">
+								<?php for ($i = 0; $i < 5; $i++) : ?>
+									<svg class="lf-block-hero__star" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+								<?php endfor; ?>
+							</span>
+							<span class="lf-block-hero__badge"><?php echo esc_html(sprintf(_n('%d review', '%d reviews', $review_count, 'leadsforward-core'), $review_count)); ?></span>
+						<?php else : ?>
+							<span class="lf-block-hero__badge"><?php esc_html_e('Trusted local service', 'leadsforward-core'); ?></span>
+						<?php endif; ?>
+					</div>
+					<?php if ($cta_phone && $cta_phone !== $cta_text) : ?>
+						<p class="lf-hero-split__phone">
+							<a href="tel:<?php echo esc_attr($cta_phone); ?>"><?php echo esc_html($cta_phone); ?></a>
+						</p>
+					<?php endif; ?>
+				</div>
+				<div class="lf-hero-split__proof">
 					<div class="lf-block-hero__card">
 						<div class="lf-block-hero__card-title"><?php esc_html_e('Why homeowners choose us', 'leadsforward-core'); ?></div>
 						<ul class="lf-block-hero__card-list" role="list">
@@ -186,8 +345,8 @@ $show_form_in_hero = $cta_type === 'form' && !empty($cta_resolved_for_type['ghl_
 							</ul>
 						<?php endif; ?>
 					</div>
-				<?php endif; ?>
+				</div>
 			</div>
-		</div>
+		<?php endif; ?>
 	</div>
 </section>

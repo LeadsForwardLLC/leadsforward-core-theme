@@ -207,7 +207,7 @@ All blocks are PHP-rendered via `templates/blocks/*.php`. Available in the block
 
 | Block | Template | Notes |
 |-------|----------|--------|
-| Hero | hero | Headline/subheadline/CTA; homepage section overrides; call link when type=call |
+| Hero | hero | Homepage-only variants: Authority Split, Conversion Stack, Form First, Visual Proof |
 | Trust/Reviews | trust-reviews | Pulls from lf_testimonial; max items from section or attribute |
 | Service Grid | service-grid | Links to lf_service posts |
 | CTA | cta | Resolved CTA stack; optional GHL embed; call link when type=call |
