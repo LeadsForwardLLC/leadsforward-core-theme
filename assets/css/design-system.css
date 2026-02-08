@@ -1698,8 +1698,8 @@ button:focus-visible,
 }
 
 .lf-block-faq-accordion__inner {
-	padding: 4rem 1.5rem;
-	max-width: 40rem;
+	padding: var(--lf-section-padding-y) var(--lf-section-padding-x);
+	max-width: var(--lf-container-wide);
 	margin-left: auto;
 	margin-right: auto;
 }
@@ -1727,22 +1727,29 @@ button:focus-visible,
 .lf-block-faq-accordion__list {
 	margin: 0;
 	padding: 0;
+	display: grid;
+	gap: 0.85rem;
 }
 
 .lf-block-faq-accordion__item {
 	margin: 0;
-	border-bottom: 1px solid #e2e8f0;
+	background: var(--lf-card-bg);
+	border: var(--lf-card-border);
+	border-radius: var(--lf-card-radius);
+	box-shadow: var(--lf-card-shadow);
 	overflow: hidden;
+	transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
-.lf-block-faq-accordion__item:first-child {
-	border-top: 1px solid #e2e8f0;
+.lf-block-faq-accordion__item[open] {
+	border-color: var(--lf-accent);
+	box-shadow: var(--lf-card-shadow-hover);
 }
 
 .lf-block-faq-accordion__question {
 	display: block;
 	width: 100%;
-	padding: 1.375rem 2.5rem 1.375rem 0;
+	padding: 1.15rem 3rem 1.15rem 1.25rem;
 	font-weight: 700;
 	font-size: 1.125rem;
 	text-align: left;
@@ -1765,19 +1772,26 @@ button:focus-visible,
 .lf-block-faq-accordion__question::after {
 	content: "+";
 	position: absolute;
-	right: 0;
+	right: 1rem;
 	top: 50%;
 	transform: translateY(-50%);
-	font-size: 1.25rem;
-	color: #94a3b8;
+	font-size: 1.1rem;
+	color: var(--lf-text-muted);
 	line-height: 1;
+	width: 28px;
+	height: 28px;
+	border-radius: 999px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--lf-surface-soft);
 }
 
 .lf-block-faq-accordion__item[open] .lf-block-faq-accordion__question::after { content: "−"; }
 
 .lf-block-faq-accordion__answer {
 	margin: 0;
-	padding: 0 0 1.5rem;
+	padding: 0 1.25rem 1.25rem;
 	font-size: 1rem;
 	line-height: 1.6;
 	color: var(--lf-text);
