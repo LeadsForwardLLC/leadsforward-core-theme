@@ -306,6 +306,9 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 		lf_render_block_template('hero', $block, false, $block['context']);
 		return;
 	}
+	static $hero_rendered = false;
+	$heading_tag = $hero_rendered ? 'h2' : 'h1';
+	$hero_rendered = true;
 	$heading = $settings['hero_headline'] ?? '';
 	$sub = $settings['hero_subheadline'] ?? '';
 	if ($heading === '') {
@@ -342,7 +345,7 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 	?>
 	<section class="lf-section lf-section--hero">
 		<div class="lf-section__inner">
-			<h1 class="lf-section__title"><?php echo esc_html($heading); ?></h1>
+			<<?php echo $heading_tag; ?> class="lf-section__title"><?php echo esc_html($heading); ?></<?php echo $heading_tag; ?>>
 			<?php if ($sub) : ?><p class="lf-section__intro"><?php echo esc_html($sub); ?></p><?php endif; ?>
 			<div class="lf-section__buttons">
 				<?php if ($primary) : ?>
