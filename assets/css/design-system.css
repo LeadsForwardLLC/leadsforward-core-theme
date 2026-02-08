@@ -484,6 +484,51 @@ button:focus-visible,
 	color: var(--lf-accent);
 }
 
+.lf-internal-links {
+	display: grid;
+	gap: 1.5rem;
+}
+
+.lf-internal-links__heading {
+	margin: 0 0 0.5rem;
+	font-size: var(--lf-fs-h4);
+}
+
+.lf-internal-links__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 0.5rem;
+}
+
+.lf-internal-links--cards .lf-internal-links__list {
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 0.75rem;
+}
+
+.lf-internal-links--cards .lf-internal-links__list li a {
+	display: block;
+	border: var(--lf-card-border);
+	border-radius: var(--lf-card-radius);
+	padding: 0.75rem 0.9rem;
+	background: var(--lf-card-bg);
+	text-decoration: none;
+	color: var(--lf-text);
+}
+
+.lf-internal-links__list li a {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	text-decoration: none;
+	color: var(--lf-text);
+}
+
+.lf-internal-links__list li a:hover {
+	color: var(--lf-accent);
+}
+
 /* Surface utilities — every section has an intentional surface */
 .lf-surface-white {
 	background-color: var(--lf-surface-white);

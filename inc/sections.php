@@ -127,6 +127,29 @@ function lf_sections_registry(): array {
 			],
 			'render' => 'lf_sections_render_related_links',
 		],
+		'internal_links' => [
+			'label' => __('Internal Linking', 'leadsforward-core'),
+			'contexts' => ['service', 'service_area'],
+			'fields' => [
+				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Internal Links', 'leadsforward-core')],
+				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Explore related services, areas, and key pages.', 'leadsforward-core')],
+				['key' => 'related_services', 'label' => __('Related Services', 'leadsforward-core'), 'type' => 'post_multi', 'post_type' => 'lf_service', 'default' => []],
+				['key' => 'related_service_areas', 'label' => __('Related Service Areas', 'leadsforward-core'), 'type' => 'post_multi', 'post_type' => 'lf_service_area', 'default' => []],
+				['key' => 'auto_suggest', 'label' => __('Auto-suggest when empty', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => [
+					'1' => __('On', 'leadsforward-core'),
+					'0' => __('Off', 'leadsforward-core'),
+				]],
+				['key' => 'layout_style', 'label' => __('Layout style', 'leadsforward-core'), 'type' => 'select', 'default' => 'list', 'options' => [
+					'list'  => __('List', 'leadsforward-core'),
+					'cards' => __('Cards', 'leadsforward-core'),
+				]],
+				['key' => 'cornerstone_about', 'label' => __('Cornerstone: About page', 'leadsforward-core'), 'type' => 'post_single', 'post_type' => 'page', 'default' => 0],
+				['key' => 'cornerstone_reviews', 'label' => __('Cornerstone: Reviews page', 'leadsforward-core'), 'type' => 'post_single', 'post_type' => 'page', 'default' => 0],
+				['key' => 'cornerstone_contact', 'label' => __('Cornerstone: Contact page', 'leadsforward-core'), 'type' => 'post_single', 'post_type' => 'page', 'default' => 0],
+				['key' => 'cornerstone_why', 'label' => __('Cornerstone: Why Choose Us page', 'leadsforward-core'), 'type' => 'post_single', 'post_type' => 'page', 'default' => 0],
+			],
+			'render' => 'lf_sections_render_internal_links',
+		],
 		'service_areas_served' => [
 			'label' => __('Service Areas Served', 'leadsforward-core'),
 			'contexts' => ['service'],
@@ -171,10 +194,12 @@ function lf_sections_default_order(string $context): array {
 	$base = ['hero', 'trust_bar', 'benefits', 'service_details', 'process', 'faq_accordion', 'cta', 'related_links'];
 	if ($context === 'service') {
 		$base[] = 'service_areas_served';
+		$base[] = 'internal_links';
 	}
 	if ($context === 'service_area') {
 		$base[] = 'services_offered_here';
 		$base[] = 'nearby_areas';
+		$base[] = 'internal_links';
 	}
 	if ($context === 'homepage') {
 		$base[] = 'map_nap';
@@ -217,6 +242,22 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 		$key = $field['key'];
 		$raw = $input[$key] ?? ($field['default'] ?? '');
 		switch ($field['type']) {
+			case 'post_multi':
+				$post_type = $field['post_type'] ?? 'post';
+				$ids = array_filter(array_map('intval', (array) $raw));
+				$clean = [];
+				foreach ($ids as $id) {
+					if (get_post_type($id) === $post_type) {
+						$clean[] = $id;
+					}
+				}
+				$out[$key] = array_values(array_unique($clean));
+				break;
+			case 'post_single':
+				$post_type = $field['post_type'] ?? 'post';
+				$val = (int) $raw;
+				$out[$key] = $val > 0 && get_post_type($val) === $post_type ? $val : 0;
+				break;
 			case 'textarea':
 				$out[$key] = sanitize_textarea_field(wp_unslash((string) $raw));
 				break;
@@ -247,6 +288,47 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 function lf_sections_parse_lines(string $value): array {
 	$lines = array_filter(array_map('trim', explode("\n", $value)));
 	return array_values(array_map('sanitize_text_field', $lines));
+}
+
+function lf_sections_anchor_text(string $type, string $title, int $id = 0): string {
+	$business = function_exists('lf_get_option') ? lf_get_option('lf_business_name', 'option') : '';
+	if (!is_string($business) || $business === '') {
+		$business = get_bloginfo('name') ?: '';
+	}
+	$templates = [
+		'service' => [
+			__('Learn about %s', 'leadsforward-core'),
+			__('%s service details', 'leadsforward-core'),
+		],
+		'area' => [
+			__('Serving %s', 'leadsforward-core'),
+			__('%s service area', 'leadsforward-core'),
+		],
+		'cornerstone_about' => [
+			__('About %s', 'leadsforward-core'),
+			__('Meet %s', 'leadsforward-core'),
+		],
+		'cornerstone_reviews' => [
+			__('Customer Reviews', 'leadsforward-core'),
+			__('Client Reviews', 'leadsforward-core'),
+		],
+		'cornerstone_contact' => [
+			__('Contact %s', 'leadsforward-core'),
+			__('Get in touch with %s', 'leadsforward-core'),
+		],
+		'cornerstone_why' => [
+			__('Why Choose Us', 'leadsforward-core'),
+			__('Why Homeowners Choose Us', 'leadsforward-core'),
+		],
+	];
+	$list = $templates[$type] ?? ['%s'];
+	$index = count($list) > 1 ? abs($id) % count($list) : 0;
+	$template = $list[$index] ?? '%s';
+	$value = $title;
+	if (str_contains($type, 'cornerstone') && $business) {
+		$value = $business;
+	}
+	return sprintf($template, $value);
 }
 
 function lf_sections_render_section(string $section_id, string $context, array $settings, \WP_Post $post): void {
@@ -568,6 +650,122 @@ function lf_sections_render_related_links(string $context, array $settings, \WP_
 			<li><a href="<?php echo esc_url($link['url']); ?>"><?php echo esc_html($link['label']); ?></a></li>
 		<?php endforeach; ?>
 	</ul>
+	<?php
+	lf_sections_render_shell_close();
+}
+
+function lf_sections_render_internal_links(string $context, array $settings, \WP_Post $post): void {
+	$title = $settings['section_heading'] ?? '';
+	$intro = $settings['section_intro'] ?? '';
+	$layout = $settings['layout_style'] ?? 'list';
+	if (!in_array($layout, ['list', 'cards'], true)) {
+		$layout = 'list';
+	}
+	$auto = !empty($settings['auto_suggest']) && $settings['auto_suggest'] !== '0';
+
+	$service_ids = array_values(array_filter(array_map('intval', (array) ($settings['related_services'] ?? []))));
+	$area_ids = array_values(array_filter(array_map('intval', (array) ($settings['related_service_areas'] ?? []))));
+
+	if ($auto && empty($service_ids)) {
+		$service_ids = get_posts([
+			'post_type'      => 'lf_service',
+			'posts_per_page' => 6,
+			'orderby'        => 'menu_order title',
+			'order'          => 'ASC',
+			'post_status'    => 'publish',
+			'no_found_rows'  => true,
+			'fields'         => 'ids',
+		]);
+	}
+	if ($auto && empty($area_ids)) {
+		$area_ids = get_posts([
+			'post_type'      => 'lf_service_area',
+			'posts_per_page' => 6,
+			'orderby'        => 'menu_order title',
+			'order'          => 'ASC',
+			'post_status'    => 'publish',
+			'no_found_rows'  => true,
+			'fields'         => 'ids',
+		]);
+	}
+
+	if ($post->post_type === 'lf_service') {
+		$service_ids = array_values(array_diff($service_ids, [$post->ID]));
+	}
+	if ($post->post_type === 'lf_service_area') {
+		$area_ids = array_values(array_diff($area_ids, [$post->ID]));
+	}
+
+	$cornerstone = [
+		'cornerstone_about' => (int) ($settings['cornerstone_about'] ?? 0),
+		'cornerstone_reviews' => (int) ($settings['cornerstone_reviews'] ?? 0),
+		'cornerstone_contact' => (int) ($settings['cornerstone_contact'] ?? 0),
+		'cornerstone_why' => (int) ($settings['cornerstone_why'] ?? 0),
+	];
+
+	$has_links = !empty($service_ids) || !empty($area_ids) || array_filter($cornerstone);
+	if (!$has_links) {
+		return;
+	}
+
+	lf_sections_render_shell_open('internal-links', $title, $intro);
+	?>
+	<div class="lf-internal-links lf-internal-links--<?php echo esc_attr($layout); ?>">
+		<?php if (!empty($service_ids)) : ?>
+			<div class="lf-internal-links__group">
+				<h3 class="lf-internal-links__heading"><?php esc_html_e('Related Services', 'leadsforward-core'); ?></h3>
+				<ul class="lf-internal-links__list" role="list">
+					<?php foreach ($service_ids as $id) :
+						$title_text = get_the_title($id);
+						if (!$title_text) {
+							continue;
+						}
+						$label = lf_sections_anchor_text('service', $title_text, $id);
+					?>
+						<li><a href="<?php echo esc_url(get_permalink($id)); ?>"><?php echo esc_html($label); ?></a></li>
+					<?php endforeach; ?>
+				</ul>
+			</div>
+		<?php endif; ?>
+		<?php if (!empty($area_ids)) : ?>
+			<div class="lf-internal-links__group">
+				<h3 class="lf-internal-links__heading"><?php esc_html_e('Related Service Areas', 'leadsforward-core'); ?></h3>
+				<ul class="lf-internal-links__list" role="list">
+					<?php foreach ($area_ids as $id) :
+						$title_text = get_the_title($id);
+						if (!$title_text) {
+							continue;
+						}
+						$label = lf_sections_anchor_text('area', $title_text, $id);
+					?>
+						<li><a href="<?php echo esc_url(get_permalink($id)); ?>"><?php echo esc_html($label); ?></a></li>
+					<?php endforeach; ?>
+				</ul>
+			</div>
+		<?php endif; ?>
+		<?php if (array_filter($cornerstone)) : ?>
+			<div class="lf-internal-links__group">
+				<h3 class="lf-internal-links__heading"><?php esc_html_e('Cornerstone Links', 'leadsforward-core'); ?></h3>
+				<ul class="lf-internal-links__list" role="list">
+					<?php foreach ($cornerstone as $key => $page_id) :
+						if ($page_id <= 0) {
+							continue;
+						}
+						if (get_post_type($page_id) !== 'page') {
+							continue;
+						}
+						$page_title = get_the_title($page_id);
+						if (!$page_title) {
+							continue;
+						}
+						$label = lf_sections_anchor_text($key, $page_title, $page_id);
+					?>
+						<li><a href="<?php echo esc_url(get_permalink($page_id)); ?>"><?php echo esc_html($label); ?></a></li>
+					<?php endforeach; ?>
+				</ul>
+			</div>
+		<?php endif; ?>
+	</div>
 	<?php
 	lf_sections_render_shell_close();
 }
