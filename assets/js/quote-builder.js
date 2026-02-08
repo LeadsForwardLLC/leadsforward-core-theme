@@ -18,6 +18,7 @@
 	var lastFocus = null;
 	var isOpen = false;
 	var hasCompleted = false;
+	var isSubmitting = false;
 	var stepStart = {};
 	var context = (window.lfQuoteBuilder && window.lfQuoteBuilder.context) ? window.lfQuoteBuilder.context : {};
 	var sessionKey = 'lf_qb_session';
@@ -42,6 +43,10 @@
 	function setHiddenValue(name, value) {
 		var input = form ? form.querySelector('input[name="lf_quote[' + name + ']"]') : null;
 		if (input) input.value = value;
+	}
+
+	function generateSubmissionId() {
+		return 'sub_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
 	}
 
 	function trackEvent(type, payload) {
@@ -98,6 +103,7 @@
 		if (isOpen) return;
 		isOpen = true;
 		hasCompleted = false;
+		isSubmitting = false;
 		lastFocus = document.activeElement;
 		modal.classList.add('is-open');
 		body.classList.add('lf-quote-open');
@@ -115,6 +121,7 @@
 		}
 		setHiddenValue('returning', returning ? '1' : '0');
 		setHiddenValue('device', getDeviceType());
+		setHiddenValue('submission_id', generateSubmissionId());
 		trackEvent('open');
 		updateStep();
 		setTimeout(function () {
@@ -216,7 +223,14 @@
 
 	function submitQuote() {
 		return new Promise(function (resolve, reject) {
+			if (isSubmitting) {
+				return;
+			}
+			isSubmitting = true;
+			if (nextBtn) nextBtn.disabled = true;
 			if (!window.lfQuoteBuilder || !window.lfQuoteBuilder.ajax_url) {
+				isSubmitting = false;
+				if (nextBtn) nextBtn.disabled = false;
 				reject('Submission is not available.');
 				return;
 			}
@@ -231,6 +245,8 @@
 			}).then(function (res) {
 				return res.json();
 			}).then(function (json) {
+				isSubmitting = false;
+				if (nextBtn) nextBtn.disabled = false;
 				if (json && json.success) {
 					hasCompleted = true;
 					resolve();
@@ -238,6 +254,8 @@
 					reject((json && json.data && json.data.message) ? json.data.message : 'Submission failed.');
 				}
 			}).catch(function () {
+				isSubmitting = false;
+				if (nextBtn) nextBtn.disabled = false;
 				reject('Submission failed.');
 			});
 		});

@@ -598,6 +598,7 @@ function lf_quote_builder_render_modal(): void {
 				<input type="hidden" name="lf_quote[page_url]" value="<?php echo esc_attr($context['page_url']); ?>" />
 				<input type="hidden" name="lf_quote[device]" value="" />
 				<input type="hidden" name="lf_quote[returning]" value="0" />
+				<input type="hidden" name="lf_quote[submission_id]" value="" />
 				<?php foreach ($steps as $index => $step) :
 					$step_id = $step['id'] ?? 'step-' . $index;
 					$step_type = $step['type'] ?? 'standard';
@@ -774,7 +775,7 @@ function lf_quote_builder_handle_submit(): void {
 	}
 	$allowed = array_unique($allowed);
 	$required = array_unique($required);
-	$meta_keys = ['page_context', 'page_id', 'page_title', 'page_url', 'device', 'returning'];
+	$meta_keys = ['page_context', 'page_id', 'page_title', 'page_url', 'device', 'returning', 'submission_id'];
 	$allowed = array_unique(array_merge($allowed, $meta_keys));
 	$meta_keys = ['page_context', 'page_id', 'page_title', 'page_url'];
 	$allowed = array_unique(array_merge($allowed, $meta_keys));
@@ -799,6 +800,10 @@ function lf_quote_builder_handle_submit(): void {
 			$clean[$key] = absint($val) > 0 ? '1' : '0';
 			continue;
 		}
+		if ($key === 'submission_id') {
+			$clean[$key] = sanitize_key(wp_unslash((string) $val));
+			continue;
+		}
 		$clean[$key] = sanitize_text_field(wp_unslash((string) $val));
 	}
 	if (empty($clean)) {
@@ -809,6 +814,15 @@ function lf_quote_builder_handle_submit(): void {
 			wp_send_json_error(['message' => __('Please complete the required fields.', 'leadsforward-core')]);
 		}
 	}
+	$submission_id = $clean['submission_id'] ?? '';
+	if ($submission_id !== '') {
+		$submission_key = 'lf_qb_sub_' . $submission_id;
+		if (get_transient($submission_key)) {
+			wp_send_json_success(['ok' => true]);
+		}
+		set_transient($submission_key, 1, 10 * MINUTE_IN_SECONDS);
+	}
+
 	$log = get_option(LF_QUOTE_BUILDER_SUBMISSIONS, []);
 	if (!is_array($log)) {
 		$log = [];
@@ -1105,11 +1119,9 @@ function lf_quote_builder_render_analytics(bool $embedded = false): void {
 	}));
 	$stats = lf_quote_builder_get_step_stats(30);
 	$errors = lf_quote_builder_get_validation_errors(30);
-	$buckets = lf_quote_builder_get_time_buckets(30);
 	$context_totals = lf_quote_builder_get_context_totals(30);
 	$device_totals = lf_quote_builder_get_device_totals(30);
 	$return_totals = lf_quote_builder_get_returning_totals(30);
-	$top_services = lf_quote_builder_get_top_services(30, 5);
 	$ghl_stats = lf_quote_builder_get_ghl_stats(30);
 	$ghl_errors = get_option(LF_QUOTE_BUILDER_GHL_ERRORS, []);
 	if (!is_array($ghl_errors)) {
@@ -1290,56 +1302,6 @@ function lf_quote_builder_render_analytics(bool $embedded = false): void {
 		<?php if ($most_exit !== '') : ?>
 			<p class="description"><?php echo esc_html(sprintf(__('Most common exit step: %s', 'leadsforward-core'), $step_labels[$most_exit] ?? $most_exit)); ?></p>
 		<?php endif; ?>
-
-		<h2><?php esc_html_e('Step time distribution (last 30 days)', 'leadsforward-core'); ?></h2>
-		<table class="widefat striped">
-			<thead>
-				<tr>
-					<th><?php esc_html_e('Step', 'leadsforward-core'); ?></th>
-					<th><?php esc_html_e('0–5s', 'leadsforward-core'); ?></th>
-					<th><?php esc_html_e('5–15s', 'leadsforward-core'); ?></th>
-					<th><?php esc_html_e('15–30s', 'leadsforward-core'); ?></th>
-					<th><?php esc_html_e('30s+', 'leadsforward-core'); ?></th>
-				</tr>
-			</thead>
-			<tbody>
-				<?php foreach ($steps as $step) :
-					$step_id = $step['id'] ?? '';
-					$label = $step['title'] ?? $step_id;
-					$dist = $buckets[$step_id] ?? [];
-					?>
-					<tr>
-						<td><?php echo esc_html($label); ?></td>
-						<td><?php echo esc_html((string) ($dist['0-5s'] ?? 0)); ?></td>
-						<td><?php echo esc_html((string) ($dist['5-15s'] ?? 0)); ?></td>
-						<td><?php echo esc_html((string) ($dist['15-30s'] ?? 0)); ?></td>
-						<td><?php echo esc_html((string) ($dist['30s+'] ?? 0)); ?></td>
-					</tr>
-				<?php endforeach; ?>
-			</tbody>
-		</table>
-
-		<h2><?php esc_html_e('Top service types (last 30 days)', 'leadsforward-core'); ?></h2>
-		<table class="widefat striped">
-			<thead>
-				<tr>
-					<th><?php esc_html_e('Service type', 'leadsforward-core'); ?></th>
-					<th><?php esc_html_e('Selections', 'leadsforward-core'); ?></th>
-				</tr>
-			</thead>
-			<tbody>
-				<?php if (empty($top_services)) : ?>
-					<tr><td colspan="2"><?php esc_html_e('No selections yet.', 'leadsforward-core'); ?></td></tr>
-				<?php else : ?>
-					<?php foreach ($top_services as $row) : ?>
-						<tr>
-							<td><?php echo esc_html($row['label']); ?></td>
-							<td><?php echo esc_html((string) $row['count']); ?></td>
-						</tr>
-					<?php endforeach; ?>
-				<?php endif; ?>
-			</tbody>
-		</table>
 
 		<h2><?php esc_html_e('GHL delivery health (last 30 days)', 'leadsforward-core'); ?></h2>
 		<table class="widefat striped">
