@@ -23,6 +23,7 @@ add_action('admin_init', 'lf_quote_builder_handle_save');
 add_action('admin_init', 'lf_quote_builder_integrations_handle_save');
 add_action('admin_init', 'lf_quote_builder_maybe_create_analytics_table');
 add_action('admin_init', 'lf_quote_builder_redirect_legacy_pages');
+add_action('admin_init', 'lf_quote_builder_handle_reset_analytics');
 add_action('wp_enqueue_scripts', 'lf_quote_builder_enqueue_assets');
 add_action('wp_footer', 'lf_quote_builder_render_modal', 20);
 add_action('wp_ajax_lf_quote_builder_submit', 'lf_quote_builder_handle_submit');
@@ -314,6 +315,27 @@ function lf_quote_builder_redirect_legacy_pages(): void {
 		wp_safe_redirect(admin_url('admin.php?page=lf-quote-builder&section=' . ($page === 'lf-quote-builder-integrations' ? 'integrations' : 'analytics')));
 		exit;
 	}
+}
+
+function lf_quote_builder_handle_reset_analytics(): void {
+	if (!isset($_POST['lf_qb_reset_analytics'])) {
+		return;
+	}
+	if (!current_user_can('edit_theme_options')) {
+		return;
+	}
+	if (!isset($_POST['lf_qb_reset_analytics_nonce']) || !wp_verify_nonce($_POST['lf_qb_reset_analytics_nonce'], 'lf_qb_reset_analytics')) {
+		return;
+	}
+	lf_quote_builder_maybe_create_analytics_table();
+	global $wpdb;
+	$table = $wpdb->prefix . LF_QUOTE_BUILDER_ANALYTICS_TABLE;
+	$exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+	if ($exists === $table) {
+		$wpdb->query("TRUNCATE TABLE $table");
+	}
+	wp_safe_redirect(admin_url('admin.php?page=lf-quote-builder&section=analytics&reset=1'));
+	exit;
 }
 
 function lf_quote_builder_get_page_context_data(): array {
@@ -876,6 +898,8 @@ function lf_quote_builder_render_analytics(bool $embedded = false): void {
 	global $wpdb;
 	$table = $wpdb->prefix . LF_QUOTE_BUILDER_ANALYTICS_TABLE;
 	$exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+	$section = isset($_GET['section']) ? sanitize_key((string) $_GET['section']) : '';
+	$reset = isset($_GET['reset']) && $_GET['reset'] === '1' && $section === 'analytics';
 	$range_days = [7, 30, 90];
 	$totals = [];
 	foreach ($range_days as $days) {
@@ -914,6 +938,9 @@ function lf_quote_builder_render_analytics(bool $embedded = false): void {
 			<h1><?php esc_html_e('Quote Builder — Analytics', 'leadsforward-core'); ?></h1>
 			<p class="description"><?php esc_html_e('Aggregated, first-party analytics for Quote Builder performance. No PII is stored or shown.', 'leadsforward-core'); ?></p>
 	<?php endif; ?>
+		<?php if ($reset) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Analytics data has been reset.', 'leadsforward-core'); ?></p></div>
+		<?php endif; ?>
 		<?php if ($exists !== $table) : ?>
 			<div class="notice notice-error"><p><?php esc_html_e('Analytics storage table is missing. Try reloading this page or re-saving the theme settings.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
@@ -978,6 +1005,12 @@ function lf_quote_builder_render_analytics(bool $embedded = false): void {
 		<?php if ($most_exit !== '') : ?>
 			<p class="description"><?php echo esc_html(sprintf(__('Most common exit step: %s', 'leadsforward-core'), $step_labels[$most_exit] ?? $most_exit)); ?></p>
 		<?php endif; ?>
+		<form method="post" class="lf-qb-reset-form">
+			<?php wp_nonce_field('lf_qb_reset_analytics', 'lf_qb_reset_analytics_nonce'); ?>
+			<input type="hidden" name="lf_qb_reset_analytics" value="1" />
+			<p class="description"><?php esc_html_e('Resetting clears all quote builder analytics data. This cannot be undone.', 'leadsforward-core'); ?></p>
+			<p><button type="submit" class="button lf-qb-danger"><?php esc_html_e('Reset Analytics Data', 'leadsforward-core'); ?></button></p>
+		</form>
 	<?php if (!$embedded) : ?>
 		</div>
 	<?php endif; ?>
@@ -1013,6 +1046,8 @@ function lf_quote_builder_render_admin(): void {
 		.lf-qb-step--collapsed .lf-qb-toggle { background:#0f172a; color:#fff; border-color:#0f172a; }
 		.lf-qb-field { border:1px solid #e2e8f0; border-radius:10px; padding:0.75rem 1rem; margin:0.75rem 0; }
 		.lf-qb-field h4 { margin:0 0 0.5rem; }
+		.lf-qb-danger { background:#dc2626; border-color:#b91c1c; color:#fff; }
+		.lf-qb-danger:hover { background:#b91c1c; border-color:#991b1b; color:#fff; }
 	</style>
 	<div class="lf-qb-panel" data-panel="builder">
 		<div class="lf-qb-panel-header">
@@ -1179,6 +1214,19 @@ function lf_quote_builder_render_admin(): void {
 				collapsed[type] = !collapsed[type];
 				try { window.localStorage.setItem(storageKey, JSON.stringify(collapsed)); } catch (e) {}
 				applyPanel(type);
+			});
+		})();
+		(function () {
+			var resetForm = document.querySelector('.lf-qb-reset-form');
+			if (!resetForm) return;
+			resetForm.addEventListener('submit', function (e) {
+				if (!window.confirm('<?php echo esc_js(__('This will permanently delete all quote builder analytics. Continue?', 'leadsforward-core')); ?>')) {
+					e.preventDefault();
+					return;
+				}
+				if (!window.confirm('<?php echo esc_js(__('Are you absolutely sure? This cannot be undone.', 'leadsforward-core')); ?>')) {
+					e.preventDefault();
+				}
 			});
 		})();
 	</script>
