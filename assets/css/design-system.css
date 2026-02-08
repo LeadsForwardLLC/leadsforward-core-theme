@@ -888,14 +888,16 @@ button:focus-visible,
 }
 
 .site-header__cta {
-	padding: var(--lf-btn-pad-y) var(--lf-btn-pad-x);
-	min-height: var(--lf-btn-min-height);
+	padding: calc(var(--lf-btn-pad-y) - 2px) calc(var(--lf-btn-pad-x) - 6px);
+	min-height: calc(var(--lf-btn-min-height) - 6px);
 	border-radius: var(--lf-button-radius);
 	box-shadow: none;
+	font-size: calc(var(--lf-fs-body) - 1px);
 }
 
-.site-header__cta:hover {
-	background: var(--lf-color-secondary);
+.site-header__cta.lf-btn--primary:hover {
+	background-color: color-mix(in srgb, var(--lf-primary) 88%, #000);
+	border-color: color-mix(in srgb, var(--lf-primary) 88%, #000);
 }
 
 @media (max-width: 900px) {
