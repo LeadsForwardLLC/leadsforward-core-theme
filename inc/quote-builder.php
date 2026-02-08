@@ -358,6 +358,20 @@ function lf_quote_builder_get_page_context_data(): array {
 	];
 }
 
+function lf_quote_builder_page_label_from_context(array $context): string {
+	$title = isset($context['page_title']) ? (string) $context['page_title'] : '';
+	$id = isset($context['page_id']) ? (int) $context['page_id'] : 0;
+	$title = $title !== '' ? $title : __('Page', 'leadsforward-core');
+	return $id > 0 ? ($title . ' (#' . $id . ')') : $title;
+}
+
+function lf_quote_builder_page_label_from_clean(array $clean): string {
+	$title = isset($clean['page_title']) ? (string) $clean['page_title'] : '';
+	$id = isset($clean['page_id']) ? (int) $clean['page_id'] : 0;
+	$title = $title !== '' ? $title : __('Page', 'leadsforward-core');
+	return $id > 0 ? ($title . ' (#' . $id . ')') : $title;
+}
+
 function lf_quote_builder_get_form_variant(): string {
 	$config = lf_quote_builder_get_config();
 	$version = isset($config['version']) ? (int) $config['version'] : 1;
@@ -526,7 +540,7 @@ function lf_quote_builder_handle_event(): void {
 	check_ajax_referer('lf_quote_builder', 'nonce');
 	lf_quote_builder_maybe_create_analytics_table();
 	$event = isset($_POST['event']) ? sanitize_text_field(wp_unslash((string) $_POST['event'])) : '';
-	$allowed = ['open', 'step_view', 'step_complete', 'abandon', 'complete', 'validation_error', 'service_select', 'step_time_bucket'];
+	$allowed = ['open', 'step_view', 'step_complete', 'abandon', 'complete', 'validation_error'];
 	if (!in_array($event, $allowed, true)) {
 		wp_send_json_success(['ok' => true]);
 	}
@@ -599,6 +613,7 @@ function lf_quote_builder_render_modal(): void {
 				<input type="hidden" name="lf_quote[device]" value="" />
 				<input type="hidden" name="lf_quote[returning]" value="0" />
 				<input type="hidden" name="lf_quote[submission_id]" value="" />
+				<input type="hidden" name="lf_quote[steps_completed]" value="[]" />
 				<?php foreach ($steps as $index => $step) :
 					$step_id = $step['id'] ?? 'step-' . $index;
 					$step_type = $step['type'] ?? 'standard';
@@ -760,9 +775,13 @@ function lf_quote_builder_handle_submit(): void {
 	$config = lf_quote_builder_get_config();
 	$allowed = [];
 	$required = [];
+	$step_ids = [];
 	foreach ($config['steps'] as $step) {
 		if (empty($step['enabled'])) {
 			continue;
+		}
+		if (!empty($step['id']) && ($step['type'] ?? '') !== 'confirmation') {
+			$step_ids[] = $step['id'];
 		}
 		foreach ($step['fields'] ?? [] as $field) {
 			if (!empty($field['key'])) {
@@ -775,7 +794,7 @@ function lf_quote_builder_handle_submit(): void {
 	}
 	$allowed = array_unique($allowed);
 	$required = array_unique($required);
-	$meta_keys = ['page_context', 'page_id', 'page_title', 'page_url', 'device', 'returning', 'submission_id'];
+	$meta_keys = ['page_context', 'page_id', 'page_title', 'page_url', 'device', 'returning', 'submission_id', 'steps_completed'];
 	$allowed = array_unique(array_merge($allowed, $meta_keys));
 	$meta_keys = ['page_context', 'page_id', 'page_title', 'page_url'];
 	$allowed = array_unique(array_merge($allowed, $meta_keys));
@@ -802,6 +821,10 @@ function lf_quote_builder_handle_submit(): void {
 		}
 		if ($key === 'submission_id') {
 			$clean[$key] = sanitize_key(wp_unslash((string) $val));
+			continue;
+		}
+		if ($key === 'steps_completed') {
+			$clean[$key] = wp_unslash((string) $val);
 			continue;
 		}
 		$clean[$key] = sanitize_text_field(wp_unslash((string) $val));
@@ -834,7 +857,22 @@ function lf_quote_builder_handle_submit(): void {
 	]);
 	$log = array_slice($log, 0, 50);
 	update_option(LF_QUOTE_BUILDER_SUBMISSIONS, $log, false);
+	$steps_completed = [];
+	if (!empty($clean['steps_completed'])) {
+		$decoded = json_decode((string) $clean['steps_completed'], true);
+		if (is_array($decoded)) {
+			foreach ($decoded as $step_id) {
+				$step_id = sanitize_key((string) $step_id);
+				if ($step_id !== '' && in_array($step_id, $step_ids, true)) {
+					$steps_completed[] = $step_id;
+				}
+			}
+		}
+	}
+	$steps_completed = array_values(array_unique($steps_completed));
+
 	lf_quote_builder_maybe_create_analytics_table();
+	$page_label = lf_quote_builder_page_label_from_clean($clean);
 	lf_quote_builder_record_event(
 		'complete',
 		'form',
@@ -842,11 +880,21 @@ function lf_quote_builder_handle_submit(): void {
 		0,
 		(string) get_option('lf_homepage_niche_slug', ''),
 		lf_quote_builder_get_form_variant(),
-		'',
-		'',
+		'page',
+		$page_label,
 		$clean['device'] ?? '',
 		isset($clean['returning']) && $clean['returning'] === '1' ? 1 : 0
 	);
+	foreach ($steps_completed as $step_id) {
+		lf_quote_builder_record_event(
+			'path_step',
+			$step_id,
+			$clean['page_context'] ?? '',
+			0,
+			(string) get_option('lf_homepage_niche_slug', ''),
+			lf_quote_builder_get_form_variant()
+		);
+	}
 	lf_quote_builder_send_ghl($clean);
 	do_action('lf_quote_builder_submission', $clean);
 	wp_send_json_success(['ok' => true]);
@@ -979,43 +1027,23 @@ function lf_quote_builder_get_validation_errors(int $days): array {
 	return $stats;
 }
 
-function lf_quote_builder_get_time_buckets(int $days): array {
+function lf_quote_builder_get_page_totals(int $days): array {
 	global $wpdb;
 	$table = $wpdb->prefix . LF_QUOTE_BUILDER_ANALYTICS_TABLE;
 	$since = wp_date('Y-m-d', strtotime('-' . $days . ' days'));
 	$rows = $wpdb->get_results(
-		$wpdb->prepare("SELECT step_id, meta_value, SUM(count) AS total_count FROM $table WHERE event_date >= %s AND event_type = 'step_time_bucket' GROUP BY step_id, meta_value", $since),
+		$wpdb->prepare("SELECT meta_value, event_type, SUM(count) AS total_count FROM $table WHERE event_date >= %s AND event_type IN ('open','complete') AND meta_key = 'page' GROUP BY meta_value, event_type", $since),
 		ARRAY_A
 	);
 	$out = [];
 	foreach ($rows as $row) {
-		$step = $row['step_id'] ?? '';
-		$bucket = $row['meta_value'] ?? '';
-		if (!isset($out[$step])) {
-			$out[$step] = [];
-		}
-		$out[$step][$bucket] = (int) ($row['total_count'] ?? 0);
-	}
-	return $out;
-}
-
-function lf_quote_builder_get_context_totals(int $days): array {
-	global $wpdb;
-	$table = $wpdb->prefix . LF_QUOTE_BUILDER_ANALYTICS_TABLE;
-	$since = wp_date('Y-m-d', strtotime('-' . $days . ' days'));
-	$rows = $wpdb->get_results(
-		$wpdb->prepare("SELECT context, event_type, SUM(count) AS total_count FROM $table WHERE event_date >= %s AND event_type IN ('open','complete') GROUP BY context, event_type", $since),
-		ARRAY_A
-	);
-	$out = [];
-	foreach ($rows as $row) {
-		$context = $row['context'] ?? 'unknown';
-		if (!isset($out[$context])) {
-			$out[$context] = ['open' => 0, 'complete' => 0];
+		$page = $row['meta_value'] ?? 'Unknown';
+		if (!isset($out[$page])) {
+			$out[$page] = ['open' => 0, 'complete' => 0];
 		}
 		$type = $row['event_type'] ?? '';
-		if (isset($out[$context][$type])) {
-			$out[$context][$type] = (int) ($row['total_count'] ?? 0);
+		if (isset($out[$page][$type])) {
+			$out[$page][$type] = (int) ($row['total_count'] ?? 0);
 		}
 	}
 	return $out;
@@ -1062,20 +1090,17 @@ function lf_quote_builder_get_returning_totals(int $days): array {
 	return $out;
 }
 
-function lf_quote_builder_get_top_services(int $days, int $limit = 5): array {
+function lf_quote_builder_get_conversion_path(int $days): array {
 	global $wpdb;
 	$table = $wpdb->prefix . LF_QUOTE_BUILDER_ANALYTICS_TABLE;
 	$since = wp_date('Y-m-d', strtotime('-' . $days . ' days'));
 	$rows = $wpdb->get_results(
-		$wpdb->prepare("SELECT meta_value, SUM(count) AS total_count FROM $table WHERE event_date >= %s AND event_type = 'service_select' AND meta_value <> '' GROUP BY meta_value ORDER BY total_count DESC LIMIT %d", $since, $limit),
+		$wpdb->prepare("SELECT step_id, SUM(count) AS total_count FROM $table WHERE event_date >= %s AND event_type = 'path_step' GROUP BY step_id", $since),
 		ARRAY_A
 	);
 	$out = [];
 	foreach ($rows as $row) {
-		$out[] = [
-			'label' => $row['meta_value'] ?? '',
-			'count' => (int) ($row['total_count'] ?? 0),
-		];
+		$out[$row['step_id'] ?? ''] = (int) ($row['total_count'] ?? 0);
 	}
 	return $out;
 }
@@ -1119,10 +1144,11 @@ function lf_quote_builder_render_analytics(bool $embedded = false): void {
 	}));
 	$stats = lf_quote_builder_get_step_stats(30);
 	$errors = lf_quote_builder_get_validation_errors(30);
-	$context_totals = lf_quote_builder_get_context_totals(30);
+	$page_totals = lf_quote_builder_get_page_totals(30);
 	$device_totals = lf_quote_builder_get_device_totals(30);
 	$return_totals = lf_quote_builder_get_returning_totals(30);
 	$ghl_stats = lf_quote_builder_get_ghl_stats(30);
+	$path_counts = lf_quote_builder_get_conversion_path(30);
 	$ghl_errors = get_option(LF_QUOTE_BUILDER_GHL_ERRORS, []);
 	if (!is_array($ghl_errors)) {
 		$ghl_errors = [];
@@ -1211,24 +1237,24 @@ function lf_quote_builder_render_analytics(bool $embedded = false): void {
 			</tbody>
 		</table>
 
-		<h2><?php esc_html_e('By page context (last 30 days)', 'leadsforward-core'); ?></h2>
+		<h2><?php esc_html_e('By page (last 30 days)', 'leadsforward-core'); ?></h2>
 		<table class="widefat striped">
 			<thead>
 				<tr>
-					<th><?php esc_html_e('Context', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Page', 'leadsforward-core'); ?></th>
 					<th><?php esc_html_e('Opens', 'leadsforward-core'); ?></th>
 					<th><?php esc_html_e('Completions', 'leadsforward-core'); ?></th>
 					<th><?php esc_html_e('Conversion', 'leadsforward-core'); ?></th>
 				</tr>
 			</thead>
 			<tbody>
-				<?php foreach ($context_totals as $context => $counts) :
+				<?php foreach ($page_totals as $page_label => $counts) :
 					$open = $counts['open'] ?? 0;
 					$complete = $counts['complete'] ?? 0;
 					$rate = $open > 0 ? round(($complete / $open) * 100, 1) : 0;
 					?>
 					<tr>
-						<td><?php echo esc_html($context); ?></td>
+						<td><?php echo esc_html($page_label); ?></td>
 						<td><?php echo esc_html((string) $open); ?></td>
 						<td><?php echo esc_html((string) $complete); ?></td>
 						<td><?php echo esc_html($rate . '%'); ?></td>
@@ -1302,6 +1328,33 @@ function lf_quote_builder_render_analytics(bool $embedded = false): void {
 		<?php if ($most_exit !== '') : ?>
 			<p class="description"><?php echo esc_html(sprintf(__('Most common exit step: %s', 'leadsforward-core'), $step_labels[$most_exit] ?? $most_exit)); ?></p>
 		<?php endif; ?>
+
+		<h2><?php esc_html_e('Conversion path (last 30 days)', 'leadsforward-core'); ?></h2>
+		<table class="widefat striped">
+			<thead>
+				<tr>
+					<th><?php esc_html_e('Step', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Conversions reaching step', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Rate', 'leadsforward-core'); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php
+				$total_conversions = $totals[30]['complete'] ?? 0;
+				foreach ($steps as $step) :
+					$step_id = $step['id'] ?? '';
+					$label = $step['title'] ?? $step_id;
+					$count = $path_counts[$step_id] ?? 0;
+					$rate = $total_conversions > 0 ? round(($count / $total_conversions) * 100, 1) : 0;
+					?>
+					<tr>
+						<td><?php echo esc_html($label); ?></td>
+						<td><?php echo esc_html((string) $count); ?></td>
+						<td><?php echo esc_html($rate . '%'); ?></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
 
 		<h2><?php esc_html_e('GHL delivery health (last 30 days)', 'leadsforward-core'); ?></h2>
 		<table class="widefat striped">

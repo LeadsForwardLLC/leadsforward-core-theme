@@ -20,12 +20,12 @@
 	var hasCompleted = false;
 	var isSubmitting = false;
 	var stepStart = {};
+	var stepsCompleted = [];
 	var context = (window.lfQuoteBuilder && window.lfQuoteBuilder.context) ? window.lfQuoteBuilder.context : {};
 	var sessionKey = 'lf_qb_session';
 	var sessionId = (window.sessionStorage && window.sessionStorage.getItem(sessionKey)) || '';
 	var returningKey = 'lf_qb_returning';
 	var lastOpenKey = 'lf_qb_last_open';
-	var serviceTracked = false;
 	if (!sessionId) {
 		sessionId = 'qb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
 		if (window.sessionStorage) {
@@ -104,6 +104,7 @@
 		isOpen = true;
 		hasCompleted = false;
 		isSubmitting = false;
+		stepsCompleted = [];
 		lastFocus = document.activeElement;
 		modal.classList.add('is-open');
 		body.classList.add('lf-quote-open');
@@ -122,7 +123,11 @@
 		setHiddenValue('returning', returning ? '1' : '0');
 		setHiddenValue('device', getDeviceType());
 		setHiddenValue('submission_id', generateSubmissionId());
-		trackEvent('open');
+		var pageLabel = (context.page_title || 'Page');
+		if (context.page_id) {
+			pageLabel += ' (#' + context.page_id + ')';
+		}
+		trackEvent('open', { meta_key: 'page', meta_value: pageLabel });
 		updateStep();
 		setTimeout(function () {
 			if (dialog) dialog.focus();
@@ -274,8 +279,10 @@
 		var startedAt = stepStart[stepId] || Date.now();
 		var duration = Date.now() - startedAt;
 		trackEvent('step_complete', { step_id: stepId, duration: duration });
-		var bucket = duration <= 5000 ? '0-5s' : (duration <= 15000 ? '5-15s' : (duration <= 30000 ? '15-30s' : '30s+'));
-		trackEvent('step_time_bucket', { step_id: stepId, meta_key: 'bucket', meta_value: bucket });
+		if (stepId && stepsCompleted.indexOf(stepId) === -1) {
+			stepsCompleted.push(stepId);
+			setHiddenValue('steps_completed', JSON.stringify(stepsCompleted));
+		}
 		var next = steps[index + 1];
 		var nextIsConfirm = next && next.getAttribute('data-step-type') === 'confirmation';
 		if (nextIsConfirm) {
@@ -320,10 +327,6 @@
 				parent.querySelectorAll('.lf-quote-choice__card').forEach(function (card) {
 					card.classList.toggle('is-selected', card.querySelector('input').checked);
 				});
-				if (!serviceTracked && input.name && input.name.indexOf('[service_type]') !== -1) {
-					serviceTracked = true;
-					trackEvent('service_select', { meta_key: 'service', meta_value: input.value || '' });
-				}
 			});
 		});
 		document.querySelectorAll('.lf-quote-choice').forEach(function (group) {
