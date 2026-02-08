@@ -14,6 +14,7 @@ Ultra-lightweight, SEO-first WordPress theme for local lead-gen sites. Built to 
 LeadsForward Core provides:
 
 - **Custom post types:** Services, Service Areas, Testimonials, FAQs (all REST-ready)
+- **Business Entity:** Single source of truth for NAP, phones, service areas, and schema
 - **Global settings & branding:** Logo + color tokens mapped to CSS variables (core, surface, text)
 - **Shared section registry:** Universal section definitions + defaults used by homepage and page builders
 - **Image system:** Media Library–only images with Unsplash placeholder seeding
@@ -22,7 +23,9 @@ LeadsForward Core provides:
 - **Quote Builder:** Full-screen modal with multi-step flow, GHL webhook delivery, and first-party analytics
 - **AI Assistant (bounded):** Safe copy suggestions + field edits only (no layout/CSS changes)
 - **Server-rendered blocks:** Hero, Trust/Reviews, CTA, FAQ Accordion, Map+NAP
-- **SEO & schema:** JSON-LD (LocalBusiness, Service, FAQPage, Review), canonical, noindex, NAP/geo helpers
+- **SEO & schema:** JSON-LD (LocalBusiness, Organization, WebSite, BreadcrumbList, Service, FAQPage, Review), canonical, noindex, NAP/geo helpers
+- **Internal linking engine:** Deterministic anchors + hub-and-spoke modules (services/areas)
+- **SEO coverage validator:** Site Health checks for missing hubs, thin pages, and orphans
 - **Controlled variation:** Site-wide profile (A–E), block variant registry, safe section ordering, style tokens, copy template slots (no randomness)
 - **Setup wizard:** Niche-aware init; seeds pages, CPTs, menus, page builder defaults, and copy templates
 - **Safety:** CPT delete protection, admin notices for missing SEO-critical fields, graceful fallback when ACF is off
@@ -57,8 +60,9 @@ leadsforward-core-theme/
 │   ├── setup.php        # Theme support, menus, ACF options pages
 │   ├── cleanup.php      # Emoji/oEmbed/dashicons removal, optional block CSS
 │   ├── performance.php  # Defer scripts, heartbeat, head cleanup, critical CSS hook
-│   ├── seo.php          # Canonical, noindex, NAP/geo, breadcrumb helpers
-│   ├── schema.php       # JSON-LD: LocalBusiness, Service, FAQPage, Review
+│   ├── business-entity.php # Business entity single source of truth
+│   ├── seo.php          # Canonical, noindex, NAP/geo, breadcrumbs, internal links
+│   ├── schema.php       # JSON-LD: LocalBusiness, Organization, WebSite, BreadcrumbList, Service, FAQPage, Review
 │   ├── images.php       # Placeholder images + media helpers
 │   ├── sections.php     # Shared section registry + renderers
 │   ├── homepage.php     # Homepage config + CTA resolution
@@ -119,13 +123,14 @@ Under **LeadsForward**:
 | Page | Purpose |
 |------|--------|
 | **Setup** | Setup wizard, API keys (Google Maps/OpenAI), admin bar toggle, reset tools. |
-| **Global Settings** | Logo + Branding colors (core/surface/text) mapped to CSS variables. |
+| **Global Settings** | Business Entity + Logo + Branding colors (core/surface/text). |
 | **Homepage** | Homepage builder: section order, toggles, backgrounds, copy, CTA actions. |
 | **Quote Builder** | Builder config plus integrations + analytics panels. |
 | **AI Assistant** | Bounded copy tools (text-only changes, confirmations). |
 | **Config** | Export/Import config. |
 | **Schema** | Schema toggles and outputs. |
 | **Variation** | Variation profile and copy templates (A–E). |
+| **Site Health** | SEO coverage + pre-launch checks. |
 
 ---
 

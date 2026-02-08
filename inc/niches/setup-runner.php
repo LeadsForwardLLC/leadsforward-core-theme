@@ -136,10 +136,26 @@ function lf_run_setup(array $data): array {
 	// 4. ACF options: business, CTAs, variation, schema, homepage sections
 	if (function_exists('update_field')) {
 		if (function_exists('lf_update_business_info_value')) {
-			lf_update_business_info_value('lf_business_name', $data['business_name'] ?? '');
-			lf_update_business_info_value('lf_business_phone', $data['business_phone'] ?? '');
-			lf_update_business_info_value('lf_business_email', $data['business_email'] ?? '');
-			lf_update_business_info_value('lf_business_address', $data['business_address'] ?? '');
+			$biz_name = $data['business_name'] ?? '';
+			$biz_phone = $data['business_phone'] ?? '';
+			$biz_email = $data['business_email'] ?? '';
+			$biz_address = $data['business_address'] ?? '';
+			lf_update_business_info_value('lf_business_name', $biz_name);
+			lf_update_business_info_value('lf_business_phone', $biz_phone);
+			lf_update_business_info_value('lf_business_phone_primary', $biz_phone);
+			lf_update_business_info_value('lf_business_phone_display', 'primary');
+			lf_update_business_info_value('lf_business_email', $biz_email);
+			lf_update_business_info_value('lf_business_address', $biz_address);
+			if (!empty($data['service_areas']) && is_array($data['service_areas'])) {
+				$areas = array_map(function ($area) {
+					if (is_array($area)) {
+						return $area['name'] ?? '';
+					}
+					return (string) $area;
+				}, $data['service_areas']);
+				$areas = array_filter(array_map('trim', $areas));
+				lf_update_business_info_value('lf_business_service_areas', implode("\n", $areas));
+			}
 			if (!empty($data['business_hours'])) {
 				lf_update_business_info_value('lf_business_hours', $data['business_hours']);
 			}

@@ -295,6 +295,7 @@ function lf_sections_default_order(string $context): array {
 		return $base;
 	}
 	if ($context === 'service_area') {
+		$base = ['hero', 'trust_bar', 'benefits', 'process', 'faq_accordion', 'cta'];
 		array_splice($base, 3, 0, ['content']);
 		$base[] = 'services_offered_here';
 		$base[] = 'nearby_areas';
@@ -957,30 +958,40 @@ function lf_sections_render_related_links(string $context, array $settings, \WP_
 		$mode = 'both';
 	}
 	$links = [];
+	$max_links = 8;
+	$origin_id = $post->ID;
 	if ($mode === 'services' || $mode === 'both') {
 		$services = get_posts([
 			'post_type'      => 'lf_service',
-			'posts_per_page' => 6,
+			'posts_per_page' => $max_links,
 			'orderby'        => 'menu_order title',
 			'order'          => 'ASC',
 			'post_status'    => 'publish',
 			'no_found_rows'  => true,
 		]);
 		foreach ($services as $svc) {
-			$links[] = ['label' => get_the_title($svc), 'url' => get_permalink($svc)];
+			if (count($links) >= $max_links) {
+				break;
+			}
+			$label = function_exists('lf_internal_link_label') ? lf_internal_link_label('service', $svc, $origin_id) : get_the_title($svc);
+			$links[] = ['label' => $label, 'url' => get_permalink($svc)];
 		}
 	}
 	if ($mode === 'areas' || $mode === 'both') {
 		$areas = get_posts([
 			'post_type'      => 'lf_service_area',
-			'posts_per_page' => 6,
+			'posts_per_page' => $max_links,
 			'orderby'        => 'menu_order title',
 			'order'          => 'ASC',
 			'post_status'    => 'publish',
 			'no_found_rows'  => true,
 		]);
 		foreach ($areas as $area) {
-			$links[] = ['label' => get_the_title($area), 'url' => get_permalink($area)];
+			if (count($links) >= $max_links) {
+				break;
+			}
+			$label = function_exists('lf_internal_link_label') ? lf_internal_link_label('area', $area, $origin_id) : get_the_title($area);
+			$links[] = ['label' => $label, 'url' => get_permalink($area)];
 		}
 	}
 	if (empty($links)) {
@@ -1017,6 +1028,7 @@ function lf_sections_render_nearby_areas(string $context, array $settings, \WP_P
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
 	$max = max(1, (int) ($settings['nearby_areas_max'] ?? 6));
+	$origin_id = $post->ID;
 	$query = new WP_Query([
 		'post_type'      => 'lf_service_area',
 		'posts_per_page' => $max,
@@ -1032,8 +1044,10 @@ function lf_sections_render_nearby_areas(string $context, array $settings, \WP_P
 	lf_sections_render_shell_open('nearby-areas', $title, $intro, $settings['section_background'] ?? 'light');
 	?>
 	<ul class="lf-related-links" role="list">
-		<?php while ($query->have_posts()) : $query->the_post(); ?>
-			<li><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></li>
+		<?php while ($query->have_posts()) : $query->the_post();
+			$label = function_exists('lf_internal_link_label') ? lf_internal_link_label('area', get_post(), $origin_id) : get_the_title();
+		?>
+			<li><a href="<?php the_permalink(); ?>"><?php echo esc_html($label); ?></a></li>
 		<?php endwhile; ?>
 	</ul>
 	<?php

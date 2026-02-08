@@ -65,9 +65,9 @@ function lf_health_check_variation_profile(): array {
 }
 
 function lf_health_check_business_info(): array {
-	$storage = defined('LF_OPTIONS_PAGE_BUSINESS') ? LF_OPTIONS_PAGE_BUSINESS : 'lf-business-info';
-	$name = function_exists('get_field') ? get_field('lf_business_name', $storage) : '';
-	$phone = function_exists('get_field') ? get_field('lf_business_phone', $storage) : '';
+	$nap = function_exists('lf_nap_data') ? lf_nap_data() : ['name' => '', 'phone' => ''];
+	$name = $nap['name'] ?? '';
+	$phone = $nap['phone'] ?? '';
 	$missing = [];
 	if (empty(trim((string) $name))) {
 		$missing[] = __('Business name', 'leadsforward-core');
@@ -76,7 +76,7 @@ function lf_health_check_business_info(): array {
 		$missing[] = __('Phone', 'leadsforward-core');
 	}
 	if (!empty($missing)) {
-		return ['status' => lf_health_status_fail(), 'label' => __('Global business info', 'leadsforward-core'), 'message' => __('Missing: ', 'leadsforward-core') . implode(', ', $missing), 'fix_link' => admin_url('admin.php?page=lf-business-info')];
+		return ['status' => lf_health_status_fail(), 'label' => __('Global business info', 'leadsforward-core'), 'message' => __('Missing: ', 'leadsforward-core') . implode(', ', $missing), 'fix_link' => admin_url('admin.php?page=lf-global')];
 	}
 	return ['status' => lf_health_status_pass(), 'label' => __('Global business info', 'leadsforward-core'), 'message' => __('Name and phone set.', 'leadsforward-core'), 'fix_link' => ''];
 }
@@ -93,9 +93,85 @@ function lf_health_check_nap_complete(): array {
 		$missing[] = __('Phone', 'leadsforward-core');
 	}
 	if (!empty($missing)) {
-		return ['status' => lf_health_status_fail(), 'label' => __('NAP complete', 'leadsforward-core'), 'message' => __('Missing: ', 'leadsforward-core') . implode(', ', $missing), 'fix_link' => admin_url('admin.php?page=lf-business-info')];
+		return ['status' => lf_health_status_fail(), 'label' => __('NAP complete', 'leadsforward-core'), 'message' => __('Missing: ', 'leadsforward-core') . implode(', ', $missing), 'fix_link' => admin_url('admin.php?page=lf-global')];
 	}
 	return ['status' => lf_health_status_pass(), 'label' => __('NAP complete', 'leadsforward-core'), 'message' => __('Name, address, phone present.', 'leadsforward-core'), 'fix_link' => ''];
+}
+
+function lf_health_check_core_pages_exist(): array {
+	$required = function_exists('lf_wizard_required_page_slugs') ? lf_wizard_required_page_slugs() : [
+		'about-us',
+		'contact-us',
+		'services',
+		'service-areas',
+		'reviews',
+		'blog',
+		'sitemap',
+		'privacy-policy',
+		'terms-of-service',
+		'thank-you',
+	];
+	$missing = [];
+	foreach ($required as $slug) {
+		$page = get_page_by_path($slug);
+		if (!$page instanceof \WP_Post) {
+			$missing[] = $slug;
+		}
+	}
+	if (!empty($missing)) {
+		return [
+			'status' => lf_health_status_fail(),
+			'label' => __('Core pages present', 'leadsforward-core'),
+			'message' => __('Missing: ', 'leadsforward-core') . implode(', ', $missing),
+			'fix_link' => admin_url('admin.php?page=lf-ops'),
+		];
+	}
+	return ['status' => lf_health_status_pass(), 'label' => __('Core pages present', 'leadsforward-core'), 'message' => __('All required pages exist.', 'leadsforward-core'), 'fix_link' => ''];
+}
+
+function lf_health_check_service_pages_exist(): array {
+	$services = get_posts(['post_type' => 'lf_service', 'post_status' => 'publish', 'posts_per_page' => 1, 'fields' => 'ids']);
+	if (empty($services)) {
+		return ['status' => lf_health_status_warning(), 'label' => __('Service pages', 'leadsforward-core'), 'message' => __('No service pages found.', 'leadsforward-core'), 'fix_link' => admin_url('edit.php?post_type=lf_service')];
+	}
+	return ['status' => lf_health_status_pass(), 'label' => __('Service pages', 'leadsforward-core'), 'message' => __('At least one service exists.', 'leadsforward-core'), 'fix_link' => ''];
+}
+
+function lf_health_check_service_area_pages_exist(): array {
+	$areas = get_posts(['post_type' => 'lf_service_area', 'post_status' => 'publish', 'posts_per_page' => 1, 'fields' => 'ids']);
+	if (empty($areas)) {
+		return ['status' => lf_health_status_warning(), 'label' => __('Service area pages', 'leadsforward-core'), 'message' => __('No service area pages found.', 'leadsforward-core'), 'fix_link' => admin_url('edit.php?post_type=lf_service_area')];
+	}
+	return ['status' => lf_health_status_pass(), 'label' => __('Service area pages', 'leadsforward-core'), 'message' => __('At least one service area exists.', 'leadsforward-core'), 'fix_link' => ''];
+}
+
+function lf_health_check_thin_pages(): array {
+	if (!function_exists('lf_pb_get_post_config')) {
+		return ['status' => lf_health_status_warning(), 'label' => __('Thin pages', 'leadsforward-core'), 'message' => __('Page builder not available.', 'leadsforward-core'), 'fix_link' => ''];
+	}
+	$slugs = function_exists('lf_wizard_required_page_slugs') ? lf_wizard_required_page_slugs() : [];
+	$thin = [];
+	foreach ($slugs as $slug) {
+		$page = get_page_by_path($slug);
+		if (!$page instanceof \WP_Post) {
+			continue;
+		}
+		$config = lf_pb_get_post_config($page->ID, 'page');
+		$sections = $config['sections'] ?? [];
+		$count = 0;
+		foreach ($sections as $section) {
+			if (!empty($section['enabled'])) {
+				$count++;
+			}
+		}
+		if ($count > 0 && $count < 3) {
+			$thin[] = $page->post_title;
+		}
+	}
+	if (!empty($thin)) {
+		return ['status' => lf_health_status_warning(), 'label' => __('Thin pages', 'leadsforward-core'), 'message' => __('Low section count: ', 'leadsforward-core') . implode(', ', $thin), 'fix_link' => admin_url('edit.php?post_type=page')];
+	}
+	return ['status' => lf_health_status_pass(), 'label' => __('Thin pages', 'leadsforward-core'), 'message' => __('No thin core pages detected.', 'leadsforward-core'), 'fix_link' => ''];
 }
 
 function lf_health_check_schema_present(): array {
@@ -207,6 +283,16 @@ function lf_health_check_orphaned_services(): array {
 	if (count($services) > 0 && count($areas) === 0) {
 		return ['status' => lf_health_status_warning(), 'label' => __('Orphaned services/areas', 'leadsforward-core'), 'message' => __('Services exist but no service areas. Add areas and run Rebuild linking.', 'leadsforward-core'), 'fix_link' => admin_url('admin.php?page=lf-ops-bulk')];
 	}
+	$orphan_areas = 0;
+	foreach ($areas as $area_id) {
+		$linked = function_exists('get_field') ? get_field('lf_service_area_services', $area_id) : null;
+		if (empty($linked) || !is_array($linked)) {
+			$orphan_areas++;
+		}
+	}
+	if ($orphan_areas > 0) {
+		return ['status' => lf_health_status_warning(), 'label' => __('Orphaned services/areas', 'leadsforward-core'), 'message' => sprintf(__('Service areas missing linked services: %d', 'leadsforward-core'), $orphan_areas), 'fix_link' => admin_url('edit.php?post_type=lf_service_area')];
+	}
 	return ['status' => lf_health_status_pass(), 'label' => __('Orphaned services/areas', 'leadsforward-core'), 'message' => __('None detected.', 'leadsforward-core'), 'fix_link' => ''];
 }
 
@@ -231,6 +317,10 @@ function lf_health_prelaunch_checks(): array {
 		'dashboard' => lf_health_dashboard_checks(),
 		'seo'       => [
 			lf_health_check_nap_complete(),
+			lf_health_check_core_pages_exist(),
+			lf_health_check_service_pages_exist(),
+			lf_health_check_service_area_pages_exist(),
+			lf_health_check_thin_pages(),
 			lf_health_check_schema_present(),
 			lf_health_check_noindex_money_pages(),
 			lf_health_check_canonicals(),

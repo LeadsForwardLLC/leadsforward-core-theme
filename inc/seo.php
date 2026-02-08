@@ -239,6 +239,15 @@ function lf_meta_description_tag(): void {
  * NAP: name, address, phone. Returns associative array for flexible output.
  */
 function lf_nap_data(): array {
+	if (function_exists('lf_business_entity_get')) {
+		$entity = lf_business_entity_get();
+		return [
+			'name'    => (string) ($entity['name'] ?? ''),
+			'address' => (string) ($entity['address'] ?? ''),
+			'phone'   => (string) ($entity['phone_display'] ?? ''),
+			'email'   => (string) ($entity['email'] ?? ''),
+		];
+	}
 	return [
 		'name'    => lf_get_option('lf_business_name', 'option'),
 		'address' => lf_get_option('lf_business_address', 'option'),
@@ -363,6 +372,76 @@ function lf_related_areas_for_service(int $service_id): array {
 	]);
 	$posts = array_filter(array_map('get_post', $ids));
 	return array_values(array_filter($posts, fn($p) => $p && $p->post_status === 'publish'));
+}
+
+/**
+ * Stable seed for deterministic internal anchor variations.
+ */
+function lf_internal_link_seed(): string {
+	$seed = (string) get_option('lf_site_seed', '');
+	if ($seed === '') {
+		$seed = wp_generate_password(12, false, false);
+		update_option('lf_site_seed', $seed);
+	}
+	return $seed;
+}
+
+/**
+ * Anchor templates for internal links (5 per type).
+ */
+function lf_internal_link_templates(): array {
+	$templates = [
+		'service' => [
+			'{service} services',
+			'Book {service}',
+			'Get {service}',
+			'{business} {service}',
+			'{service} in {city}',
+		],
+		'area' => [
+			'Service in {area}',
+			'Serving {area}',
+			'{business} in {area}',
+			'{area} service area',
+			'Local help in {area}',
+		],
+		'generic' => [
+			'Learn about {title}',
+			'Explore {title}',
+			'View {title}',
+			'{business} — {title}',
+			'{title} details',
+		],
+	];
+	return apply_filters('lf_internal_link_templates', $templates);
+}
+
+/**
+ * Deterministic anchor text based on seed + origin + target.
+ */
+function lf_internal_link_label(string $type, \WP_Post $target, int $origin_id = 0): string {
+	$templates = lf_internal_link_templates();
+	$list = $templates[$type] ?? $templates['generic'];
+	$seed = lf_internal_link_seed();
+	$hash = crc32($seed . '|' . $type . '|' . $origin_id . '|' . $target->ID);
+	$index = (int) (abs($hash) % count($list));
+	$template = $list[$index] ?? $target->post_title;
+	$entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
+	$business = (string) ($entity['name'] ?? get_bloginfo('name'));
+	$city = (string) ($entity['address_parts']['city'] ?? '');
+	if ($city === '' && !empty($entity['service_areas'][0])) {
+		$city = (string) $entity['service_areas'][0];
+	}
+	$replacements = [
+		'{service}' => $target->post_title,
+		'{area}' => $target->post_title,
+		'{title}' => $target->post_title,
+		'{business}' => $business,
+		'{city}' => $city !== '' ? $city : $target->post_title,
+	];
+	$label = strtr($template, $replacements);
+	$label = trim(preg_replace('/\s+/', ' ', $label));
+	return $label !== '' ? $label : $target->post_title;
 }
 
 /**

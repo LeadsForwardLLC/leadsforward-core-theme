@@ -38,6 +38,9 @@ lf_load_inc('cleanup.php');
 // Performance: defer scripts, heartbeat, head cleanup.
 lf_load_inc('performance.php');
 
+// Business entity (Local SEO single source of truth).
+lf_load_inc('business-entity.php');
+
 // SEO and schema (foundation only).
 lf_load_inc('seo.php');
 lf_load_inc('schema.php');

@@ -13,16 +13,34 @@ if (!defined('ABSPATH')) {
 }
 
 $area_ids = function_exists('get_field') ? get_field('lf_service_related_areas') : null;
-if (empty($area_ids) || !is_array($area_ids)) {
-	return;
+$areas = [];
+if (!empty($area_ids) && is_array($area_ids)) {
+	$areas = array_filter(array_map('get_post', $area_ids));
 }
-$areas = array_filter(array_map('get_post', $area_ids));
+if (empty($areas)) {
+	$areas = get_posts([
+		'post_type'      => 'lf_service_area',
+		'posts_per_page' => 8,
+		'post_status'    => 'publish',
+		'orderby'        => 'menu_order title',
+		'order'          => 'ASC',
+		'no_found_rows'  => true,
+	]);
+}
 if (empty($areas)) {
 	return;
 }
+$areas = array_slice($areas, 0, 8);
 ?>
 <ul class="lf-related-links" role="list" aria-label="<?php esc_attr_e('Related service areas', 'leadsforward-core'); ?>">
-	<?php foreach ($areas as $area) : if (!$area || $area->post_status !== 'publish') continue; ?>
-		<li><a href="<?php echo esc_url(get_permalink($area)); ?>"><?php echo esc_html($area->post_title); ?></a></li>
+	<?php
+	$origin_id = get_the_ID();
+	foreach ($areas as $area) :
+		if (!$area || $area->post_status !== 'publish') {
+			continue;
+		}
+		$label = function_exists('lf_internal_link_label') ? lf_internal_link_label('area', $area, $origin_id) : $area->post_title;
+	?>
+		<li><a href="<?php echo esc_url(get_permalink($area)); ?>"><?php echo esc_html($label); ?></a></li>
 	<?php endforeach; ?>
 </ul>

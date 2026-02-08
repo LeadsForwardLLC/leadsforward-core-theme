@@ -143,6 +143,71 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('options_lf_global_logo', $logo_id);
 	update_option('options_lf_header_cta_label', isset($_POST['lf_header_cta_label']) ? sanitize_text_field(wp_unslash($_POST['lf_header_cta_label'])) : '');
 	update_option('options_lf_header_cta_url', isset($_POST['lf_header_cta_url']) ? esc_url_raw(wp_unslash($_POST['lf_header_cta_url'])) : '');
+	if (function_exists('lf_update_business_info_value')) {
+		$display_name = isset($_POST['lf_business_name']) ? sanitize_text_field(wp_unslash($_POST['lf_business_name'])) : '';
+		$legal_name = isset($_POST['lf_business_legal_name']) ? sanitize_text_field(wp_unslash($_POST['lf_business_legal_name'])) : '';
+		$primary_phone = isset($_POST['lf_business_phone_primary']) ? sanitize_text_field(wp_unslash($_POST['lf_business_phone_primary'])) : '';
+		$tracking_phone = isset($_POST['lf_business_phone_tracking']) ? sanitize_text_field(wp_unslash($_POST['lf_business_phone_tracking'])) : '';
+		$phone_display = isset($_POST['lf_business_phone_display']) && $_POST['lf_business_phone_display'] === 'tracking' ? 'tracking' : 'primary';
+		$display_phone = $phone_display === 'tracking' && $tracking_phone !== '' ? $tracking_phone : $primary_phone;
+		$address_street = isset($_POST['lf_business_address_street']) ? sanitize_text_field(wp_unslash($_POST['lf_business_address_street'])) : '';
+		$address_city = isset($_POST['lf_business_address_city']) ? sanitize_text_field(wp_unslash($_POST['lf_business_address_city'])) : '';
+		$address_state = isset($_POST['lf_business_address_state']) ? sanitize_text_field(wp_unslash($_POST['lf_business_address_state'])) : '';
+		$address_zip = isset($_POST['lf_business_address_zip']) ? sanitize_text_field(wp_unslash($_POST['lf_business_address_zip'])) : '';
+		$line2 = trim(implode(' ', array_filter([$address_city, $address_state, $address_zip])));
+		$address = trim(implode(', ', array_filter([$address_street, $line2])));
+		$service_area_type = isset($_POST['lf_business_service_area_type']) && $_POST['lf_business_service_area_type'] === 'service_area' ? 'service_area' : 'address';
+		$service_areas = isset($_POST['lf_business_service_areas']) ? sanitize_textarea_field(wp_unslash($_POST['lf_business_service_areas'])) : '';
+		$lat_raw = isset($_POST['lf_business_geo_lat']) ? trim((string) $_POST['lf_business_geo_lat']) : '';
+		$lng_raw = isset($_POST['lf_business_geo_lng']) ? trim((string) $_POST['lf_business_geo_lng']) : '';
+		$lat = $lat_raw !== '' ? (float) $lat_raw : '';
+		$lng = $lng_raw !== '' ? (float) $lng_raw : '';
+		$category = isset($_POST['lf_business_category']) ? sanitize_text_field(wp_unslash($_POST['lf_business_category'])) : 'HomeAndConstructionBusiness';
+		$allowed_categories = ['HomeAndConstructionBusiness', 'GeneralContractor', 'RoofingContractor', 'Plumber', 'HVACBusiness', 'LandscapingBusiness', 'LocalBusiness'];
+		if (!in_array($category, $allowed_categories, true)) {
+			$category = 'HomeAndConstructionBusiness';
+		}
+		$short_desc = isset($_POST['lf_business_short_description']) ? sanitize_textarea_field(wp_unslash($_POST['lf_business_short_description'])) : '';
+		$primary_image = isset($_POST['lf_business_primary_image']) ? (int) $_POST['lf_business_primary_image'] : 0;
+		$social_facebook = isset($_POST['lf_business_social_facebook']) ? esc_url_raw(wp_unslash($_POST['lf_business_social_facebook'])) : '';
+		$social_instagram = isset($_POST['lf_business_social_instagram']) ? esc_url_raw(wp_unslash($_POST['lf_business_social_instagram'])) : '';
+		$social_youtube = isset($_POST['lf_business_social_youtube']) ? esc_url_raw(wp_unslash($_POST['lf_business_social_youtube'])) : '';
+		$social_linkedin = isset($_POST['lf_business_social_linkedin']) ? esc_url_raw(wp_unslash($_POST['lf_business_social_linkedin'])) : '';
+		$gbp_url = isset($_POST['lf_business_gbp_url']) ? esc_url_raw(wp_unslash($_POST['lf_business_gbp_url'])) : '';
+		$same_as = isset($_POST['lf_business_same_as']) ? sanitize_textarea_field(wp_unslash($_POST['lf_business_same_as'])) : '';
+		$founding_year = isset($_POST['lf_business_founding_year']) ? sanitize_text_field(wp_unslash($_POST['lf_business_founding_year'])) : '';
+		$license_number = isset($_POST['lf_business_license_number']) ? sanitize_text_field(wp_unslash($_POST['lf_business_license_number'])) : '';
+		$insurance_statement = isset($_POST['lf_business_insurance_statement']) ? sanitize_textarea_field(wp_unslash($_POST['lf_business_insurance_statement'])) : '';
+
+		lf_update_business_info_value('lf_business_name', $display_name);
+		lf_update_business_info_value('lf_business_legal_name', $legal_name);
+		lf_update_business_info_value('lf_business_phone_primary', $primary_phone);
+		lf_update_business_info_value('lf_business_phone_tracking', $tracking_phone);
+		lf_update_business_info_value('lf_business_phone_display', $phone_display);
+		lf_update_business_info_value('lf_business_phone', $display_phone);
+		lf_update_business_info_value('lf_business_email', isset($_POST['lf_business_email']) ? sanitize_email(wp_unslash($_POST['lf_business_email'])) : '');
+		lf_update_business_info_value('lf_business_address_street', $address_street);
+		lf_update_business_info_value('lf_business_address_city', $address_city);
+		lf_update_business_info_value('lf_business_address_state', $address_state);
+		lf_update_business_info_value('lf_business_address_zip', $address_zip);
+		lf_update_business_info_value('lf_business_address', $address);
+		lf_update_business_info_value('lf_business_service_area_type', $service_area_type);
+		lf_update_business_info_value('lf_business_service_areas', $service_areas);
+		lf_update_business_info_value('lf_business_geo', ['lat' => $lat, 'lng' => $lng]);
+		lf_update_business_info_value('lf_business_hours', isset($_POST['lf_business_hours']) ? sanitize_textarea_field(wp_unslash($_POST['lf_business_hours'])) : '');
+		lf_update_business_info_value('lf_business_category', $category);
+		lf_update_business_info_value('lf_business_short_description', $short_desc);
+		lf_update_business_info_value('lf_business_primary_image', $primary_image);
+		lf_update_business_info_value('lf_business_social_facebook', $social_facebook);
+		lf_update_business_info_value('lf_business_social_instagram', $social_instagram);
+		lf_update_business_info_value('lf_business_social_youtube', $social_youtube);
+		lf_update_business_info_value('lf_business_social_linkedin', $social_linkedin);
+		lf_update_business_info_value('lf_business_gbp_url', $gbp_url);
+		lf_update_business_info_value('lf_business_same_as', $same_as);
+		lf_update_business_info_value('lf_business_founding_year', $founding_year);
+		lf_update_business_info_value('lf_business_license_number', $license_number);
+		lf_update_business_info_value('lf_business_insurance_statement', $insurance_statement);
+	}
 	$keys = [
 		'lf_brand_primary',
 		'lf_brand_secondary',
@@ -190,6 +255,38 @@ function lf_ops_render_global_settings_page(): void {
 	$logo_url = $logo_id ? wp_get_attachment_image_url($logo_id, 'medium') : '';
 	$cta_label = (string) lf_get_global_option('lf_header_cta_label', '');
 	$cta_url = (string) lf_get_global_option('lf_header_cta_url', '');
+	$entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
+	$entity_name = (string) ($entity['name'] ?? '');
+	$entity_legal = (string) ($entity['legal_name'] ?? '');
+	$entity_phone_primary = (string) ($entity['phone_primary'] ?? '');
+	$entity_phone_tracking = (string) ($entity['phone_tracking'] ?? '');
+	$entity_phone_display = (string) ($entity['phone_display_pref'] ?? '');
+	$entity_email = (string) ($entity['email'] ?? '');
+	$entity_address_parts = $entity['address_parts'] ?? ['street' => '', 'city' => '', 'state' => '', 'zip' => ''];
+	$entity_address_street = (string) ($entity_address_parts['street'] ?? '');
+	$entity_address_city = (string) ($entity_address_parts['city'] ?? '');
+	$entity_address_state = (string) ($entity_address_parts['state'] ?? '');
+	$entity_address_zip = (string) ($entity_address_parts['zip'] ?? '');
+	$entity_service_area_type = (string) ($entity['service_area_type'] ?? 'address');
+	$entity_service_areas = '';
+	if (!empty($entity['service_areas']) && is_array($entity['service_areas'])) {
+		$entity_service_areas = implode("\n", $entity['service_areas']);
+	}
+	$entity_geo = $entity['geo'] ?? ['lat' => '', 'lng' => ''];
+	$entity_hours = (string) ($entity['hours'] ?? '');
+	$entity_category = (string) ($entity['category'] ?? 'HomeAndConstructionBusiness');
+	$entity_desc = (string) ($entity['description'] ?? '');
+	$entity_primary_image_id = (int) ($entity['primary_image_id'] ?? 0);
+	$entity_primary_image_url = $entity_primary_image_id ? wp_get_attachment_image_url($entity_primary_image_id, 'medium') : '';
+	$entity_social = $entity['social'] ?? ['facebook' => '', 'instagram' => '', 'youtube' => '', 'linkedin' => ''];
+	$entity_gbp = (string) ($entity['gbp_url'] ?? '');
+	$entity_same_as = '';
+	if (!empty($entity['same_as']) && is_array($entity['same_as'])) {
+		$entity_same_as = implode("\n", $entity['same_as']);
+	}
+	$entity_founding_year = (string) ($entity['founding_year'] ?? '');
+	$entity_license = (string) ($entity['license_number'] ?? '');
+	$entity_insurance = (string) ($entity['insurance_statement'] ?? '');
 	$get_brand = function (string $key, string $default): string {
 		if (function_exists('lf_branding_get_value')) {
 			return lf_branding_get_value($key, $default);
@@ -217,19 +314,6 @@ function lf_ops_render_global_settings_page(): void {
 			<?php wp_nonce_field('lf_global_settings', 'lf_global_settings_nonce'); ?>
 			<table class="form-table" role="presentation">
 				<tr>
-					<th scope="row"><?php esc_html_e('Logo', 'leadsforward-core'); ?></th>
-					<td>
-						<div style="display:flex;align-items:center;gap:1rem;">
-							<div>
-								<img id="lf-global-logo-preview" src="<?php echo esc_url($logo_url); ?>" style="max-height:60px;<?php echo $logo_url ? '' : 'display:none;'; ?>" alt="" />
-							</div>
-							<input type="hidden" name="lf_global_logo" id="lf_global_logo" value="<?php echo esc_attr((string) $logo_id); ?>" />
-							<button type="button" class="button" id="lf-global-logo-select"><?php esc_html_e('Select Logo', 'leadsforward-core'); ?></button>
-							<button type="button" class="button" id="lf-global-logo-clear"><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
-						</div>
-					</td>
-				</tr>
-				<tr>
 					<th scope="row"><label for="lf_header_cta_label"><?php esc_html_e('Header CTA label', 'leadsforward-core'); ?></label></th>
 					<td><input type="text" class="regular-text" id="lf_header_cta_label" name="lf_header_cta_label" value="<?php echo esc_attr($cta_label); ?>" /></td>
 				</tr>
@@ -238,6 +322,169 @@ function lf_ops_render_global_settings_page(): void {
 					<td><input type="url" class="large-text" id="lf_header_cta_url" name="lf_header_cta_url" value="<?php echo esc_attr($cta_url); ?>" /></td>
 				</tr>
 			</table>
+			<div class="lf-settings-panel" data-section="business_entity">
+				<div class="lf-settings-panel-header">
+					<h2><?php esc_html_e('Business Entity', 'leadsforward-core'); ?></h2>
+					<button type="button" class="lf-settings-toggle" data-target="business_entity" aria-expanded="true">
+						<span class="lf-settings-toggle-icon">▾</span>
+						<span class="lf-settings-toggle-label"><?php esc_html_e('Collapse', 'leadsforward-core'); ?></span>
+					</button>
+				</div>
+				<div class="lf-settings-panel-body" data-parent="business_entity">
+					<p class="description"><?php esc_html_e('Single source of truth for NAP, schema, and local SEO. This data is used across the site.', 'leadsforward-core'); ?></p>
+					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><?php esc_html_e('Logo', 'leadsforward-core'); ?></th>
+							<td>
+								<div style="display:flex;align-items:center;gap:1rem;">
+									<div>
+										<img id="lf-global-logo-preview" src="<?php echo esc_url($logo_url); ?>" style="max-height:60px;<?php echo $logo_url ? '' : 'display:none;'; ?>" alt="" />
+									</div>
+									<input type="hidden" name="lf_global_logo" id="lf_global_logo" value="<?php echo esc_attr((string) $logo_id); ?>" />
+									<button type="button" class="button" id="lf-global-logo-select"><?php esc_html_e('Select Logo', 'leadsforward-core'); ?></button>
+									<button type="button" class="button" id="lf-global-logo-clear"><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
+								</div>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_name"><?php esc_html_e('Business name (display)', 'leadsforward-core'); ?></label></th>
+							<td><input type="text" class="regular-text" id="lf_business_name" name="lf_business_name" value="<?php echo esc_attr($entity_name); ?>" /></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_legal_name"><?php esc_html_e('Business name (legal)', 'leadsforward-core'); ?></label></th>
+							<td><input type="text" class="regular-text" id="lf_business_legal_name" name="lf_business_legal_name" value="<?php echo esc_attr($entity_legal); ?>" /></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_phone_primary"><?php esc_html_e('Primary phone', 'leadsforward-core'); ?></label></th>
+							<td><input type="text" class="regular-text" id="lf_business_phone_primary" name="lf_business_phone_primary" value="<?php echo esc_attr($entity_phone_primary); ?>" /></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_phone_tracking"><?php esc_html_e('Tracking phone (optional)', 'leadsforward-core'); ?></label></th>
+							<td><input type="text" class="regular-text" id="lf_business_phone_tracking" name="lf_business_phone_tracking" value="<?php echo esc_attr($entity_phone_tracking); ?>" /></td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e('Display phone', 'leadsforward-core'); ?></th>
+							<td>
+								<select name="lf_business_phone_display">
+									<option value="primary" <?php selected($entity_phone_display !== 'tracking'); ?>><?php esc_html_e('Primary phone', 'leadsforward-core'); ?></option>
+									<option value="tracking" <?php selected($entity_phone_display === 'tracking'); ?>><?php esc_html_e('Tracking phone', 'leadsforward-core'); ?></option>
+								</select>
+								<p class="description"><?php esc_html_e('Controls which phone displays across the site.', 'leadsforward-core'); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_email"><?php esc_html_e('Email', 'leadsforward-core'); ?></label></th>
+							<td><input type="email" class="regular-text" id="lf_business_email" name="lf_business_email" value="<?php echo esc_attr($entity_email); ?>" /></td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e('Address (NAP)', 'leadsforward-core'); ?></th>
+							<td>
+								<input type="text" class="large-text" name="lf_business_address_street" placeholder="<?php esc_attr_e('Street address', 'leadsforward-core'); ?>" value="<?php echo esc_attr($entity_address_street); ?>" />
+								<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;">
+									<input type="text" class="regular-text" name="lf_business_address_city" placeholder="<?php esc_attr_e('City', 'leadsforward-core'); ?>" value="<?php echo esc_attr($entity_address_city); ?>" />
+									<input type="text" class="regular-text" name="lf_business_address_state" placeholder="<?php esc_attr_e('State', 'leadsforward-core'); ?>" value="<?php echo esc_attr($entity_address_state); ?>" />
+									<input type="text" class="regular-text" name="lf_business_address_zip" placeholder="<?php esc_attr_e('ZIP', 'leadsforward-core'); ?>" value="<?php echo esc_attr($entity_address_zip); ?>" />
+								</div>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e('Service area type', 'leadsforward-core'); ?></th>
+							<td>
+								<select name="lf_business_service_area_type">
+									<option value="address" <?php selected($entity_service_area_type !== 'service_area'); ?>><?php esc_html_e('Address-based business', 'leadsforward-core'); ?></option>
+									<option value="service_area" <?php selected($entity_service_area_type === 'service_area'); ?>><?php esc_html_e('Service-area business (SAB)', 'leadsforward-core'); ?></option>
+								</select>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_service_areas"><?php esc_html_e('Service areas list', 'leadsforward-core'); ?></label></th>
+							<td>
+								<textarea class="large-text" id="lf_business_service_areas" name="lf_business_service_areas" rows="4" placeholder="<?php esc_attr_e("One city or region per line", 'leadsforward-core'); ?>"><?php echo esc_textarea($entity_service_areas); ?></textarea>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e('Latitude / Longitude', 'leadsforward-core'); ?></th>
+							<td>
+								<div style="display:flex;gap:10px;flex-wrap:wrap;">
+									<input type="number" step="any" class="regular-text" name="lf_business_geo_lat" placeholder="<?php esc_attr_e('Latitude', 'leadsforward-core'); ?>" value="<?php echo esc_attr((string) ($entity_geo['lat'] ?? '')); ?>" />
+									<input type="number" step="any" class="regular-text" name="lf_business_geo_lng" placeholder="<?php esc_attr_e('Longitude', 'leadsforward-core'); ?>" value="<?php echo esc_attr((string) ($entity_geo['lng'] ?? '')); ?>" />
+								</div>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_hours"><?php esc_html_e('Hours', 'leadsforward-core'); ?></label></th>
+							<td><textarea class="large-text" id="lf_business_hours" name="lf_business_hours" rows="3"><?php echo esc_textarea($entity_hours); ?></textarea></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_category"><?php esc_html_e('Primary category', 'leadsforward-core'); ?></label></th>
+							<td>
+								<select name="lf_business_category" id="lf_business_category">
+									<?php
+									$categories = [
+										'HomeAndConstructionBusiness' => __('Home & Construction Business', 'leadsforward-core'),
+										'GeneralContractor' => __('General Contractor', 'leadsforward-core'),
+										'RoofingContractor' => __('Roofing Contractor', 'leadsforward-core'),
+										'Plumber' => __('Plumber', 'leadsforward-core'),
+										'HVACBusiness' => __('HVAC Business', 'leadsforward-core'),
+										'LandscapingBusiness' => __('Landscaping Business', 'leadsforward-core'),
+										'LocalBusiness' => __('Local Business (generic)', 'leadsforward-core'),
+									];
+									foreach ($categories as $value => $label) {
+										echo '<option value="' . esc_attr($value) . '"' . selected($entity_category === $value, true, false) . '>' . esc_html($label) . '</option>';
+									}
+									?>
+								</select>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_short_description"><?php esc_html_e('Short description', 'leadsforward-core'); ?></label></th>
+							<td><textarea class="large-text" id="lf_business_short_description" name="lf_business_short_description" rows="3"><?php echo esc_textarea($entity_desc); ?></textarea></td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e('Primary image', 'leadsforward-core'); ?></th>
+							<td>
+								<div style="display:flex;align-items:center;gap:1rem;">
+									<div>
+										<img id="lf-entity-primary-image-preview" src="<?php echo esc_url($entity_primary_image_url); ?>" style="max-height:80px;<?php echo $entity_primary_image_url ? '' : 'display:none;'; ?>" alt="" />
+									</div>
+									<input type="hidden" name="lf_business_primary_image" id="lf_business_primary_image" value="<?php echo esc_attr((string) $entity_primary_image_id); ?>" />
+									<button type="button" class="button" id="lf-entity-primary-image-select"><?php esc_html_e('Select Image', 'leadsforward-core'); ?></button>
+									<button type="button" class="button" id="lf-entity-primary-image-clear"><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
+								</div>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_gbp_url"><?php esc_html_e('Google Business Profile URL', 'leadsforward-core'); ?></label></th>
+							<td><input type="url" class="large-text" id="lf_business_gbp_url" name="lf_business_gbp_url" value="<?php echo esc_attr($entity_gbp); ?>" /></td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e('Social profiles', 'leadsforward-core'); ?></th>
+							<td>
+								<input type="url" class="large-text" name="lf_business_social_facebook" placeholder="<?php esc_attr_e('Facebook URL', 'leadsforward-core'); ?>" value="<?php echo esc_attr((string) ($entity_social['facebook'] ?? '')); ?>" />
+								<input type="url" class="large-text" name="lf_business_social_instagram" placeholder="<?php esc_attr_e('Instagram URL', 'leadsforward-core'); ?>" value="<?php echo esc_attr((string) ($entity_social['instagram'] ?? '')); ?>" style="margin-top:6px;" />
+								<input type="url" class="large-text" name="lf_business_social_youtube" placeholder="<?php esc_attr_e('YouTube URL', 'leadsforward-core'); ?>" value="<?php echo esc_attr((string) ($entity_social['youtube'] ?? '')); ?>" style="margin-top:6px;" />
+								<input type="url" class="large-text" name="lf_business_social_linkedin" placeholder="<?php esc_attr_e('LinkedIn URL', 'leadsforward-core'); ?>" value="<?php echo esc_attr((string) ($entity_social['linkedin'] ?? '')); ?>" style="margin-top:6px;" />
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_same_as"><?php esc_html_e('sameAs links (optional)', 'leadsforward-core'); ?></label></th>
+							<td><textarea class="large-text" id="lf_business_same_as" name="lf_business_same_as" rows="3" placeholder="<?php esc_attr_e("One URL per line", 'leadsforward-core'); ?>"><?php echo esc_textarea($entity_same_as); ?></textarea></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_founding_year"><?php esc_html_e('Founding year (optional)', 'leadsforward-core'); ?></label></th>
+							<td><input type="text" class="regular-text" id="lf_business_founding_year" name="lf_business_founding_year" value="<?php echo esc_attr($entity_founding_year); ?>" /></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_license_number"><?php esc_html_e('License number (optional)', 'leadsforward-core'); ?></label></th>
+							<td><input type="text" class="regular-text" id="lf_business_license_number" name="lf_business_license_number" value="<?php echo esc_attr($entity_license); ?>" /></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_business_insurance_statement"><?php esc_html_e('Insurance statement (optional)', 'leadsforward-core'); ?></label></th>
+							<td><textarea class="large-text" id="lf_business_insurance_statement" name="lf_business_insurance_statement" rows="2"><?php echo esc_textarea($entity_insurance); ?></textarea></td>
+						</tr>
+					</table>
+				</div>
+			</div>
 			<div class="lf-settings-panel" data-section="branding">
 				<div class="lf-settings-panel-header">
 					<h2><?php esc_html_e('Branding', 'leadsforward-core'); ?></h2>
@@ -316,14 +563,39 @@ function lf_ops_render_global_settings_page(): void {
 					if (preview) { preview.src = ''; preview.style.display = 'none'; }
 				});
 			}
-			var toggle = document.querySelector('.lf-settings-toggle');
-			if (toggle) {
+			var toggles = document.querySelectorAll('.lf-settings-toggle');
+			toggles.forEach(function (toggle) {
 				var type = toggle.getAttribute('data-target');
 				applyCollapse(type);
 				toggle.addEventListener('click', function () {
 					collapsed[type] = !collapsed[type];
 					try { window.localStorage.setItem(storageKey, JSON.stringify(collapsed)); } catch (e) {}
 					applyCollapse(type);
+				});
+			});
+			var imageFrame;
+			var imageSelectBtn = document.getElementById('lf-entity-primary-image-select');
+			var imageClearBtn = document.getElementById('lf-entity-primary-image-clear');
+			var imageInput = document.getElementById('lf_business_primary_image');
+			var imagePreview = document.getElementById('lf-entity-primary-image-preview');
+			if (imageSelectBtn) {
+				imageSelectBtn.addEventListener('click', function (e) {
+					e.preventDefault();
+					if (imageFrame) { imageFrame.open(); return; }
+					imageFrame = wp.media({ title: 'Select Image', button: { text: 'Use image' }, multiple: false });
+					imageFrame.on('select', function () {
+						var attachment = imageFrame.state().get('selection').first().toJSON();
+						if (imageInput) imageInput.value = attachment.id;
+						if (imagePreview) { imagePreview.src = attachment.url; imagePreview.style.display = 'block'; }
+					});
+					imageFrame.open();
+				});
+			}
+			if (imageClearBtn) {
+				imageClearBtn.addEventListener('click', function (e) {
+					e.preventDefault();
+					if (imageInput) imageInput.value = '';
+					if (imagePreview) { imagePreview.src = ''; imagePreview.style.display = 'none'; }
 				});
 			}
 		})();

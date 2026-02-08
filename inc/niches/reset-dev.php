@@ -141,11 +141,33 @@ function lf_dev_reset_run(): void {
 	if (function_exists('update_field')) {
 		if (function_exists('lf_update_business_info_value')) {
 			lf_update_business_info_value('lf_business_name', '');
+			lf_update_business_info_value('lf_business_legal_name', '');
 			lf_update_business_info_value('lf_business_phone', '');
+			lf_update_business_info_value('lf_business_phone_primary', '');
+			lf_update_business_info_value('lf_business_phone_tracking', '');
+			lf_update_business_info_value('lf_business_phone_display', '');
 			lf_update_business_info_value('lf_business_email', '');
 			lf_update_business_info_value('lf_business_address', '');
+			lf_update_business_info_value('lf_business_address_street', '');
+			lf_update_business_info_value('lf_business_address_city', '');
+			lf_update_business_info_value('lf_business_address_state', '');
+			lf_update_business_info_value('lf_business_address_zip', '');
+			lf_update_business_info_value('lf_business_service_area_type', '');
+			lf_update_business_info_value('lf_business_service_areas', '');
 			lf_update_business_info_value('lf_business_hours', '');
 			lf_update_business_info_value('lf_business_geo', ['lat' => '', 'lng' => '']);
+			lf_update_business_info_value('lf_business_category', '');
+			lf_update_business_info_value('lf_business_short_description', '');
+			lf_update_business_info_value('lf_business_primary_image', '');
+			lf_update_business_info_value('lf_business_social_facebook', '');
+			lf_update_business_info_value('lf_business_social_instagram', '');
+			lf_update_business_info_value('lf_business_social_youtube', '');
+			lf_update_business_info_value('lf_business_social_linkedin', '');
+			lf_update_business_info_value('lf_business_gbp_url', '');
+			lf_update_business_info_value('lf_business_same_as', '');
+			lf_update_business_info_value('lf_business_founding_year', '');
+			lf_update_business_info_value('lf_business_license_number', '');
+			lf_update_business_info_value('lf_business_insurance_statement', '');
 			lf_update_business_info_value('lf_business_place_id', '');
 			lf_update_business_info_value('lf_business_place_name', '');
 			lf_update_business_info_value('lf_business_place_address', '');
@@ -171,6 +193,7 @@ function lf_dev_reset_run(): void {
 	}
 	delete_option('lf_maps_api_key');
 	delete_option('lf_openai_api_key');
+	delete_option('lf_site_seed');
 	// Clear global settings (logo + header CTA).
 	$global_keys = ['lf_global_logo', 'lf_header_cta_label', 'lf_header_cta_url'];
 	if (function_exists('update_field')) {

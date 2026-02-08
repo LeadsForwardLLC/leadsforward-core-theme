@@ -16,10 +16,11 @@ $variant  = $block['variant'] ?? 'default';
 $context  = $block['context'] ?? [];
 $section  = $context['section'] ?? [];
 $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'light') : '';
-$name     = function_exists('lf_get_option') ? lf_get_option('lf_business_name', 'option') : '';
-$phone    = function_exists('lf_get_option') ? lf_get_option('lf_business_phone', 'option') : '';
-$email    = function_exists('lf_get_option') ? lf_get_option('lf_business_email', 'option') : '';
-$address  = function_exists('lf_get_option') ? lf_get_option('lf_business_address', 'option') : '';
+$entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
+$name     = $entity['name'] ?? (function_exists('lf_get_option') ? lf_get_option('lf_business_name', 'option') : '');
+$phone    = $entity['phone_display'] ?? (function_exists('lf_get_option') ? lf_get_option('lf_business_phone', 'option') : '');
+$email    = $entity['email'] ?? (function_exists('lf_get_option') ? lf_get_option('lf_business_email', 'option') : '');
+$address  = $entity['address'] ?? (function_exists('lf_get_option') ? lf_get_option('lf_business_address', 'option') : '');
 $place_id = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_id', '') : '';
 $place_name = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_name', '') : '';
 $place_address = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_address', '') : '';
@@ -81,7 +82,7 @@ if (is_string($map_embed_override) && $map_embed_override !== '') {
 
 $areas_query = new WP_Query([
 	'post_type'      => 'lf_service_area',
-	'posts_per_page' => -1,
+	'posts_per_page' => 8,
 	'orderby'        => 'menu_order title',
 	'order'          => 'ASC',
 	'post_status'    => 'publish',
@@ -100,9 +101,13 @@ $areas_query = new WP_Query([
 				</header>
 				<?php if ($areas_query->have_posts()) : ?>
 					<ul class="lf-block-map-nap__areas-list" role="list">
-						<?php while ($areas_query->have_posts()) : $areas_query->the_post(); ?>
+						<?php
+						$origin_id = get_the_ID() ?: 0;
+						while ($areas_query->have_posts()) : $areas_query->the_post();
+							$label = function_exists('lf_internal_link_label') ? lf_internal_link_label('area', get_post(), $origin_id) : get_the_title();
+						?>
 							<li class="lf-block-map-nap__areas-item">
-								<a href="<?php the_permalink(); ?>" class="lf-block-map-nap__areas-link"><?php the_title(); ?></a>
+								<a href="<?php the_permalink(); ?>" class="lf-block-map-nap__areas-link"><?php echo esc_html($label); ?></a>
 							</li>
 						<?php endwhile; ?>
 					</ul>

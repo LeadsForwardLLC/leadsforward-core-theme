@@ -251,3 +251,31 @@ Final QA checklist before launch:
 Content fields policy:
 - Page Attributes and Featured Image are hidden for core pages.
 - Featured Image remains available for blog posts only.
+
+---
+
+Entity‑First Local SEO Addendum (Append‑Only)
+--------------------------------------------
+Business Entity (single source of truth):
+- Go to **LeadsForward → Global Settings → Business Entity**.
+- Fill in business name (display + legal), primary phone, address, and category.
+- Add service areas (one per line) and business hours.
+- Upload a logo and a primary image.
+- Add social profiles + Google Business Profile URL.
+- Optional: sameAs links, founding year, license number, insurance statement.
+
+Schema behavior (automatic):
+- Global schema outputs: LocalBusiness + Organization + WebSite + BreadcrumbList.
+- Service pages: Service schema + OfferCatalog.
+- Service area pages: LocalBusiness addendum with area served.
+- FAQ schema is added only when an FAQ section is enabled.
+- Review schema outputs when testimonials exist.
+
+Internal linking (deterministic):
+- Homepage, service pages, and service area pages include hub‑and‑spoke modules.
+- Anchors vary deterministically based on site seed + page ID.
+- Each module caps at 8 links by default.
+
+SEO Coverage validator:
+- Run **LeadsForward → Site Health → Pre‑Launch Check**.
+- Flags missing hubs, missing services/areas, orphaned areas, and thin pages.

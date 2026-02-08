@@ -541,6 +541,11 @@ function lf_get_resolved_cta(array $context = []): array {
  * Phone number for call CTA. From Business Info.
  */
 function lf_get_cta_phone(): string {
+	if (function_exists('lf_business_entity_get')) {
+		$entity = lf_business_entity_get();
+		$phone = $entity['phone_display'] ?? '';
+		return is_string($phone) ? preg_replace('/\s+/', '', $phone) : '';
+	}
 	$phone = lf_get_option('lf_business_phone', 'option');
 	return is_string($phone) ? preg_replace('/\s+/', '', $phone) : '';
 }
