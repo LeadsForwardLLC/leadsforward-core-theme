@@ -177,6 +177,7 @@ function lf_pb_admin_assets(string $hook): void {
 	}
 	wp_enqueue_script('jquery-ui-sortable');
 	wp_enqueue_script('jquery-ui-draggable');
+	wp_enqueue_script('jquery-ui-droppable');
 }
 
 function lf_pb_render_section_item(string $instance_id, array $def, array $section, bool $is_template = false): void {
@@ -321,29 +322,27 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 				$list.append($item);
 				applyCollapse(id);
 			}
+			function insertAtDrop($item, e) {
+				var el = document.elementFromPoint(e.clientX, e.clientY);
+				var $target = $(el).closest('.lf-pb-section');
+				if ($target.length) {
+					var midpoint = $target.offset().top + ($target.outerHeight() / 2);
+					if (e.pageY > midpoint) {
+						$target.after($item);
+					} else {
+						$target.before($item);
+					}
+				} else {
+					$list.append($item);
+				}
+			}
 			if ($list.length && $list.sortable) {
 				$list.sortable({
 					items: '> li.lf-pb-section',
 					handle: '.lf-pb-drag',
 					axis: 'y',
 					placeholder: 'lf-pb-placeholder',
-					tolerance: 'pointer',
-					receive: function (e, ui) {
-						var type = ui.item.attr('data-section-type') || ui.item.data('sectionType');
-						if (!type) {
-							ui.item.remove();
-							return;
-						}
-						$list.find('.lf-pb-empty').remove();
-						var id = makeId(type);
-						var html = templates[type] ? templates[type].replace(/__ID__/g, id) : '';
-						if (html) {
-							ui.item.replaceWith($(html));
-							applyCollapse(id);
-						} else {
-							ui.item.remove();
-						}
-					}
+					tolerance: 'pointer'
 				});
 			}
 			$('.lf-pb-library__item').draggable({
@@ -351,10 +350,24 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 					return $(this).clone().addClass('lf-pb-section lf-pb-section--ghost');
 				},
 				appendTo: 'body',
-				connectToSortable: '.lf-pb-sections',
 				revert: 'invalid',
 				cancel: '.lf-pb-library__add',
 				zIndex: 9999
+			});
+			$list.droppable({
+				accept: '.lf-pb-library__item',
+				tolerance: 'pointer',
+				drop: function (e, ui) {
+					var type = ui.draggable.data('sectionType') || ui.draggable.attr('data-section-type');
+					if (!type) return;
+					$list.find('.lf-pb-empty').remove();
+					var id = makeId(type);
+					var html = templates[type] ? templates[type].replace(/__ID__/g, id) : '';
+					if (!html) return;
+					var $item = $(html);
+					insertAtDrop($item, e);
+					applyCollapse(id);
+				}
 			});
 			$(document).on('click', '.lf-pb-library__add', function () {
 				var type = $(this).closest('.lf-pb-library__item').data('sectionType');
