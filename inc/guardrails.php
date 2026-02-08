@@ -118,6 +118,58 @@ function lf_get_option(string $selector, string $options_page_slug = 'option', $
 	return $default;
 }
 
+function lf_update_cta_option_value(string $key, string $value): void {
+	$post_ids = ['lf-ctas', 'options_lf_ctas', 'options_lf-ctas', 'option', 'options'];
+	if (function_exists('update_field')) {
+		foreach ($post_ids as $post_id) {
+			update_field($key, $value, $post_id);
+		}
+	}
+	update_option('options_' . $key, $value);
+}
+
+function lf_update_global_option_value(string $key, string $value): void {
+	$post_ids = ['lf-global', 'options_lf_global', 'options_lf-global', 'option', 'options'];
+	if (function_exists('update_field')) {
+		foreach ($post_ids as $post_id) {
+			update_field($key, $value, $post_id);
+		}
+	}
+	update_option('options_' . $key, $value);
+}
+
+function lf_maybe_migrate_cta_defaults(): void {
+	if (get_option('lf_cta_defaults_migrated', '0') === '1') {
+		return;
+	}
+	$primary = lf_get_option('lf_cta_primary_text', 'option', '');
+	$secondary = lf_get_option('lf_cta_secondary_text', 'option', '');
+	$header_label = function_exists('lf_get_global_option') ? (string) lf_get_global_option('lf_header_cta_label', '') : '';
+
+	$new_primary = __('Get a free estimate', 'leadsforward-core');
+	$new_secondary = __('Call now', 'leadsforward-core');
+	$new_header = __('Free Estimate', 'leadsforward-core');
+	$did = false;
+
+	if ($primary === '' || strcasecmp($primary, 'Contact Us') === 0 || strcasecmp($primary, 'Get a Quote') === 0) {
+		lf_update_cta_option_value('lf_cta_primary_text', $new_primary);
+		$did = true;
+	}
+	if ($secondary === '' || strcasecmp($secondary, 'Contact Us') === 0 || strcasecmp($secondary, 'Get a Quote') === 0) {
+		lf_update_cta_option_value('lf_cta_secondary_text', $new_secondary);
+		$did = true;
+	}
+	if ($header_label === '' || strcasecmp($header_label, 'Contact Us') === 0 || strcasecmp($header_label, 'Get a Quote') === 0) {
+		lf_update_global_option_value('lf_header_cta_label', $new_header);
+		$did = true;
+	}
+
+	if ($did) {
+		update_option('lf_cta_defaults_migrated', '1');
+	}
+}
+add_action('init', 'lf_maybe_migrate_cta_defaults', 20);
+
 /**
  * Hide deprecated Service Content ACF group if it exists in DB.
  */

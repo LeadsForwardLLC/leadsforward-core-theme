@@ -36,6 +36,7 @@ function lf_acf_add_options_global_fields(): void {
 				'label' => __('Header CTA label', 'leadsforward-core'),
 				'name'  => 'lf_header_cta_label',
 				'type'  => 'text',
+				'default_value' => __('Free Estimate', 'leadsforward-core'),
 			],
 			[
 				'key'   => 'field_lf_header_cta_url',
