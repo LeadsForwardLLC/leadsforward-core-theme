@@ -28,6 +28,10 @@ function lf_pb_registry(): array {
 			'label' => __('Service Area Page', 'leadsforward-core'),
 			'sections' => array_values(lf_sections_get_context_sections('service_area')),
 		],
+		'page' => [
+			'label' => __('Page', 'leadsforward-core'),
+			'sections' => array_values(lf_sections_get_context_sections('page')),
+		],
 	];
 }
 
@@ -37,6 +41,16 @@ function lf_pb_get_context_for_post(\WP_Post $post): string {
 	}
 	if ($post->post_type === 'lf_service_area') {
 		return 'service_area';
+	}
+	if ($post->post_type === 'page') {
+		if ($post->post_name === 'home') {
+			return '';
+		}
+		$has_config = get_post_meta($post->ID, LF_PB_META_KEY, true);
+		$core_slugs = function_exists('lf_wizard_required_page_slugs') ? lf_wizard_required_page_slugs() : [];
+		if (!empty($has_config) || in_array($post->post_name, $core_slugs, true)) {
+			return 'page';
+		}
 	}
 	return '';
 }
@@ -154,7 +168,7 @@ function lf_pb_sanitize_order(array $order, array $allowed): array {
 
 function lf_pb_register_meta_box(): void {
 	$screen = get_current_screen();
-	if (!$screen || !in_array($screen->post_type, ['lf_service', 'lf_service_area'], true)) {
+	if (!$screen || !in_array($screen->post_type, ['lf_service', 'lf_service_area', 'page'], true)) {
 		return;
 	}
 	add_meta_box(
@@ -172,7 +186,7 @@ function lf_pb_admin_assets(string $hook): void {
 		return;
 	}
 	$screen = get_current_screen();
-	if (!$screen || !in_array($screen->post_type, ['lf_service', 'lf_service_area'], true)) {
+	if (!$screen || !in_array($screen->post_type, ['lf_service', 'lf_service_area', 'page'], true)) {
 		return;
 	}
 	wp_enqueue_script('jquery-ui-sortable');
@@ -434,7 +448,7 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 }
 
 function lf_pb_handle_save(int $post_id, \WP_Post $post): void {
-	if (!in_array($post->post_type, ['lf_service', 'lf_service_area'], true)) {
+	if (!in_array($post->post_type, ['lf_service', 'lf_service_area', 'page'], true)) {
 		return;
 	}
 	if (!isset($_POST['lf_pb_nonce']) || !wp_verify_nonce($_POST['lf_pb_nonce'], 'lf_pb_save')) {
@@ -444,6 +458,9 @@ function lf_pb_handle_save(int $post_id, \WP_Post $post): void {
 		return;
 	}
 	$context = lf_pb_get_context_for_post($post);
+	if ($context === '') {
+		return;
+	}
 	$section_defs = lf_sections_get_context_sections($context);
 	$allowed_types = array_keys($section_defs);
 	$input = $_POST['lf_pb_sections'] ?? [];

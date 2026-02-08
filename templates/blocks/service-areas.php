@@ -17,6 +17,7 @@ $context = $block['context'] ?? [];
 $section = $context['section'] ?? [];
 $heading = !empty($section['section_heading']) ? $section['section_heading'] : __('Areas We Serve', 'leadsforward-core');
 $intro   = !empty($section['section_intro']) ? $section['section_intro'] : '';
+$bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'soft') : '';
 
 $query = new WP_Query([
 	'post_type'      => 'lf_service_area',
@@ -27,7 +28,7 @@ $query = new WP_Query([
 	'no_found_rows'  => true,
 ]);
 ?>
-<section class="lf-block lf-block-service-areas lf-surface-soft lf-block-service-areas--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
+<section class="lf-block lf-block-service-areas <?php echo esc_attr($bg_class); ?> lf-block-service-areas--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-service-areas__inner">
 		<header class="lf-block-service-areas__header">
 			<h2 class="lf-block-service-areas__title"><?php echo esc_html($heading); ?></h2>

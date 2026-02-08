@@ -22,9 +22,12 @@ function lf_wizard_required_page_slugs(): array {
 		'about-us',
 		'our-services',
 		'our-service-areas',
+		'reviews',
+		'blog',
+		'sitemap',
 		'contact',
 		'privacy-policy',
-		'terms-of-use',
+		'terms-of-service',
 		'thank-you',
 	];
 }
@@ -38,9 +41,12 @@ function lf_wizard_default_page_titles(): array {
 		'about-us'          => __('About Us', 'leadsforward-core'),
 		'our-services'      => __('Our Services', 'leadsforward-core'),
 		'our-service-areas' => __('Our Service Areas', 'leadsforward-core'),
+		'reviews'           => __('Reviews', 'leadsforward-core'),
+		'blog'              => __('Blog', 'leadsforward-core'),
+		'sitemap'           => __('Sitemap', 'leadsforward-core'),
 		'contact'           => __('Contact', 'leadsforward-core'),
 		'privacy-policy'    => __('Privacy Policy', 'leadsforward-core'),
-		'terms-of-use'      => __('Terms of Use', 'leadsforward-core'),
+		'terms-of-service'  => __('Terms of Service', 'leadsforward-core'),
 		'thank-you'         => __('Thank You', 'leadsforward-core'),
 	];
 }

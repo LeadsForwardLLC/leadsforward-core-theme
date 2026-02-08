@@ -57,7 +57,7 @@ function lf_sections_registry(): array {
 	return [
 		'hero' => [
 			'label' => __('Hero', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area'],
+			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => [
 				$bg_soft,
 				['key' => 'hero_headline', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
@@ -81,7 +81,7 @@ function lf_sections_registry(): array {
 		],
 		'trust_bar' => [
 			'label' => __('Trust Bar', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area'],
+			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => [
 				$bg_field,
 				['key' => 'trust_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Trusted by local homeowners', 'leadsforward-core')],
@@ -93,7 +93,7 @@ function lf_sections_registry(): array {
 		],
 		'benefits' => [
 			'label' => __('Benefits / Why Choose Us', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area'],
+			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => [
 				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Why Homeowners Choose Us', 'leadsforward-core')],
@@ -116,13 +116,13 @@ function lf_sections_registry(): array {
 		],
 		'content_image' => [
 			'label' => __('Content with Image', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area'],
+			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => $media_fields,
 			'render' => 'lf_sections_render_content_image',
 		],
 		'image_content' => [
 			'label' => __('Image with Content', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area'],
+			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => $media_fields,
 			'render' => 'lf_sections_render_image_content',
 		],
@@ -136,7 +136,7 @@ function lf_sections_registry(): array {
 		],
 		'process' => [
 			'label' => __('Process', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area'],
+			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => [
 				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Our Process', 'leadsforward-core')],
@@ -147,7 +147,7 @@ function lf_sections_registry(): array {
 		],
 		'faq_accordion' => [
 			'label' => __('FAQ', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area'],
+			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => [
 				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Frequently Asked Questions', 'leadsforward-core')],
@@ -158,7 +158,7 @@ function lf_sections_registry(): array {
 		],
 		'cta' => [
 			'label' => __('CTA Band', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area'],
+			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => [
 				$bg_dark,
 				['key' => 'cta_headline', 'label' => __('CTA headline', 'leadsforward-core'), 'type' => 'text', 'default' => __('Get a fast, no-obligation estimate', 'leadsforward-core')],
@@ -182,9 +182,50 @@ function lf_sections_registry(): array {
 			],
 			'render' => 'lf_sections_render_cta_band',
 		],
+		'trust_reviews' => [
+			'label' => __('Reviews', 'leadsforward-core'),
+			'contexts' => ['page'],
+			'fields' => [
+				$bg_field,
+				['key' => 'trust_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('What Our Customers Say', 'leadsforward-core')],
+				['key' => 'trust_max_items', 'label' => __('Max items', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
+			],
+			'render' => 'lf_sections_render_trust_reviews',
+		],
+		'service_grid' => [
+			'label' => __('Services Grid', 'leadsforward-core'),
+			'contexts' => ['page'],
+			'fields' => [
+				$bg_field,
+				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Our Services', 'leadsforward-core')],
+				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Explore our most requested services.', 'leadsforward-core')],
+			],
+			'render' => 'lf_sections_render_service_grid',
+		],
+		'service_areas' => [
+			'label' => __('Service Areas Grid', 'leadsforward-core'),
+			'contexts' => ['page'],
+			'fields' => [
+				$bg_field,
+				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Areas We Serve', 'leadsforward-core')],
+				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Select a location to learn more.', 'leadsforward-core')],
+			],
+			'render' => 'lf_sections_render_service_areas',
+		],
+		'blog_posts' => [
+			'label' => __('Blog Posts', 'leadsforward-core'),
+			'contexts' => ['page'],
+			'fields' => [
+				$bg_field,
+				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Latest Articles', 'leadsforward-core')],
+				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Helpful tips and updates from our team.', 'leadsforward-core')],
+				['key' => 'posts_per_page', 'label' => __('Posts per page', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
+			],
+			'render' => 'lf_sections_render_blog_posts',
+		],
 		'related_links' => [
 			'label' => __('Related Links', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area'],
+			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => [
 				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Explore More', 'leadsforward-core')],
@@ -220,7 +261,7 @@ function lf_sections_registry(): array {
 		],
 		'map_nap' => [
 			'label' => __('Service Areas + Map', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service'],
+			'contexts' => ['homepage', 'service', 'page'],
 			'fields' => [
 				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Areas We Serve', 'leadsforward-core')],
@@ -247,6 +288,10 @@ function lf_sections_default_order(string $context): array {
 		array_splice($base, 3, 0, ['content']);
 		$base[] = 'services_offered_here';
 		$base[] = 'nearby_areas';
+		return $base;
+	}
+	if ($context === 'page') {
+		array_splice($base, 3, 0, ['content_image', 'image_content']);
 		return $base;
 	}
 	return $base;
@@ -754,6 +799,88 @@ function lf_sections_render_cta_band(string $context, array $settings, \WP_Post 
 		];
 		lf_render_block_template('cta', $block, false, $block['context']);
 	}
+}
+
+function lf_sections_render_trust_reviews(string $context, array $settings, \WP_Post $post): void {
+	if (!function_exists('lf_render_block_template')) {
+		return;
+	}
+	$section = [
+		'trust_heading' => $settings['trust_heading'] ?? '',
+		'trust_max_items' => $settings['trust_max_items'] ?? '',
+		'section_background' => $settings['section_background'] ?? 'soft',
+	];
+	$block = [
+		'id'         => 'lf-trust-reviews',
+		'variant'    => 'default',
+		'attributes' => ['variant' => 'default'],
+		'context'    => ['homepage' => ($context === 'homepage'), 'section' => $section],
+	];
+	lf_render_block_template('trust-reviews', $block, false, $block['context']);
+}
+
+function lf_sections_render_service_grid(string $context, array $settings, \WP_Post $post): void {
+	if (!function_exists('lf_render_block_template')) {
+		return;
+	}
+	$section = [
+		'section_heading' => $settings['section_heading'] ?? '',
+		'section_intro' => $settings['section_intro'] ?? '',
+		'section_background' => $settings['section_background'] ?? 'light',
+	];
+	$block = [
+		'id'         => 'lf-service-grid',
+		'variant'    => 'default',
+		'attributes' => ['variant' => 'default'],
+		'context'    => ['homepage' => ($context === 'homepage'), 'section' => $section],
+	];
+	lf_render_block_template('service-grid', $block, false, $block['context']);
+}
+
+function lf_sections_render_service_areas(string $context, array $settings, \WP_Post $post): void {
+	if (!function_exists('lf_render_block_template')) {
+		return;
+	}
+	$section = [
+		'section_heading' => $settings['section_heading'] ?? '',
+		'section_intro' => $settings['section_intro'] ?? '',
+		'section_background' => $settings['section_background'] ?? 'soft',
+	];
+	$block = [
+		'id'         => 'lf-service-areas',
+		'variant'    => 'default',
+		'attributes' => ['variant' => 'default'],
+		'context'    => ['homepage' => ($context === 'homepage'), 'section' => $section],
+	];
+	lf_render_block_template('service-areas', $block, false, $block['context']);
+}
+
+function lf_sections_render_blog_posts(string $context, array $settings, \WP_Post $post): void {
+	$title = $settings['section_heading'] ?? '';
+	$intro = $settings['section_intro'] ?? '';
+	$count = isset($settings['posts_per_page']) ? (int) $settings['posts_per_page'] : 6;
+	$count = max(1, min(12, $count));
+	lf_sections_render_shell_open('blog-posts', $title, $intro, $settings['section_background'] ?? 'light');
+	$query = new \WP_Query([
+		'post_type'      => 'post',
+		'posts_per_page' => $count,
+		'orderby'        => 'date',
+		'order'          => 'DESC',
+		'post_status'    => 'publish',
+		'no_found_rows'  => true,
+	]);
+	if ($query->have_posts()) {
+		echo '<div class="posts-list">';
+		while ($query->have_posts()) {
+			$query->the_post();
+			get_template_part('templates/parts/content', get_post_type());
+		}
+		echo '</div>';
+		wp_reset_postdata();
+	} else {
+		echo '<p>' . esc_html__('No posts yet.', 'leadsforward-core') . '</p>';
+	}
+	lf_sections_render_shell_close();
 }
 
 function lf_sections_render_related_links(string $context, array $settings, \WP_Post $post): void {

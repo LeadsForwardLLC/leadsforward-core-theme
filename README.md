@@ -18,7 +18,7 @@ LeadsForward Core provides:
 - **Shared section registry:** Universal section definitions + defaults used by homepage and page builders
 - **Image system:** Media Library–only images with Unsplash placeholder seeding
 - **Homepage builder:** Drag/drop order, per-section toggles, backgrounds, and copy
-- **Page Builder Framework:** Instance-based sections for service + service area pages
+- **Page Builder Framework:** Instance-based sections for core pages, services, and service areas
 - **Quote Builder:** Full-screen modal with multi-step flow, GHL webhook delivery, and first-party analytics
 - **AI Assistant (bounded):** Safe copy suggestions + field edits only (no layout/CSS changes)
 - **Server-rendered blocks:** Hero, Trust/Reviews, CTA, FAQ Accordion, Map+NAP
@@ -26,6 +26,13 @@ LeadsForward Core provides:
 - **Controlled variation:** Site-wide profile (A–E), block variant registry, safe section ordering, style tokens, copy template slots (no randomness)
 - **Setup wizard:** Niche-aware init; seeds pages, CPTs, menus, page builder defaults, and copy templates
 - **Safety:** CPT delete protection, admin notices for missing SEO-critical fields, graceful fallback when ACF is off
+- **SOP:** Step-by-step build process in `docs/SOP.md`
+
+---
+
+## SOP
+
+The full, non-technical build checklist lives here: `docs/SOP.md`.
 
 ---
 
@@ -45,6 +52,7 @@ leadsforward-core-theme/
 │   ├── css/          # editor.css, variation-tokens.css, future front-end CSS
 │   ├── js/
 │   └── images/
+├── docs/             # SOP.md and product documentation
 ├── inc/
 │   ├── setup.php        # Theme support, menus, ACF options pages
 │   ├── cleanup.php      # Emoji/oEmbed/dashicons removal, optional block CSS
@@ -160,10 +168,10 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 
 ---
 
-## Page Builder Framework (Service + Service Area)
+## Page Builder Framework (Core Pages + Service + Service Area)
 
 - **Meta key:** `lf_pb_config` stores instance-based sections and order.
-- **Shared sections:** From `inc/sections.php` (hero, trust, benefits, process, FAQ, CTA, related, map, etc).
+- **Shared sections:** From `inc/sections.php` (hero, trust, benefits, process, FAQ, CTA, related, map, service grid, reviews, blog posts, etc).
 - **Admin UI:** Right-side Section Library, add/remove sections, per-section settings, drag to reorder.
 - **Renderer:** `lf_pb_render_sections()` respects section order and enabled state.
 - **Media sections:** Content with Image + Image with Content (shared renderer, layout modifier).
@@ -258,7 +266,7 @@ After theme activation, **Appearance → LeadsForward Setup** runs a one-time fl
 2. **Business info (NAP)** — Name, phone, email, address, opening hours. Saved to global business info options and editable in LeadsForward settings.
 3. **Confirm services & service areas** — Services come from the niche; add service areas (one per line, optional `City, ST`). Creates `lf_service` and `lf_service_area` posts.
 4. **Variation profile** — Pre-selected from niche; can override.
-5. **Generate site** — Creates pages (Home, About Us, Our Services, Our Service Areas, Contact, Privacy Policy, Terms of Use, Thank You), sets Home as front page, creates Header and Footer menus and assigns them, seeds service ↔ service area relationships, updates options (NAP, CTAs, variation, schema, homepage config), and seeds **page builder defaults** for services and areas. Idempotent: existing pages/CPTs by slug are reused; no duplicates.
+5. **Generate site** — Creates pages (Home, About Us, Our Services, Our Service Areas, Reviews, Blog, Sitemap, Contact, Privacy Policy, Terms of Service, Thank You), sets Home as front page, creates Header and Footer menus and assigns them, seeds service ↔ service area relationships, updates options (NAP, CTAs, variation, schema, homepage config), and seeds **page builder defaults** for core pages, services, and areas. Idempotent: existing pages/CPTs by slug are reused; no duplicates.
 
 Completion is stored in option `lf_setup_wizard_complete`. The wizard does not show again unless you use “Show wizard again” (which clears the flag). No frontend JS, no cron; all actions are explicit and logged in the runner return value.
 

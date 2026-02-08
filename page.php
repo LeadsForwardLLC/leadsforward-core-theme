@@ -17,7 +17,11 @@ get_header();
 
 <main id="main" class="site-main" role="main">
 	<?php while (have_posts()) : the_post();
-		$show_title_h1 = apply_filters('lf_page_show_title_h1', true, get_the_ID());
+		$post_obj = get_post();
+		$use_builder = function_exists('lf_pb_get_context_for_post') && function_exists('lf_pb_render_sections')
+			? (lf_pb_get_context_for_post($post_obj) === 'page')
+			: false;
+		$show_title_h1 = apply_filters('lf_page_show_title_h1', !$use_builder, get_the_ID());
 	?>
 		<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
 			<?php if ($show_title_h1) : ?>
@@ -26,7 +30,13 @@ get_header();
 				</header>
 			<?php endif; ?>
 			<div class="entry-content">
-				<?php the_content(); ?>
+				<?php
+				if ($use_builder) {
+					lf_pb_render_sections($post_obj);
+				} else {
+					the_content();
+				}
+				?>
 			</div>
 		</article>
 	<?php endwhile; ?>

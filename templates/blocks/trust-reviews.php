@@ -15,6 +15,7 @@ $block_id = $block['id'] ?? '';
 $variant = $block['variant'] ?? 'default';
 $context = $block['context'] ?? [];
 $section = $context['section'] ?? [];
+$bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'soft') : '';
 $max = 3;
 if (!empty($section['trust_max_items'])) {
 	$max = (int) $section['trust_max_items'];
@@ -46,7 +47,7 @@ if ($review_total > 0) {
 }
 $avg_rating = $ratings_count > 0 ? round($ratings_total / $ratings_count, 1) : 0;
 ?>
-<section class="lf-block lf-block-trust-reviews lf-surface-soft lf-block-trust-reviews--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
+<section class="lf-block lf-block-trust-reviews <?php echo esc_attr($bg_class); ?> lf-block-trust-reviews--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-trust-reviews__inner">
 		<header class="lf-block-trust-reviews__header">
 			<h2 class="lf-block-trust-reviews__title"><?php echo esc_html($heading); ?></h2>
