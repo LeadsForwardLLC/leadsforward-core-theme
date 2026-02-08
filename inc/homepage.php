@@ -90,6 +90,9 @@ function lf_homepage_default_section_config(string $section_type): array {
 	$defaults = lf_sections_defaults_for($section_type);
 	if (!empty($defaults)) {
 		$config = array_merge($base, $defaults);
+		if (in_array($section_type, ['content_image', 'image_content'], true)) {
+			$config['enabled'] = false;
+		}
 		if ($section_type === 'hero') {
 			$config['hero_headline'] = __('Trusted Local Home Services in [Your City]', 'leadsforward-core');
 			$config['hero_subheadline'] = __('Fast response times, clear pricing, and workmanship backed by warranty. Get expert help from a local team you can rely on.', 'leadsforward-core');

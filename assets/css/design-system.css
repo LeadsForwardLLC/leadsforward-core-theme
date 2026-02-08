@@ -468,6 +468,111 @@ button:focus-visible,
 	margin-right: 0.5rem;
 }
 
+/* -------------------------------------------------------------------------
+   Section: Content + Image (shared)
+   ------------------------------------------------------------------------- */
+.lf-media-section {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--lf-gap-loose);
+	align-items: center;
+}
+
+.lf-media-section__content {
+	display: flex;
+	flex-direction: column;
+	gap: var(--lf-gap-tight);
+}
+
+.lf-media-section__media {
+	width: 100%;
+}
+
+.lf-media-section__title {
+	margin: 0;
+	font-size: clamp(1.75rem, 3vw, 2.4rem);
+	font-weight: 800;
+	letter-spacing: -0.03em;
+}
+
+.lf-media-section__support {
+	margin: 0;
+	font-size: 1.05rem;
+	color: var(--lf-text-muted);
+}
+
+.lf-media-section__body {
+	color: var(--lf-text);
+	line-height: 1.65;
+	max-width: 38rem;
+}
+
+.lf-surface-dark .lf-media-section__title,
+.lf-surface-dark .lf-media-section__body {
+	color: var(--lf-text-inverse);
+}
+
+.lf-surface-dark .lf-media-section__support {
+	color: var(--lf-cta-block-text-muted);
+}
+
+.lf-media-section__actions {
+	margin-top: var(--lf-gap-normal);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+}
+
+.lf-media-section__image-frame {
+	border-radius: 18px;
+	border: var(--lf-card-border);
+	box-shadow: var(--lf-card-shadow);
+	overflow: hidden;
+	background: var(--lf-surface-card);
+	aspect-ratio: 4 / 3;
+}
+
+.lf-media-section__image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.lf-media-section__image-placeholder {
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(140deg, #e2e8f0, #cbd5f5);
+}
+
+.lf-media-section--image-left .lf-media-section__media {
+	order: 0;
+}
+
+.lf-media-section--image-left .lf-media-section__content {
+	order: 1;
+}
+
+.lf-media-section--image-right .lf-media-section__content {
+	order: 0;
+}
+
+.lf-media-section--image-right .lf-media-section__media {
+	order: 1;
+}
+
+@media (max-width: 960px) {
+	.lf-media-section {
+		grid-template-columns: 1fr;
+	}
+	.lf-media-section__media {
+		order: 0;
+	}
+	.lf-media-section__content {
+		order: 1;
+	}
+}
+
 .lf-process {
 	list-style: none;
 	margin: 0;

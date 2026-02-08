@@ -128,6 +128,20 @@ function lf_homepage_admin_save(): void {
 			$config[$type]['section_intro'] = isset($_POST['lf_hp_process_intro']) ? sanitize_textarea_field($_POST['lf_hp_process_intro']) : '';
 			$config[$type]['process_steps'] = isset($_POST['lf_hp_process_steps']) ? sanitize_textarea_field($_POST['lf_hp_process_steps']) : '';
 		}
+		if (in_array($type, ['content_image', 'image_content'], true)) {
+			$prefix = $type === 'content_image' ? 'lf_hp_ci_' : 'lf_hp_ic_';
+			$config[$type]['section_heading'] = isset($_POST[$prefix . 'heading']) ? sanitize_text_field($_POST[$prefix . 'heading']) : '';
+			$config[$type]['section_intro'] = isset($_POST[$prefix . 'support']) ? sanitize_textarea_field($_POST[$prefix . 'support']) : '';
+			$config[$type]['section_body'] = isset($_POST[$prefix . 'body']) ? wp_kses_post(wp_unslash($_POST[$prefix . 'body'])) : '';
+			$config[$type]['cta_primary_override'] = isset($_POST[$prefix . 'cta_text']) ? sanitize_text_field($_POST[$prefix . 'cta_text']) : '';
+			$cta_action = isset($_POST[$prefix . 'cta_action']) ? sanitize_text_field($_POST[$prefix . 'cta_action']) : '';
+			$config[$type]['cta_primary_action'] = in_array($cta_action, ['link', 'quote'], true) ? $cta_action : 'quote';
+			$config[$type]['cta_primary_url'] = isset($_POST[$prefix . 'cta_url']) ? esc_url_raw(wp_unslash($_POST[$prefix . 'cta_url'])) : '';
+			$config[$type]['image_id'] = isset($_POST[$prefix . 'image_id']) ? absint($_POST[$prefix . 'image_id']) : 0;
+			$config[$type]['image_alt'] = isset($_POST[$prefix . 'image_alt']) ? sanitize_text_field($_POST[$prefix . 'image_alt']) : '';
+			$pos = isset($_POST[$prefix . 'image_pos']) ? sanitize_text_field($_POST[$prefix . 'image_pos']) : 'center';
+			$config[$type]['image_position'] = in_array($pos, ['center', 'top', 'bottom', 'left', 'right', 'top-left', 'top-right', 'bottom-left', 'bottom-right'], true) ? $pos : 'center';
+		}
 		if ($type === 'related_links') {
 			$config[$type]['section_heading'] = isset($_POST['lf_hp_related_heading']) ? sanitize_text_field($_POST['lf_hp_related_heading']) : '';
 			$config[$type]['section_intro'] = isset($_POST['lf_hp_related_intro']) ? sanitize_textarea_field($_POST['lf_hp_related_intro']) : '';
@@ -167,6 +181,8 @@ function lf_homepage_admin_section_labels(): array {
 		'trust_bar'      => __('Trust Bar', 'leadsforward-core'),
 		'benefits'       => __('Benefits / Why Choose Us', 'leadsforward-core'),
 		'service_details' => __('Service Details', 'leadsforward-core'),
+		'content_image'  => __('Content with Image', 'leadsforward-core'),
+		'image_content'  => __('Image with Content', 'leadsforward-core'),
 		'process'        => __('Process', 'leadsforward-core'),
 		'faq_accordion'  => __('FAQ', 'leadsforward-core'),
 		'cta'            => __('CTA Band', 'leadsforward-core'),
@@ -182,6 +198,7 @@ function lf_homepage_admin_assets(): void {
 	wp_enqueue_script('jquery-ui-sortable');
 	wp_enqueue_script('jquery-ui-draggable');
 	wp_enqueue_script('jquery-ui-droppable');
+	wp_enqueue_media();
 	$script = <<<'JS'
 jQuery(function ($) {
 	var $list = $('.lf-hp-sections');
@@ -305,6 +322,43 @@ jQuery(function ($) {
 			applyCollapse(type);
 		});
 		setStorage();
+	});
+
+	var mediaFrame = null;
+	function openMediaFrame($field) {
+		if (!window.wp || !wp.media) {
+			return;
+		}
+		if (mediaFrame) {
+			mediaFrame.off('select');
+		}
+		mediaFrame = wp.media({
+			title: 'Select image',
+			button: { text: 'Use image' },
+			library: { type: 'image' },
+			multiple: false
+		});
+		mediaFrame.on('select', function () {
+			var attachment = mediaFrame.state().get('selection').first();
+			if (!attachment) return;
+			var data = attachment.toJSON();
+			$field.find('.lf-media-id').val(data.id || '');
+			var url = (data.sizes && data.sizes.thumbnail) ? data.sizes.thumbnail.url : data.url;
+			var html = url ? '<img src="' + url + '" alt="" />' : '';
+			$field.find('.lf-media-preview').html(html || '<div class="lf-media-preview__empty">No image selected</div>');
+		});
+		mediaFrame.open();
+	}
+
+	$(document).on('click', '.lf-media-upload', function () {
+		var $field = $(this).closest('.lf-media-field');
+		openMediaFrame($field);
+	});
+
+	$(document).on('click', '.lf-media-remove', function () {
+		var $field = $(this).closest('.lf-media-field');
+		$field.find('.lf-media-id').val('');
+		$field.find('.lf-media-preview').html('<div class="lf-media-preview__empty">No image selected</div>');
 	});
 
 	if ($.fn.draggable) {
@@ -501,6 +555,11 @@ function lf_homepage_admin_render(): void {
 			.lf-hp-library__add { font-size: 11px; border-radius: 999px; padding: 0.15rem 0.6rem; border: 1px solid rgba(255,255,255,0.4); background: transparent; color: #fff; cursor: pointer; }
 			.lf-hp-library__item:active { cursor: grabbing; }
 			.lf-hp-section .form-table { margin-top: 0; }
+			.lf-media-field { display: grid; gap: 0.75rem; }
+			.lf-media-preview { width: 160px; height: 100px; border: 1px dashed #cbd5e1; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f8fafc; }
+			.lf-media-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+			.lf-media-preview__empty { font-size: 12px; color: #64748b; text-align: center; padding: 0 0.5rem; }
+			.lf-media-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 		</style>
 		<div class="lf-homepage-panel-controls">
 			<button type="button" class="button lf-homepage-expand-all"><?php esc_html_e('Expand all', 'leadsforward-core'); ?></button>
@@ -756,6 +815,79 @@ function lf_homepage_admin_render(): void {
 									<tr>
 										<th scope="row"><label for="lf_hp_process_steps"><?php esc_html_e('Process steps (one per line)', 'leadsforward-core'); ?></label></th>
 										<td><textarea class="large-text" name="lf_hp_process_steps" id="lf_hp_process_steps" rows="3"><?php echo esc_textarea($sec['process_steps'] ?? ''); ?></textarea></td>
+									</tr>
+									<?php endif; ?>
+									<?php if (in_array($type, ['content_image', 'image_content'], true)) : ?>
+									<?php
+										$prefix = $type === 'content_image' ? 'lf_hp_ci_' : 'lf_hp_ic_';
+										$image_id = isset($sec['image_id']) ? (int) $sec['image_id'] : 0;
+										$thumb = $image_id ? wp_get_attachment_image_src($image_id, 'thumbnail') : null;
+										$img_html = $thumb ? '<img src="' . esc_url($thumb[0]) . '" alt="" />' : '';
+										$pos_val = $sec['image_position'] ?? 'center';
+									?>
+									<tr>
+										<th scope="row"><label for="<?php echo esc_attr($prefix); ?>heading"><?php esc_html_e('Section title', 'leadsforward-core'); ?></label></th>
+										<td><input type="text" class="large-text" name="<?php echo esc_attr($prefix); ?>heading" id="<?php echo esc_attr($prefix); ?>heading" value="<?php echo esc_attr($sec['section_heading'] ?? ''); ?>" /></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="<?php echo esc_attr($prefix); ?>support"><?php esc_html_e('Supporting text', 'leadsforward-core'); ?></label></th>
+										<td><textarea class="large-text" name="<?php echo esc_attr($prefix); ?>support" id="<?php echo esc_attr($prefix); ?>support" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="<?php echo esc_attr($prefix); ?>body"><?php esc_html_e('Main body text', 'leadsforward-core'); ?></label></th>
+										<td><textarea class="large-text" name="<?php echo esc_attr($prefix); ?>body" id="<?php echo esc_attr($prefix); ?>body" rows="4"><?php echo esc_textarea($sec['section_body'] ?? ''); ?></textarea></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="<?php echo esc_attr($prefix); ?>cta_text"><?php esc_html_e('Primary CTA text', 'leadsforward-core'); ?></label></th>
+										<td><input type="text" class="regular-text" name="<?php echo esc_attr($prefix); ?>cta_text" id="<?php echo esc_attr($prefix); ?>cta_text" value="<?php echo esc_attr($sec['cta_primary_override'] ?? ''); ?>" /></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="<?php echo esc_attr($prefix); ?>cta_action"><?php esc_html_e('Primary CTA action', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="<?php echo esc_attr($prefix); ?>cta_action" id="<?php echo esc_attr($prefix); ?>cta_action">
+												<option value="quote" <?php selected(($sec['cta_primary_action'] ?? 'quote'), 'quote'); ?>><?php esc_html_e('Open Quote Builder', 'leadsforward-core'); ?></option>
+												<option value="link" <?php selected(($sec['cta_primary_action'] ?? ''), 'link'); ?>><?php esc_html_e('Link', 'leadsforward-core'); ?></option>
+											</select>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="<?php echo esc_attr($prefix); ?>cta_url"><?php esc_html_e('Primary CTA URL', 'leadsforward-core'); ?></label></th>
+										<td><input type="url" class="large-text" name="<?php echo esc_attr($prefix); ?>cta_url" id="<?php echo esc_attr($prefix); ?>cta_url" value="<?php echo esc_attr($sec['cta_primary_url'] ?? ''); ?>" placeholder="https://example.com" /></td>
+									</tr>
+									<tr>
+										<th scope="row"><?php esc_html_e('Image', 'leadsforward-core'); ?></th>
+										<td>
+											<div class="lf-media-field">
+												<div class="lf-media-preview">
+													<?php echo $img_html !== '' ? $img_html : '<div class="lf-media-preview__empty">' . esc_html__('No image selected', 'leadsforward-core') . '</div>'; ?>
+												</div>
+												<div class="lf-media-actions">
+													<button type="button" class="button lf-media-upload"><?php esc_html_e('Select image', 'leadsforward-core'); ?></button>
+													<button type="button" class="button lf-media-remove"><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
+												</div>
+												<input type="hidden" class="lf-media-id" name="<?php echo esc_attr($prefix); ?>image_id" value="<?php echo esc_attr((string) $image_id); ?>" />
+											</div>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="<?php echo esc_attr($prefix); ?>image_alt"><?php esc_html_e('Image alt text (optional)', 'leadsforward-core'); ?></label></th>
+										<td><input type="text" class="regular-text" name="<?php echo esc_attr($prefix); ?>image_alt" id="<?php echo esc_attr($prefix); ?>image_alt" value="<?php echo esc_attr($sec['image_alt'] ?? ''); ?>" /></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="<?php echo esc_attr($prefix); ?>image_pos"><?php esc_html_e('Image focal point', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="<?php echo esc_attr($prefix); ?>image_pos" id="<?php echo esc_attr($prefix); ?>image_pos">
+												<option value="center" <?php selected($pos_val, 'center'); ?>><?php esc_html_e('Center', 'leadsforward-core'); ?></option>
+												<option value="top" <?php selected($pos_val, 'top'); ?>><?php esc_html_e('Top', 'leadsforward-core'); ?></option>
+												<option value="bottom" <?php selected($pos_val, 'bottom'); ?>><?php esc_html_e('Bottom', 'leadsforward-core'); ?></option>
+												<option value="left" <?php selected($pos_val, 'left'); ?>><?php esc_html_e('Left', 'leadsforward-core'); ?></option>
+												<option value="right" <?php selected($pos_val, 'right'); ?>><?php esc_html_e('Right', 'leadsforward-core'); ?></option>
+												<option value="top-left" <?php selected($pos_val, 'top-left'); ?>><?php esc_html_e('Top left', 'leadsforward-core'); ?></option>
+												<option value="top-right" <?php selected($pos_val, 'top-right'); ?>><?php esc_html_e('Top right', 'leadsforward-core'); ?></option>
+												<option value="bottom-left" <?php selected($pos_val, 'bottom-left'); ?>><?php esc_html_e('Bottom left', 'leadsforward-core'); ?></option>
+												<option value="bottom-right" <?php selected($pos_val, 'bottom-right'); ?>><?php esc_html_e('Bottom right', 'leadsforward-core'); ?></option>
+											</select>
+										</td>
 									</tr>
 									<?php endif; ?>
 									<?php if ($type === 'related_links') : ?>

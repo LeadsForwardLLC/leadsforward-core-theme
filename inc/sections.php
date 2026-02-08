@@ -29,6 +29,31 @@ function lf_sections_registry(): array {
 	$bg_soft['default'] = 'soft';
 	$bg_dark = $bg_field;
 	$bg_dark['default'] = 'dark';
+	$media_fields = [
+		$bg_field,
+		['key' => 'section_heading', 'label' => __('Section title', 'leadsforward-core'), 'type' => 'text', 'default' => __('Designed for busy homeowners', 'leadsforward-core')],
+		['key' => 'section_intro', 'label' => __('Supporting text', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Clear communication, reliable crews, and a process built for modern service.', 'leadsforward-core')],
+		['key' => 'section_body', 'label' => __('Main body text', 'leadsforward-core'), 'type' => 'richtext', 'default' => __('From first contact to final walkthrough, we keep the experience simple and professional. You get accurate timelines, transparent pricing, and a team that treats your home with care.', 'leadsforward-core')],
+		['key' => 'cta_primary_override', 'label' => __('Primary CTA text', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
+		['key' => 'cta_primary_action', 'label' => __('Primary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => 'quote', 'options' => [
+			'quote' => __('Open Quote Builder', 'leadsforward-core'),
+			'link'  => __('Link', 'leadsforward-core'),
+		]],
+		['key' => 'cta_primary_url', 'label' => __('Primary CTA URL', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
+		['key' => 'image_id', 'label' => __('Image', 'leadsforward-core'), 'type' => 'image', 'default' => function_exists('lf_get_placeholder_image_id') ? lf_get_placeholder_image_id() : 0],
+		['key' => 'image_alt', 'label' => __('Image alt text (optional)', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
+		['key' => 'image_position', 'label' => __('Image focal point', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
+			'center' => __('Center', 'leadsforward-core'),
+			'top' => __('Top', 'leadsforward-core'),
+			'bottom' => __('Bottom', 'leadsforward-core'),
+			'left' => __('Left', 'leadsforward-core'),
+			'right' => __('Right', 'leadsforward-core'),
+			'top-left' => __('Top left', 'leadsforward-core'),
+			'top-right' => __('Top right', 'leadsforward-core'),
+			'bottom-left' => __('Bottom left', 'leadsforward-core'),
+			'bottom-right' => __('Bottom right', 'leadsforward-core'),
+		]],
+	];
 	return [
 		'hero' => [
 			'label' => __('Hero', 'leadsforward-core'),
@@ -88,6 +113,18 @@ function lf_sections_registry(): array {
 				['key' => 'service_details_checklist', 'label' => __('Checklist (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Transparent scope and pricing' . "\n" . 'Clean, respectful crews' . "\n" . 'Work backed by warranty', 'leadsforward-core')],
 			],
 			'render' => 'lf_sections_render_service_details',
+		],
+		'content_image' => [
+			'label' => __('Content with Image', 'leadsforward-core'),
+			'contexts' => ['homepage', 'service', 'service_area'],
+			'fields' => $media_fields,
+			'render' => 'lf_sections_render_content_image',
+		],
+		'image_content' => [
+			'label' => __('Image with Content', 'leadsforward-core'),
+			'contexts' => ['homepage', 'service', 'service_area'],
+			'fields' => $media_fields,
+			'render' => 'lf_sections_render_image_content',
 		],
 		'content' => [
 			'label' => __('Content', 'leadsforward-core'),
@@ -197,7 +234,7 @@ function lf_sections_registry(): array {
 function lf_sections_default_order(string $context): array {
 	$base = ['hero', 'trust_bar', 'benefits', 'process', 'faq_accordion', 'cta', 'related_links'];
 	if ($context === 'homepage') {
-		array_splice($base, 3, 0, ['service_details']);
+		array_splice($base, 3, 0, ['service_details', 'content_image', 'image_content']);
 		$base[] = 'map_nap';
 		return $base;
 	}
@@ -253,6 +290,9 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 			case 'textarea':
 				$out[$key] = sanitize_textarea_field(wp_unslash((string) $raw));
 				break;
+			case 'richtext':
+				$out[$key] = wp_kses_post(wp_unslash((string) $raw));
+				break;
 			case 'url':
 				$out[$key] = esc_url_raw(wp_unslash((string) $raw));
 				break;
@@ -260,6 +300,9 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 				$val = trim(wp_unslash((string) $raw));
 				$val = preg_replace('/[^0-9.]/', '', $val);
 				$out[$key] = $val;
+				break;
+			case 'image':
+				$out[$key] = absint($raw);
 				break;
 			case 'select':
 				$val = sanitize_text_field(wp_unslash((string) $raw));
@@ -293,6 +336,30 @@ function lf_sections_bg_class(?string $value): string {
 		case 'light':
 		default:
 			return 'lf-surface-light';
+	}
+}
+
+function lf_sections_image_position(?string $value): string {
+	switch ($value) {
+		case 'top':
+			return '50% 0%';
+		case 'bottom':
+			return '50% 100%';
+		case 'left':
+			return '0% 50%';
+		case 'right':
+			return '100% 50%';
+		case 'top-left':
+			return '0% 0%';
+		case 'top-right':
+			return '100% 0%';
+		case 'bottom-left':
+			return '0% 100%';
+		case 'bottom-right':
+			return '100% 100%';
+		case 'center':
+		default:
+			return '50% 50%';
 	}
 }
 
@@ -517,6 +584,108 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 	</div>
 	<?php
 	lf_sections_render_shell_close();
+}
+
+function lf_sections_render_media_content(string $context, array $settings, \WP_Post $post, string $layout): void {
+	$title = $settings['section_heading'] ?? '';
+	$support = $settings['section_intro'] ?? '';
+	$body = $settings['section_body'] ?? '';
+	$cta_override = $settings['cta_primary_override'] ?? '';
+	$cta_action = $settings['cta_primary_action'] ?? '';
+	$cta_url = $settings['cta_primary_url'] ?? '';
+
+	$cta_section = [
+		'cta_primary_override' => $cta_override,
+		'cta_primary_action' => $cta_action,
+		'cta_primary_url' => $cta_url,
+	];
+	$resolved_cta = function_exists('lf_get_resolved_cta')
+		? lf_get_resolved_cta(['section' => $cta_section, 'homepage' => ($context === 'homepage')])
+		: [];
+
+	$primary_text = $resolved_cta['primary_text'] ?? $cta_override;
+	$primary_action = $resolved_cta['primary_action'] ?? ($cta_action ?: 'quote');
+	if (!in_array($primary_action, ['quote', 'link'], true)) {
+		$primary_action = 'quote';
+	}
+	$primary_url = $resolved_cta['primary_url'] ?? $cta_url;
+	if ($primary_action === 'link' && $primary_url === '') {
+		$primary_action = 'quote';
+	}
+
+	$image_id = isset($settings['image_id']) ? (int) $settings['image_id'] : 0;
+	if ($image_id === 0 && function_exists('lf_get_placeholder_image_id')) {
+		$image_id = lf_get_placeholder_image_id();
+	}
+	$alt_override = trim((string) ($settings['image_alt'] ?? ''));
+	$alt_text = $alt_override;
+	if ($alt_text === '' && $image_id) {
+		$alt_text = (string) get_post_meta($image_id, '_wp_attachment_image_alt', true);
+	}
+	if ($alt_text === '') {
+		$alt_text = $title !== '' ? $title : get_the_title($post);
+	}
+	$position = lf_sections_image_position($settings['image_position'] ?? 'center');
+	$img_style = $position ? 'object-position:' . esc_attr($position) . ';' : '';
+
+	$layout_class = $layout === 'image-left' ? 'lf-media-section--image-left' : 'lf-media-section--image-right';
+	lf_sections_render_shell_open('media', '', '', $settings['section_background'] ?? 'light');
+	?>
+	<div class="lf-media-section <?php echo esc_attr($layout_class); ?>">
+		<div class="lf-media-section__content">
+			<?php if ($title !== '') : ?>
+				<h2 class="lf-media-section__title"><?php echo esc_html($title); ?></h2>
+			<?php endif; ?>
+			<?php if ($support !== '') : ?>
+				<p class="lf-media-section__support"><?php echo esc_html($support); ?></p>
+			<?php endif; ?>
+			<?php if ($body !== '') : ?>
+				<div class="lf-media-section__body lf-prose"><?php echo wp_kses_post(wpautop($body)); ?></div>
+			<?php endif; ?>
+			<?php if ($primary_text) : ?>
+				<div class="lf-media-section__actions">
+					<?php if ($primary_action === 'quote') : ?>
+						<button type="button" class="lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="content-image"><?php echo esc_html($primary_text); ?></button>
+					<?php elseif ($primary_action === 'link' && $primary_url !== '') : ?>
+						<a href="<?php echo esc_url($primary_url); ?>" class="lf-btn lf-btn--primary"><?php echo esc_html($primary_text); ?></a>
+					<?php endif; ?>
+				</div>
+			<?php endif; ?>
+		</div>
+		<div class="lf-media-section__media">
+			<div class="lf-media-section__image-frame">
+				<?php if ($image_id) : ?>
+					<?php
+					echo wp_get_attachment_image(
+						$image_id,
+						'large',
+						false,
+						[
+							'class' => 'lf-media-section__image',
+							'loading' => 'lazy',
+							'decoding' => 'async',
+							'alt' => $alt_text,
+							'style' => $img_style,
+							'sizes' => '(max-width: 960px) 100vw, 50vw',
+						]
+					);
+					?>
+				<?php else : ?>
+					<div class="lf-media-section__image-placeholder" aria-hidden="true"></div>
+				<?php endif; ?>
+			</div>
+		</div>
+	</div>
+	<?php
+	lf_sections_render_shell_close();
+}
+
+function lf_sections_render_content_image(string $context, array $settings, \WP_Post $post): void {
+	lf_sections_render_media_content($context, $settings, $post, 'image-right');
+}
+
+function lf_sections_render_image_content(string $context, array $settings, \WP_Post $post): void {
+	lf_sections_render_media_content($context, $settings, $post, 'image-left');
 }
 
 function lf_sections_render_content(string $context, array $settings, \WP_Post $post): void {

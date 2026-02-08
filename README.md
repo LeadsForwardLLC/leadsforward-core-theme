@@ -16,6 +16,7 @@ LeadsForward Core provides:
 - **Custom post types:** Services, Service Areas, Testimonials, FAQs (all REST-ready)
 - **Global settings & branding:** Logo + color tokens mapped to CSS variables (core, surface, text)
 - **Shared section registry:** Universal section definitions + defaults used by homepage and page builders
+- **Image system:** Media Library–only images with Unsplash placeholder seeding
 - **Homepage builder:** Drag/drop order, per-section toggles, backgrounds, and copy
 - **Page Builder Framework:** Instance-based sections for service + service area pages
 - **Quote Builder:** Full-screen modal with multi-step flow + CTA actions (quote/call/link)
@@ -50,6 +51,7 @@ leadsforward-core-theme/
 │   ├── performance.php  # Defer scripts, heartbeat, head cleanup, critical CSS hook
 │   ├── seo.php          # Canonical, noindex, NAP/geo, breadcrumb helpers
 │   ├── schema.php       # JSON-LD: LocalBusiness, Service, FAQPage, Review
+│   ├── images.php       # Placeholder images + media helpers
 │   ├── sections.php     # Shared section registry + renderers
 │   ├── homepage.php     # Homepage config + CTA resolution
 │   ├── homepage-admin.php # Homepage builder UI
@@ -139,6 +141,7 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
   - Shared section registry in `inc/sections.php`.
   - Per-section toggle, variant, background, and copy fields.
   - CTA actions: `quote`, `call`, `link`.
+- **Media sections:** Content with Image + Image with Content use Media Library images with a placeholder fallback.
 - **Defaults:** If no config exists, a conversion-optimized default order is seeded.
 - **CTA resolution:** Section overrides → Homepage overrides → Global defaults.
 - **Phone linking:** When CTA action is `call`, uses Business Info phone for a `tel:` link.
@@ -162,6 +165,7 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 - **Shared sections:** From `inc/sections.php` (hero, trust, benefits, process, FAQ, CTA, related, map, etc).
 - **Admin UI:** Right-side Section Library, add/remove sections, per-section settings, drag to reorder.
 - **Renderer:** `lf_pb_render_sections()` respects section order and enabled state.
+- **Media sections:** Content with Image + Image with Content (shared renderer, layout modifier).
 
 ---
 
@@ -170,6 +174,14 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 - **Global CSS tokens:** Core, surface, and text colors mapped to CSS variables.
 - **Single source of truth:** `inc/branding.php` outputs variables; CSS + `theme.json` consume them.
 - **Goal:** Safe, consistent theming without per-section overrides.
+
+---
+
+## Image System
+
+- **Media Library only:** All section images are stored as attachment IDs (no external URLs).
+- **Placeholder seeding:** `inc/images.php` seeds a default Unsplash image into the Media Library and stores `lf_placeholder_image_id`.
+- **Fallback behavior:** If a section image is unset, it uses the placeholder attachment ID.
 
 ---
 
@@ -254,6 +266,7 @@ Completion is stored in option `lf_setup_wizard_complete`. The wizard does not s
 
 - **New niche:** Add an entry to `lf_get_niche_registry()` in `inc/niches/registry.php` with `name`, `slug`, `services`, `required_pages` (optional), `homepage_section_order`, `variation_profile`, `cta_primary_default`, `cta_secondary_default`, `schema_review_enabled`. No change to wizard or runner logic required.
 - **New section type:** Add to `lf_sections_registry()` in `inc/sections.php`, include defaults, and update homepage/page builder admin UI as needed for new fields.
+- **New placeholders:** Update `LF_PLACEHOLDER_IMAGE_URL` in `inc/images.php` and re-seed.
 - **New block:** Register in `inc/blocks/register.php` and add a template in `templates/blocks/`.
 - **FAQ schema on custom pages:** Use filter `lf_faq_schema_items` to pass FAQ items.
 - **Breadcrumbs:** Filter `lf_breadcrumb_items` to adjust or extend items.

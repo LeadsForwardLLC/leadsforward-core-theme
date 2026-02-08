@@ -176,6 +176,7 @@ function lf_pb_admin_assets(string $hook): void {
 		return;
 	}
 	wp_enqueue_script('jquery-ui-sortable');
+	wp_enqueue_media();
 }
 
 function lf_pb_render_section_item(string $instance_id, array $def, array $section, bool $is_template = false): void {
@@ -206,14 +207,30 @@ function lf_pb_render_section_item(string $instance_id, array $def, array $secti
 				?>
 				<div class="lf-pb-field">
 					<label><strong><?php echo esc_html($field['label']); ?></strong></label>
-					<?php if ($type_field === 'textarea' || $type_field === 'list') : ?>
-						<textarea class="widefat" rows="2" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][settings][<?php echo esc_attr($key); ?>]"><?php echo esc_textarea($value); ?></textarea>
+					<?php if ($type_field === 'textarea' || $type_field === 'list' || $type_field === 'richtext') : ?>
+						<textarea class="widefat" rows="3" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][settings][<?php echo esc_attr($key); ?>]"><?php echo esc_textarea((string) $value); ?></textarea>
 					<?php elseif ($type_field === 'select') : ?>
 						<select name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][settings][<?php echo esc_attr($key); ?>]">
 							<?php foreach (($field['options'] ?? []) as $opt_val => $opt_label) : ?>
 								<option value="<?php echo esc_attr($opt_val); ?>" <?php selected((string) $value, (string) $opt_val); ?>><?php echo esc_html($opt_label); ?></option>
 							<?php endforeach; ?>
 						</select>
+					<?php elseif ($type_field === 'image') : ?>
+						<?php
+						$img_id = (int) $value;
+						$thumb = $img_id ? wp_get_attachment_image_src($img_id, 'thumbnail') : null;
+						$img_html = $thumb ? '<img src="' . esc_url($thumb[0]) . '" alt="" />' : '';
+						?>
+						<div class="lf-media-field">
+							<div class="lf-media-preview">
+								<?php echo $img_html !== '' ? $img_html : '<div class="lf-media-preview__empty">' . esc_html__('No image selected', 'leadsforward-core') . '</div>'; ?>
+							</div>
+							<div class="lf-media-actions">
+								<button type="button" class="button lf-media-upload"><?php esc_html_e('Select image', 'leadsforward-core'); ?></button>
+								<button type="button" class="button lf-media-remove"><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
+							</div>
+							<input type="hidden" class="lf-media-id" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][settings][<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr((string) $img_id); ?>" />
+						</div>
 					<?php else : ?>
 						<input type="<?php echo esc_attr($type_field); ?>" class="widefat" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][settings][<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr((string) $value); ?>" />
 					<?php endif; ?>
@@ -263,6 +280,11 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 		.lf-pb-library__add { font-size: 11px; border-radius: 999px; padding: 0.15rem 0.6rem; border: 1px solid rgba(255,255,255,0.4); background: transparent; color: #fff; cursor: pointer; }
 		.lf-pb-library__item:active { cursor: grabbing; }
 		.lf-pb-empty { border: 2px dashed #cbd5f5; border-radius: 16px; padding: 1rem; text-align: center; color: #64748b; background: #f8fafc; }
+		.lf-media-field { display: grid; gap: 0.75rem; }
+		.lf-media-preview { width: 160px; height: 100px; border: 1px dashed #cbd5e1; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f8fafc; }
+		.lf-media-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+		.lf-media-preview__empty { font-size: 12px; color: #64748b; text-align: center; padding: 0 0.5rem; }
+		.lf-media-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 	</style>
 	<div class="lf-pb-grid">
 		<div class="lf-pb-main">
@@ -320,6 +342,31 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 				$list.append($item);
 				applyCollapse(id);
 			}
+			var mediaFrame = null;
+			function openMediaFrame($field) {
+				if (!window.wp || !wp.media) {
+					return;
+				}
+				if (mediaFrame) {
+					mediaFrame.off('select');
+				}
+				mediaFrame = wp.media({
+					title: 'Select image',
+					button: { text: 'Use image' },
+					library: { type: 'image' },
+					multiple: false
+				});
+				mediaFrame.on('select', function () {
+					var attachment = mediaFrame.state().get('selection').first();
+					if (!attachment) return;
+					var data = attachment.toJSON();
+					$field.find('.lf-media-id').val(data.id || '');
+					var url = (data.sizes && data.sizes.thumbnail) ? data.sizes.thumbnail.url : data.url;
+					var html = url ? '<img src="' + url + '" alt="" />' : '';
+					$field.find('.lf-media-preview').html(html || '<div class="lf-media-preview__empty">No image selected</div>');
+				});
+				mediaFrame.open();
+			}
 			function insertAtDrop($item, e) {
 				var el = document.elementFromPoint(e.clientX, e.clientY);
 				var $target = $(el).closest('.lf-pb-section');
@@ -349,6 +396,15 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 			});
 			$(document).on('click', '.lf-pb-remove', function () {
 				$(this).closest('.lf-pb-section').remove();
+			});
+			$(document).on('click', '.lf-media-upload', function () {
+				var $field = $(this).closest('.lf-media-field');
+				openMediaFrame($field);
+			});
+			$(document).on('click', '.lf-media-remove', function () {
+				var $field = $(this).closest('.lf-media-field');
+				$field.find('.lf-media-id').val('');
+				$field.find('.lf-media-preview').html('<div class="lf-media-preview__empty">No image selected</div>');
 			});
 			var key = 'lf_pb_collapsed';
 			var collapsed = {};
