@@ -607,8 +607,8 @@ button:focus-visible,
 
 .site-main {
 	min-height: 1px;
-	padding-top: var(--lf-section-padding-y);
-	padding-bottom: var(--lf-section-padding-y);
+	padding-top: 0;
+	padding-bottom: 0;
 }
 
 .site-main .entry-header {
