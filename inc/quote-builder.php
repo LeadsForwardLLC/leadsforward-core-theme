@@ -613,7 +613,7 @@ function lf_quote_builder_render_modal(): void {
 				<input type="hidden" name="lf_quote[device]" value="" />
 				<input type="hidden" name="lf_quote[returning]" value="0" />
 				<input type="hidden" name="lf_quote[submission_id]" value="" />
-				<input type="hidden" name="lf_quote[steps_completed]" value="[]" />
+				<input type="hidden" name="lf_quote[pages_path]" value="[]" />
 				<?php foreach ($steps as $index => $step) :
 					$step_id = $step['id'] ?? 'step-' . $index;
 					$step_type = $step['type'] ?? 'standard';
@@ -794,7 +794,7 @@ function lf_quote_builder_handle_submit(): void {
 	}
 	$allowed = array_unique($allowed);
 	$required = array_unique($required);
-	$meta_keys = ['page_context', 'page_id', 'page_title', 'page_url', 'device', 'returning', 'submission_id', 'steps_completed'];
+	$meta_keys = ['page_context', 'page_id', 'page_title', 'page_url', 'device', 'returning', 'submission_id', 'pages_path'];
 	$allowed = array_unique(array_merge($allowed, $meta_keys));
 	$meta_keys = ['page_context', 'page_id', 'page_title', 'page_url'];
 	$allowed = array_unique(array_merge($allowed, $meta_keys));
@@ -823,7 +823,7 @@ function lf_quote_builder_handle_submit(): void {
 			$clean[$key] = sanitize_key(wp_unslash((string) $val));
 			continue;
 		}
-		if ($key === 'steps_completed') {
+		if ($key === 'pages_path') {
 			$clean[$key] = wp_unslash((string) $val);
 			continue;
 		}
@@ -857,19 +857,23 @@ function lf_quote_builder_handle_submit(): void {
 	]);
 	$log = array_slice($log, 0, 50);
 	update_option(LF_QUOTE_BUILDER_SUBMISSIONS, $log, false);
-	$steps_completed = [];
-	if (!empty($clean['steps_completed'])) {
-		$decoded = json_decode((string) $clean['steps_completed'], true);
+	$page_path_label = '';
+	if (!empty($clean['pages_path'])) {
+		$decoded = json_decode((string) $clean['pages_path'], true);
 		if (is_array($decoded)) {
-			foreach ($decoded as $step_id) {
-				$step_id = sanitize_key((string) $step_id);
-				if ($step_id !== '' && in_array($step_id, $step_ids, true)) {
-					$steps_completed[] = $step_id;
+			$labels = [];
+			foreach ($decoded as $label) {
+				$label = sanitize_text_field((string) $label);
+				if ($label !== '') {
+					$labels[] = $label;
 				}
+			}
+			if (!empty($labels)) {
+				$labels = array_slice($labels, -6);
+				$page_path_label = implode(' > ', $labels);
 			}
 		}
 	}
-	$steps_completed = array_values(array_unique($steps_completed));
 
 	lf_quote_builder_maybe_create_analytics_table();
 	$page_label = lf_quote_builder_page_label_from_clean($clean);
@@ -885,14 +889,16 @@ function lf_quote_builder_handle_submit(): void {
 		$clean['device'] ?? '',
 		isset($clean['returning']) && $clean['returning'] === '1' ? 1 : 0
 	);
-	foreach ($steps_completed as $step_id) {
+	if ($page_path_label !== '') {
 		lf_quote_builder_record_event(
-			'path_step',
-			$step_id,
+			'pre_path',
+			'path',
 			$clean['page_context'] ?? '',
 			0,
 			(string) get_option('lf_homepage_niche_slug', ''),
-			lf_quote_builder_get_form_variant()
+			lf_quote_builder_get_form_variant(),
+			'path',
+			$page_path_label
 		);
 	}
 	lf_quote_builder_send_ghl($clean);
@@ -1090,17 +1096,20 @@ function lf_quote_builder_get_returning_totals(int $days): array {
 	return $out;
 }
 
-function lf_quote_builder_get_conversion_path(int $days): array {
+function lf_quote_builder_get_top_paths(int $days, int $limit = 10): array {
 	global $wpdb;
 	$table = $wpdb->prefix . LF_QUOTE_BUILDER_ANALYTICS_TABLE;
 	$since = wp_date('Y-m-d', strtotime('-' . $days . ' days'));
 	$rows = $wpdb->get_results(
-		$wpdb->prepare("SELECT step_id, SUM(count) AS total_count FROM $table WHERE event_date >= %s AND event_type = 'path_step' GROUP BY step_id", $since),
+		$wpdb->prepare("SELECT meta_value, SUM(count) AS total_count FROM $table WHERE event_date >= %s AND event_type = 'pre_path' AND meta_key = 'path' GROUP BY meta_value ORDER BY total_count DESC LIMIT %d", $since, $limit),
 		ARRAY_A
 	);
 	$out = [];
 	foreach ($rows as $row) {
-		$out[$row['step_id'] ?? ''] = (int) ($row['total_count'] ?? 0);
+		$out[] = [
+			'path' => $row['meta_value'] ?? '',
+			'count' => (int) ($row['total_count'] ?? 0),
+		];
 	}
 	return $out;
 }
@@ -1148,7 +1157,7 @@ function lf_quote_builder_render_analytics(bool $embedded = false): void {
 	$device_totals = lf_quote_builder_get_device_totals(30);
 	$return_totals = lf_quote_builder_get_returning_totals(30);
 	$ghl_stats = lf_quote_builder_get_ghl_stats(30);
-	$path_counts = lf_quote_builder_get_conversion_path(30);
+	$top_paths = lf_quote_builder_get_top_paths(30, 10);
 	$ghl_errors = get_option(LF_QUOTE_BUILDER_GHL_ERRORS, []);
 	if (!is_array($ghl_errors)) {
 		$ghl_errors = [];
@@ -1329,30 +1338,25 @@ function lf_quote_builder_render_analytics(bool $embedded = false): void {
 			<p class="description"><?php echo esc_html(sprintf(__('Most common exit step: %s', 'leadsforward-core'), $step_labels[$most_exit] ?? $most_exit)); ?></p>
 		<?php endif; ?>
 
-		<h2><?php esc_html_e('Conversion path (last 30 days)', 'leadsforward-core'); ?></h2>
+		<h2><?php esc_html_e('Pre-conversion page paths (last 30 days)', 'leadsforward-core'); ?></h2>
 		<table class="widefat striped">
 			<thead>
 				<tr>
-					<th><?php esc_html_e('Step', 'leadsforward-core'); ?></th>
-					<th><?php esc_html_e('Conversions reaching step', 'leadsforward-core'); ?></th>
-					<th><?php esc_html_e('Rate', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Path', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Conversions', 'leadsforward-core'); ?></th>
 				</tr>
 			</thead>
 			<tbody>
-				<?php
-				$total_conversions = $totals[30]['complete'] ?? 0;
-				foreach ($steps as $step) :
-					$step_id = $step['id'] ?? '';
-					$label = $step['title'] ?? $step_id;
-					$count = $path_counts[$step_id] ?? 0;
-					$rate = $total_conversions > 0 ? round(($count / $total_conversions) * 100, 1) : 0;
-					?>
-					<tr>
-						<td><?php echo esc_html($label); ?></td>
-						<td><?php echo esc_html((string) $count); ?></td>
-						<td><?php echo esc_html($rate . '%'); ?></td>
-					</tr>
-				<?php endforeach; ?>
+				<?php if (empty($top_paths)) : ?>
+					<tr><td colspan="2"><?php esc_html_e('No paths recorded yet.', 'leadsforward-core'); ?></td></tr>
+				<?php else : ?>
+					<?php foreach ($top_paths as $row) : ?>
+						<tr>
+							<td><?php echo esc_html($row['path']); ?></td>
+							<td><?php echo esc_html((string) $row['count']); ?></td>
+						</tr>
+					<?php endforeach; ?>
+				<?php endif; ?>
 			</tbody>
 		</table>
 

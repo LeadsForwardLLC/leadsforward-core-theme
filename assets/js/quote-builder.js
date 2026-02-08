@@ -20,12 +20,12 @@
 	var hasCompleted = false;
 	var isSubmitting = false;
 	var stepStart = {};
-	var stepsCompleted = [];
 	var context = (window.lfQuoteBuilder && window.lfQuoteBuilder.context) ? window.lfQuoteBuilder.context : {};
 	var sessionKey = 'lf_qb_session';
 	var sessionId = (window.sessionStorage && window.sessionStorage.getItem(sessionKey)) || '';
 	var returningKey = 'lf_qb_returning';
 	var lastOpenKey = 'lf_qb_last_open';
+	var pathKey = 'lf_qb_page_path';
 	if (!sessionId) {
 		sessionId = 'qb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
 		if (window.sessionStorage) {
@@ -43,6 +43,38 @@
 	function setHiddenValue(name, value) {
 		var input = form ? form.querySelector('input[name="lf_quote[' + name + ']"]') : null;
 		if (input) input.value = value;
+	}
+
+	function getPageLabel() {
+		var label = context.page_title || 'Page';
+		if (context.page_id) {
+			label += ' (#' + context.page_id + ')';
+		}
+		return label;
+	}
+
+	function updatePagePath() {
+		if (!window.sessionStorage) return [];
+		var path = [];
+		try { path = JSON.parse(window.sessionStorage.getItem(pathKey) || '[]') || []; } catch (e) { path = []; }
+		if (!Array.isArray(path)) path = [];
+		var label = getPageLabel();
+		if (!path.length || path[path.length - 1] !== label) {
+			path.push(label);
+			if (path.length > 6) path = path.slice(-6);
+			window.sessionStorage.setItem(pathKey, JSON.stringify(path));
+		}
+		return path;
+	}
+
+	function getStoredPath() {
+		if (!window.sessionStorage) return [];
+		try {
+			var path = JSON.parse(window.sessionStorage.getItem(pathKey) || '[]') || [];
+			return Array.isArray(path) ? path : [];
+		} catch (e) {
+			return [];
+		}
 	}
 
 	function generateSubmissionId() {
@@ -104,7 +136,6 @@
 		isOpen = true;
 		hasCompleted = false;
 		isSubmitting = false;
-		stepsCompleted = [];
 		lastFocus = document.activeElement;
 		modal.classList.add('is-open');
 		body.classList.add('lf-quote-open');
@@ -123,11 +154,12 @@
 		setHiddenValue('returning', returning ? '1' : '0');
 		setHiddenValue('device', getDeviceType());
 		setHiddenValue('submission_id', generateSubmissionId());
-		var pageLabel = (context.page_title || 'Page');
-		if (context.page_id) {
-			pageLabel += ' (#' + context.page_id + ')';
-		}
+		var pageLabel = getPageLabel();
 		trackEvent('open', { meta_key: 'page', meta_value: pageLabel });
+		var path = getStoredPath();
+		if (path.length) {
+			setHiddenValue('pages_path', JSON.stringify(path));
+		}
 		updateStep();
 		setTimeout(function () {
 			if (dialog) dialog.focus();
@@ -279,10 +311,6 @@
 		var startedAt = stepStart[stepId] || Date.now();
 		var duration = Date.now() - startedAt;
 		trackEvent('step_complete', { step_id: stepId, duration: duration });
-		if (stepId && stepsCompleted.indexOf(stepId) === -1) {
-			stepsCompleted.push(stepId);
-			setHiddenValue('steps_completed', JSON.stringify(stepsCompleted));
-		}
 		var next = steps[index + 1];
 		var nextIsConfirm = next && next.getAttribute('data-step-type') === 'confirmation';
 		if (nextIsConfirm) {
@@ -305,6 +333,7 @@
 	}
 
 	function bindEvents() {
+		updatePagePath();
 		document.addEventListener('click', function (e) {
 			var trigger = e.target.closest('[data-lf-quote-trigger]');
 			if (trigger) {
