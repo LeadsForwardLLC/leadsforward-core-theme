@@ -24,7 +24,7 @@ get_header();
 	?>
 		<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
 			<?php if ($use_builder) : ?>
-				<div class="entry-content">
+				<div class="entry-content entry-content--builder">
 					<?php lf_pb_render_sections($post_obj); ?>
 				</div>
 			<?php else : ?>

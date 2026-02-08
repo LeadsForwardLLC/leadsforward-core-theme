@@ -294,12 +294,33 @@ function lf_wizard_template_vars(array $data, array $extra = []): array {
 	return $vars;
 }
 
-function lf_wizard_pick(array $items, int $index): string {
+function lf_wizard_pick($items, int $index): string {
 	if (empty($items)) {
 		return '';
 	}
+	if (!is_array($items)) {
+		return (string) $items;
+	}
 	$pos = $index % count($items);
-	return (string) $items[$pos];
+	return (string) ($items[$pos] ?? '');
+}
+
+function lf_wizard_pick_list($items, int $index): array {
+	if (empty($items)) {
+		return [];
+	}
+	if (!is_array($items)) {
+		return [(string) $items];
+	}
+	$pos = $index % count($items);
+	$pick = $items[$pos] ?? [];
+	if (is_array($pick)) {
+		return $pick;
+	}
+	if ($pick !== '') {
+		return [(string) $pick];
+	}
+	return [];
 }
 
 function lf_wizard_fill_template(string $template, array $vars): string {
@@ -480,8 +501,8 @@ function lf_wizard_get_area_templates(array $niche): array {
 function lf_wizard_service_placeholder_content(string $service_name, array $data, int $index = 0, array $niche = []): string {
 	$templates = lf_wizard_get_service_templates($niche);
 	$vars = lf_wizard_template_vars($data, ['service' => $service_name]);
-	$line1 = lf_wizard_fill_template(lf_wizard_pick($templates['hero_subheadline'], $index), $vars);
-	$line2 = lf_wizard_fill_template(lf_wizard_pick($templates['benefits_intro'], $index), $vars);
+	$line1 = lf_wizard_fill_template(lf_wizard_pick($templates['hero_subheadline'] ?? [], $index), $vars);
+	$line2 = lf_wizard_fill_template(lf_wizard_pick($templates['benefits_intro'] ?? [], $index), $vars);
 	return '<!-- wp:paragraph --><p>' . esc_html($line1) . '</p><!-- /wp:paragraph -->' .
 		'<!-- wp:paragraph --><p>' . esc_html($line2) . '</p><!-- /wp:paragraph -->';
 }
@@ -492,8 +513,8 @@ function lf_wizard_service_area_placeholder_content(array $area, array $data, in
 	$loc = $state ? $name . ', ' . $state : $name;
 	$templates = lf_wizard_get_area_templates($niche);
 	$vars = lf_wizard_template_vars($data, ['area' => $loc]);
-	$line1 = lf_wizard_fill_template(lf_wizard_pick($templates['hero_subheadline'], $index), $vars);
-	$line2 = lf_wizard_fill_template(lf_wizard_pick($templates['benefits_intro'], $index), $vars);
+	$line1 = lf_wizard_fill_template(lf_wizard_pick($templates['hero_subheadline'] ?? [], $index), $vars);
+	$line2 = lf_wizard_fill_template(lf_wizard_pick($templates['benefits_intro'] ?? [], $index), $vars);
 	return '<!-- wp:paragraph --><p>' . esc_html($line1) . '</p><!-- /wp:paragraph -->' .
 		'<!-- wp:paragraph --><p>' . esc_html($line2) . '</p><!-- /wp:paragraph -->';
 }
@@ -539,12 +560,12 @@ function lf_wizard_seed_pb_config(int $post_id, string $context, array $data, ar
 		'benefits' => [
 			'section_heading' => lf_wizard_fill_template(lf_wizard_pick($templates['benefits_heading'] ?? [], $index), $vars),
 			'section_intro' => lf_wizard_fill_template(lf_wizard_pick($templates['benefits_intro'] ?? [], $index), $vars),
-			'benefits_items' => lf_wizard_fill_list(lf_wizard_pick($templates['benefits_items'] ?? [], $index) ?: [], $vars),
+			'benefits_items' => lf_wizard_fill_list(lf_wizard_pick_list($templates['benefits_items'] ?? [], $index), $vars),
 		],
 		'process' => [
 			'section_heading' => lf_wizard_fill_template(lf_wizard_pick($templates['process_heading'] ?? [], $index), $vars),
 			'section_intro' => lf_wizard_fill_template(lf_wizard_pick($templates['process_intro'] ?? [], $index), $vars),
-			'process_steps' => lf_wizard_fill_list(lf_wizard_pick($templates['process_steps'] ?? [], $index) ?: [], $vars),
+			'process_steps' => lf_wizard_fill_list(lf_wizard_pick_list($templates['process_steps'] ?? [], $index), $vars),
 		],
 		'faq_accordion' => [
 			'section_heading' => lf_wizard_fill_template(lf_wizard_pick($templates['faq_heading'] ?? [], $index), $vars),

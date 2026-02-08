@@ -21,7 +21,7 @@ if (!$has_footer_menu && !$has_nap) {
 }
 ?>
 <footer class="site-footer" role="contentinfo">
-	<div class="lf-container lf-container--full">
+	<div class="lf-container">
 		<?php if ($has_nap) : ?>
 			<address class="lf-footer-nap">
 				<?php if (!empty($nap['name'])) : ?>

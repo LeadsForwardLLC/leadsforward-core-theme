@@ -29,7 +29,7 @@ get_header();
 					<h1 class="entry-title"><?php the_title(); ?></h1>
 				</header>
 			<?php endif; ?>
-			<div class="entry-content">
+			<div class="entry-content<?php echo $use_builder ? ' entry-content--builder' : ''; ?>">
 				<?php
 				if ($use_builder) {
 					lf_pb_render_sections($post_obj);
