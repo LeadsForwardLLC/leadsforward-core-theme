@@ -171,6 +171,54 @@ function lf_maybe_migrate_cta_defaults(): void {
 add_action('init', 'lf_maybe_migrate_cta_defaults', 20);
 
 /**
+ * Hide the main editor for core pages (builder-managed).
+ */
+function lf_should_hide_editor_for_core_page(?\WP_Post $post): bool {
+	if (!$post || $post->post_type !== 'page') {
+		return false;
+	}
+	$slugs = function_exists('lf_wizard_required_page_slugs') ? lf_wizard_required_page_slugs() : [];
+	if (in_array($post->post_name, $slugs, true)) {
+		return true;
+	}
+	$has_pb = get_post_meta($post->ID, LF_PB_META_KEY, true);
+	return !empty($has_pb);
+}
+
+function lf_hide_editor_for_core_pages(): void {
+	if (!is_admin()) {
+		return;
+	}
+	$screen = function_exists('get_current_screen') ? get_current_screen() : null;
+	if (!$screen || !in_array($screen->base, ['post', 'post-new'], true)) {
+		return;
+	}
+	global $post;
+	if (!lf_should_hide_editor_for_core_page($post)) {
+		return;
+	}
+	echo '<style>
+		#postdivrich,
+		.block-editor__container,
+		.edit-post-visual-editor,
+		.edit-post-text-editor { display: none !important; }
+	</style>';
+}
+add_action('admin_head', 'lf_hide_editor_for_core_pages', 20);
+
+function lf_core_page_editor_notice(\WP_Post $post): void {
+	if (!lf_should_hide_editor_for_core_page($post)) {
+		return;
+	}
+	$message = __('This page is managed by the Page Builder below. Use the structured sections instead of the main editor.', 'leadsforward-core');
+	if ($post->post_name === 'home') {
+		$message = __('This page is managed by the Homepage Builder. Use LeadsForward → Homepage to edit it.', 'leadsforward-core');
+	}
+	echo '<div class="notice notice-info inline"><p>' . esc_html($message) . '</p></div>';
+}
+add_action('edit_form_after_title', 'lf_core_page_editor_notice', 5);
+
+/**
  * Hide deprecated Service Content ACF group if it exists in DB.
  */
 add_filter('acf/get_field_groups', function (array $groups): array {

@@ -221,6 +221,7 @@ Editing core pages safely:
 - Use the Page Builder panel on each core page.
 - Adjust section order, headings, and copy only in the structured fields.
 - Do NOT use Gutenberg blocks for layout or custom HTML.
+- The standard WordPress editor is hidden for core pages to prevent conflicts.
 
 SEO best practices (per core page):
 - **About Us:** Keep the H1 clear (About {Business}); describe what makes you credible.
