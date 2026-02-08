@@ -335,6 +335,7 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 		$section = [
 			'hero_headline' => $settings['hero_headline'] ?? '',
 			'hero_subheadline' => $settings['hero_subheadline'] ?? '',
+			'section_background' => $settings['section_background'] ?? 'soft',
 			'hero_cta_override' => $settings['cta_primary_override'] ?? '',
 			'hero_cta_secondary_override' => $settings['cta_secondary_override'] ?? '',
 			'hero_cta_action' => $settings['cta_primary_action'] ?? '',
