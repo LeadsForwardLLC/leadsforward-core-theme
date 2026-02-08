@@ -63,7 +63,9 @@ function lf_run_setup(array $data): array {
 	// 2. Service CPT entries (from niche; skip if slug exists)
 	$service_names = $niche['services'] ?? [];
 	$created_services = [];
+	$new_services = [];
 	foreach ($service_names as $name) {
+		$index = count($created_services);
 		$slug = sanitize_title($name);
 		$exists = get_page_by_path($slug, OBJECT, 'lf_service');
 		if ($exists) {
@@ -73,13 +75,14 @@ function lf_run_setup(array $data): array {
 		$sid = wp_insert_post([
 			'post_title'   => $name,
 			'post_name'   => $slug,
-			'post_content' => lf_wizard_service_placeholder_content($name, $data),
+			'post_content' => lf_wizard_service_placeholder_content($name, $data, $index, $niche),
 			'post_status'  => 'publish',
 			'post_type'    => 'lf_service',
 			'post_author'  => get_current_user_id(),
 		], true);
 		if (!is_wp_error($sid)) {
 			$created_services[] = $sid;
+			$new_services[] = ['id' => $sid, 'name' => $name, 'index' => $index];
 			$log['created']['services'][] = ['title' => $name, 'id' => $sid];
 		} else {
 			$log['errors'][] = $sid->get_error_message();
@@ -90,7 +93,9 @@ function lf_run_setup(array $data): array {
 	$area_input = $data['service_areas'] ?? [];
 	$areas_parsed = lf_wizard_parse_service_areas($area_input);
 	$created_areas = [];
+	$new_areas = [];
 	foreach ($areas_parsed as $area) {
+		$index = count($created_areas);
 		$slug = $area['state'] ? sanitize_title($area['name'] . '-' . $area['state']) : sanitize_title($area['name']);
 		$exists = get_page_by_path($slug, OBJECT, 'lf_service_area');
 		if ($exists) {
@@ -100,13 +105,14 @@ function lf_run_setup(array $data): array {
 		$aid = wp_insert_post([
 			'post_title'   => $area['name'],
 			'post_name'   => sanitize_title($area['name']),
-			'post_content' => lf_wizard_service_area_placeholder_content($area, $data),
+			'post_content' => lf_wizard_service_area_placeholder_content($area, $data, $index, $niche),
 			'post_status'  => 'publish',
 			'post_type'    => 'lf_service_area',
 			'post_author'  => get_current_user_id(),
 		], true);
 		if (!is_wp_error($aid)) {
 			$created_areas[] = $aid;
+			$new_areas[] = ['id' => $aid, 'area' => $area, 'index' => $index];
 			if (function_exists('update_field') && !empty($area['state'])) {
 				update_field('lf_service_area_state', $area['state'], $aid);
 			}
@@ -147,7 +153,20 @@ function lf_run_setup(array $data): array {
 		}
 	}
 
-	// 6. Menus
+	// 6. Page Builder defaults for services and areas (only newly created)
+	foreach ($new_services as $svc) {
+		lf_wizard_seed_pb_config($svc['id'], 'service', $data, $niche, (int) $svc['index'], ['service' => $svc['name']]);
+	}
+	foreach ($new_areas as $row) {
+		$area = $row['area'] ?? [];
+		$loc = $area['name'] ?? '';
+		if (!empty($area['state'])) {
+			$loc = $loc ? $loc . ', ' . $area['state'] : $area['state'];
+		}
+		lf_wizard_seed_pb_config($row['id'], 'service_area', $data, $niche, (int) $row['index'], ['area' => $loc]);
+	}
+
+	// 7. Menus
 	$menu_result = lf_wizard_create_menus($created_pages, $created_services, $created_areas);
 	$log['created']['menus'] = $menu_result['created'] ?? [];
 	if (!empty($menu_result['errors'])) {
@@ -197,15 +216,317 @@ function lf_wizard_placeholder_content(string $slug, string $title, array $data)
 	}
 }
 
-function lf_wizard_service_placeholder_content(string $service_name, array $data): string {
-	return '<!-- wp:paragraph --><p>' . sprintf(esc_html__('We provide %s. Contact us for more information or a quote.', 'leadsforward-core'), $service_name) . '</p><!-- /wp:paragraph -->';
+function lf_wizard_primary_city(array $data): string {
+	$areas = $data['service_areas'] ?? [];
+	if (!is_array($areas) || empty($areas)) {
+		return '';
+	}
+	$first = reset($areas);
+	if (is_array($first)) {
+		return (string) ($first['name'] ?? '');
+	}
+	$first = trim((string) $first);
+	if (preg_match('/^(.+),\s*[A-Za-z]{2}$/', $first, $m)) {
+		return trim($m[1]);
+	}
+	return $first;
 }
 
-function lf_wizard_service_area_placeholder_content(array $area, array $data): string {
+function lf_wizard_template_vars(array $data, array $extra = []): array {
+	$business = $data['business_name'] ?? get_bloginfo('name');
+	$city = lf_wizard_primary_city($data);
+	$vars = array_merge([
+		'business' => $business,
+		'city'     => $city,
+	], $extra);
+	return $vars;
+}
+
+function lf_wizard_pick(array $items, int $index): string {
+	if (empty($items)) {
+		return '';
+	}
+	$pos = $index % count($items);
+	return (string) $items[$pos];
+}
+
+function lf_wizard_fill_template(string $template, array $vars): string {
+	foreach ($vars as $key => $val) {
+		$template = str_replace('{' . $key . '}', (string) $val, $template);
+	}
+	return trim(preg_replace('/\s+/', ' ', $template));
+}
+
+function lf_wizard_fill_list(array $items, array $vars): string {
+	$out = [];
+	foreach ($items as $item) {
+		$out[] = lf_wizard_fill_template($item, $vars);
+	}
+	return implode("\n", $out);
+}
+
+function lf_wizard_get_service_templates(array $niche): array {
+	$general = [
+		'hero_headline' => [
+			'Trusted {service} in {city}',
+			'Expert {service} for {city} homeowners',
+			'{service} you can count on in {city}',
+		],
+		'hero_subheadline' => [
+			'Fast response, clear pricing, and professional crews for {service} projects.',
+			'Local {service} specialists focused on quality and clean job sites.',
+			'Schedule {service} with a local team that shows up on time.',
+		],
+		'benefits_heading' => [
+			'Why Homeowners Choose Us',
+			'Why {business} for {service}',
+		],
+		'benefits_intro' => [
+			'Transparent pricing and expert workmanship for {service}.',
+			'Clear communication, clean work, and results you can trust.',
+		],
+		'benefits_items' => [
+			[
+				'Upfront pricing before work begins',
+				'Licensed & insured professionals',
+				'Fast scheduling windows',
+			],
+			[
+				'Experienced {service} technicians',
+				'Clean, respectful crews',
+				'Work backed by warranty',
+			],
+		],
+		'process_heading' => [
+			'Our {service} Process',
+			'How {service} works',
+		],
+		'process_intro' => [
+			'Simple, clear steps from first call to completion.',
+			'We keep it easy from estimate to final walkthrough.',
+		],
+		'process_steps' => [
+			[
+				'Tell us about your {service} needs',
+				'Get a fast, clear estimate',
+				'Schedule and complete the work',
+			],
+			[
+				'Book a quick consult',
+				'Approve the plan and pricing',
+				'We complete the job and follow up',
+			],
+		],
+		'faq_heading' => [
+			'{service} FAQs',
+			'Questions about {service}',
+		],
+		'faq_intro' => [
+			'Quick answers about scheduling, pricing, and what to expect.',
+			'Helpful answers before you book your {service}.',
+		],
+		'cta_headline' => [
+			'Ready to start your {service} project?',
+			'Get your {service} estimate today',
+		],
+		'cta_subheadline' => [
+			'Get a free estimate and a clear next step today.',
+			'Fast scheduling, honest pricing, and expert support.',
+		],
+		'trust_heading' => [
+			'Trusted by {city} homeowners',
+			'Local {service} pros you can trust',
+		],
+		'related_heading' => [
+			'Explore More',
+			'Related Services & Areas',
+		],
+		'related_intro' => [
+			'Browse related services and areas we serve.',
+		],
+	];
+	return array_merge($general, $niche['service_templates'] ?? []);
+}
+
+function lf_wizard_get_area_templates(array $niche): array {
+	$general = [
+		'hero_headline' => [
+			'Local service in {area}',
+			'Trusted home services in {area}',
+		],
+		'hero_subheadline' => [
+			'Trusted local team for repairs, installs, and ongoing service in {area}.',
+			'Fast response times and expert service for {area} homeowners.',
+		],
+		'benefits_heading' => [
+			'Why Homeowners Choose Us',
+			'Why {business} in {area}',
+		],
+		'benefits_intro' => [
+			'Clear pricing, fast response, and workmanship you can trust.',
+			'Local, reliable service backed by clean workmanship.',
+		],
+		'benefits_items' => [
+			[
+				'Fast scheduling in {area}',
+				'Licensed & insured team',
+				'Upfront pricing',
+			],
+			[
+				'Respectful crews',
+				'Quality workmanship',
+				'Work backed by warranty',
+			],
+		],
+		'process_heading' => [
+			'Our Process',
+			'How service works in {area}',
+		],
+		'process_intro' => [
+			'Simple steps from request to completion.',
+		],
+		'process_steps' => [
+			[
+				'Tell us what you need',
+				'Get a fast estimate',
+				'Schedule and complete the work',
+			],
+		],
+		'faq_heading' => [
+			'FAQs for {area}',
+			'Common questions in {area}',
+		],
+		'faq_intro' => [
+			'Helpful answers about scheduling and service in your area.',
+		],
+		'cta_headline' => [
+			'Need service in {area}?',
+			'Get your estimate for {area} today',
+		],
+		'cta_subheadline' => [
+			'Fast scheduling and clear pricing for {area} homeowners.',
+		],
+		'trust_heading' => [
+			'Trusted by local homeowners',
+		],
+		'related_heading' => [
+			'Explore More',
+		],
+		'related_intro' => [
+			'Browse related services and areas we serve.',
+		],
+		'services_heading' => [
+			'Services in {area}',
+		],
+		'nearby_heading' => [
+			'Nearby service areas',
+		],
+	];
+	return array_merge($general, $niche['service_area_templates'] ?? []);
+}
+
+function lf_wizard_service_placeholder_content(string $service_name, array $data, int $index = 0, array $niche = []): string {
+	$templates = lf_wizard_get_service_templates($niche);
+	$vars = lf_wizard_template_vars($data, ['service' => $service_name]);
+	$line1 = lf_wizard_fill_template(lf_wizard_pick($templates['hero_subheadline'], $index), $vars);
+	$line2 = lf_wizard_fill_template(lf_wizard_pick($templates['benefits_intro'], $index), $vars);
+	return '<!-- wp:paragraph --><p>' . esc_html($line1) . '</p><!-- /wp:paragraph -->' .
+		'<!-- wp:paragraph --><p>' . esc_html($line2) . '</p><!-- /wp:paragraph -->';
+}
+
+function lf_wizard_service_area_placeholder_content(array $area, array $data, int $index = 0, array $niche = []): string {
 	$name = $area['name'] ?? '';
 	$state = $area['state'] ?? '';
 	$loc = $state ? $name . ', ' . $state : $name;
-	return '<!-- wp:paragraph --><p>' . sprintf(esc_html__('We serve %s. Get in touch for service in this area.', 'leadsforward-core'), $loc) . '</p><!-- /wp:paragraph -->';
+	$templates = lf_wizard_get_area_templates($niche);
+	$vars = lf_wizard_template_vars($data, ['area' => $loc]);
+	$line1 = lf_wizard_fill_template(lf_wizard_pick($templates['hero_subheadline'], $index), $vars);
+	$line2 = lf_wizard_fill_template(lf_wizard_pick($templates['benefits_intro'], $index), $vars);
+	return '<!-- wp:paragraph --><p>' . esc_html($line1) . '</p><!-- /wp:paragraph -->' .
+		'<!-- wp:paragraph --><p>' . esc_html($line2) . '</p><!-- /wp:paragraph -->';
+}
+
+function lf_wizard_apply_pb_overrides(array $config, array $overrides): array {
+	if (empty($overrides) || empty($config['sections'])) {
+		return $config;
+	}
+	foreach ($config['sections'] as $instance_id => $section) {
+		$type = $section['type'] ?? '';
+		if ($type === '' || empty($overrides[$type]) || empty($section['settings'])) {
+			continue;
+		}
+		$config['sections'][$instance_id]['settings'] = array_merge($section['settings'], $overrides[$type]);
+	}
+	return $config;
+}
+
+function lf_wizard_seed_pb_config(int $post_id, string $context, array $data, array $niche, int $index, array $vars_extra = []): void {
+	if (!function_exists('lf_pb_default_config')) {
+		return;
+	}
+	$config = lf_pb_default_config($context);
+	$templates = $context === 'service' ? lf_wizard_get_service_templates($niche) : lf_wizard_get_area_templates($niche);
+	$vars = lf_wizard_template_vars($data, $vars_extra);
+	$city = $vars['city'] ?? '';
+
+	$hero_headlines = $templates['hero_headline'] ?? [];
+	$trust_headings = $templates['trust_heading'] ?? [];
+	if ($city === '') {
+		$hero_headlines = ['Trusted {service} services', '{service} you can count on'];
+		$trust_headings = ['Trusted by local homeowners'];
+	}
+
+	$overrides = [
+		'hero' => [
+			'hero_headline' => lf_wizard_fill_template(lf_wizard_pick($hero_headlines, $index), $vars),
+			'hero_subheadline' => lf_wizard_fill_template(lf_wizard_pick($templates['hero_subheadline'] ?? [], $index), $vars),
+		],
+		'trust_bar' => [
+			'trust_heading' => lf_wizard_fill_template(lf_wizard_pick($trust_headings, $index), $vars),
+		],
+		'benefits' => [
+			'section_heading' => lf_wizard_fill_template(lf_wizard_pick($templates['benefits_heading'] ?? [], $index), $vars),
+			'section_intro' => lf_wizard_fill_template(lf_wizard_pick($templates['benefits_intro'] ?? [], $index), $vars),
+			'benefits_items' => lf_wizard_fill_list(lf_wizard_pick($templates['benefits_items'] ?? [], $index) ?: [], $vars),
+		],
+		'process' => [
+			'section_heading' => lf_wizard_fill_template(lf_wizard_pick($templates['process_heading'] ?? [], $index), $vars),
+			'section_intro' => lf_wizard_fill_template(lf_wizard_pick($templates['process_intro'] ?? [], $index), $vars),
+			'process_steps' => lf_wizard_fill_list(lf_wizard_pick($templates['process_steps'] ?? [], $index) ?: [], $vars),
+		],
+		'faq_accordion' => [
+			'section_heading' => lf_wizard_fill_template(lf_wizard_pick($templates['faq_heading'] ?? [], $index), $vars),
+			'section_intro' => lf_wizard_fill_template(lf_wizard_pick($templates['faq_intro'] ?? [], $index), $vars),
+		],
+		'cta' => [
+			'cta_headline' => lf_wizard_fill_template(lf_wizard_pick($templates['cta_headline'] ?? [], $index), $vars),
+			'cta_subheadline' => lf_wizard_fill_template(lf_wizard_pick($templates['cta_subheadline'] ?? [], $index), $vars),
+		],
+		'related_links' => [
+			'section_heading' => lf_wizard_fill_template(lf_wizard_pick($templates['related_heading'] ?? [], $index), $vars),
+			'section_intro' => lf_wizard_fill_template(lf_wizard_pick($templates['related_intro'] ?? [], $index), $vars),
+		],
+	];
+
+	if ($context === 'service') {
+		$overrides['map_nap'] = [
+			'section_heading' => __('Areas We Serve', 'leadsforward-core'),
+			'section_intro' => __('Find us on the map and explore the neighborhoods we serve every day.', 'leadsforward-core'),
+		];
+	}
+	if ($context === 'service_area') {
+		$overrides['services_offered_here'] = [
+			'section_heading' => lf_wizard_fill_template(lf_wizard_pick($templates['services_heading'] ?? [], $index), $vars),
+			'section_intro' => __('Explore the services available in your area.', 'leadsforward-core'),
+		];
+		$overrides['nearby_areas'] = [
+			'section_heading' => lf_wizard_fill_template(lf_wizard_pick($templates['nearby_heading'] ?? [], $index), $vars),
+			'section_intro' => __('We also serve these nearby locations.', 'leadsforward-core'),
+		];
+	}
+
+	$config = lf_wizard_apply_pb_overrides($config, $overrides);
+	update_post_meta($post_id, LF_PB_META_KEY, $config);
 }
 
 /**
