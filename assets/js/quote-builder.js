@@ -22,11 +22,26 @@
 	var context = (window.lfQuoteBuilder && window.lfQuoteBuilder.context) ? window.lfQuoteBuilder.context : {};
 	var sessionKey = 'lf_qb_session';
 	var sessionId = (window.sessionStorage && window.sessionStorage.getItem(sessionKey)) || '';
+	var returningKey = 'lf_qb_returning';
+	var lastOpenKey = 'lf_qb_last_open';
+	var serviceTracked = false;
 	if (!sessionId) {
 		sessionId = 'qb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
 		if (window.sessionStorage) {
 			window.sessionStorage.setItem(sessionKey, sessionId);
 		}
+	}
+
+	function getDeviceType() {
+		var width = window.innerWidth || document.documentElement.clientWidth || 1024;
+		if (width <= 767) return 'mobile';
+		if (width <= 1024) return 'tablet';
+		return 'desktop';
+	}
+
+	function setHiddenValue(name, value) {
+		var input = form ? form.querySelector('input[name="lf_quote[' + name + ']"]') : null;
+		if (input) input.value = value;
 	}
 
 	function trackEvent(type, payload) {
@@ -39,8 +54,13 @@
 		data.append('niche', context.niche || '');
 		data.append('variant', context.form_variant || '');
 		data.append('session_id', sessionId);
+		data.append('device', getDeviceType());
+		var returning = (window.sessionStorage && window.sessionStorage.getItem(returningKey)) === '1' ? '1' : '0';
+		data.append('returning', returning);
 		if (payload && payload.step_id) data.append('step_id', payload.step_id);
 		if (payload && payload.duration) data.append('duration', payload.duration);
+		if (payload && payload.meta_key) data.append('meta_key', payload.meta_key);
+		if (payload && payload.meta_value) data.append('meta_value', payload.meta_value);
 		fetch(window.lfQuoteBuilder.ajax_url, {
 			method: 'POST',
 			credentials: 'same-origin',
@@ -83,6 +103,18 @@
 		body.classList.add('lf-quote-open');
 		modal.setAttribute('aria-hidden', 'false');
 		index = 0;
+		var now = Date.now();
+		var lastOpen = 0;
+		if (window.localStorage) {
+			lastOpen = parseInt(window.localStorage.getItem(lastOpenKey) || '0', 10) || 0;
+			window.localStorage.setItem(lastOpenKey, String(now));
+		}
+		var returning = lastOpen > 0 && (now - lastOpen) > (30 * 60 * 1000);
+		if (window.sessionStorage) {
+			window.sessionStorage.setItem(returningKey, returning ? '1' : '0');
+		}
+		setHiddenValue('returning', returning ? '1' : '0');
+		setHiddenValue('device', getDeviceType());
 		trackEvent('open');
 		updateStep();
 		setTimeout(function () {
@@ -170,6 +202,8 @@
 		});
 		if (!ok) {
 			setStatus('Please complete the required fields to continue.', true);
+			var stepId = current.getAttribute('data-step-id') || '';
+			trackEvent('validation_error', { step_id: stepId, meta_key: 'required', meta_value: '1' });
 			required.forEach(function (field) {
 				if (field.type !== 'radio') {
 					field.classList.add('is-invalid');
@@ -199,7 +233,6 @@
 			}).then(function (json) {
 				if (json && json.success) {
 					hasCompleted = true;
-					trackEvent('complete');
 					resolve();
 				} else {
 					reject((json && json.data && json.data.message) ? json.data.message : 'Submission failed.');
@@ -223,6 +256,8 @@
 		var startedAt = stepStart[stepId] || Date.now();
 		var duration = Date.now() - startedAt;
 		trackEvent('step_complete', { step_id: stepId, duration: duration });
+		var bucket = duration <= 5000 ? '0-5s' : (duration <= 15000 ? '5-15s' : (duration <= 30000 ? '15-30s' : '30s+'));
+		trackEvent('step_time_bucket', { step_id: stepId, meta_key: 'bucket', meta_value: bucket });
 		var next = steps[index + 1];
 		var nextIsConfirm = next && next.getAttribute('data-step-type') === 'confirmation';
 		if (nextIsConfirm) {
@@ -267,6 +302,10 @@
 				parent.querySelectorAll('.lf-quote-choice__card').forEach(function (card) {
 					card.classList.toggle('is-selected', card.querySelector('input').checked);
 				});
+				if (!serviceTracked && input.name && input.name.indexOf('[service_type]') !== -1) {
+					serviceTracked = true;
+					trackEvent('service_select', { meta_key: 'service', meta_value: input.value || '' });
+				}
 			});
 		});
 		document.querySelectorAll('.lf-quote-choice').forEach(function (group) {
