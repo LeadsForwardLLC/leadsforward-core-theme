@@ -486,37 +486,52 @@ button:focus-visible,
 	margin: 0;
 	padding: 0;
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-	gap: 0.75rem;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 1rem;
 }
 
-.lf-related-links a {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 0.75rem;
-	width: 100%;
-	color: var(--lf-text);
-	text-decoration: none;
-	padding: 0.75rem 1rem;
+.lf-related-links li {
 	background: var(--lf-card-bg);
 	border: var(--lf-card-border);
 	border-radius: var(--lf-card-radius);
 	box-shadow: var(--lf-card-shadow);
-	transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+	transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.lf-related-links a {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	align-items: center;
+	gap: 0.75rem;
+	width: 100%;
+	color: var(--lf-text);
+	text-decoration: none;
+	padding: 0.95rem 1.1rem;
+	border-radius: var(--lf-card-radius);
+	min-height: 56px;
+}
+
+.lf-related-links li:hover {
+	border-color: var(--lf-accent);
+	box-shadow: var(--lf-card-shadow-hover);
+	transform: translateY(-2px);
 }
 
 .lf-related-links a:hover {
 	color: var(--lf-accent);
-	border-color: var(--lf-accent);
-	box-shadow: var(--lf-card-shadow-hover);
-	transform: translateY(-1px);
 }
 
 .lf-related-links a::after {
-	content: '↗';
-	font-size: 0.9em;
+	content: '→';
+	font-size: 1rem;
 	color: var(--lf-text-muted);
+	width: 32px;
+	height: 32px;
+	border-radius: 999px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--lf-surface-soft);
 }
 
 @media (max-width: 720px) {
