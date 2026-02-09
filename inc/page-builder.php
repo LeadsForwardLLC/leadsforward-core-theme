@@ -264,19 +264,20 @@ function lf_pb_render_section_item(string $instance_id, array $def, array $secti
 	$enabled = $is_template ? true : !empty($section['enabled']);
 	$deletable = $is_template ? true : !empty($section['deletable']);
 	$settings = $is_template ? lf_sections_defaults_for($type) : ($section['settings'] ?? []);
+	$disabled = $is_template ? ' disabled' : '';
 	?>
 	<li class="lf-pb-section" data-instance="<?php echo esc_attr($instance_id); ?>" data-type="<?php echo esc_attr($type); ?>">
 		<div class="lf-pb-section-header">
 			<span class="lf-pb-drag" aria-hidden="true">⋮⋮</span>
 			<strong><?php echo esc_html($label); ?></strong>
-			<label><input type="checkbox" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][enabled]" value="1" <?php checked($enabled); ?> /> <?php esc_html_e('Enabled', 'leadsforward-core'); ?></label>
+			<label><input type="checkbox" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][enabled]" value="1" <?php checked($enabled); ?><?php echo $disabled; ?> /> <?php esc_html_e('Enabled', 'leadsforward-core'); ?></label>
 			<button type="button" class="lf-pb-toggle" data-target="<?php echo esc_attr($instance_id); ?>" aria-expanded="true">▾ <?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
 			<?php if ($deletable) : ?>
 				<button type="button" class="lf-pb-remove" aria-label="<?php esc_attr_e('Remove section', 'leadsforward-core'); ?>">✕</button>
 			<?php endif; ?>
-			<input type="hidden" name="lf_pb_order[]" value="<?php echo esc_attr($instance_id); ?>" />
-			<input type="hidden" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][type]" value="<?php echo esc_attr($type); ?>" />
-			<input type="hidden" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][deletable]" value="<?php echo $deletable ? '1' : '0'; ?>" />
+			<input type="hidden" name="lf_pb_order[]" value="<?php echo esc_attr($instance_id); ?>"<?php echo $disabled; ?> />
+			<input type="hidden" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][type]" value="<?php echo esc_attr($type); ?>"<?php echo $disabled; ?> />
+			<input type="hidden" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][deletable]" value="<?php echo $deletable ? '1' : '0'; ?>"<?php echo $disabled; ?> />
 		</div>
 		<div class="lf-pb-section-body">
 			<?php foreach ($def['fields'] as $field) :
@@ -287,9 +288,9 @@ function lf_pb_render_section_item(string $instance_id, array $def, array $secti
 				<div class="lf-pb-field">
 					<label><strong><?php echo esc_html($field['label']); ?></strong></label>
 					<?php if ($type_field === 'textarea' || $type_field === 'list' || $type_field === 'richtext') : ?>
-						<textarea class="widefat" rows="3" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][settings][<?php echo esc_attr($key); ?>]"><?php echo esc_textarea((string) $value); ?></textarea>
+						<textarea class="widefat" rows="3" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][settings][<?php echo esc_attr($key); ?>]"<?php echo $disabled; ?>><?php echo esc_textarea((string) $value); ?></textarea>
 					<?php elseif ($type_field === 'select') : ?>
-						<select name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][settings][<?php echo esc_attr($key); ?>]">
+						<select name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][settings][<?php echo esc_attr($key); ?>]"<?php echo $disabled; ?>>
 							<?php foreach (($field['options'] ?? []) as $opt_val => $opt_label) : ?>
 								<option value="<?php echo esc_attr($opt_val); ?>" <?php selected((string) $value, (string) $opt_val); ?>><?php echo esc_html($opt_label); ?></option>
 							<?php endforeach; ?>
@@ -308,10 +309,10 @@ function lf_pb_render_section_item(string $instance_id, array $def, array $secti
 								<button type="button" class="button lf-media-upload"><?php esc_html_e('Select image', 'leadsforward-core'); ?></button>
 								<button type="button" class="button lf-media-remove"><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
 							</div>
-							<input type="hidden" class="lf-media-id" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][settings][<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr((string) $img_id); ?>" />
+							<input type="hidden" class="lf-media-id" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][settings][<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr((string) $img_id); ?>"<?php echo $disabled; ?> />
 						</div>
 					<?php else : ?>
-						<input type="<?php echo esc_attr($type_field); ?>" class="widefat" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][settings][<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr((string) $value); ?>" />
+						<input type="<?php echo esc_attr($type_field); ?>" class="widefat" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][settings][<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr((string) $value); ?>"<?php echo $disabled; ?> />
 					<?php endif; ?>
 				</div>
 			<?php endforeach; ?>
@@ -441,6 +442,7 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 				var id = makeId(type);
 				var html = templates[type].replace(/__ID__/g, id);
 				var $item = $(html);
+				$item.find('[disabled]').prop('disabled', false);
 				$list.append($item);
 				applyCollapse(id);
 			}

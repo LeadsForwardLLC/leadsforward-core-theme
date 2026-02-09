@@ -413,11 +413,16 @@ function lf_homepage_admin_render(): void {
 		'b'       => __('Form First', 'leadsforward-core'),
 		'c'       => __('Visual Proof', 'leadsforward-core'),
 	];
-	$bg_options = [
-		'light' => __('Light', 'leadsforward-core'),
-		'soft'  => __('Soft', 'leadsforward-core'),
-		'dark'  => __('Dark', 'leadsforward-core'),
-		'card'  => __('Card', 'leadsforward-core'),
+	$bg_options = function_exists('lf_sections_bg_options') ? lf_sections_bg_options() : [
+		'white'     => __('White', 'leadsforward-core'),
+		'light'     => __('Light', 'leadsforward-core'),
+		'soft'      => __('Soft', 'leadsforward-core'),
+		'primary'   => __('Primary', 'leadsforward-core'),
+		'secondary' => __('Secondary', 'leadsforward-core'),
+		'accent'    => __('Accent', 'leadsforward-core'),
+		'dark'      => __('Dark', 'leadsforward-core'),
+		'black'     => __('Black', 'leadsforward-core'),
+		'card'      => __('Card', 'leadsforward-core'),
 	];
 	$icon_options = function_exists('lf_icon_options') ? lf_icon_options() : [];
 	$icon_options = array_merge(['' => __('Auto (niche default)', 'leadsforward-core')], $icon_options);

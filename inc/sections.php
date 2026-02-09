@@ -70,18 +70,27 @@ function lf_sections_icon_fields(): array {
 	];
 }
 
+function lf_sections_bg_options(): array {
+	return [
+		'white'     => __('White', 'leadsforward-core'),
+		'light'     => __('Light', 'leadsforward-core'),
+		'soft'      => __('Soft', 'leadsforward-core'),
+		'primary'   => __('Primary', 'leadsforward-core'),
+		'secondary' => __('Secondary', 'leadsforward-core'),
+		'accent'    => __('Accent', 'leadsforward-core'),
+		'dark'      => __('Dark', 'leadsforward-core'),
+		'black'     => __('Black', 'leadsforward-core'),
+		'card'      => __('Card', 'leadsforward-core'),
+	];
+}
+
 function lf_sections_registry(): array {
 	$bg_field = [
 		'key' => 'section_background',
 		'label' => __('Background', 'leadsforward-core'),
 		'type' => 'select',
 		'default' => 'light',
-		'options' => [
-			'light' => __('Light', 'leadsforward-core'),
-			'soft'  => __('Soft', 'leadsforward-core'),
-			'dark'  => __('Dark', 'leadsforward-core'),
-			'card'  => __('Card', 'leadsforward-core'),
-		],
+		'options' => lf_sections_bg_options(),
 	];
 	$bg_soft = $bg_field;
 	$bg_soft['default'] = 'soft';
@@ -461,10 +470,20 @@ function lf_sections_parse_lines(string $value): array {
 
 function lf_sections_bg_class(?string $value): string {
 	switch ($value) {
+		case 'white':
+			return 'lf-surface-white';
 		case 'soft':
 			return 'lf-surface-soft';
+		case 'primary':
+			return 'lf-surface-dark lf-surface-primary';
+		case 'secondary':
+			return 'lf-surface-dark lf-surface-secondary';
+		case 'accent':
+			return 'lf-surface-dark lf-surface-accent';
 		case 'dark':
 			return 'lf-surface-dark';
+		case 'black':
+			return 'lf-surface-dark lf-surface-black';
 		case 'card':
 			return 'lf-surface-card';
 		case 'light':
