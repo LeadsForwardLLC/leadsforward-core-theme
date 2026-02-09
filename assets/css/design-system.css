@@ -1458,6 +1458,15 @@ button:focus-visible,
 	color: var(--lf-text-inverse);
 }
 
+.lf-block-hero.lf-surface-dark .lf-block-hero__reviews {
+	color: var(--lf-text-inverse);
+}
+
+.lf-block-hero.lf-surface-dark .lf-block-hero__reviews-count {
+	background: rgba(255, 255, 255, 0.18);
+	color: var(--lf-text-inverse);
+}
+
 .lf-block-hero.lf-surface-dark .lf-block-hero__eyebrow {
 	background: rgba(255, 255, 255, 0.12);
 	border-color: rgba(255, 255, 255, 0.25);
@@ -1595,17 +1604,28 @@ button:focus-visible,
 	height: 1.125rem;
 }
 
-.lf-block-hero__badge {
+.lf-block-hero__reviews {
 	display: inline-flex;
 	align-items: center;
-	padding: 0.35em 0.9em;
-	background: var(--lf-surface-soft);
-	border: var(--lf-card-border);
-	border-radius: 9999px;
-	box-shadow: var(--lf-card-shadow);
-	color: var(--lf-text);
-	font-weight: 600;
-	font-size: var(--lf-fs-small);
+	gap: 0.5rem;
+	font-weight: 700;
+	font-size: 0.95rem;
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero__reviews-label {
+	letter-spacing: -0.01em;
+}
+
+.lf-block-hero__reviews-count {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.15rem 0.55rem;
+	border-radius: 999px;
+	background: rgba(37, 99, 235, 0.12);
+	color: var(--lf-primary);
+	font-weight: 700;
+	font-size: 0.85rem;
 }
 
 .lf-block-hero__phone-wrap { margin: 1rem 0 0; }
@@ -1756,6 +1776,7 @@ button:focus-visible,
 	display: flex;
 	flex-wrap: wrap;
 	gap: 1rem;
+	margin-bottom: 0.75rem;
 }
 
 .lf-hero-basic__media {
@@ -1810,6 +1831,7 @@ button:focus-visible,
 	display: flex;
 	flex-wrap: wrap;
 	gap: 1rem;
+	margin-bottom: 0.75rem;
 }
 
 .lf-hero-split__trust {
@@ -1902,6 +1924,7 @@ button:focus-visible,
 	gap: 0.75rem;
 	width: 100%;
 	max-width: 360px;
+	margin-bottom: 0.75rem;
 }
 
 .lf-hero-stack__actions .lf-btn {
@@ -1994,6 +2017,7 @@ button:focus-visible,
 	display: flex;
 	flex-wrap: wrap;
 	gap: 1rem;
+	margin-bottom: 0.75rem;
 }
 
 .lf-hero-visual__trust {
