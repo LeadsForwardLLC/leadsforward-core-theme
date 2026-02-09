@@ -10,9 +10,9 @@
    ------------------------------------------------------------------------- */
 :root {
 	/* Layout: theme.json layout.contentSize / wideSize */
-	--lf-container-narrow: 720px;
-	--lf-container-wide: 960px;
-	--lf-container-full: 1200px;
+	--lf-container-narrow: 860px;
+	--lf-container-wide: 1200px;
+	--lf-container-full: 1400px;
 
 	/* 1) SPACING SCALE — section, container, card (from theme.json presets) */
 	--lf-space-section-sm: var(--wp--preset--spacing--60, 1.5rem);

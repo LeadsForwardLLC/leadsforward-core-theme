@@ -15,6 +15,7 @@ if (!defined('ABSPATH')) {
 
 add_action('admin_init', 'lf_wizard_handle_post');
 add_action('admin_init', 'lf_wizard_handle_setup_settings');
+add_action('admin_init', 'lf_wizard_handle_regen_legal');
 add_action('admin_notices', 'lf_wizard_admin_notice');
 add_action('after_switch_theme', 'lf_wizard_on_activation');
 
@@ -193,6 +194,23 @@ function lf_wizard_handle_setup_settings(): void {
 	exit;
 }
 
+function lf_wizard_handle_regen_legal(): void {
+	if (!isset($_POST['lf_regen_legal_nonce']) || !current_user_can('edit_theme_options')) {
+		return;
+	}
+	if (!wp_verify_nonce($_POST['lf_regen_legal_nonce'], 'lf_regen_legal')) {
+		return;
+	}
+	if (!function_exists('lf_wizard_regenerate_legal_pages')) {
+		return;
+	}
+	$data = function_exists('lf_wizard_data_from_entity') ? lf_wizard_data_from_entity() : [];
+	$result = lf_wizard_regenerate_legal_pages($data);
+	$ok = !empty($result['success']);
+	wp_safe_redirect(admin_url('admin.php?page=lf-ops&legal_regen=' . ($ok ? '1' : '0')));
+	exit;
+}
+
 function lf_wizard_sanitize_areas($input): array {
 	if (is_array($input)) {
 		return array_filter(array_map('sanitize_text_field', $input));
@@ -221,10 +239,16 @@ function lf_wizard_render_page(): void {
 	$settings_saved = isset($_GET['settings_saved']) && $_GET['settings_saved'] === '1';
 	$reset_done = isset($_GET['reset_done']) && $_GET['reset_done'] === '1';
 	$reset_error = isset($_GET['reset_error']) ? sanitize_text_field($_GET['reset_error']) : '';
+	$legal_regen = isset($_GET['legal_regen']) ? sanitize_text_field($_GET['legal_regen']) : '';
 	if ($complete && !isset($_GET['done'])) {
 		echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
 		if ($settings_saved) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Settings saved.', 'leadsforward-core') . '</p></div>';
+		}
+		if ($legal_regen === '1') {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Legal pages regenerated.', 'leadsforward-core') . '</p></div>';
+		} elseif ($legal_regen === '0') {
+			echo '<div class="notice notice-error"><p>' . esc_html__('Legal pages could not be regenerated.', 'leadsforward-core') . '</p></div>';
 		}
 		if ($reset_done) {
 			echo '<div class="notice notice-success"><p>' . esc_html__('Site reset complete. You can run the setup wizard again.', 'leadsforward-core') . '</p></div>';
@@ -247,6 +271,11 @@ function lf_wizard_render_page(): void {
 		if ($settings_saved) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Settings saved.', 'leadsforward-core') . '</p></div>';
 		}
+		if ($legal_regen === '1') {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Legal pages regenerated.', 'leadsforward-core') . '</p></div>';
+		} elseif ($legal_regen === '0') {
+			echo '<div class="notice notice-error"><p>' . esc_html__('Legal pages could not be regenerated.', 'leadsforward-core') . '</p></div>';
+		}
 		if ($reset_done) {
 			echo '<div class="notice notice-success"><p>' . esc_html__('Site reset complete. You can run the setup wizard again.', 'leadsforward-core') . '</p></div>';
 		}
@@ -266,6 +295,11 @@ function lf_wizard_render_page(): void {
 	echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
 	if ($settings_saved) {
 		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Settings saved.', 'leadsforward-core') . '</p></div>';
+	}
+	if ($legal_regen === '1') {
+		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Legal pages regenerated.', 'leadsforward-core') . '</p></div>';
+	} elseif ($legal_regen === '0') {
+		echo '<div class="notice notice-error"><p>' . esc_html__('Legal pages could not be regenerated.', 'leadsforward-core') . '</p></div>';
 	}
 	if ($reset_done) {
 		echo '<div class="notice notice-success"><p>' . esc_html__('Site reset complete. You can run the setup wizard again.', 'leadsforward-core') . '</p></div>';
@@ -670,6 +704,14 @@ function lf_wizard_render_setup_settings_panel(): void {
 				</tr>
 			</table>
 			<p class="submit"><button type="submit" class="button button-primary"><?php esc_html_e('Save Settings', 'leadsforward-core'); ?></button></p>
+		</form>
+	</div>
+	<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
+		<h2 style="margin-top:0;"><?php esc_html_e('Legal Pages', 'leadsforward-core'); ?></h2>
+		<p class="description"><?php esc_html_e('Regenerate Privacy Policy and Terms of Service using current Business Entity data.', 'leadsforward-core'); ?></p>
+		<form method="post">
+			<?php wp_nonce_field('lf_regen_legal', 'lf_regen_legal_nonce'); ?>
+			<p class="submit"><button type="submit" class="button"><?php esc_html_e('Regenerate legal pages', 'leadsforward-core'); ?></button></p>
 		</form>
 	</div>
 	<?php if (function_exists('lf_dev_reset_allowed') && lf_dev_reset_allowed() && current_user_can('manage_options')) : ?>
