@@ -188,6 +188,10 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 - **Samples:** Reads from `docs/content-samples/*.md` (required) plus optional admin samples.
 - **Flow:** Build blueprint → send to orchestrator → validate payload → apply to builder fields.
 - **Jobs:** Logged with status, user, time, and summary. Retry resends same payload.
+- **REST endpoints (secret auth):**
+  - `GET /wp-json/leadsforward/v1/blueprint`
+  - `POST /wp-json/leadsforward/v1/apply`
+  - Header: `Authorization: Bearer <shared_secret>`
 
 ---
 

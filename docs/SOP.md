@@ -284,6 +284,8 @@ SEO Coverage validator:
 
 Append‑Only Change Log (Recent)
 -------------------------------
+2026‑02‑09 — AI Studio REST endpoints added (blueprint + apply) with shared secret auth and job logging.
+
 2026‑02‑09 — Hero controls now match across Homepage Builder and Page Builder (variant + CTA toggles/actions). CTA resolution is unified via `lf_resolve_cta()`. SEO overrides now apply to services and service areas. Sortable behavior is shared via `assets/js/lf-section-sortable.js`.
 
 2026‑02‑06 — Heading rules enforced (single H1 + hierarchy validation). Content H1s are demoted on render; warnings appear in editor and Site Health.
@@ -317,3 +319,6 @@ AI Studio (Append‑Only)
 - Requires `docs/content-samples/*.md` plus optional admin samples.
 - One-click “Generate Site Content” posts a blueprint to the orchestrator webhook.
 - Response payload is validated and applied to existing builder fields.
+- REST endpoints require the shared secret in the `Authorization` header.
+- Blueprint endpoint: `GET /wp-json/leadsforward/v1/blueprint`.
+- Apply endpoint: `POST /wp-json/leadsforward/v1/apply`.

@@ -48,6 +48,9 @@ lf_load_inc('seo.php');
 lf_load_inc('schema.php');
 // Heading enforcement + validation.
 lf_load_inc('headings.php');
+// AI Studio core + REST endpoints (used outside admin).
+lf_load_inc('ai-studio.php');
+lf_load_inc('ai-studio-rest.php');
 
 // Custom post types.
 lf_load_inc('cpt/services.php');
@@ -104,7 +107,6 @@ if (is_admin()) {
 	lf_load_inc('ai-editing/provider-openai.php');
 	lf_load_inc('ai-editing/admin-ui.php');
 	lf_load_inc('ai-assistant.php');
-	lf_load_inc('ai-studio.php');
 	// Homepage controller admin UI (must load before ops menu).
 	lf_load_inc('homepage-admin.php');
 	// Bulk-safe ops: export/import config, bulk actions, audit log.
