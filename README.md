@@ -24,6 +24,7 @@ LeadsForward Core provides:
 - **Navigation:** Header menu auto-built after setup with a non-clickable “More” dropdown plus Call Now and CTA actions
 - **Quote Builder:** Full-screen modal with multi-step flow, GHL webhook delivery, and first-party analytics
 - **AI Assistant (bounded):** Safe copy suggestions + field edits only (no layout/CSS changes)
+- **AI Studio:** Orchestrator-driven site content generation (no OpenAI keys stored)
 - **Server-rendered blocks:** Hero, Trust/Reviews, CTA, FAQ Accordion, Map+NAP
 - **SEO & schema:** JSON-LD (LocalBusiness, Organization, WebSite, BreadcrumbList, Service, FAQPage, Review), canonical, noindex, NAP/geo helpers
 - **Heading rules:** Enforced single H1 + heading hierarchy validation (warnings only)
@@ -132,6 +133,7 @@ Under **LeadsForward**:
 | **Homepage** | Homepage builder: section order, toggles, backgrounds, copy, CTA actions. |
 | **Quote Builder** | Builder config plus integrations + analytics panels. |
 | **AI Assistant** | Bounded copy tools (text-only changes, confirmations). |
+| **AI Studio** | Orchestrator-driven “Generate Site Content” with job logging. |
 | **Config** | Export/Import config. |
 | **Schema** | Schema toggles and outputs. |
 | **Variation** | Variation profile and copy templates (A–E). |
@@ -176,6 +178,16 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 - **Primary action:** `quote` | `call` | `link`. `quote` opens the modal.
 - **Primary type:** `text` | `call` | `form`. `call` uses Business Info phone for `tel:` link; `form` shows GHL embed when set.
 - **GHL:** Stored once per scope (global, homepage, or section); no duplicated embed code.
+
+---
+
+## AI Studio
+
+- **Location:** LeadsForward → AI Studio.
+- **Inputs:** Webhook URL + shared secret, keywords, style, scope, writing samples.
+- **Samples:** Reads from `docs/content-samples/*.md` (required) plus optional admin samples.
+- **Flow:** Build blueprint → send to orchestrator → validate payload → apply to builder fields.
+- **Jobs:** Logged with status, user, time, and summary. Retry resends same payload.
 
 ---
 

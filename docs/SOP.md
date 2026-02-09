@@ -290,6 +290,8 @@ Append‑Only Change Log (Recent)
 
 2026‑02‑06 — Header navigation auto-generated after setup with a non-clickable “More” dropdown and Call Now / CTA actions.
 
+2026‑02‑06 — AI Studio added for orchestrator-driven site content generation (no OpenAI keys stored).
+
 ---
 
 Heading Rules (Append‑Only)
@@ -306,3 +308,12 @@ Navigation Defaults (Append‑Only)
 - Header menu is auto-generated after setup.
 - Top-level: Home, Services, Service Areas, Reviews, More, Call Now, Free Estimate.
 - “More” contains About, Blog/Posts, Contact and is not a clickable link.
+
+---
+
+AI Studio (Append‑Only)
+----------------------
+- Configure in **LeadsForward → AI Studio**.
+- Requires `docs/content-samples/*.md` plus optional admin samples.
+- One-click “Generate Site Content” posts a blueprint to the orchestrator webhook.
+- Response payload is validated and applied to existing builder fields.
