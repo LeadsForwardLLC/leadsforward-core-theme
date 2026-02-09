@@ -82,7 +82,7 @@ function lf_ai_rollback(string $id): bool {
 	$context_id   = $found['context_id'] ?? '';
 	$old          = $found['changes_old'] ?? [];
 	if ($context_type === 'homepage') {
-		$hero_keys = ['hero_headline', 'hero_subheadline', 'hero_cta_override'];
+		$hero_keys = ['hero_headline', 'hero_subheadline', 'cta_primary_override'];
 		$sections = function_exists('get_field') ? get_field('homepage_sections', 'option') : [];
 		if (!empty($sections) && is_array($sections)) {
 			foreach ($sections as $i => $row) {

@@ -84,6 +84,34 @@ function lf_sections_bg_options(): array {
 	];
 }
 
+function lf_sections_hero_variant_options(): array {
+	return [
+		'default' => __('Authority Split (Recommended)', 'leadsforward-core'),
+		'a'       => __('Conversion Stack', 'leadsforward-core'),
+		'b'       => __('Form First', 'leadsforward-core'),
+		'c'       => __('Visual Proof', 'leadsforward-core'),
+	];
+}
+
+function lf_sections_cta_action_options(bool $include_empty = false): array {
+	$options = [
+		'quote' => __('Open Quote Builder', 'leadsforward-core'),
+		'call'  => __('Call now', 'leadsforward-core'),
+		'link'  => __('Link', 'leadsforward-core'),
+	];
+	if ($include_empty) {
+		return ['' => __('Use global/homepage setting', 'leadsforward-core')] + $options;
+	}
+	return $options;
+}
+
+function lf_sections_toggle_options(): array {
+	return [
+		'1' => __('On', 'leadsforward-core'),
+		'0' => __('Off', 'leadsforward-core'),
+	];
+}
+
 function lf_sections_registry(): array {
 	$bg_field = [
 		'key' => 'section_background',
@@ -128,29 +156,16 @@ function lf_sections_registry(): array {
 			'contexts' => ['homepage', 'service', 'service_area', 'page', 'post'],
 			'fields' => [
 				$bg_soft,
+				['key' => 'variant', 'label' => __('Hero layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'default', 'options' => lf_sections_hero_variant_options()],
 				['key' => 'hero_headline', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_subheadline', 'label' => __('Subheadline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-				['key' => 'cta_primary_enabled', 'label' => __('Primary CTA enabled', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => [
-					'1' => __('On', 'leadsforward-core'),
-					'0' => __('Off', 'leadsforward-core'),
-				]],
-				['key' => 'cta_secondary_enabled', 'label' => __('Secondary CTA enabled', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => [
-					'1' => __('On', 'leadsforward-core'),
-					'0' => __('Off', 'leadsforward-core'),
-				]],
+				['key' => 'cta_primary_enabled', 'label' => __('Primary CTA enabled', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
+				['key' => 'cta_secondary_enabled', 'label' => __('Secondary CTA enabled', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
 				['key' => 'cta_primary_override', 'label' => __('Primary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'cta_secondary_override', 'label' => __('Secondary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-				['key' => 'cta_primary_action', 'label' => __('Primary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => 'quote', 'options' => [
-					'quote' => __('Open Quote Builder', 'leadsforward-core'),
-					'call'  => __('Call now', 'leadsforward-core'),
-					'link'  => __('Link', 'leadsforward-core'),
-				]],
+				['key' => 'cta_primary_action', 'label' => __('Primary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => '', 'options' => lf_sections_cta_action_options(true)],
 				['key' => 'cta_primary_url', 'label' => __('Primary CTA URL', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
-				['key' => 'cta_secondary_action', 'label' => __('Secondary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => 'call', 'options' => [
-					'call'  => __('Call now', 'leadsforward-core'),
-					'quote' => __('Open Quote Builder', 'leadsforward-core'),
-					'link'  => __('Link', 'leadsforward-core'),
-				]],
+				['key' => 'cta_secondary_action', 'label' => __('Secondary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => '', 'options' => lf_sections_cta_action_options(true)],
 				['key' => 'cta_secondary_url', 'label' => __('Secondary CTA URL', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
 			],
 			'render' => 'lf_sections_render_hero',
@@ -468,6 +483,115 @@ function lf_sections_parse_lines(string $value): array {
 	return array_values(array_map('sanitize_text_field', $lines));
 }
 
+/**
+ * Canonical CTA resolver: section > homepage > global. Returns normalized CTA payload.
+ *
+ * @param array $context          Context flags (e.g. ['homepage' => true, 'section' => [...]]).
+ * @param array $section_instance Section-level overrides (cta_* keys).
+ * @param array $fallbacks        Base fallback values (same keys as return array).
+ */
+function lf_resolve_cta(array $context = [], array $section_instance = [], array $fallbacks = []): array {
+	$defaults = [
+		'primary_text'     => __('Get a free estimate', 'leadsforward-core'),
+		'secondary_text'   => __('Call now', 'leadsforward-core'),
+		'ghl_embed'        => '',
+		'primary_type'     => 'text',
+		'primary_action'   => 'quote',
+		'primary_url'      => '',
+		'secondary_action' => 'call',
+		'secondary_url'    => '',
+	];
+	$resolved = array_merge($defaults, array_intersect_key($fallbacks, $defaults));
+	$section = !empty($section_instance) ? $section_instance : (is_array($context['section'] ?? null) ? $context['section'] : []);
+	$is_homepage = (bool) ($context['homepage'] ?? false);
+	if (!$is_homepage && is_front_page()) {
+		$is_homepage = true;
+	}
+
+	$resolved['primary_text'] = lf_get_option('lf_cta_primary_text', 'option', $resolved['primary_text']);
+	$resolved['secondary_text'] = lf_get_option('lf_cta_secondary_text', 'option', $resolved['secondary_text']);
+	$resolved['ghl_embed'] = lf_get_option('lf_cta_ghl_embed', 'option', $resolved['ghl_embed']);
+	$resolved['primary_type'] = lf_get_option('lf_cta_primary_type', 'option') ?: $resolved['primary_type'];
+	$resolved['primary_action'] = lf_get_option('lf_cta_primary_action', 'option', $resolved['primary_action']) ?: $resolved['primary_action'];
+	$resolved['primary_url'] = lf_get_option('lf_cta_primary_url', 'option', $resolved['primary_url']) ?: $resolved['primary_url'];
+	$resolved['secondary_action'] = lf_get_option('lf_cta_secondary_action', 'option', $resolved['secondary_action']) ?: $resolved['secondary_action'];
+	$resolved['secondary_url'] = lf_get_option('lf_cta_secondary_url', 'option', $resolved['secondary_url']) ?: $resolved['secondary_url'];
+
+	if ($is_homepage && function_exists('get_field')) {
+		$hp_primary = get_field('lf_homepage_cta_primary', 'option');
+		$hp_secondary = get_field('lf_homepage_cta_secondary', 'option');
+		$hp_ghl = get_field('lf_homepage_cta_ghl', 'option');
+		$hp_type = get_field('lf_homepage_cta_primary_type', 'option');
+		$hp_action = get_field('lf_homepage_cta_primary_action', 'option');
+		$hp_url = get_field('lf_homepage_cta_primary_url', 'option');
+		$hp_secondary_action = get_field('lf_homepage_cta_secondary_action', 'option');
+		$hp_secondary_url = get_field('lf_homepage_cta_secondary_url', 'option');
+		if ($hp_primary !== null && $hp_primary !== '') {
+			$resolved['primary_text'] = $hp_primary;
+		}
+		if ($hp_secondary !== null && $hp_secondary !== '') {
+			$resolved['secondary_text'] = $hp_secondary;
+		}
+		if ($hp_ghl !== null && $hp_ghl !== '') {
+			$resolved['ghl_embed'] = $hp_ghl;
+		}
+		if ($hp_type !== null && $hp_type !== '') {
+			$resolved['primary_type'] = $hp_type;
+		}
+		if ($hp_action !== null && $hp_action !== '') {
+			$resolved['primary_action'] = $hp_action;
+		}
+		if ($hp_url !== null && $hp_url !== '') {
+			$resolved['primary_url'] = $hp_url;
+		}
+		if ($hp_secondary_action !== null && $hp_secondary_action !== '') {
+			$resolved['secondary_action'] = $hp_secondary_action;
+		}
+		if ($hp_secondary_url !== null && $hp_secondary_url !== '') {
+			$resolved['secondary_url'] = $hp_secondary_url;
+		}
+	}
+
+	if (is_array($section) && !empty($section)) {
+		if (!empty($section['cta_primary_override'])) {
+			$resolved['primary_text'] = $section['cta_primary_override'];
+		}
+		if (!empty($section['cta_secondary_override'])) {
+			$resolved['secondary_text'] = $section['cta_secondary_override'];
+		}
+		if (!empty($section['cta_ghl_override'])) {
+			$resolved['ghl_embed'] = $section['cta_ghl_override'];
+		}
+		if (!empty($section['cta_primary_action'])) {
+			$resolved['primary_action'] = $section['cta_primary_action'];
+		}
+		if (!empty($section['cta_primary_url'])) {
+			$resolved['primary_url'] = $section['cta_primary_url'];
+		}
+		if (!empty($section['cta_secondary_action'])) {
+			$resolved['secondary_action'] = $section['cta_secondary_action'];
+		}
+		if (!empty($section['cta_secondary_url'])) {
+			$resolved['secondary_url'] = $section['cta_secondary_url'];
+		}
+	}
+
+	if ($resolved['primary_action'] === 'call') {
+		$resolved['primary_type'] = 'call';
+	}
+
+	return [
+		'primary_text'     => is_string($resolved['primary_text']) ? $resolved['primary_text'] : '',
+		'secondary_text'   => is_string($resolved['secondary_text']) ? $resolved['secondary_text'] : '',
+		'ghl_embed'        => is_string($resolved['ghl_embed']) ? $resolved['ghl_embed'] : '',
+		'primary_type'     => in_array($resolved['primary_type'], ['call', 'form', 'text'], true) ? $resolved['primary_type'] : 'text',
+		'primary_action'   => in_array($resolved['primary_action'], ['link', 'quote', 'call'], true) ? $resolved['primary_action'] : 'quote',
+		'primary_url'      => is_string($resolved['primary_url']) ? $resolved['primary_url'] : '',
+		'secondary_action' => in_array($resolved['secondary_action'], ['link', 'quote', 'call'], true) ? $resolved['secondary_action'] : 'call',
+		'secondary_url'    => is_string($resolved['secondary_url']) ? $resolved['secondary_url'] : '',
+	];
+}
+
 function lf_sections_bg_class(?string $value): string {
 	switch ($value) {
 		case 'white':
@@ -564,119 +688,42 @@ function lf_sections_render_shell_close(): void {
 }
 
 function lf_sections_render_hero(string $context, array $settings, \WP_Post $post): void {
-	if ($context === 'homepage' && function_exists('lf_render_block_template')) {
-		$section = [
-			'section_type' => 'hero',
-			'hero_headline' => $settings['hero_headline'] ?? '',
-			'hero_subheadline' => $settings['hero_subheadline'] ?? '',
-			'section_background' => $settings['section_background'] ?? 'soft',
-			'hero_cta_override' => $settings['cta_primary_override'] ?? '',
-			'hero_cta_secondary_override' => $settings['cta_secondary_override'] ?? '',
-			'hero_cta_action' => $settings['cta_primary_action'] ?? '',
-			'hero_cta_url' => $settings['cta_primary_url'] ?? '',
-			'hero_cta_secondary_action' => $settings['cta_secondary_action'] ?? '',
-			'hero_cta_secondary_url' => $settings['cta_secondary_url'] ?? '',
-			'hero_cta_primary_enabled' => $settings['cta_primary_enabled'] ?? '1',
-			'hero_cta_secondary_enabled' => $settings['cta_secondary_enabled'] ?? '1',
-			'icon_enabled' => $settings['icon_enabled'] ?? '0',
-			'icon_slug' => $settings['icon_slug'] ?? '',
-			'icon_position' => $settings['icon_position'] ?? 'left',
-			'icon_size' => $settings['icon_size'] ?? 'md',
-			'icon_color' => $settings['icon_color'] ?? 'primary',
-		];
-		$variant = $settings['variant'] ?? 'default';
-		$block = [
-			'id'         => 'lf-hero',
-			'variant'    => $variant,
-			'attributes' => ['variant' => $variant, 'layout' => $variant],
-			'context'    => ['homepage' => true, 'section' => $section],
-		];
-		lf_render_block_template('hero', $block, false, $block['context']);
+	if (!function_exists('lf_render_block_template')) {
 		return;
 	}
-	static $hero_rendered = false;
-	$heading_tag = $hero_rendered ? 'h2' : 'h1';
-	$hero_rendered = true;
-	$heading = $settings['hero_headline'] ?? '';
-	$sub = $settings['hero_subheadline'] ?? '';
-	if ($heading === '') {
-		$heading = get_the_title($post);
+	$heading_tag = 'h1';
+	if ($context !== 'homepage') {
+		static $hero_rendered = false;
+		$heading_tag = $hero_rendered ? 'h2' : 'h1';
+		$hero_rendered = true;
 	}
-	if ($sub === '') {
-		if ($post->post_type === 'lf_service') {
-			$excerpt = get_the_excerpt($post);
-			$sub = $excerpt !== '' ? $excerpt : wp_trim_words(wp_strip_all_tags($post->post_content), 22);
-		}
-		if ($post->post_type === 'lf_service_area' && function_exists('get_field')) {
-			$state = get_field('lf_service_area_state', $post->ID);
-			if ($state) {
-				$sub = sprintf(__('Serving %1$s, %2$s', 'leadsforward-core'), get_the_title($post), $state);
-			}
-		}
-	}
-	$cta = [
-		'cta_primary_override' => $settings['cta_primary_override'] ?? ($settings['hero_cta_override'] ?? ''),
-		'cta_secondary_override' => $settings['cta_secondary_override'] ?? ($settings['hero_cta_secondary_override'] ?? ''),
-		'cta_primary_action' => $settings['cta_primary_action'] ?? ($settings['hero_cta_action'] ?? ''),
-		'cta_primary_url' => $settings['cta_primary_url'] ?? ($settings['hero_cta_url'] ?? ''),
-		'cta_secondary_action' => $settings['cta_secondary_action'] ?? ($settings['hero_cta_secondary_action'] ?? ''),
-		'cta_secondary_url' => $settings['cta_secondary_url'] ?? ($settings['hero_cta_secondary_url'] ?? ''),
+	$section = [
+		'section_type' => 'hero',
+		'hero_headline' => $settings['hero_headline'] ?? '',
+		'hero_subheadline' => $settings['hero_subheadline'] ?? '',
+		'section_background' => $settings['section_background'] ?? 'soft',
+		'cta_primary_override' => $settings['cta_primary_override'] ?? '',
+		'cta_secondary_override' => $settings['cta_secondary_override'] ?? '',
+		'cta_primary_action' => $settings['cta_primary_action'] ?? '',
+		'cta_primary_url' => $settings['cta_primary_url'] ?? '',
+		'cta_secondary_action' => $settings['cta_secondary_action'] ?? '',
+		'cta_secondary_url' => $settings['cta_secondary_url'] ?? '',
+		'cta_primary_enabled' => $settings['cta_primary_enabled'] ?? '1',
+		'cta_secondary_enabled' => $settings['cta_secondary_enabled'] ?? '1',
+		'icon_enabled' => $settings['icon_enabled'] ?? '0',
+		'icon_slug' => $settings['icon_slug'] ?? '',
+		'icon_position' => $settings['icon_position'] ?? 'left',
+		'icon_size' => $settings['icon_size'] ?? 'md',
+		'icon_color' => $settings['icon_color'] ?? 'primary',
 	];
-	$primary_enabled = (string) ($settings['cta_primary_enabled'] ?? '1') !== '0';
-	$secondary_enabled = (string) ($settings['cta_secondary_enabled'] ?? '1') !== '0';
-	$resolved = function_exists('lf_get_resolved_cta') ? lf_get_resolved_cta(['section' => $cta, 'homepage' => false]) : [];
-	$primary = $resolved['primary_text'] ?? '';
-	$secondary = $resolved['secondary_text'] ?? '';
-	if (!$primary_enabled) {
-		$primary = '';
-	}
-	if (!$secondary_enabled) {
-		$secondary = '';
-	}
-	$action = $resolved['primary_action'] ?? 'quote';
-	$secondary_action = $resolved['secondary_action'] ?? 'call';
-	$primary_url = $resolved['primary_url'] ?? '';
-	$secondary_url = $resolved['secondary_url'] ?? '';
-	$phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
-	$icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'hero', 'above', 'lf-heading-icon') : '';
-	$icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'hero', 'left', 'lf-heading-icon') : '';
-	?>
-	<?php $bg_class = lf_sections_bg_class($settings['section_background'] ?? 'soft'); ?>
-	<section class="lf-section lf-section--hero <?php echo esc_attr($bg_class); ?>">
-		<div class="lf-section__inner">
-			<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
-			<?php if ($icon_left) : ?>
-				<div class="lf-heading-row">
-					<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
-					<<?php echo $heading_tag; ?> class="lf-section__title"><?php echo esc_html($heading); ?></<?php echo $heading_tag; ?>>
-				</div>
-			<?php else : ?>
-				<<?php echo $heading_tag; ?> class="lf-section__title"><?php echo esc_html($heading); ?></<?php echo $heading_tag; ?>>
-			<?php endif; ?>
-			<?php if ($sub) : ?><p class="lf-section__intro"><?php echo esc_html($sub); ?></p><?php endif; ?>
-			<div class="lf-section__buttons">
-				<?php if ($primary) : ?>
-					<?php if ($action === 'quote') : ?>
-						<button type="button" class="lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="pb-hero"><?php echo esc_html($primary); ?></button>
-					<?php elseif ($action === 'call' && $phone) : ?>
-						<a href="tel:<?php echo esc_attr($phone); ?>" class="lf-btn lf-btn--primary"><?php echo esc_html($primary); ?></a>
-					<?php elseif ($action === 'link' && $primary_url) : ?>
-						<a href="<?php echo esc_url($primary_url); ?>" class="lf-btn lf-btn--primary"><?php echo esc_html($primary); ?></a>
-					<?php endif; ?>
-				<?php endif; ?>
-				<?php if ($secondary) : ?>
-					<?php if ($secondary_action === 'call' && $phone) : ?>
-						<a href="tel:<?php echo esc_attr($phone); ?>" class="lf-btn lf-btn--secondary"><?php echo esc_html($secondary); ?></a>
-					<?php elseif ($secondary_action === 'quote') : ?>
-						<button type="button" class="lf-btn lf-btn--secondary" data-lf-quote-trigger="1" data-lf-quote-source="pb-hero-secondary"><?php echo esc_html($secondary); ?></button>
-					<?php elseif ($secondary_action === 'link' && $secondary_url) : ?>
-						<a href="<?php echo esc_url($secondary_url); ?>" class="lf-btn lf-btn--secondary"><?php echo esc_html($secondary); ?></a>
-					<?php endif; ?>
-				<?php endif; ?>
-			</div>
-		</div>
-	</section>
-	<?php
+	$variant = $settings['variant'] ?? 'default';
+	$block = [
+		'id'         => 'lf-hero',
+		'variant'    => $variant,
+		'attributes' => ['variant' => $variant, 'layout' => $variant],
+		'context'    => ['homepage' => ($context === 'homepage'), 'section' => $section, 'heading_tag' => $heading_tag],
+	];
+	lf_render_block_template('hero', $block, false, $block['context']);
 }
 
 function lf_sections_render_trust_bar(string $context, array $settings, \WP_Post $post): void {
@@ -806,8 +853,8 @@ function lf_sections_render_media_content(string $context, array $settings, \WP_
 		'cta_primary_action' => $cta_action,
 		'cta_primary_url' => $cta_url,
 	];
-	$resolved_cta = function_exists('lf_get_resolved_cta')
-		? lf_get_resolved_cta(['section' => $cta_section, 'homepage' => ($context === 'homepage')])
+	$resolved_cta = function_exists('lf_resolve_cta')
+		? lf_resolve_cta(['homepage' => ($context === 'homepage')], $cta_section, [])
 		: [];
 
 	$primary_text = $resolved_cta['primary_text'] ?? $cta_override;

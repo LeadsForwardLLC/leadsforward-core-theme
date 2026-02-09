@@ -19,7 +19,7 @@ LeadsForward Core provides:
 - **Shared section registry:** Universal section definitions + defaults used by homepage and page builders
 - **Image system:** Media Library–only images with Unsplash placeholder seeding
 - **Icon system:** Heroicons inline SVGs with per-section controls + niche defaults
-- **Homepage builder:** Drag/drop order, per-section toggles, backgrounds, and copy
+- **Homepage builder:** Drag/drop order, per-section toggles, backgrounds, and copy (Hero controls match Page Builder)
 - **Page Builder Framework:** Instance-based sections for core pages, posts, services, and service areas
 - **Quote Builder:** Full-screen modal with multi-step flow, GHL webhook delivery, and first-party analytics
 - **AI Assistant (bounded):** Safe copy suggestions + field edits only (no layout/CSS changes)
@@ -54,7 +54,7 @@ The full, non-technical build checklist lives here: `docs/SOP.md`.
 leadsforward-core-theme/
 ├── assets/
 │   ├── css/          # editor.css, variation-tokens.css, future front-end CSS
-│   ├── js/
+│   ├── js/           # quote-builder.js, lf-section-sortable.js
 │   ├── icons/        # Local Heroicons SVGs (inline usage)
 │   └── images/
 ├── docs/             # SOP.md and product documentation
@@ -156,7 +156,7 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 - **Sections:** Configured in **LeadsForward → Homepage** via drag/drop.
   - Shared section registry in `inc/sections.php`.
   - Per-section toggle, background, and copy fields.
-  - **Hero only:** Variant selector (Authority Split, Conversion Stack, Form First, Visual Proof).
+- **Hero controls:** Variant selector + CTA toggles/actions (same options as Page Builder).
   - CTA actions: `quote`, `call`, `link`.
 - **Media sections:** Content with Image + Image with Content use Media Library images with a placeholder fallback.
 - **Defaults:** If no config exists, a conversion-optimized default order is seeded.
@@ -170,6 +170,7 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 - **Global default:** LeadsForward → Global Settings (CTAs).
 - **Homepage override:** LeadsForward → Homepage.
 - **Section override:** Per-section in the homepage builder and page builder settings.
+- **Canonical resolver:** `lf_resolve_cta()` (section > homepage > global).
 - **Primary action:** `quote` | `call` | `link`. `quote` opens the modal.
 - **Primary type:** `text` | `call` | `form`. `call` uses Business Info phone for `tel:` link; `form` shows GHL embed when set.
 - **GHL:** Stored once per scope (global, homepage, or section); no duplicated embed code.
@@ -183,6 +184,14 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 - **Admin UI:** Right-side Section Library, add/remove sections, per-section settings, drag to reorder.
 - **Renderer:** `lf_pb_render_sections()` respects section order and enabled state.
 - **Media sections:** Content with Image + Image with Content (shared renderer, layout modifier).
+- **SEO overrides:** Meta title/description + noindex for pages, posts, services, and service areas.
+
+---
+
+## Regression checks
+
+- Existing saved homepage configs still render without edits.
+- Page Builder sections render correctly after save/reload.
 
 ---
 

@@ -38,7 +38,7 @@ function lf_ai_get_current_values(string $context_type, $context_id, array $fiel
 	if ($context_type === 'homepage') {
 		$hero_row = lf_ai_get_homepage_hero_row();
 		foreach ($field_keys as $key) {
-			if (in_array($key, ['hero_headline', 'hero_subheadline', 'hero_cta_override'], true)) {
+			if (in_array($key, ['hero_headline', 'hero_subheadline', 'cta_primary_override'], true)) {
 				$out[$key] = $hero_row[$key] ?? '';
 			} else {
 				$out[$key] = function_exists('get_field') ? (string) get_field($key, 'option') : '';
@@ -124,7 +124,7 @@ function lf_ai_apply_proposal(string $context_type, $context_id, array $proposed
 	}
 	$current = lf_ai_get_current_values($context_type, $context_id, array_keys($to_apply));
 	if ($context_type === 'homepage') {
-		$hero_keys = ['hero_headline', 'hero_subheadline', 'hero_cta_override'];
+		$hero_keys = ['hero_headline', 'hero_subheadline', 'cta_primary_override'];
 		$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
 		if (!empty($config['hero'])) {
 			foreach ($hero_keys as $hk) {

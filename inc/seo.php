@@ -67,6 +67,15 @@ function lf_robots_noindex_where_needed(): void {
 	if (is_search() || is_404()) {
 		$noindex = true;
 	}
+	if (is_singular(['page', 'post', 'lf_service', 'lf_service_area'])) {
+		$post_id = get_queried_object_id();
+		if ($post_id) {
+			$seo = lf_get_pb_seo_overrides($post_id);
+			if (!empty($seo['noindex'])) {
+				$noindex = true;
+			}
+		}
+	}
 	// Testimonials are private; if any URL ever shows them, noindex. (Currently no single/archive for them.)
 	if (is_singular('lf_testimonial') || is_post_type_archive('lf_testimonial')) {
 		$noindex = true;
@@ -83,12 +92,13 @@ function lf_robots_noindex_where_needed(): void {
 function lf_get_pb_seo_overrides(int $post_id): array {
 	$config = get_post_meta($post_id, LF_PB_META_KEY, true);
 	if (!is_array($config)) {
-		return ['title' => '', 'description' => ''];
+		return ['title' => '', 'description' => '', 'noindex' => false];
 	}
 	$seo = is_array($config['seo'] ?? null) ? $config['seo'] : [];
 	return [
 		'title' => sanitize_text_field((string) ($seo['title'] ?? '')),
 		'description' => sanitize_textarea_field((string) ($seo['description'] ?? '')),
+		'noindex' => !empty($seo['noindex']),
 	];
 }
 

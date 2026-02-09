@@ -159,13 +159,13 @@ function lf_acf_add_options_homepage_fields(): void {
 								'type'          => 'text',
 								'conditional_logic' => [['field' => 'field_lf_section_type', 'operator' => '==', 'value' => 'hero']],
 							],
-							[
-								'key'           => 'field_lf_section_hero_cta',
-								'label'         => __('Hero CTA override', 'leadsforward-core'),
-								'name'          => 'hero_cta_override',
-								'type'          => 'text',
-								'conditional_logic' => [['field' => 'field_lf_section_type', 'operator' => '==', 'value' => 'hero']],
-							],
+						[
+							'key'           => 'field_lf_section_hero_cta_primary',
+							'label'         => __('Primary CTA override', 'leadsforward-core'),
+							'name'          => 'cta_primary_override',
+							'type'          => 'text',
+							'conditional_logic' => [['field' => 'field_lf_section_type', 'operator' => '==', 'value' => 'hero']],
+						],
 							// Trust overrides
 							[
 								'key'           => 'field_lf_section_trust_max',

@@ -60,7 +60,7 @@ function lf_ai_editable_field_keys(): array {
 		'lf_cta_secondary_text',
 		'hero_headline',
 		'hero_subheadline',
-		'hero_cta_override',
+		'cta_primary_override',
 		'post_content',
 	];
 }
@@ -93,7 +93,7 @@ function lf_get_ai_editable_fields($post_id): array {
 		'lf_cta_secondary_text'    => __('Global secondary CTA', 'leadsforward-core'),
 		'hero_headline'            => __('Hero headline', 'leadsforward-core'),
 		'hero_subheadline'         => __('Hero subheadline', 'leadsforward-core'),
-		'hero_cta_override'        => __('Hero CTA override', 'leadsforward-core'),
+		'cta_primary_override'     => __('Primary CTA override', 'leadsforward-core'),
 		'post_content'             => __('Page content', 'leadsforward-core'),
 	];
 	$out = [];
@@ -111,9 +111,9 @@ function lf_get_ai_editable_fields($post_id): array {
 		} elseif ($context === 'lf_testimonial') {
 			$allowed = in_array($key, ['lf_testimonial_review_text'], true);
 		} elseif ($context === 'page' && (int) $post_id === (int) get_option('page_on_front')) {
-			$allowed = in_array($key, ['lf_homepage_cta_primary', 'lf_homepage_cta_secondary', 'hero_headline', 'hero_subheadline', 'hero_cta_override', 'post_content'], true);
+			$allowed = in_array($key, ['lf_homepage_cta_primary', 'lf_homepage_cta_secondary', 'hero_headline', 'hero_subheadline', 'cta_primary_override', 'post_content'], true);
 		} elseif ($context === 'homepage') {
-			$allowed = in_array($key, ['lf_homepage_cta_primary', 'lf_homepage_cta_secondary', 'hero_headline', 'hero_subheadline', 'hero_cta_override'], true);
+			$allowed = in_array($key, ['lf_homepage_cta_primary', 'lf_homepage_cta_secondary', 'hero_headline', 'hero_subheadline', 'cta_primary_override'], true);
 		}
 		if ($allowed && isset($labels[$key])) {
 			$out[$key] = $labels[$key];

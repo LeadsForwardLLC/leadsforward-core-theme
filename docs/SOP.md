@@ -279,3 +279,9 @@ Internal linking (deterministic):
 SEO Coverage validator:
 - Run **LeadsForward → Site Health → Pre‑Launch Check**.
 - Flags missing hubs, missing services/areas, orphaned areas, and thin pages.
+
+---
+
+Append‑Only Change Log (Recent)
+-------------------------------
+2026‑02‑09 — Hero controls now match across Homepage Builder and Page Builder (variant + CTA toggles/actions). CTA resolution is unified via `lf_resolve_cta()`. SEO overrides now apply to services and service areas. Sortable behavior is shared via `assets/js/lf-section-sortable.js`.

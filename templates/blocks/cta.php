@@ -36,7 +36,7 @@ if ($variant === 'b') {
 	];
 }
 
-$cta = function_exists('lf_get_resolved_cta') ? lf_get_resolved_cta($context) : [
+$cta = function_exists('lf_resolve_cta') ? lf_resolve_cta($context, $section, []) : [
 	'primary_text'   => lf_get_option('lf_cta_primary_text', 'option'),
 	'secondary_text' => lf_get_option('lf_cta_secondary_text', 'option'),
 	'ghl_embed'     => lf_get_option('lf_cta_ghl_embed', 'option'),

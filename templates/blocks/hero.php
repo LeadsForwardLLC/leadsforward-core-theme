@@ -19,14 +19,14 @@ $section  = $context['section'] ?? [];
 $variant  = $block['variant'] ?? 'default';
 $block_id = $block['id'] ?? '';
 $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'soft') : '';
+$heading_tag = $context['heading_tag'] ?? 'h1';
 
 $eyebrow = __('Licensed • Insured • Local', 'leadsforward-core');
 
 $heading = get_the_title() ?: __('Quality Local Service', 'leadsforward-core');
 $subheading = '';
-$cta_text = function_exists('lf_get_option') ? lf_get_option('lf_cta_primary_text', 'option') : '';
-$primary_enabled = (string) (($section['cta_primary_enabled'] ?? $section['hero_cta_primary_enabled'] ?? '1')) !== '0';
-$secondary_enabled = (string) (($section['cta_secondary_enabled'] ?? $section['hero_cta_secondary_enabled'] ?? '1')) !== '0';
+$primary_enabled = (string) (($section['cta_primary_enabled'] ?? '1')) !== '0';
+$secondary_enabled = (string) (($section['cta_secondary_enabled'] ?? '1')) !== '0';
 $business_name = function_exists('lf_get_option') ? lf_get_option('lf_business_name', 'option') : '';
 if (!is_string($business_name) || $business_name === '') {
 	$business_name = get_bloginfo('name') ?: '';
@@ -48,24 +48,37 @@ if (!empty($context['homepage']) && !empty($section)) {
 		}
 	}
 	$subheading = $section['hero_subheadline'] ?? '';
-	$cta_resolved = lf_get_resolved_cta($context);
-	$cta_text = !empty($section['hero_cta_override']) ? $section['hero_cta_override'] : $cta_resolved['primary_text'];
-	if ($cta_text && function_exists('lf_copy_template')) {
-		$cta_text = lf_copy_template('cta_microcopy', $cta_text, []);
+} elseif (!empty($section['hero_headline'])) {
+	$heading = $section['hero_headline'];
+	$subheading = $section['hero_subheadline'] ?? '';
+}
+
+if ($subheading === '' && empty($context['homepage'])) {
+	$post_type = get_post_type();
+	if ($post_type === 'lf_service') {
+		$excerpt = get_the_excerpt();
+		$subheading = $excerpt !== '' ? $excerpt : wp_trim_words(wp_strip_all_tags(get_the_content(null, false)), 22);
 	}
-	if ($cta_text === '') {
-		$cta_text = $cta_resolved['primary_text'] ?? '';
+	if ($post_type === 'lf_service_area' && function_exists('get_field')) {
+		$state = get_field('lf_service_area_state');
+		if ($state) {
+			$subheading = sprintf(__('Serving %1$s, %2$s', 'leadsforward-core'), get_the_title(), $state);
+		}
 	}
-} elseif (function_exists('lf_get_resolved_cta')) {
-	$cta_resolved = lf_get_resolved_cta([]);
-	$cta_text = $cta_resolved['primary_text'];
 }
 
 if ($business_name !== '') {
 	$heading = str_replace(['[Your Business]', '[Your Business Name]', '{business_name}'], $business_name, $heading);
 }
 
-$cta_resolved_for_type = function_exists('lf_get_resolved_cta') ? lf_get_resolved_cta($context) : [];
+$cta_resolved_for_type = function_exists('lf_resolve_cta') ? lf_resolve_cta($context, $section, []) : [];
+$cta_text = $cta_resolved_for_type['primary_text'] ?? '';
+if (!empty($context['homepage']) && $cta_text && function_exists('lf_copy_template')) {
+	$cta_text = lf_copy_template('cta_microcopy', $cta_text, []);
+	if ($cta_text === '') {
+		$cta_text = $cta_resolved_for_type['primary_text'] ?? '';
+	}
+}
 $cta_phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
 $cta_type = $cta_resolved_for_type['primary_type'] ?? 'text';
 $cta_action = $cta_resolved_for_type['primary_action'] ?? 'link';
@@ -128,10 +141,10 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 				<?php if ($icon_left) : ?>
 					<div class="lf-heading-row">
 						<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
-						<h1 class="lf-hero-stack__title"><?php echo esc_html($heading); ?></h1>
+						<<?php echo esc_html($heading_tag); ?> class="lf-hero-stack__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
 					</div>
 				<?php else : ?>
-					<h1 class="lf-hero-stack__title"><?php echo esc_html($heading); ?></h1>
+					<<?php echo esc_html($heading_tag); ?> class="lf-hero-stack__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
 				<?php endif; ?>
 				<?php if ($subheading !== '') : ?>
 					<p class="lf-hero-stack__subtitle"><?php echo esc_html($subheading); ?></p>
@@ -186,10 +199,10 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 					<?php if ($icon_left) : ?>
 						<div class="lf-heading-row">
 							<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
-							<h1 class="lf-hero-form__title"><?php echo esc_html($heading); ?></h1>
+							<<?php echo esc_html($heading_tag); ?> class="lf-hero-form__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
 						</div>
 					<?php else : ?>
-						<h1 class="lf-hero-form__title"><?php echo esc_html($heading); ?></h1>
+						<<?php echo esc_html($heading_tag); ?> class="lf-hero-form__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
 					<?php endif; ?>
 					<?php if ($subheading !== '') : ?>
 						<p class="lf-hero-form__subtitle"><?php echo esc_html($subheading); ?></p>
@@ -239,10 +252,10 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 					<?php if ($icon_left) : ?>
 						<div class="lf-heading-row">
 							<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
-							<h1 class="lf-hero-visual__title"><?php echo esc_html($heading); ?></h1>
+							<<?php echo esc_html($heading_tag); ?> class="lf-hero-visual__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
 						</div>
 					<?php else : ?>
-						<h1 class="lf-hero-visual__title"><?php echo esc_html($heading); ?></h1>
+						<<?php echo esc_html($heading_tag); ?> class="lf-hero-visual__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
 					<?php endif; ?>
 					<?php if ($subheading !== '') : ?>
 						<p class="lf-hero-visual__subtitle"><?php echo esc_html($subheading); ?></p>
@@ -324,10 +337,10 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 					<?php if ($icon_left) : ?>
 						<div class="lf-heading-row">
 							<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
-							<h1 class="lf-hero-split__title"><?php echo esc_html($heading); ?></h1>
+							<<?php echo esc_html($heading_tag); ?> class="lf-hero-split__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
 						</div>
 					<?php else : ?>
-						<h1 class="lf-hero-split__title"><?php echo esc_html($heading); ?></h1>
+						<<?php echo esc_html($heading_tag); ?> class="lf-hero-split__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
 					<?php endif; ?>
 					<?php if ($subheading !== '') : ?>
 						<p class="lf-hero-split__subtitle"><?php echo esc_html($subheading); ?></p>
