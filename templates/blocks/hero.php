@@ -89,6 +89,19 @@ $secondary_action = $cta_resolved_for_type['secondary_action'] ?? 'call';
 $secondary_url = $cta_resolved_for_type['secondary_url'] ?? '';
 $icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'hero', 'above', 'lf-heading-icon') : '';
 $icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'hero', 'left', 'lf-heading-icon') : '';
+$hero_media = $section['hero_media'] ?? 'none';
+$hero_image_id = isset($section['hero_image_id']) ? (int) $section['hero_image_id'] : 0;
+if ($hero_image_id === 0 && is_singular()) {
+	$hero_image_id = (int) get_post_thumbnail_id(get_the_ID());
+}
+$show_hero_image = $hero_media === 'image' && $hero_image_id > 0;
+$hero_image_alt = '';
+if ($show_hero_image) {
+	$hero_image_alt = (string) get_post_meta($hero_image_id, '_wp_attachment_image_alt', true);
+	if ($hero_image_alt === '') {
+		$hero_image_alt = $heading !== '' ? $heading : ($business_name ?: __('Trusted local service', 'leadsforward-core'));
+	}
+}
 $review_count = 0;
 if (function_exists('wp_count_posts')) {
 	$counts = wp_count_posts('lf_testimonial');
@@ -132,7 +145,53 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 <section class="lf-block lf-block-hero <?php echo esc_attr($bg_class ?: 'lf-surface-soft'); ?> lf-block-hero--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-hero__bg" aria-hidden="true"></div>
 	<div class="lf-block-hero__inner">
-		<?php if ($variant === 'a') : ?>
+		<?php if ($variant === 'internal') : ?>
+			<div class="lf-hero-basic<?php echo $show_hero_image ? ' lf-hero-basic--media' : ''; ?>">
+				<div class="lf-hero-basic__content">
+					<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
+					<?php if ($icon_left) : ?>
+						<div class="lf-heading-row">
+							<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
+							<<?php echo esc_html($heading_tag); ?> class="lf-hero-basic__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
+						</div>
+					<?php else : ?>
+						<<?php echo esc_html($heading_tag); ?> class="lf-hero-basic__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
+					<?php endif; ?>
+					<?php if ($subheading !== '') : ?>
+						<p class="lf-hero-basic__subtitle"><?php echo esc_html($subheading); ?></p>
+					<?php endif; ?>
+					<?php if ($show_cta_group) : ?>
+						<div class="lf-hero-basic__actions">
+							<?php if ($cta_text) : ?>
+								<?php if ($use_phone_link) : ?>
+									<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-btn lf-btn--primary"><?php echo esc_html($cta_text); ?></a>
+								<?php elseif ($cta_action === 'quote') : ?>
+									<button type="button" class="lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="hero-basic"><?php echo esc_html($cta_text); ?></button>
+								<?php elseif ($cta_url !== '') : ?>
+									<a href="<?php echo esc_url($cta_url); ?>" class="lf-btn lf-btn--primary"><?php echo esc_html($cta_text); ?></a>
+								<?php endif; ?>
+							<?php endif; ?>
+							<?php if ($secondary_text !== '') : ?>
+								<?php if ($secondary_action === 'quote') : ?>
+									<button type="button" class="lf-btn lf-btn--secondary" data-lf-quote-trigger="1" data-lf-quote-source="hero-basic-secondary"><?php echo esc_html($secondary_text); ?></button>
+								<?php elseif ($secondary_action === 'call' && $cta_phone) : ?>
+									<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-btn lf-btn--secondary"><?php echo esc_html($secondary_text); ?></a>
+								<?php elseif ($secondary_action === 'link' && $secondary_url !== '') : ?>
+									<a href="<?php echo esc_url($secondary_url); ?>" class="lf-btn lf-btn--secondary"><?php echo esc_html($secondary_text); ?></a>
+								<?php endif; ?>
+							<?php endif; ?>
+						</div>
+					<?php endif; ?>
+				</div>
+				<?php if ($show_hero_image) : ?>
+					<div class="lf-hero-basic__media">
+						<div class="lf-hero-basic__image">
+							<?php echo wp_get_attachment_image($hero_image_id, 'large', false, ['loading' => 'lazy', 'decoding' => 'async', 'alt' => esc_attr($hero_image_alt)]); ?>
+						</div>
+					</div>
+				<?php endif; ?>
+			</div>
+		<?php elseif ($variant === 'a') : ?>
 			<div class="lf-hero-stack">
 				<?php if ($eyebrow !== '') : ?>
 					<p class="lf-hero-stack__eyebrow"><?php echo esc_html($eyebrow); ?></p>

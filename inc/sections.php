@@ -86,10 +86,18 @@ function lf_sections_bg_options(): array {
 
 function lf_sections_hero_variant_options(): array {
 	return [
-		'default' => __('Authority Split (Recommended)', 'leadsforward-core'),
-		'a'       => __('Conversion Stack', 'leadsforward-core'),
-		'b'       => __('Form First', 'leadsforward-core'),
-		'c'       => __('Visual Proof', 'leadsforward-core'),
+		'internal' => __('Basic Internal Hero', 'leadsforward-core'),
+		'default'  => __('Authority Split (Recommended)', 'leadsforward-core'),
+		'a'        => __('Conversion Stack', 'leadsforward-core'),
+		'b'        => __('Form First', 'leadsforward-core'),
+		'c'        => __('Visual Proof', 'leadsforward-core'),
+	];
+}
+
+function lf_sections_hero_media_options(): array {
+	return [
+		'none'  => __('No image', 'leadsforward-core'),
+		'image' => __('Image on right', 'leadsforward-core'),
 	];
 }
 
@@ -159,6 +167,8 @@ function lf_sections_registry(): array {
 				['key' => 'variant', 'label' => __('Hero layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'default', 'options' => lf_sections_hero_variant_options()],
 				['key' => 'hero_headline', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_subheadline', 'label' => __('Subheadline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
+				['key' => 'hero_media', 'label' => __('Hero media', 'leadsforward-core'), 'type' => 'select', 'default' => 'none', 'options' => lf_sections_hero_media_options()],
+				['key' => 'hero_image_id', 'label' => __('Hero image', 'leadsforward-core'), 'type' => 'image', 'default' => 0],
 				['key' => 'cta_primary_enabled', 'label' => __('Primary CTA enabled', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
 				['key' => 'cta_secondary_enabled', 'label' => __('Secondary CTA enabled', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
 				['key' => 'cta_primary_override', 'label' => __('Primary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
@@ -705,6 +715,8 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 		'hero_headline' => $settings['hero_headline'] ?? '',
 		'hero_subheadline' => $settings['hero_subheadline'] ?? '',
 		'section_background' => $settings['section_background'] ?? 'soft',
+		'hero_media' => $settings['hero_media'] ?? 'none',
+		'hero_image_id' => $settings['hero_image_id'] ?? 0,
 		'cta_primary_override' => $settings['cta_primary_override'] ?? '',
 		'cta_secondary_override' => $settings['cta_secondary_override'] ?? '',
 		'cta_primary_action' => $settings['cta_primary_action'] ?? '',

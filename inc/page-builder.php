@@ -89,11 +89,15 @@ function lf_pb_default_config(string $context): array {
 	foreach ($order_types as $type) {
 		$counts[$type] = ($counts[$type] ?? 0) + 1;
 		$instance_id = lf_pb_instance_id($type, $counts[$type]);
+		$settings = lf_sections_defaults_for($type);
+		if ($type === 'hero' && in_array($context, ['page', 'post', 'service', 'service_area'], true)) {
+			$settings['variant'] = 'internal';
+		}
 		$sections[$instance_id] = [
 			'type' => $type,
 			'enabled' => true,
 			'deletable' => false,
-			'settings' => lf_sections_defaults_for($type),
+			'settings' => $settings,
 		];
 		$order[] = $instance_id;
 	}
@@ -139,11 +143,18 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 			$counts[$type] = ($counts[$type] ?? 0) + 1;
 			$instance_id = lf_pb_instance_id($type, $counts[$type]);
 			$row = is_array($legacy_sections[$type] ?? null) ? $legacy_sections[$type] : [];
+			$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+			if ($type === 'hero' && in_array($context, ['page', 'post', 'service', 'service_area'], true)) {
+				$variant = $settings['variant'] ?? 'default';
+				if ($variant === '' || $variant === 'default') {
+					$settings['variant'] = 'internal';
+				}
+			}
 			$sections_out[$instance_id] = [
 				'type' => $type,
 				'enabled' => !empty($row['enabled']),
 				'deletable' => false,
-				'settings' => is_array($row['settings'] ?? null) ? $row['settings'] : [],
+				'settings' => $settings,
 			];
 			$order_out[] = $instance_id;
 		}
@@ -157,11 +168,18 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 			if (!in_array($type, $allowed_types, true)) {
 				continue;
 			}
+			$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+			if ($type === 'hero' && in_array($context, ['page', 'post', 'service', 'service_area'], true)) {
+				$variant = $settings['variant'] ?? 'default';
+				if ($variant === '' || $variant === 'default') {
+					$settings['variant'] = 'internal';
+				}
+			}
 			$sections_out[$instance_id] = [
 				'type' => $type,
 				'enabled' => !empty($row['enabled']),
 				'deletable' => !empty($row['deletable']),
-				'settings' => is_array($row['settings'] ?? null) ? $row['settings'] : [],
+				'settings' => $settings,
 			];
 		}
 		$order_out = is_array($stored['order'] ?? null) ? $stored['order'] : array_keys($sections_out);
