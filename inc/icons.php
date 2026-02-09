@@ -34,6 +34,9 @@ function lf_icon_list(): array {
 		return basename((string) $file, '.svg');
 	}, $files);
 	$slugs = array_filter(array_map('sanitize_title', $slugs));
+	$slugs = array_values(array_filter($slugs, function ($slug) {
+		return strpos((string) $slug, 'social-') !== 0;
+	}));
 	sort($slugs);
 	return array_values($slugs);
 }

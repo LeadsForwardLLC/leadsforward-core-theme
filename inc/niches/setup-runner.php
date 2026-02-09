@@ -201,16 +201,6 @@ function lf_run_setup(array $data): array {
 			lf_update_business_info_value('lf_business_address_zip', $address_zip);
 			lf_update_business_info_value('lf_business_address', $address_full);
 			lf_update_business_info_value('lf_business_service_area_type', $service_area_type);
-			if (!empty($data['service_areas']) && is_array($data['service_areas'])) {
-				$areas = array_map(function ($area) {
-					if (is_array($area)) {
-						return $area['name'] ?? '';
-					}
-					return (string) $area;
-				}, $data['service_areas']);
-				$areas = array_filter(array_map('trim', $areas));
-				lf_update_business_info_value('lf_business_service_areas', implode("\n", $areas));
-			}
 			lf_update_business_info_value('lf_business_geo', $geo);
 			if (!empty($data['business_hours'])) {
 				lf_update_business_info_value('lf_business_hours', $data['business_hours']);
@@ -222,6 +212,8 @@ function lf_run_setup(array $data): array {
 			lf_update_business_info_value('lf_business_social_instagram', (string) ($data['business_social_instagram'] ?? ''));
 			lf_update_business_info_value('lf_business_social_youtube', (string) ($data['business_social_youtube'] ?? ''));
 			lf_update_business_info_value('lf_business_social_linkedin', (string) ($data['business_social_linkedin'] ?? ''));
+			lf_update_business_info_value('lf_business_social_tiktok', (string) ($data['business_social_tiktok'] ?? ''));
+			lf_update_business_info_value('lf_business_social_x', (string) ($data['business_social_x'] ?? ''));
 			lf_update_business_info_value('lf_business_same_as', $same_as);
 			lf_update_business_info_value('lf_business_founding_year', $founding_year);
 			lf_update_business_info_value('lf_business_license_number', $license_number);
@@ -323,9 +315,25 @@ function lf_wizard_placeholder_content(string $slug, string $title, array $data)
 		case 'contact':
 			return '<!-- wp:paragraph --><p>' . esc_html__('Contact us by phone or the form below.', 'leadsforward-core') . '</p><!-- /wp:paragraph -->';
 		case 'privacy-policy':
-			return '<!-- wp:paragraph --><p>' . esc_html__('Privacy policy content. Replace with your legal text.', 'leadsforward-core') . '</p><!-- /wp:paragraph -->';
+			$contact_bits = array_filter([
+				!empty($data['business_phone']) ? sprintf(esc_html__('Call %s', 'leadsforward-core'), $data['business_phone']) : '',
+				!empty($data['business_email']) ? sprintf(esc_html__('Email %s', 'leadsforward-core'), $data['business_email']) : '',
+			]);
+			$contact_line = $contact_bits ? sprintf(esc_html__('Questions? %s.', 'leadsforward-core'), implode(esc_html__(' or ', 'leadsforward-core'), $contact_bits)) : '';
+			$intro = sprintf(esc_html__('This Privacy Policy explains how %s collects, uses, and protects your information when you use this site.', 'leadsforward-core'), $business);
+			$body = esc_html__('We only use your information to respond to inquiries, schedule service, and improve your experience.', 'leadsforward-core');
+			$parts = array_filter([$intro, $body, $contact_line]);
+			return '<!-- wp:paragraph --><p>' . implode('</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>', $parts) . '</p><!-- /wp:paragraph -->';
 		case 'terms-of-service':
-			return '<!-- wp:paragraph --><p>' . esc_html__('Terms of service. Replace with your legal text.', 'leadsforward-core') . '</p><!-- /wp:paragraph -->';
+			$contact_bits = array_filter([
+				!empty($data['business_phone']) ? sprintf(esc_html__('Call %s', 'leadsforward-core'), $data['business_phone']) : '',
+				!empty($data['business_email']) ? sprintf(esc_html__('Email %s', 'leadsforward-core'), $data['business_email']) : '',
+			]);
+			$contact_line = $contact_bits ? sprintf(esc_html__('Questions? %s.', 'leadsforward-core'), implode(esc_html__(' or ', 'leadsforward-core'), $contact_bits)) : '';
+			$intro = sprintf(esc_html__('These Terms of Service govern use of this website and services provided by %s.', 'leadsforward-core'), $business);
+			$body = esc_html__('By using this site, you agree to these terms and to provide accurate information when requesting service.', 'leadsforward-core');
+			$parts = array_filter([$intro, $body, $contact_line]);
+			return '<!-- wp:paragraph --><p>' . implode('</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>', $parts) . '</p><!-- /wp:paragraph -->';
 		case 'thank-you':
 			return '<!-- wp:paragraph --><p>' . esc_html__('Thank you for your submission. We will be in touch soon.', 'leadsforward-core') . '</p><!-- /wp:paragraph -->';
 		default:
@@ -718,6 +726,21 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 	$email = $vars['email'] ?? '';
 	$city_line = $city ? ' in ' . $city : '';
 	$cta_headline = $business ? 'Get a free estimate from ' . $business : __('Get a free estimate', 'leadsforward-core');
+	$contact_bits = array_filter([
+		$phone ? 'Phone: ' . $phone : '',
+		$email ? 'Email: ' . $email : '',
+	]);
+	$contact_line = $contact_bits ? 'Questions? ' . implode(' | ', $contact_bits) : '';
+	$privacy_body = implode("\n", array_filter([
+		$business ? $business . ' values your privacy and uses your information only to respond to requests and improve your experience.' : 'We value your privacy and use your information only to respond to requests and improve your experience.',
+		'We do not sell your information and only share it when required to provide service or comply with the law.',
+		$contact_line,
+	]));
+	$terms_body = implode("\n", array_filter([
+		$business ? 'These terms govern your use of the ' . $business . ' website and services.' : 'These terms govern your use of this website and our services.',
+		'By using this site, you agree to provide accurate information and to follow these terms.',
+		$contact_line,
+	]));
 
 	return [
 		'about-us' => [
@@ -922,8 +945,8 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 				],
 				'content_image' => [
 					'section_heading' => 'Privacy overview',
-					'section_intro' => 'Replace this with your official policy.',
-					'section_body' => 'We respect your privacy and never share your information without permission. Replace this section with your official legal policy.',
+					'section_intro' => 'A quick summary of how we use your information.',
+					'section_body' => $privacy_body,
 				],
 			],
 			'seo' => [
@@ -940,8 +963,8 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 				],
 				'content_image' => [
 					'section_heading' => 'Terms overview',
-					'section_intro' => 'Replace this with your official terms.',
-					'section_body' => 'These terms outline the use of this website and our services. Replace this section with your official legal terms.',
+					'section_intro' => 'A quick summary of the rules for using this site.',
+					'section_body' => $terms_body,
 				],
 			],
 			'seo' => [

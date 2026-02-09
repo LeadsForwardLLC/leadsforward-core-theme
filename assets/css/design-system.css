@@ -1100,6 +1100,11 @@ button:focus-visible,
 		grid-template-columns: 1fr auto;
 		align-items: start;
 	}
+
+	.lf-footer-social {
+		grid-column: 2;
+		justify-self: end;
+	}
 }
 
 .site-footer a {
@@ -1158,6 +1163,31 @@ button:focus-visible,
 .footer-menu .legal-link a {
 	opacity: var(--lf-opacity-legal);
 	font-size: var(--lf-fs-small);
+}
+
+.lf-footer-social {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--lf-gap-sm);
+}
+
+.lf-footer-social__link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.25rem;
+	height: 2.25rem;
+	border-radius: 999px;
+	border: 1px solid currentColor;
+	font-size: 1.1rem;
+	opacity: var(--lf-opacity-footer-link);
+	text-decoration: none;
+}
+
+.lf-footer-social__link:hover {
+	opacity: 1;
+	text-decoration: none;
 }
 
 /* -------------------------------------------------------------------------

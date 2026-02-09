@@ -95,6 +95,8 @@ function lf_wizard_handle_post(): void {
 			'business_social_instagram'  => esc_url_raw($_POST['lf_business_social_instagram'] ?? ''),
 			'business_social_youtube'    => esc_url_raw($_POST['lf_business_social_youtube'] ?? ''),
 			'business_social_linkedin'   => esc_url_raw($_POST['lf_business_social_linkedin'] ?? ''),
+			'business_social_tiktok'     => esc_url_raw($_POST['lf_business_social_tiktok'] ?? ''),
+			'business_social_x'          => esc_url_raw($_POST['lf_business_social_x'] ?? ''),
 			'business_same_as'           => sanitize_textarea_field($_POST['lf_business_same_as'] ?? ''),
 			'business_founding_year'     => sanitize_text_field($_POST['lf_business_founding_year'] ?? ''),
 			'business_license_number'    => sanitize_text_field($_POST['lf_business_license_number'] ?? ''),
@@ -123,10 +125,6 @@ function lf_wizard_handle_post(): void {
 				lf_update_business_info_value('lf_business_address_zip', $data['business_address_zip'] ?? '');
 				lf_update_business_info_value('lf_business_address', $data['business_address'] ?? '');
 				lf_update_business_info_value('lf_business_service_area_type', $data['business_service_area_type'] ?? 'address');
-				if (!empty($data['service_areas']) && is_array($data['service_areas'])) {
-					$areas = array_filter(array_map('sanitize_text_field', $data['service_areas']));
-					lf_update_business_info_value('lf_business_service_areas', implode("\n", $areas));
-				}
 				lf_update_business_info_value('lf_business_geo', $data['business_geo'] ?? ['lat' => '', 'lng' => '']);
 				if (array_key_exists('business_hours', $data) && $data['business_hours'] !== '') {
 					lf_update_business_info_value('lf_business_hours', $data['business_hours']);
@@ -138,6 +136,8 @@ function lf_wizard_handle_post(): void {
 				lf_update_business_info_value('lf_business_social_instagram', $data['business_social_instagram'] ?? '');
 				lf_update_business_info_value('lf_business_social_youtube', $data['business_social_youtube'] ?? '');
 				lf_update_business_info_value('lf_business_social_linkedin', $data['business_social_linkedin'] ?? '');
+				lf_update_business_info_value('lf_business_social_tiktok', $data['business_social_tiktok'] ?? '');
+				lf_update_business_info_value('lf_business_social_x', $data['business_social_x'] ?? '');
 				lf_update_business_info_value('lf_business_same_as', $data['business_same_as'] ?? '');
 				lf_update_business_info_value('lf_business_founding_year', $data['business_founding_year'] ?? '');
 				lf_update_business_info_value('lf_business_license_number', $data['business_license_number'] ?? '');
@@ -256,7 +256,7 @@ function lf_wizard_render_page(): void {
 		lf_wizard_render_setup_settings_panel();
 		echo '<p class="notice notice-success">' . esc_html__('Site setup complete. You can now customize Theme Options and edit pages.', 'leadsforward-core') . '</p>';
 		echo '<p><a href="' . esc_url(get_permalink(get_option('page_on_front'))) . '" class="button button-primary">' . esc_html__('View site', 'leadsforward-core') . '</a> ';
-		echo '<a href="' . esc_url(admin_url('admin.php?page=lf-theme-options')) . '" class="button">' . esc_html__('Theme Options', 'leadsforward-core') . '</a></p></div>';
+		echo '<a href="' . esc_url(admin_url('admin.php?page=lf-global')) . '" class="button">' . esc_html__('Global Settings', 'leadsforward-core') . '</a></p></div>';
 		return;
 	}
 
@@ -327,6 +327,8 @@ function lf_wizard_render_page(): void {
 		$social_instagram = esc_url_raw($_GET['lf_business_social_instagram'] ?? '');
 		$social_youtube = esc_url_raw($_GET['lf_business_social_youtube'] ?? '');
 		$social_linkedin = esc_url_raw($_GET['lf_business_social_linkedin'] ?? '');
+		$social_tiktok = esc_url_raw($_GET['lf_business_social_tiktok'] ?? '');
+		$social_x = esc_url_raw($_GET['lf_business_social_x'] ?? '');
 		$same_as = sanitize_textarea_field($_GET['lf_business_same_as'] ?? '');
 		$founding_year = sanitize_text_field($_GET['lf_business_founding_year'] ?? '');
 		$license_number = sanitize_text_field($_GET['lf_business_license_number'] ?? '');
@@ -410,6 +412,8 @@ function lf_wizard_render_page(): void {
 		echo '<input type="url" class="large-text" name="lf_business_social_instagram" placeholder="' . esc_attr__('Instagram URL', 'leadsforward-core') . '" value="' . esc_attr($social_instagram) . '" style="margin-top:6px;" />';
 		echo '<input type="url" class="large-text" name="lf_business_social_youtube" placeholder="' . esc_attr__('YouTube URL', 'leadsforward-core') . '" value="' . esc_attr($social_youtube) . '" style="margin-top:6px;" />';
 		echo '<input type="url" class="large-text" name="lf_business_social_linkedin" placeholder="' . esc_attr__('LinkedIn URL', 'leadsforward-core') . '" value="' . esc_attr($social_linkedin) . '" style="margin-top:6px;" />';
+		echo '<input type="url" class="large-text" name="lf_business_social_tiktok" placeholder="' . esc_attr__('TikTok URL', 'leadsforward-core') . '" value="' . esc_attr($social_tiktok) . '" style="margin-top:6px;" />';
+		echo '<input type="url" class="large-text" name="lf_business_social_x" placeholder="' . esc_attr__('X (Twitter) URL', 'leadsforward-core') . '" value="' . esc_attr($social_x) . '" style="margin-top:6px;" />';
 		echo '</td></tr>';
 		echo '<tr><th scope="row"><label for="lf_business_same_as">' . esc_html__('sameAs links (optional)', 'leadsforward-core') . '</label></th><td><textarea class="large-text" id="lf_business_same_as" name="lf_business_same_as" rows="3" placeholder="' . esc_attr__('One URL per line', 'leadsforward-core') . '">' . esc_textarea($same_as) . '</textarea></td></tr>';
 		echo '<tr><th scope="row"><label for="lf_business_founding_year">' . esc_html__('Founding year (optional)', 'leadsforward-core') . '</label></th><td><input type="text" class="regular-text" id="lf_business_founding_year" name="lf_business_founding_year" value="' . esc_attr($founding_year) . '" /></td></tr>';
@@ -450,6 +454,12 @@ function lf_wizard_render_page(): void {
 			'lf_business_social_instagram',
 			'lf_business_social_youtube',
 			'lf_business_social_linkedin',
+			'lf_business_social_tiktok',
+			'lf_business_social_x',
+			'lf_business_social_tiktok',
+			'lf_business_social_x',
+			'lf_business_social_tiktok',
+			'lf_business_social_x',
 			'lf_business_same_as',
 			'lf_business_founding_year',
 			'lf_business_license_number',

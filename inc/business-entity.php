@@ -39,6 +39,30 @@ function lf_business_entity_address_string(array $parts): string {
 	return $full;
 }
 
+function lf_business_entity_service_areas(): array {
+	static $cached = null;
+	if ($cached !== null) {
+		return $cached;
+	}
+	if (!post_type_exists('lf_service_area')) {
+		$cached = [];
+		return $cached;
+	}
+	$posts = get_posts([
+		'post_type' => 'lf_service_area',
+		'post_status' => 'publish',
+		'posts_per_page' => 50,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+		'no_found_rows' => true,
+	]);
+	$areas = array_values(array_filter(array_map(function ($post) {
+		return $post ? get_the_title($post) : '';
+	}, $posts)));
+	$cached = array_values(array_unique($areas));
+	return $cached;
+}
+
 function lf_business_entity_get(): array {
 	$get = function (string $key, $default = '') {
 		return function_exists('lf_get_business_info_value') ? lf_get_business_info_value($key, $default) : get_option('options_' . $key, $default);
@@ -73,7 +97,7 @@ function lf_business_entity_get(): array {
 		$street = $address;
 	}
 	$service_area_type = (string) $get('lf_business_service_area_type', 'address');
-	$service_areas = lf_business_entity_parse_list($get('lf_business_service_areas', ''));
+	$service_areas = lf_business_entity_service_areas();
 	$geo = $get('lf_business_geo', []);
 	$hours = (string) $get('lf_business_hours', '');
 	$category = (string) $get('lf_business_category', 'HomeAndConstructionBusiness');
@@ -91,6 +115,8 @@ function lf_business_entity_get(): array {
 		'instagram' => (string) $get('lf_business_social_instagram', ''),
 		'youtube' => (string) $get('lf_business_social_youtube', ''),
 		'linkedin' => (string) $get('lf_business_social_linkedin', ''),
+		'tiktok' => (string) $get('lf_business_social_tiktok', ''),
+		'x' => (string) $get('lf_business_social_x', ''),
 	];
 	$gbp = (string) $get('lf_business_gbp_url', '');
 	$same_as = lf_business_entity_parse_list($get('lf_business_same_as', ''));
@@ -141,21 +167,8 @@ function lf_business_entity_get(): array {
 }
 
 function lf_business_entity_area_served(array $entity): array {
-	$areas = $entity['service_areas'] ?? [];
-	if (!empty($areas)) {
-		return $areas;
-	}
-	$posts = get_posts([
-		'post_type' => 'lf_service_area',
-		'post_status' => 'publish',
-		'posts_per_page' => 20,
-		'orderby' => 'menu_order title',
-		'order' => 'ASC',
-		'no_found_rows' => true,
-	]);
-	return array_values(array_filter(array_map(function ($post) {
-		return $post ? get_the_title($post) : '';
-	}, $posts)));
+	$areas = lf_business_entity_service_areas();
+	return $areas;
 }
 
 function lf_business_entity_image_url(int $attachment_id, string $size = 'large'): string {

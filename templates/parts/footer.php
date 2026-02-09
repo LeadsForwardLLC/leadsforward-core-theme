@@ -14,6 +14,27 @@ if (!defined('ABSPATH')) {
 
 $has_footer_menu = has_nav_menu('footer_menu');
 $nap = function_exists('lf_nap_data') ? lf_nap_data() : ['name' => '', 'address' => '', 'phone' => '', 'email' => ''];
+$entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
+$social = is_array($entity['social'] ?? null) ? $entity['social'] : [];
+$social_map = [
+	'facebook' => ['label' => __('Facebook', 'leadsforward-core'), 'icon' => 'social-facebook'],
+	'instagram' => ['label' => __('Instagram', 'leadsforward-core'), 'icon' => 'social-instagram'],
+	'youtube' => ['label' => __('YouTube', 'leadsforward-core'), 'icon' => 'social-youtube'],
+	'linkedin' => ['label' => __('LinkedIn', 'leadsforward-core'), 'icon' => 'social-linkedin'],
+	'tiktok' => ['label' => __('TikTok', 'leadsforward-core'), 'icon' => 'social-tiktok'],
+	'x' => ['label' => __('X', 'leadsforward-core'), 'icon' => 'social-x'],
+];
+$social_links = [];
+foreach ($social_map as $key => $meta) {
+	$url = isset($social[$key]) ? trim((string) $social[$key]) : '';
+	if ($url !== '') {
+		$social_links[] = [
+			'url' => $url,
+			'label' => $meta['label'],
+			'icon' => $meta['icon'],
+		];
+	}
+}
 $has_nap = !empty(trim((string) ($nap['name'] ?? ''))) || !empty(trim((string) ($nap['phone'] ?? '')));
 
 if (!$has_footer_menu && !$has_nap) {
@@ -48,6 +69,20 @@ if (!$has_footer_menu && !$has_nap) {
 				]);
 				?>
 			</nav>
+		<?php endif; ?>
+		<?php if (!empty($social_links)) : ?>
+			<div class="lf-footer-social" aria-label="<?php esc_attr_e('Social media', 'leadsforward-core'); ?>">
+				<?php foreach ($social_links as $item) : ?>
+					<a class="lf-footer-social__link" href="<?php echo esc_url($item['url']); ?>" target="_blank" rel="noopener noreferrer">
+						<?php
+						if (function_exists('lf_icon')) {
+							echo lf_icon($item['icon'], ['class' => 'lf-footer-social__icon lf-icon--sm lf-icon--inherit']);
+						}
+						?>
+						<span class="screen-reader-text"><?php echo esc_html($item['label']); ?></span>
+					</a>
+				<?php endforeach; ?>
+			</div>
 		<?php endif; ?>
 	</div>
 </footer>

@@ -42,6 +42,8 @@ function lf_business_option_selectors(): array {
 		'lf_business_social_instagram',
 		'lf_business_social_youtube',
 		'lf_business_social_linkedin',
+		'lf_business_social_tiktok',
+		'lf_business_social_x',
 		'lf_business_gbp_url',
 		'lf_business_same_as',
 		'lf_business_founding_year',

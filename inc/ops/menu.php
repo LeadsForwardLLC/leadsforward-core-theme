@@ -157,7 +157,6 @@ function lf_ops_handle_global_settings_save(): void {
 		$line2 = trim(implode(' ', array_filter([$address_city, $address_state, $address_zip])));
 		$address = trim(implode(', ', array_filter([$address_street, $line2])));
 		$service_area_type = isset($_POST['lf_business_service_area_type']) && $_POST['lf_business_service_area_type'] === 'service_area' ? 'service_area' : 'address';
-		$service_areas = isset($_POST['lf_business_service_areas']) ? sanitize_textarea_field(wp_unslash($_POST['lf_business_service_areas'])) : '';
 		$lat_raw = isset($_POST['lf_business_geo_lat']) ? trim((string) $_POST['lf_business_geo_lat']) : '';
 		$lng_raw = isset($_POST['lf_business_geo_lng']) ? trim((string) $_POST['lf_business_geo_lng']) : '';
 		$lat = $lat_raw !== '' ? (float) $lat_raw : '';
@@ -173,6 +172,8 @@ function lf_ops_handle_global_settings_save(): void {
 		$social_instagram = isset($_POST['lf_business_social_instagram']) ? esc_url_raw(wp_unslash($_POST['lf_business_social_instagram'])) : '';
 		$social_youtube = isset($_POST['lf_business_social_youtube']) ? esc_url_raw(wp_unslash($_POST['lf_business_social_youtube'])) : '';
 		$social_linkedin = isset($_POST['lf_business_social_linkedin']) ? esc_url_raw(wp_unslash($_POST['lf_business_social_linkedin'])) : '';
+		$social_tiktok = isset($_POST['lf_business_social_tiktok']) ? esc_url_raw(wp_unslash($_POST['lf_business_social_tiktok'])) : '';
+		$social_x = isset($_POST['lf_business_social_x']) ? esc_url_raw(wp_unslash($_POST['lf_business_social_x'])) : '';
 		$gbp_url = isset($_POST['lf_business_gbp_url']) ? esc_url_raw(wp_unslash($_POST['lf_business_gbp_url'])) : '';
 		$same_as = isset($_POST['lf_business_same_as']) ? sanitize_textarea_field(wp_unslash($_POST['lf_business_same_as'])) : '';
 		$founding_year = isset($_POST['lf_business_founding_year']) ? sanitize_text_field(wp_unslash($_POST['lf_business_founding_year'])) : '';
@@ -208,7 +209,6 @@ function lf_ops_handle_global_settings_save(): void {
 		lf_update_business_info_value('lf_business_address_zip', $address_zip);
 		lf_update_business_info_value('lf_business_address', $address);
 		lf_update_business_info_value('lf_business_service_area_type', $service_area_type);
-		lf_update_business_info_value('lf_business_service_areas', $service_areas);
 		lf_update_business_info_value('lf_business_geo', ['lat' => $lat, 'lng' => $lng]);
 		lf_update_business_info_value('lf_business_hours', isset($_POST['lf_business_hours']) ? sanitize_textarea_field(wp_unslash($_POST['lf_business_hours'])) : '');
 		lf_update_business_info_value('lf_business_category', $category);
@@ -218,6 +218,8 @@ function lf_ops_handle_global_settings_save(): void {
 		lf_update_business_info_value('lf_business_social_instagram', $social_instagram);
 		lf_update_business_info_value('lf_business_social_youtube', $social_youtube);
 		lf_update_business_info_value('lf_business_social_linkedin', $social_linkedin);
+		lf_update_business_info_value('lf_business_social_tiktok', $social_tiktok);
+		lf_update_business_info_value('lf_business_social_x', $social_x);
 		lf_update_business_info_value('lf_business_gbp_url', $gbp_url);
 		lf_update_business_info_value('lf_business_same_as', $same_as);
 		lf_update_business_info_value('lf_business_founding_year', $founding_year);
@@ -288,17 +290,35 @@ function lf_ops_render_global_settings_page(): void {
 	$entity_address_state = (string) ($entity_address_parts['state'] ?? '');
 	$entity_address_zip = (string) ($entity_address_parts['zip'] ?? '');
 	$entity_service_area_type = (string) ($entity['service_area_type'] ?? 'address');
-	$entity_service_areas = '';
-	if (!empty($entity['service_areas']) && is_array($entity['service_areas'])) {
-		$entity_service_areas = implode("\n", $entity['service_areas']);
+	$service_area_titles = [];
+	if (post_type_exists('lf_service_area')) {
+		$service_area_titles = get_posts([
+			'post_type' => 'lf_service_area',
+			'post_status' => 'publish',
+			'posts_per_page' => 50,
+			'orderby' => 'menu_order title',
+			'order' => 'ASC',
+			'no_found_rows' => true,
+		]);
+		$service_area_titles = array_values(array_filter(array_map(function ($post) {
+			return $post ? get_the_title($post) : '';
+		}, $service_area_titles)));
 	}
+	$service_area_text = $service_area_titles ? implode("\n", $service_area_titles) : __('No service areas yet.', 'leadsforward-core');
 	$entity_geo = $entity['geo'] ?? ['lat' => '', 'lng' => ''];
 	$entity_hours = (string) ($entity['hours'] ?? '');
 	$entity_category = (string) ($entity['category'] ?? 'HomeAndConstructionBusiness');
 	$entity_desc = (string) ($entity['description'] ?? '');
 	$entity_primary_image_id = (int) ($entity['primary_image_id'] ?? 0);
 	$entity_primary_image_url = $entity_primary_image_id ? wp_get_attachment_image_url($entity_primary_image_id, 'medium') : '';
-	$entity_social = $entity['social'] ?? ['facebook' => '', 'instagram' => '', 'youtube' => '', 'linkedin' => ''];
+	$entity_social = $entity['social'] ?? [
+		'facebook' => '',
+		'instagram' => '',
+		'youtube' => '',
+		'linkedin' => '',
+		'tiktok' => '',
+		'x' => '',
+	];
 	$entity_gbp = (string) ($entity['gbp_url'] ?? '');
 	$entity_same_as = '';
 	if (!empty($entity['same_as']) && is_array($entity['same_as'])) {
@@ -453,9 +473,19 @@ function lf_ops_render_global_settings_page(): void {
 							</td>
 						</tr>
 						<tr>
-							<th scope="row"><label for="lf_business_service_areas"><?php esc_html_e('Service areas list', 'leadsforward-core'); ?></label></th>
+							<th scope="row"><?php esc_html_e('Service areas list', 'leadsforward-core'); ?></th>
 							<td>
-								<textarea class="large-text" id="lf_business_service_areas" name="lf_business_service_areas" rows="4" placeholder="<?php esc_attr_e("One city or region per line", 'leadsforward-core'); ?>"><?php echo esc_textarea($entity_service_areas); ?></textarea>
+								<textarea class="large-text" rows="4" readonly><?php echo esc_textarea($service_area_text); ?></textarea>
+								<p class="description">
+									<?php
+									printf(
+										'%s <a href="%s">%s</a>.',
+										esc_html__('To edit service areas, manage the Service Areas pages.', 'leadsforward-core'),
+										esc_url(admin_url('edit.php?post_type=lf_service_area')),
+										esc_html__('Go to Service Areas', 'leadsforward-core')
+									);
+									?>
+								</p>
 							</td>
 						</tr>
 						<tr>
@@ -507,6 +537,7 @@ function lf_ops_render_global_settings_page(): void {
 									<button type="button" class="button" id="lf-entity-primary-image-select"><?php esc_html_e('Select Image', 'leadsforward-core'); ?></button>
 									<button type="button" class="button" id="lf-entity-primary-image-clear"><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
 								</div>
+								<p class="description"><?php esc_html_e('Used in LocalBusiness schema as the primary business image.', 'leadsforward-core'); ?></p>
 							</td>
 						</tr>
 						<tr>
@@ -520,11 +551,16 @@ function lf_ops_render_global_settings_page(): void {
 								<input type="url" class="large-text" name="lf_business_social_instagram" placeholder="<?php esc_attr_e('Instagram URL', 'leadsforward-core'); ?>" value="<?php echo esc_attr((string) ($entity_social['instagram'] ?? '')); ?>" style="margin-top:6px;" />
 								<input type="url" class="large-text" name="lf_business_social_youtube" placeholder="<?php esc_attr_e('YouTube URL', 'leadsforward-core'); ?>" value="<?php echo esc_attr((string) ($entity_social['youtube'] ?? '')); ?>" style="margin-top:6px;" />
 								<input type="url" class="large-text" name="lf_business_social_linkedin" placeholder="<?php esc_attr_e('LinkedIn URL', 'leadsforward-core'); ?>" value="<?php echo esc_attr((string) ($entity_social['linkedin'] ?? '')); ?>" style="margin-top:6px;" />
+								<input type="url" class="large-text" name="lf_business_social_tiktok" placeholder="<?php esc_attr_e('TikTok URL', 'leadsforward-core'); ?>" value="<?php echo esc_attr((string) ($entity_social['tiktok'] ?? '')); ?>" style="margin-top:6px;" />
+								<input type="url" class="large-text" name="lf_business_social_x" placeholder="<?php esc_attr_e('X (Twitter) URL', 'leadsforward-core'); ?>" value="<?php echo esc_attr((string) ($entity_social['x'] ?? '')); ?>" style="margin-top:6px;" />
 							</td>
 						</tr>
 						<tr>
 							<th scope="row"><label for="lf_business_same_as"><?php esc_html_e('sameAs links (optional)', 'leadsforward-core'); ?></label></th>
-							<td><textarea class="large-text" id="lf_business_same_as" name="lf_business_same_as" rows="3" placeholder="<?php esc_attr_e("One URL per line", 'leadsforward-core'); ?>"><?php echo esc_textarea($entity_same_as); ?></textarea></td>
+							<td>
+								<textarea class="large-text" id="lf_business_same_as" name="lf_business_same_as" rows="3" placeholder="<?php esc_attr_e("One URL per line", 'leadsforward-core'); ?>"><?php echo esc_textarea($entity_same_as); ?></textarea>
+								<p class="description"><?php esc_html_e('Used in schema to point to official profiles and directory listings.', 'leadsforward-core'); ?></p>
+							</td>
 						</tr>
 						<tr>
 							<th scope="row"><label for="lf_business_founding_year"><?php esc_html_e('Founding year (optional)', 'leadsforward-core'); ?></label></th>
