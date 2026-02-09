@@ -152,6 +152,24 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 		$seo_out['title'] = sanitize_text_field((string) ($stored['seo']['title'] ?? ''));
 		$seo_out['description'] = sanitize_textarea_field((string) ($stored['seo']['description'] ?? ''));
 	}
+
+	if ($context === 'page') {
+		$post = get_post($post_id);
+		$content_only_slugs = ['privacy-policy', 'terms-of-service'];
+		if ($post && in_array($post->post_name, $content_only_slugs, true)) {
+			$sections_out = array_filter($sections_out, function ($row) {
+				return is_array($row) && in_array(($row['type'] ?? ''), ['hero', 'content'], true);
+			});
+			$order_out = array_values(array_filter($order_out, function ($instance_id) use ($sections_out) {
+				return isset($sections_out[$instance_id]);
+			}));
+			if (empty($sections_out)) {
+				$default = lf_pb_default_config('page');
+				$sections_out = $default['sections'] ?? [];
+				$order_out = $default['order'] ?? [];
+			}
+		}
+	}
 	if (empty($sections_out)) {
 		$default['seo'] = $seo_out;
 		return $default;
@@ -325,7 +343,7 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 		<div class="lf-pb-main">
 			<p class="description"><?php esc_html_e('Drag to reorder sections. Use the Add buttons on the right to insert new sections (duplicates allowed).', 'leadsforward-core'); ?></p>
 			<?php if (in_array($context, ['page', 'post'], true)) : ?>
-				<div class="lf-pb-section">
+				<div class="lf-pb-section" data-instance="seo-panel">
 					<div class="lf-pb-section-header">
 						<span class="lf-pb-drag" aria-hidden="true">🔒</span>
 						<strong><?php esc_html_e('SEO Overrides', 'leadsforward-core'); ?></strong>
