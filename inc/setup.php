@@ -46,6 +46,71 @@ function lf_theme_setup(): void {
 }
 add_action('after_setup_theme', 'lf_theme_setup');
 
+function lf_header_menu_item_title(string $title, \WP_Post $item, $args, int $depth): string {
+	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu') {
+		return $title;
+	}
+	$classes = $item->classes ?? [];
+	if (in_array('lf-menu-cta', $classes, true)) {
+		$label = function_exists('lf_get_global_option') ? (string) lf_get_global_option('lf_header_cta_label', '') : '';
+		if ($label === '' && function_exists('lf_get_option')) {
+			$label = (string) lf_get_option('lf_cta_primary_text', 'option');
+		}
+		return $label !== '' ? $label : __('Free Estimate', 'leadsforward-core');
+	}
+	if (in_array('lf-menu-call', $classes, true)) {
+		return __('Call Now', 'leadsforward-core');
+	}
+	return $title;
+}
+add_filter('nav_menu_item_title', 'lf_header_menu_item_title', 10, 4);
+
+function lf_header_menu_link_attributes(array $atts, \WP_Post $item, $args, int $depth): array {
+	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu') {
+		return $atts;
+	}
+	$classes = $item->classes ?? [];
+	if (in_array('lf-menu-cta', $classes, true)) {
+		$cta_url = function_exists('lf_get_global_option') ? (string) lf_get_global_option('lf_header_cta_url', '') : '';
+		if ($cta_url !== '') {
+			$atts['href'] = esc_url($cta_url);
+		} else {
+			$atts['href'] = '#';
+			$atts['data-lf-quote-trigger'] = '1';
+			$atts['data-lf-quote-source'] = 'header-menu';
+		}
+		$atts['class'] = trim(($atts['class'] ?? '') . ' lf-btn lf-btn--primary');
+	}
+	if (in_array('lf-menu-call', $classes, true)) {
+		$phone = function_exists('lf_get_cta_phone') ? (string) lf_get_cta_phone() : '';
+		$atts['href'] = $phone !== '' ? 'tel:' . esc_attr($phone) : '#';
+		$atts['class'] = trim(($atts['class'] ?? '') . ' lf-menu-call__link');
+	}
+	return $atts;
+}
+add_filter('nav_menu_link_attributes', 'lf_header_menu_link_attributes', 10, 4);
+
+function lf_header_menu_item_output(string $item_output, \WP_Post $item, int $depth, $args): string {
+	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu') {
+		return $item_output;
+	}
+	$classes = $item->classes ?? [];
+	if (in_array('lf-menu-call', $classes, true) && function_exists('lf_icon')) {
+		$icon = lf_icon('phone', ['class' => 'lf-menu-call__icon lf-icon lf-icon--sm lf-icon--inherit', 'aria-hidden' => 'true']);
+		$item_output = preg_replace('/(<a[^>]*>)(.*?)(<\/a>)/', '$1' . $icon . '<span>$2</span>$3', $item_output, 1);
+	}
+	if (in_array('lf-menu-more', $classes, true)) {
+		$title = apply_filters('nav_menu_item_title', $item->title, $item, $args, $depth);
+		$item_output = $args->before
+			. '<button type="button" class="site-header__more-toggle" aria-haspopup="true" aria-expanded="false">'
+			. $args->link_before . $title . $args->link_after
+			. '</button>'
+			. $args->after;
+	}
+	return $item_output;
+}
+add_filter('walker_nav_menu_start_el', 'lf_header_menu_item_output', 10, 4);
+
 /**
  * Register ACF Options pages when ACF is active. Global Business Info, CTAs, Schema.
  */

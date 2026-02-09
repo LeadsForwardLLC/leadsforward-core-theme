@@ -19,6 +19,7 @@ $cta_phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
 $cta_label = function_exists('lf_get_global_option') ? lf_get_global_option('lf_header_cta_label', '') : '';
 $cta_url = function_exists('lf_get_global_option') ? lf_get_global_option('lf_header_cta_url', '') : '';
 $show_cta = ($cta_label !== '' || $cta_text !== '');
+$show_actions = !$has_header_menu;
 $logo_id = function_exists('lf_get_global_option') ? lf_get_global_option('lf_global_logo', 0) : 0;
 $logo_id = is_numeric($logo_id) ? (int) $logo_id : 0;
 $logo_html = '';
@@ -59,28 +60,30 @@ if ($logo_text === '') {
 					?>
 				</nav>
 			<?php endif; ?>
-			<div class="site-header__actions">
-				<?php if ($cta_phone) : ?>
-					<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $cta_phone)); ?>" class="site-header__phone">
+			<?php if ($show_actions) : ?>
+				<div class="site-header__actions">
+					<?php if ($cta_phone) : ?>
+						<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $cta_phone)); ?>" class="site-header__phone">
+							<?php
+							if (function_exists('lf_icon')) {
+								echo lf_icon('phone', ['class' => 'site-header__phone-icon lf-icon lf-icon--sm lf-icon--inherit', 'aria-hidden' => 'true']);
+							}
+							?>
+							<span><?php esc_html_e('Call Now', 'leadsforward-core'); ?></span>
+						</a>
+					<?php endif; ?>
+					<?php if ($show_cta) : ?>
 						<?php
-						if (function_exists('lf_icon')) {
-							echo lf_icon('phone', ['class' => 'site-header__phone-icon lf-icon lf-icon--sm lf-icon--inherit', 'aria-hidden' => 'true']);
-						}
+					$label = $cta_label !== '' ? $cta_label : ($cta_text ?: __('Free Estimate', 'leadsforward-core'));
 						?>
-						<span><?php esc_html_e('Call Now', 'leadsforward-core'); ?></span>
-					</a>
-				<?php endif; ?>
-				<?php if ($show_cta) : ?>
-					<?php
-				$label = $cta_label !== '' ? $cta_label : ($cta_text ?: __('Free Estimate', 'leadsforward-core'));
-					?>
-				<?php if ($cta_url !== '') : ?>
-					<a class="site-header__cta lf-btn lf-btn--primary" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($label); ?></a>
-				<?php else : ?>
-					<button type="button" class="site-header__cta lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="header"><?php echo esc_html($label); ?></button>
-				<?php endif; ?>
-				<?php endif; ?>
-			</div>
+					<?php if ($cta_url !== '') : ?>
+						<a class="site-header__cta lf-btn lf-btn--primary" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($label); ?></a>
+					<?php else : ?>
+						<button type="button" class="site-header__cta lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="header"><?php echo esc_html($label); ?></button>
+					<?php endif; ?>
+					<?php endif; ?>
+				</div>
+			<?php endif; ?>
 			<?php if ($has_utility_menu) : ?>
 				<nav class="site-header__utility" aria-label="<?php esc_attr_e('Utility', 'leadsforward-core'); ?>">
 					<?php
@@ -128,6 +131,32 @@ if ($logo_text === '') {
 				if (target && target.tagName === 'A') {
 					setOpen(false);
 				}
+			});
+		}
+		var moreToggles = header.querySelectorAll('.site-header__more-toggle');
+		if (moreToggles.length) {
+			moreToggles.forEach(function (toggleBtn) {
+				var parentItem = toggleBtn.closest('.menu-item');
+				if (!parentItem) return;
+				function setMoreOpen(open) {
+					parentItem.classList.toggle('is-open', open);
+					toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+				}
+				toggleBtn.addEventListener('click', function (event) {
+					event.preventDefault();
+					setMoreOpen(!parentItem.classList.contains('is-open'));
+				});
+				parentItem.addEventListener('mouseleave', function () {
+					setMoreOpen(false);
+				});
+				parentItem.addEventListener('focusout', function (event) {
+					if (!parentItem.contains(event.relatedTarget)) {
+						setMoreOpen(false);
+					}
+				});
+				toggleBtn.addEventListener('focus', function () {
+					setMoreOpen(true);
+				});
 			});
 		}
 		document.addEventListener('keydown', function (event) {

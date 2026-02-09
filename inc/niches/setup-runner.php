@@ -270,7 +270,7 @@ function lf_run_setup(array $data): array {
 	}
 
 	// 7. Menus
-	$menu_result = lf_wizard_create_menus($created_pages, $created_services, $created_areas);
+	$menu_result = lf_wizard_create_menus($created_pages, $created_services, $created_areas, $data);
 	$log['created']['menus'] = $menu_result['created'] ?? [];
 	if (!empty($menu_result['errors'])) {
 		$log['errors'] = array_merge($log['errors'], $menu_result['errors']);
@@ -1169,7 +1169,7 @@ function lf_wizard_seed_homepage_sections(array $section_order, string $options_
 /**
  * Create Header and Footer menus; assign to theme locations; add items.
  */
-function lf_wizard_create_menus(array $created_pages, array $service_ids, array $area_ids): array {
+function lf_wizard_create_menus(array $created_pages, array $service_ids, array $area_ids, array $data = []): array {
 	$log = ['created' => [], 'errors' => []];
 	$home_id = $created_pages['home'] ?? null;
 	$about_id = $created_pages['about-us'] ?? null;
@@ -1227,14 +1227,41 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 		'title' => __('Services', 'leadsforward-core'),
 		'children' => $service_children,
 	];
-	if ($about_id) $header_items[] = ['type' => 'page', 'object_id' => $about_id];
 	$header_items[] = [
 		'type' => 'custom',
 		'url' => get_post_type_archive_link('lf_service_area'),
 		'title' => __('Service Areas', 'leadsforward-core'),
 		'children' => $area_children,
 	];
-	if ($contact_id) $header_items[] = ['type' => 'page', 'object_id' => $contact_id];
+	if ($reviews_id) $header_items[] = ['type' => 'page', 'object_id' => $reviews_id];
+
+	$more_children = [];
+	if ($about_id) $more_children[] = ['type' => 'page', 'object_id' => $about_id];
+	if ($blog_id) $more_children[] = ['type' => 'page', 'object_id' => $blog_id];
+	if ($contact_id) $more_children[] = ['type' => 'page', 'object_id' => $contact_id];
+	if (!empty($more_children)) {
+		$header_items[] = [
+			'type' => 'custom',
+			'url' => '#',
+			'title' => __('More', 'leadsforward-core'),
+			'classes' => 'lf-menu-more',
+			'children' => $more_children,
+		];
+	}
+	$phone_raw = (string) ($data['business_phone'] ?? (function_exists('lf_get_option') ? lf_get_option('lf_business_phone', 'option') : ''));
+	$phone_href = $phone_raw !== '' ? 'tel:' . preg_replace('/\s+/', '', $phone_raw) : '#';
+	$header_items[] = [
+		'type' => 'custom',
+		'url' => $phone_href,
+		'title' => __('Call Now', 'leadsforward-core'),
+		'classes' => 'lf-menu-call',
+	];
+	$header_items[] = [
+		'type' => 'custom',
+		'url' => '#',
+		'title' => __('Free Estimate', 'leadsforward-core'),
+		'classes' => 'lf-menu-cta',
+	];
 
 	$footer_items = [];
 	if ($home_id) $footer_items[] = ['type' => 'page', 'object_id' => $home_id];
@@ -1279,6 +1306,10 @@ function lf_wizard_ensure_menu(string $menu_name, string $location, array $items
 	$position = 0;
 	foreach ($items as $item) {
 		$parent_id = 0;
+		$classes = '';
+		if (!empty($item['classes'])) {
+			$classes = is_array($item['classes']) ? implode(' ', $item['classes']) : (string) $item['classes'];
+		}
 		if ($item['type'] === 'page' && !empty($item['object_id'])) {
 			$parent_id = wp_update_nav_menu_item($menu_id, 0, [
 				'menu-item-title'     => get_the_title($item['object_id']),
@@ -1288,6 +1319,7 @@ function lf_wizard_ensure_menu(string $menu_name, string $location, array $items
 				'menu-item-object-id' => $item['object_id'],
 				'menu-item-status'    => 'publish',
 				'menu-item-position'  => $position++,
+				'menu-item-classes'   => $classes,
 			]);
 		} elseif ($item['type'] === 'custom' && !empty($item['url'])) {
 			$parent_id = wp_update_nav_menu_item($menu_id, 0, [
@@ -1296,6 +1328,7 @@ function lf_wizard_ensure_menu(string $menu_name, string $location, array $items
 				'menu-item-type'     => 'custom',
 				'menu-item-status'   => 'publish',
 				'menu-item-position' => $position++,
+				'menu-item-classes'  => $classes,
 			]);
 		} elseif ($item['type'] === 'post_type' && !empty($item['object_id']) && !empty($item['object'])) {
 			$parent_id = wp_update_nav_menu_item($menu_id, 0, [
@@ -1306,6 +1339,7 @@ function lf_wizard_ensure_menu(string $menu_name, string $location, array $items
 				'menu-item-object-id' => $item['object_id'],
 				'menu-item-status'    => 'publish',
 				'menu-item-position'  => $position++,
+				'menu-item-classes'   => $classes,
 			]);
 		}
 		if (!empty($item['children']) && is_array($item['children']) && $parent_id && !is_wp_error($parent_id)) {
