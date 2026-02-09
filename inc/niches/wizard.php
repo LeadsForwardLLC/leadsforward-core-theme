@@ -47,27 +47,105 @@ function lf_wizard_handle_post(): void {
 	}
 	$step = (int) $_POST['lf_wizard_step'];
 	if ($step === 5 && isset($_POST['lf_wizard_generate']) && check_admin_referer('lf_wizard_generate', 'lf_wizard_nonce')) {
+		$allowed_embed = lf_wizard_allowed_map_embed();
+		$address_street = isset($_POST['lf_business_address_street']) ? sanitize_text_field($_POST['lf_business_address_street']) : '';
+		$address_city = isset($_POST['lf_business_address_city']) ? sanitize_text_field($_POST['lf_business_address_city']) : '';
+		$address_state = isset($_POST['lf_business_address_state']) ? sanitize_text_field($_POST['lf_business_address_state']) : '';
+		$address_zip = isset($_POST['lf_business_address_zip']) ? sanitize_text_field($_POST['lf_business_address_zip']) : '';
+		$address_line2 = trim(implode(' ', array_filter([$address_city, $address_state, $address_zip])));
+		$address_full = trim(implode(', ', array_filter([$address_street, $address_line2])));
+		$primary_phone = isset($_POST['lf_business_phone_primary']) ? sanitize_text_field($_POST['lf_business_phone_primary']) : '';
+		if ($primary_phone === '' && isset($_POST['lf_business_phone'])) {
+			$primary_phone = sanitize_text_field($_POST['lf_business_phone']);
+		}
+		$tracking_phone = isset($_POST['lf_business_phone_tracking']) ? sanitize_text_field($_POST['lf_business_phone_tracking']) : '';
+		$phone_display = isset($_POST['lf_business_phone_display']) && $_POST['lf_business_phone_display'] === 'tracking' ? 'tracking' : 'primary';
+		$display_phone = $phone_display === 'tracking' && $tracking_phone !== '' ? $tracking_phone : $primary_phone;
+		$service_area_type = isset($_POST['lf_business_service_area_type']) && $_POST['lf_business_service_area_type'] === 'service_area' ? 'service_area' : 'address';
+		$lat_raw = isset($_POST['lf_business_geo_lat']) ? trim((string) $_POST['lf_business_geo_lat']) : '';
+		$lng_raw = isset($_POST['lf_business_geo_lng']) ? trim((string) $_POST['lf_business_geo_lng']) : '';
+		$lat = $lat_raw !== '' ? (float) $lat_raw : '';
+		$lng = $lng_raw !== '' ? (float) $lng_raw : '';
+		$category = isset($_POST['lf_business_category']) ? sanitize_text_field($_POST['lf_business_category']) : 'HomeAndConstructionBusiness';
+		$allowed_categories = ['HomeAndConstructionBusiness', 'GeneralContractor', 'RoofingContractor', 'Plumber', 'HVACBusiness', 'LandscapingBusiness', 'LocalBusiness'];
+		if (!in_array($category, $allowed_categories, true)) {
+			$category = 'HomeAndConstructionBusiness';
+		}
 		$data = [
 			'niche_slug'                 => sanitize_text_field($_POST['lf_niche'] ?? ''),
 			'business_name'              => sanitize_text_field($_POST['lf_business_name'] ?? ''),
-			'business_phone'             => sanitize_text_field($_POST['lf_business_phone'] ?? ''),
+			'business_legal_name'        => isset($_POST['lf_business_legal_name']) ? sanitize_text_field($_POST['lf_business_legal_name']) : '',
+			'business_phone'             => $display_phone,
+			'business_phone_primary'     => $primary_phone,
+			'business_phone_tracking'    => $tracking_phone,
+			'business_phone_display'     => $phone_display,
 			'business_email'             => sanitize_email($_POST['lf_business_email'] ?? ''),
-			'business_address'           => sanitize_textarea_field($_POST['lf_business_address'] ?? ''),
+			'business_address'           => $address_full !== '' ? $address_full : sanitize_textarea_field($_POST['lf_business_address'] ?? ''),
+			'business_address_street'    => $address_street,
+			'business_address_city'      => $address_city,
+			'business_address_state'     => $address_state,
+			'business_address_zip'       => $address_zip,
+			'business_service_area_type' => $service_area_type,
+			'business_geo'               => ['lat' => $lat, 'lng' => $lng],
 			'business_hours'             => sanitize_textarea_field($_POST['lf_business_hours'] ?? ''),
+			'business_category'          => $category,
+			'business_short_description' => sanitize_textarea_field($_POST['lf_business_short_description'] ?? ''),
+			'business_gbp_url'           => esc_url_raw($_POST['lf_business_gbp_url'] ?? ''),
+			'business_social_facebook'   => esc_url_raw($_POST['lf_business_social_facebook'] ?? ''),
+			'business_social_instagram'  => esc_url_raw($_POST['lf_business_social_instagram'] ?? ''),
+			'business_social_youtube'    => esc_url_raw($_POST['lf_business_social_youtube'] ?? ''),
+			'business_social_linkedin'   => esc_url_raw($_POST['lf_business_social_linkedin'] ?? ''),
+			'business_same_as'           => sanitize_textarea_field($_POST['lf_business_same_as'] ?? ''),
+			'business_founding_year'     => sanitize_text_field($_POST['lf_business_founding_year'] ?? ''),
+			'business_license_number'    => sanitize_text_field($_POST['lf_business_license_number'] ?? ''),
+			'business_insurance_statement' => sanitize_textarea_field($_POST['lf_business_insurance_statement'] ?? ''),
+			'business_place_id'          => sanitize_text_field($_POST['lf_business_place_id'] ?? ''),
+			'business_place_name'        => sanitize_text_field($_POST['lf_business_place_name'] ?? ''),
+			'business_place_address'     => sanitize_text_field($_POST['lf_business_place_address'] ?? ''),
+			'business_map_embed'         => isset($_POST['lf_business_map_embed']) ? wp_kses(wp_unslash($_POST['lf_business_map_embed']), $allowed_embed) : '',
 			'service_areas'              => lf_wizard_sanitize_areas($_POST['lf_service_areas'] ?? ''),
 			'variation_profile_override' => sanitize_text_field($_POST['lf_variation_profile'] ?? ''),
 		];
 		$result = lf_run_setup($data);
 		if (!empty($result['success'])) {
-			// Ensure business info is saved where LeadsForward → Homepage (Business Info) reads from
+			// Ensure business info is saved for Global Settings → Business Entity
 			if (function_exists('lf_update_business_info_value')) {
 				lf_update_business_info_value('lf_business_name', $data['business_name'] ?? '');
+				lf_update_business_info_value('lf_business_legal_name', $data['business_legal_name'] ?? '');
+				lf_update_business_info_value('lf_business_phone_primary', $data['business_phone_primary'] ?? '');
+				lf_update_business_info_value('lf_business_phone_tracking', $data['business_phone_tracking'] ?? '');
+				lf_update_business_info_value('lf_business_phone_display', $data['business_phone_display'] ?? 'primary');
 				lf_update_business_info_value('lf_business_phone', $data['business_phone'] ?? '');
 				lf_update_business_info_value('lf_business_email', $data['business_email'] ?? '');
+				lf_update_business_info_value('lf_business_address_street', $data['business_address_street'] ?? '');
+				lf_update_business_info_value('lf_business_address_city', $data['business_address_city'] ?? '');
+				lf_update_business_info_value('lf_business_address_state', $data['business_address_state'] ?? '');
+				lf_update_business_info_value('lf_business_address_zip', $data['business_address_zip'] ?? '');
 				lf_update_business_info_value('lf_business_address', $data['business_address'] ?? '');
+				lf_update_business_info_value('lf_business_service_area_type', $data['business_service_area_type'] ?? 'address');
+				if (!empty($data['service_areas']) && is_array($data['service_areas'])) {
+					$areas = array_filter(array_map('sanitize_text_field', $data['service_areas']));
+					lf_update_business_info_value('lf_business_service_areas', implode("\n", $areas));
+				}
+				lf_update_business_info_value('lf_business_geo', $data['business_geo'] ?? ['lat' => '', 'lng' => '']);
 				if (array_key_exists('business_hours', $data) && $data['business_hours'] !== '') {
 					lf_update_business_info_value('lf_business_hours', $data['business_hours']);
 				}
+				lf_update_business_info_value('lf_business_category', $data['business_category'] ?? 'HomeAndConstructionBusiness');
+				lf_update_business_info_value('lf_business_short_description', $data['business_short_description'] ?? '');
+				lf_update_business_info_value('lf_business_gbp_url', $data['business_gbp_url'] ?? '');
+				lf_update_business_info_value('lf_business_social_facebook', $data['business_social_facebook'] ?? '');
+				lf_update_business_info_value('lf_business_social_instagram', $data['business_social_instagram'] ?? '');
+				lf_update_business_info_value('lf_business_social_youtube', $data['business_social_youtube'] ?? '');
+				lf_update_business_info_value('lf_business_social_linkedin', $data['business_social_linkedin'] ?? '');
+				lf_update_business_info_value('lf_business_same_as', $data['business_same_as'] ?? '');
+				lf_update_business_info_value('lf_business_founding_year', $data['business_founding_year'] ?? '');
+				lf_update_business_info_value('lf_business_license_number', $data['business_license_number'] ?? '');
+				lf_update_business_info_value('lf_business_insurance_statement', $data['business_insurance_statement'] ?? '');
+				lf_update_business_info_value('lf_business_place_id', $data['business_place_id'] ?? '');
+				lf_update_business_info_value('lf_business_place_name', $data['business_place_name'] ?? '');
+				lf_update_business_info_value('lf_business_place_address', $data['business_place_address'] ?? '');
+				lf_update_business_info_value('lf_business_map_embed', $data['business_map_embed'] ?? '');
 			}
 			// Force homepage sections to initialize after wizard (ensures front-end renders).
 			if (function_exists('lf_homepage_apply_niche_config')) {
@@ -121,6 +199,21 @@ function lf_wizard_sanitize_areas($input): array {
 	}
 	$lines = array_filter(array_map('trim', explode("\n", (string) $input)));
 	return array_map('sanitize_text_field', $lines);
+}
+
+function lf_wizard_allowed_map_embed(): array {
+	return [
+		'iframe' => [
+			'src' => true,
+			'width' => true,
+			'height' => true,
+			'style' => true,
+			'loading' => true,
+			'referrerpolicy' => true,
+			'allowfullscreen' => true,
+			'title' => true,
+		],
+	];
 }
 
 function lf_wizard_render_page(): void {
@@ -204,34 +297,129 @@ function lf_wizard_render_page(): void {
 	} elseif ($step === 2) {
 		$niche = $niche ?: array_key_first(lf_get_niche_registry());
 		// Defaults: schema-friendly format examples (pre-fill when empty so user sees how to format)
-		$default_name    = __('Quality Roofing of Sarasota', 'leadsforward-core');
-		$default_phone   = __('(941) 555-0123', 'leadsforward-core');
-		$default_email   = __('contact@yourbusiness.com', 'leadsforward-core');
-		$default_address = __("123 Main Street\nSarasota, FL 34232", 'leadsforward-core');
-		$default_hours   = __("Mon–Fri 8am–6pm\nSat 9am–2pm", 'leadsforward-core');
+		$default_name = __('Quality Roofing of Sarasota', 'leadsforward-core');
+		$default_phone = __('(941) 555-0123', 'leadsforward-core');
+		$default_email = __('contact@yourbusiness.com', 'leadsforward-core');
+		$default_street = __('123 Main Street', 'leadsforward-core');
+		$default_city = __('Sarasota', 'leadsforward-core');
+		$default_state = __('FL', 'leadsforward-core');
+		$default_zip = __('34232', 'leadsforward-core');
+		$default_hours = __("Mon–Fri 8am–6pm\nSat 9am–2pm", 'leadsforward-core');
+
+		$allowed_embed = lf_wizard_allowed_map_embed();
 		$bn = sanitize_text_field($_GET['lf_business_name'] ?? '');
-		$bp = sanitize_text_field($_GET['lf_business_phone'] ?? '');
+		$bl = sanitize_text_field($_GET['lf_business_legal_name'] ?? '');
+		$bp_primary = sanitize_text_field($_GET['lf_business_phone_primary'] ?? '');
+		$bp_tracking = sanitize_text_field($_GET['lf_business_phone_tracking'] ?? '');
+		$phone_display = sanitize_text_field($_GET['lf_business_phone_display'] ?? 'primary');
 		$be = sanitize_email($_GET['lf_business_email'] ?? '');
-		$ba = sanitize_textarea_field($_GET['lf_business_address'] ?? '');
+		$street = sanitize_text_field($_GET['lf_business_address_street'] ?? '');
+		$city = sanitize_text_field($_GET['lf_business_address_city'] ?? '');
+		$state = sanitize_text_field($_GET['lf_business_address_state'] ?? '');
+		$zip = sanitize_text_field($_GET['lf_business_address_zip'] ?? '');
 		$bh = sanitize_textarea_field($_GET['lf_business_hours'] ?? '');
+		$category = sanitize_text_field($_GET['lf_business_category'] ?? 'HomeAndConstructionBusiness');
+		$short_desc = sanitize_textarea_field($_GET['lf_business_short_description'] ?? '');
+		$geo_lat = sanitize_text_field($_GET['lf_business_geo_lat'] ?? '');
+		$geo_lng = sanitize_text_field($_GET['lf_business_geo_lng'] ?? '');
+		$gbp_url = esc_url_raw($_GET['lf_business_gbp_url'] ?? '');
+		$social_facebook = esc_url_raw($_GET['lf_business_social_facebook'] ?? '');
+		$social_instagram = esc_url_raw($_GET['lf_business_social_instagram'] ?? '');
+		$social_youtube = esc_url_raw($_GET['lf_business_social_youtube'] ?? '');
+		$social_linkedin = esc_url_raw($_GET['lf_business_social_linkedin'] ?? '');
+		$same_as = sanitize_textarea_field($_GET['lf_business_same_as'] ?? '');
+		$founding_year = sanitize_text_field($_GET['lf_business_founding_year'] ?? '');
+		$license_number = sanitize_text_field($_GET['lf_business_license_number'] ?? '');
+		$insurance_statement = sanitize_textarea_field($_GET['lf_business_insurance_statement'] ?? '');
+		$place_id = sanitize_text_field($_GET['lf_business_place_id'] ?? '');
+		$place_name = sanitize_text_field($_GET['lf_business_place_name'] ?? '');
+		$place_address = sanitize_text_field($_GET['lf_business_place_address'] ?? '');
+		$map_embed = isset($_GET['lf_business_map_embed']) ? wp_kses(wp_unslash($_GET['lf_business_map_embed']), $allowed_embed) : '';
+		$maps_api_key = get_option('lf_maps_api_key', '');
+		$maps_api_key = is_string($maps_api_key) ? $maps_api_key : '';
+
 		if ($bn === '') { $bn = $default_name; }
-		if ($bp === '') { $bp = $default_phone; }
+		if ($bp_primary === '') { $bp_primary = $default_phone; }
 		if ($be === '') { $be = $default_email; }
-		if ($ba === '') { $ba = $default_address; }
+		if ($street === '') { $street = $default_street; }
+		if ($city === '') { $city = $default_city; }
+		if ($state === '') { $state = $default_state; }
+		if ($zip === '') { $zip = $default_zip; }
 		if ($bh === '') { $bh = $default_hours; }
-		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-ops')) . '">';
+		if ($phone_display !== 'tracking') { $phone_display = 'primary'; }
+		$allowed_categories = ['HomeAndConstructionBusiness', 'GeneralContractor', 'RoofingContractor', 'Plumber', 'HVACBusiness', 'LandscapingBusiness', 'LocalBusiness'];
+		if (!in_array($category, $allowed_categories, true)) {
+			$category = 'HomeAndConstructionBusiness';
+		}
+
+		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-ops')) . '" data-maps-key="' . esc_attr($maps_api_key) . '">';
 		echo '<input type="hidden" name="page" value="lf-ops" />';
 		echo '<input type="hidden" name="step" value="3" />';
 		echo '<input type="hidden" name="niche" value="' . esc_attr($niche) . '" />';
 		echo '<p class="description">' . esc_html__('Used for schema, footer, and Map + NAP. Replace with your real business info—these show the recommended format.', 'leadsforward-core') . '</p>';
 		echo '<table class="form-table">';
-		echo '<tr><th scope="row"><label for="lf_business_name">' . esc_html__('Business name', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_business_name" name="lf_business_name" class="regular-text" value="' . esc_attr($bn) . '" required placeholder="' . esc_attr($default_name) . '" /></td></tr>';
-		echo '<tr><th scope="row"><label for="lf_business_phone">' . esc_html__('Phone', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_business_phone" name="lf_business_phone" class="regular-text" value="' . esc_attr($bp) . '" required placeholder="(XXX) XXX-XXXX" /></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_name">' . esc_html__('Business name (display)', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_business_name" name="lf_business_name" class="regular-text" value="' . esc_attr($bn) . '" required placeholder="' . esc_attr($default_name) . '" /></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_legal_name">' . esc_html__('Business name (legal)', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_business_legal_name" name="lf_business_legal_name" class="regular-text" value="' . esc_attr($bl) . '" /></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_phone_primary">' . esc_html__('Primary phone', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_business_phone_primary" name="lf_business_phone_primary" class="regular-text" value="' . esc_attr($bp_primary) . '" required placeholder="(XXX) XXX-XXXX" /></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_phone_tracking">' . esc_html__('Tracking phone (optional)', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_business_phone_tracking" name="lf_business_phone_tracking" class="regular-text" value="' . esc_attr($bp_tracking) . '" /></td></tr>';
+		echo '<tr><th scope="row">' . esc_html__('Display phone', 'leadsforward-core') . '</th><td><select name="lf_business_phone_display"><option value="primary"' . selected($phone_display !== 'tracking', true, false) . '>' . esc_html__('Primary phone', 'leadsforward-core') . '</option><option value="tracking"' . selected($phone_display === 'tracking', true, false) . '>' . esc_html__('Tracking phone', 'leadsforward-core') . '</option></select></td></tr>';
 		echo '<tr><th scope="row"><label for="lf_business_email">' . esc_html__('Email', 'leadsforward-core') . '</label></th><td><input type="email" id="lf_business_email" name="lf_business_email" class="regular-text" value="' . esc_attr($be) . '" placeholder="contact@yourbusiness.com" /></td></tr>';
-		echo '<tr><th scope="row"><label for="lf_business_address">' . esc_html__('Address (NAP)', 'leadsforward-core') . '</label></th><td><textarea id="lf_business_address" name="lf_business_address" rows="3" class="large-text" placeholder="' . esc_attr(preg_replace('/\s+/', ' ', $default_address)) . '">' . esc_textarea($ba) . '</textarea><br /><span class="description">' . esc_html__('Street, then city/state/zip on following lines. Used in schema and Map + NAP.', 'leadsforward-core') . '</span></td></tr>';
+		echo '<tr><th scope="row">' . esc_html__('Address (NAP)', 'leadsforward-core') . '</th><td><input type="text" class="large-text" name="lf_business_address_street" placeholder="' . esc_attr($default_street) . '" value="' . esc_attr($street) . '" /><div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;"><input type="text" class="regular-text" name="lf_business_address_city" placeholder="' . esc_attr($default_city) . '" value="' . esc_attr($city) . '" /><input type="text" class="regular-text" name="lf_business_address_state" placeholder="' . esc_attr($default_state) . '" value="' . esc_attr($state) . '" /><input type="text" class="regular-text" name="lf_business_address_zip" placeholder="' . esc_attr($default_zip) . '" value="' . esc_attr($zip) . '" /></div></td></tr>';
 		echo '<tr><th scope="row"><label for="lf_business_hours">' . esc_html__('Opening hours', 'leadsforward-core') . '</label></th><td><textarea id="lf_business_hours" name="lf_business_hours" rows="3" class="large-text" placeholder="Mon–Fri 8am–6pm">' . esc_textarea($bh) . '</textarea><br /><span class="description">' . esc_html__('Human-readable hours for schema (e.g. Mon–Fri 8am–6pm). One line per rule.', 'leadsforward-core') . '</span></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_category">' . esc_html__('Primary category', 'leadsforward-core') . '</label></th><td><select name="lf_business_category" id="lf_business_category">';
+		foreach ($allowed_categories as $cat) {
+			$label = $cat;
+			switch ($cat) {
+				case 'HomeAndConstructionBusiness': $label = __('Home & Construction Business', 'leadsforward-core'); break;
+				case 'GeneralContractor': $label = __('General Contractor', 'leadsforward-core'); break;
+				case 'RoofingContractor': $label = __('Roofing Contractor', 'leadsforward-core'); break;
+				case 'Plumber': $label = __('Plumber', 'leadsforward-core'); break;
+				case 'HVACBusiness': $label = __('HVAC Business', 'leadsforward-core'); break;
+				case 'LandscapingBusiness': $label = __('Landscaping Business', 'leadsforward-core'); break;
+				case 'LocalBusiness': $label = __('Local Business (generic)', 'leadsforward-core'); break;
+			}
+			echo '<option value="' . esc_attr($cat) . '"' . selected($category === $cat, true, false) . '>' . esc_html($label) . '</option>';
+		}
+		echo '</select></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_short_description">' . esc_html__('Short description', 'leadsforward-core') . '</label></th><td><textarea id="lf_business_short_description" name="lf_business_short_description" rows="3" class="large-text">' . esc_textarea($short_desc) . '</textarea></td></tr>';
+		echo '<tr><th scope="row">' . esc_html__('Google Maps API key', 'leadsforward-core') . '</th><td>';
+		if ($maps_api_key) {
+			echo '<p class="description">' . esc_html__('Key is set in LeadsForward -> Setup.', 'leadsforward-core') . '</p>';
+		} else {
+			echo '<p class="description">' . esc_html__('Add your Google Maps API key in LeadsForward -> Setup to enable place search + embeds.', 'leadsforward-core') . '</p>';
+		}
+		echo '</td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_place_search">' . esc_html__('Search business on Google Maps', 'leadsforward-core') . '</label></th><td>';
+		echo '<input type="text" class="large-text" id="lf_business_place_search" placeholder="' . esc_attr__('Start typing your business name...', 'leadsforward-core') . '" value="' . esc_attr($place_name) . '" />';
+		echo '<input type="hidden" name="lf_business_place_id" id="lf_business_place_id" value="' . esc_attr($place_id) . '" />';
+		echo '<input type="hidden" name="lf_business_place_name" id="lf_business_place_name" value="' . esc_attr($place_name) . '" />';
+		echo '<input type="hidden" name="lf_business_place_address" id="lf_business_place_address" value="' . esc_attr($place_address) . '" />';
+		echo '<p class="description" id="lf_place_selected">' . ($place_name !== '' ? esc_html(sprintf(__('Selected: %1$s (%2$s)', 'leadsforward-core'), $place_name, $place_address)) : esc_html__('No place selected yet.', 'leadsforward-core')) . '</p>';
+		echo '<p class="description" id="lf_maps_status" style="color:#b45309;"></p>';
+		echo '</td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_map_embed">' . esc_html__('Map embed override (optional)', 'leadsforward-core') . '</label></th><td><textarea class="large-text" name="lf_business_map_embed" id="lf_business_map_embed" rows="3">' . esc_textarea($map_embed) . '</textarea><p class="description">' . esc_html__('Paste a custom iframe embed if you prefer. If empty, the selected Google Maps place will be used.', 'leadsforward-core') . '</p></td></tr>';
 		echo '</table>';
+
+		echo '<details style="margin-top:12px;">';
+		echo '<summary style="cursor:pointer;">' . esc_html__('Advanced business details (optional)', 'leadsforward-core') . '</summary>';
+		echo '<table class="form-table">';
+		echo '<tr><th scope="row">' . esc_html__('Latitude / Longitude', 'leadsforward-core') . '</th><td><div style="display:flex;gap:10px;flex-wrap:wrap;"><input type="text" class="regular-text" name="lf_business_geo_lat" placeholder="' . esc_attr__('Latitude', 'leadsforward-core') . '" value="' . esc_attr($geo_lat) . '" /><input type="text" class="regular-text" name="lf_business_geo_lng" placeholder="' . esc_attr__('Longitude', 'leadsforward-core') . '" value="' . esc_attr($geo_lng) . '" /></div></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_gbp_url">' . esc_html__('Google Business Profile URL', 'leadsforward-core') . '</label></th><td><input type="url" class="large-text" name="lf_business_gbp_url" id="lf_business_gbp_url" value="' . esc_attr($gbp_url) . '" /></td></tr>';
+		echo '<tr><th scope="row">' . esc_html__('Social profiles', 'leadsforward-core') . '</th><td>';
+		echo '<input type="url" class="large-text" name="lf_business_social_facebook" placeholder="' . esc_attr__('Facebook URL', 'leadsforward-core') . '" value="' . esc_attr($social_facebook) . '" />';
+		echo '<input type="url" class="large-text" name="lf_business_social_instagram" placeholder="' . esc_attr__('Instagram URL', 'leadsforward-core') . '" value="' . esc_attr($social_instagram) . '" style="margin-top:6px;" />';
+		echo '<input type="url" class="large-text" name="lf_business_social_youtube" placeholder="' . esc_attr__('YouTube URL', 'leadsforward-core') . '" value="' . esc_attr($social_youtube) . '" style="margin-top:6px;" />';
+		echo '<input type="url" class="large-text" name="lf_business_social_linkedin" placeholder="' . esc_attr__('LinkedIn URL', 'leadsforward-core') . '" value="' . esc_attr($social_linkedin) . '" style="margin-top:6px;" />';
+		echo '</td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_same_as">' . esc_html__('sameAs links (optional)', 'leadsforward-core') . '</label></th><td><textarea class="large-text" id="lf_business_same_as" name="lf_business_same_as" rows="3" placeholder="' . esc_attr__('One URL per line', 'leadsforward-core') . '">' . esc_textarea($same_as) . '</textarea></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_founding_year">' . esc_html__('Founding year (optional)', 'leadsforward-core') . '</label></th><td><input type="text" class="regular-text" id="lf_business_founding_year" name="lf_business_founding_year" value="' . esc_attr($founding_year) . '" /></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_license_number">' . esc_html__('License number (optional)', 'leadsforward-core') . '</label></th><td><input type="text" class="regular-text" id="lf_business_license_number" name="lf_business_license_number" value="' . esc_attr($license_number) . '" /></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_insurance_statement">' . esc_html__('Insurance statement (optional)', 'leadsforward-core') . '</label></th><td><textarea class="large-text" id="lf_business_insurance_statement" name="lf_business_insurance_statement" rows="2">' . esc_textarea($insurance_statement) . '</textarea></td></tr>';
+		echo '</table>';
+		echo '</details>';
+
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Next', 'leadsforward-core') . '" /></p></form>';
+		echo '<script>(function(){function loadPlacesApi(key, callback){var status=document.getElementById("lf_maps_status");if(window.google&&window.google.maps&&window.google.maps.places){callback();return;}if(!key){if(status){status.textContent="Add your Google Maps API key in LeadsForward -> Setup to enable search.";}return;}var scriptId="lf-maps-places";if(document.getElementById(scriptId)){return;}var script=document.createElement("script");script.id=scriptId;script.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(key)+"&libraries=places";script.async=true;script.onerror=function(){if(status){status.textContent="Failed to load Google Maps. Check API key restrictions and billing.";}};script.onload=callback;document.head.appendChild(script);}function initPlacesSearch(){var input=document.getElementById("lf_business_place_search");var placeId=document.getElementById("lf_business_place_id");var placeName=document.getElementById("lf_business_place_name");var placeAddress=document.getElementById("lf_business_place_address");var selected=document.getElementById("lf_place_selected");var status=document.getElementById("lf_maps_status");if(!input){return;}var form=input.closest("form");var key=form?(form.getAttribute("data-maps-key")||""):"";key=key.trim();if(!key){if(selected){selected.textContent="Add your Google Maps API key in LeadsForward -> Setup to enable search.";}if(status){status.textContent="";}return;}if(status){status.textContent="Loading Google Maps...";}window.gm_authFailure=function(){if(status){status.textContent="Google Maps auth failed. Check key restrictions and billing.";}};loadPlacesApi(key,function(){if(!window.google||!google.maps||!google.maps.places){if(status){status.textContent="Google Maps loaded without Places library. Check API settings.";}return;}if(status){status.textContent="";}var ac=new google.maps.places.Autocomplete(input,{fields:["place_id","name","formatted_address"]});ac.addListener("place_changed",function(){var place=ac.getPlace();if(!place||!place.place_id){return;}if(placeId)placeId.value=place.place_id||"";if(placeName)placeName.value=place.name||"";if(placeAddress)placeAddress.value=place.formatted_address||"";if(selected){selected.textContent="Selected: "+(place.name||"")+(place.formatted_address?" ("+place.formatted_address+")":"");}});});}initPlacesSearch();})();</script>';
 	} elseif ($step === 3) {
 		$niche = $niche ?: array_key_first(lf_get_niche_registry());
 		$n = lf_get_niche($niche);
@@ -240,14 +428,66 @@ function lf_wizard_render_page(): void {
 		echo '<input type="hidden" name="page" value="lf-ops" />';
 		echo '<input type="hidden" name="step" value="4" />';
 		echo '<input type="hidden" name="niche" value="' . esc_attr($niche) . '" />';
-		echo '<input type="hidden" name="lf_business_name" value="' . esc_attr(sanitize_text_field($_GET['lf_business_name'] ?? '')) . '" />';
-		echo '<input type="hidden" name="lf_business_phone" value="' . esc_attr(sanitize_text_field($_GET['lf_business_phone'] ?? '')) . '" />';
-		echo '<input type="hidden" name="lf_business_email" value="' . esc_attr(sanitize_email($_GET['lf_business_email'] ?? '')) . '" />';
-		echo '<input type="hidden" name="lf_business_address" value="' . esc_attr(sanitize_textarea_field($_GET['lf_business_address'] ?? '')) . '" />';
-		echo '<input type="hidden" name="lf_business_hours" value="' . esc_attr(sanitize_textarea_field($_GET['lf_business_hours'] ?? '')) . '" />';
+		$allowed_embed = lf_wizard_allowed_map_embed();
+		$carry_fields = [
+			'lf_business_name',
+			'lf_business_legal_name',
+			'lf_business_phone_primary',
+			'lf_business_phone_tracking',
+			'lf_business_phone_display',
+			'lf_business_email',
+			'lf_business_address_street',
+			'lf_business_address_city',
+			'lf_business_address_state',
+			'lf_business_address_zip',
+			'lf_business_hours',
+			'lf_business_category',
+			'lf_business_short_description',
+			'lf_business_geo_lat',
+			'lf_business_geo_lng',
+			'lf_business_gbp_url',
+			'lf_business_social_facebook',
+			'lf_business_social_instagram',
+			'lf_business_social_youtube',
+			'lf_business_social_linkedin',
+			'lf_business_same_as',
+			'lf_business_founding_year',
+			'lf_business_license_number',
+			'lf_business_insurance_statement',
+			'lf_business_place_id',
+			'lf_business_place_name',
+			'lf_business_place_address',
+			'lf_business_map_embed',
+		];
+		foreach ($carry_fields as $field) {
+			$value = $_GET[$field] ?? '';
+			if (!is_string($value)) {
+				$value = '';
+			}
+			$value = wp_unslash($value);
+			if ($field === 'lf_business_email') {
+				$value = sanitize_email($value);
+			} elseif ($field === 'lf_business_gbp_url' || str_starts_with($field, 'lf_business_social_')) {
+				$value = esc_url_raw($value);
+			} elseif ($field === 'lf_business_short_description' || $field === 'lf_business_same_as' || $field === 'lf_business_insurance_statement' || $field === 'lf_business_hours') {
+				$value = sanitize_textarea_field($value);
+			} elseif ($field === 'lf_business_map_embed') {
+				$value = wp_kses($value, $allowed_embed);
+			} else {
+				$value = sanitize_text_field($value);
+			}
+			echo '<input type="hidden" name="' . esc_attr($field) . '" value="' . esc_attr($value) . '" />';
+		}
 		echo '<p>' . esc_html__('Services to create:', 'leadsforward-core') . ' ' . esc_html($services_list) . '</p>';
+		$service_area_type = isset($_GET['lf_business_service_area_type']) ? sanitize_text_field($_GET['lf_business_service_area_type']) : 'address';
+		if ($service_area_type !== 'service_area') {
+			$service_area_type = 'address';
+		}
 		$areas_value = isset($_GET['lf_service_areas']) ? implode("\n", lf_wizard_sanitize_areas($_GET['lf_service_areas'])) : '';
-		echo '<table class="form-table"><tr><th scope="row"><label for="lf_service_areas">' . esc_html__('Service areas (one per line; optional "City, ST")', 'leadsforward-core') . '</label></th><td><textarea id="lf_service_areas" name="lf_service_areas" rows="5" class="large-text" placeholder="City One&#10;City Two, CA">' . esc_textarea($areas_value) . '</textarea></td></tr></table>';
+		echo '<table class="form-table">';
+		echo '<tr><th scope="row">' . esc_html__('Service area type', 'leadsforward-core') . '</th><td><select name="lf_business_service_area_type"><option value="address"' . selected($service_area_type !== 'service_area', true, false) . '>' . esc_html__('Address-based business', 'leadsforward-core') . '</option><option value="service_area"' . selected($service_area_type === 'service_area', true, false) . '>' . esc_html__('Service-area business (SAB)', 'leadsforward-core') . '</option></select></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_service_areas">' . esc_html__('Service areas (one per line; optional "City, ST")', 'leadsforward-core') . '</label></th><td><textarea id="lf_service_areas" name="lf_service_areas" rows="5" class="large-text" placeholder="City One&#10;City Two, CA">' . esc_textarea($areas_value) . '</textarea></td></tr>';
+		echo '</table>';
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Next', 'leadsforward-core') . '" /></p></form>';
 	} elseif ($step === 4) {
 		$niche = $niche ?: array_key_first(lf_get_niche_registry());
@@ -257,11 +497,57 @@ function lf_wizard_render_page(): void {
 		echo '<input type="hidden" name="page" value="lf-ops" />';
 		echo '<input type="hidden" name="step" value="5" />';
 		echo '<input type="hidden" name="niche" value="' . esc_attr($niche) . '" />';
-		foreach (['lf_business_name','lf_business_phone','lf_business_email'] as $k) {
-			echo '<input type="hidden" name="' . esc_attr($k) . '" value="' . esc_attr(sanitize_text_field($_GET[$k] ?? '')) . '" />';
+		$allowed_embed = lf_wizard_allowed_map_embed();
+		$carry_fields = [
+			'lf_business_name',
+			'lf_business_legal_name',
+			'lf_business_phone_primary',
+			'lf_business_phone_tracking',
+			'lf_business_phone_display',
+			'lf_business_email',
+			'lf_business_address_street',
+			'lf_business_address_city',
+			'lf_business_address_state',
+			'lf_business_address_zip',
+			'lf_business_hours',
+			'lf_business_category',
+			'lf_business_short_description',
+			'lf_business_geo_lat',
+			'lf_business_geo_lng',
+			'lf_business_gbp_url',
+			'lf_business_social_facebook',
+			'lf_business_social_instagram',
+			'lf_business_social_youtube',
+			'lf_business_social_linkedin',
+			'lf_business_same_as',
+			'lf_business_founding_year',
+			'lf_business_license_number',
+			'lf_business_insurance_statement',
+			'lf_business_place_id',
+			'lf_business_place_name',
+			'lf_business_place_address',
+			'lf_business_map_embed',
+			'lf_business_service_area_type',
+		];
+		foreach ($carry_fields as $field) {
+			$value = $_GET[$field] ?? '';
+			if (!is_string($value)) {
+				$value = '';
+			}
+			$value = wp_unslash($value);
+			if ($field === 'lf_business_email') {
+				$value = sanitize_email($value);
+			} elseif ($field === 'lf_business_gbp_url' || str_starts_with($field, 'lf_business_social_')) {
+				$value = esc_url_raw($value);
+			} elseif ($field === 'lf_business_short_description' || $field === 'lf_business_same_as' || $field === 'lf_business_insurance_statement' || $field === 'lf_business_hours') {
+				$value = sanitize_textarea_field($value);
+			} elseif ($field === 'lf_business_map_embed') {
+				$value = wp_kses($value, $allowed_embed);
+			} else {
+				$value = sanitize_text_field($value);
+			}
+			echo '<input type="hidden" name="' . esc_attr($field) . '" value="' . esc_attr($value) . '" />';
 		}
-		echo '<input type="hidden" name="lf_business_address" value="' . esc_attr(sanitize_textarea_field($_GET['lf_business_address'] ?? '')) . '" />';
-		echo '<input type="hidden" name="lf_business_hours" value="' . esc_attr(sanitize_textarea_field($_GET['lf_business_hours'] ?? '')) . '" />';
 		$areas = isset($_GET['lf_service_areas']) ? lf_wizard_sanitize_areas($_GET['lf_service_areas']) : [];
 		echo '<input type="hidden" name="lf_service_areas_raw" value="' . esc_attr(implode("\n", $areas)) . '" />';
 		echo '<table class="form-table"><tr><th scope="row">' . esc_html__('Variation profile', 'leadsforward-core') . '</th><td><select name="lf_variation_profile">';
@@ -278,11 +564,58 @@ function lf_wizard_render_page(): void {
 		echo '<input type="hidden" name="lf_wizard_step" value="5" />';
 		echo '<input type="hidden" name="lf_wizard_generate" value="1" />';
 		echo '<input type="hidden" name="lf_niche" value="' . esc_attr($niche) . '" />';
-		foreach (['lf_business_name','lf_business_phone','lf_business_email','lf_variation_profile'] as $k) {
-			echo '<input type="hidden" name="' . esc_attr($k) . '" value="' . esc_attr(sanitize_text_field($_GET[$k] ?? '')) . '" />';
+		$allowed_embed = lf_wizard_allowed_map_embed();
+		$carry_fields = [
+			'lf_business_name',
+			'lf_business_legal_name',
+			'lf_business_phone_primary',
+			'lf_business_phone_tracking',
+			'lf_business_phone_display',
+			'lf_business_email',
+			'lf_business_address_street',
+			'lf_business_address_city',
+			'lf_business_address_state',
+			'lf_business_address_zip',
+			'lf_business_hours',
+			'lf_business_category',
+			'lf_business_short_description',
+			'lf_business_geo_lat',
+			'lf_business_geo_lng',
+			'lf_business_gbp_url',
+			'lf_business_social_facebook',
+			'lf_business_social_instagram',
+			'lf_business_social_youtube',
+			'lf_business_social_linkedin',
+			'lf_business_same_as',
+			'lf_business_founding_year',
+			'lf_business_license_number',
+			'lf_business_insurance_statement',
+			'lf_business_place_id',
+			'lf_business_place_name',
+			'lf_business_place_address',
+			'lf_business_map_embed',
+			'lf_business_service_area_type',
+			'lf_variation_profile',
+		];
+		foreach ($carry_fields as $field) {
+			$value = $_GET[$field] ?? '';
+			if (!is_string($value)) {
+				$value = '';
+			}
+			$value = wp_unslash($value);
+			if ($field === 'lf_business_email') {
+				$value = sanitize_email($value);
+			} elseif ($field === 'lf_business_gbp_url' || str_starts_with($field, 'lf_business_social_')) {
+				$value = esc_url_raw($value);
+			} elseif ($field === 'lf_business_short_description' || $field === 'lf_business_same_as' || $field === 'lf_business_insurance_statement' || $field === 'lf_business_hours') {
+				$value = sanitize_textarea_field($value);
+			} elseif ($field === 'lf_business_map_embed') {
+				$value = wp_kses($value, $allowed_embed);
+			} else {
+				$value = sanitize_text_field($value);
+			}
+			echo '<input type="hidden" name="' . esc_attr($field) . '" value="' . esc_attr($value) . '" />';
 		}
-		echo '<input type="hidden" name="lf_business_address" value="' . esc_attr(sanitize_textarea_field($_GET['lf_business_address'] ?? '')) . '" />';
-		echo '<input type="hidden" name="lf_business_hours" value="' . esc_attr(sanitize_textarea_field($_GET['lf_business_hours'] ?? '')) . '" />';
 		$areas_raw = isset($_GET['lf_service_areas_raw']) ? $_GET['lf_service_areas_raw'] : (isset($_GET['lf_service_areas']) ? $_GET['lf_service_areas'] : '');
 		$areas_str = is_string($areas_raw) ? $areas_raw : implode("\n", (array) $areas_raw);
 		echo '<input type="hidden" name="lf_service_areas" value="' . esc_attr($areas_str) . '" />';

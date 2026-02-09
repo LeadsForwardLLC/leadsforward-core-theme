@@ -16,7 +16,12 @@ if (!defined('ABSPATH')) {
 /**
  * Run full site setup. Returns ['success' => bool, 'message' => '', 'created' => [], 'errors' => []].
  *
- * @param array $data niche_slug, business_name, business_phone, business_email, business_address, business_hours, service_areas (array of strings or [name=>, state=>]), variation_profile_override (optional)
+ * @param array $data niche_slug, business_name, business_legal_name, business_phone_primary, business_phone_tracking, business_phone_display, business_email,
+ *                    business_address, business_address_street, business_address_city, business_address_state, business_address_zip,
+ *                    business_service_area_type, business_geo, business_hours, business_category, business_short_description,
+ *                    business_gbp_url, business_social_*, business_same_as, business_founding_year, business_license_number,
+ *                    business_insurance_statement, business_place_id, business_place_name, business_place_address, business_map_embed,
+ *                    service_areas (array of strings or [name=>, state=>]), variation_profile_override (optional)
  */
 function lf_run_setup(array $data): array {
 	$log = ['created' => ['pages' => [], 'services' => [], 'service_areas' => [], 'menus' => []], 'errors' => []];
@@ -136,16 +141,66 @@ function lf_run_setup(array $data): array {
 	// 4. ACF options: business, CTAs, variation, schema, homepage sections
 	if (function_exists('update_field')) {
 		if (function_exists('lf_update_business_info_value')) {
-			$biz_name = $data['business_name'] ?? '';
-			$biz_phone = $data['business_phone'] ?? '';
-			$biz_email = $data['business_email'] ?? '';
-			$biz_address = $data['business_address'] ?? '';
+			$biz_name = (string) ($data['business_name'] ?? '');
+			$biz_legal = (string) ($data['business_legal_name'] ?? '');
+			$biz_phone_primary = (string) ($data['business_phone_primary'] ?? $data['business_phone'] ?? '');
+			$biz_phone_tracking = (string) ($data['business_phone_tracking'] ?? '');
+			$phone_display = ($data['business_phone_display'] ?? 'primary') === 'tracking' ? 'tracking' : 'primary';
+			$display_phone = $phone_display === 'tracking' && $biz_phone_tracking !== '' ? $biz_phone_tracking : $biz_phone_primary;
+			$biz_email = (string) ($data['business_email'] ?? '');
+			$address_street = (string) ($data['business_address_street'] ?? '');
+			$address_city = (string) ($data['business_address_city'] ?? '');
+			$address_state = (string) ($data['business_address_state'] ?? '');
+			$address_zip = (string) ($data['business_address_zip'] ?? '');
+			$address_full = (string) ($data['business_address'] ?? '');
+			if ($address_full === '' && function_exists('lf_business_entity_address_string')) {
+				$address_full = lf_business_entity_address_string([
+					'street' => $address_street,
+					'city' => $address_city,
+					'state' => $address_state,
+					'zip' => $address_zip,
+				]);
+			}
+			$service_area_type = ($data['business_service_area_type'] ?? 'address') === 'service_area' ? 'service_area' : 'address';
+			$geo = $data['business_geo'] ?? ['lat' => '', 'lng' => ''];
+			$category = (string) ($data['business_category'] ?? 'HomeAndConstructionBusiness');
+			$short_desc = (string) ($data['business_short_description'] ?? '');
+			$gbp_url = (string) ($data['business_gbp_url'] ?? '');
+			$same_as = (string) ($data['business_same_as'] ?? '');
+			$founding_year = (string) ($data['business_founding_year'] ?? '');
+			$license_number = (string) ($data['business_license_number'] ?? '');
+			$insurance_statement = (string) ($data['business_insurance_statement'] ?? '');
+			$place_id = (string) ($data['business_place_id'] ?? '');
+			$place_name = (string) ($data['business_place_name'] ?? '');
+			$place_address = (string) ($data['business_place_address'] ?? '');
+			$map_embed = (string) ($data['business_map_embed'] ?? '');
+			$allowed_embed = [
+				'iframe' => [
+					'src' => true,
+					'width' => true,
+					'height' => true,
+					'style' => true,
+					'loading' => true,
+					'referrerpolicy' => true,
+					'allowfullscreen' => true,
+					'title' => true,
+				],
+			];
+			$map_embed = $map_embed !== '' ? wp_kses($map_embed, $allowed_embed) : '';
+
 			lf_update_business_info_value('lf_business_name', $biz_name);
-			lf_update_business_info_value('lf_business_phone', $biz_phone);
-			lf_update_business_info_value('lf_business_phone_primary', $biz_phone);
-			lf_update_business_info_value('lf_business_phone_display', 'primary');
+			lf_update_business_info_value('lf_business_legal_name', $biz_legal);
+			lf_update_business_info_value('lf_business_phone_primary', $biz_phone_primary);
+			lf_update_business_info_value('lf_business_phone_tracking', $biz_phone_tracking);
+			lf_update_business_info_value('lf_business_phone_display', $phone_display);
+			lf_update_business_info_value('lf_business_phone', $display_phone);
 			lf_update_business_info_value('lf_business_email', $biz_email);
-			lf_update_business_info_value('lf_business_address', $biz_address);
+			lf_update_business_info_value('lf_business_address_street', $address_street);
+			lf_update_business_info_value('lf_business_address_city', $address_city);
+			lf_update_business_info_value('lf_business_address_state', $address_state);
+			lf_update_business_info_value('lf_business_address_zip', $address_zip);
+			lf_update_business_info_value('lf_business_address', $address_full);
+			lf_update_business_info_value('lf_business_service_area_type', $service_area_type);
 			if (!empty($data['service_areas']) && is_array($data['service_areas'])) {
 				$areas = array_map(function ($area) {
 					if (is_array($area)) {
@@ -156,9 +211,25 @@ function lf_run_setup(array $data): array {
 				$areas = array_filter(array_map('trim', $areas));
 				lf_update_business_info_value('lf_business_service_areas', implode("\n", $areas));
 			}
+			lf_update_business_info_value('lf_business_geo', $geo);
 			if (!empty($data['business_hours'])) {
 				lf_update_business_info_value('lf_business_hours', $data['business_hours']);
 			}
+			lf_update_business_info_value('lf_business_category', $category);
+			lf_update_business_info_value('lf_business_short_description', $short_desc);
+			lf_update_business_info_value('lf_business_gbp_url', $gbp_url);
+			lf_update_business_info_value('lf_business_social_facebook', (string) ($data['business_social_facebook'] ?? ''));
+			lf_update_business_info_value('lf_business_social_instagram', (string) ($data['business_social_instagram'] ?? ''));
+			lf_update_business_info_value('lf_business_social_youtube', (string) ($data['business_social_youtube'] ?? ''));
+			lf_update_business_info_value('lf_business_social_linkedin', (string) ($data['business_social_linkedin'] ?? ''));
+			lf_update_business_info_value('lf_business_same_as', $same_as);
+			lf_update_business_info_value('lf_business_founding_year', $founding_year);
+			lf_update_business_info_value('lf_business_license_number', $license_number);
+			lf_update_business_info_value('lf_business_insurance_statement', $insurance_statement);
+			lf_update_business_info_value('lf_business_place_id', $place_id);
+			lf_update_business_info_value('lf_business_place_name', $place_name);
+			lf_update_business_info_value('lf_business_place_address', $place_address);
+			lf_update_business_info_value('lf_business_map_embed', $map_embed);
 		}
 		update_field('lf_cta_primary_text', $niche['cta_primary_default'] ?? '', 'option');
 		update_field('lf_cta_secondary_text', $niche['cta_secondary_default'] ?? '', 'option');

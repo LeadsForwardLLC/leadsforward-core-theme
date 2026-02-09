@@ -79,6 +79,10 @@ function lf_business_entity_get(): array {
 	$category = (string) $get('lf_business_category', 'HomeAndConstructionBusiness');
 	$description = (string) $get('lf_business_short_description', '');
 	$primary_image_id = (int) $get('lf_business_primary_image', 0);
+	$place_id = (string) $get('lf_business_place_id', '');
+	$place_name = (string) $get('lf_business_place_name', '');
+	$place_address = (string) $get('lf_business_place_address', '');
+	$map_embed = (string) $get('lf_business_map_embed', '');
 	$logo_id = function_exists('lf_get_global_option') ? (int) lf_get_global_option('lf_global_logo', 0) : 0;
 	$logo_id = $logo_id > 0 ? $logo_id : (int) $get('lf_business_logo', 0);
 
@@ -123,6 +127,10 @@ function lf_business_entity_get(): array {
 		'description' => $description,
 		'logo_id' => $logo_id,
 		'primary_image_id' => $primary_image_id,
+		'place_id' => $place_id,
+		'place_name' => $place_name,
+		'place_address' => $place_address,
+		'map_embed' => $map_embed,
 		'social' => $social,
 		'gbp_url' => $gbp,
 		'same_as' => $same_as,

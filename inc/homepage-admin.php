@@ -53,31 +53,7 @@ function lf_homepage_admin_save(): void {
 		return;
 	}
 
-	/* Save Business Info globally (same storage as Theme Options → Business Info: lf-business-info) */
-	if (function_exists('lf_update_business_info_value')) {
-		$allowed_embed = [
-			'iframe' => [
-				'src' => true,
-				'width' => true,
-				'height' => true,
-				'style' => true,
-				'loading' => true,
-				'referrerpolicy' => true,
-				'allowfullscreen' => true,
-				'title' => true,
-			],
-		];
-		lf_update_business_info_value('lf_business_name', isset($_POST['lf_business_name']) ? sanitize_text_field(wp_unslash($_POST['lf_business_name'])) : '');
-		lf_update_business_info_value('lf_business_phone', isset($_POST['lf_business_phone']) ? sanitize_text_field(wp_unslash($_POST['lf_business_phone'])) : '');
-		lf_update_business_info_value('lf_business_email', isset($_POST['lf_business_email']) ? sanitize_email(wp_unslash($_POST['lf_business_email'])) : '');
-		lf_update_business_info_value('lf_business_address', isset($_POST['lf_business_address']) ? sanitize_textarea_field(wp_unslash($_POST['lf_business_address'])) : '');
-		lf_update_business_info_value('lf_business_place_id', isset($_POST['lf_business_place_id']) ? sanitize_text_field(wp_unslash($_POST['lf_business_place_id'])) : '');
-		lf_update_business_info_value('lf_business_place_name', isset($_POST['lf_business_place_name']) ? sanitize_text_field(wp_unslash($_POST['lf_business_place_name'])) : '');
-		lf_update_business_info_value('lf_business_place_address', isset($_POST['lf_business_place_address']) ? sanitize_text_field(wp_unslash($_POST['lf_business_place_address'])) : '');
-		$embed = isset($_POST['lf_business_map_embed']) ? wp_kses(wp_unslash($_POST['lf_business_map_embed']), $allowed_embed) : '';
-		lf_update_business_info_value('lf_business_map_embed', $embed);
-	}
-	// Maps API key is managed in LeadsForward → Setup.
+	// Business Entity is managed in LeadsForward → Global Settings.
 
 	$order = lf_homepage_controller_order();
 	$config = lf_get_homepage_section_config();
@@ -412,100 +388,7 @@ jQuery(function ($) {
 		activateSection(type, true);
 	});
 
-	function loadPlacesApi(key, callback) {
-		var status = document.getElementById('lf_maps_status');
-		if (window.google && window.google.maps && window.google.maps.places) {
-			callback();
-			return;
-		}
-		if (!key) {
-			if (status) {
-				status.textContent = 'Add your Google Maps API key in LeadsForward → Setup to enable search.';
-			}
-			return;
-		}
-		var scriptId = 'lf-maps-places';
-		if (document.getElementById(scriptId)) {
-			return;
-		}
-		var script = document.createElement('script');
-		script.id = scriptId;
-		script.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&libraries=places';
-		script.async = true;
-		script.onerror = function () {
-			if (status) {
-				status.textContent = 'Failed to load Google Maps. Check API key restrictions and billing.';
-			}
-		};
-		script.onload = callback;
-		document.head.appendChild(script);
-	}
-
-	function initPlacesSearch() {
-		var input = document.getElementById('lf_business_place_search');
-		var keyInput = null;
-		var placeId = document.getElementById('lf_business_place_id');
-		var placeName = document.getElementById('lf_business_place_name');
-		var placeAddress = document.getElementById('lf_business_place_address');
-		var businessName = document.getElementById('lf_business_name');
-		var businessAddress = document.getElementById('lf_business_address');
-		var selected = document.getElementById('lf_place_selected');
-		var status = document.getElementById('lf_maps_status');
-		if (!input) {
-			return;
-		}
-		var form = input.closest('form');
-		var key = form ? (form.getAttribute('data-maps-key') || '') : '';
-		key = key.trim();
-		if (!key) {
-			if (selected) {
-				selected.textContent = 'Add your Google Maps API key in LeadsForward → Setup to enable search.';
-			}
-			if (status) {
-				status.textContent = '';
-			}
-			return;
-		}
-		if (status) {
-			status.textContent = 'Loading Google Maps…';
-		}
-		window.gm_authFailure = function () {
-			if (status) {
-				status.textContent = 'Google Maps auth failed. Check key restrictions and billing.';
-			}
-		};
-		loadPlacesApi(key, function () {
-			if (!window.google || !google.maps || !google.maps.places) {
-				if (status) {
-					status.textContent = 'Google Maps loaded without Places library. Check API settings.';
-				}
-				return;
-			}
-			if (status) {
-				status.textContent = '';
-			}
-			var ac = new google.maps.places.Autocomplete(input, {
-				fields: ['place_id', 'name', 'formatted_address']
-			});
-			ac.addListener('place_changed', function () {
-				var place = ac.getPlace();
-				if (!place || !place.place_id) {
-					return;
-				}
-				if (placeId) placeId.value = place.place_id || '';
-				if (placeName) placeName.value = place.name || '';
-				if (placeAddress) placeAddress.value = place.formatted_address || '';
-				if (businessName && !businessName.value) businessName.value = place.name || '';
-				if (businessAddress && !businessAddress.value) businessAddress.value = place.formatted_address || '';
-				if (selected) {
-					selected.textContent = 'Selected: ' + (place.name || '') + (place.formatted_address ? ' (' + place.formatted_address + ')' : '');
-				}
-			});
-		});
-	}
-
-	initPlacesSearch();
-	// Maps API key changes are handled in LeadsForward → Setup.
+	// Maps search now lives in Global Settings → Business Entity.
 });
 JS;
 	wp_add_inline_script('jquery-ui-sortable', $script);
@@ -518,8 +401,6 @@ function lf_homepage_admin_render(): void {
 	$config = lf_get_homepage_section_config();
 	$order = lf_homepage_controller_order();
 	$labels = lf_homepage_admin_section_labels();
-	$maps_api_key = get_option('lf_maps_api_key', '');
-	$maps_api_key = is_string($maps_api_key) ? $maps_api_key : '';
 	$variants = [
 		'default' => __('Authority Split (Recommended)', 'leadsforward-core'),
 		'a'       => __('Conversion Stack', 'leadsforward-core'),
@@ -606,95 +487,9 @@ function lf_homepage_admin_render(): void {
 			<button type="button" class="button lf-homepage-collapse-all"><?php esc_html_e('Collapse all', 'leadsforward-core'); ?></button>
 		</div>
 
-		<form method="post" action="" data-maps-key="<?php echo esc_attr($maps_api_key); ?>">
+		<form method="post" action="">
 			<?php wp_nonce_field('lf_homepage_settings', 'lf_homepage_settings_nonce'); ?>
-		<?php
-		$get_business = function (string $key) {
-			if (function_exists('lf_get_business_info_value')) {
-				return lf_get_business_info_value($key, '');
-			}
-			return '';
-		};
-		$business_name    = $get_business('lf_business_name');
-		$business_phone   = $get_business('lf_business_phone');
-		$business_email   = $get_business('lf_business_email');
-		$business_address = $get_business('lf_business_address');
-		$place_id         = $get_business('lf_business_place_id');
-		$place_name       = $get_business('lf_business_place_name');
-		$place_address    = $get_business('lf_business_place_address');
-		$map_embed        = $get_business('lf_business_map_embed');
-		$business_name    = is_string($business_name) ? $business_name : '';
-		$business_phone   = is_string($business_phone) ? $business_phone : '';
-		$business_email   = is_string($business_email) ? $business_email : '';
-		$business_address = is_string($business_address) ? $business_address : '';
-		$place_id         = is_string($place_id) ? $place_id : '';
-		$place_name       = is_string($place_name) ? $place_name : '';
-		$place_address    = is_string($place_address) ? $place_address : '';
-		$map_embed        = is_string($map_embed) ? $map_embed : '';
-		?>
-		<div class="lf-homepage-panel lf-homepage-panel--business" data-section="business_info">
-			<div class="lf-homepage-panel-header">
-				<h2 id="lf-business-info" class="title"><?php esc_html_e('Business Info', 'leadsforward-core'); ?></h2>
-				<button type="button" class="lf-homepage-toggle" data-target="business_info" aria-expanded="true">
-					<span class="lf-homepage-toggle-icon">▾</span>
-					<span class="lf-homepage-toggle-label"><?php esc_html_e('Collapse', 'leadsforward-core'); ?></span>
-				</button>
-			</div>
-			<div class="lf-homepage-panel-body lf-homepage-section-fields" data-parent="business_info">
-				<p class="description"><?php esc_html_e('Used site-wide: footer, Map + NAP section, schema, and CTAs. Same data as the startup wizard—edit here anytime.', 'leadsforward-core'); ?> <?php esc_html_e('Kept consistent for local SEO: NAP (name, address, phone) is output in one format everywhere and in LocalBusiness schema.', 'leadsforward-core'); ?></p>
-				<table class="form-table" role="presentation">
-					<tbody>
-						<tr>
-							<th scope="row"><label for="lf_business_name"><?php esc_html_e('Business name', 'leadsforward-core'); ?></label></th>
-							<td><input type="text" class="large-text" name="lf_business_name" id="lf_business_name" value="<?php echo esc_attr($business_name); ?>" /></td>
-						</tr>
-						<tr>
-							<th scope="row"><label for="lf_business_phone"><?php esc_html_e('Phone', 'leadsforward-core'); ?></label></th>
-							<td><input type="text" class="regular-text" name="lf_business_phone" id="lf_business_phone" value="<?php echo esc_attr($business_phone); ?>" /></td>
-						</tr>
-						<tr>
-							<th scope="row"><label for="lf_business_email"><?php esc_html_e('Email', 'leadsforward-core'); ?></label></th>
-							<td><input type="email" class="regular-text" name="lf_business_email" id="lf_business_email" value="<?php echo esc_attr($business_email); ?>" /></td>
-						</tr>
-						<tr>
-							<th scope="row"><label for="lf_business_address"><?php esc_html_e('Address (NAP)', 'leadsforward-core'); ?></label></th>
-							<td><textarea class="large-text" name="lf_business_address" id="lf_business_address" rows="3"><?php echo esc_textarea($business_address); ?></textarea></td>
-						</tr>
-						<tr>
-							<th scope="row"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></th>
-							<td>
-								<?php if ($maps_api_key) : ?>
-									<p class="description"><?php esc_html_e('Key is set in LeadsForward → Setup.', 'leadsforward-core'); ?></p>
-								<?php else : ?>
-									<p class="description"><?php esc_html_e('Add your Google Maps API key in LeadsForward → Setup to enable place search + embeds.', 'leadsforward-core'); ?></p>
-								<?php endif; ?>
-							</td>
-						</tr>
-						<tr>
-							<th scope="row"><label for="lf_business_place_search"><?php esc_html_e('Search business on Google Maps', 'leadsforward-core'); ?></label></th>
-							<td>
-								<input type="text" class="large-text" id="lf_business_place_search" placeholder="<?php esc_attr_e('Start typing your business name...', 'leadsforward-core'); ?>" value="<?php echo esc_attr($place_name); ?>" />
-								<input type="hidden" name="lf_business_place_id" id="lf_business_place_id" value="<?php echo esc_attr($place_id); ?>" />
-								<input type="hidden" name="lf_business_place_name" id="lf_business_place_name" value="<?php echo esc_attr($place_name); ?>" />
-								<input type="hidden" name="lf_business_place_address" id="lf_business_place_address" value="<?php echo esc_attr($place_address); ?>" />
-								<p class="description" id="lf_place_selected">
-									<?php echo $place_name !== '' ? esc_html(sprintf(__('Selected: %1$s (%2$s)', 'leadsforward-core'), $place_name, $place_address)) : esc_html__('No place selected yet.', 'leadsforward-core'); ?>
-								</p>
-								<p class="description" id="lf_maps_status" style="color:#b45309;"></p>
-							</td>
-						</tr>
-						<tr>
-							<th scope="row"><label for="lf_business_map_embed"><?php esc_html_e('Map embed override (optional)', 'leadsforward-core'); ?></label></th>
-							<td>
-								<textarea class="large-text" name="lf_business_map_embed" id="lf_business_map_embed" rows="3"><?php echo esc_textarea($map_embed); ?></textarea>
-								<p class="description"><?php esc_html_e('Paste a custom iframe embed if you prefer. If empty, the selected Google Maps place will be used.', 'leadsforward-core'); ?></p>
-							</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
-		</div>
-
+		
 		<h2 class="title"><?php esc_html_e('Homepage sections', 'leadsforward-core'); ?></h2>
 		<div class="lf-hp-grid">
 			<div class="lf-hp-main">
@@ -794,7 +589,7 @@ function lf_homepage_admin_render(): void {
 									<?php if ($type === 'map_nap') : ?>
 										<tr>
 											<td colspan="2">
-												<p class="description" style="margin: 0;"><?php esc_html_e('Service areas and map come from Business Info + Service Areas. Select a place above to show the map.', 'leadsforward-core'); ?></p>
+												<p class="description" style="margin: 0;"><?php esc_html_e('Service areas and map come from Global Settings -> Business Entity.', 'leadsforward-core'); ?></p>
 											</td>
 										</tr>
 									<?php endif; ?>
