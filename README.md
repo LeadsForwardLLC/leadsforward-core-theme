@@ -25,6 +25,7 @@ LeadsForward Core provides:
 - **AI Assistant (bounded):** Safe copy suggestions + field edits only (no layout/CSS changes)
 - **Server-rendered blocks:** Hero, Trust/Reviews, CTA, FAQ Accordion, Map+NAP
 - **SEO & schema:** JSON-LD (LocalBusiness, Organization, WebSite, BreadcrumbList, Service, FAQPage, Review), canonical, noindex, NAP/geo helpers
+- **Heading rules:** Enforced single H1 + heading hierarchy validation (warnings only)
 - **Internal linking engine:** Deterministic anchors + hub-and-spoke modules (services/areas)
 - **SEO coverage validator:** Site Health checks for missing hubs, thin pages, and orphans
 - **Controlled variation:** Site-wide profile (A–E), block variant registry, safe section ordering, style tokens, copy template slots (no randomness)

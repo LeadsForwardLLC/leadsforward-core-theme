@@ -46,6 +46,8 @@ lf_load_inc('icons.php');
 // SEO and schema (foundation only).
 lf_load_inc('seo.php');
 lf_load_inc('schema.php');
+// Heading enforcement + validation.
+lf_load_inc('headings.php');
 
 // Custom post types.
 lf_load_inc('cpt/services.php');

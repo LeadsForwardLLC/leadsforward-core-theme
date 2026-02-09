@@ -691,10 +691,13 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 	if (!function_exists('lf_render_block_template')) {
 		return;
 	}
-	$heading_tag = 'h1';
+	$can_use_h1 = function_exists('lf_should_output_h1')
+		? lf_should_output_h1(['location' => 'hero', 'post_id' => $post->ID, 'context' => $context])
+		: true;
+	$heading_tag = $can_use_h1 ? 'h1' : 'h2';
 	if ($context !== 'homepage') {
 		static $hero_rendered = false;
-		$heading_tag = $hero_rendered ? 'h2' : 'h1';
+		$heading_tag = ($hero_rendered || !$can_use_h1) ? 'h2' : 'h1';
 		$hero_rendered = true;
 	}
 	$section = [

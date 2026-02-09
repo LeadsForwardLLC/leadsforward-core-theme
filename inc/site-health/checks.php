@@ -205,8 +205,25 @@ function lf_health_check_canonicals(): array {
 }
 
 function lf_health_check_single_h1(): array {
-	// Theme templates (hero, single, archive) each output one H1. We flag for manual verification.
-	return ['status' => lf_health_status_pass(), 'label' => __('Single H1 per page', 'leadsforward-core'), 'message' => __('Theme templates use one H1. Spot-check key URLs.', 'leadsforward-core'), 'fix_link' => ''];
+	if (!function_exists('lf_heading_collect_site_issues')) {
+		return ['status' => lf_health_status_pass(), 'label' => __('Heading rules', 'leadsforward-core'), 'message' => __('Heading validator unavailable.', 'leadsforward-core'), 'fix_link' => ''];
+	}
+	$issues = lf_heading_collect_site_issues();
+	if (empty($issues)) {
+		return ['status' => lf_health_status_pass(), 'label' => __('Heading rules', 'leadsforward-core'), 'message' => __('No heading violations detected.', 'leadsforward-core'), 'fix_link' => ''];
+	}
+	$labels = [];
+	foreach ($issues as $post_id => $warnings) {
+		$label = get_the_title((int) $post_id);
+		$labels[] = $label !== '' ? $label : sprintf(__('Post %d', 'leadsforward-core'), (int) $post_id);
+	}
+	$sample = array_slice($labels, 0, 5);
+	$more = count($labels) - count($sample);
+	$message = __('Heading issues detected on: ', 'leadsforward-core') . implode(', ', $sample);
+	if ($more > 0) {
+		$message .= sprintf(__(' (+%d more)', 'leadsforward-core'), $more);
+	}
+	return ['status' => lf_health_status_warning(), 'label' => __('Heading rules', 'leadsforward-core'), 'message' => $message, 'fix_link' => admin_url('edit.php?post_type=page')];
 }
 
 // --- Performance ---
