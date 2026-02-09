@@ -494,6 +494,22 @@ button:focus-visible,
 	gap: 0.35rem;
 }
 
+.lf-surface-dark .lf-trust-bar,
+.lf-surface-primary .lf-trust-bar,
+.lf-surface-secondary .lf-trust-bar,
+.lf-surface-accent .lf-trust-bar,
+.lf-surface-black .lf-trust-bar {
+	color: var(--lf-text-primary);
+}
+
+.lf-surface-dark .lf-trust-bar__badge,
+.lf-surface-primary .lf-trust-bar__badge,
+.lf-surface-secondary .lf-trust-bar__badge,
+.lf-surface-accent .lf-trust-bar__badge,
+.lf-surface-black .lf-trust-bar__badge {
+	color: var(--lf-text-primary);
+}
+
 .lf-trust-bar__badge-icon {
 	display: inline-flex;
 	align-items: center;
@@ -1275,6 +1291,11 @@ button:focus-visible,
 	color: var(--lf-text-inverse);
 }
 
+.lf-block-hero--internal {
+	min-height: 0;
+	padding: var(--lf-section-padding-lg) var(--lf-section-padding-x);
+}
+
 .lf-block-hero.lf-surface-light .lf-block-hero__bg,
 .lf-block-hero.lf-surface-white .lf-block-hero__bg,
 .lf-block-hero.lf-surface-soft .lf-block-hero__bg,
@@ -1289,19 +1310,49 @@ button:focus-visible,
 }
 
 .lf-block-hero.lf-surface-dark .lf-block-hero__title,
-.lf-block-hero.lf-surface-dark .lf-block-hero__subtitle,
-.lf-block-hero.lf-surface-dark .lf-block-hero__trust {
+.lf-block-hero.lf-surface-dark .lf-hero-stack__title,
+.lf-block-hero.lf-surface-dark .lf-hero-form__title,
+.lf-block-hero.lf-surface-dark .lf-hero-visual__title,
+.lf-block-hero.lf-surface-dark .lf-hero-split__title,
+.lf-block-hero.lf-surface-dark .lf-hero-basic__title {
 	color: var(--lf-text-inverse);
 }
 
-.lf-block-hero.lf-surface-dark .lf-block-hero__subtitle {
+.lf-block-hero.lf-surface-dark .lf-block-hero__subtitle,
+.lf-block-hero.lf-surface-dark .lf-hero-stack__subtitle,
+.lf-block-hero.lf-surface-dark .lf-hero-form__subtitle,
+.lf-block-hero.lf-surface-dark .lf-hero-visual__subtitle,
+.lf-block-hero.lf-surface-dark .lf-hero-split__subtitle,
+.lf-block-hero.lf-surface-dark .lf-hero-basic__subtitle {
 	color: var(--lf-cta-block-text-muted);
+}
+
+.lf-block-hero.lf-surface-dark .lf-hero-stack__trust,
+.lf-block-hero.lf-surface-dark .lf-hero-form__trust,
+.lf-block-hero.lf-surface-dark .lf-hero-visual__trust,
+.lf-block-hero.lf-surface-dark .lf-hero-split__trust,
+.lf-block-hero.lf-surface-dark .lf-hero-basic__actions,
+.lf-block-hero.lf-surface-dark .lf-hero-stack__phone,
+.lf-block-hero.lf-surface-dark .lf-hero-split__phone,
+.lf-block-hero.lf-surface-dark .lf-block-hero__phone {
+	color: var(--lf-text-inverse);
 }
 
 .lf-block-hero.lf-surface-dark .lf-block-hero__eyebrow {
 	background: rgba(255, 255, 255, 0.12);
 	border-color: rgba(255, 255, 255, 0.25);
 	color: var(--lf-text-inverse);
+}
+
+.lf-block-hero.lf-surface-dark .lf-block-hero__card,
+.lf-block-hero.lf-surface-dark .lf-block-hero__form,
+.lf-block-hero.lf-surface-dark .lf-block-hero__quote {
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero.lf-surface-dark .lf-block-hero__card a,
+.lf-block-hero.lf-surface-dark .lf-block-hero__quote a {
+	color: var(--lf-text-primary);
 }
 
 .lf-block-hero__bg {
