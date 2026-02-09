@@ -72,6 +72,8 @@ $use_phone_link = $cta_type === 'call' && $cta_phone && $cta_text;
 $secondary_text = $cta_resolved_for_type['secondary_text'] ?? '';
 $secondary_action = $cta_resolved_for_type['secondary_action'] ?? 'call';
 $secondary_url = $cta_resolved_for_type['secondary_url'] ?? '';
+$icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'hero', 'above', 'lf-heading-icon') : '';
+$icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'hero', 'left', 'lf-heading-icon') : '';
 $review_count = 0;
 if (function_exists('wp_count_posts')) {
 	$counts = wp_count_posts('lf_testimonial');
@@ -112,7 +114,15 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 				<?php if ($eyebrow !== '') : ?>
 					<p class="lf-hero-stack__eyebrow"><?php echo esc_html($eyebrow); ?></p>
 				<?php endif; ?>
-				<h1 class="lf-hero-stack__title"><?php echo esc_html($heading); ?></h1>
+				<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
+				<?php if ($icon_left) : ?>
+					<div class="lf-heading-row">
+						<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
+						<h1 class="lf-hero-stack__title"><?php echo esc_html($heading); ?></h1>
+					</div>
+				<?php else : ?>
+					<h1 class="lf-hero-stack__title"><?php echo esc_html($heading); ?></h1>
+				<?php endif; ?>
 				<?php if ($subheading !== '') : ?>
 					<p class="lf-hero-stack__subtitle"><?php echo esc_html($subheading); ?></p>
 				<?php endif; ?>
@@ -162,7 +172,15 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 					<?php if ($eyebrow !== '') : ?>
 						<p class="lf-hero-form__eyebrow"><?php echo esc_html($eyebrow); ?></p>
 					<?php endif; ?>
-					<h1 class="lf-hero-form__title"><?php echo esc_html($heading); ?></h1>
+					<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
+					<?php if ($icon_left) : ?>
+						<div class="lf-heading-row">
+							<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
+							<h1 class="lf-hero-form__title"><?php echo esc_html($heading); ?></h1>
+						</div>
+					<?php else : ?>
+						<h1 class="lf-hero-form__title"><?php echo esc_html($heading); ?></h1>
+					<?php endif; ?>
 					<?php if ($subheading !== '') : ?>
 						<p class="lf-hero-form__subtitle"><?php echo esc_html($subheading); ?></p>
 					<?php endif; ?>
@@ -207,7 +225,15 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 					<?php if ($eyebrow !== '') : ?>
 						<p class="lf-hero-visual__eyebrow"><?php echo esc_html($eyebrow); ?></p>
 					<?php endif; ?>
-					<h1 class="lf-hero-visual__title"><?php echo esc_html($heading); ?></h1>
+					<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
+					<?php if ($icon_left) : ?>
+						<div class="lf-heading-row">
+							<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
+							<h1 class="lf-hero-visual__title"><?php echo esc_html($heading); ?></h1>
+						</div>
+					<?php else : ?>
+						<h1 class="lf-hero-visual__title"><?php echo esc_html($heading); ?></h1>
+					<?php endif; ?>
 					<?php if ($subheading !== '') : ?>
 						<p class="lf-hero-visual__subtitle"><?php echo esc_html($subheading); ?></p>
 					<?php endif; ?>
@@ -284,7 +310,15 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 					<?php if ($eyebrow !== '') : ?>
 						<p class="lf-hero-split__eyebrow"><?php echo esc_html($eyebrow); ?></p>
 					<?php endif; ?>
-					<h1 class="lf-hero-split__title"><?php echo esc_html($heading); ?></h1>
+					<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
+					<?php if ($icon_left) : ?>
+						<div class="lf-heading-row">
+							<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
+							<h1 class="lf-hero-split__title"><?php echo esc_html($heading); ?></h1>
+						</div>
+					<?php else : ?>
+						<h1 class="lf-hero-split__title"><?php echo esc_html($heading); ?></h1>
+					<?php endif; ?>
 					<?php if ($subheading !== '') : ?>
 						<p class="lf-hero-split__subtitle"><?php echo esc_html($subheading); ?></p>
 					<?php endif; ?>

@@ -19,6 +19,8 @@ $variant = $block['variant'] ?? 'default';
 $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'dark') : '';
 $headline = !empty($section['cta_headline']) ? $section['cta_headline'] : '';
 $subheadline = !empty($section['cta_subheadline']) ? $section['cta_subheadline'] : '';
+$icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'cta', 'above', 'lf-heading-icon') : '';
+$icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'cta', 'left', 'lf-heading-icon') : '';
 $eyebrow = '';
 $offer_label = '';
 $offer_items = [];
@@ -61,11 +63,19 @@ $show_form = ($cta_type === 'form' && $ghl_embed) || ($cta_type !== 'call' && $g
 <section class="lf-block lf-block-cta <?php echo esc_attr($bg_class ?: 'lf-surface-dark'); ?> lf-block-cta--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" aria-label="<?php esc_attr_e('Call to action', 'leadsforward-core'); ?>">
 	<div class="lf-block-cta__inner">
 		<div class="lf-block-cta__content">
+			<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
 			<?php if ($eyebrow !== '') : ?>
 				<p class="lf-block-cta__eyebrow"><?php echo esc_html($eyebrow); ?></p>
 			<?php endif; ?>
 			<?php if ($headline !== '') : ?>
-				<h2 class="lf-block-cta__headline"><?php echo esc_html($headline); ?></h2>
+				<?php if ($icon_left) : ?>
+					<div class="lf-heading-row">
+						<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
+						<h2 class="lf-block-cta__headline"><?php echo esc_html($headline); ?></h2>
+					</div>
+				<?php else : ?>
+					<h2 class="lf-block-cta__headline"><?php echo esc_html($headline); ?></h2>
+				<?php endif; ?>
 			<?php endif; ?>
 			<?php if ($subheadline !== '') : ?>
 				<p class="lf-block-cta__subheadline"><?php echo esc_html($subheadline); ?></p>

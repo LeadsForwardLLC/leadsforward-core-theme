@@ -18,6 +18,7 @@ LeadsForward Core provides:
 - **Global settings & branding:** Logo + color tokens mapped to CSS variables (core, surface, text)
 - **Shared section registry:** Universal section definitions + defaults used by homepage and page builders
 - **Image system:** Media Library–only images with Unsplash placeholder seeding
+- **Icon system:** Heroicons inline SVGs with per-section controls + niche defaults
 - **Homepage builder:** Drag/drop order, per-section toggles, backgrounds, and copy
 - **Page Builder Framework:** Instance-based sections for core pages, posts, services, and service areas
 - **Quote Builder:** Full-screen modal with multi-step flow, GHL webhook delivery, and first-party analytics
@@ -54,6 +55,7 @@ leadsforward-core-theme/
 ├── assets/
 │   ├── css/          # editor.css, variation-tokens.css, future front-end CSS
 │   ├── js/
+│   ├── icons/        # Local Heroicons SVGs (inline usage)
 │   └── images/
 ├── docs/             # SOP.md and product documentation
 ├── inc/
@@ -61,6 +63,7 @@ leadsforward-core-theme/
 │   ├── cleanup.php      # Emoji/oEmbed/dashicons removal, optional block CSS
 │   ├── performance.php  # Defer scripts, heartbeat, head cleanup, critical CSS hook
 │   ├── business-entity.php # Business entity single source of truth
+│   ├── icons.php        # Icon helpers + niche defaults
 │   ├── seo.php          # Canonical, noindex, NAP/geo, breadcrumbs, internal links
 │   ├── schema.php       # JSON-LD: LocalBusiness, Organization, WebSite, BreadcrumbList, Service, FAQPage, Review
 │   ├── images.php       # Placeholder images + media helpers

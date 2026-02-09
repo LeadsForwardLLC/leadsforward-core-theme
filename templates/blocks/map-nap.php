@@ -29,6 +29,9 @@ $maps_api_key = get_option('lf_maps_api_key', '');
 $maps_api_key = is_string($maps_api_key) ? $maps_api_key : '';
 $heading = !empty($section['section_heading']) ? $section['section_heading'] : __('Areas We Serve', 'leadsforward-core');
 $intro   = !empty($section['section_intro']) ? $section['section_intro'] : '';
+$icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'map_nap', 'above', 'lf-heading-icon') : '';
+$icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'map_nap', 'left', 'lf-heading-icon') : '';
+$list_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'map_nap', 'list', 'lf-block-map-nap__icon') : '';
 
 $has_nap = ($name !== '' || $address !== '' || $phone !== '' || $email !== '');
 $reviews_query = new WP_Query([
@@ -94,7 +97,15 @@ $areas_query = new WP_Query([
 		<div class="lf-block-map-nap__grid">
 			<div class="lf-block-map-nap__areas">
 				<header class="lf-block-map-nap__header">
-					<h2 class="lf-block-map-nap__title"><?php echo esc_html($heading); ?></h2>
+					<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
+					<?php if ($icon_left) : ?>
+						<div class="lf-heading-row">
+							<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
+							<h2 class="lf-block-map-nap__title"><?php echo esc_html($heading); ?></h2>
+						</div>
+					<?php else : ?>
+						<h2 class="lf-block-map-nap__title"><?php echo esc_html($heading); ?></h2>
+					<?php endif; ?>
 					<?php if ($intro !== '') : ?>
 						<p class="lf-block-map-nap__intro"><?php echo esc_html($intro); ?></p>
 					<?php endif; ?>
@@ -107,7 +118,10 @@ $areas_query = new WP_Query([
 							$label = function_exists('lf_internal_link_label') ? lf_internal_link_label('area', get_post(), $origin_id) : get_the_title();
 						?>
 							<li class="lf-block-map-nap__areas-item">
-								<a href="<?php the_permalink(); ?>" class="lf-block-map-nap__areas-link"><?php echo esc_html($label); ?></a>
+								<a href="<?php the_permalink(); ?>" class="lf-block-map-nap__areas-link">
+									<?php if ($list_icon) : ?><span class="lf-block-map-nap__icon"><?php echo $list_icon; ?></span><?php endif; ?>
+									<span><?php echo esc_html($label); ?></span>
+								</a>
 							</li>
 						<?php endwhile; ?>
 					</ul>

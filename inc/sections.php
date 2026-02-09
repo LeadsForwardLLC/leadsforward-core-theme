@@ -12,6 +12,64 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+function lf_sections_icon_fields(): array {
+	$icon_options = function_exists('lf_icon_options') ? lf_icon_options() : [];
+	$icon_options = array_merge(['' => __('Auto (niche default)', 'leadsforward-core')], $icon_options);
+	return [
+		[
+			'key' => 'icon_enabled',
+			'label' => __('Enable icon', 'leadsforward-core'),
+			'type' => 'select',
+			'default' => '0',
+			'options' => [
+				'0' => __('Off', 'leadsforward-core'),
+				'1' => __('On', 'leadsforward-core'),
+			],
+		],
+		[
+			'key' => 'icon_slug',
+			'label' => __('Icon', 'leadsforward-core'),
+			'type' => 'select',
+			'default' => '',
+			'options' => $icon_options,
+		],
+		[
+			'key' => 'icon_position',
+			'label' => __('Icon position', 'leadsforward-core'),
+			'type' => 'select',
+			'default' => 'left',
+			'options' => [
+				'above' => __('Above heading', 'leadsforward-core'),
+				'left' => __('Left of heading', 'leadsforward-core'),
+				'list' => __('Inline with list items', 'leadsforward-core'),
+			],
+		],
+		[
+			'key' => 'icon_size',
+			'label' => __('Icon size', 'leadsforward-core'),
+			'type' => 'select',
+			'default' => 'md',
+			'options' => [
+				'sm' => __('Small', 'leadsforward-core'),
+				'md' => __('Medium', 'leadsforward-core'),
+				'lg' => __('Large', 'leadsforward-core'),
+			],
+		],
+		[
+			'key' => 'icon_color',
+			'label' => __('Icon color', 'leadsforward-core'),
+			'type' => 'select',
+			'default' => 'primary',
+			'options' => [
+				'inherit' => __('Inherit', 'leadsforward-core'),
+				'primary' => __('Primary', 'leadsforward-core'),
+				'secondary' => __('Secondary', 'leadsforward-core'),
+				'muted' => __('Muted', 'leadsforward-core'),
+			],
+		],
+	];
+}
+
 function lf_sections_registry(): array {
 	$bg_field = [
 		'key' => 'section_background',
@@ -54,7 +112,8 @@ function lf_sections_registry(): array {
 			'bottom-right' => __('Bottom right', 'leadsforward-core'),
 		]],
 	];
-	return [
+	$icon_fields = lf_sections_icon_fields();
+	$sections = [
 		'hero' => [
 			'label' => __('Hero', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area', 'page', 'post'],
@@ -280,6 +339,11 @@ function lf_sections_registry(): array {
 			'render' => 'lf_sections_render_map_nap',
 		],
 	];
+	foreach ($sections as $id => $section) {
+		$fields = $section['fields'] ?? [];
+		$sections[$id]['fields'] = array_merge($fields, $icon_fields);
+	}
+	return $sections;
 }
 
 function lf_sections_default_order(string $context): array {
@@ -324,7 +388,7 @@ function lf_sections_get_context_sections(string $context): array {
 	return $out;
 }
 
-function lf_sections_defaults_for(string $section_id): array {
+function lf_sections_defaults_for(string $section_id, string $niche_slug = ''): array {
 	$section = lf_sections_registry()[$section_id] ?? null;
 	if (!$section) {
 		return [];
@@ -332,6 +396,10 @@ function lf_sections_defaults_for(string $section_id): array {
 	$defaults = [];
 	foreach ($section['fields'] as $field) {
 		$defaults[$field['key']] = $field['default'] ?? '';
+	}
+	if (function_exists('lf_icon_default_settings')) {
+		$niche_slug = $niche_slug !== '' ? $niche_slug : (string) get_option('lf_homepage_niche_slug', 'general');
+		$defaults = array_merge($defaults, lf_icon_default_settings($section_id, $niche_slug));
 	}
 	return $defaults;
 }
@@ -433,14 +501,27 @@ function lf_sections_render_section(string $section_id, string $context, array $
 	}
 }
 
-function lf_sections_render_shell_open(string $id, string $title = '', string $intro = '', string $background = 'light'): void {
+function lf_sections_render_shell_open(string $id, string $title = '', string $intro = '', string $background = 'light', array $settings = []): void {
 	$bg_class = lf_sections_bg_class($background);
+	$icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, $id, 'above', 'lf-heading-icon') : '';
+	$icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, $id, 'left', 'lf-heading-icon') : '';
+	$has_header = $title || $intro || $icon_above || $icon_left;
 	?>
 	<section class="lf-section lf-section--<?php echo esc_attr($id); ?> <?php echo esc_attr($bg_class); ?>">
 		<div class="lf-section__inner">
-			<?php if ($title || $intro) : ?>
+			<?php if ($has_header) : ?>
 				<header class="lf-section__header">
-					<?php if ($title) : ?><h2 class="lf-section__title"><?php echo esc_html($title); ?></h2><?php endif; ?>
+					<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
+					<?php if ($title) : ?>
+						<?php if ($icon_left) : ?>
+							<div class="lf-heading-row">
+								<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
+								<h2 class="lf-section__title"><?php echo esc_html($title); ?></h2>
+							</div>
+						<?php else : ?>
+							<h2 class="lf-section__title"><?php echo esc_html($title); ?></h2>
+						<?php endif; ?>
+					<?php endif; ?>
 					<?php if ($intro) : ?><p class="lf-section__intro"><?php echo esc_html($intro); ?></p><?php endif; ?>
 				</header>
 			<?php endif; ?>
@@ -459,6 +540,7 @@ function lf_sections_render_shell_close(): void {
 function lf_sections_render_hero(string $context, array $settings, \WP_Post $post): void {
 	if ($context === 'homepage' && function_exists('lf_render_block_template')) {
 		$section = [
+			'section_type' => 'hero',
 			'hero_headline' => $settings['hero_headline'] ?? '',
 			'hero_subheadline' => $settings['hero_subheadline'] ?? '',
 			'section_background' => $settings['section_background'] ?? 'soft',
@@ -468,6 +550,11 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 			'hero_cta_url' => $settings['cta_primary_url'] ?? '',
 			'hero_cta_secondary_action' => $settings['cta_secondary_action'] ?? '',
 			'hero_cta_secondary_url' => $settings['cta_secondary_url'] ?? '',
+			'icon_enabled' => $settings['icon_enabled'] ?? '0',
+			'icon_slug' => $settings['icon_slug'] ?? '',
+			'icon_position' => $settings['icon_position'] ?? 'left',
+			'icon_size' => $settings['icon_size'] ?? 'md',
+			'icon_color' => $settings['icon_color'] ?? 'primary',
 		];
 		$variant = $settings['variant'] ?? 'default';
 		$block = [
@@ -515,11 +602,21 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 	$primary_url = $resolved['primary_url'] ?? '';
 	$secondary_url = $resolved['secondary_url'] ?? '';
 	$phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
+	$icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'hero', 'above', 'lf-heading-icon') : '';
+	$icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'hero', 'left', 'lf-heading-icon') : '';
 	?>
 	<?php $bg_class = lf_sections_bg_class($settings['section_background'] ?? 'soft'); ?>
 	<section class="lf-section lf-section--hero <?php echo esc_attr($bg_class); ?>">
 		<div class="lf-section__inner">
-			<<?php echo $heading_tag; ?> class="lf-section__title"><?php echo esc_html($heading); ?></<?php echo $heading_tag; ?>>
+			<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
+			<?php if ($icon_left) : ?>
+				<div class="lf-heading-row">
+					<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
+					<<?php echo $heading_tag; ?> class="lf-section__title"><?php echo esc_html($heading); ?></<?php echo $heading_tag; ?>>
+				</div>
+			<?php else : ?>
+				<<?php echo $heading_tag; ?> class="lf-section__title"><?php echo esc_html($heading); ?></<?php echo $heading_tag; ?>>
+			<?php endif; ?>
 			<?php if ($sub) : ?><p class="lf-section__intro"><?php echo esc_html($sub); ?></p><?php endif; ?>
 			<div class="lf-section__buttons">
 				<?php if ($primary) : ?>
@@ -579,7 +676,8 @@ function lf_sections_render_trust_bar(string $context, array $settings, \WP_Post
 		$badges = [__('Licensed & Insured', 'leadsforward-core'), __('5-Star Rated', 'leadsforward-core')];
 	}
 	$title = $settings['trust_heading'] ?? '';
-	lf_sections_render_shell_open('trust-bar', $title, '', $settings['section_background'] ?? 'light');
+	$badge_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'trust_bar', 'list', 'lf-trust-bar__badge-icon') : '';
+	lf_sections_render_shell_open('trust-bar', $title, '', $settings['section_background'] ?? 'light', $settings);
 	?>
 	<div class="lf-trust-bar">
 		<div class="lf-trust-bar__rating">
@@ -593,7 +691,10 @@ function lf_sections_render_trust_bar(string $context, array $settings, \WP_Post
 		</div>
 		<div class="lf-trust-bar__badges">
 			<?php foreach ($badges as $badge) : ?>
-				<span class="lf-trust-bar__badge"><?php echo esc_html($badge); ?></span>
+				<span class="lf-trust-bar__badge">
+					<?php if ($badge_icon) : ?><span class="lf-trust-bar__badge-icon"><?php echo $badge_icon; ?></span><?php endif; ?>
+					<?php echo esc_html($badge); ?>
+				</span>
 			<?php endforeach; ?>
 		</div>
 	</div>
@@ -605,11 +706,16 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
 	$items = lf_sections_parse_lines((string) ($settings['benefits_items'] ?? ''));
-	lf_sections_render_shell_open('benefits', $title, $intro, $settings['section_background'] ?? 'light');
+	$item_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'benefits', 'list', 'lf-benefits__icon') : '';
+	$card_class = $item_icon ? 'lf-benefits__card lf-benefits__card--icon' : 'lf-benefits__card';
+	lf_sections_render_shell_open('benefits', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	?>
 	<div class="lf-benefits">
 		<?php foreach ($items as $item) : ?>
-			<div class="lf-benefits__card"><?php echo esc_html($item); ?></div>
+			<div class="<?php echo esc_attr($card_class); ?>">
+				<?php if ($item_icon) : ?><span class="lf-benefits__icon"><?php echo $item_icon; ?></span><?php endif; ?>
+				<span class="lf-benefits__text"><?php echo esc_html($item); ?></span>
+			</div>
 		<?php endforeach; ?>
 	</div>
 	<?php
@@ -628,16 +734,21 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 		$body = wpautop($body);
 	}
 	$checklist = lf_sections_parse_lines((string) ($settings['service_details_checklist'] ?? ''));
-	lf_sections_render_shell_open('service-details', $title, $intro, $settings['section_background'] ?? 'light');
+	$list_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'service_details', 'list', 'lf-service-details__icon') : '';
+	$checklist_class = $list_icon ? 'lf-service-details__checklist lf-service-details__checklist--icon' : 'lf-service-details__checklist';
+	lf_sections_render_shell_open('service-details', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	?>
 	<div class="lf-service-details">
 		<?php if ($body) : ?>
 			<div class="lf-service-details__body"><?php echo wp_kses_post($body); ?></div>
 		<?php endif; ?>
 		<?php if (!empty($checklist)) : ?>
-			<ul class="lf-service-details__checklist" role="list">
+			<ul class="<?php echo esc_attr($checklist_class); ?>" role="list">
 				<?php foreach ($checklist as $item) : ?>
-					<li><?php echo esc_html($item); ?></li>
+					<li>
+						<?php if ($list_icon) : ?><span class="lf-service-details__icon"><?php echo $list_icon; ?></span><?php endif; ?>
+						<span class="lf-service-details__text"><?php echo esc_html($item); ?></span>
+					</li>
 				<?php endforeach; ?>
 			</ul>
 		<?php endif; ?>
@@ -687,14 +798,25 @@ function lf_sections_render_media_content(string $context, array $settings, \WP_
 	}
 	$position = lf_sections_image_position($settings['image_position'] ?? 'center');
 	$img_style = $position ? 'object-position:' . esc_attr($position) . ';' : '';
+	$section_id = $layout === 'image-left' ? 'image_content' : 'content_image';
+	$icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, $section_id, 'above', 'lf-heading-icon') : '';
+	$icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, $section_id, 'left', 'lf-heading-icon') : '';
 
 	$layout_class = $layout === 'image-left' ? 'lf-media-section--image-left' : 'lf-media-section--image-right';
-	lf_sections_render_shell_open('media', '', '', $settings['section_background'] ?? 'light');
+	lf_sections_render_shell_open('media', '', '', $settings['section_background'] ?? 'light', []);
 	?>
 	<div class="lf-media-section <?php echo esc_attr($layout_class); ?>">
 		<div class="lf-media-section__content">
+			<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
 			<?php if ($title !== '') : ?>
-				<h2 class="lf-media-section__title"><?php echo esc_html($title); ?></h2>
+				<?php if ($icon_left) : ?>
+					<div class="lf-heading-row">
+						<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
+						<h2 class="lf-media-section__title"><?php echo esc_html($title); ?></h2>
+					</div>
+				<?php else : ?>
+					<h2 class="lf-media-section__title"><?php echo esc_html($title); ?></h2>
+				<?php endif; ?>
 			<?php endif; ?>
 			<?php if ($support !== '') : ?>
 				<p class="lf-media-section__support"><?php echo esc_html($support); ?></p>
@@ -753,7 +875,7 @@ function lf_sections_render_content(string $context, array $settings, \WP_Post $
 	if ($body === '') {
 		return;
 	}
-	lf_sections_render_shell_open('content', '', '', $settings['section_background'] ?? 'light');
+	lf_sections_render_shell_open('content', '', '', $settings['section_background'] ?? 'light', $settings);
 	?>
 	<div class="lf-prose"><?php echo wp_kses_post($body); ?></div>
 	<?php
@@ -763,11 +885,16 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
 	$steps = lf_sections_parse_lines((string) ($settings['process_steps'] ?? ''));
-	lf_sections_render_shell_open('process', $title, $intro, $settings['section_background'] ?? 'light');
+	$list_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'process', 'list', 'lf-process__icon') : '';
+	$process_class = $list_icon ? 'lf-process lf-process--icon' : 'lf-process';
+	lf_sections_render_shell_open('process', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	?>
-	<ol class="lf-process">
+	<ol class="<?php echo esc_attr($process_class); ?>">
 		<?php foreach ($steps as $step) : ?>
-			<li class="lf-process__step"><?php echo esc_html($step); ?></li>
+			<li class="lf-process__step">
+				<?php if ($list_icon) : ?><span class="lf-process__icon"><?php echo $list_icon; ?></span><?php endif; ?>
+				<span class="lf-process__text"><?php echo esc_html($step); ?></span>
+			</li>
 		<?php endforeach; ?>
 	</ol>
 	<?php
@@ -781,6 +908,11 @@ function lf_sections_render_faq(string $context, array $settings, \WP_Post $post
 			'section_intro' => $settings['section_intro'] ?? '',
 			'faq_max_items' => $settings['faq_max_items'] ?? '',
 			'section_background' => $settings['section_background'] ?? 'light',
+			'icon_enabled' => $settings['icon_enabled'] ?? '0',
+			'icon_slug' => $settings['icon_slug'] ?? '',
+			'icon_position' => $settings['icon_position'] ?? 'left',
+			'icon_size' => $settings['icon_size'] ?? 'md',
+			'icon_color' => $settings['icon_color'] ?? 'primary',
 		];
 		$block = [
 			'id'         => 'lf-faq',
@@ -804,6 +936,11 @@ function lf_sections_render_cta_band(string $context, array $settings, \WP_Post 
 			'cta_secondary_action' => $settings['cta_secondary_action'] ?? '',
 			'cta_secondary_url' => $settings['cta_secondary_url'] ?? '',
 			'section_background' => $settings['section_background'] ?? 'dark',
+			'icon_enabled' => $settings['icon_enabled'] ?? '0',
+			'icon_slug' => $settings['icon_slug'] ?? '',
+			'icon_position' => $settings['icon_position'] ?? 'left',
+			'icon_size' => $settings['icon_size'] ?? 'md',
+			'icon_color' => $settings['icon_color'] ?? 'primary',
 		];
 		$block = [
 			'id'         => 'lf-cta-band',
@@ -823,6 +960,11 @@ function lf_sections_render_trust_reviews(string $context, array $settings, \WP_
 		'trust_heading' => $settings['trust_heading'] ?? '',
 		'trust_max_items' => $settings['trust_max_items'] ?? '',
 		'section_background' => $settings['section_background'] ?? 'soft',
+		'icon_enabled' => $settings['icon_enabled'] ?? '0',
+		'icon_slug' => $settings['icon_slug'] ?? '',
+		'icon_position' => $settings['icon_position'] ?? 'left',
+		'icon_size' => $settings['icon_size'] ?? 'md',
+		'icon_color' => $settings['icon_color'] ?? 'primary',
 	];
 	$block = [
 		'id'         => 'lf-trust-reviews',
@@ -841,6 +983,11 @@ function lf_sections_render_service_grid(string $context, array $settings, \WP_P
 		'section_heading' => $settings['section_heading'] ?? '',
 		'section_intro' => $settings['section_intro'] ?? '',
 		'section_background' => $settings['section_background'] ?? 'light',
+		'icon_enabled' => $settings['icon_enabled'] ?? '0',
+		'icon_slug' => $settings['icon_slug'] ?? '',
+		'icon_position' => $settings['icon_position'] ?? 'left',
+		'icon_size' => $settings['icon_size'] ?? 'md',
+		'icon_color' => $settings['icon_color'] ?? 'primary',
 	];
 	$block = [
 		'id'         => 'lf-service-grid',
@@ -859,6 +1006,11 @@ function lf_sections_render_service_areas(string $context, array $settings, \WP_
 		'section_heading' => $settings['section_heading'] ?? '',
 		'section_intro' => $settings['section_intro'] ?? '',
 		'section_background' => $settings['section_background'] ?? 'soft',
+		'icon_enabled' => $settings['icon_enabled'] ?? '0',
+		'icon_slug' => $settings['icon_slug'] ?? '',
+		'icon_position' => $settings['icon_position'] ?? 'left',
+		'icon_size' => $settings['icon_size'] ?? 'md',
+		'icon_color' => $settings['icon_color'] ?? 'primary',
 	];
 	$block = [
 		'id'         => 'lf-service-areas',
@@ -874,7 +1026,7 @@ function lf_sections_render_blog_posts(string $context, array $settings, \WP_Pos
 	$intro = $settings['section_intro'] ?? '';
 	$count = isset($settings['posts_per_page']) ? (int) $settings['posts_per_page'] : 6;
 	$count = max(1, min(12, $count));
-	lf_sections_render_shell_open('blog-posts', $title, $intro, $settings['section_background'] ?? 'light');
+	lf_sections_render_shell_open('blog-posts', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	$query = new \WP_Query([
 		'post_type'      => 'post',
 		'posts_per_page' => $count,
@@ -900,7 +1052,7 @@ function lf_sections_render_blog_posts(string $context, array $settings, \WP_Pos
 function lf_sections_render_sitemap_links(string $context, array $settings, \WP_Post $post): void {
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
-	lf_sections_render_shell_open('sitemap-links', $title, $intro, $settings['section_background'] ?? 'light');
+	lf_sections_render_shell_open('sitemap-links', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 
 	$pages = get_pages(['post_status' => 'publish', 'sort_order' => 'ASC', 'sort_column' => 'menu_order,post_title']);
 	$services = get_posts([
@@ -997,11 +1149,17 @@ function lf_sections_render_related_links(string $context, array $settings, \WP_
 	if (empty($links)) {
 		return;
 	}
-	lf_sections_render_shell_open('related-links', $title, $intro, $settings['section_background'] ?? 'light');
+	$item_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'related_links', 'list', 'lf-related-links__icon') : '';
+	lf_sections_render_shell_open('related-links', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	?>
 	<ul class="lf-related-links" role="list">
 		<?php foreach ($links as $link) : ?>
-			<li><a href="<?php echo esc_url($link['url']); ?>"><?php echo esc_html($link['label']); ?></a></li>
+			<li>
+				<a href="<?php echo esc_url($link['url']); ?>">
+					<?php if ($item_icon) : ?><span class="lf-related-links__icon"><?php echo $item_icon; ?></span><?php endif; ?>
+					<span class="lf-related-links__label"><?php echo esc_html($link['label']); ?></span>
+				</a>
+			</li>
 		<?php endforeach; ?>
 	</ul>
 	<?php
@@ -1011,16 +1169,18 @@ function lf_sections_render_related_links(string $context, array $settings, \WP_
 function lf_sections_render_service_areas_served(string $context, array $settings, \WP_Post $post): void {
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
-	lf_sections_render_shell_open('service-areas-served', $title, $intro);
-	get_template_part('templates/parts/related-service-areas');
+	$list_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'service_areas_served', 'list', 'lf-related-links__icon') : '';
+	lf_sections_render_shell_open('service-areas-served', $title, $intro, 'light', $settings);
+	get_template_part('templates/parts/related-service-areas', null, ['icon' => $list_icon]);
 	lf_sections_render_shell_close();
 }
 
 function lf_sections_render_services_offered(string $context, array $settings, \WP_Post $post): void {
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
-	lf_sections_render_shell_open('services-offered', $title, $intro, $settings['section_background'] ?? 'light');
-	get_template_part('templates/parts/related-services');
+	$list_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'services_offered_here', 'list', 'lf-related-links__icon') : '';
+	lf_sections_render_shell_open('services-offered', $title, $intro, $settings['section_background'] ?? 'light', $settings);
+	get_template_part('templates/parts/related-services', null, ['icon' => $list_icon]);
 	lf_sections_render_shell_close();
 }
 
@@ -1029,6 +1189,7 @@ function lf_sections_render_nearby_areas(string $context, array $settings, \WP_P
 	$intro = $settings['section_intro'] ?? '';
 	$max = max(1, (int) ($settings['nearby_areas_max'] ?? 6));
 	$origin_id = $post->ID;
+	$area_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'nearby_areas', 'list', 'lf-nearby-areas__icon') : '';
 	$query = new WP_Query([
 		'post_type'      => 'lf_service_area',
 		'posts_per_page' => $max,
@@ -1041,13 +1202,18 @@ function lf_sections_render_nearby_areas(string $context, array $settings, \WP_P
 	if (!$query->have_posts()) {
 		return;
 	}
-	lf_sections_render_shell_open('nearby-areas', $title, $intro, $settings['section_background'] ?? 'light');
+	lf_sections_render_shell_open('nearby-areas', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	?>
 	<ul class="lf-related-links" role="list">
 		<?php while ($query->have_posts()) : $query->the_post();
 			$label = function_exists('lf_internal_link_label') ? lf_internal_link_label('area', get_post(), $origin_id) : get_the_title();
 		?>
-			<li><a href="<?php the_permalink(); ?>"><?php echo esc_html($label); ?></a></li>
+			<li>
+				<a href="<?php the_permalink(); ?>">
+					<?php if ($area_icon) : ?><span class="lf-nearby-areas__icon"><?php echo $area_icon; ?></span><?php endif; ?>
+					<span class="lf-related-links__label"><?php echo esc_html($label); ?></span>
+				</a>
+			</li>
 		<?php endwhile; ?>
 	</ul>
 	<?php
@@ -1061,6 +1227,11 @@ function lf_sections_render_map_nap(string $context, array $settings, \WP_Post $
 			'section_heading' => $settings['section_heading'] ?? '',
 			'section_intro'   => $settings['section_intro'] ?? '',
 			'section_background' => $settings['section_background'] ?? 'light',
+			'icon_enabled' => $settings['icon_enabled'] ?? '0',
+			'icon_slug' => $settings['icon_slug'] ?? '',
+			'icon_position' => $settings['icon_position'] ?? 'left',
+			'icon_size' => $settings['icon_size'] ?? 'md',
+			'icon_color' => $settings['icon_color'] ?? 'primary',
 		];
 		$block = [
 			'id'         => 'lf-map-nap',

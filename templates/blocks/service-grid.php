@@ -19,6 +19,9 @@ $section = $context['section'] ?? [];
 $heading = !empty($section['section_heading']) ? $section['section_heading'] : __('Our Services', 'leadsforward-core');
 $intro   = !empty($section['section_intro']) ? $section['section_intro'] : '';
 $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'light') : '';
+$icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'service_grid', 'above', 'lf-heading-icon') : '';
+$icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'service_grid', 'left', 'lf-heading-icon') : '';
+$card_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'service_grid', 'list', 'lf-block-service-grid__icon') : '';
 
 $query = new WP_Query([
 	'post_type'      => 'lf_service',
@@ -32,7 +35,15 @@ $query = new WP_Query([
 <section class="lf-block lf-block-service-grid <?php echo esc_attr($bg_class); ?> lf-block-service-grid--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-service-grid__inner">
 		<header class="lf-block-service-grid__header">
-			<h2 class="lf-block-service-grid__title"><?php echo esc_html($heading); ?></h2>
+			<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
+			<?php if ($icon_left) : ?>
+				<div class="lf-heading-row">
+					<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
+					<h2 class="lf-block-service-grid__title"><?php echo esc_html($heading); ?></h2>
+				</div>
+			<?php else : ?>
+				<h2 class="lf-block-service-grid__title"><?php echo esc_html($heading); ?></h2>
+			<?php endif; ?>
 			<?php if ($intro !== '') : ?>
 				<p class="lf-block-service-grid__intro"><?php echo esc_html($intro); ?></p>
 			<?php endif; ?>
@@ -49,6 +60,7 @@ $query = new WP_Query([
 				?>
 					<li class="lf-block-service-grid__item">
 						<a href="<?php the_permalink(); ?>" class="lf-block-service-grid__link">
+							<?php if ($card_icon) : ?><span class="lf-block-service-grid__icon"><?php echo $card_icon; ?></span><?php endif; ?>
 							<?php if ($variant === 'a') : ?>
 								<span class="lf-block-service-grid__card-index"><?php echo esc_html(str_pad((string) $index, 2, '0', STR_PAD_LEFT)); ?></span>
 							<?php endif; ?>

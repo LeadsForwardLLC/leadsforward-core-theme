@@ -24,6 +24,8 @@ if (!empty($section['trust_max_items'])) {
 }
 $max = max(1, min(10, $max));
 $heading = !empty($section['trust_heading']) ? $section['trust_heading'] : __('What Our Customers Say', 'leadsforward-core');
+$icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'trust_reviews', 'above', 'lf-heading-icon') : '';
+$icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'trust_reviews', 'left', 'lf-heading-icon') : '';
 
 $query = new WP_Query([
 	'post_type'      => 'lf_testimonial',
@@ -50,7 +52,15 @@ $avg_rating = $ratings_count > 0 ? round($ratings_total / $ratings_count, 1) : 0
 <section class="lf-block lf-block-trust-reviews <?php echo esc_attr($bg_class); ?> lf-block-trust-reviews--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-trust-reviews__inner">
 		<header class="lf-block-trust-reviews__header">
-			<h2 class="lf-block-trust-reviews__title"><?php echo esc_html($heading); ?></h2>
+			<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
+			<?php if ($icon_left) : ?>
+				<div class="lf-heading-row">
+					<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
+					<h2 class="lf-block-trust-reviews__title"><?php echo esc_html($heading); ?></h2>
+				</div>
+			<?php else : ?>
+				<h2 class="lf-block-trust-reviews__title"><?php echo esc_html($heading); ?></h2>
+			<?php endif; ?>
 			<?php if ($variant === 'a' && $review_total > 0) : ?>
 				<div class="lf-block-trust-reviews__summary" role="note" aria-label="<?php esc_attr_e('Review summary', 'leadsforward-core'); ?>">
 					<?php if ($avg_rating > 0) : ?>

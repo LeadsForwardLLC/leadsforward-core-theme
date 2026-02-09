@@ -82,12 +82,12 @@ function lf_homepage_controller_order(): array {
  *
  * @return array<string, mixed>
  */
-function lf_homepage_default_section_config(string $section_type): array {
+function lf_homepage_default_section_config(string $section_type, string $niche_slug = ''): array {
 	$base = [
 		'enabled' => true,
 		'variant' => 'default',
 	];
-	$defaults = lf_sections_defaults_for($section_type);
+	$defaults = lf_sections_defaults_for($section_type, $niche_slug);
 	if (!empty($defaults)) {
 		$config = array_merge($base, $defaults);
 		if (in_array($section_type, ['content_image', 'image_content'], true)) {
@@ -175,7 +175,7 @@ function lf_homepage_default_config(?string $niche_slug = null): array {
 	$niche = $niche_slug && function_exists('lf_get_niche') ? lf_get_niche($niche_slug) : null;
 	$section_enabled = $niche['section_enabled'] ?? null;
 	foreach ($order as $type) {
-		$sec = lf_homepage_default_section_config($type);
+		$sec = lf_homepage_default_section_config($type, $niche_slug ?? '');
 		if (is_array($section_enabled) && array_key_exists($type, $section_enabled)) {
 			$sec['enabled'] = (bool) $section_enabled[$type];
 		}

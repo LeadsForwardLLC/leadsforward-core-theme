@@ -40,6 +40,8 @@ lf_load_inc('performance.php');
 
 // Business entity (Local SEO single source of truth).
 lf_load_inc('business-entity.php');
+// Icon system (inline SVGs).
+lf_load_inc('icons.php');
 
 // SEO and schema (foundation only).
 lf_load_inc('seo.php');
