@@ -198,8 +198,30 @@ add_action('init', 'lf_maybe_migrate_cta_defaults', 20);
 /**
  * Hide the main editor for core pages (builder-managed).
  */
+function lf_pb_config_has_section(int $post_id, string $type): bool {
+	$stored = get_post_meta($post_id, LF_PB_META_KEY, true);
+	if (!is_array($stored) || empty($stored['sections']) || !is_array($stored['sections'])) {
+		return false;
+	}
+	$sections = $stored['sections'];
+	$first = reset($sections);
+	$is_legacy = is_array($first) && !array_key_exists('type', $first);
+	if ($is_legacy) {
+		return array_key_exists($type, $sections);
+	}
+	foreach ($sections as $row) {
+		if (is_array($row) && ($row['type'] ?? '') === $type) {
+			return true;
+		}
+	}
+	return false;
+}
+
 function lf_should_hide_editor_for_core_page(?\WP_Post $post): bool {
 	if (!$post || $post->post_type !== 'page') {
+		return false;
+	}
+	if (function_exists('lf_pb_config_has_section') && lf_pb_config_has_section($post->ID, 'content')) {
 		return false;
 	}
 	$slugs = function_exists('lf_wizard_required_page_slugs') ? lf_wizard_required_page_slugs() : [];

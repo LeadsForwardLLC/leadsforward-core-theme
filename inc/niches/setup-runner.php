@@ -1012,16 +1012,11 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'privacy-policy' => [
-			'order' => ['hero', 'content_image'],
+			'order' => ['hero', 'content'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Privacy policy',
 					'hero_subheadline' => 'How we collect and protect your information.',
-				],
-				'content_image' => [
-					'section_heading' => 'Privacy overview',
-					'section_intro' => 'A quick summary of how we use your information.',
-					'section_body' => $privacy_body,
 				],
 			],
 			'seo' => [
@@ -1030,16 +1025,11 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'terms-of-service' => [
-			'order' => ['hero', 'content_image'],
+			'order' => ['hero', 'content'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Terms of service',
 					'hero_subheadline' => 'Important details about using this site and our services.',
-				],
-				'content_image' => [
-					'section_heading' => 'Terms overview',
-					'section_intro' => 'A quick summary of the rules for using this site.',
-					'section_body' => $terms_body,
 				],
 			],
 			'seo' => [

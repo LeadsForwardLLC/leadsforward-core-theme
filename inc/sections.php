@@ -366,8 +366,7 @@ function lf_sections_default_order(string $context): array {
 		return $base;
 	}
 	if ($context === 'page') {
-		array_splice($base, 3, 0, ['content_image', 'image_content']);
-		return $base;
+		return ['hero', 'content'];
 	}
 	if ($context === 'post') {
 		return ['hero', 'content', 'related_links', 'cta'];
@@ -877,7 +876,7 @@ function lf_sections_render_content(string $context, array $settings, \WP_Post $
 	}
 	lf_sections_render_shell_open('content', '', '', $settings['section_background'] ?? 'light', $settings);
 	?>
-	<div class="lf-prose"><?php echo wp_kses_post($body); ?></div>
+	<div class="lf-prose"><?php echo $body; ?></div>
 	<?php
 	lf_sections_render_shell_close();
 }

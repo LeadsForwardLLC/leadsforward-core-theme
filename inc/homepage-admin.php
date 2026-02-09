@@ -401,6 +401,8 @@ function lf_homepage_admin_render(): void {
 	$config = lf_get_homepage_section_config();
 	$order = lf_homepage_controller_order();
 	$labels = lf_homepage_admin_section_labels();
+	$section_defs = function_exists('lf_sections_get_context_sections') ? lf_sections_get_context_sections('homepage') : [];
+	$section_list = array_values($section_defs);
 	$variants = [
 		'default' => __('Authority Split (Recommended)', 'leadsforward-core'),
 		'a'       => __('Conversion Stack', 'leadsforward-core'),
@@ -887,8 +889,12 @@ function lf_homepage_admin_render(): void {
 				<h4><?php esc_html_e('Section Library', 'leadsforward-core'); ?></h4>
 				<p><?php esc_html_e('Drag or click Add to insert a section.', 'leadsforward-core'); ?></p>
 				<ul class="lf-hp-library__list">
-					<?php foreach ($order as $type) :
-						$label = $labels[$type] ?? $type;
+					<?php foreach ($section_list as $def) :
+						$type = $def['id'] ?? '';
+						if ($type === '') {
+							continue;
+						}
+						$label = $def['label'] ?? ($labels[$type] ?? $type);
 					?>
 						<li class="lf-hp-library__item" data-section-type="<?php echo esc_attr($type); ?>">
 							<span class="lf-hp-library__label"><?php echo esc_html($label); ?></span>

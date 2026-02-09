@@ -50,11 +50,7 @@ function lf_pb_get_context_for_post(\WP_Post $post): string {
 		if ($post->post_name === 'home') {
 			return '';
 		}
-		$has_config = get_post_meta($post->ID, LF_PB_META_KEY, true);
-		$core_slugs = function_exists('lf_wizard_required_page_slugs') ? lf_wizard_required_page_slugs() : [];
-		if (!empty($has_config) || in_array($post->post_name, $core_slugs, true)) {
-			return 'page';
-		}
+		return 'page';
 	}
 	if ($post->post_type === 'post') {
 		return 'post';
@@ -364,7 +360,7 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 		</div>
 		<aside class="lf-pb-library">
 			<h4><?php esc_html_e('Section Library', 'leadsforward-core'); ?></h4>
-			<p><?php esc_html_e('Click Add to insert a section.', 'leadsforward-core'); ?></p>
+			<p><?php esc_html_e('Drag or click Add to insert a section.', 'leadsforward-core'); ?></p>
 			<ul class="lf-pb-library__list">
 				<?php foreach ($section_list as $def) : ?>
 					<li class="lf-pb-library__item" data-section-type="<?php echo esc_attr($def['id']); ?>">
