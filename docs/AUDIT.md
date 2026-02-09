@@ -10,12 +10,13 @@
 - Schema foundation for organization/local business (`inc/schema.php`)
 - Content block that pulls from main WP editor (`inc/sections.php`)
 - Setup wizard seeds pages and business data (`inc/niches/wizard.php`, `inc/niches/setup-runner.php`)
+- Hero controls parity across Homepage + Page Builder (variant + CTA toggles/actions)
+- Canonical CTA resolver used across builders (`lf_resolve_cta`)
+- SEO overrides for pages/posts/services/service areas (title/description/noindex)
+- Shared section drag-and-drop module (`assets/js/lf-section-sortable.js`)
 
 ## What’s missing
 - Page Builder parity:
-  - Hero variant selector only exists on Homepage admin, not Page Builder
-  - Hero CTA enable/disable toggles exist on Homepage admin, not Page Builder
-  - SEO overrides panel only for page/post, not service/service area
 - Clear operator guidance:
   - Most fields lack `instructions` or examples (sections registry, page builder UI)
   - Many defaults are empty with no guidance (hero headline, service details body)
@@ -30,9 +31,6 @@
   - No automatic contextual linking in content blocks
 
 ## What’s redundant
-- CTA resolution logic duplicated across homepage and section renderer (`inc/homepage.php` vs `inc/sections.php`)
-- Hero CTA field naming split (`hero_cta_*` in homepage admin vs `cta_*` in registry)
-- Section library drag-and-drop JS duplicated for Homepage and Page Builder
 - Mixed rendering paths for the same section type (block templates vs inline renderers)
 
 ## What’s dangerous
@@ -43,10 +41,8 @@
 - Context restrictions not documented (sections silently hidden by context)
 
 ## What must be fixed before scale
-- Page Builder parity: hero variant + CTA toggles + SEO overrides must match Homepage controls
 - H1 enforcement and heading hierarchy validation to prevent SEO regressions
 - Add OG/Twitter meta tags and HTML breadcrumbs for baseline share/SEO parity
-- Standardize CTA field naming and remove duplicate resolution paths
 - Add operator guidance for all critical fields (placeholders, examples, “what happens if empty”)
 - Add validation warnings for URLs, phones, emails, and embed fields
 - Document section context rules in admin UI to avoid confusion across 500 sites
