@@ -62,6 +62,25 @@ function lf_pb_instance_id(string $type, int $index = 1): string {
 	return $type . '-' . max(1, $index);
 }
 
+function lf_pb_basic_page_slugs(): array {
+	return [
+		'about-us',
+		'our-services',
+		'our-service-areas',
+		'reviews',
+		'blog',
+		'sitemap',
+		'contact',
+		'privacy-policy',
+		'terms-of-service',
+		'thank-you',
+	];
+}
+
+function lf_pb_is_basic_page(\WP_Post $post): bool {
+	return $post->post_type === 'page' && in_array($post->post_name, lf_pb_basic_page_slugs(), true);
+}
+
 function lf_pb_default_config(string $context): array {
 	$order_types = lf_sections_default_order($context);
 	$sections = [];
@@ -153,13 +172,31 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 		$seo_out['description'] = sanitize_textarea_field((string) ($stored['seo']['description'] ?? ''));
 	}
 
+
+	if (empty($sections_out)) {
+		$default['seo'] = $seo_out;
+		return $default;
+	}
+
+	foreach ($sections_out as $instance_id => $row) {
+		$defaults = lf_sections_defaults_for($row['type']);
+		$sections_out[$instance_id]['settings'] = array_merge($defaults, $row['settings'] ?? []);
+	}
+
 	if ($context === 'page') {
 		$post = get_post($post_id);
-		$content_only_slugs = ['privacy-policy', 'terms-of-service'];
-		if ($post && in_array($post->post_name, $content_only_slugs, true)) {
-			$sections_out = array_filter($sections_out, function ($row) {
-				return is_array($row) && in_array(($row['type'] ?? ''), ['hero', 'content'], true);
-			});
+		if ($post && lf_pb_is_basic_page($post)) {
+			$default_types = ['hero', 'content'];
+			foreach ($sections_out as $instance_id => $row) {
+				$type = $row['type'] ?? '';
+				if (!in_array($type, $default_types, true)) {
+					if (empty($row['deletable'])) {
+						unset($sections_out[$instance_id]);
+					} else {
+						$sections_out[$instance_id]['deletable'] = true;
+					}
+				}
+			}
 			$order_out = array_values(array_filter($order_out, function ($instance_id) use ($sections_out) {
 				return isset($sections_out[$instance_id]);
 			}));
@@ -169,15 +206,6 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 				$order_out = $default['order'] ?? [];
 			}
 		}
-	}
-	if (empty($sections_out)) {
-		$default['seo'] = $seo_out;
-		return $default;
-	}
-
-	foreach ($sections_out as $instance_id => $row) {
-		$defaults = lf_sections_defaults_for($row['type']);
-		$sections_out[$instance_id]['settings'] = array_merge($defaults, $row['settings'] ?? []);
 	}
 
 	$order_out = lf_pb_sanitize_order($order_out, array_keys($sections_out));
@@ -544,6 +572,19 @@ function lf_pb_handle_save(int $post_id, \WP_Post $post): void {
 			'deletable' => $deletable,
 			'settings' => $settings,
 		];
+	}
+	if ($context === 'page' && lf_pb_is_basic_page($post)) {
+		$default_types = ['hero', 'content'];
+		foreach ($clean_sections as $instance_id => $row) {
+			$type = $row['type'] ?? '';
+			if (!in_array($type, $default_types, true)) {
+				if (empty($row['deletable'])) {
+					unset($clean_sections[$instance_id]);
+					continue;
+				}
+				$clean_sections[$instance_id]['deletable'] = true;
+			}
+		}
 	}
 	$order_raw = isset($_POST['lf_pb_order']) ? (array) $_POST['lf_pb_order'] : [];
 	$order = lf_pb_sanitize_order(array_map('sanitize_text_field', $order_raw), array_keys($clean_sections));

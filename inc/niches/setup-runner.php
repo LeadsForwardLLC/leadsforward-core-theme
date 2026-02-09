@@ -283,7 +283,7 @@ function lf_run_setup(array $data): array {
 		'service_ids'      => $created_services,
 		'service_area_ids' => $created_areas,
 	];
-	return [
+	$blueprints = [
 		'success' => $success,
 		'message' => $success ? __('Site setup complete.', 'leadsforward-core') : __('Setup finished with some errors.', 'leadsforward-core'),
 		'created' => $log['created'],
@@ -1065,6 +1065,32 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 	];
+
+	$basic_pages = [
+		'about-us',
+		'our-services',
+		'our-service-areas',
+		'reviews',
+		'blog',
+		'sitemap',
+		'contact',
+		'privacy-policy',
+		'terms-of-service',
+		'thank-you',
+	];
+	foreach ($basic_pages as $slug) {
+		if (!isset($blueprints[$slug])) {
+			continue;
+		}
+		$hero_override = $blueprints[$slug]['overrides']['hero'] ?? [];
+		$blueprints[$slug]['order'] = ['hero', 'content'];
+		$blueprints[$slug]['overrides'] = [];
+		if (!empty($hero_override)) {
+			$blueprints[$slug]['overrides']['hero'] = $hero_override;
+		}
+	}
+
+	return $blueprints;
 }
 
 function lf_wizard_seed_page_pb_config(int $post_id, string $slug, array $data, array $niche, array $created_pages): void {

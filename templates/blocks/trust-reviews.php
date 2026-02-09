@@ -82,32 +82,58 @@ $avg_rating = $ratings_count > 0 ? round($ratings_total / $ratings_count, 1) : 0
 					$name = function_exists('get_field') ? get_field('lf_testimonial_reviewer_name') : '';
 					$rating = function_exists('get_field') ? (int) get_field('lf_testimonial_rating') : 5;
 					$text = function_exists('get_field') ? get_field('lf_testimonial_review_text') : get_the_excerpt();
-					$source = function_exists('get_field') ? get_field('lf_testimonial_source') : '';
+				$source = function_exists('get_field') ? get_field('lf_testimonial_source') : '';
+				$source_url = function_exists('get_field') ? get_field('lf_testimonial_source_url') : '';
+				$avatar_id = function_exists('get_field') ? (int) get_field('lf_testimonial_reviewer_avatar') : 0;
+				if (!$avatar_id) {
+					$avatar_id = get_post_thumbnail_id();
+				}
 					if (!$name) {
 						$name = get_the_title();
 					}
 					if (!$text) {
 						$text = get_the_content();
 					}
+				$initials = '';
+				if ($name) {
+					$parts = preg_split('/\s+/', trim((string) $name));
+					$initials = strtoupper(substr($parts[0] ?? '', 0, 1) . substr($parts[1] ?? '', 0, 1));
+				}
 				?>
-					<li class="lf-block-trust-reviews__item">
-						<blockquote class="lf-block-trust-reviews__quote">
-							<p class="lf-block-trust-reviews__text"><?php echo esc_html($text); ?></p>
-							<footer class="lf-block-trust-reviews__cite">
-								<?php if ($rating) : ?>
-									<span class="lf-block-trust-reviews__stars" aria-label="<?php echo esc_attr(sprintf(__('%d stars', 'leadsforward-core'), $rating)); ?>">
-										<?php for ($s = 1; $s <= 5; $s++) : ?>
-											<svg class="lf-block-trust-reviews__star<?php echo $s <= $rating ? ' lf-block-trust-reviews__star--filled' : ''; ?>" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-										<?php endfor; ?>
-									</span>
-								<?php endif; ?>
-								<cite><?php echo esc_html($name); ?></cite>
+				<li class="lf-block-trust-reviews__item" <?php echo $source ? 'data-source="' . esc_attr(sanitize_title((string) $source)) . '"' : ''; ?>>
+					<figure class="lf-block-trust-reviews__quote">
+						<span class="lf-block-trust-reviews__quote-icon" aria-hidden="true">“</span>
+						<blockquote class="lf-block-trust-reviews__text"><?php echo esc_html($text); ?></blockquote>
+						<figcaption class="lf-block-trust-reviews__cite">
+							<span class="lf-block-trust-reviews__avatar" aria-hidden="true">
+								<?php
+								if ($avatar_id) {
+									echo wp_get_attachment_image($avatar_id, 'thumbnail', false, ['alt' => '', 'loading' => 'lazy', 'decoding' => 'async']);
+								} else {
+									echo esc_html($initials ?: '★');
+								}
+								?>
+							</span>
+							<span class="lf-block-trust-reviews__author">
+								<cite class="lf-block-trust-reviews__name"><?php echo esc_html($name); ?></cite>
 								<?php if ($source) : ?>
-									<span class="lf-block-trust-reviews__source"><?php echo esc_html($source); ?></span>
+									<?php if ($source_url) : ?>
+										<a class="lf-block-trust-reviews__source" href="<?php echo esc_url($source_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html($source); ?></a>
+									<?php else : ?>
+										<span class="lf-block-trust-reviews__source"><?php echo esc_html($source); ?></span>
+									<?php endif; ?>
 								<?php endif; ?>
-							</footer>
-						</blockquote>
-					</li>
+							</span>
+							<?php if ($rating) : ?>
+								<span class="lf-block-trust-reviews__stars" aria-label="<?php echo esc_attr(sprintf(__('%d stars', 'leadsforward-core'), $rating)); ?>">
+									<?php for ($s = 1; $s <= 5; $s++) : ?>
+										<svg class="lf-block-trust-reviews__star<?php echo $s <= $rating ? ' lf-block-trust-reviews__star--filled' : ''; ?>" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+									<?php endfor; ?>
+								</span>
+							<?php endif; ?>
+						</figcaption>
+					</figure>
+				</li>
 				<?php endwhile; ?>
 			</ul>
 			<?php wp_reset_postdata(); ?>
