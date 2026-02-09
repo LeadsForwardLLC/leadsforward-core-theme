@@ -61,6 +61,7 @@ function lf_homepage_admin_save(): void {
 	$icon_positions = ['above', 'left', 'list'];
 	$icon_sizes = ['sm', 'md', 'lg'];
 	$icon_colors = ['inherit', 'primary', 'secondary', 'muted'];
+	$bg_keys = function_exists('lf_sections_bg_options') ? array_keys(lf_sections_bg_options()) : ['light', 'soft', 'dark', 'card'];
 	$icon_slugs = function_exists('lf_icon_options') ? array_keys(lf_icon_options()) : [];
 	$order_input = isset($_POST['lf_hp_order']) ? array_map('sanitize_text_field', (array) $_POST['lf_hp_order']) : [];
 	$order = function_exists('lf_homepage_sanitize_order') ? lf_homepage_sanitize_order($order_input) : $order;
@@ -77,7 +78,7 @@ function lf_homepage_admin_save(): void {
 			$config[$type]['variant'] = 'default';
 		}
 		$bg_value = isset($_POST['lf_hp_bg_' . $type]) ? sanitize_text_field($_POST['lf_hp_bg_' . $type]) : 'light';
-		$config[$type]['section_background'] = in_array($bg_value, ['light', 'soft', 'dark', 'card'], true) ? $bg_value : 'light';
+		$config[$type]['section_background'] = in_array($bg_value, $bg_keys, true) ? $bg_value : 'light';
 		$icon_enabled = isset($_POST['lf_hp_icon_enabled_' . $type]) ? sanitize_text_field($_POST['lf_hp_icon_enabled_' . $type]) : '0';
 		$config[$type]['icon_enabled'] = $icon_enabled === '1' ? '1' : '0';
 		$icon_slug = isset($_POST['lf_hp_icon_slug_' . $type]) ? sanitize_text_field($_POST['lf_hp_icon_slug_' . $type]) : '';
@@ -358,6 +359,7 @@ jQuery(function ($) {
 		$field.find('.lf-media-id').val('');
 		$field.find('.lf-media-preview').html('<div class="lf-media-preview__empty">No image selected</div>');
 	});
+
 
 	if ($.fn.draggable) {
 		$('.lf-hp-library__item').draggable({
