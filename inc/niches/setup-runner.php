@@ -1174,21 +1174,66 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	$home_id = $created_pages['home'] ?? null;
 	$about_id = $created_pages['about-us'] ?? null;
 	$contact_id = $created_pages['contact'] ?? null;
-	$our_services_id = $created_pages['our-services'] ?? null;
-	$our_areas_id = $created_pages['our-service-areas'] ?? null;
 	$reviews_id = $created_pages['reviews'] ?? null;
 	$blog_id = $created_pages['blog'] ?? null;
 	$sitemap_id = $created_pages['sitemap'] ?? null;
 	$privacy_id = $created_pages['privacy-policy'] ?? null;
 	$terms_id = $created_pages['terms-of-service'] ?? null;
 
+	$service_children = [];
+	if (!empty($service_ids)) {
+		$services = get_posts([
+			'post_type' => 'lf_service',
+			'post_status' => 'publish',
+			'posts_per_page' => 50,
+			'orderby' => 'menu_order title',
+			'order' => 'ASC',
+			'no_found_rows' => true,
+			'include' => array_map('absint', $service_ids),
+		]);
+		foreach ($services as $service) {
+			$service_children[] = [
+				'type' => 'post_type',
+				'object' => 'lf_service',
+				'object_id' => $service->ID,
+			];
+		}
+	}
+	$area_children = [];
+	if (!empty($area_ids)) {
+		$areas = get_posts([
+			'post_type' => 'lf_service_area',
+			'post_status' => 'publish',
+			'posts_per_page' => 50,
+			'orderby' => 'menu_order title',
+			'order' => 'ASC',
+			'no_found_rows' => true,
+			'include' => array_map('absint', $area_ids),
+		]);
+		foreach ($areas as $area) {
+			$area_children[] = [
+				'type' => 'post_type',
+				'object' => 'lf_service_area',
+				'object_id' => $area->ID,
+			];
+		}
+	}
+
 	$header_items = [];
 	if ($home_id) $header_items[] = ['type' => 'page', 'object_id' => $home_id];
-	$header_items[] = ['type' => 'custom', 'url' => get_post_type_archive_link('lf_service'), 'title' => __('Services', 'leadsforward-core')];
-	$header_items[] = ['type' => 'custom', 'url' => get_post_type_archive_link('lf_service_area'), 'title' => __('Service Areas', 'leadsforward-core')];
-	if ($reviews_id) $header_items[] = ['type' => 'page', 'object_id' => $reviews_id];
-	if ($blog_id) $header_items[] = ['type' => 'page', 'object_id' => $blog_id];
+	$header_items[] = [
+		'type' => 'custom',
+		'url' => get_post_type_archive_link('lf_service'),
+		'title' => __('Services', 'leadsforward-core'),
+		'children' => $service_children,
+	];
 	if ($about_id) $header_items[] = ['type' => 'page', 'object_id' => $about_id];
+	$header_items[] = [
+		'type' => 'custom',
+		'url' => get_post_type_archive_link('lf_service_area'),
+		'title' => __('Service Areas', 'leadsforward-core'),
+		'children' => $area_children,
+	];
 	if ($contact_id) $header_items[] = ['type' => 'page', 'object_id' => $contact_id];
 
 	$footer_items = [];
@@ -1233,8 +1278,9 @@ function lf_wizard_ensure_menu(string $menu_name, string $location, array $items
 	}
 	$position = 0;
 	foreach ($items as $item) {
+		$parent_id = 0;
 		if ($item['type'] === 'page' && !empty($item['object_id'])) {
-			wp_update_nav_menu_item($menu_id, 0, [
+			$parent_id = wp_update_nav_menu_item($menu_id, 0, [
 				'menu-item-title'     => get_the_title($item['object_id']),
 				'menu-item-url'       => get_permalink($item['object_id']),
 				'menu-item-type'      => 'post_type',
@@ -1244,13 +1290,40 @@ function lf_wizard_ensure_menu(string $menu_name, string $location, array $items
 				'menu-item-position'  => $position++,
 			]);
 		} elseif ($item['type'] === 'custom' && !empty($item['url'])) {
-			wp_update_nav_menu_item($menu_id, 0, [
+			$parent_id = wp_update_nav_menu_item($menu_id, 0, [
 				'menu-item-title'    => $item['title'] ?? '',
 				'menu-item-url'      => $item['url'],
 				'menu-item-type'     => 'custom',
 				'menu-item-status'   => 'publish',
 				'menu-item-position' => $position++,
 			]);
+		} elseif ($item['type'] === 'post_type' && !empty($item['object_id']) && !empty($item['object'])) {
+			$parent_id = wp_update_nav_menu_item($menu_id, 0, [
+				'menu-item-title'     => get_the_title($item['object_id']),
+				'menu-item-url'       => get_permalink($item['object_id']),
+				'menu-item-type'      => 'post_type',
+				'menu-item-object'    => $item['object'],
+				'menu-item-object-id' => $item['object_id'],
+				'menu-item-status'    => 'publish',
+				'menu-item-position'  => $position++,
+			]);
+		}
+		if (!empty($item['children']) && is_array($item['children']) && $parent_id && !is_wp_error($parent_id)) {
+			foreach ($item['children'] as $child) {
+				if (($child['type'] ?? '') !== 'post_type' || empty($child['object_id']) || empty($child['object'])) {
+					continue;
+				}
+				wp_update_nav_menu_item($menu_id, 0, [
+					'menu-item-title'     => get_the_title($child['object_id']),
+					'menu-item-url'       => get_permalink($child['object_id']),
+					'menu-item-type'      => 'post_type',
+					'menu-item-object'    => $child['object'],
+					'menu-item-object-id' => $child['object_id'],
+					'menu-item-status'    => 'publish',
+					'menu-item-parent-id' => $parent_id,
+					'menu-item-position'  => $position++,
+				]);
+			}
 		}
 	}
 	$locations = get_theme_mod('nav_menu_locations') ?: [];

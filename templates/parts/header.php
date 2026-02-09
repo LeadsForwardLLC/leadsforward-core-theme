@@ -41,9 +41,13 @@ if ($logo_text === '') {
 		</a>
 		<button class="site-header__toggle" type="button" aria-expanded="false" aria-controls="site-header-panel">
 			<span class="site-header__toggle-icon" aria-hidden="true">☰</span>
-			<span class="screen-reader-text"><?php esc_html_e('Menu', 'leadsforward-core'); ?></span>
+			<span class="site-header__toggle-label"><?php esc_html_e('Menu', 'leadsforward-core'); ?></span>
 		</button>
 		<div class="site-header__panel" id="site-header-panel" aria-hidden="true">
+			<div class="site-header__panel-header">
+				<span class="site-header__panel-title"><?php esc_html_e('Menu', 'leadsforward-core'); ?></span>
+				<button class="site-header__close" type="button" aria-label="<?php esc_attr_e('Close menu', 'leadsforward-core'); ?>">✕</button>
+			</div>
 			<?php if ($has_header_menu) : ?>
 				<nav class="site-header__nav" aria-label="<?php esc_attr_e('Primary', 'leadsforward-core'); ?>">
 					<?php
@@ -57,7 +61,14 @@ if ($logo_text === '') {
 			<?php endif; ?>
 			<div class="site-header__actions">
 				<?php if ($cta_phone) : ?>
-					<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $cta_phone)); ?>" class="site-header__phone"><?php echo esc_html($cta_phone); ?></a>
+					<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $cta_phone)); ?>" class="site-header__phone">
+						<?php
+						if (function_exists('lf_icon')) {
+							echo lf_icon('phone', ['class' => 'site-header__phone-icon lf-icon lf-icon--sm lf-icon--inherit', 'aria-hidden' => 'true']);
+						}
+						?>
+						<span><?php esc_html_e('Call Now', 'leadsforward-core'); ?></span>
+					</a>
 				<?php endif; ?>
 				<?php if ($show_cta) : ?>
 					<?php
@@ -90,13 +101,40 @@ if ($logo_text === '') {
 		if (!header) return;
 		var toggle = header.querySelector('.site-header__toggle');
 		var panel = header.querySelector('.site-header__panel');
+		var closeBtn = header.querySelector('.site-header__close');
+		function setOpen(open) {
+			header.classList.toggle('site-header--open', open);
+			if (toggle) {
+				toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+			}
+			if (panel) {
+				panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+			}
+			document.body.classList.toggle('site-header--menu-open', open);
+		}
 		if (toggle && panel) {
 			toggle.addEventListener('click', function () {
-				var open = header.classList.toggle('site-header--open');
-				toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-				panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+				setOpen(!header.classList.contains('site-header--open'));
 			});
 		}
+		if (closeBtn) {
+			closeBtn.addEventListener('click', function () {
+				setOpen(false);
+			});
+		}
+		if (panel) {
+			panel.addEventListener('click', function (event) {
+				var target = event.target;
+				if (target && target.tagName === 'A') {
+					setOpen(false);
+				}
+			});
+		}
+		document.addEventListener('keydown', function (event) {
+			if (event.key === 'Escape') {
+				setOpen(false);
+			}
+		});
 		var last = 0;
 		window.addEventListener('scroll', function () {
 			var y = window.scrollY || window.pageYOffset;
