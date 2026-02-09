@@ -290,6 +290,7 @@ function lf_run_setup(array $data): array {
 		'ids'     => $ids,
 		'errors'  => $log['errors'],
 	];
+	return $blueprints;
 }
 
 /**

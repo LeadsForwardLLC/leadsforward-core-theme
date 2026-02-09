@@ -288,6 +288,8 @@ Append‑Only Change Log (Recent)
 
 2026‑02‑06 — Heading rules enforced (single H1 + hierarchy validation). Content H1s are demoted on render; warnings appear in editor and Site Health.
 
+2026‑02‑06 — Header navigation auto-generated after setup with a non-clickable “More” dropdown and Call Now / CTA actions.
+
 ---
 
 Heading Rules (Append‑Only)
@@ -296,3 +298,11 @@ Heading Rules (Append‑Only)
 - Hero owns the H1 when present.
 - Page titles are demoted to H2 when a hero is active.
 - Editor H1s are demoted on render; fix them when warned.
+
+---
+
+Navigation Defaults (Append‑Only)
+---------------------------------
+- Header menu is auto-generated after setup.
+- Top-level: Home, Services, Service Areas, Reviews, More, Call Now, Free Estimate.
+- “More” contains About, Blog/Posts, Contact and is not a clickable link.
