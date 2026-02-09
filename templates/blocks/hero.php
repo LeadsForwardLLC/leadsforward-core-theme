@@ -21,7 +21,12 @@ $block_id = $block['id'] ?? '';
 $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'soft') : '';
 $heading_tag = $context['heading_tag'] ?? 'h1';
 
-$eyebrow = __('Licensed • Insured • Local', 'leadsforward-core');
+$eyebrow_enabled = (string) (($section['hero_eyebrow_enabled'] ?? '1')) !== '0';
+$eyebrow_default = __('Licensed • Insured • Local', 'leadsforward-core');
+$eyebrow = isset($section['hero_eyebrow_text']) && $section['hero_eyebrow_text'] !== '' ? $section['hero_eyebrow_text'] : $eyebrow_default;
+if (!$eyebrow_enabled) {
+	$eyebrow = '';
+}
 
 $heading = get_the_title() ?: __('Quality Local Service', 'leadsforward-core');
 $subheading = '';
@@ -108,14 +113,7 @@ if (function_exists('wp_count_posts')) {
 	$review_count = isset($counts->publish) ? (int) $counts->publish : 0;
 }
 $show_trust_strip = $review_count > 0;
-$services = get_posts([
-	'post_type'      => 'lf_service',
-	'posts_per_page' => 3,
-	'orderby'        => 'menu_order title',
-	'order'          => 'ASC',
-	'post_status'    => 'publish',
-	'no_found_rows'  => true,
-]);
+// Services list removed from hero card.
 $latest_testimonial = null;
 if (post_type_exists('lf_testimonial')) {
 	$testimonials = get_posts([
@@ -242,11 +240,6 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 						<?php endif; ?>
 					</div>
 				<?php endif; ?>
-				<?php if ($show_cta_group && $cta_phone && $cta_phone !== $cta_text) : ?>
-					<p class="lf-hero-stack__phone">
-						<a href="tel:<?php echo esc_attr($cta_phone); ?>"><?php echo esc_html($cta_phone); ?></a>
-					</p>
-				<?php endif; ?>
 			</div>
 		<?php elseif ($variant === 'b') : ?>
 			<div class="lf-hero-form">
@@ -294,9 +287,6 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 							<?php elseif ($secondary_action === 'link' && $secondary_url !== '') : ?>
 								<a href="<?php echo esc_url($secondary_url); ?>" class="lf-btn lf-btn--secondary lf-hero-form__panel-secondary"><?php echo esc_html($secondary_text); ?></a>
 							<?php endif; ?>
-						<?php endif; ?>
-						<?php if ($show_cta_group && $cta_phone && $cta_phone !== $cta_text) : ?>
-							<p class="lf-hero-form__panel-note"><?php echo esc_html($cta_phone); ?></p>
 						<?php endif; ?>
 					</div>
 				</div>
@@ -438,11 +428,6 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 							<span class="lf-block-hero__badge"><?php esc_html_e('Trusted local service', 'leadsforward-core'); ?></span>
 						<?php endif; ?>
 					</div>
-					<?php if ($cta_phone && $cta_phone !== $cta_text) : ?>
-						<p class="lf-hero-split__phone">
-							<a href="tel:<?php echo esc_attr($cta_phone); ?>"><?php echo esc_html($cta_phone); ?></a>
-						</p>
-					<?php endif; ?>
 				</div>
 				<div class="lf-hero-split__proof">
 					<div class="lf-block-hero__card">
@@ -452,14 +437,6 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 							<li><?php esc_html_e('Licensed, insured, and local', 'leadsforward-core'); ?></li>
 							<li><?php esc_html_e('Clean work backed by warranty', 'leadsforward-core'); ?></li>
 						</ul>
-						<?php if (!empty($services)) : ?>
-							<div class="lf-block-hero__card-subtitle"><?php esc_html_e('Popular services', 'leadsforward-core'); ?></div>
-							<ul class="lf-block-hero__card-services" role="list">
-								<?php foreach ($services as $svc) : ?>
-									<li><a href="<?php echo esc_url(get_permalink($svc)); ?>"><?php echo esc_html(get_the_title($svc)); ?></a></li>
-								<?php endforeach; ?>
-							</ul>
-						<?php endif; ?>
 					</div>
 				</div>
 			</div>

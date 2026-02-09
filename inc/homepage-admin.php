@@ -93,6 +93,9 @@ function lf_homepage_admin_save(): void {
 		if ($type === 'hero') {
 			$config[$type]['hero_headline'] = isset($_POST['lf_hp_hero_headline']) ? sanitize_text_field($_POST['lf_hp_hero_headline']) : '';
 			$config[$type]['hero_subheadline'] = isset($_POST['lf_hp_hero_subheadline']) ? sanitize_text_field($_POST['lf_hp_hero_subheadline']) : '';
+			$eyebrow_enabled = isset($_POST['lf_hp_hero_eyebrow_enabled']) ? sanitize_text_field($_POST['lf_hp_hero_eyebrow_enabled']) : '1';
+			$config[$type]['hero_eyebrow_enabled'] = $eyebrow_enabled === '0' ? '0' : '1';
+			$config[$type]['hero_eyebrow_text'] = isset($_POST['lf_hp_hero_eyebrow_text']) ? sanitize_text_field($_POST['lf_hp_hero_eyebrow_text']) : '';
 			$config[$type]['cta_primary_override'] = isset($_POST['lf_hp_hero_cta_primary_override']) ? sanitize_text_field($_POST['lf_hp_hero_cta_primary_override']) : '';
 			$config[$type]['cta_secondary_override'] = isset($_POST['lf_hp_hero_cta_secondary_override']) ? sanitize_text_field($_POST['lf_hp_hero_cta_secondary_override']) : '';
 			$hero_primary_enabled = isset($_POST['lf_hp_hero_cta_primary_enabled']) ? sanitize_text_field($_POST['lf_hp_hero_cta_primary_enabled']) : '1';
@@ -625,6 +628,20 @@ function lf_homepage_admin_render(): void {
 									<tr>
 										<th scope="row"><label for="lf_hp_hero_subheadline"><?php esc_html_e('Hero subheadline', 'leadsforward-core'); ?></label></th>
 										<td><input type="text" class="large-text" name="lf_hp_hero_subheadline" id="lf_hp_hero_subheadline" value="<?php echo esc_attr($sec['hero_subheadline'] ?? ''); ?>" /></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_hero_eyebrow_enabled"><?php esc_html_e('Trust badge enabled', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_hero_eyebrow_enabled" id="lf_hp_hero_eyebrow_enabled">
+												<?php foreach ($cta_enabled_options as $opt_key => $opt_label) : ?>
+													<option value="<?php echo esc_attr($opt_key); ?>" <?php selected((string) ($sec['hero_eyebrow_enabled'] ?? '1'), $opt_key); ?>><?php echo esc_html($opt_label); ?></option>
+												<?php endforeach; ?>
+											</select>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_hero_eyebrow_text"><?php esc_html_e('Trust badge text', 'leadsforward-core'); ?></label></th>
+										<td><input type="text" class="large-text" name="lf_hp_hero_eyebrow_text" id="lf_hp_hero_eyebrow_text" value="<?php echo esc_attr($sec['hero_eyebrow_text'] ?? ''); ?>" placeholder="<?php esc_attr_e('Licensed • Insured • Local', 'leadsforward-core'); ?>" /></td>
 									</tr>
 									<tr>
 										<th scope="row"><label for="lf_hp_hero_cta_primary_enabled"><?php esc_html_e('Primary CTA enabled', 'leadsforward-core'); ?></label></th>

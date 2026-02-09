@@ -1700,6 +1700,14 @@ button:focus-visible,
 	justify-content: center;
 }
 
+.lf-block-hero--default .lf-hero-split__content {
+	gap: 0.6rem;
+}
+
+.lf-block-hero--default .lf-hero-split__subtitle {
+	margin-bottom: 0.8rem;
+}
+
 .lf-block-hero--b .lf-block-hero__bg {
 	background: radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.2), transparent 50%), linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
 }
@@ -1851,6 +1859,12 @@ button:focus-visible,
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--lf-text-primary);
+}
+
+.lf-hero-split__eyebrow {
+	align-self: flex-start;
+	justify-content: flex-start;
+	width: fit-content;
 }
 
 .lf-hero-stack__title,
