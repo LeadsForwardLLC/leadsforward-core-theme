@@ -25,6 +25,8 @@ $eyebrow = __('Licensed • Insured • Local', 'leadsforward-core');
 $heading = get_the_title() ?: __('Quality Local Service', 'leadsforward-core');
 $subheading = '';
 $cta_text = function_exists('lf_get_option') ? lf_get_option('lf_cta_primary_text', 'option') : '';
+$primary_enabled = (string) (($section['cta_primary_enabled'] ?? $section['hero_cta_primary_enabled'] ?? '1')) !== '0';
+$secondary_enabled = (string) (($section['cta_secondary_enabled'] ?? $section['hero_cta_secondary_enabled'] ?? '1')) !== '0';
 $business_name = function_exists('lf_get_option') ? lf_get_option('lf_business_name', 'option') : '';
 if (!is_string($business_name) || $business_name === '') {
 	$business_name = get_bloginfo('name') ?: '';
@@ -103,6 +105,14 @@ if (post_type_exists('lf_testimonial')) {
 	}
 }
 $show_form_in_hero = $cta_type === 'form' && !empty($cta_resolved_for_type['ghl_embed']);
+
+if (!$primary_enabled) {
+	$cta_text = '';
+}
+if (!$secondary_enabled) {
+	$secondary_text = '';
+}
+$show_cta_group = ($cta_text !== '' || $secondary_text !== '');
 $placeholder_id = function_exists('lf_get_placeholder_image_id') ? lf_get_placeholder_image_id() : 0;
 $placeholder_alt = $business_name ? $business_name : __('Trusted local service', 'leadsforward-core');
 ?>
@@ -138,7 +148,7 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 						<span class="lf-block-hero__badge"><?php esc_html_e('Trusted local service', 'leadsforward-core'); ?></span>
 					<?php endif; ?>
 				</div>
-				<?php if ($cta_text || $secondary_text !== '') : ?>
+				<?php if ($show_cta_group) : ?>
 					<div class="lf-hero-stack__actions">
 						<?php if ($cta_text) : ?>
 							<?php if ($use_phone_link) : ?>
@@ -160,7 +170,7 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 						<?php endif; ?>
 					</div>
 				<?php endif; ?>
-				<?php if ($cta_phone && $cta_phone !== $cta_text) : ?>
+				<?php if ($show_cta_group && $cta_phone && $cta_phone !== $cta_text) : ?>
 					<p class="lf-hero-stack__phone">
 						<a href="tel:<?php echo esc_attr($cta_phone); ?>"><?php echo esc_html($cta_phone); ?></a>
 					</p>
@@ -213,7 +223,7 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 								<a href="<?php echo esc_url($secondary_url); ?>" class="lf-btn lf-btn--secondary lf-hero-form__panel-secondary"><?php echo esc_html($secondary_text); ?></a>
 							<?php endif; ?>
 						<?php endif; ?>
-						<?php if ($cta_phone && $cta_phone !== $cta_text) : ?>
+						<?php if ($show_cta_group && $cta_phone && $cta_phone !== $cta_text) : ?>
 							<p class="lf-hero-form__panel-note"><?php echo esc_html($cta_phone); ?></p>
 						<?php endif; ?>
 					</div>
@@ -237,7 +247,7 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 					<?php if ($subheading !== '') : ?>
 						<p class="lf-hero-visual__subtitle"><?php echo esc_html($subheading); ?></p>
 					<?php endif; ?>
-					<?php if ($cta_text || $secondary_text !== '') : ?>
+					<?php if ($show_cta_group) : ?>
 						<div class="lf-hero-visual__actions">
 							<?php if ($cta_text) : ?>
 								<?php if ($use_phone_link) : ?>
@@ -322,7 +332,7 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 					<?php if ($subheading !== '') : ?>
 						<p class="lf-hero-split__subtitle"><?php echo esc_html($subheading); ?></p>
 					<?php endif; ?>
-					<?php if ($cta_text || $secondary_text !== '') : ?>
+					<?php if ($show_cta_group) : ?>
 						<div class="lf-hero-split__actions">
 							<?php if ($cta_text) : ?>
 								<?php if ($use_phone_link) : ?>

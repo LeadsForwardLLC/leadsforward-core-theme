@@ -121,6 +121,14 @@ function lf_sections_registry(): array {
 				$bg_soft,
 				['key' => 'hero_headline', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_subheadline', 'label' => __('Subheadline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
+				['key' => 'cta_primary_enabled', 'label' => __('Primary CTA enabled', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => [
+					'1' => __('On', 'leadsforward-core'),
+					'0' => __('Off', 'leadsforward-core'),
+				]],
+				['key' => 'cta_secondary_enabled', 'label' => __('Secondary CTA enabled', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => [
+					'1' => __('On', 'leadsforward-core'),
+					'0' => __('Off', 'leadsforward-core'),
+				]],
 				['key' => 'cta_primary_override', 'label' => __('Primary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'cta_secondary_override', 'label' => __('Secondary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'cta_primary_action', 'label' => __('Primary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => 'quote', 'options' => [
@@ -549,6 +557,8 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 			'hero_cta_url' => $settings['cta_primary_url'] ?? '',
 			'hero_cta_secondary_action' => $settings['cta_secondary_action'] ?? '',
 			'hero_cta_secondary_url' => $settings['cta_secondary_url'] ?? '',
+			'hero_cta_primary_enabled' => $settings['cta_primary_enabled'] ?? '1',
+			'hero_cta_secondary_enabled' => $settings['cta_secondary_enabled'] ?? '1',
 			'icon_enabled' => $settings['icon_enabled'] ?? '0',
 			'icon_slug' => $settings['icon_slug'] ?? '',
 			'icon_position' => $settings['icon_position'] ?? 'left',
@@ -593,9 +603,17 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 		'cta_secondary_action' => $settings['cta_secondary_action'] ?? ($settings['hero_cta_secondary_action'] ?? ''),
 		'cta_secondary_url' => $settings['cta_secondary_url'] ?? ($settings['hero_cta_secondary_url'] ?? ''),
 	];
+	$primary_enabled = (string) ($settings['cta_primary_enabled'] ?? '1') !== '0';
+	$secondary_enabled = (string) ($settings['cta_secondary_enabled'] ?? '1') !== '0';
 	$resolved = function_exists('lf_get_resolved_cta') ? lf_get_resolved_cta(['section' => $cta, 'homepage' => false]) : [];
 	$primary = $resolved['primary_text'] ?? '';
 	$secondary = $resolved['secondary_text'] ?? '';
+	if (!$primary_enabled) {
+		$primary = '';
+	}
+	if (!$secondary_enabled) {
+		$secondary = '';
+	}
 	$action = $resolved['primary_action'] ?? 'quote';
 	$secondary_action = $resolved['secondary_action'] ?? 'call';
 	$primary_url = $resolved['primary_url'] ?? '';

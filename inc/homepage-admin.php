@@ -93,6 +93,10 @@ function lf_homepage_admin_save(): void {
 			$config[$type]['hero_subheadline'] = isset($_POST['lf_hp_hero_subheadline']) ? sanitize_text_field($_POST['lf_hp_hero_subheadline']) : '';
 			$config[$type]['hero_cta_override'] = isset($_POST['lf_hp_hero_cta_override']) ? sanitize_text_field($_POST['lf_hp_hero_cta_override']) : '';
 			$config[$type]['hero_cta_secondary_override'] = isset($_POST['lf_hp_hero_cta_secondary_override']) ? sanitize_text_field($_POST['lf_hp_hero_cta_secondary_override']) : '';
+			$hero_primary_enabled = isset($_POST['lf_hp_hero_cta_primary_enabled']) ? sanitize_text_field($_POST['lf_hp_hero_cta_primary_enabled']) : '1';
+			$hero_secondary_enabled = isset($_POST['lf_hp_hero_cta_secondary_enabled']) ? sanitize_text_field($_POST['lf_hp_hero_cta_secondary_enabled']) : '1';
+			$config[$type]['cta_primary_enabled'] = $hero_primary_enabled === '0' ? '0' : '1';
+			$config[$type]['cta_secondary_enabled'] = $hero_secondary_enabled === '0' ? '0' : '1';
 			$hero_action = isset($_POST['lf_hp_hero_cta_action']) ? sanitize_text_field($_POST['lf_hp_hero_cta_action']) : '';
 			$config[$type]['hero_cta_action'] = in_array($hero_action, ['link', 'quote', 'call'], true) ? $hero_action : '';
 			$config[$type]['hero_cta_url'] = isset($_POST['lf_hp_hero_cta_url']) ? esc_url_raw(wp_unslash($_POST['lf_hp_hero_cta_url'])) : '';
@@ -437,6 +441,10 @@ function lf_homepage_admin_render(): void {
 		'secondary' => __('Secondary', 'leadsforward-core'),
 		'muted' => __('Muted', 'leadsforward-core'),
 	];
+	$cta_enabled_options = [
+		'1' => __('On', 'leadsforward-core'),
+		'0' => __('Off', 'leadsforward-core'),
+	];
 	$saved = isset($_GET['saved']) && $_GET['saved'] === '1';
 	?>
 	<div class="wrap">
@@ -603,6 +611,26 @@ function lf_homepage_admin_render(): void {
 									<tr>
 										<th scope="row"><label for="lf_hp_hero_subheadline"><?php esc_html_e('Hero subheadline', 'leadsforward-core'); ?></label></th>
 										<td><input type="text" class="large-text" name="lf_hp_hero_subheadline" id="lf_hp_hero_subheadline" value="<?php echo esc_attr($sec['hero_subheadline'] ?? ''); ?>" /></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_hero_cta_primary_enabled"><?php esc_html_e('Primary CTA enabled', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_hero_cta_primary_enabled" id="lf_hp_hero_cta_primary_enabled">
+												<?php foreach ($cta_enabled_options as $opt_key => $opt_label) : ?>
+													<option value="<?php echo esc_attr($opt_key); ?>" <?php selected((string) ($sec['cta_primary_enabled'] ?? '1'), $opt_key); ?>><?php echo esc_html($opt_label); ?></option>
+												<?php endforeach; ?>
+											</select>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_hero_cta_secondary_enabled"><?php esc_html_e('Secondary CTA enabled', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_hero_cta_secondary_enabled" id="lf_hp_hero_cta_secondary_enabled">
+												<?php foreach ($cta_enabled_options as $opt_key => $opt_label) : ?>
+													<option value="<?php echo esc_attr($opt_key); ?>" <?php selected((string) ($sec['cta_secondary_enabled'] ?? '1'), $opt_key); ?>><?php echo esc_html($opt_label); ?></option>
+												<?php endforeach; ?>
+											</select>
+										</td>
 									</tr>
 									<tr>
 										<th scope="row"><label for="lf_hp_hero_cta_override"><?php esc_html_e('Hero CTA override', 'leadsforward-core'); ?></label></th>
