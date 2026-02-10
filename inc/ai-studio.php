@@ -66,6 +66,25 @@ function lf_ai_studio_handle_save(): void {
 		$style = 'professional';
 	}
 	update_option('lf_ai_studio_style', $style);
+	$homepage_city = isset($_POST['lf_homepage_city']) ? sanitize_text_field(wp_unslash($_POST['lf_homepage_city'])) : '';
+	update_option('lf_homepage_city', $homepage_city, true);
+	$primary_kw = isset($_POST['lf_homepage_keyword_primary']) ? sanitize_text_field(wp_unslash($_POST['lf_homepage_keyword_primary'])) : '';
+	$secondary_raw = isset($_POST['lf_homepage_keyword_secondary']) ? sanitize_textarea_field(wp_unslash($_POST['lf_homepage_keyword_secondary'])) : '';
+	$secondary = array_filter(array_map('sanitize_text_field', preg_split('/\r\n|\r|\n|,/', $secondary_raw)));
+	update_option('lf_homepage_keywords', [
+		'primary' => $primary_kw,
+		'secondary' => array_values($secondary),
+	], true);
+	$sample_files = lf_ai_studio_get_sample_files();
+	$selected_samples = $_POST['lf_homepage_writing_samples'] ?? [];
+	if (!is_array($selected_samples)) {
+		$selected_samples = [$selected_samples];
+	}
+	$selected_samples = array_values(array_filter(array_map('sanitize_file_name', $selected_samples)));
+	if (!empty($sample_files)) {
+		$selected_samples = array_values(array_intersect($selected_samples, $sample_files));
+	}
+	update_option('lf_homepage_writing_samples', $selected_samples, true);
 	wp_safe_redirect(admin_url('admin.php?page=lf-ai-studio&saved=1'));
 	exit;
 }
@@ -128,6 +147,12 @@ function lf_ai_studio_render_page(): void {
 	$scope_types = get_option('lf_ai_studio_scope_types', []);
 	$scope_types = is_array($scope_types) ? $scope_types : [];
 	$style = (string) get_option('lf_ai_studio_style', 'professional');
+	$homepage_keywords = function_exists('lf_homepage_keywords') ? lf_homepage_keywords() : ['primary' => '', 'secondary' => []];
+	$homepage_city = (string) get_option('lf_homepage_city', '');
+	$homepage_samples = get_option('lf_homepage_writing_samples', []);
+	if (!is_array($homepage_samples)) {
+		$homepage_samples = [];
+	}
 	$jobs = get_posts([
 		'post_type' => LF_AI_STUDIO_JOB_CPT,
 		'post_status' => 'any',
@@ -182,6 +207,38 @@ function lf_ai_studio_render_page(): void {
 				<tr>
 					<th scope="row"><label for="lf_ai_studio_secret"><?php esc_html_e('Orchestrator Shared Secret', 'leadsforward-core'); ?></label></th>
 					<td><input type="text" class="large-text" name="lf_ai_studio_secret" id="lf_ai_studio_secret" value="<?php echo esc_attr($secret); ?>" required /></td>
+				</tr>
+				<tr>
+					<th colspan="2" style="padding-top: 16px;"><?php esc_html_e('Homepage Inputs (used for regeneration)', 'leadsforward-core'); ?></th>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_homepage_city"><?php esc_html_e('City / Region', 'leadsforward-core'); ?></label></th>
+					<td><input type="text" class="large-text" name="lf_homepage_city" id="lf_homepage_city" value="<?php echo esc_attr($homepage_city); ?>" /></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_homepage_keyword_primary"><?php esc_html_e('Primary homepage keyword', 'leadsforward-core'); ?></label></th>
+					<td><input type="text" class="large-text" name="lf_homepage_keyword_primary" id="lf_homepage_keyword_primary" value="<?php echo esc_attr($homepage_keywords['primary']); ?>" required /></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_homepage_keyword_secondary"><?php esc_html_e('Secondary homepage keywords (optional)', 'leadsforward-core'); ?></label></th>
+					<td><textarea class="large-text" name="lf_homepage_keyword_secondary" id="lf_homepage_keyword_secondary" rows="3"><?php echo esc_textarea(implode("\n", $homepage_keywords['secondary'])); ?></textarea></td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e('Writing samples (select 1–3)', 'leadsforward-core'); ?></th>
+					<td>
+						<?php if (!empty($samples_files)) : ?>
+							<?php foreach ($samples_files as $file) :
+								$checked = in_array($file, $homepage_samples, true);
+							?>
+								<label style="display:block;margin-bottom:6px;">
+									<input type="checkbox" name="lf_homepage_writing_samples[]" value="<?php echo esc_attr($file); ?>" <?php checked($checked); ?> />
+									<code><?php echo esc_html($file); ?></code>
+								</label>
+							<?php endforeach; ?>
+						<?php else : ?>
+							<strong><?php esc_html_e('No files found in /docs/content-samples/*.md (required).', 'leadsforward-core'); ?></strong>
+						<?php endif; ?>
+					</td>
 				</tr>
 			</table>
 			<p><button type="submit" class="button button-primary"><?php esc_html_e('Save Settings', 'leadsforward-core'); ?></button></p>
@@ -499,6 +556,7 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 	$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
 	$order = function_exists('lf_homepage_controller_order') ? lf_homepage_controller_order() : [];
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
+	$hero_variant = isset($config['hero']['variant']) ? (string) $config['hero']['variant'] : 'default';
 	$variation_seed = lf_homepage_variation_seed();
 
 	$sections = [];
@@ -541,16 +599,20 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 	$base = [
 		'variation_seed' => $variation_seed,
 		'business_name' => $business_name,
+		'business_entity' => $entity,
 		'niche' => $niche,
 		'city_region' => $city,
 		'keywords' => $keywords,
 		'writing_samples' => $samples,
 		'blueprint' => [
 			'page' => 'homepage',
+			'hero_variant' => $hero_variant,
 			'sections' => $blueprint_sections,
 			'order' => $order,
 			'services' => lf_ai_studio_homepage_service_catalog(),
 			'service_areas' => lf_ai_studio_homepage_area_catalog(),
+			'faqs' => lf_ai_studio_homepage_faq_catalog(),
+			'faq_target_count' => lf_ai_studio_homepage_faq_target_count($config),
 		],
 	];
 	$request_id = lf_ai_studio_homepage_request_id($base);
@@ -667,6 +729,47 @@ function lf_ai_studio_homepage_area_catalog(): array {
 			'id' => $area->ID,
 			'slug' => $area->post_name,
 			'title' => $area->post_title,
+		];
+	}
+	return $out;
+}
+
+function lf_ai_studio_homepage_faq_target_count(array $config): int {
+	$max = 6;
+	if (!empty($config['faq_accordion']['faq_max_items'])) {
+		$max = (int) $config['faq_accordion']['faq_max_items'];
+	}
+	if ($max < 1) {
+		$max = 6;
+	}
+	return $max;
+}
+
+function lf_ai_studio_homepage_faq_catalog(): array {
+	$faqs = get_posts([
+		'post_type' => 'lf_faq',
+		'post_status' => 'publish',
+		'posts_per_page' => 200,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+	]);
+	$out = [];
+	foreach ($faqs as $faq) {
+		if (!$faq instanceof \WP_Post) {
+			continue;
+		}
+		$question = function_exists('get_field') ? (string) get_field('lf_faq_question', $faq->ID) : '';
+		$answer = function_exists('get_field') ? (string) get_field('lf_faq_answer', $faq->ID) : '';
+		if ($question === '') {
+			$question = (string) $faq->post_title;
+		}
+		if ($answer === '') {
+			$answer = (string) $faq->post_content;
+		}
+		$out[] = [
+			'id' => $faq->ID,
+			'question' => $question,
+			'answer' => $answer,
 		];
 	}
 	return $out;
@@ -839,7 +942,7 @@ function lf_ai_studio_validate_payload(array $payload): array {
 }
 
 function lf_ai_studio_apply_payload(array $payload): array {
-	$changes = ['homepage' => false, 'posts' => []];
+	$changes = ['homepage' => false, 'posts' => [], 'faqs' => []];
 	if (!empty($payload['homepage']) && is_array($payload['homepage']) && function_exists('lf_get_homepage_section_config')) {
 		$config = lf_get_homepage_section_config();
 		$updated = $payload['homepage']['config'] ?? $payload['homepage'];
@@ -867,6 +970,10 @@ function lf_ai_studio_apply_payload(array $payload): array {
 			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 			$changes['homepage'] = true;
 		}
+	}
+	$faq_changes = lf_ai_studio_apply_faq_updates($payload);
+	if (!empty($faq_changes)) {
+		$changes['faqs'] = $faq_changes;
 	}
 	if (!empty($payload['posts']) && is_array($payload['posts'])) {
 		foreach ($payload['posts'] as $post_payload) {
@@ -924,6 +1031,9 @@ function lf_ai_studio_apply_payload(array $payload): array {
 	if (!empty($changes['posts'])) {
 		$summary_parts[] = sprintf(__('Posts updated: %d', 'leadsforward-core'), count($changes['posts']));
 	}
+	if (!empty($changes['faqs'])) {
+		$summary_parts[] = sprintf(__('FAQs updated: %d', 'leadsforward-core'), count($changes['faqs']));
+	}
 	$summary = implode('; ', $summary_parts);
 	return ['success' => true, 'summary' => $summary, 'changes' => $changes];
 }
@@ -967,4 +1077,63 @@ function lf_ai_studio_extract_homepage_updates(array $payload): array {
 		}
 	}
 	return $out;
+}
+
+function lf_ai_studio_apply_faq_updates(array $payload): array {
+	$updates = $payload['updates'] ?? [];
+	if (!is_array($updates)) {
+		return [];
+	}
+	$changed = [];
+	foreach ($updates as $update) {
+		if (!is_array($update)) {
+			continue;
+		}
+		if (($update['target'] ?? '') !== 'faq') {
+			continue;
+		}
+		$fields = $update['fields'] ?? $update['data'] ?? [];
+		if (!is_array($fields)) {
+			continue;
+		}
+		$question = isset($fields['question']) ? sanitize_text_field((string) $fields['question']) : '';
+		$answer = isset($fields['answer']) ? wp_kses_post((string) $fields['answer']) : '';
+		if ($question === '' && $answer === '') {
+			continue;
+		}
+		$faq_id = isset($update['id']) ? absint($update['id']) : 0;
+		if ($faq_id) {
+			$post = get_post($faq_id);
+			if (!$post instanceof \WP_Post || $post->post_type !== 'lf_faq') {
+				continue;
+			}
+		} else {
+			$faq_id = wp_insert_post([
+				'post_type' => 'lf_faq',
+				'post_status' => 'publish',
+				'post_title' => $question !== '' ? $question : __('FAQ', 'leadsforward-core'),
+			]);
+			if (!$faq_id || is_wp_error($faq_id)) {
+				continue;
+			}
+		}
+		if ($question !== '') {
+			wp_update_post(['ID' => $faq_id, 'post_title' => $question]);
+			if (function_exists('update_field')) {
+				update_field('lf_faq_question', $question, $faq_id);
+			} else {
+				update_post_meta($faq_id, 'lf_faq_question', $question);
+			}
+		}
+		if ($answer !== '') {
+			wp_update_post(['ID' => $faq_id, 'post_content' => $answer]);
+			if (function_exists('update_field')) {
+				update_field('lf_faq_answer', $answer, $faq_id);
+			} else {
+				update_post_meta($faq_id, 'lf_faq_answer', $answer);
+			}
+		}
+		$changed[] = (int) $faq_id;
+	}
+	return $changed;
 }
