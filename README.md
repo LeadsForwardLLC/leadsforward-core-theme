@@ -212,6 +212,16 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 - **Writable fields:** Copy-only keys from the section schema (headings, subheadings, body, lists, CTA text, image alt).
 - **Never changed by AI:** Layout, order, enable/disable toggles, backgrounds, icon settings, CTA actions.
 - **Output shape:** `section_id.field_key` dot notation in `allowed_fields`, with internal link targets (services + areas).
+- **Variation seed:** `variation_seed` is included at the top level for anti-footprint style variation.
+
+---
+
+## Homepage Variation Seeds (Anti-Footprint)
+
+- **Purpose:** Gives the orchestrator a stable per-site seed to vary tone and rhythm without changing layout.
+- **How it's generated:** Stored once in `lf_homepage_variation_seed` (random on first run; stable thereafter).
+- **Where used:** Included with every homepage blueprint request as `variation_seed`.
+- **Safe scope:** Only influences writing style (sentence rhythm, CTA phrasing, transitions).
 
 ---
 

@@ -263,6 +263,9 @@ function lf_ai_studio_run_homepage_generation(): array {
 		return ['error' => __('Select 1–3 writing samples in the Setup Wizard.', 'leadsforward-core')];
 	}
 	$request = lf_ai_studio_build_homepage_blueprint();
+	if (isset($request['error'])) {
+		return ['error' => (string) $request['error']];
+	}
 	$job_id = lf_ai_studio_create_job($request);
 	return lf_ai_studio_send_request($request, $job_id);
 }
@@ -271,6 +274,17 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$secret = (string) get_option('lf_ai_studio_secret', '');
 	update_post_meta($job_id, 'lf_ai_job_status', 'running');
+	$log_payload = [
+		'keys' => array_keys($request),
+		'blueprint' => isset($request['blueprint']) && is_array($request['blueprint'])
+			? [
+				'keys' => array_keys($request['blueprint']),
+				'sections' => isset($request['blueprint']['sections']) && is_array($request['blueprint']['sections']) ? count($request['blueprint']['sections']) : 0,
+				'order' => isset($request['blueprint']['order']) && is_array($request['blueprint']['order']) ? count($request['blueprint']['order']) : 0,
+			]
+			: ['keys' => []],
+	];
+	error_log('LF AI Studio payload keys: ' . wp_json_encode($log_payload));
 	$response = wp_remote_post($webhook, [
 		'headers' => [
 			'Authorization' => 'Bearer ' . $secret,
@@ -424,6 +438,7 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 	$order = function_exists('lf_homepage_controller_order') ? lf_homepage_controller_order() : [];
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 	$hero_variant = isset($config['hero']['variant']) ? (string) $config['hero']['variant'] : 'default';
+	$variation_seed = lf_homepage_variation_seed();
 
 	$sections = [];
 	foreach ($order as $section_id) {
@@ -443,10 +458,29 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 			'purpose' => $purpose,
 		];
 	}
+	$blueprint_sections = [];
+	foreach ($order as $section_id) {
+		$schema = $registry[$section_id] ?? null;
+		if (!is_array($schema)) {
+			continue;
+		}
+		$section = $config[$section_id] ?? [];
+		$allowed_keys = lf_ai_studio_homepage_allowed_field_keys($section_id, $schema);
+		$blueprint_sections[] = [
+			'section_id' => $section_id,
+			'section_type' => lf_ai_studio_homepage_section_type($section_id),
+			'intent' => (string) ($section['section_intent'] ?? ''),
+			'allowed_field_keys' => $allowed_keys,
+		];
+	}
+	if (empty($order) || empty($blueprint_sections)) {
+		return ['error' => __('Homepage blueprint could not be built. Check homepage configuration.', 'leadsforward-core')];
+	}
 
 	$internal_links = lf_ai_studio_homepage_internal_links();
 
 	$base = [
+		'variation_seed' => $variation_seed,
 		'business_name' => $business_name,
 		'niche' => $niche,
 		'city_region' => $city,
@@ -455,16 +489,20 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 		'writing_samples' => $samples,
 		'section_order' => $order,
 		'sections' => $sections,
+		'blueprint' => [
+			'page' => 'homepage',
+			'sections' => $blueprint_sections,
+			'order' => $order,
+		],
 		'internal_links' => $internal_links,
 	];
 	$request_id = lf_ai_studio_homepage_request_id($base);
 
-	return [
-		'request_id' => $request_id,
-	] + $base;
+	$base['blueprint']['request_id'] = $request_id;
+	return ['request_id' => $request_id] + $base;
 }
 
-function lf_ai_studio_homepage_allowed_fields(string $section_id, array $schema): array {
+function lf_ai_studio_homepage_allowed_field_keys(string $section_id, array $schema): array {
 	$fields = $schema['fields'] ?? [];
 	$allowed_types = ['text', 'textarea', 'list', 'richtext'];
 	$blocked_keys = [
@@ -508,9 +546,29 @@ function lf_ai_studio_homepage_allowed_fields(string $section_id, array $schema)
 		if (!in_array($type, $allowed_types, true)) {
 			continue;
 		}
+		$out[] = $key;
+	}
+	return $out;
+}
+
+function lf_ai_studio_homepage_allowed_fields(string $section_id, array $schema): array {
+	$out = [];
+	foreach (lf_ai_studio_homepage_allowed_field_keys($section_id, $schema) as $key) {
 		$out[] = $section_id . '.' . $key;
 	}
 	return $out;
+}
+
+function lf_ai_studio_homepage_section_type(string $section_id): string {
+	switch ($section_id) {
+		case 'content_image_a':
+		case 'content_image_c':
+			return 'content_image';
+		case 'image_content_b':
+			return 'image_content';
+		default:
+			return $section_id;
+	}
 }
 
 function lf_ai_studio_homepage_internal_links(): array {
@@ -548,6 +606,24 @@ function lf_ai_studio_homepage_internal_links(): array {
 		'services' => $service_targets,
 		'service_areas' => $area_targets,
 	];
+}
+
+function lf_homepage_variation_seed(): string {
+	$seed = get_option('lf_homepage_variation_seed', '');
+	$seed = is_string($seed) ? trim($seed) : '';
+	if ($seed !== '') {
+		return $seed;
+	}
+	$generated = '';
+	if (function_exists('wp_generate_password')) {
+		$generated = wp_generate_password(20, false, false);
+	}
+	if (!is_string($generated) || trim($generated) === '') {
+		$generated = substr(hash('sha256', (string) get_site_url()), 0, 20);
+	}
+	$seed = trim((string) $generated);
+	update_option('lf_homepage_variation_seed', $seed, true);
+	return $seed;
 }
 
 function lf_ai_studio_homepage_request_id(array $base): string {
