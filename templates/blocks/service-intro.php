@@ -65,6 +65,9 @@ $query = new WP_Query([
 						$desc = '';
 					}
 					$image_id = $show_images ? (int) get_post_thumbnail_id(get_the_ID()) : 0;
+					if ($show_images && $image_id === 0 && function_exists('lf_get_placeholder_image_id')) {
+						$image_id = lf_get_placeholder_image_id();
+					}
 					$image_html = $image_id ? wp_get_attachment_image($image_id, 'medium', false, [
 						'class' => 'lf-block-service-intro__image',
 						'loading' => 'lazy',

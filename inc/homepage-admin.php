@@ -80,16 +80,24 @@ function lf_homepage_admin_save(): void {
 		}
 		$bg_value = isset($_POST['lf_hp_bg_' . $type]) ? sanitize_text_field($_POST['lf_hp_bg_' . $type]) : 'light';
 		$config[$type]['section_background'] = in_array($bg_value, $bg_keys, true) ? $bg_value : 'light';
-		$icon_enabled = isset($_POST['lf_hp_icon_enabled_' . $type]) ? sanitize_text_field($_POST['lf_hp_icon_enabled_' . $type]) : '0';
-		$config[$type]['icon_enabled'] = $icon_enabled === '1' ? '1' : '0';
-		$icon_slug = isset($_POST['lf_hp_icon_slug_' . $type]) ? sanitize_text_field($_POST['lf_hp_icon_slug_' . $type]) : '';
-		$config[$type]['icon_slug'] = in_array($icon_slug, $icon_slugs, true) ? $icon_slug : '';
-		$icon_position = isset($_POST['lf_hp_icon_position_' . $type]) ? sanitize_text_field($_POST['lf_hp_icon_position_' . $type]) : 'left';
-		$config[$type]['icon_position'] = in_array($icon_position, $icon_positions, true) ? $icon_position : 'left';
-		$icon_size = isset($_POST['lf_hp_icon_size_' . $type]) ? sanitize_text_field($_POST['lf_hp_icon_size_' . $type]) : 'md';
-		$config[$type]['icon_size'] = in_array($icon_size, $icon_sizes, true) ? $icon_size : 'md';
-		$icon_color = isset($_POST['lf_hp_icon_color_' . $type]) ? sanitize_text_field($_POST['lf_hp_icon_color_' . $type]) : 'primary';
-		$config[$type]['icon_color'] = in_array($icon_color, $icon_colors, true) ? $icon_color : 'primary';
+		if ($type !== 'service_intro') {
+			$icon_enabled = isset($_POST['lf_hp_icon_enabled_' . $type]) ? sanitize_text_field($_POST['lf_hp_icon_enabled_' . $type]) : '0';
+			$config[$type]['icon_enabled'] = $icon_enabled === '1' ? '1' : '0';
+			$icon_slug = isset($_POST['lf_hp_icon_slug_' . $type]) ? sanitize_text_field($_POST['lf_hp_icon_slug_' . $type]) : '';
+			$config[$type]['icon_slug'] = in_array($icon_slug, $icon_slugs, true) ? $icon_slug : '';
+			$icon_position = isset($_POST['lf_hp_icon_position_' . $type]) ? sanitize_text_field($_POST['lf_hp_icon_position_' . $type]) : 'left';
+			$config[$type]['icon_position'] = in_array($icon_position, $icon_positions, true) ? $icon_position : 'left';
+			$icon_size = isset($_POST['lf_hp_icon_size_' . $type]) ? sanitize_text_field($_POST['lf_hp_icon_size_' . $type]) : 'md';
+			$config[$type]['icon_size'] = in_array($icon_size, $icon_sizes, true) ? $icon_size : 'md';
+			$icon_color = isset($_POST['lf_hp_icon_color_' . $type]) ? sanitize_text_field($_POST['lf_hp_icon_color_' . $type]) : 'primary';
+			$config[$type]['icon_color'] = in_array($icon_color, $icon_colors, true) ? $icon_color : 'primary';
+		} else {
+			$config[$type]['icon_enabled'] = '1';
+			$config[$type]['icon_slug'] = '';
+			$config[$type]['icon_position'] = 'list';
+			$config[$type]['icon_size'] = 'md';
+			$config[$type]['icon_color'] = 'primary';
+		}
 		if ($type === 'hero') {
 			$config[$type]['hero_headline'] = isset($_POST['lf_hp_hero_headline']) ? sanitize_text_field($_POST['lf_hp_hero_headline']) : '';
 			$config[$type]['hero_subheadline'] = isset($_POST['lf_hp_hero_subheadline']) ? sanitize_text_field($_POST['lf_hp_hero_subheadline']) : '';
@@ -119,6 +127,15 @@ function lf_homepage_admin_save(): void {
 			$config[$type]['section_heading'] = isset($_POST['lf_hp_benefits_heading']) ? sanitize_text_field($_POST['lf_hp_benefits_heading']) : '';
 			$config[$type]['section_intro'] = isset($_POST['lf_hp_benefits_intro']) ? sanitize_textarea_field($_POST['lf_hp_benefits_intro']) : '';
 			$config[$type]['benefits_items'] = isset($_POST['lf_hp_benefits_items']) ? sanitize_textarea_field($_POST['lf_hp_benefits_items']) : '';
+		}
+		if ($type === 'service_intro') {
+			$config[$type]['section_heading'] = isset($_POST['lf_hp_service_intro_heading']) ? sanitize_text_field($_POST['lf_hp_service_intro_heading']) : '';
+			$config[$type]['section_intro'] = isset($_POST['lf_hp_service_intro_intro']) ? sanitize_textarea_field($_POST['lf_hp_service_intro_intro']) : '';
+			$cols = isset($_POST['lf_hp_service_intro_columns']) ? sanitize_text_field($_POST['lf_hp_service_intro_columns']) : '3';
+			$config[$type]['service_intro_columns'] = in_array($cols, ['3', '4', '5', '6'], true) ? $cols : '3';
+			$config[$type]['service_intro_max_items'] = isset($_POST['lf_hp_service_intro_max']) ? absint($_POST['lf_hp_service_intro_max']) : 6;
+			$show_images = isset($_POST['lf_hp_service_intro_images']) ? sanitize_text_field($_POST['lf_hp_service_intro_images']) : '1';
+			$config[$type]['service_intro_show_images'] = $show_images === '0' ? '0' : '1';
 		}
 		if ($type === 'service_details') {
 			$config[$type]['section_heading'] = isset($_POST['lf_hp_details_heading']) ? sanitize_text_field($_POST['lf_hp_details_heading']) : '';
@@ -183,6 +200,7 @@ function lf_homepage_admin_section_labels(): array {
 		'hero'           => __('Hero', 'leadsforward-core'),
 		'trust_bar'      => __('Trust Bar', 'leadsforward-core'),
 		'benefits'       => __('Benefits / Why Choose Us', 'leadsforward-core'),
+		'service_intro'  => __('Service Intro Boxes', 'leadsforward-core'),
 		'service_details' => __('Service Details', 'leadsforward-core'),
 		'content_image'  => __('Content with Image', 'leadsforward-core'),
 		'image_content'  => __('Image with Content', 'leadsforward-core'),
@@ -561,58 +579,60 @@ function lf_homepage_admin_render(): void {
 											</select>
 										</td>
 									</tr>
-									<?php
-										$icon_enabled = (string) ($sec['icon_enabled'] ?? '0');
-										$icon_slug = (string) ($sec['icon_slug'] ?? '');
-										$icon_position = (string) ($sec['icon_position'] ?? 'left');
-										$icon_size = (string) ($sec['icon_size'] ?? 'md');
-										$icon_color = (string) ($sec['icon_color'] ?? 'primary');
-									?>
-									<tr>
-										<th scope="row"><label for="lf_hp_icon_enabled_<?php echo esc_attr($type); ?>"><?php esc_html_e('Icon', 'leadsforward-core'); ?></label></th>
-										<td>
-											<select name="lf_hp_icon_enabled_<?php echo esc_attr($type); ?>" id="lf_hp_icon_enabled_<?php echo esc_attr($type); ?>">
-												<?php foreach ($icon_enabled_options as $opt_key => $opt_label) : ?>
-													<option value="<?php echo esc_attr($opt_key); ?>" <?php selected($icon_enabled, $opt_key); ?>><?php echo esc_html($opt_label); ?></option>
-												<?php endforeach; ?>
-											</select>
-											<select name="lf_hp_icon_slug_<?php echo esc_attr($type); ?>" id="lf_hp_icon_slug_<?php echo esc_attr($type); ?>">
-												<?php foreach ($icon_options as $opt_key => $opt_label) : ?>
-													<option value="<?php echo esc_attr($opt_key); ?>" <?php selected($icon_slug, $opt_key); ?>><?php echo esc_html($opt_label); ?></option>
-												<?php endforeach; ?>
-											</select>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row"><label for="lf_hp_icon_position_<?php echo esc_attr($type); ?>"><?php esc_html_e('Icon position', 'leadsforward-core'); ?></label></th>
-										<td>
-											<select name="lf_hp_icon_position_<?php echo esc_attr($type); ?>" id="lf_hp_icon_position_<?php echo esc_attr($type); ?>">
-												<?php foreach ($icon_positions as $opt_key => $opt_label) : ?>
-													<option value="<?php echo esc_attr($opt_key); ?>" <?php selected($icon_position, $opt_key); ?>><?php echo esc_html($opt_label); ?></option>
-												<?php endforeach; ?>
-											</select>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row"><label for="lf_hp_icon_size_<?php echo esc_attr($type); ?>"><?php esc_html_e('Icon size', 'leadsforward-core'); ?></label></th>
-										<td>
-											<select name="lf_hp_icon_size_<?php echo esc_attr($type); ?>" id="lf_hp_icon_size_<?php echo esc_attr($type); ?>">
-												<?php foreach ($icon_sizes as $opt_key => $opt_label) : ?>
-													<option value="<?php echo esc_attr($opt_key); ?>" <?php selected($icon_size, $opt_key); ?>><?php echo esc_html($opt_label); ?></option>
-												<?php endforeach; ?>
-											</select>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row"><label for="lf_hp_icon_color_<?php echo esc_attr($type); ?>"><?php esc_html_e('Icon color', 'leadsforward-core'); ?></label></th>
-										<td>
-											<select name="lf_hp_icon_color_<?php echo esc_attr($type); ?>" id="lf_hp_icon_color_<?php echo esc_attr($type); ?>">
-												<?php foreach ($icon_colors as $opt_key => $opt_label) : ?>
-													<option value="<?php echo esc_attr($opt_key); ?>" <?php selected($icon_color, $opt_key); ?>><?php echo esc_html($opt_label); ?></option>
-												<?php endforeach; ?>
-											</select>
-										</td>
-									</tr>
+									<?php if ($type !== 'service_intro') : ?>
+										<?php
+											$icon_enabled = (string) ($sec['icon_enabled'] ?? '0');
+											$icon_slug = (string) ($sec['icon_slug'] ?? '');
+											$icon_position = (string) ($sec['icon_position'] ?? 'left');
+											$icon_size = (string) ($sec['icon_size'] ?? 'md');
+											$icon_color = (string) ($sec['icon_color'] ?? 'primary');
+										?>
+										<tr>
+											<th scope="row"><label for="lf_hp_icon_enabled_<?php echo esc_attr($type); ?>"><?php esc_html_e('Icon', 'leadsforward-core'); ?></label></th>
+											<td>
+												<select name="lf_hp_icon_enabled_<?php echo esc_attr($type); ?>" id="lf_hp_icon_enabled_<?php echo esc_attr($type); ?>">
+													<?php foreach ($icon_enabled_options as $opt_key => $opt_label) : ?>
+														<option value="<?php echo esc_attr($opt_key); ?>" <?php selected($icon_enabled, $opt_key); ?>><?php echo esc_html($opt_label); ?></option>
+													<?php endforeach; ?>
+												</select>
+												<select name="lf_hp_icon_slug_<?php echo esc_attr($type); ?>" id="lf_hp_icon_slug_<?php echo esc_attr($type); ?>">
+													<?php foreach ($icon_options as $opt_key => $opt_label) : ?>
+														<option value="<?php echo esc_attr($opt_key); ?>" <?php selected($icon_slug, $opt_key); ?>><?php echo esc_html($opt_label); ?></option>
+													<?php endforeach; ?>
+												</select>
+											</td>
+										</tr>
+										<tr>
+											<th scope="row"><label for="lf_hp_icon_position_<?php echo esc_attr($type); ?>"><?php esc_html_e('Icon position', 'leadsforward-core'); ?></label></th>
+											<td>
+												<select name="lf_hp_icon_position_<?php echo esc_attr($type); ?>" id="lf_hp_icon_position_<?php echo esc_attr($type); ?>">
+													<?php foreach ($icon_positions as $opt_key => $opt_label) : ?>
+														<option value="<?php echo esc_attr($opt_key); ?>" <?php selected($icon_position, $opt_key); ?>><?php echo esc_html($opt_label); ?></option>
+													<?php endforeach; ?>
+												</select>
+											</td>
+										</tr>
+										<tr>
+											<th scope="row"><label for="lf_hp_icon_size_<?php echo esc_attr($type); ?>"><?php esc_html_e('Icon size', 'leadsforward-core'); ?></label></th>
+											<td>
+												<select name="lf_hp_icon_size_<?php echo esc_attr($type); ?>" id="lf_hp_icon_size_<?php echo esc_attr($type); ?>">
+													<?php foreach ($icon_sizes as $opt_key => $opt_label) : ?>
+														<option value="<?php echo esc_attr($opt_key); ?>" <?php selected($icon_size, $opt_key); ?>><?php echo esc_html($opt_label); ?></option>
+													<?php endforeach; ?>
+												</select>
+											</td>
+										</tr>
+										<tr>
+											<th scope="row"><label for="lf_hp_icon_color_<?php echo esc_attr($type); ?>"><?php esc_html_e('Icon color', 'leadsforward-core'); ?></label></th>
+											<td>
+												<select name="lf_hp_icon_color_<?php echo esc_attr($type); ?>" id="lf_hp_icon_color_<?php echo esc_attr($type); ?>">
+													<?php foreach ($icon_colors as $opt_key => $opt_label) : ?>
+														<option value="<?php echo esc_attr($opt_key); ?>" <?php selected($icon_color, $opt_key); ?>><?php echo esc_html($opt_label); ?></option>
+													<?php endforeach; ?>
+												</select>
+											</td>
+										</tr>
+									<?php endif; ?>
 									<?php if ($type === 'map_nap') : ?>
 										<tr>
 											<td colspan="2">
@@ -731,6 +751,40 @@ function lf_homepage_admin_render(): void {
 									<tr>
 										<th scope="row"><label for="lf_hp_benefits_items"><?php esc_html_e('Benefits (one per line)', 'leadsforward-core'); ?></label></th>
 										<td><textarea class="large-text" name="lf_hp_benefits_items" id="lf_hp_benefits_items" rows="3"><?php echo esc_textarea($sec['benefits_items'] ?? ''); ?></textarea></td>
+									</tr>
+									<?php endif; ?>
+									<?php if ($type === 'service_intro') : ?>
+									<tr>
+										<th scope="row"><label for="lf_hp_service_intro_heading"><?php esc_html_e('Section heading', 'leadsforward-core'); ?></label></th>
+										<td><input type="text" class="large-text" name="lf_hp_service_intro_heading" id="lf_hp_service_intro_heading" value="<?php echo esc_attr($sec['section_heading'] ?? ''); ?>" /></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_service_intro_intro"><?php esc_html_e('Supporting text', 'leadsforward-core'); ?></label></th>
+										<td><textarea class="large-text" name="lf_hp_service_intro_intro" id="lf_hp_service_intro_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_service_intro_columns"><?php esc_html_e('Columns', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_service_intro_columns" id="lf_hp_service_intro_columns">
+												<option value="3" <?php selected(($sec['service_intro_columns'] ?? '3'), '3'); ?>><?php esc_html_e('3 columns', 'leadsforward-core'); ?></option>
+												<option value="4" <?php selected(($sec['service_intro_columns'] ?? ''), '4'); ?>><?php esc_html_e('4 columns', 'leadsforward-core'); ?></option>
+												<option value="5" <?php selected(($sec['service_intro_columns'] ?? ''), '5'); ?>><?php esc_html_e('5 columns', 'leadsforward-core'); ?></option>
+												<option value="6" <?php selected(($sec['service_intro_columns'] ?? ''), '6'); ?>><?php esc_html_e('6 columns', 'leadsforward-core'); ?></option>
+											</select>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_service_intro_max"><?php esc_html_e('Max services', 'leadsforward-core'); ?></label></th>
+										<td><input type="number" name="lf_hp_service_intro_max" id="lf_hp_service_intro_max" value="<?php echo esc_attr((string) ($sec['service_intro_max_items'] ?? '6')); ?>" min="3" max="12" /></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_service_intro_images"><?php esc_html_e('Show images', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_service_intro_images" id="lf_hp_service_intro_images">
+												<option value="1" <?php selected((string) ($sec['service_intro_show_images'] ?? '1'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
+												<option value="0" <?php selected((string) ($sec['service_intro_show_images'] ?? '1'), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
+											</select>
+										</td>
 									</tr>
 									<?php endif; ?>
 									<?php if ($type === 'service_details') : ?>
