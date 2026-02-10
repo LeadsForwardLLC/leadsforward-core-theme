@@ -232,7 +232,9 @@ function lf_homepage_apply_niche_config(string $niche_slug, ?array $wizard_data 
 	$config = lf_homepage_default_config($niche_slug);
 	$city_placeholder = '[Your City]';
 	$first_area_name = '';
-	if (!empty($wizard_data['service_areas']) && is_array($wizard_data['service_areas'])) {
+	if (!empty($wizard_data['homepage_city'])) {
+		$first_area_name = sanitize_text_field((string) $wizard_data['homepage_city']);
+	} elseif (!empty($wizard_data['service_areas']) && is_array($wizard_data['service_areas'])) {
 		$first = reset($wizard_data['service_areas']);
 		if (is_array($first)) {
 			$first_area_name = $first['name'] ?? '';

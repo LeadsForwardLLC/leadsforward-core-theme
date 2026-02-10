@@ -184,14 +184,25 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 ## AI Studio
 
 - **Location:** LeadsForward → AI Studio.
-- **Inputs:** Webhook URL + shared secret, keywords, style, scope, writing samples.
-- **Samples:** Reads from `docs/content-samples/*.md` (required) plus optional admin samples.
-- **Flow:** Build blueprint → send to orchestrator → validate payload → apply to builder fields.
+- **Role:** Advanced homepage regeneration and debug.
+- **Inputs:** Webhook URL + shared secret.
+- **Samples:** Uses selected `docs/content-samples/*.md` from Setup Wizard plus optional admin samples.
+- **Flow:** Build homepage blueprint → send to orchestrator → validate payload → apply to homepage fields.
 - **Jobs:** Logged with status, user, time, and summary. Retry resends same payload.
 - **REST endpoints (secret auth):**
   - `GET /wp-json/leadsforward/v1/blueprint`
   - `POST /wp-json/leadsforward/v1/apply`
   - Header: `Authorization: Bearer <shared_secret>`
+
+---
+
+## Homepage Generation Flow
+
+- **Where:** LeadsForward → Setup (single guided flow).
+- **Inputs:** Business info, niche, city/region, homepage keywords, hero variant, writing samples, variation profile.
+- **Trigger:** “Generate homepage now” calls the orchestrator and applies homepage-only updates.
+- **Storage:** `lf_homepage_keywords` + `lf_homepage_writing_samples` + homepage hero variant stored in homepage config.
+- **Regenerate:** Use LeadsForward → AI Studio (Advanced) to re-run homepage generation.
 
 ---
 

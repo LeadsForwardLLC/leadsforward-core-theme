@@ -72,6 +72,18 @@ function lf_wizard_handle_post(): void {
 		if (!in_array($category, $allowed_categories, true)) {
 			$category = 'HomeAndConstructionBusiness';
 		}
+		$homepage_city = isset($_POST['lf_homepage_city']) ? sanitize_text_field($_POST['lf_homepage_city']) : '';
+		$homepage_keyword_primary = isset($_POST['lf_homepage_keyword_primary']) ? sanitize_text_field($_POST['lf_homepage_keyword_primary']) : '';
+		$homepage_keyword_secondary_raw = isset($_POST['lf_homepage_keyword_secondary']) ? sanitize_textarea_field($_POST['lf_homepage_keyword_secondary']) : '';
+		$homepage_keyword_secondary = array_filter(array_map('sanitize_text_field', preg_split('/\r\n|\r|\n|,/', $homepage_keyword_secondary_raw)));
+		$homepage_samples = $_POST['lf_homepage_writing_samples'] ?? [];
+		if (!is_array($homepage_samples)) {
+			$homepage_samples = [$homepage_samples];
+		}
+		$homepage_samples = array_values(array_filter(array_map('sanitize_file_name', $homepage_samples)));
+		$hero_variant = isset($_POST['lf_homepage_hero_variant']) ? sanitize_text_field($_POST['lf_homepage_hero_variant']) : '';
+		$generate_now = !empty($_POST['lf_homepage_generate_now']);
+
 		$data = [
 			'niche_slug'                 => sanitize_text_field($_POST['lf_niche'] ?? ''),
 			'business_name'              => sanitize_text_field($_POST['lf_business_name'] ?? ''),
@@ -108,7 +120,28 @@ function lf_wizard_handle_post(): void {
 			'business_map_embed'         => isset($_POST['lf_business_map_embed']) ? wp_kses(wp_unslash($_POST['lf_business_map_embed']), $allowed_embed) : '',
 			'service_areas'              => lf_wizard_sanitize_areas($_POST['lf_service_areas'] ?? ''),
 			'variation_profile_override' => sanitize_text_field($_POST['lf_variation_profile'] ?? ''),
+			'homepage_city'              => $homepage_city,
+			'homepage_hero_variant'      => $hero_variant,
 		];
+		$sample_files = function_exists('lf_ai_studio_get_sample_files') ? lf_ai_studio_get_sample_files() : [];
+		$valid_samples = array_values(array_intersect($homepage_samples, $sample_files));
+		$errors = [];
+		if ($homepage_keyword_primary === '') {
+			$errors[] = __('Primary homepage keyword is required.', 'leadsforward-core');
+		}
+		if (count($valid_samples) < 1 || count($valid_samples) > 3) {
+			$errors[] = __('Select 1–3 writing samples.', 'leadsforward-core');
+		}
+		if (!empty($errors)) {
+			$redirect = add_query_arg([
+				'page' => 'lf-ops',
+				'step' => 4,
+				'errors' => 1,
+				'msg' => implode(' ', $errors),
+			], admin_url('admin.php'));
+			wp_safe_redirect($redirect);
+			exit;
+		}
 		$result = lf_run_setup($data);
 		if (!empty($result['success'])) {
 			// Ensure business info is saved for Global Settings → Business Entity
@@ -152,11 +185,43 @@ function lf_wizard_handle_post(): void {
 			if (function_exists('lf_homepage_apply_niche_config')) {
 				lf_homepage_apply_niche_config($data['niche_slug'], $data);
 			}
+			$sample_files = function_exists('lf_ai_studio_get_sample_files') ? lf_ai_studio_get_sample_files() : [];
+			$valid_samples = array_values(array_intersect($homepage_samples, $sample_files));
+			if ($hero_variant !== '' && function_exists('lf_sections_hero_variant_options')) {
+				$variants = array_keys(lf_sections_hero_variant_options());
+				if (in_array($hero_variant, $variants, true)) {
+					$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
+					if (!empty($config['hero']) && is_array($config['hero'])) {
+						$config['hero']['variant'] = $hero_variant;
+						update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+					}
+				}
+			}
+			update_option('lf_homepage_keywords', [
+				'primary' => $homepage_keyword_primary,
+				'secondary' => array_values($homepage_keyword_secondary),
+			], true);
+			update_option('lf_homepage_writing_samples', $valid_samples, true);
+			if ($homepage_city !== '') {
+				update_option('lf_homepage_city', $homepage_city, true);
+			}
 			update_option('lf_setup_wizard_complete', true);
 			if (!empty($result['ids']) && is_array($result['ids'])) {
 				update_option('lf_wizard_created_ids', $result['ids']);
 			}
-			wp_redirect(admin_url('admin.php?page=lf-ops&done=1'));
+			$redirect = admin_url('admin.php?page=lf-ops&done=1');
+			if ($generate_now && function_exists('lf_ai_studio_run_homepage_generation')) {
+				$gen = lf_ai_studio_run_homepage_generation();
+				if (!empty($gen['error'])) {
+					$redirect = add_query_arg('ai_error', rawurlencode((string) $gen['error']), $redirect);
+				} else {
+					$redirect = admin_url('admin.php?page=lf-homepage-settings');
+					if (!empty($gen['job_id'])) {
+						$redirect = add_query_arg('ai_job', (string) $gen['job_id'], $redirect);
+					}
+				}
+			}
+			wp_redirect($redirect);
 			exit;
 		}
 		wp_redirect(admin_url('admin.php?page=lf-ops&step=5&errors=1&msg=' . urlencode(implode('; ', $result['errors']))));
@@ -268,6 +333,7 @@ function lf_wizard_render_page(): void {
 	}
 	if (isset($_GET['done'])) {
 		echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
+		$ai_error = isset($_GET['ai_error']) ? sanitize_text_field($_GET['ai_error']) : '';
 		if ($settings_saved) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Settings saved.', 'leadsforward-core') . '</p></div>';
 		}
@@ -281,6 +347,9 @@ function lf_wizard_render_page(): void {
 		}
 		if ($reset_error === 'confirm') {
 			echo '<div class="notice notice-error"><p>' . esc_html__('You must type RESET exactly to confirm.', 'leadsforward-core') . '</p></div>';
+		}
+		if ($ai_error) {
+			echo '<div class="notice notice-error"><p>' . esc_html($ai_error) . '</p></div>';
 		}
 		lf_wizard_render_setup_settings_panel();
 		echo '<p class="notice notice-success">' . esc_html__('Site setup complete. You can now customize Theme Options and edit pages.', 'leadsforward-core') . '</p>';
@@ -349,6 +418,7 @@ function lf_wizard_render_page(): void {
 		$be = sanitize_email($_GET['lf_business_email'] ?? '');
 		$street = sanitize_text_field($_GET['lf_business_address_street'] ?? '');
 		$city = sanitize_text_field($_GET['lf_business_address_city'] ?? '');
+		$home_city = sanitize_text_field($_GET['lf_homepage_city'] ?? '');
 		$state = sanitize_text_field($_GET['lf_business_address_state'] ?? '');
 		$zip = sanitize_text_field($_GET['lf_business_address_zip'] ?? '');
 		$bh = sanitize_textarea_field($_GET['lf_business_hours'] ?? '');
@@ -379,6 +449,7 @@ function lf_wizard_render_page(): void {
 		if ($be === '') { $be = $default_email; }
 		if ($street === '') { $street = $default_street; }
 		if ($city === '') { $city = $default_city; }
+		if ($home_city === '') { $home_city = $city; }
 		if ($state === '') { $state = $default_state; }
 		if ($zip === '') { $zip = $default_zip; }
 		if ($bh === '') { $bh = $default_hours; }
@@ -401,6 +472,7 @@ function lf_wizard_render_page(): void {
 		echo '<tr><th scope="row">' . esc_html__('Display phone', 'leadsforward-core') . '</th><td><select name="lf_business_phone_display"><option value="primary"' . selected($phone_display !== 'tracking', true, false) . '>' . esc_html__('Primary phone', 'leadsforward-core') . '</option><option value="tracking"' . selected($phone_display === 'tracking', true, false) . '>' . esc_html__('Tracking phone', 'leadsforward-core') . '</option></select></td></tr>';
 		echo '<tr><th scope="row"><label for="lf_business_email">' . esc_html__('Email', 'leadsforward-core') . '</label></th><td><input type="email" id="lf_business_email" name="lf_business_email" class="regular-text" value="' . esc_attr($be) . '" placeholder="contact@yourbusiness.com" /></td></tr>';
 		echo '<tr><th scope="row">' . esc_html__('Address (NAP)', 'leadsforward-core') . '</th><td><input type="text" class="large-text" name="lf_business_address_street" placeholder="' . esc_attr($default_street) . '" value="' . esc_attr($street) . '" /><div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;"><input type="text" class="regular-text" name="lf_business_address_city" placeholder="' . esc_attr($default_city) . '" value="' . esc_attr($city) . '" /><input type="text" class="regular-text" name="lf_business_address_state" placeholder="' . esc_attr($default_state) . '" value="' . esc_attr($state) . '" /><input type="text" class="regular-text" name="lf_business_address_zip" placeholder="' . esc_attr($default_zip) . '" value="' . esc_attr($zip) . '" /></div></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_homepage_city">' . esc_html__('Primary city / service region', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_homepage_city" name="lf_homepage_city" class="regular-text" value="' . esc_attr($home_city) . '" placeholder="' . esc_attr($default_city) . '" /></td></tr>';
 		echo '<tr><th scope="row"><label for="lf_business_hours">' . esc_html__('Opening hours', 'leadsforward-core') . '</label></th><td><textarea id="lf_business_hours" name="lf_business_hours" rows="3" class="large-text" placeholder="Mon–Fri 8am–6pm">' . esc_textarea($bh) . '</textarea><br /><span class="description">' . esc_html__('Human-readable hours for schema (e.g. Mon–Fri 8am–6pm). One line per rule.', 'leadsforward-core') . '</span></td></tr>';
 		echo '<tr><th scope="row"><label for="lf_business_category">' . esc_html__('Primary category', 'leadsforward-core') . '</label></th><td><select name="lf_business_category" id="lf_business_category">';
 		foreach ($allowed_categories as $cat) {
@@ -502,6 +574,7 @@ function lf_wizard_render_page(): void {
 			'lf_business_place_name',
 			'lf_business_place_address',
 			'lf_business_map_embed',
+			'lf_homepage_city',
 		];
 		foreach ($carry_fields as $field) {
 			$value = $_GET[$field] ?? '';
@@ -572,6 +645,7 @@ function lf_wizard_render_page(): void {
 			'lf_business_place_address',
 			'lf_business_map_embed',
 			'lf_business_service_area_type',
+			'lf_homepage_city',
 		];
 		foreach ($carry_fields as $field) {
 			$value = $_GET[$field] ?? '';
@@ -594,11 +668,45 @@ function lf_wizard_render_page(): void {
 		}
 		$areas = isset($_GET['lf_service_areas']) ? lf_wizard_sanitize_areas($_GET['lf_service_areas']) : [];
 		echo '<input type="hidden" name="lf_service_areas_raw" value="' . esc_attr(implode("\n", $areas)) . '" />';
+		$hero_variants = function_exists('lf_sections_hero_variant_options') ? lf_sections_hero_variant_options() : ['default' => __('Default', 'leadsforward-core')];
+		$hero_variant = sanitize_text_field($_GET['lf_homepage_hero_variant'] ?? 'default');
+		if (!array_key_exists($hero_variant, $hero_variants)) {
+			$hero_variant = 'default';
+		}
+		$keyword_primary = sanitize_text_field($_GET['lf_homepage_keyword_primary'] ?? '');
+		$keyword_secondary = sanitize_textarea_field($_GET['lf_homepage_keyword_secondary'] ?? '');
+		$sample_files = function_exists('lf_ai_studio_get_sample_files') ? lf_ai_studio_get_sample_files() : [];
+		$selected_samples = $_GET['lf_homepage_writing_samples'] ?? [];
+		if (!is_array($selected_samples)) {
+			$selected_samples = [$selected_samples];
+		}
+		$selected_samples = array_values(array_filter(array_map('sanitize_file_name', $selected_samples)));
+		$generate_now = !empty($_GET['lf_homepage_generate_now']);
+
 		echo '<table class="form-table"><tr><th scope="row">' . esc_html__('Variation profile', 'leadsforward-core') . '</th><td><select name="lf_variation_profile">';
 		foreach ($profiles as $key => $label) {
 			echo '<option value="' . esc_attr($key) . '"' . selected($rec, $key, false) . '>' . esc_html($label) . '</option>';
 		}
-		echo '</select></td></tr></table>';
+		echo '</select></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_homepage_hero_variant">' . esc_html__('Homepage hero variant', 'leadsforward-core') . '</label></th><td><select id="lf_homepage_hero_variant" name="lf_homepage_hero_variant">';
+		foreach ($hero_variants as $variant_key => $label) {
+			echo '<option value="' . esc_attr($variant_key) . '"' . selected($hero_variant, $variant_key, false) . '>' . esc_html($label) . '</option>';
+		}
+		echo '</select></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_homepage_keyword_primary">' . esc_html__('Primary homepage keyword', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_homepage_keyword_primary" name="lf_homepage_keyword_primary" class="large-text" value="' . esc_attr($keyword_primary) . '" required placeholder="' . esc_attr__('e.g. Roofing contractor Sarasota', 'leadsforward-core') . '" /></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_homepage_keyword_secondary">' . esc_html__('Secondary homepage keywords (optional)', 'leadsforward-core') . '</label></th><td><textarea id="lf_homepage_keyword_secondary" name="lf_homepage_keyword_secondary" rows="3" class="large-text" placeholder="' . esc_attr__('One per line', 'leadsforward-core') . '">' . esc_textarea($keyword_secondary) . '</textarea></td></tr>';
+		echo '<tr><th scope="row">' . esc_html__('Writing samples (select 1–3)', 'leadsforward-core') . '</th><td>';
+		if (!empty($sample_files)) {
+			foreach ($sample_files as $file) {
+				$checked = in_array($file, $selected_samples, true);
+				echo '<label style="display:block;margin-bottom:6px;"><input type="checkbox" name="lf_homepage_writing_samples[]" value="' . esc_attr($file) . '"' . checked($checked, true, false) . ' /> <code>' . esc_html($file) . '</code></label>';
+			}
+		} else {
+			echo '<strong>' . esc_html__('No files found in /docs/content-samples/*.md (required).', 'leadsforward-core') . '</strong>';
+		}
+		echo '</td></tr>';
+		echo '<tr><th scope="row">' . esc_html__('Generate homepage now', 'leadsforward-core') . '</th><td><label><input type="checkbox" name="lf_homepage_generate_now" value="1"' . checked($generate_now, true, false) . ' /> ' . esc_html__('Generate homepage content after setup completes', 'leadsforward-core') . '</label></td></tr>';
+		echo '</table>';
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Next', 'leadsforward-core') . '" /></p></form>';
 	} else {
 		$step = 5;
@@ -640,6 +748,11 @@ function lf_wizard_render_page(): void {
 			'lf_business_map_embed',
 			'lf_business_service_area_type',
 			'lf_variation_profile',
+			'lf_homepage_city',
+			'lf_homepage_keyword_primary',
+			'lf_homepage_keyword_secondary',
+			'lf_homepage_hero_variant',
+			'lf_homepage_generate_now',
 		];
 		foreach ($carry_fields as $field) {
 			$value = $_GET[$field] ?? '';
@@ -659,6 +772,17 @@ function lf_wizard_render_page(): void {
 				$value = sanitize_text_field($value);
 			}
 			echo '<input type="hidden" name="' . esc_attr($field) . '" value="' . esc_attr($value) . '" />';
+		}
+		$selected_samples = $_GET['lf_homepage_writing_samples'] ?? [];
+		if (!is_array($selected_samples)) {
+			$selected_samples = [$selected_samples];
+		}
+		foreach ($selected_samples as $sample) {
+			$sample = sanitize_file_name((string) $sample);
+			if ($sample === '') {
+				continue;
+			}
+			echo '<input type="hidden" name="lf_homepage_writing_samples[]" value="' . esc_attr($sample) . '" />';
 		}
 		$areas_raw = isset($_GET['lf_service_areas_raw']) ? $_GET['lf_service_areas_raw'] : (isset($_GET['lf_service_areas']) ? $_GET['lf_service_areas'] : '');
 		$areas_str = is_string($areas_raw) ? $areas_raw : implode("\n", (array) $areas_raw);

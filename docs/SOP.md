@@ -284,6 +284,8 @@ SEO Coverage validator:
 
 Append‑Only Change Log (Recent)
 -------------------------------
+2026‑02‑09 — Setup Wizard merged with AI Studio for homepage‑only generation flow.
+
 2026‑02‑09 — AI Studio REST endpoints added (blueprint + apply) with shared secret auth and job logging.
 
 2026‑02‑09 — Hero controls now match across Homepage Builder and Page Builder (variant + CTA toggles/actions). CTA resolution is unified via `lf_resolve_cta()`. SEO overrides now apply to services and service areas. Sortable behavior is shared via `assets/js/lf-section-sortable.js`.
@@ -322,3 +324,13 @@ AI Studio (Append‑Only)
 - REST endpoints require the shared secret in the `Authorization` header.
 - Blueprint endpoint: `GET /wp-json/leadsforward/v1/blueprint`.
 - Apply endpoint: `POST /wp-json/leadsforward/v1/apply`.
+
+---
+
+Homepage Generation Flow (Append‑Only)
+--------------------------------------
+- Run **LeadsForward → Setup** to enter business info, niche, city/region, and homepage keywords.
+- Select 1–3 writing samples from `docs/content-samples/*.md`.
+- Choose the homepage hero variant and a variation profile.
+- Enable “Generate homepage now” to run the orchestrator immediately after setup.
+- Homepage regeneration is available in **LeadsForward → AI Studio (Advanced)**.

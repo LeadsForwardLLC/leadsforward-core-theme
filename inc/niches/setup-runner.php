@@ -343,6 +343,9 @@ function lf_wizard_placeholder_content(string $slug, string $title, array $data)
 }
 
 function lf_wizard_primary_city(array $data): string {
+	if (!empty($data['homepage_city'])) {
+		return sanitize_text_field((string) $data['homepage_city']);
+	}
 	$areas = $data['service_areas'] ?? [];
 	if (!is_array($areas) || empty($areas)) {
 		return '';
