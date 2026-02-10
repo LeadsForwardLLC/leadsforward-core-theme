@@ -58,12 +58,7 @@ $query = new WP_Query([
 		<?php if ($query->have_posts()) : ?>
 			<div class="lf-block-service-intro__grid">
 				<?php while ($query->have_posts()) : $query->the_post();
-					$support = wp_strip_all_tags(get_the_excerpt());
 					$desc = wp_trim_words(wp_strip_all_tags(get_the_content(null, false)), 28);
-					if ($support === '') {
-						$support = $desc;
-						$desc = '';
-					}
 					$image_id = $show_images ? (int) get_post_thumbnail_id(get_the_ID()) : 0;
 					if ($show_images && $image_id === 0 && function_exists('lf_get_placeholder_image_id')) {
 						$image_id = lf_get_placeholder_image_id();
@@ -81,9 +76,6 @@ $query = new WP_Query([
 						</div>
 						<?php if ($image_html) : ?>
 							<div class="lf-block-service-intro__media"><?php echo $image_html; ?></div>
-						<?php endif; ?>
-						<?php if ($support !== '') : ?>
-							<p class="lf-block-service-intro__support"><?php echo esc_html($support); ?></p>
 						<?php endif; ?>
 						<?php if ($desc !== '') : ?>
 							<p class="lf-block-service-intro__desc"><?php echo esc_html($desc); ?></p>

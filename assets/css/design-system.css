@@ -2427,6 +2427,10 @@ button:focus-visible,
 }
 
 @media (max-width: 640px) {
+	.lf-block-service-intro--cols-3 .lf-block-service-intro__grid,
+	.lf-block-service-intro--cols-4 .lf-block-service-intro__grid,
+	.lf-block-service-intro--cols-5 .lf-block-service-intro__grid,
+	.lf-block-service-intro--cols-6 .lf-block-service-intro__grid,
 	.lf-block-service-intro__grid {
 		grid-template-columns: 1fr;
 	}
