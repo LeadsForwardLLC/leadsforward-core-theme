@@ -1138,9 +1138,10 @@ function lf_sections_render_blog_posts(string $context, array $settings, \WP_Pos
 		'no_found_rows'  => true,
 	]);
 	if ($query->have_posts()) {
-		echo '<div class="posts-list">';
+		echo '<div class="posts-list lf-blog-grid">';
 		while ($query->have_posts()) {
 			$query->the_post();
+			set_query_var('lf_post_card_variant', 'standard');
 			get_template_part('templates/parts/content', get_post_type());
 		}
 		echo '</div>';

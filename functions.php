@@ -46,6 +46,7 @@ lf_load_inc('icons.php');
 // SEO and schema (foundation only).
 lf_load_inc('seo.php');
 lf_load_inc('schema.php');
+lf_load_inc('blog.php');
 // Heading enforcement + validation.
 lf_load_inc('headings.php');
 // AI Studio core + REST endpoints (used outside admin).
