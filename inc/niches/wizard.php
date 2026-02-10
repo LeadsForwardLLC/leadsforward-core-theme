@@ -368,12 +368,15 @@ function lf_wizard_render_page(): void {
 
 	echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
 	echo '<style>
+		.wrap > h1 { margin-bottom: 6px; }
 		.lf-setup-progress { display:flex; align-items:center; gap:12px; margin: 8px 0 16px; }
 		.lf-setup-progress__bar { flex: 1; height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
 		.lf-setup-progress__bar span { display:block; height: 100%; background: #3b82f6; }
 		.lf-setup-step-title { margin: 12px 0 6px; }
 		.lf-setup-help { color: #475569; margin: 0 0 12px; }
-		.lf-setup-card { max-width: 980px; padding: 16px; margin: 16px 0; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; }
+		.lf-setup-card { max-width: 980px; padding: 14px; margin: 10px 0; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; }
+		.lf-setup-card--top { padding: 12px; margin: 6px 0 10px; border-left: 3px solid #3b82f6; }
+		.lf-setup-progress { margin: 6px 0 12px; }
 		.lf-setup-card h2 { margin-top: 0; }
 	</style>';
 	$step = isset($_GET['step']) ? max(1, min(5, (int) $_GET['step'])) : 1;
@@ -392,7 +395,7 @@ function lf_wizard_render_page(): void {
 	if ($reset_error === 'confirm') {
 		echo '<div class="notice notice-error"><p>' . esc_html__('You must type RESET exactly to confirm.', 'leadsforward-core') . '</p></div>';
 	}
-	echo '<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0; border-left: 4px solid #3b82f6;">';
+	echo '<div class="lf-setup-card lf-setup-card--top">';
 	echo '<h2 style="margin-top:0;">' . esc_html__('Setup Wizard + AI Studio', 'leadsforward-core') . '</h2>';
 	echo '<p class="description">' . esc_html__('Complete the wizard to store business info, keywords, and writing samples. AI Studio uses these inputs for regeneration.', 'leadsforward-core') . '</p>';
 	echo '<p><a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=lf-ops&step=' . $step)) . '#lf-setup-wizard">' . esc_html__('Continue setup wizard', 'leadsforward-core') . '</a> ';
