@@ -437,7 +437,6 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 	$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
 	$order = function_exists('lf_homepage_controller_order') ? lf_homepage_controller_order() : [];
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
-	$hero_variant = isset($config['hero']['variant']) ? (string) $config['hero']['variant'] : 'default';
 	$variation_seed = lf_homepage_variation_seed();
 
 	$sections = [];
@@ -477,24 +476,18 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 		return ['error' => __('Homepage blueprint could not be built. Check homepage configuration.', 'leadsforward-core')];
 	}
 
-	$internal_links = lf_ai_studio_homepage_internal_links();
-
 	$base = [
 		'variation_seed' => $variation_seed,
 		'business_name' => $business_name,
 		'niche' => $niche,
 		'city_region' => $city,
 		'keywords' => $keywords,
-		'hero_variant' => $hero_variant,
 		'writing_samples' => $samples,
-		'section_order' => $order,
-		'sections' => $sections,
 		'blueprint' => [
 			'page' => 'homepage',
 			'sections' => $blueprint_sections,
 			'order' => $order,
 		],
-		'internal_links' => $internal_links,
 	];
 	$request_id = lf_ai_studio_homepage_request_id($base);
 
