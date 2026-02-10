@@ -334,3 +334,11 @@ Homepage Generation Flow (Append‑Only)
 - Choose the homepage hero variant and a variation profile.
 - Enable “Generate homepage now” to run the orchestrator immediately after setup.
 - Homepage regeneration is available in **LeadsForward → AI Studio (Advanced)**.
+
+---
+
+Homepage Generation Flow (Builder‑aware)
+---------------------------------------
+- Blueprint reads the current Homepage Builder config (enabled sections + order).
+- AI can only write to allowed copy fields; layout, order, and toggles are read‑only.
+- Allowed fields are flattened as `section_id.field_key` for safe mapping.

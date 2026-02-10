@@ -206,6 +206,15 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 
 ---
 
+## Homepage AI Blueprint
+
+- **Source of truth:** Current Homepage Builder config, enabled sections, and stored order.
+- **Writable fields:** Copy-only keys from the section schema (headings, subheadings, body, lists, CTA text, image alt).
+- **Never changed by AI:** Layout, order, enable/disable toggles, backgrounds, icon settings, CTA actions.
+- **Output shape:** `section_id.field_key` dot notation in `allowed_fields`, with internal link targets (services + areas).
+
+---
+
 ## Page Builder Framework (Core Pages + Service + Service Area)
 
 - **Meta key:** `lf_pb_config` stores instance-based sections and order.

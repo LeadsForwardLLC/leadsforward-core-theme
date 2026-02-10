@@ -135,6 +135,8 @@ function lf_ai_studio_render_page(): void {
 		'order' => 'DESC',
 	]);
 	$samples_files = lf_ai_studio_get_sample_files();
+	$blueprint_preview = lf_ai_studio_build_homepage_blueprint();
+	$blueprint_json = wp_json_encode($blueprint_preview, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('AI Studio (Advanced)', 'leadsforward-core'); ?></h1>
@@ -174,6 +176,10 @@ function lf_ai_studio_render_page(): void {
 			<p><button type="submit" class="button button-primary"><?php esc_html_e('Regenerate Homepage', 'leadsforward-core'); ?></button></p>
 		</form>
 		<p class="description"><?php esc_html_e('Advanced/debug only. Setup Wizard handles first‑run generation.', 'leadsforward-core'); ?></p>
+
+		<h2><?php esc_html_e('Blueprint Preview', 'leadsforward-core'); ?></h2>
+		<p class="description"><?php esc_html_e('Read-only snapshot of the homepage blueprint sent to the orchestrator.', 'leadsforward-core'); ?></p>
+		<textarea class="large-text code" rows="12" readonly><?php echo esc_textarea((string) $blueprint_json); ?></textarea>
 
 		<h2><?php esc_html_e('Recent Jobs', 'leadsforward-core'); ?></h2>
 		<table class="widefat striped">
@@ -256,7 +262,7 @@ function lf_ai_studio_run_homepage_generation(): array {
 	if (empty($samples)) {
 		return ['error' => __('Select 1–3 writing samples in the Setup Wizard.', 'leadsforward-core')];
 	}
-	$request = lf_ai_studio_build_homepage_blueprint($keywords, $samples);
+	$request = lf_ai_studio_build_homepage_blueprint();
 	$job_id = lf_ai_studio_create_job($request);
 	return lf_ai_studio_send_request($request, $job_id);
 }
@@ -349,12 +355,12 @@ function lf_ai_studio_collect_selected_samples(): array {
 		}
 		$content = file_get_contents($path);
 		if (is_string($content) && trim($content) !== '') {
-			$out[] = trim($content);
+			$out[] = trim(wp_strip_all_tags($content));
 		}
 	}
 	$admin = (string) get_option('lf_ai_studio_samples', '');
 	if (trim($admin) !== '') {
-		$out[] = trim($admin);
+		$out[] = trim(wp_strip_all_tags($admin));
 	}
 	return $out;
 }
@@ -401,26 +407,146 @@ function lf_homepage_keywords(): array {
 	];
 }
 
-function lf_ai_studio_build_homepage_blueprint(array $keywords, array $samples): array {
+function lf_ai_studio_build_homepage_blueprint(): array {
 	$entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
-	$sections = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
-	$home_id = (int) get_option('page_on_front');
-	$homepage = [];
-	if ($home_id && function_exists('lf_get_homepage_section_config')) {
-		$homepage = [
-			'post_id' => $home_id,
-			'config' => lf_get_homepage_section_config(),
+	$business_name = is_array($entity) ? (string) ($entity['name'] ?? get_bloginfo('name')) : get_bloginfo('name');
+	$niche = (string) get_option(LF_HOMEPAGE_NICHE_OPTION, 'general');
+	$city = (string) get_option('lf_homepage_city', '');
+	if ($city === '' && is_array($entity)) {
+		$city = (string) ($entity['address_parts']['city'] ?? '');
+		if ($city === '' && !empty($entity['service_areas'][0])) {
+			$city = (string) $entity['service_areas'][0];
+		}
+	}
+	$keywords = lf_homepage_keywords();
+	$samples = lf_ai_studio_collect_selected_samples();
+	$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
+	$order = function_exists('lf_homepage_controller_order') ? lf_homepage_controller_order() : [];
+	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
+	$hero_variant = isset($config['hero']['variant']) ? (string) $config['hero']['variant'] : 'default';
+
+	$sections = [];
+	foreach ($order as $section_id) {
+		$section = $config[$section_id] ?? null;
+		if (!is_array($section) || empty($section['enabled'])) {
+			continue;
+		}
+		$schema = $registry[$section_id] ?? [];
+		$allowed = lf_ai_studio_homepage_allowed_fields($section_id, $schema);
+		$sections[] = [
+			'section_id' => $section_id,
+			'enabled' => true,
+			'allowed_fields' => $allowed,
 		];
 	}
-	return [
-		'schema_version' => '1.0',
-		'scope' => 'homepage',
+
+	$internal_links = lf_ai_studio_homepage_internal_links();
+
+	$base = [
+		'business_name' => $business_name,
+		'niche' => $niche,
+		'city_region' => $city,
 		'keywords' => $keywords,
+		'hero_variant' => $hero_variant,
 		'writing_samples' => $samples,
-		'business_entity' => $entity,
+		'section_order' => $order,
 		'sections' => $sections,
-		'homepage' => $homepage,
+		'internal_links' => $internal_links,
 	];
+	$request_id = lf_ai_studio_homepage_request_id($base);
+
+	return [
+		'request_id' => $request_id,
+	] + $base;
+}
+
+function lf_ai_studio_homepage_allowed_fields(string $section_id, array $schema): array {
+	$fields = $schema['fields'] ?? [];
+	$allowed_types = ['text', 'textarea', 'list', 'richtext'];
+	$blocked_keys = [
+		'section_background',
+		'variant',
+		'service_intro_columns',
+		'service_intro_max_items',
+		'service_intro_show_images',
+		'cta_primary_enabled',
+		'cta_secondary_enabled',
+		'cta_primary_action',
+		'cta_secondary_action',
+		'cta_primary_url',
+		'cta_secondary_url',
+		'cta_ghl_override',
+		'hero_media',
+		'hero_image_id',
+		'image_id',
+		'image_position',
+		'trust_max_items',
+		'trust_rating',
+		'trust_review_count',
+		'posts_per_page',
+		'faq_max_items',
+		'nearby_areas_max',
+		'icon_enabled',
+		'icon_slug',
+		'icon_position',
+		'icon_size',
+		'icon_color',
+	];
+	$out = [];
+	foreach ($fields as $field) {
+		$key = $field['key'] ?? '';
+		$type = $field['type'] ?? 'text';
+		if ($key === '' || in_array($key, $blocked_keys, true)) {
+			continue;
+		}
+		if (!in_array($type, $allowed_types, true)) {
+			continue;
+		}
+		$out[] = $section_id . '.' . $key;
+	}
+	return $out;
+}
+
+function lf_ai_studio_homepage_internal_links(): array {
+	$services = get_posts([
+		'post_type' => 'lf_service',
+		'post_status' => 'publish',
+		'posts_per_page' => 200,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+		'fields' => 'ids',
+	]);
+	$areas = get_posts([
+		'post_type' => 'lf_service_area',
+		'post_status' => 'publish',
+		'posts_per_page' => 200,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+		'fields' => 'ids',
+	]);
+	$service_targets = [];
+	foreach ($services as $id) {
+		$post = get_post($id);
+		if ($post instanceof \WP_Post) {
+			$service_targets[] = ['id' => $post->ID, 'slug' => $post->post_name];
+		}
+	}
+	$area_targets = [];
+	foreach ($areas as $id) {
+		$post = get_post($id);
+		if ($post instanceof \WP_Post) {
+			$area_targets[] = ['id' => $post->ID, 'slug' => $post->post_name];
+		}
+	}
+	return [
+		'services' => $service_targets,
+		'service_areas' => $area_targets,
+	];
+}
+
+function lf_ai_studio_homepage_request_id(array $base): string {
+	$hash = hash('sha256', wp_json_encode($base));
+	return substr($hash, 0, 16);
 }
 
 function lf_ai_studio_build_blueprint(): array {

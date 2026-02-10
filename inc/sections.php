@@ -295,6 +295,24 @@ function lf_sections_registry(): array {
 			],
 			'render' => 'lf_sections_render_trust_reviews',
 		],
+		'service_intro' => [
+			'label' => __('Service Intro Boxes', 'leadsforward-core'),
+			'contexts' => ['homepage', 'page', 'service', 'service_area'],
+			'fields' => [
+				$bg_field,
+				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Service options built for homeowners', 'leadsforward-core')],
+				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Explore our core services with clear scopes and upfront expectations.', 'leadsforward-core')],
+				['key' => 'service_intro_columns', 'label' => __('Columns', 'leadsforward-core'), 'type' => 'select', 'default' => '3', 'options' => [
+					'3' => __('3 columns', 'leadsforward-core'),
+					'4' => __('4 columns', 'leadsforward-core'),
+					'5' => __('5 columns', 'leadsforward-core'),
+					'6' => __('6 columns', 'leadsforward-core'),
+				]],
+				['key' => 'service_intro_max_items', 'label' => __('Max services', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
+				['key' => 'service_intro_show_images', 'label' => __('Show images', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
+			],
+			'render' => 'lf_sections_render_service_intro',
+		],
 		'service_grid' => [
 			'label' => __('Services Grid', 'leadsforward-core'),
 			'contexts' => ['page'],
@@ -393,6 +411,7 @@ function lf_sections_registry(): array {
 function lf_sections_default_order(string $context): array {
 	$base = ['hero', 'trust_bar', 'benefits', 'process', 'faq_accordion', 'cta', 'related_links'];
 	if ($context === 'homepage') {
+		array_splice($base, 2, 0, ['service_intro']);
 		array_splice($base, 3, 0, ['service_details', 'content_image', 'image_content']);
 		$base[] = 'map_nap';
 		return $base;
@@ -1098,6 +1117,32 @@ function lf_sections_render_service_grid(string $context, array $settings, \WP_P
 		'context'    => ['homepage' => ($context === 'homepage'), 'section' => $section],
 	];
 	lf_render_block_template('service-grid', $block, false, $block['context']);
+}
+
+function lf_sections_render_service_intro(string $context, array $settings, \WP_Post $post): void {
+	if (!function_exists('lf_render_block_template')) {
+		return;
+	}
+	$section = [
+		'section_heading' => $settings['section_heading'] ?? '',
+		'section_intro' => $settings['section_intro'] ?? '',
+		'section_background' => $settings['section_background'] ?? 'light',
+		'service_intro_columns' => $settings['service_intro_columns'] ?? '3',
+		'service_intro_max_items' => $settings['service_intro_max_items'] ?? '6',
+		'service_intro_show_images' => $settings['service_intro_show_images'] ?? '1',
+		'icon_enabled' => $settings['icon_enabled'] ?? '0',
+		'icon_slug' => $settings['icon_slug'] ?? '',
+		'icon_position' => $settings['icon_position'] ?? 'left',
+		'icon_size' => $settings['icon_size'] ?? 'md',
+		'icon_color' => $settings['icon_color'] ?? 'primary',
+	];
+	$block = [
+		'id'         => 'lf-service-intro',
+		'variant'    => 'default',
+		'attributes' => ['variant' => 'default'],
+		'context'    => ['homepage' => ($context === 'homepage'), 'section' => $section],
+	];
+	lf_render_block_template('service-intro', $block, false, $block['context']);
 }
 
 function lf_sections_render_service_areas(string $context, array $settings, \WP_Post $post): void {
