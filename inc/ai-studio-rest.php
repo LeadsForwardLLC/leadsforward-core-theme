@@ -55,7 +55,8 @@ function lf_ai_studio_build_blueprint_rest(): array {
 	$site_url = home_url('/');
 	$site_name = get_bloginfo('name');
 	$entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
-	$niche = (string) get_option('lf_homepage_niche_slug', 'general');
+	$niche_option = defined('LF_HOMEPAGE_NICHE_OPTION') ? LF_HOMEPAGE_NICHE_OPTION : 'lf_homepage_niche_slug';
+	$niche = (string) get_option($niche_option, 'general');
 	$niche_profile = function_exists('lf_get_niche') ? lf_get_niche($niche) : ['slug' => $niche];
 	$homepage = lf_ai_studio_collect_homepage();
 	$inventory = lf_ai_studio_collect_pages_inventory();

@@ -181,10 +181,7 @@ function lf_wizard_handle_post(): void {
 				lf_update_business_info_value('lf_business_place_address', $data['business_place_address'] ?? '');
 				lf_update_business_info_value('lf_business_map_embed', $data['business_map_embed'] ?? '');
 			}
-			// Force homepage sections to initialize after wizard (ensures front-end renders).
-			if (function_exists('lf_homepage_apply_niche_config')) {
-				lf_homepage_apply_niche_config($data['niche_slug'], $data);
-			}
+			// Homepage config is applied during setup runner.
 			$sample_files = function_exists('lf_ai_studio_get_sample_files') ? lf_ai_studio_get_sample_files() : [];
 			$valid_samples = array_values(array_intersect($homepage_samples, $sample_files));
 			if ($hero_variant !== '' && function_exists('lf_sections_hero_variant_options')) {
@@ -358,10 +355,9 @@ function lf_wizard_render_page(): void {
 		return;
 	}
 
+	echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
 	$step = isset($_GET['step']) ? max(1, min(5, (int) $_GET['step'])) : 1;
 	$errors = isset($_GET['errors']) ? sanitize_text_field($_GET['msg'] ?? '') : '';
-
-	echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
 	if ($settings_saved) {
 		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Settings saved.', 'leadsforward-core') . '</p></div>';
 	}
@@ -376,10 +372,16 @@ function lf_wizard_render_page(): void {
 	if ($reset_error === 'confirm') {
 		echo '<div class="notice notice-error"><p>' . esc_html__('You must type RESET exactly to confirm.', 'leadsforward-core') . '</p></div>';
 	}
-	lf_wizard_render_setup_settings_panel();
+	echo '<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0; border-left: 4px solid #3b82f6;">';
+	echo '<h2 style="margin-top:0;">' . esc_html__('Setup Wizard + AI Studio', 'leadsforward-core') . '</h2>';
+	echo '<p class="description">' . esc_html__('Complete the wizard to store business info, keywords, and writing samples. AI Studio uses these inputs for regeneration.', 'leadsforward-core') . '</p>';
+	echo '<p><a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=lf-ops&step=' . $step)) . '#lf-setup-wizard">' . esc_html__('Continue setup wizard', 'leadsforward-core') . '</a> ';
+	echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=lf-ai-studio')) . '">' . esc_html__('Open AI Studio (Advanced)', 'leadsforward-core') . '</a></p>';
+	echo '</div>';
 	if ($errors) {
 		echo '<div class="notice notice-error"><p>' . esc_html($errors) . '</p></div>';
 	}
+	echo '<div id="lf-setup-wizard">';
 	echo '<p>' . esc_html__('Step', 'leadsforward-core') . ' ' . $step . ' / 5</p>';
 
 	$method = 'post';
@@ -790,6 +792,8 @@ function lf_wizard_render_page(): void {
 		echo '<p>' . esc_html__('Click Generate to create pages, services, service areas, menus, and set Theme Options. This will not duplicate existing pages.', 'leadsforward-core') . '</p>';
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Generate site', 'leadsforward-core') . '" /></p></form>';
 	}
+	echo '</div>';
+	lf_wizard_render_setup_settings_panel();
 	echo '</div>';
 }
 

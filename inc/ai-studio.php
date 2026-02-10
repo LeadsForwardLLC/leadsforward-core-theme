@@ -72,6 +72,7 @@ function lf_ai_studio_handle_save(): void {
 
 function lf_ai_studio_handle_generate(): void {
 	if (!current_user_can('edit_theme_options')) {
+		error_log('LF DEBUG: Regenerate Homepage blocked: insufficient permissions.');
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_ai_studio_generate', 'lf_ai_studio_generate_nonce');
@@ -137,10 +138,29 @@ function lf_ai_studio_render_page(): void {
 	$samples_files = lf_ai_studio_get_sample_files();
 	$blueprint_preview = lf_ai_studio_build_homepage_blueprint();
 	$blueprint_json = wp_json_encode($blueprint_preview, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+	$wizard_complete = (bool) get_option('lf_setup_wizard_complete', false);
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('AI Studio (Advanced)', 'leadsforward-core'); ?></h1>
 		<p class="description"><?php esc_html_e('Regenerate homepage content via the orchestrator. Setup Wizard handles first‑run inputs.', 'leadsforward-core'); ?></p>
+		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0; border-left: 4px solid #3b82f6;">
+			<h2 style="margin-top:0;"><?php esc_html_e('Setup Wizard Connection', 'leadsforward-core'); ?></h2>
+			<p class="description">
+				<?php if ($wizard_complete) : ?>
+					<?php esc_html_e('AI Studio uses the business info, keywords, and samples saved in the Setup Wizard.', 'leadsforward-core'); ?>
+				<?php else : ?>
+					<?php esc_html_e('Run the Setup Wizard first to store business info, keywords, and writing samples used by AI Studio.', 'leadsforward-core'); ?>
+				<?php endif; ?>
+			</p>
+			<p>
+				<a class="button button-primary" href="<?php echo esc_url(admin_url('admin.php?page=lf-ops')); ?>">
+					<?php echo $wizard_complete ? esc_html__('Review Setup Wizard', 'leadsforward-core') : esc_html__('Run Setup Wizard', 'leadsforward-core'); ?>
+				</a>
+				<a class="button" href="<?php echo esc_url(admin_url('admin.php?page=lf-homepage-settings')); ?>">
+					<?php esc_html_e('Open Homepage Builder', 'leadsforward-core'); ?>
+				</a>
+			</p>
+		</div>
 		<?php if ($saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('AI Studio settings saved.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
@@ -249,22 +269,48 @@ function lf_ai_studio_run_homepage_generation(): array {
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$secret = (string) get_option('lf_ai_studio_secret', '');
 	if (!$enabled) {
+		error_log('LF DEBUG: Regenerate Homepage blocked: AI Studio disabled.');
 		return ['error' => __('AI Studio is disabled.', 'leadsforward-core')];
 	}
 	if ($webhook === '' || $secret === '') {
+		error_log('LF DEBUG: Regenerate Homepage blocked: missing webhook or secret.');
 		return ['error' => __('Webhook URL and shared secret are required.', 'leadsforward-core')];
 	}
 	$keywords = lf_homepage_keywords();
 	if (empty($keywords['primary'])) {
+		error_log('LF DEBUG: Regenerate Homepage blocked: missing primary keyword.');
 		return ['error' => __('Homepage primary keyword is required.', 'leadsforward-core')];
 	}
 	$samples = lf_ai_studio_collect_selected_samples();
 	if (empty($samples)) {
+		error_log('LF DEBUG: Regenerate Homepage blocked: missing writing samples.');
 		return ['error' => __('Select 1–3 writing samples in the Setup Wizard.', 'leadsforward-core')];
 	}
 	$request = lf_ai_studio_build_homepage_blueprint();
+	if (!is_array($request)) {
+		error_log('LF DEBUG: Regenerate Homepage blocked: blueprint build returned non-array.');
+		return ['error' => __('Homepage blueprint build failed.', 'leadsforward-core')];
+	}
 	if (isset($request['error'])) {
+		error_log('LF DEBUG: Regenerate Homepage blocked: ' . (string) $request['error']);
 		return ['error' => (string) $request['error']];
+	}
+	$blueprint = $request['blueprint'] ?? null;
+	if (!is_array($blueprint)) {
+		error_log('LF DEBUG: Regenerate Homepage blocked: missing blueprint.');
+		return ['error' => __('Homepage blueprint is missing.', 'leadsforward-core')];
+	}
+	if (($blueprint['page'] ?? '') !== 'homepage') {
+		error_log('LF DEBUG: Regenerate Homepage blocked: blueprint page mismatch.');
+		return ['error' => __('Homepage blueprint page must be "homepage".', 'leadsforward-core')];
+	}
+	if (empty($blueprint['sections']) || !is_array($blueprint['sections'])) {
+		error_log('LF DEBUG: Regenerate Homepage blocked: blueprint sections missing.');
+		return ['error' => __('Homepage blueprint sections are missing.', 'leadsforward-core')];
+	}
+	if (empty($blueprint['order']) || !is_array($blueprint['order'])) {
+		error_log('LF DEBUG: Regenerate Homepage blocked: blueprint order missing.');
+		return ['error' => __('Homepage blueprint order is missing.', 'leadsforward-core')];
 	}
 	$job_id = lf_ai_studio_create_job($request);
 	return lf_ai_studio_send_request($request, $job_id);
@@ -285,6 +331,10 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 			: ['keys' => []],
 	];
 	error_log('LF AI Studio payload keys: ' . wp_json_encode($log_payload));
+	$webhook_host = wp_parse_url($webhook, PHP_URL_HOST);
+	$webhook_host = is_string($webhook_host) ? $webhook_host : '';
+	error_log('LF AI Studio webhook invoked: job=' . $job_id . ($webhook_host ? ' host=' . $webhook_host : ''));
+	error_log('LF DEBUG: About to POST homepage payload to orchestrator');
 	$response = wp_remote_post($webhook, [
 		'headers' => [
 			'Authorization' => 'Bearer ' . $secret,
@@ -293,16 +343,28 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 		'timeout' => 45,
 		'body' => wp_json_encode($request),
 	]);
+	error_log('LF DEBUG: Webhook call returned' . print_r($response, true));
 	if (is_wp_error($response)) {
 		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
 		update_post_meta($job_id, 'lf_ai_job_error', $response->get_error_message());
+		error_log('LF DEBUG: Regenerate Homepage failed: WP error on webhook call: ' . $response->get_error_message());
 		return ['error' => $response->get_error_message(), 'job_id' => $job_id];
 	}
 	$body = wp_remote_retrieve_body($response);
+	$status = (int) wp_remote_retrieve_response_code($response);
+	if ($status < 200 || $status >= 300) {
+		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
+		update_post_meta($job_id, 'lf_ai_job_error', 'http_' . $status);
+		update_post_meta($job_id, 'lf_ai_job_response', $body);
+		error_log('LF DEBUG: Regenerate Homepage failed: HTTP ' . $status);
+		return ['error' => sprintf(__('Orchestrator returned HTTP %d: %s', 'leadsforward-core'), $status, (string) $body), 'job_id' => $job_id];
+	}
 	$payload = json_decode($body, true);
 	if (!is_array($payload)) {
 		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
 		update_post_meta($job_id, 'lf_ai_job_error', 'invalid_json');
+		update_post_meta($job_id, 'lf_ai_job_response', $body);
+		error_log('LF DEBUG: Regenerate Homepage failed: invalid JSON response.');
 		return ['error' => __('Invalid JSON response from orchestrator.', 'leadsforward-core'), 'job_id' => $job_id];
 	}
 	if (!empty($payload['request_id'])) {
@@ -487,6 +549,8 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 			'page' => 'homepage',
 			'sections' => $blueprint_sections,
 			'order' => $order,
+			'services' => lf_ai_studio_homepage_service_catalog(),
+			'service_areas' => lf_ai_studio_homepage_area_catalog(),
 		],
 	];
 	$request_id = lf_ai_studio_homepage_request_id($base);
@@ -562,6 +626,50 @@ function lf_ai_studio_homepage_section_type(string $section_id): string {
 		default:
 			return $section_id;
 	}
+}
+
+function lf_ai_studio_homepage_service_catalog(): array {
+	$services = get_posts([
+		'post_type' => 'lf_service',
+		'post_status' => 'publish',
+		'posts_per_page' => 200,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+	]);
+	$out = [];
+	foreach ($services as $service) {
+		if (!$service instanceof \WP_Post) {
+			continue;
+		}
+		$out[] = [
+			'id' => $service->ID,
+			'slug' => $service->post_name,
+			'title' => $service->post_title,
+		];
+	}
+	return $out;
+}
+
+function lf_ai_studio_homepage_area_catalog(): array {
+	$areas = get_posts([
+		'post_type' => 'lf_service_area',
+		'post_status' => 'publish',
+		'posts_per_page' => 200,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+	]);
+	$out = [];
+	foreach ($areas as $area) {
+		if (!$area instanceof \WP_Post) {
+			continue;
+		}
+		$out[] = [
+			'id' => $area->ID,
+			'slug' => $area->post_name,
+			'title' => $area->post_title,
+		];
+	}
+	return $out;
 }
 
 function lf_ai_studio_homepage_internal_links(): array {
@@ -746,6 +854,20 @@ function lf_ai_studio_apply_payload(array $payload): array {
 			$changes['homepage'] = true;
 		}
 	}
+	if (!$changes['homepage'] && function_exists('lf_get_homepage_section_config')) {
+		$updates = lf_ai_studio_extract_homepage_updates($payload);
+		if (!empty($updates)) {
+			$config = lf_get_homepage_section_config();
+			foreach ($config as $type => $settings) {
+				if (!isset($updates[$type]) || !is_array($updates[$type])) {
+					continue;
+				}
+				$config[$type] = array_merge($settings, lf_sections_sanitize_settings($type, $updates[$type]));
+			}
+			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+			$changes['homepage'] = true;
+		}
+	}
 	if (!empty($payload['posts']) && is_array($payload['posts'])) {
 		foreach ($payload['posts'] as $post_payload) {
 			if (!is_array($post_payload)) {
@@ -804,4 +926,45 @@ function lf_ai_studio_apply_payload(array $payload): array {
 	}
 	$summary = implode('; ', $summary_parts);
 	return ['success' => true, 'summary' => $summary, 'changes' => $changes];
+}
+
+function lf_ai_studio_extract_homepage_updates(array $payload): array {
+	$updates = $payload['updates'] ?? [];
+	if (!is_array($updates)) {
+		return [];
+	}
+	$out = [];
+	foreach ($updates as $update) {
+		if (!is_array($update)) {
+			continue;
+		}
+		$target = $update['target'] ?? '';
+		$id = $update['id'] ?? '';
+		if ($target !== 'options' || $id !== 'homepage') {
+			continue;
+		}
+		$fields = $update['fields'] ?? $update['data'] ?? [];
+		if (!is_array($fields)) {
+			continue;
+		}
+		foreach ($fields as $key => $value) {
+			if (!is_string($key)) {
+				continue;
+			}
+			$parts = explode('.', $key, 2);
+			if (count($parts) !== 2) {
+				continue;
+			}
+			$section_id = trim($parts[0]);
+			$field_key = trim($parts[1]);
+			if ($section_id === '' || $field_key === '') {
+				continue;
+			}
+			if (!isset($out[$section_id])) {
+				$out[$section_id] = [];
+			}
+			$out[$section_id][$field_key] = $value;
+		}
+	}
+	return $out;
 }
