@@ -26,7 +26,7 @@ const LF_HOMEPAGE_ORDER_OPTION = 'lf_homepage_section_order';
 const LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION = 'lf_homepage_manual_override';
 
 /**
- * Recommended default order: Hero → Services → Social Proof → FAQs → Final CTA → Areas + Map.
+ * Recommended default order: Hero → Trust → Benefits → Services → Media → Process → FAQ → CTA → Links → Areas + Map.
  * Drag-and-drop order is stored in options and always respected.
  *
  * @return string[]
@@ -36,12 +36,34 @@ function lf_homepage_default_order(): array {
 }
 
 /**
+ * Legacy order preserved for pre-existing sites without a stored order.
+ *
+ * @return string[]
+ */
+function lf_homepage_legacy_order(): array {
+	return [
+		'hero',
+		'trust_bar',
+		'service_intro',
+		'service_details',
+		'content_image',
+		'image_content',
+		'benefits',
+		'process',
+		'faq_accordion',
+		'cta',
+		'related_links',
+		'map_nap',
+	];
+}
+
+/**
  * Sanitize section order: keep hero first, drop unknowns, append missing.
  *
  * @param array $order
  * @return string[]
  */
-function lf_homepage_sanitize_order(array $order): array {
+function lf_homepage_sanitize_order(array $order, bool $append_missing = true): array {
 	$canonical = lf_homepage_default_order();
 	$clean = [];
 	foreach ($order as $item) {
@@ -53,9 +75,11 @@ function lf_homepage_sanitize_order(array $order): array {
 			$clean[] = $item;
 		}
 	}
-	foreach ($canonical as $type) {
-		if (!in_array($type, $clean, true)) {
-			$clean[] = $type;
+	if ($append_missing) {
+		foreach ($canonical as $type) {
+			if (!in_array($type, $clean, true)) {
+				$clean[] = $type;
+			}
 		}
 	}
 	return $clean;
@@ -69,7 +93,14 @@ function lf_homepage_sanitize_order(array $order): array {
 function lf_homepage_controller_order(): array {
 	$stored = get_option(LF_HOMEPAGE_ORDER_OPTION, null);
 	if (is_array($stored) && !empty($stored)) {
-		return lf_homepage_sanitize_order($stored);
+		return lf_homepage_sanitize_order($stored, false);
+	}
+	$stored_config = get_option(LF_HOMEPAGE_CONFIG_OPTION, null);
+	if (is_array($stored_config) && !empty($stored_config)) {
+		$has_new_instances = isset($stored_config['content_image_a']) || isset($stored_config['image_content_b']) || isset($stored_config['content_image_c']);
+		if (!$has_new_instances) {
+			return lf_homepage_legacy_order();
+		}
 	}
 	return lf_homepage_default_order();
 }

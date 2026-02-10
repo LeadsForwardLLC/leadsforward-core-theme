@@ -157,6 +157,71 @@ function lf_sections_registry(): array {
 			'bottom-right' => __('Bottom right', 'leadsforward-core'),
 		]],
 	];
+	$media_fields_a = $media_fields;
+	foreach ($media_fields_a as &$field) {
+		if (($field['key'] ?? '') === 'section_heading') {
+			$field['default'] = __('Experience & communication', 'leadsforward-core');
+		}
+		if (($field['key'] ?? '') === 'section_intro') {
+			$field['default'] = __('Know what to expect before, during, and after service.', 'leadsforward-core');
+		}
+		if (($field['key'] ?? '') === 'section_body') {
+			$field['default'] = __('We keep every step clear: confirm scope, share timelines, and follow through with updates. You will always know who is coming, what the next step is, and how to reach us.', 'leadsforward-core');
+		}
+		if (($field['key'] ?? '') === 'cta_primary_override') {
+			$field['default'] = __('Request service details', 'leadsforward-core');
+		}
+		if (($field['key'] ?? '') === 'image_alt') {
+			$field['default'] = __('Technician reviewing service details with a homeowner', 'leadsforward-core');
+		}
+	}
+	unset($field);
+	$media_fields_a[] = ['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'Experience & Communication'];
+	$media_fields_a[] = ['key' => 'section_purpose', 'label' => __('Section purpose', 'leadsforward-core'), 'type' => 'text', 'default' => 'Explain what it\'s like to work with this company.'];
+
+	$media_fields_b = $media_fields;
+	foreach ($media_fields_b as &$field) {
+		if (($field['key'] ?? '') === 'section_heading') {
+			$field['default'] = __('Quality & craftsmanship', 'leadsforward-core');
+		}
+		if (($field['key'] ?? '') === 'section_intro') {
+			$field['default'] = __('Materials, workmanship, and standards you can trust.', 'leadsforward-core');
+		}
+		if (($field['key'] ?? '') === 'section_body') {
+			$field['default'] = __('Our team follows documented standards and best practices on every job. We use proven materials, keep work areas clean, and finish with a quality check you can see.', 'leadsforward-core');
+		}
+		if (($field['key'] ?? '') === 'cta_primary_override') {
+			$field['default'] = __('View our quality promise', 'leadsforward-core');
+		}
+		if (($field['key'] ?? '') === 'image_alt') {
+			$field['default'] = __('Close-up of completed craftsmanship detail', 'leadsforward-core');
+		}
+	}
+	unset($field);
+	$media_fields_b[] = ['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'Quality & Craftsmanship'];
+	$media_fields_b[] = ['key' => 'section_purpose', 'label' => __('Section purpose', 'leadsforward-core'), 'type' => 'text', 'default' => 'Reinforce workmanship, materials, and standards.'];
+
+	$media_fields_c = $media_fields;
+	foreach ($media_fields_c as &$field) {
+		if (($field['key'] ?? '') === 'section_heading') {
+			$field['default'] = __('Local trust & reliability', 'leadsforward-core');
+		}
+		if (($field['key'] ?? '') === 'section_intro') {
+			$field['default'] = __('A nearby team that shows up and stands behind the work.', 'leadsforward-core');
+		}
+		if (($field['key'] ?? '') === 'section_body') {
+			$field['default'] = __('We are accountable to the communities we serve. Expect fast responses, honest recommendations, and a team that treats your home with respect.', 'leadsforward-core');
+		}
+		if (($field['key'] ?? '') === 'cta_primary_override') {
+			$field['default'] = __('Meet the local team', 'leadsforward-core');
+		}
+		if (($field['key'] ?? '') === 'image_alt') {
+			$field['default'] = __('Local service team arriving for a scheduled visit', 'leadsforward-core');
+		}
+	}
+	unset($field);
+	$media_fields_c[] = ['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'Local Trust & Reliability'];
+	$media_fields_c[] = ['key' => 'section_purpose', 'label' => __('Section purpose', 'leadsforward-core'), 'type' => 'text', 'default' => 'Emphasize local ownership, responsiveness, and accountability.'];
 	$icon_fields = lf_sections_icon_fields();
 	$sections = [
 		'hero' => [
@@ -223,11 +288,29 @@ function lf_sections_registry(): array {
 			'fields' => $media_fields,
 			'render' => 'lf_sections_render_content_image',
 		],
+		'content_image_a' => [
+			'label' => __('Content with Image (A)', 'leadsforward-core'),
+			'contexts' => ['homepage'],
+			'fields' => $media_fields_a,
+			'render' => 'lf_sections_render_content_image',
+		],
 		'image_content' => [
 			'label' => __('Image with Content', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => $media_fields,
 			'render' => 'lf_sections_render_image_content',
+		],
+		'image_content_b' => [
+			'label' => __('Image with Content (B)', 'leadsforward-core'),
+			'contexts' => ['homepage'],
+			'fields' => $media_fields_b,
+			'render' => 'lf_sections_render_image_content',
+		],
+		'content_image_c' => [
+			'label' => __('Content with Image (C)', 'leadsforward-core'),
+			'contexts' => ['homepage'],
+			'fields' => $media_fields_c,
+			'render' => 'lf_sections_render_content_image',
 		],
 		'content' => [
 			'label' => __('Content', 'leadsforward-core'),
@@ -411,10 +494,21 @@ function lf_sections_registry(): array {
 function lf_sections_default_order(string $context): array {
 	$base = ['hero', 'trust_bar', 'benefits', 'process', 'faq_accordion', 'cta', 'related_links'];
 	if ($context === 'homepage') {
-		array_splice($base, 2, 0, ['service_intro']);
-		array_splice($base, 3, 0, ['service_details', 'content_image', 'image_content']);
-		$base[] = 'map_nap';
-		return $base;
+		return [
+			'hero',
+			'trust_bar',
+			'benefits',
+			'service_intro',
+			'service_details',
+			'content_image_a',
+			'image_content_b',
+			'content_image_c',
+			'process',
+			'faq_accordion',
+			'cta',
+			'related_links',
+			'map_nap',
+		];
 	}
 	if ($context === 'service') {
 		array_splice($base, 3, 0, ['content']);

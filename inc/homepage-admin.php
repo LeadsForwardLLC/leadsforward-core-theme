@@ -64,6 +64,13 @@ function lf_homepage_admin_save(): void {
 	$cta_action_keys = array_keys(function_exists('lf_sections_cta_action_options') ? lf_sections_cta_action_options(true) : ['' => '', 'quote' => '', 'call' => '', 'link' => '']);
 	$bg_keys = function_exists('lf_sections_bg_options') ? array_keys(lf_sections_bg_options()) : ['light', 'soft', 'dark', 'card'];
 	$icon_slugs = function_exists('lf_icon_options') ? array_keys(lf_icon_options()) : [];
+	$media_prefixes = [
+		'content_image' => 'lf_hp_ci_',
+		'content_image_a' => 'lf_hp_ci_a_',
+		'content_image_c' => 'lf_hp_ci_c_',
+		'image_content' => 'lf_hp_ic_',
+		'image_content_b' => 'lf_hp_ic_b_',
+	];
 	$order_input = isset($_POST['lf_hp_order']) ? array_map('sanitize_text_field', (array) $_POST['lf_hp_order']) : [];
 	$order = function_exists('lf_homepage_sanitize_order') ? lf_homepage_sanitize_order($order_input) : $order;
 	update_option(LF_HOMEPAGE_ORDER_OPTION, $order, true);
@@ -148,8 +155,8 @@ function lf_homepage_admin_save(): void {
 			$config[$type]['section_intro'] = isset($_POST['lf_hp_process_intro']) ? sanitize_textarea_field($_POST['lf_hp_process_intro']) : '';
 			$config[$type]['process_steps'] = isset($_POST['lf_hp_process_steps']) ? sanitize_textarea_field($_POST['lf_hp_process_steps']) : '';
 		}
-		if (in_array($type, ['content_image', 'image_content'], true)) {
-			$prefix = $type === 'content_image' ? 'lf_hp_ci_' : 'lf_hp_ic_';
+		if (isset($media_prefixes[$type])) {
+			$prefix = $media_prefixes[$type];
 			$config[$type]['section_heading'] = isset($_POST[$prefix . 'heading']) ? sanitize_text_field($_POST[$prefix . 'heading']) : '';
 			$config[$type]['section_intro'] = isset($_POST[$prefix . 'support']) ? sanitize_textarea_field($_POST[$prefix . 'support']) : '';
 			$config[$type]['section_body'] = isset($_POST[$prefix . 'body']) ? wp_kses_post(wp_unslash($_POST[$prefix . 'body'])) : '';
@@ -201,6 +208,9 @@ function lf_homepage_admin_section_labels(): array {
 		'trust_bar'      => __('Trust Bar', 'leadsforward-core'),
 		'benefits'       => __('Benefits / Why Choose Us', 'leadsforward-core'),
 		'service_intro'  => __('Service Intro Boxes', 'leadsforward-core'),
+		'content_image_a' => __('Content with Image (A)', 'leadsforward-core'),
+		'image_content_b' => __('Image with Content (B)', 'leadsforward-core'),
+		'content_image_c' => __('Content with Image (C)', 'leadsforward-core'),
 		'service_details' => __('Service Details', 'leadsforward-core'),
 		'content_image'  => __('Content with Image', 'leadsforward-core'),
 		'image_content'  => __('Image with Content', 'leadsforward-core'),
@@ -430,7 +440,10 @@ function lf_homepage_admin_render(): void {
 	$order = lf_homepage_controller_order();
 	$labels = lf_homepage_admin_section_labels();
 	$section_defs = function_exists('lf_sections_get_context_sections') ? lf_sections_get_context_sections('homepage') : [];
-	$section_list = array_values($section_defs);
+	$section_list = array_values(array_filter($section_defs, function ($def) use ($order) {
+		$id = is_array($def) && isset($def['id']) ? (string) $def['id'] : '';
+		return $id !== '' && in_array($id, $order, true);
+	}));
 	$variants = function_exists('lf_sections_hero_variant_options') ? lf_sections_hero_variant_options() : [
 		'default' => __('Authority Split (Recommended)', 'leadsforward-core'),
 		'a'       => __('Conversion Stack', 'leadsforward-core'),
@@ -469,6 +482,13 @@ function lf_homepage_admin_render(): void {
 		'primary' => __('Primary', 'leadsforward-core'),
 		'secondary' => __('Secondary', 'leadsforward-core'),
 		'muted' => __('Muted', 'leadsforward-core'),
+	];
+	$media_prefixes = [
+		'content_image' => 'lf_hp_ci_',
+		'content_image_a' => 'lf_hp_ci_a_',
+		'content_image_c' => 'lf_hp_ci_c_',
+		'image_content' => 'lf_hp_ic_',
+		'image_content_b' => 'lf_hp_ic_b_',
 	];
 	$cta_enabled_options = function_exists('lf_sections_toggle_options') ? lf_sections_toggle_options() : [
 		'1' => __('On', 'leadsforward-core'),
@@ -819,9 +839,9 @@ function lf_homepage_admin_render(): void {
 										<td><textarea class="large-text" name="lf_hp_process_steps" id="lf_hp_process_steps" rows="3"><?php echo esc_textarea($sec['process_steps'] ?? ''); ?></textarea></td>
 									</tr>
 									<?php endif; ?>
-									<?php if (in_array($type, ['content_image', 'image_content'], true)) : ?>
+									<?php if (isset($media_prefixes[$type])) : ?>
 									<?php
-										$prefix = $type === 'content_image' ? 'lf_hp_ci_' : 'lf_hp_ic_';
+										$prefix = $media_prefixes[$type];
 										$image_id = isset($sec['image_id']) ? (int) $sec['image_id'] : 0;
 										$thumb = $image_id ? wp_get_attachment_image_src($image_id, 'thumbnail') : null;
 										$img_html = $thumb ? '<img src="' . esc_url($thumb[0]) . '" alt="" />' : '';

@@ -433,10 +433,14 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 		}
 		$schema = $registry[$section_id] ?? [];
 		$allowed = lf_ai_studio_homepage_allowed_fields($section_id, $schema);
+		$intent = (string) ($section['section_intent'] ?? '');
+		$purpose = (string) ($section['section_purpose'] ?? '');
 		$sections[] = [
 			'section_id' => $section_id,
 			'enabled' => true,
 			'allowed_fields' => $allowed,
+			'intent' => $intent,
+			'purpose' => $purpose,
 		];
 	}
 
@@ -466,6 +470,8 @@ function lf_ai_studio_homepage_allowed_fields(string $section_id, array $schema)
 	$blocked_keys = [
 		'section_background',
 		'variant',
+		'section_intent',
+		'section_purpose',
 		'service_intro_columns',
 		'service_intro_max_items',
 		'service_intro_show_images',

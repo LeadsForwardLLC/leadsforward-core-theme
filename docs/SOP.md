@@ -342,3 +342,13 @@ Homepage Generation Flow (Builder‑aware)
 - Blueprint reads the current Homepage Builder config (enabled sections + order).
 - AI can only write to allowed copy fields; layout, order, and toggles are read‑only.
 - Allowed fields are flattened as `section_id.field_key` for safe mapping.
+
+---
+
+Homepage Pre‑AI Configuration (Append‑Only)
+------------------------------------------
+- Defaults apply only on fresh setups or when resetting homepage defaults.
+- Existing sites retain their saved homepage order and enabled sections.
+- Default order (fresh setups): Hero → Trust Bar → Benefits → Service Intro Boxes → Service Details → Content with Image (A) → Image with Content (B) → Content with Image (C) → Process → FAQ → CTA → Related Links → Service Areas + Map.
+- The default homepage order includes three media sections (A/B/C) with distinct intent metadata.
+- Intent (`section_intent`, `section_purpose`) guides AI generation and is not shown on the frontend.

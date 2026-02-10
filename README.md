@@ -215,6 +215,15 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 
 ---
 
+## Homepage Default Sections & Intent
+
+- **Default order (fresh setups):** Hero → Trust Bar → Benefits → Service Intro Boxes → Service Details → Content with Image (A) → Image with Content (B) → Content with Image (C) → Process → FAQ → CTA → Related Links → Service Areas + Map.
+- **Repeatable media sections:** A/B/C are distinct instances with different placeholder copy.
+- **Intent metadata:** Each media instance stores `section_intent` + `section_purpose` for AI guidance (not rendered).
+- **Why it exists:** Clear, differentiated content goals produce higher-quality AI output while keeping layout fully editable.
+
+---
+
 ## Page Builder Framework (Core Pages + Service + Service Area)
 
 - **Meta key:** `lf_pb_config` stores instance-based sections and order.
