@@ -438,19 +438,107 @@ function lf_ai_studio_collect_writing_samples(): array {
 	return [];
 }
 
-// Long-form density expansion – Step 3
-function lf_ai_studio_section_length_targets(string $section_type): array {
+function lf_ai_studio_llm_system_message(): string {
+	return implode("\n", [
+		'Return JSON only. No markdown, no commentary, no HTML.',
+		'Use only allowed_field_keys. Do not invent fields.',
+		'Headlines: never use dash or hyphen separators. Sentence case or title case only. No trailing punctuation unless a question mark. Hero headline max 12 words.',
+		'Benefits: 15-35 words each, max 2 sentences per benefit. No dash separators in benefit titles.',
+		'Content separation by page type:',
+		'Homepage: broad positioning; do not reuse service or area copy verbatim.',
+		'Services overview: broad authority content; no detailed process repetition; avoid excessive city modifiers.',
+		'Service page: deep service-specific content; do not reuse homepage hero copy; reference the exact service.',
+		'Service areas overview: broad coverage explanation; no detailed local signals per city.',
+		'Service area page: localized content; do not repeat service overview intro verbatim.',
+		'Never reuse sentences across page types.',
+		'FAQ strategy: create one global pool of 8-12 evergreen FAQs. Reuse across pages unless contextual variation is required. Homepage shows 5. Service pages show 4-6 relevant. Service area pages show 3-5 localized. Overview pages optionally 3-4.',
+		'CTA strategy: treat the homepage CTA section as the canonical global CTA copy. For each page, add exactly one contextual sentence in cta_subheadline_secondary. Never duplicate CTA sentences across pages.',
+	]);
+}
+
+function lf_ai_studio_faq_strategy(): array {
+	return [
+		'global_pool' => ['min' => 8, 'max' => 12],
+		'homepage' => ['count' => 5],
+		'service' => ['min' => 4, 'max' => 6],
+		'service_area' => ['min' => 3, 'max' => 5],
+		'services_overview' => ['min' => 3, 'max' => 4],
+		'service_areas_overview' => ['min' => 3, 'max' => 4],
+		'reuse_policy' => 'Reuse global pool whenever possible; only vary for context.',
+	];
+}
+
+function lf_ai_studio_cta_strategy(): array {
+	return [
+		'global_cta' => [
+			'write_once' => true,
+			'store' => 'options',
+			'fields' => ['cta_headline', 'cta_subheadline', 'cta_primary_override', 'cta_secondary_override'],
+		],
+		'page_context_sentence' => [
+			'field' => 'cta_subheadline_secondary',
+			'sentences' => 1,
+		],
+		'no_exact_duplicates' => true,
+	];
+}
+
+function lf_ai_studio_faq_target_range(string $page): array {
+	switch ($page) {
+		case 'homepage':
+			return ['min' => 5, 'max' => 5];
+		case 'service':
+			return ['min' => 4, 'max' => 6];
+		case 'service_area':
+			return ['min' => 3, 'max' => 5];
+		case 'services_overview':
+		case 'service_areas_overview':
+			return ['min' => 3, 'max' => 4];
+		default:
+			return [];
+	}
+}
+
+function lf_ai_studio_normalize_section_type(string $section_type): string {
 	switch ($section_type) {
+		case 'content_image_a':
+		case 'content_image_c':
+			return 'content_image';
+		case 'image_content_b':
+			return 'image_content';
+		default:
+			return $section_type;
+	}
+}
+
+// Long-form density expansion – Step 3
+function lf_ai_studio_section_length_targets(string $section_type, string $page = ''): array {
+	$type = lf_ai_studio_normalize_section_type($section_type);
+	switch ($type) {
 		case 'hero':
-			return ['headline_subheadline_words' => ['min' => 20, 'max' => 40]];
+			return [
+				'headline_subheadline_words' => ['min' => 20, 'max' => 40],
+				'hero_headline_words' => ['max' => 12],
+			];
 		case 'benefits':
-			return ['min_items' => 5, 'item_words' => ['min' => 40, 'max' => 80]];
+			return [
+				'min_items' => 5,
+				'item_words' => ['min' => 15, 'max' => 35],
+				'item_sentences_max' => 2,
+				'title_no_dashes' => true,
+			];
 		case 'process':
 			return ['min_items' => 4, 'item_words' => ['min' => 40, 'max' => 80]];
 		case 'service_details':
-			return ['body_words' => ['min' => 600, 'max' => 1200]];
+			return ['body_words' => ['min' => 500, 'max' => 800]];
 		case 'content_image':
 		case 'image_content':
+			if ($page === 'homepage') {
+				return ['body_words' => ['min' => 400, 'max' => 700]];
+			}
+			if (in_array($page, ['service', 'service_area'], true)) {
+				return ['body_words' => ['min' => 350, 'max' => 600]];
+			}
 			return ['body_words' => ['min' => 300, 'max' => 600]];
 		case 'faq_accordion':
 			return ['min_items' => 5, 'max_items' => 8, 'answer_words' => ['min' => 80, 'max' => 150]];
@@ -525,7 +613,7 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 			'section_type' => lf_ai_studio_homepage_section_type($section_id),
 			'intent' => (string) ($section['section_intent'] ?? ''),
 			// Long-form density expansion – Step 3
-			'length_targets' => lf_ai_studio_section_length_targets(lf_ai_studio_homepage_section_type($section_id)),
+			'length_targets' => lf_ai_studio_section_length_targets(lf_ai_studio_homepage_section_type($section_id), 'homepage'),
 			'allowed_field_keys' => $allowed_keys,
 		];
 	}
@@ -540,6 +628,9 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 		'niche' => $niche,
 		'city_region' => $city,
 		'keywords' => $keywords,
+		'system_message' => lf_ai_studio_llm_system_message(),
+		'faq_strategy' => lf_ai_studio_faq_strategy(),
+		'cta_strategy' => lf_ai_studio_cta_strategy(),
 		'blueprint' => [
 			'page' => 'homepage',
 			'page_intent' => 'homepage',
@@ -550,6 +641,7 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 			'service_areas' => lf_ai_studio_homepage_area_catalog(),
 			'faqs' => lf_ai_studio_homepage_faq_catalog(),
 			'faq_target_count' => lf_ai_studio_homepage_faq_target_count($config),
+			'faq_target_range' => lf_ai_studio_faq_target_range('homepage'),
 		],
 	];
 	$request_id = lf_ai_studio_homepage_request_id($base);
@@ -674,14 +766,7 @@ function lf_ai_studio_homepage_area_catalog(): array {
 }
 
 function lf_ai_studio_homepage_faq_target_count(array $config): int {
-	$max = 6;
-	if (!empty($config['faq_accordion']['faq_max_items'])) {
-		$max = (int) $config['faq_accordion']['faq_max_items'];
-	}
-	if ($max < 1) {
-		$max = 6;
-	}
-	return $max;
+	return 5;
 }
 
 function lf_ai_studio_homepage_faq_catalog(): array {
@@ -740,7 +825,7 @@ function lf_ai_studio_build_post_blueprint(\WP_Post $post, string $page, string 
 			'section_type' => $type,
 			'intent' => (string) ($settings['section_intent'] ?? ''),
 			// Long-form density expansion – Step 3
-			'length_targets' => lf_ai_studio_section_length_targets($type),
+			'length_targets' => lf_ai_studio_section_length_targets($type, $page),
 			'allowed_field_keys' => lf_ai_studio_homepage_allowed_field_keys($type, $registry[$type]),
 		];
 		$out_order[] = $instance_id;
@@ -751,6 +836,7 @@ function lf_ai_studio_build_post_blueprint(\WP_Post $post, string $page, string 
 		'page_intent' => $page_intent,
 		'sections' => $out_sections,
 		'order' => $out_order,
+		'faq_target_range' => lf_ai_studio_faq_target_range($page),
 	];
 }
 
@@ -821,6 +907,9 @@ function lf_ai_studio_build_full_site_payload(): array {
 		'keywords' => $homepage_payload['keywords'] ?? [],
 		'writing_samples' => lf_ai_studio_collect_writing_samples(),
 		'business_entity' => $homepage_payload['business_entity'] ?? [],
+		'system_message' => lf_ai_studio_llm_system_message(),
+		'faq_strategy' => lf_ai_studio_faq_strategy(),
+		'cta_strategy' => lf_ai_studio_cta_strategy(),
 		'blueprints' => $blueprints,
 	];
 }
@@ -979,6 +1068,32 @@ function lf_ai_studio_apply_payload(array $payload): array {
 	return lf_apply_orchestrator_updates($payload);
 }
 
+function lf_ai_studio_normalize_text(string $text): string {
+	$clean = wp_check_invalid_utf8($text, true);
+	if ($clean === false) {
+		$clean = '';
+	}
+	$clean = str_replace(["\\r\\n", "\\n", "\\r"], "\n", $clean);
+	$clean = str_replace(["\r\n", "\r"], "\n", $clean);
+	$clean = str_replace(["\u{2018}", "\u{2019}"], "'", $clean);
+	$clean = preg_replace('/\\\\([\'"’])/u', '$1', $clean);
+	$clean = preg_replace('/\\\\{2,}/', '\\', $clean);
+	return $clean;
+}
+
+function lf_ai_studio_normalize_value($value) {
+	if (is_array($value)) {
+		foreach ($value as $key => $item) {
+			$value[$key] = lf_ai_studio_normalize_value($item);
+		}
+		return $value;
+	}
+	if (!is_string($value)) {
+		return $value;
+	}
+	return lf_ai_studio_normalize_text($value);
+}
+
 function lf_apply_orchestrator_updates(array $response): array {
 	$updates = $response['updates'] ?? [];
 	if (!is_array($updates)) {
@@ -1058,7 +1173,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 				if (!isset($homepage_fields[$section_id])) {
 					$homepage_fields[$section_id] = [];
 				}
-				$homepage_fields[$section_id][$field_key] = $value;
+				$homepage_fields[$section_id][$field_key] = lf_ai_studio_normalize_value($value);
 				$fields_updated++;
 			}
 		}
@@ -1126,7 +1241,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 			if (!isset($incoming_by_instance[$instance_id])) {
 				$incoming_by_instance[$instance_id] = [];
 			}
-			$incoming_by_instance[$instance_id][$field_key] = $value;
+			$incoming_by_instance[$instance_id][$field_key] = lf_ai_studio_normalize_value($value);
 			$fields_updated++;
 		}
 		foreach ($incoming_by_instance as $instance_id => $fields) {
@@ -1158,6 +1273,9 @@ function lf_apply_orchestrator_updates(array $response): array {
 			}
 			$allowed_keys = ['question', 'answer'];
 			$filtered_fields = array_intersect_key($fields, array_flip($allowed_keys));
+			foreach ($filtered_fields as $key => $value) {
+				$filtered_fields[$key] = lf_ai_studio_normalize_value($value);
+			}
 			if (count($filtered_fields) !== count($fields)) {
 				$errors[] = __('FAQ update contains unsupported fields.', 'leadsforward-core');
 			}
@@ -1253,8 +1371,10 @@ function lf_ai_studio_apply_faq_updates(array $payload): array {
 		if (!is_array($fields)) {
 			continue;
 		}
-		$question = isset($fields['question']) ? sanitize_text_field((string) $fields['question']) : '';
-		$answer = isset($fields['answer']) ? wp_kses_post((string) $fields['answer']) : '';
+		$question_raw = isset($fields['question']) ? (string) $fields['question'] : '';
+		$answer_raw = isset($fields['answer']) ? (string) $fields['answer'] : '';
+		$question = sanitize_text_field(lf_ai_studio_normalize_text($question_raw));
+		$answer = wp_kses_post(lf_ai_studio_normalize_text($answer_raw));
 		if ($question === '' && $answer === '') {
 			continue;
 		}
