@@ -352,6 +352,17 @@ button:focus-visible,
 	margin-bottom: var(--lf-spacing-normal);
 }
 
+.lf-section--content-centered .lf-section__header,
+.lf-section--content-centered .lf-section__body {
+	text-align: center;
+}
+
+.lf-section--content-centered .lf-content-centered__body {
+	max-width: 52rem;
+	margin-left: auto;
+	margin-right: auto;
+}
+
 .lf-heading-row {
 	display: flex;
 	align-items: center;

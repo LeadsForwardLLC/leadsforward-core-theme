@@ -77,57 +77,73 @@ Each page uses the Page Builder Framework and pre‑configured sections:
 Home (Homepage Builder)
 - Hero
 - Trust Bar
+- Service Intro Boxes
 - Benefits
+- Content with Image (A)
+- Image with Content (B)
+- Content with Image (C)
+- Service Details
 - Process
 - FAQ
-- CTA
 - Related Links
 - Map + Service Areas
+- CTA (last)
 
-About Us (Page Builder)
+Services (single service page)
 - Hero
-- Content with Image
+- Trust Bar
 - Benefits
-- CTA
+- Content with Image (A)
+- Image with Content (B)
+- Service Details
+- Process
+- FAQ
+- Related Links
+- CTA (last)
 
-Our Services (Page Builder)
+Service Areas (single area page)
 - Hero
-- Services Grid
-- CTA
-
-Our Service Areas (Page Builder)
-- Hero
-- Service Areas Grid
+- Trust Bar
+- Benefits
+- Content with Image (A)
+- Image with Content (B)
+- Services Offered Here
+- FAQ
+- Nearby Areas
 - Map + Service Areas
-- CTA
+- CTA (last)
 
-Reviews (Page Builder)
+Our Services (Overview page)
 - Hero
-- Reviews
-- CTA
+- Trust Bar
+- Centered Content
+- Service Intro Boxes
+- Content with Image (A)
+- Process
+- FAQ
+- CTA (last)
 
-Blog (Page Builder)
+Our Service Areas (Overview page)
 - Hero
-- Blog Posts
-- CTA
-
-Sitemap (Page Builder)
-- Hero
-- Content with Image (link list)
+- Centered Content
+- Nearby Areas
+- Content with Image (A)
+- FAQ
+- CTA (last)
 
 Contact (Page Builder)
 - Hero
-- Content with Image
+- Centered Content
 - Map + Service Areas
-- CTA
+- CTA (last)
 
 Privacy Policy (Page Builder)
 - Hero
-- Content with Image
+- Content
 
 Terms of Service (Page Builder)
 - Hero
-- Content with Image
+- Content
 
 Thank You (Page Builder)
 - Hero

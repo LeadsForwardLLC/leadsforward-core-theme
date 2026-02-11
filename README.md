@@ -169,6 +169,19 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 
 ---
 
+## Page Builder Defaults (Deterministic)
+
+- **Services (single):** `hero → trust_bar → benefits → content_image_a → image_content_b → service_details → process → faq_accordion → related_links → cta`
+- **Service Areas (single):** `hero → trust_bar → benefits → content_image_a → image_content_b → services_offered_here → faq_accordion → nearby_areas → map_nap → cta`
+- **Services Overview (Our Services page):** `hero → trust_bar → content_centered → service_intro → content_image_a → process → faq_accordion → cta`
+- **Service Areas Overview (Our Service Areas page):** `hero → content_centered → nearby_areas → content_image_a → faq_accordion → cta`
+- **Contact:** `hero → content_centered → map_nap → cta`
+- **Terms / Privacy:** `hero → content`
+
+New section type: **Centered Content** (`content_centered`) — minimal, text-only section with heading, optional subheading, and rich supporting text.
+
+---
+
 ## CTA Intelligence
 
 - **Global default:** LeadsForward → Global Settings (CTAs).

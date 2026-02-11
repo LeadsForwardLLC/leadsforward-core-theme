@@ -299,7 +299,7 @@ function lf_sections_registry(): array {
 		],
 		'service_details' => [
 			'label' => __('Service Details', 'leadsforward-core'),
-			'contexts' => ['homepage'],
+			'contexts' => ['homepage', 'service'],
 			'fields' => [
 				$bg_field,
 				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'service_summary'],
@@ -326,7 +326,7 @@ function lf_sections_registry(): array {
 		],
 		'content_image_a' => [
 			'label' => __('Content with Image (A)', 'leadsforward-core'),
-			'contexts' => ['homepage'],
+			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => $media_fields_a,
 			'render' => 'lf_sections_render_content_image',
 		],
@@ -338,7 +338,7 @@ function lf_sections_registry(): array {
 		],
 		'image_content_b' => [
 			'label' => __('Image with Content (B)', 'leadsforward-core'),
-			'contexts' => ['homepage'],
+			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => $media_fields_b,
 			'render' => 'lf_sections_render_image_content',
 		],
@@ -347,6 +347,17 @@ function lf_sections_registry(): array {
 			'contexts' => ['homepage'],
 			'fields' => $media_fields_c,
 			'render' => 'lf_sections_render_content_image',
+		],
+		'content_centered' => [
+			'label' => __('Centered Content', 'leadsforward-core'),
+			'contexts' => ['page'],
+			'fields' => [
+				$bg_field,
+				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Clear next steps', 'leadsforward-core')],
+				['key' => 'optional_subheading', 'label' => __('Optional subheading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Everything you need before you reach out', 'leadsforward-core')],
+				['key' => 'supporting_text', 'label' => __('Supporting text', 'leadsforward-core'), 'type' => 'richtext', 'default' => __('Use this space to set expectations, outline what happens next, or answer quick pre-contact questions. Keep it concise and homeowner-friendly.', 'leadsforward-core')],
+			],
+			'render' => 'lf_sections_render_content_centered',
 		],
 		'content' => [
 			'label' => __('Content', 'leadsforward-core'),
@@ -534,7 +545,7 @@ function lf_sections_registry(): array {
 		],
 		'map_nap' => [
 			'label' => __('Service Areas + Map', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'page'],
+			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => [
 				$bg_field,
 				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'authority'],
@@ -571,16 +582,32 @@ function lf_sections_default_order(string $context): array {
 		];
 	}
 	if ($context === 'service') {
-		array_splice($base, 3, 0, ['content']);
-		$base[] = 'map_nap';
-		return $base;
+		return [
+			'hero',
+			'trust_bar',
+			'benefits',
+			'content_image_a',
+			'image_content_b',
+			'service_details',
+			'process',
+			'faq_accordion',
+			'related_links',
+			'cta',
+		];
 	}
 	if ($context === 'service_area') {
-		$base = ['hero', 'trust_bar', 'benefits', 'process', 'faq_accordion', 'cta'];
-		array_splice($base, 3, 0, ['content']);
-		$base[] = 'services_offered_here';
-		$base[] = 'nearby_areas';
-		return $base;
+		return [
+			'hero',
+			'trust_bar',
+			'benefits',
+			'content_image_a',
+			'image_content_b',
+			'services_offered_here',
+			'faq_accordion',
+			'nearby_areas',
+			'map_nap',
+			'cta',
+		];
 	}
 	if ($context === 'page') {
 		return ['hero', 'content'];
@@ -1144,6 +1171,17 @@ function lf_sections_render_image_content(string $context, array $settings, \WP_
 
 function lf_sections_render_content(string $context, array $settings, \WP_Post $post): void {
 	return;
+}
+
+function lf_sections_render_content_centered(string $context, array $settings, \WP_Post $post): void {
+	$title = $settings['section_heading'] ?? '';
+	$subheading = $settings['optional_subheading'] ?? '';
+	$body = $settings['supporting_text'] ?? '';
+	lf_sections_render_shell_open('content-centered', $title, $subheading, $settings['section_background'] ?? 'light', $settings);
+	if ($body !== '') {
+		echo '<div class="lf-content-centered__body">' . wpautop(wp_kses_post((string) $body)) . '</div>';
+	}
+	lf_sections_render_shell_close();
 }
 function lf_sections_render_process(string $context, array $settings, \WP_Post $post): void {
 	$title = $settings['section_heading'] ?? '';

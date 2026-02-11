@@ -65,12 +65,9 @@ function lf_pb_instance_id(string $type, int $index = 1): string {
 function lf_pb_basic_page_slugs(): array {
 	return [
 		'about-us',
-		'our-services',
-		'our-service-areas',
 		'reviews',
 		'blog',
 		'sitemap',
-		'contact',
 		'privacy-policy',
 		'terms-of-service',
 		'thank-you',

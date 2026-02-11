@@ -220,8 +220,8 @@ function lf_homepage_default_config(?string $niche_slug = null): array {
 		}
 		$config[$type] = $sec;
 	}
-	// Ensure content/image A/B/C are enabled by default for density.
-	foreach (['content_image_a', 'image_content_b', 'content_image_c'] as $media_type) {
+	// Ensure content/image A/B/C and FAQ are enabled by default for density.
+	foreach (['content_image_a', 'image_content_b', 'content_image_c', 'faq_accordion'] as $media_type) {
 		if (isset($config[$media_type]) && is_array($config[$media_type])) {
 			$config[$media_type]['enabled'] = true;
 		}
