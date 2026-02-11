@@ -340,6 +340,8 @@ AI Studio (Append‑Only)
 - Writing samples are controlled in n8n.
 - Optional deterministic mode: upload a JSON manifest to bypass wizard inputs.
 - Canonical schema: `docs/MANIFEST_SCHEMA.md`.
+- Section schema reference: `docs/SECTION_SCHEMA.json` (update when section registry changes).
+- Manifest upload shows a progress overlay during generation.
 - One-click “Generate Site Content” posts a blueprint to the orchestrator webhook.
 - Response payload is validated and applied to existing builder fields.
 - REST endpoints require the shared secret in the `Authorization` header.

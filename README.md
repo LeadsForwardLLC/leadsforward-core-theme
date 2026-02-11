@@ -204,6 +204,8 @@ New section type: **Centered Content** (`content_centered`) — minimal, text-on
 - **Writing samples:** Controlled in n8n; not stored in WordPress.
 - **Manifest upload:** Optional deterministic mode via JSON manifest stored in `lf_site_manifest`.
 - **Manifest schema:** See `docs/MANIFEST_SCHEMA.md` for the canonical JSON structure and validation rules.
+- **Manifest UX:** Upload shows a progress overlay during generation.
+- **Section schema reference:** `docs/SECTION_SCHEMA.json` is the canonical list of section types and fields. Keep it in sync with the registry.
 - **Flow:** Build homepage blueprint → send to orchestrator → validate payload → apply to homepage fields.
 - **Jobs:** Logged with status, user, time, and summary. Retry resends same payload.
 - **REST endpoints (secret auth):**

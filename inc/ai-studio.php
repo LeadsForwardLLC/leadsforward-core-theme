@@ -306,7 +306,7 @@ function lf_ai_studio_render_page(): void {
 				</p>
 			<?php endif; ?>
 			<?php $template_url = wp_nonce_url(admin_url('admin-post.php?action=lf_ai_studio_manifest_template'), 'lf_ai_studio_manifest_template', 'lf_ai_studio_manifest_template_nonce'); ?>
-			<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+			<form id="lf-ai-manifest-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
 				<?php wp_nonce_field('lf_ai_studio_manifest', 'lf_ai_studio_manifest_nonce'); ?>
 				<input type="hidden" name="action" value="lf_ai_studio_manifest" />
 				<input type="file" name="lf_site_manifest" accept="application/json,.json" required />
@@ -316,6 +316,60 @@ function lf_ai_studio_render_page(): void {
 				</p>
 			</form>
 		</div>
+		<div id="lf-ai-manifest-loading" class="lf-ai-loading-overlay" aria-hidden="true">
+			<div class="lf-ai-loading-card" role="status" aria-live="polite">
+				<div class="lf-ai-loading-title"><?php esc_html_e('Generating site…', 'leadsforward-core'); ?></div>
+				<div class="lf-ai-loading-bar"><span></span></div>
+				<div class="lf-ai-loading-status"><?php esc_html_e('Uploading manifest…', 'leadsforward-core'); ?></div>
+			</div>
+		</div>
+		<style>
+			.lf-ai-loading-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: none; align-items: center; justify-content: center; z-index: 9999; }
+			.lf-ai-loading-overlay.is-active { display: flex; }
+			.lf-ai-loading-card { background: #fff; border-radius: 12px; padding: 24px 28px; width: min(520px, 90vw); box-shadow: 0 18px 60px rgba(15, 23, 42, 0.25); text-align: center; }
+			.lf-ai-loading-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; color: #111827; }
+			.lf-ai-loading-status { margin-top: 10px; color: #4b5563; font-size: 0.95rem; }
+			.lf-ai-loading-bar { position: relative; height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+			.lf-ai-loading-bar span { position: absolute; inset: 0; width: 40%; background: linear-gradient(90deg, #3b82f6, #60a5fa, #3b82f6); animation: lf-ai-progress 1.4s ease-in-out infinite; }
+			@keyframes lf-ai-progress {
+				0% { transform: translateX(-100%); }
+				50% { transform: translateX(60%); }
+				100% { transform: translateX(200%); }
+			}
+		</style>
+		<script>
+			(function() {
+				var form = document.getElementById('lf-ai-manifest-form');
+				var overlay = document.getElementById('lf-ai-manifest-loading');
+				if (!form || !overlay) {
+					return;
+				}
+				var status = overlay.querySelector('.lf-ai-loading-status');
+				var button = form.querySelector('button[type="submit"]');
+				var steps = [
+					'Uploading manifest…',
+					'Validating schema…',
+					'Building blueprints…',
+					'Generating content…',
+					'Applying updates…'
+				];
+				form.addEventListener('submit', function() {
+					overlay.classList.add('is-active');
+					overlay.setAttribute('aria-hidden', 'false');
+					if (button) {
+						button.disabled = true;
+					}
+					var idx = 0;
+					if (status) {
+						status.textContent = steps[0];
+						window.setInterval(function() {
+							idx = (idx + 1) % steps.length;
+							status.textContent = steps[idx];
+						}, 2200);
+					}
+				});
+			})();
+		</script>
 		<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
 			<?php wp_nonce_field('lf_ai_studio_save', 'lf_ai_studio_nonce'); ?>
 			<input type="hidden" name="action" value="lf_ai_studio_save" />
