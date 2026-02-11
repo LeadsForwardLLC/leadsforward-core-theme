@@ -726,6 +726,13 @@ function lf_wizard_render_page(): void {
 		echo '<div class="lf-setup-card">';
 		echo '<h2 class="lf-setup-step-title">' . esc_html__('Generate your site', 'leadsforward-core') . '</h2>';
 		echo '<p class="lf-setup-help">' . esc_html__('Creates pages, services, service areas, menus, and applies homepage settings.', 'leadsforward-core') . '</p>';
+		echo '<div class="lf-setup-loading" id="lf-setup-loading" aria-hidden="true">';
+		echo '<div class="lf-setup-loading__panel" role="status" aria-live="polite">';
+		echo '<div class="lf-setup-loading__title">' . esc_html__('Generating your site', 'leadsforward-core') . '</div>';
+		echo '<div class="lf-setup-loading__status" id="lf-setup-loading-status">' . esc_html__('Starting setup...', 'leadsforward-core') . '</div>';
+		echo '<div class="lf-setup-loading__bar" aria-hidden="true"><span id="lf-setup-loading-bar"></span></div>';
+		echo '<div class="lf-setup-loading__note">' . esc_html__('This usually takes under a minute. Please keep this tab open.', 'leadsforward-core') . '</div>';
+		echo '</div></div>';
 		echo '<form method="post" action="' . esc_url(admin_url('admin.php?page=lf-ops')) . '" enctype="multipart/form-data">';
 		wp_nonce_field('lf_wizard_generate', 'lf_wizard_nonce');
 		echo '<input type="hidden" name="lf_wizard_step" value="5" />';
@@ -796,6 +803,51 @@ function lf_wizard_render_page(): void {
 		echo '<input type="file" id="lf_homepage_keywords_file" name="lf_homepage_keywords_file" accept=".txt,.csv" /> ';
 		echo '<span class="description">' . esc_html__('One keyword per line or comma-separated. Added to secondary keywords.', 'leadsforward-core') . '</span></p>';
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Generate site', 'leadsforward-core') . '" /></p></form>';
+		echo '<style>
+		.lf-setup-loading{position:fixed;inset:0;background:rgba(16,24,40,0.65);display:none;align-items:center;justify-content:center;z-index:9999;}
+		.lf-setup-loading.is-visible{display:flex;}
+		.lf-setup-loading__panel{background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.2);padding:28px 32px;max-width:520px;width:92%;text-align:center;}
+		.lf-setup-loading__title{font-size:1.1rem;font-weight:600;margin-bottom:6px;}
+		.lf-setup-loading__status{font-size:0.95rem;color:#475467;margin-bottom:16px;}
+		.lf-setup-loading__bar{height:10px;border-radius:999px;background:#e4e7ec;overflow:hidden;}
+		.lf-setup-loading__bar span{display:block;height:100%;width:0%;background:linear-gradient(90deg,#1d4ed8,#3b82f6);transition:width 0.4s ease;}
+		.lf-setup-loading__note{margin-top:14px;color:#667085;font-size:0.85rem;}
+		</style>';
+		echo '<script>
+		(function(){
+			var trigger = document.querySelector("form[action*=\\"lf-ops\\"] input[name=\\"lf_wizard_generate\\"]");
+			var form = trigger ? trigger.form : null;
+			if(!form){return;}
+			var overlay = document.getElementById("lf-setup-loading");
+			var bar = document.getElementById("lf-setup-loading-bar");
+			var statusEl = document.getElementById("lf-setup-loading-status");
+			var steps = [
+				"Preparing setup...",
+				"Creating pages...",
+				"Creating services...",
+				"Creating service areas...",
+				"Building menus...",
+				"Applying homepage settings..."
+			];
+			form.addEventListener("submit", function(){
+				if(overlay){overlay.classList.add("is-visible");overlay.setAttribute("aria-hidden","false");}
+				var btn = form.querySelector("input[type=\\"submit\\"]");
+				if(btn){btn.disabled = true;btn.value = "Generating...";}
+				var progress = 5;
+				var stepIndex = 0;
+				if(statusEl){statusEl.textContent = steps[stepIndex];}
+				if(bar){bar.style.width = progress + "%";}
+				setInterval(function(){
+					if(progress >= 95){return;}
+					progress += Math.floor(Math.random() * 6) + 2;
+					if(progress > 95){progress = 95;}
+					if(bar){bar.style.width = progress + "%";}
+					stepIndex = Math.min(steps.length - 1, Math.floor(progress / 20));
+					if(statusEl){statusEl.textContent = steps[stepIndex];}
+				}, 900);
+			});
+		})();
+		</script>';
 		echo '</div>';
 	}
 	echo '</div>';
