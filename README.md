@@ -390,6 +390,15 @@ Completion is stored in option `lf_setup_wizard_complete`. The wizard does not s
 
 ---
 
+## Content Density: Template Field Coverage
+
+- **All allowed fields rendered:** Section templates already output every field in `allowed_field_keys` for each section type.
+- **No schema changes:** Field coverage improvements come from using existing fields only; no new keys or section types.
+- **Admin debug logging:** When an admin renders a page with `WP_DEBUG` on, logs include section/instance id, allowed field keys, and which keys rendered.
+- **Deterministic compliance:** No `post_content` or excerpt fallbacks are used to fill gaps.
+
+---
+
 ## Changelog
 
 - **0.1.0** — Foundation: CPTs, ACF options, blocks, SEO/schema, modular homepage, CTA resolution, documentation.

@@ -652,6 +652,35 @@ function lf_pb_render_sections(\WP_Post $post): void {
 		if ($type === '') {
 			continue;
 		}
+		if (current_user_can('manage_options') && defined('WP_DEBUG') && WP_DEBUG) {
+			$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
+			$allowed = (isset($registry[$type]) && function_exists('lf_ai_studio_homepage_allowed_field_keys'))
+				? lf_ai_studio_homepage_allowed_field_keys($type, $registry[$type])
+				: [];
+			$settings = $sec_cfg['settings'] ?? [];
+			$rendered = [];
+			foreach ($allowed as $key) {
+				$value = is_array($settings) ? ($settings[$key] ?? null) : null;
+				if (is_array($value)) {
+					if (!empty($value)) {
+						$rendered[] = $key;
+					}
+				} elseif (is_string($value)) {
+					if (trim($value) !== '') {
+						$rendered[] = $key;
+					}
+				} elseif ($value !== null && $value !== '') {
+					$rendered[] = $key;
+				}
+			}
+			error_log(sprintf(
+				'LF DEBUG: Page section=%s type=%s allowed=[%s] rendered=[%s]',
+				$section_id,
+				$type,
+				implode(', ', $allowed),
+				implode(', ', $rendered)
+			));
+		}
 		lf_sections_render_section($type, $context, $sec_cfg['settings'] ?? [], $post);
 	}
 }

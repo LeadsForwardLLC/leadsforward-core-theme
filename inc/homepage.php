@@ -527,5 +527,32 @@ function lf_render_homepage_section(array $section, int $index): void {
 	if (!$post instanceof \WP_Post) {
 		return;
 	}
+	if (current_user_can('manage_options') && defined('WP_DEBUG') && WP_DEBUG) {
+		$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
+		$allowed = (isset($registry[$type]) && function_exists('lf_ai_studio_homepage_allowed_field_keys'))
+			? lf_ai_studio_homepage_allowed_field_keys($type, $registry[$type])
+			: [];
+		$rendered = [];
+		foreach ($allowed as $key) {
+			$value = $section[$key] ?? null;
+			if (is_array($value)) {
+				if (!empty($value)) {
+					$rendered[] = $key;
+				}
+			} elseif (is_string($value)) {
+				if (trim($value) !== '') {
+					$rendered[] = $key;
+				}
+			} elseif ($value !== null && $value !== '') {
+				$rendered[] = $key;
+			}
+		}
+		error_log(sprintf(
+			'LF DEBUG: Homepage section=%s allowed=[%s] rendered=[%s]',
+			$type,
+			implode(', ', $allowed),
+			implode(', ', $rendered)
+		));
+	}
 	lf_sections_render_section($type, 'homepage', $section, $post);
 }

@@ -382,3 +382,12 @@ Full Site Generation Architecture
 - All updates route through `lf_apply_orchestrator_updates()` with per-section allowed field validation.
 - Deterministic enforcement: no implicit fallbacks or cross-context content reuse.
 - Payload includes `writing_samples` (empty by default; orchestration can supply samples in n8n).
+
+---
+
+Content Density: Template Field Coverage
+---------------------------------------
+- Section templates render every field included in `allowed_field_keys`.
+- Field coverage uses existing schema only; no new keys or section types.
+- Admin debug logging outputs section/instance id, allowed keys, and rendered keys when `WP_DEBUG` is enabled.
+- Deterministic compliance: no post content or excerpt fallbacks are used to increase density.
