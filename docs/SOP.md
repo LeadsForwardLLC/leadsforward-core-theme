@@ -391,6 +391,7 @@ Content Density: Template Field Coverage
 - Field coverage uses existing schema only; no new keys or section types.
 - Admin debug logging outputs section/instance id, allowed keys, and rendered keys when `WP_DEBUG` is enabled.
 - Deterministic compliance: no post content or excerpt fallbacks are used to increase density.
+- List fields are newline-delimited and parsed via `lf_sections_parse_lines()` before rendering.
 
 ---
 

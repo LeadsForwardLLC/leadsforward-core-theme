@@ -396,6 +396,7 @@ Completion is stored in option `lf_setup_wizard_complete`. The wizard does not s
 - **No schema changes:** Field coverage improvements come from using existing fields only; no new keys or section types.
 - **Admin debug logging:** When an admin renders a page with `WP_DEBUG` on, logs include section/instance id, allowed field keys, and which keys rendered.
 - **Deterministic compliance:** No `post_content` or excerpt fallbacks are used to fill gaps.
+- **List parsing:** List fields are newline-delimited and parsed with `lf_sections_parse_lines()` before rendering.
 
 ---
 
