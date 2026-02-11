@@ -344,6 +344,7 @@ AI Studio (Append‑Only)
 - Manifest upload shows a progress overlay during generation.
 - One-click “Generate Site Content” posts a blueprint to the orchestrator webhook.
 - Dev reset clears nearly all content (pages, posts, CPTs, manifest, keywords, generation logs) but preserves AI Studio settings (enable, webhook, shared secret).
+- AI collaboration guide: `docs/AI_CONTEXT.md` (keep in sync for multi‑assistant work).
 - Response payload is validated and applied to existing builder fields.
 - REST endpoints require the shared secret in the `Authorization` header.
 - Blueprint endpoint: `GET /wp-json/leadsforward/v1/blueprint`.

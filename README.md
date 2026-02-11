@@ -206,6 +206,7 @@ New section type: **Centered Content** (`content_centered`) — minimal, text-on
 - **Manifest schema:** See `docs/MANIFEST_SCHEMA.md` for the canonical JSON structure and validation rules.
 - **Manifest UX:** Upload shows a progress overlay during generation.
 - **Section schema reference:** `docs/SECTION_SCHEMA.json` is the canonical list of section types and fields. Keep it in sync with the registry.
+- **AI collaboration guide:** `docs/AI_CONTEXT.md` is the live handoff for other AI assistants.
 - **Dev reset behavior:** Dev reset clears nearly all content (pages, posts, CPTs, manifest, keywords, generation logs) but preserves AI Studio settings (enable, webhook, shared secret).
 - **Flow:** Build homepage blueprint → send to orchestrator → validate payload → apply to homepage fields.
 - **Jobs:** Logged with status, user, time, and summary. Retry resends same payload.
