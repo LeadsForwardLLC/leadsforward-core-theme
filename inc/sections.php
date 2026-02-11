@@ -1009,14 +1009,47 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	$intro = $settings['section_intro'] ?? '';
 	$items = lf_sections_parse_lines((string) ($settings['benefits_items'] ?? ''));
 	$item_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'benefits', 'list', 'lf-benefits__icon') : '';
-	$card_class = $item_icon ? 'lf-benefits__card lf-benefits__card--icon' : 'lf-benefits__card';
+	$card_class = 'lf-benefits__card';
+	$parsed_items = [];
+	foreach ($items as $item) {
+		$title_text = $item;
+		$body_text = '';
+		if (strpos($item, '||') !== false) {
+			$parts = array_map('trim', explode('||', $item, 2));
+			$title_text = $parts[0] ?? $item;
+			$body_text = $parts[1] ?? '';
+		} elseif (strpos($item, ' | ') !== false) {
+			$parts = array_map('trim', explode(' | ', $item, 2));
+			$title_text = $parts[0] ?? $item;
+			$body_text = $parts[1] ?? '';
+		} elseif (strpos($item, ' - ') !== false) {
+			$parts = array_map('trim', explode(' - ', $item, 2));
+			$title_text = $parts[0] ?? $item;
+			$body_text = $parts[1] ?? '';
+		} elseif (strpos($item, ' — ') !== false) {
+			$parts = array_map('trim', explode(' — ', $item, 2));
+			$title_text = $parts[0] ?? $item;
+			$body_text = $parts[1] ?? '';
+		}
+		$parsed_items[] = [
+			'title' => $title_text,
+			'body' => $body_text,
+		];
+	}
+	if (count($parsed_items) > 3) {
+		$parsed_items = array_slice($parsed_items, 0, 3);
+	}
+	while (count($parsed_items) < 3) {
+		$parsed_items[] = ['title' => '', 'body' => ''];
+	}
 	lf_sections_render_shell_open('benefits', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	?>
 	<div class="lf-benefits">
-		<?php foreach ($items as $item) : ?>
+		<?php foreach ($parsed_items as $item) : ?>
 			<div class="<?php echo esc_attr($card_class); ?>">
 				<?php if ($item_icon) : ?><span class="lf-benefits__icon"><?php echo $item_icon; ?></span><?php endif; ?>
-				<span class="lf-benefits__text"><?php echo esc_html($item); ?></span>
+				<h3 class="lf-benefits__title"><?php echo esc_html($item['title']); ?></h3>
+				<p class="lf-benefits__desc"><?php echo $item['body'] !== '' ? esc_html($item['body']) : '&#8203;'; ?></p>
 			</div>
 		<?php endforeach; ?>
 	</div>
@@ -1033,8 +1066,7 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 		$body = wpautop($body);
 	}
 	$checklist = lf_sections_parse_lines((string) ($settings['service_details_checklist'] ?? ''));
-	$list_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'service_details', 'list', 'lf-service-details__icon') : '';
-	$checklist_class = $list_icon ? 'lf-service-details__checklist lf-service-details__checklist--icon' : 'lf-service-details__checklist';
+	$checklist_class = 'lf-service-details__checklist';
 	lf_sections_render_shell_open('service-details', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	?>
 	<div class="lf-service-details">
@@ -1045,7 +1077,6 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 			<ul class="<?php echo esc_attr($checklist_class); ?>" role="list">
 				<?php foreach ($checklist as $item) : ?>
 					<li>
-						<?php if ($list_icon) : ?><span class="lf-service-details__icon"><?php echo $list_icon; ?></span><?php endif; ?>
 						<span class="lf-service-details__text"><?php echo esc_html($item); ?></span>
 					</li>
 				<?php endforeach; ?>
@@ -1187,14 +1218,12 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
 	$steps = lf_sections_parse_lines((string) ($settings['process_steps'] ?? ''));
-	$list_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'process', 'list', 'lf-process__icon') : '';
-	$process_class = $list_icon ? 'lf-process lf-process--icon' : 'lf-process';
+	$process_class = 'lf-process';
 	lf_sections_render_shell_open('process', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	?>
 	<ol class="<?php echo esc_attr($process_class); ?>">
 		<?php foreach ($steps as $step) : ?>
 			<li class="lf-process__step">
-				<?php if ($list_icon) : ?><span class="lf-process__icon"><?php echo $list_icon; ?></span><?php endif; ?>
 				<span class="lf-process__text"><?php echo esc_html($step); ?></span>
 			</li>
 		<?php endforeach; ?>
@@ -1455,7 +1484,12 @@ function lf_sections_render_related_links(string $context, array $settings, \WP_
 				break;
 			}
 			$label = function_exists('lf_internal_link_label') ? lf_internal_link_label('service', $svc, $origin_id) : get_the_title($svc);
-			$links[] = ['label' => $label, 'url' => get_permalink($svc)];
+			$image_id = (int) get_post_thumbnail_id($svc);
+			if ($image_id === 0 && function_exists('lf_get_placeholder_image_id')) {
+				$image_id = lf_get_placeholder_image_id();
+			}
+			$image_url = $image_id ? wp_get_attachment_image_url($image_id, 'large') : '';
+			$links[] = ['label' => $label, 'url' => get_permalink($svc), 'image' => $image_url];
 		}
 	}
 	if ($mode === 'areas' || $mode === 'both') {
@@ -1472,20 +1506,25 @@ function lf_sections_render_related_links(string $context, array $settings, \WP_
 				break;
 			}
 			$label = function_exists('lf_internal_link_label') ? lf_internal_link_label('area', $area, $origin_id) : get_the_title($area);
-			$links[] = ['label' => $label, 'url' => get_permalink($area)];
+			$image_id = (int) get_post_thumbnail_id($area);
+			if ($image_id === 0 && function_exists('lf_get_placeholder_image_id')) {
+				$image_id = lf_get_placeholder_image_id();
+			}
+			$image_url = $image_id ? wp_get_attachment_image_url($image_id, 'large') : '';
+			$links[] = ['label' => $label, 'url' => get_permalink($area), 'image' => $image_url];
 		}
 	}
 	if (empty($links)) {
 		return;
 	}
-	$item_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'related_links', 'list', 'lf-related-links__icon') : '';
 	lf_sections_render_shell_open('related-links', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	?>
-	<ul class="lf-related-links" role="list">
+	<ul class="lf-related-links lf-related-links--media" role="list">
 		<?php foreach ($links as $link) : ?>
-			<li>
-				<a href="<?php echo esc_url($link['url']); ?>">
-					<?php if ($item_icon) : ?><span class="lf-related-links__icon"><?php echo $item_icon; ?></span><?php endif; ?>
+			<?php $bg = is_string($link['image'] ?? '') ? $link['image'] : ''; ?>
+			<li class="lf-related-links__item"<?php echo $bg ? ' style="--lf-related-bg: url(' . esc_url($bg) . ');"' : ''; ?>>
+				<a class="lf-related-links__link" href="<?php echo esc_url($link['url']); ?>">
+					<span class="lf-related-links__overlay" aria-hidden="true"></span>
 					<span class="lf-related-links__label"><?php echo esc_html($link['label']); ?></span>
 				</a>
 			</li>

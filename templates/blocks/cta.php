@@ -19,6 +19,7 @@ $variant = $block['variant'] ?? 'default';
 $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'dark') : '';
 $headline = !empty($section['cta_headline']) ? $section['cta_headline'] : '';
 $subheadline = !empty($section['cta_subheadline']) ? $section['cta_subheadline'] : '';
+$supporting = !empty($section['cta_subheadline_secondary']) ? $section['cta_subheadline_secondary'] : '';
 $icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'cta', 'above', 'lf-heading-icon') : '';
 $icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'cta', 'left', 'lf-heading-icon') : '';
 $eyebrow = '';
@@ -79,6 +80,9 @@ $show_form = ($cta_type === 'form' && $ghl_embed) || ($cta_type !== 'call' && $g
 			<?php endif; ?>
 			<?php if ($subheadline !== '') : ?>
 				<p class="lf-block-cta__subheadline"><?php echo esc_html($subheadline); ?></p>
+			<?php endif; ?>
+			<?php if ($supporting !== '') : ?>
+				<p class="lf-block-cta__support"><?php echo esc_html($supporting); ?></p>
 			<?php endif; ?>
 			<?php if ($primary || $secondary) : ?>
 				<div class="lf-block-cta__buttons">

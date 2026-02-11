@@ -77,14 +77,11 @@ function lf_icon_default_for_section(string $section_id, string $niche_slug = ''
 }
 
 function lf_icon_default_settings(string $section_id, string $niche_slug = ''): array {
-	$enabled_sections = ['trust_bar', 'benefits', 'service_details', 'process', 'service_intro'];
+	$enabled_sections = ['benefits'];
 	if (!in_array($section_id, $enabled_sections, true)) {
 		return [];
 	}
-	$position = in_array($section_id, ['benefits', 'service_details', 'process'], true) ? 'list' : 'left';
-	if ($section_id === 'service_intro') {
-		$position = 'list';
-	}
+	$position = 'list';
 	return [
 		'icon_enabled' => '1',
 		'icon_slug' => '',
