@@ -78,30 +78,65 @@ function lf_run_setup(array $data): array {
 		update_option('page_on_front', $home_id);
 	}
 
-	// 2. Service CPT entries (from niche; skip if slug exists)
-	$service_names = $niche['services'] ?? [];
+	// 2. Service CPT entries (from niche or provided list; skip if slug exists)
+	$service_items = [];
+	if (!empty($data['services']) && is_array($data['services'])) {
+		foreach ($data['services'] as $item) {
+			if (is_array($item)) {
+				$title = sanitize_text_field((string) ($item['title'] ?? $item['name'] ?? ''));
+				$slug = sanitize_title((string) ($item['slug'] ?? ''));
+				if ($slug === '' && $title !== '') {
+					$slug = sanitize_title($title);
+				}
+				if ($title !== '' || $slug !== '') {
+					$service_items[] = ['title' => $title, 'slug' => $slug];
+				}
+				continue;
+			}
+			$name = sanitize_text_field((string) $item);
+			if ($name !== '') {
+				$service_items[] = ['title' => $name, 'slug' => sanitize_title($name)];
+			}
+		}
+	}
+	if (empty($service_items)) {
+		$service_names = $niche['services'] ?? [];
+		foreach ($service_names as $name) {
+			$name = sanitize_text_field((string) $name);
+			if ($name !== '') {
+				$service_items[] = ['title' => $name, 'slug' => sanitize_title($name)];
+			}
+		}
+	}
 	$created_services = [];
 	$new_services = [];
-	foreach ($service_names as $name) {
+	foreach ($service_items as $item) {
 		$index = count($created_services);
-		$slug = sanitize_title($name);
+		$name = (string) ($item['title'] ?? '');
+		$slug = (string) ($item['slug'] ?? '');
+		if ($slug === '' && $name !== '') {
+			$slug = sanitize_title($name);
+		}
+		if ($slug === '' && $name === '') {
+			continue;
+		}
 		$exists = get_page_by_path($slug, OBJECT, 'lf_service');
 		if ($exists) {
 			$created_services[] = $exists->ID;
 			continue;
 		}
 		$sid = wp_insert_post([
-			'post_title'   => $name,
+			'post_title'   => $name !== '' ? $name : $slug,
 			'post_name'   => $slug,
-			'post_content' => lf_wizard_service_placeholder_content($name, $data, $index, $niche),
+			'post_content' => lf_wizard_service_placeholder_content($name !== '' ? $name : $slug, $data, $index, $niche),
 			'post_status'  => 'publish',
 			'post_type'    => 'lf_service',
 			'post_author'  => get_current_user_id(),
 		], true);
 		if (!is_wp_error($sid)) {
 			$created_services[] = $sid;
-			$new_services[] = ['id' => $sid, 'name' => $name, 'index' => $index];
-			$log['created']['services'][] = ['title' => $name, 'id' => $sid];
+			$new_services[] = ['id' => $sid, 'name' => $name !== '' ? $name : $slug, 'index' => $index];
+			$log['created']['services'][] = ['title' => $name !== '' ? $name : $slug, 'id' => $sid];
 		} else {
 			$log['errors'][] = $sid->get_error_message();
 		}
@@ -112,9 +147,12 @@ function lf_run_setup(array $data): array {
 	$areas_parsed = lf_wizard_parse_service_areas($area_input);
 	$created_areas = [];
 	$new_areas = [];
-	foreach ($areas_parsed as $area) {
+		foreach ($areas_parsed as $area) {
 		$index = count($created_areas);
-		$slug = $area['state'] ? sanitize_title($area['name'] . '-' . $area['state']) : sanitize_title($area['name']);
+			$slug = (string) ($area['slug'] ?? '');
+			if ($slug === '') {
+				$slug = $area['state'] ? sanitize_title($area['name'] . '-' . $area['state']) : sanitize_title($area['name']);
+			}
 		$exists = get_page_by_path($slug, OBJECT, 'lf_service_area');
 		if ($exists) {
 			$created_areas[] = $exists->ID;
@@ -122,7 +160,7 @@ function lf_run_setup(array $data): array {
 		}
 		$aid = wp_insert_post([
 			'post_title'   => $area['name'],
-			'post_name'   => sanitize_title($area['name']),
+			'post_name'   => $slug,
 			'post_content' => lf_wizard_service_area_placeholder_content($area, $data, $index, $niche),
 			'post_status'  => 'publish',
 			'post_type'    => 'lf_service_area',
@@ -1149,7 +1187,11 @@ function lf_wizard_parse_service_areas($input): array {
 		if (is_array($item)) {
 			$name = $item['name'] ?? $item['city'] ?? '';
 			if ($name !== '') {
-				$out[] = ['name' => $name, 'state' => $item['state'] ?? ''];
+				$out[] = [
+					'name' => $name,
+					'state' => $item['state'] ?? '',
+					'slug' => $item['slug'] ?? '',
+				];
 			}
 			continue;
 		}

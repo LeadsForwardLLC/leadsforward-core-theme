@@ -203,6 +203,8 @@ function lf_dev_reset_run(): void {
 	delete_option('lf_homepage_city');
 	delete_option('lf_homepage_keywords');
 	delete_option('lf_homepage_variation_seed');
+	update_option('blogname', '');
+	update_option('blogdescription', '');
 	// Clear global settings (logo + header CTA).
 	$global_keys = ['lf_global_logo', 'lf_header_cta_label', 'lf_header_cta_url'];
 	if (function_exists('update_field')) {

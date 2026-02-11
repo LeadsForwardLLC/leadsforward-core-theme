@@ -31,18 +31,21 @@ This document keeps collaborating AI models and humans aligned on the current Le
 - Manifest validation is hard‑fail (missing required keys, empty arrays, duplicate slugs, missing primary_keyword).
 - Manifest values override wizard values; no merging when manifest exists.
 - Variation seed is derived from business name + primary city + niche.
+- Manifest generation runs the same scaffold as the setup wizard (pages, menus, business entity) using manifest values only.
 
 ## AI Studio Orchestration
 
 - Webhook POST is executed via `lf_ai_studio_send_request()` in `inc/ai-studio.php`.
 - Payload includes system rules, FAQ strategy, CTA strategy, and blueprints array.
 - Apply logic routes updates via `lf_apply_orchestrator_updates()`.
+- List fields are coerced to newline‑delimited strings before storage.
 
 ## Reset Behavior (Dev)
 
 - Reset wipes pages, posts, CPTs (services, service areas, FAQs, testimonials, AI jobs), manifest, keywords, and generation logs.
 - AI Studio settings **persist** (enable flag, webhook URL, shared secret).
 - Triggered from Setup Wizard → Advanced settings (dev‑only visibility).
+- Site title/description are cleared to remove business evidence.
 
 ## Dummy Content Generation
 

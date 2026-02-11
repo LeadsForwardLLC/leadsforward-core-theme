@@ -680,6 +680,20 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 				$out[$key] = array_key_exists($val, $options) ? $val : ($field['default'] ?? '');
 				break;
 			case 'list':
+				if (is_array($raw)) {
+					$lines = [];
+					foreach ($raw as $item) {
+						if (is_array($item)) {
+							$item = wp_json_encode($item);
+						}
+						$item = (string) $item;
+						$item = trim($item);
+						if ($item !== '') {
+							$lines[] = $item;
+						}
+					}
+					$raw = implode("\n", $lines);
+				}
 				$out[$key] = sanitize_textarea_field(wp_unslash((string) $raw));
 				break;
 			default:
@@ -690,8 +704,22 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 	return $out;
 }
 
-function lf_sections_parse_lines(string $value): array {
-	$lines = array_filter(array_map('trim', explode("\n", $value)));
+function lf_sections_parse_lines($value): array {
+	if (is_array($value)) {
+		$lines = [];
+		foreach ($value as $item) {
+			if (is_array($item)) {
+				$item = wp_json_encode($item);
+			}
+			$item = (string) $item;
+			$item = trim($item);
+			if ($item !== '') {
+				$lines[] = $item;
+			}
+		}
+		$value = implode("\n", $lines);
+	}
+	$lines = array_filter(array_map('trim', explode("\n", (string) $value)));
 	return array_values(array_map('sanitize_text_field', $lines));
 }
 

@@ -147,14 +147,19 @@ function lf_ai_studio_handle_manifest(): void {
 		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
 		exit;
 	}
+	$raw = preg_replace('/^\xEF\xBB\xBF/', '', $raw);
 	$decoded = json_decode($raw, true);
 	if (!is_array($decoded)) {
-		update_option('lf_ai_studio_manifest_errors', [__('Manifest JSON is invalid.', 'leadsforward-core')], false);
+		$reason = function_exists('json_last_error_msg') ? json_last_error_msg() : '';
+		$message = $reason ? sprintf(__('Manifest JSON is invalid: %s', 'leadsforward-core'), $reason) : __('Manifest JSON is invalid.', 'leadsforward-core');
+		error_log('LF MANIFEST: ' . $message);
+		update_option('lf_ai_studio_manifest_errors', [$message], false);
 		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
 		exit;
 	}
 	$errors = lf_ai_studio_validate_manifest($decoded);
 	if (!empty($errors)) {
+		error_log('LF MANIFEST: validation errors ' . print_r($errors, true));
 		update_option('lf_ai_studio_manifest_errors', $errors, false);
 		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
 		exit;
@@ -662,6 +667,7 @@ function lf_ai_studio_manifest_template(): array {
 			],
 			'primary_city' => 'Sarasota',
 			'niche' => 'roofing',
+			'niche_slug' => 'roofing',
 			'site_style' => 'professional',
 			'variation_seed' => '',
 		],
@@ -697,6 +703,179 @@ function lf_ai_studio_manifest_template(): array {
 			],
 		],
 	];
+}
+
+function lf_ai_studio_manifest_to_setup_data(array $manifest): array {
+	$business = $manifest['business'] ?? [];
+	$address = is_array($business['address'] ?? null) ? $business['address'] : [];
+	$niche_slug = lf_ai_studio_manifest_niche_slug($business);
+	if (is_wp_error($niche_slug)) {
+		return ['error' => $niche_slug->get_error_message()];
+	}
+	$services = $manifest['services'] ?? [];
+	$areas = $manifest['service_areas'] ?? [];
+	$mapped_services = [];
+	foreach ($services as $item) {
+		if (!is_array($item)) {
+			continue;
+		}
+		$mapped_services[] = [
+			'title' => (string) ($item['title'] ?? ''),
+			'slug' => (string) ($item['slug'] ?? ''),
+		];
+	}
+	$mapped_areas = [];
+	foreach ($areas as $item) {
+		if (!is_array($item)) {
+			continue;
+		}
+		$mapped_areas[] = [
+			'name' => (string) ($item['city'] ?? ''),
+			'state' => (string) ($item['state'] ?? ''),
+			'slug' => (string) ($item['slug'] ?? ''),
+		];
+	}
+	return [
+		'niche_slug' => $niche_slug,
+		'business_name' => (string) ($business['name'] ?? ''),
+		'business_legal_name' => (string) ($business['legal_name'] ?? ''),
+		'business_phone_primary' => (string) ($business['phone'] ?? ''),
+		'business_phone_tracking' => '',
+		'business_phone_display' => 'primary',
+		'business_phone' => (string) ($business['phone'] ?? ''),
+		'business_email' => (string) ($business['email'] ?? ''),
+		'business_address' => '',
+		'business_address_street' => (string) ($address['street'] ?? ''),
+		'business_address_city' => (string) ($address['city'] ?? ''),
+		'business_address_state' => (string) ($address['state'] ?? ''),
+		'business_address_zip' => (string) ($address['zip'] ?? ''),
+		'business_service_area_type' => 'service_area',
+		'business_geo' => ['lat' => '', 'lng' => ''],
+		'business_hours' => '',
+		'business_category' => 'HomeAndConstructionBusiness',
+		'business_short_description' => '',
+		'business_gbp_url' => '',
+		'business_social_facebook' => '',
+		'business_social_instagram' => '',
+		'business_social_youtube' => '',
+		'business_social_linkedin' => '',
+		'business_social_tiktok' => '',
+		'business_social_x' => '',
+		'business_same_as' => '',
+		'business_founding_year' => '',
+		'business_license_number' => '',
+		'business_insurance_statement' => '',
+		'business_place_id' => '',
+		'business_place_name' => '',
+		'business_place_address' => '',
+		'business_map_embed' => '',
+		'services' => $mapped_services,
+		'service_areas' => $mapped_areas,
+	];
+}
+
+function lf_ai_studio_manifest_niche_slug(array $business) {
+	$registry = function_exists('lf_get_niche_registry') ? lf_get_niche_registry() : [];
+	$valid_slugs = is_array($registry) ? array_keys($registry) : [];
+	$provided = sanitize_title((string) ($business['niche_slug'] ?? ''));
+	if ($provided !== '') {
+		if (in_array($provided, $valid_slugs, true)) {
+			return $provided;
+		}
+		return new \WP_Error('invalid_niche_slug', 'Invalid niche slug in manifest.');
+	}
+	$derived = sanitize_title((string) ($business['niche'] ?? ''));
+	if ($derived !== '' && in_array($derived, $valid_slugs, true)) {
+		return $derived;
+	}
+	return new \WP_Error('invalid_niche_slug', 'Invalid niche slug in manifest.');
+}
+
+function lf_ai_studio_scaffold_manifest(array $manifest): array {
+	if (!function_exists('lf_run_setup')) {
+		return ['success' => false, 'message' => __('Setup runner not available.', 'leadsforward-core')];
+	}
+	$data = lf_ai_studio_manifest_to_setup_data($manifest);
+	if (!empty($data['error'])) {
+		return ['success' => false, 'message' => (string) $data['error'], 'errors' => [(string) $data['error']]];
+	}
+	$result = lf_run_setup($data);
+	$business = $manifest['business'] ?? [];
+	$address = is_array($business['address'] ?? null) ? $business['address'] : [];
+	$biz_name = (string) ($business['name'] ?? '');
+	$biz_legal = (string) ($business['legal_name'] ?? '');
+	$biz_phone = (string) ($business['phone'] ?? '');
+	$biz_email = (string) ($business['email'] ?? '');
+	$address_street = (string) ($address['street'] ?? '');
+	$address_city = (string) ($address['city'] ?? '');
+	$address_state = (string) ($address['state'] ?? '');
+	$address_zip = (string) ($address['zip'] ?? '');
+	$address_full = function_exists('lf_business_entity_address_string')
+		? lf_business_entity_address_string([
+			'street' => $address_street,
+			'city' => $address_city,
+			'state' => $address_state,
+			'zip' => $address_zip,
+		])
+		: trim(implode(', ', array_filter([$address_street, $address_city, $address_state, $address_zip])));
+	if ($biz_name !== '') {
+		update_option('blogname', $biz_name);
+	}
+	if (function_exists('lf_update_business_info_value')) {
+		lf_update_business_info_value('lf_business_name', $biz_name);
+		lf_update_business_info_value('lf_business_legal_name', $biz_legal);
+		lf_update_business_info_value('lf_business_phone_primary', $biz_phone);
+		lf_update_business_info_value('lf_business_phone_tracking', '');
+		lf_update_business_info_value('lf_business_phone_display', 'primary');
+		lf_update_business_info_value('lf_business_phone', $biz_phone);
+		lf_update_business_info_value('lf_business_email', $biz_email);
+		lf_update_business_info_value('lf_business_address_street', $address_street);
+		lf_update_business_info_value('lf_business_address_city', $address_city);
+		lf_update_business_info_value('lf_business_address_state', $address_state);
+		lf_update_business_info_value('lf_business_address_zip', $address_zip);
+		lf_update_business_info_value('lf_business_address', $address_full);
+		lf_update_business_info_value('lf_business_service_area_type', 'service_area');
+		lf_update_business_info_value('lf_business_geo', ['lat' => '', 'lng' => '']);
+		lf_update_business_info_value('lf_business_hours', '');
+		lf_update_business_info_value('lf_business_category', 'HomeAndConstructionBusiness');
+		lf_update_business_info_value('lf_business_short_description', '');
+		lf_update_business_info_value('lf_business_gbp_url', '');
+		lf_update_business_info_value('lf_business_social_facebook', '');
+		lf_update_business_info_value('lf_business_social_instagram', '');
+		lf_update_business_info_value('lf_business_social_youtube', '');
+		lf_update_business_info_value('lf_business_social_linkedin', '');
+		lf_update_business_info_value('lf_business_social_tiktok', '');
+		lf_update_business_info_value('lf_business_social_x', '');
+		lf_update_business_info_value('lf_business_same_as', '');
+		lf_update_business_info_value('lf_business_founding_year', '');
+		lf_update_business_info_value('lf_business_license_number', '');
+		lf_update_business_info_value('lf_business_insurance_statement', '');
+		lf_update_business_info_value('lf_business_place_id', '');
+		lf_update_business_info_value('lf_business_place_name', '');
+		lf_update_business_info_value('lf_business_place_address', '');
+		lf_update_business_info_value('lf_business_map_embed', '');
+	}
+	if (function_exists('lf_update_global_option_value')) {
+		lf_update_global_option_value('lf_header_cta_label', '');
+		lf_update_global_option_value('lf_header_cta_url', '');
+	} else {
+		update_option('options_lf_header_cta_label', '');
+		update_option('options_lf_header_cta_url', '');
+	}
+	if (defined('LF_HOMEPAGE_NICHE_OPTION')) {
+		update_option(LF_HOMEPAGE_NICHE_OPTION, $data['niche_slug'], true);
+	}
+	update_option('lf_homepage_city', (string) ($business['primary_city'] ?? $address_city), true);
+	update_option('lf_homepage_keywords', [
+		'primary' => (string) ($manifest['homepage']['primary_keyword'] ?? ''),
+		'secondary' => $manifest['homepage']['secondary_keywords'] ?? [],
+	], true);
+	$home = get_page_by_path('home', OBJECT, 'page');
+	if ($home instanceof \WP_Post) {
+		update_option('show_on_front', 'page');
+		update_option('page_on_front', $home->ID);
+	}
+	return is_array($result) ? $result : ['success' => false, 'message' => __('Setup runner failed.', 'leadsforward-core')];
 }
 
 function lf_ai_studio_get_manifest(): array {
@@ -1604,12 +1783,26 @@ function lf_ai_studio_build_full_site_payload(): array {
 	$manifest = lf_ai_studio_get_manifest();
 	$use_manifest = !empty($manifest);
 	if ($use_manifest) {
+		error_log('LF MANIFEST: loaded');
 		$manifest_errors = lf_ai_studio_validate_manifest($manifest);
 		if (!empty($manifest_errors)) {
 			update_option('lf_ai_studio_manifest_errors', $manifest_errors, false);
 			return ['error' => __('Manifest validation failed. Fix the uploaded manifest to continue.', 'leadsforward-core')];
 		}
 		$manifest = lf_ai_studio_normalize_manifest($manifest);
+		$scaffold = lf_ai_studio_scaffold_manifest($manifest);
+		error_log('LF MANIFEST: scaffold ran ' . wp_json_encode(['success' => $scaffold['success'] ?? false, 'errors' => $scaffold['errors'] ?? []]));
+		if (empty($scaffold['success'])) {
+			$errors = $scaffold['errors'] ?? [];
+			if (is_array($errors) && !empty($errors)) {
+				return ['error' => 'Manifest scaffold failed: ' . print_r($errors, true)];
+			}
+			$message = (string) ($scaffold['message'] ?? '');
+			if ($message !== '') {
+				return ['error' => 'Manifest scaffold failed: ' . $message];
+			}
+			return ['error' => __('Manifest scaffold failed. Fix manifest data and try again.', 'leadsforward-core')];
+		}
 		lf_ai_studio_sync_manifest_posts($manifest);
 	}
 	$homepage_payload = lf_ai_studio_build_homepage_blueprint();
@@ -1698,6 +1891,7 @@ function lf_ai_studio_build_full_site_payload(): array {
 	if ($use_manifest) {
 		$business_entity = lf_ai_studio_manifest_business_entity($manifest, is_array($business_entity) ? $business_entity : []);
 	}
+	error_log('LF MANIFEST: blueprints count ' . count($blueprints));
 	return [
 		'request_id' => (string) ($homepage_payload['request_id'] ?? ''),
 		'variation_seed' => (string) ($homepage_payload['variation_seed'] ?? ''),
@@ -1908,6 +2102,37 @@ function lf_ai_studio_normalize_value($value) {
 	return lf_ai_studio_normalize_text($value);
 }
 
+function lf_ai_studio_registry_field_type(array $registry, string $section_id, string $field_key): string {
+	$section = $registry[$section_id] ?? null;
+	if (!is_array($section)) {
+		return '';
+	}
+	foreach ($section['fields'] ?? [] as $field) {
+		if (($field['key'] ?? '') === $field_key) {
+			return (string) ($field['type'] ?? '');
+		}
+	}
+	return '';
+}
+
+function lf_ai_studio_coerce_list_value($value): string {
+	if (is_array($value)) {
+		$lines = [];
+		foreach ($value as $item) {
+			if (is_array($item)) {
+				$item = wp_json_encode($item);
+			}
+			$item = lf_ai_studio_normalize_text((string) $item);
+			$item = trim($item);
+			if ($item !== '') {
+				$lines[] = $item;
+			}
+		}
+		return implode("\n", $lines);
+	}
+	return (string) $value;
+}
+
 function lf_apply_orchestrator_updates(array $response): array {
 	$updates = $response['updates'] ?? [];
 	if (!is_array($updates)) {
@@ -1917,6 +2142,8 @@ function lf_apply_orchestrator_updates(array $response): array {
 	$changes = ['homepage' => false, 'posts' => [], 'faqs' => []];
 	$pages_updated = 0;
 	$fields_updated = 0;
+	$homepage_fields_count = 0;
+	$update_counts = ['homepage' => 0, 'post_meta' => 0, 'faq' => 0];
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 	$homepage_config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
 
@@ -1939,6 +2166,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 		}
 		if ($target === 'options' && $id === 'homepage') {
 			$homepage_updates[] = $update;
+			$update_counts['homepage']++;
 			continue;
 		}
 		if ($target === 'post_meta') {
@@ -1948,10 +2176,12 @@ function lf_apply_orchestrator_updates(array $response): array {
 				continue;
 			}
 			$post_updates[] = $update;
+			$update_counts['post_meta']++;
 			continue;
 		}
 		if ($target === 'faq') {
 			$faq_updates[] = $update;
+			$update_counts['faq']++;
 			continue;
 		}
 		$errors[] = sprintf(__('Update at index %d has unknown target.', 'leadsforward-core'), $index);
@@ -1987,7 +2217,13 @@ function lf_apply_orchestrator_updates(array $response): array {
 				if (!isset($homepage_fields[$section_id])) {
 					$homepage_fields[$section_id] = [];
 				}
-				$homepage_fields[$section_id][$field_key] = lf_ai_studio_normalize_value($value);
+				$normalized_value = lf_ai_studio_normalize_value($value);
+				$field_type = lf_ai_studio_registry_field_type($registry, $section_id, $field_key);
+				if ($field_type === 'list') {
+					$normalized_value = lf_ai_studio_coerce_list_value($normalized_value);
+				}
+				$homepage_fields[$section_id][$field_key] = $normalized_value;
+				$homepage_fields_count++;
 				$fields_updated++;
 			}
 		}
@@ -2055,7 +2291,12 @@ function lf_apply_orchestrator_updates(array $response): array {
 			if (!isset($incoming_by_instance[$instance_id])) {
 				$incoming_by_instance[$instance_id] = [];
 			}
-			$incoming_by_instance[$instance_id][$field_key] = lf_ai_studio_normalize_value($value);
+			$normalized_value = lf_ai_studio_normalize_value($value);
+			$field_type = lf_ai_studio_registry_field_type($registry, $type, $field_key);
+			if ($field_type === 'list') {
+				$normalized_value = lf_ai_studio_coerce_list_value($normalized_value);
+			}
+			$incoming_by_instance[$instance_id][$field_key] = $normalized_value;
 			$fields_updated++;
 		}
 		foreach ($incoming_by_instance as $instance_id => $fields) {
@@ -2111,6 +2352,13 @@ function lf_apply_orchestrator_updates(array $response): array {
 	if (!empty($changes['faqs'])) {
 		$summary_parts[] = sprintf(__('FAQs updated: %d', 'leadsforward-core'), count($changes['faqs']));
 	}
+	error_log('LF MANIFEST: updates applied ' . wp_json_encode([
+		'homepage_updates' => $update_counts['homepage'],
+		'post_updates' => $update_counts['post_meta'],
+		'faq_updates' => $update_counts['faq'],
+		'faq_created' => count($changes['faqs']),
+		'homepage_fields_updated' => $homepage_fields_count,
+	]));
 
 	$log_manifest = lf_ai_studio_get_manifest();
 	$log_manifest_present = !empty($log_manifest);
