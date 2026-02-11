@@ -25,6 +25,11 @@ function lf_ai_studio_register_rest(): void {
 		'callback' => 'lf_ai_studio_rest_apply',
 		'permission_callback' => 'lf_ai_studio_rest_auth',
 	]);
+	register_rest_route('leadsforward/v1', '/orchestrator', [
+		'methods' => 'POST',
+		'callback' => 'lf_ai_studio_rest_orchestrator',
+		'permission_callback' => 'lf_ai_studio_rest_auth',
+	]);
 }
 
 function lf_ai_studio_rest_auth(\WP_REST_Request $request) {
@@ -33,13 +38,18 @@ function lf_ai_studio_rest_auth(\WP_REST_Request $request) {
 		return new \WP_Error('lf_ai_auth_missing', 'Shared secret is not configured.', ['status' => 401]);
 	}
 	$auth = (string) $request->get_header('authorization');
+	$token = '';
 	if ($auth === '') {
-		return new \WP_Error('lf_ai_auth_missing', 'Missing Authorization header.', ['status' => 401]);
+		$token = (string) $request->get_param('token');
+	} else {
+		if (stripos($auth, 'bearer ') !== 0) {
+			return new \WP_Error('lf_ai_auth_invalid', 'Invalid Authorization header.', ['status' => 401]);
+		}
+		$token = trim(substr($auth, 7));
 	}
-	if (stripos($auth, 'bearer ') !== 0) {
-		return new \WP_Error('lf_ai_auth_invalid', 'Invalid Authorization header.', ['status' => 401]);
+	if ($token === '') {
+		return new \WP_Error('lf_ai_auth_missing', 'Missing Authorization token.', ['status' => 401]);
 	}
-	$token = trim(substr($auth, 7));
 	if (!hash_equals($secret, $token)) {
 		return new \WP_Error('lf_ai_auth_invalid', 'Invalid bearer token.', ['status' => 401]);
 	}
@@ -271,6 +281,20 @@ function lf_ai_studio_internal_link_requirements(array $pages): array {
 function lf_ai_studio_rest_apply(\WP_REST_Request $request): \WP_REST_Response {
 	$payload = $request->get_json_params();
 	if (!is_array($payload)) {
+		$raw = (string) $request->get_body();
+		if ($raw !== '') {
+			$decoded = json_decode($raw, true);
+			if (is_array($decoded)) {
+				$payload = $decoded;
+			} elseif (is_string($decoded)) {
+				$decoded_again = json_decode($decoded, true);
+				if (is_array($decoded_again)) {
+					$payload = $decoded_again;
+				}
+			}
+		}
+	}
+	if (!is_array($payload)) {
 		return new \WP_REST_Response(['error' => 'invalid_json'], 400);
 	}
 	$job_id = isset($payload['job_id']) ? absint($payload['job_id']) : 0;
@@ -307,6 +331,71 @@ function lf_ai_studio_rest_apply(\WP_REST_Request $request): \WP_REST_Response {
 		'success' => $apply['success'],
 		'error' => $apply['error'] ?? '',
 	], $apply['success'] ? 200 : 400);
+}
+
+function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Response {
+	$payload = $request->get_json_params();
+	if (!is_array($payload)) {
+		$raw = (string) $request->get_body();
+		if ($raw !== '') {
+			$decoded = json_decode($raw, true);
+			if (is_array($decoded)) {
+				$payload = $decoded;
+			} elseif (is_string($decoded)) {
+				$decoded_again = json_decode($decoded, true);
+				if (is_array($decoded_again)) {
+					$payload = $decoded_again;
+				}
+			}
+		}
+	}
+	if (!is_array($payload)) {
+		return new \WP_REST_Response(['error' => 'invalid_json'], 400);
+	}
+	$job_id = isset($payload['job_id']) ? absint($payload['job_id']) : 0;
+	if ($job_id) {
+		$job = get_post($job_id);
+		if (!$job instanceof \WP_Post || $job->post_type !== LF_AI_STUDIO_JOB_CPT) {
+			$job_id = 0;
+		}
+	}
+	if (!$job_id) {
+		$job_id = lf_ai_studio_create_job(['source' => 'orchestrator_callback']);
+	}
+	update_post_meta($job_id, 'lf_ai_job_status', 'running');
+	update_post_meta($job_id, 'lf_ai_job_response', $payload);
+	if (!empty($payload['request_id'])) {
+		update_post_meta($job_id, 'lf_ai_job_request_id', sanitize_text_field((string) $payload['request_id']));
+	}
+
+	$apply_payload = $payload['apply'] ?? $payload;
+	$errors = function_exists('lf_ai_studio_validate_payload')
+		? lf_ai_studio_validate_payload($apply_payload)
+		: [];
+	if (!empty($errors)) {
+		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
+		update_post_meta($job_id, 'lf_ai_job_error', implode('; ', $errors));
+		return new \WP_REST_Response(['error' => 'validation_failed', 'messages' => $errors, 'job_id' => $job_id], 400);
+	}
+
+	$apply_result = lf_apply_orchestrator_updates($apply_payload);
+	update_post_meta($job_id, 'lf_ai_job_status', $apply_result['success'] ? 'done' : 'failed');
+	update_post_meta($job_id, 'lf_ai_job_summary', $apply_result['summary'] ?? '');
+	update_post_meta($job_id, 'lf_ai_job_changes', $apply_result['changes'] ?? []);
+	update_post_meta($job_id, 'lf_ai_job_error', !empty($apply_result['errors']) ? implode('; ', $apply_result['errors']) : '');
+
+	if (!empty($apply_result['success'])) {
+		$request = get_post_meta($job_id, 'lf_ai_job_request', true);
+		if (is_array($request)) {
+			lf_ai_studio_seed_dummy_posts((string) ($request['business_name'] ?? ''));
+		}
+	}
+
+	return new \WP_REST_Response([
+		'job_id' => $job_id,
+		'success' => $apply_result['success'],
+		'error' => $apply_result['errors'] ?? [],
+	], $apply_result['success'] ? 200 : 400);
 }
 
 function lf_ai_studio_validate_apply_payload(array $payload): array {

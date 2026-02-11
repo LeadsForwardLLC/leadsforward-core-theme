@@ -4,8 +4,8 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "leadsforward-content-generate",
-        "responseMode": "responseNode",
+        "path": "leadsforward-website-manifester",
+        "responseMode": "onReceived",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
@@ -75,21 +75,6 @@
     },
     {
       "parameters": {
-        "options": {
-          "responseCode": 200
-        }
-      },
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
-      "position": [
-        592,
-        304
-      ],
-      "id": "5c589049-37f5-4f88-b047-bb49c5e8a7cc",
-      "name": "Respond to Webhook"
-    },
-    {
-      "parameters": {
         "jsCode": "// Merge Blueprint Results + Deterministic FAQ Enforcement (STATELESS)\n// IMPORTANT: Code node must be set to \"Run Once for All Items\"\n\nconst items = $input.all();\n\n// If upstream returned a single error item, just pass it through\nif (items.length === 1 && items[0]?.json?.ok === false) {\n  return items;\n}\n\n// Basic validation\nif (!items.length) {\n  return [{ json: { ok: false, status: 500, error: \"No items received to merge\" } }];\n}\n\nconst first = items[0].json || {};\nconst request_id = first.request_id || null;\n\n// ------------------------------\n// Helpers\n// ------------------------------\nfunction clamp(n, min, max) {\n  return Math.max(min, Math.min(max, n));\n}\n\nfunction normalizeText(value) {\n  return String(value || \"\")\n    .toLowerCase()\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nfunction ensureParagraph(answer) {\n  const trimmed = String(answer || \"\").trim();\n  if (!trimmed) return \"\";\n  if (/<p[\\s>]/i.test(trimmed)) {\n    return trimmed;\n  }\n  return `<p>${trimmed}</p>`;\n}\n\nfunction faqRangeForPageType(pageType) {\n  if (pageType === \"service\") return { min: 4, max: 6 };\n  if (pageType === \"service_area\") return { min: 3, max: 5 };\n  if (pageType === \"services_overview\" || pageType === \"service_areas_overview\") return { min: 3, max: 4 };\n  // default for other non-homepage pages\n  return { min: 3, max: 4 };\n}\n\nconst faqEligible = new Set([\n  \"service\",\n  \"service_area\",\n  \"services_overview\",\n  \"service_areas_overview\"\n]);\n\nfunction deterministicSlice(pool, seedInt, count) {\n  if (!pool.length) return [];\n  const start = Math.abs(seedInt) % pool.length;\n  const out = [];\n  for (let i = 0; i < count; i++) {\n    out.push(pool[(start + i) % pool.length]);\n  }\n  return out;\n}\n\nconst ctaDescriptorByPageType = {\n  homepage: \"your project\",\n  service: \"this service\",\n  service_area: \"local service\",\n  services_overview: \"our services\",\n  service_areas_overview: \"coverage in your area\",\n  about: \"working with our team\"\n};\n\nconst ctaVariants = [\n  (desc) => `Get a fast, local response about ${desc}.`,\n  (desc) => `Talk with a specialist about ${desc} today.`,\n  (desc) => `Schedule a quick, no-pressure walkthrough for ${desc}.`,\n  (desc) => `Get clear timing and next steps for ${desc}.`,\n  (desc) => `Plan ${desc} with a trusted local team.`,\n  (desc) => `Get answers and a simple plan for ${desc}.`,\n  (desc) => `Start with a fast estimate for ${desc}.`,\n  (desc) => `Lock in a convenient window for ${desc}.`\n];\n\nfunction buildCtaSupport(pageType, seed) {\n  const desc = ctaDescriptorByPageType[pageType] || \"your project\";\n  const idx = Math.abs(seed) % ctaVariants.length;\n  return ctaVariants[idx](desc);\n}\n\n// ------------------------------\n// 1) Find homepage item + FAQ pool\n// ------------------------------\nconst homepageItem = items.find(i => i?.json?.page_type === \"homepage\");\nlet globalPool = [];\n\n// Prefer FAQ pool generated on homepage in this run\nif (homepageItem?.json?.updates?.length) {\n  const homepageFaq = homepageItem.json.updates.filter(u => u?.target === \"faq\");\n  if (homepageFaq.length) {\n    globalPool = homepageFaq.map(u => ({\n      question: u?.fields?.question || \"\",\n      answer: ensureParagraph(u?.fields?.answer || \"\")\n    })).filter(x => x.question && x.answer);\n  }\n}\n\n// Fallback: if WP payload already included a pool\nif (!globalPool.length && Array.isArray(first.global_faq_pool) && first.global_faq_pool.length) {\n  globalPool = first.global_faq_pool\n    .map(x => ({ question: x?.question || \"\", answer: ensureParagraph(x?.answer || \"\") }))\n    .filter(x => x.question && x.answer);\n}\n\n// ------------------------------\n// 2) Enforce FAQ on each non-homepage item BEFORE merge\n// ------------------------------\nfor (const it of items) {\n  const j = it.json || {};\n  if (!j.ok || !Array.isArray(j.updates)) continue;\n\n  const pageType = j.page_type || null;\n\n  // Homepage: allow as-is (it is canonical generator)\n  if (pageType === \"homepage\") continue;\n\n  if (!faqEligible.has(pageType)) {\n    j.updates = j.updates.filter(u => u?.target !== \"faq\");\n    continue;\n  }\n\n  // If no pool exists, do nothing (don’t invent FAQs here)\n  if (!globalPool.length) {\n    // still strip any LLM-generated FAQs to avoid random drift\n    j.updates = j.updates.filter(u => u?.target !== \"faq\");\n    continue;\n  }\n\n  // Strip any LLM FAQ attempts\n  j.updates = j.updates.filter(u => u?.target !== \"faq\");\n\n  const seedInt = parseInt(j.variation_seed || first.variation_seed || \"1\", 10) || 1;\n  const { min, max } = faqRangeForPageType(pageType);\n\n  // deterministic count in range\n  const span = (max - min + 1);\n  const count = clamp(min + (Math.abs(seedInt) % span), min, max);\n\n  const sliced = deterministicSlice(globalPool, seedInt, count);\n\n  // Inject deterministic FAQs\n  for (const faq of sliced) {\n    j.updates.push({\n      target: \"faq\",\n      id: null,\n      fields: {\n        question: faq.question,\n        answer: ensureParagraph(faq.answer)\n      }\n    });\n  }\n}\n\n// ------------------------------\n// 3) Enforce unique CTA supporting sentences across pages\n// ------------------------------\nconst ctaSeen = new Set();\n\nitems.forEach((it, itemIndex) => {\n  const j = it.json || {};\n  if (!j.ok || !Array.isArray(j.updates)) return;\n\n  const pageType = j.page_type || null;\n\n  for (const update of j.updates) {\n    const fields = update?.fields;\n    if (!fields || typeof fields !== \"object\") continue;\n\n    for (const key of Object.keys(fields)) {\n      if (!key.endsWith(\".cta_subheadline_secondary\")) continue;\n\n      const raw = typeof fields[key] === \"string\" ? fields[key].trim() : \"\";\n      let normalized = normalizeText(raw);\n\n      if (pageType !== \"homepage\" && (!raw || ctaSeen.has(normalized))) {\n        let attempt = 0;\n        let candidate = \"\";\n        let candidateNorm = \"\";\n        do {\n          candidate = buildCtaSupport(pageType, itemIndex + attempt + 1);\n          candidateNorm = normalizeText(candidate);\n          attempt += 1;\n        } while (candidateNorm === \"\" || ctaSeen.has(candidateNorm));\n        fields[key] = candidate;\n        normalized = candidateNorm;\n      }\n\n      if (normalized !== \"\") {\n        ctaSeen.add(normalized);\n      }\n    }\n  }\n});\n\n// ------------------------------\n// 4) Merge all updates into one response payload\n// ------------------------------\nconst mergedUpdates = [];\nfor (const it of items) {\n  const j = it.json || {};\n  if (j.ok && Array.isArray(j.updates)) {\n    mergedUpdates.push(...j.updates);\n  }\n}\n\nreturn [{\n  json: {\n    ok: true,\n    request_id,\n    updates: mergedUpdates\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
@@ -152,6 +137,36 @@
       ],
       "id": "c3bbf996-9ce8-4335-a67e-8337eb20f24b",
       "name": "Merge Blueprint Results"
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhook = $node[\"Webhook\"].json || {};\nconst jobId = webhook.job_id || webhook.body?.job_id || $json?.job_id || null;\nconst callbackUrl = webhook.callback_url || webhook.body?.callback_url || $json?.callback_url || \"\";\n\nreturn [{\n  json: {\n    ...$json,\n    job_id: jobId,\n    callback_url: callbackUrl\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        304
+      ],
+      "id": "e9b4c5a7-8a33-4e6f-9c5b-b3e6f9a1f0d4",
+      "name": "Attach Callback Metadata"
+    },
+    {
+      "parameters": {
+        "url": "={{$json.callback_url}}",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={{JSON.stringify($json)}}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        720,
+        304
+      ],
+      "id": "c0b5c159-7a7f-4d58-b7c1-1a7a2a1e3b42",
+      "name": "Callback to WP"
     }
   ],
   "pinData": {},
@@ -237,7 +252,18 @@
       "main": [
         [
           {
-            "node": "Respond to Webhook",
+            "node": "Attach Callback Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Callback Metadata": {
+      "main": [
+        [
+          {
+            "node": "Callback to WP",
             "type": "main",
             "index": 0
           }

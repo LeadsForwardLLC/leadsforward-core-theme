@@ -1,0 +1,128 @@
+{
+  "business": {
+    "name": "ProClean Power Washing Sarasota",
+    "legal_name": "ProClean Power Washing LLC",
+    "phone": "(941) 260-0596",
+    "email": "hello@procleanpowerwash.com",
+    "address": {
+      "street": "2075 Main Street #1",
+      "city": "Sarasota",
+      "state": "FL",
+      "zip": "34237"
+    },
+    "primary_city": "Sarasota",
+    "niche": "Power Washing",
+    "niche_slug": "power-washing",
+    "site_style": "premium",
+    "variation_seed": "proclean-sarasota-2026-02-11"
+  },
+  "homepage": {
+    "primary_keyword": "Power washing Sarasota",
+    "secondary_keywords": [
+      "Pressure washing Sarasota",
+      "House washing Sarasota",
+      "Driveway cleaning Sarasota"
+    ]
+  },
+  "services": [
+    {
+      "title": "House Washing",
+      "slug": "house-washing",
+      "primary_keyword": "House washing Sarasota",
+      "secondary_keywords": [
+        "Soft wash house cleaning",
+        "Exterior house wash"
+      ],
+      "custom_cta_context": "Gentle, safe washes that protect paint and landscaping."
+    },
+    {
+      "title": "Roof Soft Washing",
+      "slug": "roof-soft-washing",
+      "primary_keyword": "Roof soft washing Sarasota",
+      "secondary_keywords": [
+        "Roof algae removal",
+        "Low pressure roof cleaning"
+      ],
+      "custom_cta_context": "No-pressure roof cleaning that preserves shingles."
+    },
+    {
+      "title": "Driveway Cleaning",
+      "slug": "driveway-cleaning",
+      "primary_keyword": "Driveway cleaning Sarasota",
+      "secondary_keywords": [
+        "Concrete cleaning",
+        "Oil stain removal"
+      ],
+      "custom_cta_context": "Brighten concrete and improve curb appeal fast."
+    },
+    {
+      "title": "Patio & Paver Cleaning",
+      "slug": "patio-paver-cleaning",
+      "primary_keyword": "Paver cleaning Sarasota",
+      "secondary_keywords": [
+        "Patio washing",
+        "Paver sand restoration"
+      ],
+      "custom_cta_context": "Restore color and traction on patios and pool decks."
+    },
+    {
+      "title": "Gutter Cleaning & Whitening",
+      "slug": "gutter-cleaning-whitening",
+      "primary_keyword": "Gutter cleaning Sarasota",
+      "secondary_keywords": [
+        "Gutter whitening",
+        "Downspout clearing"
+      ],
+      "custom_cta_context": "Clear flow and brighten gutters for a clean edge."
+    },
+    {
+      "title": "Commercial Power Washing",
+      "slug": "commercial-power-washing",
+      "primary_keyword": "Commercial power washing Sarasota",
+      "secondary_keywords": [
+        "Storefront washing",
+        "Parking lot cleaning"
+      ],
+      "custom_cta_context": "Keep storefronts and walkways spotless and safe."
+    }
+  ],
+  "service_areas": [
+    {
+      "city": "Sarasota",
+      "state": "FL",
+      "slug": "sarasota",
+      "primary_keyword": "Power washing Sarasota FL"
+    },
+    {
+      "city": "Bradenton",
+      "state": "FL",
+      "slug": "bradenton",
+      "primary_keyword": "Power washing Bradenton FL"
+    },
+    {
+      "city": "Lakewood Ranch",
+      "state": "FL",
+      "slug": "lakewood-ranch",
+      "primary_keyword": "Power washing Lakewood Ranch FL"
+    },
+    {
+      "city": "Venice",
+      "state": "FL",
+      "slug": "venice",
+      "primary_keyword": "Power washing Venice FL"
+    },
+    {
+      "city": "Palmetto",
+      "state": "FL",
+      "slug": "palmetto",
+      "primary_keyword": "Power washing Palmetto FL"
+    }
+  ],
+  "global": {
+    "global_cta_override": false,
+    "custom_global_cta": {
+      "headline": "Get a fast, no-obligation estimate",
+      "subheadline": "Talk to a local expert and get clear next steps today."
+    }
+  }
+}

@@ -182,7 +182,11 @@ function lf_ai_studio_handle_manifest(): void {
 		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
 		exit;
 	}
-	wp_safe_redirect(add_query_arg('manifest', '1', $redirect));
+	$redirect = add_query_arg('manifest', '1', $redirect);
+	if (!empty($result['job_id'])) {
+		$redirect = add_query_arg('job', (string) $result['job_id'], $redirect);
+	}
+	wp_safe_redirect($redirect);
 	exit;
 }
 
@@ -212,6 +216,9 @@ function lf_ai_studio_render_page(): void {
 	}
 	$saved = isset($_GET['saved']) && $_GET['saved'] === '1';
 	$error = isset($_GET['error']) ? sanitize_text_field(wp_unslash((string) $_GET['error'])) : '';
+	$job_id = isset($_GET['job']) ? absint($_GET['job']) : 0;
+	$job_status = $job_id ? (string) get_post_meta($job_id, 'lf_ai_job_status', true) : '';
+	$job_error = $job_id ? (string) get_post_meta($job_id, 'lf_ai_job_error', true) : '';
 	$enabled = get_option('lf_ai_studio_enabled', '0') === '1';
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$secret = (string) get_option('lf_ai_studio_secret', '');
@@ -276,7 +283,16 @@ function lf_ai_studio_render_page(): void {
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Website Manifester settings saved.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
 		<?php if ($manifest_saved) : ?>
-			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Manifest uploaded. Generation started.', 'leadsforward-core'); ?></p></div>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Manifest uploaded. Generation queued and running in the background.', 'leadsforward-core'); ?></p></div>
+		<?php endif; ?>
+		<?php if ($job_id && $job_status) : ?>
+			<?php if (in_array($job_status, ['queued', 'running'], true)) : ?>
+				<div class="notice notice-info is-dismissible"><p><?php echo esc_html(sprintf(__('Generation job #%d is running. Refresh in a minute to see completion.', 'leadsforward-core'), $job_id)); ?></p></div>
+			<?php elseif ($job_status === 'done') : ?>
+				<div class="notice notice-success is-dismissible"><p><?php echo esc_html(sprintf(__('Generation job #%d completed successfully.', 'leadsforward-core'), $job_id)); ?></p></div>
+			<?php elseif ($job_status === 'failed') : ?>
+				<div class="notice notice-error"><p><?php echo esc_html(sprintf(__('Generation job #%d failed: %s', 'leadsforward-core'), $job_id, $job_error ?: __('Unknown error', 'leadsforward-core'))); ?></p></div>
+			<?php endif; ?>
 		<?php endif; ?>
 		<?php if ($error) : ?>
 			<div class="notice notice-error"><p><?php echo esc_html($error); ?></p></div>
@@ -612,7 +628,14 @@ function lf_ai_studio_run_homepage_generation(): array {
 function lf_ai_studio_send_request(array $request, int $job_id): array {
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$secret = (string) get_option('lf_ai_studio_secret', '');
-	update_post_meta($job_id, 'lf_ai_job_status', 'running');
+	$callback_url = rest_url('leadsforward/v1/orchestrator');
+	if ($secret !== '') {
+		$callback_url = add_query_arg('token', rawurlencode($secret), $callback_url);
+	}
+	$request['job_id'] = $job_id;
+	$request['callback_url'] = $callback_url;
+	update_post_meta($job_id, 'lf_ai_job_status', 'queued');
+	update_post_meta($job_id, 'lf_ai_job_request', $request);
 	$log_payload = [
 		'keys' => array_keys($request),
 		'blueprints' => isset($request['blueprints']) && is_array($request['blueprints'])
@@ -626,7 +649,7 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	error_log('LF DEBUG: About to POST full-site payload to orchestrator');
 	$response = wp_remote_post($webhook, [
 		'method' => 'POST',
-		'timeout' => 120,
+		'timeout' => 20,
 		'blocking' => true,
 		'headers' => [
 			'Authorization' => 'Bearer ' . $secret,
@@ -651,31 +674,13 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 		return ['error' => sprintf(__('Orchestrator returned HTTP %d: %s', 'leadsforward-core'), $status, (string) $body), 'job_id' => $job_id];
 	}
 	$payload = json_decode($body, true);
-	if (!is_array($payload)) {
-		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
-		update_post_meta($job_id, 'lf_ai_job_error', 'invalid_json');
-		update_post_meta($job_id, 'lf_ai_job_response', $body);
-		error_log('LF DEBUG: Regenerate Site failed: invalid JSON response.');
-		return ['error' => __('Invalid JSON response from orchestrator.', 'leadsforward-core'), 'job_id' => $job_id];
-	}
-	if (!empty($payload['request_id'])) {
+	if (is_array($payload) && !empty($payload['request_id'])) {
 		update_post_meta($job_id, 'lf_ai_job_request_id', sanitize_text_field((string) $payload['request_id']));
+		update_post_meta($job_id, 'lf_ai_job_response', $payload);
+	} elseif ($body !== '') {
+		update_post_meta($job_id, 'lf_ai_job_response', $body);
 	}
-	update_post_meta($job_id, 'lf_ai_job_response', $payload);
-	$apply_payload = $payload['apply'] ?? $payload;
-	$errors = lf_ai_studio_validate_payload($apply_payload);
-	if (!empty($errors)) {
-		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
-		update_post_meta($job_id, 'lf_ai_job_error', implode('; ', $errors));
-		return ['error' => __('Payload validation failed.', 'leadsforward-core'), 'job_id' => $job_id];
-	}
-	$apply_result = lf_apply_orchestrator_updates($apply_payload);
-	update_post_meta($job_id, 'lf_ai_job_status', $apply_result['success'] ? 'done' : 'failed');
-	update_post_meta($job_id, 'lf_ai_job_summary', $apply_result['summary'] ?? '');
-	update_post_meta($job_id, 'lf_ai_job_changes', $apply_result['changes'] ?? []);
-	if (!empty($apply_result['success'])) {
-		lf_ai_studio_seed_dummy_posts((string) ($request['business_name'] ?? ''));
-	}
+	update_post_meta($job_id, 'lf_ai_job_status', 'running');
 	return ['job_id' => $job_id];
 }
 
@@ -742,36 +747,72 @@ function lf_ai_studio_collect_writing_samples(): array {
 function lf_ai_studio_manifest_template(): array {
 	return [
 		'business' => [
-			'name' => 'Your Business Name',
-			'legal_name' => 'Your Legal Business Name',
-			'phone' => '(555) 555-5555',
-			'email' => 'contact@example.com',
+			'name' => 'ProClean Power Washing Sarasota',
+			'legal_name' => 'ProClean Power Washing LLC',
+			'phone' => '(941) 260-0596',
+			'email' => 'hello@procleanpowerwash.com',
 			'address' => [
-				'street' => '123 Main Street',
+				'street' => '2075 Main Street #1',
 				'city' => 'Sarasota',
 				'state' => 'FL',
-				'zip' => '34232',
+				'zip' => '34237',
 			],
 			'primary_city' => 'Sarasota',
-			'niche' => 'roofing',
-			'niche_slug' => 'roofing',
-			'site_style' => 'professional',
-			'variation_seed' => '',
+			'niche' => 'Power Washing',
+			'niche_slug' => 'power-washing',
+			'site_style' => 'premium',
+			'variation_seed' => 'proclean-sarasota-2026-02-11',
 		],
 		'homepage' => [
-			'primary_keyword' => 'Roofing contractor Sarasota',
+			'primary_keyword' => 'Power washing Sarasota',
 			'secondary_keywords' => [
-				'Roof repair Sarasota',
-				'Roof replacement Sarasota',
+				'Pressure washing Sarasota',
+				'House washing Sarasota',
+				'Driveway cleaning Sarasota',
 			],
 		],
 		'services' => [
 			[
-				'title' => 'Roof Repair',
-				'slug' => 'roof-repair',
-				'primary_keyword' => 'Roof repair Sarasota',
-				'secondary_keywords' => ['Emergency roof repair', 'Leak repair'],
-				'custom_cta_context' => 'Fast inspections and same-week repair slots.',
+				'title' => 'House Washing',
+				'slug' => 'house-washing',
+				'primary_keyword' => 'House washing Sarasota',
+				'secondary_keywords' => ['Soft wash house cleaning', 'Exterior house wash'],
+				'custom_cta_context' => 'Gentle, safe washes that protect paint and landscaping.',
+			],
+			[
+				'title' => 'Roof Soft Washing',
+				'slug' => 'roof-soft-washing',
+				'primary_keyword' => 'Roof soft washing Sarasota',
+				'secondary_keywords' => ['Roof algae removal', 'Low pressure roof cleaning'],
+				'custom_cta_context' => 'No-pressure roof cleaning that preserves shingles.',
+			],
+			[
+				'title' => 'Driveway Cleaning',
+				'slug' => 'driveway-cleaning',
+				'primary_keyword' => 'Driveway cleaning Sarasota',
+				'secondary_keywords' => ['Concrete cleaning', 'Oil stain removal'],
+				'custom_cta_context' => 'Brighten concrete and improve curb appeal fast.',
+			],
+			[
+				'title' => 'Patio & Paver Cleaning',
+				'slug' => 'patio-paver-cleaning',
+				'primary_keyword' => 'Paver cleaning Sarasota',
+				'secondary_keywords' => ['Patio washing', 'Paver sand restoration'],
+				'custom_cta_context' => 'Restore color and traction on patios and pool decks.',
+			],
+			[
+				'title' => 'Gutter Cleaning & Whitening',
+				'slug' => 'gutter-cleaning-whitening',
+				'primary_keyword' => 'Gutter cleaning Sarasota',
+				'secondary_keywords' => ['Gutter whitening', 'Downspout clearing'],
+				'custom_cta_context' => 'Clear flow and brighten gutters for a clean edge.',
+			],
+			[
+				'title' => 'Commercial Power Washing',
+				'slug' => 'commercial-power-washing',
+				'primary_keyword' => 'Commercial power washing Sarasota',
+				'secondary_keywords' => ['Storefront washing', 'Parking lot cleaning'],
+				'custom_cta_context' => 'Keep storefronts and walkways spotless and safe.',
 			],
 		],
 		'service_areas' => [
@@ -779,7 +820,31 @@ function lf_ai_studio_manifest_template(): array {
 				'city' => 'Sarasota',
 				'state' => 'FL',
 				'slug' => 'sarasota',
-				'primary_keyword' => 'Roofing services Sarasota',
+				'primary_keyword' => 'Power washing Sarasota FL',
+			],
+			[
+				'city' => 'Bradenton',
+				'state' => 'FL',
+				'slug' => 'bradenton',
+				'primary_keyword' => 'Power washing Bradenton FL',
+			],
+			[
+				'city' => 'Lakewood Ranch',
+				'state' => 'FL',
+				'slug' => 'lakewood-ranch',
+				'primary_keyword' => 'Power washing Lakewood Ranch FL',
+			],
+			[
+				'city' => 'Venice',
+				'state' => 'FL',
+				'slug' => 'venice',
+				'primary_keyword' => 'Power washing Venice FL',
+			],
+			[
+				'city' => 'Palmetto',
+				'state' => 'FL',
+				'slug' => 'palmetto',
+				'primary_keyword' => 'Power washing Palmetto FL',
 			],
 		],
 		'global' => [
