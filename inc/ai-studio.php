@@ -581,6 +581,9 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	update_post_meta($job_id, 'lf_ai_job_status', $apply_result['success'] ? 'done' : 'failed');
 	update_post_meta($job_id, 'lf_ai_job_summary', $apply_result['summary'] ?? '');
 	update_post_meta($job_id, 'lf_ai_job_changes', $apply_result['changes'] ?? []);
+	if (!empty($apply_result['success'])) {
+		lf_ai_studio_seed_dummy_posts((string) ($request['business_name'] ?? ''));
+	}
 	return ['job_id' => $job_id];
 }
 
@@ -603,6 +606,41 @@ function lf_ai_studio_keywords(): array {
 	$raw = (string) get_option('lf_ai_studio_keywords', '');
 	$lines = array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $raw)));
 	return array_values(array_map('sanitize_text_field', $lines));
+}
+
+function lf_ai_studio_seed_dummy_posts(string $business_name = ''): void {
+	$existing = get_posts([
+		'post_type'      => 'post',
+		'post_status'    => 'any',
+		'posts_per_page' => 1,
+		'fields'         => 'ids',
+	]);
+	if (!empty($existing)) {
+		return;
+	}
+	$label = $business_name !== '' ? $business_name : __('your home', 'leadsforward-core');
+	$posts = [
+		[
+			'post_title' => sprintf(__('Planning your next project with %s in mind', 'leadsforward-core'), $label),
+			'post_content' => __('This is a placeholder post created during site generation. Replace it with a helpful guide or FAQ that answers your customers’ most common questions.', 'leadsforward-core'),
+		],
+		[
+			'post_title' => __('What to expect during a typical service visit', 'leadsforward-core'),
+			'post_content' => __('Use this post to explain your process, timeline, and how homeowners should prepare. Add real examples and photos once available.', 'leadsforward-core'),
+		],
+		[
+			'post_title' => __('Common pitfalls homeowners should avoid', 'leadsforward-core'),
+			'post_content' => __('Outline mistakes you see often and how your team prevents them. This builds trust and clarifies why professional help matters.', 'leadsforward-core'),
+		],
+	];
+	foreach ($posts as $post) {
+		wp_insert_post([
+			'post_type' => 'post',
+			'post_status' => 'publish',
+			'post_title' => $post['post_title'],
+			'post_content' => $post['post_content'],
+		]);
+	}
 }
 
 function lf_ai_studio_collect_writing_samples(): array {
@@ -914,6 +952,33 @@ function lf_ai_studio_normalize_manifest(array $manifest): array {
 	];
 }
 
+function lf_ai_studio_manifest_business_entity(array $manifest, array $fallback = []): array {
+	$business = is_array($manifest['business'] ?? null) ? $manifest['business'] : [];
+	$address = is_array($business['address'] ?? null) ? $business['address'] : [];
+	$address_parts = [
+		'street' => (string) ($address['street'] ?? ''),
+		'city' => (string) ($address['city'] ?? ''),
+		'state' => (string) ($address['state'] ?? ''),
+		'zip' => (string) ($address['zip'] ?? ''),
+	];
+	$address_full = function_exists('lf_business_entity_address_string')
+		? lf_business_entity_address_string($address_parts)
+		: trim(implode(', ', array_filter($address_parts)));
+	$phone = (string) ($business['phone'] ?? '');
+	$entity = is_array($fallback) ? $fallback : [];
+	$entity['name'] = (string) ($business['name'] ?? '');
+	$entity['legal_name'] = (string) ($business['legal_name'] ?? '');
+	$entity['phone_primary'] = $phone;
+	$entity['phone_tracking'] = '';
+	$entity['phone_display_pref'] = 'primary';
+	$entity['phone_display'] = $phone;
+	$entity['email'] = (string) ($business['email'] ?? '');
+	$entity['address_parts'] = $address_parts;
+	$entity['address'] = $address_full;
+	$entity['niche'] = (string) ($business['niche'] ?? '');
+	return $entity;
+}
+
 function lf_ai_studio_manifest_hash(array $manifest): string {
 	$normalized = lf_ai_studio_normalize_manifest($manifest);
 	return hash('sha256', wp_json_encode($normalized));
@@ -1118,35 +1183,50 @@ function lf_homepage_keywords(): array {
 }
 
 function lf_ai_studio_build_homepage_blueprint(): array {
-	$entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
-	$business_name = is_array($entity) ? (string) ($entity['name'] ?? get_bloginfo('name')) : get_bloginfo('name');
-	$niche = (string) get_option(LF_HOMEPAGE_NICHE_OPTION, 'general');
-	$city = (string) get_option('lf_homepage_city', '');
-	if ($city === '' && is_array($entity)) {
-		$city = (string) ($entity['address_parts']['city'] ?? '');
-		if ($city === '' && !empty($entity['service_areas'][0])) {
-			$city = (string) $entity['service_areas'][0];
-		}
-	}
-	$keywords = lf_homepage_keywords();
 	$manifest = lf_ai_studio_get_manifest();
-	if (!empty($manifest)) {
+	$use_manifest = !empty($manifest);
+	$entity = [];
+	$business_name = '';
+	$niche = '';
+	$city = '';
+	$keywords = ['primary' => '', 'secondary' => []];
+	if ($use_manifest) {
 		$manifest_errors = lf_ai_studio_validate_manifest($manifest);
 		if (!empty($manifest_errors)) {
 			update_option('lf_ai_studio_manifest_errors', $manifest_errors, false);
 			return ['error' => __('Manifest validation failed. Fix the uploaded manifest to continue.', 'leadsforward-core')];
 		}
 		$manifest = lf_ai_studio_normalize_manifest($manifest);
-		$business_name = (string) ($manifest['business']['name'] ?? $business_name);
-		$niche = (string) ($manifest['business']['niche'] ?? $niche);
-		$city = (string) ($manifest['business']['primary_city'] ?? ($manifest['business']['address']['city'] ?? $city));
+		$entity = lf_ai_studio_manifest_business_entity($manifest, $entity);
+		$business_name = (string) ($manifest['business']['name'] ?? '');
+		$niche = (string) ($manifest['business']['niche'] ?? '');
+		$city = (string) ($manifest['business']['primary_city'] ?? ($manifest['business']['address']['city'] ?? ''));
 		$keywords = [
 			'primary' => (string) ($manifest['homepage']['primary_keyword'] ?? ''),
 			'secondary' => $manifest['homepage']['secondary_keywords'] ?? [],
 		];
+	} else {
+		$entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
+		$business_name = is_array($entity) ? (string) ($entity['name'] ?? get_bloginfo('name')) : get_bloginfo('name');
+		$niche = (string) get_option(LF_HOMEPAGE_NICHE_OPTION, 'general');
+		$city = (string) get_option('lf_homepage_city', '');
+		if ($city === '' && is_array($entity)) {
+			$city = (string) ($entity['address_parts']['city'] ?? '');
+			if ($city === '' && !empty($entity['service_areas'][0])) {
+				$city = (string) $entity['service_areas'][0];
+			}
+		}
+		$keywords = lf_homepage_keywords();
 	}
 	$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
 	$order = function_exists('lf_homepage_controller_order') ? lf_homepage_controller_order() : [];
+	if ($use_manifest && (empty($config) || empty($order)) && function_exists('lf_homepage_default_config')) {
+		$config = lf_homepage_default_config($niche !== '' ? $niche : null);
+		$order = function_exists('lf_homepage_controller_order') ? lf_homepage_controller_order() : array_keys($config);
+		if (empty($order)) {
+			$order = array_keys($config);
+		}
+	}
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 	$hero_variant = isset($config['hero']['variant']) ? (string) $config['hero']['variant'] : 'default';
 	$variation_seed = lf_homepage_variation_seed();
@@ -1187,7 +1267,20 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 		];
 	}
 	if (empty($order) || empty($blueprint_sections)) {
-		return ['error' => __('Homepage blueprint could not be built. Check homepage configuration.', 'leadsforward-core')];
+		if ($use_manifest) {
+			$fallback = lf_ai_studio_build_default_homepage_blueprint($manifest);
+			if (!empty($fallback)) {
+				$blueprint_sections = $fallback['sections'] ?? [];
+				$order = $fallback['order'] ?? $order;
+				$hero_variant = (string) ($fallback['hero_variant'] ?? $hero_variant);
+				if (function_exists('lf_homepage_default_config')) {
+					$config = lf_homepage_default_config($niche !== '' ? $niche : null);
+				}
+			}
+		}
+		if (empty($order) || empty($blueprint_sections)) {
+			return ['error' => __('Homepage blueprint could not be built. Check homepage configuration.', 'leadsforward-core')];
+		}
 	}
 
 	$base = [
@@ -1217,6 +1310,54 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 
 	$base['blueprint']['request_id'] = $request_id;
 	return ['request_id' => $request_id] + $base;
+}
+
+function lf_ai_studio_build_default_homepage_blueprint(array $manifest = []): array {
+	$niche = '';
+	if (!empty($manifest) && is_array($manifest)) {
+		$normalized = lf_ai_studio_normalize_manifest($manifest);
+		$niche = (string) ($normalized['business']['niche'] ?? '');
+	}
+	$config = function_exists('lf_homepage_default_config')
+		? lf_homepage_default_config($niche !== '' ? $niche : null)
+		: [];
+	$order = function_exists('lf_homepage_controller_order') ? lf_homepage_controller_order() : array_keys($config);
+	if (empty($order)) {
+		$order = array_keys($config);
+	}
+	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
+	$hero_variant = isset($config['hero']['variant']) ? (string) $config['hero']['variant'] : 'default';
+	$blueprint_sections = [];
+	foreach ($order as $section_id) {
+		$schema = $registry[$section_id] ?? null;
+		if (!is_array($schema)) {
+			continue;
+		}
+		$section = $config[$section_id] ?? [];
+		$allowed_keys = lf_ai_studio_homepage_allowed_field_keys($section_id, $schema);
+		$blueprint_sections[] = [
+			'section_id' => $section_id,
+			'section_type' => lf_ai_studio_homepage_section_type($section_id),
+			'intent' => (string) ($section['section_intent'] ?? ''),
+			'length_targets' => lf_ai_studio_section_length_targets(lf_ai_studio_homepage_section_type($section_id), 'homepage'),
+			'allowed_field_keys' => $allowed_keys,
+		];
+	}
+	if (empty($order) || empty($blueprint_sections)) {
+		return [];
+	}
+	return [
+		'page' => 'homepage',
+		'page_intent' => 'homepage',
+		'hero_variant' => $hero_variant,
+		'sections' => $blueprint_sections,
+		'order' => $order,
+		'services' => lf_ai_studio_homepage_service_catalog(),
+		'service_areas' => lf_ai_studio_homepage_area_catalog(),
+		'faqs' => lf_ai_studio_homepage_faq_catalog(),
+		'faq_target_count' => lf_ai_studio_homepage_faq_target_count($config),
+		'faq_target_range' => lf_ai_studio_faq_target_range('homepage'),
+	];
 }
 
 function lf_ai_studio_homepage_allowed_field_keys(string $section_id, array $schema): array {
@@ -1479,8 +1620,13 @@ function lf_ai_studio_build_full_site_payload(): array {
 		return ['error' => (string) $homepage_payload['error']];
 	}
 	$homepage_blueprint = $homepage_payload['blueprint'] ?? [];
-	if (!is_array($homepage_blueprint)) {
-		return ['error' => __('Homepage blueprint is missing.', 'leadsforward-core')];
+	if (!is_array($homepage_blueprint) || empty($homepage_blueprint)) {
+		if ($use_manifest) {
+			$homepage_blueprint = lf_ai_studio_build_default_homepage_blueprint($manifest);
+		}
+		if (!is_array($homepage_blueprint) || empty($homepage_blueprint)) {
+			return ['error' => __('Homepage blueprint is missing.', 'leadsforward-core')];
+		}
 	}
 
 	$blueprints = [];
@@ -1539,18 +1685,18 @@ function lf_ai_studio_build_full_site_payload(): array {
 		}
 	}
 
-	$business_name = (string) ($homepage_payload['business_name'] ?? '');
-	$niche = (string) ($homepage_payload['niche'] ?? '');
-	$city = (string) ($homepage_payload['city_region'] ?? '');
-	$keywords = $homepage_payload['keywords'] ?? [];
-	if ($use_manifest) {
-		$business_name = (string) ($manifest['business']['name'] ?? $business_name);
-		$niche = (string) ($manifest['business']['niche'] ?? $niche);
-		$city = (string) ($manifest['business']['primary_city'] ?? ($manifest['business']['address']['city'] ?? $city));
-		$keywords = [
+	$business_name = $use_manifest ? (string) ($manifest['business']['name'] ?? '') : (string) ($homepage_payload['business_name'] ?? '');
+	$niche = $use_manifest ? (string) ($manifest['business']['niche'] ?? '') : (string) ($homepage_payload['niche'] ?? '');
+	$city = $use_manifest ? (string) ($manifest['business']['primary_city'] ?? ($manifest['business']['address']['city'] ?? '')) : (string) ($homepage_payload['city_region'] ?? '');
+	$keywords = $use_manifest
+		? [
 			'primary' => (string) ($manifest['homepage']['primary_keyword'] ?? ''),
 			'secondary' => $manifest['homepage']['secondary_keywords'] ?? [],
-		];
+		]
+		: ($homepage_payload['keywords'] ?? []);
+	$business_entity = $homepage_payload['business_entity'] ?? [];
+	if ($use_manifest) {
+		$business_entity = lf_ai_studio_manifest_business_entity($manifest, is_array($business_entity) ? $business_entity : []);
 	}
 	return [
 		'request_id' => (string) ($homepage_payload['request_id'] ?? ''),
@@ -1560,7 +1706,7 @@ function lf_ai_studio_build_full_site_payload(): array {
 		'city_region' => $city,
 		'keywords' => $keywords,
 		'writing_samples' => lf_ai_studio_collect_writing_samples(),
-		'business_entity' => $homepage_payload['business_entity'] ?? [],
+		'business_entity' => $business_entity,
 		'system_message' => lf_ai_studio_llm_system_message(),
 		'faq_strategy' => lf_ai_studio_faq_strategy(),
 		'cta_strategy' => lf_ai_studio_cta_strategy(),

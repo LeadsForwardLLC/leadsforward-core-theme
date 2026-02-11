@@ -18,6 +18,18 @@ const LF_DEV_RESET_LOG_MAX     = 20;
 const LF_DEV_RESET_MENU_NAMES  = ['Header Menu', 'Footer Menu'];
 const LF_DEV_RESET_MENU_LOCATIONS = ['header_menu', 'footer_menu'];
 
+function lf_dev_reset_delete_posts_by_type(string $post_type): void {
+	$posts = get_posts([
+		'post_type'      => $post_type,
+		'post_status'    => 'any',
+		'posts_per_page' => -1,
+		'fields'         => 'ids',
+	]);
+	foreach ($posts as $id) {
+		wp_delete_post((int) $id, true);
+	}
+}
+
 /**
  * True only when WP_DEBUG, WP_ENV=local, or LF_DEV_RESET_ENABLED. Used for visibility and abort.
  */
@@ -90,33 +102,6 @@ function lf_dev_reset_run(): void {
 				wp_delete_post($page->ID, true);
 			}
 		}
-		$services = get_posts([
-			'post_type'      => 'lf_service',
-			'post_status'    => 'any',
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-		]);
-		foreach ($services as $id) {
-			wp_delete_post((int) $id, true);
-		}
-		$areas = get_posts([
-			'post_type'      => 'lf_service_area',
-			'post_status'    => 'any',
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-		]);
-		foreach ($areas as $id) {
-			wp_delete_post((int) $id, true);
-		}
-		$faqs = get_posts([
-			'post_type'      => 'lf_faq',
-			'post_status'    => 'any',
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-		]);
-		foreach ($faqs as $id) {
-			wp_delete_post((int) $id, true);
-		}
 	} else {
 		foreach ($page_ids as $id) {
 			if (is_numeric($id)) {
@@ -133,16 +118,15 @@ function lf_dev_reset_run(): void {
 				wp_delete_post((int) $id, true);
 			}
 		}
-		$faqs = get_posts([
-			'post_type'      => 'lf_faq',
-			'post_status'    => 'any',
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-		]);
-		foreach ($faqs as $id) {
-			wp_delete_post((int) $id, true);
-		}
 	}
+
+	lf_dev_reset_delete_posts_by_type('page');
+	lf_dev_reset_delete_posts_by_type('post');
+	lf_dev_reset_delete_posts_by_type('lf_service');
+	lf_dev_reset_delete_posts_by_type('lf_service_area');
+	lf_dev_reset_delete_posts_by_type('lf_faq');
+	lf_dev_reset_delete_posts_by_type('lf_testimonial');
+	lf_dev_reset_delete_posts_by_type('lf_ai_job');
 
 	$menus = wp_get_nav_menus();
 	foreach ($menus as $menu) {
@@ -212,6 +196,13 @@ function lf_dev_reset_run(): void {
 	delete_option('lf_maps_api_key');
 	delete_option('lf_openai_api_key');
 	delete_option('lf_site_seed');
+	delete_option('lf_site_manifest');
+	delete_option('lf_ai_last_generation_log');
+	delete_option('lf_ai_studio_manifest_errors');
+	delete_option('lf_ai_studio_keywords');
+	delete_option('lf_homepage_city');
+	delete_option('lf_homepage_keywords');
+	delete_option('lf_homepage_variation_seed');
 	// Clear global settings (logo + header CTA).
 	$global_keys = ['lf_global_logo', 'lf_header_cta_label', 'lf_header_cta_url'];
 	if (function_exists('update_field')) {
