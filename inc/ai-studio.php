@@ -533,11 +533,13 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	error_log('LF AI Studio webhook invoked: job=' . $job_id . ($webhook_host ? ' host=' . $webhook_host : ''));
 	error_log('LF DEBUG: About to POST full-site payload to orchestrator');
 	$response = wp_remote_post($webhook, [
+		'method' => 'POST',
+		'timeout' => 120,
+		'blocking' => true,
 		'headers' => [
 			'Authorization' => 'Bearer ' . $secret,
 			'Content-Type' => 'application/json',
 		],
-		'timeout' => 45,
 		'body' => wp_json_encode($request),
 	]);
 	error_log('LF DEBUG: Webhook call returned' . print_r($response, true));
