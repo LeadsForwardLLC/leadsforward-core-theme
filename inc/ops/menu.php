@@ -1,7 +1,7 @@
 <?php
 /**
  * LeadsForward parent menu and submenu registration. Admin only.
- * Order: Setup → Global Settings → Homepage → Ops (bulk/audit/config).
+ * Order: Website Manifester → Setup → Global Settings → Homepage → Ops (bulk/audit/config).
  * Site Health is added by inc/site-health/dashboard.php at priority 11.
  *
  * @package LeadsForward_Core
@@ -26,21 +26,30 @@ function lf_ops_register_menu(): void {
 		__('LeadsForward', 'leadsforward-core'),
 		LF_OPS_CAP,
 		'lf-ops',
-		'lf_wizard_render_page',
+		'lf_ai_studio_render_page',
 		'dashicons-admin-generic',
 		59
 	);
 
-	// 1. Setup — same slug as parent so clicking "LeadsForward" shows this; only this item highlights when on page=lf-ops
+	// 1. Website Manifester — same slug as parent so clicking "LeadsForward" shows this.
 	add_submenu_page(
 		'lf-ops',
-		__('Setup', 'leadsforward-core'),
-		__('Setup', 'leadsforward-core'),
+		__('Website Manifester', 'leadsforward-core'),
+		__('Website Manifester', 'leadsforward-core'),
 		'edit_theme_options',
 		'lf-ops',
+		'lf_ai_studio_render_page'
+	);
+	// 2. Setup Wizard (secondary).
+	add_submenu_page(
+		'lf-ops',
+		__('Setup Wizard', 'leadsforward-core'),
+		__('Setup Wizard', 'leadsforward-core'),
+		'edit_theme_options',
+		'lf-setup',
 		'lf_wizard_render_page'
 	);
-	// 2. Global Settings (includes Branding).
+	// 3. Global Settings (includes Branding).
 	add_submenu_page(
 		'lf-ops',
 		__('Global Settings', 'leadsforward-core'),
@@ -49,7 +58,7 @@ function lf_ops_register_menu(): void {
 		'lf-global',
 		'lf_ops_render_global_settings_page'
 	);
-	// 3. Homepage (sections)
+	// 4. Homepage (sections)
 	add_submenu_page(
 		'lf-ops',
 		__('Homepage', 'leadsforward-core'),
@@ -58,7 +67,7 @@ function lf_ops_register_menu(): void {
 		'lf-homepage-settings',
 		'lf_homepage_admin_render'
 	);
-	// 4. Quote Builder
+	// 5. Quote Builder
 	add_submenu_page(
 		'lf-ops',
 		__('Quote Builder', 'leadsforward-core'),

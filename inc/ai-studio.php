@@ -16,12 +16,12 @@ const LF_AI_STUDIO_JOB_CPT = 'lf_ai_job';
 const LF_MANIFEST_SCHEMA_VERSION = '1.0';
 
 add_action('init', 'lf_ai_studio_register_cpt');
-add_action('admin_menu', 'lf_ai_studio_register_menu', 13);
 add_action('admin_post_lf_ai_studio_save', 'lf_ai_studio_handle_save');
 add_action('admin_post_lf_ai_studio_generate', 'lf_ai_studio_handle_generate');
 add_action('admin_post_lf_ai_studio_retry', 'lf_ai_studio_handle_retry');
 add_action('admin_post_lf_ai_studio_manifest', 'lf_ai_studio_handle_manifest');
 add_action('admin_post_lf_ai_studio_manifest_template', 'lf_ai_studio_handle_manifest_template');
+add_action('admin_enqueue_scripts', 'lf_ai_studio_assets');
 
 function lf_ai_studio_register_cpt(): void {
 	register_post_type(LF_AI_STUDIO_JOB_CPT, [
@@ -35,18 +35,14 @@ function lf_ai_studio_register_cpt(): void {
 	]);
 }
 
-function lf_ai_studio_register_menu(): void {
+function lf_ai_studio_assets(string $hook): void {
 	if (!current_user_can('edit_theme_options')) {
 		return;
 	}
-	add_submenu_page(
-		'lf-ops',
-		__('AI Studio (Advanced)', 'leadsforward-core'),
-		__('AI Studio (Advanced)', 'leadsforward-core'),
-		'edit_theme_options',
-		'lf-ai-studio',
-		'lf_ai_studio_render_page'
-	);
+	if (!in_array($hook, ['toplevel_page_lf-ops', 'leadsforward_page_lf-ops'], true)) {
+		return;
+	}
+	wp_enqueue_media();
 }
 
 function lf_ai_studio_handle_save(): void {
@@ -54,6 +50,18 @@ function lf_ai_studio_handle_save(): void {
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_ai_studio_save', 'lf_ai_studio_nonce');
+	$prev_logo_id = function_exists('lf_get_global_option')
+		? (int) lf_get_global_option('lf_global_logo', 0)
+		: (int) get_option('options_lf_global_logo', 0);
+	$logo_id = isset($_POST['lf_global_logo']) ? (int) $_POST['lf_global_logo'] : 0;
+	if (function_exists('lf_update_global_option_value')) {
+		lf_update_global_option_value('lf_global_logo', (string) $logo_id);
+	} else {
+		update_option('options_lf_global_logo', $logo_id);
+	}
+	if ($logo_id > 0 && $logo_id !== $prev_logo_id && function_exists('lf_branding_auto_from_logo')) {
+		lf_branding_auto_from_logo($logo_id);
+	}
 	update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
 	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
 	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
@@ -77,7 +85,7 @@ function lf_ai_studio_handle_save(): void {
 		'primary' => $primary_kw,
 		'secondary' => array_values($secondary),
 	], true);
-	wp_safe_redirect(admin_url('admin.php?page=lf-ai-studio&saved=1'));
+	wp_safe_redirect(admin_url('admin.php?page=lf-ops&saved=1'));
 	exit;
 }
 
@@ -88,7 +96,7 @@ function lf_ai_studio_handle_generate(): void {
 	}
 	check_admin_referer('lf_ai_studio_generate', 'lf_ai_studio_generate_nonce');
 	$result = lf_ai_studio_run_homepage_generation();
-	$redirect = admin_url('admin.php?page=lf-ai-studio');
+	$redirect = admin_url('admin.php?page=lf-ops');
 	if (!empty($result['error'])) {
 		$redirect = add_query_arg('error', rawurlencode($result['error']), $redirect);
 	} else {
@@ -105,16 +113,16 @@ function lf_ai_studio_handle_retry(): void {
 	check_admin_referer('lf_ai_studio_retry', 'lf_ai_studio_retry_nonce');
 	$job_id = isset($_GET['job_id']) ? absint($_GET['job_id']) : 0;
 	if (!$job_id) {
-		wp_safe_redirect(admin_url('admin.php?page=lf-ai-studio&error=missing_job'));
+		wp_safe_redirect(admin_url('admin.php?page=lf-ops&error=missing_job'));
 		exit;
 	}
 	$request_payload = get_post_meta($job_id, 'lf_ai_job_request', true);
 	if (!is_array($request_payload)) {
-		wp_safe_redirect(admin_url('admin.php?page=lf-ai-studio&error=missing_payload'));
+		wp_safe_redirect(admin_url('admin.php?page=lf-ops&error=missing_payload'));
 		exit;
 	}
 	$result = lf_ai_studio_send_request($request_payload, $job_id);
-	$redirect = admin_url('admin.php?page=lf-ai-studio');
+	$redirect = admin_url('admin.php?page=lf-ops');
 	if (!empty($result['error'])) {
 		$redirect = add_query_arg('error', rawurlencode($result['error']), $redirect);
 	} else {
@@ -129,7 +137,7 @@ function lf_ai_studio_handle_manifest(): void {
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_ai_studio_manifest', 'lf_ai_studio_manifest_nonce');
-	$redirect = admin_url('admin.php?page=lf-ai-studio');
+	$redirect = admin_url('admin.php?page=lf-ops');
 	if (empty($_FILES['lf_site_manifest']) || !is_array($_FILES['lf_site_manifest'])) {
 		update_option('lf_ai_studio_manifest_errors', [__('Manifest file is required.', 'leadsforward-core')], false);
 		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
@@ -214,6 +222,10 @@ function lf_ai_studio_render_page(): void {
 	$style = (string) get_option('lf_ai_studio_style', 'professional');
 	$homepage_keywords = function_exists('lf_homepage_keywords') ? lf_homepage_keywords() : ['primary' => '', 'secondary' => []];
 	$homepage_city = (string) get_option('lf_homepage_city', '');
+	$logo_id = function_exists('lf_get_global_option')
+		? (int) lf_get_global_option('lf_global_logo', 0)
+		: (int) get_option('options_lf_global_logo', 0);
+	$logo_url = $logo_id ? wp_get_attachment_image_url($logo_id, 'medium') : '';
 	$manifest = lf_ai_studio_get_manifest();
 	$manifest_errors = get_option('lf_ai_studio_manifest_errors', []);
 	$manifest_saved = isset($_GET['manifest']) && $_GET['manifest'] === '1';
@@ -233,26 +245,8 @@ function lf_ai_studio_render_page(): void {
 	}
 	?>
 	<div class="wrap">
-		<h1><?php esc_html_e('AI Studio (Advanced)', 'leadsforward-core'); ?></h1>
-		<p class="description"><?php esc_html_e('Regenerate full site content via the orchestrator. Setup Wizard handles first‑run inputs.', 'leadsforward-core'); ?></p>
-		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0; border-left: 4px solid #3b82f6;">
-			<h2 style="margin-top:0;"><?php esc_html_e('Setup Wizard Connection', 'leadsforward-core'); ?></h2>
-			<p class="description">
-				<?php if ($wizard_complete) : ?>
-					<?php esc_html_e('AI Studio uses the business info and keywords saved in the Setup Wizard.', 'leadsforward-core'); ?>
-				<?php else : ?>
-					<?php esc_html_e('Run the Setup Wizard first to store business info and keywords used by AI Studio.', 'leadsforward-core'); ?>
-				<?php endif; ?>
-			</p>
-			<p>
-				<a class="button button-primary" href="<?php echo esc_url(admin_url('admin.php?page=lf-ops')); ?>">
-					<?php echo $wizard_complete ? esc_html__('Review Setup Wizard', 'leadsforward-core') : esc_html__('Run Setup Wizard', 'leadsforward-core'); ?>
-				</a>
-				<a class="button" href="<?php echo esc_url(admin_url('admin.php?page=lf-homepage-settings')); ?>">
-					<?php esc_html_e('Open Homepage Builder', 'leadsforward-core'); ?>
-				</a>
-			</p>
-		</div>
+		<h1><?php esc_html_e('Website Manifester', 'leadsforward-core'); ?></h1>
+		<p class="description"><?php esc_html_e('Deterministic, orchestrator-driven generation for full site content and structure.', 'leadsforward-core'); ?></p>
 		<?php if (!empty($last_log)) : ?>
 			<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
 				<h2 style="margin-top:0;"><?php esc_html_e('Last Full-Site Generation', 'leadsforward-core'); ?></h2>
@@ -279,7 +273,7 @@ function lf_ai_studio_render_page(): void {
 			</div>
 		<?php endif; ?>
 		<?php if ($saved) : ?>
-			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('AI Studio settings saved.', 'leadsforward-core'); ?></p></div>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Website Manifester settings saved.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
 		<?php if ($manifest_saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Manifest uploaded. Generation started.', 'leadsforward-core'); ?></p></div>
@@ -321,6 +315,44 @@ function lf_ai_studio_render_page(): void {
 				</p>
 			</form>
 		</div>
+		<script>
+			(function() {
+				var selectBtn = document.getElementById('lf-manifester-logo-select');
+				var clearBtn = document.getElementById('lf-manifester-logo-clear');
+				var input = document.getElementById('lf_manifester_logo');
+				var preview = document.getElementById('lf-manifester-logo-preview');
+				if (!selectBtn || !clearBtn || !input || !preview || typeof wp === 'undefined' || !wp.media) {
+					return;
+				}
+				var frame;
+				selectBtn.addEventListener('click', function(e) {
+					e.preventDefault();
+					if (frame) {
+						frame.open();
+						return;
+					}
+					frame = wp.media({ title: 'Select Logo', button: { text: 'Use logo' }, multiple: false });
+					frame.on('select', function() {
+						var attachment = frame.state().get('selection').first().toJSON();
+						if (!attachment || !attachment.id) {
+							return;
+						}
+						input.value = attachment.id;
+						if (attachment.url) {
+							preview.src = attachment.url;
+							preview.style.display = '';
+						}
+					});
+					frame.open();
+				});
+				clearBtn.addEventListener('click', function(e) {
+					e.preventDefault();
+					input.value = '';
+					preview.src = '';
+					preview.style.display = 'none';
+				});
+			})();
+		</script>
 		<div id="lf-ai-manifest-loading" class="lf-ai-loading-overlay" aria-hidden="true">
 			<div class="lf-ai-loading-card" role="status" aria-live="polite">
 				<div class="lf-ai-loading-title"><?php esc_html_e('Generating site…', 'leadsforward-core'); ?></div>
@@ -375,13 +407,17 @@ function lf_ai_studio_render_page(): void {
 				});
 			})();
 		</script>
-		<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
+			<h2 style="margin-top:0;"><?php esc_html_e('Orchestrator Settings', 'leadsforward-core'); ?></h2>
+			<p class="description"><?php esc_html_e('Connect the orchestrator, manage branding inputs, and control regeneration defaults.', 'leadsforward-core'); ?></p>
+			<?php $manifest_active = !empty($manifest); ?>
+			<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
 			<?php wp_nonce_field('lf_ai_studio_save', 'lf_ai_studio_nonce'); ?>
 			<input type="hidden" name="action" value="lf_ai_studio_save" />
 			<table class="form-table" role="presentation">
 				<tr>
 					<th scope="row"><?php esc_html_e('Enable AI', 'leadsforward-core'); ?></th>
-					<td><label><input type="checkbox" name="lf_ai_studio_enabled" value="1" <?php checked($enabled); ?> /> <?php esc_html_e('Allow AI Studio runs', 'leadsforward-core'); ?></label></td>
+					<td><label><input type="checkbox" name="lf_ai_studio_enabled" value="1" <?php checked($enabled); ?> /> <?php esc_html_e('Allow Manifester runs', 'leadsforward-core'); ?></label></td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="lf_ai_studio_webhook"><?php esc_html_e('Orchestrator Webhook URL', 'leadsforward-core'); ?></label></th>
@@ -392,15 +428,42 @@ function lf_ai_studio_render_page(): void {
 					<td><input type="text" class="large-text" name="lf_ai_studio_secret" id="lf_ai_studio_secret" value="<?php echo esc_attr($secret); ?>" required /></td>
 				</tr>
 				<tr>
+					<th colspan="2" style="padding-top: 16px;"><?php esc_html_e('Branding', 'leadsforward-core'); ?></th>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e('Logo', 'leadsforward-core'); ?></th>
+					<td>
+						<div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+							<div>
+								<img id="lf-manifester-logo-preview" src="<?php echo esc_url($logo_url); ?>" style="max-height:60px;<?php echo $logo_url ? '' : 'display:none;'; ?>" alt="" />
+							</div>
+							<input type="hidden" name="lf_global_logo" id="lf_manifester_logo" value="<?php echo esc_attr((string) $logo_id); ?>" />
+							<button type="button" class="button" id="lf-manifester-logo-select"><?php esc_html_e('Select Logo', 'leadsforward-core'); ?></button>
+							<button type="button" class="button" id="lf-manifester-logo-clear"><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
+						</div>
+						<p class="description"><?php esc_html_e('Used across the site and schema. Uploading a logo can auto-generate brand colors.', 'leadsforward-core'); ?></p>
+					</td>
+				</tr>
+				<tr>
 					<th colspan="2" style="padding-top: 16px;"><?php esc_html_e('Site Inputs (used for regeneration)', 'leadsforward-core'); ?></th>
 				</tr>
+				<?php if ($manifest_active) : ?>
+					<tr>
+						<td colspan="2">
+							<p class="description"><?php esc_html_e('Manifest mode is active. Keyword fields are optional and ignored during generation.', 'leadsforward-core'); ?></p>
+						</td>
+					</tr>
+				<?php endif; ?>
 				<tr>
 					<th scope="row"><label for="lf_homepage_city"><?php esc_html_e('City / Region', 'leadsforward-core'); ?></label></th>
 					<td><input type="text" class="large-text" name="lf_homepage_city" id="lf_homepage_city" value="<?php echo esc_attr($homepage_city); ?>" /></td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="lf_homepage_keyword_primary"><?php esc_html_e('Primary homepage keyword', 'leadsforward-core'); ?></label></th>
-					<td><input type="text" class="large-text" name="lf_homepage_keyword_primary" id="lf_homepage_keyword_primary" value="<?php echo esc_attr($homepage_keywords['primary']); ?>" required /></td>
+					<td>
+						<input type="text" class="large-text" name="lf_homepage_keyword_primary" id="lf_homepage_keyword_primary" value="<?php echo esc_attr($homepage_keywords['primary']); ?>" />
+						<p class="description"><?php esc_html_e('Required only when regenerating without a manifest.', 'leadsforward-core'); ?></p>
+					</td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="lf_homepage_keyword_secondary"><?php esc_html_e('Secondary homepage keywords (optional)', 'leadsforward-core'); ?></label></th>
@@ -409,23 +472,28 @@ function lf_ai_studio_render_page(): void {
 			</table>
 			<p><button type="submit" class="button button-primary"><?php esc_html_e('Save Settings', 'leadsforward-core'); ?></button></p>
 		</form>
+		</div>
 
-		<hr />
-		<h2><?php esc_html_e('Regenerate Site', 'leadsforward-core'); ?></h2>
-		<p class="description"><?php esc_html_e('Uses inputs stored from the Setup Wizard (keywords).', 'leadsforward-core'); ?></p>
-		<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-			<?php wp_nonce_field('lf_ai_studio_generate', 'lf_ai_studio_generate_nonce'); ?>
-			<input type="hidden" name="action" value="lf_ai_studio_generate" />
-			<p><button type="submit" class="button button-primary"><?php esc_html_e('Regenerate Site', 'leadsforward-core'); ?></button></p>
-		</form>
-		<p class="description"><?php esc_html_e('Advanced/debug only. Setup Wizard handles first‑run generation.', 'leadsforward-core'); ?></p>
+		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
+			<h2 style="margin-top:0;"><?php esc_html_e('Regenerate Site', 'leadsforward-core'); ?></h2>
+			<p class="description"><?php esc_html_e('Uses inputs stored from the Setup Wizard (keywords).', 'leadsforward-core'); ?></p>
+			<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+				<?php wp_nonce_field('lf_ai_studio_generate', 'lf_ai_studio_generate_nonce'); ?>
+				<input type="hidden" name="action" value="lf_ai_studio_generate" />
+				<p><button type="submit" class="button button-primary"><?php esc_html_e('Regenerate Site', 'leadsforward-core'); ?></button></p>
+			</form>
+			<p class="description"><?php esc_html_e('Advanced/debug only. Setup Wizard handles first‑run generation.', 'leadsforward-core'); ?></p>
+		</div>
 
-		<h2><?php esc_html_e('Blueprint Preview', 'leadsforward-core'); ?></h2>
-		<p class="description"><?php esc_html_e('Read-only snapshot of the homepage blueprint sent to the orchestrator.', 'leadsforward-core'); ?></p>
-		<textarea class="large-text code" rows="12" readonly><?php echo esc_textarea((string) $blueprint_json); ?></textarea>
+		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
+			<h2 style="margin-top:0;"><?php esc_html_e('Blueprint Preview', 'leadsforward-core'); ?></h2>
+			<p class="description"><?php esc_html_e('Read-only snapshot of the homepage blueprint sent to the orchestrator.', 'leadsforward-core'); ?></p>
+			<textarea class="large-text code" rows="12" readonly><?php echo esc_textarea((string) $blueprint_json); ?></textarea>
+		</div>
 
-		<h2><?php esc_html_e('Recent Jobs', 'leadsforward-core'); ?></h2>
-		<table class="widefat striped">
+		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
+			<h2 style="margin-top:0;"><?php esc_html_e('Recent Jobs', 'leadsforward-core'); ?></h2>
+			<table class="widefat striped">
 			<thead>
 				<tr>
 					<th><?php esc_html_e('Time', 'leadsforward-core'); ?></th>
@@ -463,7 +531,26 @@ function lf_ai_studio_render_page(): void {
 					<tr><td colspan="5"><?php esc_html_e('No jobs yet.', 'leadsforward-core'); ?></td></tr>
 				<?php endif; ?>
 			</tbody>
-		</table>
+			</table>
+		</div>
+		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
+			<h2 style="margin-top:0;"><?php esc_html_e('Setup Wizard (Optional)', 'leadsforward-core'); ?></h2>
+			<p class="description">
+				<?php if ($wizard_complete) : ?>
+					<?php esc_html_e('Setup Wizard inputs are stored and used for regeneration when no manifest is active.', 'leadsforward-core'); ?>
+				<?php else : ?>
+					<?php esc_html_e('Run the Setup Wizard if you want to populate initial business info and keywords.', 'leadsforward-core'); ?>
+				<?php endif; ?>
+			</p>
+			<p>
+				<a class="button" href="<?php echo esc_url(admin_url('admin.php?page=lf-setup')); ?>">
+					<?php echo $wizard_complete ? esc_html__('Review Setup Wizard', 'leadsforward-core') : esc_html__('Run Setup Wizard', 'leadsforward-core'); ?>
+				</a>
+				<a class="button" href="<?php echo esc_url(admin_url('admin.php?page=lf-homepage-settings')); ?>">
+					<?php esc_html_e('Open Homepage Builder', 'leadsforward-core'); ?>
+				</a>
+			</p>
+		</div>
 	</div>
 	<?php
 }
@@ -473,7 +560,7 @@ function lf_ai_studio_run_generation(): array {
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$secret = (string) get_option('lf_ai_studio_secret', '');
 	if (!$enabled) {
-		return ['error' => __('AI Studio is disabled.', 'leadsforward-core')];
+		return ['error' => __('Website Manifester is disabled.', 'leadsforward-core')];
 	}
 	if ($webhook === '' || $secret === '') {
 		return ['error' => __('Webhook URL and shared secret are required.', 'leadsforward-core')];
@@ -495,7 +582,7 @@ function lf_ai_studio_run_homepage_generation(): array {
 	$secret = (string) get_option('lf_ai_studio_secret', '');
 	if (!$enabled) {
 		error_log('LF DEBUG: Regenerate Site blocked: AI Studio disabled.');
-		return ['error' => __('AI Studio is disabled.', 'leadsforward-core')];
+		return ['error' => __('Website Manifester is disabled.', 'leadsforward-core')];
 	}
 	if ($webhook === '' || $secret === '') {
 		error_log('LF DEBUG: Regenerate Site blocked: missing webhook or secret.');

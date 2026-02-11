@@ -32,13 +32,13 @@ function lf_wizard_admin_notice(): void {
 	}
 	$screen = get_current_screen();
 	// Hide notice on any LeadsForward admin page (Setup lives under LeadsForward menu)
-	if ($screen && strpos($screen->id, 'lf-ops') !== false) {
+	if ($screen && (strpos($screen->id, 'toplevel_page_lf-ops') !== false || strpos($screen->id, 'leadsforward_page_lf-') !== false)) {
 		return;
 	}
 	echo '<div class="notice notice-info"><p>' . sprintf(
 		/* translators: %s: link to setup wizard */
 		esc_html__('LeadsForward: Complete your site setup in one go. %s', 'leadsforward-core'),
-		'<a href="' . esc_url(admin_url('admin.php?page=lf-ops')) . '">' . esc_html__('Run setup wizard', 'leadsforward-core') . '</a>'
+		'<a href="' . esc_url(admin_url('admin.php?page=lf-setup')) . '">' . esc_html__('Run setup wizard', 'leadsforward-core') . '</a>'
 	) . '</p></div>';
 }
 
@@ -54,7 +54,7 @@ function lf_wizard_handle_post(): void {
 			$manifest_errors = lf_ai_studio_validate_manifest($manifest);
 			if (!empty($manifest_errors)) {
 				update_option('lf_ai_studio_manifest_errors', $manifest_errors, false);
-				wp_safe_redirect(admin_url('admin.php?page=lf-ops&step=5&manifest_error=1'));
+				wp_safe_redirect(admin_url('admin.php?page=lf-setup&step=5&manifest_error=1'));
 				exit;
 			}
 			if (function_exists('lf_ai_studio_normalize_manifest')) {
@@ -224,7 +224,7 @@ function lf_wizard_handle_post(): void {
 			if (!empty($result['ids']) && is_array($result['ids'])) {
 				update_option('lf_wizard_created_ids', $result['ids']);
 			}
-			$redirect = admin_url('admin.php?page=lf-ops&done=1');
+			$redirect = admin_url('admin.php?page=lf-setup&done=1');
 			if ($generate_now && function_exists('lf_ai_studio_run_homepage_generation')) {
 				$gen = lf_ai_studio_run_homepage_generation();
 				if (!empty($gen['error'])) {
@@ -239,7 +239,7 @@ function lf_wizard_handle_post(): void {
 			wp_redirect($redirect);
 			exit;
 		}
-		wp_redirect(admin_url('admin.php?page=lf-ops&step=5&errors=1&msg=' . urlencode(implode('; ', $result['errors']))));
+		wp_redirect(admin_url('admin.php?page=lf-setup&step=5&errors=1&msg=' . urlencode(implode('; ', $result['errors']))));
 		exit;
 	}
 }
@@ -270,7 +270,7 @@ function lf_wizard_handle_setup_settings(): void {
 	$hide_bar = !empty($_POST['lf_hide_admin_bar']) ? '1' : '0';
 	update_option('lf_hide_admin_bar', $hide_bar);
 
-	wp_safe_redirect(admin_url('admin.php?page=lf-ops&settings_saved=1'));
+wp_safe_redirect(admin_url('admin.php?page=lf-setup&settings_saved=1'));
 	exit;
 }
 
@@ -287,7 +287,7 @@ function lf_wizard_handle_regen_legal(): void {
 	$data = function_exists('lf_wizard_data_from_entity') ? lf_wizard_data_from_entity() : [];
 	$result = lf_wizard_regenerate_legal_pages($data);
 	$ok = !empty($result['success']);
-	wp_safe_redirect(admin_url('admin.php?page=lf-ops&legal_regen=' . ($ok ? '1' : '0')));
+wp_safe_redirect(admin_url('admin.php?page=lf-setup&legal_regen=' . ($ok ? '1' : '0')));
 	exit;
 }
 
@@ -346,12 +346,12 @@ function lf_wizard_render_page(): void {
 		}
 		lf_wizard_render_setup_settings_panel();
 		echo '<p>' . esc_html__('Setup is already complete. Your site has the required pages, menus, and structure.', 'leadsforward-core') . '</p>';
-		echo '<p><a href="' . esc_url(admin_url('admin.php?page=lf-ops&reset=1')) . '" class="button">' . esc_html__('Show wizard again', 'leadsforward-core') . '</a></p></div>';
+		echo '<p><a href="' . esc_url(admin_url('admin.php?page=lf-setup&reset=1')) . '" class="button">' . esc_html__('Show wizard again', 'leadsforward-core') . '</a></p></div>';
 		return;
 	}
 	if (isset($_GET['reset']) && current_user_can('edit_theme_options')) {
 		delete_option('lf_setup_wizard_complete');
-		wp_redirect(admin_url('admin.php?page=lf-ops'));
+		wp_redirect(admin_url('admin.php?page=lf-setup'));
 		exit;
 	}
 	if (isset($_GET['done'])) {
@@ -411,10 +411,10 @@ function lf_wizard_render_page(): void {
 		echo '<div class="notice notice-error"><p>' . esc_html__('You must type RESET exactly to confirm.', 'leadsforward-core') . '</p></div>';
 	}
 	echo '<div class="lf-setup-card lf-setup-card--top">';
-	echo '<h2 style="margin-top:0;">' . esc_html__('Setup Wizard + AI Studio', 'leadsforward-core') . '</h2>';
-	echo '<p class="description">' . esc_html__('Complete the wizard to store business info and keywords. AI Studio uses these inputs for regeneration.', 'leadsforward-core') . '</p>';
-	echo '<p><a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=lf-ops&step=' . $step)) . '#lf-setup-wizard">' . esc_html__('Continue setup wizard', 'leadsforward-core') . '</a> ';
-	echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=lf-ai-studio')) . '">' . esc_html__('Open AI Studio (Advanced)', 'leadsforward-core') . '</a></p>';
+	echo '<h2 style="margin-top:0;">' . esc_html__('Setup Wizard + Website Manifester', 'leadsforward-core') . '</h2>';
+	echo '<p class="description">' . esc_html__('Complete the wizard to store business info and keywords. Website Manifester uses these inputs for regeneration.', 'leadsforward-core') . '</p>';
+	echo '<p><a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=lf-setup&step=' . $step)) . '#lf-setup-wizard">' . esc_html__('Continue setup wizard', 'leadsforward-core') . '</a> ';
+	echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=lf-ops')) . '">' . esc_html__('Open Website Manifester', 'leadsforward-core') . '</a></p>';
 	echo '</div>';
 	if ($errors) {
 		echo '<div class="notice notice-error"><p>' . esc_html($errors) . '</p></div>';
@@ -430,7 +430,7 @@ function lf_wizard_render_page(): void {
 	echo '<div class="lf-setup-progress"><strong>' . sprintf(esc_html__('Step %d of 5', 'leadsforward-core'), $step) . '</strong><div class="lf-setup-progress__bar"><span style="width:' . esc_attr((string) ($step * 20)) . '%;"></span></div></div>';
 
 	$method = 'post';
-	$action = admin_url('admin.php?page=lf-ops');
+	$action = admin_url('admin.php?page=lf-setup');
 	$niche = isset($_GET['niche']) ? sanitize_text_field($_GET['niche']) : '';
 	$profiles = ['a' => __('Clean + Minimal', 'leadsforward-core'), 'b' => __('Bold + High Contrast', 'leadsforward-core'), 'c' => __('Trust Heavy', 'leadsforward-core'), 'd' => __('Service Heavy', 'leadsforward-core'), 'e' => __('Offer/Promo Heavy', 'leadsforward-core')];
 
@@ -443,8 +443,8 @@ function lf_wizard_render_page(): void {
 		echo '<p class="lf-setup-help">' . esc_html__('These locations power Service Area pages and the map section.', 'leadsforward-core') . '</p>';
 		echo '<div class="lf-setup-card">';
 		echo '<h2 class="lf-setup-step-title">' . esc_html__('Homepage & AI content', 'leadsforward-core') . '</h2>';
-		echo '<p class="lf-setup-help">' . esc_html__('These inputs are sent to AI Studio to generate your homepage copy.', 'leadsforward-core') . '</p>';
-		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-ops')) . '">';
+		echo '<p class="lf-setup-help">' . esc_html__('These inputs are sent to Website Manifester to generate your homepage copy.', 'leadsforward-core') . '</p>';
+		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup')) . '">';
 		echo '<input type="hidden" name="page" value="lf-ops" />';
 		echo '<input type="hidden" name="step" value="2" />';
 		echo '<table class="form-table"><tr><th scope="row">' . esc_html__('Industry', 'leadsforward-core') . '</th><td><select name="niche" required>';
@@ -520,7 +520,7 @@ function lf_wizard_render_page(): void {
 		echo '<div class="lf-setup-card">';
 		echo '<h2 class="lf-setup-step-title">' . esc_html__('Business details', 'leadsforward-core') . '</h2>';
 		echo '<p class="lf-setup-help">' . esc_html__('Used for schema, contact info, and map display. You can edit later in Global Settings.', 'leadsforward-core') . '</p>';
-		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-ops')) . '" data-maps-key="' . esc_attr($maps_api_key) . '">';
+		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup')) . '" data-maps-key="' . esc_attr($maps_api_key) . '">';
 		echo '<input type="hidden" name="page" value="lf-ops" />';
 		echo '<input type="hidden" name="step" value="3" />';
 		echo '<input type="hidden" name="niche" value="' . esc_attr($niche) . '" />';
@@ -595,7 +595,7 @@ function lf_wizard_render_page(): void {
 		$niche = $niche ?: array_key_first(lf_get_niche_registry());
 		$n = lf_get_niche($niche);
 		$services_list = $n ? implode(', ', $n['services']) : '';
-		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-ops')) . '">';
+		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup')) . '">';
 		echo '<input type="hidden" name="page" value="lf-ops" />';
 		echo '<input type="hidden" name="step" value="4" />';
 		echo '<input type="hidden" name="niche" value="' . esc_attr($niche) . '" />';
@@ -672,7 +672,7 @@ function lf_wizard_render_page(): void {
 		$niche = $niche ?: array_key_first(lf_get_niche_registry());
 		$n = lf_get_niche($niche);
 		$rec = $n['variation_profile'] ?? 'a';
-		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-ops')) . '">';
+		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup')) . '">';
 		echo '<input type="hidden" name="page" value="lf-ops" />';
 		echo '<input type="hidden" name="step" value="5" />';
 		echo '<input type="hidden" name="niche" value="' . esc_attr($niche) . '" />';
@@ -760,7 +760,7 @@ function lf_wizard_render_page(): void {
 		echo '</select></td></tr>';
 		$keyword_attr = $manifest_active ? ' readonly disabled' : '';
 		echo '<tr><th scope="row"><label for="lf_homepage_keyword_primary">' . esc_html__('Primary homepage keyword (SEO)', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_homepage_keyword_primary" name="lf_homepage_keyword_primary" class="large-text" value="' . esc_attr($keyword_primary) . '" required placeholder="' . esc_attr__('e.g. Roofing contractor Sarasota', 'leadsforward-core') . '"' . $keyword_attr . ' /></td></tr>';
-		echo '<tr><th scope="row"><label for="lf_homepage_keyword_secondary">' . esc_html__('Secondary homepage keywords (optional)', 'leadsforward-core') . '</label></th><td><textarea id="lf_homepage_keyword_secondary" name="lf_homepage_keyword_secondary" rows="3" class="large-text" placeholder="' . esc_attr__('One per line', 'leadsforward-core') . '"' . $keyword_attr . '>' . esc_textarea($keyword_secondary) . '</textarea><p class="description">' . esc_html__('These keywords are stored for AI Studio regeneration.', 'leadsforward-core') . '</p></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_homepage_keyword_secondary">' . esc_html__('Secondary homepage keywords (optional)', 'leadsforward-core') . '</label></th><td><textarea id="lf_homepage_keyword_secondary" name="lf_homepage_keyword_secondary" rows="3" class="large-text" placeholder="' . esc_attr__('One per line', 'leadsforward-core') . '"' . $keyword_attr . '>' . esc_textarea($keyword_secondary) . '</textarea><p class="description">' . esc_html__('These keywords are stored for Website Manifester regeneration.', 'leadsforward-core') . '</p></td></tr>';
 		echo '<tr><th scope="row">' . esc_html__('Generate site now', 'leadsforward-core') . '</th><td><label><input type="checkbox" name="lf_homepage_generate_now" value="1"' . checked($generate_now, true, false) . ' /> ' . esc_html__('Generate site content after setup completes', 'leadsforward-core') . '</label><p class="description">' . esc_html__('Runs AI generation immediately after the setup completes.', 'leadsforward-core') . '</p></td></tr>';
 		echo '</table>';
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Next', 'leadsforward-core') . '" /></p></form>';
@@ -778,7 +778,7 @@ function lf_wizard_render_page(): void {
 		echo '<div class="lf-setup-loading__bar" aria-hidden="true"><span id="lf-setup-loading-bar"></span></div>';
 		echo '<div class="lf-setup-loading__note">' . esc_html__('This usually takes under a minute. Please keep this tab open.', 'leadsforward-core') . '</div>';
 		echo '</div></div>';
-		echo '<form method="post" action="' . esc_url(admin_url('admin.php?page=lf-ops')) . '" enctype="multipart/form-data">';
+		echo '<form method="post" action="' . esc_url(admin_url('admin.php?page=lf-setup')) . '" enctype="multipart/form-data">';
 		wp_nonce_field('lf_wizard_generate', 'lf_wizard_nonce');
 		echo '<input type="hidden" name="lf_wizard_step" value="5" />';
 		echo '<input type="hidden" name="lf_wizard_generate" value="1" />';
@@ -956,7 +956,7 @@ function lf_wizard_render_setup_settings_panel(): void {
 		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0; border-left: 4px solid #b32d2e;">
 			<h2 style="margin-top:0;"><?php esc_html_e('Reset site (dev only)', 'leadsforward-core'); ?></h2>
 			<p class="description"><?php esc_html_e('Deletes content, menus, and options created by the setup wizard. Available only in local/dev environments.', 'leadsforward-core'); ?></p>
-			<form method="post" action="<?php echo esc_url(admin_url('admin.php?page=lf-ops')); ?>">
+			<form method="post" action="<?php echo esc_url(admin_url('admin.php?page=lf-setup')); ?>">
 				<?php wp_nonce_field('lf_dev_reset', 'lf_dev_reset_nonce'); ?>
 				<input type="hidden" name="lf_dev_reset" value="1" />
 				<p><label for="lf_dev_reset_confirm"><?php esc_html_e('Type RESET to confirm:', 'leadsforward-core'); ?></label><br />
