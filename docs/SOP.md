@@ -400,3 +400,12 @@ Content Density: Schema Expansion
 - New fields are non-required defaults; existing content remains valid.
 - New fields are included in `allowed_field_keys` automatically.
 - Determinism preserved: no fallback logic added or registry structure changes.
+
+---
+
+Content Density: Long-Form Utilization – Step 3
+----------------------------------------------
+- Length targets are added to blueprints as metadata; templates remain unchanged.
+- `section_intent` metadata is included to guide long-form writing.
+- Targets: Hero 20–40 words combined; Benefits 5 items at 40–80 words each; Process 4 steps at 40–80 words each; Service Details 600–1200 words; Content/Image 300–600 words; FAQ 5–8 answers at 80–150 words.
+- Deterministic isolation preserved: no CPT body reuse; only allowed fields are writable.

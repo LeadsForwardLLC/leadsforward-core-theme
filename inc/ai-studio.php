@@ -438,6 +438,27 @@ function lf_ai_studio_collect_writing_samples(): array {
 	return [];
 }
 
+// Long-form density expansion – Step 3
+function lf_ai_studio_section_length_targets(string $section_type): array {
+	switch ($section_type) {
+		case 'hero':
+			return ['headline_subheadline_words' => ['min' => 20, 'max' => 40]];
+		case 'benefits':
+			return ['min_items' => 5, 'item_words' => ['min' => 40, 'max' => 80]];
+		case 'process':
+			return ['min_items' => 4, 'item_words' => ['min' => 40, 'max' => 80]];
+		case 'service_details':
+			return ['body_words' => ['min' => 600, 'max' => 1200]];
+		case 'content_image':
+		case 'image_content':
+			return ['body_words' => ['min' => 300, 'max' => 600]];
+		case 'faq_accordion':
+			return ['min_items' => 5, 'max_items' => 8, 'answer_words' => ['min' => 80, 'max' => 150]];
+		default:
+			return [];
+	}
+}
+
 function lf_homepage_keywords(): array {
 	$raw = get_option('lf_homepage_keywords', []);
 	if (!is_array($raw)) {
@@ -503,6 +524,8 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 			'section_id' => $section_id,
 			'section_type' => lf_ai_studio_homepage_section_type($section_id),
 			'intent' => (string) ($section['section_intent'] ?? ''),
+			// Long-form density expansion – Step 3
+			'length_targets' => lf_ai_studio_section_length_targets(lf_ai_studio_homepage_section_type($section_id)),
 			'allowed_field_keys' => $allowed_keys,
 		];
 	}
@@ -538,6 +561,7 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 function lf_ai_studio_homepage_allowed_field_keys(string $section_id, array $schema): array {
 	$fields = $schema['fields'] ?? [];
 	$allowed_types = ['text', 'textarea', 'list', 'richtext'];
+	// Long-form density expansion – Step 3
 	$blocked_keys = [
 		'section_background',
 		'variant',
@@ -710,9 +734,13 @@ function lf_ai_studio_build_post_blueprint(\WP_Post $post, string $page, string 
 		if ($type === '' || !isset($registry[$type])) {
 			continue;
 		}
+		$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
 		$out_sections[] = [
 			'section_id' => $instance_id,
 			'section_type' => $type,
+			'intent' => (string) ($settings['section_intent'] ?? ''),
+			// Long-form density expansion – Step 3
+			'length_targets' => lf_ai_studio_section_length_targets($type),
 			'allowed_field_keys' => lf_ai_studio_homepage_allowed_field_keys($type, $registry[$type]),
 		];
 		$out_order[] = $instance_id;

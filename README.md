@@ -408,6 +408,15 @@ Completion is stored in option `lf_setup_wizard_complete`. The wizard does not s
 
 ---
 
+## Content Density: Long-Form Utilization – Step 3
+
+- **Blueprint guidance only:** Length targets are added to blueprints as metadata; templates remain unchanged.
+- **Section intent included:** `section_intent` is included in blueprints to guide long-form writing.
+- **Targets by section:** Hero 20–40 words combined; Benefits 5 items at 40–80 words each; Process 4 steps at 40–80 words each; Service Details 600–1200 words; Content/Image 300–600 words; FAQ 5–8 answers at 80–150 words.
+- **Deterministic isolation preserved:** No CPT body reuse; only allowed fields are writable.
+
+---
+
 ## Changelog
 
 - **0.1.0** — Foundation: CPTs, ACF options, blocks, SEO/schema, modular homepage, CTA resolution, documentation.
