@@ -360,6 +360,18 @@ Homepage Generation Flow (Builder‑aware)
 
 ---
 
+AI Generation Quality Rules (Append-Only)
+-----------------------------------------
+- Headlines use sentence or title case with no dash or hyphen separators.
+- Hero headline max 12 words; no trailing punctuation unless a question.
+- Benefits: 15-35 words each, max 2 sentences, no dash separators in benefit titles.
+- Never reuse sentences across page types; follow page-specific focus rules.
+- FAQ strategy uses a global pool with per-page counts; reuse unless context requires variation.
+- CTA strategy: homepage CTA is canonical; add one contextual sentence per page in `cta_subheadline_secondary`.
+- Output normalization removes escaped apostrophes/backslashes before save.
+
+---
+
 Homepage Pre‑AI Configuration (Append‑Only)
 ------------------------------------------
 - Defaults apply only on fresh setups or when resetting homepage defaults.
