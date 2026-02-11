@@ -19,6 +19,7 @@ add_action('admin_menu', 'lf_ai_studio_register_menu', 13);
 add_action('admin_post_lf_ai_studio_save', 'lf_ai_studio_handle_save');
 add_action('admin_post_lf_ai_studio_generate', 'lf_ai_studio_handle_generate');
 add_action('admin_post_lf_ai_studio_retry', 'lf_ai_studio_handle_retry');
+add_action('admin_post_lf_ai_studio_manifest', 'lf_ai_studio_handle_manifest');
 
 function lf_ai_studio_register_cpt(): void {
 	register_post_type(LF_AI_STUDIO_JOB_CPT, [
@@ -121,6 +122,55 @@ function lf_ai_studio_handle_retry(): void {
 	exit;
 }
 
+function lf_ai_studio_handle_manifest(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
+	}
+	check_admin_referer('lf_ai_studio_manifest', 'lf_ai_studio_manifest_nonce');
+	$redirect = admin_url('admin.php?page=lf-ai-studio');
+	if (empty($_FILES['lf_site_manifest']) || !is_array($_FILES['lf_site_manifest'])) {
+		update_option('lf_ai_studio_manifest_errors', [__('Manifest file is required.', 'leadsforward-core')], false);
+		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
+		exit;
+	}
+	$file = $_FILES['lf_site_manifest'];
+	if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+		update_option('lf_ai_studio_manifest_errors', [__('Manifest upload failed.', 'leadsforward-core')], false);
+		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
+		exit;
+	}
+	$raw = file_get_contents((string) ($file['tmp_name'] ?? ''));
+	if (!is_string($raw) || trim($raw) === '') {
+		update_option('lf_ai_studio_manifest_errors', [__('Manifest file is empty.', 'leadsforward-core')], false);
+		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
+		exit;
+	}
+	$decoded = json_decode($raw, true);
+	if (!is_array($decoded)) {
+		update_option('lf_ai_studio_manifest_errors', [__('Manifest JSON is invalid.', 'leadsforward-core')], false);
+		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
+		exit;
+	}
+	$errors = lf_ai_studio_validate_manifest($decoded);
+	if (!empty($errors)) {
+		update_option('lf_ai_studio_manifest_errors', $errors, false);
+		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
+		exit;
+	}
+	$normalized = lf_ai_studio_normalize_manifest($decoded);
+	update_option('lf_site_manifest', $normalized, false);
+	delete_option('lf_ai_studio_manifest_errors');
+	lf_ai_studio_sync_manifest_posts($normalized);
+	$result = lf_ai_studio_run_generation();
+	if (!empty($result['error'])) {
+		update_option('lf_ai_studio_manifest_errors', [sprintf(__('Generation failed: %s', 'leadsforward-core'), (string) $result['error'])], false);
+		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
+		exit;
+	}
+	wp_safe_redirect(add_query_arg('manifest', '1', $redirect));
+	exit;
+}
+
 function lf_ai_studio_render_page(): void {
 	if (!current_user_can('edit_theme_options')) {
 		return;
@@ -137,6 +187,9 @@ function lf_ai_studio_render_page(): void {
 	$style = (string) get_option('lf_ai_studio_style', 'professional');
 	$homepage_keywords = function_exists('lf_homepage_keywords') ? lf_homepage_keywords() : ['primary' => '', 'secondary' => []];
 	$homepage_city = (string) get_option('lf_homepage_city', '');
+	$manifest = lf_ai_studio_get_manifest();
+	$manifest_errors = get_option('lf_ai_studio_manifest_errors', []);
+	$manifest_saved = isset($_GET['manifest']) && $_GET['manifest'] === '1';
 	$jobs = get_posts([
 		'post_type' => LF_AI_STUDIO_JOB_CPT,
 		'post_status' => 'any',
@@ -201,9 +254,42 @@ function lf_ai_studio_render_page(): void {
 		<?php if ($saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('AI Studio settings saved.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
+		<?php if ($manifest_saved) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Manifest uploaded. Generation started.', 'leadsforward-core'); ?></p></div>
+		<?php endif; ?>
 		<?php if ($error) : ?>
 			<div class="notice notice-error"><p><?php echo esc_html($error); ?></p></div>
 		<?php endif; ?>
+		<?php if (is_array($manifest_errors) && !empty($manifest_errors)) : ?>
+			<div class="notice notice-error">
+				<p><strong><?php esc_html_e('Manifest validation failed:', 'leadsforward-core'); ?></strong></p>
+				<ul>
+					<?php foreach ($manifest_errors as $err) : ?>
+						<li><?php echo esc_html((string) $err); ?></li>
+					<?php endforeach; ?>
+				</ul>
+			</div>
+		<?php endif; ?>
+		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
+			<h2 style="margin-top:0;"><?php esc_html_e('Manifest Upload (Deterministic)', 'leadsforward-core'); ?></h2>
+			<p class="description"><?php esc_html_e('Upload a JSON manifest to bypass wizard inputs and run deterministic generation.', 'leadsforward-core'); ?></p>
+			<?php if (!empty($manifest)) : ?>
+				<?php
+				$site_name = (string) ($manifest['site']['business_name'] ?? '');
+				$site_niche = (string) ($manifest['site']['niche'] ?? '');
+				$site_city = (string) ($manifest['site']['address']['city'] ?? '');
+				?>
+				<p class="description">
+					<?php echo esc_html(sprintf(__('Active manifest: %1$s (%2$s) — %3$s', 'leadsforward-core'), $site_name ?: __('Unnamed', 'leadsforward-core'), $site_niche ?: __('No niche', 'leadsforward-core'), $site_city ?: __('No city', 'leadsforward-core'))); ?>
+				</p>
+			<?php endif; ?>
+			<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+				<?php wp_nonce_field('lf_ai_studio_manifest', 'lf_ai_studio_manifest_nonce'); ?>
+				<input type="hidden" name="action" value="lf_ai_studio_manifest" />
+				<input type="file" name="lf_site_manifest" accept="application/json,.json" required />
+				<p class="submit"><button type="submit" class="button button-primary"><?php esc_html_e('Upload Manifest & Generate', 'leadsforward-core'); ?></button></p>
+			</form>
+		</div>
 		<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
 			<?php wp_nonce_field('lf_ai_studio_save', 'lf_ai_studio_nonce'); ?>
 			<input type="hidden" name="action" value="lf_ai_studio_save" />
@@ -330,10 +416,13 @@ function lf_ai_studio_run_homepage_generation(): array {
 		error_log('LF DEBUG: Regenerate Site blocked: missing webhook or secret.');
 		return ['error' => __('Webhook URL and shared secret are required.', 'leadsforward-core')];
 	}
-	$keywords = lf_homepage_keywords();
-	if (empty($keywords['primary'])) {
-		error_log('LF DEBUG: Regenerate Site blocked: missing primary keyword.');
-		return ['error' => __('Homepage primary keyword is required.', 'leadsforward-core')];
+	$manifest = lf_ai_studio_get_manifest();
+	if (empty($manifest)) {
+		$keywords = lf_homepage_keywords();
+		if (empty($keywords['primary'])) {
+			error_log('LF DEBUG: Regenerate Site blocked: missing primary keyword.');
+			return ['error' => __('Homepage primary keyword is required.', 'leadsforward-core')];
+		}
 	}
 	$request = lf_ai_studio_build_full_site_payload();
 	if (!is_array($request)) {
@@ -436,6 +525,177 @@ function lf_ai_studio_keywords(): array {
 
 function lf_ai_studio_collect_writing_samples(): array {
 	return [];
+}
+
+function lf_ai_studio_get_manifest(): array {
+	$manifest = get_option('lf_site_manifest', []);
+	return is_array($manifest) ? $manifest : [];
+}
+
+function lf_ai_studio_manifest_exists(): bool {
+	return !empty(lf_ai_studio_get_manifest());
+}
+
+function lf_ai_studio_validate_manifest(array $manifest): array {
+	$errors = [];
+	$site = isset($manifest['site']) && is_array($manifest['site']) ? $manifest['site'] : [];
+	$address = isset($site['address']) && is_array($site['address']) ? $site['address'] : [];
+	$homepage = isset($manifest['homepage']) && is_array($manifest['homepage']) ? $manifest['homepage'] : [];
+	$business_name = trim((string) ($site['business_name'] ?? ''));
+	$niche = trim((string) ($site['niche'] ?? ''));
+	$city = trim((string) ($address['city'] ?? ''));
+	$primary_keyword = trim((string) ($homepage['primary_keyword'] ?? ''));
+	if ($business_name === '') {
+		$errors[] = __('Manifest missing site.business_name.', 'leadsforward-core');
+	}
+	if ($niche === '') {
+		$errors[] = __('Manifest missing site.niche.', 'leadsforward-core');
+	}
+	if ($city === '') {
+		$errors[] = __('Manifest missing site.address.city.', 'leadsforward-core');
+	}
+	if ($primary_keyword === '') {
+		$errors[] = __('Manifest missing homepage.primary_keyword.', 'leadsforward-core');
+	}
+	if (!isset($manifest['services']) || !is_array($manifest['services']) || empty($manifest['services'])) {
+		$errors[] = __('Manifest missing services array.', 'leadsforward-core');
+	}
+	if (!isset($manifest['service_areas']) || !is_array($manifest['service_areas']) || empty($manifest['service_areas'])) {
+		$errors[] = __('Manifest missing service_areas array.', 'leadsforward-core');
+	}
+	if (!empty($manifest['services']) && is_array($manifest['services'])) {
+		foreach ($manifest['services'] as $index => $item) {
+			$normalized = lf_ai_studio_normalize_manifest_item($item);
+			if (empty($normalized['slug']) || empty($normalized['keyword'])) {
+				$errors[] = sprintf(__('Service item %d is missing slug or keyword.', 'leadsforward-core'), $index + 1);
+			}
+		}
+	}
+	if (!empty($manifest['service_areas']) && is_array($manifest['service_areas'])) {
+		foreach ($manifest['service_areas'] as $index => $item) {
+			$normalized = lf_ai_studio_normalize_manifest_item($item);
+			if (empty($normalized['slug']) || empty($normalized['keyword'])) {
+				$errors[] = sprintf(__('Service area item %d is missing slug or keyword.', 'leadsforward-core'), $index + 1);
+			}
+		}
+	}
+	return $errors;
+}
+
+function lf_ai_studio_normalize_manifest_item($item): array {
+	if (is_string($item)) {
+		$name = trim($item);
+		$slug = sanitize_title($name);
+		return [
+			'name' => $name,
+			'slug' => $slug,
+			'keyword' => $name,
+		];
+	}
+	if (!is_array($item)) {
+		return ['name' => '', 'slug' => '', 'keyword' => ''];
+	}
+	$name = (string) ($item['name'] ?? $item['title'] ?? $item['label'] ?? '');
+	$name = sanitize_text_field($name);
+	$slug = (string) ($item['slug'] ?? '');
+	$slug = sanitize_title($slug !== '' ? $slug : $name);
+	$keyword = (string) ($item['keyword'] ?? $item['primary_keyword'] ?? $item['seo_keyword'] ?? $name);
+	$keyword = sanitize_text_field($keyword);
+	return [
+		'name' => $name,
+		'slug' => $slug,
+		'keyword' => $keyword,
+	];
+}
+
+function lf_ai_studio_normalize_manifest(array $manifest): array {
+	$site = isset($manifest['site']) && is_array($manifest['site']) ? $manifest['site'] : [];
+	$address = isset($site['address']) && is_array($site['address']) ? $site['address'] : [];
+	$homepage = isset($manifest['homepage']) && is_array($manifest['homepage']) ? $manifest['homepage'] : [];
+	$services = isset($manifest['services']) && is_array($manifest['services']) ? $manifest['services'] : [];
+	$areas = isset($manifest['service_areas']) && is_array($manifest['service_areas']) ? $manifest['service_areas'] : [];
+	$secondary = $homepage['secondary_keywords'] ?? [];
+	if (!is_array($secondary)) {
+		$secondary = [];
+	}
+	return [
+		'site' => [
+			'business_name' => sanitize_text_field((string) ($site['business_name'] ?? '')),
+			'niche' => sanitize_text_field((string) ($site['niche'] ?? '')),
+			'address' => [
+				'city' => sanitize_text_field((string) ($address['city'] ?? '')),
+			],
+		],
+		'homepage' => [
+			'primary_keyword' => sanitize_text_field((string) ($homepage['primary_keyword'] ?? '')),
+			'secondary_keywords' => array_values(array_filter(array_map('sanitize_text_field', $secondary))),
+		],
+		'services' => array_values(array_map('lf_ai_studio_normalize_manifest_item', $services)),
+		'service_areas' => array_values(array_map('lf_ai_studio_normalize_manifest_item', $areas)),
+	];
+}
+
+function lf_ai_studio_manifest_keyword_map(array $manifest, string $key): array {
+	$items = isset($manifest[$key]) && is_array($manifest[$key]) ? $manifest[$key] : [];
+	$map = [];
+	foreach ($items as $item) {
+		$normalized = lf_ai_studio_normalize_manifest_item($item);
+		if ($normalized['slug'] !== '') {
+			$map[$normalized['slug']] = $normalized['keyword'];
+		}
+	}
+	return $map;
+}
+
+function lf_ai_studio_sync_manifest_posts(array $manifest): void {
+	$services = isset($manifest['services']) && is_array($manifest['services']) ? $manifest['services'] : [];
+	foreach ($services as $item) {
+		$normalized = lf_ai_studio_normalize_manifest_item($item);
+		if ($normalized['slug'] === '') {
+			continue;
+		}
+		$existing = get_page_by_path($normalized['slug'], OBJECT, 'lf_service');
+		if ($existing instanceof \WP_Post) {
+			$title = $normalized['name'] !== '' ? $normalized['name'] : $existing->post_title;
+			wp_update_post([
+				'ID' => $existing->ID,
+				'post_title' => $title,
+				'post_name' => $normalized['slug'],
+			]);
+		} else {
+			wp_insert_post([
+				'post_type' => 'lf_service',
+				'post_status' => 'publish',
+				'post_title' => $normalized['name'] !== '' ? $normalized['name'] : $normalized['slug'],
+				'post_name' => $normalized['slug'],
+				'post_author' => get_current_user_id(),
+			]);
+		}
+	}
+	$areas = isset($manifest['service_areas']) && is_array($manifest['service_areas']) ? $manifest['service_areas'] : [];
+	foreach ($areas as $item) {
+		$normalized = lf_ai_studio_normalize_manifest_item($item);
+		if ($normalized['slug'] === '') {
+			continue;
+		}
+		$existing = get_page_by_path($normalized['slug'], OBJECT, 'lf_service_area');
+		if ($existing instanceof \WP_Post) {
+			$title = $normalized['name'] !== '' ? $normalized['name'] : $existing->post_title;
+			wp_update_post([
+				'ID' => $existing->ID,
+				'post_title' => $title,
+				'post_name' => $normalized['slug'],
+			]);
+		} else {
+			wp_insert_post([
+				'post_type' => 'lf_service_area',
+				'post_status' => 'publish',
+				'post_title' => $normalized['name'] !== '' ? $normalized['name'] : $normalized['slug'],
+				'post_name' => $normalized['slug'],
+				'post_author' => get_current_user_id(),
+			]);
+		}
+	}
 }
 
 function lf_ai_studio_llm_system_message(): string {
@@ -576,6 +836,17 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 		}
 	}
 	$keywords = lf_homepage_keywords();
+	$manifest = lf_ai_studio_get_manifest();
+	if (!empty($manifest)) {
+		$manifest = lf_ai_studio_normalize_manifest($manifest);
+		$business_name = (string) ($manifest['site']['business_name'] ?? $business_name);
+		$niche = (string) ($manifest['site']['niche'] ?? $niche);
+		$city = (string) ($manifest['site']['address']['city'] ?? $city);
+		$keywords = [
+			'primary' => (string) ($manifest['homepage']['primary_keyword'] ?? ''),
+			'secondary' => $manifest['homepage']['secondary_keywords'] ?? [],
+		];
+	}
 	$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
 	$order = function_exists('lf_homepage_controller_order') ? lf_homepage_controller_order() : [];
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
@@ -721,6 +992,28 @@ function lf_ai_studio_homepage_section_type(string $section_id): string {
 }
 
 function lf_ai_studio_homepage_service_catalog(): array {
+	$manifest = lf_ai_studio_get_manifest();
+	if (!empty($manifest) && is_array($manifest)) {
+		$items = $manifest['services'] ?? [];
+		if (is_array($items) && !empty($items)) {
+			$out = [];
+			foreach ($items as $item) {
+				$normalized = lf_ai_studio_normalize_manifest_item($item);
+				if ($normalized['slug'] === '') {
+					continue;
+				}
+				$post = get_page_by_path($normalized['slug'], OBJECT, 'lf_service');
+				$out[] = [
+					'id' => $post instanceof \WP_Post ? $post->ID : 0,
+					'slug' => $normalized['slug'],
+					'title' => $normalized['name'] !== '' ? $normalized['name'] : $normalized['slug'],
+					'short_desc' => '',
+					'keyword' => $normalized['keyword'],
+				];
+			}
+			return $out;
+		}
+	}
 	$services = get_posts([
 		'post_type' => 'lf_service',
 		'post_status' => 'publish',
@@ -744,6 +1037,27 @@ function lf_ai_studio_homepage_service_catalog(): array {
 }
 
 function lf_ai_studio_homepage_area_catalog(): array {
+	$manifest = lf_ai_studio_get_manifest();
+	if (!empty($manifest) && is_array($manifest)) {
+		$items = $manifest['service_areas'] ?? [];
+		if (is_array($items) && !empty($items)) {
+			$out = [];
+			foreach ($items as $item) {
+				$normalized = lf_ai_studio_normalize_manifest_item($item);
+				if ($normalized['slug'] === '') {
+					continue;
+				}
+				$post = get_page_by_path($normalized['slug'], OBJECT, 'lf_service_area');
+				$out[] = [
+					'id' => $post instanceof \WP_Post ? $post->ID : 0,
+					'slug' => $normalized['slug'],
+					'title' => $normalized['name'] !== '' ? $normalized['name'] : $normalized['slug'],
+					'keyword' => $normalized['keyword'],
+				];
+			}
+			return $out;
+		}
+	}
 	$areas = get_posts([
 		'post_type' => 'lf_service_area',
 		'post_status' => 'publish',
@@ -799,7 +1113,7 @@ function lf_ai_studio_homepage_faq_catalog(): array {
 	return $out;
 }
 
-function lf_ai_studio_build_post_blueprint(\WP_Post $post, string $page, string $page_intent): array {
+function lf_ai_studio_build_post_blueprint(\WP_Post $post, string $page, string $page_intent, string $primary_keyword = ''): array {
 	$context = function_exists('lf_pb_get_context_for_post') ? lf_pb_get_context_for_post($post) : '';
 	if ($context === '') {
 		return [];
@@ -834,6 +1148,7 @@ function lf_ai_studio_build_post_blueprint(\WP_Post $post, string $page, string 
 		'page' => $page,
 		'post_id' => $post->ID,
 		'page_intent' => $page_intent,
+		'primary_keyword' => $primary_keyword,
 		'sections' => $out_sections,
 		'order' => $out_order,
 		'faq_target_range' => lf_ai_studio_faq_target_range($page),
@@ -841,6 +1156,12 @@ function lf_ai_studio_build_post_blueprint(\WP_Post $post, string $page, string 
 }
 
 function lf_ai_studio_build_full_site_payload(): array {
+	$manifest = lf_ai_studio_get_manifest();
+	$use_manifest = !empty($manifest);
+	if ($use_manifest) {
+		$manifest = lf_ai_studio_normalize_manifest($manifest);
+		lf_ai_studio_sync_manifest_posts($manifest);
+	}
 	$homepage_payload = lf_ai_studio_build_homepage_blueprint();
 	if (!is_array($homepage_payload)) {
 		return ['error' => __('Full site payload build failed.', 'leadsforward-core')];
@@ -856,6 +1177,9 @@ function lf_ai_studio_build_full_site_payload(): array {
 	$blueprints = [];
 	$blueprints[] = $homepage_blueprint;
 
+	$service_keyword_map = $use_manifest ? lf_ai_studio_manifest_keyword_map($manifest, 'services') : [];
+	$area_keyword_map = $use_manifest ? lf_ai_studio_manifest_keyword_map($manifest, 'service_areas') : [];
+
 	$services = get_posts([
 		'post_type' => 'lf_service',
 		'post_status' => 'publish',
@@ -867,7 +1191,11 @@ function lf_ai_studio_build_full_site_payload(): array {
 		if (!$service instanceof \WP_Post) {
 			continue;
 		}
-		$blueprint = lf_ai_studio_build_post_blueprint($service, 'service', 'service_detail');
+		if ($use_manifest && !isset($service_keyword_map[$service->post_name])) {
+			continue;
+		}
+		$keyword = $service_keyword_map[$service->post_name] ?? '';
+		$blueprint = lf_ai_studio_build_post_blueprint($service, 'service', 'service_detail', $keyword);
 		if (!empty($blueprint)) {
 			$blueprints[] = $blueprint;
 		}
@@ -884,7 +1212,11 @@ function lf_ai_studio_build_full_site_payload(): array {
 		if (!$area instanceof \WP_Post) {
 			continue;
 		}
-		$blueprint = lf_ai_studio_build_post_blueprint($area, 'service_area', 'service_area_detail');
+		if ($use_manifest && !isset($area_keyword_map[$area->post_name])) {
+			continue;
+		}
+		$keyword = $area_keyword_map[$area->post_name] ?? '';
+		$blueprint = lf_ai_studio_build_post_blueprint($area, 'service_area', 'service_area_detail', $keyword);
 		if (!empty($blueprint)) {
 			$blueprints[] = $blueprint;
 		}
@@ -892,19 +1224,32 @@ function lf_ai_studio_build_full_site_payload(): array {
 
 	$about = get_page_by_path('about-us');
 	if ($about instanceof \WP_Post) {
-		$blueprint = lf_ai_studio_build_post_blueprint($about, 'about', 'about_overview');
+		$blueprint = lf_ai_studio_build_post_blueprint($about, 'about', 'about_overview', '');
 		if (!empty($blueprint)) {
 			$blueprints[] = $blueprint;
 		}
 	}
 
+	$business_name = (string) ($homepage_payload['business_name'] ?? '');
+	$niche = (string) ($homepage_payload['niche'] ?? '');
+	$city = (string) ($homepage_payload['city_region'] ?? '');
+	$keywords = $homepage_payload['keywords'] ?? [];
+	if ($use_manifest) {
+		$business_name = (string) ($manifest['site']['business_name'] ?? $business_name);
+		$niche = (string) ($manifest['site']['niche'] ?? $niche);
+		$city = (string) ($manifest['site']['address']['city'] ?? $city);
+		$keywords = [
+			'primary' => (string) ($manifest['homepage']['primary_keyword'] ?? ''),
+			'secondary' => $manifest['homepage']['secondary_keywords'] ?? [],
+		];
+	}
 	return [
 		'request_id' => (string) ($homepage_payload['request_id'] ?? ''),
 		'variation_seed' => (string) ($homepage_payload['variation_seed'] ?? ''),
-		'business_name' => (string) ($homepage_payload['business_name'] ?? ''),
-		'niche' => (string) ($homepage_payload['niche'] ?? ''),
-		'city_region' => (string) ($homepage_payload['city_region'] ?? ''),
-		'keywords' => $homepage_payload['keywords'] ?? [],
+		'business_name' => $business_name,
+		'niche' => $niche,
+		'city_region' => $city,
+		'keywords' => $keywords,
 		'writing_samples' => lf_ai_studio_collect_writing_samples(),
 		'business_entity' => $homepage_payload['business_entity'] ?? [],
 		'system_message' => lf_ai_studio_llm_system_message(),

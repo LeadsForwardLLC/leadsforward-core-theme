@@ -200,6 +200,7 @@ New section type: **Centered Content** (`content_centered`) — minimal, text-on
 - **Role:** Advanced homepage regeneration and debug.
 - **Inputs:** Webhook URL + shared secret.
 - **Writing samples:** Controlled in n8n; not stored in WordPress.
+- **Manifest upload:** Optional deterministic mode via JSON manifest stored in `lf_site_manifest`.
 - **Flow:** Build homepage blueprint → send to orchestrator → validate payload → apply to homepage fields.
 - **Jobs:** Logged with status, user, time, and summary. Retry resends same payload.
 - **REST endpoints (secret auth):**

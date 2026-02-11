@@ -335,6 +335,7 @@ AI Studio (Append‑Only)
 ----------------------
 - Configure in **LeadsForward → AI Studio**.
 - Writing samples are controlled in n8n.
+- Optional deterministic mode: upload a JSON manifest to bypass wizard inputs.
 - One-click “Generate Site Content” posts a blueprint to the orchestrator webhook.
 - Response payload is validated and applied to existing builder fields.
 - REST endpoints require the shared secret in the `Authorization` header.
