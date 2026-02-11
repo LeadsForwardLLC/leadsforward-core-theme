@@ -186,7 +186,7 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 - **Location:** LeadsForward → AI Studio.
 - **Role:** Advanced homepage regeneration and debug.
 - **Inputs:** Webhook URL + shared secret.
-- **Samples:** Uses selected `docs/content-samples/*.md` from Setup Wizard plus optional admin samples.
+- **Writing samples:** Controlled in n8n; not stored in WordPress.
 - **Flow:** Build homepage blueprint → send to orchestrator → validate payload → apply to homepage fields.
 - **Jobs:** Logged with status, user, time, and summary. Retry resends same payload.
 - **REST endpoints (secret auth):**
@@ -199,9 +199,9 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 ## Homepage Generation Flow
 
 - **Where:** LeadsForward → Setup (single guided flow).
-- **Inputs:** Business info, niche, city/region, homepage keywords, hero variant, writing samples, variation profile.
+- **Inputs:** Business info, niche, city/region, homepage keywords, hero variant, variation profile.
 - **Trigger:** “Generate homepage now” calls the orchestrator and applies homepage-only updates.
-- **Storage:** `lf_homepage_keywords` + `lf_homepage_writing_samples` + homepage hero variant stored in homepage config.
+- **Storage:** `lf_homepage_keywords` + homepage hero variant stored in homepage config.
 - **Regenerate:** Use LeadsForward → AI Studio (Advanced) to re-run homepage generation.
 
 ---
@@ -354,6 +354,19 @@ Completion is stored in option `lf_setup_wizard_complete`. The wizard does not s
 - **New block:** Register in `inc/blocks/register.php` and add a template in `templates/blocks/`.
 - **FAQ schema on custom pages:** Use filter `lf_faq_schema_items` to pass FAQ items.
 - **Breadcrumbs:** Filter `lf_breadcrumb_items` to adjust or extend items.
+
+---
+
+## Deterministic Content Isolation Architecture
+
+- **Blueprint-only homepage copy:** Homepage sections render only stored section fields from `lf_homepage_section_config`.
+- **No CPT body reuse on homepage:** Service cards read `lf_service_short_desc` only; no `post_content` or excerpt fallbacks.
+- **Service CPT isolation:** Service body content stays on Service pages (Page Builder or `post_content` fallback only).
+- **No implicit cross-context fallbacks:** Service Details renders stored fields only (no CPT fallback).
+- **Section boundaries are explicit:** AI writes only allowed section fields; `section_intent` metadata guides generation without rendering.
+- **Service catalog enrichment:** Homepage blueprint includes `short_desc` to keep summaries consistent without pulling bodies.
+- **Files modified:** `templates/blocks/service-intro.php`, `templates/blocks/service-grid.php`, `inc/sections.php`, `inc/ai-studio.php`, `README.md`, `docs/SOP.md`.
+- **Reason for isolation:** Prevent duplication between homepage summaries and Service pages; ensure safe regeneration with deterministic inputs.
 
 ---
 

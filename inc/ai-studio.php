@@ -55,7 +55,6 @@ function lf_ai_studio_handle_save(): void {
 	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
 	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
 	update_option('lf_ai_studio_keywords', isset($_POST['lf_ai_studio_keywords']) ? sanitize_textarea_field(wp_unslash($_POST['lf_ai_studio_keywords'])) : '');
-	update_option('lf_ai_studio_samples', isset($_POST['lf_ai_studio_samples']) ? sanitize_textarea_field(wp_unslash($_POST['lf_ai_studio_samples'])) : '');
 	update_option('lf_ai_studio_scope', isset($_POST['lf_ai_studio_scope']) && $_POST['lf_ai_studio_scope'] === 'selected' ? 'selected' : 'all');
 	$scope_types = isset($_POST['lf_ai_studio_scope_types']) && is_array($_POST['lf_ai_studio_scope_types'])
 		? array_map('sanitize_text_field', $_POST['lf_ai_studio_scope_types'])
@@ -75,16 +74,6 @@ function lf_ai_studio_handle_save(): void {
 		'primary' => $primary_kw,
 		'secondary' => array_values($secondary),
 	], true);
-	$sample_files = lf_ai_studio_get_sample_files();
-	$selected_samples = $_POST['lf_homepage_writing_samples'] ?? [];
-	if (!is_array($selected_samples)) {
-		$selected_samples = [$selected_samples];
-	}
-	$selected_samples = array_values(array_filter(array_map('sanitize_file_name', $selected_samples)));
-	if (!empty($sample_files)) {
-		$selected_samples = array_values(array_intersect($selected_samples, $sample_files));
-	}
-	update_option('lf_homepage_writing_samples', $selected_samples, true);
 	wp_safe_redirect(admin_url('admin.php?page=lf-ai-studio&saved=1'));
 	exit;
 }
@@ -142,17 +131,12 @@ function lf_ai_studio_render_page(): void {
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$secret = (string) get_option('lf_ai_studio_secret', '');
 	$keywords = (string) get_option('lf_ai_studio_keywords', '');
-	$samples = (string) get_option('lf_ai_studio_samples', '');
 	$scope = (string) get_option('lf_ai_studio_scope', 'all');
 	$scope_types = get_option('lf_ai_studio_scope_types', []);
 	$scope_types = is_array($scope_types) ? $scope_types : [];
 	$style = (string) get_option('lf_ai_studio_style', 'professional');
 	$homepage_keywords = function_exists('lf_homepage_keywords') ? lf_homepage_keywords() : ['primary' => '', 'secondary' => []];
 	$homepage_city = (string) get_option('lf_homepage_city', '');
-	$homepage_samples = get_option('lf_homepage_writing_samples', []);
-	if (!is_array($homepage_samples)) {
-		$homepage_samples = [];
-	}
 	$jobs = get_posts([
 		'post_type' => LF_AI_STUDIO_JOB_CPT,
 		'post_status' => 'any',
@@ -160,7 +144,6 @@ function lf_ai_studio_render_page(): void {
 		'orderby' => 'date',
 		'order' => 'DESC',
 	]);
-	$samples_files = lf_ai_studio_get_sample_files();
 	$blueprint_preview = lf_ai_studio_build_homepage_blueprint();
 	$blueprint_json = wp_json_encode($blueprint_preview, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 	$wizard_complete = (bool) get_option('lf_setup_wizard_complete', false);
@@ -172,9 +155,9 @@ function lf_ai_studio_render_page(): void {
 			<h2 style="margin-top:0;"><?php esc_html_e('Setup Wizard Connection', 'leadsforward-core'); ?></h2>
 			<p class="description">
 				<?php if ($wizard_complete) : ?>
-					<?php esc_html_e('AI Studio uses the business info, keywords, and samples saved in the Setup Wizard.', 'leadsforward-core'); ?>
+					<?php esc_html_e('AI Studio uses the business info and keywords saved in the Setup Wizard.', 'leadsforward-core'); ?>
 				<?php else : ?>
-					<?php esc_html_e('Run the Setup Wizard first to store business info, keywords, and writing samples used by AI Studio.', 'leadsforward-core'); ?>
+					<?php esc_html_e('Run the Setup Wizard first to store business info and keywords used by AI Studio.', 'leadsforward-core'); ?>
 				<?php endif; ?>
 			</p>
 			<p>
@@ -223,30 +206,13 @@ function lf_ai_studio_render_page(): void {
 					<th scope="row"><label for="lf_homepage_keyword_secondary"><?php esc_html_e('Secondary homepage keywords (optional)', 'leadsforward-core'); ?></label></th>
 					<td><textarea class="large-text" name="lf_homepage_keyword_secondary" id="lf_homepage_keyword_secondary" rows="3"><?php echo esc_textarea(implode("\n", $homepage_keywords['secondary'])); ?></textarea></td>
 				</tr>
-				<tr>
-					<th scope="row"><?php esc_html_e('Writing samples (select 1–3)', 'leadsforward-core'); ?></th>
-					<td>
-						<?php if (!empty($samples_files)) : ?>
-							<?php foreach ($samples_files as $file) :
-								$checked = in_array($file, $homepage_samples, true);
-							?>
-								<label style="display:block;margin-bottom:6px;">
-									<input type="checkbox" name="lf_homepage_writing_samples[]" value="<?php echo esc_attr($file); ?>" <?php checked($checked); ?> />
-									<code><?php echo esc_html($file); ?></code>
-								</label>
-							<?php endforeach; ?>
-						<?php else : ?>
-							<strong><?php esc_html_e('No files found in /docs/content-samples/*.md (required).', 'leadsforward-core'); ?></strong>
-						<?php endif; ?>
-					</td>
-				</tr>
 			</table>
 			<p><button type="submit" class="button button-primary"><?php esc_html_e('Save Settings', 'leadsforward-core'); ?></button></p>
 		</form>
 
 		<hr />
 		<h2><?php esc_html_e('Regenerate Homepage', 'leadsforward-core'); ?></h2>
-		<p class="description"><?php esc_html_e('Uses homepage inputs stored from the Setup Wizard (keywords + samples).', 'leadsforward-core'); ?></p>
+		<p class="description"><?php esc_html_e('Uses homepage inputs stored from the Setup Wizard (keywords).', 'leadsforward-core'); ?></p>
 		<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
 			<?php wp_nonce_field('lf_ai_studio_generate', 'lf_ai_studio_generate_nonce'); ?>
 			<input type="hidden" name="action" value="lf_ai_studio_generate" />
@@ -312,10 +278,6 @@ function lf_ai_studio_run_generation(): array {
 	if ($webhook === '' || $secret === '') {
 		return ['error' => __('Webhook URL and shared secret are required.', 'leadsforward-core')];
 	}
-	$samples = lf_ai_studio_collect_samples();
-	if (empty($samples)) {
-		return ['error' => __('No writing samples found in /docs/content-samples/*.md.', 'leadsforward-core')];
-	}
 	$request = lf_ai_studio_build_blueprint();
 	$job_id = lf_ai_studio_create_job($request);
 	return lf_ai_studio_send_request($request, $job_id);
@@ -337,11 +299,6 @@ function lf_ai_studio_run_homepage_generation(): array {
 	if (empty($keywords['primary'])) {
 		error_log('LF DEBUG: Regenerate Homepage blocked: missing primary keyword.');
 		return ['error' => __('Homepage primary keyword is required.', 'leadsforward-core')];
-	}
-	$samples = lf_ai_studio_collect_selected_samples();
-	if (empty($samples)) {
-		error_log('LF DEBUG: Regenerate Homepage blocked: missing writing samples.');
-		return ['error' => __('Select 1–3 writing samples in the Setup Wizard.', 'leadsforward-core')];
 	}
 	$request = lf_ai_studio_build_homepage_blueprint();
 	if (!is_array($request)) {
@@ -457,66 +414,6 @@ function lf_ai_studio_create_job(array $request): int {
 	return (int) $job_id;
 }
 
-function lf_ai_studio_get_sample_files(): array {
-	$dir = LF_THEME_DIR . '/docs/content-samples';
-	$files = glob($dir . '/*.md');
-	if (!$files) {
-		return [];
-	}
-	$names = array_map(function ($file) use ($dir) {
-		return ltrim(str_replace($dir, '', (string) $file), '/');
-	}, $files);
-	return array_values($names);
-}
-
-function lf_ai_studio_collect_selected_samples(): array {
-	$selected = get_option('lf_homepage_writing_samples', []);
-	$selected = is_array($selected) ? array_values($selected) : [];
-	$selected = array_values(array_filter(array_map('sanitize_file_name', $selected)));
-	if (empty($selected)) {
-		return [];
-	}
-	$dir = LF_THEME_DIR . '/docs/content-samples';
-	$out = [];
-	foreach ($selected as $file) {
-		if (!str_ends_with($file, '.md')) {
-			continue;
-		}
-		$path = $dir . '/' . $file;
-		if (!is_readable($path)) {
-			continue;
-		}
-		$content = file_get_contents($path);
-		if (is_string($content) && trim($content) !== '') {
-			$out[] = trim(wp_strip_all_tags($content));
-		}
-	}
-	$admin = (string) get_option('lf_ai_studio_samples', '');
-	if (trim($admin) !== '') {
-		$out[] = trim(wp_strip_all_tags($admin));
-	}
-	return $out;
-}
-
-function lf_ai_studio_collect_samples(): array {
-	$dir = LF_THEME_DIR . '/docs/content-samples';
-	$files = glob($dir . '/*.md');
-	$out = [];
-	if ($files) {
-		foreach ($files as $file) {
-			$content = file_get_contents($file);
-			if (is_string($content) && trim($content) !== '') {
-				$out[] = trim($content);
-			}
-		}
-	}
-	$admin = (string) get_option('lf_ai_studio_samples', '');
-	if (trim($admin) !== '') {
-		$out[] = trim($admin);
-	}
-	return $out;
-}
-
 function lf_ai_studio_keywords(): array {
 	$raw = (string) get_option('lf_ai_studio_keywords', '');
 	$lines = array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $raw)));
@@ -552,7 +449,6 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 		}
 	}
 	$keywords = lf_homepage_keywords();
-	$samples = lf_ai_studio_collect_selected_samples();
 	$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
 	$order = function_exists('lf_homepage_controller_order') ? lf_homepage_controller_order() : [];
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
@@ -603,7 +499,6 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 		'niche' => $niche,
 		'city_region' => $city,
 		'keywords' => $keywords,
-		'writing_samples' => $samples,
 		'blueprint' => [
 			'page' => 'homepage',
 			'hero_variant' => $hero_variant,
@@ -707,6 +602,7 @@ function lf_ai_studio_homepage_service_catalog(): array {
 			'id' => $service->ID,
 			'slug' => $service->post_name,
 			'title' => $service->post_title,
+			'short_desc' => function_exists('get_field') ? (string) get_field('lf_service_short_desc', $service->ID) : '',
 		];
 	}
 	return $out;
@@ -842,7 +738,6 @@ function lf_ai_studio_build_blueprint(): array {
 	$style = (string) get_option('lf_ai_studio_style', 'professional');
 	$entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
 	$keywords = lf_ai_studio_keywords();
-	$samples = lf_ai_studio_collect_samples();
 	$sections = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 
 	$posts = [];
@@ -894,7 +789,6 @@ function lf_ai_studio_build_blueprint(): array {
 		'scope' => $scope,
 		'scope_types' => $scope_types,
 		'keywords' => $keywords,
-		'writing_samples' => $samples,
 		'business_entity' => $entity,
 		'sections' => $sections,
 		'homepage' => $homepage,

@@ -229,6 +229,7 @@ function lf_sections_registry(): array {
 			'contexts' => ['homepage', 'service', 'service_area', 'page', 'post'],
 			'fields' => [
 				$bg_soft,
+				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'positioning'],
 				['key' => 'variant', 'label' => __('Hero layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'default', 'options' => lf_sections_hero_variant_options()],
 				['key' => 'hero_headline', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_subheadline', 'label' => __('Subheadline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
@@ -252,6 +253,7 @@ function lf_sections_registry(): array {
 			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => [
 				$bg_field,
+				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'authority'],
 				['key' => 'trust_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Trusted by local homeowners', 'leadsforward-core')],
 				['key' => 'trust_badges', 'label' => __('Badges (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Licensed & Insured' . "\n" . '5-Star Rated' . "\n" . 'Fast Response', 'leadsforward-core')],
 				['key' => 'trust_rating', 'label' => __('Rating override (optional)', 'leadsforward-core'), 'type' => 'number', 'default' => ''],
@@ -264,6 +266,7 @@ function lf_sections_registry(): array {
 			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => [
 				$bg_field,
+				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'authority'],
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Why Homeowners Choose Us', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Clear pricing, fast response, and workmanship you can trust.', 'leadsforward-core')],
 				['key' => 'benefits_items', 'label' => __('Benefits (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Fast response windows' . "\n" . 'Licensed, insured professionals' . "\n" . 'Upfront pricing before work starts', 'leadsforward-core')],
@@ -275,6 +278,7 @@ function lf_sections_registry(): array {
 			'contexts' => ['homepage'],
 			'fields' => [
 				$bg_field,
+				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'service_summary'],
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Service Details', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Everything you need to know before scheduling.', 'leadsforward-core')],
 				['key' => 'service_details_body', 'label' => __('Body copy', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
@@ -325,6 +329,7 @@ function lf_sections_registry(): array {
 			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => [
 				$bg_field,
+				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'process'],
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Our Process', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Simple, clear steps from first call to completion.', 'leadsforward-core')],
 				['key' => 'process_steps', 'label' => __('Steps (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Tell us what you need' . "\n" . 'Get a fast, clear estimate' . "\n" . 'Schedule and complete the work', 'leadsforward-core')],
@@ -336,6 +341,7 @@ function lf_sections_registry(): array {
 			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => [
 				$bg_field,
+				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'objection_handling'],
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Frequently Asked Questions', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Answers to common questions about scheduling and service.', 'leadsforward-core')],
 				['key' => 'faq_max_items', 'label' => __('Max items', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
@@ -347,6 +353,7 @@ function lf_sections_registry(): array {
 			'contexts' => ['homepage', 'service', 'service_area', 'page', 'post'],
 			'fields' => [
 				$bg_dark,
+				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'conversion'],
 				['key' => 'cta_headline', 'label' => __('CTA headline', 'leadsforward-core'), 'type' => 'text', 'default' => __('Get a fast, no-obligation estimate', 'leadsforward-core')],
 				['key' => 'cta_subheadline', 'label' => __('Supporting text (optional)', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				['key' => 'cta_primary_override', 'label' => __('Primary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
@@ -383,6 +390,7 @@ function lf_sections_registry(): array {
 			'contexts' => ['homepage', 'page', 'service', 'service_area'],
 			'fields' => [
 				$bg_field,
+				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'service_summary'],
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Service options built for homeowners', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Explore our core services with clear scopes and upfront expectations.', 'leadsforward-core')],
 				['key' => 'service_intro_columns', 'label' => __('Columns', 'leadsforward-core'), 'type' => 'select', 'default' => '3', 'options' => [
@@ -442,6 +450,7 @@ function lf_sections_registry(): array {
 			'contexts' => ['homepage', 'service', 'service_area', 'page', 'post'],
 			'fields' => [
 				$bg_field,
+				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'conversion'],
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Explore More', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Browse related services and areas we serve.', 'leadsforward-core')],
 				['key' => 'related_links_mode', 'label' => __('Links to show', 'leadsforward-core'), 'type' => 'select', 'default' => 'both', 'options' => [
@@ -478,6 +487,7 @@ function lf_sections_registry(): array {
 			'contexts' => ['homepage', 'service', 'page'],
 			'fields' => [
 				$bg_field,
+				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'authority'],
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Areas We Serve', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Find us on the map and explore nearby neighborhoods.', 'leadsforward-core')],
 			],
@@ -942,9 +952,6 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 	$intro = $settings['section_intro'] ?? '';
 	$body = $settings['service_details_body'] ?? '';
 	$body_from_settings = $body !== '';
-	if ($body === '' && $context !== 'homepage') {
-		$body = apply_filters('the_content', $post->post_content);
-	}
 	if ($body_from_settings) {
 		$body = wpautop($body);
 	}

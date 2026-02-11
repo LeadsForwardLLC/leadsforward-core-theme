@@ -58,7 +58,8 @@ $query = new WP_Query([
 		<?php if ($query->have_posts()) : ?>
 			<div class="lf-block-service-intro__grid">
 				<?php while ($query->have_posts()) : $query->the_post();
-					$desc = wp_trim_words(wp_strip_all_tags(get_the_content(null, false)), 28);
+					$short_desc = function_exists('get_field') ? (string) get_field('lf_service_short_desc', get_the_ID()) : '';
+					$desc = $short_desc !== '' ? wp_trim_words(wp_strip_all_tags($short_desc), 28) : '';
 					$image_id = $show_images ? (int) get_post_thumbnail_id(get_the_ID()) : 0;
 					if ($show_images && $image_id === 0 && function_exists('lf_get_placeholder_image_id')) {
 						$image_id = lf_get_placeholder_image_id();

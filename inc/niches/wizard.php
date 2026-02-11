@@ -87,11 +87,6 @@ function lf_wizard_handle_post(): void {
 				}
 			}
 		}
-		$homepage_samples = $_POST['lf_homepage_writing_samples'] ?? [];
-		if (!is_array($homepage_samples)) {
-			$homepage_samples = [$homepage_samples];
-		}
-		$homepage_samples = array_values(array_filter(array_map('sanitize_file_name', $homepage_samples)));
 		$hero_variant = isset($_POST['lf_homepage_hero_variant']) ? sanitize_text_field($_POST['lf_homepage_hero_variant']) : '';
 		$generate_now = !empty($_POST['lf_homepage_generate_now']);
 
@@ -134,14 +129,9 @@ function lf_wizard_handle_post(): void {
 			'homepage_city'              => $homepage_city,
 			'homepage_hero_variant'      => $hero_variant,
 		];
-		$sample_files = function_exists('lf_ai_studio_get_sample_files') ? lf_ai_studio_get_sample_files() : [];
-		$valid_samples = array_values(array_intersect($homepage_samples, $sample_files));
 		$errors = [];
 		if ($homepage_keyword_primary === '') {
 			$errors[] = __('Primary homepage keyword is required.', 'leadsforward-core');
-		}
-		if (count($valid_samples) < 1 || count($valid_samples) > 3) {
-			$errors[] = __('Select 1–3 writing samples.', 'leadsforward-core');
 		}
 		if (!empty($errors)) {
 			$redirect = add_query_arg([
@@ -193,8 +183,6 @@ function lf_wizard_handle_post(): void {
 				lf_update_business_info_value('lf_business_map_embed', $data['business_map_embed'] ?? '');
 			}
 			// Homepage config is applied during setup runner.
-			$sample_files = function_exists('lf_ai_studio_get_sample_files') ? lf_ai_studio_get_sample_files() : [];
-			$valid_samples = array_values(array_intersect($homepage_samples, $sample_files));
 			if ($hero_variant !== '' && function_exists('lf_sections_hero_variant_options')) {
 				$variants = array_keys(lf_sections_hero_variant_options());
 				if (in_array($hero_variant, $variants, true)) {
@@ -209,7 +197,6 @@ function lf_wizard_handle_post(): void {
 				'primary' => $homepage_keyword_primary,
 				'secondary' => array_values($homepage_keyword_secondary),
 			], true);
-			update_option('lf_homepage_writing_samples', $valid_samples, true);
 			if ($homepage_city !== '') {
 				update_option('lf_homepage_city', $homepage_city, true);
 			}
@@ -397,7 +384,7 @@ function lf_wizard_render_page(): void {
 	}
 	echo '<div class="lf-setup-card lf-setup-card--top">';
 	echo '<h2 style="margin-top:0;">' . esc_html__('Setup Wizard + AI Studio', 'leadsforward-core') . '</h2>';
-	echo '<p class="description">' . esc_html__('Complete the wizard to store business info, keywords, and writing samples. AI Studio uses these inputs for regeneration.', 'leadsforward-core') . '</p>';
+	echo '<p class="description">' . esc_html__('Complete the wizard to store business info and keywords. AI Studio uses these inputs for regeneration.', 'leadsforward-core') . '</p>';
 	echo '<p><a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=lf-ops&step=' . $step)) . '#lf-setup-wizard">' . esc_html__('Continue setup wizard', 'leadsforward-core') . '</a> ';
 	echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=lf-ai-studio')) . '">' . esc_html__('Open AI Studio (Advanced)', 'leadsforward-core') . '</a></p>';
 	echo '</div>';
@@ -715,12 +702,6 @@ function lf_wizard_render_page(): void {
 		}
 		$keyword_primary = sanitize_text_field($_GET['lf_homepage_keyword_primary'] ?? '');
 		$keyword_secondary = sanitize_textarea_field($_GET['lf_homepage_keyword_secondary'] ?? '');
-		$sample_files = function_exists('lf_ai_studio_get_sample_files') ? lf_ai_studio_get_sample_files() : [];
-		$selected_samples = $_GET['lf_homepage_writing_samples'] ?? [];
-		if (!is_array($selected_samples)) {
-			$selected_samples = [$selected_samples];
-		}
-		$selected_samples = array_values(array_filter(array_map('sanitize_file_name', $selected_samples)));
 		$generate_now = !empty($_GET['lf_homepage_generate_now']);
 
 		echo '<table class="form-table"><tr><th scope="row">' . esc_html__('Site style', 'leadsforward-core') . '</th><td><select name="lf_variation_profile">';
@@ -735,16 +716,6 @@ function lf_wizard_render_page(): void {
 		echo '</select></td></tr>';
 		echo '<tr><th scope="row"><label for="lf_homepage_keyword_primary">' . esc_html__('Primary homepage keyword (SEO)', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_homepage_keyword_primary" name="lf_homepage_keyword_primary" class="large-text" value="' . esc_attr($keyword_primary) . '" required placeholder="' . esc_attr__('e.g. Roofing contractor Sarasota', 'leadsforward-core') . '" /></td></tr>';
 		echo '<tr><th scope="row"><label for="lf_homepage_keyword_secondary">' . esc_html__('Secondary homepage keywords (optional)', 'leadsforward-core') . '</label></th><td><textarea id="lf_homepage_keyword_secondary" name="lf_homepage_keyword_secondary" rows="3" class="large-text" placeholder="' . esc_attr__('One per line', 'leadsforward-core') . '">' . esc_textarea($keyword_secondary) . '</textarea><p class="description">' . esc_html__('These keywords are stored for AI Studio regeneration.', 'leadsforward-core') . '</p></td></tr>';
-		echo '<tr><th scope="row">' . esc_html__('Writing samples (select 1–3)', 'leadsforward-core') . '</th><td>';
-		if (!empty($sample_files)) {
-			foreach ($sample_files as $file) {
-				$checked = in_array($file, $selected_samples, true);
-				echo '<label style="display:block;margin-bottom:6px;"><input type="checkbox" name="lf_homepage_writing_samples[]" value="' . esc_attr($file) . '"' . checked($checked, true, false) . ' /> <code>' . esc_html($file) . '</code></label>';
-			}
-		} else {
-			echo '<strong>' . esc_html__('No files found in /docs/content-samples/*.md (required).', 'leadsforward-core') . '</strong>';
-		}
-		echo '<p class="description">' . esc_html__('Used to match tone and cadence in AI-generated copy.', 'leadsforward-core') . '</p></td></tr>';
 		echo '<tr><th scope="row">' . esc_html__('Generate homepage now', 'leadsforward-core') . '</th><td><label><input type="checkbox" name="lf_homepage_generate_now" value="1"' . checked($generate_now, true, false) . ' /> ' . esc_html__('Generate homepage content after setup completes', 'leadsforward-core') . '</label><p class="description">' . esc_html__('Runs AI generation immediately after the setup completes.', 'leadsforward-core') . '</p></td></tr>';
 		echo '</table>';
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Next', 'leadsforward-core') . '" /></p></form>';
@@ -816,17 +787,6 @@ function lf_wizard_render_page(): void {
 				$value = sanitize_text_field($value);
 			}
 			echo '<input type="hidden" name="' . esc_attr($field) . '" value="' . esc_attr($value) . '" />';
-		}
-		$selected_samples = $_GET['lf_homepage_writing_samples'] ?? [];
-		if (!is_array($selected_samples)) {
-			$selected_samples = [$selected_samples];
-		}
-		foreach ($selected_samples as $sample) {
-			$sample = sanitize_file_name((string) $sample);
-			if ($sample === '') {
-				continue;
-			}
-			echo '<input type="hidden" name="lf_homepage_writing_samples[]" value="' . esc_attr($sample) . '" />';
 		}
 		$areas_raw = isset($_GET['lf_service_areas_raw']) ? $_GET['lf_service_areas_raw'] : (isset($_GET['lf_service_areas']) ? $_GET['lf_service_areas'] : '');
 		$areas_str = is_string($areas_raw) ? $areas_raw : implode("\n", (array) $areas_raw);

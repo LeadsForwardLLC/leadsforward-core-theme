@@ -55,7 +55,8 @@ $query = new WP_Query([
 					$index++;
 					$excerpt = '';
 					if ($variant === 'a') {
-						$excerpt = wp_strip_all_tags(get_the_excerpt());
+						$short_desc = function_exists('get_field') ? (string) get_field('lf_service_short_desc', get_the_ID()) : '';
+						$excerpt = $short_desc !== '' ? wp_strip_all_tags($short_desc) : '';
 					}
 				?>
 					<li class="lf-block-service-grid__item">

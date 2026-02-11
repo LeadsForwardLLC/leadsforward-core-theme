@@ -318,7 +318,7 @@ Navigation Defaults (Append‑Only)
 AI Studio (Append‑Only)
 ----------------------
 - Configure in **LeadsForward → AI Studio**.
-- Requires `docs/content-samples/*.md` plus optional admin samples.
+- Writing samples are controlled in n8n.
 - One-click “Generate Site Content” posts a blueprint to the orchestrator webhook.
 - Response payload is validated and applied to existing builder fields.
 - REST endpoints require the shared secret in the `Authorization` header.
@@ -330,7 +330,6 @@ AI Studio (Append‑Only)
 Homepage Generation Flow (Append‑Only)
 --------------------------------------
 - Run **LeadsForward → Setup** to enter business info, niche, city/region, and homepage keywords.
-- Select 1–3 writing samples from `docs/content-samples/*.md`.
 - Choose the homepage hero variant and a variation profile.
 - Enable “Generate homepage now” to run the orchestrator immediately after setup.
 - Homepage regeneration is available in **LeadsForward → AI Studio (Advanced)**.
@@ -352,3 +351,14 @@ Homepage Pre‑AI Configuration (Append‑Only)
 - Default order (fresh setups): Hero → Trust Bar → Benefits → Service Intro Boxes → Service Details → Content with Image (A) → Image with Content (B) → Content with Image (C) → Process → FAQ → CTA → Related Links → Service Areas + Map.
 - The default homepage order includes three media sections (A/B/C) with distinct intent metadata.
 - Intent (`section_intent`, `section_purpose`) guides AI generation and is not shown on the frontend.
+
+---
+
+Deterministic Content Isolation Architecture
+-------------------------------------------
+- Homepage content is blueprint-controlled only; rendering uses section fields stored in `lf_homepage_section_config`.
+- Homepage does not reuse Service CPT body or excerpts; service cards use `lf_service_short_desc` only.
+- Service CPT body content remains isolated to Service pages (Page Builder or `post_content` fallback only).
+- Service Details on the homepage renders stored section fields only (no CPT fallback).
+- AI generation relies on explicit section field boundaries plus `section_intent` metadata.
+- Isolation prevents duplication across homepage summaries and Service pages, and protects regeneration determinism.
