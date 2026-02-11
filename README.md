@@ -409,6 +409,14 @@ Completion is stored in option `lf_setup_wizard_complete`. The wizard does not s
 
 ---
 
+## Homepage Default Order (Conversion)
+
+- **Order:** hero → trust_bar → service_intro → benefits → content_image_a → image_content_b → content_image_c → service_details → process → faq_accordion → related_links → map_nap → cta.
+- **CTA placement:** CTA appears once and is last.
+- **Defaults:** All three content/image variants (A/B/C) are enabled by default.
+
+---
+
 ## Content Density: Long-Form Utilization – Step 3
 
 - **Blueprint guidance only:** Length targets are added to blueprints as metadata; templates remain unchanged.

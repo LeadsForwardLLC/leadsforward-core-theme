@@ -404,6 +404,14 @@ Content Density: Schema Expansion
 
 ---
 
+Homepage Default Order (Conversion)
+----------------------------------
+- Order: hero → trust_bar → service_intro → benefits → content_image_a → image_content_b → content_image_c → service_details → process → faq_accordion → related_links → map_nap → cta.
+- CTA appears once and is last.
+- Content/image variants A/B/C are enabled by default.
+
+---
+
 Content Density: Long-Form Utilization – Step 3
 ----------------------------------------------
 - Length targets are added to blueprints as metadata; templates remain unchanged.

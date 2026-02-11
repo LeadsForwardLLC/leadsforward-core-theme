@@ -557,17 +557,17 @@ function lf_sections_default_order(string $context): array {
 		return [
 			'hero',
 			'trust_bar',
-			'benefits',
 			'service_intro',
-			'service_details',
+			'benefits',
 			'content_image_a',
 			'image_content_b',
 			'content_image_c',
+			'service_details',
 			'process',
 			'faq_accordion',
-			'cta',
 			'related_links',
 			'map_nap',
+			'cta',
 		];
 	}
 	if ($context === 'service') {
