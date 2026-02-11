@@ -137,6 +137,16 @@ function lf_sections_registry(): array {
 		['key' => 'section_heading', 'label' => __('Section title', 'leadsforward-core'), 'type' => 'text', 'default' => __('Designed for busy homeowners', 'leadsforward-core')],
 		['key' => 'section_intro', 'label' => __('Supporting text', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Clear communication, reliable crews, and a process built for modern service.', 'leadsforward-core')],
 		['key' => 'section_body', 'label' => __('Main body text', 'leadsforward-core'), 'type' => 'richtext', 'default' => __('From first contact to final walkthrough, we keep the experience simple and professional. You get accurate timelines, transparent pricing, and a team that treats your home with care.', 'leadsforward-core')],
+		// Added for density expansion – vNext
+		['key' => 'section_intro_secondary', 'label' => __('Secondary intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+		// Added for density expansion – vNext
+		['key' => 'section_body_secondary', 'label' => __('Expanded body text', 'leadsforward-core'), 'type' => 'richtext', 'default' => ''],
+		// Added for density expansion – vNext
+		['key' => 'section_bullets', 'label' => __('Bullet list (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
+		// Added for density expansion – vNext
+		['key' => 'section_trust_block', 'label' => __('Trust / credibility block', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+		// Added for density expansion – vNext
+		['key' => 'section_guarantee_text', 'label' => __('Guarantee text', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 		['key' => 'cta_primary_override', 'label' => __('Primary CTA text', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 		['key' => 'cta_primary_action', 'label' => __('Primary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => 'quote', 'options' => [
 			'quote' => __('Open Quote Builder', 'leadsforward-core'),
@@ -233,6 +243,14 @@ function lf_sections_registry(): array {
 				['key' => 'variant', 'label' => __('Hero layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'default', 'options' => lf_sections_hero_variant_options()],
 				['key' => 'hero_headline', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_subheadline', 'label' => __('Subheadline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
+				// Added for density expansion – vNext
+				['key' => 'hero_supporting_text', 'label' => __('Supporting text', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+				// Added for density expansion – vNext
+				['key' => 'hero_bullets', 'label' => __('Bullet list (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
+				// Added for density expansion – vNext
+				['key' => 'hero_trust_block', 'label' => __('Trust / credibility block', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+				// Added for density expansion – vNext
+				['key' => 'hero_guarantee_text', 'label' => __('Guarantee text', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_eyebrow_enabled', 'label' => __('Trust badge enabled', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
 				['key' => 'hero_eyebrow_text', 'label' => __('Trust badge text', 'leadsforward-core'), 'type' => 'text', 'default' => __('Licensed • Insured • Local', 'leadsforward-core')],
 				['key' => 'hero_media', 'label' => __('Hero media', 'leadsforward-core'), 'type' => 'select', 'default' => 'none', 'options' => lf_sections_hero_media_options()],
@@ -269,7 +287,13 @@ function lf_sections_registry(): array {
 				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'authority'],
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Why Homeowners Choose Us', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Clear pricing, fast response, and workmanship you can trust.', 'leadsforward-core')],
+				// Added for density expansion – vNext
+				['key' => 'section_intro_secondary', 'label' => __('Secondary intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				['key' => 'benefits_items', 'label' => __('Benefits (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Fast response windows' . "\n" . 'Licensed, insured professionals' . "\n" . 'Upfront pricing before work starts', 'leadsforward-core')],
+				// Added for density expansion – vNext
+				['key' => 'benefits_supporting_points', 'label' => __('Supporting points (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
+				// Added for density expansion – vNext
+				['key' => 'benefits_trust_block', 'label' => __('Trust / credibility block', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 			],
 			'render' => 'lf_sections_render_benefits',
 		],
@@ -282,7 +306,15 @@ function lf_sections_registry(): array {
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Service Details', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Everything you need to know before scheduling.', 'leadsforward-core')],
 				['key' => 'service_details_body', 'label' => __('Body copy', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+				// Added for density expansion – vNext
+				['key' => 'service_details_body_secondary', 'label' => __('Expanded body text', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				['key' => 'service_details_checklist', 'label' => __('Checklist (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Transparent scope and pricing' . "\n" . 'Clean, respectful crews' . "\n" . 'Work backed by warranty', 'leadsforward-core')],
+				// Added for density expansion – vNext
+				['key' => 'service_details_micro_sections', 'label' => __('Service micro-sections (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
+				// Added for density expansion – vNext
+				['key' => 'service_details_trust_block', 'label' => __('Trust / credibility block', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+				// Added for density expansion – vNext
+				['key' => 'service_details_guarantee_text', 'label' => __('Guarantee text', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 			],
 			'render' => 'lf_sections_render_service_details',
 		],
@@ -332,7 +364,13 @@ function lf_sections_registry(): array {
 				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'process'],
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Our Process', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Simple, clear steps from first call to completion.', 'leadsforward-core')],
+				// Added for density expansion – vNext
+				['key' => 'section_intro_secondary', 'label' => __('Secondary intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				['key' => 'process_steps', 'label' => __('Steps (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Tell us what you need' . "\n" . 'Get a fast, clear estimate' . "\n" . 'Schedule and complete the work', 'leadsforward-core')],
+				// Added for density expansion – vNext
+				['key' => 'process_expectations', 'label' => __('Expectations (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
+				// Added for density expansion – vNext
+				['key' => 'process_trust_block', 'label' => __('Trust / credibility block', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 			],
 			'render' => 'lf_sections_render_process',
 		],
@@ -344,7 +382,11 @@ function lf_sections_registry(): array {
 				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'objection_handling'],
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Frequently Asked Questions', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Answers to common questions about scheduling and service.', 'leadsforward-core')],
+				// Added for density expansion – vNext
+				['key' => 'section_intro_secondary', 'label' => __('Secondary intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				['key' => 'faq_max_items', 'label' => __('Max items', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
+				// Added for density expansion – vNext
+				['key' => 'faq_trust_block', 'label' => __('Trust / credibility block', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 			],
 			'render' => 'lf_sections_render_faq',
 		],
@@ -356,6 +398,14 @@ function lf_sections_registry(): array {
 				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'conversion'],
 				['key' => 'cta_headline', 'label' => __('CTA headline', 'leadsforward-core'), 'type' => 'text', 'default' => __('Get a fast, no-obligation estimate', 'leadsforward-core')],
 				['key' => 'cta_subheadline', 'label' => __('Supporting text (optional)', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+				// Added for density expansion – vNext
+				['key' => 'cta_subheadline_secondary', 'label' => __('Secondary supporting text', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+				// Added for density expansion – vNext
+				['key' => 'cta_bullets', 'label' => __('CTA bullets (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
+				// Added for density expansion – vNext
+				['key' => 'cta_trust_block', 'label' => __('Trust / credibility block', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+				// Added for density expansion – vNext
+				['key' => 'cta_guarantee_text', 'label' => __('Guarantee text', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'cta_primary_override', 'label' => __('Primary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'cta_secondary_override', 'label' => __('Secondary CTA label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'cta_primary_action', 'label' => __('Primary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => '', 'options' => [

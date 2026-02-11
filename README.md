@@ -399,6 +399,15 @@ Completion is stored in option `lf_setup_wizard_complete`. The wizard does not s
 
 ---
 
+## Content Density: Schema Expansion
+
+- **Schema-only expansion:** Added optional long-form fields to section registry without changing templates or layout.
+- **No new required fields:** All added fields default to empty and are safe for existing content.
+- **Allowed field coverage:** New fields are automatically included in `allowed_field_keys` (no blocked keys added).
+- **Deterministic safe:** No fallback logic or registry structure changes.
+
+---
+
 ## Changelog
 
 - **0.1.0** — Foundation: CPTs, ACF options, blocks, SEO/schema, modular homepage, CTA resolution, documentation.

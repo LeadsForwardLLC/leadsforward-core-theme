@@ -391,3 +391,12 @@ Content Density: Template Field Coverage
 - Field coverage uses existing schema only; no new keys or section types.
 - Admin debug logging outputs section/instance id, allowed keys, and rendered keys when `WP_DEBUG` is enabled.
 - Deterministic compliance: no post content or excerpt fallbacks are used to increase density.
+
+---
+
+Content Density: Schema Expansion
+--------------------------------
+- Added optional long-form fields to section registry only (no template changes).
+- New fields are non-required defaults; existing content remains valid.
+- New fields are included in `allowed_field_keys` automatically.
+- Determinism preserved: no fallback logic added or registry structure changes.
