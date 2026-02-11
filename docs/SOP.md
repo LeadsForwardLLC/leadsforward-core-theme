@@ -371,3 +371,14 @@ Deterministic Template Rules
 - Homepage sections never read Service/Service Area CPT body or excerpts.
 - No implicit fallbacks to `post_content`, `get_the_content()`, or `get_the_excerpt()`.
 - Add new fields in `lf_sections_registry()` and include them in `allowed_field_keys` for AI writes.
+
+---
+
+Full Site Generation Architecture
+--------------------------------
+- Setup Wizard and AI Studio regenerate send one unified payload to n8n.
+- Payload includes homepage + each Service + each Service Area + About page blueprints.
+- Each blueprint contains `sections`, `order`, `page_intent`, and `allowed_field_keys`.
+- All updates route through `lf_apply_orchestrator_updates()` with per-section allowed field validation.
+- Deterministic enforcement: no implicit fallbacks or cross-context content reuse.
+- Payload includes `writing_samples` (empty by default; orchestration can supply samples in n8n).

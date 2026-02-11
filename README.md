@@ -379,6 +379,17 @@ Completion is stored in option `lf_setup_wizard_complete`. The wizard does not s
 
 ---
 
+## Full Site Generation Architecture
+
+- **Single orchestrator call:** Setup Wizard and AI Studio regenerate send one unified payload to n8n.
+- **Multi-blueprint payload:** Payload includes homepage + each Service + each Service Area + About page blueprints.
+- **Deterministic enforcement:** Each blueprint carries `sections`, `order`, `page_intent`, and `allowed_field_keys`.
+- **Single apply path:** All updates route through `lf_apply_orchestrator_updates()` with per-section allowed field validation.
+- **No cross-context reuse:** AI writes only to declared fields; no implicit fallbacks or CPT body reuse.
+- **Writing samples:** Included in payload as `writing_samples` (empty by default; orchestration can override in n8n).
+
+---
+
 ## Changelog
 
 - **0.1.0** — Foundation: CPTs, ACF options, blocks, SEO/schema, modular homepage, CTA resolution, documentation.
