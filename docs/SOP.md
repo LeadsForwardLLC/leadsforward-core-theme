@@ -89,6 +89,9 @@ Home (Homepage Builder)
 - Map + Service Areas
 - CTA (last)
 
+Benefits cards use: icon + title + short explainer text (3 cards).
+Explore More tiles (Related Links) can render image-backed cards with overlay text.
+
 Services (single service page)
 - Hero
 - Trust Bar

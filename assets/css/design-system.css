@@ -547,9 +547,16 @@ button:focus-visible,
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 20px;
-	height: 20px;
+	width: 40px;
+	height: 40px;
+	border-radius: 999px;
+	background: rgba(59,130,246,0.12);
 	color: var(--lf-primary);
+}
+
+.lf-benefits__icon .lf-icon {
+	width: 22px;
+	height: 22px;
 }
 
 .lf-benefits__title {
@@ -814,8 +821,37 @@ button:focus-visible,
 	font-weight: 600;
 }
 
+.lf-related-links--media .lf-related-links__label {
+	text-align: center;
+	max-width: 14rem;
+	margin: 0 auto;
+	font-size: 0.98rem;
+	line-height: 1.35;
+}
+
 .lf-related-links--media .lf-related-links__link:hover {
 	color: #fff;
+}
+
+@media (max-width: 720px) {
+	.lf-related-links--media {
+		grid-template-columns: 1fr;
+		gap: 0.75rem;
+	}
+
+	.lf-related-links--media .lf-related-links__item {
+		min-height: 90px;
+	}
+
+	.lf-related-links--media .lf-related-links__link {
+		min-height: 90px;
+		padding: 1rem;
+	}
+
+	.lf-related-links--media .lf-related-links__label {
+		max-width: 100%;
+		font-size: 0.95rem;
+	}
 }
 
 .lf-related-links--media .lf-related-links__link::after {

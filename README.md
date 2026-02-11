@@ -163,6 +163,8 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 - **Hero controls:** Variant selector + CTA toggles/actions (same options as Page Builder).
   - CTA actions: `quote`, `call`, `link`.
 - **Media sections:** Content with Image + Image with Content use Media Library images with a placeholder fallback.
+- **Benefits layout:** Benefits cards render icon + title + short explainer (3 cards).
+- **Related links tiles:** Explore More supports image-backed tiles with overlay text.
 - **Defaults:** If no config exists, a conversion-optimized default order is seeded.
 - **CTA resolution:** Section overrides → Homepage overrides → Global defaults.
 - **Phone linking:** When CTA action is `call`, uses Business Info phone for a `tel:` link.

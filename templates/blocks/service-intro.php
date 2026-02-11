@@ -23,7 +23,10 @@ $intro = !empty($section['section_intro']) ? $section['section_intro'] : '';
 $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'light') : '';
 $icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'service_intro', 'above', 'lf-heading-icon') : '';
 $icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'service_intro', 'left', 'lf-heading-icon') : '';
-$card_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'service_intro', 'list', 'lf-block-service-intro__icon') : '';
+$card_icon = '';
+if (!empty($section['icon_enabled']) && !empty($section['icon_slug']) && function_exists('lf_section_icon_markup')) {
+	$card_icon = lf_section_icon_markup($section, 'service_intro', 'list', 'lf-block-service-intro__icon');
+}
 $columns = (int) ($section['service_intro_columns'] ?? 3);
 $columns = max(3, min(6, $columns));
 $max_items = (int) ($section['service_intro_max_items'] ?? 6);
@@ -60,6 +63,9 @@ $query = new WP_Query([
 				<?php while ($query->have_posts()) : $query->the_post();
 					$short_desc = function_exists('get_field') ? (string) get_field('lf_service_short_desc', get_the_ID()) : '';
 					$desc = $short_desc !== '' ? wp_trim_words(wp_strip_all_tags($short_desc), 28) : '';
+					if ($desc === '') {
+						$desc = sprintf(__('Short overview of %s and what to expect.', 'leadsforward-core'), get_the_title());
+					}
 					$image_id = $show_images ? (int) get_post_thumbnail_id(get_the_ID()) : 0;
 					if ($show_images && $image_id === 0 && function_exists('lf_get_placeholder_image_id')) {
 						$image_id = lf_get_placeholder_image_id();
@@ -78,9 +84,7 @@ $query = new WP_Query([
 						<?php if ($image_html) : ?>
 							<div class="lf-block-service-intro__media"><?php echo $image_html; ?></div>
 						<?php endif; ?>
-						<?php if ($desc !== '') : ?>
-							<p class="lf-block-service-intro__desc"><?php echo esc_html($desc); ?></p>
-						<?php endif; ?>
+						<p class="lf-block-service-intro__desc"><?php echo esc_html($desc); ?></p>
 						<a class="lf-block-service-intro__link" href="<?php the_permalink(); ?>"><?php esc_html_e('Learn more', 'leadsforward-core'); ?></a>
 					</article>
 				<?php endwhile; ?>
