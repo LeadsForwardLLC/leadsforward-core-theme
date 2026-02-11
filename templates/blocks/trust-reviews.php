@@ -92,7 +92,7 @@ if ($is_slider) {
 					<?php while ($query->have_posts()) : $query->the_post();
 						$name = function_exists('get_field') ? get_field('lf_testimonial_reviewer_name') : '';
 						$rating = function_exists('get_field') ? (int) get_field('lf_testimonial_rating') : 5;
-						$text = function_exists('get_field') ? get_field('lf_testimonial_review_text') : get_the_excerpt();
+						$text = function_exists('get_field') ? get_field('lf_testimonial_review_text') : '';
 					$source = function_exists('get_field') ? get_field('lf_testimonial_source') : '';
 					$source_url = function_exists('get_field') ? get_field('lf_testimonial_source_url') : '';
 					$avatar_id = function_exists('get_field') ? (int) get_field('lf_testimonial_reviewer_avatar') : 0;
@@ -101,9 +101,6 @@ if ($is_slider) {
 					}
 						if (!$name) {
 							$name = get_the_title();
-						}
-						if (!$text) {
-							$text = get_the_content();
 						}
 					$initials = '';
 					if ($name) {

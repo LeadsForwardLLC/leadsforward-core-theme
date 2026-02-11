@@ -362,3 +362,12 @@ Deterministic Content Isolation Architecture
 - Service Details on the homepage renders stored section fields only (no CPT fallback).
 - AI generation relies on explicit section field boundaries plus `section_intent` metadata.
 - Isolation prevents duplication across homepage summaries and Service pages, and protects regeneration determinism.
+
+---
+
+Deterministic Template Rules
+---------------------------
+- Templates and blocks render only section fields stored in options/meta that exist in the section registry.
+- Homepage sections never read Service/Service Area CPT body or excerpts.
+- No implicit fallbacks to `post_content`, `get_the_content()`, or `get_the_excerpt()`.
+- Add new fields in `lf_sections_registry()` and include them in `allowed_field_keys` for AI writes.

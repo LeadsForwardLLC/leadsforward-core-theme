@@ -370,6 +370,15 @@ Completion is stored in option `lf_setup_wizard_complete`. The wizard does not s
 
 ---
 
+## Deterministic Template Rules
+
+- **Render only blueprint fields:** Templates and blocks render only section fields stored in options/meta that exist in the section registry.
+- **No cross-context reuse:** Homepage sections never read Service/Service Area CPT body or excerpts.
+- **No implicit fallbacks:** Never fall back to `post_content`, `get_the_content()`, or `get_the_excerpt()`.
+- **Add new fields safely:** Add fields to `lf_sections_registry()` and include them in `allowed_field_keys`; never read arbitrary post content.
+
+---
+
 ## Changelog
 
 - **0.1.0** — Foundation: CPTs, ACF options, blocks, SEO/schema, modular homepage, CTA resolution, documentation.

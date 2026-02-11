@@ -57,9 +57,6 @@ $query = new WP_Query([
 					if (!$q) {
 						$q = get_the_title();
 					}
-					if (!$a) {
-						$a = get_the_content();
-					}
 				?>
 					<details class="lf-block-faq-accordion__item">
 						<summary class="lf-block-faq-accordion__question"><?php echo esc_html($q); ?></summary>

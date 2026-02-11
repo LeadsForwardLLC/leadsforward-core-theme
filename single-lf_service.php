@@ -21,8 +21,6 @@ get_header();
 			<?php
 			if (function_exists('lf_pb_render_sections')) {
 				lf_pb_render_sections(get_post());
-			} else {
-				the_content();
 			}
 			?>
 		</article>

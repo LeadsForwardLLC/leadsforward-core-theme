@@ -38,8 +38,6 @@ get_header();
 				<?php
 				if ($use_builder) {
 					lf_pb_render_sections($post_obj);
-				} else {
-					the_content();
 				}
 				?>
 			</div>

@@ -1093,15 +1093,7 @@ function lf_sections_render_image_content(string $context, array $settings, \WP_
 }
 
 function lf_sections_render_content(string $context, array $settings, \WP_Post $post): void {
-	$body = apply_filters('the_content', $post->post_content);
-	if ($body === '') {
-		return;
-	}
-	lf_sections_render_shell_open('content', '', '', $settings['section_background'] ?? 'light', $settings);
-	?>
-	<div class="lf-prose"><?php echo $body; ?></div>
-	<?php
-	lf_sections_render_shell_close();
+	return;
 }
 function lf_sections_render_process(string $context, array $settings, \WP_Post $post): void {
 	$title = $settings['section_heading'] ?? '';

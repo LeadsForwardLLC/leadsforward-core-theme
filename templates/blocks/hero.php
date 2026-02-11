@@ -60,10 +60,6 @@ if (!empty($context['homepage']) && !empty($section)) {
 
 if ($subheading === '' && empty($context['homepage'])) {
 	$post_type = get_post_type();
-	if ($post_type === 'lf_service') {
-		$excerpt = get_the_excerpt();
-		$subheading = $excerpt !== '' ? $excerpt : wp_trim_words(wp_strip_all_tags(get_the_content(null, false)), 22);
-	}
 	if ($post_type === 'lf_service_area' && function_exists('get_field')) {
 		$state = get_field('lf_service_area_state');
 		if ($state) {
@@ -117,6 +113,7 @@ $trust_label = __('Trusted by local homeowners', 'leadsforward-core');
 $trust_reviews = sprintf(_n('%d review', '%d reviews', $review_count, 'leadsforward-core'), $review_count);
 // Services list removed from hero card.
 $latest_testimonial = null;
+$latest_testimonial_text = '';
 if (post_type_exists('lf_testimonial')) {
 	$testimonials = get_posts([
 		'post_type'      => 'lf_testimonial',
@@ -128,6 +125,9 @@ if (post_type_exists('lf_testimonial')) {
 	]);
 	if (!empty($testimonials)) {
 		$latest_testimonial = $testimonials[0];
+		if ($latest_testimonial && function_exists('get_field')) {
+			$latest_testimonial_text = (string) get_field('lf_testimonial_review_text', $latest_testimonial->ID);
+		}
 	}
 }
 $show_form_in_hero = $cta_type === 'form' && !empty($cta_resolved_for_type['ghl_embed']);
@@ -367,7 +367,7 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 							<?php echo wp_get_attachment_image($placeholder_id, 'large', false, ['loading' => 'lazy', 'decoding' => 'async', 'alt' => esc_attr($placeholder_alt)]); ?>
 						<?php elseif ($latest_testimonial) : ?>
 							<div class="lf-block-hero__quote">
-								<p class="lf-block-hero__quote-text"><?php echo esc_html(get_the_excerpt($latest_testimonial)); ?></p>
+								<p class="lf-block-hero__quote-text"><?php echo esc_html($latest_testimonial_text); ?></p>
 								<p class="lf-block-hero__quote-meta"><?php echo esc_html(get_the_title($latest_testimonial)); ?></p>
 							</div>
 						<?php else : ?>
