@@ -905,6 +905,14 @@ function lf_ai_studio_validate_manifest(array $manifest): array {
 				$errors[] = sprintf(__('Manifest missing business.address.%s.', 'leadsforward-core'), $key);
 			}
 		}
+		if (array_key_exists('niche_slug', $biz)) {
+			$slug = sanitize_title((string) $biz['niche_slug']);
+			$registry = function_exists('lf_get_niche_registry') ? lf_get_niche_registry() : [];
+			$valid = is_array($registry) ? array_keys($registry) : [];
+			if ($slug === '' || !in_array($slug, $valid, true)) {
+				$errors[] = __('Invalid niche slug in manifest.', 'leadsforward-core');
+			}
+		}
 	}
 	if (!isset($manifest['homepage']) || !is_array($manifest['homepage'])) {
 		$errors[] = __('Manifest missing homepage object.', 'leadsforward-core');
@@ -1112,6 +1120,7 @@ function lf_ai_studio_normalize_manifest(array $manifest): array {
 			],
 			'primary_city' => sanitize_text_field((string) ($business['primary_city'] ?? ($address['city'] ?? ''))),
 			'niche' => sanitize_text_field((string) ($business['niche'] ?? '')),
+			'niche_slug' => sanitize_title((string) ($business['niche_slug'] ?? '')),
 			'site_style' => sanitize_text_field((string) ($business['site_style'] ?? '')),
 			'variation_seed' => sanitize_text_field((string) ($business['variation_seed'] ?? '')),
 		],
