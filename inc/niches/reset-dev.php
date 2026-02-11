@@ -108,6 +108,15 @@ function lf_dev_reset_run(): void {
 		foreach ($areas as $id) {
 			wp_delete_post((int) $id, true);
 		}
+		$faqs = get_posts([
+			'post_type'      => 'lf_faq',
+			'post_status'    => 'any',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		]);
+		foreach ($faqs as $id) {
+			wp_delete_post((int) $id, true);
+		}
 	} else {
 		foreach ($page_ids as $id) {
 			if (is_numeric($id)) {
@@ -123,6 +132,15 @@ function lf_dev_reset_run(): void {
 			if (is_numeric($id)) {
 				wp_delete_post((int) $id, true);
 			}
+		}
+		$faqs = get_posts([
+			'post_type'      => 'lf_faq',
+			'post_status'    => 'any',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		]);
+		foreach ($faqs as $id) {
+			wp_delete_post((int) $id, true);
 		}
 	}
 
