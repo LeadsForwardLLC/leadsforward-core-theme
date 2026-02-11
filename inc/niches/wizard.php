@@ -48,6 +48,19 @@ function lf_wizard_handle_post(): void {
 	}
 	$step = (int) $_POST['lf_wizard_step'];
 	if ($step === 5 && isset($_POST['lf_wizard_generate']) && check_admin_referer('lf_wizard_generate', 'lf_wizard_nonce')) {
+		$manifest_active = function_exists('lf_ai_studio_manifest_exists') && lf_ai_studio_manifest_exists();
+		$manifest = $manifest_active && function_exists('lf_ai_studio_get_manifest') ? lf_ai_studio_get_manifest() : [];
+		if ($manifest_active && function_exists('lf_ai_studio_validate_manifest')) {
+			$manifest_errors = lf_ai_studio_validate_manifest($manifest);
+			if (!empty($manifest_errors)) {
+				update_option('lf_ai_studio_manifest_errors', $manifest_errors, false);
+				wp_safe_redirect(admin_url('admin.php?page=lf-ops&step=5&manifest_error=1'));
+				exit;
+			}
+			if (function_exists('lf_ai_studio_normalize_manifest')) {
+				$manifest = lf_ai_studio_normalize_manifest($manifest);
+			}
+		}
 		$allowed_embed = lf_wizard_allowed_map_embed();
 		$address_street = isset($_POST['lf_business_address_street']) ? sanitize_text_field($_POST['lf_business_address_street']) : '';
 		$address_city = isset($_POST['lf_business_address_city']) ? sanitize_text_field($_POST['lf_business_address_city']) : '';
@@ -76,7 +89,7 @@ function lf_wizard_handle_post(): void {
 		$homepage_keyword_primary = isset($_POST['lf_homepage_keyword_primary']) ? sanitize_text_field($_POST['lf_homepage_keyword_primary']) : '';
 		$homepage_keyword_secondary_raw = isset($_POST['lf_homepage_keyword_secondary']) ? sanitize_textarea_field($_POST['lf_homepage_keyword_secondary']) : '';
 		$homepage_keyword_secondary = array_filter(array_map('sanitize_text_field', preg_split('/\r\n|\r|\n|,/', $homepage_keyword_secondary_raw)));
-		if (!empty($_FILES['lf_homepage_keywords_file']) && is_array($_FILES['lf_homepage_keywords_file'])) {
+		if (!$manifest_active && !empty($_FILES['lf_homepage_keywords_file']) && is_array($_FILES['lf_homepage_keywords_file'])) {
 			$file = $_FILES['lf_homepage_keywords_file'];
 			if (isset($file['error']) && (int) $file['error'] === UPLOAD_ERR_OK && !empty($file['tmp_name'])) {
 				$contents = file_get_contents($file['tmp_name']);
@@ -86,6 +99,11 @@ function lf_wizard_handle_post(): void {
 					$homepage_keyword_secondary = array_values(array_unique(array_merge($homepage_keyword_secondary, $from_file)));
 				}
 			}
+		}
+		if ($manifest_active) {
+			$homepage_city = (string) ($manifest['site']['address']['city'] ?? $homepage_city);
+			$homepage_keyword_primary = (string) ($manifest['homepage']['primary_keyword'] ?? $homepage_keyword_primary);
+			$homepage_keyword_secondary = $manifest['homepage']['secondary_keywords'] ?? $homepage_keyword_secondary;
 		}
 		$hero_variant = isset($_POST['lf_homepage_hero_variant']) ? sanitize_text_field($_POST['lf_homepage_hero_variant']) : '';
 		$generate_now = !empty($_POST['lf_homepage_generate_now']);
@@ -130,7 +148,7 @@ function lf_wizard_handle_post(): void {
 			'homepage_hero_variant'      => $hero_variant,
 		];
 		$errors = [];
-		if ($homepage_keyword_primary === '') {
+		if (!$manifest_active && $homepage_keyword_primary === '') {
 			$errors[] = __('Primary homepage keyword is required.', 'leadsforward-core');
 		}
 		if (!empty($errors)) {
@@ -193,12 +211,14 @@ function lf_wizard_handle_post(): void {
 					}
 				}
 			}
-			update_option('lf_homepage_keywords', [
-				'primary' => $homepage_keyword_primary,
-				'secondary' => array_values($homepage_keyword_secondary),
-			], true);
-			if ($homepage_city !== '') {
-				update_option('lf_homepage_city', $homepage_city, true);
+			if (!$manifest_active) {
+				update_option('lf_homepage_keywords', [
+					'primary' => $homepage_keyword_primary,
+					'secondary' => array_values($homepage_keyword_secondary),
+				], true);
+				if ($homepage_city !== '') {
+					update_option('lf_homepage_city', $homepage_city, true);
+				}
 			}
 			update_option('lf_setup_wizard_complete', true);
 			if (!empty($result['ids']) && is_array($result['ids'])) {
@@ -300,6 +320,7 @@ function lf_wizard_render_page(): void {
 	$reset_done = isset($_GET['reset_done']) && $_GET['reset_done'] === '1';
 	$reset_error = isset($_GET['reset_error']) ? sanitize_text_field($_GET['reset_error']) : '';
 	$legal_regen = isset($_GET['legal_regen']) ? sanitize_text_field($_GET['legal_regen']) : '';
+	$manifest_errors = get_option('lf_ai_studio_manifest_errors', []);
 	if ($complete && !isset($_GET['done'])) {
 		echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
 		if ($settings_saved) {
@@ -315,6 +336,13 @@ function lf_wizard_render_page(): void {
 		}
 		if ($reset_error === 'confirm') {
 			echo '<div class="notice notice-error"><p>' . esc_html__('You must type RESET exactly to confirm.', 'leadsforward-core') . '</p></div>';
+		}
+		if (is_array($manifest_errors) && !empty($manifest_errors)) {
+			echo '<div class="notice notice-error"><p><strong>' . esc_html__('Manifest validation failed:', 'leadsforward-core') . '</strong></p><ul>';
+			foreach ($manifest_errors as $err) {
+				echo '<li>' . esc_html((string) $err) . '</li>';
+			}
+			echo '</ul></div>';
 		}
 		lf_wizard_render_setup_settings_panel();
 		echo '<p>' . esc_html__('Setup is already complete. Your site has the required pages, menus, and structure.', 'leadsforward-core') . '</p>';
@@ -390,6 +418,13 @@ function lf_wizard_render_page(): void {
 	echo '</div>';
 	if ($errors) {
 		echo '<div class="notice notice-error"><p>' . esc_html($errors) . '</p></div>';
+	}
+	if (is_array($manifest_errors) && !empty($manifest_errors)) {
+		echo '<div class="notice notice-error"><p><strong>' . esc_html__('Manifest validation failed:', 'leadsforward-core') . '</strong></p><ul>';
+		foreach ($manifest_errors as $err) {
+			echo '<li>' . esc_html((string) $err) . '</li>';
+		}
+		echo '</ul></div>';
 	}
 	echo '<div id="lf-setup-wizard">';
 	echo '<div class="lf-setup-progress"><strong>' . sprintf(esc_html__('Step %d of 5', 'leadsforward-core'), $step) . '</strong><div class="lf-setup-progress__bar"><span style="width:' . esc_attr((string) ($step * 20)) . '%;"></span></div></div>';
@@ -703,7 +738,16 @@ function lf_wizard_render_page(): void {
 		$keyword_primary = sanitize_text_field($_GET['lf_homepage_keyword_primary'] ?? '');
 		$keyword_secondary = sanitize_textarea_field($_GET['lf_homepage_keyword_secondary'] ?? '');
 		$generate_now = !empty($_GET['lf_homepage_generate_now']);
+		$manifest_active = function_exists('lf_ai_studio_manifest_exists') && lf_ai_studio_manifest_exists();
+		$manifest = $manifest_active && function_exists('lf_ai_studio_get_manifest') ? lf_ai_studio_get_manifest() : [];
+		if ($manifest_active && function_exists('lf_ai_studio_normalize_manifest')) {
+			$manifest = lf_ai_studio_normalize_manifest($manifest);
+			$keyword_primary = (string) ($manifest['homepage']['primary_keyword'] ?? $keyword_primary);
+			$keyword_secondary = implode("\n", $manifest['homepage']['secondary_keywords'] ?? []);
+		}
+		$manifest_notice = $manifest_active ? '<p class="description" style="color:#b45309;font-weight:600;">' . esc_html__('Manifest Mode Active – Wizard inputs ignored.', 'leadsforward-core') . '</p>' : '';
 
+		echo $manifest_notice;
 		echo '<table class="form-table"><tr><th scope="row">' . esc_html__('Site style', 'leadsforward-core') . '</th><td><select name="lf_variation_profile">';
 		foreach ($profiles as $key => $label) {
 			echo '<option value="' . esc_attr($key) . '"' . selected($rec, $key, false) . '>' . esc_html($label) . '</option>';
@@ -714,8 +758,9 @@ function lf_wizard_render_page(): void {
 			echo '<option value="' . esc_attr($variant_key) . '"' . selected($hero_variant, $variant_key, false) . '>' . esc_html($label) . '</option>';
 		}
 		echo '</select></td></tr>';
-		echo '<tr><th scope="row"><label for="lf_homepage_keyword_primary">' . esc_html__('Primary homepage keyword (SEO)', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_homepage_keyword_primary" name="lf_homepage_keyword_primary" class="large-text" value="' . esc_attr($keyword_primary) . '" required placeholder="' . esc_attr__('e.g. Roofing contractor Sarasota', 'leadsforward-core') . '" /></td></tr>';
-		echo '<tr><th scope="row"><label for="lf_homepage_keyword_secondary">' . esc_html__('Secondary homepage keywords (optional)', 'leadsforward-core') . '</label></th><td><textarea id="lf_homepage_keyword_secondary" name="lf_homepage_keyword_secondary" rows="3" class="large-text" placeholder="' . esc_attr__('One per line', 'leadsforward-core') . '">' . esc_textarea($keyword_secondary) . '</textarea><p class="description">' . esc_html__('These keywords are stored for AI Studio regeneration.', 'leadsforward-core') . '</p></td></tr>';
+		$keyword_attr = $manifest_active ? ' readonly disabled' : '';
+		echo '<tr><th scope="row"><label for="lf_homepage_keyword_primary">' . esc_html__('Primary homepage keyword (SEO)', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_homepage_keyword_primary" name="lf_homepage_keyword_primary" class="large-text" value="' . esc_attr($keyword_primary) . '" required placeholder="' . esc_attr__('e.g. Roofing contractor Sarasota', 'leadsforward-core') . '"' . $keyword_attr . ' /></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_homepage_keyword_secondary">' . esc_html__('Secondary homepage keywords (optional)', 'leadsforward-core') . '</label></th><td><textarea id="lf_homepage_keyword_secondary" name="lf_homepage_keyword_secondary" rows="3" class="large-text" placeholder="' . esc_attr__('One per line', 'leadsforward-core') . '"' . $keyword_attr . '>' . esc_textarea($keyword_secondary) . '</textarea><p class="description">' . esc_html__('These keywords are stored for AI Studio regeneration.', 'leadsforward-core') . '</p></td></tr>';
 		echo '<tr><th scope="row">' . esc_html__('Generate site now', 'leadsforward-core') . '</th><td><label><input type="checkbox" name="lf_homepage_generate_now" value="1"' . checked($generate_now, true, false) . ' /> ' . esc_html__('Generate site content after setup completes', 'leadsforward-core') . '</label><p class="description">' . esc_html__('Runs AI generation immediately after the setup completes.', 'leadsforward-core') . '</p></td></tr>';
 		echo '</table>';
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Next', 'leadsforward-core') . '" /></p></form>';
@@ -799,8 +844,13 @@ function lf_wizard_render_page(): void {
 		$areas_str = is_string($areas_raw) ? $areas_raw : implode("\n", (array) $areas_raw);
 		echo '<input type="hidden" name="lf_service_areas" value="' . esc_attr($areas_str) . '" />';
 		echo '<p>' . esc_html__('Click Generate to create pages, services, service areas, menus, and set Theme Options. This will not duplicate existing pages.', 'leadsforward-core') . '</p>';
+		$manifest_active = function_exists('lf_ai_studio_manifest_exists') && lf_ai_studio_manifest_exists();
+		if ($manifest_active) {
+			echo '<p class="description" style="color:#b45309;font-weight:600;">' . esc_html__('Manifest Mode Active – Wizard inputs ignored.', 'leadsforward-core') . '</p>';
+		}
+		$file_attr = $manifest_active ? ' disabled' : '';
 		echo '<p><label for="lf_homepage_keywords_file">' . esc_html__('Upload keyword list (optional)', 'leadsforward-core') . '</label><br />';
-		echo '<input type="file" id="lf_homepage_keywords_file" name="lf_homepage_keywords_file" accept=".txt,.csv" /> ';
+		echo '<input type="file" id="lf_homepage_keywords_file" name="lf_homepage_keywords_file" accept=".txt,.csv"' . $file_attr . ' /> ';
 		echo '<span class="description">' . esc_html__('One keyword per line or comma-separated. Added to secondary keywords.', 'leadsforward-core') . '</span></p>';
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Generate site', 'leadsforward-core') . '" /></p></form>';
 		echo '<style>

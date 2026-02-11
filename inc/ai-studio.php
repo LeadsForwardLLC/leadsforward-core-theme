@@ -635,6 +635,11 @@ function lf_ai_studio_normalize_manifest(array $manifest): array {
 	];
 }
 
+function lf_ai_studio_manifest_hash(array $manifest): string {
+	$normalized = lf_ai_studio_normalize_manifest($manifest);
+	return hash('sha256', wp_json_encode($normalized));
+}
+
 function lf_ai_studio_manifest_keyword_map(array $manifest, string $key): array {
 	$items = isset($manifest[$key]) && is_array($manifest[$key]) ? $manifest[$key] : [];
 	$map = [];
@@ -838,6 +843,11 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 	$keywords = lf_homepage_keywords();
 	$manifest = lf_ai_studio_get_manifest();
 	if (!empty($manifest)) {
+		$manifest_errors = lf_ai_studio_validate_manifest($manifest);
+		if (!empty($manifest_errors)) {
+			update_option('lf_ai_studio_manifest_errors', $manifest_errors, false);
+			return ['error' => __('Manifest validation failed. Fix the uploaded manifest to continue.', 'leadsforward-core')];
+		}
 		$manifest = lf_ai_studio_normalize_manifest($manifest);
 		$business_name = (string) ($manifest['site']['business_name'] ?? $business_name);
 		$niche = (string) ($manifest['site']['niche'] ?? $niche);
@@ -1159,6 +1169,11 @@ function lf_ai_studio_build_full_site_payload(): array {
 	$manifest = lf_ai_studio_get_manifest();
 	$use_manifest = !empty($manifest);
 	if ($use_manifest) {
+		$manifest_errors = lf_ai_studio_validate_manifest($manifest);
+		if (!empty($manifest_errors)) {
+			update_option('lf_ai_studio_manifest_errors', $manifest_errors, false);
+			return ['error' => __('Manifest validation failed. Fix the uploaded manifest to continue.', 'leadsforward-core')];
+		}
 		$manifest = lf_ai_studio_normalize_manifest($manifest);
 		lf_ai_studio_sync_manifest_posts($manifest);
 	}
@@ -1297,6 +1312,20 @@ function lf_ai_studio_homepage_internal_links(): array {
 }
 
 function lf_homepage_variation_seed(): string {
+	$manifest = lf_ai_studio_get_manifest();
+	if (!empty($manifest)) {
+		$manifest_errors = lf_ai_studio_validate_manifest($manifest);
+		if (empty($manifest_errors)) {
+			$normalized = lf_ai_studio_normalize_manifest($manifest);
+			$business = (string) ($normalized['site']['business_name'] ?? '');
+			$city = (string) ($normalized['site']['address']['city'] ?? '');
+			$niche = (string) ($normalized['site']['niche'] ?? '');
+			$seed_source = trim($business . '|' . $city . '|' . $niche);
+			if ($seed_source !== '') {
+				return substr(hash('sha256', $seed_source), 0, 20);
+			}
+		}
+	}
 	$seed = get_option('lf_homepage_variation_seed', '');
 	$seed = is_string($seed) ? trim($seed) : '';
 	if ($seed !== '') {
@@ -1643,10 +1672,19 @@ function lf_apply_orchestrator_updates(array $response): array {
 		$summary_parts[] = sprintf(__('FAQs updated: %d', 'leadsforward-core'), count($changes['faqs']));
 	}
 
+	$log_manifest = lf_ai_studio_get_manifest();
+	$log_manifest_present = !empty($log_manifest);
+	$log_manifest_hash = $log_manifest_present ? lf_ai_studio_manifest_hash($log_manifest) : '';
+	$log_services_count = $log_manifest_present && is_array($log_manifest['services'] ?? null) ? count($log_manifest['services']) : 0;
+	$log_service_areas_count = $log_manifest_present && is_array($log_manifest['service_areas'] ?? null) ? count($log_manifest['service_areas']) : 0;
 	update_option('lf_ai_last_generation_log', [
 		'time' => current_time('mysql'),
 		'pages_updated' => $pages_updated,
 		'fields_updated' => $fields_updated,
+		'manifest_present' => $log_manifest_present,
+		'manifest_hash' => $log_manifest_hash,
+		'services_count' => $log_services_count,
+		'service_areas_count' => $log_service_areas_count,
 		'errors' => $errors,
 	], false);
 
