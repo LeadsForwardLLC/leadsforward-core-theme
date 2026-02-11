@@ -887,6 +887,7 @@ function lf_ai_studio_scaffold_manifest(array $manifest): array {
 		return ['success' => false, 'message' => (string) $data['error'], 'errors' => [(string) $data['error']]];
 	}
 	$result = lf_run_setup($data);
+	lf_ai_studio_ensure_header_menu_more_children();
 	$business = $manifest['business'] ?? [];
 	$address = is_array($business['address'] ?? null) ? $business['address'] : [];
 	$biz_name = (string) ($business['name'] ?? '');
@@ -963,6 +964,54 @@ function lf_ai_studio_scaffold_manifest(array $manifest): array {
 		update_option('page_on_front', $home->ID);
 	}
 	return is_array($result) ? $result : ['success' => false, 'message' => __('Setup runner failed.', 'leadsforward-core')];
+}
+
+function lf_ai_studio_ensure_header_menu_more_children(): void {
+	$locations = get_nav_menu_locations();
+	$menu_id = $locations['header_menu'] ?? 0;
+	if (!$menu_id) {
+		return;
+	}
+	$menu = wp_get_nav_menu_object($menu_id);
+	if (!$menu || ($menu->name ?? '') !== 'Header Menu') {
+		return;
+	}
+	$items = wp_get_nav_menu_items($menu_id);
+	if (!is_array($items) || empty($items)) {
+		return;
+	}
+	$more_item = null;
+	foreach ($items as $item) {
+		$classes = $item->classes ?? [];
+		if (is_array($classes) && in_array('lf-menu-more', $classes, true)) {
+			$more_item = $item;
+			break;
+		}
+	}
+	if (!$more_item) {
+		return;
+	}
+	foreach ($items as $item) {
+		if ((int) $item->menu_item_parent === (int) $more_item->ID) {
+			return;
+		}
+	}
+	$slugs = ['about-us', 'blog', 'contact'];
+	foreach ($slugs as $slug) {
+		$page = get_page_by_path($slug);
+		if (!$page instanceof \WP_Post) {
+			continue;
+		}
+		wp_update_nav_menu_item($menu_id, 0, [
+			'menu-item-title' => get_the_title($page->ID),
+			'menu-item-url' => get_permalink($page->ID),
+			'menu-item-type' => 'post_type',
+			'menu-item-object' => 'page',
+			'menu-item-object-id' => $page->ID,
+			'menu-item-parent-id' => (int) $more_item->ID,
+			'menu-item-status' => 'publish',
+		]);
+	}
 }
 
 function lf_ai_studio_get_manifest(): array {
@@ -1921,6 +1970,13 @@ function lf_ai_studio_build_full_site_payload(): array {
 	$blueprints = [];
 	$blueprints[] = $homepage_blueprint;
 
+	$overview_keyword = '';
+	if ($use_manifest) {
+		$overview_keyword = (string) ($manifest['homepage']['primary_keyword'] ?? '');
+	} else {
+		$overview_keyword = (string) ($homepage_payload['keywords']['primary'] ?? '');
+	}
+
 	$service_keyword_map = $use_manifest ? lf_ai_studio_manifest_keyword_map($manifest, 'services') : [];
 	$area_keyword_map = $use_manifest ? lf_ai_studio_manifest_keyword_map($manifest, 'service_areas') : [];
 
@@ -1969,6 +2025,33 @@ function lf_ai_studio_build_full_site_payload(): array {
 	$about = get_page_by_path('about-us');
 	if ($about instanceof \WP_Post) {
 		$blueprint = lf_ai_studio_build_post_blueprint($about, 'about', 'about_overview', '');
+		if (!empty($blueprint)) {
+			$blueprints[] = $blueprint;
+		}
+	}
+
+	$core_pages = [
+		'our-services' => ['page' => 'services_overview', 'intent' => 'services_overview', 'keyword' => $overview_keyword],
+		'our-service-areas' => ['page' => 'service_areas_overview', 'intent' => 'service_areas_overview', 'keyword' => $overview_keyword],
+		'contact' => ['page' => 'contact', 'intent' => 'contact', 'keyword' => ''],
+		'reviews' => ['page' => 'reviews', 'intent' => 'reviews', 'keyword' => ''],
+		'blog' => ['page' => 'blog', 'intent' => 'blog', 'keyword' => ''],
+		'sitemap' => ['page' => 'sitemap', 'intent' => 'sitemap', 'keyword' => ''],
+		'privacy-policy' => ['page' => 'privacy', 'intent' => 'privacy', 'keyword' => ''],
+		'terms-of-service' => ['page' => 'terms', 'intent' => 'terms', 'keyword' => ''],
+		'thank-you' => ['page' => 'thank_you', 'intent' => 'thank_you', 'keyword' => ''],
+	];
+	foreach ($core_pages as $slug => $meta) {
+		$page = get_page_by_path($slug);
+		if (!$page instanceof \WP_Post) {
+			continue;
+		}
+		$blueprint = lf_ai_studio_build_post_blueprint(
+			$page,
+			(string) $meta['page'],
+			(string) $meta['intent'],
+			(string) $meta['keyword']
+		);
 		if (!empty($blueprint)) {
 			$blueprints[] = $blueprint;
 		}
@@ -2239,7 +2322,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 	$pages_updated = 0;
 	$fields_updated = 0;
 	$homepage_fields_count = 0;
-	$update_counts = ['homepage' => 0, 'post_meta' => 0, 'faq' => 0];
+	$update_counts = ['homepage' => 0, 'post_meta' => 0, 'faq' => 0, 'service_meta' => 0];
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 	$homepage_config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
 
@@ -2247,6 +2330,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 	$homepage_fields = [];
 	$post_updates = [];
 	$faq_updates = [];
+	$service_meta_updates = [];
 
 	foreach ($updates as $index => $update) {
 		if (!is_array($update)) {
@@ -2278,6 +2362,16 @@ function lf_apply_orchestrator_updates(array $response): array {
 		if ($target === 'faq') {
 			$faq_updates[] = $update;
 			$update_counts['faq']++;
+			continue;
+		}
+		if ($target === 'service_meta') {
+			$post_id = absint($id);
+			if (!$post_id) {
+				$errors[] = sprintf(__('Service meta update at index %d is missing id.', 'leadsforward-core'), $index);
+				continue;
+			}
+			$service_meta_updates[] = $update;
+			$update_counts['service_meta']++;
 			continue;
 		}
 		$errors[] = sprintf(__('Update at index %d has unknown target.', 'leadsforward-core'), $index);
@@ -2437,6 +2531,34 @@ function lf_apply_orchestrator_updates(array $response): array {
 			$changes['faqs'] = $faq_changes;
 		}
 	}
+	if (!empty($service_meta_updates)) {
+		foreach ($service_meta_updates as $update) {
+			$post_id = absint($update['id'] ?? 0);
+			$post = $post_id ? get_post($post_id) : null;
+			if (!$post instanceof \WP_Post || $post->post_type !== 'lf_service') {
+				$errors[] = sprintf(__('Service meta update for id %d not found.', 'leadsforward-core'), $post_id);
+				continue;
+			}
+			$fields = $update['fields'] ?? $update['data'] ?? [];
+			if (!is_array($fields)) {
+				continue;
+			}
+			$short_desc = '';
+			if (isset($fields['lf_service_short_desc'])) {
+				$short_desc = sanitize_textarea_field((string) $fields['lf_service_short_desc']);
+			} elseif (isset($fields['short_desc'])) {
+				$short_desc = sanitize_textarea_field((string) $fields['short_desc']);
+			}
+			if ($short_desc !== '') {
+				if (function_exists('update_field')) {
+					update_field('lf_service_short_desc', $short_desc, $post_id);
+				} else {
+					update_post_meta($post_id, 'lf_service_short_desc', $short_desc);
+				}
+				$fields_updated++;
+			}
+		}
+	}
 
 	$summary_parts = [];
 	if ($changes['homepage']) {
@@ -2452,6 +2574,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 		'homepage_updates' => $update_counts['homepage'],
 		'post_updates' => $update_counts['post_meta'],
 		'faq_updates' => $update_counts['faq'],
+		'service_meta_updates' => $update_counts['service_meta'],
 		'faq_created' => count($changes['faqs']),
 		'homepage_fields_updated' => $homepage_fields_count,
 	]));
