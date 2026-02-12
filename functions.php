@@ -52,6 +52,7 @@ lf_load_inc('headings.php');
 // AI Studio core + REST endpoints (used outside admin).
 lf_load_inc('ai-studio.php');
 lf_load_inc('ai-studio-rest.php');
+lf_load_inc('ai-studio-airtable.php');
 
 // Custom post types.
 lf_load_inc('cpt/services.php');

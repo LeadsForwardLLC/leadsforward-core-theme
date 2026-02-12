@@ -43,6 +43,34 @@ function lf_ai_studio_assets(string $hook): void {
 		return;
 	}
 	wp_enqueue_media();
+	wp_enqueue_style(
+		'lf-ai-studio-airtable',
+		LF_THEME_URI . '/assets/css/ai-studio-airtable.css',
+		[],
+		LF_THEME_VERSION
+	);
+	wp_enqueue_script(
+		'lf-ai-studio-airtable',
+		LF_THEME_URI . '/assets/js/ai-studio-airtable.js',
+		[],
+		LF_THEME_VERSION,
+		true
+	);
+	$airtable_settings = function_exists('lf_ai_studio_airtable_get_settings')
+		? lf_ai_studio_airtable_get_settings()
+		: ['enabled' => false];
+	wp_localize_script('lf-ai-studio-airtable', 'LFAirtableManifester', [
+		'ajaxUrl' => admin_url('admin-ajax.php'),
+		'nonce' => wp_create_nonce('lf_ai_airtable'),
+		'enabled' => !empty($airtable_settings['enabled']),
+		'strings' => [
+			'searchPlaceholder' => __('Search Airtable projects…', 'leadsforward-core'),
+			'noResults' => __('No projects found.', 'leadsforward-core'),
+			'notConfigured' => __('Airtable is not configured.', 'leadsforward-core'),
+			'selectPrompt' => __('Select a project to preview before generating.', 'leadsforward-core'),
+			'generating' => __('Generating from Airtable…', 'leadsforward-core'),
+		],
+	]);
 }
 
 function lf_ai_studio_handle_save(): void {
@@ -85,6 +113,23 @@ function lf_ai_studio_handle_save(): void {
 		'primary' => $primary_kw,
 		'secondary' => array_values($secondary),
 	], true);
+	update_option('lf_ai_airtable_enabled', isset($_POST['lf_ai_airtable_enabled']) ? '1' : '0');
+	update_option('lf_ai_airtable_pat', isset($_POST['lf_ai_airtable_pat']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_pat'])) : '');
+	update_option('lf_ai_airtable_base', isset($_POST['lf_ai_airtable_base']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_base'])) : '');
+	update_option('lf_ai_airtable_table', isset($_POST['lf_ai_airtable_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_table'])) : '');
+	update_option('lf_ai_airtable_view', isset($_POST['lf_ai_airtable_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_view'])) : '');
+	$field_defaults = function_exists('lf_ai_studio_airtable_default_field_map') ? lf_ai_studio_airtable_default_field_map() : [];
+	$field_input = isset($_POST['lf_ai_airtable_field_map']) && is_array($_POST['lf_ai_airtable_field_map'])
+		? $_POST['lf_ai_airtable_field_map']
+		: [];
+	$sanitized_map = [];
+	foreach ($field_defaults as $key => $label) {
+		$value = isset($field_input[$key]) ? sanitize_text_field(wp_unslash((string) $field_input[$key])) : '';
+		$sanitized_map[$key] = $value !== '' ? $value : $label;
+	}
+	if (!empty($sanitized_map)) {
+		update_option('lf_ai_airtable_field_map', $sanitized_map);
+	}
 	wp_safe_redirect(admin_url('admin.php?page=lf-ops&saved=1'));
 	exit;
 }
@@ -236,6 +281,18 @@ function lf_ai_studio_render_page(): void {
 	$manifest = lf_ai_studio_get_manifest();
 	$manifest_errors = get_option('lf_ai_studio_manifest_errors', []);
 	$manifest_saved = isset($_GET['manifest']) && $_GET['manifest'] === '1';
+	$airtable_settings = function_exists('lf_ai_studio_airtable_get_settings')
+		? lf_ai_studio_airtable_get_settings()
+		: [];
+	$airtable_fields = is_array($airtable_settings['fields'] ?? null) ? $airtable_settings['fields'] : [];
+	$airtable_field_defaults = function_exists('lf_ai_studio_airtable_default_field_map')
+		? lf_ai_studio_airtable_default_field_map()
+		: [];
+	$airtable_enabled = !empty($airtable_settings['enabled']);
+	$airtable_ready = $airtable_enabled
+		&& !empty($airtable_settings['pat'])
+		&& !empty($airtable_settings['base_id'])
+		&& !empty($airtable_settings['table']);
 	$jobs = get_posts([
 		'post_type' => LF_AI_STUDIO_JOB_CPT,
 		'post_status' => 'any',
@@ -330,6 +387,31 @@ function lf_ai_studio_render_page(): void {
 					<a class="button" href="<?php echo esc_url($template_url); ?>"><?php esc_html_e('Download Manifest Template', 'leadsforward-core'); ?></a>
 				</p>
 			</form>
+		</div>
+		<div class="card" id="lf-airtable-picker" style="max-width: 980px; padding: 16px; margin: 16px 0;">
+			<h2 style="margin-top:0;"><?php esc_html_e('Airtable Projects', 'leadsforward-core'); ?></h2>
+			<p class="description"><?php esc_html_e('Search your Airtable projects and generate from a single record.', 'leadsforward-core'); ?></p>
+			<?php if (!$airtable_ready) : ?>
+				<div class="notice notice-warning inline">
+					<p><?php esc_html_e('Airtable is not configured yet. Add your PAT, Base ID, and Table in Orchestrator Settings below, then save.', 'leadsforward-core'); ?></p>
+				</div>
+			<?php endif; ?>
+			<div class="lf-airtable-grid">
+				<div class="lf-airtable-search">
+					<label class="screen-reader-text" for="lf-airtable-search"><?php esc_html_e('Search Airtable projects', 'leadsforward-core'); ?></label>
+					<input type="text" id="lf-airtable-search" class="regular-text" placeholder="<?php esc_attr_e('Search Airtable projects…', 'leadsforward-core'); ?>" <?php echo $airtable_ready ? '' : 'disabled'; ?> />
+					<div id="lf-airtable-results" class="lf-airtable-results"></div>
+				</div>
+				<div class="lf-airtable-preview">
+					<div id="lf-airtable-preview" class="lf-airtable-preview-card">
+						<?php esc_html_e('Select a project to preview before generating.', 'leadsforward-core'); ?>
+					</div>
+					<button type="button" class="button button-primary" id="lf-airtable-generate" disabled>
+						<?php esc_html_e('Use Project & Generate', 'leadsforward-core'); ?>
+					</button>
+					<div id="lf-airtable-status" class="lf-airtable-status" role="status" aria-live="polite"></div>
+				</div>
+			</div>
 		</div>
 		<script>
 			(function() {
@@ -484,6 +566,57 @@ function lf_ai_studio_render_page(): void {
 				<tr>
 					<th scope="row"><label for="lf_homepage_keyword_secondary"><?php esc_html_e('Secondary homepage keywords (optional)', 'leadsforward-core'); ?></label></th>
 					<td><textarea class="large-text" name="lf_homepage_keyword_secondary" id="lf_homepage_keyword_secondary" rows="3"><?php echo esc_textarea(implode("\n", $homepage_keywords['secondary'])); ?></textarea></td>
+				</tr>
+				<tr>
+					<th colspan="2" style="padding-top: 16px;"><?php esc_html_e('Airtable Connection', 'leadsforward-core'); ?></th>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e('Enable Airtable', 'leadsforward-core'); ?></th>
+					<td><label><input type="checkbox" name="lf_ai_airtable_enabled" value="1" <?php checked($airtable_enabled); ?> /> <?php esc_html_e('Allow Airtable project imports', 'leadsforward-core'); ?></label></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_ai_airtable_pat"><?php esc_html_e('Airtable Personal Access Token', 'leadsforward-core'); ?></label></th>
+					<td>
+						<input type="password" class="large-text" name="lf_ai_airtable_pat" id="lf_ai_airtable_pat" value="<?php echo esc_attr((string) ($airtable_settings['pat'] ?? '')); ?>" autocomplete="new-password" />
+						<label style="display:inline-block;margin-top:6px;">
+							<input type="checkbox" id="lf-airtable-token-toggle" />
+							<?php esc_html_e('Show token', 'leadsforward-core'); ?>
+						</label>
+						<p class="description"><?php esc_html_e('Required scopes: data.records:read and schema.bases:read.', 'leadsforward-core'); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_ai_airtable_base"><?php esc_html_e('Airtable Base ID', 'leadsforward-core'); ?></label></th>
+					<td><input type="text" class="regular-text" name="lf_ai_airtable_base" id="lf_ai_airtable_base" value="<?php echo esc_attr((string) ($airtable_settings['base_id'] ?? '')); ?>" /></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_ai_airtable_table"><?php esc_html_e('Table Name', 'leadsforward-core'); ?></label></th>
+					<td><input type="text" class="regular-text" name="lf_ai_airtable_table" id="lf_ai_airtable_table" value="<?php echo esc_attr((string) ($airtable_settings['table'] ?? 'Business Info')); ?>" /></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_ai_airtable_view"><?php esc_html_e('View Name', 'leadsforward-core'); ?></label></th>
+					<td>
+						<input type="text" class="regular-text" name="lf_ai_airtable_view" id="lf_ai_airtable_view" value="<?php echo esc_attr((string) ($airtable_settings['view'] ?? 'Global Sync View')); ?>" />
+						<p class="description"><?php esc_html_e('Optional. Leave blank to use the table default.', 'leadsforward-core'); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e('Field mapping overrides', 'leadsforward-core'); ?></th>
+					<td>
+						<details class="lf-airtable-field-map">
+							<summary><?php esc_html_e('Override Airtable field names', 'leadsforward-core'); ?></summary>
+							<div class="lf-airtable-field-map-grid">
+								<?php foreach ($airtable_field_defaults as $key => $label) :
+									$value = (string) ($airtable_fields[$key] ?? $label);
+									?>
+									<label>
+										<span><?php echo esc_html($label); ?></span>
+										<input type="text" name="lf_ai_airtable_field_map[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($value); ?>" />
+									</label>
+								<?php endforeach; ?>
+							</div>
+						</details>
+					</td>
 				</tr>
 			</table>
 			<p><button type="submit" class="button button-primary"><?php esc_html_e('Save Settings', 'leadsforward-core'); ?></button></p>
@@ -2032,6 +2165,12 @@ function lf_ai_studio_build_full_site_payload(): array {
 		}
 	}
 
+	$generation_scope = '';
+	if ($use_manifest) {
+		$generation_scope = (string) ($manifest['generation_scope'] ?? '');
+	}
+	$homepage_only = ($generation_scope === 'homepage_only');
+
 	$blueprints = [];
 	$blueprints[] = $homepage_blueprint;
 
@@ -2045,80 +2184,82 @@ function lf_ai_studio_build_full_site_payload(): array {
 	$service_keyword_map = $use_manifest ? lf_ai_studio_manifest_keyword_map($manifest, 'services') : [];
 	$area_keyword_map = $use_manifest ? lf_ai_studio_manifest_keyword_map($manifest, 'service_areas') : [];
 
-	$services = get_posts([
-		'post_type' => 'lf_service',
-		'post_status' => 'publish',
-		'posts_per_page' => 200,
-		'orderby' => 'menu_order title',
-		'order' => 'ASC',
-	]);
-	foreach ($services as $service) {
-		if (!$service instanceof \WP_Post) {
-			continue;
+	if (!$homepage_only) {
+		$services = get_posts([
+			'post_type' => 'lf_service',
+			'post_status' => 'publish',
+			'posts_per_page' => 200,
+			'orderby' => 'menu_order title',
+			'order' => 'ASC',
+		]);
+		foreach ($services as $service) {
+			if (!$service instanceof \WP_Post) {
+				continue;
+			}
+			if ($use_manifest && !isset($service_keyword_map[$service->post_name])) {
+				continue;
+			}
+			$keyword = $service_keyword_map[$service->post_name] ?? '';
+			$blueprint = lf_ai_studio_build_post_blueprint($service, 'service', 'service_detail', $keyword);
+			if (!empty($blueprint)) {
+				$blueprints[] = $blueprint;
+			}
 		}
-		if ($use_manifest && !isset($service_keyword_map[$service->post_name])) {
-			continue;
-		}
-		$keyword = $service_keyword_map[$service->post_name] ?? '';
-		$blueprint = lf_ai_studio_build_post_blueprint($service, 'service', 'service_detail', $keyword);
-		if (!empty($blueprint)) {
-			$blueprints[] = $blueprint;
-		}
-	}
 
-	$areas = get_posts([
-		'post_type' => 'lf_service_area',
-		'post_status' => 'publish',
-		'posts_per_page' => 200,
-		'orderby' => 'menu_order title',
-		'order' => 'ASC',
-	]);
-	foreach ($areas as $area) {
-		if (!$area instanceof \WP_Post) {
-			continue;
+		$areas = get_posts([
+			'post_type' => 'lf_service_area',
+			'post_status' => 'publish',
+			'posts_per_page' => 200,
+			'orderby' => 'menu_order title',
+			'order' => 'ASC',
+		]);
+		foreach ($areas as $area) {
+			if (!$area instanceof \WP_Post) {
+				continue;
+			}
+			if ($use_manifest && !isset($area_keyword_map[$area->post_name])) {
+				continue;
+			}
+			$keyword = $area_keyword_map[$area->post_name] ?? '';
+			$blueprint = lf_ai_studio_build_post_blueprint($area, 'service_area', 'service_area_detail', $keyword);
+			if (!empty($blueprint)) {
+				$blueprints[] = $blueprint;
+			}
 		}
-		if ($use_manifest && !isset($area_keyword_map[$area->post_name])) {
-			continue;
-		}
-		$keyword = $area_keyword_map[$area->post_name] ?? '';
-		$blueprint = lf_ai_studio_build_post_blueprint($area, 'service_area', 'service_area_detail', $keyword);
-		if (!empty($blueprint)) {
-			$blueprints[] = $blueprint;
-		}
-	}
 
-	$about = get_page_by_path('about-us');
-	if ($about instanceof \WP_Post) {
-		$blueprint = lf_ai_studio_build_post_blueprint($about, 'about', 'about_overview', '');
-		if (!empty($blueprint)) {
-			$blueprints[] = $blueprint;
+		$about = get_page_by_path('about-us');
+		if ($about instanceof \WP_Post) {
+			$blueprint = lf_ai_studio_build_post_blueprint($about, 'about', 'about_overview', '');
+			if (!empty($blueprint)) {
+				$blueprints[] = $blueprint;
+			}
 		}
-	}
 
-	$core_pages = [
-		'our-services' => ['page' => 'services_overview', 'intent' => 'services_overview', 'keyword' => $overview_keyword],
-		'our-service-areas' => ['page' => 'service_areas_overview', 'intent' => 'service_areas_overview', 'keyword' => $overview_keyword],
-		'contact' => ['page' => 'contact', 'intent' => 'contact', 'keyword' => ''],
-		'reviews' => ['page' => 'reviews', 'intent' => 'reviews', 'keyword' => ''],
-		'blog' => ['page' => 'blog', 'intent' => 'blog', 'keyword' => ''],
-		'sitemap' => ['page' => 'sitemap', 'intent' => 'sitemap', 'keyword' => ''],
-		'privacy-policy' => ['page' => 'privacy', 'intent' => 'privacy', 'keyword' => ''],
-		'terms-of-service' => ['page' => 'terms', 'intent' => 'terms', 'keyword' => ''],
-		'thank-you' => ['page' => 'thank_you', 'intent' => 'thank_you', 'keyword' => ''],
-	];
-	foreach ($core_pages as $slug => $meta) {
-		$page = get_page_by_path($slug);
-		if (!$page instanceof \WP_Post) {
-			continue;
-		}
-		$blueprint = lf_ai_studio_build_post_blueprint(
-			$page,
-			(string) $meta['page'],
-			(string) $meta['intent'],
-			(string) $meta['keyword']
-		);
-		if (!empty($blueprint)) {
-			$blueprints[] = $blueprint;
+		$core_pages = [
+			'our-services' => ['page' => 'services_overview', 'intent' => 'services_overview', 'keyword' => $overview_keyword],
+			'our-service-areas' => ['page' => 'service_areas_overview', 'intent' => 'service_areas_overview', 'keyword' => $overview_keyword],
+			'contact' => ['page' => 'contact', 'intent' => 'contact', 'keyword' => ''],
+			'reviews' => ['page' => 'reviews', 'intent' => 'reviews', 'keyword' => ''],
+			'blog' => ['page' => 'blog', 'intent' => 'blog', 'keyword' => ''],
+			'sitemap' => ['page' => 'sitemap', 'intent' => 'sitemap', 'keyword' => ''],
+			'privacy-policy' => ['page' => 'privacy', 'intent' => 'privacy', 'keyword' => ''],
+			'terms-of-service' => ['page' => 'terms', 'intent' => 'terms', 'keyword' => ''],
+			'thank-you' => ['page' => 'thank_you', 'intent' => 'thank_you', 'keyword' => ''],
+		];
+		foreach ($core_pages as $slug => $meta) {
+			$page = get_page_by_path($slug);
+			if (!$page instanceof \WP_Post) {
+				continue;
+			}
+			$blueprint = lf_ai_studio_build_post_blueprint(
+				$page,
+				(string) $meta['page'],
+				(string) $meta['intent'],
+				(string) $meta['keyword']
+			);
+			if (!empty($blueprint)) {
+				$blueprints[] = $blueprint;
+			}
 		}
 	}
 

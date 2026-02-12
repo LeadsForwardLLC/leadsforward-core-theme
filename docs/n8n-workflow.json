@@ -20,6 +20,56 @@
     },
     {
       "parameters": {
+        "jsCode": "const webhook = $json || {};\nconst defaultCallbackUrl = \"http://localhost:10008/wp-json/leadsforward/v1/orchestrator?token=LF-THEME-DEV\";\nconst callbackUrl = webhook.callback_url || webhook.body?.callback_url || defaultCallbackUrl;\n\nreturn [{\n  json: {\n    ok: true,\n    request_id: \"callback-test\",\n    updates: [],\n    callback_url: callbackUrl\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        220
+      ],
+      "id": "b2f4b1c6-9b41-4a6a-9b3d-7a8d2e7e8a11",
+      "name": "Callback Test Payload",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "url": "={{$json.callback_url}}",
+        "method": "POST",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "payload",
+              "value": "={{JSON.stringify($json)}}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        120,
+        220
+      ],
+      "id": "d9d1e0e6-1c71-4a69-bd7b-4c2e5f4f9c33",
+      "name": "Callback Test Request",
+      "disabled": true
+    },
+    {
+      "parameters": {
         "promptType": "define",
         "text": "={{$json}}",
         "messages": {
@@ -155,9 +205,27 @@
       "parameters": {
         "url": "={{$json.callback_url}}",
         "method": "POST",
-        "jsonParameters": true,
-        "options": {},
-        "bodyParametersJson": "={{JSON.stringify($json)}}"
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "payload",
+              "value": "={{JSON.stringify($json)}}"
+            }
+          ]
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
@@ -167,6 +235,17 @@
       ],
       "id": "c0b5c159-7a7f-4d58-b7c1-1a7a2a1e3b42",
       "name": "Callback to WP"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -280,
+        220
+      ],
+      "id": "f3e3b75e-3dd1-4bfe-9d2f-6631fdc2b19b",
+      "name": "Test Trigger"
     }
   ],
   "pinData": {},
@@ -176,6 +255,28 @@
         [
           {
             "node": "Split Blueprints + Deterministic Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Callback Test Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback Test Payload": {
+      "main": [
+        [
+          {
+            "node": "Callback Test Request",
             "type": "main",
             "index": 0
           }

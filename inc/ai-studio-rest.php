@@ -297,6 +297,12 @@ function lf_ai_studio_rest_apply(\WP_REST_Request $request): \WP_REST_Response {
 	if (!is_array($payload)) {
 		return new \WP_REST_Response(['error' => 'invalid_json'], 400);
 	}
+	if (isset($payload['payload']) && is_string($payload['payload'])) {
+		$decoded_payload = json_decode($payload['payload'], true);
+		if (is_array($decoded_payload)) {
+			$payload = $decoded_payload;
+		}
+	}
 	$job_id = isset($payload['job_id']) ? absint($payload['job_id']) : 0;
 	if ($job_id) {
 		$job = get_post($job_id);
@@ -351,6 +357,12 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 	}
 	if (!is_array($payload)) {
 		return new \WP_REST_Response(['error' => 'invalid_json'], 400);
+	}
+	if (isset($payload['payload']) && is_string($payload['payload'])) {
+		$decoded_payload = json_decode($payload['payload'], true);
+		if (is_array($decoded_payload)) {
+			$payload = $decoded_payload;
+		}
 	}
 	$job_id = isset($payload['job_id']) ? absint($payload['job_id']) : 0;
 	if ($job_id) {

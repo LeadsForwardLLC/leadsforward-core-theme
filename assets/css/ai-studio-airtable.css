@@ -1,0 +1,92 @@
+#lf-airtable-picker .lf-airtable-grid {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+#lf-airtable-picker .lf-airtable-search {
+  flex: 1 1 320px;
+  min-width: 280px;
+}
+
+#lf-airtable-picker .lf-airtable-results {
+  margin-top: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  max-height: 260px;
+  overflow: auto;
+}
+
+#lf-airtable-picker .lf-airtable-result {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+#lf-airtable-picker .lf-airtable-result:hover {
+  background: #f3f4f6;
+}
+
+#lf-airtable-picker .lf-airtable-result.is-active {
+  background: #e0f2fe;
+}
+
+#lf-airtable-picker .lf-airtable-empty {
+  padding: 10px;
+  color: #6b7280;
+}
+
+#lf-airtable-picker .lf-airtable-preview {
+  flex: 1 1 260px;
+  min-width: 240px;
+}
+
+#lf-airtable-picker .lf-airtable-preview-card {
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: #f9fafb;
+  color: #111827;
+}
+
+#lf-airtable-picker .lf-airtable-status {
+  margin-top: 8px;
+  font-size: 0.95rem;
+  color: #4b5563;
+}
+
+#lf-airtable-picker .lf-airtable-status.is-error {
+  color: #b91c1c;
+}
+
+#lf-airtable-picker .lf-airtable-status.is-success {
+  color: #047857;
+}
+
+#lf-airtable-picker .lf-airtable-status.is-info {
+  color: #1d4ed8;
+}
+
+.lf-airtable-field-map {
+  margin-top: 4px;
+}
+
+.lf-airtable-field-map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px 16px;
+  margin-top: 10px;
+}
+
+.lf-airtable-field-map-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+}
