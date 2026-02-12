@@ -314,6 +314,20 @@
         "storage_format": "raw string (newline-delimited)"
       },
       {
+        "key": "benefits_title_word_limit",
+        "type": "number",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw number"
+      },
+      {
+        "key": "benefits_body_word_limit",
+        "type": "number",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw number"
+      },
+      {
         "key": "benefits_supporting_points",
         "type": "list",
         "expected_structure_if_list": "newline-delimited string; parsed to array of strings for list rendering",
@@ -408,6 +422,27 @@
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
+      },
+      {
+        "key": "service_details_media_mode",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "service_details_media_embed",
+        "type": "textarea",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "service_details_media_image_id",
+        "type": "image",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "integer (attachment ID)"
       },
       {
         "key": "service_details_checklist",
@@ -1249,6 +1284,34 @@
         "type": "select",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "section_heading",
+        "type": "text",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "section_intro",
+        "type": "textarea",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "section_body",
+        "type": "richtext",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "HTML allowed; stored as raw string",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "section_body_secondary",
+        "type": "richtext",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "HTML allowed; stored as raw string",
         "storage_format": "raw string"
       },
       {

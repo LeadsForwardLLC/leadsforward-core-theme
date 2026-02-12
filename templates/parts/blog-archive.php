@@ -16,12 +16,36 @@ $title = (string) get_query_var('lf_blog_archive_title', '');
 $intro = (string) get_query_var('lf_blog_archive_intro', '');
 $label = (string) get_query_var('lf_blog_archive_label', '');
 $author = get_query_var('lf_blog_archive_author');
+$blog_page = get_page_by_path('blog');
+$blog_hero_title = '';
+$blog_hero_intro = '';
+if ($blog_page instanceof \WP_Post && function_exists('lf_pb_get_post_config')) {
+	$config = lf_pb_get_post_config($blog_page->ID, 'page');
+	$order = $config['order'] ?? [];
+	$sections = $config['sections'] ?? [];
+	foreach ((array) $order as $instance_id) {
+		$section = $sections[$instance_id] ?? null;
+		if (!is_array($section) || ($section['type'] ?? '') !== 'hero') {
+			continue;
+		}
+		$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+		$blog_hero_title = (string) ($settings['hero_headline'] ?? '');
+		$blog_hero_intro = (string) ($settings['hero_subheadline'] ?? ($settings['hero_supporting_text'] ?? ''));
+		break;
+	}
+}
 
 if ($title === '') {
 	$title = get_the_archive_title() ?: __('Blog', 'leadsforward-core');
 }
+if ($title === '' && $blog_hero_title !== '') {
+	$title = $blog_hero_title;
+}
 if ($intro === '') {
 	$intro = get_the_archive_description();
+}
+if ($intro === '' && $blog_hero_intro !== '') {
+	$intro = $blog_hero_intro;
 }
 ?>
 <section class="lf-section lf-section--blog-hero">

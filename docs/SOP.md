@@ -465,7 +465,7 @@ Content QA & Auto-Repair (Append‑Only)
 - After AI generation, a content audit checks every page section for empty or default content.
 - The audit records missing fields and CTA duplication across all pages.
 - If issues are found, the system automatically requeues **one** repair pass targeting missing fields only.
-- Operators can run the audit manually from **Website Manifester → Content QA Report**.
+- Operators can run the audit manually from **Website Manifester → Content QA Report**; if issues remain, a repair job is queued.
 
 Quote Builder Dynamic Fields (Append‑Only)
 ------------------------------------------
@@ -473,6 +473,32 @@ Quote Builder Dynamic Fields (Append‑Only)
 - When no Services exist, options fall back to niche defaults.
 - Additional niche‑specific fields are inserted into the “Project details” step.
 
+Service Overview Cards (Append‑Only)
+-----------------------------------
+- Homepage Service Intro cards render `lf_service_short_desc` only.
+- If that field is empty after AI generation, it is auto‑backfilled from the service page’s AI content.
+
+Content Section Rendering (Append‑Only)
+--------------------------------------
+- The `content` section now renders `section_heading`, `section_intro`, and `section_body` fields.
+- Core/internal pages seeded with `content` sections now display AI-written copy instead of empty blocks.
+
+Benefits + Process Enhancements (Append‑Only)
+---------------------------------------------
+- Benefits cards enforce concise titles and uniform body lengths for clean layout.
+- Process now supports expectations list + trust block when provided by AI.
+
+Service Details Media (Append‑Only)
+-----------------------------------
+- Service Details includes an optional media column (video embed default, image optional).
+- When no embed is set, the layout still renders with a styled media placeholder.
+
+Footer Structure (Append‑Only)
+------------------------------
+- Footer now includes NAP, license (if present), and organized link columns.
+- Privacy and Terms are separated in the legal row for clarity.
+
 Append‑Only Change Log (Append‑Only)
 -----------------------------------
 2026‑02‑11 — Added Content QA audit + one‑pass auto‑repair and dynamic Quote Builder fields.
+2026‑02‑12 — Added content section rendering, benefits/process layout polish, service details media, and footer upgrade.

@@ -39,8 +39,8 @@ function lf_wizard_default_page_titles(): array {
 	return [
 		'home'              => __('Home', 'leadsforward-core'),
 		'about-us'          => __('About Us', 'leadsforward-core'),
-		'our-services'      => __('Our Services', 'leadsforward-core'),
-		'our-service-areas' => __('Our Service Areas', 'leadsforward-core'),
+		'our-services'      => __('Services', 'leadsforward-core'),
+		'our-service-areas' => __('Service Areas', 'leadsforward-core'),
 		'reviews'           => __('Reviews', 'leadsforward-core'),
 		'blog'              => __('Blog', 'leadsforward-core'),
 		'sitemap'           => __('Sitemap', 'leadsforward-core'),

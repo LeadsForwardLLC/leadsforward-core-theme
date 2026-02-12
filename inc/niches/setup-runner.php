@@ -774,6 +774,7 @@ function lf_wizard_seed_pb_config(int $post_id, string $context, array $data, ar
 		'related_links' => [
 			'section_heading' => lf_wizard_fill_template(lf_wizard_pick($templates['related_heading'] ?? [], $index), $vars),
 			'section_intro' => lf_wizard_fill_template(lf_wizard_pick($templates['related_intro'] ?? [], $index), $vars),
+			'related_links_mode' => 'services',
 		],
 	];
 
@@ -811,8 +812,8 @@ function lf_wizard_build_sitemap_body(array $created_pages): string {
 	};
 	$add_page('home', __('Home', 'leadsforward-core'));
 	$add_page('about-us', __('About Us', 'leadsforward-core'));
-	$add_page('our-services', __('Our Services', 'leadsforward-core'));
-	$add_page('our-service-areas', __('Our Service Areas', 'leadsforward-core'));
+	$add_page('our-services', __('Services', 'leadsforward-core'));
+	$add_page('our-service-areas', __('Service Areas', 'leadsforward-core'));
 	$add_page('reviews', __('Reviews', 'leadsforward-core'));
 	$add_page('blog', __('Blog', 'leadsforward-core'));
 	$add_page('contact', __('Contact', 'leadsforward-core'));
@@ -879,8 +880,8 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 				],
 				'related_links' => [
 					'section_heading' => 'Explore our services',
-					'section_intro' => 'Browse popular services and nearby areas.',
-					'related_links_mode' => 'both',
+					'section_intro' => 'Explore more of our services.',
+					'related_links_mode' => 'services',
 				],
 				'cta' => [
 					'cta_headline' => $cta_headline,
@@ -981,8 +982,8 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 				],
 				'related_links' => [
 					'section_heading' => 'Explore services',
-					'section_intro' => 'See services and areas customers trust.',
-					'related_links_mode' => 'both',
+					'section_intro' => 'Explore more of our services.',
+					'related_links_mode' => 'services',
 				],
 				'cta' => [
 					'cta_headline' => $cta_headline,
@@ -1120,8 +1121,8 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 				],
 				'related_links' => [
 					'section_heading' => 'Explore services',
-					'section_intro' => 'Browse services and areas we cover.',
-					'related_links_mode' => 'both',
+					'section_intro' => 'Explore more of our services.',
+					'related_links_mode' => 'services',
 				],
 				'cta' => [
 					'cta_headline' => 'Need immediate help?',

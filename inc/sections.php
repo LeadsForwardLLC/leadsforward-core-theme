@@ -290,6 +290,8 @@ function lf_sections_registry(): array {
 				// Added for density expansion – vNext
 				['key' => 'section_intro_secondary', 'label' => __('Secondary intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				['key' => 'benefits_items', 'label' => __('Benefits (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Fast response windows' . "\n" . 'Licensed, insured professionals' . "\n" . 'Upfront pricing before work starts', 'leadsforward-core')],
+				['key' => 'benefits_title_word_limit', 'label' => __('Benefit title word limit', 'leadsforward-core'), 'type' => 'number', 'default' => '5'],
+				['key' => 'benefits_body_word_limit', 'label' => __('Benefit body word limit', 'leadsforward-core'), 'type' => 'number', 'default' => '14'],
 				// Added for density expansion – vNext
 				['key' => 'benefits_supporting_points', 'label' => __('Supporting points (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 				// Added for density expansion – vNext
@@ -308,6 +310,13 @@ function lf_sections_registry(): array {
 				['key' => 'service_details_body', 'label' => __('Body copy', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				// Added for density expansion – vNext
 				['key' => 'service_details_body_secondary', 'label' => __('Expanded body text', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+				['key' => 'service_details_media_mode', 'label' => __('Media mode', 'leadsforward-core'), 'type' => 'select', 'default' => 'video', 'options' => [
+					'video' => __('Video embed', 'leadsforward-core'),
+					'image' => __('Image', 'leadsforward-core'),
+					'none' => __('None', 'leadsforward-core'),
+				]],
+				['key' => 'service_details_media_embed', 'label' => __('Video embed code', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+				['key' => 'service_details_media_image_id', 'label' => __('Media image', 'leadsforward-core'), 'type' => 'image', 'default' => ''],
 				['key' => 'service_details_checklist', 'label' => __('Checklist (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Transparent scope and pricing' . "\n" . 'Clean, respectful crews' . "\n" . 'Work backed by warranty', 'leadsforward-core')],
 				// Added for density expansion – vNext
 				['key' => 'service_details_micro_sections', 'label' => __('Service micro-sections (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
@@ -364,6 +373,10 @@ function lf_sections_registry(): array {
 			'contexts' => ['service', 'service_area', 'page', 'post'],
 			'fields' => [
 				$bg_field,
+				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('What to expect', 'leadsforward-core')],
+				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Helpful details about this service and what homeowners should know.', 'leadsforward-core')],
+				['key' => 'section_body', 'label' => __('Body copy', 'leadsforward-core'), 'type' => 'richtext', 'default' => ''],
+				['key' => 'section_body_secondary', 'label' => __('Expanded body', 'leadsforward-core'), 'type' => 'richtext', 'default' => ''],
 			],
 			'render' => 'lf_sections_render_content',
 		],
@@ -512,9 +525,9 @@ function lf_sections_registry(): array {
 			'fields' => [
 				$bg_field,
 				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'conversion'],
-				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Explore More', 'leadsforward-core')],
-				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Browse related services and areas we serve.', 'leadsforward-core')],
-				['key' => 'related_links_mode', 'label' => __('Links to show', 'leadsforward-core'), 'type' => 'select', 'default' => 'both', 'options' => [
+				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Explore More Services', 'leadsforward-core')],
+				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Explore more of our services.', 'leadsforward-core')],
+				['key' => 'related_links_mode', 'label' => __('Links to show', 'leadsforward-core'), 'type' => 'select', 'default' => 'services', 'options' => [
 					'services' => __('Services', 'leadsforward-core'),
 					'areas'    => __('Service Areas', 'leadsforward-core'),
 					'both'     => __('Both', 'leadsforward-core'),
@@ -1038,6 +1051,8 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	$items = lf_sections_parse_lines((string) ($settings['benefits_items'] ?? ''));
 	$item_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'benefits', 'list', 'lf-benefits__icon') : '';
 	$card_class = 'lf-benefits__card';
+	$title_limit = max(3, min(8, (int) ($settings['benefits_title_word_limit'] ?? 5)));
+	$body_limit = max(8, min(20, (int) ($settings['benefits_body_word_limit'] ?? 14)));
 	$parsed_items = [];
 	foreach ($items as $item) {
 		$title_text = $item;
@@ -1059,6 +1074,8 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 			$title_text = $parts[0] ?? $item;
 			$body_text = $parts[1] ?? '';
 		}
+		$title_text = wp_trim_words($title_text, $title_limit, '');
+		$body_text = wp_trim_words($body_text, $body_limit, '');
 		$parsed_items[] = [
 			'title' => $title_text,
 			'body' => $body_text,
@@ -1089,26 +1106,104 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
 	$body = $settings['service_details_body'] ?? '';
+	$body_secondary = $settings['service_details_body_secondary'] ?? '';
+	$trust_block = $settings['service_details_trust_block'] ?? '';
+	$guarantee = $settings['service_details_guarantee_text'] ?? '';
 	$body_from_settings = $body !== '';
 	if ($body_from_settings) {
 		$body = wpautop($body);
 	}
+	if ($body_secondary !== '') {
+		$body_secondary = wpautop($body_secondary);
+	}
 	$checklist = lf_sections_parse_lines((string) ($settings['service_details_checklist'] ?? ''));
 	$checklist_class = 'lf-service-details__checklist';
+	$media_mode = (string) ($settings['service_details_media_mode'] ?? 'video');
+	if (!in_array($media_mode, ['video', 'image', 'none'], true)) {
+		$media_mode = 'video';
+	}
+	$media_embed = trim((string) ($settings['service_details_media_embed'] ?? ''));
+	$media_image_id = isset($settings['service_details_media_image_id']) ? (int) $settings['service_details_media_image_id'] : 0;
+	if ($media_image_id === 0 && function_exists('lf_get_placeholder_image_id')) {
+		$media_image_id = lf_get_placeholder_image_id();
+	}
+	$show_media = $media_mode !== 'none' && ($media_embed !== '' || $media_image_id);
+	$embed_html = '';
+	if ($media_mode === 'video' && $media_embed !== '') {
+		$allowed = wp_kses_allowed_html('post');
+		$allowed['iframe'] = [
+			'src' => true,
+			'width' => true,
+			'height' => true,
+			'frameborder' => true,
+			'allow' => true,
+			'allowfullscreen' => true,
+			'title' => true,
+			'loading' => true,
+			'referrerpolicy' => true,
+		];
+		$embed_html = wp_kses($media_embed, $allowed);
+	}
 	lf_sections_render_shell_open('service-details', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	?>
-	<div class="lf-service-details">
-		<?php if ($body) : ?>
-			<div class="lf-service-details__body"><?php echo wp_kses_post($body); ?></div>
-		<?php endif; ?>
-		<?php if (!empty($checklist)) : ?>
-			<ul class="<?php echo esc_attr($checklist_class); ?>" role="list">
-				<?php foreach ($checklist as $item) : ?>
-					<li>
-						<span class="lf-service-details__text"><?php echo esc_html($item); ?></span>
-					</li>
-				<?php endforeach; ?>
-			</ul>
+	<div class="lf-service-details<?php echo $show_media ? ' lf-service-details--media' : ''; ?>">
+		<div class="lf-service-details__content">
+			<?php if ($body) : ?>
+				<div class="lf-service-details__body lf-prose"><?php echo wp_kses_post($body); ?></div>
+			<?php endif; ?>
+			<?php if ($body_secondary) : ?>
+				<div class="lf-service-details__body-secondary lf-prose"><?php echo wp_kses_post($body_secondary); ?></div>
+			<?php endif; ?>
+			<?php if ($trust_block !== '') : ?>
+				<p class="lf-service-details__trust"><?php echo esc_html($trust_block); ?></p>
+			<?php endif; ?>
+			<?php if ($guarantee !== '') : ?>
+				<p class="lf-service-details__guarantee"><?php echo esc_html($guarantee); ?></p>
+			<?php endif; ?>
+			<?php if (!empty($checklist)) : ?>
+				<ul class="<?php echo esc_attr($checklist_class); ?>" role="list">
+					<?php foreach ($checklist as $item) : ?>
+						<li>
+							<span class="lf-service-details__text"><?php echo esc_html($item); ?></span>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endif; ?>
+		</div>
+		<?php if ($show_media) : ?>
+			<div class="lf-service-details__media">
+				<?php if ($media_mode === 'video' && $embed_html !== '') : ?>
+					<div class="lf-service-details__media-embed"><?php echo $embed_html; ?></div>
+				<?php elseif ($media_mode === 'image' && $media_image_id) : ?>
+					<?php
+					echo wp_get_attachment_image(
+						$media_image_id,
+						'large',
+						false,
+						[
+							'class' => 'lf-service-details__media-image',
+							'loading' => 'lazy',
+							'decoding' => 'async',
+						]
+					);
+					?>
+				<?php elseif ($media_image_id) : ?>
+					<div class="lf-service-details__media-placeholder">
+						<?php
+						echo wp_get_attachment_image(
+							$media_image_id,
+							'large',
+							false,
+							[
+								'class' => 'lf-service-details__media-image',
+								'loading' => 'lazy',
+								'decoding' => 'async',
+							]
+						);
+						?>
+					</div>
+				<?php endif; ?>
+			</div>
 		<?php endif; ?>
 	</div>
 	<?php
@@ -1229,7 +1324,25 @@ function lf_sections_render_image_content(string $context, array $settings, \WP_
 }
 
 function lf_sections_render_content(string $context, array $settings, \WP_Post $post): void {
-	return;
+	$title = $settings['section_heading'] ?? '';
+	$intro = $settings['section_intro'] ?? '';
+	$body = $settings['section_body'] ?? '';
+	$body_secondary = $settings['section_body_secondary'] ?? '';
+	if ($title === '' && $intro === '' && $body === '' && $body_secondary === '') {
+		return;
+	}
+	lf_sections_render_shell_open('content', $title, $intro, $settings['section_background'] ?? 'light', $settings);
+	?>
+	<div class="lf-content">
+		<?php if ($body !== '') : ?>
+			<div class="lf-content__body lf-prose"><?php echo wp_kses_post(wpautop((string) $body)); ?></div>
+		<?php endif; ?>
+		<?php if ($body_secondary !== '') : ?>
+			<div class="lf-content__body-secondary lf-prose"><?php echo wp_kses_post(wpautop((string) $body_secondary)); ?></div>
+		<?php endif; ?>
+	</div>
+	<?php
+	lf_sections_render_shell_close();
 }
 
 function lf_sections_render_content_centered(string $context, array $settings, \WP_Post $post): void {
@@ -1245,9 +1358,13 @@ function lf_sections_render_content_centered(string $context, array $settings, \
 function lf_sections_render_process(string $context, array $settings, \WP_Post $post): void {
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
+	$intro_secondary = $settings['section_intro_secondary'] ?? '';
 	$steps = lf_sections_parse_lines((string) ($settings['process_steps'] ?? ''));
+	$expectations = lf_sections_parse_lines((string) ($settings['process_expectations'] ?? ''));
+	$trust_block = $settings['process_trust_block'] ?? '';
 	$process_class = 'lf-process';
-	lf_sections_render_shell_open('process', $title, $intro, $settings['section_background'] ?? 'light', $settings);
+	$intro_text = $intro_secondary !== '' ? trim($intro . "\n\n" . $intro_secondary) : $intro;
+	lf_sections_render_shell_open('process', $title, $intro_text, $settings['section_background'] ?? 'light', $settings);
 	?>
 	<ol class="<?php echo esc_attr($process_class); ?>">
 		<?php foreach ($steps as $step) : ?>
@@ -1256,6 +1373,16 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 			</li>
 		<?php endforeach; ?>
 	</ol>
+	<?php if (!empty($expectations)) : ?>
+		<ul class="lf-process__expectations" role="list">
+			<?php foreach ($expectations as $item) : ?>
+				<li><?php echo esc_html($item); ?></li>
+			<?php endforeach; ?>
+		</ul>
+	<?php endif; ?>
+	<?php if ($trust_block !== '') : ?>
+		<p class="lf-process__trust"><?php echo esc_html($trust_block); ?></p>
+	<?php endif; ?>
 	<?php
 	lf_sections_render_shell_close();
 }
@@ -1492,9 +1619,7 @@ function lf_sections_render_related_links(string $context, array $settings, \WP_
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
 	$mode = $settings['related_links_mode'] ?? 'both';
-	if (!in_array($mode, ['services', 'areas', 'both'], true)) {
-		$mode = 'both';
-	}
+	$mode = 'services';
 	$links = [];
 	$max_links = 8;
 	$origin_id = $post->ID;

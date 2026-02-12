@@ -41,6 +41,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 - List fields are coerced to newline‑delimited strings before storage.
 - Post‑apply content audit runs after orchestrator callbacks and stores a QA report.
 - Auto‑repair will requeue one focused pass when missing/default fields remain.
+- Manual QA audits queue a repair job when missing fields remain.
 
 ## Reset Behavior (Dev)
 
@@ -53,11 +54,23 @@ This document keeps collaborating AI models and humans aligned on the current Le
 
 - On successful generation, dummy blog posts are created if none exist (placeholder content).
 
+## Section Rendering Updates
+
+- `content` section now renders heading + intro + body fields (no longer empty).
+- `process` section renders expectations + trust block when provided.
+- `service_details` section supports an optional media column (video embed default).
+- `related_links` defaults to services-only in core templates.
+
 ## Quote Builder Dynamics
 
 - Quote Builder services auto‑populate from created Service pages.
 - If no services exist, it falls back to niche defaults.
 - Niche‑specific fields are injected into the project details step.
+
+## Service Intro Short Descriptions
+
+- Homepage service cards use `lf_service_short_desc` only.
+- After AI applies, the short description is auto‑backfilled from service page content if empty.
 
 ## Known UI Locations
 

@@ -8,7 +8,7 @@
 - Background selector with brand-aligned options (white/light/soft/primary/secondary/accent/dark/black/card)
 - SEO foundation: canonical URLs, meta title/description fallbacks, robots rules (`inc/seo.php`)
 - Schema foundation for organization/local business (`inc/schema.php`)
-- Content block that pulls from main WP editor (`inc/sections.php`)
+- Content section renders heading/intro/body fields (`inc/sections.php`)
 - Setup wizard seeds pages and business data (`inc/niches/wizard.php`, `inc/niches/setup-runner.php`)
 - Hero controls parity across Homepage + Page Builder (variant + CTA toggles/actions)
 - Canonical CTA resolver used across builders (`lf_resolve_cta`)
@@ -16,6 +16,7 @@
 - Shared section drag-and-drop module (`assets/js/lf-section-sortable.js`)
 - Post-generation content QA audit + one-pass auto-repair (`inc/ai-studio.php`)
 - Quote Builder dynamic service options + niche fields (`inc/quote-builder.php`)
+- Service Details media column + process expectations/trust rendering (`inc/sections.php`)
 
 ## What’s missing
 - Page Builder parity:
