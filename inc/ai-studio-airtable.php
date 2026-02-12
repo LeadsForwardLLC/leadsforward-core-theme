@@ -335,7 +335,7 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 		$errors[] = __('Missing Primary Keyword field in Airtable.', 'leadsforward-core');
 	}
 	if (empty($services)) {
-		$niche_slug_guess = $niche_slug !== '' ? sanitize_title($niche_slug) : sanitize_title($niche);
+		$niche_slug_guess = lf_ai_studio_airtable_resolve_niche_slug($niche, $niche_slug);
 		$services = lf_ai_studio_airtable_build_services_from_niche($niche_slug_guess, $primary_city, $state, $business_name);
 	}
 	if (empty($services)) {
@@ -357,18 +357,7 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 
 	$variation_seed = 'airtable-' . ($record['id'] ?? wp_generate_uuid4());
 
-	$niche_slug_final = '';
-	if ($niche_slug !== '') {
-		$niche_slug_final = sanitize_title($niche_slug);
-	} elseif ($niche !== '') {
-		$niche_slug_final = sanitize_title($niche);
-	}
-	if ($niche_slug_final !== '' && function_exists('lf_get_niche')) {
-		$check = lf_get_niche($niche_slug_final);
-		if (!$check) {
-			$niche_slug_final = '';
-		}
-	}
+	$niche_slug_final = lf_ai_studio_airtable_resolve_niche_slug($niche, $niche_slug);
 
 	$manifest = [
 		'business' => [
@@ -677,6 +666,24 @@ function lf_ai_studio_airtable_build_services_from_niche(string $niche_slug, str
 		];
 	}
 	return $services;
+}
+
+function lf_ai_studio_airtable_resolve_niche_slug(string $niche, string $niche_slug): string {
+	$registry = function_exists('lf_get_niche_registry') ? lf_get_niche_registry() : [];
+	$valid = is_array($registry) ? array_keys($registry) : [];
+	$slug = '';
+	if ($niche_slug !== '') {
+		$slug = sanitize_title($niche_slug);
+	} elseif ($niche !== '') {
+		$slug = sanitize_title($niche);
+	}
+	if ($slug !== '' && in_array($slug, $valid, true)) {
+		return $slug;
+	}
+	if (in_array('general', $valid, true)) {
+		return 'general';
+	}
+	return '';
 }
 
 function lf_ai_studio_airtable_build_generic_services(string $niche, string $city, string $state, string $business_name): array {

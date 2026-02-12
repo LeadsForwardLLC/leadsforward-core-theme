@@ -34,6 +34,8 @@ These fields must exist or the manifest will fail validation:
 - **Niche** → `business.niche`
 - **Primary KWs** → `homepage.primary_keyword` (first item)
 
+If the Niche does not match a known niche slug, the system defaults `business.niche_slug` to `general` to avoid validation failures.
+
 ## Keywords (pull as much as possible)
 
 The manifester merges keywords from multiple columns:
