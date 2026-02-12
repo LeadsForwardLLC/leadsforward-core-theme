@@ -59,6 +59,7 @@
   margin-top: 8px;
   font-size: 0.95rem;
   color: #4b5563;
+  white-space: pre-line;
 }
 
 #lf-airtable-picker .lf-airtable-status.is-error {

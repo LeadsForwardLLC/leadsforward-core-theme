@@ -272,6 +272,9 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 		lf_ai_studio_airtable_keywords_field($fields, $map['secondary_keywords_focus'] ?? '')
 	);
 	$secondary_keywords = array_values(array_unique(array_filter($secondary_keywords)));
+	if ($primary_keyword === '') {
+		$primary_keyword = trim(sprintf('%s %s %s', $niche, $city, $state));
+	}
 
 	$services = lf_ai_studio_airtable_json_array_field($fields, $map['services_json'] ?? '', 'Services JSON', $errors);
 	$service_areas = lf_ai_studio_airtable_json_array_field($fields, $map['service_areas_json'] ?? '', 'Service Areas JSON', $errors);
@@ -322,6 +325,9 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	if (empty($services)) {
 		$niche_slug_guess = $niche_slug !== '' ? sanitize_title($niche_slug) : sanitize_title($niche);
 		$services = lf_ai_studio_airtable_build_services_from_niche($niche_slug_guess, $primary_city, $state, $business_name);
+	}
+	if (empty($services)) {
+		$services = lf_ai_studio_airtable_build_generic_services($niche, $primary_city, $state, $business_name);
 	}
 	if (empty($service_areas) && $primary_city !== '') {
 		$service_areas = lf_ai_studio_airtable_build_service_areas_from_list($primary_city, $state, $niche);
@@ -659,6 +665,23 @@ function lf_ai_studio_airtable_build_services_from_niche(string $niche_slug, str
 		];
 	}
 	return $services;
+}
+
+function lf_ai_studio_airtable_build_generic_services(string $niche, string $city, string $state, string $business_name): array {
+	$title = trim($niche);
+	if ($title === '') {
+		$title = __('Service', 'leadsforward-core');
+	}
+	$primary_keyword = trim(sprintf('%s %s %s', $title, $city, $state));
+	return [
+		[
+			'title' => $title,
+			'slug' => sanitize_title($title),
+			'primary_keyword' => $primary_keyword,
+			'secondary_keywords' => [],
+			'custom_cta_context' => trim(sprintf('Get trusted %s from %s.', $title, $business_name)),
+		],
+	];
 }
 
 function lf_ai_studio_airtable_json_array_field(array $fields, string $key, string $label, array &$errors): array {

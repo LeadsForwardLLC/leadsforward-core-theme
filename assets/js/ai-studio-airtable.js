@@ -133,6 +133,9 @@
       .then(function (payload) {
         if (!payload || !payload.success) {
           var msg = payload && payload.data && payload.data.message ? payload.data.message : 'Generation failed.';
+          if (payload && payload.data && payload.data.errors && payload.data.errors.length) {
+            msg += '\n' + payload.data.errors.join('\n');
+          }
           setStatus(msg, 'error');
           generateBtn.disabled = false;
           return;
