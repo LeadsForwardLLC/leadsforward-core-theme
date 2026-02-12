@@ -596,7 +596,7 @@ function lf_ai_studio_render_page(): void {
 				<tr>
 					<th scope="row"><label for="lf_ai_airtable_view"><?php esc_html_e('View Name', 'leadsforward-core'); ?></label></th>
 					<td>
-						<input type="text" class="regular-text" name="lf_ai_airtable_view" id="lf_ai_airtable_view" value="<?php echo esc_attr((string) ($airtable_settings['view'] ?? 'Global Sync View')); ?>" />
+						<input type="text" class="regular-text" name="lf_ai_airtable_view" id="lf_ai_airtable_view" value="<?php echo esc_attr((string) ($airtable_settings['view'] ?? 'Global Sync View (ACTIVE)')); ?>" />
 						<p class="description"><?php esc_html_e('Optional. Leave blank to use the table default.', 'leadsforward-core'); ?></p>
 					</td>
 				</tr>

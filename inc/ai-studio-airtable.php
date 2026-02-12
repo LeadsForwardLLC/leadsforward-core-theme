@@ -19,17 +19,18 @@ function lf_ai_studio_airtable_default_field_map(): array {
 	return [
 		'project' => 'Project',
 		'phone' => 'Phone Number',
-		'email' => 'Email',
-		'street' => 'Street',
+		'email' => 'Client Email',
+		'street' => 'Street Address',
 		'city' => 'City',
 		'state' => 'State',
 		'zip' => 'Zip',
-		'primary_city' => 'Primary City',
+		'primary_city' => 'City',
 		'niche' => 'Niche',
 		'niche_slug' => 'Niche Slug',
 		'site_style' => 'Site Style',
-		'primary_keyword' => 'Primary Keyword',
-		'secondary_keywords' => 'Secondary Keywords',
+		'primary_keyword' => 'Primary KWs',
+		'secondary_keywords' => 'KW-Top 10',
+		'service_areas_list' => 'Service Areas',
 		'services_json' => 'Services JSON',
 		'service_areas_json' => 'Service Areas JSON',
 		'manifest_json' => 'Manifest JSON',
@@ -47,7 +48,7 @@ function lf_ai_studio_airtable_get_settings(): array {
 	}
 
 	$table = (string) get_option('lf_ai_airtable_table', 'Business Info');
-	$view = (string) get_option('lf_ai_airtable_view', 'Global Sync View');
+	$view = (string) get_option('lf_ai_airtable_view', 'Global Sync View (ACTIVE)');
 
 	return [
 		'enabled' => get_option('lf_ai_airtable_enabled', '0') === '1',
@@ -223,10 +224,16 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	$niche_slug = lf_ai_studio_airtable_string_field($fields, $map['niche_slug'] ?? '');
 	$site_style = lf_ai_studio_airtable_string_field($fields, $map['site_style'] ?? '');
 	$primary_keyword = lf_ai_studio_airtable_string_field($fields, $map['primary_keyword'] ?? '');
+	$primary_keyword = lf_ai_studio_airtable_pick_primary_keyword($primary_keyword);
 	$secondary_keywords = lf_ai_studio_airtable_keywords_field($fields, $map['secondary_keywords'] ?? '');
 
 	$services = lf_ai_studio_airtable_json_array_field($fields, $map['services_json'] ?? '', 'Services JSON', $errors);
 	$service_areas = lf_ai_studio_airtable_json_array_field($fields, $map['service_areas_json'] ?? '', 'Service Areas JSON', $errors);
+	$service_area_list = lf_ai_studio_airtable_string_field($fields, $map['service_areas_list'] ?? '');
+
+	if (empty($service_areas) && $service_area_list !== '') {
+		$service_areas = lf_ai_studio_airtable_build_service_areas_from_list($service_area_list, $state, $niche);
+	}
 
 	if ($business_name === '') {
 		$errors[] = __('Missing Project field in Airtable.', 'leadsforward-core');
@@ -250,10 +257,17 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 		$errors[] = __('Missing Primary Keyword field in Airtable.', 'leadsforward-core');
 	}
 	if (empty($services)) {
-		$errors[] = __('Services JSON must be a valid JSON array of services.', 'leadsforward-core');
+		$niche_slug_guess = $niche_slug !== '' ? sanitize_title($niche_slug) : sanitize_title($niche);
+		$services = lf_ai_studio_airtable_build_services_from_niche($niche_slug_guess, $primary_city, $state, $business_name);
+	}
+	if (empty($service_areas) && $primary_city !== '') {
+		$service_areas = lf_ai_studio_airtable_build_service_areas_from_list($primary_city, $state, $niche);
+	}
+	if (empty($services)) {
+		$errors[] = __('Services JSON is missing and no niche defaults were found.', 'leadsforward-core');
 	}
 	if (empty($service_areas)) {
-		$errors[] = __('Service Areas JSON must be a valid JSON array of service areas.', 'leadsforward-core');
+		$errors[] = __('Service areas are missing. Add Service Areas in Airtable or provide Service Areas JSON.', 'leadsforward-core');
 	}
 
 	if (!empty($errors)) {
@@ -261,6 +275,19 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	}
 
 	$variation_seed = 'airtable-' . ($record['id'] ?? wp_generate_uuid4());
+
+	$niche_slug_final = '';
+	if ($niche_slug !== '') {
+		$niche_slug_final = sanitize_title($niche_slug);
+	} elseif ($niche !== '') {
+		$niche_slug_final = sanitize_title($niche);
+	}
+	if ($niche_slug_final !== '' && function_exists('lf_get_niche')) {
+		$check = lf_get_niche($niche_slug_final);
+		if (!$check) {
+			$niche_slug_final = '';
+		}
+	}
 
 	$manifest = [
 		'business' => [
@@ -276,7 +303,7 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 			],
 			'primary_city' => $primary_city,
 			'niche' => $niche,
-			'niche_slug' => $niche_slug !== '' ? sanitize_title($niche_slug) : sanitize_title($niche),
+			'niche_slug' => $niche_slug_final,
 			'site_style' => $site_style !== '' ? $site_style : 'premium',
 			'variation_seed' => $variation_seed,
 		],
@@ -371,6 +398,62 @@ function lf_ai_studio_airtable_keywords_field(array $fields, string $key): array
 	}
 	$parts = preg_split('/\r\n|\r|\n|,/', $raw);
 	return array_values(array_filter(array_map('sanitize_text_field', (array) $parts)));
+}
+
+function lf_ai_studio_airtable_pick_primary_keyword(string $raw): string {
+	$raw = trim($raw);
+	if ($raw === '') {
+		return '';
+	}
+	$parts = preg_split('/\r\n|\r|\n|,/', $raw);
+	if (!$parts) {
+		return $raw;
+	}
+	$first = trim((string) $parts[0]);
+	return $first !== '' ? $first : $raw;
+}
+
+function lf_ai_studio_airtable_build_service_areas_from_list(string $raw, string $state, string $niche): array {
+	$parts = preg_split('/\r\n|\r|\n|,/', $raw);
+	$areas = [];
+	foreach ((array) $parts as $part) {
+		$city = trim((string) $part);
+		if ($city === '') {
+			continue;
+		}
+		$areas[] = [
+			'city' => $city,
+			'state' => $state,
+			'slug' => sanitize_title($city),
+			'primary_keyword' => trim(sprintf('%s %s %s', $niche, $city, $state)),
+		];
+	}
+	return $areas;
+}
+
+function lf_ai_studio_airtable_build_services_from_niche(string $niche_slug, string $city, string $state, string $business_name): array {
+	if (!function_exists('lf_get_niche')) {
+		return [];
+	}
+	$niche = lf_get_niche($niche_slug);
+	if (!$niche || empty($niche['services']) || !is_array($niche['services'])) {
+		return [];
+	}
+	$services = [];
+	foreach ($niche['services'] as $service_name) {
+		$name = trim((string) $service_name);
+		if ($name === '') {
+			continue;
+		}
+		$services[] = [
+			'title' => $name,
+			'slug' => sanitize_title($name),
+			'primary_keyword' => trim(sprintf('%s %s %s', $name, $city, $state)),
+			'secondary_keywords' => [],
+			'custom_cta_context' => trim(sprintf('Get trusted %s from %s.', $name, $business_name)),
+		];
+	}
+	return $services;
 }
 
 function lf_ai_studio_airtable_json_array_field(array $fields, string $key, string $label, array &$errors): array {
