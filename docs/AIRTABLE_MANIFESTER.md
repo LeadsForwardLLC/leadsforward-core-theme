@@ -4,6 +4,7 @@ This document lists the Airtable field names used by the Website Manifester and 
 
 ## Airtable Base Settings
 
+- Configure these in **LeadsForward → Global Settings → Website Manifester Settings**.
 - **Base ID**: `app...` from the Airtable URL or API docs.
 - **Table**: name shown in the left sidebar (example: `Business Info`).
 - **View**: name shown in the top dropdown (example: `Global Sync View`).
@@ -13,12 +14,12 @@ This document lists the Airtable field names used by the Website Manifester and 
 These fields must exist or the manifest will fail validation:
 
 - **Project** → `business.name` (also used for `business.legal_name`)
-- **Client Email** → `business.email`
+- **Client Email** (fallback: **Google Account** or **Gmails**) → `business.email`
 - **Phone Number** → `business.phone`
-- **Street Address** → `business.address.street`
-- **City** → `business.address.city`
-- **State** → `business.address.state`
-- **Zip** → `business.address.zip`
+- **Street Address** → `business.address.street` (optional)
+- **City** → `business.address.city` (required)
+- **State** → `business.address.state` (required)
+- **Zip** → `business.address.zip` (optional)
 - **Niche** → `business.niche`
 - **Primary KWs** → `homepage.primary_keyword` (first item)
 

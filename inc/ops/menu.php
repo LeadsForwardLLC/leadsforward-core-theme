@@ -40,16 +40,7 @@ function lf_ops_register_menu(): void {
 		'lf-ops',
 		'lf_ai_studio_render_page'
 	);
-	// 2. Setup Wizard (secondary).
-	add_submenu_page(
-		'lf-ops',
-		__('Setup Wizard', 'leadsforward-core'),
-		__('Setup Wizard', 'leadsforward-core'),
-		'edit_theme_options',
-		'lf-setup',
-		'lf_wizard_render_page'
-	);
-	// 3. Global Settings (includes Branding).
+	// 2. Global Settings (includes Branding).
 	add_submenu_page(
 		'lf-ops',
 		__('Global Settings', 'leadsforward-core'),
@@ -58,7 +49,7 @@ function lf_ops_register_menu(): void {
 		'lf-global',
 		'lf_ops_render_global_settings_page'
 	);
-	// 4. Homepage (sections)
+	// 3. Homepage (sections)
 	add_submenu_page(
 		'lf-ops',
 		__('Homepage', 'leadsforward-core'),
@@ -67,7 +58,7 @@ function lf_ops_register_menu(): void {
 		'lf-homepage-settings',
 		'lf_homepage_admin_render'
 	);
-	// 5. Quote Builder
+	// 4. Quote Builder
 	add_submenu_page(
 		'lf-ops',
 		__('Quote Builder', 'leadsforward-core'),
@@ -135,6 +126,12 @@ function lf_ops_settings_assets(string $hook): void {
 	wp_enqueue_media();
 	wp_enqueue_style('wp-color-picker');
 	wp_enqueue_script('wp-color-picker');
+	wp_enqueue_style(
+		'lf-ai-studio-airtable',
+		LF_THEME_URI . '/assets/css/ai-studio-airtable.css',
+		[],
+		LF_THEME_VERSION
+	);
 }
 
 function lf_ops_handle_global_settings_save(): void {
@@ -152,6 +149,26 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('options_lf_global_logo', $logo_id);
 	update_option('options_lf_header_cta_label', isset($_POST['lf_header_cta_label']) ? sanitize_text_field(wp_unslash($_POST['lf_header_cta_label'])) : '');
 	update_option('options_lf_header_cta_url', isset($_POST['lf_header_cta_url']) ? esc_url_raw(wp_unslash($_POST['lf_header_cta_url'])) : '');
+	update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
+	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
+	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
+	update_option('lf_ai_airtable_enabled', isset($_POST['lf_ai_airtable_enabled']) ? '1' : '0');
+	update_option('lf_ai_airtable_pat', isset($_POST['lf_ai_airtable_pat']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_pat'])) : '');
+	update_option('lf_ai_airtable_base', isset($_POST['lf_ai_airtable_base']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_base'])) : '');
+	update_option('lf_ai_airtable_table', isset($_POST['lf_ai_airtable_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_table'])) : '');
+	update_option('lf_ai_airtable_view', isset($_POST['lf_ai_airtable_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_view'])) : '');
+	$field_defaults = function_exists('lf_ai_studio_airtable_default_field_map') ? lf_ai_studio_airtable_default_field_map() : [];
+	$field_input = isset($_POST['lf_ai_airtable_field_map']) && is_array($_POST['lf_ai_airtable_field_map'])
+		? $_POST['lf_ai_airtable_field_map']
+		: [];
+	$sanitized_map = [];
+	foreach ($field_defaults as $key => $label) {
+		$value = isset($field_input[$key]) ? sanitize_text_field(wp_unslash((string) $field_input[$key])) : '';
+		$sanitized_map[$key] = $value !== '' ? $value : $label;
+	}
+	if (!empty($sanitized_map)) {
+		update_option('lf_ai_airtable_field_map', $sanitized_map);
+	}
 	if (function_exists('lf_update_business_info_value')) {
 		$display_name = isset($_POST['lf_business_name']) ? sanitize_text_field(wp_unslash($_POST['lf_business_name'])) : '';
 		$legal_name = isset($_POST['lf_business_legal_name']) ? sanitize_text_field(wp_unslash($_POST['lf_business_legal_name'])) : '';
@@ -350,6 +367,16 @@ function lf_ops_render_global_settings_page(): void {
 		return is_string($val) && $val !== '' ? $val : $default;
 	};
 	$saved = isset($_GET['saved']) && $_GET['saved'] === '1';
+	$manifester_enabled = get_option('lf_ai_studio_enabled', '0') === '1';
+	$manifester_webhook = (string) get_option('lf_ai_studio_webhook', '');
+	$manifester_secret = (string) get_option('lf_ai_studio_secret', '');
+	$airtable_settings = function_exists('lf_ai_studio_airtable_get_settings')
+		? lf_ai_studio_airtable_get_settings()
+		: [];
+	$airtable_fields = is_array($airtable_settings['fields'] ?? null) ? $airtable_settings['fields'] : [];
+	$airtable_field_defaults = function_exists('lf_ai_studio_airtable_default_field_map')
+		? lf_ai_studio_airtable_default_field_map()
+		: [];
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></h1>
@@ -377,6 +404,96 @@ function lf_ops_render_global_settings_page(): void {
 					<td><input type="url" class="large-text" id="lf_header_cta_url" name="lf_header_cta_url" value="<?php echo esc_attr($cta_url); ?>" /></td>
 				</tr>
 			</table>
+			<div class="lf-settings-panel" data-section="manifester_settings">
+				<div class="lf-settings-panel-header">
+					<h2><?php esc_html_e('Website Manifester Settings', 'leadsforward-core'); ?></h2>
+					<button type="button" class="lf-settings-toggle" data-target="manifester_settings" aria-expanded="true">
+						<span class="lf-settings-toggle-icon">▾</span>
+						<span class="lf-settings-toggle-label"><?php esc_html_e('Collapse', 'leadsforward-core'); ?></span>
+					</button>
+				</div>
+				<div class="lf-settings-panel-body" data-parent="manifester_settings">
+					<p class="description"><?php esc_html_e('Configure the orchestrator and Airtable import settings. Manifest uploads and Airtable generation use these values.', 'leadsforward-core'); ?></p>
+					<table class="form-table" role="presentation">
+							<tr>
+								<th scope="row"><?php esc_html_e('Enable AI', 'leadsforward-core'); ?></th>
+								<td><label><input type="checkbox" name="lf_ai_studio_enabled" value="1" <?php checked($manifester_enabled); ?> /> <?php esc_html_e('Allow Manifester runs', 'leadsforward-core'); ?></label></td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_studio_webhook_global"><?php esc_html_e('Orchestrator Webhook URL', 'leadsforward-core'); ?></label></th>
+								<td><input type="url" class="large-text" name="lf_ai_studio_webhook" id="lf_ai_studio_webhook_global" value="<?php echo esc_attr($manifester_webhook); ?>" placeholder="https://n8n.example.com/webhook/..." required /></td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_studio_secret_global"><?php esc_html_e('Orchestrator Shared Secret', 'leadsforward-core'); ?></label></th>
+								<td><input type="text" class="large-text" name="lf_ai_studio_secret" id="lf_ai_studio_secret_global" value="<?php echo esc_attr($manifester_secret); ?>" required /></td>
+							</tr>
+							<tr>
+								<th colspan="2" style="padding-top: 16px;"><?php esc_html_e('Airtable Connection', 'leadsforward-core'); ?></th>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e('Enable Airtable', 'leadsforward-core'); ?></th>
+								<td><label><input type="checkbox" name="lf_ai_airtable_enabled" value="1" <?php checked(!empty($airtable_settings['enabled'])); ?> /> <?php esc_html_e('Allow Airtable project imports', 'leadsforward-core'); ?></label></td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_airtable_pat_global"><?php esc_html_e('Airtable Personal Access Token', 'leadsforward-core'); ?></label></th>
+								<td>
+									<input type="password" class="large-text" name="lf_ai_airtable_pat" id="lf_ai_airtable_pat_global" value="<?php echo esc_attr((string) ($airtable_settings['pat'] ?? '')); ?>" autocomplete="new-password" />
+									<label style="display:inline-block;margin-top:6px;">
+										<input type="checkbox" id="lf-airtable-token-toggle-global" />
+										<?php esc_html_e('Show token', 'leadsforward-core'); ?>
+									</label>
+									<p class="description"><?php esc_html_e('Required scopes: data.records:read and schema.bases:read.', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_airtable_base_global"><?php esc_html_e('Airtable Base ID', 'leadsforward-core'); ?></label></th>
+								<td><input type="text" class="regular-text" name="lf_ai_airtable_base" id="lf_ai_airtable_base_global" value="<?php echo esc_attr((string) ($airtable_settings['base_id'] ?? '')); ?>" /></td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_airtable_table_global"><?php esc_html_e('Table (left sidebar)', 'leadsforward-core'); ?></label></th>
+								<td><input type="text" class="regular-text" name="lf_ai_airtable_table" id="lf_ai_airtable_table_global" value="<?php echo esc_attr((string) ($airtable_settings['table'] ?? 'Business Info')); ?>" /></td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_airtable_view_global"><?php esc_html_e('View (top dropdown)', 'leadsforward-core'); ?></label></th>
+								<td>
+									<input type="text" class="regular-text" name="lf_ai_airtable_view" id="lf_ai_airtable_view_global" value="<?php echo esc_attr((string) ($airtable_settings['view'] ?? 'Global Sync View (ACTIVE)')); ?>" />
+									<p class="description"><?php esc_html_e('Optional. Leave blank to use the table default.', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e('Field mapping overrides', 'leadsforward-core'); ?></th>
+								<td>
+									<details class="lf-airtable-field-map">
+										<summary><?php esc_html_e('Override Airtable field names', 'leadsforward-core'); ?></summary>
+										<div class="lf-airtable-field-map-grid">
+											<?php foreach ($airtable_field_defaults as $key => $label) :
+												$value = (string) ($airtable_fields[$key] ?? $label);
+												?>
+												<label>
+													<span><?php echo esc_html($label); ?></span>
+													<input type="text" name="lf_ai_airtable_field_map[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($value); ?>" />
+												</label>
+											<?php endforeach; ?>
+										</div>
+									</details>
+								</td>
+							</tr>
+					</table>
+					<p><button type="submit" class="button button-primary"><?php esc_html_e('Save Settings', 'leadsforward-core'); ?></button></p>
+					<script>
+						(function() {
+							var toggle = document.getElementById('lf-airtable-token-toggle-global');
+							var input = document.getElementById('lf_ai_airtable_pat_global');
+							if (!toggle || !input) {
+								return;
+							}
+							toggle.addEventListener('change', function() {
+								input.type = toggle.checked ? 'text' : 'password';
+							});
+						})();
+					</script>
+				</div>
+			</div>
 			<div class="lf-settings-panel" data-section="business_entity">
 				<div class="lf-settings-panel-header">
 					<h2><?php esc_html_e('Business Entity', 'leadsforward-core'); ?></h2>

@@ -17,6 +17,7 @@ const LF_MANIFEST_SCHEMA_VERSION = '1.0';
 
 add_action('init', 'lf_ai_studio_register_cpt');
 add_action('admin_post_lf_ai_studio_save', 'lf_ai_studio_handle_save');
+add_action('admin_post_lf_ai_studio_orchestrator_save', 'lf_ai_studio_handle_orchestrator_save');
 add_action('admin_post_lf_ai_studio_generate', 'lf_ai_studio_handle_generate');
 add_action('admin_post_lf_ai_studio_retry', 'lf_ai_studio_handle_retry');
 add_action('admin_post_lf_ai_studio_manifest', 'lf_ai_studio_handle_manifest');
@@ -131,6 +132,38 @@ function lf_ai_studio_handle_save(): void {
 		update_option('lf_ai_airtable_field_map', $sanitized_map);
 	}
 	wp_safe_redirect(admin_url('admin.php?page=lf-ops&saved=1'));
+	exit;
+}
+
+function lf_ai_studio_handle_orchestrator_save(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
+	}
+	check_admin_referer('lf_ai_studio_orchestrator_save', 'lf_ai_studio_orchestrator_nonce');
+
+	update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
+	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
+	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
+
+	update_option('lf_ai_airtable_enabled', isset($_POST['lf_ai_airtable_enabled']) ? '1' : '0');
+	update_option('lf_ai_airtable_pat', isset($_POST['lf_ai_airtable_pat']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_pat'])) : '');
+	update_option('lf_ai_airtable_base', isset($_POST['lf_ai_airtable_base']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_base'])) : '');
+	update_option('lf_ai_airtable_table', isset($_POST['lf_ai_airtable_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_table'])) : '');
+	update_option('lf_ai_airtable_view', isset($_POST['lf_ai_airtable_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_view'])) : '');
+	$field_defaults = function_exists('lf_ai_studio_airtable_default_field_map') ? lf_ai_studio_airtable_default_field_map() : [];
+	$field_input = isset($_POST['lf_ai_airtable_field_map']) && is_array($_POST['lf_ai_airtable_field_map'])
+		? $_POST['lf_ai_airtable_field_map']
+		: [];
+	$sanitized_map = [];
+	foreach ($field_defaults as $key => $label) {
+		$value = isset($field_input[$key]) ? sanitize_text_field(wp_unslash((string) $field_input[$key])) : '';
+		$sanitized_map[$key] = $value !== '' ? $value : $label;
+	}
+	if (!empty($sanitized_map)) {
+		update_option('lf_ai_airtable_field_map', $sanitized_map);
+	}
+
+	wp_safe_redirect(admin_url('admin.php?page=lf-global&saved=1'));
 	exit;
 }
 
@@ -264,78 +297,21 @@ function lf_ai_studio_render_page(): void {
 	$job_id = isset($_GET['job']) ? absint($_GET['job']) : 0;
 	$job_status = $job_id ? (string) get_post_meta($job_id, 'lf_ai_job_status', true) : '';
 	$job_error = $job_id ? (string) get_post_meta($job_id, 'lf_ai_job_error', true) : '';
-	$enabled = get_option('lf_ai_studio_enabled', '0') === '1';
-	$webhook = (string) get_option('lf_ai_studio_webhook', '');
-	$secret = (string) get_option('lf_ai_studio_secret', '');
-	$keywords = (string) get_option('lf_ai_studio_keywords', '');
-	$scope = (string) get_option('lf_ai_studio_scope', 'all');
-	$scope_types = get_option('lf_ai_studio_scope_types', []);
-	$scope_types = is_array($scope_types) ? $scope_types : [];
-	$style = (string) get_option('lf_ai_studio_style', 'professional');
-	$homepage_keywords = function_exists('lf_homepage_keywords') ? lf_homepage_keywords() : ['primary' => '', 'secondary' => []];
-	$homepage_city = (string) get_option('lf_homepage_city', '');
-	$logo_id = function_exists('lf_get_global_option')
-		? (int) lf_get_global_option('lf_global_logo', 0)
-		: (int) get_option('options_lf_global_logo', 0);
-	$logo_url = $logo_id ? wp_get_attachment_image_url($logo_id, 'medium') : '';
 	$manifest = lf_ai_studio_get_manifest();
 	$manifest_errors = get_option('lf_ai_studio_manifest_errors', []);
 	$manifest_saved = isset($_GET['manifest']) && $_GET['manifest'] === '1';
 	$airtable_settings = function_exists('lf_ai_studio_airtable_get_settings')
 		? lf_ai_studio_airtable_get_settings()
 		: [];
-	$airtable_fields = is_array($airtable_settings['fields'] ?? null) ? $airtable_settings['fields'] : [];
-	$airtable_field_defaults = function_exists('lf_ai_studio_airtable_default_field_map')
-		? lf_ai_studio_airtable_default_field_map()
-		: [];
 	$airtable_enabled = !empty($airtable_settings['enabled']);
 	$airtable_ready = $airtable_enabled
 		&& !empty($airtable_settings['pat'])
 		&& !empty($airtable_settings['base_id'])
 		&& !empty($airtable_settings['table']);
-	$jobs = get_posts([
-		'post_type' => LF_AI_STUDIO_JOB_CPT,
-		'post_status' => 'any',
-		'posts_per_page' => 5,
-		'orderby' => 'date',
-		'order' => 'DESC',
-	]);
-	$blueprint_preview = lf_ai_studio_build_homepage_blueprint();
-	$blueprint_json = wp_json_encode($blueprint_preview, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-	$wizard_complete = (bool) get_option('lf_setup_wizard_complete', false);
-	$last_log = get_option('lf_ai_last_generation_log', []);
-	if (!is_array($last_log)) {
-		$last_log = [];
-	}
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Website Manifester', 'leadsforward-core'); ?></h1>
 		<p class="description"><?php esc_html_e('Deterministic, orchestrator-driven generation for full site content and structure.', 'leadsforward-core'); ?></p>
-		<?php if (!empty($last_log)) : ?>
-			<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
-				<h2 style="margin-top:0;"><?php esc_html_e('Last Full-Site Generation', 'leadsforward-core'); ?></h2>
-				<p class="description">
-					<?php
-					$time = isset($last_log['time']) ? (string) $last_log['time'] : '';
-					$pages = isset($last_log['pages_updated']) ? (int) $last_log['pages_updated'] : 0;
-					$fields = isset($last_log['fields_updated']) ? (int) $last_log['fields_updated'] : 0;
-					echo esc_html($time ? $time : __('No timestamp recorded.', 'leadsforward-core'));
-					?>
-				</p>
-				<p>
-					<?php echo esc_html(sprintf(__('Pages updated: %d', 'leadsforward-core'), $pages)); ?><br />
-					<?php echo esc_html(sprintf(__('Fields updated: %d', 'leadsforward-core'), $fields)); ?>
-				</p>
-				<?php if (!empty($last_log['errors']) && is_array($last_log['errors'])) : ?>
-					<p class="description"><strong><?php esc_html_e('Errors:', 'leadsforward-core'); ?></strong></p>
-					<ul>
-						<?php foreach ($last_log['errors'] as $err) : ?>
-							<li><?php echo esc_html((string) $err); ?></li>
-						<?php endforeach; ?>
-					</ul>
-				<?php endif; ?>
-			</div>
-		<?php endif; ?>
 		<?php if ($saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Website Manifester settings saved.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
@@ -413,44 +389,6 @@ function lf_ai_studio_render_page(): void {
 				</div>
 			</div>
 		</div>
-		<script>
-			(function() {
-				var selectBtn = document.getElementById('lf-manifester-logo-select');
-				var clearBtn = document.getElementById('lf-manifester-logo-clear');
-				var input = document.getElementById('lf_manifester_logo');
-				var preview = document.getElementById('lf-manifester-logo-preview');
-				if (!selectBtn || !clearBtn || !input || !preview || typeof wp === 'undefined' || !wp.media) {
-					return;
-				}
-				var frame;
-				selectBtn.addEventListener('click', function(e) {
-					e.preventDefault();
-					if (frame) {
-						frame.open();
-						return;
-					}
-					frame = wp.media({ title: 'Select Logo', button: { text: 'Use logo' }, multiple: false });
-					frame.on('select', function() {
-						var attachment = frame.state().get('selection').first().toJSON();
-						if (!attachment || !attachment.id) {
-							return;
-						}
-						input.value = attachment.id;
-						if (attachment.url) {
-							preview.src = attachment.url;
-							preview.style.display = '';
-						}
-					});
-					frame.open();
-				});
-				clearBtn.addEventListener('click', function(e) {
-					e.preventDefault();
-					input.value = '';
-					preview.src = '';
-					preview.style.display = 'none';
-				});
-			})();
-		</script>
 		<div id="lf-ai-manifest-loading" class="lf-ai-loading-overlay" aria-hidden="true">
 			<div class="lf-ai-loading-card" role="status" aria-live="polite">
 				<div class="lf-ai-loading-title"><?php esc_html_e('Generating site…', 'leadsforward-core'); ?></div>
@@ -505,204 +443,6 @@ function lf_ai_studio_render_page(): void {
 				});
 			})();
 		</script>
-		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
-			<h2 style="margin-top:0;"><?php esc_html_e('Orchestrator Settings', 'leadsforward-core'); ?></h2>
-			<p class="description"><?php esc_html_e('Connect the orchestrator, manage branding inputs, and control regeneration defaults.', 'leadsforward-core'); ?></p>
-			<?php $manifest_active = !empty($manifest); ?>
-			<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-			<?php wp_nonce_field('lf_ai_studio_save', 'lf_ai_studio_nonce'); ?>
-			<input type="hidden" name="action" value="lf_ai_studio_save" />
-			<table class="form-table" role="presentation">
-				<tr>
-					<th scope="row"><?php esc_html_e('Enable AI', 'leadsforward-core'); ?></th>
-					<td><label><input type="checkbox" name="lf_ai_studio_enabled" value="1" <?php checked($enabled); ?> /> <?php esc_html_e('Allow Manifester runs', 'leadsforward-core'); ?></label></td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_ai_studio_webhook"><?php esc_html_e('Orchestrator Webhook URL', 'leadsforward-core'); ?></label></th>
-					<td><input type="url" class="large-text" name="lf_ai_studio_webhook" id="lf_ai_studio_webhook" value="<?php echo esc_attr($webhook); ?>" placeholder="https://n8n.example.com/webhook/..." required /></td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_ai_studio_secret"><?php esc_html_e('Orchestrator Shared Secret', 'leadsforward-core'); ?></label></th>
-					<td><input type="text" class="large-text" name="lf_ai_studio_secret" id="lf_ai_studio_secret" value="<?php echo esc_attr($secret); ?>" required /></td>
-				</tr>
-				<tr>
-					<th colspan="2" style="padding-top: 16px;"><?php esc_html_e('Branding', 'leadsforward-core'); ?></th>
-				</tr>
-				<tr>
-					<th scope="row"><?php esc_html_e('Logo', 'leadsforward-core'); ?></th>
-					<td>
-						<div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-							<div>
-								<img id="lf-manifester-logo-preview" src="<?php echo esc_url($logo_url); ?>" style="max-height:60px;<?php echo $logo_url ? '' : 'display:none;'; ?>" alt="" />
-							</div>
-							<input type="hidden" name="lf_global_logo" id="lf_manifester_logo" value="<?php echo esc_attr((string) $logo_id); ?>" />
-							<button type="button" class="button" id="lf-manifester-logo-select"><?php esc_html_e('Select Logo', 'leadsforward-core'); ?></button>
-							<button type="button" class="button" id="lf-manifester-logo-clear"><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
-						</div>
-						<p class="description"><?php esc_html_e('Used across the site and schema. Uploading a logo can auto-generate brand colors.', 'leadsforward-core'); ?></p>
-					</td>
-				</tr>
-				<tr>
-					<th colspan="2" style="padding-top: 16px;"><?php esc_html_e('Site Inputs (used for regeneration)', 'leadsforward-core'); ?></th>
-				</tr>
-				<?php if ($manifest_active) : ?>
-					<tr>
-						<td colspan="2">
-							<p class="description"><?php esc_html_e('Manifest mode is active. Keyword fields are optional and ignored during generation.', 'leadsforward-core'); ?></p>
-						</td>
-					</tr>
-				<?php endif; ?>
-				<tr>
-					<th scope="row"><label for="lf_homepage_city"><?php esc_html_e('City / Region', 'leadsforward-core'); ?></label></th>
-					<td><input type="text" class="large-text" name="lf_homepage_city" id="lf_homepage_city" value="<?php echo esc_attr($homepage_city); ?>" /></td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_homepage_keyword_primary"><?php esc_html_e('Primary homepage keyword', 'leadsforward-core'); ?></label></th>
-					<td>
-						<input type="text" class="large-text" name="lf_homepage_keyword_primary" id="lf_homepage_keyword_primary" value="<?php echo esc_attr($homepage_keywords['primary']); ?>" />
-						<p class="description"><?php esc_html_e('Required only when regenerating without a manifest.', 'leadsforward-core'); ?></p>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_homepage_keyword_secondary"><?php esc_html_e('Secondary homepage keywords (optional)', 'leadsforward-core'); ?></label></th>
-					<td><textarea class="large-text" name="lf_homepage_keyword_secondary" id="lf_homepage_keyword_secondary" rows="3"><?php echo esc_textarea(implode("\n", $homepage_keywords['secondary'])); ?></textarea></td>
-				</tr>
-				<tr>
-					<th colspan="2" style="padding-top: 16px;"><?php esc_html_e('Airtable Connection', 'leadsforward-core'); ?></th>
-				</tr>
-				<tr>
-					<th scope="row"><?php esc_html_e('Enable Airtable', 'leadsforward-core'); ?></th>
-					<td><label><input type="checkbox" name="lf_ai_airtable_enabled" value="1" <?php checked($airtable_enabled); ?> /> <?php esc_html_e('Allow Airtable project imports', 'leadsforward-core'); ?></label></td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_ai_airtable_pat"><?php esc_html_e('Airtable Personal Access Token', 'leadsforward-core'); ?></label></th>
-					<td>
-						<input type="password" class="large-text" name="lf_ai_airtable_pat" id="lf_ai_airtable_pat" value="<?php echo esc_attr((string) ($airtable_settings['pat'] ?? '')); ?>" autocomplete="new-password" />
-						<label style="display:inline-block;margin-top:6px;">
-							<input type="checkbox" id="lf-airtable-token-toggle" />
-							<?php esc_html_e('Show token', 'leadsforward-core'); ?>
-						</label>
-						<p class="description"><?php esc_html_e('Required scopes: data.records:read and schema.bases:read.', 'leadsforward-core'); ?></p>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_ai_airtable_base"><?php esc_html_e('Airtable Base ID', 'leadsforward-core'); ?></label></th>
-					<td><input type="text" class="regular-text" name="lf_ai_airtable_base" id="lf_ai_airtable_base" value="<?php echo esc_attr((string) ($airtable_settings['base_id'] ?? '')); ?>" /></td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_ai_airtable_table"><?php esc_html_e('Table (left sidebar)', 'leadsforward-core'); ?></label></th>
-					<td>
-						<input type="text" class="regular-text" name="lf_ai_airtable_table" id="lf_ai_airtable_table" value="<?php echo esc_attr((string) ($airtable_settings['table'] ?? 'Business Info')); ?>" />
-						<p class="description"><?php esc_html_e('This is the table name shown in the left sidebar.', 'leadsforward-core'); ?></p>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_ai_airtable_view"><?php esc_html_e('View (top dropdown)', 'leadsforward-core'); ?></label></th>
-					<td>
-						<input type="text" class="regular-text" name="lf_ai_airtable_view" id="lf_ai_airtable_view" value="<?php echo esc_attr((string) ($airtable_settings['view'] ?? 'Global Sync View (ACTIVE)')); ?>" />
-						<p class="description"><?php esc_html_e('Optional. This is the view name shown in the top dropdown.', 'leadsforward-core'); ?></p>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row"><?php esc_html_e('Field mapping overrides', 'leadsforward-core'); ?></th>
-					<td>
-						<details class="lf-airtable-field-map">
-							<summary><?php esc_html_e('Override Airtable field names', 'leadsforward-core'); ?></summary>
-							<div class="lf-airtable-field-map-grid">
-								<?php foreach ($airtable_field_defaults as $key => $label) :
-									$value = (string) ($airtable_fields[$key] ?? $label);
-									?>
-									<label>
-										<span><?php echo esc_html($label); ?></span>
-										<input type="text" name="lf_ai_airtable_field_map[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($value); ?>" />
-									</label>
-								<?php endforeach; ?>
-							</div>
-						</details>
-					</td>
-				</tr>
-			</table>
-			<p><button type="submit" class="button button-primary"><?php esc_html_e('Save Settings', 'leadsforward-core'); ?></button></p>
-		</form>
-		</div>
-
-		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
-			<h2 style="margin-top:0;"><?php esc_html_e('Regenerate Site', 'leadsforward-core'); ?></h2>
-			<p class="description"><?php esc_html_e('Uses inputs stored from the Setup Wizard (keywords).', 'leadsforward-core'); ?></p>
-			<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-				<?php wp_nonce_field('lf_ai_studio_generate', 'lf_ai_studio_generate_nonce'); ?>
-				<input type="hidden" name="action" value="lf_ai_studio_generate" />
-				<p><button type="submit" class="button button-primary"><?php esc_html_e('Regenerate Site', 'leadsforward-core'); ?></button></p>
-			</form>
-			<p class="description"><?php esc_html_e('Advanced/debug only. Setup Wizard handles first‑run generation.', 'leadsforward-core'); ?></p>
-		</div>
-
-		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
-			<h2 style="margin-top:0;"><?php esc_html_e('Blueprint Preview', 'leadsforward-core'); ?></h2>
-			<p class="description"><?php esc_html_e('Read-only snapshot of the homepage blueprint sent to the orchestrator.', 'leadsforward-core'); ?></p>
-			<textarea class="large-text code" rows="12" readonly><?php echo esc_textarea((string) $blueprint_json); ?></textarea>
-		</div>
-
-		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
-			<h2 style="margin-top:0;"><?php esc_html_e('Recent Jobs', 'leadsforward-core'); ?></h2>
-			<table class="widefat striped">
-			<thead>
-				<tr>
-					<th><?php esc_html_e('Time', 'leadsforward-core'); ?></th>
-					<th><?php esc_html_e('Status', 'leadsforward-core'); ?></th>
-					<th><?php esc_html_e('User', 'leadsforward-core'); ?></th>
-					<th><?php esc_html_e('Summary', 'leadsforward-core'); ?></th>
-					<th><?php esc_html_e('Actions', 'leadsforward-core'); ?></th>
-				</tr>
-			</thead>
-			<tbody>
-				<?php if (!empty($jobs)) : ?>
-					<?php foreach ($jobs as $job) :
-						$status = get_post_meta($job->ID, 'lf_ai_job_status', true);
-						$status = $status ?: 'queued';
-						$user_id = (int) get_post_meta($job->ID, 'lf_ai_job_user', true);
-						$user = $user_id ? get_user_by('id', $user_id) : null;
-						$summary = get_post_meta($job->ID, 'lf_ai_job_summary', true);
-						?>
-						<tr>
-							<td><?php echo esc_html(get_date_from_gmt($job->post_date_gmt, get_option('date_format') . ' ' . get_option('time_format'))); ?></td>
-							<td><?php echo esc_html($status); ?></td>
-							<td><?php echo esc_html($user ? $user->display_name : ''); ?></td>
-							<td><?php echo esc_html(is_string($summary) ? $summary : ''); ?></td>
-							<td>
-								<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block;">
-									<?php wp_nonce_field('lf_ai_studio_retry', 'lf_ai_studio_retry_nonce'); ?>
-									<input type="hidden" name="action" value="lf_ai_studio_retry" />
-									<input type="hidden" name="job_id" value="<?php echo esc_attr((string) $job->ID); ?>" />
-									<button type="submit" class="button button-small"><?php esc_html_e('Retry', 'leadsforward-core'); ?></button>
-								</form>
-							</td>
-						</tr>
-					<?php endforeach; ?>
-				<?php else : ?>
-					<tr><td colspan="5"><?php esc_html_e('No jobs yet.', 'leadsforward-core'); ?></td></tr>
-				<?php endif; ?>
-			</tbody>
-			</table>
-		</div>
-		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
-			<h2 style="margin-top:0;"><?php esc_html_e('Setup Wizard (Optional)', 'leadsforward-core'); ?></h2>
-			<p class="description">
-				<?php if ($wizard_complete) : ?>
-					<?php esc_html_e('Setup Wizard inputs are stored and used for regeneration when no manifest is active.', 'leadsforward-core'); ?>
-				<?php else : ?>
-					<?php esc_html_e('Run the Setup Wizard if you want to populate initial business info and keywords.', 'leadsforward-core'); ?>
-				<?php endif; ?>
-			</p>
-			<p>
-				<a class="button" href="<?php echo esc_url(admin_url('admin.php?page=lf-setup')); ?>">
-					<?php echo $wizard_complete ? esc_html__('Review Setup Wizard', 'leadsforward-core') : esc_html__('Run Setup Wizard', 'leadsforward-core'); ?>
-				</a>
-				<a class="button" href="<?php echo esc_url(admin_url('admin.php?page=lf-homepage-settings')); ?>">
-					<?php esc_html_e('Open Homepage Builder', 'leadsforward-core'); ?>
-				</a>
-			</p>
-		</div>
 	</div>
 	<?php
 }

@@ -40,6 +40,8 @@ function lf_ai_studio_airtable_default_field_map(): array {
 		'business_category' => 'Business Category',
 		'business_hours' => 'Hours',
 		'google_name' => 'Google Name',
+		'google_account' => 'Google Account',
+		'gmails' => 'Gmails',
 		'gbp_cid_primary' => 'GMB CID Primary',
 		'gbp_cid' => 'GMB CID',
 		'facebook' => 'Facebook',
@@ -250,6 +252,16 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	$legal_name = $business_name;
 	$phone = lf_ai_studio_airtable_string_field($fields, $map['phone'] ?? '');
 	$email = lf_ai_studio_airtable_string_field($fields, $map['email'] ?? '');
+	if ($email === '') {
+		$email = lf_ai_studio_airtable_first_email(
+			lf_ai_studio_airtable_string_field($fields, $map['google_account'] ?? '')
+		);
+	}
+	if ($email === '') {
+		$email = lf_ai_studio_airtable_first_email(
+			lf_ai_studio_airtable_string_field($fields, $map['gmails'] ?? '')
+		);
+	}
 	$street = lf_ai_studio_airtable_string_field($fields, $map['street'] ?? '');
 	$city = lf_ai_studio_airtable_string_field($fields, $map['city'] ?? '');
 	$state = lf_ai_studio_airtable_string_field($fields, $map['state'] ?? '');
@@ -308,10 +320,10 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 		$errors[] = __('Missing Phone Number field in Airtable.', 'leadsforward-core');
 	}
 	if ($email === '') {
-		$errors[] = __('Missing Email field in Airtable.', 'leadsforward-core');
+		$errors[] = __('Missing Email field in Airtable (Client Email or Google Account).', 'leadsforward-core');
 	}
-	if ($street === '' || $city === '' || $state === '' || $zip === '') {
-		$errors[] = __('Missing full address fields in Airtable (Street, City, State, Zip).', 'leadsforward-core');
+	if ($city === '' || $state === '') {
+		$errors[] = __('Missing required location fields in Airtable (City, State).', 'leadsforward-core');
 	}
 	if ($primary_city === '') {
 		$primary_city = $city;
@@ -702,4 +714,15 @@ function lf_ai_studio_airtable_json_array_field(array $fields, string $key, stri
 		return [];
 	}
 	return $decoded;
+}
+
+function lf_ai_studio_airtable_first_email(string $raw): string {
+	$raw = trim($raw);
+	if ($raw === '') {
+		return '';
+	}
+	if (preg_match('/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i', $raw, $match)) {
+		return strtolower($match[0]);
+	}
+	return '';
 }
