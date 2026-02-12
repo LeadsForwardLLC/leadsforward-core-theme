@@ -332,6 +332,11 @@ function lf_ai_studio_rest_apply(\WP_REST_Request $request): \WP_REST_Response {
 	if (!empty($apply['error'])) {
 		update_post_meta($job_id, 'lf_ai_job_error', $apply['error']);
 	}
+	if (!empty($apply['success']) && function_exists('lf_ai_studio_run_content_audit')) {
+		$report = lf_ai_studio_run_content_audit('rest_apply');
+		lf_ai_studio_store_audit_report($report, $job_id);
+		lf_ai_studio_maybe_requeue_from_audit($job_id, $report);
+	}
 	return new \WP_REST_Response([
 		'job_id' => $job_id,
 		'success' => $apply['success'],
@@ -400,6 +405,11 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		$request = get_post_meta($job_id, 'lf_ai_job_request', true);
 		if (is_array($request)) {
 			lf_ai_studio_seed_dummy_posts((string) ($request['business_name'] ?? ''));
+		}
+		if (function_exists('lf_ai_studio_run_content_audit')) {
+			$report = lf_ai_studio_run_content_audit('orchestrator');
+			lf_ai_studio_store_audit_report($report, $job_id);
+			lf_ai_studio_maybe_requeue_from_audit($job_id, $report);
 		}
 	}
 

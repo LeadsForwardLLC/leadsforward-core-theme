@@ -14,6 +14,8 @@
 - Canonical CTA resolver used across builders (`lf_resolve_cta`)
 - SEO overrides for pages/posts/services/service areas (title/description/noindex)
 - Shared section drag-and-drop module (`assets/js/lf-section-sortable.js`)
+- Post-generation content QA audit + one-pass auto-repair (`inc/ai-studio.php`)
+- Quote Builder dynamic service options + niche fields (`inc/quote-builder.php`)
 
 ## What’s missing
 - Page Builder parity:

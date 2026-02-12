@@ -39,6 +39,8 @@ This document keeps collaborating AI models and humans aligned on the current Le
 - Payload includes system rules, FAQ strategy, CTA strategy, and blueprints array.
 - Apply logic routes updates via `lf_apply_orchestrator_updates()`.
 - List fields are coerced to newline‑delimited strings before storage.
+- Post‑apply content audit runs after orchestrator callbacks and stores a QA report.
+- Auto‑repair will requeue one focused pass when missing/default fields remain.
 
 ## Reset Behavior (Dev)
 
@@ -50,6 +52,12 @@ This document keeps collaborating AI models and humans aligned on the current Le
 ## Dummy Content Generation
 
 - On successful generation, dummy blog posts are created if none exist (placeholder content).
+
+## Quote Builder Dynamics
+
+- Quote Builder services auto‑populate from created Service pages.
+- If no services exist, it falls back to niche defaults.
+- Niche‑specific fields are injected into the project details step.
 
 ## Known UI Locations
 

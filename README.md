@@ -22,9 +22,9 @@ LeadsForward Core provides:
 - **Homepage builder:** Drag/drop order, per-section toggles, backgrounds, and copy (Hero controls match Page Builder)
 - **Page Builder Framework:** Instance-based sections for core pages, posts, services, and service areas
 - **Navigation:** Header menu auto-built after setup with a non-clickable “More” dropdown plus Call Now and CTA actions
-- **Quote Builder:** Full-screen modal with multi-step flow, GHL webhook delivery, and first-party analytics
+- **Quote Builder:** Full-screen modal with multi-step flow, GHL webhook delivery, dynamic niche fields, and first-party analytics
 - **AI Assistant (bounded):** Safe copy suggestions + field edits only (no layout/CSS changes)
-- **AI Studio:** Orchestrator-driven site content generation (no OpenAI keys stored)
+- **AI Studio:** Orchestrator-driven site content generation (no OpenAI keys stored) plus post-gen QA audit + one-pass auto-repair
 - **Server-rendered blocks:** Hero, Trust/Reviews, CTA, FAQ Accordion, Map+NAP
 - **SEO & schema:** JSON-LD (LocalBusiness, Organization, WebSite, BreadcrumbList, Service, FAQPage, Review), canonical, noindex, NAP/geo helpers
 - **Heading rules:** Enforced single H1 + heading hierarchy validation (warnings only)

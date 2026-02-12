@@ -457,3 +457,22 @@ Content Density: Long-Form Utilization – Step 3
 - `section_intent` metadata is included to guide long-form writing.
 - Targets: Hero 20–40 words combined; Benefits 5 items at 40–80 words each; Process 4 steps at 40–80 words each; Service Details 600–1200 words; Content/Image 300–600 words; FAQ 5–8 answers at 80–150 words.
 - Deterministic isolation preserved: no CPT body reuse; only allowed fields are writable.
+
+---
+
+Content QA & Auto-Repair (Append‑Only)
+--------------------------------------
+- After AI generation, a content audit checks every page section for empty or default content.
+- The audit records missing fields and CTA duplication across all pages.
+- If issues are found, the system automatically requeues **one** repair pass targeting missing fields only.
+- Operators can run the audit manually from **Website Manifester → Content QA Report**.
+
+Quote Builder Dynamic Fields (Append‑Only)
+------------------------------------------
+- Quote Builder service options auto‑populate from created Service pages.
+- When no Services exist, options fall back to niche defaults.
+- Additional niche‑specific fields are inserted into the “Project details” step.
+
+Append‑Only Change Log (Append‑Only)
+-----------------------------------
+2026‑02‑11 — Added Content QA audit + one‑pass auto‑repair and dynamic Quote Builder fields.

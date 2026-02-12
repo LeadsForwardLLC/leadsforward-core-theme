@@ -23,6 +23,7 @@ add_action('admin_post_lf_ai_studio_generate', 'lf_ai_studio_handle_generate');
 add_action('admin_post_lf_ai_studio_retry', 'lf_ai_studio_handle_retry');
 add_action('admin_post_lf_ai_studio_manifest', 'lf_ai_studio_handle_manifest');
 add_action('admin_post_lf_ai_studio_manifest_template', 'lf_ai_studio_handle_manifest_template');
+add_action('admin_post_lf_ai_studio_run_audit', 'lf_ai_studio_handle_run_audit');
 add_action('admin_enqueue_scripts', 'lf_ai_studio_assets');
 
 function lf_ai_studio_register_cpt(): void {
@@ -304,6 +305,18 @@ function lf_ai_studio_handle_manifest_template(): void {
 	exit;
 }
 
+function lf_ai_studio_handle_run_audit(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
+	}
+	check_admin_referer('lf_ai_studio_run_audit', 'lf_ai_studio_run_audit_nonce');
+	$report = lf_ai_studio_run_content_audit('manual');
+	lf_ai_studio_store_audit_report($report, 0);
+	$redirect = add_query_arg('audit', '1', admin_url('admin.php?page=lf-ops'));
+	wp_safe_redirect($redirect);
+	exit;
+}
+
 function lf_ai_studio_render_page(): void {
 	if (!current_user_can('edit_theme_options')) {
 		return;
@@ -318,6 +331,8 @@ function lf_ai_studio_render_page(): void {
 	$manifest = lf_ai_studio_get_manifest();
 	$manifest_errors = get_option('lf_ai_studio_manifest_errors', []);
 	$manifest_saved = isset($_GET['manifest']) && $_GET['manifest'] === '1';
+	$audit_saved = isset($_GET['audit']) && $_GET['audit'] === '1';
+	$audit_report = get_option('lf_ai_studio_last_audit', []);
 	$airtable_settings = function_exists('lf_ai_studio_airtable_get_settings')
 		? lf_ai_studio_airtable_get_settings()
 		: [];
@@ -339,6 +354,9 @@ function lf_ai_studio_render_page(): void {
 		<?php endif; ?>
 		<?php if ($manifest_saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Manifest uploaded. Generation queued and running in the background.', 'leadsforward-core'); ?></p></div>
+		<?php endif; ?>
+		<?php if ($audit_saved) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Content audit completed.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
 		<?php if ($reset_done) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Site reset complete.', 'leadsforward-core'); ?></p></div>
@@ -429,6 +447,60 @@ function lf_ai_studio_render_page(): void {
 					<div id="lf-airtable-status" class="lf-airtable-status" role="status" aria-live="polite"></div>
 				</div>
 			</div>
+		</div>
+		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
+			<h2 style="margin-top:0;"><?php esc_html_e('Content QA Report', 'leadsforward-core'); ?></h2>
+			<p class="description"><?php esc_html_e('Audit completion and default content across all pages. Auto-repair runs once if issues are found.', 'leadsforward-core'); ?></p>
+			<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-bottom: 12px;">
+				<?php wp_nonce_field('lf_ai_studio_run_audit', 'lf_ai_studio_run_audit_nonce'); ?>
+				<input type="hidden" name="action" value="lf_ai_studio_run_audit" />
+				<button type="submit" class="button"><?php esc_html_e('Run Audit', 'leadsforward-core'); ?></button>
+			</form>
+			<?php if (is_array($audit_report) && !empty($audit_report)) : ?>
+				<?php
+				$summary = $audit_report['summary'] ?? [];
+				$pages = $audit_report['pages'] ?? [];
+				$cta_dupes = $audit_report['cta_duplicates'] ?? [];
+				$timestamp = isset($audit_report['timestamp']) ? absint($audit_report['timestamp']) : 0;
+				$last_run = $timestamp ? date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $timestamp) : '';
+				?>
+				<p class="description">
+					<?php echo esc_html(sprintf(__('Last audit: %s', 'leadsforward-core'), $last_run ?: __('Never', 'leadsforward-core'))); ?>
+				</p>
+				<div style="display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;">
+					<div><strong><?php esc_html_e('Missing fields:', 'leadsforward-core'); ?></strong> <?php echo esc_html((string) ($summary['missing_fields'] ?? 0)); ?></div>
+					<div><strong><?php esc_html_e('Pages with issues:', 'leadsforward-core'); ?></strong> <?php echo esc_html((string) ($summary['pages_with_issues'] ?? 0)); ?></div>
+					<div><strong><?php esc_html_e('CTA uniqueness:', 'leadsforward-core'); ?></strong> <?php echo esc_html((string) ($summary['cta_unique'] ?? 0)); ?>/<?php echo esc_html((string) ($summary['cta_total'] ?? 0)); ?></div>
+				</div>
+				<?php if (!empty($pages) && is_array($pages)) : ?>
+					<ul style="margin: 0 0 12px 18px;">
+						<?php foreach ($pages as $page) : ?>
+							<?php
+							$issues = $page['issues'] ?? [];
+							if (empty($issues)) {
+								continue;
+							}
+							$title = $page['title'] ?? '';
+							$slug = $page['slug'] ?? '';
+							?>
+							<li>
+								<strong><?php echo esc_html($title !== '' ? $title : $slug); ?></strong>
+								<?php echo esc_html(sprintf(__(' — %d missing fields', 'leadsforward-core'), count($issues))); ?>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+				<?php endif; ?>
+				<?php if (!empty($cta_dupes)) : ?>
+					<p><strong><?php esc_html_e('Duplicate CTAs detected:', 'leadsforward-core'); ?></strong></p>
+					<ul style="margin: 0 0 12px 18px;">
+						<?php foreach ($cta_dupes as $dupe) : ?>
+							<li><?php echo esc_html((string) ($dupe['headline'] ?? __('CTA', 'leadsforward-core'))); ?></li>
+						<?php endforeach; ?>
+					</ul>
+				<?php endif; ?>
+			<?php else : ?>
+				<p class="description"><?php esc_html_e('No audit results yet. Run the audit to see coverage.', 'leadsforward-core'); ?></p>
+			<?php endif; ?>
 		</div>
 		<?php if (function_exists('lf_dev_reset_allowed') && lf_dev_reset_allowed() && current_user_can('manage_options')) : ?>
 			<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0; border: 1px solid #f87171;">
@@ -2881,4 +2953,368 @@ function lf_ai_studio_apply_faq_updates(array $payload): array {
 		$changed[] = (int) $faq_id;
 	}
 	return $changed;
+}
+
+function lf_ai_studio_run_content_audit(string $source = ''): array {
+	$report = lf_ai_studio_audit_site_content();
+	if ($source !== '') {
+		$report['source'] = $source;
+	}
+	return $report;
+}
+
+function lf_ai_studio_store_audit_report(array $report, int $job_id = 0): void {
+	update_option('lf_ai_studio_last_audit', $report, false);
+	if ($job_id) {
+		update_post_meta($job_id, 'lf_ai_job_audit', $report);
+	}
+}
+
+function lf_ai_studio_maybe_requeue_from_audit(int $job_id, array $report): array {
+	$auto = get_option('lf_ai_studio_auto_requeue', '1') === '1';
+	if (!$auto || !$job_id) {
+		return [];
+	}
+	$pages = $report['pages'] ?? [];
+	if (!is_array($pages) || empty($pages)) {
+		return [];
+	}
+	$has_issues = false;
+	foreach ($pages as $page) {
+		if (!empty($page['issues'])) {
+			$has_issues = true;
+			break;
+		}
+	}
+	if (!$has_issues) {
+		return [];
+	}
+	$requeue_count = (int) get_post_meta($job_id, 'lf_ai_job_requeue_count', true);
+	if ($requeue_count >= 1) {
+		return [];
+	}
+	$request = get_post_meta($job_id, 'lf_ai_job_request', true);
+	$repair_request = lf_ai_studio_build_repair_request($report, is_array($request) ? $request : []);
+	if (!is_array($repair_request) || !empty($repair_request['error'])) {
+		return [];
+	}
+	$new_job_id = lf_ai_studio_create_job($repair_request);
+	if (!$new_job_id) {
+		return [];
+	}
+	update_post_meta($new_job_id, 'lf_ai_job_parent', $job_id);
+	update_post_meta($new_job_id, 'lf_ai_job_repair', 1);
+	update_post_meta($new_job_id, 'lf_ai_job_requeue_count', $requeue_count + 1);
+	update_post_meta($job_id, 'lf_ai_job_requeue_count', $requeue_count + 1);
+	$result = lf_ai_studio_send_request($repair_request, $new_job_id);
+	return ['job_id' => $new_job_id, 'result' => $result];
+}
+
+function lf_ai_studio_build_repair_request(array $report, array $request): array {
+	if (empty($request) || empty($request['blueprints']) || !is_array($request['blueprints'])) {
+		$request = lf_ai_studio_build_full_site_payload();
+	}
+	if (!is_array($request) || !empty($request['error'])) {
+		return ['error' => 'Unable to build repair request.'];
+	}
+	$missing_post_ids = [];
+	$repair_focus = [];
+	$needs_homepage = false;
+	foreach ((array) ($report['pages'] ?? []) as $page) {
+		$issues = $page['issues'] ?? [];
+		if (empty($issues)) {
+			continue;
+		}
+		$post_id = isset($page['id']) ? absint($page['id']) : 0;
+		$slug = (string) ($page['slug'] ?? '');
+		if ($slug === 'home' || $slug === 'homepage') {
+			$needs_homepage = true;
+		}
+		if ($post_id) {
+			$missing_post_ids[] = $post_id;
+		}
+		if (!empty($issues)) {
+			$focus = [];
+			foreach ($issues as $issue) {
+				$section = (string) ($issue['section'] ?? '');
+				$field = (string) ($issue['field'] ?? '');
+				if ($section !== '' && $field !== '') {
+					if (!isset($focus[$section])) {
+						$focus[$section] = [];
+					}
+					$focus[$section][] = $field;
+				}
+			}
+			if (!empty($focus)) {
+				$repair_focus[] = [
+					'id' => $post_id,
+					'slug' => $slug,
+					'fields' => $focus,
+				];
+			}
+		}
+	}
+	$missing_post_ids = array_values(array_unique($missing_post_ids));
+	$filtered = [];
+	foreach ($request['blueprints'] as $blueprint) {
+		if (!is_array($blueprint)) {
+			continue;
+		}
+		$page = (string) ($blueprint['page'] ?? '');
+		$post_id = isset($blueprint['post_id']) ? absint($blueprint['post_id']) : 0;
+		if ($page === 'homepage' && $needs_homepage) {
+			$filtered[] = $blueprint;
+			continue;
+		}
+		if ($post_id && in_array($post_id, $missing_post_ids, true)) {
+			$filtered[] = $blueprint;
+		}
+	}
+	if (empty($filtered)) {
+		return ['error' => 'No repair targets found.'];
+	}
+	$request['blueprints'] = $filtered;
+	$request['repair_only'] = true;
+	$request['repair_focus'] = $repair_focus;
+	$repair_note = "REPAIR MODE: Only fill missing/placeholder fields listed in repair_focus. Do not rewrite fields that already contain real content. Preserve existing content and tone.";
+	$request['system_message'] = isset($request['system_message']) && is_string($request['system_message'])
+		? trim($request['system_message'] . "\n\n" . $repair_note)
+		: $repair_note;
+	return $request;
+}
+
+function lf_ai_studio_audit_site_content(): array {
+	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
+	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
+	$report = [
+		'timestamp' => time(),
+		'summary' => [
+			'missing_fields' => 0,
+			'pages_with_issues' => 0,
+			'cta_total' => 0,
+			'cta_unique' => 0,
+		],
+		'pages' => [],
+		'cta_duplicates' => [],
+	];
+	$cta_signatures = [];
+
+	if (function_exists('lf_get_homepage_section_config')) {
+		$config = lf_get_homepage_section_config();
+		$order = function_exists('lf_homepage_controller_order') ? lf_homepage_controller_order() : array_keys($config);
+		$homepage_issues = [];
+		foreach ($order as $section_id) {
+			$settings = $config[$section_id] ?? null;
+			if (!is_array($settings)) {
+				continue;
+			}
+			if (isset($settings['enabled']) && empty($settings['enabled'])) {
+				continue;
+			}
+			$schema = $registry[$section_id] ?? [];
+			$defaults = function_exists('lf_sections_defaults_for') ? lf_sections_defaults_for($section_id, $niche_slug) : [];
+			$allowed_keys = lf_ai_studio_homepage_allowed_field_keys($section_id, $schema);
+			$section_issues = lf_ai_studio_audit_section_settings($settings, $defaults, $section_id, $section_id, $allowed_keys);
+			if (!empty($section_issues)) {
+				$homepage_issues = array_merge($homepage_issues, $section_issues);
+			}
+			if ($section_id === 'cta') {
+				$signature = lf_ai_studio_cta_signature($settings);
+				if ($signature !== '') {
+					$cta_signatures[] = [
+						'signature' => $signature,
+						'headline' => $settings['cta_headline'] ?? '',
+						'page' => ['id' => (int) get_option('page_on_front'), 'slug' => 'home', 'title' => __('Homepage', 'leadsforward-core')],
+					];
+				}
+			}
+		}
+		$report['pages'][] = [
+			'id' => (int) get_option('page_on_front'),
+			'slug' => 'home',
+			'title' => __('Homepage', 'leadsforward-core'),
+			'post_type' => 'page',
+			'issues' => $homepage_issues,
+		];
+	}
+
+	$required_slugs = function_exists('lf_wizard_required_page_slugs') ? lf_wizard_required_page_slugs() : [];
+	foreach ($required_slugs as $slug) {
+		if ($slug === 'home') {
+			continue;
+		}
+		$page = get_page_by_path($slug);
+		if (!$page instanceof \WP_Post) {
+			$report['pages'][] = [
+				'id' => 0,
+				'slug' => $slug,
+				'title' => ucfirst(str_replace('-', ' ', $slug)),
+				'post_type' => 'page',
+				'issues' => [['section' => 'page', 'field' => 'missing', 'reason' => 'missing_page']],
+			];
+			continue;
+		}
+		$report['pages'][] = lf_ai_studio_audit_post($page, $registry, $niche_slug, $cta_signatures);
+	}
+
+	$services = get_posts([
+		'post_type' => 'lf_service',
+		'post_status' => 'publish',
+		'posts_per_page' => 200,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+	]);
+	foreach ($services as $service) {
+		if ($service instanceof \WP_Post) {
+			$report['pages'][] = lf_ai_studio_audit_post($service, $registry, $niche_slug, $cta_signatures);
+		}
+	}
+
+	$areas = get_posts([
+		'post_type' => 'lf_service_area',
+		'post_status' => 'publish',
+		'posts_per_page' => 200,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+	]);
+	foreach ($areas as $area) {
+		if ($area instanceof \WP_Post) {
+			$report['pages'][] = lf_ai_studio_audit_post($area, $registry, $niche_slug, $cta_signatures);
+		}
+	}
+
+	$missing_fields = 0;
+	$pages_with_issues = 0;
+	foreach ($report['pages'] as $page) {
+		$issues = $page['issues'] ?? [];
+		if (!empty($issues)) {
+			$pages_with_issues++;
+			$missing_fields += count($issues);
+		}
+	}
+	$report['summary']['missing_fields'] = $missing_fields;
+	$report['summary']['pages_with_issues'] = $pages_with_issues;
+
+	$cta_groups = [];
+	foreach ($cta_signatures as $entry) {
+		$signature = $entry['signature'];
+		if ($signature === '') {
+			continue;
+		}
+		if (!isset($cta_groups[$signature])) {
+			$cta_groups[$signature] = ['headline' => $entry['headline'], 'pages' => []];
+		}
+		$cta_groups[$signature]['pages'][] = $entry['page'];
+	}
+	$cta_total = count($cta_groups);
+	$cta_unique = 0;
+	foreach ($cta_groups as $signature => $group) {
+		if (count($group['pages']) > 1) {
+			$report['cta_duplicates'][] = [
+				'signature' => $signature,
+				'headline' => $group['headline'],
+				'pages' => $group['pages'],
+			];
+		} else {
+			$cta_unique++;
+		}
+	}
+	$report['summary']['cta_total'] = $cta_total;
+	$report['summary']['cta_unique'] = $cta_unique;
+	return $report;
+}
+
+function lf_ai_studio_audit_post(\WP_Post $post, array $registry, string $niche_slug, array &$cta_signatures): array {
+	$context = function_exists('lf_pb_get_context_for_post') ? lf_pb_get_context_for_post($post) : '';
+	$config = ($context !== '' && function_exists('lf_pb_get_post_config')) ? lf_pb_get_post_config($post->ID, $context) : [];
+	$order = is_array($config['order'] ?? null) ? $config['order'] : [];
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	$issues = [];
+	foreach ($order as $instance_id) {
+		$section = $sections[$instance_id] ?? null;
+		if (!is_array($section) || empty($section['enabled'])) {
+			continue;
+		}
+		$type = (string) ($section['type'] ?? '');
+		if ($type === '' || !isset($registry[$type])) {
+			continue;
+		}
+		$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+		$defaults = function_exists('lf_sections_defaults_for') ? lf_sections_defaults_for($type, $niche_slug) : [];
+		$allowed_keys = lf_ai_studio_homepage_allowed_field_keys($type, $registry[$type]);
+		$section_issues = lf_ai_studio_audit_section_settings($settings, $defaults, $type, $instance_id, $allowed_keys);
+		if (!empty($section_issues)) {
+			$issues = array_merge($issues, $section_issues);
+		}
+		if ($type === 'cta') {
+			$signature = lf_ai_studio_cta_signature($settings);
+			if ($signature !== '') {
+				$cta_signatures[] = [
+					'signature' => $signature,
+					'headline' => $settings['cta_headline'] ?? '',
+					'page' => ['id' => $post->ID, 'slug' => $post->post_name, 'title' => $post->post_title],
+				];
+			}
+		}
+	}
+	return [
+		'id' => $post->ID,
+		'slug' => $post->post_name,
+		'title' => $post->post_title,
+		'post_type' => $post->post_type,
+		'issues' => $issues,
+	];
+}
+
+function lf_ai_studio_audit_section_settings(array $settings, array $defaults, string $section_type, string $instance_id, array $allowed_keys): array {
+	$issues = [];
+	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
+	foreach ($allowed_keys as $field_key) {
+		$field_type = lf_ai_studio_registry_field_type($registry, $section_type, $field_key);
+		$raw = $settings[$field_key] ?? '';
+		$default = $defaults[$field_key] ?? '';
+		if (lf_ai_studio_audit_value_empty($raw, $field_type)) {
+			$issues[] = ['section' => $instance_id, 'field' => $field_key, 'reason' => 'empty'];
+			continue;
+		}
+		if (lf_ai_studio_audit_value_matches_default($raw, $default, $field_type)) {
+			$issues[] = ['section' => $instance_id, 'field' => $field_key, 'reason' => 'default'];
+		}
+	}
+	return $issues;
+}
+
+function lf_ai_studio_audit_value_empty($value, string $type): bool {
+	if ($type === 'list') {
+		$lines = array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string) $value)));
+		return empty($lines);
+	}
+	$text = lf_ai_studio_audit_normalize_text($value);
+	return $text === '';
+}
+
+function lf_ai_studio_audit_value_matches_default($value, $default, string $type): bool {
+	if ($default === '' || $default === null) {
+		return false;
+	}
+	if ($type === 'list') {
+		$left = implode("\n", array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string) $value))));
+		$right = implode("\n", array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string) $default))));
+		return lf_ai_studio_audit_normalize_text($left) === lf_ai_studio_audit_normalize_text($right);
+	}
+	return lf_ai_studio_audit_normalize_text($value) === lf_ai_studio_audit_normalize_text($default);
+}
+
+function lf_ai_studio_audit_normalize_text($value): string {
+	$text = wp_strip_all_tags((string) $value);
+	$text = preg_replace('/\s+/', ' ', $text);
+	return trim((string) $text);
+}
+
+function lf_ai_studio_cta_signature(array $settings): string {
+	$headline = lf_ai_studio_audit_normalize_text($settings['cta_headline'] ?? '');
+	$sub = lf_ai_studio_audit_normalize_text($settings['cta_subheadline'] ?? '');
+	$sub2 = lf_ai_studio_audit_normalize_text($settings['cta_subheadline_secondary'] ?? '');
+	$parts = array_filter([$headline, $sub, $sub2]);
+	return implode('|', $parts);
 }

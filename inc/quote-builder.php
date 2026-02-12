@@ -32,6 +32,8 @@ add_action('wp_ajax_lf_quote_builder_event', 'lf_quote_builder_handle_event');
 add_action('wp_ajax_nopriv_lf_quote_builder_event', 'lf_quote_builder_handle_event');
 
 function lf_quote_builder_default_config(?string $niche_slug = null): array {
+	$service_options = lf_quote_builder_service_options($niche_slug);
+	$project_extra_fields = lf_quote_builder_niche_fields($niche_slug);
 	$config = [
 		'version' => 1,
 		'steps' => [
@@ -47,12 +49,7 @@ function lf_quote_builder_default_config(?string $niche_slug = null): array {
 						'label'    => __('Service type', 'leadsforward-core'),
 						'type'     => 'choice',
 						'required' => true,
-						'options'  => [
-							__('General Service', 'leadsforward-core'),
-							__('Repair', 'leadsforward-core'),
-							__('Installation', 'leadsforward-core'),
-							__('Maintenance', 'leadsforward-core'),
-						],
+						'options'  => $service_options,
 						'default' => '',
 					],
 				],
@@ -63,7 +60,7 @@ function lf_quote_builder_default_config(?string $niche_slug = null): array {
 				'helper'  => __('A little detail helps us send the right expert.', 'leadsforward-core'),
 				'enabled' => true,
 				'type'    => 'standard',
-				'fields'  => [
+				'fields'  => array_merge([
 					[
 						'key'         => 'project_details',
 						'label'       => __('Project details (optional)', 'leadsforward-core'),
@@ -72,6 +69,7 @@ function lf_quote_builder_default_config(?string $niche_slug = null): array {
 						'placeholder' => __('Briefly describe what you need help with…', 'leadsforward-core'),
 						'default'     => '',
 					],
+				], $project_extra_fields, [
 					[
 						'key'      => 'project_timeline',
 						'label'    => __('When do you need help?', 'leadsforward-core'),
@@ -85,7 +83,7 @@ function lf_quote_builder_default_config(?string $niche_slug = null): array {
 						],
 						'default' => '',
 					],
-				],
+				]),
 			],
 			[
 				'id'      => 'location',
@@ -195,6 +193,152 @@ function lf_quote_builder_default_config(?string $niche_slug = null): array {
 		],
 	];
 	return apply_filters('lf_quote_builder_default_config', $config, $niche_slug);
+}
+
+function lf_quote_builder_service_options(?string $niche_slug = null): array {
+	$options = [];
+	$services = get_posts([
+		'post_type' => 'lf_service',
+		'post_status' => 'publish',
+		'posts_per_page' => 100,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+	]);
+	foreach ($services as $service) {
+		if ($service instanceof \WP_Post) {
+			$options[] = $service->post_title;
+		}
+	}
+	if (empty($options) && function_exists('lf_get_niche') && $niche_slug) {
+		$niche = lf_get_niche($niche_slug);
+		if (!empty($niche['services']) && is_array($niche['services'])) {
+			$options = array_values(array_filter(array_map('strval', $niche['services'])));
+		}
+	}
+	if (empty($options)) {
+		$options = [
+			__('General Service', 'leadsforward-core'),
+			__('Repair', 'leadsforward-core'),
+			__('Installation', 'leadsforward-core'),
+			__('Maintenance', 'leadsforward-core'),
+		];
+	}
+	return apply_filters('lf_quote_builder_service_options', $options, $niche_slug);
+}
+
+function lf_quote_builder_niche_fields(?string $niche_slug = null): array {
+	$fields = [];
+	$niche = $niche_slug ? (string) $niche_slug : (string) get_option('lf_homepage_niche_slug', 'general');
+	$map = [
+		'roofing' => [
+			[
+				'key' => 'roof_type',
+				'label' => __('Roof type', 'leadsforward-core'),
+				'type' => 'choice',
+				'required' => false,
+				'options' => [
+					__('Asphalt shingle', 'leadsforward-core'),
+					__('Metal', 'leadsforward-core'),
+					__('Tile', 'leadsforward-core'),
+					__('Flat/low-slope', 'leadsforward-core'),
+					__('Not sure', 'leadsforward-core'),
+				],
+				'default' => '',
+			],
+			[
+				'key' => 'roof_issue',
+				'label' => __('What issue are you seeing?', 'leadsforward-core'),
+				'type' => 'choice',
+				'required' => false,
+				'options' => [
+					__('Leak', 'leadsforward-core'),
+					__('Storm damage', 'leadsforward-core'),
+					__('Aging roof', 'leadsforward-core'),
+					__('Missing shingles', 'leadsforward-core'),
+					__('Just need an inspection', 'leadsforward-core'),
+				],
+				'default' => '',
+			],
+		],
+		'plumbing' => [
+			[
+				'key' => 'plumbing_issue',
+				'label' => __('Plumbing issue', 'leadsforward-core'),
+				'type' => 'choice',
+				'required' => false,
+				'options' => [
+					__('Leak', 'leadsforward-core'),
+					__('Clog/backup', 'leadsforward-core'),
+					__('Water heater', 'leadsforward-core'),
+					__('Fixture install', 'leadsforward-core'),
+					__('Other', 'leadsforward-core'),
+				],
+				'default' => '',
+			],
+		],
+		'hvac' => [
+			[
+				'key' => 'hvac_system',
+				'label' => __('System type', 'leadsforward-core'),
+				'type' => 'choice',
+				'required' => false,
+				'options' => [
+					__('Heating', 'leadsforward-core'),
+					__('Cooling', 'leadsforward-core'),
+					__('Both', 'leadsforward-core'),
+					__('Not sure', 'leadsforward-core'),
+				],
+				'default' => '',
+			],
+			[
+				'key' => 'hvac_issue',
+				'label' => __('Issue type', 'leadsforward-core'),
+				'type' => 'choice',
+				'required' => false,
+				'options' => [
+					__('Not heating/cooling', 'leadsforward-core'),
+					__('Strange noise', 'leadsforward-core'),
+					__('Poor airflow', 'leadsforward-core'),
+					__('Maintenance/tune-up', 'leadsforward-core'),
+				],
+				'default' => '',
+			],
+		],
+		'landscaping' => [
+			[
+				'key' => 'property_size',
+				'label' => __('Property size', 'leadsforward-core'),
+				'type' => 'choice',
+				'required' => false,
+				'options' => [
+					__('Small yard', 'leadsforward-core'),
+					__('Medium yard', 'leadsforward-core'),
+					__('Large property', 'leadsforward-core'),
+				],
+				'default' => '',
+			],
+		],
+		'power-washing' => [
+			[
+				'key' => 'surface_type',
+				'label' => __('Surface type', 'leadsforward-core'),
+				'type' => 'choice',
+				'required' => false,
+				'options' => [
+					__('House exterior', 'leadsforward-core'),
+					__('Roof', 'leadsforward-core'),
+					__('Driveway/sidewalk', 'leadsforward-core'),
+					__('Deck/patio', 'leadsforward-core'),
+					__('Other', 'leadsforward-core'),
+				],
+				'default' => '',
+			],
+		],
+	];
+	if (!empty($map[$niche])) {
+		$fields = $map[$niche];
+	}
+	return apply_filters('lf_quote_builder_niche_fields', $fields, $niche);
 }
 
 function lf_quote_builder_get_config(): array {
