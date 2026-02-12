@@ -897,6 +897,7 @@ function lf_ai_studio_scaffold_manifest(array $manifest): array {
 	}
 	$result = lf_run_setup($data);
 	lf_ai_studio_ensure_header_menu_more_children();
+	lf_ai_studio_ensure_header_menu_primary_pages();
 	$business = $manifest['business'] ?? [];
 	$address = is_array($business['address'] ?? null) ? $business['address'] : [];
 	$biz_name = (string) ($business['name'] ?? '');
@@ -1027,6 +1028,68 @@ function lf_ai_studio_ensure_header_menu_more_children(): void {
 			'menu-item-parent-id' => (int) $more_item->ID,
 			'menu-item-status' => 'publish',
 		]);
+	}
+}
+
+function lf_ai_studio_ensure_header_menu_primary_pages(): void {
+	$locations = get_nav_menu_locations();
+	$menu_id = $locations['header_menu'] ?? 0;
+	if (!$menu_id) {
+		return;
+	}
+	$menu = wp_get_nav_menu_object($menu_id);
+	if (!$menu || ($menu->name ?? '') !== 'Header Menu') {
+		return;
+	}
+	$services_page = get_page_by_path('our-services');
+	$areas_page = get_page_by_path('our-service-areas');
+	if (!$services_page instanceof \WP_Post && !$areas_page instanceof \WP_Post) {
+		return;
+	}
+	$items = wp_get_nav_menu_items($menu_id);
+	if (!is_array($items) || empty($items)) {
+		return;
+	}
+	$services_archive = get_post_type_archive_link('lf_service');
+	$areas_archive = get_post_type_archive_link('lf_service_area');
+	foreach ($items as $item) {
+		if (!$item instanceof \WP_Post) {
+			continue;
+		}
+		$title = strtolower((string) $item->title);
+		$url = (string) $item->url;
+		if ($services_page instanceof \WP_Post) {
+			$is_services = $title === 'services' || ($services_archive && $url === $services_archive);
+			if ($is_services) {
+				wp_update_nav_menu_item($menu_id, $item->ID, [
+					'menu-item-title' => get_the_title($services_page->ID),
+					'menu-item-url' => get_permalink($services_page->ID),
+					'menu-item-type' => 'post_type',
+					'menu-item-object' => 'page',
+					'menu-item-object-id' => $services_page->ID,
+					'menu-item-status' => 'publish',
+					'menu-item-parent-id' => (int) $item->menu_item_parent,
+					'menu-item-position' => (int) $item->menu_order,
+					'menu-item-classes' => is_array($item->classes) ? implode(' ', $item->classes) : '',
+				]);
+			}
+		}
+		if ($areas_page instanceof \WP_Post) {
+			$is_areas = $title === 'service areas' || ($areas_archive && $url === $areas_archive);
+			if ($is_areas) {
+				wp_update_nav_menu_item($menu_id, $item->ID, [
+					'menu-item-title' => get_the_title($areas_page->ID),
+					'menu-item-url' => get_permalink($areas_page->ID),
+					'menu-item-type' => 'post_type',
+					'menu-item-object' => 'page',
+					'menu-item-object-id' => $areas_page->ID,
+					'menu-item-status' => 'publish',
+					'menu-item-parent-id' => (int) $item->menu_item_parent,
+					'menu-item-position' => (int) $item->menu_order,
+					'menu-item-classes' => is_array($item->classes) ? implode(' ', $item->classes) : '',
+				]);
+			}
+		}
 	}
 }
 

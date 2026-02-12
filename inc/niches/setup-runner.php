@@ -301,7 +301,7 @@ function lf_run_setup(array $data): array {
 			continue;
 		}
 		$existing_config = get_post_meta($page_id, LF_PB_META_KEY, true);
-		if (is_array($existing_config) && !empty($existing_config)) {
+		if (!lf_wizard_is_minimal_pb_config($existing_config)) {
 			continue;
 		}
 		lf_wizard_seed_page_pb_config((int) $page_id, $slug, $data, $niche, $created_pages);
@@ -1022,7 +1022,7 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'sitemap' => [
-			'order' => ['hero', 'sitemap_links'],
+			'order' => ['hero', 'sitemap_links', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Sitemap',
@@ -1031,6 +1031,10 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 				'sitemap_links' => [
 					'section_heading' => 'Quick links',
 					'section_intro' => 'Browse the full site from one place.',
+				],
+				'cta' => [
+					'cta_headline' => $cta_headline,
+					'cta_subheadline' => 'Need a quick answer? Reach out and we will help.',
 				],
 			],
 			'seo' => [
@@ -1069,11 +1073,15 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'privacy-policy' => [
-			'order' => ['hero', 'content'],
+			'order' => ['hero', 'content', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Privacy policy',
 					'hero_subheadline' => 'How we collect and protect your information.',
+				],
+				'cta' => [
+					'cta_headline' => $cta_headline,
+					'cta_subheadline' => 'Have a question about your data? We are happy to help.',
 				],
 			],
 			'seo' => [
@@ -1082,11 +1090,15 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'terms-of-service' => [
-			'order' => ['hero', 'content'],
+			'order' => ['hero', 'content', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Terms of service',
 					'hero_subheadline' => 'Important details about using this site and our services.',
+				],
+				'cta' => [
+					'cta_headline' => $cta_headline,
+					'cta_subheadline' => 'Need clarification? Contact our team for quick answers.',
 				],
 			],
 			'seo' => [
@@ -1123,28 +1135,36 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 		],
 	];
 
-	$basic_pages = [
-		'about-us',
-		'reviews',
-		'blog',
-		'sitemap',
-		'privacy-policy',
-		'terms-of-service',
-		'thank-you',
-	];
-	foreach ($basic_pages as $slug) {
-		if (!isset($blueprints[$slug])) {
+	return $blueprints;
+}
+
+function lf_wizard_is_minimal_pb_config($config): bool {
+	if (!is_array($config) || empty($config)) {
+		return true;
+	}
+	$order = $config['order'] ?? [];
+	$sections = $config['sections'] ?? [];
+	if (!is_array($order) || empty($order) || !is_array($sections)) {
+		return true;
+	}
+	$enabled_types = [];
+	foreach ($order as $instance_id) {
+		$section = $sections[$instance_id] ?? null;
+		if (!is_array($section) || empty($section['enabled'])) {
 			continue;
 		}
-		$hero_override = $blueprints[$slug]['overrides']['hero'] ?? [];
-		$blueprints[$slug]['order'] = ['hero', 'content'];
-		$blueprints[$slug]['overrides'] = [];
-		if (!empty($hero_override)) {
-			$blueprints[$slug]['overrides']['hero'] = $hero_override;
+		$type = (string) ($section['type'] ?? '');
+		if ($type !== '') {
+			$enabled_types[$type] = true;
 		}
 	}
-
-	return $blueprints;
+	if (count($enabled_types) <= 1) {
+		return true;
+	}
+	if (count($enabled_types) === 1 && isset($enabled_types['hero'])) {
+		return true;
+	}
+	return false;
 }
 
 function lf_wizard_seed_page_pb_config(int $post_id, string $slug, array $data, array $niche, array $created_pages): void {
@@ -1237,6 +1257,8 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	$sitemap_id = $created_pages['sitemap'] ?? null;
 	$privacy_id = $created_pages['privacy-policy'] ?? null;
 	$terms_id = $created_pages['terms-of-service'] ?? null;
+	$services_page_id = $created_pages['our-services'] ?? null;
+	$areas_page_id = $created_pages['our-service-areas'] ?? null;
 
 	$service_children = [];
 	if (!empty($service_ids)) {
@@ -1279,18 +1301,34 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 
 	$header_items = [];
 	if ($home_id) $header_items[] = ['type' => 'page', 'object_id' => $home_id];
-	$header_items[] = [
-		'type' => 'custom',
-		'url' => get_post_type_archive_link('lf_service'),
-		'title' => __('Services', 'leadsforward-core'),
-		'children' => $service_children,
-	];
-	$header_items[] = [
-		'type' => 'custom',
-		'url' => get_post_type_archive_link('lf_service_area'),
-		'title' => __('Service Areas', 'leadsforward-core'),
-		'children' => $area_children,
-	];
+	if ($services_page_id) {
+		$header_items[] = [
+			'type' => 'page',
+			'object_id' => $services_page_id,
+			'children' => $service_children,
+		];
+	} else {
+		$header_items[] = [
+			'type' => 'custom',
+			'url' => get_post_type_archive_link('lf_service'),
+			'title' => __('Services', 'leadsforward-core'),
+			'children' => $service_children,
+		];
+	}
+	if ($areas_page_id) {
+		$header_items[] = [
+			'type' => 'page',
+			'object_id' => $areas_page_id,
+			'children' => $area_children,
+		];
+	} else {
+		$header_items[] = [
+			'type' => 'custom',
+			'url' => get_post_type_archive_link('lf_service_area'),
+			'title' => __('Service Areas', 'leadsforward-core'),
+			'children' => $area_children,
+		];
+	}
 	if ($reviews_id) $header_items[] = ['type' => 'page', 'object_id' => $reviews_id];
 
 	$more_children = [];
@@ -1329,8 +1367,16 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	if ($sitemap_id) $footer_items[] = ['type' => 'page', 'object_id' => $sitemap_id];
 	if ($privacy_id) $footer_items[] = ['type' => 'page', 'object_id' => $privacy_id];
 	if ($terms_id) $footer_items[] = ['type' => 'page', 'object_id' => $terms_id];
-	$footer_items[] = ['type' => 'custom', 'url' => get_post_type_archive_link('lf_service'), 'title' => __('Services', 'leadsforward-core')];
-	$footer_items[] = ['type' => 'custom', 'url' => get_post_type_archive_link('lf_service_area'), 'title' => __('Service Areas', 'leadsforward-core')];
+	if ($services_page_id) {
+		$footer_items[] = ['type' => 'page', 'object_id' => $services_page_id];
+	} else {
+		$footer_items[] = ['type' => 'custom', 'url' => get_post_type_archive_link('lf_service'), 'title' => __('Services', 'leadsforward-core')];
+	}
+	if ($areas_page_id) {
+		$footer_items[] = ['type' => 'page', 'object_id' => $areas_page_id];
+	} else {
+		$footer_items[] = ['type' => 'custom', 'url' => get_post_type_archive_link('lf_service_area'), 'title' => __('Service Areas', 'leadsforward-core')];
+	}
 
 	$header_menu_id = lf_wizard_ensure_menu('Header Menu', 'header_menu', $header_items);
 	$footer_menu_id = lf_wizard_ensure_menu('Footer Menu', 'footer_menu', $footer_items);

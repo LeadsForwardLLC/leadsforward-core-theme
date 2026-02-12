@@ -284,6 +284,7 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 		lf_ai_studio_airtable_keywords_field($fields, $map['secondary_keywords_focus'] ?? '')
 	);
 	$secondary_keywords = array_values(array_unique(array_filter($secondary_keywords)));
+	$keyword_pool = array_values(array_unique(array_filter(array_merge([$primary_keyword], $secondary_keywords))));
 	if ($primary_keyword === '') {
 		$primary_keyword = trim(sprintf('%s %s %s', $niche, $city, $state));
 	}
@@ -333,6 +334,9 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	}
 	if ($primary_keyword === '') {
 		$errors[] = __('Missing Primary Keyword field in Airtable.', 'leadsforward-core');
+	}
+	if (empty($services) && !empty($keyword_pool)) {
+		$services = lf_ai_studio_airtable_build_services_from_keywords($keyword_pool, $primary_city, $state, $business_name, $niche);
 	}
 	if (empty($services)) {
 		$niche_slug_guess = lf_ai_studio_airtable_resolve_niche_slug($niche, $niche_slug);
@@ -664,6 +668,56 @@ function lf_ai_studio_airtable_build_services_from_niche(string $niche_slug, str
 			'secondary_keywords' => [],
 			'custom_cta_context' => trim(sprintf('Get trusted %s from %s.', $name, $business_name)),
 		];
+	}
+	return $services;
+}
+
+function lf_ai_studio_airtable_build_services_from_keywords(array $keywords, string $city, string $state, string $business_name, string $niche): array {
+	$services = [];
+	$seen = [];
+	$city = trim($city);
+	$state = trim($state);
+	$niche = trim($niche);
+	foreach ($keywords as $keyword) {
+		$raw = trim((string) $keyword);
+		if ($raw === '') {
+			continue;
+		}
+		$candidate = strtolower($raw);
+		$candidate = preg_replace('/\bnear me\b/i', '', $candidate);
+		$candidate = preg_replace('/\bnear\b/i', '', $candidate);
+		$candidate = preg_replace('/\bservices?\b/i', '', $candidate);
+		$candidate = preg_replace('/\bcompany\b|\bcontractors?\b|\bexperts?\b/i', '', $candidate);
+		$candidate = preg_replace('/\b\d{5}(?:-\d{4})?\b/', '', $candidate);
+		if ($city !== '') {
+			$candidate = preg_replace('/\b' . preg_quote(strtolower($city), '/') . '\b/i', '', $candidate);
+		}
+		if ($state !== '') {
+			$candidate = preg_replace('/\b' . preg_quote(strtolower($state), '/') . '\b/i', '', $candidate);
+		}
+		if ($niche !== '') {
+			$candidate = preg_replace('/\b' . preg_quote(strtolower($niche), '/') . '\b/i', $niche, $candidate);
+		}
+		$candidate = trim(preg_replace('/\s+/', ' ', $candidate));
+		if ($candidate === '') {
+			continue;
+		}
+		$title = ucwords($candidate);
+		$slug = sanitize_title($title);
+		if ($slug === '' || isset($seen[$slug])) {
+			continue;
+		}
+		$seen[$slug] = true;
+		$services[] = [
+			'title' => $title,
+			'slug' => $slug,
+			'primary_keyword' => trim(sprintf('%s %s %s', $title, $city, $state)),
+			'secondary_keywords' => [],
+			'custom_cta_context' => trim(sprintf('Get trusted %s from %s.', $title, $business_name)),
+		];
+		if (count($services) >= 6) {
+			break;
+		}
 	}
 	return $services;
 }

@@ -54,7 +54,8 @@ The manifester merges keywords from multiple columns:
 Preferred options (highest to lowest):
 
 1. **Services JSON** (array) → `services[]`
-2. Niche defaults from theme registry (if Niche matches a known slug)
+2. Keyword-derived services from **Primary KWs / KW-Top 10 / KW-All / KW-Focus**
+3. Niche defaults from theme registry (if Niche matches a known slug)
 
 ## Optional Business / Schema Fields
 
