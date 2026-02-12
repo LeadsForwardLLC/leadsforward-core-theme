@@ -24,6 +24,8 @@ add_action('admin_post_lf_ai_studio_retry', 'lf_ai_studio_handle_retry');
 add_action('admin_post_lf_ai_studio_manifest', 'lf_ai_studio_handle_manifest');
 add_action('admin_post_lf_ai_studio_manifest_template', 'lf_ai_studio_handle_manifest_template');
 add_action('admin_post_lf_ai_studio_run_audit', 'lf_ai_studio_handle_run_audit');
+add_action('admin_post_lf_ai_studio_regen_blog_posts', 'lf_ai_studio_handle_regen_blog_posts');
+add_action('admin_post_lf_ai_studio_save_logo', 'lf_ai_studio_handle_save_logo');
 add_action('admin_enqueue_scripts', 'lf_ai_studio_assets');
 
 function lf_ai_studio_register_cpt(): void {
@@ -334,6 +336,58 @@ function lf_ai_studio_handle_run_audit(): void {
 	exit;
 }
 
+function lf_ai_studio_handle_regen_blog_posts(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
+	}
+	check_admin_referer('lf_ai_studio_regen_blog_posts', 'lf_ai_studio_regen_blog_posts_nonce');
+	$enabled = get_option('lf_ai_studio_enabled', '0') === '1';
+	if (!$enabled) {
+		wp_safe_redirect(add_query_arg('error', rawurlencode(__('Website Manifester is disabled.', 'leadsforward-core')), admin_url('admin.php?page=lf-ops')));
+		exit;
+	}
+	$webhook = (string) get_option('lf_ai_studio_webhook', '');
+	$secret = (string) get_option('lf_ai_studio_secret', '');
+	if ($webhook === '' || $secret === '') {
+		wp_safe_redirect(add_query_arg('error', rawurlencode(__('Webhook URL and shared secret are required.', 'leadsforward-core')), admin_url('admin.php?page=lf-ops')));
+		exit;
+	}
+	$request = lf_ai_studio_build_blog_payload();
+	if (!is_array($request) || !empty($request['error'])) {
+		$message = is_array($request) ? (string) ($request['error'] ?? '') : '';
+		$message = $message !== '' ? $message : __('Blog payload build failed.', 'leadsforward-core');
+		wp_safe_redirect(add_query_arg('error', rawurlencode($message), admin_url('admin.php?page=lf-ops')));
+		exit;
+	}
+	$job_id = lf_ai_studio_create_job($request);
+	lf_ai_studio_send_request($request, $job_id);
+	$redirect = add_query_arg('job', (string) $job_id, admin_url('admin.php?page=lf-ops'));
+	wp_safe_redirect($redirect);
+	exit;
+}
+
+function lf_ai_studio_handle_save_logo(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
+	}
+	check_admin_referer('lf_ai_studio_save_logo', 'lf_ai_studio_logo_nonce');
+	$prev_logo_id = function_exists('lf_get_global_option')
+		? (int) lf_get_global_option('lf_global_logo', 0)
+		: (int) get_option('options_lf_global_logo', 0);
+	$logo_id = isset($_POST['lf_global_logo']) ? (int) $_POST['lf_global_logo'] : 0;
+	if (function_exists('lf_update_global_option_value')) {
+		lf_update_global_option_value('lf_global_logo', (string) $logo_id);
+	} else {
+		update_option('options_lf_global_logo', $logo_id);
+	}
+	if ($logo_id > 0 && $logo_id !== $prev_logo_id && function_exists('lf_branding_auto_from_logo')) {
+		lf_branding_auto_from_logo($logo_id);
+	}
+	$redirect = add_query_arg('logo', '1', admin_url('admin.php?page=lf-ops'));
+	wp_safe_redirect($redirect);
+	exit;
+}
+
 function lf_ai_studio_render_page(): void {
 	if (!current_user_can('edit_theme_options')) {
 		return;
@@ -350,7 +404,12 @@ function lf_ai_studio_render_page(): void {
 	$manifest_saved = isset($_GET['manifest']) && $_GET['manifest'] === '1';
 	$audit_saved = isset($_GET['audit']) && $_GET['audit'] === '1';
 	$repair_queued = isset($_GET['job']) ? absint($_GET['job']) : 0;
+	$logo_saved = isset($_GET['logo']) && $_GET['logo'] === '1';
 	$audit_report = get_option('lf_ai_studio_last_audit', []);
+	$logo_id = function_exists('lf_get_global_option')
+		? (int) lf_get_global_option('lf_global_logo', 0)
+		: (int) get_option('options_lf_global_logo', 0);
+	$logo_url = $logo_id ? wp_get_attachment_image_url($logo_id, 'medium') : '';
 	$airtable_settings = function_exists('lf_ai_studio_airtable_get_settings')
 		? lf_ai_studio_airtable_get_settings()
 		: [];
@@ -375,6 +434,9 @@ function lf_ai_studio_render_page(): void {
 		<?php endif; ?>
 		<?php if ($audit_saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Content audit completed.', 'leadsforward-core'); ?></p></div>
+		<?php endif; ?>
+		<?php if ($logo_saved) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Logo saved and brand colors updated.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
 		<?php if ($repair_queued) : ?>
 			<div class="notice notice-info is-dismissible"><p><?php echo esc_html(sprintf(__('Repair job queued (#%d).', 'leadsforward-core'), $repair_queued)); ?></p></div>
@@ -407,65 +469,87 @@ function lf_ai_studio_render_page(): void {
 				</ul>
 			</div>
 		<?php endif; ?>
-		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
-			<h2 style="margin-top:0;"><?php esc_html_e('Manifest Upload (Deterministic)', 'leadsforward-core'); ?></h2>
-			<p class="description"><?php esc_html_e('Upload a JSON manifest to bypass wizard inputs and run deterministic generation.', 'leadsforward-core'); ?></p>
-			<?php if (!empty($manifest)) : ?>
-				<?php
-				$site_name = (string) ($manifest['business']['name'] ?? '');
-				$site_niche = (string) ($manifest['business']['niche'] ?? '');
-				$site_city = (string) ($manifest['business']['primary_city'] ?? ($manifest['business']['address']['city'] ?? ''));
-				?>
-				<p class="description">
-					<?php echo esc_html(sprintf(__('Active manifest: %1$s (%2$s) — %3$s', 'leadsforward-core'), $site_name ?: __('Unnamed', 'leadsforward-core'), $site_niche ?: __('No niche', 'leadsforward-core'), $site_city ?: __('No city', 'leadsforward-core'))); ?>
-				</p>
-			<?php endif; ?>
-			<?php $template_url = wp_nonce_url(admin_url('admin-post.php?action=lf_ai_studio_manifest_template'), 'lf_ai_studio_manifest_template', 'lf_ai_studio_manifest_template_nonce'); ?>
-			<form id="lf-ai-manifest-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
-				<?php wp_nonce_field('lf_ai_studio_manifest', 'lf_ai_studio_manifest_nonce'); ?>
-				<input type="hidden" name="action" value="lf_ai_studio_manifest" />
-				<input type="file" name="lf_site_manifest" accept="application/json,.json" required />
-				<p class="submit">
-					<button type="submit" class="button button-primary"><?php esc_html_e('Upload Manifest & Generate', 'leadsforward-core'); ?></button>
-					<a class="button" href="<?php echo esc_url($template_url); ?>"><?php esc_html_e('Download Manifest Template', 'leadsforward-core'); ?></a>
-				</p>
-			</form>
-		</div>
-		<div class="card" id="lf-airtable-picker" style="max-width: 980px; padding: 16px; margin: 16px 0;">
-			<h2 style="margin-top:0;"><?php esc_html_e('Airtable Projects', 'leadsforward-core'); ?></h2>
-			<p class="description"><?php esc_html_e('Search your Airtable projects and generate from a single record.', 'leadsforward-core'); ?></p>
-			<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-bottom: 12px;">
-				<?php wp_nonce_field('lf_ai_studio_scope_save', 'lf_ai_studio_scope_nonce'); ?>
-				<input type="hidden" name="action" value="lf_ai_studio_scope_save" />
-				<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
-					<strong><?php esc_html_e('Generate:', 'leadsforward-core'); ?></strong>
-					<label><input type="checkbox" name="lf_ai_gen_homepage" value="1" <?php checked($gen_homepage); ?> /> <?php esc_html_e('Homepage', 'leadsforward-core'); ?></label>
-					<label><input type="checkbox" name="lf_ai_gen_services" value="1" <?php checked($gen_services); ?> /> <?php esc_html_e('Service pages', 'leadsforward-core'); ?></label>
-					<label><input type="checkbox" name="lf_ai_gen_service_areas" value="1" <?php checked($gen_service_areas); ?> /> <?php esc_html_e('Service area pages', 'leadsforward-core'); ?></label>
-					<label><input type="checkbox" name="lf_ai_gen_core_pages" value="1" <?php checked($gen_core_pages); ?> /> <?php esc_html_e('Core pages', 'leadsforward-core'); ?></label>
-					<button type="submit" class="button"><?php esc_html_e('Save Scope', 'leadsforward-core'); ?></button>
-				</div>
-				<p class="description" style="margin-top:8px;"><?php esc_html_e('Defaults to everything. Manifest can override with generation_scope=homepage_only.', 'leadsforward-core'); ?></p>
-			</form>
-			<?php if (!$airtable_ready) : ?>
-				<div class="notice notice-warning inline">
-					<p><?php esc_html_e('Airtable is not configured yet. Add your PAT, Base ID, and Table in Orchestrator Settings below, then save.', 'leadsforward-core'); ?></p>
-				</div>
-			<?php endif; ?>
-			<div class="lf-airtable-grid">
-				<div class="lf-airtable-search">
-					<label class="screen-reader-text" for="lf-airtable-search"><?php esc_html_e('Search Airtable projects', 'leadsforward-core'); ?></label>
-					<input type="text" id="lf-airtable-search" class="regular-text" placeholder="<?php esc_attr_e('Search Airtable projects…', 'leadsforward-core'); ?>" <?php echo $airtable_ready ? '' : 'disabled'; ?> />
-					<div id="lf-airtable-results" class="lf-airtable-results"></div>
-				</div>
-				<div class="lf-airtable-preview">
-					<div id="lf-airtable-preview" class="lf-airtable-preview-card">
-						<?php esc_html_e('Select a project to preview before generating.', 'leadsforward-core'); ?>
+		<div class="card lf-manifester-card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
+			<h2 style="margin-top:0;"><?php esc_html_e('Generate Site Content', 'leadsforward-core'); ?></h2>
+			<p class="description"><?php esc_html_e('Choose Airtable or upload a manifest. Set the logo first to apply brand colors automatically.', 'leadsforward-core'); ?></p>
+			<div class="lf-manifester-logo">
+				<form id="lf-manifester-logo-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+					<?php wp_nonce_field('lf_ai_studio_save_logo', 'lf_ai_studio_logo_nonce'); ?>
+					<input type="hidden" name="action" value="lf_ai_studio_save_logo" />
+					<div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;">
+						<div>
+							<img id="lf-manifester-logo-preview" src="<?php echo esc_url($logo_url); ?>" style="max-height:60px;<?php echo $logo_url ? '' : 'display:none;'; ?>" alt="" />
+						</div>
+						<input type="hidden" name="lf_global_logo" id="lf_manifester_logo" value="<?php echo esc_attr((string) $logo_id); ?>" />
+						<button type="button" class="button" id="lf-manifester-logo-select"><?php esc_html_e('Select Logo', 'leadsforward-core'); ?></button>
+						<button type="button" class="button" id="lf-manifester-logo-clear"><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
+						<button type="submit" class="button button-primary"><?php esc_html_e('Save Logo', 'leadsforward-core'); ?></button>
 					</div>
-					<button type="button" class="button button-primary" id="lf-airtable-generate" disabled>
-						<?php esc_html_e('Use Project & Generate', 'leadsforward-core'); ?>
-					</button>
-					<div id="lf-airtable-status" class="lf-airtable-status" role="status" aria-live="polite"></div>
+					<p class="description" style="margin-top:6px;"><?php esc_html_e('Uploading a logo updates your brand palette automatically.', 'leadsforward-core'); ?></p>
+				</form>
+			</div>
+			<div class="lf-manifester-grid">
+				<div class="lf-manifester-panel">
+					<h3 style="margin-top:0;"><?php esc_html_e('Manifest Upload (Deterministic)', 'leadsforward-core'); ?></h3>
+					<p class="description"><?php esc_html_e('Upload a JSON manifest to bypass wizard inputs and run deterministic generation.', 'leadsforward-core'); ?></p>
+					<?php if (!empty($manifest)) : ?>
+						<?php
+						$site_name = (string) ($manifest['business']['name'] ?? '');
+						$site_niche = (string) ($manifest['business']['niche'] ?? '');
+						$site_city = (string) ($manifest['business']['primary_city'] ?? ($manifest['business']['address']['city'] ?? ''));
+						?>
+						<p class="description">
+							<?php echo esc_html(sprintf(__('Active manifest: %1$s (%2$s) — %3$s', 'leadsforward-core'), $site_name ?: __('Unnamed', 'leadsforward-core'), $site_niche ?: __('No niche', 'leadsforward-core'), $site_city ?: __('No city', 'leadsforward-core'))); ?>
+						</p>
+					<?php endif; ?>
+					<?php $template_url = wp_nonce_url(admin_url('admin-post.php?action=lf_ai_studio_manifest_template'), 'lf_ai_studio_manifest_template', 'lf_ai_studio_manifest_template_nonce'); ?>
+					<form id="lf-ai-manifest-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+						<?php wp_nonce_field('lf_ai_studio_manifest', 'lf_ai_studio_manifest_nonce'); ?>
+						<input type="hidden" name="action" value="lf_ai_studio_manifest" />
+						<input type="file" name="lf_site_manifest" accept="application/json,.json" required />
+						<p class="submit">
+							<button type="submit" class="button button-primary"><?php esc_html_e('Upload Manifest & Generate', 'leadsforward-core'); ?></button>
+							<a class="button" href="<?php echo esc_url($template_url); ?>"><?php esc_html_e('Download Manifest Template', 'leadsforward-core'); ?></a>
+						</p>
+					</form>
+				</div>
+				<div class="lf-manifester-panel" id="lf-airtable-picker">
+					<h3 style="margin-top:0;"><?php esc_html_e('Airtable Projects', 'leadsforward-core'); ?></h3>
+					<p class="description"><?php esc_html_e('Search your Airtable projects and generate from a single record.', 'leadsforward-core'); ?></p>
+					<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-bottom: 12px;">
+						<?php wp_nonce_field('lf_ai_studio_scope_save', 'lf_ai_studio_scope_nonce'); ?>
+						<input type="hidden" name="action" value="lf_ai_studio_scope_save" />
+						<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+							<strong><?php esc_html_e('Generate:', 'leadsforward-core'); ?></strong>
+							<label><input type="checkbox" name="lf_ai_gen_homepage" value="1" <?php checked($gen_homepage); ?> /> <?php esc_html_e('Homepage', 'leadsforward-core'); ?></label>
+							<label><input type="checkbox" name="lf_ai_gen_services" value="1" <?php checked($gen_services); ?> /> <?php esc_html_e('Service pages', 'leadsforward-core'); ?></label>
+							<label><input type="checkbox" name="lf_ai_gen_service_areas" value="1" <?php checked($gen_service_areas); ?> /> <?php esc_html_e('Service area pages', 'leadsforward-core'); ?></label>
+							<label><input type="checkbox" name="lf_ai_gen_core_pages" value="1" <?php checked($gen_core_pages); ?> /> <?php esc_html_e('Core pages', 'leadsforward-core'); ?></label>
+							<button type="submit" class="button"><?php esc_html_e('Save Scope', 'leadsforward-core'); ?></button>
+						</div>
+						<p class="description" style="margin-top:8px;"><?php esc_html_e('Defaults to everything. Manifest can override with generation_scope=homepage_only.', 'leadsforward-core'); ?></p>
+					</form>
+					<?php if (!$airtable_ready) : ?>
+						<div class="notice notice-warning inline">
+							<p><?php esc_html_e('Airtable is not configured yet. Add your PAT, Base ID, and Table in Orchestrator Settings below, then save.', 'leadsforward-core'); ?></p>
+						</div>
+					<?php endif; ?>
+					<div class="lf-airtable-grid">
+						<div class="lf-airtable-search">
+							<label class="screen-reader-text" for="lf-airtable-search"><?php esc_html_e('Search Airtable projects', 'leadsforward-core'); ?></label>
+							<input type="text" id="lf-airtable-search" class="regular-text" placeholder="<?php esc_attr_e('Search Airtable projects…', 'leadsforward-core'); ?>" <?php echo $airtable_ready ? '' : 'disabled'; ?> />
+							<div id="lf-airtable-results" class="lf-airtable-results"></div>
+						</div>
+						<div class="lf-airtable-preview">
+							<div id="lf-airtable-preview" class="lf-airtable-preview-card">
+								<?php esc_html_e('Select a project to preview before generating.', 'leadsforward-core'); ?>
+							</div>
+							<button type="button" class="button button-primary" id="lf-airtable-generate" disabled>
+								<?php esc_html_e('Use Project & Generate', 'leadsforward-core'); ?>
+							</button>
+							<div id="lf-airtable-status" class="lf-airtable-status" role="status" aria-live="polite"></div>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -476,6 +560,12 @@ function lf_ai_studio_render_page(): void {
 				<?php wp_nonce_field('lf_ai_studio_run_audit', 'lf_ai_studio_run_audit_nonce'); ?>
 				<input type="hidden" name="action" value="lf_ai_studio_run_audit" />
 				<button type="submit" class="button"><?php esc_html_e('Run Audit', 'leadsforward-core'); ?></button>
+			</form>
+			<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-bottom: 12px;">
+				<?php wp_nonce_field('lf_ai_studio_regen_blog_posts', 'lf_ai_studio_regen_blog_posts_nonce'); ?>
+				<input type="hidden" name="action" value="lf_ai_studio_regen_blog_posts" />
+				<button type="submit" class="button"><?php esc_html_e('Regenerate AI Blog Posts', 'leadsforward-core'); ?></button>
+				<p class="description" style="margin-top:6px;"><?php esc_html_e('Rebuilds AI blog posts only (does not change core pages).', 'leadsforward-core'); ?></p>
 			</form>
 			<?php if (is_array($audit_report) && !empty($audit_report)) : ?>
 				<?php
@@ -559,6 +649,37 @@ function lf_ai_studio_render_page(): void {
 				100% { transform: translateX(200%); }
 			}
 		</style>
+		<script>
+			(function() {
+				var form = document.getElementById('lf-manifester-logo-form');
+				var selectBtn = document.getElementById('lf-manifester-logo-select');
+				var clearBtn = document.getElementById('lf-manifester-logo-clear');
+				var input = document.getElementById('lf_manifester_logo');
+				var preview = document.getElementById('lf-manifester-logo-preview');
+				var frame;
+				if (selectBtn) {
+					selectBtn.addEventListener('click', function (e) {
+						e.preventDefault();
+						if (frame) { frame.open(); return; }
+						frame = wp.media({ title: 'Select Logo', button: { text: 'Use logo' }, multiple: false });
+						frame.on('select', function () {
+							var attachment = frame.state().get('selection').first().toJSON();
+							if (input) input.value = attachment.id;
+							if (preview) { preview.src = attachment.url; preview.style.display = 'block'; }
+							if (form) { form.submit(); }
+						});
+						frame.open();
+					});
+				}
+				if (clearBtn) {
+					clearBtn.addEventListener('click', function (e) {
+						e.preventDefault();
+						if (input) input.value = '';
+						if (preview) { preview.src = ''; preview.style.display = 'none'; }
+					});
+				}
+			})();
+		</script>
 		<script>
 			(function() {
 				var form = document.getElementById('lf-ai-manifest-form');
@@ -822,13 +943,15 @@ function lf_ai_studio_blog_post_topics(array $manifest, array $homepage_payload)
 }
 
 function lf_ai_studio_ensure_blog_posts(array $topics): array {
-	$existing_ids = get_posts([
+	$ai_ids = get_posts([
 		'post_type'      => 'post',
 		'post_status'    => 'publish',
 		'posts_per_page' => 100,
+		'meta_key'       => 'lf_ai_generated',
+		'meta_value'     => '1',
 		'fields'         => 'ids',
 	]);
-	$existing_count = is_array($existing_ids) ? count($existing_ids) : 0;
+	$existing_count = is_array($ai_ids) ? count($ai_ids) : 0;
 	$needed = max(0, 3 - $existing_count);
 	for ($i = 0; $i < $needed; $i++) {
 		$topic = $topics[$i] ?? null;
@@ -2637,6 +2760,54 @@ function lf_ai_studio_build_full_site_payload(): array {
 		'keywords' => $keywords,
 		'writing_samples' => lf_ai_studio_collect_writing_samples(),
 		'business_entity' => $business_entity,
+		'system_message' => lf_ai_studio_llm_system_message(),
+		'faq_strategy' => lf_ai_studio_faq_strategy(),
+		'cta_strategy' => lf_ai_studio_cta_strategy(),
+		'blueprints' => $blueprints,
+	];
+}
+
+function lf_ai_studio_build_blog_payload(): array {
+	$manifest = lf_ai_studio_get_manifest();
+	$homepage_payload = lf_ai_studio_build_homepage_blueprint();
+	if (!is_array($homepage_payload)) {
+		return ['error' => __('Blog payload build failed.', 'leadsforward-core')];
+	}
+	if (!empty($homepage_payload['error'])) {
+		return ['error' => (string) $homepage_payload['error']];
+	}
+	$blog_topics = lf_ai_studio_blog_post_topics($manifest, $homepage_payload);
+	$blog_posts = lf_ai_studio_ensure_blog_posts($blog_topics);
+	$blueprints = [];
+	foreach ($blog_posts as $entry) {
+		$post = $entry['post'] ?? null;
+		if (!$post instanceof \WP_Post) {
+			continue;
+		}
+		$keyword = (string) ($entry['keyword'] ?? '');
+		$blueprint = lf_ai_studio_build_post_blueprint($post, 'post', 'blog_post', $keyword);
+		if (!empty($blueprint)) {
+			$blueprints[] = $blueprint;
+		}
+	}
+	if (empty($blueprints)) {
+		return ['error' => __('No AI blog posts available to regenerate.', 'leadsforward-core')];
+	}
+	$base_request_id = (string) ($homepage_payload['request_id'] ?? '');
+	if ($base_request_id === '') {
+		$base_request_id = wp_generate_uuid4();
+	}
+	$request_id = 'blog-' . $base_request_id . '-' . time();
+	$keywords = $homepage_payload['keywords'] ?? ['primary' => '', 'secondary' => []];
+	return [
+		'request_id' => $request_id,
+		'variation_seed' => (string) ($homepage_payload['variation_seed'] ?? ''),
+		'business_name' => (string) ($homepage_payload['business_name'] ?? ''),
+		'niche' => (string) ($homepage_payload['niche'] ?? ''),
+		'city_region' => (string) ($homepage_payload['city_region'] ?? ''),
+		'keywords' => $keywords,
+		'writing_samples' => lf_ai_studio_collect_writing_samples(),
+		'business_entity' => $homepage_payload['business_entity'] ?? [],
 		'system_message' => lf_ai_studio_llm_system_message(),
 		'faq_strategy' => lf_ai_studio_faq_strategy(),
 		'cta_strategy' => lf_ai_studio_cta_strategy(),

@@ -74,6 +74,31 @@
   color: #1d4ed8;
 }
 
+.lf-manifester-card {
+  border: 1px solid #e5e7eb;
+}
+
+.lf-manifester-logo {
+  margin: 12px 0 16px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+}
+
+.lf-manifester-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.lf-manifester-panel {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+
 .lf-airtable-field-map {
   margin-top: 4px;
 }

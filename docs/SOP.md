@@ -503,8 +503,15 @@ Blog Post Generation (Append‑Only)
 - When core pages are generated, the system creates up to 3 AI blog posts if none exist.
 - Blog posts are filled via Page Builder sections and auto-backfill post titles/excerpts from the hero copy.
 
+Manifester UX (Append‑Only)
+---------------------------
+- Logo upload sits in the Manifester and applies brand colors before generation.
+- Manifest Upload and Airtable Projects live in one combined panel for quick selection.
+- QA panel includes a “Regenerate AI Blog Posts” action for blog-only refreshes.
+
 Append‑Only Change Log (Append‑Only)
 -----------------------------------
 2026‑02‑11 — Added Content QA audit + one‑pass auto‑repair and dynamic Quote Builder fields.
 2026‑02‑12 — Added content section rendering, benefits/process layout polish, service details media, and footer upgrade.
 2026‑02‑12 — Added AI blog post generation + title/excerpt backfill.
+2026‑02‑12 — Added Manifester logo upload, combined generate panel, and blog regen action.

@@ -58,6 +58,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 
 - When core page generation runs, up to three AI blog posts are created if no posts exist.
 - Blog posts are filled via Page Builder sections; titles/excerpts are auto-backfilled from hero copy.
+- Manifester includes a blog-only regeneration action for AI posts.
 
 ## Section Rendering Updates
 
