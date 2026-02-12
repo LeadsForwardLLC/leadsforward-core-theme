@@ -105,6 +105,9 @@
           return;
         }
         renderResults(payload.data.records || []);
+        if (payload.data.notice) {
+          setStatus(payload.data.notice, 'info');
+        }
       })
       .catch(function () {
         setStatus('Search failed.', 'error');

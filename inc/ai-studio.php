@@ -590,14 +590,17 @@ function lf_ai_studio_render_page(): void {
 					<td><input type="text" class="regular-text" name="lf_ai_airtable_base" id="lf_ai_airtable_base" value="<?php echo esc_attr((string) ($airtable_settings['base_id'] ?? '')); ?>" /></td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="lf_ai_airtable_table"><?php esc_html_e('Table Name', 'leadsforward-core'); ?></label></th>
-					<td><input type="text" class="regular-text" name="lf_ai_airtable_table" id="lf_ai_airtable_table" value="<?php echo esc_attr((string) ($airtable_settings['table'] ?? 'Business Info')); ?>" /></td>
+					<th scope="row"><label for="lf_ai_airtable_table"><?php esc_html_e('Table (left sidebar)', 'leadsforward-core'); ?></label></th>
+					<td>
+						<input type="text" class="regular-text" name="lf_ai_airtable_table" id="lf_ai_airtable_table" value="<?php echo esc_attr((string) ($airtable_settings['table'] ?? 'Business Info')); ?>" />
+						<p class="description"><?php esc_html_e('This is the table name shown in the left sidebar.', 'leadsforward-core'); ?></p>
+					</td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="lf_ai_airtable_view"><?php esc_html_e('View Name', 'leadsforward-core'); ?></label></th>
+					<th scope="row"><label for="lf_ai_airtable_view"><?php esc_html_e('View (top dropdown)', 'leadsforward-core'); ?></label></th>
 					<td>
 						<input type="text" class="regular-text" name="lf_ai_airtable_view" id="lf_ai_airtable_view" value="<?php echo esc_attr((string) ($airtable_settings['view'] ?? 'Global Sync View (ACTIVE)')); ?>" />
-						<p class="description"><?php esc_html_e('Optional. Leave blank to use the table default.', 'leadsforward-core'); ?></p>
+						<p class="description"><?php esc_html_e('Optional. This is the view name shown in the top dropdown.', 'leadsforward-core'); ?></p>
 					</td>
 				</tr>
 				<tr>
@@ -993,6 +996,18 @@ function lf_ai_studio_manifest_template(): array {
 function lf_ai_studio_manifest_to_setup_data(array $manifest): array {
 	$business = $manifest['business'] ?? [];
 	$address = is_array($business['address'] ?? null) ? $business['address'] : [];
+	$social = is_array($business['social'] ?? null) ? $business['social'] : [];
+	$category = trim((string) ($business['category'] ?? ''));
+	if ($category === '') {
+		$category = 'HomeAndConstructionBusiness';
+	}
+	$same_as = is_array($business['same_as'] ?? null) ? $business['same_as'] : [];
+	$website_url = (string) ($business['website_url'] ?? '');
+	if ($website_url !== '') {
+		$same_as[] = $website_url;
+	}
+	$same_as = array_values(array_unique(array_filter(array_map('esc_url_raw', $same_as))));
+	$same_as_string = $same_as ? implode("\n", $same_as) : '';
 	$niche_slug = lf_ai_studio_manifest_niche_slug($business);
 	if (is_wp_error($niche_slug)) {
 		return ['error' => $niche_slug->get_error_message()];
@@ -1036,22 +1051,22 @@ function lf_ai_studio_manifest_to_setup_data(array $manifest): array {
 		'business_address_zip' => (string) ($address['zip'] ?? ''),
 		'business_service_area_type' => 'service_area',
 		'business_geo' => ['lat' => '', 'lng' => ''],
-		'business_hours' => '',
-		'business_category' => 'HomeAndConstructionBusiness',
+		'business_hours' => (string) ($business['hours'] ?? ''),
+		'business_category' => $category,
 		'business_short_description' => '',
-		'business_gbp_url' => '',
-		'business_social_facebook' => '',
-		'business_social_instagram' => '',
-		'business_social_youtube' => '',
-		'business_social_linkedin' => '',
-		'business_social_tiktok' => '',
-		'business_social_x' => '',
-		'business_same_as' => '',
-		'business_founding_year' => '',
+		'business_gbp_url' => (string) ($business['gbp_url'] ?? ''),
+		'business_social_facebook' => (string) ($social['facebook'] ?? ''),
+		'business_social_instagram' => (string) ($social['instagram'] ?? ''),
+		'business_social_youtube' => (string) ($social['youtube'] ?? ''),
+		'business_social_linkedin' => (string) ($social['linkedin'] ?? ''),
+		'business_social_tiktok' => (string) ($social['tiktok'] ?? ''),
+		'business_social_x' => (string) ($social['x'] ?? ''),
+		'business_same_as' => $same_as_string,
+		'business_founding_year' => (string) ($business['founding_year'] ?? ''),
 		'business_license_number' => '',
 		'business_insurance_statement' => '',
-		'business_place_id' => '',
-		'business_place_name' => '',
+		'business_place_id' => (string) ($business['place_id'] ?? ''),
+		'business_place_name' => (string) ($business['place_name'] ?? ''),
 		'business_place_address' => '',
 		'business_map_embed' => '',
 		'services' => $mapped_services,
@@ -1108,38 +1123,45 @@ function lf_ai_studio_scaffold_manifest(array $manifest): array {
 		update_option('blogname', $biz_name);
 	}
 	if (function_exists('lf_update_business_info_value')) {
+		$phone_tracking = (string) ($data['business_phone_tracking'] ?? '');
+		$phone_display = ($data['business_phone_display'] ?? 'primary') === 'tracking' ? 'tracking' : 'primary';
+		$display_phone = $phone_display === 'tracking' && $phone_tracking !== '' ? $phone_tracking : $biz_phone;
+		$category = (string) ($data['business_category'] ?? '');
+		if ($category === '') {
+			$category = 'HomeAndConstructionBusiness';
+		}
 		lf_update_business_info_value('lf_business_name', $biz_name);
 		lf_update_business_info_value('lf_business_legal_name', $biz_legal);
 		lf_update_business_info_value('lf_business_phone_primary', $biz_phone);
-		lf_update_business_info_value('lf_business_phone_tracking', '');
-		lf_update_business_info_value('lf_business_phone_display', 'primary');
-		lf_update_business_info_value('lf_business_phone', $biz_phone);
+		lf_update_business_info_value('lf_business_phone_tracking', $phone_tracking);
+		lf_update_business_info_value('lf_business_phone_display', $phone_display);
+		lf_update_business_info_value('lf_business_phone', $display_phone);
 		lf_update_business_info_value('lf_business_email', $biz_email);
 		lf_update_business_info_value('lf_business_address_street', $address_street);
 		lf_update_business_info_value('lf_business_address_city', $address_city);
 		lf_update_business_info_value('lf_business_address_state', $address_state);
 		lf_update_business_info_value('lf_business_address_zip', $address_zip);
 		lf_update_business_info_value('lf_business_address', $address_full);
-		lf_update_business_info_value('lf_business_service_area_type', 'service_area');
-		lf_update_business_info_value('lf_business_geo', ['lat' => '', 'lng' => '']);
-		lf_update_business_info_value('lf_business_hours', '');
-		lf_update_business_info_value('lf_business_category', 'HomeAndConstructionBusiness');
-		lf_update_business_info_value('lf_business_short_description', '');
-		lf_update_business_info_value('lf_business_gbp_url', '');
-		lf_update_business_info_value('lf_business_social_facebook', '');
-		lf_update_business_info_value('lf_business_social_instagram', '');
-		lf_update_business_info_value('lf_business_social_youtube', '');
-		lf_update_business_info_value('lf_business_social_linkedin', '');
-		lf_update_business_info_value('lf_business_social_tiktok', '');
-		lf_update_business_info_value('lf_business_social_x', '');
-		lf_update_business_info_value('lf_business_same_as', '');
-		lf_update_business_info_value('lf_business_founding_year', '');
-		lf_update_business_info_value('lf_business_license_number', '');
-		lf_update_business_info_value('lf_business_insurance_statement', '');
-		lf_update_business_info_value('lf_business_place_id', '');
-		lf_update_business_info_value('lf_business_place_name', '');
-		lf_update_business_info_value('lf_business_place_address', '');
-		lf_update_business_info_value('lf_business_map_embed', '');
+		lf_update_business_info_value('lf_business_service_area_type', (string) ($data['business_service_area_type'] ?? 'service_area'));
+		lf_update_business_info_value('lf_business_geo', $data['business_geo'] ?? ['lat' => '', 'lng' => '']);
+		lf_update_business_info_value('lf_business_hours', (string) ($data['business_hours'] ?? ''));
+		lf_update_business_info_value('lf_business_category', $category);
+		lf_update_business_info_value('lf_business_short_description', (string) ($data['business_short_description'] ?? ''));
+		lf_update_business_info_value('lf_business_gbp_url', (string) ($data['business_gbp_url'] ?? ''));
+		lf_update_business_info_value('lf_business_social_facebook', (string) ($data['business_social_facebook'] ?? ''));
+		lf_update_business_info_value('lf_business_social_instagram', (string) ($data['business_social_instagram'] ?? ''));
+		lf_update_business_info_value('lf_business_social_youtube', (string) ($data['business_social_youtube'] ?? ''));
+		lf_update_business_info_value('lf_business_social_linkedin', (string) ($data['business_social_linkedin'] ?? ''));
+		lf_update_business_info_value('lf_business_social_tiktok', (string) ($data['business_social_tiktok'] ?? ''));
+		lf_update_business_info_value('lf_business_social_x', (string) ($data['business_social_x'] ?? ''));
+		lf_update_business_info_value('lf_business_same_as', (string) ($data['business_same_as'] ?? ''));
+		lf_update_business_info_value('lf_business_founding_year', (string) ($data['business_founding_year'] ?? ''));
+		lf_update_business_info_value('lf_business_license_number', (string) ($data['business_license_number'] ?? ''));
+		lf_update_business_info_value('lf_business_insurance_statement', (string) ($data['business_insurance_statement'] ?? ''));
+		lf_update_business_info_value('lf_business_place_id', (string) ($data['business_place_id'] ?? ''));
+		lf_update_business_info_value('lf_business_place_name', (string) ($data['business_place_name'] ?? ''));
+		lf_update_business_info_value('lf_business_place_address', (string) ($data['business_place_address'] ?? ''));
+		lf_update_business_info_value('lf_business_map_embed', (string) ($data['business_map_embed'] ?? ''));
 	}
 	if (function_exists('lf_update_global_option_value')) {
 		lf_update_global_option_value('lf_header_cta_label', '');
@@ -1457,6 +1479,22 @@ function lf_ai_studio_normalize_manifest(array $manifest): array {
 			'niche_slug' => sanitize_title((string) ($business['niche_slug'] ?? '')),
 			'site_style' => sanitize_text_field((string) ($business['site_style'] ?? '')),
 			'variation_seed' => sanitize_text_field((string) ($business['variation_seed'] ?? '')),
+			'website_url' => esc_url_raw((string) ($business['website_url'] ?? '')),
+			'hours' => sanitize_textarea_field((string) ($business['hours'] ?? '')),
+			'category' => sanitize_text_field((string) ($business['category'] ?? '')),
+			'place_id' => sanitize_text_field((string) ($business['place_id'] ?? '')),
+			'place_name' => sanitize_text_field((string) ($business['place_name'] ?? '')),
+			'gbp_url' => esc_url_raw((string) ($business['gbp_url'] ?? '')),
+			'founding_year' => sanitize_text_field((string) ($business['founding_year'] ?? '')),
+			'social' => [
+				'facebook' => esc_url_raw((string) ($business['social']['facebook'] ?? '')),
+				'instagram' => esc_url_raw((string) ($business['social']['instagram'] ?? '')),
+				'youtube' => esc_url_raw((string) ($business['social']['youtube'] ?? '')),
+				'linkedin' => esc_url_raw((string) ($business['social']['linkedin'] ?? '')),
+				'tiktok' => esc_url_raw((string) ($business['social']['tiktok'] ?? '')),
+				'x' => esc_url_raw((string) ($business['social']['x'] ?? '')),
+			],
+			'same_as' => array_values(array_filter(array_map('esc_url_raw', (array) ($business['same_as'] ?? [])))),
 		],
 		'homepage' => [
 			'primary_keyword' => sanitize_text_field((string) ($homepage['primary_keyword'] ?? '')),
@@ -1498,6 +1536,39 @@ function lf_ai_studio_manifest_business_entity(array $manifest, array $fallback 
 	$entity['address_parts'] = $address_parts;
 	$entity['address'] = $address_full;
 	$entity['niche'] = (string) ($business['niche'] ?? '');
+	if (!empty($business['category'])) {
+		$entity['category'] = (string) $business['category'];
+	}
+	if (!empty($business['hours'])) {
+		$entity['hours'] = (string) $business['hours'];
+	}
+	if (!empty($business['gbp_url'])) {
+		$entity['gbp_url'] = (string) $business['gbp_url'];
+	}
+	if (!empty($business['founding_year'])) {
+		$entity['founding_year'] = (string) $business['founding_year'];
+	}
+	if (!empty($business['place_id'])) {
+		$entity['place_id'] = (string) $business['place_id'];
+	}
+	if (!empty($business['place_name'])) {
+		$entity['place_name'] = (string) $business['place_name'];
+	}
+	if (!empty($business['social']) && is_array($business['social'])) {
+		$entity_social = is_array($entity['social'] ?? null) ? $entity['social'] : [];
+		$entity['social'] = array_merge($entity_social, array_filter($business['social']));
+	}
+	$incoming_same_as = [];
+	if (!empty($business['same_as']) && is_array($business['same_as'])) {
+		$incoming_same_as = $business['same_as'];
+	}
+	if (!empty($business['website_url'])) {
+		$incoming_same_as[] = (string) $business['website_url'];
+	}
+	if (!empty($incoming_same_as)) {
+		$existing = is_array($entity['same_as'] ?? null) ? $entity['same_as'] : [];
+		$entity['same_as'] = array_values(array_unique(array_filter(array_merge($existing, $incoming_same_as))));
+	}
 	return $entity;
 }
 

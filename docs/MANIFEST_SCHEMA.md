@@ -37,7 +37,23 @@ All fields shown below are **required keys**. Values may be empty strings unless
     "primary_city": "",
     "niche": "",
     "site_style": "",
-    "variation_seed": ""
+    "variation_seed": "",
+    "website_url": "",
+    "hours": "",
+    "category": "",
+    "place_id": "",
+    "place_name": "",
+    "gbp_url": "",
+    "founding_year": "",
+    "social": {
+      "facebook": "",
+      "instagram": "",
+      "youtube": "",
+      "linkedin": "",
+      "tiktok": "",
+      "x": ""
+    },
+    "same_as": []
   },
   "homepage": {
     "primary_keyword": "",
@@ -82,6 +98,14 @@ All fields shown below are **required keys**. Values may be empty strings unless
 - **niche**: Controls niche behavior and defaults (e.g., roofing).
 - **site_style**: Optional style cue for orchestrator.
 - **variation_seed**: Optional explicit seed; the system deterministically derives a seed from `name + primary_city + niche`.
+- **website_url**: Optional canonical URL for schema `sameAs`.
+- **hours**: Optional business hours string (schema `openingHours`).
+- **category**: Optional schema type override (defaults to `HomeAndConstructionBusiness`).
+- **place_id** / **place_name**: Optional GBP identifiers.
+- **gbp_url**: Optional GBP URL, added to schema `sameAs`.
+- **founding_year**: Optional founding year for schema.
+- **social**: Optional social URLs (facebook, instagram, youtube, linkedin, tiktok, x).
+- **same_as**: Optional array of URLs; merged with `website_url` and social URLs for schema.
 
 ### homepage
 

@@ -30,10 +30,28 @@ function lf_ai_studio_airtable_default_field_map(): array {
 		'site_style' => 'Site Style',
 		'primary_keyword' => 'Primary KWs',
 		'secondary_keywords' => 'KW-Top 10',
+		'secondary_keywords_all' => 'KW-All',
+		'secondary_keywords_focus' => 'KW-Focus',
 		'service_areas_list' => 'Service Areas',
 		'services_json' => 'Services JSON',
 		'service_areas_json' => 'Service Areas JSON',
 		'manifest_json' => 'Manifest JSON',
+		'website_url' => 'Website URL',
+		'business_category' => 'Business Category',
+		'business_hours' => 'Hours',
+		'google_name' => 'Google Name',
+		'gbp_cid_primary' => 'GMB CID Primary',
+		'gbp_cid' => 'GMB CID',
+		'facebook' => 'Facebook',
+		'x' => 'X',
+		'instagram' => 'Instagram',
+		'youtube' => 'YouTube',
+		'pinterest' => 'Pinterest',
+		'houzz' => 'Houzz',
+		'tumblr' => 'Tumblr',
+		'yelp' => 'Yelp',
+		'bing' => 'Bing',
+		'foundation_year' => 'Foundation Year',
 	];
 }
 
@@ -137,12 +155,19 @@ function lf_ai_studio_airtable_search_records(string $query): array {
 		return ['error' => $ready['message']];
 	}
 
-	$base_url = lf_ai_studio_airtable_base_url($settings);
+	$resolved = lf_ai_studio_airtable_resolve_table_view($settings);
+	if (!empty($resolved['error'])) {
+		return ['error' => $resolved['error']];
+	}
+	$base_url = lf_ai_studio_airtable_base_url([
+		'base_id' => $settings['base_id'],
+		'table' => $resolved['table_id'],
+	]);
 	$params = [
 		'pageSize' => 20,
 	];
-	if ($settings['view'] !== '') {
-		$params['view'] = $settings['view'];
+	if (!empty($resolved['view'])) {
+		$params['view'] = $resolved['view'];
 	}
 	if ($query !== '') {
 		$field = $settings['fields']['project'];
@@ -174,7 +199,10 @@ function lf_ai_studio_airtable_search_records(string $query): array {
 		];
 	}
 
-	return ['records' => $records];
+	return [
+		'records' => $records,
+		'notice' => $resolved['notice'] ?? '',
+	];
 }
 
 function lf_ai_studio_airtable_fetch_record(string $record_id): array {
@@ -183,7 +211,14 @@ function lf_ai_studio_airtable_fetch_record(string $record_id): array {
 	if (!$ready['ready']) {
 		return ['error' => $ready['message']];
 	}
-	$base_url = lf_ai_studio_airtable_base_url($settings);
+	$resolved = lf_ai_studio_airtable_resolve_table_view($settings);
+	if (!empty($resolved['error'])) {
+		return ['error' => $resolved['error']];
+	}
+	$base_url = lf_ai_studio_airtable_base_url([
+		'base_id' => $settings['base_id'],
+		'table' => $resolved['table_id'],
+	]);
 	$record_url = trailingslashit($base_url) . rawurlencode($record_id);
 
 	$response = lf_ai_studio_airtable_get($record_url, [], $settings['pat']);
@@ -225,11 +260,39 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	$site_style = lf_ai_studio_airtable_string_field($fields, $map['site_style'] ?? '');
 	$primary_keyword = lf_ai_studio_airtable_string_field($fields, $map['primary_keyword'] ?? '');
 	$primary_keyword = lf_ai_studio_airtable_pick_primary_keyword($primary_keyword);
+	if ($primary_keyword === '') {
+		$primary_keyword = lf_ai_studio_airtable_pick_primary_keyword(
+			lf_ai_studio_airtable_string_field($fields, $map['secondary_keywords_focus'] ?? '')
+		);
+	}
 	$secondary_keywords = lf_ai_studio_airtable_keywords_field($fields, $map['secondary_keywords'] ?? '');
+	$secondary_keywords = array_merge(
+		$secondary_keywords,
+		lf_ai_studio_airtable_keywords_field($fields, $map['secondary_keywords_all'] ?? ''),
+		lf_ai_studio_airtable_keywords_field($fields, $map['secondary_keywords_focus'] ?? '')
+	);
+	$secondary_keywords = array_values(array_unique(array_filter($secondary_keywords)));
 
 	$services = lf_ai_studio_airtable_json_array_field($fields, $map['services_json'] ?? '', 'Services JSON', $errors);
 	$service_areas = lf_ai_studio_airtable_json_array_field($fields, $map['service_areas_json'] ?? '', 'Service Areas JSON', $errors);
 	$service_area_list = lf_ai_studio_airtable_string_field($fields, $map['service_areas_list'] ?? '');
+
+	$website_url = lf_ai_studio_airtable_string_field($fields, $map['website_url'] ?? '');
+	$business_category = lf_ai_studio_airtable_string_field($fields, $map['business_category'] ?? '');
+	$business_hours = lf_ai_studio_airtable_string_field($fields, $map['business_hours'] ?? '');
+	$google_name = lf_ai_studio_airtable_string_field($fields, $map['google_name'] ?? '');
+	$gbp_cid_primary = lf_ai_studio_airtable_string_field($fields, $map['gbp_cid_primary'] ?? '');
+	$gbp_cid = lf_ai_studio_airtable_string_field($fields, $map['gbp_cid'] ?? '');
+	$facebook = lf_ai_studio_airtable_string_field($fields, $map['facebook'] ?? '');
+	$x_url = lf_ai_studio_airtable_string_field($fields, $map['x'] ?? '');
+	$instagram = lf_ai_studio_airtable_string_field($fields, $map['instagram'] ?? '');
+	$youtube = lf_ai_studio_airtable_string_field($fields, $map['youtube'] ?? '');
+	$pinterest = lf_ai_studio_airtable_string_field($fields, $map['pinterest'] ?? '');
+	$houzz = lf_ai_studio_airtable_string_field($fields, $map['houzz'] ?? '');
+	$tumblr = lf_ai_studio_airtable_string_field($fields, $map['tumblr'] ?? '');
+	$yelp = lf_ai_studio_airtable_string_field($fields, $map['yelp'] ?? '');
+	$bing = lf_ai_studio_airtable_string_field($fields, $map['bing'] ?? '');
+	$foundation_year = lf_ai_studio_airtable_string_field($fields, $map['foundation_year'] ?? '');
 
 	if (empty($service_areas) && $service_area_list !== '') {
 		$service_areas = lf_ai_studio_airtable_build_service_areas_from_list($service_area_list, $state, $niche);
@@ -306,6 +369,32 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 			'niche_slug' => $niche_slug_final,
 			'site_style' => $site_style !== '' ? $site_style : 'premium',
 			'variation_seed' => $variation_seed,
+			'website_url' => $website_url,
+			'hours' => $business_hours,
+			'category' => $business_category,
+			'place_name' => $google_name,
+			'place_id' => $gbp_cid_primary !== '' ? $gbp_cid_primary : $gbp_cid,
+			'founding_year' => $foundation_year,
+			'social' => [
+				'facebook' => $facebook,
+				'instagram' => $instagram,
+				'youtube' => $youtube,
+				'linkedin' => '',
+				'tiktok' => '',
+				'x' => $x_url,
+			],
+			'same_as' => array_values(array_filter([
+				$website_url,
+				$facebook,
+				$instagram,
+				$youtube,
+				$x_url,
+				$pinterest,
+				$houzz,
+				$tumblr,
+				$yelp,
+				$bing,
+			])),
 		],
 		'homepage' => [
 			'primary_keyword' => $primary_keyword,
@@ -370,6 +459,122 @@ function lf_ai_studio_airtable_get(string $url, array $params, string $pat): arr
 		return ['error' => __('Airtable response was not valid JSON.', 'leadsforward-core')];
 	}
 	return ['data' => $data];
+}
+
+function lf_ai_studio_airtable_get_tables(string $base_id, string $pat): array {
+	$cache_key = 'lf_ai_airtable_tables_' . md5($base_id);
+	$cached = get_transient($cache_key);
+	if (is_array($cached)) {
+		return ['tables' => $cached];
+	}
+	$url = sprintf('https://api.airtable.com/v0/meta/bases/%s/tables', rawurlencode($base_id));
+	$response = lf_ai_studio_airtable_get($url, [], $pat);
+	if (!empty($response['error'])) {
+		return ['error' => $response['error']];
+	}
+	$tables = $response['data']['tables'] ?? [];
+	if (!is_array($tables)) {
+		return ['error' => __('Airtable schema response was invalid.', 'leadsforward-core')];
+	}
+	set_transient($cache_key, $tables, 5 * MINUTE_IN_SECONDS);
+	return ['tables' => $tables];
+}
+
+function lf_ai_studio_airtable_resolve_table_view(array $settings): array {
+	$tables_response = lf_ai_studio_airtable_get_tables($settings['base_id'], $settings['pat']);
+	if (!empty($tables_response['error'])) {
+		return ['error' => $tables_response['error']];
+	}
+	$tables = $tables_response['tables'] ?? [];
+	if (!is_array($tables) || empty($tables)) {
+		return ['error' => __('No Airtable tables found for this base.', 'leadsforward-core')];
+	}
+
+	$input_table = trim((string) ($settings['table'] ?? ''));
+	$input_view = trim((string) ($settings['view'] ?? ''));
+
+	$table = lf_ai_studio_airtable_match_table($tables, $input_table);
+	$view = null;
+	$notice = '';
+
+	if (!$table && $input_table !== '') {
+		$view_hit = lf_ai_studio_airtable_match_view($tables, $input_table);
+		if ($view_hit) {
+			$table = $view_hit['table'];
+			$view = $view_hit['view'];
+			$notice = __('Detected table/view swap. Using view from Table Name input.', 'leadsforward-core');
+		}
+	}
+
+	if (!$table && count($tables) === 1) {
+		$table = $tables[0];
+		$notice = __('Using the only table in this base.', 'leadsforward-core');
+	}
+
+	if (!$table) {
+		$table_names = array_map(static function ($t) {
+			return (string) ($t['name'] ?? '');
+		}, $tables);
+		return ['error' => sprintf(__('Table not found. Available tables: %s', 'leadsforward-core'), implode(', ', array_filter($table_names)))];
+	}
+
+	if ($input_view !== '') {
+		$view = lf_ai_studio_airtable_match_view_in_table($table, $input_view);
+		if (!$view) {
+			$view_hit = lf_ai_studio_airtable_match_view($tables, $input_view);
+			if ($view_hit) {
+				$table = $view_hit['table'];
+				$view = $view_hit['view'];
+				$notice = __('Detected view name assigned to the wrong table. Auto-corrected.', 'leadsforward-core');
+			}
+		}
+	}
+
+	return [
+		'table_id' => (string) ($table['id'] ?? $table['name'] ?? ''),
+		'table_name' => (string) ($table['name'] ?? ''),
+		'view' => $view ? (string) ($view['id'] ?? $view['name'] ?? '') : '',
+		'notice' => $notice,
+	];
+}
+
+function lf_ai_studio_airtable_match_table(array $tables, string $needle): ?array {
+	if ($needle === '') {
+		return null;
+	}
+	foreach ($tables as $table) {
+		$name = (string) ($table['name'] ?? '');
+		$id = (string) ($table['id'] ?? '');
+		if (strcasecmp($needle, $name) === 0 || strcasecmp($needle, $id) === 0) {
+			return $table;
+		}
+	}
+	return null;
+}
+
+function lf_ai_studio_airtable_match_view(array $tables, string $needle): ?array {
+	if ($needle === '') {
+		return null;
+	}
+	foreach ($tables as $table) {
+		$view = lf_ai_studio_airtable_match_view_in_table($table, $needle);
+		if ($view) {
+			return ['table' => $table, 'view' => $view];
+		}
+	}
+	return null;
+}
+
+function lf_ai_studio_airtable_match_view_in_table(array $table, string $needle): ?array {
+	$views = is_array($table['views'] ?? null) ? $table['views'] : [];
+	foreach ($views as $view) {
+		$name = (string) ($view['name'] ?? '');
+		$id = (string) ($view['id'] ?? '');
+		if (strcasecmp($needle, $name) === 0 || strcasecmp($needle, $id) === 0) {
+			return $view;
+		}
+	}
+	return null;
 }
 
 function lf_ai_studio_airtable_string_field(array $fields, string $key): string {
