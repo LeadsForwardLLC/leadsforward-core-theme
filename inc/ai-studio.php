@@ -297,6 +297,8 @@ function lf_ai_studio_render_page(): void {
 	$job_id = isset($_GET['job']) ? absint($_GET['job']) : 0;
 	$job_status = $job_id ? (string) get_post_meta($job_id, 'lf_ai_job_status', true) : '';
 	$job_error = $job_id ? (string) get_post_meta($job_id, 'lf_ai_job_error', true) : '';
+	$reset_done = isset($_GET['reset_done']) && $_GET['reset_done'] === '1';
+	$reset_error = isset($_GET['reset_error']) ? sanitize_text_field(wp_unslash((string) $_GET['reset_error'])) : '';
 	$manifest = lf_ai_studio_get_manifest();
 	$manifest_errors = get_option('lf_ai_studio_manifest_errors', []);
 	$manifest_saved = isset($_GET['manifest']) && $_GET['manifest'] === '1';
@@ -317,6 +319,12 @@ function lf_ai_studio_render_page(): void {
 		<?php endif; ?>
 		<?php if ($manifest_saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Manifest uploaded. Generation queued and running in the background.', 'leadsforward-core'); ?></p></div>
+		<?php endif; ?>
+		<?php if ($reset_done) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Site reset complete.', 'leadsforward-core'); ?></p></div>
+		<?php endif; ?>
+		<?php if ($reset_error === 'confirm') : ?>
+			<div class="notice notice-error"><p><?php esc_html_e('Reset confirmation did not match. Type RESET to continue.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
 		<?php if ($job_id && $job_status) : ?>
 			<?php if (in_array($job_status, ['queued', 'running'], true)) : ?>
@@ -389,6 +397,21 @@ function lf_ai_studio_render_page(): void {
 				</div>
 			</div>
 		</div>
+		<?php if (function_exists('lf_dev_reset_allowed') && lf_dev_reset_allowed() && current_user_can('manage_options')) : ?>
+			<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0; border: 1px solid #f87171;">
+				<h2 style="margin-top:0;"><?php esc_html_e('Reset site (dev only)', 'leadsforward-core'); ?></h2>
+				<p class="description"><?php esc_html_e('Deletes wizard-created pages, services, and areas. This is irreversible.', 'leadsforward-core'); ?></p>
+				<form method="post">
+					<?php wp_nonce_field('lf_dev_reset', 'lf_dev_reset_nonce'); ?>
+					<input type="hidden" name="lf_dev_reset" value="1" />
+					<p>
+						<label for="lf_dev_reset_confirm"><?php esc_html_e('Type RESET to confirm:', 'leadsforward-core'); ?></label><br />
+						<input type="text" id="lf_dev_reset_confirm" name="lf_dev_reset_confirm" class="regular-text" />
+					</p>
+					<p><button type="submit" class="button button-secondary"><?php esc_html_e('Reset Site', 'leadsforward-core'); ?></button></p>
+				</form>
+			</div>
+		<?php endif; ?>
 		<div id="lf-ai-manifest-loading" class="lf-ai-loading-overlay" aria-hidden="true">
 			<div class="lf-ai-loading-card" role="status" aria-live="polite">
 				<div class="lf-ai-loading-title"><?php esc_html_e('Generating site…', 'leadsforward-core'); ?></div>
