@@ -152,10 +152,6 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
 	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
 	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
-	update_option('lf_ai_gen_homepage', isset($_POST['lf_ai_gen_homepage']) ? '1' : '0');
-	update_option('lf_ai_gen_services', isset($_POST['lf_ai_gen_services']) ? '1' : '0');
-	update_option('lf_ai_gen_service_areas', isset($_POST['lf_ai_gen_service_areas']) ? '1' : '0');
-	update_option('lf_ai_gen_core_pages', isset($_POST['lf_ai_gen_core_pages']) ? '1' : '0');
 	update_option('lf_ai_airtable_enabled', isset($_POST['lf_ai_airtable_enabled']) ? '1' : '0');
 	update_option('lf_ai_airtable_pat', isset($_POST['lf_ai_airtable_pat']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_pat'])) : '');
 	update_option('lf_ai_airtable_base', isset($_POST['lf_ai_airtable_base']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_base'])) : '');
@@ -374,10 +370,6 @@ function lf_ops_render_global_settings_page(): void {
 	$manifester_enabled = get_option('lf_ai_studio_enabled', '0') === '1';
 	$manifester_webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$manifester_secret = (string) get_option('lf_ai_studio_secret', '');
-	$gen_homepage = get_option('lf_ai_gen_homepage', '1') === '1';
-	$gen_services = get_option('lf_ai_gen_services', '1') === '1';
-	$gen_service_areas = get_option('lf_ai_gen_service_areas', '1') === '1';
-	$gen_core_pages = get_option('lf_ai_gen_core_pages', '1') === '1';
 	$airtable_settings = function_exists('lf_ai_studio_airtable_get_settings')
 		? lf_ai_studio_airtable_get_settings()
 		: [];
@@ -423,19 +415,6 @@ function lf_ops_render_global_settings_page(): void {
 				<div class="lf-settings-panel-body" data-parent="manifester_settings">
 					<p class="description"><?php esc_html_e('Configure the orchestrator and Airtable import settings. Manifest uploads and Airtable generation use these values.', 'leadsforward-core'); ?></p>
 					<table class="form-table" role="presentation">
-						<tr>
-							<th colspan="2" style="padding-top: 8px;"><?php esc_html_e('Generation Scope', 'leadsforward-core'); ?></th>
-						</tr>
-						<tr>
-							<th scope="row"><?php esc_html_e('Generate content for', 'leadsforward-core'); ?></th>
-							<td>
-								<label><input type="checkbox" name="lf_ai_gen_homepage" value="1" <?php checked($gen_homepage); ?> /> <?php esc_html_e('Homepage', 'leadsforward-core'); ?></label><br />
-								<label><input type="checkbox" name="lf_ai_gen_services" value="1" <?php checked($gen_services); ?> /> <?php esc_html_e('Service pages', 'leadsforward-core'); ?></label><br />
-								<label><input type="checkbox" name="lf_ai_gen_service_areas" value="1" <?php checked($gen_service_areas); ?> /> <?php esc_html_e('Service area pages', 'leadsforward-core'); ?></label><br />
-								<label><input type="checkbox" name="lf_ai_gen_core_pages" value="1" <?php checked($gen_core_pages); ?> /> <?php esc_html_e('Core pages (About, Contact, Blog, etc.)', 'leadsforward-core'); ?></label>
-								<p class="description"><?php esc_html_e('Defaults to everything. Manifest can override with generation_scope=homepage_only.', 'leadsforward-core'); ?></p>
-							</td>
-						</tr>
 							<tr>
 								<th scope="row"><?php esc_html_e('Enable AI', 'leadsforward-core'); ?></th>
 								<td><label><input type="checkbox" name="lf_ai_studio_enabled" value="1" <?php checked($manifester_enabled); ?> /> <?php esc_html_e('Allow Manifester runs', 'leadsforward-core'); ?></label></td>

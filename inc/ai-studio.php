@@ -18,6 +18,7 @@ const LF_MANIFEST_SCHEMA_VERSION = '1.0';
 add_action('init', 'lf_ai_studio_register_cpt');
 add_action('admin_post_lf_ai_studio_save', 'lf_ai_studio_handle_save');
 add_action('admin_post_lf_ai_studio_orchestrator_save', 'lf_ai_studio_handle_orchestrator_save');
+add_action('admin_post_lf_ai_studio_scope_save', 'lf_ai_studio_handle_scope_save');
 add_action('admin_post_lf_ai_studio_generate', 'lf_ai_studio_handle_generate');
 add_action('admin_post_lf_ai_studio_retry', 'lf_ai_studio_handle_retry');
 add_action('admin_post_lf_ai_studio_manifest', 'lf_ai_studio_handle_manifest');
@@ -167,6 +168,21 @@ function lf_ai_studio_handle_orchestrator_save(): void {
 	exit;
 }
 
+function lf_ai_studio_handle_scope_save(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
+	}
+	check_admin_referer('lf_ai_studio_scope_save', 'lf_ai_studio_scope_nonce');
+
+	update_option('lf_ai_gen_homepage', isset($_POST['lf_ai_gen_homepage']) ? '1' : '0');
+	update_option('lf_ai_gen_services', isset($_POST['lf_ai_gen_services']) ? '1' : '0');
+	update_option('lf_ai_gen_service_areas', isset($_POST['lf_ai_gen_service_areas']) ? '1' : '0');
+	update_option('lf_ai_gen_core_pages', isset($_POST['lf_ai_gen_core_pages']) ? '1' : '0');
+
+	wp_safe_redirect(admin_url('admin.php?page=lf-ops&saved=1'));
+	exit;
+}
+
 function lf_ai_studio_handle_generate(): void {
 	if (!current_user_can('edit_theme_options')) {
 		error_log('LF DEBUG: Regenerate Site blocked: insufficient permissions.');
@@ -310,6 +326,10 @@ function lf_ai_studio_render_page(): void {
 		&& !empty($airtable_settings['pat'])
 		&& !empty($airtable_settings['base_id'])
 		&& !empty($airtable_settings['table']);
+	$gen_homepage = get_option('lf_ai_gen_homepage', '1') === '1';
+	$gen_services = get_option('lf_ai_gen_services', '1') === '1';
+	$gen_service_areas = get_option('lf_ai_gen_service_areas', '1') === '1';
+	$gen_core_pages = get_option('lf_ai_gen_core_pages', '1') === '1';
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Website Manifester', 'leadsforward-core'); ?></h1>
@@ -375,6 +395,19 @@ function lf_ai_studio_render_page(): void {
 		<div class="card" id="lf-airtable-picker" style="max-width: 980px; padding: 16px; margin: 16px 0;">
 			<h2 style="margin-top:0;"><?php esc_html_e('Airtable Projects', 'leadsforward-core'); ?></h2>
 			<p class="description"><?php esc_html_e('Search your Airtable projects and generate from a single record.', 'leadsforward-core'); ?></p>
+			<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-bottom: 12px;">
+				<?php wp_nonce_field('lf_ai_studio_scope_save', 'lf_ai_studio_scope_nonce'); ?>
+				<input type="hidden" name="action" value="lf_ai_studio_scope_save" />
+				<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+					<strong><?php esc_html_e('Generate:', 'leadsforward-core'); ?></strong>
+					<label><input type="checkbox" name="lf_ai_gen_homepage" value="1" <?php checked($gen_homepage); ?> /> <?php esc_html_e('Homepage', 'leadsforward-core'); ?></label>
+					<label><input type="checkbox" name="lf_ai_gen_services" value="1" <?php checked($gen_services); ?> /> <?php esc_html_e('Service pages', 'leadsforward-core'); ?></label>
+					<label><input type="checkbox" name="lf_ai_gen_service_areas" value="1" <?php checked($gen_service_areas); ?> /> <?php esc_html_e('Service area pages', 'leadsforward-core'); ?></label>
+					<label><input type="checkbox" name="lf_ai_gen_core_pages" value="1" <?php checked($gen_core_pages); ?> /> <?php esc_html_e('Core pages', 'leadsforward-core'); ?></label>
+					<button type="submit" class="button"><?php esc_html_e('Save Scope', 'leadsforward-core'); ?></button>
+				</div>
+				<p class="description" style="margin-top:8px;"><?php esc_html_e('Defaults to everything. Manifest can override with generation_scope=homepage_only.', 'leadsforward-core'); ?></p>
+			</form>
 			<?php if (!$airtable_ready) : ?>
 				<div class="notice notice-warning inline">
 					<p><?php esc_html_e('Airtable is not configured yet. Add your PAT, Base ID, and Table in Orchestrator Settings below, then save.', 'leadsforward-core'); ?></p>

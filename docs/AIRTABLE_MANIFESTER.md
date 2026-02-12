@@ -11,7 +11,7 @@ This document lists the Airtable field names used by the Website Manifester and 
 
 ## Generation Scope Toggles
 
-In **Global Settings → Website Manifester Settings**, you can limit what gets generated:
+In **Website Manifester → Airtable Projects**, you can limit what gets generated:
 
 - Homepage
 - Service pages
