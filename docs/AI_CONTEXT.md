@@ -54,6 +54,11 @@ This document keeps collaborating AI models and humans aligned on the current Le
 
 - On successful generation, dummy blog posts are created if none exist (placeholder content).
 
+## Blog Post Generation
+
+- When core page generation runs, up to three AI blog posts are created if no posts exist.
+- Blog posts are filled via Page Builder sections; titles/excerpts are auto-backfilled from hero copy.
+
 ## Section Rendering Updates
 
 - `content` section now renders heading + intro + body fields (no longer empty).

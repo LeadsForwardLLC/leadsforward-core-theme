@@ -17,6 +17,7 @@
 - Post-generation content QA audit + one-pass auto-repair (`inc/ai-studio.php`)
 - Quote Builder dynamic service options + niche fields (`inc/quote-builder.php`)
 - Service Details media column + process expectations/trust rendering (`inc/sections.php`)
+- AI blog post generation + title/excerpt backfill (`inc/ai-studio.php`)
 
 ## What’s missing
 - Page Builder parity:

@@ -498,7 +498,13 @@ Footer Structure (Append‑Only)
 - Footer now includes NAP, license (if present), and organized link columns.
 - Privacy and Terms are separated in the legal row for clarity.
 
+Blog Post Generation (Append‑Only)
+----------------------------------
+- When core pages are generated, the system creates up to 3 AI blog posts if none exist.
+- Blog posts are filled via Page Builder sections and auto-backfill post titles/excerpts from the hero copy.
+
 Append‑Only Change Log (Append‑Only)
 -----------------------------------
 2026‑02‑11 — Added Content QA audit + one‑pass auto‑repair and dynamic Quote Builder fields.
 2026‑02‑12 — Added content section rendering, benefits/process layout polish, service details media, and footer upgrade.
+2026‑02‑12 — Added AI blog post generation + title/excerpt backfill.
