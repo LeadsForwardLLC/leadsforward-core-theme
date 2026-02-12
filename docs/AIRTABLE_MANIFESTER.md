@@ -9,6 +9,17 @@ This document lists the Airtable field names used by the Website Manifester and 
 - **Table**: name shown in the left sidebar (example: `Business Info`).
 - **View**: name shown in the top dropdown (example: `Global Sync View`).
 
+## Generation Scope Toggles
+
+In **Global Settings → Website Manifester Settings**, you can limit what gets generated:
+
+- Homepage
+- Service pages
+- Service area pages
+- Core pages (About, Contact, Blog, etc.)
+
+Defaults to **all enabled**. A manifest can still override with `generation_scope: "homepage_only"`.
+
 ## Required Airtable Fields (default mapping)
 
 These fields must exist or the manifest will fail validation:

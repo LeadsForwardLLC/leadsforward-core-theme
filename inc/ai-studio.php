@@ -1956,6 +1956,36 @@ function lf_ai_studio_build_post_blueprint(\WP_Post $post, string $page, string 
 	];
 }
 
+function lf_ai_studio_get_generation_scope(array $manifest): array {
+	$default = [
+		'homepage' => true,
+		'services' => true,
+		'service_areas' => true,
+		'core_pages' => true,
+	];
+	$scope = [
+		'homepage' => get_option('lf_ai_gen_homepage', '1') === '1',
+		'services' => get_option('lf_ai_gen_services', '1') === '1',
+		'service_areas' => get_option('lf_ai_gen_service_areas', '1') === '1',
+		'core_pages' => get_option('lf_ai_gen_core_pages', '1') === '1',
+	];
+	foreach ($default as $key => $val) {
+		if (!isset($scope[$key])) {
+			$scope[$key] = $val;
+		}
+	}
+	$manifest_scope = (string) ($manifest['generation_scope'] ?? '');
+	if ($manifest_scope === 'homepage_only') {
+		$scope = [
+			'homepage' => true,
+			'services' => false,
+			'service_areas' => false,
+			'core_pages' => false,
+		];
+	}
+	return $scope;
+}
+
 function lf_ai_studio_build_full_site_payload(): array {
 	$manifest = lf_ai_studio_get_manifest();
 	$use_manifest = !empty($manifest);
@@ -1999,14 +2029,12 @@ function lf_ai_studio_build_full_site_payload(): array {
 		}
 	}
 
-	$generation_scope = '';
-	if ($use_manifest) {
-		$generation_scope = (string) ($manifest['generation_scope'] ?? '');
-	}
-	$homepage_only = ($generation_scope === 'homepage_only');
+	$scope = lf_ai_studio_get_generation_scope($manifest);
 
 	$blueprints = [];
-	$blueprints[] = $homepage_blueprint;
+	if ($scope['homepage']) {
+		$blueprints[] = $homepage_blueprint;
+	}
 
 	$overview_keyword = '';
 	if ($use_manifest) {
@@ -2018,7 +2046,7 @@ function lf_ai_studio_build_full_site_payload(): array {
 	$service_keyword_map = $use_manifest ? lf_ai_studio_manifest_keyword_map($manifest, 'services') : [];
 	$area_keyword_map = $use_manifest ? lf_ai_studio_manifest_keyword_map($manifest, 'service_areas') : [];
 
-	if (!$homepage_only) {
+	if ($scope['services']) {
 		$services = get_posts([
 			'post_type' => 'lf_service',
 			'post_status' => 'publish',
@@ -2039,7 +2067,9 @@ function lf_ai_studio_build_full_site_payload(): array {
 				$blueprints[] = $blueprint;
 			}
 		}
+	}
 
+	if ($scope['service_areas']) {
 		$areas = get_posts([
 			'post_type' => 'lf_service_area',
 			'post_status' => 'publish',
@@ -2060,7 +2090,9 @@ function lf_ai_studio_build_full_site_payload(): array {
 				$blueprints[] = $blueprint;
 			}
 		}
+	}
 
+	if ($scope['core_pages']) {
 		$about = get_page_by_path('about-us');
 		if ($about instanceof \WP_Post) {
 			$blueprint = lf_ai_studio_build_post_blueprint($about, 'about', 'about_overview', '');
@@ -2070,8 +2102,6 @@ function lf_ai_studio_build_full_site_payload(): array {
 		}
 
 		$core_pages = [
-			'our-services' => ['page' => 'services_overview', 'intent' => 'services_overview', 'keyword' => $overview_keyword],
-			'our-service-areas' => ['page' => 'service_areas_overview', 'intent' => 'service_areas_overview', 'keyword' => $overview_keyword],
 			'contact' => ['page' => 'contact', 'intent' => 'contact', 'keyword' => ''],
 			'reviews' => ['page' => 'reviews', 'intent' => 'reviews', 'keyword' => ''],
 			'blog' => ['page' => 'blog', 'intent' => 'blog', 'keyword' => ''],
@@ -2080,6 +2110,12 @@ function lf_ai_studio_build_full_site_payload(): array {
 			'terms-of-service' => ['page' => 'terms', 'intent' => 'terms', 'keyword' => ''],
 			'thank-you' => ['page' => 'thank_you', 'intent' => 'thank_you', 'keyword' => ''],
 		];
+		if ($scope['services']) {
+			$core_pages['our-services'] = ['page' => 'services_overview', 'intent' => 'services_overview', 'keyword' => $overview_keyword];
+		}
+		if ($scope['service_areas']) {
+			$core_pages['our-service-areas'] = ['page' => 'service_areas_overview', 'intent' => 'service_areas_overview', 'keyword' => $overview_keyword];
+		}
 		foreach ($core_pages as $slug => $meta) {
 			$page = get_page_by_path($slug);
 			if (!$page instanceof \WP_Post) {
@@ -2095,6 +2131,9 @@ function lf_ai_studio_build_full_site_payload(): array {
 				$blueprints[] = $blueprint;
 			}
 		}
+	}
+	if (empty($blueprints)) {
+		return ['error' => __('Generation scope has no enabled targets.', 'leadsforward-core')];
 	}
 
 	$business_name = $use_manifest ? (string) ($manifest['business']['name'] ?? '') : (string) ($homepage_payload['business_name'] ?? '');
