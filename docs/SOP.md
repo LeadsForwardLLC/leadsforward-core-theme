@@ -402,6 +402,16 @@ AI Studio (Append‑Only)
 
 ---
 
+Research Document System (Append‑Only)
+-------------------------------------
+- Optional research JSON used to guide positioning, CRO, and SEO.
+- Generated using `docs/MASTER_RESEARCH_PROMPT.md`.
+- Upload in **LeadsForward → Website Manifester → Upload Research File**.
+- Stored in `lf_site_research_document` and included in the orchestrator payload as `research_document`.
+- JSON must match the required schema; non‑JSON uploads are rejected.
+
+---
+
 Homepage Generation Flow (Append‑Only)
 --------------------------------------
 - Run **LeadsForward → Setup** to enter business info, niche, city/region, and homepage keywords.

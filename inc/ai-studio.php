@@ -23,6 +23,7 @@ add_action('admin_post_lf_ai_studio_generate', 'lf_ai_studio_handle_generate');
 add_action('admin_post_lf_ai_studio_retry', 'lf_ai_studio_handle_retry');
 add_action('admin_post_lf_ai_studio_manifest', 'lf_ai_studio_handle_manifest');
 add_action('admin_post_lf_ai_studio_manifest_template', 'lf_ai_studio_handle_manifest_template');
+add_action('admin_post_lf_ai_studio_research', 'lf_ai_studio_handle_research');
 add_action('admin_post_lf_ai_studio_run_audit', 'lf_ai_studio_handle_run_audit');
 add_action('admin_post_lf_ai_studio_regen_blog_posts', 'lf_ai_studio_handle_regen_blog_posts');
 add_action('admin_post_lf_ai_studio_save_logo', 'lf_ai_studio_handle_save_logo');
@@ -338,6 +339,58 @@ function lf_ai_studio_handle_manifest_template(): void {
 	exit;
 }
 
+function lf_ai_studio_handle_research(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
+	}
+	check_admin_referer('lf_ai_studio_research', 'lf_ai_studio_research_nonce');
+	$redirect = admin_url('admin.php?page=lf-ops');
+	if (empty($_FILES['lf_site_research']) || !is_array($_FILES['lf_site_research'])) {
+		update_option('lf_ai_studio_research_errors', [__('Research file is required.', 'leadsforward-core')], false);
+		wp_safe_redirect(add_query_arg('research_error', '1', $redirect));
+		exit;
+	}
+	$file = $_FILES['lf_site_research'];
+	if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+		update_option('lf_ai_studio_research_errors', [__('Research upload failed.', 'leadsforward-core')], false);
+		wp_safe_redirect(add_query_arg('research_error', '1', $redirect));
+		exit;
+	}
+	$filetype = wp_check_filetype_and_ext((string) ($file['tmp_name'] ?? ''), (string) ($file['name'] ?? ''));
+	$ext = $filetype['ext'] ?? '';
+	$type = $filetype['type'] ?? '';
+	if ($ext !== 'json' || !in_array($type, ['application/json', 'text/plain'], true)) {
+		update_option('lf_ai_studio_research_errors', [__('Research file must be valid JSON.', 'leadsforward-core')], false);
+		wp_safe_redirect(add_query_arg('research_error', '1', $redirect));
+		exit;
+	}
+	$raw = file_get_contents((string) ($file['tmp_name'] ?? ''));
+	if (!is_string($raw) || trim($raw) === '') {
+		update_option('lf_ai_studio_research_errors', [__('Research file is empty.', 'leadsforward-core')], false);
+		wp_safe_redirect(add_query_arg('research_error', '1', $redirect));
+		exit;
+	}
+	$raw = preg_replace('/^\xEF\xBB\xBF/', '', $raw);
+	$decoded = json_decode($raw, true);
+	if (!is_array($decoded)) {
+		$reason = function_exists('json_last_error_msg') ? json_last_error_msg() : '';
+		$message = $reason ? sprintf(__('Research JSON is invalid: %s', 'leadsforward-core'), $reason) : __('Research JSON is invalid.', 'leadsforward-core');
+		update_option('lf_ai_studio_research_errors', [$message], false);
+		wp_safe_redirect(add_query_arg('research_error', '1', $redirect));
+		exit;
+	}
+	$errors = lf_ai_studio_validate_research_document($decoded);
+	if (!empty($errors)) {
+		update_option('lf_ai_studio_research_errors', $errors, false);
+		wp_safe_redirect(add_query_arg('research_error', '1', $redirect));
+		exit;
+	}
+	update_option('lf_site_research_document', $decoded, false);
+	delete_option('lf_ai_studio_research_errors');
+	wp_safe_redirect(add_query_arg('research', '1', $redirect));
+	exit;
+}
+
 function lf_ai_studio_handle_run_audit(): void {
 	if (!current_user_can('edit_theme_options')) {
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
@@ -435,6 +488,9 @@ function lf_ai_studio_render_page(): void {
 	$manifest = lf_ai_studio_get_manifest();
 	$manifest_errors = get_option('lf_ai_studio_manifest_errors', []);
 	$manifest_saved = isset($_GET['manifest']) && $_GET['manifest'] === '1';
+	$research = lf_ai_studio_get_research_document();
+	$research_errors = get_option('lf_ai_studio_research_errors', []);
+	$research_saved = isset($_GET['research']) && $_GET['research'] === '1';
 	$audit_saved = isset($_GET['audit']) && $_GET['audit'] === '1';
 	$repair_queued = isset($_GET['job']) ? absint($_GET['job']) : 0;
 	$logo_saved = isset($_GET['logo']) && $_GET['logo'] === '1';
@@ -464,6 +520,9 @@ function lf_ai_studio_render_page(): void {
 		<?php endif; ?>
 		<?php if ($manifest_saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Manifest uploaded. Generation queued and running in the background.', 'leadsforward-core'); ?></p></div>
+		<?php endif; ?>
+		<?php if ($research_saved) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Research document uploaded.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
 		<?php if ($audit_saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Content audit completed.', 'leadsforward-core'); ?></p></div>
@@ -502,6 +561,16 @@ function lf_ai_studio_render_page(): void {
 				</ul>
 			</div>
 		<?php endif; ?>
+		<?php if (is_array($research_errors) && !empty($research_errors)) : ?>
+			<div class="notice notice-error">
+				<p><strong><?php esc_html_e('Research validation failed:', 'leadsforward-core'); ?></strong></p>
+				<ul>
+					<?php foreach ($research_errors as $err) : ?>
+						<li><?php echo esc_html((string) $err); ?></li>
+					<?php endforeach; ?>
+				</ul>
+			</div>
+		<?php endif; ?>
 		<div class="card lf-manifester-card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
 			<h2 style="margin-top:0;"><?php esc_html_e('Generate Site Content', 'leadsforward-core'); ?></h2>
 			<p class="description"><?php esc_html_e('Choose Airtable or upload a manifest. Set the logo first to apply brand colors automatically.', 'leadsforward-core'); ?></p>
@@ -521,6 +590,7 @@ function lf_ai_studio_render_page(): void {
 					<p class="description" style="margin-top:6px;"><?php esc_html_e('Uploading a logo updates your brand palette automatically.', 'leadsforward-core'); ?></p>
 				</form>
 			</div>
+			<?php $research_prompt_url = LF_THEME_URI . '/docs/MASTER_RESEARCH_PROMPT.md'; ?>
 			<div class="lf-manifester-grid">
 				<div class="lf-manifester-panel">
 					<h3 style="margin-top:0;"><?php esc_html_e('Manifest Upload (Deterministic)', 'leadsforward-core'); ?></h3>
@@ -545,6 +615,23 @@ function lf_ai_studio_render_page(): void {
 							<a class="button" href="<?php echo esc_url($template_url); ?>"><?php esc_html_e('Download Manifest Template', 'leadsforward-core'); ?></a>
 						</p>
 					</form>
+				</div>
+				<div class="lf-manifester-panel">
+					<h3 style="margin-top:0;"><?php esc_html_e('Upload Research File', 'leadsforward-core'); ?></h3>
+					<p class="description"><?php esc_html_e('Optional but recommended. Research informs positioning, SEO, and conversion strategy.', 'leadsforward-core'); ?></p>
+					<form id="lf-ai-research-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+						<?php wp_nonce_field('lf_ai_studio_research', 'lf_ai_studio_research_nonce'); ?>
+						<input type="hidden" name="action" value="lf_ai_studio_research" />
+						<input type="file" name="lf_site_research" accept="application/json,.json" />
+						<p class="submit">
+							<button type="submit" class="button button-primary"><?php esc_html_e('Upload Research', 'leadsforward-core'); ?></button>
+							<a class="button" href="<?php echo esc_url($research_prompt_url); ?>" download><?php esc_html_e('Download Master Research Prompt', 'leadsforward-core'); ?></a>
+						</p>
+					</form>
+					<p class="description"><?php esc_html_e('Generate research using this prompt. Save as JSON. Upload here before generating site.', 'leadsforward-core'); ?></p>
+					<?php if (!empty($research)) : ?>
+						<p class="description" style="margin-top:6px;"><?php esc_html_e('Research document stored and ready for the next generation run.', 'leadsforward-core'); ?></p>
+					<?php endif; ?>
 				</div>
 				<div class="lf-manifester-panel" id="lf-airtable-picker">
 					<h3 style="margin-top:0;"><?php esc_html_e('Airtable Projects', 'leadsforward-core'); ?></h3>
@@ -1659,6 +1746,11 @@ function lf_ai_studio_get_manifest(): array {
 	return is_array($manifest) ? $manifest : [];
 }
 
+function lf_ai_studio_get_research_document(): array {
+	$doc = get_option('lf_site_research_document', []);
+	return is_array($doc) ? $doc : [];
+}
+
 function lf_ai_studio_manifest_exists(): bool {
 	return !empty(lf_ai_studio_get_manifest());
 }
@@ -1808,6 +1900,99 @@ function lf_ai_studio_validate_manifest(array $manifest): array {
 				}
 				$area_slugs[] = $normalized_item['slug'];
 			}
+		}
+	}
+	return $errors;
+}
+
+function lf_ai_studio_validate_research_document(array $doc): array {
+	$errors = [];
+	$required_top = [
+		'brand_positioning',
+		'competitor_analysis',
+		'conversion_strategy',
+		'voice_guidelines',
+		'seo_strategy',
+		'faq_strategy',
+		'image_strategy',
+		'content_expansion_guidelines',
+	];
+	foreach ($required_top as $key) {
+		if (!isset($doc[$key]) || !is_array($doc[$key])) {
+			$errors[] = sprintf(__('Research document missing %s object.', 'leadsforward-core'), $key);
+		}
+	}
+	$brand = isset($doc['brand_positioning']) && is_array($doc['brand_positioning']) ? $doc['brand_positioning'] : [];
+	foreach (['market_angle', 'primary_differentiator', 'secondary_differentiators', 'authority_positioning', 'local_positioning_strategy'] as $key) {
+		if (!array_key_exists($key, $brand)) {
+			$errors[] = sprintf(__('Research document missing brand_positioning.%s.', 'leadsforward-core'), $key);
+		} elseif ($key === 'secondary_differentiators' && !is_array($brand[$key])) {
+			$errors[] = __('brand_positioning.secondary_differentiators must be an array.', 'leadsforward-core');
+		}
+	}
+	if (isset($doc['competitor_analysis'])) {
+		if (!is_array($doc['competitor_analysis'])) {
+			$errors[] = __('competitor_analysis must be an array.', 'leadsforward-core');
+		} else {
+			foreach ($doc['competitor_analysis'] as $index => $entry) {
+				if (!is_array($entry)) {
+					$errors[] = sprintf(__('Competitor entry %d must be an object.', 'leadsforward-core'), $index + 1);
+					continue;
+				}
+				foreach (['competitor_name', 'strengths', 'weaknesses', 'content_patterns', 'seo_patterns'] as $key) {
+					if (!array_key_exists($key, $entry)) {
+						$errors[] = sprintf(__('Competitor entry %d missing %s.', 'leadsforward-core'), $index + 1, $key);
+					} elseif ($key !== 'competitor_name' && !is_array($entry[$key])) {
+						$errors[] = sprintf(__('Competitor entry %d %s must be an array.', 'leadsforward-core'), $index + 1, $key);
+					}
+				}
+			}
+		}
+	}
+	$conversion = isset($doc['conversion_strategy']) && is_array($doc['conversion_strategy']) ? $doc['conversion_strategy'] : [];
+	foreach (['primary_cta_style', 'emotional_drivers', 'trust_elements_required', 'risk_reduction_elements'] as $key) {
+		if (!array_key_exists($key, $conversion)) {
+			$errors[] = sprintf(__('Research document missing conversion_strategy.%s.', 'leadsforward-core'), $key);
+		} elseif ($key !== 'primary_cta_style' && !is_array($conversion[$key])) {
+			$errors[] = sprintf(__('conversion_strategy.%s must be an array.', 'leadsforward-core'), $key);
+		}
+	}
+	$voice = isset($doc['voice_guidelines']) && is_array($doc['voice_guidelines']) ? $doc['voice_guidelines'] : [];
+	foreach (['tone', 'sentence_style', 'avoid_phrases', 'preferred_phrases', 'reading_level_target'] as $key) {
+		if (!array_key_exists($key, $voice)) {
+			$errors[] = sprintf(__('Research document missing voice_guidelines.%s.', 'leadsforward-core'), $key);
+		} elseif (in_array($key, ['avoid_phrases', 'preferred_phrases'], true) && !is_array($voice[$key])) {
+			$errors[] = sprintf(__('voice_guidelines.%s must be an array.', 'leadsforward-core'), $key);
+		}
+	}
+	$seo = isset($doc['seo_strategy']) && is_array($doc['seo_strategy']) ? $doc['seo_strategy'] : [];
+	foreach (['primary_keyword_clusters', 'semantic_entities', 'supporting_topics', 'internal_linking_angles'] as $key) {
+		if (!array_key_exists($key, $seo)) {
+			$errors[] = sprintf(__('Research document missing seo_strategy.%s.', 'leadsforward-core'), $key);
+		} elseif (!is_array($seo[$key])) {
+			$errors[] = sprintf(__('seo_strategy.%s must be an array.', 'leadsforward-core'), $key);
+		}
+	}
+	$faq = isset($doc['faq_strategy']) && is_array($doc['faq_strategy']) ? $doc['faq_strategy'] : [];
+	foreach (['objection_clusters', 'high_intent_questions', 'authority_questions'] as $key) {
+		if (!array_key_exists($key, $faq)) {
+			$errors[] = sprintf(__('Research document missing faq_strategy.%s.', 'leadsforward-core'), $key);
+		} elseif (!is_array($faq[$key])) {
+			$errors[] = sprintf(__('faq_strategy.%s must be an array.', 'leadsforward-core'), $key);
+		}
+	}
+	$image = isset($doc['image_strategy']) && is_array($doc['image_strategy']) ? $doc['image_strategy'] : [];
+	foreach (['recommended_image_types', 'placement_guidelines', 'alt_text_style'] as $key) {
+		if (!array_key_exists($key, $image)) {
+			$errors[] = sprintf(__('Research document missing image_strategy.%s.', 'leadsforward-core'), $key);
+		} elseif ($key !== 'alt_text_style' && !is_array($image[$key])) {
+			$errors[] = sprintf(__('image_strategy.%s must be an array.', 'leadsforward-core'), $key);
+		}
+	}
+	$expansion = isset($doc['content_expansion_guidelines']) && is_array($doc['content_expansion_guidelines']) ? $doc['content_expansion_guidelines'] : [];
+	foreach (['homepage_depth_strategy', 'service_page_depth_strategy', 'service_area_localization_strategy'] as $key) {
+		if (!array_key_exists($key, $expansion)) {
+			$errors[] = sprintf(__('Research document missing content_expansion_guidelines.%s.', 'leadsforward-core'), $key);
 		}
 	}
 	return $errors;
@@ -2978,7 +3163,7 @@ function lf_ai_studio_build_full_site_payload(): array {
 	}
 	error_log('LF MANIFEST: blueprints count ' . count($blueprints));
 	$internal_links = lf_ai_studio_internal_links_catalog();
-	return [
+	$payload = [
 		'request_id' => (string) ($homepage_payload['request_id'] ?? ''),
 		'variation_seed' => (string) ($homepage_payload['variation_seed'] ?? ''),
 		'business_name' => $business_name,
@@ -2998,6 +3183,11 @@ function lf_ai_studio_build_full_site_payload(): array {
 		],
 		'blueprints' => $blueprints,
 	];
+	$research = lf_ai_studio_get_research_document();
+	if (!empty($research)) {
+		$payload['research_document'] = $research;
+	}
+	return $payload;
 }
 
 function lf_ai_studio_build_blog_payload(): array {
@@ -3033,7 +3223,7 @@ function lf_ai_studio_build_blog_payload(): array {
 	$request_id = 'blog-' . $base_request_id . '-' . time();
 	$keywords = $homepage_payload['keywords'] ?? ['primary' => '', 'secondary' => []];
 	$internal_links = lf_ai_studio_internal_links_catalog();
-	return [
+	$payload = [
 		'request_id' => $request_id,
 		'variation_seed' => (string) ($homepage_payload['variation_seed'] ?? ''),
 		'business_name' => (string) ($homepage_payload['business_name'] ?? ''),
@@ -3053,6 +3243,11 @@ function lf_ai_studio_build_blog_payload(): array {
 		],
 		'blueprints' => $blueprints,
 	];
+	$research = lf_ai_studio_get_research_document();
+	if (!empty($research)) {
+		$payload['research_document'] = $research;
+	}
+	return $payload;
 }
 
 function lf_ai_studio_internal_links_catalog(): array {

@@ -18,6 +18,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 - **AI Studio orchestration**: `inc/ai-studio.php`
 - **SEO system**: `inc/seo/`
 - **Manifest schema**: `docs/MANIFEST_SCHEMA.md`
+- **Research prompt**: `docs/MASTER_RESEARCH_PROMPT.md`
 - **Section schema reference**: `docs/SECTION_SCHEMA.json`
 - **SOP**: `docs/SOP.md`
 - **README**: `README.md`
@@ -49,6 +50,13 @@ This document keeps collaborating AI models and humans aligned on the current Le
 - Manual QA audits queue a repair job when missing fields remain.
 - Airtable import can also sync Reviews from a dedicated Reviews table/view in the same base.
 - Reviews sync runs on an hourly WP‑Cron hook and filters by exact project name (from manifest or stored Airtable project context).
+
+## Research Document System
+
+- Optional research JSON that informs positioning, CRO, SEO, and messaging.
+- Stored in `lf_site_research_document` and uploaded from the Website Manifester UI.
+- Included in the orchestrator payload as `research_document` when present.
+- Must match the schema in `docs/MASTER_RESEARCH_PROMPT.md`; non‑JSON uploads are rejected.
 
 ## Reset Behavior (Dev)
 

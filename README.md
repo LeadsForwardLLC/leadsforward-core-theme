@@ -434,6 +434,15 @@ Completion is stored in option `lf_setup_wizard_complete`. Site setup does not s
 
 ---
 
+## Research Document System
+
+- **What it is:** Optional research JSON that informs positioning, CRO, SEO, and content strategy.
+- **Where it lives:** Stored in `lf_site_research_document` and generated from `docs/MASTER_RESEARCH_PROMPT.md`.
+- **How it feeds n8n:** Included in the orchestrator payload as `research_document` when present.
+- **Deterministic:** Optional input only; no template, registry, or apply logic changes.
+
+---
+
 ## Content Density: Template Field Coverage
 
 - **All allowed fields rendered:** Section templates already output every field in `allowed_field_keys` for each section type.
