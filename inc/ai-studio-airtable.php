@@ -500,16 +500,28 @@ function lf_ai_studio_airtable_fetch_reviews(
 	if (!empty($resolved['view'])) {
 		$params['view'] = $resolved['view'];
 	}
-
-	$response = lf_ai_studio_airtable_get($base_url, $params, $pat);
-	if (!empty($response['error'])) {
-		return ['error' => $response['error']];
-	}
-	$records = $response['data']['records'] ?? [];
-	if ($project_name !== '' && $project_field !== '') {
-		$records = lf_ai_studio_airtable_filter_reviews_by_project((array) $records, $project_name, $project_field);
-	}
-	return ['records' => $records];
+	$offset = '';
+	$pages = 0;
+	$max_pages = 80;
+	$matched = [];
+	do {
+		$page_params = $params;
+		if ($offset !== '') {
+			$page_params['offset'] = $offset;
+		}
+		$response = lf_ai_studio_airtable_get($base_url, $page_params, $pat);
+		if (!empty($response['error'])) {
+			return ['error' => $response['error']];
+		}
+		$records = $response['data']['records'] ?? [];
+		if ($project_name !== '' && $project_field !== '') {
+			$records = lf_ai_studio_airtable_filter_reviews_by_project((array) $records, $project_name, $project_field);
+		}
+		$matched = array_merge($matched, (array) $records);
+		$offset = isset($response['data']['offset']) ? (string) $response['data']['offset'] : '';
+		$pages++;
+	} while ($offset !== '' && $pages < $max_pages);
+	return ['records' => $matched];
 }
 
 function lf_ai_studio_airtable_reviews_filter_formula(string $project_name, string $project_field): string {
