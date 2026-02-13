@@ -520,6 +520,13 @@
         "storage_format": "raw string"
       },
       {
+        "key": "section_intent",
+        "type": "text",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
         "key": "section_heading",
         "type": "text",
         "expected_structure_if_list": "",
@@ -534,88 +541,60 @@
         "storage_format": "raw string"
       },
       {
-        "key": "section_body",
-        "type": "richtext",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "HTML string; rendered with wp_kses_post/wpautop",
-        "storage_format": "raw HTML string"
-      },
-      {
-        "key": "section_intro_secondary",
+        "key": "service_details_body",
         "type": "textarea",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
       },
       {
-        "key": "section_body_secondary",
-        "type": "richtext",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "HTML string; rendered with wp_kses_post/wpautop",
-        "storage_format": "raw HTML string"
-      },
-      {
-        "key": "section_bullets",
-        "type": "list",
-        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for list rendering",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string (newline-delimited)"
-      },
-      {
-        "key": "section_trust_block",
-        "type": "textarea",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "section_guarantee_text",
-        "type": "text",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "cta_primary_override",
-        "type": "text",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "cta_primary_action",
+        "key": "service_details_layout",
         "type": "select",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
       },
       {
-        "key": "cta_primary_url",
-        "type": "url",
+        "key": "service_details_media_mode",
+        "type": "select",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
       },
       {
-        "key": "image_id",
+        "key": "service_details_media_embed",
+        "type": "textarea",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "service_details_media_video_url",
+        "type": "text",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "service_details_media_image_id",
         "type": "image",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "integer (attachment ID)"
       },
       {
-        "key": "image_alt",
-        "type": "text",
-        "expected_structure_if_list": "",
+        "key": "service_details_checklist",
+        "type": "list",
+        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for checklist loop",
         "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
+        "storage_format": "raw string (newline-delimited)"
       },
       {
-        "key": "image_position",
-        "type": "select",
-        "expected_structure_if_list": "",
+        "key": "service_details_micro_sections",
+        "type": "list",
+        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for list rendering",
         "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
+        "storage_format": "raw string (newline-delimited)"
       },
       {
         "key": "icon_enabled",
@@ -665,6 +644,13 @@
         "storage_format": "raw string"
       },
       {
+        "key": "section_intent",
+        "type": "text",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
         "key": "section_heading",
         "type": "text",
         "expected_structure_if_list": "",
@@ -679,88 +665,60 @@
         "storage_format": "raw string"
       },
       {
-        "key": "section_body",
-        "type": "richtext",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "HTML string; rendered with wp_kses_post/wpautop",
-        "storage_format": "raw HTML string"
-      },
-      {
-        "key": "section_intro_secondary",
+        "key": "service_details_body",
         "type": "textarea",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
       },
       {
-        "key": "section_body_secondary",
-        "type": "richtext",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "HTML string; rendered with wp_kses_post/wpautop",
-        "storage_format": "raw HTML string"
-      },
-      {
-        "key": "section_bullets",
-        "type": "list",
-        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for list rendering",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string (newline-delimited)"
-      },
-      {
-        "key": "section_trust_block",
-        "type": "textarea",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "section_guarantee_text",
-        "type": "text",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "cta_primary_override",
-        "type": "text",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "cta_primary_action",
+        "key": "service_details_layout",
         "type": "select",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
       },
       {
-        "key": "cta_primary_url",
-        "type": "url",
+        "key": "service_details_media_mode",
+        "type": "select",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
       },
       {
-        "key": "image_id",
+        "key": "service_details_media_embed",
+        "type": "textarea",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "service_details_media_video_url",
+        "type": "text",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "service_details_media_image_id",
         "type": "image",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "integer (attachment ID)"
       },
       {
-        "key": "image_alt",
-        "type": "text",
-        "expected_structure_if_list": "",
+        "key": "service_details_checklist",
+        "type": "list",
+        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for checklist loop",
         "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
+        "storage_format": "raw string (newline-delimited)"
       },
       {
-        "key": "image_position",
-        "type": "select",
-        "expected_structure_if_list": "",
+        "key": "service_details_micro_sections",
+        "type": "list",
+        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for list rendering",
         "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
+        "storage_format": "raw string (newline-delimited)"
       },
       {
         "key": "section_intent",
@@ -824,6 +782,13 @@
         "storage_format": "raw string"
       },
       {
+        "key": "section_intent",
+        "type": "text",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
         "key": "section_heading",
         "type": "text",
         "expected_structure_if_list": "",
@@ -838,88 +803,60 @@
         "storage_format": "raw string"
       },
       {
-        "key": "section_body",
-        "type": "richtext",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "HTML string; rendered with wp_kses_post/wpautop",
-        "storage_format": "raw HTML string"
-      },
-      {
-        "key": "section_intro_secondary",
+        "key": "service_details_body",
         "type": "textarea",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
       },
       {
-        "key": "section_body_secondary",
-        "type": "richtext",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "HTML string; rendered with wp_kses_post/wpautop",
-        "storage_format": "raw HTML string"
-      },
-      {
-        "key": "section_bullets",
-        "type": "list",
-        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for list rendering",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string (newline-delimited)"
-      },
-      {
-        "key": "section_trust_block",
-        "type": "textarea",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "section_guarantee_text",
-        "type": "text",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "cta_primary_override",
-        "type": "text",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "cta_primary_action",
+        "key": "service_details_layout",
         "type": "select",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
       },
       {
-        "key": "cta_primary_url",
-        "type": "url",
+        "key": "service_details_media_mode",
+        "type": "select",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
       },
       {
-        "key": "image_id",
+        "key": "service_details_media_embed",
+        "type": "textarea",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "service_details_media_video_url",
+        "type": "text",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "service_details_media_image_id",
         "type": "image",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "integer (attachment ID)"
       },
       {
-        "key": "image_alt",
-        "type": "text",
-        "expected_structure_if_list": "",
+        "key": "service_details_checklist",
+        "type": "list",
+        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for checklist loop",
         "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
+        "storage_format": "raw string (newline-delimited)"
       },
       {
-        "key": "image_position",
-        "type": "select",
-        "expected_structure_if_list": "",
+        "key": "service_details_micro_sections",
+        "type": "list",
+        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for list rendering",
         "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
+        "storage_format": "raw string (newline-delimited)"
       },
       {
         "key": "icon_enabled",
@@ -969,6 +906,13 @@
         "storage_format": "raw string"
       },
       {
+        "key": "section_intent",
+        "type": "text",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
         "key": "section_heading",
         "type": "text",
         "expected_structure_if_list": "",
@@ -983,88 +927,60 @@
         "storage_format": "raw string"
       },
       {
-        "key": "section_body",
-        "type": "richtext",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "HTML string; rendered with wp_kses_post/wpautop",
-        "storage_format": "raw HTML string"
-      },
-      {
-        "key": "section_intro_secondary",
+        "key": "service_details_body",
         "type": "textarea",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
       },
       {
-        "key": "section_body_secondary",
-        "type": "richtext",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "HTML string; rendered with wp_kses_post/wpautop",
-        "storage_format": "raw HTML string"
-      },
-      {
-        "key": "section_bullets",
-        "type": "list",
-        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for list rendering",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string (newline-delimited)"
-      },
-      {
-        "key": "section_trust_block",
-        "type": "textarea",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "section_guarantee_text",
-        "type": "text",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "cta_primary_override",
-        "type": "text",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "cta_primary_action",
+        "key": "service_details_layout",
         "type": "select",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
       },
       {
-        "key": "cta_primary_url",
-        "type": "url",
+        "key": "service_details_media_mode",
+        "type": "select",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
       },
       {
-        "key": "image_id",
+        "key": "service_details_media_embed",
+        "type": "textarea",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "service_details_media_video_url",
+        "type": "text",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "service_details_media_image_id",
         "type": "image",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "integer (attachment ID)"
       },
       {
-        "key": "image_alt",
-        "type": "text",
-        "expected_structure_if_list": "",
+        "key": "service_details_checklist",
+        "type": "list",
+        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for checklist loop",
         "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
+        "storage_format": "raw string (newline-delimited)"
       },
       {
-        "key": "image_position",
-        "type": "select",
-        "expected_structure_if_list": "",
+        "key": "service_details_micro_sections",
+        "type": "list",
+        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for list rendering",
         "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
+        "storage_format": "raw string (newline-delimited)"
       },
       {
         "key": "section_intent",
@@ -1128,6 +1044,13 @@
         "storage_format": "raw string"
       },
       {
+        "key": "section_intent",
+        "type": "text",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
         "key": "section_heading",
         "type": "text",
         "expected_structure_if_list": "",
@@ -1142,88 +1065,60 @@
         "storage_format": "raw string"
       },
       {
-        "key": "section_body",
-        "type": "richtext",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "HTML string; rendered with wp_kses_post/wpautop",
-        "storage_format": "raw HTML string"
-      },
-      {
-        "key": "section_intro_secondary",
+        "key": "service_details_body",
         "type": "textarea",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
       },
       {
-        "key": "section_body_secondary",
-        "type": "richtext",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "HTML string; rendered with wp_kses_post/wpautop",
-        "storage_format": "raw HTML string"
-      },
-      {
-        "key": "section_bullets",
-        "type": "list",
-        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for list rendering",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string (newline-delimited)"
-      },
-      {
-        "key": "section_trust_block",
-        "type": "textarea",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "section_guarantee_text",
-        "type": "text",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "cta_primary_override",
-        "type": "text",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "cta_primary_action",
+        "key": "service_details_layout",
         "type": "select",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
       },
       {
-        "key": "cta_primary_url",
-        "type": "url",
+        "key": "service_details_media_mode",
+        "type": "select",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
       },
       {
-        "key": "image_id",
+        "key": "service_details_media_embed",
+        "type": "textarea",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "service_details_media_video_url",
+        "type": "text",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "service_details_media_image_id",
         "type": "image",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "integer (attachment ID)"
       },
       {
-        "key": "image_alt",
-        "type": "text",
-        "expected_structure_if_list": "",
+        "key": "service_details_checklist",
+        "type": "list",
+        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for checklist loop",
         "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
+        "storage_format": "raw string (newline-delimited)"
       },
       {
-        "key": "image_position",
-        "type": "select",
-        "expected_structure_if_list": "",
+        "key": "service_details_micro_sections",
+        "type": "list",
+        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for list rendering",
         "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
+        "storage_format": "raw string (newline-delimited)"
       },
       {
         "key": "section_intent",

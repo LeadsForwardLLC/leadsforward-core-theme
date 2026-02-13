@@ -352,6 +352,9 @@ function lf_homepage_merge_config_with_defaults(array $stored): array {
 		if ($type === 'hero') {
 			$row = lf_homepage_normalize_hero_cta_keys($row);
 		}
+		if (function_exists('lf_sections_normalize_service_details_settings')) {
+			$row = lf_sections_normalize_service_details_settings($type, $row);
+		}
 		$out[$type] = array_merge($default, $row);
 	}
 	return $out;

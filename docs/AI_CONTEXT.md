@@ -102,6 +102,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 - `content` section now renders heading + intro + body fields (no longer empty).
 - `process` section renders an optional expectations note beneath the steps when provided.
 - `service_details` renders heading/intro/body/checklist only, with optional media (image, embed, or self-hosted video) and left/right layout control.
+- `content_image` and `image_content` variants now use the `service_details` field set + renderer for consistency.
 - `related_links` defaults to services-only in core templates.
 
 ## Quote Builder Dynamics

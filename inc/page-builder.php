@@ -147,6 +147,9 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 			$instance_id = lf_pb_instance_id($type, $counts[$type]);
 			$row = is_array($legacy_sections[$type] ?? null) ? $legacy_sections[$type] : [];
 			$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+			if (function_exists('lf_sections_normalize_service_details_settings')) {
+				$settings = lf_sections_normalize_service_details_settings($type, $settings);
+			}
 			if ($type === 'hero' && in_array($context, ['page', 'post', 'service', 'service_area'], true)) {
 				$variant = $settings['variant'] ?? 'default';
 				if ($variant === '' || $variant === 'default') {
@@ -172,6 +175,9 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 				continue;
 			}
 			$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+			if (function_exists('lf_sections_normalize_service_details_settings')) {
+				$settings = lf_sections_normalize_service_details_settings($type, $settings);
+			}
 			if ($type === 'hero' && in_array($context, ['page', 'post', 'service', 'service_area'], true)) {
 				$variant = $settings['variant'] ?? 'default';
 				if ($variant === '' || $variant === 'default') {

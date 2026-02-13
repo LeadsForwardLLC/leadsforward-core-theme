@@ -18,6 +18,7 @@ add_action('admin_menu', 'lf_ops_register_menu', 10);
 add_action('admin_menu', 'lf_ops_remove_theme_options_menu', 999);
 add_action('admin_init', 'lf_ops_handle_global_settings_save');
 add_action('admin_enqueue_scripts', 'lf_ops_settings_assets');
+add_action('admin_post_lf_reviews_sync', 'lf_ops_handle_reviews_sync');
 
 function lf_ops_register_menu(): void {
 	// Parent: slug lf-ops so first submenu with same slug (Manifester) is the default — no redirect, avoids "headers already sent"
@@ -132,6 +133,40 @@ function lf_ops_settings_assets(string $hook): void {
 		[],
 		LF_THEME_VERSION
 	);
+}
+
+function lf_ops_handle_reviews_sync(): void {
+	if (!current_user_can(LF_OPS_CAP)) {
+		wp_die(esc_html__('Insufficient permissions.', 'leadsforward-core'));
+	}
+	check_admin_referer('lf_reviews_sync', 'lf_reviews_sync_nonce');
+	$settings = function_exists('lf_ai_studio_airtable_get_settings')
+		? lf_ai_studio_airtable_get_settings()
+		: [];
+	$reviews_table = trim((string) (($settings['reviews']['table'] ?? '') ?: ''));
+	if (empty($settings['enabled']) || $reviews_table === '') {
+		wp_safe_redirect(admin_url('admin.php?page=lf-global&reviews_sync=error&reviews_error=disabled'));
+		exit;
+	}
+	$project_name = function_exists('lf_ai_studio_airtable_get_project_name_for_reviews')
+		? lf_ai_studio_airtable_get_project_name_for_reviews($settings)
+		: '';
+	if ($project_name === '') {
+		wp_safe_redirect(admin_url('admin.php?page=lf-global&reviews_sync=error&reviews_error=project'));
+		exit;
+	}
+	$result = function_exists('lf_ai_studio_airtable_import_reviews_by_project')
+		? lf_ai_studio_airtable_import_reviews_by_project($project_name, $settings)
+		: ['error' => __('Reviews import is unavailable.', 'leadsforward-core')];
+	if (!empty($result['error'])) {
+		$error = rawurlencode((string) $result['error']);
+		wp_safe_redirect(admin_url('admin.php?page=lf-global&reviews_sync=error&reviews_error=' . $error));
+		exit;
+	}
+	update_option('lf_ai_airtable_reviews_last_sync', time(), false);
+	update_option('lf_ai_airtable_reviews_last_imported', (int) ($result['imported'] ?? 0), false);
+	wp_safe_redirect(admin_url('admin.php?page=lf-global&reviews_sync=1&reviews_imported=' . (int) ($result['imported'] ?? 0)));
+	exit;
 }
 
 function lf_ops_handle_global_settings_save(): void {
@@ -508,11 +543,38 @@ function lf_ops_render_global_settings_page(): void {
 	$airtable_review_defaults = function_exists('lf_ai_studio_airtable_reviews_default_field_map')
 		? lf_ai_studio_airtable_reviews_default_field_map()
 		: [];
+	$reviews_sync = isset($_GET['reviews_sync']) ? sanitize_text_field(wp_unslash((string) $_GET['reviews_sync'])) : '';
+	$reviews_imported = isset($_GET['reviews_imported']) ? (int) $_GET['reviews_imported'] : 0;
+	$reviews_error = isset($_GET['reviews_error']) ? sanitize_text_field(wp_unslash((string) $_GET['reviews_error'])) : '';
+	$reviews_project_name = function_exists('lf_ai_studio_airtable_get_project_name_for_reviews')
+		? lf_ai_studio_airtable_get_project_name_for_reviews($airtable_settings)
+		: '';
+	$reviews_last_sync = (int) get_option('lf_ai_airtable_reviews_last_sync', 0);
+	$reviews_last_imported = (int) get_option('lf_ai_airtable_reviews_last_imported', 0);
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></h1>
 		<?php if ($saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Settings saved.', 'leadsforward-core'); ?></p></div>
+		<?php endif; ?>
+		<?php if ($reviews_sync === '1') : ?>
+			<div class="notice notice-success is-dismissible">
+				<p><?php echo esc_html(sprintf(__('Reviews sync complete. Imported %d reviews.', 'leadsforward-core'), $reviews_imported)); ?></p>
+			</div>
+		<?php elseif ($reviews_sync === 'error') : ?>
+			<div class="notice notice-error is-dismissible">
+				<p>
+					<?php
+					if ($reviews_error === 'disabled') {
+						esc_html_e('Reviews sync is disabled or the reviews table is empty.', 'leadsforward-core');
+					} elseif ($reviews_error === 'project') {
+						esc_html_e('Reviews sync needs a project name from the manifest or stored project context.', 'leadsforward-core');
+					} else {
+						echo esc_html($reviews_error !== '' ? $reviews_error : __('Reviews sync failed. Check Airtable settings.', 'leadsforward-core'));
+					}
+					?>
+				</p>
+			</div>
 		<?php endif; ?>
 		<style>
 			.lf-settings-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.25rem; margin: 1.25rem 0; }
@@ -649,6 +711,34 @@ function lf_ops_render_global_settings_page(): void {
 											<?php endforeach; ?>
 										</div>
 									</details>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e('Manual sync', 'leadsforward-core'); ?></th>
+								<td>
+									<p class="description">
+										<?php
+										if ($reviews_project_name !== '') {
+											echo esc_html(sprintf(__('Project filter: %s', 'leadsforward-core'), $reviews_project_name));
+										} else {
+											esc_html_e('Project filter: not set yet (upload a manifest or generate from Airtable).', 'leadsforward-core');
+										}
+										?>
+									</p>
+									<?php if ($reviews_last_sync > 0) : ?>
+										<p class="description">
+											<?php
+											echo esc_html(
+												sprintf(
+													__('Last sync: %s (%d imported)', 'leadsforward-core'),
+													date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $reviews_last_sync),
+													$reviews_last_imported
+												)
+											);
+											?>
+										</p>
+									<?php endif; ?>
+									<button type="submit" class="button" form="lf-reviews-sync-form"><?php esc_html_e('Sync Reviews Now', 'leadsforward-core'); ?></button>
 								</td>
 							</tr>
 					</table>
@@ -1040,6 +1130,10 @@ function lf_ops_render_global_settings_page(): void {
 				</div>
 			</div>
 			<p class="submit"><button type="submit" class="button button-primary"><?php esc_html_e('Save Global Settings', 'leadsforward-core'); ?></button></p>
+		</form>
+		<form id="lf-reviews-sync-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+			<?php wp_nonce_field('lf_reviews_sync', 'lf_reviews_sync_nonce'); ?>
+			<input type="hidden" name="action" value="lf_reviews_sync" />
 		</form>
 	</div>
 	<script>

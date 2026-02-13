@@ -232,6 +232,96 @@ function lf_sections_registry(): array {
 	unset($field);
 	$media_fields_c[] = ['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'Local Trust & Reliability'];
 	$media_fields_c[] = ['key' => 'section_purpose', 'label' => __('Section purpose', 'leadsforward-core'), 'type' => 'text', 'default' => 'Emphasize local ownership, responsiveness, and accountability.'];
+	$service_details_fields = [
+		$bg_field,
+		['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'service_summary'],
+		['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Service Details', 'leadsforward-core')],
+		['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Everything you need to know before scheduling.', 'leadsforward-core')],
+		['key' => 'service_details_body', 'label' => __('Body copy', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+		['key' => 'service_details_layout', 'label' => __('Layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'content_media', 'options' => [
+			'content_media' => __('Content left / Media right', 'leadsforward-core'),
+			'media_content' => __('Media left / Content right', 'leadsforward-core'),
+		]],
+		['key' => 'service_details_media_mode', 'label' => __('Media mode', 'leadsforward-core'), 'type' => 'select', 'default' => 'video', 'options' => [
+			'video' => __('Video embed', 'leadsforward-core'),
+			'image' => __('Image', 'leadsforward-core'),
+			'none' => __('None', 'leadsforward-core'),
+		]],
+		['key' => 'service_details_media_embed', 'label' => __('Video embed code', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+		['key' => 'service_details_media_video_url', 'label' => __('Video URL (self-hosted or YouTube)', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
+		['key' => 'service_details_media_image_id', 'label' => __('Media image', 'leadsforward-core'), 'type' => 'image', 'default' => ''],
+		['key' => 'service_details_checklist', 'label' => __('Checklist (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Transparent scope and pricing' . "\n" . 'Clean, respectful crews' . "\n" . 'Work backed by warranty', 'leadsforward-core')],
+		['key' => 'service_details_micro_sections', 'label' => __('Service micro-sections (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
+	];
+	$service_details_variant = static function (array $fields, array $overrides): array {
+		foreach ($fields as &$field) {
+			$key = $field['key'] ?? '';
+			if ($key !== '' && array_key_exists($key, $overrides)) {
+				$field['default'] = $overrides[$key];
+			}
+		}
+		unset($field);
+		return $fields;
+	};
+	$media_defaults = [];
+	foreach ($media_fields as $field) {
+		if (!empty($field['key'])) {
+			$media_defaults[$field['key']] = $field['default'] ?? '';
+		}
+	}
+	$media_a_defaults = [];
+	foreach ($media_fields_a as $field) {
+		if (!empty($field['key'])) {
+			$media_a_defaults[$field['key']] = $field['default'] ?? '';
+		}
+	}
+	$media_b_defaults = [];
+	foreach ($media_fields_b as $field) {
+		if (!empty($field['key'])) {
+			$media_b_defaults[$field['key']] = $field['default'] ?? '';
+		}
+	}
+	$media_c_defaults = [];
+	foreach ($media_fields_c as $field) {
+		if (!empty($field['key'])) {
+			$media_c_defaults[$field['key']] = $field['default'] ?? '';
+		}
+	}
+	$service_details_fields_content = $service_details_variant($service_details_fields, [
+		'section_heading' => $media_defaults['section_heading'] ?? '',
+		'section_intro' => $media_defaults['section_intro'] ?? '',
+		'service_details_body' => $media_defaults['section_body'] ?? '',
+		'service_details_layout' => 'content_media',
+		'service_details_media_mode' => 'image',
+	]);
+	$service_details_fields_media = $service_details_variant($service_details_fields, [
+		'section_heading' => $media_defaults['section_heading'] ?? '',
+		'section_intro' => $media_defaults['section_intro'] ?? '',
+		'service_details_body' => $media_defaults['section_body'] ?? '',
+		'service_details_layout' => 'media_content',
+		'service_details_media_mode' => 'image',
+	]);
+	$service_details_fields_a = $service_details_variant($service_details_fields, [
+		'section_heading' => $media_a_defaults['section_heading'] ?? '',
+		'section_intro' => $media_a_defaults['section_intro'] ?? '',
+		'service_details_body' => $media_a_defaults['section_body'] ?? '',
+		'service_details_layout' => 'content_media',
+		'service_details_media_mode' => 'image',
+	]);
+	$service_details_fields_b = $service_details_variant($service_details_fields, [
+		'section_heading' => $media_b_defaults['section_heading'] ?? '',
+		'section_intro' => $media_b_defaults['section_intro'] ?? '',
+		'service_details_body' => $media_b_defaults['section_body'] ?? '',
+		'service_details_layout' => 'media_content',
+		'service_details_media_mode' => 'image',
+	]);
+	$service_details_fields_c = $service_details_variant($service_details_fields, [
+		'section_heading' => $media_c_defaults['section_heading'] ?? '',
+		'section_intro' => $media_c_defaults['section_intro'] ?? '',
+		'service_details_body' => $media_c_defaults['section_body'] ?? '',
+		'service_details_layout' => 'content_media',
+		'service_details_media_mode' => 'image',
+	]);
 	$icon_fields = lf_sections_icon_fields();
 	$sections = [
 		'hero' => [
@@ -303,59 +393,38 @@ function lf_sections_registry(): array {
 		'service_details' => [
 			'label' => __('Service Details', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service'],
-			'fields' => [
-				$bg_field,
-				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'service_summary'],
-				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Service Details', 'leadsforward-core')],
-				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Everything you need to know before scheduling.', 'leadsforward-core')],
-				['key' => 'service_details_body', 'label' => __('Body copy', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
-				['key' => 'service_details_layout', 'label' => __('Layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'content_media', 'options' => [
-					'content_media' => __('Content left / Media right', 'leadsforward-core'),
-					'media_content' => __('Media left / Content right', 'leadsforward-core'),
-				]],
-				['key' => 'service_details_media_mode', 'label' => __('Media mode', 'leadsforward-core'), 'type' => 'select', 'default' => 'video', 'options' => [
-					'video' => __('Video embed', 'leadsforward-core'),
-					'image' => __('Image', 'leadsforward-core'),
-					'none' => __('None', 'leadsforward-core'),
-				]],
-				['key' => 'service_details_media_embed', 'label' => __('Video embed code', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
-				['key' => 'service_details_media_video_url', 'label' => __('Video URL (self-hosted or YouTube)', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
-				['key' => 'service_details_media_image_id', 'label' => __('Media image', 'leadsforward-core'), 'type' => 'image', 'default' => ''],
-				['key' => 'service_details_checklist', 'label' => __('Checklist (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Transparent scope and pricing' . "\n" . 'Clean, respectful crews' . "\n" . 'Work backed by warranty', 'leadsforward-core')],
-				// Added for density expansion – vNext
-				['key' => 'service_details_micro_sections', 'label' => __('Service micro-sections (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
-			],
+			'fields' => $service_details_fields,
 			'render' => 'lf_sections_render_service_details',
 		],
 		'content_image' => [
-			'label' => __('Content with Image', 'leadsforward-core'),
+			'label' => __('Service Details (Alt)', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area', 'page'],
-			'fields' => $media_fields,
-			'render' => 'lf_sections_render_content_image',
+			'fields' => $service_details_fields_content,
+			'render' => 'lf_sections_render_service_details',
 		],
 		'content_image_a' => [
-			'label' => __('Content with Image (A)', 'leadsforward-core'),
+			'label' => __('Service Details (A)', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area', 'page'],
-			'fields' => $media_fields_a,
-			'render' => 'lf_sections_render_content_image',
+			'fields' => $service_details_fields_a,
+			'render' => 'lf_sections_render_service_details',
 		],
 		'image_content' => [
-			'label' => __('Image with Content', 'leadsforward-core'),
+			'label' => __('Service Details (Alt • Media Left)', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area', 'page'],
-			'fields' => $media_fields,
-			'render' => 'lf_sections_render_image_content',
+			'fields' => $service_details_fields_media,
+			'render' => 'lf_sections_render_service_details',
 		],
 		'image_content_b' => [
-			'label' => __('Image with Content (B)', 'leadsforward-core'),
+			'label' => __('Service Details (B)', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area', 'page'],
-			'fields' => $media_fields_b,
-			'render' => 'lf_sections_render_image_content',
+			'fields' => $service_details_fields_b,
+			'render' => 'lf_sections_render_service_details',
 		],
 		'content_image_c' => [
-			'label' => __('Content with Image (C)', 'leadsforward-core'),
+			'label' => __('Service Details (C)', 'leadsforward-core'),
 			'contexts' => ['homepage'],
-			'fields' => $media_fields_c,
-			'render' => 'lf_sections_render_content_image',
+			'fields' => $service_details_fields_c,
+			'render' => 'lf_sections_render_service_details',
 		],
 		'content_centered' => [
 			'label' => __('Centered Content', 'leadsforward-core'),
@@ -683,11 +752,54 @@ function lf_sections_defaults_for(string $section_id, string $niche_slug = ''): 
 	return $defaults;
 }
 
+function lf_sections_service_details_alias_layouts(): array {
+	return [
+		'content_image' => 'content_media',
+		'content_image_a' => 'content_media',
+		'content_image_c' => 'content_media',
+		'image_content' => 'media_content',
+		'image_content_b' => 'media_content',
+	];
+}
+
+function lf_sections_normalize_service_details_settings(string $section_id, array $settings): array {
+	$aliases = lf_sections_service_details_alias_layouts();
+	if (!isset($aliases[$section_id])) {
+		return $settings;
+	}
+	$out = $settings;
+	if (empty($out['service_details_layout'])) {
+		$out['service_details_layout'] = $aliases[$section_id];
+	}
+	if (empty($out['service_details_body'])) {
+		$body_primary = trim((string) ($settings['section_body'] ?? ''));
+		$body_secondary = trim((string) ($settings['section_body_secondary'] ?? ''));
+		if ($body_primary !== '' && $body_secondary !== '') {
+			$out['service_details_body'] = $body_primary . "\n\n" . $body_secondary;
+		} elseif ($body_primary !== '') {
+			$out['service_details_body'] = $body_primary;
+		} elseif ($body_secondary !== '') {
+			$out['service_details_body'] = $body_secondary;
+		}
+	}
+	if (empty($out['service_details_checklist']) && !empty($settings['section_bullets'])) {
+		$out['service_details_checklist'] = $settings['section_bullets'];
+	}
+	if (empty($out['service_details_media_image_id']) && !empty($settings['image_id'])) {
+		$out['service_details_media_image_id'] = $settings['image_id'];
+	}
+	if (empty($out['service_details_media_mode'])) {
+		$out['service_details_media_mode'] = !empty($out['service_details_media_image_id']) ? 'image' : 'video';
+	}
+	return $out;
+}
+
 function lf_sections_sanitize_settings(string $section_id, array $input): array {
 	$section = lf_sections_registry()[$section_id] ?? null;
 	if (!$section) {
 		return [];
 	}
+	$input = lf_sections_normalize_service_details_settings($section_id, $input);
 	$out = [];
 	foreach ($section['fields'] as $field) {
 		$key = $field['key'];
@@ -921,6 +1033,7 @@ function lf_sections_render_section(string $section_id, string $context, array $
 	if (!$section) {
 		return;
 	}
+	$settings = lf_sections_normalize_service_details_settings($section_id, $settings);
 	$callback = $section['render'] ?? '';
 	if (is_callable($callback)) {
 		call_user_func($callback, $context, $settings, $post);
