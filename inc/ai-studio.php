@@ -1364,6 +1364,152 @@ function lf_ai_studio_scaffold_manifest(array $manifest): array {
 		update_option('show_on_front', 'page');
 		update_option('page_on_front', $home->ID);
 	}
+	$scaffold_success = is_array($result) && !empty($result['success']);
+	if ($scaffold_success) {
+		$seo_settings = function_exists('lf_seo_get_settings') ? lf_seo_get_settings() : get_option('lf_seo_settings', []);
+		if (!is_array($seo_settings)) {
+			$seo_settings = [];
+		}
+		$seo_settings = array_replace_recursive([
+			'general' => [],
+			'schema' => [],
+			'sitemap' => [],
+			'ai' => [],
+		], $seo_settings);
+		$seo_settings['general']['title_template'] = '{{page_title}} | {{primary_city}} | {{brand}}';
+		$seo_settings['schema']['enable_local_business'] = true;
+		$seo_settings['sitemap']['enable'] = true;
+		$seo_settings['ai']['enable_auto_keywords'] = true;
+		$seo_settings['ai']['enable_keyword_map'] = true;
+		$seo_settings['ai_keyword_engine'] = true;
+		update_option('lf_seo_settings', $seo_settings);
+
+		if (!empty($seo_settings['ai_keyword_engine'])) {
+			$homepage_primary = sanitize_text_field((string) ($manifest['homepage']['primary_keyword'] ?? ''));
+			$secondary_raw = $manifest['homepage']['secondary_keywords'] ?? [];
+			if (is_string($secondary_raw)) {
+				$secondary_raw = preg_split('/\r\n|\r|\n|,/', $secondary_raw);
+			}
+			if (!is_array($secondary_raw)) {
+				$secondary_raw = [];
+			}
+			$secondary_pool = array_values(array_unique(array_filter(array_map('sanitize_text_field', $secondary_raw))));
+			if ($homepage_primary !== '') {
+				$secondary_pool = array_values(array_filter($secondary_pool, function ($keyword) use ($homepage_primary) {
+					return strcasecmp($keyword, $homepage_primary) !== 0;
+				}));
+			}
+
+			$map = [
+				'primary' => [],
+				'secondary' => [
+					'pool' => $secondary_pool,
+				],
+				'last_index' => [],
+			];
+			if ($homepage_primary !== '') {
+				$map['primary']['homepage'] = $homepage_primary;
+			}
+			$homepage_id = (int) get_option('page_on_front');
+			if (!$homepage_id) {
+				$homepage_id = $home instanceof \WP_Post ? (int) $home->ID : 0;
+			}
+			if ($homepage_id > 0 && $homepage_primary !== '') {
+				update_post_meta($homepage_id, '_lf_seo_primary_keyword', $homepage_primary);
+			}
+
+			$used = [];
+			if ($homepage_primary !== '') {
+				$used[strtolower($homepage_primary)] = true;
+			}
+
+			$services = get_posts([
+				'post_type' => 'lf_service',
+				'post_status' => 'publish',
+				'posts_per_page' => -1,
+				'orderby' => 'menu_order title',
+				'order' => 'ASC',
+				'no_found_rows' => true,
+			]);
+			$service_keywords = [];
+			$service_index = 0;
+			if (!empty($secondary_pool)) {
+				$pool_count = count($secondary_pool);
+				foreach ($services as $service) {
+					$keyword = $secondary_pool[$service_index % $pool_count] ?? '';
+					$service_index++;
+					$keyword = trim((string) $keyword);
+					if ($keyword === '') {
+						continue;
+					}
+					update_post_meta($service->ID, '_lf_seo_primary_keyword', $keyword);
+					$map['primary']['post:' . (int) $service->ID] = $keyword;
+					$used[strtolower($keyword)] = true;
+					$service_keywords[] = $keyword;
+				}
+			}
+			$map['last_index']['service'] = $service_index;
+
+			$areas = get_posts([
+				'post_type' => 'lf_service_area',
+				'post_status' => 'publish',
+				'posts_per_page' => -1,
+				'orderby' => 'menu_order title',
+				'order' => 'ASC',
+				'no_found_rows' => true,
+			]);
+			$area_index = 0;
+			if (!empty($service_keywords)) {
+				foreach ($areas as $area) {
+					$service_keyword = $service_keywords[$area_index % count($service_keywords)] ?? '';
+					$area_index++;
+					$area_city = trim((string) get_the_title($area));
+					$keyword = trim(implode(' ', array_filter([$service_keyword, $area_city])));
+					if ($keyword === '') {
+						continue;
+					}
+					if ($homepage_primary !== '' && strcasecmp($keyword, $homepage_primary) === 0) {
+						continue;
+					}
+					update_post_meta($area->ID, '_lf_seo_primary_keyword', $keyword);
+					$map['primary']['post:' . (int) $area->ID] = $keyword;
+				}
+			}
+			$map['last_index']['service_area'] = $area_index;
+
+			$remaining_pool = [];
+			foreach ($secondary_pool as $keyword) {
+				if (!isset($used[strtolower($keyword)])) {
+					$remaining_pool[] = $keyword;
+				}
+			}
+			$posts = get_posts([
+				'post_type' => 'post',
+				'post_status' => 'publish',
+				'posts_per_page' => -1,
+				'orderby' => 'date',
+				'order' => 'DESC',
+				'no_found_rows' => true,
+			]);
+			$post_index = 0;
+			if (!empty($remaining_pool)) {
+				$pool_count = count($remaining_pool);
+				foreach ($posts as $post_item) {
+					$keyword = $remaining_pool[$post_index % $pool_count] ?? '';
+					$post_index++;
+					$keyword = trim((string) $keyword);
+					if ($keyword === '') {
+						continue;
+					}
+					update_post_meta($post_item->ID, '_lf_seo_primary_keyword', $keyword);
+					$map['primary']['post:' . (int) $post_item->ID] = $keyword;
+				}
+			}
+			$map['last_index']['post'] = $post_index;
+
+			update_option('lf_keyword_map', $map);
+		}
+	}
 	return is_array($result) ? $result : ['success' => false, 'message' => __('Setup runner failed.', 'leadsforward-core')];
 }
 
