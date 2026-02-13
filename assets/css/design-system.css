@@ -99,6 +99,39 @@
 	--lf-card-shadow-spotlight: 0 4px 20px rgba(15, 23, 42, 0.1);
 	--lf-card-accent-left: var(--lf-border-width-accent) solid var(--lf-primary);
 
+	/* Pills & badges */
+	--lf-pill-radius: 999px;
+	--lf-pill-radius-lg: 999px;
+	--lf-pill-padding-y: 0.25rem;
+	--lf-pill-padding-x: 0.75rem;
+	--lf-pill-font-size: 0.78rem;
+	--lf-pill-font-weight: 600;
+	--lf-pill-border: var(--lf-border-width) solid rgba(15, 23, 42, 0.1);
+	--lf-pill-bg: var(--lf-surface-soft);
+	--lf-pill-color: var(--lf-text-primary);
+	--lf-pill-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+	--lf-pill-muted-bg: rgba(15, 23, 42, 0.04);
+	--lf-pill-muted-border: var(--lf-border-width) solid rgba(15, 23, 42, 0.08);
+	--lf-pill-accent-bg: rgba(37, 99, 235, 0.12);
+	--lf-pill-accent-border: var(--lf-border-width) solid rgba(37, 99, 235, 0.18);
+	--lf-pill-accent-color: var(--lf-primary);
+	--lf-pill-icon-bg: var(--lf-pill-accent-bg);
+	--lf-pill-icon-border: var(--lf-pill-accent-border);
+	--lf-pill-icon-color: var(--lf-primary);
+	--lf-pill-icon-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+	--lf-pill-container-radius: var(--lf-pill-radius-lg);
+	--lf-pill-container-bg: var(--lf-pill-muted-bg);
+	--lf-pill-container-border: var(--lf-pill-muted-border);
+	--lf-pill-container-shadow: var(--lf-pill-shadow);
+	--lf-pill-eyebrow-bg: var(--lf-hero-eyebrow-bg, var(--lf-pill-bg));
+	--lf-pill-eyebrow-border: var(--lf-hero-eyebrow-border, var(--lf-pill-border));
+	--lf-pill-eyebrow-color: var(--lf-hero-eyebrow-text, var(--lf-pill-color));
+	--lf-pill-eyebrow-size: 0.72rem;
+	--lf-pill-eyebrow-letter-spacing: 0.12em;
+	--lf-pill-cta-bg: rgba(255, 255, 255, 0.12);
+	--lf-pill-cta-border: 1px solid rgba(255, 255, 255, 0.22);
+	--lf-pill-cta-color: var(--lf-text-inverse, #ffffff);
+
 	/* Decision cards (Services + Areas): use card system */
 	--lf-card-decision-padding-y: var(--lf-card-padding);
 	--lf-card-decision-padding-x: var(--lf-card-padding-lg);
@@ -476,11 +509,11 @@ button:focus-visible,
 	gap: 0.75rem 1.5rem;
 	justify-content: center;
 	text-align: center;
-	background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.96));
-	border: 1px solid rgba(15, 23, 42, 0.08);
-	border-radius: 999px;
+	background: var(--lf-pill-container-bg);
+	border: var(--lf-pill-container-border);
+	border-radius: var(--lf-pill-container-radius);
 	padding: 0.85rem 1.5rem;
-	box-shadow: 0 20px 44px rgba(15, 23, 42, 0.12);
+	box-shadow: var(--lf-pill-container-shadow);
 	margin: 0 auto;
 	max-width: 100%;
 }
@@ -490,10 +523,10 @@ button:focus-visible,
 	align-items: center;
 	gap: 0.5rem;
 	font-weight: var(--lf-fw-semibold);
-	background: rgba(15, 23, 42, 0.04);
-	padding: 0.25rem 0.7rem;
-	border-radius: 999px;
-	border: 1px solid rgba(15, 23, 42, 0.08);
+	background: var(--lf-pill-muted-bg);
+	padding: var(--lf-pill-padding-y) var(--lf-pill-padding-x);
+	border-radius: var(--lf-pill-radius);
+	border: var(--lf-pill-muted-border);
 }
 
 .lf-trust-bar__score,
@@ -509,10 +542,14 @@ button:focus-visible,
 }
 
 .lf-trust-bar__badge {
-	background: var(--lf-surface-soft);
-	border-radius: 999px;
-	padding: 0.25rem 0.75rem;
-	font-size: var(--lf-fs-sm);
+	background: var(--lf-pill-bg);
+	border-radius: var(--lf-pill-radius);
+	padding: var(--lf-pill-padding-y) var(--lf-pill-padding-x);
+	font-size: var(--lf-pill-font-size);
+	font-weight: var(--lf-pill-font-weight);
+	border: var(--lf-pill-border);
+	box-shadow: var(--lf-pill-shadow);
+	color: var(--lf-pill-color);
 	display: inline-flex;
 	align-items: center;
 	gap: 0.35rem;
@@ -1909,14 +1946,19 @@ button:focus-visible,
 	color: var(--lf-text-inverse);
 }
 
-.lf-block-hero.lf-surface-dark .lf-hero-trust {
-	background: rgba(255, 255, 255, 0.12);
-	border-color: rgba(255, 255, 255, 0.24);
-}
-
-.lf-block-hero.lf-surface-dark .lf-hero-trust__badge {
-	background: rgba(255, 255, 255, 0.18);
-	color: #f8fafc;
+.lf-block-hero.lf-surface-dark {
+	--lf-pill-container-bg: rgba(255, 255, 255, 0.12);
+	--lf-pill-container-border: 1px solid rgba(255, 255, 255, 0.24);
+	--lf-pill-accent-bg: rgba(255, 255, 255, 0.18);
+	--lf-pill-accent-border: 1px solid rgba(255, 255, 255, 0.28);
+	--lf-pill-accent-color: #f8fafc;
+	--lf-pill-icon-bg: rgba(255, 255, 255, 0.18);
+	--lf-pill-icon-border: 1px solid rgba(255, 255, 255, 0.28);
+	--lf-pill-icon-color: #f8fafc;
+	--lf-pill-eyebrow-bg: rgba(255, 255, 255, 0.12);
+	--lf-pill-eyebrow-border: 1px solid rgba(255, 255, 255, 0.25);
+	--lf-pill-eyebrow-color: var(--lf-text-inverse);
+	--lf-pill-shadow: 0 16px 32px rgba(0, 0, 0, 0.35);
 }
 
 .lf-block-hero.lf-surface-dark .lf-hero-trust__value,
@@ -1924,11 +1966,6 @@ button:focus-visible,
 	color: #f8fafc;
 }
 
-.lf-block-hero.lf-surface-dark .lf-block-hero__eyebrow {
-	background: rgba(255, 255, 255, 0.12);
-	border-color: rgba(255, 255, 255, 0.25);
-	color: var(--lf-text-inverse);
-}
 
 .lf-block-hero.lf-surface-dark .lf-block-hero__card,
 .lf-block-hero.lf-surface-dark .lf-block-hero__form,
@@ -1999,15 +2036,15 @@ button:focus-visible,
 	align-items: center;
 	justify-content: center;
 	margin: 0 0 1rem;
-	padding: 0.35rem 0.9rem;
-	border-radius: 999px;
-	background: var(--lf-surface-light);
-	border: 1px solid rgba(15,23,42,0.1);
-	font-size: 0.72rem;
+	padding: var(--lf-pill-padding-y) var(--lf-pill-padding-x);
+	border-radius: var(--lf-pill-radius);
+	background: var(--lf-pill-eyebrow-bg);
+	border: var(--lf-pill-eyebrow-border);
+	font-size: var(--lf-pill-eyebrow-size);
 	font-weight: 700;
-	letter-spacing: 0.12em;
+	letter-spacing: var(--lf-pill-eyebrow-letter-spacing);
 	text-transform: uppercase;
-	color: var(--lf-text-primary);
+	color: var(--lf-pill-eyebrow-color);
 }
 
 .lf-block-hero__cta {
@@ -2057,21 +2094,24 @@ button:focus-visible,
 	flex-wrap: wrap;
 	gap: 0.65rem 0.85rem;
 	padding: 0.45rem 0.75rem;
-	border-radius: 999px;
-	border: 1px solid rgba(15, 23, 42, 0.08);
-	background: rgba(15, 23, 42, 0.04);
-	box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+	border-radius: var(--lf-pill-container-radius);
+	border: var(--lf-pill-container-border);
+	background: var(--lf-pill-container-bg);
+	box-shadow: var(--lf-pill-container-shadow);
 }
 
 .lf-hero-trust__badge {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.35rem;
-	padding: 0.2rem 0.55rem;
-	border-radius: 999px;
-	background: rgba(37, 99, 235, 0.12);
-	color: var(--lf-primary);
-	font-weight: 700;
+	padding: var(--lf-pill-padding-y) var(--lf-pill-padding-x);
+	border-radius: var(--lf-pill-radius);
+	background: var(--lf-pill-accent-bg);
+	border: var(--lf-pill-accent-border);
+	color: var(--lf-pill-accent-color);
+	font-weight: var(--lf-pill-font-weight);
+	font-size: var(--lf-pill-font-size);
+	box-shadow: var(--lf-pill-shadow);
 }
 
 .lf-hero-trust__icon {
@@ -2080,9 +2120,11 @@ button:focus-visible,
 	justify-content: center;
 	width: 2rem;
 	height: 2rem;
-	border-radius: 999px;
-	background: rgba(37, 99, 235, 0.12);
-	color: var(--lf-primary);
+	border-radius: var(--lf-pill-radius);
+	background: var(--lf-pill-icon-bg);
+	border: var(--lf-pill-icon-border);
+	color: var(--lf-pill-icon-color);
+	box-shadow: var(--lf-pill-icon-shadow);
 }
 
 .lf-hero-trust__rating {
@@ -3431,13 +3473,14 @@ button:focus-visible,
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	padding: 0.35rem 0.9rem;
-	border-radius: 999px;
-	background: rgba(255,255,255,0.1);
-	border: 1px solid rgba(255,255,255,0.2);
-	font-size: 0.75rem;
+	padding: var(--lf-pill-padding-y) var(--lf-pill-padding-x);
+	border-radius: var(--lf-pill-radius);
+	background: var(--lf-pill-cta-bg);
+	border: var(--lf-pill-cta-border);
+	color: var(--lf-pill-cta-color);
+	font-size: var(--lf-pill-eyebrow-size);
 	font-weight: 700;
-	letter-spacing: 0.12em;
+	letter-spacing: var(--lf-pill-eyebrow-letter-spacing);
 	text-transform: uppercase;
 }
 
@@ -4409,13 +4452,14 @@ html {
 .lf-post-card__pill {
 	display: inline-flex;
 	align-items: center;
-	padding: 0.2rem 0.65rem;
-	border-radius: 999px;
-	background: var(--lf-surface-soft);
-	border: var(--lf-border-width) solid var(--lf-neutral-200);
-	color: var(--lf-text-primary);
-	font-weight: 600;
-	font-size: 0.8rem;
+	padding: var(--lf-pill-padding-y) var(--lf-pill-padding-x);
+	border-radius: var(--lf-pill-radius);
+	background: var(--lf-pill-bg);
+	border: var(--lf-pill-border);
+	color: var(--lf-pill-color);
+	font-weight: var(--lf-pill-font-weight);
+	font-size: var(--lf-pill-font-size);
+	box-shadow: var(--lf-pill-shadow);
 }
 
 .lf-blog-hero__back {
@@ -4573,9 +4617,11 @@ html {
 	min-width: 2.25rem;
 	height: 2.25rem;
 	margin: 0 0.25rem;
-	border-radius: 999px;
-	border: var(--lf-border-width) solid var(--lf-neutral-300);
-	color: var(--lf-text-primary);
+	border-radius: var(--lf-pill-radius);
+	border: var(--lf-pill-border);
+	background: var(--lf-pill-bg);
+	color: var(--lf-pill-color);
+	box-shadow: var(--lf-pill-shadow);
 	text-decoration: none;
 	font-weight: 600;
 }
@@ -4596,8 +4642,16 @@ html {
 }
 
 .lf-blog-tags a {
-	color: var(--lf-text-primary);
-	font-weight: 600;
+	display: inline-flex;
+	align-items: center;
+	padding: var(--lf-pill-padding-y) var(--lf-pill-padding-x);
+	border-radius: var(--lf-pill-radius);
+	background: var(--lf-pill-bg);
+	border: var(--lf-pill-border);
+	color: var(--lf-pill-color);
+	font-weight: var(--lf-pill-font-weight);
+	font-size: var(--lf-pill-font-size);
+	box-shadow: var(--lf-pill-shadow);
 	text-decoration: none;
 }
 
@@ -4834,13 +4888,14 @@ html {
 .lf-post-card__pill {
 	display: inline-flex;
 	align-items: center;
-	padding: 0.2rem 0.65rem;
-	border-radius: 999px;
-	background: var(--lf-surface-soft);
-	border: var(--lf-border-width) solid var(--lf-neutral-200);
-	color: var(--lf-text-primary);
-	font-weight: 600;
-	font-size: 0.8rem;
+	padding: var(--lf-pill-padding-y) var(--lf-pill-padding-x);
+	border-radius: var(--lf-pill-radius);
+	background: var(--lf-pill-bg);
+	border: var(--lf-pill-border);
+	color: var(--lf-pill-color);
+	font-weight: var(--lf-pill-font-weight);
+	font-size: var(--lf-pill-font-size);
+	box-shadow: var(--lf-pill-shadow);
 }
 
 .lf-blog-hero__back {
@@ -4998,9 +5053,11 @@ html {
 	min-width: 2.25rem;
 	height: 2.25rem;
 	margin: 0 0.25rem;
-	border-radius: 999px;
-	border: var(--lf-border-width) solid var(--lf-neutral-300);
-	color: var(--lf-text-primary);
+	border-radius: var(--lf-pill-radius);
+	border: var(--lf-pill-border);
+	background: var(--lf-pill-bg);
+	color: var(--lf-pill-color);
+	box-shadow: var(--lf-pill-shadow);
 	text-decoration: none;
 	font-weight: 600;
 }

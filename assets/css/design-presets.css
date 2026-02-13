@@ -35,6 +35,21 @@
 	--lf-hero-stack-shadow: 0 16px 38px rgba(15, 23, 42, 0.1);
 	--lf-card-accent-left: 4px solid var(--lf-color-primary);
 	--lf-hero-media-shell: rgba(255, 255, 255, 0.7);
+	--lf-pill-radius: 999px;
+	--lf-pill-radius-lg: 999px;
+	--lf-pill-padding-y: 0.25rem;
+	--lf-pill-padding-x: 0.75rem;
+	--lf-pill-font-size: 0.78rem;
+	--lf-pill-border: 1px solid rgba(15, 23, 42, 0.08);
+	--lf-pill-bg: #f8fafc;
+	--lf-pill-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+	--lf-pill-container-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+	--lf-pill-muted-bg: rgba(15, 23, 42, 0.04);
+	--lf-pill-muted-border: 1px solid rgba(15, 23, 42, 0.08);
+	--lf-pill-accent-bg: rgba(37, 99, 235, 0.14);
+	--lf-pill-accent-border: 1px solid rgba(37, 99, 235, 0.22);
+	--lf-pill-icon-bg: rgba(37, 99, 235, 0.12);
+	--lf-pill-icon-border: 1px solid rgba(37, 99, 235, 0.2);
 }
 
 .lf-design-bold-authority {
@@ -76,6 +91,21 @@
 	--lf-hero-stack-shadow: 0 24px 50px rgba(0, 0, 0, 0.45);
 	--lf-card-accent-left: 4px solid var(--lf-color-secondary);
 	--lf-hero-media-shell: rgba(15, 23, 42, 0.6);
+	--lf-pill-radius: 0.5rem;
+	--lf-pill-radius-lg: 0.65rem;
+	--lf-pill-padding-y: 0.2rem;
+	--lf-pill-padding-x: 0.7rem;
+	--lf-pill-font-size: 0.76rem;
+	--lf-pill-border: 2px solid rgba(2, 6, 23, 0.22);
+	--lf-pill-bg: #fff7ed;
+	--lf-pill-shadow: 0 14px 30px rgba(2, 6, 23, 0.25);
+	--lf-pill-container-shadow: 0 20px 44px rgba(2, 6, 23, 0.32);
+	--lf-pill-muted-bg: rgba(2, 6, 23, 0.06);
+	--lf-pill-muted-border: 2px solid rgba(2, 6, 23, 0.18);
+	--lf-pill-accent-bg: rgba(249, 115, 22, 0.2);
+	--lf-pill-accent-border: 2px solid rgba(249, 115, 22, 0.35);
+	--lf-pill-icon-bg: rgba(249, 115, 22, 0.2);
+	--lf-pill-icon-border: 2px solid rgba(249, 115, 22, 0.3);
 }
 
 .lf-design-bold-authority .lf-block-hero,
@@ -115,6 +145,21 @@
 	--lf-hero-stack-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
 	--lf-card-accent-left: 4px solid var(--lf-color-tertiary);
 	--lf-hero-media-shell: rgba(255, 255, 255, 0.75);
+	--lf-pill-radius: 999px;
+	--lf-pill-radius-lg: 999px;
+	--lf-pill-padding-y: 0.3rem;
+	--lf-pill-padding-x: 0.9rem;
+	--lf-pill-font-size: 0.8rem;
+	--lf-pill-border: 1px solid rgba(22, 163, 74, 0.15);
+	--lf-pill-bg: #fff7ed;
+	--lf-pill-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+	--lf-pill-container-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+	--lf-pill-muted-bg: rgba(22, 163, 74, 0.08);
+	--lf-pill-muted-border: 1px solid rgba(22, 163, 74, 0.12);
+	--lf-pill-accent-bg: rgba(22, 163, 74, 0.18);
+	--lf-pill-accent-border: 1px solid rgba(22, 163, 74, 0.25);
+	--lf-pill-icon-bg: rgba(22, 163, 74, 0.16);
+	--lf-pill-icon-border: 1px solid rgba(22, 163, 74, 0.2);
 }
 
 .lf-design-high-contrast {
@@ -155,6 +200,21 @@
 	--lf-hero-stack-shadow: 0 24px 52px rgba(0, 0, 0, 0.5);
 	--lf-card-accent-left: 4px solid #facc15;
 	--lf-hero-media-shell: rgba(11, 11, 11, 0.6);
+	--lf-pill-radius: 0.25rem;
+	--lf-pill-radius-lg: 0.25rem;
+	--lf-pill-padding-y: 0.2rem;
+	--lf-pill-padding-x: 0.6rem;
+	--lf-pill-font-size: 0.75rem;
+	--lf-pill-border: 2px solid rgba(17, 24, 39, 0.4);
+	--lf-pill-bg: #ffffff;
+	--lf-pill-shadow: none;
+	--lf-pill-container-shadow: none;
+	--lf-pill-muted-bg: #f1f5f9;
+	--lf-pill-muted-border: 2px solid rgba(17, 24, 39, 0.28);
+	--lf-pill-accent-bg: rgba(220, 38, 38, 0.18);
+	--lf-pill-accent-border: 2px solid rgba(220, 38, 38, 0.35);
+	--lf-pill-icon-bg: rgba(220, 38, 38, 0.18);
+	--lf-pill-icon-border: 2px solid rgba(220, 38, 38, 0.35);
 }
 
 .lf-design-modern-edge {
@@ -189,6 +249,21 @@
 	--lf-hero-stack-shadow: 0 20px 44px rgba(15, 23, 42, 0.14);
 	--lf-card-accent-left: 4px solid var(--lf-color-primary);
 	--lf-hero-media-shell: rgba(255, 255, 255, 0.7);
+	--lf-pill-radius: 1rem;
+	--lf-pill-radius-lg: 1rem;
+	--lf-pill-padding-y: 0.25rem;
+	--lf-pill-padding-x: 0.8rem;
+	--lf-pill-font-size: 0.78rem;
+	--lf-pill-border: 1px solid rgba(15, 23, 42, 0.08);
+	--lf-pill-bg: #eef2ff;
+	--lf-pill-shadow: 0 12px 26px rgba(15, 23, 42, 0.14);
+	--lf-pill-container-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+	--lf-pill-muted-bg: rgba(14, 165, 233, 0.08);
+	--lf-pill-muted-border: 1px solid rgba(14, 165, 233, 0.16);
+	--lf-pill-accent-bg: rgba(14, 165, 233, 0.16);
+	--lf-pill-accent-border: 1px solid rgba(14, 165, 233, 0.3);
+	--lf-pill-icon-bg: rgba(99, 102, 241, 0.16);
+	--lf-pill-icon-border: 1px solid rgba(99, 102, 241, 0.28);
 }
 
 .lf-design-structured-modular {
@@ -218,6 +293,21 @@
 	--lf-hero-eyebrow-bg: #ffffff;
 	--lf-hero-eyebrow-border: 2px solid rgba(15, 23, 42, 0.18);
 	--lf-hero-eyebrow-text: #0f172a;
+	--lf-pill-radius: 0.2rem;
+	--lf-pill-radius-lg: 0.2rem;
+	--lf-pill-padding-y: 0.2rem;
+	--lf-pill-padding-x: 0.65rem;
+	--lf-pill-font-size: 0.75rem;
+	--lf-pill-border: 2px solid rgba(15, 23, 42, 0.18);
+	--lf-pill-bg: #f3f4f6;
+	--lf-pill-shadow: none;
+	--lf-pill-container-shadow: none;
+	--lf-pill-muted-bg: #f3f4f6;
+	--lf-pill-muted-border: 2px solid rgba(15, 23, 42, 0.18);
+	--lf-pill-accent-bg: rgba(37, 99, 235, 0.12);
+	--lf-pill-accent-border: 2px solid rgba(37, 99, 235, 0.3);
+	--lf-pill-icon-bg: rgba(37, 99, 235, 0.12);
+	--lf-pill-icon-border: 2px solid rgba(37, 99, 235, 0.3);
 	--lf-hero-stack-bg: rgba(255, 255, 255, 0.92);
 	--lf-hero-stack-border: 2px solid rgba(15, 23, 42, 0.14);
 	--lf-hero-stack-shadow: none;
