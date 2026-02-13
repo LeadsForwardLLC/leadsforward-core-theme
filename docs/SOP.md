@@ -556,6 +556,7 @@ Manifester UX (Append‑Only)
 - Logo upload sits in the Manifester and applies brand colors before generation.
 - Manifest Upload and Airtable Projects live in one combined panel for quick selection.
 - QA panel includes a “Regenerate AI Blog Posts” action for blog-only refreshes.
+- Reviews can be synced from a separate Airtable Reviews table or view (best via Airtable Sync into the main base).
 
 Service Generation (Append‑Only)
 --------------------------------

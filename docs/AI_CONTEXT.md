@@ -47,6 +47,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 - Post‑apply content audit runs after orchestrator callbacks and stores a QA report.
 - Auto‑repair will requeue one focused pass when missing/default fields remain.
 - Manual QA audits queue a repair job when missing fields remain.
+- Airtable import can also sync Reviews from a dedicated Reviews table/view in the same base.
 
 ## Reset Behavior (Dev)
 
