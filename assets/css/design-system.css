@@ -1691,6 +1691,23 @@ button:focus-visible,
 	font-style: normal;
 }
 
+.lf-footer-nap__item {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.lf-footer-nap__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 0.7;
+}
+
+.lf-footer-nap__text {
+	display: inline-block;
+}
+
 .lf-footer-nap__name {
 	font-weight: 700;
 	font-size: 1.05rem;
@@ -2053,6 +2070,17 @@ button:focus-visible,
 	background: rgba(37, 99, 235, 0.12);
 	color: var(--lf-primary);
 	font-weight: 700;
+}
+
+.lf-hero-trust__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	border-radius: 999px;
+	background: rgba(37, 99, 235, 0.12);
+	color: var(--lf-primary);
 }
 
 .lf-hero-trust__rating {

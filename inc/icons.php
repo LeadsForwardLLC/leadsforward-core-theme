@@ -32,7 +32,17 @@ function lf_icon_aliases(): array {
 		'lightning' => 'zap',
 		'water-drop' => 'droplet',
 		'roof' => 'home',
+		'social-facebook' => 'facebook',
+		'social-instagram' => 'instagram',
+		'social-youtube' => 'youtube',
+		'social-linkedin' => 'linkedin',
+		'social-tiktok' => 'video',
+		'social-x' => 'twitter',
 	];
+}
+
+function lf_icon_extra_icons(): array {
+	return ['facebook', 'instagram', 'youtube', 'linkedin', 'twitter', 'video', 'mail'];
 }
 
 function lf_icon_normalize_slug(string $slug): string {
@@ -46,6 +56,7 @@ function lf_icon_normalize_slug(string $slug): string {
 
 function lf_icon_list(): array {
 	$slugs = function_exists('lf_icon_pack_all_icons') ? lf_icon_pack_all_icons() : [];
+	$slugs = array_merge($slugs, lf_icon_extra_icons());
 	$slugs = array_filter(array_map('sanitize_title', $slugs));
 	$slugs = array_values(array_filter($slugs, function ($slug) {
 		return strpos((string) $slug, 'social-') !== 0;

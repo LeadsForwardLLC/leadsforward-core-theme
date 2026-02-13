@@ -17,12 +17,12 @@ $entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() :
 $license = (string) ($entity['license_number'] ?? '');
 $social = is_array($entity['social'] ?? null) ? $entity['social'] : [];
 $social_map = [
-	'facebook' => ['label' => __('Facebook', 'leadsforward-core'), 'icon' => 'social-facebook'],
-	'instagram' => ['label' => __('Instagram', 'leadsforward-core'), 'icon' => 'social-instagram'],
-	'youtube' => ['label' => __('YouTube', 'leadsforward-core'), 'icon' => 'social-youtube'],
-	'linkedin' => ['label' => __('LinkedIn', 'leadsforward-core'), 'icon' => 'social-linkedin'],
-	'tiktok' => ['label' => __('TikTok', 'leadsforward-core'), 'icon' => 'social-tiktok'],
-	'x' => ['label' => __('X', 'leadsforward-core'), 'icon' => 'social-x'],
+	'facebook' => ['label' => __('Facebook', 'leadsforward-core'), 'icon' => 'facebook'],
+	'instagram' => ['label' => __('Instagram', 'leadsforward-core'), 'icon' => 'instagram'],
+	'youtube' => ['label' => __('YouTube', 'leadsforward-core'), 'icon' => 'youtube'],
+	'linkedin' => ['label' => __('LinkedIn', 'leadsforward-core'), 'icon' => 'linkedin'],
+	'tiktok' => ['label' => __('TikTok', 'leadsforward-core'), 'icon' => 'video'],
+	'x' => ['label' => __('X', 'leadsforward-core'), 'icon' => 'twitter'],
 ];
 $social_links = [];
 foreach ($social_map as $key => $meta) {
@@ -83,16 +83,36 @@ if (!$has_nap && empty($services) && empty($areas) && empty($company_links) && e
 						<span class="lf-footer-nap__name"><?php echo esc_html($nap['name']); ?></span>
 					<?php endif; ?>
 					<?php if (!empty($nap['address'])) : ?>
-						<span class="lf-footer-nap__address"><?php echo nl2br(esc_html($nap['address'])); ?></span>
+						<span class="lf-footer-nap__item lf-footer-nap__address">
+							<?php if (function_exists('lf_icon')) : ?>
+								<span class="lf-footer-nap__icon" aria-hidden="true"><?php echo lf_icon('map-pin', ['class' => 'lf-icon--sm lf-icon--inherit']); ?></span>
+							<?php endif; ?>
+							<span class="lf-footer-nap__text"><?php echo nl2br(esc_html($nap['address'])); ?></span>
+						</span>
 					<?php endif; ?>
 					<?php if (!empty($nap['phone'])) : ?>
-						<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $nap['phone'])); ?>" class="lf-footer-nap__phone"><?php echo esc_html($nap['phone']); ?></a>
+						<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $nap['phone'])); ?>" class="lf-footer-nap__item lf-footer-nap__phone">
+							<?php if (function_exists('lf_icon')) : ?>
+								<span class="lf-footer-nap__icon" aria-hidden="true"><?php echo lf_icon('phone', ['class' => 'lf-icon--sm lf-icon--inherit']); ?></span>
+							<?php endif; ?>
+							<span class="lf-footer-nap__text"><?php echo esc_html($nap['phone']); ?></span>
+						</a>
 					<?php endif; ?>
 					<?php if (!empty($nap['email'])) : ?>
-						<a href="mailto:<?php echo esc_attr($nap['email']); ?>" class="lf-footer-nap__email"><?php echo esc_html($nap['email']); ?></a>
+						<a href="mailto:<?php echo esc_attr($nap['email']); ?>" class="lf-footer-nap__item lf-footer-nap__email">
+							<?php if (function_exists('lf_icon')) : ?>
+								<span class="lf-footer-nap__icon" aria-hidden="true"><?php echo lf_icon('mail', ['class' => 'lf-icon--sm lf-icon--inherit']); ?></span>
+							<?php endif; ?>
+							<span class="lf-footer-nap__text"><?php echo esc_html($nap['email']); ?></span>
+						</a>
 					<?php endif; ?>
 					<?php if ($license !== '') : ?>
-						<span class="lf-footer-nap__license"><?php echo esc_html(sprintf(__('License: %s', 'leadsforward-core'), $license)); ?></span>
+						<span class="lf-footer-nap__item lf-footer-nap__license">
+							<?php if (function_exists('lf_icon')) : ?>
+								<span class="lf-footer-nap__icon" aria-hidden="true"><?php echo lf_icon('shield', ['class' => 'lf-icon--sm lf-icon--inherit']); ?></span>
+							<?php endif; ?>
+							<span class="lf-footer-nap__text"><?php echo esc_html(sprintf(__('License: %s', 'leadsforward-core'), $license)); ?></span>
+						</span>
 					<?php endif; ?>
 					<?php if (!empty($social_links)) : ?>
 						<div class="lf-footer-social" aria-label="<?php esc_attr_e('Social media', 'leadsforward-core'); ?>">

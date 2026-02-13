@@ -131,6 +131,9 @@ if ($review_count > 0 && post_type_exists('lf_testimonial')) {
 $show_trust_strip = $review_count > 0;
 $trust_label = __('Trusted by local homeowners', 'leadsforward-core');
 $trust_reviews = sprintf(_n('%d review', '%d reviews', $review_count, 'leadsforward-core'), $review_count);
+$homeowner_count = $review_count > 0 ? $review_count : 200;
+$homeowner_display = number_format_i18n($homeowner_count);
+$homeowner_label = __('Trusted by local homeowners', 'leadsforward-core');
 $trust_strip_html = '';
 if ($show_trust_strip) {
 	$reviews_display = number_format_i18n($review_count);
@@ -138,6 +141,13 @@ if ($show_trust_strip) {
 	ob_start();
 	?>
 	<div class="lf-hero-trust">
+		<span class="lf-hero-trust__icon" aria-hidden="true">
+			<?php
+			if (function_exists('lf_icon')) {
+				echo lf_icon('home', ['class' => 'lf-icon--sm lf-icon--inherit']);
+			}
+			?>
+		</span>
 		<span class="lf-hero-trust__badge">
 			<span class="lf-block-hero__stars" aria-hidden="true">
 				<?php for ($i = 0; $i < 5; $i++) : ?>
@@ -147,8 +157,8 @@ if ($show_trust_strip) {
 			<span class="lf-hero-trust__rating"><?php echo esc_html($rating_display); ?></span>
 		</span>
 		<span class="lf-hero-trust__stat">
-			<span class="lf-hero-trust__value"><?php echo esc_html($reviews_display); ?>+</span>
-			<span class="lf-hero-trust__label"><?php echo esc_html($trust_label); ?></span>
+			<span class="lf-hero-trust__value"><?php echo esc_html($homeowner_display); ?></span>
+			<span class="lf-hero-trust__label"><?php echo esc_html($homeowner_label); ?></span>
 		</span>
 		<span class="lf-hero-trust__stat">
 			<span class="lf-hero-trust__value"><?php echo esc_html($reviews_display); ?></span>
