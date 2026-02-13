@@ -162,7 +162,7 @@ function lf_design_overrides_css(): string {
 	$card_shadow = (string) get_option('lf_design_card_shadow', '');
 	$section_spacing = (string) get_option('lf_design_section_spacing', '');
 
-	$css = ':root{';
+	$css = ':root, body[class*="lf-design-"], .editor-styles-wrapper{';
 	if ($heading_font !== '' && isset($font_map[$heading_font])) {
 		$css .= '--lf-font-heading:' . $font_map[$heading_font] . ';';
 	}
