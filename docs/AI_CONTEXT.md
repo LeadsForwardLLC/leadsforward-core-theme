@@ -79,8 +79,8 @@ This document keeps collaborating AI models and humans aligned on the current Le
 
 ## SEO Engine
 
-- Global SEO settings live in the `lf_seo_settings` option (LeadsForward → SEO).
-- Per-page overrides are stored in post meta with `_lf_seo_` prefix.
+- Global SEO settings live in the `lf_seo_settings` option (LeadsForward → SEO), including header/body/footer script injections.
+- Per-page overrides are stored in post meta with `_lf_seo_` prefix, plus script overrides in `_lf_seo_scripts`.
 - Automatic keyword assignment stores mapping in `lf_keyword_map`.
 - XML sitemap is served at `/sitemap.xml` when enabled.
 

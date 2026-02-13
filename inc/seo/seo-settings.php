@@ -52,6 +52,11 @@ function lf_seo_get_settings(): array {
 			'facebook_app_id' => '',
 			'twitter_card' => 'summary_large_image',
 		],
+		'scripts' => [
+			'header' => '',
+			'body_open' => '',
+			'footer' => '',
+		],
 		'schema' => [
 			'organization_type' => 'Organization',
 			'enable_local_business' => true,
@@ -119,6 +124,13 @@ function lf_seo_handle_save(): void {
 	$twitter_card = isset($_POST['lf_seo_twitter_card']) ? sanitize_text_field(wp_unslash($_POST['lf_seo_twitter_card'])) : 'summary_large_image';
 	$settings['social']['twitter_card'] = in_array($twitter_card, ['summary', 'summary_large_image'], true) ? $twitter_card : 'summary_large_image';
 
+	$header_scripts = isset($_POST['lf_seo_header_scripts']) ? wp_unslash($_POST['lf_seo_header_scripts']) : '';
+	$body_open_scripts = isset($_POST['lf_seo_body_open_scripts']) ? wp_unslash($_POST['lf_seo_body_open_scripts']) : '';
+	$footer_scripts = isset($_POST['lf_seo_footer_scripts']) ? wp_unslash($_POST['lf_seo_footer_scripts']) : '';
+	$settings['scripts']['header'] = lf_seo_sanitize_scripts((string) $header_scripts);
+	$settings['scripts']['body_open'] = lf_seo_sanitize_scripts((string) $body_open_scripts);
+	$settings['scripts']['footer'] = lf_seo_sanitize_scripts((string) $footer_scripts);
+
 	$org_type = isset($_POST['lf_seo_organization_type']) ? sanitize_text_field(wp_unslash($_POST['lf_seo_organization_type'])) : 'Organization';
 	$allowed_org_types = [
 		'Organization',
@@ -147,6 +159,61 @@ function lf_seo_handle_save(): void {
 	update_option('lf_seo_settings', $settings);
 	wp_safe_redirect(add_query_arg('saved', '1', admin_url('admin.php?page=lf-seo')));
 	exit;
+}
+
+function lf_seo_sanitize_scripts(string $value): string {
+	$value = trim($value);
+	if ($value === '') {
+		return '';
+	}
+	if (current_user_can('unfiltered_html')) {
+		return $value;
+	}
+	$allowed = wp_kses_allowed_html('post');
+	$allowed['script'] = [
+		'type' => true,
+		'src' => true,
+		'async' => true,
+		'defer' => true,
+		'crossorigin' => true,
+		'integrity' => true,
+		'nomodule' => true,
+		'referrerpolicy' => true,
+		'id' => true,
+		'nonce' => true,
+	];
+	$allowed['noscript'] = [];
+	$allowed['iframe'] = [
+		'src' => true,
+		'height' => true,
+		'width' => true,
+		'style' => true,
+		'frameborder' => true,
+		'allow' => true,
+		'allowfullscreen' => true,
+		'loading' => true,
+		'referrerpolicy' => true,
+	];
+	$allowed['link'] = [
+		'rel' => true,
+		'href' => true,
+		'type' => true,
+		'media' => true,
+		'crossorigin' => true,
+		'referrerpolicy' => true,
+	];
+	$allowed['meta'] = [
+		'name' => true,
+		'content' => true,
+		'property' => true,
+		'charset' => true,
+	];
+	$allowed['style'] = [
+		'type' => true,
+		'media' => true,
+		'nonce' => true,
+	];
+	return wp_kses($value, $allowed);
 }
 
 function lf_seo_render_settings_page(): void {
@@ -226,6 +293,31 @@ function lf_seo_render_settings_page(): void {
 							<option value="summary" <?php selected(($settings['social']['twitter_card'] ?? '') === 'summary'); ?>><?php esc_html_e('Summary', 'leadsforward-core'); ?></option>
 							<option value="summary_large_image" <?php selected(($settings['social']['twitter_card'] ?? '') === 'summary_large_image'); ?>><?php esc_html_e('Summary Large Image', 'leadsforward-core'); ?></option>
 						</select>
+					</td>
+				</tr>
+			</table>
+
+			<h2><?php esc_html_e('Scripts', 'leadsforward-core'); ?></h2>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><label for="lf_seo_header_scripts"><?php esc_html_e('Header scripts', 'leadsforward-core'); ?></label></th>
+					<td>
+						<textarea class="large-text code" rows="4" id="lf_seo_header_scripts" name="lf_seo_header_scripts"><?php echo esc_textarea((string) ($settings['scripts']['header'] ?? '')); ?></textarea>
+						<p class="description"><?php esc_html_e('Injected into wp_head. Include full <script> tags as needed.', 'leadsforward-core'); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_seo_body_open_scripts"><?php esc_html_e('Body open scripts', 'leadsforward-core'); ?></label></th>
+					<td>
+						<textarea class="large-text code" rows="4" id="lf_seo_body_open_scripts" name="lf_seo_body_open_scripts"><?php echo esc_textarea((string) ($settings['scripts']['body_open'] ?? '')); ?></textarea>
+						<p class="description"><?php esc_html_e('Injected on wp_body_open right after <body>.', 'leadsforward-core'); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="lf_seo_footer_scripts"><?php esc_html_e('Footer scripts', 'leadsforward-core'); ?></label></th>
+					<td>
+						<textarea class="large-text code" rows="4" id="lf_seo_footer_scripts" name="lf_seo_footer_scripts"><?php echo esc_textarea((string) ($settings['scripts']['footer'] ?? '')); ?></textarea>
+						<p class="description"><?php esc_html_e('Injected into wp_footer before closing body.', 'leadsforward-core'); ?></p>
 					</td>
 				</tr>
 			</table>

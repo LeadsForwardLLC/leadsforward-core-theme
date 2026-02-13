@@ -578,8 +578,8 @@ Internal Linking (Append‑Only)
 
 SEO Engine (Append‑Only)
 ------------------------
-- LeadsForward → SEO controls global titles, descriptions, indexing, social, schema, and sitemap.
-- Per-page overrides live in the SEO meta box on pages, posts, services, and service areas.
+- LeadsForward → SEO controls global titles, descriptions, indexing, social, schema, sitemap, and script injections (header/body open/footer).
+- Per-page overrides live in the SEO meta box on pages, posts, services, and service areas (including header/footer script overrides).
 - Automatic keyword assignment populates target keywords and stores mapping in `lf_keyword_map`.
 
 Append‑Only Change Log (Append‑Only)

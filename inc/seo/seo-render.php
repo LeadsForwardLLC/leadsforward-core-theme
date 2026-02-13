@@ -13,10 +13,13 @@ if (!defined('ABSPATH')) {
 }
 
 add_action('wp', 'lf_seo_disable_legacy_schema', 1);
+add_action('wp_head', 'lf_seo_render_header_scripts', 1);
 add_action('wp_head', 'lf_seo_render_head', 2);
 add_filter('pre_get_document_title', 'lf_seo_filter_document_title', 20);
 add_action('wp_head', 'lf_seo_render_schema_json_ld', 5);
 add_action('wp_head', 'lf_geo_meta', 3);
+add_action('wp_body_open', 'lf_seo_render_body_open_scripts', 1);
+add_action('wp_footer', 'lf_seo_render_footer_scripts', 5);
 
 function lf_seo_disable_legacy_schema(): void {
 	if (has_action('wp_head', 'lf_output_schema_json_ld')) {
@@ -47,6 +50,27 @@ function lf_seo_render_head(): void {
 	}
 	foreach ($og as $tag) {
 		echo $tag . "\n";
+	}
+}
+
+function lf_seo_render_header_scripts(): void {
+	$scripts = lf_seo_get_context_script('header');
+	if ($scripts !== '') {
+		echo "\n" . $scripts . "\n";
+	}
+}
+
+function lf_seo_render_body_open_scripts(): void {
+	$scripts = lf_seo_get_global_script('body_open');
+	if ($scripts !== '') {
+		echo "\n" . $scripts . "\n";
+	}
+}
+
+function lf_seo_render_footer_scripts(): void {
+	$scripts = lf_seo_get_context_script('footer');
+	if ($scripts !== '') {
+		echo "\n" . $scripts . "\n";
 	}
 }
 
@@ -272,6 +296,36 @@ function lf_seo_get_context_post_id(): int {
 		return (int) get_option('page_for_posts');
 	}
 	return 0;
+}
+
+function lf_seo_get_post_scripts(int $post_id): array {
+	$scripts = get_post_meta($post_id, '_lf_seo_scripts', true);
+	if (!is_array($scripts)) {
+		return [];
+	}
+	return $scripts;
+}
+
+function lf_seo_get_global_script(string $key): string {
+	if (!function_exists('lf_seo_get_settings')) {
+		return '';
+	}
+	$settings = lf_seo_get_settings();
+	$scripts = is_array($settings['scripts'] ?? null) ? $settings['scripts'] : [];
+	$value = (string) ($scripts[$key] ?? '');
+	return trim($value);
+}
+
+function lf_seo_get_context_script(string $key): string {
+	$post_id = lf_seo_get_context_post_id();
+	if ($post_id > 0) {
+		$per_page = lf_seo_get_post_scripts($post_id);
+		$override = trim((string) ($per_page[$key] ?? ''));
+		if ($override !== '') {
+			return $override;
+		}
+	}
+	return lf_seo_get_global_script($key);
 }
 
 function lf_seo_get_template_vars(int $post_id = 0): array {

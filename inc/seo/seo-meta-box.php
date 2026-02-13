@@ -40,6 +40,12 @@ function lf_seo_render_meta_box(\WP_Post $post): void {
 	$nofollow = (string) get_post_meta($post->ID, '_lf_seo_nofollow', true) === '1';
 	$og_image_id = (int) get_post_meta($post->ID, '_lf_seo_og_image_id', true);
 	$og_image_url = $og_image_id ? wp_get_attachment_image_url($og_image_id, 'medium') : '';
+	$scripts = get_post_meta($post->ID, '_lf_seo_scripts', true);
+	if (!is_array($scripts)) {
+		$scripts = [];
+	}
+	$header_scripts = (string) ($scripts['header'] ?? '');
+	$footer_scripts = (string) ($scripts['footer'] ?? '');
 	?>
 	<table class="form-table" role="presentation">
 		<tr>
@@ -86,6 +92,20 @@ function lf_seo_render_meta_box(\WP_Post $post): void {
 					<button type="button" class="button" id="lf-seo-og-select"><?php esc_html_e('Select Image', 'leadsforward-core'); ?></button>
 					<button type="button" class="button" id="lf-seo-og-clear"><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
 				</div>
+			</td>
+		</tr>
+		<tr>
+			<th scope="row"><label for="lf_seo_header_scripts_override"><?php esc_html_e('Header script override', 'leadsforward-core'); ?></label></th>
+			<td>
+				<textarea class="large-text code" rows="3" id="lf_seo_header_scripts_override" name="lf_seo_header_scripts_override"><?php echo esc_textarea($header_scripts); ?></textarea>
+				<p class="description"><?php esc_html_e('Overrides global header scripts for this page only.', 'leadsforward-core'); ?></p>
+			</td>
+		</tr>
+		<tr>
+			<th scope="row"><label for="lf_seo_footer_scripts_override"><?php esc_html_e('Footer script override', 'leadsforward-core'); ?></label></th>
+			<td>
+				<textarea class="large-text code" rows="3" id="lf_seo_footer_scripts_override" name="lf_seo_footer_scripts_override"><?php echo esc_textarea($footer_scripts); ?></textarea>
+				<p class="description"><?php esc_html_e('Overrides global footer scripts for this page only.', 'leadsforward-core'); ?></p>
 			</td>
 		</tr>
 	</table>
@@ -139,6 +159,8 @@ function lf_seo_save_meta_box(int $post_id, \WP_Post $post): void {
 	$noindex = !empty($_POST['lf_seo_noindex']) ? '1' : '';
 	$nofollow = !empty($_POST['lf_seo_nofollow']) ? '1' : '';
 	$og_image_id = isset($_POST['lf_seo_og_image_id']) ? (int) $_POST['lf_seo_og_image_id'] : 0;
+	$header_scripts = isset($_POST['lf_seo_header_scripts_override']) ? wp_unslash($_POST['lf_seo_header_scripts_override']) : '';
+	$footer_scripts = isset($_POST['lf_seo_footer_scripts_override']) ? wp_unslash($_POST['lf_seo_footer_scripts_override']) : '';
 
 	lf_seo_update_post_meta($post_id, '_lf_seo_primary_keyword', $primary);
 	lf_seo_update_post_meta($post_id, '_lf_seo_secondary_keywords', $secondary);
@@ -148,6 +170,17 @@ function lf_seo_save_meta_box(int $post_id, \WP_Post $post): void {
 	lf_seo_update_post_meta($post_id, '_lf_seo_noindex', $noindex);
 	lf_seo_update_post_meta($post_id, '_lf_seo_nofollow', $nofollow);
 	lf_seo_update_post_meta($post_id, '_lf_seo_og_image_id', $og_image_id ? (string) $og_image_id : '');
+
+	$header_scripts = function_exists('lf_seo_sanitize_scripts') ? lf_seo_sanitize_scripts((string) $header_scripts) : '';
+	$footer_scripts = function_exists('lf_seo_sanitize_scripts') ? lf_seo_sanitize_scripts((string) $footer_scripts) : '';
+	if ($header_scripts === '' && $footer_scripts === '') {
+		delete_post_meta($post_id, '_lf_seo_scripts');
+	} else {
+		update_post_meta($post_id, '_lf_seo_scripts', [
+			'header' => $header_scripts,
+			'footer' => $footer_scripts,
+		]);
+	}
 
 	if (function_exists('lf_seo_register_keyword_map_for_post')) {
 		lf_seo_register_keyword_map_for_post($post_id, $primary);
