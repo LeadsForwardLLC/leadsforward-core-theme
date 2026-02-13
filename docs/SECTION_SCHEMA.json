@@ -1398,13 +1398,6 @@
       },
       {
         "key": "process_expectations",
-        "type": "list",
-        "expected_structure_if_list": "newline-delimited string; parsed to array of strings for list rendering",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string (newline-delimited)"
-      },
-      {
-        "key": "process_trust_block",
         "type": "textarea",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",

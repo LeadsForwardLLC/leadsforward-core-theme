@@ -391,10 +391,7 @@ function lf_sections_registry(): array {
 				// Added for density expansion – vNext
 				['key' => 'section_intro_secondary', 'label' => __('Secondary intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				['key' => 'process_steps', 'label' => __('Steps (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Tell us what you need' . "\n" . 'Get a fast, clear estimate' . "\n" . 'Schedule and complete the work', 'leadsforward-core')],
-				// Added for density expansion – vNext
-				['key' => 'process_expectations', 'label' => __('Expectations (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
-				// Added for density expansion – vNext
-				['key' => 'process_trust_block', 'label' => __('Trust / credibility block', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+				['key' => 'process_expectations', 'label' => __('Expectations text', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 			],
 			'render' => 'lf_sections_render_process',
 		],
@@ -1520,8 +1517,7 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 	$intro = $settings['section_intro'] ?? '';
 	$intro_secondary = $settings['section_intro_secondary'] ?? '';
 	$steps = lf_sections_parse_lines((string) ($settings['process_steps'] ?? ''));
-	$expectations = lf_sections_parse_lines((string) ($settings['process_expectations'] ?? ''));
-	$trust_block = $settings['process_trust_block'] ?? '';
+	$expectations = trim((string) ($settings['process_expectations'] ?? ''));
 	$process_class = 'lf-process';
 	$intro_text = $intro_secondary !== '' ? trim($intro . "\n\n" . $intro_secondary) : $intro;
 	lf_sections_render_shell_open('process', $title, $intro_text, $settings['section_background'] ?? 'light', $settings);
@@ -1566,15 +1562,8 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 			</li>
 		<?php endforeach; ?>
 	</ol>
-	<?php if (!empty($expectations)) : ?>
-		<ul class="lf-process__expectations" role="list">
-			<?php foreach ($expectations as $item) : ?>
-				<li><?php echo esc_html($item); ?></li>
-			<?php endforeach; ?>
-		</ul>
-	<?php endif; ?>
-	<?php if ($trust_block !== '') : ?>
-		<p class="lf-process__trust"><?php echo esc_html($trust_block); ?></p>
+	<?php if ($expectations !== '') : ?>
+		<div class="lf-process__expectations"><?php echo wpautop(wp_kses_post($expectations)); ?></div>
 	<?php endif; ?>
 	<?php
 	lf_sections_render_shell_close();

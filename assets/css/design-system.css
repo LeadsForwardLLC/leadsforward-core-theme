@@ -980,24 +980,14 @@ button:focus-visible,
 }
 
 .lf-process__expectations {
-	list-style: none;
 	margin: 1.25rem 0 0;
-	padding: 0;
-	display: grid;
-	gap: 0.5rem;
-}
-
-.lf-process__expectations li {
-	padding: 0.5rem 0.75rem;
+	padding: 0.6rem 0.9rem;
 	border-radius: 0.65rem;
 	background: var(--lf-surface-soft);
 	border: 1px solid rgba(15,23,42,0.08);
-}
-
-.lf-process__trust {
-	margin-top: 1rem;
-	font-weight: 600;
 	color: var(--lf-text-primary);
+	font-weight: 600;
+	max-width: 100%;
 }
 
 .lf-related-links {
