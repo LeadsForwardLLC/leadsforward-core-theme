@@ -739,6 +739,15 @@ button:focus-visible,
 	gap: 0.85rem;
 }
 
+.lf-service-details__header {
+	display: grid;
+	gap: 0.4rem;
+}
+
+.lf-service-details__header .lf-section__intro {
+	max-width: none;
+}
+
 .lf-service-details__body {
 	max-width: var(--lf-container-narrow);
 }

@@ -1243,6 +1243,7 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 		$media_image_id = lf_get_placeholder_image_id();
 	}
 	$show_media = $media_mode !== 'none' && ($media_embed !== '' || $media_video_url !== '' || $media_image_id);
+	$render_header_in_content = $layout === 'media_content' && $show_media;
 	$embed_html = '';
 	if ($media_mode === 'video' && $media_embed !== '') {
 		$allowed = wp_kses_allowed_html('post');
@@ -1267,7 +1268,13 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 			$embed_html = $oembed;
 		}
 	}
-	lf_sections_render_shell_open('service-details', $title, $intro, $settings['section_background'] ?? 'light', $settings);
+	lf_sections_render_shell_open(
+		'service-details',
+		$render_header_in_content ? '' : $title,
+		$render_header_in_content ? '' : $intro,
+		$settings['section_background'] ?? 'light',
+		$settings
+	);
 	?>
 	<div class="lf-service-details<?php echo $show_media ? ' lf-service-details--media' : ''; ?><?php echo $layout === 'media_content' ? ' lf-service-details--media-left' : ''; ?>">
 		<?php if ($show_media && $layout === 'media_content') : ?>
@@ -1310,6 +1317,16 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 			</div>
 		<?php endif; ?>
 		<div class="lf-service-details__content">
+			<?php if ($render_header_in_content && ($title || $intro)) : ?>
+				<div class="lf-service-details__header">
+					<?php if ($title) : ?>
+						<h2 class="lf-section__title"><?php echo esc_html($title); ?></h2>
+					<?php endif; ?>
+					<?php if ($intro) : ?>
+						<p class="lf-section__intro"><?php echo esc_html($intro); ?></p>
+					<?php endif; ?>
+				</div>
+			<?php endif; ?>
 			<?php if ($body) : ?>
 				<div class="lf-service-details__body lf-prose"><?php echo wp_kses_post($body); ?></div>
 			<?php endif; ?>
