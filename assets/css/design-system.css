@@ -608,9 +608,9 @@ button:focus-visible,
 .lf-benefits {
 	display: grid;
 	grid-template-columns: 1fr;
-	gap: 2.5rem;
-	row-gap: 2.5rem;
-	column-gap: 2.5rem;
+	gap: 3rem;
+	row-gap: 3rem;
+	column-gap: 3rem;
 	align-items: stretch;
 	justify-items: stretch;
 	width: 100%;
@@ -627,7 +627,7 @@ button:focus-visible,
 @media (min-width: 64rem) {
 	.lf-benefits {
 		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: 2.5rem;
+		gap: 3rem;
 	}
 }
 
@@ -637,7 +637,7 @@ button:focus-visible,
 	border: var(--lf-card-border);
 	border-radius: var(--lf-card-radius);
 	padding: var(--lf-card-padding-lg);
-	box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+	box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
 	display: flex;
 	flex-direction: column;
 	gap: 0.6rem;
@@ -650,7 +650,7 @@ button:focus-visible,
 
 .lf-benefits__card:hover {
 	transform: translateY(-2px);
-	box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+	box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
 	border-color: rgba(59, 130, 246, 0.2);
 }
 
