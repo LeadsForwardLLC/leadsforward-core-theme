@@ -189,17 +189,24 @@ function lf_projects_render_card(\WP_Post $post, array $args = []): void {
 /**
  * Render a gallery grid of projects.
  *
- * @param array{count?:int,show_filters?:bool,show_before_after?:bool} $args
+ * @param array{count?:int,show_filters?:bool,show_before_after?:bool,layout?:string,show_controls?:bool} $args
  */
 function lf_projects_render_gallery(array $args = []): void {
 	$args = wp_parse_args($args, [
 		'count' => 6,
 		'show_filters' => false,
 		'show_before_after' => true,
+		'layout' => 'grid',
+		'show_controls' => true,
 	]);
-	$count = max(1, min(12, (int) $args['count']));
+	$count = max(3, min(12, (int) $args['count']));
 	$show_filters = (bool) $args['show_filters'];
 	$show_before_after = (bool) $args['show_before_after'];
+	$layout = (string) $args['layout'];
+	if (!in_array($layout, ['grid', 'masonry', 'slider'], true)) {
+		$layout = 'grid';
+	}
+	$show_controls = (bool) $args['show_controls'];
 	$archive_link = get_post_type_archive_link('lf_project');
 
 	if ($show_filters && $archive_link) {
@@ -230,7 +237,16 @@ function lf_projects_render_gallery(array $args = []): void {
 		'no_found_rows'  => true,
 	]);
 	if ($query->have_posts()) {
-		echo '<div class="lf-project-grid">';
+		$grid_class = 'lf-project-grid lf-project-grid--' . $layout;
+		if ($layout === 'slider') {
+			echo '<div class="lf-slider" data-lf-slider>';
+			if ($show_controls) {
+				echo '<button type="button" class="lf-slider__nav lf-slider__prev" data-lf-slider-prev aria-label="' . esc_attr__('Previous projects', 'leadsforward-core') . '">‹</button>';
+			}
+			echo '<div class="' . esc_attr($grid_class) . ' lf-slider__track" data-lf-slider-track>';
+		} else {
+			echo '<div class="' . esc_attr($grid_class) . '">';
+		}
 		while ($query->have_posts()) {
 			$query->the_post();
 			$post = get_post();
@@ -239,6 +255,12 @@ function lf_projects_render_gallery(array $args = []): void {
 			}
 		}
 		echo '</div>';
+		if ($layout === 'slider') {
+			if ($show_controls) {
+				echo '<button type="button" class="lf-slider__nav lf-slider__next" data-lf-slider-next aria-label="' . esc_attr__('Next projects', 'leadsforward-core') . '">›</button>';
+			}
+			echo '</div>';
+		}
 		wp_reset_postdata();
 	} else {
 		echo '<p>' . esc_html__('No projects yet.', 'leadsforward-core') . '</p>';

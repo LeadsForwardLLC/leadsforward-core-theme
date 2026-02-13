@@ -60,7 +60,7 @@ The full, non-technical build checklist lives here: `docs/SOP.md`.
 leadsforward-core-theme/
 ├── assets/
 │   ├── css/          # editor.css, variation-tokens.css, projects.css, future front-end CSS
-│   ├── js/           # quote-builder.js, lf-section-sortable.js, project-gallery.js
+│   ├── js/           # quote-builder.js, lf-section-sortable.js, project-gallery.js, section-sliders.js
 │   ├── icons/        # Local Heroicons SVGs (inline usage)
 │   └── images/
 ├── docs/             # SOP.md and product documentation

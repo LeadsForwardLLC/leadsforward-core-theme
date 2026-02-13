@@ -506,6 +506,12 @@ function lf_sections_registry(): array {
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Our Projects', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Explore recent transformations and finished work.', 'leadsforward-core')],
 				['key' => 'projects_per_page', 'label' => __('Projects per page', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
+				['key' => 'project_layout', 'label' => __('Layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'grid', 'options' => [
+					'grid' => __('Grid', 'leadsforward-core'),
+					'masonry' => __('Masonry', 'leadsforward-core'),
+					'slider' => __('Slider', 'leadsforward-core'),
+				]],
+				['key' => 'project_slider_controls', 'label' => __('Show slider controls', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
 				['key' => 'project_show_filters', 'label' => __('Show filters', 'leadsforward-core'), 'type' => 'select', 'default' => '0', 'options' => lf_sections_toggle_options()],
 				['key' => 'project_show_before_after', 'label' => __('Show before/after toggle', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
 			],
@@ -519,6 +525,12 @@ function lf_sections_registry(): array {
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Latest Articles', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Helpful tips and updates from our team.', 'leadsforward-core')],
 				['key' => 'posts_per_page', 'label' => __('Posts per page', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
+				['key' => 'posts_layout', 'label' => __('Layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'grid', 'options' => [
+					'grid' => __('Grid', 'leadsforward-core'),
+					'masonry' => __('Masonry', 'leadsforward-core'),
+					'slider' => __('Slider', 'leadsforward-core'),
+				]],
+				['key' => 'posts_slider_controls', 'label' => __('Show slider controls', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
 			],
 			'render' => 'lf_sections_render_blog_posts',
 		],
@@ -1593,7 +1605,12 @@ function lf_sections_render_blog_posts(string $context, array $settings, \WP_Pos
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
 	$count = isset($settings['posts_per_page']) ? (int) $settings['posts_per_page'] : 6;
-	$count = max(1, min(12, $count));
+	$count = max(3, min(12, $count));
+	$layout = (string) ($settings['posts_layout'] ?? 'grid');
+	if (!in_array($layout, ['grid', 'masonry', 'slider'], true)) {
+		$layout = 'grid';
+	}
+	$show_controls = (string) ($settings['posts_slider_controls'] ?? '1') === '1';
 	lf_sections_render_shell_open('blog-posts', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	$query = new \WP_Query([
 		'post_type'      => 'post',
@@ -1604,13 +1621,28 @@ function lf_sections_render_blog_posts(string $context, array $settings, \WP_Pos
 		'no_found_rows'  => true,
 	]);
 	if ($query->have_posts()) {
-		echo '<div class="posts-list lf-blog-grid">';
+		$grid_class = 'posts-list lf-blog-grid lf-blog-grid--' . $layout;
+		if ($layout === 'slider') {
+			echo '<div class="lf-slider" data-lf-slider>';
+			if ($show_controls) {
+				echo '<button type="button" class="lf-slider__nav lf-slider__prev" data-lf-slider-prev aria-label="' . esc_attr__('Previous items', 'leadsforward-core') . '">‹</button>';
+			}
+			echo '<div class="' . esc_attr($grid_class) . ' lf-slider__track" data-lf-slider-track>';
+		} else {
+			echo '<div class="' . esc_attr($grid_class) . '">';
+		}
 		while ($query->have_posts()) {
 			$query->the_post();
 			set_query_var('lf_post_card_variant', 'standard');
 			get_template_part('templates/parts/content', get_post_type());
 		}
 		echo '</div>';
+		if ($layout === 'slider') {
+			if ($show_controls) {
+				echo '<button type="button" class="lf-slider__nav lf-slider__next" data-lf-slider-next aria-label="' . esc_attr__('Next items', 'leadsforward-core') . '">›</button>';
+			}
+			echo '</div>';
+		}
 		wp_reset_postdata();
 	} else {
 		echo '<p>' . esc_html__('No posts yet.', 'leadsforward-core') . '</p>';
@@ -1622,9 +1654,14 @@ function lf_sections_render_project_gallery(string $context, array $settings, \W
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
 	$count = isset($settings['projects_per_page']) ? (int) $settings['projects_per_page'] : 6;
-	$count = max(1, min(12, $count));
+	$count = max(3, min(12, $count));
 	$show_filters = (string) ($settings['project_show_filters'] ?? '0') === '1';
 	$show_before_after = (string) ($settings['project_show_before_after'] ?? '1') === '1';
+	$layout = (string) ($settings['project_layout'] ?? 'grid');
+	if (!in_array($layout, ['grid', 'masonry', 'slider'], true)) {
+		$layout = 'grid';
+	}
+	$show_controls = (string) ($settings['project_slider_controls'] ?? '1') === '1';
 
 	lf_sections_render_shell_open('project-gallery', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	if (function_exists('lf_projects_render_gallery')) {
@@ -1632,6 +1669,8 @@ function lf_sections_render_project_gallery(string $context, array $settings, \W
 			'count' => $count,
 			'show_filters' => $show_filters,
 			'show_before_after' => $show_before_after,
+			'layout' => $layout,
+			'show_controls' => $show_controls,
 		]);
 	} else {
 		echo '<p>' . esc_html__('Project gallery is unavailable.', 'leadsforward-core') . '</p>';
@@ -1839,4 +1878,88 @@ function lf_sections_render_map_nap(string $context, array $settings, \WP_Post $
 		];
 		lf_render_block_template('map-nap', $block, false, $block['context']);
 	}
+}
+
+add_action('wp_enqueue_scripts', 'lf_sections_enqueue_slider_assets', 6);
+
+function lf_sections_enqueue_slider_assets(): void {
+	if (!lf_sections_should_enqueue_slider_assets()) {
+		return;
+	}
+	$script_path = LF_THEME_DIR . '/assets/js/section-sliders.js';
+	if (is_readable($script_path)) {
+		wp_enqueue_script(
+			'lf-section-sliders',
+			LF_THEME_URI . '/assets/js/section-sliders.js',
+			[],
+			(string) filemtime($script_path),
+			true
+		);
+	}
+}
+
+function lf_sections_should_enqueue_slider_assets(): bool {
+	if (is_admin()) {
+		return false;
+	}
+	if (is_front_page() && function_exists('lf_get_homepage_section_config')) {
+		$config = lf_get_homepage_section_config();
+		if (is_array($config) && lf_sections_has_slider_in_homepage_config($config)) {
+			return true;
+		}
+	}
+	if (is_singular() && defined('LF_PB_META_KEY')) {
+		$post_id = get_the_ID();
+		if ($post_id) {
+			$config = get_post_meta($post_id, LF_PB_META_KEY, true);
+			if (is_array($config) && !empty($config['sections']) && lf_sections_has_slider_in_sections($config['sections'])) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+function lf_sections_has_slider_in_homepage_config(array $config): bool {
+	$checks = [
+		['id' => 'project_gallery', 'key' => 'project_layout'],
+		['id' => 'blog_posts', 'key' => 'posts_layout'],
+	];
+	foreach ($checks as $check) {
+		$section = $config[$check['id']] ?? null;
+		if (!is_array($section) || empty($section['enabled'])) {
+			continue;
+		}
+		$layout = (string) ($section[$check['key']] ?? 'grid');
+		if ($layout === 'slider') {
+			return true;
+		}
+	}
+	return false;
+}
+
+function lf_sections_has_slider_in_sections(array $sections): bool {
+	foreach ($sections as $section) {
+		if (!is_array($section)) {
+			continue;
+		}
+		if (isset($section['enabled']) && !$section['enabled']) {
+			continue;
+		}
+		$type = (string) ($section['type'] ?? '');
+		$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+		if ($type === 'project_gallery') {
+			$layout = (string) ($settings['project_layout'] ?? 'grid');
+			if ($layout === 'slider') {
+				return true;
+			}
+		}
+		if ($type === 'blog_posts') {
+			$layout = (string) ($settings['posts_layout'] ?? 'grid');
+			if ($layout === 'slider') {
+				return true;
+			}
+		}
+	}
+	return false;
 }

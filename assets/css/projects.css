@@ -39,6 +39,41 @@
 	gap: var(--lf-space-section);
 }
 
+.lf-project-grid--masonry {
+	display: block;
+	column-count: 3;
+	column-gap: var(--lf-space-section);
+}
+
+.lf-project-grid--masonry .lf-project-card {
+	break-inside: avoid;
+	margin-bottom: var(--lf-space-section);
+	width: 100%;
+}
+
+.lf-project-grid--slider {
+	display: flex;
+	gap: var(--lf-space-section);
+}
+
+.lf-project-grid--slider .lf-project-card {
+	flex: 0 0 280px;
+	min-width: 280px;
+	scroll-snap-align: start;
+}
+
+@media (max-width: 1024px) {
+	.lf-project-grid--masonry {
+		column-count: 2;
+	}
+}
+
+@media (max-width: 720px) {
+	.lf-project-grid--masonry {
+		column-count: 1;
+	}
+}
+
 .site-main--projects .lf-section--project-hero {
 	padding-bottom: var(--lf-section-padding-sm);
 }

@@ -1978,6 +1978,20 @@
         "storage_format": "numeric string"
       },
       {
+        "key": "posts_layout",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "posts_slider_controls",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
         "key": "icon_enabled",
         "type": "select",
         "expected_structure_if_list": "",
@@ -2309,6 +2323,20 @@
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "numeric string"
+      },
+      {
+        "key": "project_layout",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "project_slider_controls",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
       },
       {
         "key": "project_show_filters",
