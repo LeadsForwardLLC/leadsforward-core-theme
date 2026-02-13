@@ -608,7 +608,7 @@ button:focus-visible,
 .lf-benefits {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-	gap: 2rem;
+	gap: 2.25rem;
 	align-items: stretch;
 	justify-items: center;
 	max-width: 1080px;
@@ -617,11 +617,11 @@ button:focus-visible,
 
 .lf-benefits__card {
 	position: relative;
-	background: var(--lf-surface-white);
-	border: 1px solid rgba(15, 23, 42, 0.08);
-	border-radius: 1.25rem;
-	padding: 1.75rem 1.6rem 1.85rem;
-	box-shadow: 0 18px 44px rgba(15, 23, 42, 0.1);
+	background: var(--lf-card-bg);
+	border: var(--lf-card-border);
+	border-radius: var(--lf-card-radius);
+	padding: var(--lf-card-padding-lg);
+	box-shadow: var(--lf-card-shadow);
 	display: flex;
 	flex-direction: column;
 	gap: 0.6rem;
@@ -634,21 +634,12 @@ button:focus-visible,
 
 .lf-benefits__card:hover {
 	transform: translateY(-2px);
-	box-shadow: 0 26px 54px rgba(15, 23, 42, 0.14);
+	box-shadow: var(--lf-card-shadow-hover);
 	border-color: rgba(59, 130, 246, 0.2);
 }
 
 .lf-benefits__card::after {
-	content: '';
-	position: absolute;
-	top: 0.75rem;
-	left: 50%;
-	transform: translateX(-50%);
-	width: 64px;
-	height: 3px;
-	border-radius: 999px;
-	background: #2563eb;
-	opacity: 0.7;
+	content: none;
 }
 
 .lf-benefits__icon {
@@ -1793,7 +1784,7 @@ button:focus-visible,
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
-	gap: var(--lf-gap-sm);
+	gap: 0.85rem;
 	margin-top: 0.6rem;
 }
 
@@ -2034,8 +2025,10 @@ button:focus-visible,
 .lf-block-hero__eyebrow {
 	display: inline-flex;
 	align-items: center;
-	justify-content: center;
+	justify-content: flex-start;
+	align-self: flex-start;
 	margin: 0 0 1rem;
+	width: fit-content;
 	padding: var(--lf-pill-padding-y) var(--lf-pill-padding-x);
 	border-radius: var(--lf-pill-radius);
 	background: var(--lf-pill-eyebrow-bg);
@@ -2460,17 +2453,19 @@ button:focus-visible,
 .lf-hero-visual__eyebrow {
 	display: inline-flex;
 	align-items: center;
-	justify-content: center;
+	justify-content: flex-start;
+	align-self: flex-start;
 	margin: 0;
-	padding: 0.35rem 0.9rem;
-	border-radius: 999px;
-	background: var(--lf-hero-eyebrow-bg, var(--lf-surface-light));
-	border: var(--lf-hero-eyebrow-border, 1px solid rgba(15,23,42,0.1));
-	font-size: 0.72rem;
+	padding: var(--lf-pill-padding-y) var(--lf-pill-padding-x);
+	border-radius: var(--lf-pill-radius);
+	background: var(--lf-pill-eyebrow-bg);
+	border: var(--lf-pill-eyebrow-border);
+	font-size: var(--lf-pill-eyebrow-size);
 	font-weight: 700;
-	letter-spacing: 0.12em;
+	letter-spacing: var(--lf-pill-eyebrow-letter-spacing);
 	text-transform: uppercase;
-	color: var(--lf-hero-eyebrow-text, var(--lf-text-primary));
+	color: var(--lf-pill-eyebrow-color);
+	width: fit-content;
 }
 
 .lf-hero-split__eyebrow {
