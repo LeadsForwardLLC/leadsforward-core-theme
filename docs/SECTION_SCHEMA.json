@@ -424,8 +424,8 @@
         "storage_format": "raw string"
       },
       {
-        "key": "service_details_body_secondary",
-        "type": "textarea",
+        "key": "service_details_layout",
+        "type": "select",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
@@ -440,6 +440,13 @@
       {
         "key": "service_details_media_embed",
         "type": "textarea",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "service_details_media_video_url",
+        "type": "text",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string"
@@ -464,20 +471,6 @@
         "expected_structure_if_list": "newline-delimited string; parsed to array of strings for list rendering",
         "expected_structure_if_richtext": "",
         "storage_format": "raw string (newline-delimited)"
-      },
-      {
-        "key": "service_details_trust_block",
-        "type": "textarea",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
-      },
-      {
-        "key": "service_details_guarantee_text",
-        "type": "text",
-        "expected_structure_if_list": "",
-        "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
       },
       {
         "key": "icon_enabled",

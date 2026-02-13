@@ -101,7 +101,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 
 - `content` section now renders heading + intro + body fields (no longer empty).
 - `process` section renders expectations + trust block when provided.
-- `service_details` section supports an optional media column (video embed default).
+- `service_details` renders heading/intro/body/checklist only, with optional media (image, embed, or self-hosted video) and left/right layout control.
 - `related_links` defaults to services-only in core templates.
 
 ## Quote Builder Dynamics

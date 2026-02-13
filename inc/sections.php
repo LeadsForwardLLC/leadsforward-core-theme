@@ -309,22 +309,21 @@ function lf_sections_registry(): array {
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Service Details', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Everything you need to know before scheduling.', 'leadsforward-core')],
 				['key' => 'service_details_body', 'label' => __('Body copy', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
-				// Added for density expansion – vNext
-				['key' => 'service_details_body_secondary', 'label' => __('Expanded body text', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+				['key' => 'service_details_layout', 'label' => __('Layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'content_media', 'options' => [
+					'content_media' => __('Content left / Media right', 'leadsforward-core'),
+					'media_content' => __('Media left / Content right', 'leadsforward-core'),
+				]],
 				['key' => 'service_details_media_mode', 'label' => __('Media mode', 'leadsforward-core'), 'type' => 'select', 'default' => 'video', 'options' => [
 					'video' => __('Video embed', 'leadsforward-core'),
 					'image' => __('Image', 'leadsforward-core'),
 					'none' => __('None', 'leadsforward-core'),
 				]],
 				['key' => 'service_details_media_embed', 'label' => __('Video embed code', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+				['key' => 'service_details_media_video_url', 'label' => __('Video URL (self-hosted or YouTube)', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'service_details_media_image_id', 'label' => __('Media image', 'leadsforward-core'), 'type' => 'image', 'default' => ''],
 				['key' => 'service_details_checklist', 'label' => __('Checklist (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Transparent scope and pricing' . "\n" . 'Clean, respectful crews' . "\n" . 'Work backed by warranty', 'leadsforward-core')],
 				// Added for density expansion – vNext
 				['key' => 'service_details_micro_sections', 'label' => __('Service micro-sections (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
-				// Added for density expansion – vNext
-				['key' => 'service_details_trust_block', 'label' => __('Trust / credibility block', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
-				// Added for density expansion – vNext
-				['key' => 'service_details_guarantee_text', 'label' => __('Guarantee text', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 			],
 			'render' => 'lf_sections_render_service_details',
 		],
@@ -1226,15 +1225,9 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
 	$body = $settings['service_details_body'] ?? '';
-	$body_secondary = $settings['service_details_body_secondary'] ?? '';
-	$trust_block = $settings['service_details_trust_block'] ?? '';
-	$guarantee = $settings['service_details_guarantee_text'] ?? '';
 	$body_from_settings = $body !== '';
 	if ($body_from_settings) {
 		$body = wpautop($body);
-	}
-	if ($body_secondary !== '') {
-		$body_secondary = wpautop($body_secondary);
 	}
 	$checklist = lf_sections_parse_lines((string) ($settings['service_details_checklist'] ?? ''));
 	$checklist_class = 'lf-service-details__checklist';
@@ -1242,12 +1235,17 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 	if (!in_array($media_mode, ['video', 'image', 'none'], true)) {
 		$media_mode = 'video';
 	}
+	$layout = (string) ($settings['service_details_layout'] ?? 'content_media');
+	if (!in_array($layout, ['content_media', 'media_content'], true)) {
+		$layout = 'content_media';
+	}
 	$media_embed = trim((string) ($settings['service_details_media_embed'] ?? ''));
+	$media_video_url = trim((string) ($settings['service_details_media_video_url'] ?? ''));
 	$media_image_id = isset($settings['service_details_media_image_id']) ? (int) $settings['service_details_media_image_id'] : 0;
 	if ($media_image_id === 0 && function_exists('lf_get_placeholder_image_id')) {
 		$media_image_id = lf_get_placeholder_image_id();
 	}
-	$show_media = $media_mode !== 'none' && ($media_embed !== '' || $media_image_id);
+	$show_media = $media_mode !== 'none' && ($media_embed !== '' || $media_video_url !== '' || $media_image_id);
 	$embed_html = '';
 	if ($media_mode === 'video' && $media_embed !== '') {
 		$allowed = wp_kses_allowed_html('post');
@@ -1264,21 +1262,59 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 		];
 		$embed_html = wp_kses($media_embed, $allowed);
 	}
+	$video_url = $media_mode === 'video' ? esc_url($media_video_url) : '';
+	$video_is_self_hosted = $video_url !== '' && preg_match('/\.(mp4|webm|ogg)(\?.*)?$/i', $video_url);
+	if ($media_mode === 'video' && $embed_html === '' && $video_url !== '' && !$video_is_self_hosted && function_exists('wp_oembed_get')) {
+		$oembed = wp_oembed_get($video_url);
+		if ($oembed) {
+			$embed_html = $oembed;
+		}
+	}
 	lf_sections_render_shell_open('service-details', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	?>
-	<div class="lf-service-details<?php echo $show_media ? ' lf-service-details--media' : ''; ?>">
+	<div class="lf-service-details<?php echo $show_media ? ' lf-service-details--media' : ''; ?><?php echo $layout === 'media_content' ? ' lf-service-details--media-left' : ''; ?>">
+		<?php if ($show_media && $layout === 'media_content') : ?>
+			<div class="lf-service-details__media">
+				<?php if ($media_mode === 'video' && $embed_html !== '') : ?>
+					<div class="lf-service-details__media-embed"><?php echo $embed_html; ?></div>
+				<?php elseif ($media_mode === 'video' && $video_is_self_hosted && $video_url !== '') : ?>
+					<video class="lf-service-details__media-video" controls preload="metadata"<?php echo $media_image_id ? ' poster="' . esc_url(wp_get_attachment_image_url($media_image_id, 'large')) . '"' : ''; ?>>
+						<source src="<?php echo esc_url($video_url); ?>" type="video/mp4">
+					</video>
+				<?php elseif ($media_mode === 'image' && $media_image_id) : ?>
+					<?php
+					echo wp_get_attachment_image(
+						$media_image_id,
+						'large',
+						false,
+						[
+							'class' => 'lf-service-details__media-image',
+							'loading' => 'lazy',
+							'decoding' => 'async',
+						]
+					);
+					?>
+				<?php elseif ($media_image_id) : ?>
+					<div class="lf-service-details__media-placeholder">
+						<?php
+						echo wp_get_attachment_image(
+							$media_image_id,
+							'large',
+							false,
+							[
+								'class' => 'lf-service-details__media-image',
+								'loading' => 'lazy',
+								'decoding' => 'async',
+							]
+						);
+						?>
+					</div>
+				<?php endif; ?>
+			</div>
+		<?php endif; ?>
 		<div class="lf-service-details__content">
 			<?php if ($body) : ?>
 				<div class="lf-service-details__body lf-prose"><?php echo wp_kses_post($body); ?></div>
-			<?php endif; ?>
-			<?php if ($body_secondary) : ?>
-				<div class="lf-service-details__body-secondary lf-prose"><?php echo wp_kses_post($body_secondary); ?></div>
-			<?php endif; ?>
-			<?php if ($trust_block !== '') : ?>
-				<p class="lf-service-details__trust"><?php echo esc_html($trust_block); ?></p>
-			<?php endif; ?>
-			<?php if ($guarantee !== '') : ?>
-				<p class="lf-service-details__guarantee"><?php echo esc_html($guarantee); ?></p>
 			<?php endif; ?>
 			<?php if (!empty($checklist)) : ?>
 				<ul class="<?php echo esc_attr($checklist_class); ?>" role="list">
@@ -1290,10 +1326,14 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 				</ul>
 			<?php endif; ?>
 		</div>
-		<?php if ($show_media) : ?>
+		<?php if ($show_media && $layout !== 'media_content') : ?>
 			<div class="lf-service-details__media">
 				<?php if ($media_mode === 'video' && $embed_html !== '') : ?>
 					<div class="lf-service-details__media-embed"><?php echo $embed_html; ?></div>
+				<?php elseif ($media_mode === 'video' && $video_is_self_hosted && $video_url !== '') : ?>
+					<video class="lf-service-details__media-video" controls preload="metadata"<?php echo $media_image_id ? ' poster="' . esc_url(wp_get_attachment_image_url($media_image_id, 'large')) . '"' : ''; ?>>
+						<source src="<?php echo esc_url($video_url); ?>" type="video/mp4">
+					</video>
 				<?php elseif ($media_mode === 'image' && $media_image_id) : ?>
 					<?php
 					echo wp_get_attachment_image(
