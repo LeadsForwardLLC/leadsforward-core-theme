@@ -692,7 +692,6 @@ function lf_sections_default_order(string $context): array {
 		return [
 			'hero',
 			'trust_bar',
-			'trust_reviews',
 			'service_intro',
 			'project_gallery',
 			'benefits',
@@ -700,6 +699,7 @@ function lf_sections_default_order(string $context): array {
 			'image_content_b',
 			'content_image_c',
 			'service_details',
+			'trust_reviews',
 			'process',
 			'faq_accordion',
 			'related_links',

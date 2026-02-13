@@ -608,7 +608,9 @@ button:focus-visible,
 .lf-benefits {
 	display: grid;
 	grid-template-columns: 1fr;
-	gap: 2rem;
+	gap: 2.5rem;
+	row-gap: 2.5rem;
+	column-gap: 2.5rem;
 	align-items: stretch;
 	justify-items: stretch;
 	width: 100%;
@@ -625,7 +627,7 @@ button:focus-visible,
 @media (min-width: 64rem) {
 	.lf-benefits {
 		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: 2rem;
+		gap: 2.5rem;
 	}
 }
 
@@ -635,7 +637,7 @@ button:focus-visible,
 	border: var(--lf-card-border);
 	border-radius: var(--lf-card-radius);
 	padding: var(--lf-card-padding-lg);
-	box-shadow: var(--lf-card-shadow-spotlight);
+	box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
 	display: flex;
 	flex-direction: column;
 	gap: 0.6rem;
@@ -648,7 +650,7 @@ button:focus-visible,
 
 .lf-benefits__card:hover {
 	transform: translateY(-2px);
-	box-shadow: var(--lf-card-shadow);
+	box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
 	border-color: rgba(59, 130, 246, 0.2);
 }
 
@@ -3256,6 +3258,38 @@ button:focus-visible,
 	grid-template-columns: 1fr;
 }
 
+.site-main--homepage .lf-block-trust-reviews__list {
+	gap: 1.75rem;
+}
+
+.lf-block-trust-reviews__item.is-hidden {
+	display: none;
+}
+
+.lf-block-trust-reviews__actions {
+	display: flex;
+	justify-content: center;
+	margin-top: 2rem;
+}
+
+.lf-block-trust-reviews__load-more {
+	border: 0;
+	border-radius: 999px;
+	padding: 0.8rem 1.75rem;
+	font-weight: 700;
+	font-size: 0.95rem;
+	background: var(--lf-primary);
+	color: #fff;
+	box-shadow: 0 12px 26px rgba(15,23,42,0.14);
+	cursor: pointer;
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lf-block-trust-reviews__load-more:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 14px 28px rgba(15,23,42,0.18);
+}
+
 @media (min-width: 40rem) {
 	.lf-block-trust-reviews__list { grid-template-columns: repeat(2, 1fr); }
 }
@@ -4244,6 +4278,10 @@ body.lf-quote-open {
 	border-radius: 16px;
 	background: var(--lf-surface-soft);
 	border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.lf-quote-reviews--single {
+	margin-top: 1.25rem;
 }
 
 .lf-quote-reviews__eyebrow {

@@ -233,6 +233,165 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 				$order_out = $default['order'] ?? [];
 			}
 		}
+		if ($post) {
+			$slug = $post->post_name;
+			if (in_array($slug, ['contact', 'reviews'], true)) {
+				$has_reviews = false;
+				foreach ($sections_out as $row) {
+					if (($row['type'] ?? '') === 'trust_reviews') {
+						$has_reviews = true;
+						break;
+					}
+				}
+				if (!$has_reviews) {
+					$settings = lf_sections_defaults_for('trust_reviews');
+					if ($slug === 'contact') {
+						$settings['trust_heading'] = __('Recent reviews', 'leadsforward-core');
+						$settings['trust_layout'] = 'grid';
+						$settings['trust_columns'] = 2;
+						$settings['trust_max_items'] = 2;
+						$settings['trust_show_summary'] = 0;
+						$settings['trust_show_source'] = 0;
+					} elseif ($slug === 'reviews') {
+						$settings['trust_heading'] = '';
+						$settings['trust_layout'] = 'masonry';
+						$settings['trust_max_items'] = -1;
+					}
+					$instance_index = 1;
+					$instance_id = lf_pb_instance_id('trust_reviews', $instance_index);
+					while (isset($sections_out[$instance_id])) {
+						$instance_index++;
+						$instance_id = lf_pb_instance_id('trust_reviews', $instance_index);
+					}
+					$sections_out[$instance_id] = [
+						'type' => 'trust_reviews',
+						'enabled' => true,
+						'deletable' => true,
+						'settings' => $settings,
+					];
+					$inserted = false;
+					if ($slug === 'contact') {
+						foreach ($order_out as $index => $id) {
+							$type = $sections_out[$id]['type'] ?? '';
+							if ($type === 'map_nap') {
+								array_splice($order_out, $index, 0, [$instance_id]);
+								$inserted = true;
+								break;
+							}
+						}
+					} elseif ($slug === 'reviews') {
+						foreach ($order_out as $index => $id) {
+							$type = $sections_out[$id]['type'] ?? '';
+							if ($type === 'hero') {
+								array_splice($order_out, $index + 1, 0, [$instance_id]);
+								$inserted = true;
+								break;
+							}
+						}
+					}
+					if (!$inserted) {
+						$order_out[] = $instance_id;
+					}
+				}
+			}
+			if (in_array($slug, ['about-us', 'about'], true)) {
+				$has_custom_sections = false;
+				foreach ($sections_out as $row) {
+					$type = $row['type'] ?? '';
+					if (!in_array($type, ['hero', 'content'], true)) {
+						$has_custom_sections = true;
+						break;
+					}
+				}
+				if (!$has_custom_sections) {
+					$business = function_exists('lf_get_option') ? (string) lf_get_option('lf_business_name', 'option') : '';
+					if ($business === '') {
+						$business = get_bloginfo('name');
+					}
+					$cta_headline = $business ? 'Get a free estimate from ' . $business : __('Get a free estimate', 'leadsforward-core');
+					$sections_to_add = [
+						[
+							'type' => 'trust_bar',
+							'settings' => [
+								'trust_heading' => __('Trusted by local homeowners', 'leadsforward-core'),
+							],
+						],
+						[
+							'type' => 'content_image',
+							'settings' => [
+								'section_heading' => __('Our story', 'leadsforward-core'),
+								'section_intro' => __('Built for homeowners who want clear pricing and reliable service.', 'leadsforward-core'),
+								'service_details_body' => __('We started this company to make home services simpler and more dependable. Our team shows up on time, keeps you informed, and treats your home with care from start to finish.', 'leadsforward-core'),
+								'service_details_checklist' => __('Clear communication' . "\n" . 'Respectful, clean crews' . "\n" . 'Work backed by warranty', 'leadsforward-core'),
+							],
+						],
+						[
+							'type' => 'benefits',
+							'settings' => [
+								'section_heading' => __('Why homeowners choose us', 'leadsforward-core'),
+								'section_intro' => __('Honest pricing, reliable crews, and quality workmanship.', 'leadsforward-core'),
+								'benefits_items' => __('Licensed and insured professionals' . "\n" . 'Upfront pricing before work starts' . "\n" . 'Respectful, clean crews', 'leadsforward-core'),
+							],
+						],
+						[
+							'type' => 'process',
+							'settings' => [
+								'section_heading' => __('How we work', 'leadsforward-core'),
+								'section_intro' => __('A clear, homeowner-friendly experience from first call to final walkthrough.', 'leadsforward-core'),
+								'process_steps' => __('Listen to your goals' . "\n" . 'Provide a clear plan and timeline' . "\n" . 'Deliver the work with care' . "\n" . 'Review every detail together', 'leadsforward-core'),
+							],
+						],
+						[
+							'type' => 'related_links',
+							'settings' => [
+								'section_heading' => __('Explore our services', 'leadsforward-core'),
+								'section_intro' => __('Explore more of our services.', 'leadsforward-core'),
+								'related_links_mode' => 'services',
+							],
+						],
+						[
+							'type' => 'cta',
+							'settings' => [
+								'cta_headline' => $cta_headline,
+								'cta_subheadline' => __('Request a free estimate and get a clear next step.', 'leadsforward-core'),
+							],
+						],
+					];
+					$new_ids = [];
+					foreach ($sections_to_add as $section_row) {
+						$type = $section_row['type'];
+						$settings = lf_sections_defaults_for($type);
+						$settings = array_merge($settings, $section_row['settings']);
+						$instance_index = 1;
+						$instance_id = lf_pb_instance_id($type, $instance_index);
+						while (isset($sections_out[$instance_id])) {
+							$instance_index++;
+							$instance_id = lf_pb_instance_id($type, $instance_index);
+						}
+						$sections_out[$instance_id] = [
+							'type' => $type,
+							'enabled' => true,
+							'deletable' => true,
+							'settings' => $settings,
+						];
+						$new_ids[] = $instance_id;
+					}
+					$hero_index = null;
+					foreach ($order_out as $index => $id) {
+						$type = $sections_out[$id]['type'] ?? '';
+						if ($type === 'hero') {
+							$hero_index = $index;
+							break;
+						}
+					}
+					if ($hero_index === null) {
+						$order_out = array_merge($order_out, $new_ids);
+					} else {
+						array_splice($order_out, $hero_index + 1, 0, $new_ids);
+					}
+				}
+			}
+		}
 	}
 
 	$order_out = lf_pb_sanitize_order($order_out, array_keys($sections_out));

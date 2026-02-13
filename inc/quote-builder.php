@@ -1041,11 +1041,11 @@ function lf_quote_builder_enqueue_assets(): void {
 	]);
 }
 
-function lf_quote_builder_get_review_previews(int $limit = 2): array {
+function lf_quote_builder_get_review_previews(int $limit = 3): array {
 	if (!post_type_exists('lf_testimonial')) {
 		return [];
 	}
-	$limit = max(1, min(4, $limit));
+	$limit = max(1, min(5, $limit));
 	$posts = get_posts([
 		'post_type'      => 'lf_testimonial',
 		'posts_per_page' => $limit,
@@ -1062,6 +1062,7 @@ function lf_quote_builder_get_review_previews(int $limit = 2): array {
 		if ($text === '') {
 			continue;
 		}
+		$text = wp_trim_words($text, 18, '…');
 		if ($name === '') {
 			$name = $post->post_title;
 		}
@@ -1072,6 +1073,30 @@ function lf_quote_builder_get_review_previews(int $limit = 2): array {
 		];
 	}
 	return $out;
+}
+
+function lf_quote_builder_render_review_preview(array $review): void {
+	if (empty($review)) {
+		return;
+	}
+	?>
+	<div class="lf-quote-reviews lf-quote-reviews--single" role="note" aria-label="<?php esc_attr_e('Recent review', 'leadsforward-core'); ?>">
+		<p class="lf-quote-reviews__eyebrow"><?php esc_html_e('Recent review', 'leadsforward-core'); ?></p>
+		<div class="lf-quote-reviews__list">
+			<div class="lf-quote-reviews__card">
+				<p class="lf-quote-reviews__text"><?php echo esc_html($review['text']); ?></p>
+				<div class="lf-quote-reviews__meta">
+					<span class="lf-quote-reviews__name"><?php echo esc_html($review['name']); ?></span>
+					<span class="lf-quote-reviews__stars" aria-label="<?php echo esc_attr(sprintf(__('%d stars', 'leadsforward-core'), $review['rating'])); ?>">
+						<?php for ($s = 1; $s <= 5; $s++) : ?>
+							<svg class="lf-quote-reviews__star<?php echo $s <= $review['rating'] ? ' is-filled' : ''; ?>" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+						<?php endfor; ?>
+					</span>
+				</div>
+			</div>
+		</div>
+	</div>
+	<?php
 }
 
 function lf_quote_builder_render_modal(): void {
@@ -1088,8 +1113,12 @@ function lf_quote_builder_render_modal(): void {
 	$total = count($steps);
 	$modal_id = 'lf-quote-builder';
 	$first_title_id = 'lf-quote-title-0';
-	$review_previews = lf_quote_builder_get_review_previews(2);
-	$review_steps = ['service_type', 'contact'];
+	$review_previews = lf_quote_builder_get_review_previews(3);
+	$review_steps = [
+		'service_type' => 0,
+		'contact' => 1,
+		'confirmation' => 2,
+	];
 	?>
 	<div class="lf-quote-modal" id="<?php echo esc_attr($modal_id); ?>" aria-hidden="true">
 		<div class="lf-quote-modal__overlay" data-lf-quote-close></div>
@@ -1122,31 +1151,18 @@ function lf_quote_builder_render_modal(): void {
 						<?php if (!empty($step['helper'])) : ?>
 							<p class="lf-quote-step__helper"><?php echo esc_html($step['helper']); ?></p>
 						<?php endif; ?>
-						<?php if (!empty($review_previews) && in_array($step_id, $review_steps, true)) : ?>
-							<div class="lf-quote-reviews" role="note" aria-label="<?php esc_attr_e('Recent reviews', 'leadsforward-core'); ?>">
-								<p class="lf-quote-reviews__eyebrow"><?php esc_html_e('Recent reviews', 'leadsforward-core'); ?></p>
-								<div class="lf-quote-reviews__list">
-									<?php foreach ($review_previews as $review) : ?>
-										<div class="lf-quote-reviews__card">
-											<p class="lf-quote-reviews__text"><?php echo esc_html($review['text']); ?></p>
-											<div class="lf-quote-reviews__meta">
-												<span class="lf-quote-reviews__name"><?php echo esc_html($review['name']); ?></span>
-												<span class="lf-quote-reviews__stars" aria-label="<?php echo esc_attr(sprintf(__('%d stars', 'leadsforward-core'), $review['rating'])); ?>">
-													<?php for ($s = 1; $s <= 5; $s++) : ?>
-														<svg class="lf-quote-reviews__star<?php echo $s <= $review['rating'] ? ' is-filled' : ''; ?>" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-													<?php endfor; ?>
-												</span>
-											</div>
-										</div>
-									<?php endforeach; ?>
-								</div>
-							</div>
-						<?php endif; ?>
+					<?php
+					$review_index = array_key_exists($step_id, $review_steps) ? $review_steps[$step_id] : null;
+					$review_for_step = is_int($review_index) && isset($review_previews[$review_index]) ? $review_previews[$review_index] : null;
+					?>
 						<?php if ($is_confirm) : ?>
 							<div class="lf-quote-step__confirmation">
 								<p class="lf-quote-step__confirm-title"><?php echo esc_html($step['confirmation_title'] ?? ''); ?></p>
 								<p class="lf-quote-step__confirm-body"><?php echo esc_html($step['confirmation_body'] ?? ''); ?></p>
 							</div>
+						<?php if (!empty($review_for_step)) : ?>
+							<?php lf_quote_builder_render_review_preview($review_for_step); ?>
+						<?php endif; ?>
 						<?php else : ?>
 							<div class="lf-quote-fields">
 								<?php foreach ($fields as $field) :
@@ -1183,6 +1199,9 @@ function lf_quote_builder_render_modal(): void {
 									</div>
 								<?php endforeach; ?>
 							</div>
+						<?php if (!empty($review_for_step)) : ?>
+							<?php lf_quote_builder_render_review_preview($review_for_step); ?>
+						<?php endif; ?>
 						<?php endif; ?>
 					</section>
 				<?php endforeach; ?>

@@ -93,7 +93,25 @@ function lf_homepage_sanitize_order(array $order, bool $append_missing = true): 
 function lf_homepage_controller_order(): array {
 	$stored = get_option(LF_HOMEPAGE_ORDER_OPTION, null);
 	if (is_array($stored) && !empty($stored)) {
-		return lf_homepage_sanitize_order($stored, false);
+		$order = lf_homepage_sanitize_order($stored, false);
+		$defaults = lf_homepage_default_order();
+		foreach ($defaults as $type) {
+			if (!in_array($type, $order, true)) {
+				$order[] = $type;
+			}
+		}
+		if (in_array('trust_reviews', $order, true) && in_array('process', $order, true)) {
+			$order = array_values(array_filter($order, function ($type) {
+				return $type !== 'trust_reviews';
+			}));
+			$process_index = array_search('process', $order, true);
+			if ($process_index === false) {
+				$order[] = 'trust_reviews';
+			} else {
+				array_splice($order, $process_index, 0, ['trust_reviews']);
+			}
+		}
+		return $order;
 	}
 	$stored_config = get_option(LF_HOMEPAGE_CONFIG_OPTION, null);
 	if (is_array($stored_config) && !empty($stored_config)) {

@@ -27,6 +27,10 @@ $heading = !empty($section['trust_heading']) ? $section['trust_heading'] : __('W
 $layout = $section['trust_layout'] ?? 'grid';
 $columns = isset($section['trust_columns']) ? (int) $section['trust_columns'] : 3;
 $columns = max(2, min(4, $columns));
+$is_homepage = function_exists('is_front_page') && is_front_page();
+if ($is_homepage && $layout === 'grid') {
+	$layout = 'masonry';
+}
 $show_summary = (string) ($section['trust_show_summary'] ?? '1') !== '0';
 $show_stars = (string) ($section['trust_show_stars'] ?? '1') !== '0';
 $show_source = (string) ($section['trust_show_source'] ?? '1') !== '0';
@@ -38,6 +42,7 @@ $queried = get_queried_object();
 $is_reviews_page = $queried instanceof WP_Post
 	&& $queried->post_type === 'page'
 	&& (strtolower($queried->post_name) === 'reviews' || strtolower((string) $queried->post_title) === 'reviews');
+$reviews_page_limit = 15;
 if ($is_reviews_page) {
 	$layout = 'masonry';
 	$max = -1;
@@ -58,6 +63,9 @@ $query = new WP_Query([
 	'post_status'    => 'publish',
 ]);
 $review_total = is_array($query->posts) ? count($query->posts) : 0;
+$count_obj = wp_count_posts('lf_testimonial');
+$total_reviews = isset($count_obj->publish) ? (int) $count_obj->publish : 0;
+$display_limit = $is_reviews_page ? $reviews_page_limit : $review_total;
 $ratings_total = 0;
 $ratings_count = 0;
 if ($review_total > 0) {
@@ -89,7 +97,7 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 			<?php else : ?>
 				<h2 class="lf-block-trust-reviews__title"><?php echo esc_html($heading); ?></h2>
 			<?php endif; ?>
-			<?php if ($show_summary && $review_total > 0) : ?>
+		<?php if ($show_summary && $total_reviews > 0) : ?>
 				<div class="lf-block-trust-reviews__summary" role="note" aria-label="<?php esc_attr_e('Review summary', 'leadsforward-core'); ?>">
 					<?php if ($avg_rating > 0) : ?>
 						<div class="lf-block-trust-reviews__summary-score">
@@ -98,20 +106,22 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 						</div>
 					<?php endif; ?>
 					<div class="lf-block-trust-reviews__summary-meta">
-						<span class="lf-block-trust-reviews__summary-count"><?php echo esc_html(sprintf(_n('%d review', '%d reviews', $review_total, 'leadsforward-core'), $review_total)); ?></span>
+					<span class="lf-block-trust-reviews__summary-count"><?php echo esc_html(sprintf(_n('%d review', '%d reviews', $total_reviews, 'leadsforward-core'), $total_reviews)); ?></span>
 						<span class="lf-block-trust-reviews__summary-label"><?php esc_html_e('Verified feedback', 'leadsforward-core'); ?></span>
 					</div>
 				</div>
 			<?php endif; ?>
 		</header>
 		<?php if ($query->have_posts()) : ?>
-			<div class="lf-block-trust-reviews__carousel" data-slider="<?php echo $is_slider ? '1' : '0'; ?>">
+		<div class="lf-block-trust-reviews__carousel" data-slider="<?php echo $is_slider ? '1' : '0'; ?>"<?php echo $is_reviews_page ? ' data-reviews-step="' . esc_attr((string) $reviews_page_limit) . '"' : ''; ?>>
 				<?php if ($is_slider) : ?>
 					<button type="button" class="lf-block-trust-reviews__nav lf-block-trust-reviews__nav--prev" aria-label="<?php esc_attr_e('Previous reviews', 'leadsforward-core'); ?>">‹</button>
 					<button type="button" class="lf-block-trust-reviews__nav lf-block-trust-reviews__nav--next" aria-label="<?php esc_attr_e('Next reviews', 'leadsforward-core'); ?>">›</button>
 				<?php endif; ?>
 				<ul class="lf-block-trust-reviews__list" role="list">
-					<?php while ($query->have_posts()) : $query->the_post();
+				<?php
+				$review_index = 0;
+				while ($query->have_posts()) : $query->the_post();
 						$name = function_exists('get_field') ? get_field('lf_testimonial_reviewer_name') : '';
 						$rating = function_exists('get_field') ? (int) get_field('lf_testimonial_rating') : 5;
 						$text = function_exists('get_field') ? get_field('lf_testimonial_review_text') : '';
@@ -129,8 +139,8 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 						$parts = preg_split('/\s+/', trim((string) $name));
 						$initials = strtoupper(substr($parts[0] ?? '', 0, 1) . substr($parts[1] ?? '', 0, 1));
 					}
-					?>
-					<li class="lf-block-trust-reviews__item" <?php echo $source ? 'data-source="' . esc_attr(sanitize_title((string) $source)) . '"' : ''; ?>>
+				?>
+				<li class="lf-block-trust-reviews__item<?php echo ($is_reviews_page && $review_index >= $display_limit) ? ' is-hidden' : ''; ?>" <?php echo $source ? 'data-source="' . esc_attr(sanitize_title((string) $source)) . '"' : ''; ?>>
 						<figure class="lf-block-trust-reviews__quote">
 							<?php if ($show_quote_icon) : ?>
 								<span class="lf-block-trust-reviews__quote-icon" aria-hidden="true">“</span>
@@ -168,9 +178,17 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 							</figcaption>
 						</figure>
 					</li>
-					<?php endwhile; ?>
+				<?php
+					$review_index++;
+				endwhile;
+				?>
 				</ul>
 			</div>
+		<?php if ($is_reviews_page && $total_reviews > $display_limit) : ?>
+			<div class="lf-block-trust-reviews__actions">
+				<button type="button" class="lf-block-trust-reviews__load-more" data-reviews-load><?php esc_html_e('Load more reviews', 'leadsforward-core'); ?></button>
+			</div>
+		<?php endif; ?>
 			<?php wp_reset_postdata(); ?>
 		<?php else : ?>
 			<div class="lf-block-trust-reviews__empty" role="status">
@@ -206,6 +224,41 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 					});
 					next.addEventListener('click', function () {
 						list.scrollBy({ left: getStep(), behavior: 'smooth' });
+					});
+				});
+			});
+		</script>
+	<?php endif; ?>
+<?php endif; ?>
+<?php if ($is_reviews_page && $total_reviews > $display_limit) : ?>
+	<?php static $load_more_script_loaded = false; ?>
+	<?php if (!$load_more_script_loaded) : ?>
+		<?php $load_more_script_loaded = true; ?>
+		<script>
+			document.addEventListener('DOMContentLoaded', function () {
+				document.querySelectorAll('.lf-block-trust-reviews__load-more').forEach(function (button) {
+					var section = button.closest('.lf-block-trust-reviews');
+					if (!section) {
+						return;
+					}
+					var carousel = section.querySelector('.lf-block-trust-reviews__carousel');
+					var step = 15;
+					if (carousel && carousel.dataset.reviewsStep) {
+						var parsed = parseInt(carousel.dataset.reviewsStep, 10);
+						step = isNaN(parsed) ? step : parsed;
+					}
+					button.addEventListener('click', function () {
+						var hidden = section.querySelectorAll('.lf-block-trust-reviews__item.is-hidden');
+						if (!hidden.length) {
+							button.remove();
+							return;
+						}
+						for (var i = 0; i < step && i < hidden.length; i++) {
+							hidden[i].classList.remove('is-hidden');
+						}
+						if (section.querySelectorAll('.lf-block-trust-reviews__item.is-hidden').length === 0) {
+							button.remove();
+						}
 					});
 				});
 			});
