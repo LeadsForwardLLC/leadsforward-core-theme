@@ -23,10 +23,31 @@ if (!empty($section['trust_max_items'])) {
 } elseif (isset($block['attributes']['max_items'])) {
 	$max = (int) $block['attributes']['max_items'];
 }
-$max = max(1, min(10, $max));
 $heading = !empty($section['trust_heading']) ? $section['trust_heading'] : __('What Our Customers Say', 'leadsforward-core');
+$layout = $section['trust_layout'] ?? 'grid';
+$columns = isset($section['trust_columns']) ? (int) $section['trust_columns'] : 3;
+$columns = max(2, min(4, $columns));
+$show_summary = (string) ($section['trust_show_summary'] ?? '1') !== '0';
+$show_stars = (string) ($section['trust_show_stars'] ?? '1') !== '0';
+$show_source = (string) ($section['trust_show_source'] ?? '1') !== '0';
+$show_avatars = (string) ($section['trust_show_avatars'] ?? '1') !== '0';
+$show_quote_icon = (string) ($section['trust_show_quote_icon'] ?? '1') !== '0';
 $icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'trust_reviews', 'above', 'lf-heading-icon') : '';
 $icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'trust_reviews', 'left', 'lf-heading-icon') : '';
+$queried = get_queried_object();
+$is_reviews_page = $queried instanceof WP_Post
+	&& $queried->post_type === 'page'
+	&& (strtolower($queried->post_name) === 'reviews' || strtolower((string) $queried->post_title) === 'reviews');
+if ($is_reviews_page) {
+	$layout = 'masonry';
+	$max = -1;
+	$heading = sprintf(
+		__('Reviews for %s', 'leadsforward-core'),
+		(function_exists('lf_get_option') ? lf_get_option('lf_business_name', 'option') : '') ?: get_bloginfo('name')
+	);
+} else {
+	$max = max(1, min(10, $max));
+}
 
 $query = new WP_Query([
 	'post_type'      => 'lf_testimonial',
@@ -49,13 +70,14 @@ if ($review_total > 0) {
 	}
 }
 $avg_rating = $ratings_count > 0 ? round($ratings_total / $ratings_count, 1) : 0;
-$is_slider = $review_total > 3;
+$is_slider = $layout === 'slider';
 $section_classes = 'lf-block lf-block-trust-reviews ' . $bg_class . ' lf-block-trust-reviews--' . $variant;
 if ($is_slider) {
 	$section_classes .= ' lf-block-trust-reviews--slider';
 }
+$section_classes .= ' lf-block-trust-reviews--' . $layout;
 ?>
-<section class="<?php echo esc_attr(trim($section_classes)); ?>" id="<?php echo esc_attr($render_id); ?>" data-variant="<?php echo esc_attr($variant); ?>">
+<section class="<?php echo esc_attr(trim($section_classes)); ?>" id="<?php echo esc_attr($render_id); ?>" data-variant="<?php echo esc_attr($variant); ?>" style="--lf-reviews-columns: <?php echo esc_attr((string) $columns); ?>;">
 	<div class="lf-block-trust-reviews__inner">
 		<header class="lf-block-trust-reviews__header">
 			<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
@@ -67,7 +89,7 @@ if ($is_slider) {
 			<?php else : ?>
 				<h2 class="lf-block-trust-reviews__title"><?php echo esc_html($heading); ?></h2>
 			<?php endif; ?>
-			<?php if ($variant === 'a' && $review_total > 0) : ?>
+			<?php if ($show_summary && $review_total > 0) : ?>
 				<div class="lf-block-trust-reviews__summary" role="note" aria-label="<?php esc_attr_e('Review summary', 'leadsforward-core'); ?>">
 					<?php if ($avg_rating > 0) : ?>
 						<div class="lf-block-trust-reviews__summary-score">
@@ -110,21 +132,25 @@ if ($is_slider) {
 					?>
 					<li class="lf-block-trust-reviews__item" <?php echo $source ? 'data-source="' . esc_attr(sanitize_title((string) $source)) . '"' : ''; ?>>
 						<figure class="lf-block-trust-reviews__quote">
-							<span class="lf-block-trust-reviews__quote-icon" aria-hidden="true">“</span>
+							<?php if ($show_quote_icon) : ?>
+								<span class="lf-block-trust-reviews__quote-icon" aria-hidden="true">“</span>
+							<?php endif; ?>
 							<blockquote class="lf-block-trust-reviews__text"><?php echo esc_html($text); ?></blockquote>
 							<figcaption class="lf-block-trust-reviews__cite">
-								<span class="lf-block-trust-reviews__avatar" aria-hidden="true">
-									<?php
-									if ($avatar_id) {
-										echo wp_get_attachment_image($avatar_id, 'thumbnail', false, ['alt' => '', 'loading' => 'lazy', 'decoding' => 'async']);
-									} else {
-										echo esc_html($initials ?: '★');
-									}
-									?>
-								</span>
+								<?php if ($show_avatars) : ?>
+									<span class="lf-block-trust-reviews__avatar" aria-hidden="true">
+										<?php
+										if ($avatar_id) {
+											echo wp_get_attachment_image($avatar_id, 'thumbnail', false, ['alt' => '', 'loading' => 'lazy', 'decoding' => 'async']);
+										} else {
+											echo esc_html($initials ?: '★');
+										}
+										?>
+									</span>
+								<?php endif; ?>
 								<span class="lf-block-trust-reviews__author">
 									<cite class="lf-block-trust-reviews__name"><?php echo esc_html($name); ?></cite>
-									<?php if ($source) : ?>
+									<?php if ($show_source && $source) : ?>
 										<?php if ($source_url) : ?>
 											<a class="lf-block-trust-reviews__source" href="<?php echo esc_url($source_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html($source); ?></a>
 										<?php else : ?>
@@ -132,7 +158,7 @@ if ($is_slider) {
 										<?php endif; ?>
 									<?php endif; ?>
 								</span>
-								<?php if ($rating) : ?>
+								<?php if ($show_stars && $rating) : ?>
 									<span class="lf-block-trust-reviews__stars" aria-label="<?php echo esc_attr(sprintf(__('%d stars', 'leadsforward-core'), $rating)); ?>">
 										<?php for ($s = 1; $s <= 5; $s++) : ?>
 											<svg class="lf-block-trust-reviews__star<?php echo $s <= $rating ? ' lf-block-trust-reviews__star--filled' : ''; ?>" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>

@@ -3260,13 +3260,38 @@ button:focus-visible,
 	.lf-block-trust-reviews__list { grid-template-columns: repeat(2, 1fr); }
 }
 @media (min-width: 64rem) {
-	.lf-block-trust-reviews__list { grid-template-columns: repeat(3, 1fr); }
+	.lf-block-trust-reviews__list { grid-template-columns: repeat(var(--lf-reviews-columns, 3), minmax(0, 1fr)); }
 }
 
 .lf-block-trust-reviews__list:has(.lf-block-trust-reviews__item:only-child) {
 	max-width: 32rem;
 	margin-left: auto;
 	margin-right: auto;
+}
+
+.lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
+	display: block;
+	column-count: var(--lf-reviews-columns, 3);
+	column-gap: 1.5rem;
+}
+
+.lf-block-trust-reviews--masonry .lf-block-trust-reviews__item {
+	break-inside: avoid;
+	margin-bottom: 1.5rem;
+	width: 100%;
+	display: inline-block;
+}
+
+@media (max-width: 64rem) {
+	.lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
+		column-count: 2;
+	}
+}
+
+@media (max-width: 40rem) {
+	.lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
+		column-count: 1;
+	}
 }
 
 .lf-block-trust-reviews__quote {

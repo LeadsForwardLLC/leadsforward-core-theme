@@ -1594,11 +1594,60 @@
         "storage_format": "raw string"
       },
       {
+        "key": "trust_layout",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "trust_columns",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
         "key": "trust_max_items",
         "type": "number",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
         "storage_format": "numeric string"
+      },
+      {
+        "key": "trust_show_summary",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "trust_show_stars",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "trust_show_source",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "trust_show_avatars",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "trust_show_quote_icon",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
       },
       {
         "key": "icon_enabled",

@@ -150,6 +150,19 @@ function lf_homepage_admin_save(): void {
 			$config[$type]['trust_rating'] = isset($_POST['lf_hp_trust_rating']) ? sanitize_text_field($_POST['lf_hp_trust_rating']) : '';
 			$config[$type]['trust_review_count'] = isset($_POST['lf_hp_trust_review_count']) ? sanitize_text_field($_POST['lf_hp_trust_review_count']) : '';
 		}
+		if ($type === 'trust_reviews') {
+			$config[$type]['trust_heading'] = isset($_POST['lf_hp_reviews_heading']) ? sanitize_text_field($_POST['lf_hp_reviews_heading']) : '';
+			$layout = isset($_POST['lf_hp_reviews_layout']) ? sanitize_text_field($_POST['lf_hp_reviews_layout']) : 'grid';
+			$config[$type]['trust_layout'] = in_array($layout, ['grid', 'slider', 'masonry'], true) ? $layout : 'grid';
+			$cols = isset($_POST['lf_hp_reviews_columns']) ? sanitize_text_field($_POST['lf_hp_reviews_columns']) : '3';
+			$config[$type]['trust_columns'] = in_array($cols, ['2', '3', '4'], true) ? $cols : '3';
+			$config[$type]['trust_max_items'] = isset($_POST['lf_hp_reviews_max']) ? absint($_POST['lf_hp_reviews_max']) : 6;
+			$config[$type]['trust_show_summary'] = isset($_POST['lf_hp_reviews_summary']) && $_POST['lf_hp_reviews_summary'] === '0' ? '0' : '1';
+			$config[$type]['trust_show_stars'] = isset($_POST['lf_hp_reviews_stars']) && $_POST['lf_hp_reviews_stars'] === '0' ? '0' : '1';
+			$config[$type]['trust_show_source'] = isset($_POST['lf_hp_reviews_source']) && $_POST['lf_hp_reviews_source'] === '0' ? '0' : '1';
+			$config[$type]['trust_show_avatars'] = isset($_POST['lf_hp_reviews_avatars']) && $_POST['lf_hp_reviews_avatars'] === '0' ? '0' : '1';
+			$config[$type]['trust_show_quote_icon'] = isset($_POST['lf_hp_reviews_quote']) && $_POST['lf_hp_reviews_quote'] === '0' ? '0' : '1';
+		}
 		if ($type === 'benefits') {
 			$config[$type]['section_heading'] = isset($_POST['lf_hp_benefits_heading']) ? sanitize_text_field($_POST['lf_hp_benefits_heading']) : '';
 			$config[$type]['section_intro'] = isset($_POST['lf_hp_benefits_intro']) ? sanitize_textarea_field($_POST['lf_hp_benefits_intro']) : '';
@@ -228,6 +241,7 @@ function lf_homepage_admin_section_labels(): array {
 	return [
 		'hero'           => __('Hero', 'leadsforward-core'),
 		'trust_bar'      => __('Trust Bar', 'leadsforward-core'),
+		'trust_reviews'  => __('Reviews', 'leadsforward-core'),
 		'benefits'       => __('Benefits / Why Choose Us', 'leadsforward-core'),
 		'service_intro'  => __('Service Intro Boxes', 'leadsforward-core'),
 		'content_image_a' => __('Service Details (A)', 'leadsforward-core'),
@@ -828,6 +842,81 @@ function lf_homepage_admin_render(): void {
 									<tr>
 										<th scope="row"><label for="lf_hp_trust_review_count"><?php esc_html_e('Review count override (optional)', 'leadsforward-core'); ?></label></th>
 										<td><input type="number" name="lf_hp_trust_review_count" id="lf_hp_trust_review_count" value="<?php echo esc_attr((string) ($sec['trust_review_count'] ?? '')); ?>" /></td>
+									</tr>
+									<?php endif; ?>
+									<?php if ($type === 'trust_reviews') : ?>
+									<tr>
+										<th scope="row"><label for="lf_hp_reviews_heading"><?php esc_html_e('Reviews heading', 'leadsforward-core'); ?></label></th>
+										<td><input type="text" class="large-text" name="lf_hp_reviews_heading" id="lf_hp_reviews_heading" value="<?php echo esc_attr($sec['trust_heading'] ?? ''); ?>" /></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_reviews_layout"><?php esc_html_e('Layout', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_reviews_layout" id="lf_hp_reviews_layout">
+												<option value="grid" <?php selected(($sec['trust_layout'] ?? 'grid'), 'grid'); ?>><?php esc_html_e('Grid', 'leadsforward-core'); ?></option>
+												<option value="slider" <?php selected(($sec['trust_layout'] ?? ''), 'slider'); ?>><?php esc_html_e('Slider', 'leadsforward-core'); ?></option>
+												<option value="masonry" <?php selected(($sec['trust_layout'] ?? ''), 'masonry'); ?>><?php esc_html_e('Masonry', 'leadsforward-core'); ?></option>
+											</select>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_reviews_columns"><?php esc_html_e('Columns', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_reviews_columns" id="lf_hp_reviews_columns">
+												<option value="2" <?php selected(($sec['trust_columns'] ?? '3'), '2'); ?>><?php esc_html_e('2 columns', 'leadsforward-core'); ?></option>
+												<option value="3" <?php selected(($sec['trust_columns'] ?? '3'), '3'); ?>><?php esc_html_e('3 columns', 'leadsforward-core'); ?></option>
+												<option value="4" <?php selected(($sec['trust_columns'] ?? '3'), '4'); ?>><?php esc_html_e('4 columns', 'leadsforward-core'); ?></option>
+											</select>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_reviews_max"><?php esc_html_e('Max items', 'leadsforward-core'); ?></label></th>
+										<td><input type="number" class="small-text" name="lf_hp_reviews_max" id="lf_hp_reviews_max" value="<?php echo esc_attr((string) ($sec['trust_max_items'] ?? '6')); ?>" min="1" /></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_reviews_summary"><?php esc_html_e('Show summary', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_reviews_summary" id="lf_hp_reviews_summary">
+												<option value="1" <?php selected((string) ($sec['trust_show_summary'] ?? '1'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
+												<option value="0" <?php selected((string) ($sec['trust_show_summary'] ?? ''), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
+											</select>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_reviews_stars"><?php esc_html_e('Show stars', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_reviews_stars" id="lf_hp_reviews_stars">
+												<option value="1" <?php selected((string) ($sec['trust_show_stars'] ?? '1'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
+												<option value="0" <?php selected((string) ($sec['trust_show_stars'] ?? ''), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
+											</select>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_reviews_source"><?php esc_html_e('Show review source', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_reviews_source" id="lf_hp_reviews_source">
+												<option value="1" <?php selected((string) ($sec['trust_show_source'] ?? '1'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
+												<option value="0" <?php selected((string) ($sec['trust_show_source'] ?? ''), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
+											</select>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_reviews_avatars"><?php esc_html_e('Show avatars', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_reviews_avatars" id="lf_hp_reviews_avatars">
+												<option value="1" <?php selected((string) ($sec['trust_show_avatars'] ?? '1'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
+												<option value="0" <?php selected((string) ($sec['trust_show_avatars'] ?? ''), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
+											</select>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_reviews_quote"><?php esc_html_e('Show quote icon', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_reviews_quote" id="lf_hp_reviews_quote">
+												<option value="1" <?php selected((string) ($sec['trust_show_quote_icon'] ?? '1'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
+												<option value="0" <?php selected((string) ($sec['trust_show_quote_icon'] ?? ''), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
+											</select>
+										</td>
 									</tr>
 									<?php endif; ?>
 									<?php if ($type === 'benefits') : ?>

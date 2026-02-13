@@ -103,6 +103,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 - `process` section renders an optional expectations note beneath the steps when provided.
 - `service_details` renders heading/intro/body/checklist only, with optional media (image, embed, or self-hosted video) and left/right layout control.
 - `content_image` and `image_content` variants now use the `service_details` field set + renderer for consistency.
+- `trust_reviews` supports grid/slider/masonry layouts with optional summary, stars, source, avatars, and quote icon; the Reviews page defaults to masonry + all items.
 - `related_links` defaults to services-only in core templates.
 
 ## Quote Builder Dynamics
