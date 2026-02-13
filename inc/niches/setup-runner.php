@@ -1005,7 +1005,7 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'contact' => [
-			'order' => ['hero', 'content_centered', 'map_nap', 'cta'],
+			'order' => ['hero', 'content_centered', 'trust_reviews', 'map_nap', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Contact ' . $business,
@@ -1019,6 +1019,14 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 						$email ? 'Email: ' . $email : '',
 						$vars['address'] ? 'Address: ' . $vars['address'] : '',
 					])),
+				],
+				'trust_reviews' => [
+					'trust_heading' => 'Recent reviews',
+					'trust_layout' => 'grid',
+					'trust_columns' => '2',
+					'trust_max_items' => 2,
+					'trust_show_summary' => '0',
+					'trust_show_source' => '0',
 				],
 				'map_nap' => [
 					'section_heading' => 'Our service area',

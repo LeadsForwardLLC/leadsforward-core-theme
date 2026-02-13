@@ -4238,6 +4238,67 @@ body.lf-quote-open {
 	line-height: 1.6;
 }
 
+.lf-quote-reviews {
+	margin: 0 0 1.5rem;
+	padding: 1rem 1.1rem;
+	border-radius: 16px;
+	background: var(--lf-surface-soft);
+	border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.lf-quote-reviews__eyebrow {
+	margin: 0 0 0.75rem;
+	font-size: 0.75rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	color: var(--lf-text-muted);
+}
+
+.lf-quote-reviews__list {
+	display: grid;
+	gap: 0.75rem;
+}
+
+.lf-quote-reviews__card {
+	background: #fff;
+	border-radius: 12px;
+	border: 1px solid rgba(15, 23, 42, 0.08);
+	padding: 0.75rem 0.85rem;
+	box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.lf-quote-reviews__text {
+	margin: 0 0 0.75rem;
+	font-size: 0.95rem;
+	line-height: 1.5;
+	color: var(--lf-text-primary);
+}
+
+.lf-quote-reviews__meta {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	font-size: 0.85rem;
+	color: var(--lf-text-muted);
+}
+
+.lf-quote-reviews__name {
+	font-weight: 700;
+	color: var(--lf-text-primary);
+}
+
+.lf-quote-reviews__stars {
+	display: inline-flex;
+	gap: 0.1rem;
+	color: var(--lf-neutral-300);
+}
+
+.lf-quote-reviews__star.is-filled {
+	color: var(--lf-warning);
+}
+
 .lf-quote-fields {
 	display: grid;
 	gap: 1rem;
