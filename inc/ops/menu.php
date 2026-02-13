@@ -1,7 +1,7 @@
 <?php
 /**
  * LeadsForward parent menu and submenu registration. Admin only.
- * Order: Website Manifester → Setup → Global Settings → Homepage → Ops (bulk/audit/config).
+ * Order: Website Manifester → Global Settings → Homepage → Quote Builder → Ops (bulk/audit/config).
  * Site Health is added by inc/site-health/dashboard.php at priority 11.
  *
  * @package LeadsForward_Core
@@ -20,7 +20,7 @@ add_action('admin_init', 'lf_ops_handle_global_settings_save');
 add_action('admin_enqueue_scripts', 'lf_ops_settings_assets');
 
 function lf_ops_register_menu(): void {
-	// Parent: slug lf-ops so first submenu with same slug (Setup) is the default — no redirect, avoids "headers already sent"
+	// Parent: slug lf-ops so first submenu with same slug (Manifester) is the default — no redirect, avoids "headers already sent"
 	add_menu_page(
 		__('LeadsForward', 'leadsforward-core'),
 		__('LeadsForward', 'leadsforward-core'),
@@ -157,6 +157,19 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('lf_ai_airtable_base', isset($_POST['lf_ai_airtable_base']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_base'])) : '');
 	update_option('lf_ai_airtable_table', isset($_POST['lf_ai_airtable_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_table'])) : '');
 	update_option('lf_ai_airtable_view', isset($_POST['lf_ai_airtable_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_view'])) : '');
+	update_option('lf_maps_api_key', isset($_POST['lf_maps_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_maps_api_key'])) : '');
+	$design_preset = isset($_POST['lf_global_design_preset']) ? sanitize_text_field(wp_unslash($_POST['lf_global_design_preset'])) : 'clean-precision';
+	$allowed_presets = ['clean-precision', 'bold-authority', 'friendly-approachable', 'high-contrast', 'modern-edge', 'structured-modular'];
+	if (!in_array($design_preset, $allowed_presets, true)) {
+		$design_preset = 'clean-precision';
+	}
+	update_option('lf_global_design_preset', $design_preset);
+	$niche_slug = isset($_POST['lf_homepage_niche_slug']) ? sanitize_text_field(wp_unslash($_POST['lf_homepage_niche_slug'])) : 'general';
+	$allowed_niches = function_exists('lf_get_niche_registry') ? array_keys(lf_get_niche_registry()) : ['general'];
+	if (!in_array($niche_slug, $allowed_niches, true)) {
+		$niche_slug = 'general';
+	}
+	update_option('lf_homepage_niche_slug', $niche_slug);
 	$field_defaults = function_exists('lf_ai_studio_airtable_default_field_map') ? lf_ai_studio_airtable_default_field_map() : [];
 	$field_input = isset($_POST['lf_ai_airtable_field_map']) && is_array($_POST['lf_ai_airtable_field_map'])
 		? $_POST['lf_ai_airtable_field_map']
@@ -355,6 +368,28 @@ function lf_ops_render_global_settings_page(): void {
 	$entity_insurance = (string) ($entity['insurance_statement'] ?? '');
 	$maps_api_key = get_option('lf_maps_api_key', '');
 	$maps_api_key = is_string($maps_api_key) ? $maps_api_key : '';
+	$homepage_niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
+	$design_preset = (string) get_option('lf_global_design_preset', 'clean-precision');
+	$niche_registry = function_exists('lf_get_niche_registry') ? lf_get_niche_registry() : [];
+	if (empty($niche_registry)) {
+		$niche_registry = [
+			'general' => ['name' => __('General', 'leadsforward-core')],
+		];
+	}
+	if (!isset($niche_registry[$homepage_niche_slug])) {
+		$homepage_niche_slug = 'general';
+	}
+	$design_presets = [
+		'clean-precision' => __('Clean Precision', 'leadsforward-core'),
+		'bold-authority' => __('Bold Authority', 'leadsforward-core'),
+		'friendly-approachable' => __('Friendly & Approachable', 'leadsforward-core'),
+		'high-contrast' => __('High-Contrast Conversion Engine', 'leadsforward-core'),
+		'modern-edge' => __('Modern Edge', 'leadsforward-core'),
+		'structured-modular' => __('Structured Modular', 'leadsforward-core'),
+	];
+	if (!isset($design_presets[$design_preset])) {
+		$design_preset = 'clean-precision';
+	}
 	$place_id = function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_place_id', '') : '';
 	$place_name = function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_place_name', '') : '';
 	$place_address = function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_place_address', '') : '';
@@ -426,6 +461,13 @@ function lf_ops_render_global_settings_page(): void {
 							<tr>
 								<th scope="row"><label for="lf_ai_studio_secret_global"><?php esc_html_e('Orchestrator Shared Secret', 'leadsforward-core'); ?></label></th>
 								<td><input type="text" class="large-text" name="lf_ai_studio_secret" id="lf_ai_studio_secret_global" value="<?php echo esc_attr($manifester_secret); ?>" required /></td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_maps_api_key"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></label></th>
+								<td>
+									<input type="text" class="large-text" name="lf_maps_api_key" id="lf_maps_api_key" value="<?php echo esc_attr($maps_api_key); ?>" />
+									<p class="description"><?php esc_html_e('Used for business place search and map embeds in Business Entity settings.', 'leadsforward-core'); ?></p>
+								</td>
 							</tr>
 							<tr>
 								<th colspan="2" style="padding-top: 16px;"><?php esc_html_e('Airtable Connection', 'leadsforward-core'); ?></th>
@@ -527,6 +569,21 @@ function lf_ops_render_global_settings_page(): void {
 							<td><input type="text" class="regular-text" id="lf_business_legal_name" name="lf_business_legal_name" value="<?php echo esc_attr($entity_legal); ?>" /></td>
 						</tr>
 						<tr>
+							<th scope="row"><label for="lf_homepage_niche_slug"><?php esc_html_e('Niche', 'leadsforward-core'); ?></label></th>
+							<td>
+								<select name="lf_homepage_niche_slug" id="lf_homepage_niche_slug">
+									<?php foreach ($niche_registry as $slug => $niche) :
+										$name = is_array($niche) ? (string) ($niche['name'] ?? $slug) : (string) $slug;
+										?>
+										<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected($homepage_niche_slug === (string) $slug); ?>>
+											<?php echo esc_html($name); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+								<p class="description"><?php esc_html_e('Sets the default service blueprint and AI defaults for this site.', 'leadsforward-core'); ?></p>
+							</td>
+						</tr>
+						<tr>
 							<th scope="row"><label for="lf_business_phone_primary"><?php esc_html_e('Primary phone', 'leadsforward-core'); ?></label></th>
 							<td><input type="text" class="regular-text" id="lf_business_phone_primary" name="lf_business_phone_primary" value="<?php echo esc_attr($entity_phone_primary); ?>" /></td>
 						</tr>
@@ -557,16 +614,6 @@ function lf_ops_render_global_settings_page(): void {
 									<input type="text" class="regular-text" name="lf_business_address_state" placeholder="<?php esc_attr_e('State', 'leadsforward-core'); ?>" value="<?php echo esc_attr($entity_address_state); ?>" />
 									<input type="text" class="regular-text" name="lf_business_address_zip" placeholder="<?php esc_attr_e('ZIP', 'leadsforward-core'); ?>" value="<?php echo esc_attr($entity_address_zip); ?>" />
 								</div>
-							</td>
-						</tr>
-						<tr>
-							<th scope="row"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></th>
-							<td>
-								<?php if ($maps_api_key) : ?>
-									<p class="description"><?php esc_html_e('Key is set in LeadsForward -> Setup.', 'leadsforward-core'); ?></p>
-								<?php else : ?>
-									<p class="description"><?php esc_html_e('Add your Google Maps API key in LeadsForward -> Setup to enable place search + embeds.', 'leadsforward-core'); ?></p>
-								<?php endif; ?>
 							</td>
 						</tr>
 						<tr>
@@ -703,6 +750,33 @@ function lf_ops_render_global_settings_page(): void {
 					</table>
 				</div>
 			</div>
+			<div class="lf-settings-panel" data-section="global_design">
+				<div class="lf-settings-panel-header">
+					<h2><?php esc_html_e('Global Design', 'leadsforward-core'); ?></h2>
+					<button type="button" class="lf-settings-toggle" data-target="global_design" aria-expanded="true">
+						<span class="lf-settings-toggle-icon">▾</span>
+						<span class="lf-settings-toggle-label"><?php esc_html_e('Collapse', 'leadsforward-core'); ?></span>
+					</button>
+				</div>
+				<div class="lf-settings-panel-body" data-parent="global_design">
+					<p class="description"><?php esc_html_e('Pick a design system that changes the site-wide look and feel.', 'leadsforward-core'); ?></p>
+					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><label for="lf_global_design_preset"><?php esc_html_e('Design preset', 'leadsforward-core'); ?></label></th>
+							<td>
+								<select name="lf_global_design_preset" id="lf_global_design_preset">
+									<?php foreach ($design_presets as $slug => $label) : ?>
+										<option value="<?php echo esc_attr($slug); ?>" <?php selected($design_preset === $slug); ?>>
+											<?php echo esc_html($label); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+								<p class="description"><?php esc_html_e('Applies global styles to typography, surfaces, buttons, and section rhythm.', 'leadsforward-core'); ?></p>
+							</td>
+						</tr>
+					</table>
+				</div>
+			</div>
 			<div class="lf-settings-panel" data-section="branding">
 				<div class="lf-settings-panel-header">
 					<h2><?php esc_html_e('Branding', 'leadsforward-core'); ?></h2>
@@ -824,7 +898,7 @@ function lf_ops_render_global_settings_page(): void {
 				}
 				if (!key) {
 					if (status) {
-						status.textContent = 'Add your Google Maps API key in LeadsForward -> Setup to enable search.';
+						status.textContent = 'Add your Google Maps API key in LeadsForward -> Global Settings -> Website Manifester Settings to enable search.';
 					}
 					return;
 				}
@@ -860,7 +934,7 @@ function lf_ops_render_global_settings_page(): void {
 				key = key.trim();
 				if (!key) {
 					if (selected) {
-						selected.textContent = 'Add your Google Maps API key in LeadsForward -> Setup to enable search.';
+						selected.textContent = 'Add your Google Maps API key in LeadsForward -> Global Settings -> Website Manifester Settings to enable search.';
 					}
 					if (status) {
 						status.textContent = '';

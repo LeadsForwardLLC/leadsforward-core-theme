@@ -1074,6 +1074,15 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 			$title_text = $parts[0] ?? $item;
 			$body_text = $parts[1] ?? '';
 		}
+		$title_text = trim($title_text);
+		$body_text = trim($body_text);
+		if ($body_text === '' && $title_text !== '') {
+			$words = preg_split('/\s+/', $title_text);
+			if (is_array($words) && count($words) > $title_limit) {
+				$title_text = implode(' ', array_slice($words, 0, $title_limit));
+				$body_text = implode(' ', array_slice($words, $title_limit));
+			}
+		}
 		$title_text = wp_trim_words($title_text, $title_limit, '');
 		$body_text = wp_trim_words($body_text, $body_limit, '');
 		$parsed_items[] = [
@@ -1368,8 +1377,41 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 	?>
 	<ol class="<?php echo esc_attr($process_class); ?>">
 		<?php foreach ($steps as $step) : ?>
+			<?php
+			$step = trim((string) $step);
+			$step_title = $step;
+			$step_body = '';
+			if (strpos($step, '||') !== false) {
+				$parts = array_map('trim', explode('||', $step, 2));
+				$step_title = $parts[0] ?? $step;
+				$step_body = $parts[1] ?? '';
+			} elseif (strpos($step, '|') !== false) {
+				$parts = array_map('trim', explode('|', $step, 2));
+				$step_title = $parts[0] ?? $step;
+				$step_body = $parts[1] ?? '';
+			} elseif (strpos($step, ' - ') !== false) {
+				$parts = array_map('trim', explode(' - ', $step, 2));
+				$step_title = $parts[0] ?? $step;
+				$step_body = $parts[1] ?? '';
+			} elseif (strpos($step, ' — ') !== false) {
+				$parts = array_map('trim', explode(' — ', $step, 2));
+				$step_title = $parts[0] ?? $step;
+				$step_body = $parts[1] ?? '';
+			} elseif (strpos($step, ':') !== false) {
+				$parts = array_map('trim', explode(':', $step, 2));
+				$step_title = $parts[0] ?? $step;
+				$step_body = $parts[1] ?? '';
+			}
+			$step_title = wp_trim_words($step_title, 6, '');
+			$step_body = wp_trim_words($step_body, 18, '');
+			?>
 			<li class="lf-process__step">
-				<span class="lf-process__text"><?php echo esc_html($step); ?></span>
+				<?php if ($step_body !== '') : ?>
+					<span class="lf-process__step-title"><?php echo esc_html($step_title); ?></span>
+					<span class="lf-process__step-body"><?php echo esc_html($step_body); ?></span>
+				<?php else : ?>
+					<span class="lf-process__text"><?php echo esc_html($step_title); ?></span>
+				<?php endif; ?>
 			</li>
 		<?php endforeach; ?>
 	</ol>

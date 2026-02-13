@@ -312,6 +312,8 @@ function lf_ai_studio_handle_run_audit(): void {
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_ai_studio_run_audit', 'lf_ai_studio_run_audit_nonce');
+	$manifest = lf_ai_studio_get_manifest();
+	lf_ai_studio_ensure_core_page_sections($manifest);
 	$report = lf_ai_studio_run_content_audit('manual');
 	lf_ai_studio_store_audit_report($report, 0);
 	$redirect = add_query_arg('audit', '1', admin_url('admin.php?page=lf-ops'));
@@ -1889,10 +1891,12 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 
 function lf_ai_studio_llm_system_message(): string {
 	return implode("\n", [
-		'Return JSON only. No markdown, no commentary, no HTML.',
+		'Return JSON only. No markdown, no commentary.',
+		'HTML is allowed only inside richtext fields (use <p>, <ul>, <li>, <a>).',
 		'Use only allowed_field_keys. Do not invent fields.',
 		'Headlines: never use dash or hyphen separators. Sentence case or title case only. No trailing punctuation unless a question mark. Hero headline max 12 words.',
 		'Benefits: 15-35 words each, max 2 sentences per benefit. No dash separators in benefit titles.',
+		'Internal linking: include 1-2 internal links in richtext fields using internal_links list. Use <a href="URL">Label</a>. Do not invent URLs.',
 		'Content separation by page type:',
 		'Homepage: broad positioning; do not reuse service or area copy verbatim.',
 		'Services overview: broad authority content; no detailed process repetition; avoid excessive city modifiers.',
@@ -2498,7 +2502,11 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = []): void {
 		$is_minimal = function_exists('lf_wizard_is_minimal_pb_config')
 			? lf_wizard_is_minimal_pb_config($existing_config)
 			: (!is_array($existing_config) || empty($existing_config));
-		if (!$is_minimal) {
+		$force_reseed = false;
+		if ($slug === 'about-us') {
+			$force_reseed = !lf_ai_studio_config_has_section_types($existing_config, ['content_image', 'benefits', 'process']);
+		}
+		if (!$is_minimal && !$force_reseed) {
 			continue;
 		}
 		lf_wizard_seed_page_pb_config((int) $page_id, $slug, $data, is_array($niche) ? $niche : [], $created_pages);
@@ -2519,6 +2527,34 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = []): void {
 	if (function_exists('lf_ai_studio_ensure_header_menu_primary_pages')) {
 		lf_ai_studio_ensure_header_menu_primary_pages();
 	}
+}
+
+function lf_ai_studio_config_has_section_types($config, array $types): bool {
+	if (!is_array($config) || empty($types)) {
+		return false;
+	}
+	$order = $config['order'] ?? [];
+	$sections = $config['sections'] ?? [];
+	if (!is_array($order) || !is_array($sections)) {
+		return false;
+	}
+	$enabled_types = [];
+	foreach ($order as $instance_id) {
+		$section = $sections[$instance_id] ?? null;
+		if (!is_array($section) || empty($section['enabled'])) {
+			continue;
+		}
+		$type = (string) ($section['type'] ?? '');
+		if ($type !== '') {
+			$enabled_types[$type] = true;
+		}
+	}
+	foreach ($types as $type) {
+		if (empty($enabled_types[$type])) {
+			return false;
+		}
+	}
+	return true;
 }
 
 function lf_ai_studio_force_related_links_services(): void {
@@ -2649,6 +2685,11 @@ function lf_ai_studio_build_full_site_payload(): array {
 				continue;
 			}
 			$keyword = $service_keyword_map[$service->post_name] ?? '';
+			if ($keyword === '') {
+				$keyword = $overview_keyword !== ''
+					? trim($service->post_title . ' ' . $overview_keyword)
+					: (string) $service->post_title;
+			}
 			$blueprint = lf_ai_studio_build_post_blueprint($service, 'service', 'service_detail', $keyword);
 			if (!empty($blueprint)) {
 				$blueprints[] = $blueprint;
@@ -2672,6 +2713,11 @@ function lf_ai_studio_build_full_site_payload(): array {
 				continue;
 			}
 			$keyword = $area_keyword_map[$area->post_name] ?? '';
+			if ($keyword === '') {
+				$keyword = $overview_keyword !== ''
+					? trim($overview_keyword . ' ' . $area->post_title)
+					: (string) $area->post_title;
+			}
 			$blueprint = lf_ai_studio_build_post_blueprint($area, 'service_area', 'service_area_detail', $keyword);
 			if (!empty($blueprint)) {
 				$blueprints[] = $blueprint;
@@ -2751,6 +2797,7 @@ function lf_ai_studio_build_full_site_payload(): array {
 		$business_entity = lf_ai_studio_manifest_business_entity($manifest, is_array($business_entity) ? $business_entity : []);
 	}
 	error_log('LF MANIFEST: blueprints count ' . count($blueprints));
+	$internal_links = lf_ai_studio_internal_links_catalog();
 	return [
 		'request_id' => (string) ($homepage_payload['request_id'] ?? ''),
 		'variation_seed' => (string) ($homepage_payload['variation_seed'] ?? ''),
@@ -2763,6 +2810,12 @@ function lf_ai_studio_build_full_site_payload(): array {
 		'system_message' => lf_ai_studio_llm_system_message(),
 		'faq_strategy' => lf_ai_studio_faq_strategy(),
 		'cta_strategy' => lf_ai_studio_cta_strategy(),
+		'internal_links' => $internal_links,
+		'internal_link_rules' => [
+			'max_links_per_richtext' => 2,
+			'avoid_self_link' => true,
+			'prefer_services' => true,
+		],
 		'blueprints' => $blueprints,
 	];
 }
@@ -2799,6 +2852,7 @@ function lf_ai_studio_build_blog_payload(): array {
 	}
 	$request_id = 'blog-' . $base_request_id . '-' . time();
 	$keywords = $homepage_payload['keywords'] ?? ['primary' => '', 'secondary' => []];
+	$internal_links = lf_ai_studio_internal_links_catalog();
 	return [
 		'request_id' => $request_id,
 		'variation_seed' => (string) ($homepage_payload['variation_seed'] ?? ''),
@@ -2811,8 +2865,82 @@ function lf_ai_studio_build_blog_payload(): array {
 		'system_message' => lf_ai_studio_llm_system_message(),
 		'faq_strategy' => lf_ai_studio_faq_strategy(),
 		'cta_strategy' => lf_ai_studio_cta_strategy(),
+		'internal_links' => $internal_links,
+		'internal_link_rules' => [
+			'max_links_per_richtext' => 2,
+			'avoid_self_link' => true,
+			'prefer_services' => true,
+		],
 		'blueprints' => $blueprints,
 	];
+}
+
+function lf_ai_studio_internal_links_catalog(): array {
+	$links = [];
+	$add = function (string $type, string $label, string $url) use (&$links): void {
+		$url = trim($url);
+		$label = trim($label);
+		if ($url === '' || $label === '') {
+			return;
+		}
+		$links[] = [
+			'type' => $type,
+			'label' => $label,
+			'url' => $url,
+		];
+	};
+
+	$add('page', __('Home', 'leadsforward-core'), home_url('/'));
+	foreach (['about-us', 'our-services', 'our-service-areas', 'reviews', 'blog', 'contact'] as $slug) {
+		$page = get_page_by_path($slug);
+		if ($page instanceof \WP_Post) {
+			$add('page', get_the_title($page), get_permalink($page));
+		}
+	}
+
+	$services = get_posts([
+		'post_type'      => 'lf_service',
+		'post_status'    => 'publish',
+		'posts_per_page' => 8,
+		'orderby'        => 'menu_order title',
+		'order'          => 'ASC',
+		'no_found_rows'  => true,
+	]);
+	foreach ($services as $service) {
+		if ($service instanceof \WP_Post) {
+			$add('service', $service->post_title, get_permalink($service));
+		}
+	}
+
+	$areas = get_posts([
+		'post_type'      => 'lf_service_area',
+		'post_status'    => 'publish',
+		'posts_per_page' => 8,
+		'orderby'        => 'menu_order title',
+		'order'          => 'ASC',
+		'no_found_rows'  => true,
+	]);
+	foreach ($areas as $area) {
+		if ($area instanceof \WP_Post) {
+			$add('service_area', $area->post_title, get_permalink($area));
+		}
+	}
+
+	$posts = get_posts([
+		'post_type'      => 'post',
+		'post_status'    => 'publish',
+		'posts_per_page' => 4,
+		'orderby'        => 'date',
+		'order'          => 'DESC',
+		'no_found_rows'  => true,
+	]);
+	foreach ($posts as $post) {
+		if ($post instanceof \WP_Post) {
+			$add('post', $post->post_title, get_permalink($post));
+		}
+	}
+
+	return $links;
 }
 
 function lf_ai_studio_homepage_internal_links(): array {
@@ -3198,6 +3326,15 @@ function lf_apply_orchestrator_updates(array $response): array {
 				continue;
 			}
 			$section = $sections[$instance_id] ?? null;
+			if (!is_array($section)) {
+				foreach ($sections as $maybe_id => $maybe_section) {
+					if (is_array($maybe_section) && ($maybe_section['type'] ?? '') === $instance_id) {
+						$section = $maybe_section;
+						$instance_id = $maybe_id;
+						break;
+					}
+				}
+			}
 			$type = is_array($section) ? (string) ($section['type'] ?? '') : '';
 			if ($type === '' || !isset($registry[$type])) {
 				$errors[] = sprintf(__('Section "%s" is not registered for post %d.', 'leadsforward-core'), $instance_id, $post_id);

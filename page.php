@@ -18,6 +18,25 @@ get_header();
 <main id="main" class="site-main" role="main">
 	<?php while (have_posts()) : the_post();
 		$post_obj = get_post();
+		global $wp_query;
+		$posts_page_id = (int) get_option('page_for_posts');
+		if ($post_obj instanceof \WP_Post && $post_obj->post_name === 'blog' && $posts_page_id !== $post_obj->ID) {
+			$paged = max(1, (int) get_query_var('paged'), (int) get_query_var('page'));
+			$query = new WP_Query([
+				'post_type' => 'post',
+				'post_status' => 'publish',
+				'posts_per_page' => (int) get_option('posts_per_page', 10),
+				'paged' => $paged,
+			]);
+			$original_query = $wp_query;
+			$wp_query = $query;
+			set_query_var('lf_blog_archive_title', get_the_title($post_obj));
+			set_query_var('lf_blog_archive_intro', get_the_excerpt($post_obj));
+			get_template_part('templates/parts/blog-archive');
+			$wp_query = $original_query;
+			wp_reset_postdata();
+			continue;
+		}
 		$use_builder = function_exists('lf_pb_get_context_for_post') && function_exists('lf_pb_render_sections')
 			? (lf_pb_get_context_for_post($post_obj) === 'page')
 			: false;

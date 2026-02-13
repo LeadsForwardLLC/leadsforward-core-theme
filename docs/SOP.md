@@ -6,6 +6,9 @@ high-converting home-service site with the LeadsForward theme.
 
 Do not rewrite this SOP. Append new steps or notes at the bottom when the product changes.
 
+Note: The Setup Wizard has been merged into Website Manifester and Global Settings.
+Any reference to Setup now means those screens.
+
 ---
 
 1) What the theme is
@@ -43,14 +46,14 @@ When you run Setup:
 4) How to create a site from scratch (step by step)
 ---------------------------------------------------
 Step 1: Install the theme and required plugins (ACF).
-Step 2: Go to LeadsForward → Setup.
-Step 3: Choose “General (Local Services)” and complete the wizard.
+Step 2: Go to LeadsForward → Website Manifester.
+Step 3: Set the niche in LeadsForward → Global Settings → Business Entity.
 Step 4: Review the Homepage Builder and confirm section order and copy.
 Step 5: Review Page Builder for:
         - Services (each service page)
         - Service Areas (each area page)
         - Core pages (About, Contact, Reviews, Blog, Sitemap, Legal, Thank You)
-Step 6: Update business info, branding colors, and logo in Global Settings.
+Step 6: Update business info, niche, design preset, Google Maps API key, and branding in Global Settings.
 Step 7: Publish (no manual page building required).
 
 ---
@@ -188,11 +191,13 @@ Append‑Only Change Log
 
 2026‑02‑08 — Niche page matrices added.
 
+2026‑02‑11 — Global Settings now include niche, design preset, and Maps API key.
+
 ---
 
 Niche Selection Addendum (Append‑Only)
 -------------------------------------
-When you select a niche, the wizard adds niche‑specific service pages in addition to the General pages.
+When you select a niche in Global Settings → Business Entity, the system adds niche‑specific service pages in addition to the General pages.
 These are created automatically and pre‑configured with the Page Builder Framework.
 
 Roofing adds:
@@ -509,9 +514,31 @@ Manifester UX (Append‑Only)
 - Manifest Upload and Airtable Projects live in one combined panel for quick selection.
 - QA panel includes a “Regenerate AI Blog Posts” action for blog-only refreshes.
 
+Service Generation (Append‑Only)
+--------------------------------
+- Airtable keyword pools now drive service creation with niche-aware titles.
+- If a keyword lacks a niche term, the niche is appended for clarity.
+
+Blog Archive Fallback (Append‑Only)
+-----------------------------------
+- The `/blog` page renders the archive layout even if it is not set as the posts page.
+
+About Page Reseed (Append‑Only)
+-------------------------------
+- About page is reseeded if it only has hero content or is missing core sections.
+
+Internal Linking (Append‑Only)
+------------------------------
+- AI inserts 1–2 internal links in richtext sections using a curated internal_links list.
+- Links are limited to core pages, services, service areas, and recent posts.
+- Related Links sections still handle primary cross‑navigation.
+
 Append‑Only Change Log (Append‑Only)
 -----------------------------------
 2026‑02‑11 — Added Content QA audit + one‑pass auto‑repair and dynamic Quote Builder fields.
 2026‑02‑12 — Added content section rendering, benefits/process layout polish, service details media, and footer upgrade.
 2026‑02‑12 — Added AI blog post generation + title/excerpt backfill.
 2026‑02‑12 — Added Manifester logo upload, combined generate panel, and blog regen action.
+2026‑02‑12 — Improved Airtable keyword service derivation and blog archive fallback.
+2026‑02‑12 — Added About page reseed guard when sections are missing.
+2026‑02‑12 — Added internal link catalog + LLM linking rules.

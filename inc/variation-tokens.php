@@ -22,6 +22,19 @@ add_action('wp_enqueue_scripts', 'lf_enqueue_variation_tokens_css', 5);
 function lf_variation_body_class(array $classes): array {
 	$profile = function_exists('lf_get_variation_profile') ? lf_get_variation_profile() : 'a';
 	$classes[] = 'variation-profile-' . $profile;
+	$design_preset = (string) get_option('lf_global_design_preset', 'clean-precision');
+	$allowed_presets = [
+		'clean-precision',
+		'bold-authority',
+		'friendly-approachable',
+		'high-contrast',
+		'modern-edge',
+		'structured-modular',
+	];
+	if (!in_array($design_preset, $allowed_presets, true)) {
+		$design_preset = 'clean-precision';
+	}
+	$classes[] = 'lf-design-' . $design_preset;
 	return $classes;
 }
 
@@ -56,6 +69,16 @@ function lf_enqueue_variation_tokens_css(): void {
 			LF_THEME_URI . '/assets/css/design-system.css',
 			$deps,
 			(string) filemtime($ds)
+		);
+		$deps[] = 'lf-design-system';
+	}
+	$presets = LF_THEME_DIR . '/assets/css/design-presets.css';
+	if (is_readable($presets)) {
+		wp_enqueue_style(
+			'lf-design-presets',
+			LF_THEME_URI . '/assets/css/design-presets.css',
+			$deps,
+			(string) filemtime($presets)
 		);
 	}
 }

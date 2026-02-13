@@ -59,6 +59,17 @@ This document keeps collaborating AI models and humans aligned on the current Le
 - When core page generation runs, up to three AI blog posts are created if no posts exist.
 - Blog posts are filled via Page Builder sections; titles/excerpts are auto-backfilled from hero copy.
 - Manifester includes a blog-only regeneration action for AI posts.
+- `/blog` renders archive layout even if not set as posts page.
+
+## Airtable Service Derivation
+
+- Services are derived from Airtable keyword pools when JSON services are missing.
+- Niche terms are preserved/added to keep service titles specific.
+
+## Internal Linking
+
+- Generation payload includes `internal_links` catalog (core pages, services, areas, recent posts).
+- AI inserts 1–2 internal links in richtext fields only; URLs must come from the catalog.
 
 ## Section Rendering Updates
 

@@ -309,6 +309,13 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	$yelp = lf_ai_studio_airtable_string_field($fields, $map['yelp'] ?? '');
 	$bing = lf_ai_studio_airtable_string_field($fields, $map['bing'] ?? '');
 	$foundation_year = lf_ai_studio_airtable_string_field($fields, $map['foundation_year'] ?? '');
+	if ($business_category !== '') {
+		$keyword_pool[] = $business_category;
+	}
+	if ($niche !== '') {
+		$keyword_pool[] = $niche;
+	}
+	$keyword_pool = array_values(array_unique(array_filter($keyword_pool)));
 
 	if (empty($service_areas) && $service_area_list !== '') {
 		$service_areas = lf_ai_studio_airtable_build_service_areas_from_list($service_area_list, $state, $niche);
@@ -335,8 +342,28 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	if ($primary_keyword === '') {
 		$errors[] = __('Missing Primary Keyword field in Airtable.', 'leadsforward-core');
 	}
-	if (empty($services) && !empty($keyword_pool)) {
-		$services = lf_ai_studio_airtable_build_services_from_keywords($keyword_pool, $primary_city, $state, $business_name, $niche);
+	if (!empty($keyword_pool)) {
+		$generic_titles = ['main service', 'additional service', 'service', 'services'];
+		$service_titles = [];
+		foreach ($services as $svc) {
+			if (is_array($svc)) {
+				$service_titles[] = strtolower(trim((string) ($svc['title'] ?? '')));
+			}
+		}
+		$has_only_generic = !empty($services);
+		if (!empty($service_titles)) {
+			foreach ($service_titles as $title) {
+				if ($title === '' || !in_array($title, $generic_titles, true)) {
+					$has_only_generic = false;
+					break;
+				}
+			}
+		} else {
+			$has_only_generic = false;
+		}
+		if (empty($services) || count($services) < 3 || $has_only_generic) {
+			$services = lf_ai_studio_airtable_build_services_from_keywords($keyword_pool, $primary_city, $state, $business_name, $niche);
+		}
 	}
 	if (empty($services)) {
 		$niche_slug_guess = lf_ai_studio_airtable_resolve_niche_slug($niche, $niche_slug);
@@ -678,6 +705,10 @@ function lf_ai_studio_airtable_build_services_from_keywords(array $keywords, str
 	$city = trim($city);
 	$state = trim($state);
 	$niche = trim($niche);
+	$stop_words = [
+		'best', 'top', 'affordable', 'cheap', 'local', 'nearby', 'professional',
+		'residential', 'commercial', 'licensed', 'insured', 'trusted'
+	];
 	foreach ($keywords as $keyword) {
 		$raw = trim((string) $keyword);
 		if ($raw === '') {
@@ -695,10 +726,16 @@ function lf_ai_studio_airtable_build_services_from_keywords(array $keywords, str
 		if ($state !== '') {
 			$candidate = preg_replace('/\b' . preg_quote(strtolower($state), '/') . '\b/i', '', $candidate);
 		}
-		if ($niche !== '') {
-			$candidate = preg_replace('/\b' . preg_quote(strtolower($niche), '/') . '\b/i', $niche, $candidate);
+		if (!empty($stop_words)) {
+			$candidate = preg_replace('/\b(' . implode('|', array_map('preg_quote', $stop_words)) . ')\b/i', '', $candidate);
 		}
 		$candidate = trim(preg_replace('/\s+/', ' ', $candidate));
+		if ($candidate !== '' && $niche !== '' && stripos($candidate, $niche) === false) {
+			$candidate = trim($candidate . ' ' . $niche);
+		}
+		if ($candidate !== '' && $niche !== '' && strtolower($candidate) === strtolower($niche)) {
+			continue;
+		}
 		if ($candidate === '') {
 			continue;
 		}

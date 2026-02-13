@@ -862,11 +862,14 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 
 	return [
 		'about-us' => [
-			'order' => ['hero', 'content_image', 'benefits', 'related_links', 'cta'],
+			'order' => ['hero', 'trust_bar', 'content_image', 'benefits', 'process', 'related_links', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'About ' . $business,
 					'hero_subheadline' => 'Local home-service professionals' . $city_line . ' focused on quality, communication, and a clean job site.',
+				],
+				'trust_bar' => [
+					'trust_heading' => __('Trusted by local homeowners', 'leadsforward-core'),
 				],
 				'content_image' => [
 					'section_heading' => 'Our story',
@@ -877,6 +880,11 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'section_heading' => 'Why homeowners choose us',
 					'section_intro' => 'Clear communication, honest pricing, and consistent results.',
 					'benefits_items' => 'Licensed and insured professionals' . "\n" . 'Upfront pricing before work starts' . "\n" . 'Respectful, clean crews',
+				],
+				'process' => [
+					'section_heading' => 'How we work',
+					'section_intro' => 'A clear, homeowner-friendly experience from first call to final walkthrough.',
+					'process_steps' => 'Listen to your goals' . "\n" . 'Provide a clear plan and timeline' . "\n" . 'Deliver the work with care' . "\n" . 'Review every detail together',
 				],
 				'related_links' => [
 					'section_heading' => 'Explore our services',
@@ -1163,6 +1171,15 @@ function lf_wizard_is_minimal_pb_config($config): bool {
 		return true;
 	}
 	if (count($enabled_types) === 1 && isset($enabled_types['hero'])) {
+		return true;
+	}
+	if (count($enabled_types) <= 2) {
+		$allowed_minimal = ['hero' => true, 'content' => true];
+		foreach (array_keys($enabled_types) as $type) {
+			if (!isset($allowed_minimal[$type])) {
+				return false;
+			}
+		}
 		return true;
 	}
 	return false;
