@@ -608,11 +608,12 @@ button:focus-visible,
 .lf-benefits {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-	gap: 2.25rem;
+	gap: 2.5rem;
 	align-items: stretch;
-	justify-items: center;
-	max-width: 1080px;
-	margin: 0 auto;
+	justify-items: stretch;
+	width: 100%;
+	max-width: none;
+	margin: 0;
 }
 
 .lf-benefits__card {
