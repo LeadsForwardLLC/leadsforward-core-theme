@@ -89,6 +89,36 @@ function lf_ai_studio_airtable_get_settings(): array {
 		$value = isset($review_field_map[$key]) ? trim((string) $review_field_map[$key]) : '';
 		$normalized_review_map[$key] = $value !== '' ? $value : $label;
 	}
+	$review_aliases = [
+		'review_project' => [
+			'Project' => $review_defaults['review_project'] ?? 'Project Name (from CID)',
+		],
+		'review_reviewer' => [
+			'Reviewer Name' => 'Author Title',
+			'Reviewer' => 'Author Title',
+			'Review Author' => 'Author Title',
+		],
+		'review_rating' => [
+			'Rating' => 'Star Rating',
+			'Stars' => 'Star Rating',
+		],
+		'review_text' => [
+			'Review' => 'Review Text',
+			'Review Body' => 'Review Text',
+		],
+		'review_source' => [
+			'Source' => 'Type (from CID)',
+		],
+		'review_source_url' => [
+			'Source URL' => 'Review Link',
+		],
+	];
+	foreach ($review_aliases as $key => $aliases) {
+		$current = $normalized_review_map[$key] ?? '';
+		if ($current !== '' && isset($aliases[$current])) {
+			$normalized_review_map[$key] = $aliases[$current];
+		}
+	}
 
 	$table = (string) get_option('lf_ai_airtable_table', 'Business Info');
 	$view = (string) get_option('lf_ai_airtable_view', 'Global Sync View (ACTIVE)');
