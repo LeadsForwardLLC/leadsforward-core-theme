@@ -201,23 +201,23 @@ if (!$secondary_enabled) {
 $show_cta_group = ($cta_text !== '' || $secondary_text !== '');
 $placeholder_id = function_exists('lf_get_placeholder_image_id') ? lf_get_placeholder_image_id() : 0;
 $placeholder_alt = $business_name ? $business_name : __('Trusted local service', 'leadsforward-core');
+$hero_bg_mode = (string) ($section['hero_background_mode'] ?? 'color');
 $hero_bg_id = 0;
-if (is_singular()) {
-	$hero_bg_id = (int) get_post_thumbnail_id(get_the_ID());
-}
-if ($hero_bg_id === 0 && $placeholder_id) {
-	$hero_bg_id = (int) $placeholder_id;
+if ($hero_bg_mode === 'image' && $variant !== 'c') {
+	$hero_bg_id = (int) get_post_thumbnail_id(get_queried_object_id());
+	if ($hero_bg_id === 0 && $placeholder_id) {
+		$hero_bg_id = (int) $placeholder_id;
+	}
 }
 $hero_bg_url = $hero_bg_id ? wp_get_attachment_image_url($hero_bg_id, 'full') : '';
 $hero_bg_class = '';
 $hero_bg_style = '';
-if ($hero_bg_url && $variant !== 'c') {
+if ($hero_bg_url && $hero_bg_mode === 'image' && $variant !== 'c') {
 	$hero_bg_overlay = $variant === 'a' ? '0.45' : '0.82';
 	$hero_bg_class = ' lf-block-hero--has-bg';
 	$hero_bg_style = sprintf(
-		'--lf-hero-bg-image: url(\'%s\'); --lf-hero-bg-overlay: linear-gradient(0deg, rgba(255, 255, 255, %s), rgba(255, 255, 255, %s));',
+		'--lf-hero-bg-image: url(\'%s\'); --lf-hero-bg-overlay-opacity: %s;',
 		esc_url($hero_bg_url),
-		$hero_bg_overlay,
 		$hero_bg_overlay
 	);
 }

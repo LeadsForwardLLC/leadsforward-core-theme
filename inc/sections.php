@@ -330,6 +330,10 @@ function lf_sections_registry(): array {
 			'fields' => [
 				$bg_soft,
 				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'positioning'],
+				['key' => 'hero_background_mode', 'label' => __('Hero background', 'leadsforward-core'), 'type' => 'select', 'default' => 'color', 'options' => [
+					'color' => __('Background color', 'leadsforward-core'),
+					'image' => __('Featured image overlay', 'leadsforward-core'),
+				]],
 				['key' => 'variant', 'label' => __('Hero layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'default', 'options' => lf_sections_hero_variant_options()],
 				['key' => 'hero_headline', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_subheadline', 'label' => __('Subheadline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],

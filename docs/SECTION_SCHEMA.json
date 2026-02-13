@@ -17,6 +17,13 @@
         "storage_format": "raw string"
       },
       {
+        "key": "hero_background_mode",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
         "key": "variant",
         "type": "select",
         "expected_structure_if_list": "",

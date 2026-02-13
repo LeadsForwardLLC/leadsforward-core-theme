@@ -1897,6 +1897,21 @@ button:focus-visible,
 	color: var(--lf-text-inverse);
 }
 
+.lf-block-hero {
+	--lf-hero-overlay-color: var(--lf-surface-light);
+	--lf-hero-bg-overlay-opacity: 0;
+}
+
+.lf-block-hero.lf-surface-white { --lf-hero-overlay-color: #ffffff; }
+.lf-block-hero.lf-surface-light { --lf-hero-overlay-color: var(--lf-surface-light); }
+.lf-block-hero.lf-surface-soft { --lf-hero-overlay-color: var(--lf-surface-soft); }
+.lf-block-hero.lf-surface-primary { --lf-hero-overlay-color: var(--lf-primary); }
+.lf-block-hero.lf-surface-secondary { --lf-hero-overlay-color: var(--lf-secondary); }
+.lf-block-hero.lf-surface-accent { --lf-hero-overlay-color: var(--lf-accent); }
+.lf-block-hero.lf-surface-card { --lf-hero-overlay-color: var(--lf-surface-card, #ffffff); }
+.lf-block-hero.lf-surface-dark { --lf-hero-overlay-color: var(--lf-surface-dark); }
+.lf-block-hero.lf-surface-black { --lf-hero-overlay-color: #000000; }
+
 .lf-block-hero--internal {
 	min-height: 0;
 	padding: var(--lf-section-padding-lg) var(--lf-section-padding-x);
@@ -1988,12 +2003,20 @@ button:focus-visible,
 .lf-block-hero__bg {
 	position: absolute;
 	inset: 0;
-	background-image: var(--lf-hero-bg-overlay, none), var(--lf-hero-bg-image, none), var(--lf-hero-bg-gradient);
+	background-image: var(--lf-hero-bg-image, none), var(--lf-hero-bg-gradient);
 	background-size: var(--lf-hero-bg-size, cover);
 	background-position: center;
 	background-repeat: var(--lf-hero-bg-repeat, no-repeat);
 	opacity: 0.9;
 	z-index: 0;
+}
+
+.lf-block-hero__bg::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: var(--lf-hero-overlay-color);
+	opacity: var(--lf-hero-bg-overlay-opacity, 0);
 }
 
 .lf-block-hero__inner {
@@ -2336,8 +2359,18 @@ button:focus-visible,
 }
 
 .lf-block-hero.lf-block-hero--has-bg .lf-block-hero__bg {
-	background-image: var(--lf-hero-bg-overlay, none), var(--lf-hero-bg-image, none);
+	background-image: var(--lf-hero-bg-image, none);
 	opacity: 1;
+}
+
+.lf-block-hero--a .lf-hero-stack__eyebrow {
+	align-self: center;
+	justify-content: center;
+}
+
+.lf-block-hero--a .lf-hero-trust__stat {
+	align-items: flex-start;
+	text-align: left;
 }
 
 /* Hero variants: distinct layouts */

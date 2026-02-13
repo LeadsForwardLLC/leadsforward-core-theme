@@ -125,6 +125,8 @@ function lf_homepage_admin_save(): void {
 		if ($type === 'hero') {
 			$config[$type]['hero_headline'] = isset($_POST['lf_hp_hero_headline']) ? sanitize_text_field($_POST['lf_hp_hero_headline']) : '';
 			$config[$type]['hero_subheadline'] = isset($_POST['lf_hp_hero_subheadline']) ? sanitize_text_field($_POST['lf_hp_hero_subheadline']) : '';
+			$hero_bg_mode = isset($_POST['lf_hp_hero_bg_mode']) ? sanitize_text_field($_POST['lf_hp_hero_bg_mode']) : 'color';
+			$config[$type]['hero_background_mode'] = in_array($hero_bg_mode, ['color', 'image'], true) ? $hero_bg_mode : 'color';
 			$eyebrow_enabled = isset($_POST['lf_hp_hero_eyebrow_enabled']) ? sanitize_text_field($_POST['lf_hp_hero_eyebrow_enabled']) : '1';
 			$config[$type]['hero_eyebrow_enabled'] = $eyebrow_enabled === '0' ? '0' : '1';
 			$config[$type]['hero_eyebrow_text'] = isset($_POST['lf_hp_hero_eyebrow_text']) ? sanitize_text_field($_POST['lf_hp_hero_eyebrow_text']) : '';
@@ -697,6 +699,17 @@ function lf_homepage_admin_render(): void {
 										</tr>
 									<?php endif; ?>
 									<?php if ($type === 'hero') : ?>
+									<?php $hero_bg_mode = $sec['hero_background_mode'] ?? 'color'; ?>
+									<tr>
+										<th scope="row"><label for="lf_hp_hero_bg_mode"><?php esc_html_e('Hero background', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_hero_bg_mode" id="lf_hp_hero_bg_mode">
+												<option value="color" <?php selected($hero_bg_mode, 'color'); ?>><?php esc_html_e('Background color', 'leadsforward-core'); ?></option>
+												<option value="image" <?php selected($hero_bg_mode, 'image'); ?>><?php esc_html_e('Featured image overlay', 'leadsforward-core'); ?></option>
+											</select>
+											<p class="description" style="margin: 6px 0 0;"><?php esc_html_e('Uses the page featured image when enabled. Background color becomes the overlay color.', 'leadsforward-core'); ?></p>
+										</td>
+									</tr>
 									<tr>
 										<th scope="row"><label for="lf_hp_hero_headline"><?php esc_html_e('Hero headline', 'leadsforward-core'); ?></label></th>
 										<td><input type="text" class="large-text" name="lf_hp_hero_headline" id="lf_hp_hero_headline" value="<?php echo esc_attr($sec['hero_headline'] ?? ''); ?>" placeholder="<?php esc_attr_e('e.g. Quality Roofing in [City]', 'leadsforward-core'); ?>" /></td>
