@@ -1,7 +1,7 @@
 <?php
 /**
  * Setup runner: create pages, CPTs, menus, seed relationships, update ACF.
- * Idempotent where possible; no duplicate pages. Called by wizard on Generate.
+ * Idempotent where possible; no duplicate pages. Called by site setup on Generate.
  *
  * @package LeadsForward_Core
  * @since 0.1.0
@@ -142,7 +142,7 @@ function lf_run_setup(array $data): array {
 		}
 	}
 
-	// 3. Service area CPT entries (from wizard data)
+	// 3. Service area CPT entries (from setup data)
 	$area_input = $data['service_areas'] ?? [];
 	$areas_parsed = lf_wizard_parse_service_areas($area_input);
 	$created_areas = [];
@@ -430,61 +430,10 @@ function lf_wizard_data_from_entity(): array {
 }
 
 function lf_wizard_regenerate_legal_pages(array $data): array {
-	$slugs = ['privacy-policy', 'terms-of-service'];
-	$page_titles = lf_wizard_default_page_titles();
-	$niche_slug = $data['niche_slug'] ?? 'general';
-	$niche = lf_get_niche((string) $niche_slug);
-	if (!$niche) {
-		$niche = lf_get_niche('general') ?: [];
-	}
-
-	$created_pages = [];
-	if (function_exists('lf_wizard_required_page_slugs')) {
-		foreach (lf_wizard_required_page_slugs() as $slug) {
-			$page = get_page_by_path($slug, OBJECT, 'page');
-			if ($page) {
-				$created_pages[$slug] = $page->ID;
-			}
-		}
-	}
-
-	foreach ($slugs as $slug) {
-		$title = $page_titles[$slug] ?? ucwords(str_replace('-', ' ', $slug));
-		$existing = get_page_by_path($slug, OBJECT, 'page');
-		if (!$existing && $slug === 'terms-of-service') {
-			$legacy = get_page_by_path('terms-of-use', OBJECT, 'page');
-			if ($legacy) {
-				wp_update_post([
-					'ID' => $legacy->ID,
-					'post_name' => $slug,
-					'post_title' => $title,
-				]);
-				$existing = get_post($legacy->ID);
-			}
-		}
-		$content = lf_wizard_placeholder_content($slug, $title, $data);
-		if ($existing) {
-			wp_update_post([
-				'ID' => $existing->ID,
-				'post_content' => $content,
-			]);
-			$created_pages[$slug] = $existing->ID;
-		} else {
-			$pid = wp_insert_post([
-				'post_title' => $title,
-				'post_name' => $slug,
-				'post_content' => $content,
-				'post_status' => 'publish',
-				'post_type' => 'page',
-				'post_author' => get_current_user_id(),
-			], true);
-			if (is_wp_error($pid)) {
-				return ['success' => false, 'message' => $pid->get_error_message()];
-			}
-			$created_pages[$slug] = $pid;
-		}
-		if (function_exists('lf_wizard_seed_page_pb_config') && !empty($created_pages[$slug])) {
-			lf_wizard_seed_page_pb_config((int) $created_pages[$slug], $slug, $data, $niche, $created_pages);
+	if (function_exists('lf_ensure_legal_pages')) {
+		$result = lf_ensure_legal_pages();
+		if (!empty($result['error'])) {
+			return ['success' => false, 'message' => (string) $result['error']];
 		}
 	}
 	return ['success' => true];
@@ -1170,6 +1119,8 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			];
 		}
 	}
+
+	unset($blueprints['privacy-policy'], $blueprints['terms-of-service']);
 
 	return $blueprints;
 }

@@ -35,29 +35,31 @@ if ($blog_page instanceof \WP_Post && function_exists('lf_pb_get_post_config')) 
 	}
 }
 
+$archive_title = get_the_archive_title();
+$archive_intro = get_the_archive_description();
 if ($title === '') {
-	$title = get_the_archive_title() ?: __('Blog', 'leadsforward-core');
-}
-if ($title === '' && $blog_hero_title !== '') {
-	$title = $blog_hero_title;
+	$title = $blog_hero_title !== '' ? $blog_hero_title : ($archive_title ?: __('Blog', 'leadsforward-core'));
 }
 if ($intro === '') {
-	$intro = get_the_archive_description();
+	$intro = $blog_hero_intro !== '' ? $blog_hero_intro : ($archive_intro ?: '');
 }
-if ($intro === '' && $blog_hero_intro !== '') {
-	$intro = $blog_hero_intro;
+if ($intro !== '' && stripos($intro, '<') === false) {
+	$intro = wpautop($intro);
 }
+$intro = $intro !== '' ? wp_kses_post($intro) : '';
 ?>
 <section class="lf-section lf-section--blog-hero">
 	<div class="lf-section__inner">
-		<div class="lf-blog-hero">
+		<div class="lf-blog-hero lf-blog-hero--simple">
 			<div class="lf-blog-hero__content">
 				<?php if ($label !== '') : ?>
-					<p class="lf-blog-hero__kicker"><?php echo esc_html($label); ?></p>
+					<div class="lf-blog-hero__meta">
+						<span class="lf-blog-hero__pill"><?php echo esc_html($label); ?></span>
+					</div>
 				<?php endif; ?>
 				<h1 class="lf-blog-hero__title"><?php echo esc_html($title); ?></h1>
 				<?php if ($intro) : ?>
-					<div class="lf-blog-hero__intro"><?php echo wp_kses_post(wpautop($intro)); ?></div>
+					<div class="lf-blog-hero__intro"><?php echo $intro; ?></div>
 				<?php endif; ?>
 				<?php if (is_array($author)) : ?>
 					<div class="lf-blog-hero__author">

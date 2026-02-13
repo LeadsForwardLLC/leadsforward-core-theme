@@ -20,18 +20,32 @@ $terms = get_terms([
 	'taxonomy' => 'lf_project_type',
 	'hide_empty' => true,
 ]);
+$title = post_type_archive_title('', false);
+$intro = get_the_archive_description();
+if ($intro === '') {
+	$intro = __('Browse real transformations and finished work from recent projects.', 'leadsforward-core');
+}
 ?>
 
-<main id="main" class="site-main" role="main">
+<main id="main" class="site-main site-main--projects" role="main">
+	<section class="lf-section lf-section--project-hero">
+		<div class="lf-section__inner">
+			<div class="lf-blog-hero lf-blog-hero--simple">
+				<div class="lf-blog-hero__content">
+					<div class="lf-blog-hero__meta">
+						<span class="lf-blog-hero__pill"><?php esc_html_e('Projects', 'leadsforward-core'); ?></span>
+					</div>
+					<h1 class="lf-blog-hero__title"><?php echo esc_html($title ?: __('Our Projects', 'leadsforward-core')); ?></h1>
+					<?php if ($intro) : ?>
+						<div class="lf-blog-hero__intro"><?php echo wp_kses_post($intro); ?></div>
+					<?php endif; ?>
+				</div>
+			</div>
+		</div>
+	</section>
+
 	<section class="lf-section lf-section--project-archive">
 		<div class="lf-section__inner">
-			<header class="lf-section__header">
-				<h1 class="lf-section__title"><?php post_type_archive_title('', false); ?></h1>
-				<?php if (get_the_archive_description()) : ?>
-					<p class="lf-section__intro"><?php echo wp_kses_post(get_the_archive_description()); ?></p>
-				<?php endif; ?>
-			</header>
-
 			<?php if (!is_wp_error($terms) && !empty($terms) && $archive_link) : ?>
 				<div class="lf-project-filters" role="list">
 					<a class="lf-project-filter <?php echo $current_type === '' ? 'is-active' : ''; ?>" href="<?php echo esc_url($archive_link); ?>"><?php esc_html_e('All Projects', 'leadsforward-core'); ?></a>
@@ -63,7 +77,9 @@ $terms = get_terms([
 						?>
 					<?php endwhile; ?>
 				</div>
-				<?php the_posts_navigation(); ?>
+				<div class="lf-blog-pagination">
+					<?php the_posts_navigation(); ?>
+				</div>
 			<?php else : ?>
 				<p><?php esc_html_e('No projects yet.', 'leadsforward-core'); ?></p>
 			<?php endif; ?>

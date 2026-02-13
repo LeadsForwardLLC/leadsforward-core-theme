@@ -1,6 +1,6 @@
 # Manifest Schema (Deterministic Mode)
 
-This document defines the canonical JSON schema for deterministic Manifest Mode. Upload this JSON in **LeadsForward → AI Studio (Advanced)** to bypass wizard inputs and generate a site deterministically.
+This document defines the canonical JSON schema for deterministic Manifest Mode. Upload this JSON in **LeadsForward → AI Studio (Advanced)** to bypass setup inputs and generate a site deterministically.
 
 ## Schema Version
 
@@ -150,7 +150,7 @@ Each service area generates a service area page.
 
 1. Manifest is uploaded in AI Studio and stored in `lf_site_manifest`.
 2. Services and service areas are created/updated using manifest slugs.
-3. Blueprint generation uses manifest fields only (no wizard merge).
+3. Blueprint generation uses manifest fields only (no setup merge).
 4. Variation seed is computed from `business.name + business.primary_city + business.niche` to ensure deterministic builds.
 
 ## Variation Seed

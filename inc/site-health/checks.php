@@ -48,9 +48,9 @@ function lf_health_check_required_plugins(): array {
 function lf_health_check_wizard_complete(): array {
 	$done = (bool) get_option('lf_setup_wizard_complete', false);
 	if (!$done) {
-		return ['status' => lf_health_status_fail(), 'label' => __('Setup wizard', 'leadsforward-core'), 'message' => __('Setup wizard not completed.', 'leadsforward-core'), 'fix_link' => admin_url('admin.php?page=lf-setup')];
+		return ['status' => lf_health_status_fail(), 'label' => __('Site setup', 'leadsforward-core'), 'message' => __('Site setup not completed.', 'leadsforward-core'), 'fix_link' => admin_url('admin.php?page=lf-setup')];
 	}
-	return ['status' => lf_health_status_pass(), 'label' => __('Setup wizard', 'leadsforward-core'), 'message' => __('Completed.', 'leadsforward-core'), 'fix_link' => ''];
+	return ['status' => lf_health_status_pass(), 'label' => __('Site setup', 'leadsforward-core'), 'message' => __('Completed.', 'leadsforward-core'), 'fix_link' => ''];
 }
 
 function lf_health_check_variation_profile(): array {

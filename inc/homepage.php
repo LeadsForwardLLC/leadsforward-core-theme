@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 /** Option key for section config (keyed by section type). */
 const LF_HOMEPAGE_CONFIG_OPTION = 'lf_homepage_section_config';
 
-/** Option key for last applied niche (wizard source of truth). */
+/** Option key for last applied niche (setup source of truth). */
 const LF_HOMEPAGE_NICHE_OPTION = 'lf_homepage_niche_slug';
 
 /** Option key for section order (drag-and-drop on Homepage admin). */
@@ -262,11 +262,11 @@ function lf_homepage_empty_config(): array {
 }
 
 /**
- * Apply niche defaults to homepage config and save. Used by setup wizard.
+ * Apply niche defaults to homepage config and save. Used by site setup flow.
  * Optionally substitutes [Your City] in hero headline with first service area name.
  *
  * @param string     $niche_slug Niche identifier from registry.
- * @param array|null $wizard_data Optional wizard payload (e.g. service_areas for city substitution).
+ * @param array|null $wizard_data Optional setup payload (e.g. service_areas for city substitution).
  */
 function lf_homepage_apply_niche_config(string $niche_slug, ?array $wizard_data = null): void {
 	$config = lf_homepage_default_config($niche_slug);

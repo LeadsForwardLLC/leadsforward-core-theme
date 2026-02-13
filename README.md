@@ -24,6 +24,8 @@ LeadsForward Core provides:
 - **Navigation:** Header menu auto-built after setup with a non-clickable “More” dropdown plus Call Now and CTA actions
 - **Quote Builder:** Full-screen modal with multi-step flow, GHL webhook delivery, dynamic niche fields, and first-party analytics
 - **Project Gallery:** Projects CPT with before/after toggles, archive filters, and single templates
+- **Legal pages:** Fixed Privacy Policy + Terms templates with dynamic business info
+- **Duplicate:** One-click duplicate action for any post type in admin lists
 - **AI Assistant (bounded):** Safe copy suggestions + field edits only (no layout/CSS changes)
 - **AI Studio:** Orchestrator-driven site content generation (no OpenAI keys stored) plus post-gen QA audit + one-pass auto-repair
 - **Server-rendered blocks:** Hero, Trust/Reviews, CTA, FAQ Accordion, Map+NAP
@@ -32,7 +34,7 @@ LeadsForward Core provides:
 - **Internal linking engine:** Deterministic anchors + hub-and-spoke modules (services/areas)
 - **SEO coverage validator:** Site Health checks for missing hubs, thin pages, and orphans
 - **Controlled variation:** Site-wide profile (A–E), block variant registry, safe section ordering, style tokens, copy template slots (no randomness)
-- **Setup wizard:** Niche-aware init; seeds pages, CPTs, menus, page builder defaults, and copy templates (Manifester + Global Settings are primary)
+- **Site setup:** Niche-aware init; seeds pages, CPTs, menus, page builder defaults, and copy templates (Manifester + Global Settings are primary)
 - **Safety:** CPT delete protection, admin notices for missing SEO-critical fields, graceful fallback when ACF is off
 - **SOP:** Step-by-step build process in `docs/SOP.md`
 
@@ -67,7 +69,9 @@ leadsforward-core-theme/
 │   ├── cleanup.php      # Emoji/oEmbed/dashicons removal, optional block CSS
 │   ├── performance.php  # Defer scripts, heartbeat, head cleanup, critical CSS hook
 │   ├── business-entity.php # Business entity single source of truth
+│   ├── duplicate-post.php # Admin duplicate action (no plugin)
 │   ├── icons.php        # Icon helpers + niche defaults
+│   ├── legal-pages.php  # Fixed legal page templates + auto-install
 │   ├── seo.php          # SEO module loader
 │   ├── seo/             # SEO settings, meta box, render, sitemap, keyword engine
 │   ├── schema.php       # JSON-LD: LocalBusiness, Organization, WebSite, BreadcrumbList, Service, FAQPage, Review
@@ -102,7 +106,7 @@ leadsforward-core-theme/
 │   ├── niches/
 │   │   ├── registry.php     # Niche definitions (services, pages, CTA defaults)
 │   │   ├── setup-runner.php # Pages/CPTs/menus + page builder defaults
-│   │   └── wizard.php       # Admin wizard UI, completion flow
+│   │   └── wizard.php       # Admin setup UI, completion flow
 │   └── cpt/
 │       ├── services.php
 │       ├── service-areas.php
@@ -120,6 +124,8 @@ leadsforward-core-theme/
 ├── index.php
 ├── page.php
 ├── front-page.php    # Homepage: sections from ACF or defaults
+├── page-privacy-policy.php
+├── page-terms-of-service.php
 ├── single-lf_*.php
 ├── archive-lf_*.php
 └── README.md
@@ -134,7 +140,7 @@ Under **LeadsForward**:
 | Page | Purpose |
 |------|--------|
 | **SEO** | Global SEO settings, sitemap, schema, and AI keyword engine. |
-| **Setup** | Setup wizard, API keys, admin bar toggle, reset tools. |
+| **Setup** | Site setup, API keys, admin bar toggle, reset tools. |
 | **Global Settings** | Business Entity + Logo + Branding colors (core/surface/text). |
 | **Homepage** | Homepage builder: section order, toggles, backgrounds, copy, CTA actions. |
 | **Quote Builder** | Builder config plus integrations + analytics panels. |
@@ -213,7 +219,7 @@ New section type: **Centered Content** (`content_centered`) — minimal, text-on
 - **Manifest UX:** Upload shows a progress overlay during generation.
 - **Section schema reference:** `docs/SECTION_SCHEMA.json` is the canonical list of section types and fields. Keep it in sync with the registry.
 - **AI collaboration guide:** `docs/AI_CONTEXT.md` is the live handoff for other AI assistants.
-- **Manifest scaffold:** Manifest runs the same setup scaffold as the wizard (pages, menus, business entity) with manifest as the single source of truth.
+- **Manifest scaffold:** Manifest runs the same setup scaffold as site setup (pages, menus, business entity) with manifest as the single source of truth.
 - **Dev reset behavior:** Dev reset clears nearly all content (pages, posts, CPTs, manifest, keywords, generation logs) but preserves AI Studio settings (enable, webhook, shared secret).
 - **Dev reset scope:** Also resets site title/description to blank to remove any business evidence.
 - **Flow:** Build homepage blueprint → send to orchestrator → validate payload → apply to homepage fields.
@@ -370,7 +376,7 @@ All use `show_in_rest => true` and clean rewrites.
 
 ---
 
-## Setup wizard
+## Site setup
 
 After theme activation, **Appearance → LeadsForward Setup** runs a one-time flow:
 
@@ -380,13 +386,13 @@ After theme activation, **Appearance → LeadsForward Setup** runs a one-time fl
 4. **Variation profile** — Pre-selected from niche; can override.
 5. **Generate site** — Creates pages (Home, About Us, Our Services, Our Service Areas, Reviews, Blog, Sitemap, Contact, Privacy Policy, Terms of Service, Thank You), sets Home as front page, creates Header and Footer menus and assigns them, seeds service ↔ service area relationships, updates options (NAP, CTAs, variation, schema, homepage config), and seeds **page builder defaults** for core pages, services, and areas. Idempotent: existing pages/CPTs by slug are reused; no duplicates.
 
-Completion is stored in option `lf_setup_wizard_complete`. The wizard does not show again unless you use “Show wizard again” (which clears the flag). No frontend JS, no cron; all actions are explicit and logged in the runner return value.
+Completion is stored in option `lf_setup_wizard_complete`. Site setup does not show again unless you use “Show setup again” (which clears the flag). No frontend JS, no cron; all actions are explicit and logged in the runner return value.
 
 ---
 
 ## Extending
 
-- **New niche:** Add an entry to `lf_get_niche_registry()` in `inc/niches/registry.php` with `name`, `slug`, `services`, `required_pages` (optional), `homepage_section_order`, `variation_profile`, `cta_primary_default`, `cta_secondary_default`, `schema_review_enabled`. No change to wizard or runner logic required.
+- **New niche:** Add an entry to `lf_get_niche_registry()` in `inc/niches/registry.php` with `name`, `slug`, `services`, `required_pages` (optional), `homepage_section_order`, `variation_profile`, `cta_primary_default`, `cta_secondary_default`, `schema_review_enabled`. No change to setup or runner logic required.
 - **New section type:** Add to `lf_sections_registry()` in `inc/sections.php`, include defaults, and update homepage/page builder admin UI as needed for new fields.
 - **New placeholders:** Update `LF_PLACEHOLDER_IMAGE_URL` in `inc/images.php` and re-seed.
 - **New block:** Register in `inc/blocks/register.php` and add a template in `templates/blocks/`.
@@ -419,7 +425,7 @@ Completion is stored in option `lf_setup_wizard_complete`. The wizard does not s
 
 ## Full Site Generation Architecture
 
-- **Single orchestrator call:** Setup Wizard and AI Studio regenerate send one unified payload to n8n.
+- **Single orchestrator call:** Site setup and AI Studio regenerate send one unified payload to n8n.
 - **Multi-blueprint payload:** Payload includes homepage + each Service + each Service Area + About page blueprints.
 - **Deterministic enforcement:** Each blueprint carries `sections`, `order`, `page_intent`, and `allowed_field_keys`.
 - **Single apply path:** All updates route through `lf_apply_orchestrator_updates()` with per-section allowed field validation.

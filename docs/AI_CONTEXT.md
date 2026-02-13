@@ -13,6 +13,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 - **Section registry**: `inc/sections.php`
 - **Homepage builder config/order**: `inc/homepage.php`
 - **Page builder**: `inc/page-builder.php`
+- **Legal templates**: `page-privacy-policy.php`, `page-terms-of-service.php`, `inc/legal-pages.php`
 - **Project gallery**: `inc/projects.php`, `inc/cpt/projects.php`, `archive-lf_project.php`, `single-lf_project.php`
 - **AI Studio orchestration**: `inc/ai-studio.php`
 - **SEO system**: `inc/seo/`
@@ -27,14 +28,15 @@ This document keeps collaborating AI models and humans aligned on the current Le
 - Do not use external SEO plugins; SEO is theme-native.
 - Manifest Mode is the authoritative generation path when a manifest exists.
 - Homepage blueprint must always be included in orchestrator payloads.
+- Legal pages are fixed templates; AI should not generate or overwrite them.
 
 ## Deterministic Manifest Mode
 
 - Canonical schema: `docs/MANIFEST_SCHEMA.md`
 - Manifest validation is hard‑fail (missing required keys, empty arrays, duplicate slugs, missing primary_keyword).
-- Manifest values override wizard values; no merging when manifest exists.
+- Manifest values override setup values; no merging when manifest exists.
 - Variation seed is derived from business name + primary city + niche.
-- Manifest generation runs the same scaffold as the setup wizard (pages, menus, business entity) using manifest values only.
+- Manifest generation runs the same scaffold as the site setup flow (pages, menus, business entity) using manifest values only.
 
 ## AI Studio Orchestration
 
@@ -50,7 +52,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 
 - Reset wipes pages, posts, CPTs (services, service areas, projects, FAQs, testimonials, AI jobs), manifest, keywords, and generation logs.
 - AI Studio settings **persist** (enable flag, webhook URL, shared secret).
-- Triggered from Setup Wizard → Advanced settings (dev‑only visibility).
+- Triggered from LeadsForward → Setup → Advanced settings (dev‑only visibility).
 - Site title/description are cleared to remove business evidence.
 
 ## Dummy Content Generation
@@ -103,7 +105,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 ## Known UI Locations
 
 - AI Studio (Advanced): manifest upload + download template + generation controls.
-- Setup Wizard: advanced settings (API keys, legal pages, dev reset).
+- Setup: advanced settings (API keys, legal pages, dev reset).
 
 ## Update Checklist
 

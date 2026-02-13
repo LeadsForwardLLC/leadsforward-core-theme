@@ -230,6 +230,31 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 	return ['order' => $order_out, 'sections' => $sections_out, 'seo' => $seo_out];
 }
 
+/**
+ * Migrate legacy Page Builder SEO overrides to the SEO meta box.
+ */
+function lf_pb_migrate_legacy_seo(int $post_id, array $config): array {
+	$seo = is_array($config['seo'] ?? null) ? $config['seo'] : [];
+	if (empty($seo)) {
+		return $config;
+	}
+	$title = trim((string) ($seo['title'] ?? ''));
+	$description = trim((string) ($seo['description'] ?? ''));
+	$noindex = !empty($seo['noindex']);
+	if ($title !== '' && get_post_meta($post_id, '_lf_seo_meta_title', true) === '') {
+		update_post_meta($post_id, '_lf_seo_meta_title', $title);
+	}
+	if ($description !== '' && get_post_meta($post_id, '_lf_seo_meta_description', true) === '') {
+		update_post_meta($post_id, '_lf_seo_meta_description', $description);
+	}
+	if ($noindex && get_post_meta($post_id, '_lf_seo_noindex', true) !== '1') {
+		update_post_meta($post_id, '_lf_seo_noindex', '1');
+	}
+	unset($config['seo']);
+	update_post_meta($post_id, LF_PB_META_KEY, $config);
+	return $config;
+}
+
 function lf_pb_sanitize_order(array $order, array $allowed): array {
 	$clean = [];
 	foreach ($order as $item) {
@@ -254,6 +279,12 @@ function lf_pb_register_meta_box(): void {
 	if (!$screen || !in_array($screen->post_type, ['lf_service', 'lf_service_area', 'page', 'post'], true)) {
 		return;
 	}
+	if ($screen->post_type === 'page') {
+		$post = get_post();
+		if ($post && function_exists('lf_is_legal_page') && lf_is_legal_page($post)) {
+			return;
+		}
+	}
 	add_meta_box(
 		'lf_page_builder',
 		__('Page Builder', 'leadsforward-core'),
@@ -271,6 +302,12 @@ function lf_pb_admin_assets(string $hook): void {
 	$screen = get_current_screen();
 	if (!$screen || !in_array($screen->post_type, ['lf_service', 'lf_service_area', 'page', 'post'], true)) {
 		return;
+	}
+	if ($screen->post_type === 'page') {
+		$post = get_post();
+		if ($post && function_exists('lf_is_legal_page') && lf_is_legal_page($post)) {
+			return;
+		}
 	}
 	wp_enqueue_script('jquery-ui-sortable');
 	wp_enqueue_media();
@@ -357,9 +394,9 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 	$section_defs = lf_sections_get_context_sections($context);
 	$section_list = array_values($section_defs);
 	$config = lf_pb_get_post_config($post->ID, $context);
+	$config = lf_pb_migrate_legacy_seo($post->ID, $config);
 	$order = $config['order'] ?? [];
 	$saved_sections = $config['sections'] ?? [];
-	$seo = is_array($config['seo'] ?? null) ? $config['seo'] : ['title' => '', 'description' => '', 'noindex' => false];
 	wp_nonce_field('lf_pb_save', 'lf_pb_nonce');
 	?>
 	<style>
@@ -378,54 +415,26 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 		.lf-pb-placeholder { border: 2px dashed #94a3b8; border-radius: 14px; height: 58px; margin-bottom: 1rem; background: #f8fafc; }
 		.lf-pb-section--ghost { opacity: 0.85; border-style: dashed; }
 		.lf-pb-library { position: sticky; top: 12px; background: #0f172a; color: #fff; border-radius: 16px; padding: 1rem; }
-		.lf-pb-library h4 { margin: 0 0 0.5rem; font-size: 14px; }
-		.lf-pb-library p { margin: 0 0 0.75rem; color: #cbd5f5; font-size: 12px; }
+		.lf-pb-library__header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem; }
+		.lf-pb-library h4 { margin: 0; font-size: 14px; }
+		.lf-pb-library__toggle { font-size: 11px; border-radius: 999px; padding: 0.2rem 0.6rem; border: 1px solid rgba(255,255,255,0.4); background: transparent; color: #fff; cursor: pointer; }
+		.lf-pb-library__body p { margin: 0 0 0.75rem; color: #cbd5f5; font-size: 12px; }
 		.lf-pb-library__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
 		.lf-pb-library__item { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.6rem 0.65rem; border-radius: 12px; background: rgba(255,255,255,0.08); cursor: grab; }
 		.lf-pb-library__label { font-size: 12px; font-weight: 600; }
 		.lf-pb-library__add { font-size: 11px; border-radius: 999px; padding: 0.15rem 0.6rem; border: 1px solid rgba(255,255,255,0.4); background: transparent; color: #fff; cursor: pointer; }
 		.lf-pb-library__item:active { cursor: grabbing; }
+		.lf-pb-library.is-collapsed .lf-pb-library__body { display: none; }
 		.lf-pb-empty { border: 2px dashed #cbd5f5; border-radius: 16px; padding: 1rem; text-align: center; color: #64748b; background: #f8fafc; }
 		.lf-media-field { display: grid; gap: 0.75rem; }
 		.lf-media-preview { width: 160px; height: 100px; border: 1px dashed #cbd5e1; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f8fafc; }
 		.lf-media-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
 		.lf-media-preview__empty { font-size: 12px; color: #64748b; text-align: center; padding: 0 0.5rem; }
 		.lf-media-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-		.lf-pb-section-body[data-panel="seo-panel"] { padding: 0.5rem 0 0; }
 	</style>
 	<div class="lf-pb-grid">
 		<div class="lf-pb-main">
 			<p class="description"><?php esc_html_e('Drag to reorder sections. Use the Add buttons on the right to insert new sections (duplicates allowed).', 'leadsforward-core'); ?></p>
-			<?php if (in_array($context, ['page', 'post', 'service', 'service_area'], true)) : ?>
-				<div class="lf-pb-section" data-instance="seo-panel">
-					<div class="lf-pb-section-header">
-						<span class="lf-pb-drag" aria-hidden="true">🔒</span>
-						<strong><?php esc_html_e('SEO Overrides', 'leadsforward-core'); ?></strong>
-						<button type="button" class="lf-pb-toggle" data-target="seo-panel" aria-expanded="true">▾ <?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
-					</div>
-					<div class="lf-pb-section-body" data-panel="seo-panel">
-						<table class="form-table" role="presentation">
-							<tr>
-								<th scope="row"><label><?php esc_html_e('Meta title', 'leadsforward-core'); ?></label></th>
-								<td><input type="text" class="large-text" name="lf_pb_seo_title" value="<?php echo esc_attr((string) ($seo['title'] ?? '')); ?>" placeholder="<?php esc_attr_e('Leave blank to use the page title', 'leadsforward-core'); ?>" /></td>
-							</tr>
-							<tr>
-								<th scope="row"><label><?php esc_html_e('Meta description', 'leadsforward-core'); ?></label></th>
-								<td><textarea class="large-text" rows="2" name="lf_pb_seo_description" placeholder="<?php esc_attr_e('Leave blank to use the hero subheadline or page excerpt', 'leadsforward-core'); ?>"><?php echo esc_textarea((string) ($seo['description'] ?? '')); ?></textarea></td>
-							</tr>
-							<tr>
-								<th scope="row"><label for="lf_pb_seo_noindex"><?php esc_html_e('Noindex', 'leadsforward-core'); ?></label></th>
-								<td>
-									<label>
-										<input type="checkbox" name="lf_pb_seo_noindex" id="lf_pb_seo_noindex" value="1" <?php checked(!empty($seo['noindex'])); ?> />
-										<?php esc_html_e('Prevent search engines from indexing this page.', 'leadsforward-core'); ?>
-									</label>
-								</td>
-							</tr>
-						</table>
-					</div>
-				</div>
-			<?php endif; ?>
 			<ul class="lf-pb-sections">
 				<?php if (empty($order)) : ?>
 					<li class="lf-pb-empty"><?php esc_html_e('Drag sections here to start building.', 'leadsforward-core'); ?></li>
@@ -439,17 +448,22 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 				endforeach; ?>
 			</ul>
 		</div>
-		<aside class="lf-pb-library">
-			<h4><?php esc_html_e('Section Library', 'leadsforward-core'); ?></h4>
-			<p><?php esc_html_e('Drag or click Add to insert a section.', 'leadsforward-core'); ?></p>
-			<ul class="lf-pb-library__list">
-				<?php foreach ($section_list as $def) : ?>
-					<li class="lf-pb-library__item" data-section-type="<?php echo esc_attr($def['id']); ?>">
-						<span class="lf-pb-library__label"><?php echo esc_html($def['label']); ?></span>
-						<button type="button" class="lf-pb-library__add"><?php esc_html_e('Add', 'leadsforward-core'); ?></button>
-					</li>
-				<?php endforeach; ?>
-			</ul>
+		<aside class="lf-pb-library" data-collapsed="0">
+			<div class="lf-pb-library__header">
+				<h4><?php esc_html_e('Section Library', 'leadsforward-core'); ?></h4>
+				<button type="button" class="lf-pb-library__toggle" aria-expanded="true"><?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
+			</div>
+			<div class="lf-pb-library__body">
+				<p><?php esc_html_e('Drag or click Add to insert a section.', 'leadsforward-core'); ?></p>
+				<ul class="lf-pb-library__list">
+					<?php foreach ($section_list as $def) : ?>
+						<li class="lf-pb-library__item" data-section-type="<?php echo esc_attr($def['id']); ?>">
+							<span class="lf-pb-library__label"><?php echo esc_html($def['label']); ?></span>
+							<button type="button" class="lf-pb-library__add"><?php esc_html_e('Add', 'leadsforward-core'); ?></button>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			</div>
 		</aside>
 	</div>
 	<div class="lf-pb-templates" style="display:none;">
@@ -542,6 +556,22 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 				$field.find('.lf-media-id').val('');
 				$field.find('.lf-media-preview').html('<div class="lf-media-preview__empty">No image selected</div>');
 			});
+			var libraryKey = 'lf_pb_library_collapsed';
+			var libraryCollapsed = false;
+			try { libraryCollapsed = window.localStorage.getItem(libraryKey) === '1'; } catch (e) { libraryCollapsed = false; }
+			function applyLibraryCollapse() {
+				var $library = $('.lf-pb-library');
+				$library.toggleClass('is-collapsed', libraryCollapsed);
+				var $toggle = $library.find('.lf-pb-library__toggle');
+				$toggle.attr('aria-expanded', (!libraryCollapsed).toString());
+				$toggle.text(libraryCollapsed ? '▸ <?php echo esc_js(__('Expand', 'leadsforward-core')); ?>' : '▾ <?php echo esc_js(__('Collapse', 'leadsforward-core')); ?>');
+			}
+			applyLibraryCollapse();
+			$(document).on('click', '.lf-pb-library__toggle', function () {
+				libraryCollapsed = !libraryCollapsed;
+				try { window.localStorage.setItem(libraryKey, libraryCollapsed ? '1' : '0'); } catch (e) {}
+				applyLibraryCollapse();
+			});
 			var key = 'lf_pb_collapsed';
 			var collapsed = {};
 			try { collapsed = JSON.parse(window.localStorage.getItem(key) || '{}') || {}; } catch (e) { collapsed = {}; }
@@ -622,17 +652,11 @@ function lf_pb_handle_save(int $post_id, \WP_Post $post): void {
 	}
 	$order_raw = isset($_POST['lf_pb_order']) ? (array) $_POST['lf_pb_order'] : [];
 	$order = lf_pb_sanitize_order(array_map('sanitize_text_field', $order_raw), array_keys($clean_sections));
-	$seo = [
-		'title' => '',
-		'description' => '',
-		'noindex' => false,
-	];
-	if (in_array($context, ['page', 'post', 'service', 'service_area'], true)) {
-		$seo['title'] = isset($_POST['lf_pb_seo_title']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_pb_seo_title'])) : '';
-		$seo['description'] = isset($_POST['lf_pb_seo_description']) ? sanitize_textarea_field(wp_unslash((string) $_POST['lf_pb_seo_description'])) : '';
-		$seo['noindex'] = !empty($_POST['lf_pb_seo_noindex']);
+	$existing = get_post_meta($post_id, LF_PB_META_KEY, true);
+	if (is_array($existing) && !empty($existing['seo'])) {
+		lf_pb_migrate_legacy_seo($post_id, $existing);
 	}
-	update_post_meta($post_id, LF_PB_META_KEY, ['order' => $order, 'sections' => $clean_sections, 'seo' => $seo]);
+	update_post_meta($post_id, LF_PB_META_KEY, ['order' => $order, 'sections' => $clean_sections]);
 }
 
 function lf_pb_render_sections(\WP_Post $post): void {

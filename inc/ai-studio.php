@@ -496,7 +496,7 @@ function lf_ai_studio_render_page(): void {
 			<div class="lf-manifester-grid">
 				<div class="lf-manifester-panel">
 					<h3 style="margin-top:0;"><?php esc_html_e('Manifest Upload (Deterministic)', 'leadsforward-core'); ?></h3>
-					<p class="description"><?php esc_html_e('Upload a JSON manifest to bypass wizard inputs and run deterministic generation.', 'leadsforward-core'); ?></p>
+					<p class="description"><?php esc_html_e('Upload a JSON manifest to bypass setup inputs and run deterministic generation.', 'leadsforward-core'); ?></p>
 					<?php if (!empty($manifest)) : ?>
 						<?php
 						$site_name = (string) ($manifest['business']['name'] ?? '');
@@ -621,7 +621,7 @@ function lf_ai_studio_render_page(): void {
 		<?php if (function_exists('lf_dev_reset_allowed') && lf_dev_reset_allowed() && current_user_can('manage_options')) : ?>
 			<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0; border: 1px solid #f87171;">
 				<h2 style="margin-top:0;"><?php esc_html_e('Reset site (dev only)', 'leadsforward-core'); ?></h2>
-				<p class="description"><?php esc_html_e('Deletes wizard-created pages, services, and areas. This is irreversible.', 'leadsforward-core'); ?></p>
+				<p class="description"><?php esc_html_e('Deletes setup-created pages, services, and areas. This is irreversible.', 'leadsforward-core'); ?></p>
 				<form method="post">
 					<?php wp_nonce_field('lf_dev_reset', 'lf_dev_reset_nonce'); ?>
 					<input type="hidden" name="lf_dev_reset" value="1" />
@@ -2742,8 +2742,6 @@ function lf_ai_studio_build_full_site_payload(): array {
 			'reviews' => ['page' => 'reviews', 'intent' => 'reviews', 'keyword' => ''],
 			'blog' => ['page' => 'blog', 'intent' => 'blog', 'keyword' => ''],
 			'sitemap' => ['page' => 'sitemap', 'intent' => 'sitemap', 'keyword' => ''],
-			'privacy-policy' => ['page' => 'privacy', 'intent' => 'privacy', 'keyword' => ''],
-			'terms-of-service' => ['page' => 'terms', 'intent' => 'terms', 'keyword' => ''],
 			'thank-you' => ['page' => 'thank_you', 'intent' => 'thank_you', 'keyword' => ''],
 		];
 		if ($scope['services']) {

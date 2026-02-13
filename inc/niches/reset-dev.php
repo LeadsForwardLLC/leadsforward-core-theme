@@ -1,6 +1,6 @@
 <?php
 /**
- * Development-only site reset. Rerun wizard safely. No frontend, no AJAX, no production.
+ * Development-only site reset. Rerun setup safely. No frontend, no AJAX, no production.
  *
  * @package LeadsForward_Core
  * @since 0.1.0
@@ -78,8 +78,8 @@ function lf_dev_reset_render_page(): void {
 }
 
 /**
- * Delete wizard content, menus, reset ACF options, clear wizard flag, log.
- * Uses stored IDs when present; otherwise finds wizard pages by slug and all services/service areas.
+ * Delete setup content, menus, reset ACF options, clear setup flag, log.
+ * Uses stored IDs when present; otherwise finds core pages by slug and all services/service areas.
  */
 function lf_dev_reset_run(): void {
 	if (!lf_dev_reset_allowed()) {

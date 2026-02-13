@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin setup wizard UI. One-time flow: niche → NAP → services/areas → profile → generate.
+ * Admin site setup UI. One-time flow: niche → NAP → services/areas → profile → generate.
  * Persists completion flag; never shows again after success.
  *
  * @package LeadsForward_Core
@@ -36,9 +36,9 @@ function lf_wizard_admin_notice(): void {
 		return;
 	}
 	echo '<div class="notice notice-info"><p>' . sprintf(
-		/* translators: %s: link to setup wizard */
+		/* translators: %s: link to site setup */
 		esc_html__('LeadsForward: Complete your site setup in one go. %s', 'leadsforward-core'),
-		'<a href="' . esc_url(admin_url('admin.php?page=lf-setup')) . '">' . esc_html__('Run setup wizard', 'leadsforward-core') . '</a>'
+		'<a href="' . esc_url(admin_url('admin.php?page=lf-setup')) . '">' . esc_html__('Run site setup', 'leadsforward-core') . '</a>'
 	) . '</p></div>';
 }
 
@@ -337,7 +337,7 @@ function lf_wizard_render_page(): void {
 			echo '<div class="notice notice-error"><p>' . esc_html__('Legal pages could not be regenerated.', 'leadsforward-core') . '</p></div>';
 		}
 		if ($reset_done) {
-			echo '<div class="notice notice-success"><p>' . esc_html__('Site reset complete. You can run the setup wizard again.', 'leadsforward-core') . '</p></div>';
+			echo '<div class="notice notice-success"><p>' . esc_html__('Site reset complete. You can run site setup again.', 'leadsforward-core') . '</p></div>';
 		}
 		if ($reset_error === 'confirm') {
 			echo '<div class="notice notice-error"><p>' . esc_html__('You must type RESET exactly to confirm.', 'leadsforward-core') . '</p></div>';
@@ -351,7 +351,7 @@ function lf_wizard_render_page(): void {
 		}
 		lf_wizard_render_setup_settings_panel();
 		echo '<p>' . esc_html__('Setup is already complete. Your site has the required pages, menus, and structure.', 'leadsforward-core') . '</p>';
-		echo '<p><a href="' . esc_url(admin_url('admin.php?page=lf-setup&reset=1')) . '" class="button">' . esc_html__('Show wizard again', 'leadsforward-core') . '</a></p></div>';
+		echo '<p><a href="' . esc_url(admin_url('admin.php?page=lf-setup&reset=1')) . '" class="button">' . esc_html__('Show setup again', 'leadsforward-core') . '</a></p></div>';
 		return;
 	}
 	if (isset($_GET['reset']) && current_user_can('edit_theme_options')) {
@@ -371,7 +371,7 @@ function lf_wizard_render_page(): void {
 			echo '<div class="notice notice-error"><p>' . esc_html__('Legal pages could not be regenerated.', 'leadsforward-core') . '</p></div>';
 		}
 		if ($reset_done) {
-			echo '<div class="notice notice-success"><p>' . esc_html__('Site reset complete. You can run the setup wizard again.', 'leadsforward-core') . '</p></div>';
+			echo '<div class="notice notice-success"><p>' . esc_html__('Site reset complete. You can run site setup again.', 'leadsforward-core') . '</p></div>';
 		}
 		if ($reset_error === 'confirm') {
 			echo '<div class="notice notice-error"><p>' . esc_html__('You must type RESET exactly to confirm.', 'leadsforward-core') . '</p></div>';
@@ -410,15 +410,15 @@ function lf_wizard_render_page(): void {
 		echo '<div class="notice notice-error"><p>' . esc_html__('Legal pages could not be regenerated.', 'leadsforward-core') . '</p></div>';
 	}
 	if ($reset_done) {
-		echo '<div class="notice notice-success"><p>' . esc_html__('Site reset complete. You can run the setup wizard again.', 'leadsforward-core') . '</p></div>';
+		echo '<div class="notice notice-success"><p>' . esc_html__('Site reset complete. You can run site setup again.', 'leadsforward-core') . '</p></div>';
 	}
 	if ($reset_error === 'confirm') {
 		echo '<div class="notice notice-error"><p>' . esc_html__('You must type RESET exactly to confirm.', 'leadsforward-core') . '</p></div>';
 	}
 	echo '<div class="lf-setup-card lf-setup-card--top">';
-	echo '<h2 style="margin-top:0;">' . esc_html__('Setup Wizard + Website Manifester', 'leadsforward-core') . '</h2>';
-	echo '<p class="description">' . esc_html__('Complete the wizard to store business info and keywords. Website Manifester uses these inputs for regeneration.', 'leadsforward-core') . '</p>';
-	echo '<p><a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=lf-setup&step=' . $step)) . '#lf-setup-wizard">' . esc_html__('Continue setup wizard', 'leadsforward-core') . '</a> ';
+	echo '<h2 style="margin-top:0;">' . esc_html__('Website Manifester Setup', 'leadsforward-core') . '</h2>';
+	echo '<p class="description">' . esc_html__('Complete site setup to store business info and keywords. Website Manifester uses these inputs for regeneration.', 'leadsforward-core') . '</p>';
+	echo '<p><a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=lf-setup&step=' . $step)) . '#lf-site-setup">' . esc_html__('Continue site setup', 'leadsforward-core') . '</a> ';
 	echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=lf-ops')) . '">' . esc_html__('Open Website Manifester', 'leadsforward-core') . '</a></p>';
 	echo '</div>';
 	if ($errors) {
@@ -431,7 +431,7 @@ function lf_wizard_render_page(): void {
 		}
 		echo '</ul></div>';
 	}
-	echo '<div id="lf-setup-wizard">';
+	echo '<div id="lf-site-setup">';
 	echo '<div class="lf-setup-progress"><strong>' . sprintf(esc_html__('Step %d of 5', 'leadsforward-core'), $step) . '</strong><div class="lf-setup-progress__bar"><span style="width:' . esc_attr((string) ($step * 20)) . '%;"></span></div></div>';
 
 	$method = 'post';
@@ -960,7 +960,7 @@ function lf_wizard_render_setup_settings_panel(): void {
 	<?php if (function_exists('lf_dev_reset_allowed') && lf_dev_reset_allowed() && current_user_can('manage_options')) : ?>
 		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0; border-left: 4px solid #b32d2e;">
 			<h2 style="margin-top:0;"><?php esc_html_e('Reset site (dev only)', 'leadsforward-core'); ?></h2>
-			<p class="description"><?php esc_html_e('Deletes content, menus, and options created by the setup wizard. Available only in local/dev environments.', 'leadsforward-core'); ?></p>
+			<p class="description"><?php esc_html_e('Deletes content, menus, and options created by the site setup flow. Available only in local/dev environments.', 'leadsforward-core'); ?></p>
 			<form method="post" action="<?php echo esc_url(admin_url('admin.php?page=lf-setup')); ?>">
 				<?php wp_nonce_field('lf_dev_reset', 'lf_dev_reset_nonce'); ?>
 				<input type="hidden" name="lf_dev_reset" value="1" />

@@ -6,7 +6,7 @@ high-converting home-service site with the LeadsForward theme.
 
 Do not rewrite this SOP. Append new steps or notes at the bottom when the product changes.
 
-Note: The Setup Wizard has been merged into Website Manifester and Global Settings.
+Note: The site setup flow has been merged into Website Manifester and Global Settings.
 Any reference to Setup now means those screens.
 
 ---
@@ -31,8 +31,8 @@ All core pages use the same Page Builder Framework and shared section library.
 
 ---
 
-3) What the setup wizard does
------------------------------
+3) What the setup flow does
+---------------------------
 When you run Setup:
 - Creates all required pages for the selected niche
 - Creates default services and service areas
@@ -179,7 +179,7 @@ This keeps the site consistent, fast, and safe.
 7) How updates work safely
 --------------------------
 - Theme updates are safe because all content lives in settings and structured fields.
-- Re‑running the Setup Wizard does NOT delete content; it only fills missing items.
+- Re‑running site setup does NOT delete content; it only fills missing items.
 - Use “Reset” only when you want a clean start.
 - If you need a change, update settings — do not edit templates.
 
@@ -194,6 +194,8 @@ Append‑Only Change Log
 2026‑02‑11 — Global Settings now include niche, design preset, and Maps API key.
 
 2026‑02‑11 — Project Gallery CPT, niche list sync, and dynamic quote builder fields added.
+
+2026‑02‑11 — Fixed legal templates + duplicate action added.
 
 ---
 
@@ -259,6 +261,20 @@ Steps:
 Notes:
 - The Projects archive lives at `/projects/`.
 - The Project Gallery section can be added to homepage or core pages.
+
+---
+
+Legal Pages Addendum (Append‑Only)
+---------------------------------
+Privacy Policy and Terms of Service are fixed templates that auto‑insert:
+- Business name
+- Address
+- Phone
+- Email
+
+Notes:
+- These pages are auto‑installed on theme activation.
+- Do not edit content manually; update Business Entity fields instead.
 
 ---
 
@@ -331,7 +347,7 @@ SEO Coverage validator:
 
 Append‑Only Change Log (Recent)
 -------------------------------
-2026‑02‑09 — Setup Wizard merged with AI Studio for homepage‑only generation flow.
+2026‑02‑09 — Setup flow merged with AI Studio for homepage‑only generation flow.
 
 2026‑02‑09 — AI Studio REST endpoints added (blueprint + apply) with shared secret auth and job logging.
 
@@ -366,7 +382,7 @@ AI Studio (Append‑Only)
 ----------------------
 - Configure in **LeadsForward → AI Studio**.
 - Writing samples are controlled in n8n.
-- Optional deterministic mode: upload a JSON manifest to bypass wizard inputs.
+- Optional deterministic mode: upload a JSON manifest to bypass setup inputs.
 - Canonical schema: `docs/MANIFEST_SCHEMA.md`.
 - Section schema reference: `docs/SECTION_SCHEMA.json` (update when section registry changes).
 - Manifest upload shows a progress overlay during generation.
@@ -443,7 +459,7 @@ Deterministic Template Rules
 
 Full Site Generation Architecture
 --------------------------------
-- Setup Wizard and AI Studio regenerate send one unified payload to n8n.
+- Site setup and AI Studio regenerate send one unified payload to n8n.
 - Payload includes homepage + each Service + each Service Area + About page blueprints.
 - Each blueprint contains `sections`, `order`, `page_intent`, and `allowed_field_keys`.
 - All updates route through `lf_apply_orchestrator_updates()` with per-section allowed field validation.

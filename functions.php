@@ -42,6 +42,8 @@ lf_load_inc('performance.php');
 lf_load_inc('business-entity.php');
 // Icon system (inline SVGs).
 lf_load_inc('icons.php');
+lf_load_inc('legal-pages.php');
+lf_load_inc('duplicate-post.php');
 
 // SEO and schema (foundation only).
 lf_load_inc('seo.php');
@@ -94,12 +96,12 @@ lf_load_inc('page-builder.php');
 lf_load_inc('homepage.php');
 lf_load_inc('variation-copy.php');
 
-// Niche registry and setup wizard.
+// Niche registry and setup flow.
 lf_load_inc('niches/registry.php');
 lf_load_inc('niches/setup-runner.php');
 lf_load_inc('niches/wizard.php');
 
-// Dev-only site reset (rerun wizard). Always load; visibility gated inside reset-dev.php.
+// Dev-only site reset (rerun setup). Always load; visibility gated inside reset-dev.php.
 lf_load_inc('niches/reset-dev.php');
 
 // Safety: CPT protect, admin notices, ACF-off fallbacks.

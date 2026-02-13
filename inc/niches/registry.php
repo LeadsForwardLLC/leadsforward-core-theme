@@ -1,7 +1,7 @@
 <?php
 /**
- * Niche definition registry. Centralized per-niche config for wizard and structure.
- * Add new niches here without rewriting core wizard logic.
+ * Niche definition registry. Centralized per-niche config for setup and structure.
+ * Add new niches here without rewriting core setup logic.
  *
  * @package LeadsForward_Core
  * @since 0.1.0
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * All required page slugs the wizard creates. Same for all niches; titles may vary.
+ * All required page slugs the setup flow creates. Same for all niches; titles may vary.
  */
 function lf_wizard_required_page_slugs(): array {
 	return [

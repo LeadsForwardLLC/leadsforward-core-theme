@@ -39,6 +39,10 @@
 	gap: var(--lf-space-section);
 }
 
+.site-main--projects .lf-section--project-hero {
+	padding-bottom: var(--lf-section-padding-sm);
+}
+
 .lf-project-card {
 	display: flex;
 	flex-direction: column;
@@ -127,53 +131,6 @@
 	color: var(--lf-color-primary);
 }
 
-.lf-project-hero {
-	display: grid;
-	gap: var(--lf-space-section);
-	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-	padding: var(--lf-space-section) var(--lf-space-container);
-	background: var(--lf-surface-light);
-}
-
-.lf-project-hero__title {
-	margin: 0.25rem 0 0.5rem;
-	font-size: var(--lf-fs-h1);
-}
-
-.lf-project-hero__type {
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
-	font-size: 0.75rem;
-	margin: 0;
-	color: var(--lf-text-muted);
-}
-
-.lf-project-hero__meta,
-.lf-project-hero__excerpt {
-	margin: 0.25rem 0;
-	color: var(--lf-text-muted);
-}
-
-.lf-project-hero__back {
-	display: inline-flex;
-	margin-top: 0.75rem;
-	color: var(--lf-color-primary);
-	text-decoration: none;
-	font-weight: 600;
-}
-
-.lf-project-hero__media {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.lf-project-hero__image {
-	width: 100%;
-	border-radius: var(--lf-card-radius);
-	box-shadow: var(--lf-card-shadow);
-}
-
 .lf-project-before-after {
 	position: relative;
 	width: 100%;
@@ -213,15 +170,6 @@
 	color: #fff;
 	font-size: 0.8rem;
 	cursor: pointer;
-}
-
-.lf-project-body {
-	padding: var(--lf-space-section) var(--lf-space-container);
-}
-
-.lf-project-body__content {
-	max-width: var(--lf-container-narrow);
-	margin: 0 auto var(--lf-space-section);
 }
 
 .lf-project-gallery__grid {
