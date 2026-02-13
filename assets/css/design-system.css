@@ -2000,6 +2000,16 @@ button:focus-visible,
 	color: var(--lf-text-primary);
 }
 
+.lf-block-hero--a.lf-surface-dark .lf-hero-stack__title {
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero--a.lf-surface-dark .lf-hero-stack__subtitle,
+.lf-block-hero--a.lf-surface-dark .lf-hero-stack__trust,
+.lf-block-hero--a.lf-surface-dark .lf-hero-stack__phone {
+	color: var(--lf-text-muted);
+}
+
 .lf-block-hero__bg {
 	position: absolute;
 	inset: 0;
