@@ -469,11 +469,15 @@ button:focus-visible,
 	flex-wrap: wrap;
 	align-items: center;
 	gap: 0.75rem 1.5rem;
-	background: var(--lf-surface-white);
-	border: var(--lf-card-border);
+	justify-content: center;
+	text-align: center;
+	background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.96));
+	border: 1px solid rgba(15, 23, 42, 0.08);
 	border-radius: 999px;
-	padding: 0.75rem 1.25rem;
-	box-shadow: var(--lf-card-shadow);
+	padding: 0.85rem 1.5rem;
+	box-shadow: 0 20px 44px rgba(15, 23, 42, 0.12);
+	margin: 0 auto;
+	max-width: 100%;
 }
 
 .lf-trust-bar__rating {
@@ -481,6 +485,10 @@ button:focus-visible,
 	align-items: center;
 	gap: 0.5rem;
 	font-weight: var(--lf-fw-semibold);
+	background: rgba(15, 23, 42, 0.04);
+	padding: 0.25rem 0.7rem;
+	border-radius: 999px;
+	border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .lf-trust-bar__score,
@@ -503,6 +511,34 @@ button:focus-visible,
 	display: inline-flex;
 	align-items: center;
 	gap: 0.35rem;
+}
+
+.lf-trust-bar__badges {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	justify-content: center;
+	align-items: center;
+}
+
+.lf-section--trust-bar .lf-section__header {
+	text-align: center;
+	align-items: center;
+}
+
+.lf-section--trust-bar .lf-section__title {
+	font-size: clamp(1.1rem, 2.2vw, 1.4rem);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+}
+
+.lf-section--trust-bar .lf-heading-row {
+	justify-content: center;
+}
+
+.lf-section--trust-bar .lf-section__body {
+	display: flex;
+	justify-content: center;
 }
 
 .lf-surface-dark .lf-trust-bar,
@@ -1830,6 +1866,21 @@ button:focus-visible,
 	color: var(--lf-text-inverse);
 }
 
+.lf-block-hero.lf-surface-dark .lf-hero-trust {
+	background: rgba(255, 255, 255, 0.12);
+	border-color: rgba(255, 255, 255, 0.24);
+}
+
+.lf-block-hero.lf-surface-dark .lf-hero-trust__badge {
+	background: rgba(255, 255, 255, 0.18);
+	color: #f8fafc;
+}
+
+.lf-block-hero.lf-surface-dark .lf-hero-trust__value,
+.lf-block-hero.lf-surface-dark .lf-hero-trust__label-only {
+	color: #f8fafc;
+}
+
 .lf-block-hero.lf-surface-dark .lf-block-hero__eyebrow {
 	background: rgba(255, 255, 255, 0.12);
 	border-color: rgba(255, 255, 255, 0.25);
@@ -1955,6 +2006,57 @@ button:focus-visible,
 	font-size: 0.9375rem;
 	font-weight: 600;
 	color: var(--lf-text-muted);
+}
+
+.lf-hero-trust {
+	display: inline-flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.65rem 0.85rem;
+	padding: 0.45rem 0.75rem;
+	border-radius: 999px;
+	border: 1px solid rgba(15, 23, 42, 0.08);
+	background: rgba(15, 23, 42, 0.04);
+}
+
+.lf-hero-trust__badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.2rem 0.55rem;
+	border-radius: 999px;
+	background: rgba(37, 99, 235, 0.12);
+	color: var(--lf-primary);
+	font-weight: 700;
+}
+
+.lf-hero-trust__rating {
+	font-size: 0.85rem;
+}
+
+.lf-hero-trust__stat {
+	display: inline-flex;
+	flex-direction: column;
+	line-height: 1.1;
+}
+
+.lf-hero-trust__value {
+	font-size: 0.95rem;
+	font-weight: 700;
+	color: var(--lf-text-primary);
+}
+
+.lf-hero-trust__label {
+	font-size: 0.68rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--lf-text-muted);
+}
+
+.lf-hero-trust__label-only {
+	font-size: 0.9rem;
+	font-weight: 600;
+	color: var(--lf-text-primary);
 }
 
 .lf-block-hero__stars {

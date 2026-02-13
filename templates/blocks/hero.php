@@ -108,9 +108,58 @@ if (function_exists('wp_count_posts')) {
 	$counts = wp_count_posts('lf_testimonial');
 	$review_count = isset($counts->publish) ? (int) $counts->publish : 0;
 }
+$review_rating = 0.0;
+if ($review_count > 0 && post_type_exists('lf_testimonial')) {
+	$rating_posts = get_posts([
+		'post_type'      => 'lf_testimonial',
+		'posts_per_page' => -1,
+		'fields'         => 'ids',
+		'post_status'    => 'publish',
+		'no_found_rows'  => true,
+	]);
+	$ratings_total = 0;
+	$ratings_count = 0;
+	foreach ($rating_posts as $rating_post_id) {
+		$rating_value = function_exists('get_field') ? (int) get_field('lf_testimonial_rating', (int) $rating_post_id) : 5;
+		if ($rating_value > 0) {
+			$ratings_total += $rating_value;
+			$ratings_count++;
+		}
+	}
+	$review_rating = $ratings_count > 0 ? round($ratings_total / $ratings_count, 1) : 5.0;
+}
 $show_trust_strip = $review_count > 0;
 $trust_label = __('Trusted by local homeowners', 'leadsforward-core');
 $trust_reviews = sprintf(_n('%d review', '%d reviews', $review_count, 'leadsforward-core'), $review_count);
+$trust_strip_html = '';
+if ($show_trust_strip) {
+	$reviews_display = number_format_i18n($review_count);
+	$rating_display = number_format_i18n($review_rating, 1);
+	ob_start();
+	?>
+	<div class="lf-hero-trust">
+		<span class="lf-hero-trust__badge">
+			<span class="lf-block-hero__stars" aria-hidden="true">
+				<?php for ($i = 0; $i < 5; $i++) : ?>
+					<svg class="lf-block-hero__star" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+				<?php endfor; ?>
+			</span>
+			<span class="lf-hero-trust__rating"><?php echo esc_html($rating_display); ?></span>
+		</span>
+		<span class="lf-hero-trust__stat">
+			<span class="lf-hero-trust__value"><?php echo esc_html($reviews_display); ?>+</span>
+			<span class="lf-hero-trust__label"><?php echo esc_html($trust_label); ?></span>
+		</span>
+		<span class="lf-hero-trust__stat">
+			<span class="lf-hero-trust__value"><?php echo esc_html($reviews_display); ?></span>
+			<span class="lf-hero-trust__label"><?php echo esc_html(_n('Review', 'Reviews', $review_count, 'leadsforward-core')); ?></span>
+		</span>
+	</div>
+	<?php
+	$trust_strip_html = (string) ob_get_clean();
+} else {
+	$trust_strip_html = '<span class="lf-hero-trust__label-only">' . esc_html($trust_label) . '</span>';
+}
 // Services list removed from hero card.
 $latest_testimonial = null;
 $latest_testimonial_text = '';
@@ -209,21 +258,7 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 					<p class="lf-hero-stack__subtitle"><?php echo esc_html($subheading); ?></p>
 				<?php endif; ?>
 				<div class="lf-hero-stack__trust" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
-					<?php if ($show_trust_strip) : ?>
-						<span class="lf-block-hero__stars" aria-hidden="true">
-							<?php for ($i = 0; $i < 5; $i++) : ?>
-								<svg class="lf-block-hero__star" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-							<?php endfor; ?>
-						</span>
-						<span class="lf-block-hero__reviews">
-							<span class="lf-block-hero__reviews-label"><?php echo esc_html($trust_label); ?></span>
-							<span class="lf-block-hero__reviews-count"><?php echo esc_html($trust_reviews); ?></span>
-						</span>
-					<?php else : ?>
-						<span class="lf-block-hero__reviews">
-							<span class="lf-block-hero__reviews-label"><?php echo esc_html($trust_label); ?></span>
-						</span>
-					<?php endif; ?>
+					<?php echo $trust_strip_html; ?>
 				</div>
 				<?php if ($show_cta_group) : ?>
 					<div class="lf-hero-stack__actions">
@@ -267,21 +302,7 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 						<p class="lf-hero-form__subtitle"><?php echo esc_html($subheading); ?></p>
 					<?php endif; ?>
 					<div class="lf-hero-form__trust" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
-						<?php if ($show_trust_strip) : ?>
-							<span class="lf-block-hero__stars" aria-hidden="true">
-								<?php for ($i = 0; $i < 5; $i++) : ?>
-									<svg class="lf-block-hero__star" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-								<?php endfor; ?>
-							</span>
-							<span class="lf-block-hero__reviews">
-								<span class="lf-block-hero__reviews-label"><?php echo esc_html($trust_label); ?></span>
-								<span class="lf-block-hero__reviews-count"><?php echo esc_html($trust_reviews); ?></span>
-							</span>
-						<?php else : ?>
-							<span class="lf-block-hero__reviews">
-								<span class="lf-block-hero__reviews-label"><?php echo esc_html($trust_label); ?></span>
-							</span>
-						<?php endif; ?>
+						<?php echo $trust_strip_html; ?>
 					</div>
 				</div>
 				<div class="lf-hero-form__panel">
@@ -344,21 +365,7 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 						</div>
 					<?php endif; ?>
 					<div class="lf-hero-visual__trust" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
-						<?php if ($show_trust_strip) : ?>
-							<span class="lf-block-hero__stars" aria-hidden="true">
-								<?php for ($i = 0; $i < 5; $i++) : ?>
-									<svg class="lf-block-hero__star" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-								<?php endfor; ?>
-							</span>
-							<span class="lf-block-hero__reviews">
-								<span class="lf-block-hero__reviews-label"><?php echo esc_html($trust_label); ?></span>
-								<span class="lf-block-hero__reviews-count"><?php echo esc_html($trust_reviews); ?></span>
-							</span>
-						<?php else : ?>
-							<span class="lf-block-hero__reviews">
-								<span class="lf-block-hero__reviews-label"><?php echo esc_html($trust_label); ?></span>
-							</span>
-						<?php endif; ?>
+						<?php echo $trust_strip_html; ?>
 					</div>
 				</div>
 				<div class="lf-hero-visual__media">
@@ -434,21 +441,7 @@ $placeholder_alt = $business_name ? $business_name : __('Trusted local service',
 						</div>
 					<?php endif; ?>
 					<div class="lf-hero-split__trust" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
-						<?php if ($show_trust_strip) : ?>
-							<span class="lf-block-hero__stars" aria-hidden="true">
-								<?php for ($i = 0; $i < 5; $i++) : ?>
-									<svg class="lf-block-hero__star" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-								<?php endfor; ?>
-							</span>
-							<span class="lf-block-hero__reviews">
-								<span class="lf-block-hero__reviews-label"><?php echo esc_html($trust_label); ?></span>
-								<span class="lf-block-hero__reviews-count"><?php echo esc_html($trust_reviews); ?></span>
-							</span>
-						<?php else : ?>
-							<span class="lf-block-hero__reviews">
-								<span class="lf-block-hero__reviews-label"><?php echo esc_html($trust_label); ?></span>
-							</span>
-						<?php endif; ?>
+						<?php echo $trust_strip_html; ?>
 					</div>
 				</div>
 				<div class="lf-hero-split__proof">
