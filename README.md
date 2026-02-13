@@ -15,7 +15,7 @@ LeadsForward Core provides:
 
 - **Custom post types:** Services, Service Areas, Projects, Testimonials, FAQs (all REST-ready)
 - **Business Entity:** Single source of truth for NAP, phones, service areas, and schema
-- **Global settings & branding:** Logo + color tokens mapped to CSS variables (core, surface, text)
+- **Global settings & branding:** Logo + color tokens mapped to CSS variables (core, surface, text) and design presets synced to the variation profile
 - **Shared section registry:** Universal section definitions + defaults used by homepage and page builders
 - **Image system:** Media Library–only images with Unsplash placeholder seeding
 - **Icon system:** Heroicons inline SVGs with per-section controls + niche defaults

@@ -84,6 +84,10 @@ This document keeps collaborating AI models and humans aligned on the current Le
 - Automatic keyword assignment stores mapping in `lf_keyword_map`.
 - XML sitemap is served at `/sitemap.xml` when enabled.
 
+## Global Design
+
+- Global Settings design preset syncs the variation profile (block variants + section order).
+
 ## Section Rendering Updates
 
 - `content` section now renders heading + intro + body fields (no longer empty).

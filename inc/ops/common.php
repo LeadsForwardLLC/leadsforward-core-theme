@@ -16,6 +16,39 @@ const LF_OPS_CAP = 'edit_theme_options';
 const LF_OPS_AUDIT_OPTION = 'lf_ops_audit_log';
 const LF_OPS_AUDIT_MAX = 100;
 
+function lf_design_presets(): array {
+	return [
+		'clean-precision' => __('Clean Precision', 'leadsforward-core'),
+		'bold-authority' => __('Bold Authority', 'leadsforward-core'),
+		'friendly-approachable' => __('Friendly & Approachable', 'leadsforward-core'),
+		'high-contrast' => __('High-Contrast Conversion Engine', 'leadsforward-core'),
+		'modern-edge' => __('Modern Edge', 'leadsforward-core'),
+		'structured-modular' => __('Structured Modular', 'leadsforward-core'),
+	];
+}
+
+function lf_variation_profile_labels(): array {
+	return [
+		'a' => __('A: Clean + Minimal', 'leadsforward-core'),
+		'b' => __('B: Bold + High Contrast', 'leadsforward-core'),
+		'c' => __('C: Trust Heavy', 'leadsforward-core'),
+		'd' => __('D: Service Heavy', 'leadsforward-core'),
+		'e' => __('E: Offer/Promo Heavy', 'leadsforward-core'),
+	];
+}
+
+function lf_design_preset_to_variation_profile(string $preset): string {
+	$map = [
+		'clean-precision' => 'a',
+		'bold-authority' => 'b',
+		'friendly-approachable' => 'c',
+		'high-contrast' => 'b',
+		'modern-edge' => 'd',
+		'structured-modular' => 'e',
+	];
+	return $map[$preset] ?? 'a';
+}
+
 /**
  * Option keys we allow in export/import. Explicit allowlist; no URLs, slugs, post IDs, user data.
  */

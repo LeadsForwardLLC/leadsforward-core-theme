@@ -159,11 +159,29 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('lf_ai_airtable_view', isset($_POST['lf_ai_airtable_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_view'])) : '');
 	update_option('lf_maps_api_key', isset($_POST['lf_maps_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_maps_api_key'])) : '');
 	$design_preset = isset($_POST['lf_global_design_preset']) ? sanitize_text_field(wp_unslash($_POST['lf_global_design_preset'])) : 'clean-precision';
-	$allowed_presets = ['clean-precision', 'bold-authority', 'friendly-approachable', 'high-contrast', 'modern-edge', 'structured-modular'];
-	if (!in_array($design_preset, $allowed_presets, true)) {
+	$design_presets = function_exists('lf_design_presets') ? lf_design_presets() : [];
+	if (empty($design_presets)) {
+		$design_presets = [
+			'clean-precision' => __('Clean Precision', 'leadsforward-core'),
+			'bold-authority' => __('Bold Authority', 'leadsforward-core'),
+			'friendly-approachable' => __('Friendly & Approachable', 'leadsforward-core'),
+			'high-contrast' => __('High-Contrast Conversion Engine', 'leadsforward-core'),
+			'modern-edge' => __('Modern Edge', 'leadsforward-core'),
+			'structured-modular' => __('Structured Modular', 'leadsforward-core'),
+		];
+	}
+	if (!isset($design_presets[$design_preset])) {
 		$design_preset = 'clean-precision';
 	}
 	update_option('lf_global_design_preset', $design_preset);
+	$variation_profile = function_exists('lf_design_preset_to_variation_profile')
+		? lf_design_preset_to_variation_profile($design_preset)
+		: 'a';
+	if (function_exists('update_field')) {
+		update_field('variation_profile', $variation_profile, 'option');
+	} else {
+		update_option('options_variation_profile', $variation_profile);
+	}
 	$niche_slug = isset($_POST['lf_homepage_niche_slug']) ? sanitize_text_field(wp_unslash($_POST['lf_homepage_niche_slug'])) : 'general';
 	$allowed_niches = function_exists('lf_get_niche_registry') ? array_keys(lf_get_niche_registry()) : ['general'];
 	if (!in_array($niche_slug, $allowed_niches, true)) {
@@ -379,17 +397,25 @@ function lf_ops_render_global_settings_page(): void {
 	if (!isset($niche_registry[$homepage_niche_slug])) {
 		$homepage_niche_slug = 'general';
 	}
-	$design_presets = [
-		'clean-precision' => __('Clean Precision', 'leadsforward-core'),
-		'bold-authority' => __('Bold Authority', 'leadsforward-core'),
-		'friendly-approachable' => __('Friendly & Approachable', 'leadsforward-core'),
-		'high-contrast' => __('High-Contrast Conversion Engine', 'leadsforward-core'),
-		'modern-edge' => __('Modern Edge', 'leadsforward-core'),
-		'structured-modular' => __('Structured Modular', 'leadsforward-core'),
-	];
+	$design_presets = function_exists('lf_design_presets') ? lf_design_presets() : [];
+	if (empty($design_presets)) {
+		$design_presets = [
+			'clean-precision' => __('Clean Precision', 'leadsforward-core'),
+			'bold-authority' => __('Bold Authority', 'leadsforward-core'),
+			'friendly-approachable' => __('Friendly & Approachable', 'leadsforward-core'),
+			'high-contrast' => __('High-Contrast Conversion Engine', 'leadsforward-core'),
+			'modern-edge' => __('Modern Edge', 'leadsforward-core'),
+			'structured-modular' => __('Structured Modular', 'leadsforward-core'),
+		];
+	}
 	if (!isset($design_presets[$design_preset])) {
 		$design_preset = 'clean-precision';
 	}
+	$profile_labels = function_exists('lf_variation_profile_labels') ? lf_variation_profile_labels() : [];
+	$design_profile = function_exists('lf_design_preset_to_variation_profile')
+		? lf_design_preset_to_variation_profile($design_preset)
+		: 'a';
+	$design_profile_label = $profile_labels[$design_profile] ?? strtoupper($design_profile);
 	$place_id = function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_place_id', '') : '';
 	$place_name = function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_place_name', '') : '';
 	$place_address = function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_place_address', '') : '';
@@ -774,7 +800,10 @@ function lf_ops_render_global_settings_page(): void {
 										</option>
 									<?php endforeach; ?>
 								</select>
-								<p class="description"><?php esc_html_e('Applies global styles to typography, surfaces, buttons, and section rhythm.', 'leadsforward-core'); ?></p>
+								<p class="description">
+									<?php esc_html_e('Applies global styles to typography, surfaces, buttons, and section rhythm.', 'leadsforward-core'); ?>
+									<?php echo ' ' . esc_html(sprintf(__('Synced variation profile: %s.', 'leadsforward-core'), $design_profile_label)); ?>
+								</p>
 							</td>
 						</tr>
 					</table>

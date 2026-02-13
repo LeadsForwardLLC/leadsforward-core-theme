@@ -582,6 +582,11 @@ SEO Engine (Append‑Only)
 - Per-page overrides live in the SEO meta box on pages, posts, services, and service areas (including header/footer script overrides).
 - Automatic keyword assignment populates target keywords and stores mapping in `lf_keyword_map`.
 
+Global Design (Append‑Only)
+---------------------------
+- Global Settings → Global Design presets now sync with the variation profile (block variants + section order).
+- Bulk Actions “Reassign design preset” mirrors the same preset list and writes the matching variation profile.
+
 Append‑Only Change Log (Append‑Only)
 -----------------------------------
 2026‑02‑11 — Added Content QA audit + one‑pass auto‑repair and dynamic Quote Builder fields.

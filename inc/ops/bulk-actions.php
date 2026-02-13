@@ -21,7 +21,7 @@ function lf_ops_bulk_handle(): void {
 	if (isset($_POST['lf_ops_bulk_preview']) && isset($_POST['lf_ops_bulk_action'])) {
 		check_admin_referer('lf_ops_bulk', 'lf_ops_bulk_nonce');
 		$action = sanitize_text_field(wp_unslash($_POST['lf_ops_bulk_action']));
-		if (in_array($action, ['variation_profile', 'cta_sitewide', 'schema_toggles', 'rebuild_linking'], true)) {
+		if (in_array($action, ['design_preset', 'cta_sitewide', 'schema_toggles', 'rebuild_linking'], true)) {
 			wp_safe_redirect(admin_url('admin.php?page=lf-ops-bulk&preview=' . rawurlencode($action)));
 			exit;
 		}
@@ -37,14 +37,24 @@ function lf_ops_bulk_handle(): void {
 	}
 
 	switch ($action) {
-		case 'variation_profile':
-			$profile = isset($_POST['lf_ops_variation_profile']) ? sanitize_text_field(wp_unslash($_POST['lf_ops_variation_profile'])) : '';
-			if (in_array($profile, ['a', 'b', 'c', 'd', 'e'], true)) {
-				$prev = function_exists('get_field') ? get_field('variation_profile', 'option') : null;
+		case 'design_preset':
+			$preset = isset($_POST['lf_ops_design_preset']) ? sanitize_text_field(wp_unslash($_POST['lf_ops_design_preset'])) : '';
+			$presets = function_exists('lf_design_presets') ? lf_design_presets() : [];
+			if (!empty($presets) && isset($presets[$preset])) {
+				$prev = [
+					'design_preset' => get_option('lf_global_design_preset', 'clean-precision'),
+					'variation_profile' => function_exists('get_field') ? get_field('variation_profile', 'option') : null,
+				];
+				update_option('lf_global_design_preset', $preset);
+				$profile = function_exists('lf_design_preset_to_variation_profile')
+					? lf_design_preset_to_variation_profile($preset)
+					: 'a';
 				if (function_exists('update_field')) {
 					update_field('variation_profile', $profile, 'option');
+				} else {
+					update_option('options_variation_profile', $profile);
 				}
-				lf_ops_audit_log('bulk_variation_profile', ['profile' => $profile], ['variation_profile' => $prev]);
+				lf_ops_audit_log('bulk_design_preset', ['design_preset' => $preset, 'variation_profile' => $profile], $prev);
 			}
 			break;
 		case 'cta_sitewide':
@@ -132,6 +142,7 @@ function lf_ops_bulk_render(): void {
 
 	echo '<div class="wrap"><h1>' . esc_html__('Bulk Actions', 'leadsforward-core') . '</h1>';
 	echo '<p>' . esc_html__('Apply site-wide changes with preview. No bulk delete or slug edits.', 'leadsforward-core') . '</p>';
+	echo '<p class="description">' . esc_html__('Design presets now sync Global Design + variation profile. You can also manage design in Global Settings.', 'leadsforward-core') . '</p>';
 	if ($done) {
 		echo '<div class="notice notice-success"><p>' . esc_html__('Action completed.', 'leadsforward-core') . '</p></div>';
 	}
@@ -142,7 +153,26 @@ function lf_ops_bulk_render(): void {
 		echo '<div class="notice notice-error"><p>' . esc_html__('Invalid action.', 'leadsforward-core') . '</p></div>';
 	}
 
-	$current_profile = function_exists('get_field') ? get_field('variation_profile', 'option') : 'a';
+	$design_presets = function_exists('lf_design_presets') ? lf_design_presets() : [];
+	if (empty($design_presets)) {
+		$design_presets = [
+			'clean-precision' => __('Clean Precision', 'leadsforward-core'),
+			'bold-authority' => __('Bold Authority', 'leadsforward-core'),
+			'friendly-approachable' => __('Friendly & Approachable', 'leadsforward-core'),
+			'high-contrast' => __('High-Contrast Conversion Engine', 'leadsforward-core'),
+			'modern-edge' => __('Modern Edge', 'leadsforward-core'),
+			'structured-modular' => __('Structured Modular', 'leadsforward-core'),
+		];
+	}
+	$current_preset = (string) get_option('lf_global_design_preset', 'clean-precision');
+	if (!isset($design_presets[$current_preset])) {
+		$current_preset = array_key_first($design_presets);
+	}
+	$profile_labels = function_exists('lf_variation_profile_labels') ? lf_variation_profile_labels() : [];
+	$current_profile = function_exists('lf_design_preset_to_variation_profile')
+		? lf_design_preset_to_variation_profile($current_preset)
+		: 'a';
+	$current_profile_label = $profile_labels[$current_profile] ?? strtoupper((string) $current_profile);
 	$current_primary = function_exists('get_field') ? get_field('lf_cta_primary_text', 'option') : '';
 	$current_secondary = function_exists('get_field') ? get_field('lf_cta_secondary_text', 'option') : '';
 	$schema_current = [];
@@ -161,19 +191,20 @@ function lf_ops_bulk_render(): void {
 		$linking_preview['areas'] = count($areas);
 	}
 
-	// --- Variation profile ---
-	echo '<div class="card" style="max-width:600px; margin:1em 0;"><h2>' . esc_html__('Reassign variation profile', 'leadsforward-core') . '</h2>';
-	echo '<p>' . esc_html__('Set the site-wide variation profile (drives block variants and section order).', 'leadsforward-core') . '</p>';
+	// --- Design preset ---
+	echo '<div class="card" style="max-width:600px; margin:1em 0;"><h2>' . esc_html__('Reassign design preset', 'leadsforward-core') . '</h2>';
+	echo '<p>' . esc_html__('Syncs Global Design presets with the variation profile (block variants + section order).', 'leadsforward-core') . '</p>';
 	echo '<form method="post" action="">';
 	wp_nonce_field('lf_ops_bulk', 'lf_ops_bulk_nonce');
-	echo '<input type="hidden" name="lf_ops_bulk_action" value="variation_profile" />';
-	echo '<p><label>' . esc_html__('Profile:', 'leadsforward-core') . ' <select name="lf_ops_variation_profile">';
-	foreach (['a' => 'A: Clean + Minimal', 'b' => 'B: Bold + High Contrast', 'c' => 'C: Trust Heavy', 'd' => 'D: Service Heavy', 'e' => 'E: Offer/Promo Heavy'] as $v => $l) {
-		echo '<option value="' . esc_attr($v) . '"' . selected($current_profile, $v, false) . '>' . esc_html($l) . '</option>';
+	echo '<input type="hidden" name="lf_ops_bulk_action" value="design_preset" />';
+	echo '<p><label>' . esc_html__('Design preset:', 'leadsforward-core') . ' <select name="lf_ops_design_preset">';
+	foreach ($design_presets as $slug => $label) {
+		echo '<option value="' . esc_attr($slug) . '"' . selected($current_preset, $slug, false) . '>' . esc_html($label) . '</option>';
 	}
 	echo '</select></label></p>';
-	if ($preview_action === 'variation_profile') {
-		echo '<p><strong>' . esc_html__('Preview:', 'leadsforward-core') . '</strong> ' . esc_html__('Variation profile will be updated site-wide. No URLs or slugs changed.', 'leadsforward-core') . '</p>';
+	echo '<p class="description">' . esc_html(sprintf(__('Synced variation profile: %s', 'leadsforward-core'), $current_profile_label)) . '</p>';
+	if ($preview_action === 'design_preset') {
+		echo '<p><strong>' . esc_html__('Preview:', 'leadsforward-core') . '</strong> ' . esc_html__('Design preset and variation profile will be updated site-wide. No URLs or slugs changed.', 'leadsforward-core') . '</p>';
 	}
 	echo '<p><label><input type="checkbox" name="lf_ops_bulk_confirm" value="1" required /> ' . esc_html__('I understand this will overwrite the current setting.', 'leadsforward-core') . '</label></p>';
 	echo '<p><input type="submit" name="lf_ops_bulk_preview" class="button" value="' . esc_attr__('Preview changes', 'leadsforward-core') . '" /> <input type="submit" class="button button-primary" value="' . esc_attr__('Apply', 'leadsforward-core') . '" /></p>';
