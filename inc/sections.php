@@ -1082,7 +1082,7 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	$default_items = lf_sections_benefits_default_items();
 	$icon_overrides = lf_sections_parse_lines((string) ($settings['benefits_icon_overrides'] ?? ''));
 	$icon_data = function_exists('lf_section_icon_data') ? lf_section_icon_data($settings, 'benefits') : ['enabled' => false];
-	$icon_enabled = !empty($icon_data['enabled']);
+	$icon_enabled = true;
 	$icon_size = $icon_data['size'] ?? 'md';
 	$icon_color = $icon_data['color'] ?? 'primary';
 	$parsed_items = [];

@@ -134,42 +134,43 @@ $trust_reviews = sprintf(_n('%d review', '%d reviews', $review_count, 'leadsforw
 $homeowner_count = $review_count > 0 ? $review_count : 200;
 $homeowner_display = number_format_i18n($homeowner_count);
 $homeowner_label = __('Trusted by local homeowners', 'leadsforward-core');
+if ($review_rating <= 0) {
+	$review_rating = 5.0;
+}
 $trust_strip_html = '';
-if ($show_trust_strip) {
-	$reviews_display = number_format_i18n($review_count);
-	$rating_display = number_format_i18n($review_rating, 1);
-	ob_start();
-	?>
-	<div class="lf-hero-trust">
-		<span class="lf-hero-trust__icon" aria-hidden="true">
-			<?php
-			if (function_exists('lf_icon')) {
-				echo lf_icon('home', ['class' => 'lf-icon--sm lf-icon--inherit']);
-			}
-			?>
+$reviews_display = number_format_i18n($review_count);
+$rating_display = number_format_i18n($review_rating, 1);
+ob_start();
+?>
+<div class="lf-hero-trust">
+	<span class="lf-hero-trust__icon" aria-hidden="true">
+		<?php
+		if (function_exists('lf_icon')) {
+			echo lf_icon('home', ['class' => 'lf-icon--sm lf-icon--inherit']);
+		}
+		?>
+	</span>
+	<span class="lf-hero-trust__badge">
+		<span class="lf-block-hero__stars" aria-hidden="true">
+			<?php for ($i = 0; $i < 5; $i++) : ?>
+				<svg class="lf-block-hero__star" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+			<?php endfor; ?>
 		</span>
-		<span class="lf-hero-trust__badge">
-			<span class="lf-block-hero__stars" aria-hidden="true">
-				<?php for ($i = 0; $i < 5; $i++) : ?>
-					<svg class="lf-block-hero__star" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-				<?php endfor; ?>
-			</span>
-			<span class="lf-hero-trust__rating"><?php echo esc_html($rating_display); ?></span>
-		</span>
-		<span class="lf-hero-trust__stat">
-			<span class="lf-hero-trust__value"><?php echo esc_html($homeowner_display); ?></span>
-			<span class="lf-hero-trust__label"><?php echo esc_html($homeowner_label); ?></span>
-		</span>
+		<span class="lf-hero-trust__rating"><?php echo esc_html($rating_display); ?></span>
+	</span>
+	<span class="lf-hero-trust__stat lf-hero-trust__stat--emphasis">
+		<span class="lf-hero-trust__value"><?php echo esc_html($homeowner_display); ?></span>
+		<span class="lf-hero-trust__label"><?php echo esc_html($homeowner_label); ?></span>
+	</span>
+	<?php if ($review_count > 0) : ?>
 		<span class="lf-hero-trust__stat">
 			<span class="lf-hero-trust__value"><?php echo esc_html($reviews_display); ?></span>
 			<span class="lf-hero-trust__label"><?php echo esc_html(_n('Review', 'Reviews', $review_count, 'leadsforward-core')); ?></span>
 		</span>
-	</div>
-	<?php
-	$trust_strip_html = (string) ob_get_clean();
-} else {
-	$trust_strip_html = '<span class="lf-hero-trust__label-only">' . esc_html($trust_label) . '</span>';
-}
+	<?php endif; ?>
+</div>
+<?php
+$trust_strip_html = (string) ob_get_clean();
 // Services list removed from hero card.
 $latest_testimonial = null;
 $latest_testimonial_text = '';
