@@ -512,12 +512,14 @@ function lf_ai_studio_airtable_fetch_reviews(
 
 function lf_ai_studio_airtable_reviews_filter_formula(string $project_name, string $project_field): string {
 	$needle = strtolower(trim($project_name));
-	$needle = str_replace('"', '\"', $needle);
+	$needle = str_replace(['\\', '"'], ['\\\\', '\"'], $needle);
+	$field = trim((string) $project_field);
+	$field = str_replace(['{', '}'], '', $field);
 	return sprintf(
-		'FIND(",%s,", "," & LOWER(IFERROR(ARRAYJOIN({%s}), {%s})) & ",")',
+		'FIND(",%s,", "," & LOWER(IFERROR(ARRAYJOIN({%s}, ","), {%s} & "")) & ",")',
 		$needle,
-		$project_field,
-		$project_field
+		$field,
+		$field
 	);
 }
 
