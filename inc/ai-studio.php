@@ -271,6 +271,9 @@ function lf_ai_studio_handle_manifest(): void {
 	}
 	$normalized = lf_ai_studio_normalize_manifest($decoded);
 	update_option('lf_site_manifest', $normalized, false);
+	if (function_exists('lf_seo_assign_keywords_from_manifest')) {
+		lf_seo_assign_keywords_from_manifest($normalized);
+	}
 	delete_option('lf_ai_studio_manifest_errors');
 	lf_ai_studio_sync_manifest_posts($normalized);
 	$result = lf_ai_studio_run_generation();

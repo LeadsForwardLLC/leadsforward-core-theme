@@ -26,12 +26,12 @@ LeadsForward Core provides:
 - **AI Assistant (bounded):** Safe copy suggestions + field edits only (no layout/CSS changes)
 - **AI Studio:** Orchestrator-driven site content generation (no OpenAI keys stored) plus post-gen QA audit + one-pass auto-repair
 - **Server-rendered blocks:** Hero, Trust/Reviews, CTA, FAQ Accordion, Map+NAP
-- **SEO & schema:** JSON-LD (LocalBusiness, Organization, WebSite, BreadcrumbList, Service, FAQPage, Review), canonical, noindex, NAP/geo helpers
+- **SEO engine:** Global SEO settings, per-page meta, canonical/noindex/robots, OG/Twitter, XML sitemap, keyword assignment, JSON-LD
 - **Heading rules:** Enforced single H1 + heading hierarchy validation (warnings only)
 - **Internal linking engine:** Deterministic anchors + hub-and-spoke modules (services/areas)
 - **SEO coverage validator:** Site Health checks for missing hubs, thin pages, and orphans
 - **Controlled variation:** Site-wide profile (A–E), block variant registry, safe section ordering, style tokens, copy template slots (no randomness)
-- **Setup wizard:** Niche-aware init; seeds pages, CPTs, menus, page builder defaults, and copy templates
+- **Setup wizard:** Niche-aware init; seeds pages, CPTs, menus, page builder defaults, and copy templates (Manifester + Global Settings are primary)
 - **Safety:** CPT delete protection, admin notices for missing SEO-critical fields, graceful fallback when ACF is off
 - **SOP:** Step-by-step build process in `docs/SOP.md`
 
@@ -67,7 +67,8 @@ leadsforward-core-theme/
 │   ├── performance.php  # Defer scripts, heartbeat, head cleanup, critical CSS hook
 │   ├── business-entity.php # Business entity single source of truth
 │   ├── icons.php        # Icon helpers + niche defaults
-│   ├── seo.php          # Canonical, noindex, NAP/geo, breadcrumbs, internal links
+│   ├── seo.php          # SEO module loader
+│   ├── seo/             # SEO settings, meta box, render, sitemap, keyword engine
 │   ├── schema.php       # JSON-LD: LocalBusiness, Organization, WebSite, BreadcrumbList, Service, FAQPage, Review
 │   ├── images.php       # Placeholder images + media helpers
 │   ├── sections.php     # Shared section registry + renderers
@@ -128,7 +129,8 @@ Under **LeadsForward**:
 
 | Page | Purpose |
 |------|--------|
-| **Setup** | Setup wizard, API keys (Google Maps/OpenAI), admin bar toggle, reset tools. |
+| **SEO** | Global SEO settings, sitemap, schema, and AI keyword engine. |
+| **Setup** | Setup wizard, API keys, admin bar toggle, reset tools. |
 | **Global Settings** | Business Entity + Logo + Branding colors (core/surface/text). |
 | **Homepage** | Homepage builder: section order, toggles, backgrounds, copy, CTA actions. |
 | **Quote Builder** | Builder config plus integrations + analytics panels. |

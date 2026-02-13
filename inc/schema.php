@@ -54,7 +54,7 @@ function lf_output_schema_json_ld(): void {
 	}
 
 	// Service schema on single lf_service.
-	if (is_singular('lf_service')) {
+	if (is_singular('lf_service') && lf_schema_toggle_on('lf_schema_service')) {
 		$service = lf_build_service_schema();
 		if (!empty($service)) {
 			$scripts[] = $service;
@@ -92,6 +92,14 @@ function lf_output_schema_json_ld(): void {
  * Whether a schema toggle is on. Default true if option not set.
  */
 function lf_schema_toggle_on(string $option_name): bool {
+	if (function_exists('lf_seo_get_setting')) {
+		if ($option_name === 'lf_schema_local_business') {
+			return (bool) lf_seo_get_setting('schema.enable_local_business', true);
+		}
+		if ($option_name === 'lf_schema_service') {
+			return (bool) lf_seo_get_setting('schema.enable_service', true);
+		}
+	}
 	$val = lf_get_option($option_name, 'option', true);
 	if (is_bool($val)) {
 		return $val;
@@ -209,9 +217,27 @@ function lf_build_organization_schema(): array {
 	if ($name === '') {
 		return [];
 	}
+	$type = 'Organization';
+	if (function_exists('lf_seo_get_setting')) {
+		$type = (string) lf_seo_get_setting('schema.organization_type', 'Organization');
+	}
+	$allowed = [
+		'Organization',
+		'LocalBusiness',
+		'HomeAndConstructionBusiness',
+		'ProfessionalService',
+		'GeneralContractor',
+		'RoofingContractor',
+		'Plumber',
+		'HVACBusiness',
+		'LandscapingBusiness',
+	];
+	if (!in_array($type, $allowed, true)) {
+		$type = 'Organization';
+	}
 	$schema = [
 		'@context' => 'https://schema.org',
-		'@type'    => 'Organization',
+		'@type'    => $type,
 		'@id'      => home_url('/#lf-organization'),
 		'name'     => $name,
 		'url'      => home_url('/'),

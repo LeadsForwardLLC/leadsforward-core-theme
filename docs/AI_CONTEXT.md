@@ -14,6 +14,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 - **Homepage builder config/order**: `inc/homepage.php`
 - **Page builder**: `inc/page-builder.php`
 - **AI Studio orchestration**: `inc/ai-studio.php`
+- **SEO system**: `inc/seo/`
 - **Manifest schema**: `docs/MANIFEST_SCHEMA.md`
 - **Section schema reference**: `docs/SECTION_SCHEMA.json`
 - **SOP**: `docs/SOP.md`
@@ -22,6 +23,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 ## Current Constraints (High Priority)
 
 - Do not modify templates, section registry, rendering logic, or allowed_field_keys unless explicitly requested.
+- Do not use external SEO plugins; SEO is theme-native.
 - Manifest Mode is the authoritative generation path when a manifest exists.
 - Homepage blueprint must always be included in orchestrator payloads.
 
@@ -70,6 +72,13 @@ This document keeps collaborating AI models and humans aligned on the current Le
 
 - Generation payload includes `internal_links` catalog (core pages, services, areas, recent posts).
 - AI inserts 1–2 internal links in richtext fields only; URLs must come from the catalog.
+
+## SEO Engine
+
+- Global SEO settings live in the `lf_seo_settings` option (LeadsForward → SEO).
+- Per-page overrides are stored in post meta with `_lf_seo_` prefix.
+- Automatic keyword assignment stores mapping in `lf_keyword_map`.
+- XML sitemap is served at `/sitemap.xml` when enabled.
 
 ## Section Rendering Updates
 

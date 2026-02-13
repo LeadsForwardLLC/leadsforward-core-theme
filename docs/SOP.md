@@ -533,6 +533,12 @@ Internal Linking (Append‑Only)
 - Links are limited to core pages, services, service areas, and recent posts.
 - Related Links sections still handle primary cross‑navigation.
 
+SEO Engine (Append‑Only)
+------------------------
+- LeadsForward → SEO controls global titles, descriptions, indexing, social, schema, and sitemap.
+- Per-page overrides live in the SEO meta box on pages, posts, services, and service areas.
+- Automatic keyword assignment populates target keywords and stores mapping in `lf_keyword_map`.
+
 Append‑Only Change Log (Append‑Only)
 -----------------------------------
 2026‑02‑11 — Added Content QA audit + one‑pass auto‑repair and dynamic Quote Builder fields.
@@ -542,3 +548,4 @@ Append‑Only Change Log (Append‑Only)
 2026‑02‑12 — Improved Airtable keyword service derivation and blog archive fallback.
 2026‑02‑12 — Added About page reseed guard when sections are missing.
 2026‑02‑12 — Added internal link catalog + LLM linking rules.
+2026‑02‑12 — Added built‑in SEO engine, keyword mapping, and sitemap.

@@ -163,6 +163,11 @@ function lf_wizard_handle_post(): void {
 		}
 		$result = lf_run_setup($data);
 		if (!empty($result['success'])) {
+			if (function_exists('lf_seo_assign_keywords_from_manifest')) {
+				$manifest = function_exists('lf_ai_studio_get_manifest') ? lf_ai_studio_get_manifest() : get_option('lf_site_manifest', []);
+				$manifest = is_array($manifest) ? $manifest : [];
+				lf_seo_assign_keywords_from_manifest($manifest);
+			}
 			// Ensure business info is saved for Global Settings → Business Entity
 			if (function_exists('lf_update_business_info_value')) {
 				lf_update_business_info_value('lf_business_name', $data['business_name'] ?? '');
