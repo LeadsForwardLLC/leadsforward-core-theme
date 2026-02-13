@@ -16,6 +16,7 @@
 	--lf-button-radius: 0.75rem;
 	--lf-card-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 	--lf-card-border: 1px solid rgba(15, 23, 42, 0.08);
+	--lf-heading-weight: 700;
 	--lf-hero-bg: #e2e8f0;
 	--lf-hero-bg-gradient: linear-gradient(160deg, #ffffff 0%, #e2e8f0 45%, #cbd5e1 100%);
 	--lf-font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -37,7 +38,10 @@
 	--lf-card-radius: 0.4rem;
 	--lf-button-radius: 0.35rem;
 	--lf-card-shadow: 0 20px 42px rgba(2, 6, 23, 0.22);
+	--lf-card-shadow-hover: 0 28px 54px rgba(2, 6, 23, 0.3);
 	--lf-card-border: 1px solid rgba(2, 6, 23, 0.18);
+	--lf-border-width: 2px;
+	--lf-heading-weight: 800;
 	--lf-hero-bg: #05070f;
 	--lf-hero-bg-gradient: linear-gradient(135deg, #05070f 0%, #111827 60%, #1f2937 100%);
 	--lf-cta-block-bg: #05070f;
@@ -68,10 +72,12 @@
 	--lf-card-radius: 1.4rem;
 	--lf-button-radius: 999px;
 	--lf-card-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+	--lf-card-shadow-hover: 0 20px 40px rgba(15, 23, 42, 0.12);
 	--lf-card-border: 1px solid rgba(15, 23, 42, 0.06);
 	--lf-hero-bg-gradient: linear-gradient(150deg, #fff4e6 0%, #e0f2fe 50%, #fef3c7 100%);
 	--lf-hero-title-size: clamp(2.2rem, 5.3vw, 3.7rem);
 	--lf-space-section: 2.6rem;
+	--lf-heading-weight: 600;
 	--lf-font-heading: 'Playfair Display', 'Outfit', -apple-system, BlinkMacSystemFont, serif;
 	--lf-font-system: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -89,6 +95,8 @@
 	--lf-button-radius: 0.25rem;
 	--lf-card-shadow: 0 10px 18px rgba(2, 6, 23, 0.12);
 	--lf-card-border: 2px solid rgba(2, 6, 23, 0.18);
+	--lf-border-width: 2px;
+	--lf-heading-weight: 800;
 	--lf-cta-block-bg: #0b0b0b;
 	--lf-hero-bg-gradient: linear-gradient(120deg, #0b0b0b 0%, #111827 70%, #1f2937 100%);
 	--lf-hero-title-size: clamp(2.85rem, 6.8vw, 4.65rem);
@@ -112,9 +120,11 @@
 	--lf-card-radius: 1.2rem;
 	--lf-button-radius: 0.85rem;
 	--lf-card-shadow: 0 22px 44px rgba(15, 23, 42, 0.14);
+	--lf-card-shadow-hover: 0 30px 60px rgba(15, 23, 42, 0.18);
 	--lf-card-border: 1px solid rgba(15, 23, 42, 0.08);
 	--lf-hero-bg-gradient: linear-gradient(135deg, #e0f2fe 0%, #f8fafc 45%, #e2e8f0 100%);
 	--lf-space-section: 2.9rem;
+	--lf-heading-weight: 700;
 	--lf-font-heading: 'Space Grotesk', 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
 	--lf-font-system: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -132,6 +142,8 @@
 	--lf-button-radius: 0.2rem;
 	--lf-card-shadow: none;
 	--lf-card-border: 2px solid rgba(15, 23, 42, 0.14);
+	--lf-border-width: 2px;
+	--lf-heading-weight: 700;
 	--lf-hero-bg-gradient: linear-gradient(180deg, #f8fafc 0%, #e5e7eb 100%);
 	--lf-space-section: 1.9rem;
 	--lf-font-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;

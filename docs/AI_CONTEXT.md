@@ -87,6 +87,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 ## Global Design
 
 - Global Settings design preset syncs the variation profile (block variants + section order).
+- Optional design overrides can adjust typography, buttons, card styling, and spacing on top of presets.
 
 ## Section Rendering Updates
 

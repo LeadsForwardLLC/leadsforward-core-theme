@@ -1992,6 +1992,7 @@ button:focus-visible,
 	border: 1px solid rgba(15,23,42,0.08);
 	box-shadow: 0 12px 30px rgba(15,23,42,0.08);
 	padding: 1.5rem;
+	color: var(--lf-text-primary);
 }
 
 .lf-block-hero__card-title {

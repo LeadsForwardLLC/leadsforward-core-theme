@@ -182,6 +182,43 @@ function lf_ops_handle_global_settings_save(): void {
 	} else {
 		update_option('options_variation_profile', $variation_profile);
 	}
+	update_option('lf_design_overrides_enabled', isset($_POST['lf_design_overrides_enabled']) ? '1' : '0');
+	$font_choices = function_exists('lf_design_font_choices') ? lf_design_font_choices() : [];
+	$heading_font = isset($_POST['lf_design_heading_font']) ? sanitize_text_field(wp_unslash($_POST['lf_design_heading_font'])) : '';
+	if (!isset($font_choices[$heading_font])) {
+		$heading_font = '';
+	}
+	update_option('lf_design_heading_font', $heading_font);
+	$body_font = isset($_POST['lf_design_body_font']) ? sanitize_text_field(wp_unslash($_POST['lf_design_body_font'])) : '';
+	if (!isset($font_choices[$body_font])) {
+		$body_font = '';
+	}
+	update_option('lf_design_body_font', $body_font);
+	$heading_weight = isset($_POST['lf_design_heading_weight']) ? sanitize_text_field(wp_unslash($_POST['lf_design_heading_weight'])) : '';
+	if (!in_array($heading_weight, ['600', '700', '800'], true)) {
+		$heading_weight = '';
+	}
+	update_option('lf_design_heading_weight', $heading_weight);
+	$button_radius = isset($_POST['lf_design_button_radius']) ? sanitize_text_field(wp_unslash($_POST['lf_design_button_radius'])) : '';
+	if (!in_array($button_radius, ['sharp', 'soft', 'pill'], true)) {
+		$button_radius = '';
+	}
+	update_option('lf_design_button_radius', $button_radius);
+	$card_radius = isset($_POST['lf_design_card_radius']) ? sanitize_text_field(wp_unslash($_POST['lf_design_card_radius'])) : '';
+	if (!in_array($card_radius, ['tight', 'medium', 'round'], true)) {
+		$card_radius = '';
+	}
+	update_option('lf_design_card_radius', $card_radius);
+	$card_shadow = isset($_POST['lf_design_card_shadow']) ? sanitize_text_field(wp_unslash($_POST['lf_design_card_shadow'])) : '';
+	if (!in_array($card_shadow, ['none', 'soft', 'bold'], true)) {
+		$card_shadow = '';
+	}
+	update_option('lf_design_card_shadow', $card_shadow);
+	$section_spacing = isset($_POST['lf_design_section_spacing']) ? sanitize_text_field(wp_unslash($_POST['lf_design_section_spacing'])) : '';
+	if (!in_array($section_spacing, ['compact', 'normal', 'airy'], true)) {
+		$section_spacing = '';
+	}
+	update_option('lf_design_section_spacing', $section_spacing);
 	$niche_slug = isset($_POST['lf_homepage_niche_slug']) ? sanitize_text_field(wp_unslash($_POST['lf_homepage_niche_slug'])) : 'general';
 	$allowed_niches = function_exists('lf_get_niche_registry') ? array_keys(lf_get_niche_registry()) : ['general'];
 	if (!in_array($niche_slug, $allowed_niches, true)) {
@@ -416,6 +453,20 @@ function lf_ops_render_global_settings_page(): void {
 		? lf_design_preset_to_variation_profile($design_preset)
 		: 'a';
 	$design_profile_label = $profile_labels[$design_profile] ?? strtoupper($design_profile);
+	$design_overrides_enabled = get_option('lf_design_overrides_enabled', '0') === '1';
+	$font_choices = function_exists('lf_design_font_choices') ? lf_design_font_choices() : [];
+	$heading_font = (string) get_option('lf_design_heading_font', '');
+	$body_font = (string) get_option('lf_design_body_font', '');
+	$heading_weight = (string) get_option('lf_design_heading_weight', '');
+	$button_radius = (string) get_option('lf_design_button_radius', '');
+	$card_radius = (string) get_option('lf_design_card_radius', '');
+	$card_shadow = (string) get_option('lf_design_card_shadow', '');
+	$section_spacing = (string) get_option('lf_design_section_spacing', '');
+	$heading_weights = function_exists('lf_design_heading_weight_choices') ? lf_design_heading_weight_choices() : ['600' => '600', '700' => '700', '800' => '800'];
+	$button_radii = function_exists('lf_design_button_radius_choices') ? lf_design_button_radius_choices() : ['sharp' => 'Sharp', 'soft' => 'Soft', 'pill' => 'Pill'];
+	$card_radii = function_exists('lf_design_card_radius_choices') ? lf_design_card_radius_choices() : ['tight' => 'Tight', 'medium' => 'Medium', 'round' => 'Round'];
+	$card_shadows = function_exists('lf_design_card_shadow_choices') ? lf_design_card_shadow_choices() : ['none' => 'None', 'soft' => 'Soft', 'bold' => 'Bold'];
+	$section_spacings = function_exists('lf_design_section_spacing_choices') ? lf_design_section_spacing_choices() : ['compact' => 'Compact', 'normal' => 'Normal', 'airy' => 'Airy'];
 	$place_id = function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_place_id', '') : '';
 	$place_name = function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_place_name', '') : '';
 	$place_address = function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_place_address', '') : '';
@@ -804,6 +855,107 @@ function lf_ops_render_global_settings_page(): void {
 									<?php esc_html_e('Applies global styles to typography, surfaces, buttons, and section rhythm.', 'leadsforward-core'); ?>
 									<?php echo ' ' . esc_html(sprintf(__('Synced variation profile: %s.', 'leadsforward-core'), $design_profile_label)); ?>
 								</p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e('Enable custom overrides', 'leadsforward-core'); ?></th>
+							<td>
+								<label>
+									<input type="checkbox" name="lf_design_overrides_enabled" value="1" <?php checked($design_overrides_enabled); ?> />
+									<?php esc_html_e('Allow custom typography, buttons, and spacing overrides.', 'leadsforward-core'); ?>
+								</label>
+								<p class="description"><?php esc_html_e('Overrides apply on top of the preset. Disable to return to preset-only styles.', 'leadsforward-core'); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_design_heading_font"><?php esc_html_e('Heading font', 'leadsforward-core'); ?></label></th>
+							<td>
+								<select name="lf_design_heading_font" id="lf_design_heading_font">
+									<option value=""><?php esc_html_e('Use preset default', 'leadsforward-core'); ?></option>
+									<?php foreach ($font_choices as $key => $label) : ?>
+										<option value="<?php echo esc_attr($key); ?>" <?php selected($heading_font === $key); ?>>
+											<?php echo esc_html($label); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_design_body_font"><?php esc_html_e('Body font', 'leadsforward-core'); ?></label></th>
+							<td>
+								<select name="lf_design_body_font" id="lf_design_body_font">
+									<option value=""><?php esc_html_e('Use preset default', 'leadsforward-core'); ?></option>
+									<?php foreach ($font_choices as $key => $label) : ?>
+										<option value="<?php echo esc_attr($key); ?>" <?php selected($body_font === $key); ?>>
+											<?php echo esc_html($label); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_design_heading_weight"><?php esc_html_e('Heading weight', 'leadsforward-core'); ?></label></th>
+							<td>
+								<select name="lf_design_heading_weight" id="lf_design_heading_weight">
+									<option value=""><?php esc_html_e('Use preset default', 'leadsforward-core'); ?></option>
+									<?php foreach ($heading_weights as $key => $label) : ?>
+										<option value="<?php echo esc_attr($key); ?>" <?php selected($heading_weight === (string) $key); ?>>
+											<?php echo esc_html($label); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_design_button_radius"><?php esc_html_e('Button shape', 'leadsforward-core'); ?></label></th>
+							<td>
+								<select name="lf_design_button_radius" id="lf_design_button_radius">
+									<option value=""><?php esc_html_e('Use preset default', 'leadsforward-core'); ?></option>
+									<?php foreach ($button_radii as $key => $label) : ?>
+										<option value="<?php echo esc_attr($key); ?>" <?php selected($button_radius === (string) $key); ?>>
+											<?php echo esc_html($label); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_design_card_radius"><?php esc_html_e('Card radius', 'leadsforward-core'); ?></label></th>
+							<td>
+								<select name="lf_design_card_radius" id="lf_design_card_radius">
+									<option value=""><?php esc_html_e('Use preset default', 'leadsforward-core'); ?></option>
+									<?php foreach ($card_radii as $key => $label) : ?>
+										<option value="<?php echo esc_attr($key); ?>" <?php selected($card_radius === (string) $key); ?>>
+											<?php echo esc_html($label); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_design_card_shadow"><?php esc_html_e('Card shadow', 'leadsforward-core'); ?></label></th>
+							<td>
+								<select name="lf_design_card_shadow" id="lf_design_card_shadow">
+									<option value=""><?php esc_html_e('Use preset default', 'leadsforward-core'); ?></option>
+									<?php foreach ($card_shadows as $key => $label) : ?>
+										<option value="<?php echo esc_attr($key); ?>" <?php selected($card_shadow === (string) $key); ?>>
+											<?php echo esc_html($label); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_design_section_spacing"><?php esc_html_e('Section spacing', 'leadsforward-core'); ?></label></th>
+							<td>
+								<select name="lf_design_section_spacing" id="lf_design_section_spacing">
+									<option value=""><?php esc_html_e('Use preset default', 'leadsforward-core'); ?></option>
+									<?php foreach ($section_spacings as $key => $label) : ?>
+										<option value="<?php echo esc_attr($key); ?>" <?php selected($section_spacing === (string) $key); ?>>
+											<?php echo esc_html($label); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
 							</td>
 						</tr>
 					</table>

@@ -12,6 +12,72 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+function lf_design_font_choices(): array {
+	return [
+		'plus-jakarta' => __('Plus Jakarta Sans', 'leadsforward-core'),
+		'outfit' => __('Outfit', 'leadsforward-core'),
+		'manrope' => __('Manrope', 'leadsforward-core'),
+		'inter' => __('Inter', 'leadsforward-core'),
+		'dm-sans' => __('DM Sans', 'leadsforward-core'),
+		'space-grotesk' => __('Space Grotesk', 'leadsforward-core'),
+		'oswald' => __('Oswald', 'leadsforward-core'),
+		'playfair' => __('Playfair Display', 'leadsforward-core'),
+	];
+}
+
+function lf_design_font_family_map(): array {
+	return [
+		'plus-jakarta' => "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+		'outfit' => "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif",
+		'manrope' => "'Manrope', -apple-system, BlinkMacSystemFont, sans-serif",
+		'inter' => "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+		'dm-sans' => "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+		'space-grotesk' => "'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif",
+		'oswald' => "'Oswald', -apple-system, BlinkMacSystemFont, sans-serif",
+		'playfair' => "'Playfair Display', -apple-system, BlinkMacSystemFont, serif",
+	];
+}
+
+function lf_design_heading_weight_choices(): array {
+	return [
+		'600' => __('600 (Semi-bold)', 'leadsforward-core'),
+		'700' => __('700 (Bold)', 'leadsforward-core'),
+		'800' => __('800 (Extra bold)', 'leadsforward-core'),
+	];
+}
+
+function lf_design_button_radius_choices(): array {
+	return [
+		'sharp' => __('Sharp', 'leadsforward-core'),
+		'soft' => __('Soft', 'leadsforward-core'),
+		'pill' => __('Pill', 'leadsforward-core'),
+	];
+}
+
+function lf_design_card_radius_choices(): array {
+	return [
+		'tight' => __('Tight', 'leadsforward-core'),
+		'medium' => __('Medium', 'leadsforward-core'),
+		'round' => __('Round', 'leadsforward-core'),
+	];
+}
+
+function lf_design_card_shadow_choices(): array {
+	return [
+		'none' => __('None', 'leadsforward-core'),
+		'soft' => __('Soft', 'leadsforward-core'),
+		'bold' => __('Bold', 'leadsforward-core'),
+	];
+}
+
+function lf_design_section_spacing_choices(): array {
+	return [
+		'compact' => __('Compact', 'leadsforward-core'),
+		'normal' => __('Normal', 'leadsforward-core'),
+		'airy' => __('Airy', 'leadsforward-core'),
+	];
+}
+
 function lf_branding_get_value(string $key, string $default): string {
 	$val = '';
 	if (function_exists('get_field')) {
@@ -81,6 +147,102 @@ function lf_enqueue_branding_tokens(): void {
 }
 add_action('wp_enqueue_scripts', 'lf_enqueue_branding_tokens', 6);
 add_action('enqueue_block_editor_assets', 'lf_enqueue_branding_tokens', 6);
+
+function lf_design_overrides_css(): string {
+	$enabled = get_option('lf_design_overrides_enabled', '0') === '1';
+	if (!$enabled) {
+		return '';
+	}
+	$font_map = lf_design_font_family_map();
+	$heading_font = (string) get_option('lf_design_heading_font', '');
+	$body_font = (string) get_option('lf_design_body_font', '');
+	$heading_weight = (string) get_option('lf_design_heading_weight', '');
+	$button_radius = (string) get_option('lf_design_button_radius', '');
+	$card_radius = (string) get_option('lf_design_card_radius', '');
+	$card_shadow = (string) get_option('lf_design_card_shadow', '');
+	$section_spacing = (string) get_option('lf_design_section_spacing', '');
+
+	$css = ':root{';
+	if ($heading_font !== '' && isset($font_map[$heading_font])) {
+		$css .= '--lf-font-heading:' . $font_map[$heading_font] . ';';
+	}
+	if ($body_font !== '' && isset($font_map[$body_font])) {
+		$css .= '--lf-font-system:' . $font_map[$body_font] . ';';
+	}
+	if (in_array($heading_weight, ['600', '700', '800'], true)) {
+		$css .= '--lf-heading-weight:' . $heading_weight . ';';
+	}
+	switch ($button_radius) {
+		case 'sharp':
+			$css .= '--lf-button-radius:0.25rem;';
+			break;
+		case 'soft':
+			$css .= '--lf-button-radius:0.75rem;';
+			break;
+		case 'pill':
+			$css .= '--lf-button-radius:999px;';
+			break;
+	}
+	switch ($card_radius) {
+		case 'tight':
+			$css .= '--lf-card-radius:0.4rem;';
+			break;
+		case 'medium':
+			$css .= '--lf-card-radius:0.9rem;';
+			break;
+		case 'round':
+			$css .= '--lf-card-radius:1.4rem;';
+			break;
+	}
+	switch ($card_shadow) {
+		case 'none':
+			$css .= '--lf-card-shadow:none;--lf-card-shadow-hover:none;--lf-card-shadow-spotlight:none;';
+			break;
+		case 'soft':
+			$css .= '--lf-card-shadow:0 8px 18px rgba(15,23,42,0.08);';
+			$css .= '--lf-card-shadow-hover:0 14px 28px rgba(15,23,42,0.12);';
+			$css .= '--lf-card-shadow-spotlight:0 8px 24px rgba(15,23,42,0.12);';
+			break;
+		case 'bold':
+			$css .= '--lf-card-shadow:0 18px 36px rgba(15,23,42,0.16);';
+			$css .= '--lf-card-shadow-hover:0 26px 52px rgba(15,23,42,0.2);';
+			$css .= '--lf-card-shadow-spotlight:0 16px 32px rgba(15,23,42,0.2);';
+			break;
+	}
+	switch ($section_spacing) {
+		case 'compact':
+			$css .= '--lf-space-section:1.6rem;--lf-space-section-sm:1rem;--lf-space-section-lg:2.1rem;';
+			break;
+		case 'normal':
+			$css .= '--lf-space-section:2rem;--lf-space-section-sm:1.5rem;--lf-space-section-lg:2.5rem;';
+			break;
+		case 'airy':
+			$css .= '--lf-space-section:2.9rem;--lf-space-section-sm:1.7rem;--lf-space-section-lg:3.4rem;';
+			break;
+	}
+	$css .= '}';
+	return $css;
+}
+
+function lf_enqueue_design_overrides(): void {
+	$css = lf_design_overrides_css();
+	if ($css === '') {
+		return;
+	}
+	if (wp_style_is('lf-design-presets', 'enqueued')) {
+		wp_add_inline_style('lf-design-presets', $css);
+		return;
+	}
+	if (wp_style_is('lf-design-system', 'enqueued')) {
+		wp_add_inline_style('lf-design-system', $css);
+		return;
+	}
+	wp_register_style('lf-design-overrides', false, [], LF_THEME_VERSION);
+	wp_enqueue_style('lf-design-overrides');
+	wp_add_inline_style('lf-design-overrides', $css);
+}
+add_action('wp_enqueue_scripts', 'lf_enqueue_design_overrides', 7);
+add_action('enqueue_block_editor_assets', 'lf_enqueue_design_overrides', 7);
 
 /**
  * Auto-generate branding colors from an uploaded logo.
