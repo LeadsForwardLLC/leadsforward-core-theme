@@ -57,6 +57,17 @@ function lf_ai_studio_airtable_default_field_map(): array {
 	];
 }
 
+function lf_ai_studio_airtable_reviews_default_field_map(): array {
+	return [
+		'review_project' => 'Project',
+		'review_reviewer' => 'Reviewer Name',
+		'review_rating' => 'Rating',
+		'review_text' => 'Review',
+		'review_source' => 'Source',
+		'review_source_url' => 'Source URL',
+	];
+}
+
 function lf_ai_studio_airtable_get_settings(): array {
 	$defaults = lf_ai_studio_airtable_default_field_map();
 	$field_map = get_option('lf_ai_airtable_field_map', []);
@@ -67,8 +78,19 @@ function lf_ai_studio_airtable_get_settings(): array {
 		$normalized_map[$key] = $value !== '' ? $value : $label;
 	}
 
+	$review_defaults = lf_ai_studio_airtable_reviews_default_field_map();
+	$review_field_map = get_option('lf_ai_airtable_reviews_field_map', []);
+	$review_field_map = is_array($review_field_map) ? $review_field_map : [];
+	$normalized_review_map = [];
+	foreach ($review_defaults as $key => $label) {
+		$value = isset($review_field_map[$key]) ? trim((string) $review_field_map[$key]) : '';
+		$normalized_review_map[$key] = $value !== '' ? $value : $label;
+	}
+
 	$table = (string) get_option('lf_ai_airtable_table', 'Business Info');
 	$view = (string) get_option('lf_ai_airtable_view', 'Global Sync View (ACTIVE)');
+	$review_table = (string) get_option('lf_ai_airtable_reviews_table', 'Reviews');
+	$review_view = (string) get_option('lf_ai_airtable_reviews_view', '');
 
 	return [
 		'enabled' => get_option('lf_ai_airtable_enabled', '0') === '1',
@@ -77,6 +99,11 @@ function lf_ai_studio_airtable_get_settings(): array {
 		'table' => $table !== '' ? $table : 'Business Info',
 		'view' => $view,
 		'fields' => $normalized_map,
+		'reviews' => [
+			'table' => $review_table,
+			'view' => $review_view,
+			'fields' => $normalized_review_map,
+		],
 	];
 }
 
@@ -132,6 +159,10 @@ function lf_ai_studio_airtable_generate(): void {
 	update_option('lf_site_manifest', $normalized, false);
 	delete_option('lf_ai_studio_manifest_errors');
 	lf_ai_studio_sync_manifest_posts($normalized);
+	$review_result = lf_ai_studio_airtable_import_reviews($record, $settings);
+	if (!empty($review_result['error'])) {
+		error_log('LF Airtable Reviews: ' . (string) $review_result['error']);
+	}
 
 	$result = lf_ai_studio_run_generation();
 	if (!empty($result['error'])) {
@@ -232,6 +263,168 @@ function lf_ai_studio_airtable_fetch_record(string $record_id): array {
 		return ['error' => __('Invalid Airtable response.', 'leadsforward-core')];
 	}
 	return ['record' => $record];
+}
+
+function lf_ai_studio_airtable_import_reviews(array $record, array $settings): array {
+	$reviews_settings = is_array($settings['reviews'] ?? null) ? $settings['reviews'] : [];
+	$reviews_table = trim((string) ($reviews_settings['table'] ?? ''));
+	if ($reviews_table === '') {
+		return ['skipped' => true];
+	}
+	$reviews_settings['table'] = $reviews_table;
+	$reviews_settings['view'] = (string) ($reviews_settings['view'] ?? '');
+	$reviews_settings['fields'] = is_array($reviews_settings['fields'] ?? null) ? $reviews_settings['fields'] : [];
+
+	$ready = lf_ai_studio_airtable_is_ready([
+		'enabled' => $settings['enabled'] ?? false,
+		'pat' => (string) ($settings['pat'] ?? ''),
+		'base_id' => (string) ($settings['base_id'] ?? ''),
+		'table' => $reviews_settings['table'],
+	]);
+	if (!$ready['ready']) {
+		return ['error' => $ready['message']];
+	}
+
+	$resolved = lf_ai_studio_airtable_resolve_table_view([
+		'pat' => (string) ($settings['pat'] ?? ''),
+		'base_id' => (string) ($settings['base_id'] ?? ''),
+		'table' => $reviews_settings['table'],
+		'view' => (string) ($reviews_settings['view'] ?? ''),
+	]);
+	if (!empty($resolved['error'])) {
+		return ['error' => $resolved['error']];
+	}
+
+	$record_fields = is_array($record['fields'] ?? null) ? $record['fields'] : [];
+	$project_field = (string) ($settings['fields']['project'] ?? '');
+	$project_name = $project_field !== '' ? lf_ai_studio_airtable_string_field($record_fields, $project_field) : '';
+	if ($project_name === '') {
+		return ['skipped' => true];
+	}
+
+	$review_records = lf_ai_studio_airtable_fetch_reviews(
+		$project_name,
+		$reviews_settings,
+		$resolved,
+		(string) ($settings['pat'] ?? ''),
+		(string) ($settings['base_id'] ?? '')
+	);
+	if (!empty($review_records['error'])) {
+		return ['error' => $review_records['error']];
+	}
+
+	$imported = 0;
+	foreach ((array) ($review_records['records'] ?? []) as $review_record) {
+		$import = lf_ai_studio_airtable_upsert_review($review_record, $reviews_settings['fields']);
+		if (!empty($import['created']) || !empty($import['updated'])) {
+			$imported++;
+		}
+	}
+
+	return ['imported' => $imported];
+}
+
+function lf_ai_studio_airtable_fetch_reviews(
+	string $project_name,
+	array $reviews_settings,
+	array $resolved,
+	string $pat,
+	string $base_id
+): array {
+	$project_field = (string) ($reviews_settings['fields']['review_project'] ?? 'Project');
+	if ($project_field === '') {
+		return ['error' => __('Reviews project field is not configured.', 'leadsforward-core')];
+	}
+	$base_url = lf_ai_studio_airtable_base_url([
+		'base_id' => $base_id,
+		'table' => $resolved['table_id'],
+	]);
+	$needle = str_replace('"', '\"', $project_name);
+	$formula = sprintf('FIND(LOWER("%s"), LOWER(ARRAYJOIN({%s})))', $needle, $project_field);
+	$params = [
+		'pageSize' => 50,
+		'filterByFormula' => $formula,
+	];
+	if (!empty($resolved['view'])) {
+		$params['view'] = $resolved['view'];
+	}
+
+	$response = lf_ai_studio_airtable_get($base_url, $params, $pat);
+	if (!empty($response['error'])) {
+		return ['error' => $response['error']];
+	}
+	return ['records' => $response['data']['records'] ?? []];
+}
+
+function lf_ai_studio_airtable_upsert_review(array $record, array $field_map): array {
+	$record_id = (string) ($record['id'] ?? '');
+	if ($record_id === '') {
+		return ['skipped' => true];
+	}
+	$fields = is_array($record['fields'] ?? null) ? $record['fields'] : [];
+	$name = lf_ai_studio_airtable_string_field($fields, (string) ($field_map['review_reviewer'] ?? ''));
+	$text = lf_ai_studio_airtable_string_field($fields, (string) ($field_map['review_text'] ?? ''));
+	if ($text === '') {
+		return ['skipped' => true];
+	}
+	$rating_raw = lf_ai_studio_airtable_string_field($fields, (string) ($field_map['review_rating'] ?? ''));
+	$rating = (int) round((float) $rating_raw);
+	if ($rating < 1 || $rating > 5) {
+		$rating = 5;
+	}
+	$source = lf_ai_studio_airtable_string_field($fields, (string) ($field_map['review_source'] ?? ''));
+	$source_url = lf_ai_studio_airtable_string_field($fields, (string) ($field_map['review_source_url'] ?? ''));
+
+	$existing = get_posts([
+		'post_type' => 'lf_testimonial',
+		'post_status' => 'any',
+		'fields' => 'ids',
+		'numberposts' => 1,
+		'meta_query' => [
+			[
+				'key' => 'lf_airtable_review_id',
+				'value' => $record_id,
+			],
+		],
+	]);
+	$post_id = !empty($existing) ? (int) $existing[0] : 0;
+	$title = $name !== '' ? $name : __('Customer review', 'leadsforward-core');
+	$post_data = [
+		'post_type' => 'lf_testimonial',
+		'post_status' => 'publish',
+		'post_title' => $title,
+		'post_content' => $text,
+	];
+	if ($post_id) {
+		$post_data['ID'] = $post_id;
+		wp_update_post($post_data);
+	} else {
+		$post_id = (int) wp_insert_post($post_data);
+	}
+	if (!$post_id) {
+		return ['error' => __('Unable to save review.', 'leadsforward-core')];
+	}
+
+	update_post_meta($post_id, 'lf_airtable_review_id', $record_id);
+	if (function_exists('update_field')) {
+		update_field('lf_testimonial_reviewer_name', $name, $post_id);
+		update_field('lf_testimonial_rating', $rating, $post_id);
+		update_field('lf_testimonial_review_text', $text, $post_id);
+		update_field('lf_testimonial_source', $source, $post_id);
+		if ($source_url !== '') {
+			update_field('lf_testimonial_source_url', $source_url, $post_id);
+		}
+	} else {
+		update_post_meta($post_id, 'lf_testimonial_reviewer_name', $name);
+		update_post_meta($post_id, 'lf_testimonial_rating', $rating);
+		update_post_meta($post_id, 'lf_testimonial_review_text', $text);
+		update_post_meta($post_id, 'lf_testimonial_source', $source);
+		if ($source_url !== '') {
+			update_post_meta($post_id, 'lf_testimonial_source_url', $source_url);
+		}
+	}
+
+	return ['updated' => !empty($existing), 'created' => empty($existing)];
 }
 
 function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings): array {

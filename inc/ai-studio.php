@@ -123,6 +123,8 @@ function lf_ai_studio_handle_save(): void {
 	update_option('lf_ai_airtable_base', isset($_POST['lf_ai_airtable_base']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_base'])) : '');
 	update_option('lf_ai_airtable_table', isset($_POST['lf_ai_airtable_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_table'])) : '');
 	update_option('lf_ai_airtable_view', isset($_POST['lf_ai_airtable_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_view'])) : '');
+	update_option('lf_ai_airtable_reviews_table', isset($_POST['lf_ai_airtable_reviews_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_table'])) : '');
+	update_option('lf_ai_airtable_reviews_view', isset($_POST['lf_ai_airtable_reviews_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_view'])) : '');
 	$field_defaults = function_exists('lf_ai_studio_airtable_default_field_map') ? lf_ai_studio_airtable_default_field_map() : [];
 	$field_input = isset($_POST['lf_ai_airtable_field_map']) && is_array($_POST['lf_ai_airtable_field_map'])
 		? $_POST['lf_ai_airtable_field_map']
@@ -134,6 +136,18 @@ function lf_ai_studio_handle_save(): void {
 	}
 	if (!empty($sanitized_map)) {
 		update_option('lf_ai_airtable_field_map', $sanitized_map);
+	}
+	$review_defaults = function_exists('lf_ai_studio_airtable_reviews_default_field_map') ? lf_ai_studio_airtable_reviews_default_field_map() : [];
+	$review_input = isset($_POST['lf_ai_airtable_reviews_field_map']) && is_array($_POST['lf_ai_airtable_reviews_field_map'])
+		? $_POST['lf_ai_airtable_reviews_field_map']
+		: [];
+	$review_map = [];
+	foreach ($review_defaults as $key => $label) {
+		$value = isset($review_input[$key]) ? sanitize_text_field(wp_unslash((string) $review_input[$key])) : '';
+		$review_map[$key] = $value !== '' ? $value : $label;
+	}
+	if (!empty($review_map)) {
+		update_option('lf_ai_airtable_reviews_field_map', $review_map);
 	}
 	wp_safe_redirect(admin_url('admin.php?page=lf-ops&saved=1'));
 	exit;
@@ -154,6 +168,8 @@ function lf_ai_studio_handle_orchestrator_save(): void {
 	update_option('lf_ai_airtable_base', isset($_POST['lf_ai_airtable_base']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_base'])) : '');
 	update_option('lf_ai_airtable_table', isset($_POST['lf_ai_airtable_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_table'])) : '');
 	update_option('lf_ai_airtable_view', isset($_POST['lf_ai_airtable_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_view'])) : '');
+	update_option('lf_ai_airtable_reviews_table', isset($_POST['lf_ai_airtable_reviews_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_table'])) : '');
+	update_option('lf_ai_airtable_reviews_view', isset($_POST['lf_ai_airtable_reviews_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_view'])) : '');
 	$field_defaults = function_exists('lf_ai_studio_airtable_default_field_map') ? lf_ai_studio_airtable_default_field_map() : [];
 	$field_input = isset($_POST['lf_ai_airtable_field_map']) && is_array($_POST['lf_ai_airtable_field_map'])
 		? $_POST['lf_ai_airtable_field_map']
@@ -165,6 +181,18 @@ function lf_ai_studio_handle_orchestrator_save(): void {
 	}
 	if (!empty($sanitized_map)) {
 		update_option('lf_ai_airtable_field_map', $sanitized_map);
+	}
+	$review_defaults = function_exists('lf_ai_studio_airtable_reviews_default_field_map') ? lf_ai_studio_airtable_reviews_default_field_map() : [];
+	$review_input = isset($_POST['lf_ai_airtable_reviews_field_map']) && is_array($_POST['lf_ai_airtable_reviews_field_map'])
+		? $_POST['lf_ai_airtable_reviews_field_map']
+		: [];
+	$review_map = [];
+	foreach ($review_defaults as $key => $label) {
+		$value = isset($review_input[$key]) ? sanitize_text_field(wp_unslash((string) $review_input[$key])) : '';
+		$review_map[$key] = $value !== '' ? $value : $label;
+	}
+	if (!empty($review_map)) {
+		update_option('lf_ai_airtable_reviews_field_map', $review_map);
 	}
 
 	wp_safe_redirect(admin_url('admin.php?page=lf-global&saved=1'));

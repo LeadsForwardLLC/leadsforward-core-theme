@@ -1,6 +1,6 @@
 <?php
 /**
- * ACF field group: Testimonials CPT.
+ * ACF field group: Reviews CPT.
  * Reviewer name, Rating, Review text, Source.
  *
  * @package LeadsForward_Core
@@ -21,7 +21,7 @@ function lf_acf_add_testimonial_fields(): void {
 	}
 	acf_add_local_field_group([
 		'key'                   => 'group_lf_testimonial',
-		'title'                 => __('Testimonial Details', 'leadsforward-core'),
+		'title'                 => __('Review Details', 'leadsforward-core'),
 		'fields'                => [
 			[
 				'key'   => 'field_lf_testimonial_reviewer_name',

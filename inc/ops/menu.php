@@ -157,6 +157,8 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('lf_ai_airtable_base', isset($_POST['lf_ai_airtable_base']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_base'])) : '');
 	update_option('lf_ai_airtable_table', isset($_POST['lf_ai_airtable_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_table'])) : '');
 	update_option('lf_ai_airtable_view', isset($_POST['lf_ai_airtable_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_view'])) : '');
+	update_option('lf_ai_airtable_reviews_table', isset($_POST['lf_ai_airtable_reviews_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_table'])) : '');
+	update_option('lf_ai_airtable_reviews_view', isset($_POST['lf_ai_airtable_reviews_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_view'])) : '');
 	update_option('lf_maps_api_key', isset($_POST['lf_maps_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_maps_api_key'])) : '');
 	$design_preset = isset($_POST['lf_global_design_preset']) ? sanitize_text_field(wp_unslash($_POST['lf_global_design_preset'])) : 'clean-precision';
 	$design_presets = function_exists('lf_design_presets') ? lf_design_presets() : [];
@@ -236,6 +238,18 @@ function lf_ops_handle_global_settings_save(): void {
 	}
 	if (!empty($sanitized_map)) {
 		update_option('lf_ai_airtable_field_map', $sanitized_map);
+	}
+	$review_defaults = function_exists('lf_ai_studio_airtable_reviews_default_field_map') ? lf_ai_studio_airtable_reviews_default_field_map() : [];
+	$review_input = isset($_POST['lf_ai_airtable_reviews_field_map']) && is_array($_POST['lf_ai_airtable_reviews_field_map'])
+		? $_POST['lf_ai_airtable_reviews_field_map']
+		: [];
+	$review_map = [];
+	foreach ($review_defaults as $key => $label) {
+		$value = isset($review_input[$key]) ? sanitize_text_field(wp_unslash((string) $review_input[$key])) : '';
+		$review_map[$key] = $value !== '' ? $value : $label;
+	}
+	if (!empty($review_map)) {
+		update_option('lf_ai_airtable_reviews_field_map', $review_map);
 	}
 	if (function_exists('lf_update_business_info_value')) {
 		$display_name = isset($_POST['lf_business_name']) ? sanitize_text_field(wp_unslash($_POST['lf_business_name'])) : '';
@@ -489,6 +503,11 @@ function lf_ops_render_global_settings_page(): void {
 	$airtable_field_defaults = function_exists('lf_ai_studio_airtable_default_field_map')
 		? lf_ai_studio_airtable_default_field_map()
 		: [];
+	$airtable_reviews = is_array($airtable_settings['reviews'] ?? null) ? $airtable_settings['reviews'] : [];
+	$airtable_review_fields = is_array($airtable_reviews['fields'] ?? null) ? $airtable_reviews['fields'] : [];
+	$airtable_review_defaults = function_exists('lf_ai_studio_airtable_reviews_default_field_map')
+		? lf_ai_studio_airtable_reviews_default_field_map()
+		: [];
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></h1>
@@ -591,6 +610,41 @@ function lf_ops_render_global_settings_page(): void {
 												<label>
 													<span><?php echo esc_html($label); ?></span>
 													<input type="text" name="lf_ai_airtable_field_map[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($value); ?>" />
+												</label>
+											<?php endforeach; ?>
+										</div>
+									</details>
+								</td>
+							</tr>
+							<tr>
+								<th colspan="2" style="padding-top: 16px;"><?php esc_html_e('Reviews Sync', 'leadsforward-core'); ?></th>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_airtable_reviews_table"><?php esc_html_e('Reviews table', 'leadsforward-core'); ?></label></th>
+								<td>
+									<input type="text" class="regular-text" name="lf_ai_airtable_reviews_table" id="lf_ai_airtable_reviews_table" value="<?php echo esc_attr((string) ($airtable_reviews['table'] ?? 'Reviews')); ?>" />
+									<p class="description"><?php esc_html_e('Optional. Leave blank to skip review imports.', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_airtable_reviews_view"><?php esc_html_e('Reviews view', 'leadsforward-core'); ?></label></th>
+								<td>
+									<input type="text" class="regular-text" name="lf_ai_airtable_reviews_view" id="lf_ai_airtable_reviews_view" value="<?php echo esc_attr((string) ($airtable_reviews['view'] ?? '')); ?>" />
+									<p class="description"><?php esc_html_e('Optional. Useful if you sync reviews from another base into a filtered view.', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e('Review field mapping', 'leadsforward-core'); ?></th>
+								<td>
+									<details class="lf-airtable-field-map">
+										<summary><?php esc_html_e('Override review field names', 'leadsforward-core'); ?></summary>
+										<div class="lf-airtable-field-map-grid">
+											<?php foreach ($airtable_review_defaults as $key => $label) :
+												$value = (string) ($airtable_review_fields[$key] ?? $label);
+												?>
+												<label>
+													<span><?php echo esc_html($label); ?></span>
+													<input type="text" name="lf_ai_airtable_reviews_field_map[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($value); ?>" />
 												</label>
 											<?php endforeach; ?>
 										</div>

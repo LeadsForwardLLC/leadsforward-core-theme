@@ -336,7 +336,7 @@ Schema behavior (automatic):
 - Service pages: Service schema + OfferCatalog.
 - Service area pages: LocalBusiness addendum with area served.
 - FAQ schema is added only when an FAQ section is enabled.
-- Review schema outputs when testimonials exist.
+- Review schema outputs when reviews exist.
 
 Internal linking (deterministic):
 - Homepage, service pages, and service area pages include hub‑and‑spoke modules.

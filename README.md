@@ -13,7 +13,7 @@ Ultra-lightweight, SEO-first WordPress theme for local lead-gen sites. Built to 
 
 LeadsForward Core provides:
 
-- **Custom post types:** Services, Service Areas, Projects, Testimonials, FAQs (all REST-ready)
+- **Custom post types:** Services, Service Areas, Projects, Reviews, FAQs (all REST-ready)
 - **Business Entity:** Single source of truth for NAP, phones, service areas, and schema
 - **Global settings & branding:** Logo + color tokens mapped to CSS variables (core, surface, text) and design presets synced to the variation profile, with optional design overrides
 - **Shared section registry:** Universal section definitions + defaults used by homepage and page builders
@@ -351,7 +351,7 @@ Blocks receive optional `$block['context']` when rendered from the homepage (sec
 | Service | `lf_service` | `/services/service-name/`; rendered by the Page Builder framework |
 | Service Area | `lf_service_area` | `/service-areas/city-name/`; rendered by the Page Builder framework |
 | Project | `lf_project` | `/projects/`; before/after media and gallery-driven project showcase |
-| Testimonial | `lf_testimonial` | Private; reviewer name, rating, review text, source (Google/Facebook/etc.) |
+| Review | `lf_testimonial` | Private; reviewer name, rating, review text, source (Google/Facebook/etc.) |
 | FAQ | `lf_faq` | `/faqs/`; question, answer, optional service/area association |
 
 All use `show_in_rest => true` and clean rewrites.
@@ -360,9 +360,9 @@ All use `show_in_rest => true` and clean rewrites.
 
 ## SEO & Schema
 
-- **Schema (JSON-LD):** LocalBusiness (global), Service (single service), FAQPage (single/archive FAQ or filter), Review/AggregateRating (from testimonials). Toggleable in LeadsForward → Schema; fails silently if data is incomplete.
+- **Schema (JSON-LD):** LocalBusiness (global), Service (single service), FAQPage (single/archive FAQ or filter), Review/AggregateRating (from reviews). Toggleable in LeadsForward → Schema; fails silently if data is incomplete.
 - **Canonical:** Output in `wp_head`. Use `add_filter('lf_output_canonical', '__return_false')` to let Rank Math (or another plugin) handle it.
-- **Noindex:** Applied to search, 404, and testimonial single/archive.
+- **Noindex:** Applied to search, 404, and review single/archive.
 - **NAP/Geo:** `lf_nap_data()`, `lf_nap_plain()`, `lf_nap_html()`, `lf_geo_data()`, `lf_geo_meta()`; internal linking helpers `lf_related_services_for_area()`, `lf_related_areas_for_service()`; `lf_breadcrumb_items()` for Rank Math–compatible breadcrumbs.
 
 ---

@@ -50,7 +50,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 
 ## Reset Behavior (Dev)
 
-- Reset wipes pages (excluding Privacy/Terms), posts, CPTs (services, service areas, projects, FAQs, testimonials, AI jobs), manifest, keywords, and generation logs.
+- Reset wipes pages (excluding Privacy/Terms), posts, CPTs (services, service areas, projects, FAQs, reviews, AI jobs), manifest, keywords, and generation logs.
 - AI Studio settings **persist** (enable flag, webhook URL, shared secret), along with Airtable credentials and API keys.
 - Triggered from LeadsForward → Setup → Advanced settings (dev‑only visibility).
 - Site title/description are cleared to remove business evidence.

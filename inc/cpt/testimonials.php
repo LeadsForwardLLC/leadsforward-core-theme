@@ -1,6 +1,6 @@
 <?php
 /**
- * Testimonials CPT. Private (not on front end), queryable for blocks and shortcodes.
+ * Reviews CPT. Private (not on front end), queryable for blocks and shortcodes.
  * Use in widgets, blocks, or single template when made public later.
  *
  * @package LeadsForward_Core
@@ -15,17 +15,17 @@ if (!defined('ABSPATH')) {
 
 function lf_register_cpt_testimonials(): void {
 	$labels = [
-		'name'               => _x('Testimonials', 'post type general name', 'leadsforward-core'),
-		'singular_name'      => _x('Testimonial', 'post type singular name', 'leadsforward-core'),
-		'menu_name'          => _x('Testimonials', 'admin menu', 'leadsforward-core'),
-		'add_new'            => _x('Add New', 'testimonial', 'leadsforward-core'),
-		'add_new_item'       => __('Add New Testimonial', 'leadsforward-core'),
-		'edit_item'          => __('Edit Testimonial', 'leadsforward-core'),
-		'new_item'           => __('New Testimonial', 'leadsforward-core'),
-		'view_item'          => __('View Testimonial', 'leadsforward-core'),
-		'search_items'       => __('Search Testimonials', 'leadsforward-core'),
-		'not_found'          => __('No testimonials found.', 'leadsforward-core'),
-		'not_found_in_trash' => __('No testimonials found in Trash.', 'leadsforward-core'),
+		'name'               => _x('Reviews', 'post type general name', 'leadsforward-core'),
+		'singular_name'      => _x('Review', 'post type singular name', 'leadsforward-core'),
+		'menu_name'          => _x('Reviews', 'admin menu', 'leadsforward-core'),
+		'add_new'            => _x('Add New', 'review', 'leadsforward-core'),
+		'add_new_item'       => __('Add New Review', 'leadsforward-core'),
+		'edit_item'          => __('Edit Review', 'leadsforward-core'),
+		'new_item'           => __('New Review', 'leadsforward-core'),
+		'view_item'          => __('View Review', 'leadsforward-core'),
+		'search_items'       => __('Search Reviews', 'leadsforward-core'),
+		'not_found'          => __('No reviews found.', 'leadsforward-core'),
+		'not_found_in_trash' => __('No reviews found in Trash.', 'leadsforward-core'),
 	];
 
 	$args = [
@@ -35,7 +35,7 @@ function lf_register_cpt_testimonials(): void {
 		'show_ui'             => true,
 		'show_in_menu'        => true,
 		'show_in_rest'        => true,
-		'rest_base'           => 'testimonials',
+		'rest_base'           => 'reviews',
 		'query_var'           => true,
 		'rewrite'             => false,
 		'capability_type'     => 'post',
