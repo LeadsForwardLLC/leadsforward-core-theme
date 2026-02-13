@@ -908,6 +908,9 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 			? ['count' => count($request['blueprints'])]
 			: ['count' => 0],
 	];
+	$research = lf_ai_studio_get_research_document();
+	$log_payload['research_present'] = !empty($research);
+	$log_payload['research_hash'] = !empty($research) ? lf_ai_studio_research_hash($research) : '';
 	error_log('LF AI Studio payload keys: ' . wp_json_encode($log_payload));
 	$webhook_host = wp_parse_url($webhook, PHP_URL_HOST);
 	$webhook_host = is_string($webhook_host) ? $webhook_host : '';
@@ -1751,6 +1754,64 @@ function lf_ai_studio_get_research_document(): array {
 	return is_array($doc) ? $doc : [];
 }
 
+function lf_ai_studio_research_hash(array $doc): string {
+	if (empty($doc)) {
+		return '';
+	}
+	$payload = wp_json_encode($doc);
+	return is_string($payload) ? hash('sha256', $payload) : '';
+}
+
+function lf_ai_studio_compact_research_value($value, int $max_items = 6, int $max_len = 240) {
+	if (is_string($value)) {
+		$trimmed = trim($value);
+		if ($trimmed === '') {
+			return '';
+		}
+		if (strlen($trimmed) > $max_len) {
+			return substr($trimmed, 0, max(0, $max_len - 3)) . '...';
+		}
+		return $trimmed;
+	}
+	if (is_array($value)) {
+		$is_assoc = array_keys($value) !== range(0, count($value) - 1);
+		if ($is_assoc) {
+			$out = [];
+			foreach ($value as $key => $item) {
+				$out[$key] = lf_ai_studio_compact_research_value($item, $max_items, $max_len);
+			}
+			return $out;
+		}
+		$slice = array_slice($value, 0, $max_items);
+		return array_values(array_map(function ($item) use ($max_items, $max_len) {
+			return lf_ai_studio_compact_research_value($item, $max_items, $max_len);
+		}, $slice));
+	}
+	return $value;
+}
+
+function lf_ai_studio_build_research_context(): array {
+	$doc = lf_ai_studio_get_research_document();
+	if (empty($doc)) {
+		return [];
+	}
+	$keys = [
+		'brand_positioning',
+		'conversion_strategy',
+		'voice_guidelines',
+		'seo_strategy',
+		'faq_strategy',
+		'content_expansion_guidelines',
+	];
+	$out = [];
+	foreach ($keys as $key) {
+		if (isset($doc[$key]) && is_array($doc[$key])) {
+			$out[$key] = lf_ai_studio_compact_research_value($doc[$key]);
+		}
+	}
+	return $out;
+}
+
 function lf_ai_studio_manifest_exists(): bool {
 	return !empty(lf_ai_studio_get_manifest());
 }
@@ -2262,6 +2323,7 @@ function lf_ai_studio_llm_system_message(): string {
 		'Headlines: never use dash or hyphen separators. Sentence case or title case only. No trailing punctuation unless a question mark. Hero headline max 12 words.',
 		'Benefits: 15-35 words each, max 2 sentences per benefit. No dash separators in benefit titles.',
 		'Internal linking: include 1-2 internal links in richtext fields using internal_links list. Use <a href="URL">Label</a>. Do not invent URLs.',
+		'You may receive research_context. Use it for positioning, differentiation, SEO entity strategy, tone alignment, FAQ angle selection, and authority modeling. Do NOT copy research text verbatim. Apply strategically.',
 		'Content separation by page type:',
 		'Homepage: broad positioning; do not reuse service or area copy verbatim.',
 		'Services overview: broad authority content; no detailed process repetition; avoid excessive city modifiers.',
@@ -2482,6 +2544,7 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 			return ['error' => __('Homepage blueprint could not be built. Check homepage configuration.', 'leadsforward-core')];
 		}
 	}
+	$research_context = lf_ai_studio_build_research_context();
 
 	$base = [
 		'variation_seed' => $variation_seed,
@@ -2506,6 +2569,9 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 			'faq_target_range' => lf_ai_studio_faq_target_range('homepage'),
 		],
 	];
+	if (!empty($research_context)) {
+		$base['blueprint']['research_context'] = $research_context;
+	}
 	$request_id = lf_ai_studio_homepage_request_id($base);
 
 	$base['blueprint']['request_id'] = $request_id;
@@ -2794,7 +2860,7 @@ function lf_ai_studio_build_post_blueprint(\WP_Post $post, string $page, string 
 		];
 		$out_order[] = $instance_id;
 	}
-	return [
+	$blueprint = [
 		'page' => $page,
 		'post_id' => $post->ID,
 		'page_intent' => $page_intent,
@@ -2803,6 +2869,11 @@ function lf_ai_studio_build_post_blueprint(\WP_Post $post, string $page, string 
 		'order' => $out_order,
 		'faq_target_range' => lf_ai_studio_faq_target_range($page),
 	];
+	$research_context = lf_ai_studio_build_research_context();
+	if (!empty($research_context)) {
+		$blueprint['research_context'] = $research_context;
+	}
+	return $blueprint;
 }
 
 function lf_ai_studio_get_generation_scope(array $manifest): array {
