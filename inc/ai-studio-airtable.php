@@ -14,6 +14,9 @@ if (!defined('ABSPATH')) {
 
 add_action('wp_ajax_lf_ai_airtable_search', 'lf_ai_studio_airtable_search');
 add_action('wp_ajax_lf_ai_airtable_generate', 'lf_ai_studio_airtable_generate');
+add_action('init', 'lf_ai_studio_airtable_schedule_reviews_sync');
+add_action('lf_ai_airtable_reviews_sync', 'lf_ai_studio_airtable_run_reviews_sync');
+add_action('switch_theme', 'lf_ai_studio_airtable_clear_reviews_sync');
 
 function lf_ai_studio_airtable_default_field_map(): array {
 	return [
@@ -59,12 +62,12 @@ function lf_ai_studio_airtable_default_field_map(): array {
 
 function lf_ai_studio_airtable_reviews_default_field_map(): array {
 	return [
-		'review_project' => 'Project',
-		'review_reviewer' => 'Reviewer Name',
-		'review_rating' => 'Rating',
-		'review_text' => 'Review',
-		'review_source' => 'Source',
-		'review_source_url' => 'Source URL',
+		'review_project' => 'Project Name (from CID)',
+		'review_reviewer' => 'Author Title',
+		'review_rating' => 'Star Rating',
+		'review_text' => 'Review Text',
+		'review_source' => 'Type (from CID)',
+		'review_source_url' => 'Review Link',
 	];
 }
 
@@ -107,6 +110,79 @@ function lf_ai_studio_airtable_get_settings(): array {
 	];
 }
 
+function lf_ai_studio_airtable_schedule_reviews_sync(): void {
+	$hook = 'lf_ai_airtable_reviews_sync';
+	$next = wp_next_scheduled($hook);
+	$settings = lf_ai_studio_airtable_get_settings();
+	$reviews_table = trim((string) ($settings['reviews']['table'] ?? ''));
+	if (empty($settings['enabled']) || $reviews_table === '') {
+		if ($next) {
+			wp_unschedule_event($next, $hook);
+		}
+		return;
+	}
+	if (!$next) {
+		wp_schedule_event(time() + 300, 'hourly', $hook);
+	}
+}
+
+function lf_ai_studio_airtable_clear_reviews_sync(): void {
+	$hook = 'lf_ai_airtable_reviews_sync';
+	$next = wp_next_scheduled($hook);
+	if ($next) {
+		wp_unschedule_event($next, $hook);
+	}
+}
+
+function lf_ai_studio_airtable_run_reviews_sync(): void {
+	$settings = lf_ai_studio_airtable_get_settings();
+	$reviews_table = trim((string) ($settings['reviews']['table'] ?? ''));
+	if (empty($settings['enabled']) || $reviews_table === '') {
+		return;
+	}
+	$project_name = lf_ai_studio_airtable_get_project_name_for_reviews($settings);
+	if ($project_name === '') {
+		return;
+	}
+	$result = lf_ai_studio_airtable_import_reviews_by_project($project_name, $settings);
+	if (empty($result['error'])) {
+		update_option('lf_ai_airtable_reviews_last_sync', time(), false);
+	}
+}
+
+function lf_ai_studio_airtable_get_project_name_for_reviews(array $settings): string {
+	$stored = trim((string) get_option('lf_ai_airtable_project_name', ''));
+	if ($stored !== '') {
+		return $stored;
+	}
+	$manifest = function_exists('lf_ai_studio_get_manifest') ? lf_ai_studio_get_manifest() : get_option('lf_site_manifest', []);
+	$business = is_array($manifest['business'] ?? null) ? $manifest['business'] : [];
+	$name = trim((string) ($business['name'] ?? ''));
+	if ($name !== '') {
+		update_option('lf_ai_airtable_project_name', $name, false);
+	}
+	return $name;
+}
+
+function lf_ai_studio_airtable_project_name_from_record(array $record, array $settings): string {
+	$record_fields = is_array($record['fields'] ?? null) ? $record['fields'] : [];
+	$project_field = (string) ($settings['fields']['project'] ?? '');
+	if ($project_field === '') {
+		return '';
+	}
+	return lf_ai_studio_airtable_string_field($record_fields, $project_field);
+}
+
+function lf_ai_studio_airtable_store_project_context(array $record, array $settings, string $project_name): void {
+	if ($project_name !== '') {
+		update_option('lf_ai_airtable_project_name', $project_name, false);
+	}
+	$record_id = (string) ($record['id'] ?? '');
+	if ($record_id !== '') {
+		update_option('lf_ai_airtable_project_record_id', $record_id, false);
+	}
+}
+
 function lf_ai_studio_airtable_search(): void {
 	if (!current_user_can('edit_theme_options')) {
 		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
@@ -142,6 +218,10 @@ function lf_ai_studio_airtable_generate(): void {
 
 	$record = $record_result['record'] ?? [];
 	$settings = lf_ai_studio_airtable_get_settings();
+	$project_name = lf_ai_studio_airtable_project_name_from_record($record, $settings);
+	if ($project_name !== '') {
+		lf_ai_studio_airtable_store_project_context($record, $settings, $project_name);
+	}
 	$build = lf_ai_studio_airtable_record_to_manifest($record, $settings);
 	if (!empty($build['errors'])) {
 		update_option('lf_ai_studio_manifest_errors', $build['errors'], false);
@@ -295,11 +375,45 @@ function lf_ai_studio_airtable_import_reviews(array $record, array $settings): a
 		return ['error' => $resolved['error']];
 	}
 
-	$record_fields = is_array($record['fields'] ?? null) ? $record['fields'] : [];
-	$project_field = (string) ($settings['fields']['project'] ?? '');
-	$project_name = $project_field !== '' ? lf_ai_studio_airtable_string_field($record_fields, $project_field) : '';
+	$project_name = lf_ai_studio_airtable_project_name_from_record($record, $settings);
 	if ($project_name === '') {
 		return ['skipped' => true];
+	}
+	lf_ai_studio_airtable_store_project_context($record, $settings, $project_name);
+
+	return lf_ai_studio_airtable_import_reviews_by_project($project_name, $settings, $resolved);
+}
+
+function lf_ai_studio_airtable_import_reviews_by_project(string $project_name, array $settings, array $resolved = []): array {
+	$reviews_settings = is_array($settings['reviews'] ?? null) ? $settings['reviews'] : [];
+	$reviews_table = trim((string) ($reviews_settings['table'] ?? ''));
+	if ($reviews_table === '') {
+		return ['skipped' => true];
+	}
+	$reviews_settings['table'] = $reviews_table;
+	$reviews_settings['view'] = (string) ($reviews_settings['view'] ?? '');
+	$reviews_settings['fields'] = is_array($reviews_settings['fields'] ?? null) ? $reviews_settings['fields'] : [];
+
+	$ready = lf_ai_studio_airtable_is_ready([
+		'enabled' => $settings['enabled'] ?? false,
+		'pat' => (string) ($settings['pat'] ?? ''),
+		'base_id' => (string) ($settings['base_id'] ?? ''),
+		'table' => $reviews_settings['table'],
+	]);
+	if (!$ready['ready']) {
+		return ['error' => $ready['message']];
+	}
+
+	if (empty($resolved)) {
+		$resolved = lf_ai_studio_airtable_resolve_table_view([
+			'pat' => (string) ($settings['pat'] ?? ''),
+			'base_id' => (string) ($settings['base_id'] ?? ''),
+			'table' => $reviews_settings['table'],
+			'view' => (string) ($reviews_settings['view'] ?? ''),
+		]);
+		if (!empty($resolved['error'])) {
+			return ['error' => $resolved['error']];
+		}
 	}
 
 	$review_records = lf_ai_studio_airtable_fetch_reviews(
@@ -339,12 +453,15 @@ function lf_ai_studio_airtable_fetch_reviews(
 		'base_id' => $base_id,
 		'table' => $resolved['table_id'],
 	]);
-	$needle = str_replace('"', '\"', $project_name);
-	$formula = sprintf('FIND(LOWER("%s"), LOWER(ARRAYJOIN({%s})))', $needle, $project_field);
+	$formula = lf_ai_studio_airtable_reviews_filter_formula($project_name, $project_field);
 	$params = [
-		'pageSize' => 50,
+		'pageSize' => 100,
 		'filterByFormula' => $formula,
 	];
+	$fields = lf_ai_studio_airtable_collect_review_fields($reviews_settings['fields']);
+	if (!empty($fields)) {
+		$params['fields'] = $fields;
+	}
 	if (!empty($resolved['view'])) {
 		$params['view'] = $resolved['view'];
 	}
@@ -354,6 +471,29 @@ function lf_ai_studio_airtable_fetch_reviews(
 		return ['error' => $response['error']];
 	}
 	return ['records' => $response['data']['records'] ?? []];
+}
+
+function lf_ai_studio_airtable_reviews_filter_formula(string $project_name, string $project_field): string {
+	$needle = strtolower(trim($project_name));
+	$needle = str_replace('"', '\"', $needle);
+	return sprintf(
+		'FIND(",%s,", "," & LOWER(ARRAYJOIN({%s})) & ",")',
+		$needle,
+		$project_field
+	);
+}
+
+function lf_ai_studio_airtable_collect_review_fields(array $field_map): array {
+	$fields = [];
+	foreach ($field_map as $field_name) {
+		$field_name = trim((string) $field_name);
+		if ($field_name === '') {
+			continue;
+		}
+		$fields[] = $field_name;
+	}
+	$fields = array_values(array_unique($fields));
+	return $fields;
 }
 
 function lf_ai_studio_airtable_upsert_review(array $record, array $field_map): array {
@@ -372,8 +512,9 @@ function lf_ai_studio_airtable_upsert_review(array $record, array $field_map): a
 	if ($rating < 1 || $rating > 5) {
 		$rating = 5;
 	}
-	$source = lf_ai_studio_airtable_string_field($fields, (string) ($field_map['review_source'] ?? ''));
+	$source_raw = lf_ai_studio_airtable_string_field($fields, (string) ($field_map['review_source'] ?? ''));
 	$source_url = lf_ai_studio_airtable_string_field($fields, (string) ($field_map['review_source_url'] ?? ''));
+	$source = lf_ai_studio_airtable_normalize_review_source($source_raw, $source_url);
 
 	$existing = get_posts([
 		'post_type' => 'lf_testimonial',
@@ -425,6 +566,23 @@ function lf_ai_studio_airtable_upsert_review(array $record, array $field_map): a
 	}
 
 	return ['updated' => !empty($existing), 'created' => empty($existing)];
+}
+
+function lf_ai_studio_airtable_normalize_review_source(string $source, string $source_url): string {
+	$haystack = strtolower(trim($source . ' ' . $source_url));
+	if ($haystack === '') {
+		return 'other';
+	}
+	if (strpos($haystack, 'google') !== false) {
+		return 'google';
+	}
+	if (strpos($haystack, 'facebook') !== false) {
+		return 'facebook';
+	}
+	if (strpos($haystack, 'yelp') !== false) {
+		return 'yelp';
+	}
+	return 'other';
 }
 
 function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings): array {

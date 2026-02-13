@@ -600,3 +600,4 @@ Append‑Only Change Log (Append‑Only)
 2026‑02‑12 — Added About page reseed guard when sections are missing.
 2026‑02‑12 — Added internal link catalog + LLM linking rules.
 2026‑02‑12 — Added built‑in SEO engine, keyword mapping, and sitemap.
+2026‑02‑13 — Reviews sync now runs hourly via WP‑Cron and filters by exact project name from Airtable/manifest.

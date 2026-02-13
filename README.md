@@ -27,7 +27,7 @@ LeadsForward Core provides:
 - **Legal pages:** Fixed Privacy Policy + Terms templates with dynamic business info
 - **Duplicate:** One-click duplicate action for any post type in admin lists
 - **AI Assistant (bounded):** Safe copy suggestions + field edits only (no layout/CSS changes)
-- **AI Studio:** Orchestrator-driven site content generation (no OpenAI keys stored) plus post-gen QA audit + one-pass auto-repair, with Airtable review sync
+- **AI Studio:** Orchestrator-driven site content generation (no OpenAI keys stored) plus post-gen QA audit + one-pass auto-repair, with hourly Airtable review sync
 - **Server-rendered blocks:** Hero, Trust/Reviews, CTA, FAQ Accordion, Map+NAP
 - **SEO engine:** Global SEO settings, per-page meta, canonical/noindex/robots, OG/Twitter, XML sitemap, keyword assignment, JSON-LD, script injections
 - **Heading rules:** Enforced single H1 + heading hierarchy validation (warnings only)
