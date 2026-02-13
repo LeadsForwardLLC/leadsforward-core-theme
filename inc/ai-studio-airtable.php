@@ -514,8 +514,9 @@ function lf_ai_studio_airtable_reviews_filter_formula(string $project_name, stri
 	$needle = strtolower(trim($project_name));
 	$needle = str_replace('"', '\"', $needle);
 	return sprintf(
-		'FIND(",%s,", "," & LOWER(ARRAYJOIN({%s})) & ",")',
+		'FIND(",%s,", "," & LOWER(IFERROR(ARRAYJOIN({%s}), {%s})) & ",")',
 		$needle,
+		$project_field,
 		$project_field
 	);
 }
