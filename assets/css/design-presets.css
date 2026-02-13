@@ -19,11 +19,22 @@
 	--lf-heading-weight: 700;
 	--lf-hero-bg: #e2e8f0;
 	--lf-hero-bg-gradient: linear-gradient(160deg, #ffffff 0%, #e2e8f0 45%, #cbd5e1 100%);
+	--lf-hero-bg-image: radial-gradient(circle at 15% 12%, rgba(37, 99, 235, 0.16), transparent 46%), radial-gradient(circle at 82% 8%, rgba(14, 165, 233, 0.12), transparent 40%);
+	--lf-hero-proof-offset: 8px;
+	--lf-hero-proof-offset-x: 0px;
 	--lf-font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
 	--lf-font-system: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
 	--lf-space-section: 2.1rem;
 	--lf-space-section-sm: 1.25rem;
 	--lf-hero-title-size: clamp(2.35rem, 5.4vw, 3.9rem);
+	--lf-hero-eyebrow-bg: #ffffff;
+	--lf-hero-eyebrow-border: 1px solid rgba(15, 23, 42, 0.08);
+	--lf-hero-eyebrow-text: var(--lf-text-primary);
+	--lf-hero-stack-bg: rgba(255, 255, 255, 0.88);
+	--lf-hero-stack-border: 1px solid rgba(15, 23, 42, 0.06);
+	--lf-hero-stack-shadow: 0 16px 38px rgba(15, 23, 42, 0.1);
+	--lf-card-accent-left: 4px solid var(--lf-color-primary);
+	--lf-hero-media-shell: rgba(255, 255, 255, 0.7);
 }
 
 .lf-design-bold-authority {
@@ -44,6 +55,11 @@
 	--lf-heading-weight: 800;
 	--lf-hero-bg: #05070f;
 	--lf-hero-bg-gradient: linear-gradient(135deg, #05070f 0%, #111827 60%, #1f2937 100%);
+	--lf-hero-bg-image: linear-gradient(120deg, rgba(249, 115, 22, 0.22) 0%, rgba(239, 68, 68, 0) 55%), repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0 12px, transparent 12px 24px);
+	--lf-hero-proof-offset: 18px;
+	--lf-hero-proof-offset-x: 12px;
+	--lf-hero-panel-offset: 16px;
+	--lf-hero-panel-offset-x: 14px;
 	--lf-cta-block-bg: #05070f;
 	--lf-hero-title-size: clamp(2.7rem, 6.6vw, 4.6rem);
 	--lf-hero-cta-primary-size: 1.35rem;
@@ -52,6 +68,14 @@
 	--lf-space-section: 2.6rem;
 	--lf-font-heading: 'Oswald', 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
 	--lf-font-system: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+	--lf-hero-eyebrow-bg: rgba(255, 255, 255, 0.12);
+	--lf-hero-eyebrow-border: 1px solid rgba(255, 255, 255, 0.2);
+	--lf-hero-eyebrow-text: #f8fafc;
+	--lf-hero-stack-bg: rgba(5, 7, 15, 0.78);
+	--lf-hero-stack-border: 1px solid rgba(255, 255, 255, 0.2);
+	--lf-hero-stack-shadow: 0 24px 50px rgba(0, 0, 0, 0.45);
+	--lf-card-accent-left: 4px solid var(--lf-color-secondary);
+	--lf-hero-media-shell: rgba(15, 23, 42, 0.6);
 }
 
 .lf-design-bold-authority .lf-block-hero,
@@ -75,11 +99,22 @@
 	--lf-card-shadow-hover: 0 20px 40px rgba(15, 23, 42, 0.12);
 	--lf-card-border: 1px solid rgba(15, 23, 42, 0.06);
 	--lf-hero-bg-gradient: linear-gradient(150deg, #fff4e6 0%, #e0f2fe 50%, #fef3c7 100%);
+	--lf-hero-bg-image: radial-gradient(circle at 20% 20%, rgba(22, 163, 74, 0.18), transparent 45%), radial-gradient(circle at 80% 0%, rgba(56, 189, 248, 0.2), transparent 40%);
+	--lf-hero-proof-offset: 0px;
+	--lf-hero-panel-offset: 8px;
 	--lf-hero-title-size: clamp(2.2rem, 5.3vw, 3.7rem);
 	--lf-space-section: 2.6rem;
 	--lf-heading-weight: 600;
 	--lf-font-heading: 'Playfair Display', 'Outfit', -apple-system, BlinkMacSystemFont, serif;
 	--lf-font-system: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+	--lf-hero-eyebrow-bg: #fff7ed;
+	--lf-hero-eyebrow-border: 1px solid rgba(22, 163, 74, 0.15);
+	--lf-hero-eyebrow-text: #0f172a;
+	--lf-hero-stack-bg: rgba(255, 255, 255, 0.9);
+	--lf-hero-stack-border: 1px solid rgba(15, 23, 42, 0.08);
+	--lf-hero-stack-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+	--lf-card-accent-left: 4px solid var(--lf-color-tertiary);
+	--lf-hero-media-shell: rgba(255, 255, 255, 0.75);
 }
 
 .lf-design-high-contrast {
@@ -99,6 +134,12 @@
 	--lf-heading-weight: 800;
 	--lf-cta-block-bg: #0b0b0b;
 	--lf-hero-bg-gradient: linear-gradient(120deg, #0b0b0b 0%, #111827 70%, #1f2937 100%);
+	--lf-hero-bg-image: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px), linear-gradient(0deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+	--lf-hero-bg-size: 52px 52px, cover;
+	--lf-hero-bg-repeat: repeat, no-repeat;
+	--lf-hero-proof-offset: 14px;
+	--lf-hero-proof-offset-x: 10px;
+	--lf-hero-panel-offset: 12px;
 	--lf-hero-title-size: clamp(2.85rem, 6.8vw, 4.65rem);
 	--lf-hero-cta-primary-size: 1.55rem;
 	--lf-hero-cta-primary-pad-y: 1.35rem;
@@ -106,6 +147,14 @@
 	--lf-space-section: 2.35rem;
 	--lf-font-heading: 'Space Grotesk', 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
 	--lf-font-system: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+	--lf-hero-eyebrow-bg: #0b0b0b;
+	--lf-hero-eyebrow-border: 2px solid rgba(255, 255, 255, 0.2);
+	--lf-hero-eyebrow-text: #ffffff;
+	--lf-hero-stack-bg: rgba(11, 11, 11, 0.9);
+	--lf-hero-stack-border: 2px solid rgba(255, 255, 255, 0.18);
+	--lf-hero-stack-shadow: 0 24px 52px rgba(0, 0, 0, 0.5);
+	--lf-card-accent-left: 4px solid #facc15;
+	--lf-hero-media-shell: rgba(11, 11, 11, 0.6);
 }
 
 .lf-design-modern-edge {
@@ -123,10 +172,23 @@
 	--lf-card-shadow-hover: 0 30px 60px rgba(15, 23, 42, 0.18);
 	--lf-card-border: 1px solid rgba(15, 23, 42, 0.08);
 	--lf-hero-bg-gradient: linear-gradient(135deg, #e0f2fe 0%, #f8fafc 45%, #e2e8f0 100%);
+	--lf-hero-bg-image: radial-gradient(circle at 80% 12%, rgba(99, 102, 241, 0.18), transparent 45%), linear-gradient(180deg, rgba(14, 165, 233, 0.12) 0%, transparent 60%);
+	--lf-hero-proof-offset: 12px;
+	--lf-hero-proof-offset-x: 6px;
+	--lf-hero-media-offset: -10px;
+	--lf-hero-media-offset-x: 12px;
 	--lf-space-section: 2.9rem;
 	--lf-heading-weight: 700;
 	--lf-font-heading: 'Space Grotesk', 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
 	--lf-font-system: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+	--lf-hero-eyebrow-bg: rgba(255, 255, 255, 0.9);
+	--lf-hero-eyebrow-border: 1px solid rgba(15, 23, 42, 0.08);
+	--lf-hero-eyebrow-text: #0f172a;
+	--lf-hero-stack-bg: rgba(255, 255, 255, 0.8);
+	--lf-hero-stack-border: 1px solid rgba(15, 23, 42, 0.06);
+	--lf-hero-stack-shadow: 0 20px 44px rgba(15, 23, 42, 0.14);
+	--lf-card-accent-left: 4px solid var(--lf-color-primary);
+	--lf-hero-media-shell: rgba(255, 255, 255, 0.7);
 }
 
 .lf-design-structured-modular {
@@ -145,7 +207,20 @@
 	--lf-border-width: 2px;
 	--lf-heading-weight: 700;
 	--lf-hero-bg-gradient: linear-gradient(180deg, #f8fafc 0%, #e5e7eb 100%);
+	--lf-hero-bg-image: linear-gradient(90deg, rgba(15, 23, 42, 0.06) 1px, transparent 1px), linear-gradient(0deg, rgba(15, 23, 42, 0.06) 1px, transparent 1px);
+	--lf-hero-bg-size: 60px 60px, cover;
+	--lf-hero-bg-repeat: repeat, no-repeat;
+	--lf-hero-proof-offset: 0px;
+	--lf-hero-panel-offset: 0px;
 	--lf-space-section: 1.9rem;
 	--lf-font-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 	--lf-font-system: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+	--lf-hero-eyebrow-bg: #ffffff;
+	--lf-hero-eyebrow-border: 2px solid rgba(15, 23, 42, 0.18);
+	--lf-hero-eyebrow-text: #0f172a;
+	--lf-hero-stack-bg: rgba(255, 255, 255, 0.92);
+	--lf-hero-stack-border: 2px solid rgba(15, 23, 42, 0.14);
+	--lf-hero-stack-shadow: none;
+	--lf-card-accent-left: 4px solid var(--lf-color-primary);
+	--lf-hero-media-shell: rgba(255, 255, 255, 0.85);
 }

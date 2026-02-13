@@ -587,6 +587,7 @@ Global Design (Append‑Only)
 - Global Settings → Global Design presets now sync with the variation profile (block variants + section order).
 - Bulk Actions “Reassign design preset” mirrors the same preset list and writes the matching variation profile.
 - Custom design overrides (typography, button shape, card radius/shadow, spacing) apply on top of presets when enabled.
+- Presets include distinct hero background motifs and floating media offsets per variant.
 
 Append‑Only Change Log (Append‑Only)
 -----------------------------------

@@ -1829,7 +1829,10 @@ button:focus-visible,
 .lf-block-hero__bg {
 	position: absolute;
 	inset: 0;
-	background: var(--lf-hero-bg-gradient);
+	background-image: var(--lf-hero-bg-image, none), var(--lf-hero-bg-gradient);
+	background-size: var(--lf-hero-bg-size, cover);
+	background-position: center;
+	background-repeat: var(--lf-hero-bg-repeat, no-repeat);
 	opacity: 0.9;
 	z-index: 0;
 }
@@ -2071,6 +2074,26 @@ button:focus-visible,
 	margin-bottom: 0.8rem;
 }
 
+.lf-block-hero--default .lf-hero-split__proof {
+	display: grid;
+	place-items: center;
+	position: relative;
+	transform: translate3d(var(--lf-hero-proof-offset-x, 0px), var(--lf-hero-proof-offset, 0px), 0);
+}
+
+.lf-block-hero--default .lf-hero-split__proof .lf-block-hero__card {
+	border-left: var(--lf-card-accent-left, 4px solid var(--lf-color-primary));
+}
+
+.lf-block-hero--a .lf-hero-stack {
+	background: var(--lf-hero-stack-bg, rgba(255, 255, 255, 0.75));
+	border: var(--lf-hero-stack-border, 1px solid rgba(15, 23, 42, 0.08));
+	box-shadow: var(--lf-hero-stack-shadow, 0 16px 40px rgba(15, 23, 42, 0.08));
+	border-radius: 24px;
+	padding: 2rem 2.5rem;
+	backdrop-filter: blur(8px);
+}
+
 .lf-block-hero--b .lf-block-hero__bg {
 	background: radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.2), transparent 50%), linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
 }
@@ -2217,13 +2240,13 @@ button:focus-visible,
 	margin: 0;
 	padding: 0.35rem 0.9rem;
 	border-radius: 999px;
-	background: var(--lf-surface-light);
-	border: 1px solid rgba(15,23,42,0.1);
+	background: var(--lf-hero-eyebrow-bg, var(--lf-surface-light));
+	border: var(--lf-hero-eyebrow-border, 1px solid rgba(15,23,42,0.1));
 	font-size: 0.72rem;
 	font-weight: 700;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
-	color: var(--lf-text-primary);
+	color: var(--lf-hero-eyebrow-text, var(--lf-text-primary));
 }
 
 .lf-hero-split__eyebrow {
@@ -2312,6 +2335,9 @@ button:focus-visible,
 	box-shadow: var(--lf-card-shadow-spotlight);
 	border-radius: 16px;
 	padding: 1.5rem;
+	transform: translate3d(var(--lf-hero-panel-offset-x, 0px), var(--lf-hero-panel-offset, 0px), 0);
+	position: relative;
+	z-index: 1;
 }
 
 .lf-hero-form__panel-inner {
@@ -2374,6 +2400,18 @@ button:focus-visible,
 
 .lf-hero-visual__media {
 	position: relative;
+	transform: translate3d(var(--lf-hero-media-offset-x, 0px), var(--lf-hero-media-offset, 0px), 0);
+}
+
+.lf-block-hero--c .lf-hero-visual__media::after {
+	content: '';
+	position: absolute;
+	inset: -18px;
+	border-radius: 32px;
+	border: 1px solid rgba(15, 23, 42, 0.08);
+	background: var(--lf-hero-media-shell, rgba(255, 255, 255, 0.65));
+	box-shadow: 0 30px 60px rgba(15, 23, 42, 0.12);
+	z-index: -1;
 }
 
 .lf-hero-visual__image {
