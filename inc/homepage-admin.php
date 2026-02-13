@@ -125,8 +125,9 @@ function lf_homepage_admin_save(): void {
 		if ($type === 'hero') {
 			$config[$type]['hero_headline'] = isset($_POST['lf_hp_hero_headline']) ? sanitize_text_field($_POST['lf_hp_hero_headline']) : '';
 			$config[$type]['hero_subheadline'] = isset($_POST['lf_hp_hero_subheadline']) ? sanitize_text_field($_POST['lf_hp_hero_subheadline']) : '';
-			$hero_bg_mode = isset($_POST['lf_hp_hero_bg_mode']) ? sanitize_text_field($_POST['lf_hp_hero_bg_mode']) : 'color';
-			$config[$type]['hero_background_mode'] = in_array($hero_bg_mode, ['color', 'image'], true) ? $hero_bg_mode : 'color';
+			$hero_bg_mode = isset($_POST['lf_hp_hero_bg_mode']) ? sanitize_text_field($_POST['lf_hp_hero_bg_mode']) : 'image';
+			$config[$type]['hero_background_mode'] = in_array($hero_bg_mode, ['color', 'image'], true) ? $hero_bg_mode : 'image';
+			$config[$type]['hero_background_image_id'] = isset($_POST['lf_hp_hero_bg_image_id']) ? absint($_POST['lf_hp_hero_bg_image_id']) : 0;
 			$eyebrow_enabled = isset($_POST['lf_hp_hero_eyebrow_enabled']) ? sanitize_text_field($_POST['lf_hp_hero_eyebrow_enabled']) : '1';
 			$config[$type]['hero_eyebrow_enabled'] = $eyebrow_enabled === '0' ? '0' : '1';
 			$config[$type]['hero_eyebrow_text'] = isset($_POST['lf_hp_hero_eyebrow_text']) ? sanitize_text_field($_POST['lf_hp_hero_eyebrow_text']) : '';
@@ -699,7 +700,12 @@ function lf_homepage_admin_render(): void {
 										</tr>
 									<?php endif; ?>
 									<?php if ($type === 'hero') : ?>
-									<?php $hero_bg_mode = $sec['hero_background_mode'] ?? 'color'; ?>
+									<?php
+										$hero_bg_mode = $sec['hero_background_mode'] ?? 'image';
+										$hero_bg_image_id = isset($sec['hero_background_image_id']) ? (int) $sec['hero_background_image_id'] : 0;
+										$hero_bg_thumb = $hero_bg_image_id ? wp_get_attachment_image_src($hero_bg_image_id, 'thumbnail') : null;
+										$hero_bg_html = $hero_bg_thumb ? '<img src="' . esc_url($hero_bg_thumb[0]) . '" alt="" />' : '';
+									?>
 									<tr>
 										<th scope="row"><label for="lf_hp_hero_bg_mode"><?php esc_html_e('Hero background', 'leadsforward-core'); ?></label></th>
 										<td>
@@ -708,6 +714,22 @@ function lf_homepage_admin_render(): void {
 												<option value="image" <?php selected($hero_bg_mode, 'image'); ?>><?php esc_html_e('Featured image overlay', 'leadsforward-core'); ?></option>
 											</select>
 											<p class="description" style="margin: 6px 0 0;"><?php esc_html_e('Uses the page featured image when enabled. Background color becomes the overlay color.', 'leadsforward-core'); ?></p>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><?php esc_html_e('Hero background image', 'leadsforward-core'); ?></th>
+										<td>
+											<div class="lf-media-field">
+												<div class="lf-media-preview">
+													<?php echo $hero_bg_html !== '' ? $hero_bg_html : '<div class="lf-media-preview__empty">' . esc_html__('No image selected', 'leadsforward-core') . '</div>'; ?>
+												</div>
+												<div class="lf-media-actions">
+													<button type="button" class="button lf-media-upload"><?php esc_html_e('Select image', 'leadsforward-core'); ?></button>
+													<button type="button" class="button lf-media-remove"><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
+												</div>
+												<input type="hidden" class="lf-media-id" name="lf_hp_hero_bg_image_id" value="<?php echo esc_attr((string) $hero_bg_image_id); ?>" />
+											</div>
+											<p class="description" style="margin: 6px 0 0;"><?php esc_html_e('Default background image. Falls back to featured image if empty.', 'leadsforward-core'); ?></p>
 										</td>
 									</tr>
 									<tr>

@@ -201,10 +201,13 @@ if (!$secondary_enabled) {
 $show_cta_group = ($cta_text !== '' || $secondary_text !== '');
 $placeholder_id = function_exists('lf_get_placeholder_image_id') ? lf_get_placeholder_image_id() : 0;
 $placeholder_alt = $business_name ? $business_name : __('Trusted local service', 'leadsforward-core');
-$hero_bg_mode = (string) ($section['hero_background_mode'] ?? 'color');
+$hero_bg_mode = (string) ($section['hero_background_mode'] ?? 'image');
 $hero_bg_id = 0;
 if ($hero_bg_mode === 'image' && $variant !== 'c') {
-	$hero_bg_id = (int) get_post_thumbnail_id(get_queried_object_id());
+	$hero_bg_id = isset($section['hero_background_image_id']) ? (int) $section['hero_background_image_id'] : 0;
+	if ($hero_bg_id === 0) {
+		$hero_bg_id = (int) get_post_thumbnail_id(get_queried_object_id());
+	}
 	if ($hero_bg_id === 0 && $placeholder_id) {
 		$hero_bg_id = (int) $placeholder_id;
 	}

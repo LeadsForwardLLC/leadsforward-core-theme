@@ -24,6 +24,13 @@
         "storage_format": "raw string"
       },
       {
+        "key": "hero_background_image_id",
+        "type": "image",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "integer (attachment ID)"
+      },
+      {
         "key": "variant",
         "type": "select",
         "expected_structure_if_list": "",
