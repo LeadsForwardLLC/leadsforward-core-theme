@@ -692,7 +692,7 @@ function lf_ops_render_global_settings_page(): void {
 								<th scope="row"><label for="lf_ai_airtable_reviews_view"><?php esc_html_e('Reviews view', 'leadsforward-core'); ?></label></th>
 								<td>
 									<input type="text" class="regular-text" name="lf_ai_airtable_reviews_view" id="lf_ai_airtable_reviews_view" value="<?php echo esc_attr((string) ($airtable_reviews['view'] ?? '')); ?>" />
-									<p class="description"><?php esc_html_e('Optional. Useful if you sync reviews from another base into a filtered view.', 'leadsforward-core'); ?></p>
+									<p class="description"><?php esc_html_e('Optional. Airtable view name only (not a field/column). Leave blank to use the table default.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>

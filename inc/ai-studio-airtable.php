@@ -94,6 +94,13 @@ function lf_ai_studio_airtable_get_settings(): array {
 	$view = (string) get_option('lf_ai_airtable_view', 'Global Sync View (ACTIVE)');
 	$review_table = (string) get_option('lf_ai_airtable_reviews_table', 'Reviews');
 	$review_view = (string) get_option('lf_ai_airtable_reviews_view', '');
+	$default_review_project = (string) ($review_defaults['review_project'] ?? '');
+	if (($normalized_review_map['review_project'] ?? '') === 'Project' && $default_review_project !== '' && $default_review_project !== 'Project') {
+		$normalized_review_map['review_project'] = $default_review_project;
+	}
+	if ($review_view !== '' && ($normalized_review_map['review_project'] ?? '') !== '' && $review_view === $normalized_review_map['review_project']) {
+		$review_view = '';
+	}
 
 	return [
 		'enabled' => get_option('lf_ai_airtable_enabled', '0') === '1',
