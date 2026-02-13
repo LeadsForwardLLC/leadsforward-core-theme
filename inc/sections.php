@@ -289,9 +289,10 @@ function lf_sections_registry(): array {
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Clear pricing, fast response, and workmanship you can trust.', 'leadsforward-core')],
 				// Added for density expansion – vNext
 				['key' => 'section_intro_secondary', 'label' => __('Secondary intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
-				['key' => 'benefits_items', 'label' => __('Benefits (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Fast response windows' . "\n" . 'Licensed, insured professionals' . "\n" . 'Upfront pricing before work starts', 'leadsforward-core')],
-				['key' => 'benefits_title_word_limit', 'label' => __('Benefit title word limit', 'leadsforward-core'), 'type' => 'number', 'default' => '5'],
-				['key' => 'benefits_body_word_limit', 'label' => __('Benefit body word limit', 'leadsforward-core'), 'type' => 'number', 'default' => '14'],
+				['key' => 'benefits_items', 'label' => __('Benefits (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Fast response windows || Clear arrival times and quick follow-up after you reach out.' . "\n" . 'Licensed, insured professionals || Fully vetted team backed by proper coverage and local reviews.' . "\n" . 'Upfront pricing before work starts || Detailed estimates so you always know the next step.', 'leadsforward-core')],
+				['key' => 'benefits_icon_overrides', 'label' => __('Benefit icons (one per line, optional icon slug)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
+				['key' => 'benefits_title_word_limit', 'label' => __('Benefit title word limit', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
+				['key' => 'benefits_body_word_limit', 'label' => __('Benefit body word limit', 'leadsforward-core'), 'type' => 'number', 'default' => '18'],
 				// Added for density expansion – vNext
 				['key' => 'benefits_supporting_points', 'label' => __('Supporting points (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 				// Added for density expansion – vNext
@@ -1078,6 +1079,12 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	$card_class = 'lf-benefits__card';
 	$title_limit = max(3, min(8, (int) ($settings['benefits_title_word_limit'] ?? 5)));
 	$body_limit = max(8, min(20, (int) ($settings['benefits_body_word_limit'] ?? 14)));
+	$default_items = lf_sections_benefits_default_items();
+	$icon_overrides = lf_sections_parse_lines((string) ($settings['benefits_icon_overrides'] ?? ''));
+	$icon_data = function_exists('lf_section_icon_data') ? lf_section_icon_data($settings, 'benefits') : ['enabled' => false];
+	$icon_enabled = !empty($icon_data['enabled']);
+	$icon_size = $icon_data['size'] ?? 'md';
+	$icon_color = $icon_data['color'] ?? 'primary';
 	$parsed_items = [];
 	foreach ($items as $item) {
 		$title_text = $item;
@@ -1101,13 +1108,6 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 		}
 		$title_text = trim($title_text);
 		$body_text = trim($body_text);
-		if ($body_text === '' && $title_text !== '') {
-			$words = preg_split('/\s+/', $title_text);
-			if (is_array($words) && count($words) > $title_limit) {
-				$title_text = implode(' ', array_slice($words, 0, $title_limit));
-				$body_text = implode(' ', array_slice($words, $title_limit));
-			}
-		}
 		$title_text = wp_trim_words($title_text, $title_limit, '');
 		$body_text = wp_trim_words($body_text, $body_limit, '');
 		$parsed_items[] = [
@@ -1121,19 +1121,31 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	while (count($parsed_items) < 3) {
 		$parsed_items[] = ['title' => '', 'body' => ''];
 	}
+	$used_icons = [];
 	lf_sections_render_shell_open('benefits', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	?>
 	<div class="lf-benefits">
 		<?php foreach ($parsed_items as $index => $item) : ?>
+			<?php if ($item['title'] === '' && isset($default_items[$index]['title'])) : ?>
+				<?php $item['title'] = (string) $default_items[$index]['title']; ?>
+			<?php endif; ?>
+			<?php if ($item['body'] === '') : ?>
+				<?php $item['body'] = lf_sections_benefits_supporting_text($item['title'], $index, $default_items); ?>
+			<?php endif; ?>
+			<?php $item['title'] = wp_trim_words($item['title'], $title_limit, ''); ?>
+			<?php $item['body'] = wp_trim_words($item['body'], $body_limit, ''); ?>
 			<div class="<?php echo esc_attr($card_class); ?>">
-				<?php $item_icon = function_exists('lf_sections_benefits_icon_markup') ? lf_sections_benefits_icon_markup($settings, (int) $index) : ''; ?>
-				<?php if ($item_icon) : ?>
-					<span class="lf-benefits__icon" aria-hidden="true"><?php echo $item_icon; ?></span>
+				<?php if ($icon_enabled) : ?>
+					<?php $icon_slug = lf_sections_benefits_pick_icon_slug($item, $icon_overrides, $used_icons, $index); ?>
+					<?php if ($icon_slug !== '' && function_exists('lf_icon')) : ?>
+						<?php $used_icons[] = $icon_slug; ?>
+						<span class="lf-benefits__icon" aria-hidden="true">
+							<?php echo lf_icon($icon_slug, ['class' => trim('lf-icon--' . $icon_size . ' lf-icon--' . $icon_color)]); ?>
+						</span>
+					<?php endif; ?>
 				<?php endif; ?>
 				<h3 class="lf-benefits__title"><?php echo esc_html($item['title']); ?></h3>
-				<?php if ($item['body'] !== '') : ?>
-					<p class="lf-benefits__desc"><?php echo esc_html($item['body']); ?></p>
-				<?php endif; ?>
+				<p class="lf-benefits__desc"><?php echo esc_html($item['body']); ?></p>
 			</div>
 		<?php endforeach; ?>
 	</div>
@@ -1141,39 +1153,70 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	lf_sections_render_shell_close();
 }
 
-function lf_sections_benefits_icon_markup(array $settings, int $index): string {
-	if (!function_exists('lf_icon') || !function_exists('lf_section_icon_data')) {
-		return '';
-	}
-	$data = lf_section_icon_data($settings, 'benefits');
-	if (empty($data['enabled'])) {
-		return '';
-	}
-	$size = $data['size'] ?? 'md';
-	$color = $data['color'] ?? 'primary';
-	$seed_slug = $data['slug'] ?? '';
-	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
-	$pool = function_exists('lf_icon_niche_pool') ? lf_icon_niche_pool($niche_slug) : [];
-	$pool = array_values(array_filter(array_unique($pool)));
-	if ($seed_slug !== '' && !in_array($seed_slug, $pool, true)) {
-		array_unshift($pool, $seed_slug);
-	}
-	if (count($pool) < 3 && function_exists('lf_icon_list')) {
-		foreach (lf_icon_list() as $slug) {
-			if (!in_array($slug, $pool, true)) {
-				$pool[] = $slug;
-			}
-			if (count($pool) >= 3) {
-				break;
-			}
+function lf_sections_benefits_default_items(): array {
+	return [
+		[
+			'title' => __('Fast response windows', 'leadsforward-core'),
+			'body' => __('Clear arrival times and quick follow-up after you reach out.', 'leadsforward-core'),
+		],
+		[
+			'title' => __('Licensed, insured professionals', 'leadsforward-core'),
+			'body' => __('Fully vetted team backed by proper coverage and local reviews.', 'leadsforward-core'),
+		],
+		[
+			'title' => __('Upfront pricing before work starts', 'leadsforward-core'),
+			'body' => __('Detailed estimates so you always know the next step.', 'leadsforward-core'),
+		],
+	];
+}
+
+function lf_sections_benefits_supporting_text(string $title, int $index, array $defaults = []): string {
+	$title_lower = strtolower($title);
+	$keyword_map = [
+		'price' => __('Upfront estimates and transparent pricing with no surprises.', 'leadsforward-core'),
+		'pricing' => __('Upfront estimates and transparent pricing with no surprises.', 'leadsforward-core'),
+		'transparent' => __('Upfront estimates and transparent pricing with no surprises.', 'leadsforward-core'),
+		'licensed' => __('Fully licensed, insured, and backed by local reviews.', 'leadsforward-core'),
+		'insured' => __('Fully licensed, insured, and backed by local reviews.', 'leadsforward-core'),
+		'response' => __('Fast scheduling with clear arrival windows and updates.', 'leadsforward-core'),
+		'fast' => __('Fast scheduling with clear arrival windows and updates.', 'leadsforward-core'),
+		'management' => __('Dedicated project manager and daily progress updates.', 'leadsforward-core'),
+		'quality' => __('Premium materials and craftsmanship you can see and feel.', 'leadsforward-core'),
+		'craft' => __('Premium materials and craftsmanship you can see and feel.', 'leadsforward-core'),
+		'warranty' => __('Backed by workmanship guarantees and reliable service.', 'leadsforward-core'),
+	];
+	foreach ($keyword_map as $keyword => $copy) {
+		if ($title_lower !== '' && strpos($title_lower, $keyword) !== false) {
+			return $copy;
 		}
 	}
-	if (empty($pool)) {
-		return '';
+	if (isset($defaults[$index]['body'])) {
+		return (string) $defaults[$index]['body'];
 	}
-	$slug = $pool[$index % count($pool)];
-	$classes = trim('lf-icon--' . $size . ' lf-icon--' . $color);
-	return lf_icon($slug, ['class' => $classes]);
+	return __('Clear communication, consistent quality, and a stress-free experience.', 'leadsforward-core');
+}
+
+function lf_sections_benefits_pick_icon_slug(array $item, array $overrides, array $used_icons, int $index): string {
+	$available = function_exists('lf_icon_list') ? lf_icon_list() : [];
+	$override = $overrides[$index] ?? '';
+	if ($override !== '' && in_array($override, $available, true) && !in_array($override, $used_icons, true)) {
+		return $override;
+	}
+	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
+	$pool = function_exists('lf_icon_niche_pool') ? lf_icon_niche_pool($niche_slug) : [];
+	$pool = array_values(array_filter(array_unique(array_merge($pool, $available))));
+	$pool = array_values(array_diff($pool, $used_icons));
+	$text = trim(($item['title'] ?? '') . ' ' . ($item['body'] ?? ''));
+	if (function_exists('lf_icon_slug_for_text')) {
+		$slug = lf_icon_slug_for_text($text, $pool);
+		if ($slug !== '') {
+			return $slug;
+		}
+	}
+	if (!empty($pool)) {
+		return $pool[$index % count($pool)];
+	}
+	return '';
 }
 
 function lf_sections_render_service_details(string $context, array $settings, \WP_Post $post): void {

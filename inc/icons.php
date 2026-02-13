@@ -52,17 +52,79 @@ function lf_icon_options(): array {
 function lf_icon_niche_pool(string $niche_slug): array {
 	switch ($niche_slug) {
 		case 'roofing':
-			return ['roof', 'shield', 'lightning', 'hammer'];
+			return ['roof', 'shield', 'hammer', 'check', 'star', 'clock'];
 		case 'plumbing':
-			return ['water-drop', 'wrench', 'pipe'];
+			return ['water-drop', 'pipe', 'wrench', 'shield', 'check', 'clock'];
 		case 'hvac':
-			return ['snowflake', 'flame', 'fan'];
+			return ['snowflake', 'flame', 'fan', 'shield', 'check', 'clock'];
 		case 'landscaping':
-			return ['leaf', 'tree', 'sun'];
+			return ['leaf', 'tree', 'sun', 'shield', 'check', 'clock'];
 		case 'general':
 		default:
-			return ['check', 'shield', 'star'];
+			return ['check', 'shield', 'star', 'clock', 'map-pin', 'home', 'calendar', 'phone'];
 	}
+}
+
+function lf_icon_keyword_map(): array {
+	return [
+		'fast' => 'lightning',
+		'quick' => 'lightning',
+		'response' => 'clock',
+		'schedule' => 'calendar',
+		'appointment' => 'calendar',
+		'licensed' => 'shield',
+		'insured' => 'shield',
+		'warranty' => 'shield',
+		'safe' => 'shield',
+		'price' => 'check',
+		'pricing' => 'check',
+		'upfront' => 'check',
+		'transparent' => 'check',
+		'quality' => 'star',
+		'craft' => 'hammer',
+		'expertise' => 'hammer',
+		'management' => 'check',
+		'local' => 'map-pin',
+		'nearby' => 'map-pin',
+		'home' => 'home',
+		'communication' => 'phone',
+		'support' => 'phone',
+		'repair' => 'wrench',
+		'maintenance' => 'wrench',
+		'water' => 'water-drop',
+		'leak' => 'pipe',
+		'plumbing' => 'pipe',
+		'roof' => 'roof',
+		'cool' => 'snowflake',
+		'heat' => 'flame',
+		'air' => 'fan',
+		'landscape' => 'leaf',
+		'tree' => 'tree',
+		'outdoor' => 'sun',
+	];
+}
+
+function lf_icon_slug_for_text(string $text, array $fallback_pool = []): string {
+	$text = strtolower(trim($text));
+	if ($text === '') {
+		return '';
+	}
+	$available = lf_icon_list();
+	foreach (lf_icon_keyword_map() as $keyword => $slug) {
+		if (strpos($text, $keyword) !== false && in_array($slug, $available, true)) {
+			return $slug;
+		}
+	}
+	$fallback_pool = array_values(array_filter(array_unique($fallback_pool)));
+	if (empty($fallback_pool)) {
+		return '';
+	}
+	foreach ($fallback_pool as $slug) {
+		if (in_array($slug, $available, true)) {
+			return $slug;
+		}
+	}
+	return '';
 }
 
 function lf_icon_default_for_section(string $section_id, string $niche_slug = ''): string {

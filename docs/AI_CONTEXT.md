@@ -89,6 +89,11 @@ This document keeps collaborating AI models and humans aligned on the current Le
 - Global Settings design preset syncs the variation profile (block variants + section order).
 - Optional design overrides can adjust typography, buttons, card styling, and spacing on top of presets.
 
+## Icon System
+
+- SVG icons live in `assets/icons` and are rendered via `inc/icons.php`.
+- Benefits cards select icons by keyword match with niche-aware pools and allow optional per-card overrides (`benefits_icon_overrides`).
+
 ## Section Rendering Updates
 
 - `content` section now renders heading + intro + body fields (no longer empty).

@@ -314,6 +314,13 @@
         "storage_format": "raw string (newline-delimited)"
       },
       {
+        "key": "benefits_icon_overrides",
+        "type": "list",
+        "expected_structure_if_list": "newline-delimited icon slugs; one per benefit card (optional)",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string (newline-delimited)"
+      },
+      {
         "key": "benefits_title_word_limit",
         "type": "number",
         "expected_structure_if_list": "",
