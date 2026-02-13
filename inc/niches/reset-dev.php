@@ -86,6 +86,16 @@ function lf_dev_reset_run(): void {
 		return;
 	}
 
+	$preserve_pages = [];
+	$privacy = get_page_by_path('privacy-policy', OBJECT, 'page');
+	if ($privacy instanceof \WP_Post) {
+		$preserve_pages[] = (int) $privacy->ID;
+	}
+	$terms = get_page_by_path('terms-of-service', OBJECT, 'page');
+	if ($terms instanceof \WP_Post) {
+		$preserve_pages[] = (int) $terms->ID;
+	}
+
 	$ids = get_option(LF_DEV_RESET_OPTION_IDS, []);
 	$ids = is_array($ids) ? $ids : [];
 
@@ -120,7 +130,18 @@ function lf_dev_reset_run(): void {
 		}
 	}
 
-	lf_dev_reset_delete_posts_by_type('page');
+	$pages = get_posts([
+		'post_type'      => 'page',
+		'post_status'    => 'any',
+		'posts_per_page' => -1,
+		'fields'         => 'ids',
+	]);
+	foreach ($pages as $id) {
+		if (in_array((int) $id, $preserve_pages, true)) {
+			continue;
+		}
+		wp_delete_post((int) $id, true);
+	}
 	lf_dev_reset_delete_posts_by_type('post');
 	lf_dev_reset_delete_posts_by_type('lf_service');
 	lf_dev_reset_delete_posts_by_type('lf_service_area');
@@ -193,8 +214,6 @@ function lf_dev_reset_run(): void {
 		update_field('lf_homepage_cta_ghl', '', 'option');
 		update_field('lf_homepage_cta_primary_type', '', 'option');
 	}
-	delete_option('lf_maps_api_key');
-	delete_option('lf_openai_api_key');
 	delete_option('lf_site_seed');
 	delete_option('lf_site_manifest');
 	delete_option('lf_ai_last_generation_log');

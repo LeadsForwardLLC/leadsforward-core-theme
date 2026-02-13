@@ -183,6 +183,10 @@ This keeps the site consistent, fast, and safe.
 - Use “Reset” only when you want a clean start.
 - If you need a change, update settings — do not edit templates.
 
+Reset preservation:
+- API keys and Airtable settings are preserved.
+- Privacy Policy and Terms pages are preserved.
+
 ---
 
 Append‑Only Change Log
