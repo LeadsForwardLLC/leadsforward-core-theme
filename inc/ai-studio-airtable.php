@@ -490,10 +490,8 @@ function lf_ai_studio_airtable_fetch_reviews(
 		'base_id' => $base_id,
 		'table' => $resolved['table_id'],
 	]);
-	$formula = lf_ai_studio_airtable_reviews_filter_formula($project_name, $project_field);
 	$params = [
 		'pageSize' => 100,
-		'filterByFormula' => $formula,
 	];
 	$fields = lf_ai_studio_airtable_collect_review_fields($reviews_settings['fields']);
 	if (!empty($fields)) {
@@ -507,7 +505,11 @@ function lf_ai_studio_airtable_fetch_reviews(
 	if (!empty($response['error'])) {
 		return ['error' => $response['error']];
 	}
-	return ['records' => $response['data']['records'] ?? []];
+	$records = $response['data']['records'] ?? [];
+	if ($project_name !== '' && $project_field !== '') {
+		$records = lf_ai_studio_airtable_filter_reviews_by_project((array) $records, $project_name, $project_field);
+	}
+	return ['records' => $records];
 }
 
 function lf_ai_studio_airtable_reviews_filter_formula(string $project_name, string $project_field): string {
@@ -520,6 +522,46 @@ function lf_ai_studio_airtable_reviews_filter_formula(string $project_name, stri
 		$field,
 		$needle,
 	);
+}
+
+function lf_ai_studio_airtable_filter_reviews_by_project(array $records, string $project_name, string $project_field): array {
+	$needle = strtolower(trim($project_name));
+	if ($needle === '') {
+		return $records;
+	}
+	$field = trim((string) $project_field);
+	$out = [];
+	foreach ($records as $record) {
+		$fields = is_array($record['fields'] ?? null) ? $record['fields'] : [];
+		if (!array_key_exists($field, $fields)) {
+			continue;
+		}
+		$value = $fields[$field];
+		$match = false;
+		if (is_array($value)) {
+			foreach ($value as $item) {
+				if (strtolower(trim((string) $item)) === $needle) {
+					$match = true;
+					break;
+				}
+			}
+		} else {
+			$raw = trim((string) $value);
+			if ($raw !== '') {
+				$parts = array_map('trim', explode(',', $raw));
+				foreach ($parts as $part) {
+					if (strtolower($part) === $needle) {
+						$match = true;
+						break;
+					}
+				}
+			}
+		}
+		if ($match) {
+			$out[] = $record;
+		}
+	}
+	return $out;
 }
 
 function lf_ai_studio_airtable_collect_review_fields(array $field_map): array {
