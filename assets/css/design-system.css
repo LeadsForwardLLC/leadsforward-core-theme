@@ -1988,7 +1988,7 @@ button:focus-visible,
 .lf-block-hero__bg {
 	position: absolute;
 	inset: 0;
-	background-image: var(--lf-hero-bg-image, none), var(--lf-hero-bg-gradient);
+	background-image: var(--lf-hero-bg-overlay, none), var(--lf-hero-bg-image, none), var(--lf-hero-bg-gradient);
 	background-size: var(--lf-hero-bg-size, cover);
 	background-position: center;
 	background-repeat: var(--lf-hero-bg-repeat, no-repeat);
@@ -2333,6 +2333,11 @@ button:focus-visible,
 
 .lf-block-hero--c .lf-block-hero__bg {
 	background: linear-gradient(120deg, rgba(37, 99, 235, 0.15) 0%, rgba(14, 165, 233, 0.15) 100%), #f8fafc;
+}
+
+.lf-block-hero.lf-block-hero--has-bg .lf-block-hero__bg {
+	background-image: var(--lf-hero-bg-overlay, none), var(--lf-hero-bg-image, none);
+	opacity: 1;
 }
 
 /* Hero variants: distinct layouts */

@@ -201,8 +201,28 @@ if (!$secondary_enabled) {
 $show_cta_group = ($cta_text !== '' || $secondary_text !== '');
 $placeholder_id = function_exists('lf_get_placeholder_image_id') ? lf_get_placeholder_image_id() : 0;
 $placeholder_alt = $business_name ? $business_name : __('Trusted local service', 'leadsforward-core');
+$hero_bg_id = 0;
+if (is_singular()) {
+	$hero_bg_id = (int) get_post_thumbnail_id(get_the_ID());
+}
+if ($hero_bg_id === 0 && $placeholder_id) {
+	$hero_bg_id = (int) $placeholder_id;
+}
+$hero_bg_url = $hero_bg_id ? wp_get_attachment_image_url($hero_bg_id, 'full') : '';
+$hero_bg_class = '';
+$hero_bg_style = '';
+if ($hero_bg_url && $variant !== 'c') {
+	$hero_bg_overlay = $variant === 'a' ? '0.45' : '0.82';
+	$hero_bg_class = ' lf-block-hero--has-bg';
+	$hero_bg_style = sprintf(
+		'--lf-hero-bg-image: url(\'%s\'); --lf-hero-bg-overlay: linear-gradient(0deg, rgba(255, 255, 255, %s), rgba(255, 255, 255, %s));',
+		esc_url($hero_bg_url),
+		$hero_bg_overlay,
+		$hero_bg_overlay
+	);
+}
 ?>
-<section class="lf-block lf-block-hero <?php echo esc_attr($bg_class ?: 'lf-surface-soft'); ?> lf-block-hero--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
+<section class="lf-block lf-block-hero <?php echo esc_attr($bg_class ?: 'lf-surface-soft'); ?> lf-block-hero--<?php echo esc_attr($variant); ?><?php echo esc_attr($hero_bg_class); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>"<?php echo $hero_bg_style !== '' ? ' style="' . esc_attr($hero_bg_style) . '"' : ''; ?>>
 	<div class="lf-block-hero__bg" aria-hidden="true"></div>
 	<div class="lf-block-hero__inner">
 		<?php if ($variant === 'internal') : ?>
