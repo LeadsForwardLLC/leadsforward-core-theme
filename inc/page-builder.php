@@ -114,6 +114,9 @@ function lf_pb_default_config(string $context): array {
 function lf_pb_get_post_config(int $post_id, string $context): array {
 	$default = lf_pb_default_config($context);
 	$stored = get_post_meta($post_id, LF_PB_META_KEY, true);
+	if (is_array($stored)) {
+		$stored = wp_unslash($stored);
+	}
 	if (!is_array($stored) || empty($stored)) {
 		return $default;
 	}

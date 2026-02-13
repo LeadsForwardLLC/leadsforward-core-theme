@@ -303,6 +303,9 @@ function lf_homepage_apply_niche_config(string $niche_slug, ?array $wizard_data 
  */
 function lf_get_homepage_section_config(): array {
 	$stored = get_option(LF_HOMEPAGE_CONFIG_OPTION, null);
+	if (is_array($stored)) {
+		$stored = wp_unslash($stored);
+	}
 	if (is_array($stored) && !empty($stored)) {
 		$config = lf_homepage_merge_config_with_defaults($stored);
 		$manual = (bool) get_option(LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION, false);

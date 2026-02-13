@@ -1075,7 +1075,6 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
 	$items = lf_sections_parse_lines((string) ($settings['benefits_items'] ?? ''));
-	$item_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'benefits', 'list', 'lf-benefits__icon') : '';
 	$card_class = 'lf-benefits__card';
 	$title_limit = max(3, min(8, (int) ($settings['benefits_title_word_limit'] ?? 5)));
 	$body_limit = max(8, min(20, (int) ($settings['benefits_body_word_limit'] ?? 14)));
@@ -1125,16 +1124,56 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	lf_sections_render_shell_open('benefits', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	?>
 	<div class="lf-benefits">
-		<?php foreach ($parsed_items as $item) : ?>
+		<?php foreach ($parsed_items as $index => $item) : ?>
 			<div class="<?php echo esc_attr($card_class); ?>">
-				<?php if ($item_icon) : ?><span class="lf-benefits__icon"><?php echo $item_icon; ?></span><?php endif; ?>
+				<?php $item_icon = function_exists('lf_sections_benefits_icon_markup') ? lf_sections_benefits_icon_markup($settings, (int) $index) : ''; ?>
+				<?php if ($item_icon) : ?>
+					<span class="lf-benefits__icon" aria-hidden="true"><?php echo $item_icon; ?></span>
+				<?php endif; ?>
 				<h3 class="lf-benefits__title"><?php echo esc_html($item['title']); ?></h3>
-				<p class="lf-benefits__desc"><?php echo $item['body'] !== '' ? esc_html($item['body']) : '&#8203;'; ?></p>
+				<?php if ($item['body'] !== '') : ?>
+					<p class="lf-benefits__desc"><?php echo esc_html($item['body']); ?></p>
+				<?php endif; ?>
 			</div>
 		<?php endforeach; ?>
 	</div>
 	<?php
 	lf_sections_render_shell_close();
+}
+
+function lf_sections_benefits_icon_markup(array $settings, int $index): string {
+	if (!function_exists('lf_icon') || !function_exists('lf_section_icon_data')) {
+		return '';
+	}
+	$data = lf_section_icon_data($settings, 'benefits');
+	if (empty($data['enabled'])) {
+		return '';
+	}
+	$size = $data['size'] ?? 'md';
+	$color = $data['color'] ?? 'primary';
+	$seed_slug = $data['slug'] ?? '';
+	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
+	$pool = function_exists('lf_icon_niche_pool') ? lf_icon_niche_pool($niche_slug) : [];
+	$pool = array_values(array_filter(array_unique($pool)));
+	if ($seed_slug !== '' && !in_array($seed_slug, $pool, true)) {
+		array_unshift($pool, $seed_slug);
+	}
+	if (count($pool) < 3 && function_exists('lf_icon_list')) {
+		foreach (lf_icon_list() as $slug) {
+			if (!in_array($slug, $pool, true)) {
+				$pool[] = $slug;
+			}
+			if (count($pool) >= 3) {
+				break;
+			}
+		}
+	}
+	if (empty($pool)) {
+		return '';
+	}
+	$slug = $pool[$index % count($pool)];
+	$classes = trim('lf-icon--' . $size . ' lf-icon--' . $color);
+	return lf_icon($slug, ['class' => $classes]);
 }
 
 function lf_sections_render_service_details(string $context, array $settings, \WP_Post $post): void {
