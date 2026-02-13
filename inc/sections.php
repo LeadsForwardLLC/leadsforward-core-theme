@@ -338,6 +338,8 @@ function lf_sections_registry(): array {
 				['key' => 'variant', 'label' => __('Hero layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'default', 'options' => lf_sections_hero_variant_options()],
 				['key' => 'hero_headline', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_subheadline', 'label' => __('Subheadline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
+				['key' => 'hero_proof_title', 'label' => __('Proof card title', 'leadsforward-core'), 'type' => 'text', 'default' => __('Why homeowners choose us', 'leadsforward-core')],
+				['key' => 'hero_proof_bullets', 'label' => __('Proof card bullets (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Fast response and clear pricing' . "\n" . 'Licensed, insured, and local' . "\n" . 'Clean work backed by warranty', 'leadsforward-core')],
 				// Added for density expansion – vNext
 				['key' => 'hero_supporting_text', 'label' => __('Supporting text', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				// Added for density expansion – vNext

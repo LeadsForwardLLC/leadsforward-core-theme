@@ -2350,7 +2350,7 @@ button:focus-visible,
 }
 
 .lf-block-hero--default .lf-hero-split__proof .lf-block-hero__card {
-	border-left: var(--lf-card-accent-left, 4px solid var(--lf-color-primary));
+	border-left: var(--lf-card-accent-left, 4px solid var(--lf-primary));
 }
 
 .lf-block-hero--a .lf-hero-stack {

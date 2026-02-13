@@ -191,6 +191,24 @@ if (post_type_exists('lf_testimonial')) {
 	}
 }
 $show_form_in_hero = $cta_type === 'form' && !empty($cta_resolved_for_type['ghl_embed']);
+$proof_default_title = __('Why homeowners choose us', 'leadsforward-core');
+$proof_default_items = [
+	__('Fast response and clear pricing', 'leadsforward-core'),
+	__('Licensed, insured, and local', 'leadsforward-core'),
+	__('Clean work backed by warranty', 'leadsforward-core'),
+];
+$proof_title = $section['hero_proof_title'] ?? $proof_default_title;
+$proof_bullets_raw = $section['hero_proof_bullets'] ?? '';
+$proof_items = function_exists('lf_sections_parse_lines')
+	? lf_sections_parse_lines((string) $proof_bullets_raw)
+	: preg_split('/\r\n|\r|\n/', (string) $proof_bullets_raw);
+$proof_items = array_values(array_filter(array_map('trim', is_array($proof_items) ? $proof_items : [])));
+if (empty($proof_items)) {
+	$proof_items = $proof_default_items;
+}
+if (count($proof_items) > 4) {
+	$proof_items = array_slice($proof_items, 0, 4);
+}
 
 if (!$primary_enabled) {
 	$cta_text = '';
@@ -413,11 +431,11 @@ if ($hero_bg_url && $hero_bg_mode === 'image' && $variant !== 'c') {
 							</div>
 						<?php else : ?>
 							<div class="lf-block-hero__card">
-								<div class="lf-block-hero__card-title"><?php esc_html_e('Why homeowners choose us', 'leadsforward-core'); ?></div>
+								<div class="lf-block-hero__card-title"><?php echo esc_html($proof_title ?: $proof_default_title); ?></div>
 								<ul class="lf-block-hero__card-list" role="list">
-									<li><?php esc_html_e('Fast response and clear pricing', 'leadsforward-core'); ?></li>
-									<li><?php esc_html_e('Licensed, insured, and local', 'leadsforward-core'); ?></li>
-									<li><?php esc_html_e('Clean work backed by warranty', 'leadsforward-core'); ?></li>
+									<?php foreach ($proof_items as $item) : ?>
+										<li><?php echo esc_html($item); ?></li>
+									<?php endforeach; ?>
 								</ul>
 							</div>
 						<?php endif; ?>
@@ -480,11 +498,11 @@ if ($hero_bg_url && $hero_bg_mode === 'image' && $variant !== 'c') {
 				</div>
 				<div class="lf-hero-split__proof">
 					<div class="lf-block-hero__card">
-						<div class="lf-block-hero__card-title"><?php esc_html_e('Why homeowners choose us', 'leadsforward-core'); ?></div>
+						<div class="lf-block-hero__card-title"><?php echo esc_html($proof_title ?: $proof_default_title); ?></div>
 						<ul class="lf-block-hero__card-list" role="list">
-							<li><?php esc_html_e('Fast response and clear pricing', 'leadsforward-core'); ?></li>
-							<li><?php esc_html_e('Licensed, insured, and local', 'leadsforward-core'); ?></li>
-							<li><?php esc_html_e('Clean work backed by warranty', 'leadsforward-core'); ?></li>
+							<?php foreach ($proof_items as $item) : ?>
+								<li><?php echo esc_html($item); ?></li>
+							<?php endforeach; ?>
 						</ul>
 					</div>
 				</div>

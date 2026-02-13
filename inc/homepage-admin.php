@@ -125,6 +125,8 @@ function lf_homepage_admin_save(): void {
 		if ($type === 'hero') {
 			$config[$type]['hero_headline'] = isset($_POST['lf_hp_hero_headline']) ? sanitize_text_field($_POST['lf_hp_hero_headline']) : '';
 			$config[$type]['hero_subheadline'] = isset($_POST['lf_hp_hero_subheadline']) ? sanitize_text_field($_POST['lf_hp_hero_subheadline']) : '';
+			$config[$type]['hero_proof_title'] = isset($_POST['lf_hp_hero_proof_title']) ? sanitize_text_field($_POST['lf_hp_hero_proof_title']) : '';
+			$config[$type]['hero_proof_bullets'] = isset($_POST['lf_hp_hero_proof_bullets']) ? sanitize_textarea_field(wp_unslash($_POST['lf_hp_hero_proof_bullets'])) : '';
 			$hero_bg_mode = isset($_POST['lf_hp_hero_bg_mode']) ? sanitize_text_field($_POST['lf_hp_hero_bg_mode']) : 'image';
 			$config[$type]['hero_background_mode'] = in_array($hero_bg_mode, ['color', 'image'], true) ? $hero_bg_mode : 'image';
 			$config[$type]['hero_background_image_id'] = isset($_POST['lf_hp_hero_bg_image_id']) ? absint($_POST['lf_hp_hero_bg_image_id']) : 0;
@@ -753,6 +755,14 @@ function lf_homepage_admin_render(): void {
 									<tr>
 										<th scope="row"><label for="lf_hp_hero_subheadline"><?php esc_html_e('Hero subheadline', 'leadsforward-core'); ?></label></th>
 										<td><input type="text" class="large-text" name="lf_hp_hero_subheadline" id="lf_hp_hero_subheadline" value="<?php echo esc_attr($sec['hero_subheadline'] ?? ''); ?>" /></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_hero_proof_title"><?php esc_html_e('Proof card title', 'leadsforward-core'); ?></label></th>
+										<td><input type="text" class="large-text" name="lf_hp_hero_proof_title" id="lf_hp_hero_proof_title" value="<?php echo esc_attr($sec['hero_proof_title'] ?? ''); ?>" /></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_hero_proof_bullets"><?php esc_html_e('Proof card bullets (one per line)', 'leadsforward-core'); ?></label></th>
+										<td><textarea class="large-text" name="lf_hp_hero_proof_bullets" id="lf_hp_hero_proof_bullets" rows="3"><?php echo esc_textarea($sec['hero_proof_bullets'] ?? ''); ?></textarea></td>
 									</tr>
 									<tr>
 										<th scope="row"><label for="lf_hp_hero_eyebrow_enabled"><?php esc_html_e('Trust badge enabled', 'leadsforward-core'); ?></label></th>
