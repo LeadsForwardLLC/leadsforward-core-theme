@@ -92,8 +92,9 @@ This document keeps collaborating AI models and humans aligned on the current Le
 
 ## Icon System
 
-- SVG icons live in `assets/icons` and are rendered via `inc/icons.php`.
-- Benefits cards select icons by keyword match with niche-aware pools and allow optional per-card overrides (`benefits_icon_overrides`).
+- Lucide SVGs are bundled into `assets/icons/sprite.svg` and rendered via `inc/icons/icon-render.php`.
+- Active icon pack resolves from `lf_active_icon_pack` (set by manifest scaffold; falls back to homepage niche).
+- Benefits cards select icons by keyword match with pack-aware pools and allow optional per-card overrides (`benefits_icon_overrides`).
 
 ## Section Rendering Updates
 

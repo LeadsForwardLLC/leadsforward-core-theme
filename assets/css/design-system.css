@@ -385,6 +385,11 @@ button:focus-visible,
 	width: 1em;
 	height: 1em;
 	display: inline-block;
+	stroke: currentColor;
+	fill: none;
+	stroke-width: var(--lf-icon-stroke, 2);
+	stroke-linecap: round;
+	stroke-linejoin: round;
 }
 
 .lf-icon--sm {

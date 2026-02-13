@@ -161,7 +161,7 @@
         "type": "select",
         "expected_structure_if_list": "",
         "expected_structure_if_richtext": "",
-        "storage_format": "raw string"
+        "storage_format": "raw string (lucide icon slug from sprite)"
       },
       {
         "key": "icon_position",

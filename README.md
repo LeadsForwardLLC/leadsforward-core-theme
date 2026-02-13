@@ -18,7 +18,7 @@ LeadsForward Core provides:
 - **Global settings & branding:** Logo + color tokens mapped to CSS variables (core, surface, text) and design presets synced to the variation profile, with optional design overrides
 - **Shared section registry:** Universal section definitions + defaults used by homepage and page builders
 - **Image system:** Media Library–only images with Unsplash placeholder seeding
-- **Icon system:** Heroicons inline SVGs with per-section controls + niche defaults
+- **Icon system:** Lucide SVG sprite with per-section controls + niche-based icon packs
 - **Homepage builder:** Drag/drop order, per-section toggles, backgrounds, and copy (Hero controls match Page Builder)
 - **Page Builder Framework:** Instance-based sections for core pages, posts, services, and service areas
 - **Navigation:** Header menu auto-built after setup with a non-clickable “More” dropdown plus Call Now and CTA actions

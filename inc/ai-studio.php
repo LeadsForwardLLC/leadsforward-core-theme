@@ -1382,6 +1382,9 @@ function lf_ai_studio_scaffold_manifest(array $manifest): array {
 	if (defined('LF_HOMEPAGE_NICHE_OPTION')) {
 		update_option(LF_HOMEPAGE_NICHE_OPTION, $data['niche_slug'], true);
 	}
+	if (!empty($data['niche_slug'])) {
+		update_option('lf_active_icon_pack', (string) $data['niche_slug'], true);
+	}
 	update_option('lf_homepage_city', (string) ($business['primary_city'] ?? $address_city), true);
 	update_option('lf_homepage_keywords', [
 		'primary' => (string) ($manifest['homepage']['primary_keyword'] ?? ''),

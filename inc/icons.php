@@ -1,6 +1,6 @@
 <?php
 /**
- * Icon system: Heroicons SVGs, inline rendering, and niche defaults.
+ * Icon system: Lucide sprite, packs, and section defaults.
  *
  * @package LeadsForward_Core
  * @since 0.1.0
@@ -11,6 +11,9 @@ declare(strict_types=1);
 if (!defined('ABSPATH')) {
 	exit;
 }
+
+require_once LF_THEME_DIR . '/inc/icons/icon-render.php';
+require_once LF_THEME_DIR . '/inc/icons/icon-packs.php';
 
 function lf_icon_seed(): string {
 	if (function_exists('lf_internal_link_seed')) {
@@ -24,21 +27,32 @@ function lf_icon_seed(): string {
 	return $seed;
 }
 
-function lf_icon_list(): array {
-	$dir = LF_THEME_DIR . '/assets/icons';
-	$files = glob($dir . '/*.svg');
-	if (!$files) {
-		return [];
+function lf_icon_aliases(): array {
+	return [
+		'lightning' => 'zap',
+		'water-drop' => 'droplet',
+		'roof' => 'home',
+	];
+}
+
+function lf_icon_normalize_slug(string $slug): string {
+	$slug = sanitize_title($slug);
+	$aliases = lf_icon_aliases();
+	if (isset($aliases[$slug])) {
+		return $aliases[$slug];
 	}
-	$slugs = array_map(function ($file) {
-		return basename((string) $file, '.svg');
-	}, $files);
+	return $slug;
+}
+
+function lf_icon_list(): array {
+	$slugs = function_exists('lf_icon_pack_all_icons') ? lf_icon_pack_all_icons() : [];
 	$slugs = array_filter(array_map('sanitize_title', $slugs));
 	$slugs = array_values(array_filter($slugs, function ($slug) {
 		return strpos((string) $slug, 'social-') !== 0;
 	}));
+	$slugs = array_values(array_unique($slugs));
 	sort($slugs);
-	return array_values($slugs);
+	return $slugs;
 }
 
 function lf_icon_options(): array {
@@ -50,25 +64,14 @@ function lf_icon_options(): array {
 }
 
 function lf_icon_niche_pool(string $niche_slug): array {
-	switch ($niche_slug) {
-		case 'roofing':
-			return ['roof', 'shield', 'hammer', 'check', 'star', 'clock'];
-		case 'plumbing':
-			return ['water-drop', 'pipe', 'wrench', 'shield', 'check', 'clock'];
-		case 'hvac':
-			return ['snowflake', 'flame', 'fan', 'shield', 'check', 'clock'];
-		case 'landscaping':
-			return ['leaf', 'tree', 'sun', 'shield', 'check', 'clock'];
-		case 'general':
-		default:
-			return ['check', 'shield', 'star', 'clock', 'map-pin', 'home', 'calendar', 'phone'];
-	}
+	$pack = function_exists('lf_icon_pack_slug_for_niche') ? lf_icon_pack_slug_for_niche($niche_slug) : 'general';
+	return function_exists('lf_icon_pack_pool') ? lf_icon_pack_pool($pack) : [];
 }
 
 function lf_icon_keyword_map(): array {
 	return [
-		'fast' => 'lightning',
-		'quick' => 'lightning',
+		'fast' => 'zap',
+		'quick' => 'zap',
 		'response' => 'clock',
 		'schedule' => 'calendar',
 		'appointment' => 'calendar',
@@ -91,16 +94,19 @@ function lf_icon_keyword_map(): array {
 		'support' => 'phone',
 		'repair' => 'wrench',
 		'maintenance' => 'wrench',
-		'water' => 'water-drop',
+		'water' => 'droplet',
 		'leak' => 'pipe',
 		'plumbing' => 'pipe',
-		'roof' => 'roof',
+		'roof' => 'home',
 		'cool' => 'snowflake',
 		'heat' => 'flame',
 		'air' => 'fan',
 		'landscape' => 'leaf',
 		'tree' => 'tree',
 		'outdoor' => 'sun',
+		'electric' => 'zap',
+		'power' => 'plug',
+		'light' => 'lightbulb',
 	];
 }
 
@@ -111,6 +117,7 @@ function lf_icon_slug_for_text(string $text, array $fallback_pool = []): string 
 	}
 	$available = lf_icon_list();
 	foreach (lf_icon_keyword_map() as $keyword => $slug) {
+		$slug = lf_icon_normalize_slug($slug);
 		if (strpos($text, $keyword) !== false && in_array($slug, $available, true)) {
 			return $slug;
 		}
@@ -120,6 +127,7 @@ function lf_icon_slug_for_text(string $text, array $fallback_pool = []): string 
 		return '';
 	}
 	foreach ($fallback_pool as $slug) {
+		$slug = lf_icon_normalize_slug($slug);
 		if (in_array($slug, $available, true)) {
 			return $slug;
 		}
@@ -128,14 +136,23 @@ function lf_icon_slug_for_text(string $text, array $fallback_pool = []): string 
 }
 
 function lf_icon_default_for_section(string $section_id, string $niche_slug = ''): string {
-	$pool = lf_icon_niche_pool($niche_slug);
+	$pack = $niche_slug !== '' && function_exists('lf_icon_pack_slug_for_niche')
+		? lf_icon_pack_slug_for_niche($niche_slug)
+		: (function_exists('lf_icon_active_pack') ? lf_icon_active_pack() : 'general');
+	$icons = function_exists('lf_icon_pack_section_icons') ? lf_icon_pack_section_icons($section_id, $pack) : [];
+	$pool = function_exists('lf_icon_pack_pool') ? lf_icon_pack_pool($pack) : [];
+	if (!empty($icons)) {
+		$pool = $icons;
+	}
 	if (empty($pool)) {
 		return '';
 	}
 	$seed = lf_icon_seed();
-	$hash = crc32($seed . '|' . $niche_slug . '|' . $section_id);
+	$hash = crc32($seed . '|' . $pack . '|' . $section_id);
 	$index = (int) (abs($hash) % count($pool));
-	return $pool[$index] ?? '';
+	$slug = $pool[$index] ?? '';
+	$slug = lf_icon_normalize_slug($slug);
+	return in_array($slug, lf_icon_list(), true) ? $slug : '';
 }
 
 function lf_icon_default_settings(string $section_id, string $niche_slug = ''): array {
@@ -171,6 +188,7 @@ function lf_section_icon_data(array $settings, string $section_id): array {
 		$color = 'primary';
 	}
 	$slug = sanitize_title((string) ($settings['icon_slug'] ?? ''));
+	$slug = lf_icon_normalize_slug($slug);
 	$available = lf_icon_list();
 	if ($slug !== '' && !in_array($slug, $available, true)) {
 		$slug = '';
@@ -201,34 +219,4 @@ function lf_section_icon_markup(array $settings, string $section_id, string $pos
 	}
 	$classes = trim($extra_class . ' lf-icon--' . $data['size'] . ' lf-icon--' . $data['color']);
 	return lf_icon($data['slug'], ['class' => $classes]);
-}
-
-function lf_icon(string $icon_slug, array $args = []): string {
-	$slug = strtolower(trim($icon_slug));
-	if ($slug === '' || !preg_match('/^[a-z0-9-]+$/', $slug)) {
-		return '';
-	}
-	static $cache = [];
-	if (!array_key_exists($slug, $cache)) {
-		$path = LF_THEME_DIR . '/assets/icons/' . $slug . '.svg';
-		$cache[$slug] = is_readable($path) ? file_get_contents($path) : '';
-	}
-	$svg = $cache[$slug];
-	if (!is_string($svg) || $svg === '') {
-		return '';
-	}
-	$class = 'lf-icon';
-	if (!empty($args['class'])) {
-		$class .= ' ' . trim((string) $args['class']);
-	}
-	$aria_label = isset($args['aria_label']) ? trim((string) $args['aria_label']) : '';
-	$role = $aria_label !== '' ? 'img' : 'presentation';
-	$aria_hidden = $aria_label === '' ? 'true' : 'false';
-	$attributes = 'class="' . esc_attr($class) . '" role="' . esc_attr($role) . '" aria-hidden="' . esc_attr($aria_hidden) . '"';
-	if ($aria_label !== '') {
-		$attributes .= ' aria-label="' . esc_attr($aria_label) . '"';
-	}
-	$attributes .= ' focusable="false"';
-	$svg = preg_replace('/<svg\b([^>]*)>/i', '<svg$1 ' . $attributes . '>', $svg, 1);
-	return is_string($svg) ? $svg : '';
 }

@@ -1199,12 +1199,15 @@ function lf_sections_benefits_supporting_text(string $title, int $index, array $
 function lf_sections_benefits_pick_icon_slug(array $item, array $overrides, array $used_icons, int $index): string {
 	$available = function_exists('lf_icon_list') ? lf_icon_list() : [];
 	$override = $overrides[$index] ?? '';
+	if (function_exists('lf_icon_normalize_slug')) {
+		$override = lf_icon_normalize_slug($override);
+	}
 	if ($override !== '' && in_array($override, $available, true) && !in_array($override, $used_icons, true)) {
 		return $override;
 	}
-	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
-	$pool = function_exists('lf_icon_niche_pool') ? lf_icon_niche_pool($niche_slug) : [];
-	$pool = array_values(array_filter(array_unique(array_merge($pool, $available))));
+	$active_pack = function_exists('lf_icon_active_pack') ? lf_icon_active_pack() : 'general';
+	$pack_icons = function_exists('lf_icon_pack_section_icons') ? lf_icon_pack_section_icons('benefits', $active_pack) : [];
+	$pool = array_values(array_filter(array_unique(array_merge($pack_icons, $available))));
 	$pool = array_values(array_diff($pool, $used_icons));
 	$text = trim(($item['title'] ?? '') . ' ' . ($item['body'] ?? ''));
 	if (function_exists('lf_icon_slug_for_text')) {
