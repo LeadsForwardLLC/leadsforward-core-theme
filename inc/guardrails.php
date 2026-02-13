@@ -296,7 +296,7 @@ add_filter('acf/get_field_groups', function (array $groups): array {
  * Core CPTs that must not be permanently deleted. Trash allowed; permanent delete blocked.
  */
 function lf_protected_post_types(): array {
-	return ['lf_service', 'lf_service_area', 'lf_testimonial', 'lf_faq'];
+	return ['lf_service', 'lf_service_area', 'lf_project', 'lf_testimonial', 'lf_faq'];
 }
 
 /**

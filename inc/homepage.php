@@ -26,7 +26,7 @@ const LF_HOMEPAGE_ORDER_OPTION = 'lf_homepage_section_order';
 const LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION = 'lf_homepage_manual_override';
 
 /**
- * Recommended default order: Hero → Trust → Benefits → Services → Media → Process → FAQ → CTA → Links → Areas + Map.
+ * Recommended default order: Hero → Trust → Services → Projects → Benefits → Media → Process → FAQ → Links → Areas + Map → CTA.
  * Drag-and-drop order is stored in options and always respected.
  *
  * @return string[]
@@ -122,6 +122,9 @@ function lf_homepage_default_section_config(string $section_type, string $niche_
 	if (!empty($defaults)) {
 		$config = array_merge($base, $defaults);
 		if (in_array($section_type, ['content_image', 'image_content'], true)) {
+			$config['enabled'] = false;
+		}
+		if ($section_type === 'project_gallery') {
 			$config['enabled'] = false;
 		}
 		if ($section_type === 'hero') {

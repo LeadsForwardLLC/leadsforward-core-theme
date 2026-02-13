@@ -13,6 +13,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 - **Section registry**: `inc/sections.php`
 - **Homepage builder config/order**: `inc/homepage.php`
 - **Page builder**: `inc/page-builder.php`
+- **Project gallery**: `inc/projects.php`, `inc/cpt/projects.php`, `archive-lf_project.php`, `single-lf_project.php`
 - **AI Studio orchestration**: `inc/ai-studio.php`
 - **SEO system**: `inc/seo/`
 - **Manifest schema**: `docs/MANIFEST_SCHEMA.md`
@@ -47,7 +48,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 
 ## Reset Behavior (Dev)
 
-- Reset wipes pages, posts, CPTs (services, service areas, FAQs, testimonials, AI jobs), manifest, keywords, and generation logs.
+- Reset wipes pages, posts, CPTs (services, service areas, projects, FAQs, testimonials, AI jobs), manifest, keywords, and generation logs.
 - AI Studio settings **persist** (enable flag, webhook URL, shared secret).
 - Triggered from Setup Wizard → Advanced settings (dev‑only visibility).
 - Site title/description are cleared to remove business evidence.
@@ -67,6 +68,7 @@ This document keeps collaborating AI models and humans aligned on the current Le
 
 - Services are derived from Airtable keyword pools when JSON services are missing.
 - Niche terms are preserved/added to keep service titles specific.
+- Niche slugs are validated against `lf_get_niche_registry()` and normalized via `lf_niche_slug_aliases()`.
 
 ## Internal Linking
 

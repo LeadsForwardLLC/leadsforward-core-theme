@@ -103,6 +103,24 @@ function lf_seo_render_sitemap(): void {
 		}
 	}
 
+	if (post_type_exists('lf_project') && apply_filters('lf_seo_include_projects', true)) {
+		$projects = get_posts([
+			'post_type' => 'lf_project',
+			'post_status' => 'publish',
+			'posts_per_page' => -1,
+			'orderby' => 'date',
+			'order' => 'DESC',
+			'no_found_rows' => true,
+		]);
+		foreach ($projects as $project) {
+			if (lf_seo_post_noindexed((int) $project->ID)) {
+				continue;
+			}
+			$lastmod = get_post_modified_time('c', true, $project);
+			lf_seo_add_sitemap_url($urls, get_permalink($project), $lastmod ?: $now);
+		}
+	}
+
 	if (!empty($settings['sitemap']['include_posts'])) {
 		$posts = get_posts([
 			'post_type' => 'post',

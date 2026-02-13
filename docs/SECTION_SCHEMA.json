@@ -2280,6 +2280,88 @@
     ]
   },
   {
+    "section_type": "project_gallery",
+    "fields": [
+      {
+        "key": "section_background",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "section_heading",
+        "type": "text",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "section_intro",
+        "type": "textarea",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "projects_per_page",
+        "type": "number",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "numeric string"
+      },
+      {
+        "key": "project_show_filters",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "project_show_before_after",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "icon_enabled",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "icon_slug",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "icon_position",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "icon_size",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      },
+      {
+        "key": "icon_color",
+        "type": "select",
+        "expected_structure_if_list": "",
+        "expected_structure_if_richtext": "",
+        "storage_format": "raw string"
+      }
+    ]
+  },
+  {
     "section_type": "map_nap",
     "fields": [
       {

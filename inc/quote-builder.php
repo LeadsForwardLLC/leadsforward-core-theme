@@ -229,6 +229,331 @@ function lf_quote_builder_service_options(?string $niche_slug = null): array {
 function lf_quote_builder_niche_fields(?string $niche_slug = null): array {
 	$fields = [];
 	$niche = $niche_slug ? (string) $niche_slug : (string) get_option('lf_homepage_niche_slug', 'general');
+	$niche_data = function_exists('lf_get_niche') ? lf_get_niche($niche) : null;
+	$layout_profile = is_array($niche_data) ? (string) ($niche_data['layout_profile'] ?? '') : '';
+	$project_fields = [
+		[
+			'key' => 'project_scope',
+			'label' => __('Project scope', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Full project', 'leadsforward-core'),
+				__('Partial update', 'leadsforward-core'),
+				__('Repair', 'leadsforward-core'),
+				__('New build', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+		[
+			'key' => 'project_timeline_priority',
+			'label' => __('Timeline priority', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('As soon as possible', 'leadsforward-core'),
+				__('1-3 months', 'leadsforward-core'),
+				__('3-6 months', 'leadsforward-core'),
+				__('Just researching', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$cleaning_fields = [
+		[
+			'key' => 'property_type',
+			'label' => __('Property type', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Residential', 'leadsforward-core'),
+				__('Commercial', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+		[
+			'key' => 'area_size',
+			'label' => __('Area size', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Small', 'leadsforward-core'),
+				__('Medium', 'leadsforward-core'),
+				__('Large', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+		[
+			'key' => 'last_service',
+			'label' => __('When was it last serviced?', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Within 6 months', 'leadsforward-core'),
+				__('1-2 years ago', 'leadsforward-core'),
+				__('3+ years ago', 'leadsforward-core'),
+				__('Not sure', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$water_fields = [
+		[
+			'key' => 'water_issue',
+			'label' => __('Issue type', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Leak or seepage', 'leadsforward-core'),
+				__('Flooding', 'leadsforward-core'),
+				__('Foundation cracks', 'leadsforward-core'),
+				__('Moisture or mold', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+		[
+			'key' => 'water_urgency',
+			'label' => __('Urgency', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Emergency', 'leadsforward-core'),
+				__('Within 1-2 weeks', 'leadsforward-core'),
+				__('Within a month', 'leadsforward-core'),
+				__('Just researching', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$electrical_fields = [
+		[
+			'key' => 'electrical_service',
+			'label' => __('Service type', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Repair', 'leadsforward-core'),
+				__('Installation', 'leadsforward-core'),
+				__('Upgrade', 'leadsforward-core'),
+				__('Not sure', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+		[
+			'key' => 'electrical_issue',
+			'label' => __('Issue type', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Outlets or switches', 'leadsforward-core'),
+				__('Lighting', 'leadsforward-core'),
+				__('Panel or breaker', 'leadsforward-core'),
+				__('Wiring', 'leadsforward-core'),
+				__('Other', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$pest_fields = [
+		[
+			'key' => 'pest_type',
+			'label' => __('Pest type', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Ants', 'leadsforward-core'),
+				__('Roaches', 'leadsforward-core'),
+				__('Rodents', 'leadsforward-core'),
+				__('Termites', 'leadsforward-core'),
+				__('Other', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+		[
+			'key' => 'pest_frequency',
+			'label' => __('Service preference', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('One-time treatment', 'leadsforward-core'),
+				__('Ongoing prevention', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$pool_build_fields = [
+		[
+			'key' => 'pool_type',
+			'label' => __('Pool type', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('In-ground', 'leadsforward-core'),
+				__('Above-ground', 'leadsforward-core'),
+				__('Not sure', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+		[
+			'key' => 'pool_scope',
+			'label' => __('Project scope', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('New build', 'leadsforward-core'),
+				__('Resurface/renovate', 'leadsforward-core'),
+				__('Equipment upgrade', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$pool_service_fields = [
+		[
+			'key' => 'pool_service_need',
+			'label' => __('Service need', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Weekly maintenance', 'leadsforward-core'),
+				__('Chemical balance', 'leadsforward-core'),
+				__('Equipment repair', 'leadsforward-core'),
+				__('Open/close', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$cleanup_fields = [
+		[
+			'key' => 'load_size',
+			'label' => __('Load size', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('A few items', 'leadsforward-core'),
+				__('One room', 'leadsforward-core'),
+				__('Multiple rooms', 'leadsforward-core'),
+				__('Whole property', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+		[
+			'key' => 'material_type',
+			'label' => __('Material type', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Household items', 'leadsforward-core'),
+				__('Construction debris', 'leadsforward-core'),
+				__('Yard waste', 'leadsforward-core'),
+				__('Mixed', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$vehicle_fields = [
+		[
+			'key' => 'vehicle_type',
+			'label' => __('Vehicle type', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('RV', 'leadsforward-core'),
+				__('Boat', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+		[
+			'key' => 'vehicle_service',
+			'label' => __('Service type', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Inspection', 'leadsforward-core'),
+				__('Repair', 'leadsforward-core'),
+				__('Detailing', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$snow_fields = [
+		[
+			'key' => 'snow_property_type',
+			'label' => __('Property type', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Residential', 'leadsforward-core'),
+				__('Commercial', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+		[
+			'key' => 'snow_frequency',
+			'label' => __('Service frequency', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Per snowfall', 'leadsforward-core'),
+				__('Seasonal contract', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$solar_fields = [
+		[
+			'key' => 'solar_service',
+			'label' => __('Service type', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('New installation', 'leadsforward-core'),
+				__('System upgrade', 'leadsforward-core'),
+				__('Maintenance', 'leadsforward-core'),
+				__('Not sure', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+		[
+			'key' => 'roof_type',
+			'label' => __('Roof type', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Asphalt shingle', 'leadsforward-core'),
+				__('Metal', 'leadsforward-core'),
+				__('Tile', 'leadsforward-core'),
+				__('Flat/low-slope', 'leadsforward-core'),
+				__('Not sure', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$window_fields = [
+		[
+			'key' => 'window_project_type',
+			'label' => __('Project type', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Replacement', 'leadsforward-core'),
+				__('Repair', 'leadsforward-core'),
+				__('New install', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+		[
+			'key' => 'opening_count',
+			'label' => __('How many openings?', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('1-3', 'leadsforward-core'),
+				__('4-8', 'leadsforward-core'),
+				__('9+', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
 	$map = [
 		'roofing' => [
 			[
@@ -304,39 +629,32 @@ function lf_quote_builder_niche_fields(?string $niche_slug = null): array {
 				'default' => '',
 			],
 		],
-		'landscaping' => [
-			[
-				'key' => 'property_size',
-				'label' => __('Property size', 'leadsforward-core'),
-				'type' => 'choice',
-				'required' => false,
-				'options' => [
-					__('Small yard', 'leadsforward-core'),
-					__('Medium yard', 'leadsforward-core'),
-					__('Large property', 'leadsforward-core'),
-				],
-				'default' => '',
-			],
-		],
-		'power-washing' => [
-			[
-				'key' => 'surface_type',
-				'label' => __('Surface type', 'leadsforward-core'),
-				'type' => 'choice',
-				'required' => false,
-				'options' => [
-					__('House exterior', 'leadsforward-core'),
-					__('Roof', 'leadsforward-core'),
-					__('Driveway/sidewalk', 'leadsforward-core'),
-					__('Deck/patio', 'leadsforward-core'),
-					__('Other', 'leadsforward-core'),
-				],
-				'default' => '',
-			],
-		],
+		'electrical' => $electrical_fields,
+		'pest-control' => $pest_fields,
+		'pool-service' => $pool_service_fields,
+		'pool-building' => $pool_build_fields,
+		'pool-resurfacing' => $pool_build_fields,
+		'junk-removal' => $cleanup_fields,
+		'dumpster-rental' => $cleanup_fields,
+		'rv-repair' => $vehicle_fields,
+		'boat-detailing' => $vehicle_fields,
+		'snow-removal' => $snow_fields,
+		'water-damage' => $water_fields,
+		'waterproofing' => $water_fields,
+		'foundation-repair' => $water_fields,
+		'solar' => $solar_fields,
+		'windows-doors' => $window_fields,
+		'shower-doors' => $window_fields,
+		'siding' => $window_fields,
 	];
 	if (!empty($map[$niche])) {
 		$fields = $map[$niche];
+	} elseif (in_array($niche, ['air-duct-cleaning', 'carpet-cleaning', 'pressure-washing', 'power-washing', 'window-cleaning', 'gutter-services'], true)) {
+		$fields = $cleaning_fields;
+	} elseif (in_array($niche, ['tree-service', 'excavation', 'concrete-cutting', 'stamped-concrete', 'paving', 'masonry', 'landscaping', 'fencing', 'deck-building', 'lanais-patios'], true)) {
+		$fields = $project_fields;
+	} elseif ($layout_profile === 'project-heavy') {
+		$fields = $project_fields;
 	}
 	return apply_filters('lf_quote_builder_niche_fields', $fields, $niche);
 }

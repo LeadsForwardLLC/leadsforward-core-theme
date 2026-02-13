@@ -573,6 +573,9 @@ function lf_ops_render_global_settings_page(): void {
 							<td>
 								<select name="lf_homepage_niche_slug" id="lf_homepage_niche_slug">
 									<?php foreach ($niche_registry as $slug => $niche) :
+										if (!empty($niche['hidden'])) {
+											continue;
+										}
 										$name = is_array($niche) ? (string) ($niche['name'] ?? $slug) : (string) $slug;
 										?>
 										<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected($homepage_niche_slug === (string) $slug); ?>>

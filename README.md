@@ -13,7 +13,7 @@ Ultra-lightweight, SEO-first WordPress theme for local lead-gen sites. Built to 
 
 LeadsForward Core provides:
 
-- **Custom post types:** Services, Service Areas, Testimonials, FAQs (all REST-ready)
+- **Custom post types:** Services, Service Areas, Projects, Testimonials, FAQs (all REST-ready)
 - **Business Entity:** Single source of truth for NAP, phones, service areas, and schema
 - **Global settings & branding:** Logo + color tokens mapped to CSS variables (core, surface, text)
 - **Shared section registry:** Universal section definitions + defaults used by homepage and page builders
@@ -23,6 +23,7 @@ LeadsForward Core provides:
 - **Page Builder Framework:** Instance-based sections for core pages, posts, services, and service areas
 - **Navigation:** Header menu auto-built after setup with a non-clickable “More” dropdown plus Call Now and CTA actions
 - **Quote Builder:** Full-screen modal with multi-step flow, GHL webhook delivery, dynamic niche fields, and first-party analytics
+- **Project Gallery:** Projects CPT with before/after toggles, archive filters, and single templates
 - **AI Assistant (bounded):** Safe copy suggestions + field edits only (no layout/CSS changes)
 - **AI Studio:** Orchestrator-driven site content generation (no OpenAI keys stored) plus post-gen QA audit + one-pass auto-repair
 - **Server-rendered blocks:** Hero, Trust/Reviews, CTA, FAQ Accordion, Map+NAP
@@ -56,8 +57,8 @@ The full, non-technical build checklist lives here: `docs/SOP.md`.
 ```
 leadsforward-core-theme/
 ├── assets/
-│   ├── css/          # editor.css, variation-tokens.css, future front-end CSS
-│   ├── js/           # quote-builder.js, lf-section-sortable.js
+│   ├── css/          # editor.css, variation-tokens.css, projects.css, future front-end CSS
+│   ├── js/           # quote-builder.js, lf-section-sortable.js, project-gallery.js
 │   ├── icons/        # Local Heroicons SVGs (inline usage)
 │   └── images/
 ├── docs/             # SOP.md and product documentation
@@ -72,6 +73,7 @@ leadsforward-core-theme/
 │   ├── schema.php       # JSON-LD: LocalBusiness, Organization, WebSite, BreadcrumbList, Service, FAQPage, Review
 │   ├── images.php       # Placeholder images + media helpers
 │   ├── sections.php     # Shared section registry + renderers
+│   ├── projects.php     # Project gallery helpers (filters/cards/assets)
 │   ├── homepage.php     # Homepage config + CTA resolution
 │   ├── homepage-admin.php # Homepage builder UI
 │   ├── page-builder.php # Service + service area page builder UI + renderer
@@ -86,6 +88,7 @@ leadsforward-core-theme/
 │   │   ├── options-branding.php   # Branding colors (CSS vars)
 │   │   ├── options-variation.php  # Variation profile, copy template selects
 │   │   ├── field-group-service-area.php
+│   │   ├── field-group-project.php
 │   │   ├── field-group-testimonial.php
 │   │   └── field-group-faq.php
 │   ├── ai-editing/
@@ -103,6 +106,7 @@ leadsforward-core-theme/
 │   └── cpt/
 │       ├── services.php
 │       ├── service-areas.php
+│       ├── projects.php
 │       ├── testimonials.php
 │       └── faqs.php
 ├── templates/
@@ -340,6 +344,7 @@ Blocks receive optional `$block['context']` when rendered from the homepage (sec
 |-----|------|-----|
 | Service | `lf_service` | `/services/service-name/`; rendered by the Page Builder framework |
 | Service Area | `lf_service_area` | `/service-areas/city-name/`; rendered by the Page Builder framework |
+| Project | `lf_project` | `/projects/`; before/after media and gallery-driven project showcase |
 | Testimonial | `lf_testimonial` | Private; reviewer name, rating, review text, source (Google/Facebook/etc.) |
 | FAQ | `lf_faq` | `/faqs/`; question, answer, optional service/area association |
 

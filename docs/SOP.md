@@ -193,12 +193,17 @@ Append‑Only Change Log
 
 2026‑02‑11 — Global Settings now include niche, design preset, and Maps API key.
 
+2026‑02‑11 — Project Gallery CPT, niche list sync, and dynamic quote builder fields added.
+
 ---
 
 Niche Selection Addendum (Append‑Only)
 -------------------------------------
 When you select a niche in Global Settings → Business Entity, the system adds niche‑specific service pages in addition to the General pages.
 These are created automatically and pre‑configured with the Page Builder Framework.
+
+Niche list sync rule:
+- The dropdown is synced to Airtable’s niche list. Use the listed niches exactly; do not create custom slugs in Airtable.
 
 Roofing adds:
 - Roof Repair
@@ -225,6 +230,8 @@ Landscaping adds:
 - Hardscaping
 - Seasonal Cleanup
 
+Full niche list and default services live in `inc/niches/registry.php`.
+
 Operator customization rules:
 - You MAY reorder sections, edit copy, and toggle sections ON/OFF.
 - You MAY update branding, CTAs, and global business info.
@@ -236,6 +243,22 @@ Internal linking rules:
 - Service pages link to service areas (via the Map + Areas section).
 - Service areas link back to services (via Services Offered Here).
 - Homepage links to top services and areas (Related Links + Map section).
+
+---
+
+Project Gallery Addendum (Append‑Only)
+-------------------------------------
+Use Projects to showcase before/after transformations and work examples.
+
+Steps:
+- Add projects under **Projects** in the WP admin.
+- Assign a **Project Type** (used for filters).
+- Add **Before** and **After** images (optional but recommended).
+- Add a short excerpt for the archive cards; full details in the main editor.
+
+Notes:
+- The Projects archive lives at `/projects/`.
+- The Project Gallery section can be added to homepage or core pages.
 
 ---
 

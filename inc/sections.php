@@ -498,6 +498,19 @@ function lf_sections_registry(): array {
 			],
 			'render' => 'lf_sections_render_service_areas',
 		],
+		'project_gallery' => [
+			'label' => __('Project Gallery', 'leadsforward-core'),
+			'contexts' => ['homepage', 'page', 'service', 'service_area', 'post'],
+			'fields' => [
+				$bg_field,
+				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Our Projects', 'leadsforward-core')],
+				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Explore recent transformations and finished work.', 'leadsforward-core')],
+				['key' => 'projects_per_page', 'label' => __('Projects per page', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
+				['key' => 'project_show_filters', 'label' => __('Show filters', 'leadsforward-core'), 'type' => 'select', 'default' => '0', 'options' => lf_sections_toggle_options()],
+				['key' => 'project_show_before_after', 'label' => __('Show before/after toggle', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
+			],
+			'render' => 'lf_sections_render_project_gallery',
+		],
 		'blog_posts' => [
 			'label' => __('Blog Posts', 'leadsforward-core'),
 			'contexts' => ['page'],
@@ -582,6 +595,7 @@ function lf_sections_default_order(string $context): array {
 			'hero',
 			'trust_bar',
 			'service_intro',
+			'project_gallery',
 			'benefits',
 			'content_image_a',
 			'image_content_b',
@@ -1600,6 +1614,27 @@ function lf_sections_render_blog_posts(string $context, array $settings, \WP_Pos
 		wp_reset_postdata();
 	} else {
 		echo '<p>' . esc_html__('No posts yet.', 'leadsforward-core') . '</p>';
+	}
+	lf_sections_render_shell_close();
+}
+
+function lf_sections_render_project_gallery(string $context, array $settings, \WP_Post $post): void {
+	$title = $settings['section_heading'] ?? '';
+	$intro = $settings['section_intro'] ?? '';
+	$count = isset($settings['projects_per_page']) ? (int) $settings['projects_per_page'] : 6;
+	$count = max(1, min(12, $count));
+	$show_filters = (string) ($settings['project_show_filters'] ?? '0') === '1';
+	$show_before_after = (string) ($settings['project_show_before_after'] ?? '1') === '1';
+
+	lf_sections_render_shell_open('project-gallery', $title, $intro, $settings['section_background'] ?? 'light', $settings);
+	if (function_exists('lf_projects_render_gallery')) {
+		lf_projects_render_gallery([
+			'count' => $count,
+			'show_filters' => $show_filters,
+			'show_before_after' => $show_before_after,
+		]);
+	} else {
+		echo '<p>' . esc_html__('Project gallery is unavailable.', 'leadsforward-core') . '</p>';
 	}
 	lf_sections_render_shell_close();
 }

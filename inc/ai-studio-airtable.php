@@ -762,11 +762,15 @@ function lf_ai_studio_airtable_build_services_from_keywords(array $keywords, str
 function lf_ai_studio_airtable_resolve_niche_slug(string $niche, string $niche_slug): string {
 	$registry = function_exists('lf_get_niche_registry') ? lf_get_niche_registry() : [];
 	$valid = is_array($registry) ? array_keys($registry) : [];
+	$aliases = function_exists('lf_niche_slug_aliases') ? lf_niche_slug_aliases() : [];
 	$slug = '';
 	if ($niche_slug !== '') {
 		$slug = sanitize_title($niche_slug);
 	} elseif ($niche !== '') {
 		$slug = sanitize_title($niche);
+	}
+	if ($slug !== '' && isset($aliases[$slug])) {
+		$slug = (string) $aliases[$slug];
 	}
 	if ($slug !== '' && in_array($slug, $valid, true)) {
 		return $slug;

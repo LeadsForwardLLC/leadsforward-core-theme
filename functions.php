@@ -57,6 +57,7 @@ lf_load_inc('ai-studio-airtable.php');
 // Custom post types.
 lf_load_inc('cpt/services.php');
 lf_load_inc('cpt/service-areas.php');
+lf_load_inc('cpt/projects.php');
 lf_load_inc('cpt/testimonials.php');
 lf_load_inc('cpt/faqs.php');
 
@@ -69,8 +70,12 @@ lf_load_inc('acf/options-schema.php');
 lf_load_inc('acf/options-homepage.php');
 lf_load_inc('acf/options-variation.php');
 lf_load_inc('acf/field-group-service-area.php');
+lf_load_inc('acf/field-group-project.php');
 lf_load_inc('acf/field-group-testimonial.php');
 lf_load_inc('acf/field-group-faq.php');
+
+// Project gallery helpers.
+lf_load_inc('projects.php');
 
 // ACF blocks (server-rendered).
 lf_load_inc('blocks/register.php');

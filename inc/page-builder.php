@@ -79,7 +79,10 @@ function lf_pb_is_basic_page(\WP_Post $post): bool {
 }
 
 function lf_pb_default_config(string $context): array {
-	$order_types = lf_sections_default_order($context);
+	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
+	$order_types = function_exists('lf_niche_section_order')
+		? lf_niche_section_order($context, $niche_slug)
+		: lf_sections_default_order($context);
 	$sections = [];
 	$order = [];
 	$counts = [];

@@ -419,7 +419,7 @@ function lf_wizard_data_from_entity(): array {
 	$entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
 	$areas = is_array($entity['service_areas'] ?? null) ? $entity['service_areas'] : [];
 	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
-	return [
+	$blueprints = [
 		'niche_slug' => $niche_slug ?: 'general',
 		'business_name' => (string) ($entity['name'] ?? get_bloginfo('name')),
 		'business_phone' => (string) ($entity['phone_display'] ?? ''),
@@ -829,6 +829,10 @@ function lf_wizard_build_sitemap_body(array $created_pages): string {
 	if ($area_archive) {
 		$links[] = '<li><a href="' . esc_url($area_archive) . '">' . esc_html__('Service Areas Archive', 'leadsforward-core') . '</a></li>';
 	}
+	$project_archive = get_post_type_archive_link('lf_project');
+	if ($project_archive) {
+		$links[] = '<li><a href="' . esc_url($project_archive) . '">' . esc_html__('Projects Archive', 'leadsforward-core') . '</a></li>';
+	}
 
 	if (empty($links)) {
 		return '';
@@ -1143,6 +1147,29 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 	];
+
+	$layout_profile = (string) ($niche['layout_profile'] ?? '');
+	if ($layout_profile === 'project-heavy') {
+		foreach (['about-us', 'our-services'] as $slug) {
+			if (empty($blueprints[$slug])) {
+				continue;
+			}
+			$order = $blueprints[$slug]['order'] ?? [];
+			if (is_array($order) && !in_array('project_gallery', $order, true)) {
+				$cta_pos = array_search('cta', $order, true);
+				if ($cta_pos === false) {
+					$order[] = 'project_gallery';
+				} else {
+					array_splice($order, $cta_pos, 0, ['project_gallery']);
+				}
+				$blueprints[$slug]['order'] = $order;
+			}
+			$blueprints[$slug]['overrides']['project_gallery'] = [
+				'section_heading' => __('Our Projects', 'leadsforward-core'),
+				'section_intro' => __('Explore recent transformations and finished work.', 'leadsforward-core'),
+			];
+		}
+	}
 
 	return $blueprints;
 }
