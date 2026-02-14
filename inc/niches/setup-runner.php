@@ -997,7 +997,7 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'contact' => [
-			'order' => ['hero', 'map_nap', 'cta', 'trust_reviews'],
+			'order' => ['hero', 'map_nap', 'trust_reviews', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Contact ' . $business,

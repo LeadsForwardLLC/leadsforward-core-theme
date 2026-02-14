@@ -212,7 +212,8 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 
 	if ($context === 'page') {
 		$post = get_post($post_id);
-		if ($post && lf_pb_is_basic_page($post)) {
+		$post_slug = $post ? (string) $post->post_name : '';
+		if ($post && lf_pb_is_basic_page($post) && !in_array($post_slug, ['contact', 'reviews'], true)) {
 			$default_types = ['hero', 'content'];
 			foreach ($sections_out as $instance_id => $row) {
 				$type = $row['type'] ?? '';
@@ -234,8 +235,45 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 			}
 		}
 		if ($post) {
-			$slug = $post->post_name;
+			$slug = $post_slug;
 			if (in_array($slug, ['contact', 'reviews'], true)) {
+				if ($slug === 'contact') {
+					$required_contact_sections = ['map_nap', 'trust_reviews', 'cta'];
+					foreach ($required_contact_sections as $required_type) {
+						$has_required = false;
+						foreach ($sections_out as $row) {
+							if (($row['type'] ?? '') === $required_type) {
+								$has_required = true;
+								break;
+							}
+						}
+						if ($has_required) {
+							continue;
+						}
+						$settings = lf_sections_defaults_for($required_type);
+						if ($required_type === 'trust_reviews') {
+							$settings['trust_heading'] = __('Recent reviews', 'leadsforward-core');
+							$settings['trust_layout'] = 'grid';
+							$settings['trust_columns'] = 2;
+							$settings['trust_max_items'] = 2;
+							$settings['trust_show_summary'] = 0;
+							$settings['trust_show_source'] = 0;
+						}
+						$instance_index = 1;
+						$instance_id = lf_pb_instance_id($required_type, $instance_index);
+						while (isset($sections_out[$instance_id])) {
+							$instance_index++;
+							$instance_id = lf_pb_instance_id($required_type, $instance_index);
+						}
+						$sections_out[$instance_id] = [
+							'type' => $required_type,
+							'enabled' => true,
+							'deletable' => true,
+							'settings' => $settings,
+						];
+						$order_out[] = $instance_id;
+					}
+				}
 				$has_reviews = false;
 				foreach ($sections_out as $row) {
 					if (($row['type'] ?? '') === 'trust_reviews') {
@@ -273,7 +311,7 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 					if ($slug === 'contact') {
 						foreach ($order_out as $index => $id) {
 							$type = $sections_out[$id]['type'] ?? '';
-							if ($type === 'map_nap') {
+							if ($type === 'cta') {
 								array_splice($order_out, $index, 0, [$instance_id]);
 								$inserted = true;
 								break;
@@ -292,6 +330,31 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 					if (!$inserted) {
 						$order_out[] = $instance_id;
 					}
+				}
+				if ($slug === 'contact') {
+					$desired_order = ['hero', 'map_nap', 'trust_reviews', 'cta'];
+					$placed_ids = [];
+					$reordered = [];
+					foreach ($desired_order as $desired_type) {
+						foreach ($order_out as $id) {
+							if (isset($placed_ids[$id])) {
+								continue;
+							}
+							$type = $sections_out[$id]['type'] ?? '';
+							if ($type === $desired_type) {
+								$reordered[] = $id;
+								$placed_ids[$id] = true;
+								break;
+							}
+						}
+					}
+					foreach ($order_out as $id) {
+						if (isset($placed_ids[$id])) {
+							continue;
+						}
+						$reordered[] = $id;
+					}
+					$order_out = $reordered;
 				}
 			}
 			if (in_array($slug, ['about-us', 'about'], true)) {

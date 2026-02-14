@@ -159,7 +159,7 @@ if ($logo_text === '') {
 			submenuItems.forEach(function (item) {
 				var link = item.querySelector(':scope > a');
 				var moreToggle = item.querySelector(':scope > .site-header__more-toggle');
-				var toggleBtn = moreToggle || item.querySelector(':scope > .site-header__submenu-toggle');
+				var toggleBtn = item.querySelector(':scope > .site-header__submenu-toggle') || moreToggle;
 				if (!toggleBtn && link) {
 					toggleBtn = document.createElement('button');
 					toggleBtn.type = 'button';
@@ -171,17 +171,28 @@ if ($logo_text === '') {
 				}
 				if (!toggleBtn) return;
 				submenuToggles.push({ item: item, toggle: toggleBtn });
-				toggleBtn.addEventListener('click', function (event) {
+				var handleToggle = function (event) {
 					event.preventDefault();
 					submenuToggles.forEach(function (entry) {
 						if (entry.item === item) return;
 						entry.item.classList.remove('is-open');
 						entry.toggle.setAttribute('aria-expanded', 'false');
+						var entryMore = entry.item.querySelector(':scope > .site-header__more-toggle');
+						if (entryMore) {
+							entryMore.setAttribute('aria-expanded', 'false');
+						}
 					});
 					var open = !item.classList.contains('is-open');
 					item.classList.toggle('is-open', open);
 					toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-				});
+					if (moreToggle) {
+						moreToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+					}
+				};
+				toggleBtn.addEventListener('click', handleToggle);
+				if (moreToggle && moreToggle !== toggleBtn) {
+					moreToggle.addEventListener('click', handleToggle);
+				}
 			});
 		}
 		document.addEventListener('keydown', function (event) {

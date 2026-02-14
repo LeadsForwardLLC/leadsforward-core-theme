@@ -1522,16 +1522,9 @@ button:focus-visible,
 .site-header__more-toggle:focus-visible {
 	background: var(--lf-surface-soft);
 }
-
-/* More dropdown: desktop chevron matches menu-item-has-children > a::after */
-.site-header__menu .lf-menu-more .site-header__more-chevron {
-	display: inline;
-	width: auto;
-	height: auto;
+.site-header__menu .lf-menu-more > .site-header__more-toggle::after {
+	content: '▾';
 	margin-left: 0.35rem;
-	padding: 0;
-	border: none;
-	border-radius: 0;
 	font-size: 0.7rem;
 	opacity: 0.7;
 }
@@ -1722,20 +1715,25 @@ button:focus-visible,
 		border-bottom: 0;
 	}
 	/* Dropdown parents: same as regular links + chevron */
-	.site-header__menu .menu-item-has-children {
-		position: relative;
+	.site-header__menu .menu-item-has-children,
+	.site-header__menu .lf-menu-more {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
 	}
 	.site-header__menu .menu-item-has-children > a {
-		padding-right: 2.5rem;
+		flex: 1 1 auto;
+		padding-right: 0;
 	}
 	.site-header__menu .menu-item-has-children > a::after {
 		display: none;
 	}
+	.site-header__menu .lf-menu-more > .site-header__more-toggle::after {
+		content: '';
+	}
 	.site-header__submenu-toggle {
-		position: absolute;
-		right: 0;
-		top: 1.1rem;
-		transform: none;
+		position: static;
+		margin-left: 0.5rem;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -1756,36 +1754,18 @@ button:focus-visible,
 		transform: rotate(180deg);
 		display: inline-block;
 	}
-	/* More toggle: chevron matches submenu-toggle exactly (same bordered box) */
+	/* More toggle: same row behavior as regular parent links */
 	.site-header__menu .lf-menu-more .site-header__more-toggle {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
+		display: block;
+		flex: 1 1 auto;
 		width: 100%;
 		text-align: left;
 		padding-right: 0;
 	}
-	.site-header__menu .lf-menu-more .site-header__more-chevron {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 36px;
-		height: 36px;
-		margin-left: auto;
-		flex-shrink: 0;
-		background: transparent;
-		border: 1px solid rgba(15, 23, 42, 0.12);
-		border-radius: 0.5rem;
-		font-size: 0.85rem;
-		opacity: 0.9;
-		transition: transform 0.2s ease;
-	}
-	.site-header__menu .lf-menu-more.is-open .site-header__more-chevron {
-		transform: rotate(180deg);
-	}
 	/* Submenus: inline, no absolute positioning */
 	.site-header__menu .sub-menu {
 		display: none;
+		flex-basis: 100%;
 		list-style: none;
 		margin: 0;
 		padding: 0 0 0.5rem 0;
@@ -1815,6 +1795,11 @@ button:focus-visible,
 	.site-header__menu .lf-menu-more .site-header__more-toggle:hover,
 	.site-header__menu .lf-menu-more .site-header__more-toggle:focus-visible {
 		background: var(--lf-surface-soft);
+	}
+	.site-header__submenu-toggle:focus-visible,
+	.site-header__menu .lf-menu-more .site-header__more-toggle:focus-visible {
+		outline: none;
+		box-shadow: none;
 	}
 	/* Call Now + CTA: full-width block */
 	.site-header__menu .lf-menu-call {
@@ -2038,10 +2023,11 @@ button:focus-visible,
 }
 
 .lf-footer-col__title {
-	font-size: 0.8rem;
-	letter-spacing: 0.12em;
-	text-transform: uppercase;
-	margin: 0 0 0.75rem;
+	font-weight: 700;
+	font-size: 1.05rem;
+	letter-spacing: 0;
+	text-transform: none;
+	margin: 0 0 0.25rem;
 }
 
 .lf-footer-links {

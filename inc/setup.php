@@ -104,8 +104,10 @@ function lf_header_menu_item_output(string $item_output, \WP_Post $item, int $de
 		$item_output = $args->before
 			. '<button type="button" class="site-header__more-toggle" aria-haspopup="true" aria-expanded="false">'
 			. $args->link_before . '<span class="site-header__more-text">' . esc_html($title) . '</span>'
-			. '<span class="site-header__more-chevron" aria-hidden="true">▾</span>'
 			. $args->link_after
+			. '</button>'
+			. '<button type="button" class="site-header__submenu-toggle site-header__submenu-toggle--more" aria-expanded="false" aria-label="Toggle submenu">'
+			. '<span aria-hidden="true">▾</span>'
 			. '</button>'
 			. $args->after;
 	}
