@@ -46,7 +46,6 @@ if ($logo_text === '') {
 		</button>
 		<div class="site-header__panel" id="site-header-panel" aria-hidden="true">
 			<div class="site-header__panel-header">
-				<span class="site-header__panel-title"><?php esc_html_e('Menu', 'leadsforward-core'); ?></span>
 				<button class="site-header__close" type="button" aria-label="<?php esc_attr_e('Close menu', 'leadsforward-core'); ?>">✕</button>
 			</div>
 			<?php if ($has_header_menu) : ?>
@@ -135,19 +134,33 @@ if ($logo_text === '') {
 		if (panel) {
 			panel.addEventListener('click', function (event) {
 				var target = event.target;
-				if (target && target.tagName === 'A') {
+				if (!target) return;
+				var link = target.closest('a');
+				if (link && link.tagName === 'A') {
+					var parentItem = link.closest('.menu-item-has-children, .lf-menu-more');
+					var isTopLevelParent = parentItem && parentItem.parentElement && parentItem.parentElement.classList.contains('site-header__menu');
+					var isDirectLink = link.closest('.sub-menu') === null;
+					if (isTopLevelParent && isDirectLink) {
+						event.preventDefault();
+						var toggleBtn = parentItem.querySelector(':scope > .site-header__submenu-toggle, :scope > .site-header__more-toggle');
+						if (toggleBtn) toggleBtn.click();
+						return;
+					}
 					setOpen(false);
 				}
 			});
 		}
-		var submenuItems = header.querySelectorAll('.site-header__menu .menu-item-has-children');
+		/* Remove any submenu toggles incorrectly added to nested items (keeps chevron on parent only) */
+		header.querySelectorAll('.site-header__menu .sub-menu .menu-item .site-header__submenu-toggle').forEach(function (btn) {
+			btn.remove();
+		});
+		var submenuItems = header.querySelectorAll('.site-header__menu > .menu-item-has-children, .site-header__menu > .lf-menu-more');
 		if (submenuItems.length) {
 			submenuItems.forEach(function (item) {
 				var link = item.querySelector(':scope > a');
-				if (!link) return;
-				var existing = item.querySelector(':scope > .site-header__submenu-toggle');
-				var toggleBtn = existing;
-				if (!toggleBtn) {
+				var moreToggle = item.querySelector(':scope > .site-header__more-toggle');
+				var toggleBtn = moreToggle || item.querySelector(':scope > .site-header__submenu-toggle');
+				if (!toggleBtn && link) {
 					toggleBtn = document.createElement('button');
 					toggleBtn.type = 'button';
 					toggleBtn.className = 'site-header__submenu-toggle';
@@ -156,6 +169,7 @@ if ($logo_text === '') {
 					toggleBtn.innerHTML = '<span aria-hidden="true">▾</span>';
 					link.insertAdjacentElement('afterend', toggleBtn);
 				}
+				if (!toggleBtn) return;
 				submenuToggles.push({ item: item, toggle: toggleBtn });
 				toggleBtn.addEventListener('click', function (event) {
 					event.preventDefault();
