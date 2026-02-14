@@ -197,11 +197,22 @@
   background: #fff;
 }
 
-.lf-manifester-card .button {
+.lf-manifester-card .button,
+.lf-manifester-card + .card .button,
+.lf-manifester-card ~ .card .button {
+  min-height: 40px;
+  padding: 8px 14px;
   border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.lf-manifester-card .button.button-primary {
+.lf-manifester-card .button.button-primary,
+.lf-manifester-card ~ .card .button.button-primary {
   box-shadow: 0 8px 18px rgba(59, 130, 246, 0.15);
 }
 
@@ -237,8 +248,8 @@
 }
 
 .button-hero {
-  font-size: 1.05rem;
-  padding: 10px 18px;
+  font-size: 14px;
+  padding: 8px 14px;
 }
 
 .lf-manifester-progress {

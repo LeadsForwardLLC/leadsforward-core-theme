@@ -28,6 +28,7 @@ add_action('wp_ajax_lf_ai_studio_research_upload', 'lf_ai_studio_handle_research
 add_action('admin_post_lf_ai_studio_run_audit', 'lf_ai_studio_handle_run_audit');
 add_action('admin_post_lf_ai_studio_regen_blog_posts', 'lf_ai_studio_handle_regen_blog_posts');
 add_action('admin_post_lf_ai_studio_save_logo', 'lf_ai_studio_handle_save_logo');
+add_action('admin_post_lf_ai_studio_images_upload', 'lf_ai_studio_handle_images_upload');
 add_action('wp_ajax_lf_ai_studio_job_status', 'lf_ai_studio_job_status_ajax');
 add_action('admin_enqueue_scripts', 'lf_ai_studio_assets');
 
@@ -531,6 +532,55 @@ function lf_ai_studio_handle_save_logo(): void {
 	exit;
 }
 
+function lf_ai_studio_handle_images_upload(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
+	}
+	check_admin_referer('lf_ai_studio_images_upload', 'lf_ai_studio_images_upload_nonce');
+	if (empty($_FILES['lf_manifest_images']) || !is_array($_FILES['lf_manifest_images'])) {
+		wp_safe_redirect(add_query_arg('images_error', 'missing', admin_url('admin.php?page=lf-ops')));
+		exit;
+	}
+
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+	require_once ABSPATH . 'wp-admin/includes/media.php';
+
+	$files = $_FILES['lf_manifest_images'];
+	$uploaded = 0;
+	$errors = 0;
+	$count = is_array($files['name'] ?? null) ? count($files['name']) : 0;
+	for ($i = 0; $i < $count; $i++) {
+		$name = (string) ($files['name'][$i] ?? '');
+		if ($name === '') {
+			continue;
+		}
+		$file = [
+			'name' => $name,
+			'type' => (string) ($files['type'][$i] ?? ''),
+			'tmp_name' => (string) ($files['tmp_name'][$i] ?? ''),
+			'error' => (int) ($files['error'][$i] ?? UPLOAD_ERR_NO_FILE),
+			'size' => (int) ($files['size'][$i] ?? 0),
+		];
+		$attachment_id = media_handle_sideload($file, 0);
+		if (is_wp_error($attachment_id)) {
+			$errors++;
+			continue;
+		}
+		$uploaded++;
+	}
+	if ($uploaded > 0) {
+		lf_invalidate_media_index_cache();
+		lf_build_media_index();
+	}
+	$redirect = add_query_arg('images_uploaded', (string) $uploaded, admin_url('admin.php?page=lf-ops'));
+	if ($errors > 0) {
+		$redirect = add_query_arg('images_errors', (string) $errors, $redirect);
+	}
+	wp_safe_redirect($redirect);
+	exit;
+}
+
 function lf_ai_studio_render_page(): void {
 	if (!current_user_can('edit_theme_options')) {
 		return;
@@ -551,6 +601,9 @@ function lf_ai_studio_render_page(): void {
 	$audit_saved = isset($_GET['audit']) && $_GET['audit'] === '1';
 	$repair_queued = isset($_GET['job']) ? absint($_GET['job']) : 0;
 	$logo_saved = isset($_GET['logo']) && $_GET['logo'] === '1';
+	$images_uploaded = isset($_GET['images_uploaded']) ? absint($_GET['images_uploaded']) : 0;
+	$images_errors = isset($_GET['images_errors']) ? absint($_GET['images_errors']) : 0;
+	$images_error = isset($_GET['images_error']) ? sanitize_text_field(wp_unslash((string) $_GET['images_error'])) : '';
 	$audit_report = get_option('lf_ai_studio_last_audit', []);
 	$logo_id = function_exists('lf_get_global_option')
 		? (int) lf_get_global_option('lf_global_logo', 0)
@@ -586,6 +639,15 @@ function lf_ai_studio_render_page(): void {
 		<?php endif; ?>
 		<?php if ($logo_saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Logo saved and brand colors updated.', 'leadsforward-core'); ?></p></div>
+		<?php endif; ?>
+		<?php if ($images_uploaded > 0) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php echo esc_html(sprintf(_n('%d image uploaded to Media Library.', '%d images uploaded to Media Library.', $images_uploaded, 'leadsforward-core'), $images_uploaded)); ?></p></div>
+		<?php endif; ?>
+		<?php if ($images_errors > 0) : ?>
+			<div class="notice notice-warning"><p><?php echo esc_html(sprintf(_n('%d image failed to upload.', '%d images failed to upload.', $images_errors, 'leadsforward-core'), $images_errors)); ?></p></div>
+		<?php endif; ?>
+		<?php if ($images_error === 'missing') : ?>
+			<div class="notice notice-error"><p><?php esc_html_e('Please choose one or more images before uploading.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
 		<?php if ($repair_queued) : ?>
 			<div class="notice notice-info is-dismissible"><p><?php echo esc_html(sprintf(__('Repair job queued (#%d).', 'leadsforward-core'), $repair_queued)); ?></p></div>
@@ -744,6 +806,25 @@ function lf_ai_studio_render_page(): void {
 				<div class="lf-manifester-step">
 					<div class="lf-manifester-step__badge">4</div>
 					<div class="lf-manifester-step__content">
+						<h3><?php esc_html_e('Upload required images for auto-distribution', 'leadsforward-core'); ?></h3>
+						<p class="description"><?php esc_html_e('Upload your image library now so AI can deterministically assign hero/content/featured images during generation.', 'leadsforward-core'); ?></p>
+						<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+							<?php wp_nonce_field('lf_ai_studio_images_upload', 'lf_ai_studio_images_upload_nonce'); ?>
+							<input type="hidden" name="action" value="lf_ai_studio_images_upload" />
+							<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+								<input type="file" name="lf_manifest_images[]" class="lf-manifester-file" multiple accept="image/*" />
+								<button type="submit" class="button"><?php esc_html_e('Upload Images to Media Library', 'leadsforward-core'); ?></button>
+							</div>
+						</form>
+						<p class="description" style="margin-top:8px;">
+							<?php esc_html_e('Naming strategy examples: roof-repair-kansas-city-1.jpg, kitchen-remodel-sarasota-modern.jpg, bathroom-remodel-before-after.jpg, general-contractor-team.jpg. Include service + city + niche words in filenames for best matching.', 'leadsforward-core'); ?>
+						</p>
+					</div>
+				</div>
+
+				<div class="lf-manifester-step">
+					<div class="lf-manifester-step__badge">5</div>
+					<div class="lf-manifester-step__content">
 						<h3><?php esc_html_e('Upload your logo (optional)', 'leadsforward-core'); ?></h3>
 						<p class="description"><?php esc_html_e('Your logo sets the brand colors automatically, but you can skip it.', 'leadsforward-core'); ?></p>
 						<div class="lf-manifester-logo">
@@ -765,7 +846,7 @@ function lf_ai_studio_render_page(): void {
 				</div>
 
 				<div class="lf-manifester-step lf-manifester-step--action">
-					<div class="lf-manifester-step__badge">5</div>
+					<div class="lf-manifester-step__badge">6</div>
 					<div class="lf-manifester-step__content">
 						<h3><?php esc_html_e('Manifest your website', 'leadsforward-core'); ?></h3>
 						<p class="description"><?php esc_html_e('We will use the manifest file if one is selected, otherwise the selected Airtable project.', 'leadsforward-core'); ?></p>
@@ -1871,6 +1952,9 @@ function lf_ai_studio_scaffold_manifest(array $manifest): array {
 			$map['last_index']['post'] = $post_index;
 
 			update_option('lf_keyword_map', $map);
+		}
+		if (function_exists('lf_prime_image_distribution_for_site')) {
+			lf_prime_image_distribution_for_site();
 		}
 	}
 	return is_array($result) ? $result : ['success' => false, 'message' => __('Setup runner failed.', 'leadsforward-core')];
@@ -3927,6 +4011,61 @@ function lf_ai_studio_coerce_list_value($value): string {
 	return (string) $value;
 }
 
+function lf_ai_studio_homepage_image_context(): array {
+	$keywords = get_option('lf_homepage_keywords', []);
+	$primary = is_array($keywords) ? (string) ($keywords['primary'] ?? '') : '';
+	$secondary = is_array($keywords) && is_array($keywords['secondary'] ?? null) ? $keywords['secondary'] : [];
+	return [
+		'page_type' => 'homepage',
+		'service_slug' => '',
+		'area_slug' => '',
+		'niche' => (string) (defined('LF_HOMEPAGE_NICHE_OPTION') ? get_option(LF_HOMEPAGE_NICHE_OPTION, '') : ''),
+		'city' => (string) get_option('lf_homepage_city', ''),
+		'primary_keyword' => $primary,
+		'secondary_keywords' => $secondary,
+		'variation_seed' => (string) get_option('lf_homepage_variation_seed', ''),
+		'service_name' => (string) get_bloginfo('name'),
+	];
+}
+
+function lf_ai_studio_maybe_inject_section_images(array $registry, string $section_type, array $existing_settings, array $incoming_fields, array $matches, array $context, array &$assigned): array {
+	if (!function_exists('lf_image_intelligence_registry_image_fields')) {
+		return $incoming_fields;
+	}
+	$registry_section = $registry[$section_type] ?? null;
+	if (!is_array($registry_section)) {
+		return $incoming_fields;
+	}
+	$image_fields = lf_image_intelligence_registry_image_fields($registry_section);
+	if (empty($image_fields)) {
+		return $incoming_fields;
+	}
+	foreach ($image_fields as $field_key) {
+		$current_value = $existing_settings[$field_key] ?? '';
+		$incoming_value = $incoming_fields[$field_key] ?? '';
+		if (!function_exists('lf_image_intelligence_empty_image_value')) {
+			continue;
+		}
+		if (!lf_image_intelligence_empty_image_value($current_value) || !lf_image_intelligence_empty_image_value($incoming_value)) {
+			continue;
+		}
+		if (!function_exists('lf_image_intelligence_slot_for_section_field')) {
+			continue;
+		}
+		$slot = lf_image_intelligence_slot_for_section_field($section_type, $field_key);
+		$image_id = absint($matches[$slot] ?? 0);
+		if ($image_id <= 0) {
+			continue;
+		}
+		$incoming_fields[$field_key] = $image_id;
+		$assigned[] = [
+			'image_id' => $image_id,
+			'context' => $context,
+		];
+	}
+	return $incoming_fields;
+}
+
 function lf_apply_orchestrator_updates(array $response): array {
 	$updates = $response['updates'] ?? [];
 	if (!is_array($updates)) {
@@ -3948,6 +4087,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 	$service_meta_updates = [];
 	$service_posts_for_short_desc = [];
 	$blog_posts_for_title = [];
+	$assigned_images = [];
 
 	foreach ($updates as $index => $update) {
 		if (!is_array($update)) {
@@ -3996,6 +4136,10 @@ function lf_apply_orchestrator_updates(array $response): array {
 
 	if (!empty($homepage_updates) && function_exists('lf_get_homepage_section_config')) {
 		$config = $homepage_config;
+		$homepage_image_context = lf_ai_studio_homepage_image_context();
+		$homepage_matches = function_exists('lf_match_images_for_context')
+			? lf_match_images_for_context($homepage_image_context)
+			: [];
 		foreach ($homepage_updates as $update) {
 			$fields = $update['fields'] ?? $update['data'] ?? [];
 			foreach ($fields as $key => $value) {
@@ -4038,6 +4182,15 @@ function lf_apply_orchestrator_updates(array $response): array {
 			if (!is_array($fields) || !isset($config[$section_id])) {
 				continue;
 			}
+			$fields = lf_ai_studio_maybe_inject_section_images(
+				$registry,
+				$section_id,
+				is_array($config[$section_id]) ? $config[$section_id] : [],
+				$fields,
+				$homepage_matches,
+				$homepage_image_context,
+				$assigned_images
+			);
 			$config[$section_id] = array_merge(
 				$config[$section_id],
 				lf_sections_sanitize_settings($section_id, $fields)
@@ -4069,6 +4222,12 @@ function lf_apply_orchestrator_updates(array $response): array {
 		if (!is_array($incoming)) {
 			continue;
 		}
+		$post_image_context = function_exists('lf_image_intelligence_build_context_for_post')
+			? lf_image_intelligence_build_context_for_post($post)
+			: [];
+		$post_matches = (!empty($post_image_context) && function_exists('lf_match_images_for_context'))
+			? lf_match_images_for_context($post_image_context)
+			: [];
 		$incoming_by_instance = [];
 		foreach ($incoming as $key => $value) {
 			if (!is_string($key)) {
@@ -4121,6 +4280,15 @@ function lf_apply_orchestrator_updates(array $response): array {
 				continue;
 			}
 			$type = (string) ($section['type'] ?? '');
+			$fields = lf_ai_studio_maybe_inject_section_images(
+				$registry,
+				$type,
+				is_array($section['settings'] ?? null) ? $section['settings'] : [],
+				$fields,
+				$post_matches,
+				$post_image_context,
+				$assigned_images
+			);
 			$sections[$instance_id]['settings'] = array_merge(
 				$section['settings'] ?? [],
 				lf_sections_sanitize_settings($type, $fields)
@@ -4133,6 +4301,14 @@ function lf_apply_orchestrator_updates(array $response): array {
 		]);
 		$changes['posts'][] = $post_id;
 		$pages_updated++;
+		$featured_id = absint($post_matches['featured'] ?? 0);
+		if ($featured_id > 0 && !has_post_thumbnail($post_id)) {
+			set_post_thumbnail($post_id, $featured_id);
+			$assigned_images[] = [
+				'image_id' => $featured_id,
+				'context' => $post_image_context,
+			];
+		}
 		if ($post->post_type === 'lf_service') {
 			$service_posts_for_short_desc[] = $post_id;
 		}
@@ -4206,6 +4382,15 @@ function lf_apply_orchestrator_updates(array $response): array {
 	if (!empty($blog_posts_for_title)) {
 		foreach (array_unique($blog_posts_for_title) as $post_id) {
 			lf_ai_studio_backfill_post_title_excerpt($post_id);
+		}
+	}
+	if (!empty($assigned_images) && function_exists('lf_image_intelligence_maybe_set_alt_text')) {
+		foreach ($assigned_images as $assignment) {
+			$image_id = absint($assignment['image_id'] ?? 0);
+			$context_for_alt = is_array($assignment['context'] ?? null) ? $assignment['context'] : [];
+			if ($image_id > 0) {
+				lf_image_intelligence_maybe_set_alt_text($image_id, $context_for_alt);
+			}
 		}
 	}
 

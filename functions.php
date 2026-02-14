@@ -51,6 +51,8 @@ lf_load_inc('schema.php');
 lf_load_inc('blog.php');
 // Heading enforcement + validation.
 lf_load_inc('headings.php');
+// Deterministic media indexing + matching engine.
+lf_load_inc('image-intelligence.php');
 // AI Studio core + REST endpoints (used outside admin).
 lf_load_inc('ai-studio.php');
 lf_load_inc('ai-studio-rest.php');
