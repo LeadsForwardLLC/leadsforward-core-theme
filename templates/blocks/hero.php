@@ -22,7 +22,13 @@ $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($sect
 $heading_tag = $context['heading_tag'] ?? 'h1';
 
 $eyebrow_enabled = (string) (($section['hero_eyebrow_enabled'] ?? '1')) !== '0';
-$eyebrow_default = __('Licensed • Insured • Local', 'leadsforward-core');
+$business_city = function_exists('lf_get_option') ? (string) lf_get_option('lf_business_address_city', 'option') : '';
+$business_state = function_exists('lf_get_option') ? (string) lf_get_option('lf_business_address_state', 'option') : '';
+$business_city = sanitize_text_field($business_city);
+$business_state = sanitize_text_field($business_state);
+$eyebrow_default = ($business_city !== '' && $business_state !== '')
+	? sprintf(__('Homeowners in %1$s, %2$s', 'leadsforward-core'), $business_city, $business_state)
+	: ($business_city !== '' ? sprintf(__('Homeowners in %s', 'leadsforward-core'), $business_city) : __('Licensed • Insured • Local', 'leadsforward-core'));
 $eyebrow = isset($section['hero_eyebrow_text']) && $section['hero_eyebrow_text'] !== '' ? $section['hero_eyebrow_text'] : $eyebrow_default;
 if (!$eyebrow_enabled) {
 	$eyebrow = '';
@@ -196,8 +202,26 @@ $proof_items = array_values(array_filter(array_map('trim', is_array($proof_items
 if (empty($proof_items)) {
 	$proof_items = $proof_default_items;
 }
-if (count($proof_items) > 4) {
-	$proof_items = array_slice($proof_items, 0, 4);
+if (count($proof_items) > 3) {
+	$proof_items = array_slice($proof_items, 0, 3);
+}
+
+$chip_items = $proof_items;
+if (count($chip_items) < 3) {
+	$chip_items = array_slice(array_merge($chip_items, $proof_default_items), 0, 3);
+}
+$show_hero_chips = $variant !== 'internal' && !empty($chip_items);
+$hero_chips_html = '';
+if ($show_hero_chips) {
+	ob_start();
+	?>
+	<ul class="lf-hero-chips" role="list">
+		<?php foreach ($chip_items as $chip) : ?>
+			<li class="lf-hero-chip"><?php echo esc_html($chip); ?></li>
+		<?php endforeach; ?>
+	</ul>
+	<?php
+	$hero_chips_html = (string) ob_get_clean();
 }
 
 if (!$primary_enabled) {
@@ -299,9 +323,9 @@ if ($hero_bg_url && $hero_bg_mode === 'image' && $variant !== 'c') {
 				<?php if ($subheading !== '') : ?>
 					<p class="lf-hero-stack__subtitle"><?php echo esc_html($subheading); ?></p>
 				<?php endif; ?>
-				<div class="lf-hero-stack__trust" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
-					<?php echo $trust_strip_html; ?>
-				</div>
+				<?php if ($hero_chips_html !== '') : ?>
+					<div class="lf-hero-stack__chips"><?php echo $hero_chips_html; ?></div>
+				<?php endif; ?>
 				<?php if ($show_cta_group) : ?>
 					<div class="lf-hero-stack__actions">
 						<?php if ($cta_text) : ?>
@@ -324,6 +348,9 @@ if ($hero_bg_url && $hero_bg_mode === 'image' && $variant !== 'c') {
 						<?php endif; ?>
 					</div>
 				<?php endif; ?>
+				<div class="lf-hero-stack__trust" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
+					<?php echo $trust_strip_html; ?>
+				</div>
 			</div>
 		<?php elseif ($variant === 'b') : ?>
 			<div class="lf-hero-form">
@@ -342,6 +369,9 @@ if ($hero_bg_url && $hero_bg_mode === 'image' && $variant !== 'c') {
 					<?php endif; ?>
 					<?php if ($subheading !== '') : ?>
 						<p class="lf-hero-form__subtitle"><?php echo esc_html($subheading); ?></p>
+					<?php endif; ?>
+					<?php if ($hero_chips_html !== '') : ?>
+						<div class="lf-hero-form__chips"><?php echo $hero_chips_html; ?></div>
 					<?php endif; ?>
 					<div class="lf-hero-form__trust" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
 						<?php echo $trust_strip_html; ?>
@@ -384,6 +414,9 @@ if ($hero_bg_url && $hero_bg_mode === 'image' && $variant !== 'c') {
 					<?php if ($subheading !== '') : ?>
 						<p class="lf-hero-visual__subtitle"><?php echo esc_html($subheading); ?></p>
 					<?php endif; ?>
+					<?php if ($hero_chips_html !== '') : ?>
+						<div class="lf-hero-visual__chips"><?php echo $hero_chips_html; ?></div>
+					<?php endif; ?>
 					<?php if ($show_cta_group) : ?>
 						<div class="lf-hero-visual__actions">
 							<?php if ($cta_text) : ?>
@@ -412,7 +445,9 @@ if ($hero_bg_url && $hero_bg_mode === 'image' && $variant !== 'c') {
 				</div>
 				<div class="lf-hero-visual__media">
 					<div class="lf-hero-visual__image">
-						<?php if ($placeholder_id) : ?>
+						<?php if ($show_hero_image) : ?>
+							<?php echo wp_get_attachment_image($hero_image_id, 'large', false, ['loading' => 'lazy', 'decoding' => 'async', 'alt' => esc_attr($hero_image_alt)]); ?>
+						<?php elseif ($placeholder_id) : ?>
 							<?php echo wp_get_attachment_image($placeholder_id, 'large', false, ['loading' => 'lazy', 'decoding' => 'async', 'alt' => esc_attr($placeholder_alt)]); ?>
 						<?php elseif ($latest_testimonial) : ?>
 							<div class="lf-block-hero__quote">
@@ -459,6 +494,9 @@ if ($hero_bg_url && $hero_bg_mode === 'image' && $variant !== 'c') {
 					<?php endif; ?>
 					<?php if ($subheading !== '') : ?>
 						<p class="lf-hero-split__subtitle"><?php echo esc_html($subheading); ?></p>
+					<?php endif; ?>
+					<?php if ($hero_chips_html !== '') : ?>
+						<div class="lf-hero-split__chips"><?php echo $hero_chips_html; ?></div>
 					<?php endif; ?>
 					<?php if ($show_cta_group) : ?>
 						<div class="lf-hero-split__actions">

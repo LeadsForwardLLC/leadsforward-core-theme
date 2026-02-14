@@ -2619,6 +2619,47 @@ button:focus-visible,
 	width: fit-content;
 }
 
+.lf-hero-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.lf-hero-chip {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.3rem 0.75rem;
+	border-radius: 999px;
+	background: var(--lf-pill-muted-bg);
+	border: var(--lf-pill-muted-border);
+	color: var(--lf-text-primary);
+	font-size: 0.78rem;
+	font-weight: 600;
+	letter-spacing: 0.01em;
+}
+
+.lf-hero-stack__chips,
+.lf-hero-form__chips,
+.lf-hero-visual__chips,
+.lf-hero-split__chips {
+	display: flex;
+}
+
+.lf-hero-stack__chips {
+	justify-content: center;
+	width: 100%;
+}
+
+.lf-hero-form__chips,
+.lf-hero-visual__chips,
+.lf-hero-split__chips {
+	justify-content: flex-start;
+}
+
 .lf-hero-split__eyebrow {
 	align-self: flex-start;
 	justify-content: flex-start;
