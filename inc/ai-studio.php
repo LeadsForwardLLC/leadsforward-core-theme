@@ -619,52 +619,8 @@ function lf_ai_studio_render_page(): void {
 				<div class="lf-manifester-step">
 					<div class="lf-manifester-step__badge">2</div>
 					<div class="lf-manifester-step__content">
-						<h3><?php esc_html_e('Upload your logo (optional)', 'leadsforward-core'); ?></h3>
-						<p class="description"><?php esc_html_e('Your logo sets the brand colors automatically, but you can skip it.', 'leadsforward-core'); ?></p>
-						<div class="lf-manifester-logo">
-							<form id="lf-manifester-logo-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-								<?php wp_nonce_field('lf_ai_studio_save_logo', 'lf_ai_studio_logo_nonce'); ?>
-								<input type="hidden" name="action" value="lf_ai_studio_save_logo" />
-								<div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;">
-									<div>
-										<img id="lf-manifester-logo-preview" src="<?php echo esc_url($logo_url); ?>" style="max-height:60px;<?php echo $logo_url ? '' : 'display:none;'; ?>" alt="" />
-									</div>
-									<input type="hidden" name="lf_global_logo" id="lf_manifester_logo" value="<?php echo esc_attr((string) $logo_id); ?>" />
-									<button type="button" class="button" id="lf-manifester-logo-select"><?php esc_html_e('Select Logo', 'leadsforward-core'); ?></button>
-									<button type="button" class="button" id="lf-manifester-logo-clear"><?php esc_html_e('Remove Logo', 'leadsforward-core'); ?></button>
-								</div>
-								<p class="description" style="margin-top:6px;"><?php esc_html_e('Selecting a logo immediately applies your palette.', 'leadsforward-core'); ?></p>
-							</form>
-						</div>
-					</div>
-				</div>
-
-				<div class="lf-manifester-step">
-					<div class="lf-manifester-step__badge">3</div>
-					<div class="lf-manifester-step__content">
-						<h3><?php esc_html_e('Upload your research file', 'leadsforward-core'); ?></h3>
-						<p class="description"><?php esc_html_e('Optional but recommended. Research informs positioning, SEO, and conversion strategy.', 'leadsforward-core'); ?></p>
-						<form id="lf-ai-research-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
-							<?php wp_nonce_field('lf_ai_studio_research', 'lf_ai_studio_research_nonce'); ?>
-							<input type="hidden" name="action" value="lf_ai_studio_research" />
-							<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
-								<input type="file" name="lf_site_research" id="lf_site_research" class="lf-manifester-file" accept="application/json,.json" />
-								<a class="button" href="<?php echo esc_url($research_prompt_url); ?>" download><?php esc_html_e('Download Master Research Prompt', 'leadsforward-core'); ?></a>
-							</div>
-						</form>
-						<div id="lf-research-status" class="lf-manifester-status" role="status" aria-live="polite"></div>
-						<p class="description"><?php esc_html_e('Choose a JSON file to upload instantly. Generate research using the prompt and save as JSON.', 'leadsforward-core'); ?></p>
-						<?php if (!empty($research)) : ?>
-							<p class="description" style="margin-top:6px;"><?php esc_html_e('Research document stored and ready for the next generation run.', 'leadsforward-core'); ?></p>
-						<?php endif; ?>
-					</div>
-				</div>
-
-				<div class="lf-manifester-step">
-					<div class="lf-manifester-step__badge">4</div>
-					<div class="lf-manifester-step__content">
-						<h3><?php esc_html_e('Select Airtable project or upload a manifest', 'leadsforward-core'); ?></h3>
-						<p class="description"><?php esc_html_e('Choose one source. Airtable is faster for single projects; manifest is best for full control.', 'leadsforward-core'); ?></p>
+						<h3><?php esc_html_e('Select your Airtable project', 'leadsforward-core'); ?></h3>
+						<p class="description"><?php esc_html_e('Pick a project first. If you prefer a manifest file, upload it below as an alternate source.', 'leadsforward-core'); ?></p>
 						<div class="lf-manifester-source">
 							<div class="lf-manifester-panel" id="lf-airtable-picker">
 								<h4 style="margin-top:0;"><?php esc_html_e('Airtable Projects', 'leadsforward-core'); ?></h4>
@@ -727,6 +683,42 @@ function lf_ai_studio_render_page(): void {
 					</div>
 				</div>
 
+				<div class="lf-manifester-step">
+					<div class="lf-manifester-step__badge">3</div>
+					<div class="lf-manifester-step__content">
+						<h3><?php esc_html_e('Research runs automatically', 'leadsforward-core'); ?></h3>
+						<p class="description"><?php esc_html_e('After you select a project or manifest, n8n generates research and stores it before content generation.', 'leadsforward-core'); ?></p>
+						<?php if (!empty($research)) : ?>
+							<div class="lf-manifester-status is-success"><?php esc_html_e('Research document is already stored and will be reused.', 'leadsforward-core'); ?></div>
+						<?php else : ?>
+							<div class="lf-manifester-status is-info"><?php esc_html_e('Research will be generated during this run.', 'leadsforward-core'); ?></div>
+						<?php endif; ?>
+					</div>
+				</div>
+
+				<div class="lf-manifester-step">
+					<div class="lf-manifester-step__badge">4</div>
+					<div class="lf-manifester-step__content">
+						<h3><?php esc_html_e('Upload your logo (optional)', 'leadsforward-core'); ?></h3>
+						<p class="description"><?php esc_html_e('Your logo sets the brand colors automatically, but you can skip it.', 'leadsforward-core'); ?></p>
+						<div class="lf-manifester-logo">
+							<form id="lf-manifester-logo-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+								<?php wp_nonce_field('lf_ai_studio_save_logo', 'lf_ai_studio_logo_nonce'); ?>
+								<input type="hidden" name="action" value="lf_ai_studio_save_logo" />
+								<div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;">
+									<div>
+										<img id="lf-manifester-logo-preview" src="<?php echo esc_url($logo_url); ?>" style="max-height:60px;<?php echo $logo_url ? '' : 'display:none;'; ?>" alt="" />
+									</div>
+									<input type="hidden" name="lf_global_logo" id="lf_manifester_logo" value="<?php echo esc_attr((string) $logo_id); ?>" />
+									<button type="button" class="button" id="lf-manifester-logo-select"><?php esc_html_e('Select Logo', 'leadsforward-core'); ?></button>
+									<button type="button" class="button" id="lf-manifester-logo-clear"><?php esc_html_e('Remove Logo', 'leadsforward-core'); ?></button>
+								</div>
+								<p class="description" style="margin-top:6px;"><?php esc_html_e('Selecting a logo immediately applies your palette.', 'leadsforward-core'); ?></p>
+							</form>
+						</div>
+					</div>
+				</div>
+
 				<div class="lf-manifester-step lf-manifester-step--action">
 					<div class="lf-manifester-step__badge">5</div>
 					<div class="lf-manifester-step__content">
@@ -739,6 +731,22 @@ function lf_ai_studio_render_page(): void {
 					</div>
 				</div>
 			</div>
+		</div>
+		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
+			<h2 style="margin-top:0;"><?php esc_html_e('Research Override (Optional)', 'leadsforward-core'); ?></h2>
+			<p class="description"><?php esc_html_e('Upload a research JSON to override the automated research step for the next generation.', 'leadsforward-core'); ?></p>
+			<form id="lf-ai-research-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+				<?php wp_nonce_field('lf_ai_studio_research', 'lf_ai_studio_research_nonce'); ?>
+				<input type="hidden" name="action" value="lf_ai_studio_research" />
+				<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+					<input type="file" name="lf_site_research" id="lf_site_research" class="lf-manifester-file" accept="application/json,.json" />
+					<a class="button" href="<?php echo esc_url($research_prompt_url); ?>" download><?php esc_html_e('Download Master Research Prompt', 'leadsforward-core'); ?></a>
+				</div>
+			</form>
+			<div id="lf-research-status" class="lf-manifester-status" role="status" aria-live="polite"></div>
+			<?php if (!empty($research)) : ?>
+				<p class="description" style="margin-top:6px;"><?php esc_html_e('Research document stored and ready for the next generation run.', 'leadsforward-core'); ?></p>
+			<?php endif; ?>
 		</div>
 		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
 			<h2 style="margin-top:0;"><?php esc_html_e('Content QA Report', 'leadsforward-core'); ?></h2>

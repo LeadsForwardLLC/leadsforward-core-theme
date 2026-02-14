@@ -363,6 +363,15 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 	if (!is_array($payload)) {
 		return new \WP_REST_Response(['error' => 'invalid_json'], 400);
 	}
+	if (!empty($payload['research_document']) && is_array($payload['research_document'])) {
+		$errors = lf_ai_studio_validate_research_document($payload['research_document']);
+		if (empty($errors)) {
+			update_option('lf_site_research_document', $payload['research_document'], false);
+			delete_option('lf_ai_studio_research_errors');
+		} else {
+			update_option('lf_ai_studio_research_errors', $errors, false);
+		}
+	}
 	if (isset($payload['payload']) && is_string($payload['payload'])) {
 		$decoded_payload = json_decode($payload['payload'], true);
 		if (is_array($decoded_payload)) {
