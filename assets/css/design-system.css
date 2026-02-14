@@ -1075,7 +1075,7 @@ button:focus-visible,
 	border: 1px solid rgba(15,23,42,0.08);
 	box-shadow: 0 12px 26px rgba(15,23,42,0.12);
 	background: #0f172a;
-	min-height: 110px;
+	min-height: 150px;
 }
 
 .lf-related-links--media .lf-related-links__item::before {
@@ -1103,7 +1103,7 @@ button:focus-visible,
 	align-items: center;
 	justify-content: center;
 	text-align: center;
-	min-height: 110px;
+	min-height: 150px;
 	padding: 0;
 	color: #fff;
 	font-weight: 600;
@@ -1129,6 +1129,7 @@ button:focus-visible,
 	font-size: 0.98rem;
 	line-height: 1.35;
 	overflow-wrap: anywhere;
+	pointer-events: none;
 }
 
 .lf-related-links--media .lf-related-links__link:hover {
@@ -1142,11 +1143,11 @@ button:focus-visible,
 	}
 
 	.lf-related-links--media .lf-related-links__item {
-		min-height: 90px;
+		min-height: 120px;
 	}
 
 	.lf-related-links--media .lf-related-links__link {
-		min-height: 90px;
+		min-height: 120px;
 		padding: 0;
 	}
 
