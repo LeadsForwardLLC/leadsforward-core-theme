@@ -1036,10 +1036,7 @@ function lf_ai_studio_run_homepage_generation(): array {
 function lf_ai_studio_send_request(array $request, int $job_id): array {
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$secret = (string) get_option('lf_ai_studio_secret', '');
-	$callback_url = rest_url('leadsforward/v1/orchestrator');
-	if ($secret !== '') {
-		$callback_url = add_query_arg('token', rawurlencode($secret), $callback_url);
-	}
+	$callback_url = lf_ai_studio_build_callback_url();
 	$request['job_id'] = $job_id;
 	$request['callback_url'] = $callback_url;
 	update_post_meta($job_id, 'lf_ai_job_status', 'queued');
@@ -1095,6 +1092,24 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	return ['job_id' => $job_id];
 }
 
+function lf_ai_studio_build_callback_url(): string {
+	$secret = (string) get_option('lf_ai_studio_secret', '');
+	$override = (string) get_option('lf_ai_studio_callback_url', '');
+	$callback_url = '';
+	if ($override !== '') {
+		$callback_url = trim($override);
+		if (strpos($callback_url, '/wp-json/') === false) {
+			$callback_url = rtrim($callback_url, '/') . '/wp-json/leadsforward/v1/orchestrator';
+		}
+	} else {
+		$callback_url = rest_url('leadsforward/v1/orchestrator');
+	}
+	if ($secret !== '') {
+		$callback_url = add_query_arg('token', rawurlencode($secret), $callback_url);
+	}
+	return $callback_url;
+}
+
 function lf_ai_studio_create_job(array $request): int {
 	$user = get_current_user_id();
 	$job_id = wp_insert_post([
@@ -1123,11 +1138,9 @@ function lf_ai_studio_seed_dummy_posts(string $business_name = ''): void {
 		'posts_per_page' => 1,
 		'fields'         => 'ids',
 	]);
-	if (!empty($existing)) {
-		return;
-	}
 	$label = $business_name !== '' ? $business_name : __('your home', 'leadsforward-core');
-	$posts = [
+	if (empty($existing)) {
+		$posts = [
 		[
 			'post_title' => sprintf(__('Planning your next project with %s in mind', 'leadsforward-core'), $label),
 			'post_content' => __('This is a placeholder post created during site generation. Replace it with a helpful guide or FAQ that answers your customers’ most common questions.', 'leadsforward-core'),
@@ -1140,14 +1153,89 @@ function lf_ai_studio_seed_dummy_posts(string $business_name = ''): void {
 			'post_title' => __('Common pitfalls homeowners should avoid', 'leadsforward-core'),
 			'post_content' => __('Outline mistakes you see often and how your team prevents them. This builds trust and clarifies why professional help matters.', 'leadsforward-core'),
 		],
-	];
-	foreach ($posts as $post) {
-		wp_insert_post([
-			'post_type' => 'post',
+		];
+		foreach ($posts as $post) {
+			wp_insert_post([
+				'post_type' => 'post',
+				'post_status' => 'publish',
+				'post_title' => $post['post_title'],
+				'post_content' => $post['post_content'],
+			]);
+		}
+	}
+	lf_ai_studio_seed_sample_projects();
+}
+
+function lf_ai_studio_seed_sample_projects(): void {
+	$existing = get_posts([
+		'post_type'      => 'lf_project',
+		'post_status'    => 'any',
+		'posts_per_page' => 1,
+		'fields'         => 'ids',
+	]);
+	if (!empty($existing)) {
+		return;
+	}
+	$manifest = lf_ai_studio_get_manifest();
+	$business = is_array($manifest['business'] ?? null) ? $manifest['business'] : [];
+	$address = is_array($business['address'] ?? null) ? $business['address'] : [];
+	$city = sanitize_text_field((string) ($address['city'] ?? ($business['primary_city'] ?? '')));
+	$state = sanitize_text_field((string) ($address['state'] ?? ''));
+	$location = trim($city . ($state !== '' ? ', ' . $state : ''));
+	$services = is_array($manifest['services'] ?? null) ? $manifest['services'] : [];
+	$service_titles = [];
+	foreach ($services as $item) {
+		$normalized = lf_ai_studio_normalize_service_item($item);
+		if ($normalized['title'] !== '') {
+			$service_titles[] = $normalized['title'];
+		}
+	}
+	if (empty($service_titles)) {
+		$niche = (string) ($business['niche'] ?? __('Service', 'leadsforward-core'));
+		$service_titles = [$niche, $niche, $niche];
+	}
+	$service_titles = array_slice($service_titles, 0, 3);
+	$placeholder_id = function_exists('lf_get_placeholder_image_id') ? (int) lf_get_placeholder_image_id() : 0;
+	$year = (string) date('Y');
+	foreach ($service_titles as $service) {
+		$title = $location !== '' ? sprintf(__('%s Project — %s', 'leadsforward-core'), $service, $location) : sprintf(__('%s Project', 'leadsforward-core'), $service);
+		$post_id = wp_insert_post([
+			'post_type' => 'lf_project',
 			'post_status' => 'publish',
-			'post_title' => $post['post_title'],
-			'post_content' => $post['post_content'],
+			'post_title' => $title,
+			'post_content' => __('Sample project created during site generation. Replace with real before/after details and photos.', 'leadsforward-core'),
 		]);
+		if (!$post_id) {
+			continue;
+		}
+		if ($placeholder_id) {
+			update_post_meta($post_id, 'lf_project_before_image', $placeholder_id);
+			update_post_meta($post_id, 'lf_project_after_image', $placeholder_id);
+			if (function_exists('set_post_thumbnail')) {
+				set_post_thumbnail($post_id, $placeholder_id);
+			}
+		}
+		if ($city !== '') {
+			update_post_meta($post_id, 'lf_project_city', $city);
+		}
+		if ($state !== '') {
+			update_post_meta($post_id, 'lf_project_state', $state);
+		}
+		update_post_meta($post_id, 'lf_project_year', $year);
+		$taxonomy = 'lf_project_type';
+		if (taxonomy_exists($taxonomy)) {
+			$term_name = $service;
+			$term = term_exists($term_name, $taxonomy);
+			if (!$term) {
+				$term = wp_insert_term($term_name, $taxonomy);
+			}
+			if (!is_wp_error($term)) {
+				$term_id = is_array($term) ? (int) ($term['term_id'] ?? 0) : (int) $term;
+				if ($term_id) {
+					wp_set_post_terms($post_id, [$term_id], $taxonomy, false);
+				}
+			}
+		}
 	}
 }
 
@@ -2226,6 +2314,27 @@ function lf_ai_studio_normalize_service_item($item): array {
 	];
 }
 
+function lf_ai_studio_clean_service_title(string $title, string $location): string {
+	$base = strtolower(trim($title));
+	$location = trim($location);
+	if ($location !== '') {
+		$base = preg_replace('/\b' . preg_quote(strtolower($location), '/') . '\b/i', '', $base);
+	}
+	$base = preg_replace('/\bselect\b/i', '', $base);
+	$base = preg_replace('/\bservices?\b/i', '', $base);
+	$base = preg_replace('/\bcompany\b|\bcontractors?\b|\bexperts?\b/i', '', $base);
+	$base = preg_replace('/\bnear me\b|\bnear\b/i', '', $base);
+	$base = trim(preg_replace('/\s+/', ' ', $base));
+	if ($base === '') {
+		$base = __('Service', 'leadsforward-core');
+	}
+	$clean = ucwords($base);
+	if ($location !== '' && stripos($clean, $location) === false) {
+		$clean = trim($clean . ' in ' . $location);
+	}
+	return $clean;
+}
+
 function lf_ai_studio_normalize_area_item($item): array {
 	if (!is_array($item)) {
 		$item = [];
@@ -2270,6 +2379,22 @@ function lf_ai_studio_normalize_manifest(array $manifest): array {
 	if (!is_array($secondary)) {
 		$secondary = [];
 	}
+	$location_label = sanitize_text_field((string) ($address['state'] ?? ''));
+	if ($location_label === '') {
+		$location_label = sanitize_text_field((string) ($business['primary_city'] ?? ($address['city'] ?? '')));
+	}
+	$normalized_services = [];
+	foreach ($services as $item) {
+		$normalized = lf_ai_studio_normalize_service_item($item);
+		if ($normalized['title'] !== '') {
+			$normalized['title'] = lf_ai_studio_clean_service_title($normalized['title'], $location_label);
+			$normalized['slug'] = sanitize_title(str_replace(' in ', ' ', strtolower($normalized['title'])));
+			if ($normalized['primary_keyword'] === '' || stripos($normalized['primary_keyword'], $normalized['title']) === false) {
+				$normalized['primary_keyword'] = $normalized['title'];
+			}
+		}
+		$normalized_services[] = $normalized;
+	}
 	return [
 		'business' => [
 			'name' => sanitize_text_field((string) ($business['name'] ?? '')),
@@ -2308,7 +2433,7 @@ function lf_ai_studio_normalize_manifest(array $manifest): array {
 			'primary_keyword' => sanitize_text_field((string) ($homepage['primary_keyword'] ?? '')),
 			'secondary_keywords' => array_values(array_filter(array_map('sanitize_text_field', $secondary))),
 		],
-		'services' => array_values(array_map('lf_ai_studio_normalize_service_item', $services)),
+		'services' => $normalized_services,
 		'service_areas' => array_values(array_map('lf_ai_studio_normalize_area_item', $areas)),
 		'global' => [
 			'global_cta_override' => !empty($global['global_cta_override']),

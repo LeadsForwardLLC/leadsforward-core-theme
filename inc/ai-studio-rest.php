@@ -419,6 +419,7 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		$request = get_post_meta($job_id, 'lf_ai_job_request', true);
 		if (is_array($request)) {
 			lf_ai_studio_seed_dummy_posts((string) ($request['business_name'] ?? ''));
+			lf_ai_studio_seed_sample_projects();
 		}
 		if (function_exists('lf_ai_studio_run_content_audit')) {
 			$report = lf_ai_studio_run_content_audit('orchestrator');

@@ -187,6 +187,7 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
 	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
 	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
+	update_option('lf_ai_studio_callback_url', isset($_POST['lf_ai_studio_callback_url']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_callback_url'])) : '');
 	update_option('lf_ai_airtable_enabled', isset($_POST['lf_ai_airtable_enabled']) ? '1' : '0');
 	update_option('lf_ai_airtable_pat', isset($_POST['lf_ai_airtable_pat']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_pat'])) : '');
 	update_option('lf_ai_airtable_base', isset($_POST['lf_ai_airtable_base']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_base'])) : '');
@@ -531,6 +532,7 @@ function lf_ops_render_global_settings_page(): void {
 	$manifester_enabled = get_option('lf_ai_studio_enabled', '0') === '1';
 	$manifester_webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$manifester_secret = (string) get_option('lf_ai_studio_secret', '');
+	$manifester_callback = (string) get_option('lf_ai_studio_callback_url', '');
 	$airtable_settings = function_exists('lf_ai_studio_airtable_get_settings')
 		? lf_ai_studio_airtable_get_settings()
 		: [];
@@ -619,6 +621,13 @@ function lf_ops_render_global_settings_page(): void {
 							<tr>
 								<th scope="row"><label for="lf_ai_studio_secret_global"><?php esc_html_e('Orchestrator Shared Secret', 'leadsforward-core'); ?></label></th>
 								<td><input type="text" class="large-text" name="lf_ai_studio_secret" id="lf_ai_studio_secret_global" value="<?php echo esc_attr($manifester_secret); ?>" required /></td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_studio_callback_url_global"><?php esc_html_e('Callback URL (WordPress)', 'leadsforward-core'); ?></label></th>
+								<td>
+									<input type="url" class="large-text" name="lf_ai_studio_callback_url" id="lf_ai_studio_callback_url_global" value="<?php echo esc_attr($manifester_callback); ?>" placeholder="https://your-site.com/wp-json/leadsforward/v1/orchestrator" />
+									<p class="description"><?php esc_html_e('Use this if n8n cannot reach localhost. For Docker: http://host.docker.internal:10008/wp-json/leadsforward/v1/orchestrator', 'leadsforward-core'); ?></p>
+								</td>
 							</tr>
 							<tr>
 								<th scope="row"><label for="lf_maps_api_key"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></label></th>
