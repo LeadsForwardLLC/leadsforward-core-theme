@@ -15,6 +15,7 @@
   var statusEl = document.getElementById('lf-airtable-status');
   var tokenToggle = document.getElementById('lf-airtable-token-toggle');
   var tokenInput = document.getElementById('lf_ai_airtable_pat');
+  var storageKey = 'lfAirtableSelectedProject';
 
   if (tokenToggle && tokenInput) {
     tokenToggle.addEventListener('change', function () {
@@ -48,6 +49,50 @@
     }
   }
 
+  function formatRecordLabel(record) {
+    if (!record) return '';
+    var metaParts = [];
+    if (record.city || record.state) {
+      metaParts.push([record.city, record.state].filter(Boolean).join(', '));
+    }
+    if (record.niche) {
+      metaParts.push(record.niche);
+    }
+    return record.name + (metaParts.length ? ' — ' + metaParts.join(' • ') : '');
+  }
+
+  function updatePreview(record) {
+    if (!previewEl) return;
+    if (!record) {
+      previewEl.textContent = (cfg.strings && cfg.strings.selectPrompt) ? cfg.strings.selectPrompt : 'Select a project to preview before generating.';
+      previewEl.classList.remove('is-selected');
+      return;
+    }
+    previewEl.textContent = formatRecordLabel(record);
+    previewEl.classList.add('is-selected');
+  }
+
+  function loadStoredSelection() {
+    try {
+      var raw = window.localStorage.getItem(storageKey);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (parsed && parsed.id) return parsed;
+    } catch (e) {
+      return null;
+    }
+    return null;
+  }
+
+  function storeSelection(record) {
+    if (!record || !record.id) return;
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(record));
+    } catch (e) {
+      // ignore storage failures
+    }
+  }
+
   function renderEmpty() {
     clearResults();
     var empty = document.createElement('div');
@@ -62,34 +107,27 @@
       renderEmpty();
       return;
     }
+    var stored = loadStoredSelection();
     records.forEach(function (record) {
       var button = document.createElement('button');
       button.type = 'button';
       button.className = 'lf-airtable-result';
-      var metaParts = [];
-      if (record.city || record.state) {
-        metaParts.push([record.city, record.state].filter(Boolean).join(', '));
-      }
-      if (record.niche) {
-        metaParts.push(record.niche);
-      }
-      button.textContent = record.name + (metaParts.length ? ' — ' + metaParts.join(' • ') : '');
+      button.textContent = formatRecordLabel(record);
       button.addEventListener('click', function () {
         selectedRecord = record;
+        storeSelection(record);
         updatePrimaryState();
-        var previewParts = [record.name];
-        if (record.city || record.state) {
-          previewParts.push([record.city, record.state].filter(Boolean).join(', '));
-        }
-        if (record.niche) {
-          previewParts.push(record.niche);
-        }
-        previewEl.textContent = previewParts.join(' • ');
+        updatePreview(record);
         var buttons = resultsEl.querySelectorAll('.lf-airtable-result');
         buttons.forEach(function (btn) {
           btn.classList.toggle('is-active', btn === button);
         });
       });
+      if (stored && stored.id && stored.id === record.id) {
+        selectedRecord = record;
+        updatePreview(record);
+        button.classList.add('is-active');
+      }
       resultsEl.appendChild(button);
     });
   }
@@ -243,6 +281,11 @@
     fetchResults('');
   }
 
+  var storedSelection = loadStoredSelection();
+  if (storedSelection) {
+    selectedRecord = storedSelection;
+    updatePreview(storedSelection);
+  }
   updatePrimaryState();
 
   var researchInput = document.getElementById('lf_site_research');
