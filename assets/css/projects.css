@@ -74,6 +74,12 @@
 	}
 }
 
+@media (max-width: 900px) {
+	.lf-project-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
 .site-main--projects .lf-section--project-hero {
 	padding-bottom: var(--lf-section-padding-sm);
 }
