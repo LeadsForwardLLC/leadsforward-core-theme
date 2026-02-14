@@ -4317,6 +4317,25 @@ function lf_ai_studio_maybe_inject_section_images(array $registry, string $secti
 	return $incoming_fields;
 }
 
+function lf_ai_studio_resolve_homepage_field_key(string $field_key, array $config, array $registry): ?array {
+	if ($field_key === '' || strpos($field_key, '.') !== false) {
+		return null;
+	}
+	foreach ($config as $section_id => $section_settings) {
+		if (!is_array($section_settings) || !isset($registry[$section_id])) {
+			continue;
+		}
+		$allowed = lf_ai_studio_homepage_allowed_field_keys((string) $section_id, $registry[$section_id]);
+		if (in_array($field_key, $allowed, true)) {
+			return [
+				'section_id' => (string) $section_id,
+				'field_key' => $field_key,
+			];
+		}
+	}
+	return null;
+}
+
 function lf_apply_orchestrator_updates(array $response): array {
 	$updates = $response['updates'] ?? [];
 	if (!is_array($updates)) {
@@ -4399,11 +4418,18 @@ function lf_apply_orchestrator_updates(array $response): array {
 				}
 				$parts = explode('.', $key, 2);
 				if (count($parts) !== 2) {
-					$errors[] = sprintf(__('Homepage field "%s" must use section.field notation.', 'leadsforward-core'), (string) $key);
-					continue;
+					$resolved = lf_ai_studio_resolve_homepage_field_key(trim($key), $config, $registry);
+					if (is_array($resolved)) {
+						$section_id = (string) ($resolved['section_id'] ?? '');
+						$field_key = (string) ($resolved['field_key'] ?? '');
+					} else {
+						$errors[] = sprintf(__('Homepage field "%s" must use section.field notation.', 'leadsforward-core'), (string) $key);
+						continue;
+					}
+				} else {
+					$section_id = trim($parts[0]);
+					$field_key = trim($parts[1]);
 				}
-				$section_id = trim($parts[0]);
-				$field_key = trim($parts[1]);
 				if ($section_id === '' || $field_key === '') {
 					continue;
 				}
