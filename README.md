@@ -36,13 +36,19 @@ LeadsForward Core provides:
 - **Controlled variation:** Site-wide profile (A–E), block variant registry, safe section ordering, style tokens, copy template slots (no randomness)
 - **Site setup:** Niche-aware init; seeds pages, CPTs, menus, page builder defaults, and copy templates (Manifester + Global Settings are primary)
 - **Safety:** CPT delete protection, admin notices for missing SEO-critical fields, graceful fallback when ACF is off
-- **SOP:** Step-by-step build process in `docs/SOP.md`
+- **Docs:** System architecture and schemas in `docs/`
 
 ---
 
-## SOP
+## Docs
 
-The full, non-technical build checklist lives here: `docs/SOP.md`.
+Core system documentation (read in order):
+- `docs/01_SYSTEM_OVERVIEW.md`
+- `docs/02_N8N_WORKFLOW_ARCHITECTURE.md`
+- `docs/03_MANIFEST_SCHEMA.md`
+- `docs/04_SECTION_SCHEMA.md`
+- `docs/05_THEME_INTEGRATION.md`
+- `docs/06_AI_PROMPT_ENGINE.md`
 
 ---
 
@@ -63,7 +69,7 @@ leadsforward-core-theme/
 │   ├── js/           # quote-builder.js, lf-section-sortable.js, project-gallery.js, section-sliders.js
 │   ├── icons/        # Local Heroicons SVGs (inline usage)
 │   └── images/
-├── docs/             # SOP.md and product documentation
+├── docs/             # System documentation
 ├── inc/
 │   ├── setup.php        # Theme support, menus, ACF options pages
 │   ├── cleanup.php      # Emoji/oEmbed/dashicons removal, optional block CSS
@@ -215,10 +221,10 @@ New section type: **Centered Content** (`content_centered`) — minimal, text-on
 - **Inputs:** Webhook URL + shared secret.
 - **Writing samples:** Controlled in n8n; not stored in WordPress.
 - **Manifest upload:** Optional deterministic mode via JSON manifest stored in `lf_site_manifest`.
-- **Manifest schema:** See `docs/MANIFEST_SCHEMA.md` for the canonical JSON structure and validation rules.
+- **Manifest schema:** See `docs/03_MANIFEST_SCHEMA.md` for the canonical JSON structure and validation rules.
 - **Manifest UX:** Upload shows a progress overlay during generation.
-- **Section schema reference:** `docs/SECTION_SCHEMA.json` is the canonical list of section types and fields. Keep it in sync with the registry.
-- **AI collaboration guide:** `docs/AI_CONTEXT.md` is the live handoff for other AI assistants.
+- **Section schema reference:** `docs/04_SECTION_SCHEMA.md` is the canonical list of section types and fields. Keep it in sync with the registry.
+- **AI prompt system:** `docs/06_AI_PROMPT_ENGINE.md` documents the prompt contract and token logic.
 - **Manifest scaffold:** Manifest runs the same setup scaffold as site setup (pages, menus, business entity) with manifest as the single source of truth.
 - **Dev reset behavior:** Dev reset clears nearly all content (pages, posts, CPTs, manifest, keywords, generation logs) but preserves AI Studio settings (enable, webhook, shared secret).
 - **Dev reset scope:** Also resets site title/description to blank to remove any business evidence.
@@ -409,7 +415,6 @@ Completion is stored in option `lf_setup_wizard_complete`. Site setup does not s
 - **No implicit cross-context fallbacks:** Service Details renders stored fields only (no CPT fallback).
 - **Section boundaries are explicit:** AI writes only allowed section fields; `section_intent` metadata guides generation without rendering.
 - **Service catalog enrichment:** Homepage blueprint includes `short_desc` to keep summaries consistent without pulling bodies.
-- **Files modified:** `templates/blocks/service-intro.php`, `templates/blocks/service-grid.php`, `inc/sections.php`, `inc/ai-studio.php`, `README.md`, `docs/SOP.md`.
 - **Reason for isolation:** Prevent duplication between homepage summaries and Service pages; ensure safe regeneration with deterministic inputs.
 
 ---
@@ -437,7 +442,7 @@ Completion is stored in option `lf_setup_wizard_complete`. Site setup does not s
 ## Research Document System
 
 - **What it is:** Optional research JSON that informs positioning, CRO, SEO, and content strategy.
-- **Where it lives:** Stored in `lf_site_research_document` and generated from `docs/MASTER_RESEARCH_PROMPT.md`.
+- **Where it lives:** Stored in `lf_site_research_document` and generated per `docs/06_AI_PROMPT_ENGINE.md`.
 - **How it feeds n8n:** Included in the orchestrator payload as `research_document` when present.
 - **Deterministic:** Optional input only; no template, registry, or apply logic changes.
 

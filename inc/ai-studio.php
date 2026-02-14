@@ -631,7 +631,7 @@ function lf_ai_studio_render_page(): void {
 		<div class="card lf-manifester-card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
 			<h2 style="margin-top:0;"><?php esc_html_e('Website Manifester', 'leadsforward-core'); ?></h2>
 			<p class="description"><?php esc_html_e('Follow the steps below to generate a full site with consistent branding and content.', 'leadsforward-core'); ?></p>
-			<?php $research_prompt_url = LF_THEME_URI . '/docs/MASTER_RESEARCH_PROMPT.md'; ?>
+			<?php $research_prompt_url = LF_THEME_URI . '/docs/06_AI_PROMPT_ENGINE.md'; ?>
 			<?php $global_settings_url = admin_url('admin.php?page=lf-global'); ?>
 			<?php $template_url = wp_nonce_url(admin_url('admin-post.php?action=lf_ai_studio_manifest_template'), 'lf_ai_studio_manifest_template', 'lf_ai_studio_manifest_template_nonce'); ?>
 
