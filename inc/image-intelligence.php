@@ -45,6 +45,34 @@ function lf_image_intelligence_normalize_filename(string $filename): string {
 	return $filename;
 }
 
+function lf_image_intelligence_is_placeholder_asset(int $attachment_id): bool {
+	$attachment_id = (int) $attachment_id;
+	if ($attachment_id <= 0) {
+		return false;
+	}
+	$manual_skip = (string) get_post_meta($attachment_id, '_lf_skip_auto_distribution', true);
+	if ($manual_skip === '1') {
+		return true;
+	}
+	$file = (string) get_attached_file($attachment_id);
+	$filename = strtolower((string) basename($file));
+	$title = strtolower((string) get_the_title($attachment_id));
+	$caption = strtolower((string) wp_get_attachment_caption($attachment_id));
+	$stack = trim($filename . ' ' . $title . ' ' . $caption);
+	$markers = [
+		'placeholder',
+		'stock-interior',
+		'leadforward-placeholder',
+		'sample-image',
+	];
+	foreach ($markers as $marker) {
+		if ($marker !== '' && strpos($stack, $marker) !== false) {
+			return true;
+		}
+	}
+	return false;
+}
+
 function lf_image_intelligence_upload_context_defaults(): array {
 	$keywords = get_option('lf_homepage_keywords', []);
 	$primary = is_array($keywords) ? sanitize_text_field((string) ($keywords['primary'] ?? '')) : '';
@@ -315,6 +343,9 @@ function lf_build_media_index(): array {
 	$vision_map = lf_image_intelligence_get_vision_annotations();
 	foreach ($ids as $attachment_id) {
 		$attachment_id = (int) $attachment_id;
+		if (lf_image_intelligence_is_placeholder_asset($attachment_id)) {
+			continue;
+		}
 		$file = (string) get_attached_file($attachment_id);
 		$filename = $file !== '' ? basename($file) : '';
 		if ($filename === '') {
@@ -877,8 +908,14 @@ function lf_image_intelligence_empty_image_value($value): bool {
 	if ($value === '' || $value === null) {
 		return true;
 	}
-	if (is_numeric($value) && (int) $value === 0) {
-		return true;
+	if (is_numeric($value)) {
+		$id = (int) $value;
+		if ($id === 0) {
+			return true;
+		}
+		if (lf_image_intelligence_is_placeholder_asset($id)) {
+			return true;
+		}
 	}
 	return false;
 }
@@ -1020,7 +1057,9 @@ function lf_prime_image_distribution_for_site(): array {
 		$context = lf_image_intelligence_build_context_for_post($post);
 		$matches = lf_match_images_for_context($context);
 		$featured = (int) ($matches['featured'] ?? 0);
-		if ($featured > 0 && !has_post_thumbnail($post_id)) {
+		$current_thumb_id = (int) get_post_thumbnail_id($post_id);
+		$current_thumb_placeholder = $current_thumb_id > 0 ? lf_image_intelligence_is_placeholder_asset($current_thumb_id) : false;
+		if ($featured > 0 && (!has_post_thumbnail($post_id) || $current_thumb_placeholder)) {
 			set_post_thumbnail($post_id, $featured);
 			lf_image_intelligence_maybe_set_alt_text($featured, $context);
 			$summary['featured_set']++;

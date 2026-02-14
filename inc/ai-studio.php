@@ -1619,7 +1619,7 @@ function lf_ai_studio_is_generic_copy(string $value): bool {
 	return false;
 }
 
-function lf_ai_studio_fallback_copy_for_field(string $field_key, \WP_Post $post): string {
+function lf_ai_studio_fallback_copy_for_field(string $field_key, \WP_Post $post, string $field_type = 'text'): string {
 	$business = trim((string) get_option('lf_business_name', get_bloginfo('name')));
 	$city = trim((string) get_option('lf_city_region', ''));
 	$keyword = trim((string) get_option('lf_primary_keyword', ''));
@@ -1634,6 +1634,13 @@ function lf_ai_studio_fallback_copy_for_field(string $field_key, \WP_Post $post)
 		$city = __('your area', 'leadsforward-core');
 	}
 	$focus = $keyword !== '' ? $keyword : $title;
+	if ($field_type === 'list') {
+		return implode("\n", [
+			sprintf(__('%s completed with careful planning and durable workmanship.', 'leadsforward-core'), $focus),
+			sprintf(__('Tailored for homeowners in %s with practical next-step guidance.', 'leadsforward-core'), $city),
+			sprintf(__('Delivered by %s with clear communication and reliable timelines.', 'leadsforward-core'), $business !== '' ? $business : get_bloginfo('name')),
+		]);
+	}
 
 	if (strpos($field_key, 'heading') !== false || strpos($field_key, 'headline') !== false) {
 		return sanitize_text_field(sprintf(__('%1$s in %2$s', 'leadsforward-core'), $focus, $city));
@@ -1653,19 +1660,34 @@ function lf_ai_studio_fallback_copy_for_field(string $field_key, \WP_Post $post)
 	return '';
 }
 
-function lf_ai_studio_fill_generic_section_copy(array $settings, \WP_Post $post): array {
-	foreach ($settings as $field_key => $value) {
-		if (!is_string($field_key)) {
+function lf_ai_studio_fill_generic_section_copy(array $settings, \WP_Post $post, string $section_type = '', array $section_registry = []): array {
+	$keys_to_fill = array_keys($settings);
+	if ($section_type !== '' && !empty($section_registry)) {
+		$keys_to_fill = lf_ai_studio_homepage_allowed_field_keys($section_type, $section_registry);
+	}
+	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
+	$defaults = ($section_type !== '' && function_exists('lf_sections_defaults_for'))
+		? lf_sections_defaults_for($section_type, (string) get_option('lf_homepage_niche_slug', 'general'))
+		: [];
+	foreach ($keys_to_fill as $field_key) {
+		if (!is_string($field_key) || $field_key === '') {
 			continue;
 		}
+		$value = $settings[$field_key] ?? '';
 		if (is_array($value)) {
 			continue;
 		}
+		$field_type = $section_type !== ''
+			? lf_ai_studio_registry_field_type($registry, $section_type, $field_key)
+			: 'text';
 		$text = is_scalar($value) ? (string) $value : '';
-		if (!lf_ai_studio_is_generic_copy($text)) {
+		$default = $defaults[$field_key] ?? '';
+		$needs_fill = lf_ai_studio_is_generic_copy($text)
+			|| (function_exists('lf_ai_studio_audit_value_matches_default') && $default !== '' && lf_ai_studio_audit_value_matches_default($text, $default, $field_type));
+		if (!$needs_fill) {
 			continue;
 		}
-		$fallback = lf_ai_studio_fallback_copy_for_field($field_key, $post);
+		$fallback = lf_ai_studio_fallback_copy_for_field($field_key, $post, $field_type);
 		if ($fallback === '') {
 			continue;
 		}
@@ -1796,9 +1818,10 @@ function lf_ai_studio_fill_site_content_without_ai(): array {
 				continue;
 			}
 			$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
-			$filled = lf_ai_studio_fill_generic_section_copy($settings, $post);
+			$type = (string) ($section['type'] ?? '');
+			$section_registry = ($type !== '' && isset($registry[$type]) && is_array($registry[$type])) ? $registry[$type] : [];
+			$filled = lf_ai_studio_fill_generic_section_copy($settings, $post, $type, $section_registry);
 			if ($filled !== $settings) {
-				$type = (string) ($section['type'] ?? '');
 				$sections[$instance_id]['settings'] = lf_sections_sanitize_settings($type, $filled);
 				$updated['post_sections']++;
 				$changed = true;
@@ -4903,7 +4926,8 @@ function lf_apply_orchestrator_updates(array $response): array {
 				$current_settings,
 				lf_sections_sanitize_settings($type, $injected)
 			);
-			$sections[$instance_id]['settings'] = lf_ai_studio_fill_generic_section_copy($merged_settings, $post);
+			$section_registry = isset($registry[$type]) && is_array($registry[$type]) ? $registry[$type] : [];
+			$sections[$instance_id]['settings'] = lf_ai_studio_fill_generic_section_copy($merged_settings, $post, $type, $section_registry);
 		}
 		update_post_meta($post_id, LF_PB_META_KEY, [
 			'order' => $order,
@@ -4913,7 +4937,11 @@ function lf_apply_orchestrator_updates(array $response): array {
 		$changes['posts'][] = $post_id;
 		$pages_updated++;
 		$featured_id = absint($post_matches['featured'] ?? 0);
-		if ($featured_id > 0 && !has_post_thumbnail($post_id)) {
+		$current_thumb_id = (int) get_post_thumbnail_id($post_id);
+		$current_thumb_placeholder = ($current_thumb_id > 0 && function_exists('lf_image_intelligence_is_placeholder_asset'))
+			? lf_image_intelligence_is_placeholder_asset($current_thumb_id)
+			: false;
+		if ($featured_id > 0 && (!has_post_thumbnail($post_id) || $current_thumb_placeholder)) {
 			set_post_thumbnail($post_id, $featured_id);
 			$assigned_images[] = [
 				'image_id' => $featured_id,
@@ -5005,6 +5033,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 			}
 		}
 	}
+	lf_ai_studio_fill_site_content_without_ai();
 	if (function_exists('lf_seo_refresh_metadata_for_generated_content')) {
 		lf_seo_refresh_metadata_for_generated_content();
 	}

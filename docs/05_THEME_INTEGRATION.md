@@ -18,6 +18,7 @@ The theme now includes a deterministic local fallback pass so the site can still
   - ensures AI blog shells are created/scheduled (`3 publish now + 2 future weekly`),
   - runs `lf_ai_studio_fill_site_content_without_ai()` to replace generic/empty section copy,
   - runs image distribution and SEO refresh passes.
+- Placeholder/stock placeholder media assets are excluded from deterministic image matching and can be replaced automatically during assignment.
 - `lf_apply_orchestrator_updates()` continues to overwrite weak generic copy with deterministic fallback if AI output is thin.
 
 This keeps the theme operational as a standalone engine while still benefiting from n8n when available.
