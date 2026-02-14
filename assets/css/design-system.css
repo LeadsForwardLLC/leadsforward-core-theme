@@ -379,6 +379,23 @@ button:focus-visible,
 	margin-right: auto;
 	padding-left: var(--lf-section-padding-x);
 	padding-right: var(--lf-section-padding-x);
+	box-sizing: border-box;
+}
+
+.lf-block-hero__inner,
+.lf-block-service-grid__inner,
+.lf-block-service-intro__inner,
+.lf-block-service-areas__inner,
+.lf-block-trust-reviews__inner,
+.lf-block-cta__inner,
+.lf-block-faq-accordion__inner,
+.lf-block-map-nap__inner,
+.lf-pb-hero__inner,
+.lf-pb-content__inner,
+.site-header__inner,
+.site-footer .lf-container {
+	box-sizing: border-box;
+	width: 100%;
 }
 
 .lf-section__header {
@@ -4786,8 +4803,16 @@ html {
 	.lf-block-trust-reviews__inner,
 	.lf-block-faq-accordion__inner,
 	.lf-block-cta__inner {
-		padding-left: var(--lf-section-padding-x);
-		padding-right: var(--lf-section-padding-x);
+		padding-left: calc(var(--lf-section-padding-x) + env(safe-area-inset-left));
+		padding-right: calc(var(--lf-section-padding-x) + env(safe-area-inset-right));
+	}
+
+	.lf-section__inner,
+	.lf-block-service-intro__inner,
+	.lf-block-map-nap__inner,
+	.lf-pb-section {
+		padding-left: calc(var(--lf-section-padding-x) + env(safe-area-inset-left));
+		padding-right: calc(var(--lf-section-padding-x) + env(safe-area-inset-right));
 	}
 
 	.lf-block-hero__cta .lf-btn {
