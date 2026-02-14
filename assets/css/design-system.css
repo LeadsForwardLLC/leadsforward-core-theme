@@ -1645,6 +1645,9 @@ button:focus-visible,
 		gap: 0;
 		width: 100%;
 	}
+	.site-header__nav {
+		width: 100%;
+	}
 	.site-header__menu a,
 	.site-header__utility-menu a {
 		font-size: 1.05rem;
@@ -1682,11 +1685,15 @@ button:focus-visible,
 		display: none;
 		list-style: none;
 		margin: 0.35rem 0 0.5rem;
-		padding: 0 0 0 0.75rem;
+		padding: 0;
 		border-radius: 0;
 		background: transparent;
 		border: 0;
 		width: 100%;
+	}
+	.site-header__menu .sub-menu a {
+		padding: 0.85rem 0;
+		font-size: 1rem;
 	}
 	.site-header__menu .menu-item.is-open > .sub-menu {
 		display: grid;
