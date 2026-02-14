@@ -78,6 +78,45 @@
   border: 1px solid #e5e7eb;
 }
 
+.lf-manifester-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.lf-manifester-step {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  background: #fff;
+}
+
+.lf-manifester-step--action {
+  border-color: #bfdbfe;
+  background: #f8fafc;
+}
+
+.lf-manifester-step__badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e0f2fe;
+  color: #0369a1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.lf-manifester-step__content {
+  flex: 1 1 auto;
+}
+
 .lf-manifester-logo {
   margin: 12px 0 16px;
   padding: 12px;
@@ -92,11 +131,54 @@
   gap: 16px;
 }
 
+.lf-manifester-source {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
 .lf-manifester-panel {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 12px;
   background: #fff;
+}
+
+.lf-manifester-status {
+  margin-top: 8px;
+  font-size: 0.95rem;
+  color: #4b5563;
+  white-space: pre-line;
+}
+
+.lf-manifester-status.is-error {
+  color: #b91c1c;
+}
+
+.lf-manifester-status.is-success {
+  color: #047857;
+}
+
+.lf-manifester-status.is-info {
+  color: #1d4ed8;
+}
+
+.lf-manifester-hidden {
+  display: none;
+}
+
+.lf-manifester-hidden-submit {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.button-hero {
+  font-size: 1.05rem;
+  padding: 10px 18px;
 }
 
 .lf-airtable-field-map {
