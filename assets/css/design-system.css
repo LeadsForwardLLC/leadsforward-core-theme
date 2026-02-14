@@ -3557,11 +3557,9 @@ button:focus-visible,
 	--lf-review-gap: 1.25rem;
 	display: flex;
 	gap: var(--lf-review-gap);
-	overflow-x: auto;
-	scroll-snap-type: x mandatory;
+	overflow: visible;
+	scroll-snap-type: none;
 	padding-bottom: 0.5rem;
-	scrollbar-gutter: stable;
-	-webkit-overflow-scrolling: touch;
 }
 
 .lf-block-trust-reviews--slider .lf-block-trust-reviews__item {
@@ -5172,6 +5170,13 @@ html {
 	gap: 0.75rem;
 	position: relative;
 	overflow: hidden;
+}
+
+.lf-slider__viewport {
+	width: 100%;
+	overflow-x: hidden;
+	overflow-y: visible;
+	padding-bottom: 1rem;
 }
 
 .lf-slider__track {

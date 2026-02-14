@@ -1,8 +1,11 @@
 (() => {
 	const getTrack = (root) =>
 		root.querySelector('[data-lf-slider-track]') || root.querySelector('.lf-slider__track');
+	const getViewport = (root) =>
+		root.querySelector('[data-lf-slider-viewport]') || root;
 
 	const buildSliderState = (root) => {
+		const viewport = getViewport(root);
 		const track = getTrack(root);
 		if (!track) return null;
 		const items = Array.from(track.children);
@@ -10,7 +13,8 @@
 		const styles = window.getComputedStyle(track);
 		const gap = parseFloat(styles.columnGap || styles.gap || 0);
 		const itemWidth = items[0].getBoundingClientRect().width;
-		const perView = Math.max(1, Math.round((track.clientWidth + gap) / (itemWidth + gap)));
+		const viewWidth = viewport ? viewport.clientWidth : track.clientWidth;
+		const perView = Math.max(1, Math.round((viewWidth + gap) / (itemWidth + gap)));
 		const pageWidth = (itemWidth + (isNaN(gap) ? 0 : gap)) * perView;
 		const maxIndex = Math.max(0, Math.ceil(items.length / perView) - 1);
 		return { track, items, gap, perView, pageWidth, maxIndex };

@@ -148,7 +148,8 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 							<button type="button" class="lf-slider__nav lf-block-trust-reviews__nav lf-block-trust-reviews__nav--prev" data-lf-slider-prev aria-label="<?php esc_attr_e('Previous reviews', 'leadsforward-core'); ?>">‹</button>
 							<button type="button" class="lf-slider__nav lf-block-trust-reviews__nav lf-block-trust-reviews__nav--next" data-lf-slider-next aria-label="<?php esc_attr_e('Next reviews', 'leadsforward-core'); ?>">›</button>
 						</div>
-						<ul class="lf-block-trust-reviews__list lf-slider__track" role="list" data-lf-slider-track>
+						<div class="lf-slider__viewport" data-lf-slider-viewport>
+							<ul class="lf-block-trust-reviews__list lf-slider__track" role="list" data-lf-slider-track>
 				<?php else : ?>
 					<ul class="lf-block-trust-reviews__list" role="list">
 				<?php endif; ?>
@@ -219,6 +220,9 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 				endwhile;
 				?>
 				</ul>
+				<?php if ($is_slider) : ?>
+						</div>
+				<?php endif; ?>
 				<?php if ($is_slider) : ?>
 						<div class="lf-slider__dots" data-lf-slider-dots aria-label="<?php esc_attr_e('Review pages', 'leadsforward-core'); ?>"></div>
 					</div>
