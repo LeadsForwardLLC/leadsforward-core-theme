@@ -150,6 +150,7 @@ Under **LeadsForward**:
 | **Global Settings** | Business Entity + Logo + Branding colors (core/surface/text). |
 | **Homepage** | Homepage builder: section order, toggles, backgrounds, copy, CTA actions. |
 | **Quote Builder** | Builder config plus integrations + analytics panels. |
+| **Contact Form** | Lightweight field builder + GHL webhook for the Contact page form. |
 | **AI Assistant** | Bounded copy tools (text-only changes, confirmations). |
 | **AI Studio** | Orchestrator-driven “Generate Site Content” with job logging. |
 | **Config** | Export/Import config. |
@@ -192,10 +193,10 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 ## Page Builder Defaults (Deterministic)
 
 - **Services (single):** `hero → trust_bar → benefits → content_image_a → image_content_b → service_details → process → faq_accordion → related_links → cta`
-- **Service Areas (single):** `hero → trust_bar → benefits → content_image_a → image_content_b → services_offered_here → faq_accordion → nearby_areas → map_nap → cta`
-- **Services Overview (Our Services page):** `hero → trust_bar → content_centered → service_intro → content_image_a → process → faq_accordion → cta`
-- **Service Areas Overview (Our Service Areas page):** `hero → content_centered → nearby_areas → content_image_a → faq_accordion → cta`
-- **Contact:** `hero → content_centered → map_nap → cta`
+- **Service Areas (single):** `hero → trust_bar → benefits → content_image_a → image_content_b → services_offered_here → faq_accordion → nearby_areas → cta`
+- **Services Overview (Services page):** `hero → trust_bar → service_intro → content_image_a → faq_accordion → cta`
+- **Service Areas Overview (Service Areas page):** `hero → content_centered → service_areas → faq_accordion → cta`
+- **Contact:** `hero → map_nap → cta → trust_reviews`
 - **Terms / Privacy:** `hero → content`
 
 New section type: **Centered Content** (`content_centered`) — minimal, text-only section with heading, optional subheading, and rich supporting text.
@@ -326,6 +327,15 @@ New section type: **Centered Content** (`content_centered`) — minimal, text-on
 
 ---
 
+## Contact Form
+
+- **Admin:** Configure in **LeadsForward → Contact Form**.
+- **Fields:** One line per field: `Label | type | required|optional | placeholder`.
+- **Delivery:** Submissions post to the saved GHL webhook URL.
+- **Rendering:** Contact page uses the Map + NAP block in contact mode to render the form.
+
+---
+
 ## AI Assistant
 
 - **Scope:** Copy-only suggestions and edits (no layout, CSS, or slugs).
@@ -390,7 +400,7 @@ After theme activation, **Appearance → LeadsForward Setup** runs a one-time fl
 2. **Business info (NAP)** — Name, phone, email, address, opening hours. Saved to global business info options and editable in LeadsForward settings.
 3. **Confirm services & service areas** — Services come from the niche; add service areas (one per line, optional `City, ST`). Creates `lf_service` and `lf_service_area` posts.
 4. **Variation profile** — Pre-selected from niche; can override.
-5. **Generate site** — Creates pages (Home, About Us, Our Services, Our Service Areas, Reviews, Blog, Sitemap, Contact, Privacy Policy, Terms of Service, Thank You), sets Home as front page, creates Header and Footer menus and assigns them, seeds service ↔ service area relationships, updates options (NAP, CTAs, variation, schema, homepage config), and seeds **page builder defaults** for core pages, services, and areas. Idempotent: existing pages/CPTs by slug are reused; no duplicates.
+5. **Generate site** — Creates pages (Home, About Us, Services, Service Areas, Reviews, Blog, Sitemap, Contact, Privacy Policy, Terms of Service, Thank You), sets Home as front page, creates Header and Footer menus and assigns them, seeds service ↔ service area relationships, updates options (NAP, CTAs, variation, schema, homepage config), and seeds **page builder defaults** for core pages, services, and areas. Idempotent: existing pages/CPTs by slug are reused; no duplicates.
 
 Completion is stored in option `lf_setup_wizard_complete`. Site setup does not show again unless you use “Show setup again” (which clears the flag). No frontend JS, no cron; all actions are explicit and logged in the runner return value.
 

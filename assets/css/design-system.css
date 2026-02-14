@@ -2194,19 +2194,19 @@ button:focus-visible,
 	display: inline-flex;
 	align-items: center;
 	flex-wrap: wrap;
-	gap: 0.65rem 0.85rem;
-	padding: 0.45rem 0.75rem;
+	gap: 0.5rem 0.75rem;
+	padding: 0.25rem 0.6rem;
 	border-radius: var(--lf-pill-container-radius);
-	border: var(--lf-pill-container-border);
-	background: var(--lf-pill-container-bg);
-	box-shadow: var(--lf-pill-container-shadow);
+	border: 1px solid rgba(15, 23, 42, 0.1);
+	background: #fff;
+	box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
 }
 
 .lf-hero-trust__badge {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.35rem;
-	padding: var(--lf-pill-padding-y) var(--lf-pill-padding-x);
+	padding: 0.35rem 0.65rem;
 	border-radius: var(--lf-pill-radius);
 	background: var(--lf-pill-accent-bg);
 	border: var(--lf-pill-accent-border);
