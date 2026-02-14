@@ -171,12 +171,14 @@ function lf_image_intelligence_optimize_uploaded_image(array $metadata, int $att
 		return $metadata;
 	}
 	if ($mime === 'image/png' && (string) get_post_meta($attachment_id, '_lf_image_png_converted', true) !== '1') {
-		$converted = lf_image_intelligence_convert_png_to_jpeg($attachment_id, $file);
-		if (is_array($converted)) {
-			update_post_meta($attachment_id, '_lf_image_png_converted', '1');
-			update_post_meta($attachment_id, '_lf_image_optimized', '1');
-			delete_post_meta($attachment_id, '_lf_image_processing_lock');
-			return $converted;
+		if (!lf_image_intelligence_png_has_transparency($file)) {
+			$converted = lf_image_intelligence_convert_png_to_jpeg($attachment_id, $file);
+			if (is_array($converted)) {
+				update_post_meta($attachment_id, '_lf_image_png_converted', '1');
+				update_post_meta($attachment_id, '_lf_image_optimized', '1');
+				delete_post_meta($attachment_id, '_lf_image_processing_lock');
+				return $converted;
+			}
 		}
 	}
 	$editor = wp_get_image_editor($file);
@@ -193,6 +195,28 @@ function lf_image_intelligence_optimize_uploaded_image(array $metadata, int $att
 	}
 	delete_post_meta($attachment_id, '_lf_image_processing_lock');
 	return $metadata;
+}
+
+function lf_image_intelligence_png_has_transparency(string $file): bool {
+	if ($file === '' || !file_exists($file)) {
+		return false;
+	}
+	$handle = @fopen($file, 'rb');
+	if (!$handle) {
+		return false;
+	}
+	$header = fread($handle, 64 * 1024);
+	fclose($handle);
+	if (!is_string($header) || strlen($header) < 33) {
+		return false;
+	}
+	// PNG color type byte in IHDR chunk payload (offset 25)
+	$color_type = ord($header[25]);
+	if (in_array($color_type, [4, 6], true)) {
+		return true;
+	}
+	// Palette transparency chunk
+	return strpos($header, 'tRNS') !== false;
 }
 
 function lf_image_intelligence_convert_png_to_jpeg(int $attachment_id, string $source_file): array {

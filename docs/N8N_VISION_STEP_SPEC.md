@@ -74,6 +74,73 @@ Return your normal payload plus:
 4. Merge annotations into final callback payload as `media_annotations`.
 5. Keep normal `updates` output unchanged.
 
+### Drop-in Code Node (Create annotations skeleton)
+
+Use a Code node after webhook parse (run once for all items):
+
+```javascript
+const payload = $json.body ?? $json;
+const candidates = Array.isArray(payload.media_library_candidates) ? payload.media_library_candidates : [];
+const imageGen = payload.image_generation || {};
+
+// Build hybrid target lookup for faster matching
+const targets = Array.isArray(imageGen.targets) ? imageGen.targets : [];
+const targetByPostAndSlot = new Map();
+for (const t of targets) {
+  const key = `${t.post_id || 0}:${t.slot || ''}`;
+  if (!targetByPostAndSlot.has(key)) targetByPostAndSlot.set(key, []);
+  targetByPostAndSlot.get(key).push(t);
+}
+
+return candidates.map((c) => ({
+  json: {
+    ...payload,
+    candidate: c,
+    image_generation: imageGen,
+    targetByPostAndSlot: Object.fromEntries(targetByPostAndSlot)
+  }
+}));
+```
+
+### Vision/Generation output contract per item
+
+Each item should eventually produce:
+
+```json
+{
+  "attachment_id": 123,
+  "description": "Worker installing roof shingles",
+  "alt_text": "Roof repair in Kansas City by Acme Roofing",
+  "recommended_filename": "roof-repair-kansas-city-install",
+  "keywords": ["roof repair", "shingle installation", "kansas city"],
+  "service_slugs": ["roof-repair"],
+  "area_slugs": ["kansas-city-mo"],
+  "page_types": ["service", "service_area", "homepage"],
+  "slots": ["hero", "featured"]
+}
+```
+
+### Merge node (append `media_annotations` to callback payload)
+
+Use a final Code node before callback:
+
+```javascript
+const items = $input.all();
+const first = items[0]?.json || {};
+
+const media_annotations = items
+  .map(i => i.json.media_annotation || i.json.annotation || null)
+  .filter(Boolean);
+
+// Preserve existing orchestrator payload shape
+return [{
+  json: {
+    ...first,
+    media_annotations
+  }
+}];
+```
+
 ## Hybrid AI Image Generation Mode
 
 The theme now sends `image_generation` instructions in payload:
