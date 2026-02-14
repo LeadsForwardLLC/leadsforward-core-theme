@@ -69,7 +69,10 @@ The theme now auto-processes uploaded images so users can upload files without m
    - Title/slug are normalized from generated filename tokens.
 4. **ALT text auto-fill**
    - If ALT is empty, theme generates keyword-aware ALT.
-   - Existing ALT is never overwritten.
+   - Existing ALT is preserved unless it is clearly generic/placeholder.
+5. **Placeholder suppression**
+   - Assets flagged as placeholder (filename/title/caption markers like `placeholder`) are excluded from deterministic matching.
+   - Placeholder image IDs are treated as replaceable so uploaded real images take priority during assignment.
 
 ## Matching Priority (Highest to Lowest)
 

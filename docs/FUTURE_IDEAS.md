@@ -1,51 +1,28 @@
 # Future Ideas
 
-Living backlog of high-upside product/system ideas for LeadsForward + JobCapturePro. Keep this concise, practical, and implementation-oriented.
+Living backlog of high-upside product/system ideas for LeadsForward + JobCapturePro. Add to this over time and promote items into implementation specs when ready.
 
-## Vision Themes
-
+## Vision
 - Closed-loop optimization around `lead -> booked job -> revenue`, not just traffic.
 - Self-healing websites that continuously improve from live conversion signals.
-- Deterministic quality/safety rails with AI acceleration on top.
+- Deterministic quality/safety rails with AI acceleration layered on top.
 - End-to-end contractor growth OS launched in minutes.
 
 ## Priority Concepts
+- **Closed-Loop Revenue OS:** Connect theme + JobCapturePro + CRM + call tracking to score pages by revenue per visit and auto-prioritize changes.
+- **Self-Healing Local Pages:** Rewrite weak sections from search/call/form outcomes with pre-publish quality gates and city/service uniqueness.
+- **Intent-Matched Micro Landing Engine:** Generate and test micro-pages per high-intent query/ad group; scale winners and retire losers.
+- **Trust Graph Automation:** Assemble local proof blocks from reviews, before/after jobs, licenses, guarantees, and nearby projects.
+- **Adaptive Lead Friction Layer:** Personalize forms/CTAs by source, device, and intent with fast-lane high-intent routes.
+- **AI Call + Site Intelligence Loop:** Feed anonymized call/chat outcomes into copy, FAQs, objections, and offer strategy.
+- **Image Intelligence 2.0:** Rank assets by trust/relevance/conversion impact and auto-replace weak media.
+- **Offer Experiment Grid:** Continuously test guarantees, financing, urgency, and CTA framing with stop-loss rules.
+- **Cross-Account Learning Network:** Use anonymized benchmark patterns to pre-seed new launches with proven structures.
 
-- **Closed-Loop Revenue OS**
-  - Connect theme + JobCapturePro + CRM + call tracking to score pages by revenue per visit.
-  - Auto-prioritize content and UX updates based on booked-job outcomes.
-
-- **Self-Healing Local Pages**
-  - Rewrite weak sections from real search/call/form signals with pre-publish quality gates.
-  - Keep unique copy and proof per service + city pair.
-
-- **Intent-Matched Micro Landing Engine**
-  - Generate and test micro-landing pages per high-intent query/ad group.
-  - Auto-scale winners, retire losers, keep design/system consistency.
-
-- **Trust Graph Automation**
-  - Auto-assemble local proof blocks: reviews, before/after jobs, licenses, guarantees, nearby projects.
-  - Rotate proof by service, season, and geography.
-
-- **Adaptive Lead Friction Layer**
-  - Dynamic forms/CTAs by source, device, and page intent.
-  - Fast-lane flows for high-intent leads (callback, SMS quote, instant booking).
-
-- **AI Call + Site Intelligence Loop**
-  - Feed anonymized call/chat outcomes into copy/FAQ/offer generation.
-  - Optimize for closed jobs, not vanity metrics.
-
-- **Offer Experiment Grid**
-  - Continuous multivariate testing for guarantees, financing, urgency, and CTA framing.
-  - Guardrails for conversion decline and brand safety.
-
-- **Network Moat**
-  - Use anonymized benchmark patterns across clients to pre-load new launches with proven structures.
-
-## Implementation Notes
-
-- Keep WordPress deterministic and authoritative.
-- Use n8n as augmentation + validation layer, not a single point of failure.
-- Always include: security hardening, rollback safety, and clear observability.
-- Every new capability should ship with docs, SOP updates, and QA criteria.
+## Always-On Constraints
+- Security first: signed callbacks, replay protection, strict schema validation, least-privilege data handling.
+- Determinism first: no random writes to live content.
+- No-AI mode must remain viable: theme alone can scaffold, populate, optimize, and launch.
+- n8n is an augmentation and quality gate layer, not a single point of failure.
+- Every major capability ships with docs, SOP updates, and QA criteria.
 

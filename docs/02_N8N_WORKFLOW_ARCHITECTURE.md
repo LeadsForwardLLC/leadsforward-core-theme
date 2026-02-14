@@ -41,7 +41,7 @@ Webhook
    - enforces minimum content volume per page type.
    - rejects placeholder/generic phrases.
    - enforces blog blueprint count floor (`>= 5` when blog scope is enabled).
-   - emits workflow warnings instead of hard-failing callback (WordPress fallback repair remains authoritative).
+   - emits `quality_warnings` for observability instead of hard-failing callback (WordPress fallback repair remains authoritative).
 11. **Merge Blueprint Results** collects all page updates.
 12. **Callback to WP** posts the merged updates to the WP orchestrator endpoint.
 

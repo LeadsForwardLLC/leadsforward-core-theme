@@ -1317,24 +1317,43 @@ function lf_ai_studio_seed_sample_projects(): void {
 		$service_titles = [$niche, $niche, $niche];
 	}
 	$service_titles = array_slice($service_titles, 0, 3);
-	$placeholder_id = function_exists('lf_get_placeholder_image_id') ? (int) lf_get_placeholder_image_id() : 0;
 	$year = (string) date('Y');
 	foreach ($service_titles as $service) {
 		$title = $location !== '' ? sprintf(__('%s Project — %s', 'leadsforward-core'), $service, $location) : sprintf(__('%s Project', 'leadsforward-core'), $service);
+		$project_copy = $location !== ''
+			? sprintf(__('%1$s project completed in %2$s with a clear scope, reliable timeline, and durable finish built for long-term performance.', 'leadsforward-core'), $service, $location)
+			: sprintf(__('%1$s project completed with clear planning, reliable execution, and a durable finish designed for long-term performance.', 'leadsforward-core'), $service);
 		$post_id = wp_insert_post([
 			'post_type' => 'lf_project',
 			'post_status' => 'publish',
 			'post_title' => $title,
-			'post_content' => __('Sample project created during site generation. Replace with real before/after details and photos.', 'leadsforward-core'),
+			'post_content' => $project_copy,
 		]);
 		if (!$post_id) {
 			continue;
 		}
-		if ($placeholder_id) {
-			update_post_meta($post_id, 'lf_project_before_image', $placeholder_id);
-			update_post_meta($post_id, 'lf_project_after_image', $placeholder_id);
-			if (function_exists('set_post_thumbnail')) {
-				set_post_thumbnail($post_id, $placeholder_id);
+		if (function_exists('lf_match_images_for_context')) {
+			$image_context = [
+				'page_type' => 'overview',
+				'niche' => (string) ($business['niche'] ?? ''),
+				'city' => $city,
+				'primary_keyword' => $service,
+				'secondary_keywords' => is_array($manifest['homepage']['secondary_keywords'] ?? null) ? $manifest['homepage']['secondary_keywords'] : [],
+				'variation_seed' => (string) get_option('lf_homepage_variation_seed', ''),
+				'service_name' => $service,
+			];
+			$matches = lf_match_images_for_context($image_context);
+			$before_id = (int) ($matches['content_image_a'] ?? 0);
+			$after_id = (int) ($matches['image_content_b'] ?? 0);
+			$featured_id = (int) ($matches['featured'] ?? $before_id);
+			if ($before_id > 0) {
+				update_post_meta($post_id, 'lf_project_before_image', $before_id);
+			}
+			if ($after_id > 0) {
+				update_post_meta($post_id, 'lf_project_after_image', $after_id);
+			}
+			if ($featured_id > 0 && function_exists('set_post_thumbnail')) {
+				set_post_thumbnail($post_id, $featured_id);
 			}
 		}
 		if ($city !== '') {

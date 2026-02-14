@@ -1032,7 +1032,7 @@ function lf_prime_image_distribution_for_site(): array {
 		$post_ids[] = $front_id;
 	}
 	$post_ids = array_merge($post_ids, get_posts([
-		'post_type' => ['lf_service', 'lf_service_area'],
+		'post_type' => ['lf_service', 'lf_service_area', 'lf_project'],
 		'post_status' => 'publish',
 		'posts_per_page' => -1,
 		'fields' => 'ids',
