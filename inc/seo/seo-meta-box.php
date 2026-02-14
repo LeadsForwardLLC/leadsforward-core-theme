@@ -247,7 +247,7 @@ function lf_seo_maybe_populate_generated_meta(int $post_id, string $primary = ''
 	}
 
 	$current_title = trim((string) get_post_meta($post_id, '_lf_seo_meta_title', true));
-	if ($current_title === '') {
+	if ($current_title === '' || lf_seo_meta_text_needs_upgrade($current_title, 'title')) {
 		$title = lf_seo_generate_meta_title_from_keywords($primary_keyword);
 		if ($title !== '') {
 			update_post_meta($post_id, '_lf_seo_meta_title', $title);
@@ -255,7 +255,7 @@ function lf_seo_maybe_populate_generated_meta(int $post_id, string $primary = ''
 	}
 
 	$current_description = trim((string) get_post_meta($post_id, '_lf_seo_meta_description', true));
-	if ($current_description === '') {
+	if ($current_description === '' || lf_seo_meta_text_needs_upgrade($current_description, 'description')) {
 		$description = lf_seo_generate_meta_description_from_keywords($post_id, $primary_keyword, $secondary_list);
 		if ($description !== '') {
 			update_post_meta($post_id, '_lf_seo_meta_description', $description);
@@ -288,16 +288,70 @@ function lf_seo_generate_meta_title_from_keywords(string $primary_keyword): stri
 	if ($primary_keyword === '') {
 		return '';
 	}
-	$brand = trim((string) get_bloginfo('name'));
-	$title = $primary_keyword;
-	if ($brand !== '' && stripos($title, $brand) === false) {
-		$title .= ' | ' . $brand;
+	$city = '';
+	if (function_exists('lf_business_entity_get')) {
+		$entity = lf_business_entity_get();
+		$city = trim((string) ($entity['address_parts']['city'] ?? ''));
 	}
-	$title = trim($title);
-	if (function_exists('mb_substr') && mb_strlen($title) > 65) {
-		$title = rtrim(mb_substr($title, 0, 65));
+	if ($city === '') {
+		$city = trim((string) get_option('lf_homepage_city', ''));
+	}
+	$brand = trim((string) get_bloginfo('name'));
+	$title_parts = [$primary_keyword];
+	if ($city !== '' && stripos($primary_keyword, $city) === false) {
+		$title_parts[] = $city;
+	}
+	if ($brand !== '' && stripos($primary_keyword, $brand) === false) {
+		$title_parts[] = $brand;
+	}
+	$title = trim(implode(' | ', array_filter($title_parts)));
+	if (function_exists('mb_substr') && mb_strlen($title) > 62) {
+		$title = rtrim(mb_substr($title, 0, 62));
 	}
 	return $title;
+}
+
+function lf_seo_meta_text_needs_upgrade(string $value, string $type = 'description'): bool {
+	$value = trim(wp_strip_all_tags($value));
+	if ($value === '') {
+		return true;
+	}
+	$lower = strtolower($value);
+	$generic_patterns = [
+		'get a fast quote today',
+		'lorem ipsum',
+		'placeholder',
+		'sample',
+		'trusted experts',
+	];
+	foreach ($generic_patterns as $pattern) {
+		if (strpos($lower, $pattern) !== false) {
+			return true;
+		}
+	}
+	if ($type === 'title') {
+		return function_exists('mb_strlen') ? mb_strlen($value) < 32 : strlen($value) < 32;
+	}
+	return function_exists('mb_strlen') ? mb_strlen($value) < 120 : strlen($value) < 120;
+}
+
+function lf_seo_post_location_phrase(int $post_id): string {
+	$post = get_post($post_id);
+	if (!$post instanceof \WP_Post) {
+		return '';
+	}
+	$post_title = trim((string) $post->post_title);
+	if ($post->post_type === 'lf_service_area' && $post_title !== '') {
+		return $post_title;
+	}
+	if (function_exists('lf_business_entity_get')) {
+		$entity = lf_business_entity_get();
+		$city = trim((string) ($entity['address_parts']['city'] ?? ''));
+		if ($city !== '') {
+			return $city;
+		}
+	}
+	return trim((string) get_option('lf_homepage_city', ''));
 }
 
 function lf_seo_generate_meta_description_from_keywords(int $post_id, string $primary_keyword, array $secondary_keywords = []): string {
@@ -314,36 +368,86 @@ function lf_seo_generate_meta_description_from_keywords(int $post_id, string $pr
 	if ($post_title === '') {
 		$post_title = __('our services', 'leadsforward-core');
 	}
+	$location = lf_seo_post_location_phrase($post_id);
+	$brand = trim((string) get_bloginfo('name'));
+	$post_type = (string) get_post_type($post_id);
+	$intent_phrase = $post_type === 'post'
+		? __('in-depth guide', 'leadsforward-core')
+		: __('local service', 'leadsforward-core');
+	$secondary_phrase = '';
+	if (!empty($secondary_keywords)) {
+		$secondary_phrase = implode(', ', array_slice($secondary_keywords, 0, 2));
+	}
 
-	if (count($secondary_keywords) >= 2) {
-		$description = sprintf(
-			/* translators: 1: primary keyword, 2: post title, 3: secondary keyword one, 4: secondary keyword two. */
-			__('%1$s from trusted %2$s experts. We also specialize in %3$s and %4$s. Get a fast quote today.', 'leadsforward-core'),
-			$primary_keyword,
-			$post_title,
-			$secondary_keywords[0],
-			$secondary_keywords[1]
-		);
-	} elseif (count($secondary_keywords) === 1) {
-		$description = sprintf(
-			/* translators: 1: primary keyword, 2: post title, 3: secondary keyword. */
-			__('%1$s from trusted %2$s experts. We also specialize in %3$s. Get a fast quote today.', 'leadsforward-core'),
-			$primary_keyword,
-			$post_title,
-			$secondary_keywords[0]
-		);
-	} else {
-		$description = sprintf(
-			/* translators: 1: primary keyword, 2: post title. */
-			__('%1$s from trusted %2$s experts. Get a fast quote today.', 'leadsforward-core'),
-			$primary_keyword,
-			$post_title
+	$description = sprintf(
+		/* translators: 1: primary keyword, 2: location, 3: post title, 4: intent phrase, 5: secondary phrase, 6: brand */
+		__('%1$s in %2$s from %6$s. This %4$s for %3$s covers process, pricing, timelines, and quality standards to help you choose confidently.', 'leadsforward-core'),
+		$primary_keyword,
+		$location !== '' ? $location : __('your area', 'leadsforward-core'),
+		$post_title,
+		$intent_phrase,
+		$secondary_phrase,
+		$brand !== '' ? $brand : __('our team', 'leadsforward-core')
+	);
+	if ($secondary_phrase !== '') {
+		$description .= ' ' . sprintf(
+			/* translators: %s secondary keywords list */
+			__('Related services: %s.', 'leadsforward-core'),
+			$secondary_phrase
 		);
 	}
+	$description .= ' ' . __('Request a quote for a tailored plan.', 'leadsforward-core');
 
 	$description = trim(preg_replace('/\s+/', ' ', $description));
 	if (function_exists('mb_substr') && mb_strlen($description) > 160) {
 		$description = rtrim(mb_substr($description, 0, 157), " \t\n\r\0\x0B,.;:-") . '...';
 	}
 	return $description;
+}
+
+function lf_seo_refresh_metadata_for_generated_content(int $limit = 400): void {
+	$posts = get_posts([
+		'post_type' => ['page', 'post', 'lf_service', 'lf_service_area'],
+		'post_status' => ['publish', 'future', 'draft', 'pending', 'private'],
+		'posts_per_page' => $limit,
+		'orderby' => 'date',
+		'order' => 'DESC',
+		'no_found_rows' => true,
+	]);
+	foreach ($posts as $post) {
+		if (!$post instanceof \WP_Post) {
+			continue;
+		}
+		$post_id = (int) $post->ID;
+		$primary = trim((string) get_post_meta($post_id, '_lf_seo_primary_keyword', true));
+		if ($primary === '') {
+			continue;
+		}
+		$secondary = lf_seo_normalize_secondary_keywords((string) get_post_meta($post_id, '_lf_seo_secondary_keywords', true));
+		lf_seo_maybe_populate_generated_meta($post_id, $primary, $secondary);
+
+		$current_title = trim((string) get_post_meta($post_id, '_lf_seo_meta_title', true));
+		if (lf_seo_meta_text_needs_upgrade($current_title, 'title')) {
+			$new_title = lf_seo_generate_meta_title_from_keywords($primary);
+			if ($new_title !== '') {
+				update_post_meta($post_id, '_lf_seo_meta_title', $new_title);
+			}
+		}
+		$current_description = trim((string) get_post_meta($post_id, '_lf_seo_meta_description', true));
+		if (lf_seo_meta_text_needs_upgrade($current_description, 'description')) {
+			$new_description = lf_seo_generate_meta_description_from_keywords($post_id, $primary, $secondary);
+			if ($new_description !== '') {
+				update_post_meta($post_id, '_lf_seo_meta_description', $new_description);
+			}
+		}
+		$canonical = trim((string) get_post_meta($post_id, '_lf_seo_canonical_url', true));
+		$permalink = (string) get_permalink($post_id);
+		if ($canonical === '' && $permalink !== '') {
+			update_post_meta($post_id, '_lf_seo_canonical_url', esc_url_raw($permalink));
+		}
+		$og_image = (int) get_post_meta($post_id, '_lf_seo_og_image_id', true);
+		if ($og_image <= 0 && has_post_thumbnail($post_id)) {
+			update_post_meta($post_id, '_lf_seo_og_image_id', (string) get_post_thumbnail_id($post_id));
+		}
+	}
 }

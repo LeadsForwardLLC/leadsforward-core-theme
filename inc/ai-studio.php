@@ -2202,6 +2202,9 @@ function lf_ai_studio_scaffold_manifest(array $manifest): array {
 		if (function_exists('lf_prime_image_distribution_for_site')) {
 			lf_prime_image_distribution_for_site();
 		}
+		if (function_exists('lf_seo_refresh_metadata_for_generated_content')) {
+			lf_seo_refresh_metadata_for_generated_content();
+		}
 	}
 	return is_array($result) ? $result : ['success' => false, 'message' => __('Setup runner failed.', 'leadsforward-core')];
 }
@@ -4850,6 +4853,9 @@ function lf_apply_orchestrator_updates(array $response): array {
 				lf_image_intelligence_maybe_set_alt_text($image_id, $context_for_alt);
 			}
 		}
+	}
+	if (function_exists('lf_seo_refresh_metadata_for_generated_content')) {
+		lf_seo_refresh_metadata_for_generated_content();
 	}
 
 	$summary_parts = [];
