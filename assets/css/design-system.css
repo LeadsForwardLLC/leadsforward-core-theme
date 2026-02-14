@@ -5196,8 +5196,9 @@ html {
 .lf-slider__viewport {
 	width: 100%;
 	box-sizing: border-box;
-	overflow: hidden;
-	padding: 0.25rem 0 1.75rem;
+	overflow-x: hidden;
+	overflow-y: visible;
+	padding: 0.25rem 0 2.25rem;
 }
 
 .lf-slider__track {
