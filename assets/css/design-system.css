@@ -3433,6 +3433,18 @@ button:focus-visible,
 	position: relative;
 }
 
+.lf-block-trust-reviews__item:nth-child(3n + 1) .lf-block-trust-reviews__quote {
+	border-color: var(--lf-primary);
+}
+
+.lf-block-trust-reviews__item:nth-child(3n + 2) .lf-block-trust-reviews__quote {
+	border-color: var(--lf-secondary);
+}
+
+.lf-block-trust-reviews__item:nth-child(3n) .lf-block-trust-reviews__quote {
+	border-color: var(--lf-accent);
+}
+
 .lf-block-trust-reviews__text {
 	margin: 0 0 1.1rem;
 	padding-top: 0.2rem;
