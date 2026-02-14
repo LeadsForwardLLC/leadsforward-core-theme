@@ -5369,6 +5369,45 @@ html {
 	text-decoration: none;
 }
 
+.lf-blog-share {
+	margin-top: 1rem;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+	align-items: center;
+}
+
+.lf-blog-share__label {
+	color: var(--lf-text-muted);
+	font-weight: 600;
+}
+
+.lf-blog-share__links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.lf-blog-share__link {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.35rem 0.7rem;
+	border: var(--lf-pill-border);
+	border-radius: var(--lf-pill-radius);
+	background: var(--lf-pill-bg);
+	color: var(--lf-pill-color);
+	font-size: 0.85rem;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.lf-blog-comments {
+	background: var(--lf-surface-soft);
+	border: var(--lf-card-border);
+	border-radius: var(--lf-card-radius);
+	padding: var(--lf-card-padding-lg);
+}
+
 .lf-blog-author-card {
 	display: flex;
 	gap: 1rem;

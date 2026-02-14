@@ -89,6 +89,19 @@ get_header();
 							<?php endforeach; ?>
 						</div>
 					<?php endif; ?>
+					<?php
+					$share_url = urlencode((string) get_permalink($post_id));
+					$share_title = urlencode((string) get_the_title($post_id));
+					?>
+					<div class="lf-blog-share" aria-label="<?php esc_attr_e('Share this article', 'leadsforward-core'); ?>">
+						<span class="lf-blog-share__label"><?php esc_html_e('Share:', 'leadsforward-core'); ?></span>
+						<div class="lf-blog-share__links">
+							<a class="lf-blog-share__link" href="<?php echo esc_url('https://www.facebook.com/sharer/sharer.php?u=' . $share_url); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Facebook', 'leadsforward-core'); ?></a>
+							<a class="lf-blog-share__link" href="<?php echo esc_url('https://www.linkedin.com/sharing/share-offsite/?url=' . $share_url); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('LinkedIn', 'leadsforward-core'); ?></a>
+							<a class="lf-blog-share__link" href="<?php echo esc_url('https://twitter.com/intent/tweet?url=' . $share_url . '&text=' . $share_title); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('X', 'leadsforward-core'); ?></a>
+							<a class="lf-blog-share__link" href="<?php echo esc_url('mailto:?subject=' . rawurlencode((string) get_the_title($post_id)) . '&body=' . $share_url); ?>"><?php esc_html_e('Email', 'leadsforward-core'); ?></a>
+						</div>
+					</div>
 				</div>
 			</section>
 
@@ -136,6 +149,16 @@ get_header();
 							endwhile;
 							wp_reset_postdata();
 							?>
+						</div>
+					</div>
+				</section>
+			<?php endif; ?>
+
+			<?php if (comments_open() || get_comments_number()) : ?>
+				<section class="lf-section lf-section--blog-comments">
+					<div class="lf-section__inner">
+						<div class="lf-blog-comments">
+							<?php comments_template(); ?>
 						</div>
 					</div>
 				</section>

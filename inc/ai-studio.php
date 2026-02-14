@@ -1337,89 +1337,159 @@ function lf_ai_studio_blog_post_topics(array $manifest, array $homepage_payload)
 		$niche = (string) ($manifest['business']['niche'] ?? $niche);
 		$city = (string) ($manifest['business']['primary_city'] ?? ($manifest['business']['address']['city'] ?? $city));
 	}
-	$secondary = array_values(array_unique(array_filter(array_map('strval', $secondary))));
+	$primary = sanitize_text_field($primary);
+	$niche = sanitize_text_field($niche);
+	$city = sanitize_text_field($city);
+	$secondary = array_values(array_unique(array_filter(array_map('sanitize_text_field', $secondary))));
+	$secondary = array_values(array_filter($secondary, static function (string $keyword) use ($primary): bool {
+		return $keyword !== '' && strcasecmp($keyword, $primary) !== 0;
+	}));
 
-	if ($primary !== '') {
-		$topics[] = [
-			'title' => sprintf(__('Homeowner guide to %s', 'leadsforward-core'), $primary),
-			'keyword' => $primary,
-		];
-		$topics[] = [
-			'title' => sprintf(__('Top signs you need %s', 'leadsforward-core'), $primary),
-			'keyword' => $primary,
-		];
-	}
-	foreach ($secondary as $keyword) {
-		if (count($topics) >= 3) {
-			break;
+	$focus = $primary !== '' ? $primary : ($niche !== '' ? $niche : __('home services', 'leadsforward-core'));
+	$location = $city !== '' ? $city : __('your area', 'leadsforward-core');
+	$secondary_or_focus = static function (int $index) use ($secondary, $focus): string {
+		if (!empty($secondary)) {
+			return (string) ($secondary[$index % count($secondary)] ?? $focus);
 		}
-		if ($keyword === '') {
-			continue;
-		}
-		$topics[] = [
-			'title' => sprintf(__('What to know about %s', 'leadsforward-core'), $keyword),
-			'keyword' => $keyword,
-		];
-	}
-	if (count($topics) < 3 && $niche !== '') {
-		$topics[] = [
-			'title' => sprintf(__('Planning a %s project the right way', 'leadsforward-core'), $niche),
-			'keyword' => $primary !== '' ? $primary : $niche,
-		];
-	}
-	if (count($topics) < 3 && $business_name !== '' && $city !== '') {
-		$topics[] = [
-			'title' => sprintf(__('Local tips for homeowners in %s', 'leadsforward-core'), $city),
-			'keyword' => $primary !== '' ? $primary : $city,
-		];
-	}
-	return array_slice($topics, 0, 3);
+		return $focus;
+	};
+
+	$topics[] = [
+		'title' => sprintf(__('Complete pillar guide to %1$s in %2$s', 'leadsforward-core'), $focus, $location),
+		'keyword' => $focus,
+		'format' => 'pillar',
+	];
+	$topics[] = [
+		'title' => sprintf(__('How to plan a %s project without costly surprises', 'leadsforward-core'), $secondary_or_focus(0)),
+		'keyword' => $secondary_or_focus(0),
+		'format' => 'how_to',
+	];
+	$topics[] = [
+		'title' => sprintf(__('How much does %1$s cost in %2$s', 'leadsforward-core'), $secondary_or_focus(1), $location),
+		'keyword' => $secondary_or_focus(1),
+		'format' => 'cost',
+	];
+	$topics[] = [
+		'title' => sprintf(__('%1$s versus alternatives: what homeowners should choose', 'leadsforward-core'), $secondary_or_focus(2)),
+		'keyword' => $secondary_or_focus(2),
+		'format' => 'comparison',
+	];
+	$topics[] = [
+		'title' => sprintf(__('Homeowner checklist before hiring a %s company', 'leadsforward-core'), $niche !== '' ? $niche : $focus),
+		'keyword' => $secondary_or_focus(3),
+		'format' => 'checklist',
+	];
+	$topics[] = [
+		'title' => sprintf(__('Seasonal timing for %1$s in %2$s', 'leadsforward-core'), $secondary_or_focus(4), $location),
+		'keyword' => $secondary_or_focus(4),
+		'format' => 'local_guide',
+	];
+	$topics[] = [
+		'title' => sprintf(__('Top homeowner questions about %s answered', 'leadsforward-core'), $secondary_or_focus(5)),
+		'keyword' => $secondary_or_focus(5),
+		'format' => 'faq_roundup',
+	];
+
+	return array_slice($topics, 0, 7);
 }
 
 function lf_ai_studio_ensure_blog_posts(array $topics): array {
+	$now_ts = current_time('timestamp');
+	$publish_now_count = 3;
+	$total_posts = 7;
+	$topics = array_slice($topics, 0, $total_posts);
 	$ai_ids = get_posts([
 		'post_type'      => 'post',
-		'post_status'    => 'publish',
-		'posts_per_page' => 100,
+		'post_status'    => ['publish', 'future', 'draft', 'pending', 'private'],
+		'posts_per_page' => 200,
 		'meta_key'       => 'lf_ai_generated',
 		'meta_value'     => '1',
-		'fields'         => 'ids',
+		'fields'         => 'all',
 	]);
-	$existing_count = is_array($ai_ids) ? count($ai_ids) : 0;
-	$needed = max(0, 3 - $existing_count);
-	for ($i = 0; $i < $needed; $i++) {
-		$topic = $topics[$i] ?? null;
+	$slot_map = [];
+	foreach ($ai_ids as $ai_post) {
+		if (!$ai_post instanceof \WP_Post) {
+			continue;
+		}
+		$slot = (int) get_post_meta((int) $ai_post->ID, 'lf_ai_post_slot', true);
+		if ($slot >= 1 && $slot <= $total_posts) {
+			$slot_map[$slot] = $ai_post;
+		}
+	}
+
+	for ($slot = 1; $slot <= $total_posts; $slot++) {
+		$topic = $topics[$slot - 1] ?? null;
 		if (!is_array($topic)) {
 			continue;
 		}
 		$title = (string) ($topic['title'] ?? '');
 		$keyword = (string) ($topic['keyword'] ?? '');
+		$format = sanitize_key((string) ($topic['format'] ?? 'standard'));
 		if ($title === '') {
 			continue;
 		}
-		$post_id = wp_insert_post([
-			'post_type' => 'post',
-			'post_status' => 'publish',
-			'post_title' => $title,
-			'post_content' => '',
-			'post_excerpt' => '',
-		]);
-		if ($post_id) {
-			update_post_meta($post_id, 'lf_ai_generated', 1);
-			update_post_meta($post_id, 'lf_ai_generated_filled', 0);
-			if ($keyword !== '') {
-				update_post_meta($post_id, 'lf_ai_post_keyword', $keyword);
+		$post = $slot_map[$slot] ?? null;
+		if (!$post instanceof \WP_Post) {
+			$post_id = wp_insert_post([
+				'post_type' => 'post',
+				'post_status' => 'draft',
+				'post_title' => $title,
+				'post_content' => '',
+				'post_excerpt' => '',
+				'comment_status' => 'open',
+				'ping_status' => 'closed',
+			]);
+			if (!$post_id || is_wp_error($post_id)) {
+				continue;
 			}
+			$post = get_post((int) $post_id);
+			if (!$post instanceof \WP_Post) {
+				continue;
+			}
+			update_post_meta((int) $post->ID, 'lf_ai_generated', 1);
+			update_post_meta((int) $post->ID, 'lf_ai_generated_filled', 0);
 		}
+
+		update_post_meta((int) $post->ID, 'lf_ai_post_slot', $slot);
+		if ($keyword !== '') {
+			update_post_meta((int) $post->ID, 'lf_ai_post_keyword', $keyword);
+		}
+		update_post_meta((int) $post->ID, 'lf_ai_post_format', $format);
+		update_post_meta((int) $post->ID, 'lf_ai_post_schedule_managed', 1);
+
+		$post_update = [
+			'ID' => (int) $post->ID,
+			'comment_status' => 'open',
+		];
+		if ($slot <= $publish_now_count) {
+			$post_update['post_status'] = 'publish';
+		} else {
+			$weeks_out = $slot - $publish_now_count;
+			$scheduled_ts = strtotime('+' . $weeks_out . ' week', $now_ts);
+			$local_date = wp_date('Y-m-d 09:00:00', $scheduled_ts, wp_timezone());
+			$post_update['post_status'] = 'future';
+			$post_update['post_date'] = $local_date;
+			$post_update['post_date_gmt'] = get_gmt_from_date($local_date);
+		}
+		wp_update_post($post_update);
 	}
+
 	$ai_posts = get_posts([
-		'post_type'      => 'post',
-		'post_status'    => 'publish',
-		'posts_per_page' => 10,
-		'meta_key'       => 'lf_ai_generated',
-		'meta_value'     => '1',
-		'orderby'        => 'date',
-		'order'          => 'DESC',
+		'post_type' => 'post',
+		'post_status' => ['publish', 'future', 'draft', 'pending', 'private'],
+		'posts_per_page' => $total_posts,
+		'meta_key' => 'lf_ai_generated',
+		'meta_value' => '1',
+		'meta_query' => [
+			[
+				'key' => 'lf_ai_post_slot',
+				'value' => [1, $total_posts],
+				'compare' => 'BETWEEN',
+				'type' => 'NUMERIC',
+			],
+		],
+		'orderby' => 'meta_value_num',
+		'order' => 'ASC',
 	]);
 	$out = [];
 	foreach ($ai_posts as $post) {
@@ -1427,7 +1497,8 @@ function lf_ai_studio_ensure_blog_posts(array $topics): array {
 			continue;
 		}
 		$keyword = (string) get_post_meta($post->ID, 'lf_ai_post_keyword', true);
-		$out[] = ['post' => $post, 'keyword' => $keyword];
+		$format = (string) get_post_meta($post->ID, 'lf_ai_post_format', true);
+		$out[] = ['post' => $post, 'keyword' => $keyword, 'format' => $format];
 	}
 	return $out;
 }
@@ -2706,6 +2777,8 @@ function lf_ai_studio_llm_system_message(): string {
 		'Service page: deep service-specific content; do not reuse homepage hero copy; reference the exact service.',
 		'Service areas overview: broad coverage explanation; no detailed local signals per city.',
 		'Service area page: localized content; do not repeat service overview intro verbatim.',
+		'Blog post rules: when page_intent is blog_post, write a complete long-form article suitable for publication with substantial depth, practical guidance, and concrete homeowner takeaways.',
+		'If blog_post_type is provided in blueprint, shape the article to that format (pillar, how_to, cost, comparison, checklist, local_guide, faq_roundup) while preserving factual accuracy for business and location context.',
 		'Never reuse sentences across page types.',
 		'FAQ strategy: create one global pool of 8-12 evergreen FAQs. Reuse across pages unless contextual variation is required. Homepage shows 5. Service pages show 4-6 relevant. Service area pages show 3-5 localized. Overview pages optionally 3-4.',
 		'CTA strategy: treat the homepage CTA section as the canonical global CTA copy. For each page, add exactly one contextual sentence in cta_subheadline_secondary. Never duplicate CTA sentences across pages.',
@@ -3245,6 +3318,12 @@ function lf_ai_studio_build_post_blueprint(\WP_Post $post, string $page, string 
 		'order' => $out_order,
 		'faq_target_range' => lf_ai_studio_faq_target_range($page),
 	];
+	if ($page === 'post') {
+		$blog_post_type = (string) get_post_meta((int) $post->ID, 'lf_ai_post_format', true);
+		if ($blog_post_type !== '') {
+			$blueprint['blog_post_type'] = $blog_post_type;
+		}
+	}
 	$research_context = lf_ai_studio_build_research_context();
 	if (!empty($research_context)) {
 		$blueprint['research_context'] = $research_context;
