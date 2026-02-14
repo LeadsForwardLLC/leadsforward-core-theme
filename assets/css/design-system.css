@@ -3554,9 +3554,8 @@ button:focus-visible,
 
 .lf-block-trust-reviews--slider .lf-slider__mask {
 	width: 100%;
-	overflow-x: hidden;
-	overflow-y: visible;
-	padding-bottom: 0;
+	overflow: hidden;
+	padding-bottom: 2.5rem;
 }
 
 .lf-block-trust-reviews--slider .lf-slider__viewport {
@@ -3566,6 +3565,8 @@ button:focus-visible,
 .lf-block-trust-reviews--slider .lf-slider__track {
 	width: 100%;
 	overflow: visible;
+	padding-bottom: 1.25rem;
+	box-sizing: content-box;
 }
 
 .lf-block-trust-reviews--slider .lf-slider__controls {
