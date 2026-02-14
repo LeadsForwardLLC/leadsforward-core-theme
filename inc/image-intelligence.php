@@ -142,7 +142,7 @@ function lf_image_intelligence_upload_prefilter(array $file): array {
 
 function lf_image_intelligence_editor_quality(int $quality, string $mime_type): int {
 	if (in_array($mime_type, ['image/jpeg', 'image/webp', 'image/avif'], true)) {
-		return 82;
+		return 72;
 	}
 	return $quality;
 }
@@ -186,10 +186,25 @@ function lf_image_intelligence_optimize_uploaded_image(array $metadata, int $att
 		delete_post_meta($attachment_id, '_lf_image_processing_lock');
 		return $metadata;
 	}
+	$size = method_exists($editor, 'get_size') ? $editor->get_size() : [];
+	$width = (int) ($size['width'] ?? 0);
+	$height = (int) ($size['height'] ?? 0);
+	if ($width > 0 && $height > 0 && ($width > 1600 || $height > 1600)) {
+		$editor->resize(1600, 1600, false);
+	}
 	if (method_exists($editor, 'set_quality')) {
-		$editor->set_quality(82);
+		$editor->set_quality(72);
 	}
 	$saved = $editor->save($file);
+	if (!is_wp_error($saved)) {
+		$current_size = @filesize($file);
+		if (is_int($current_size) && $current_size > 120000) {
+			if (method_exists($editor, 'set_quality')) {
+				$editor->set_quality(62);
+			}
+			$editor->save($file);
+		}
+	}
 	if (!is_wp_error($saved)) {
 		update_post_meta($attachment_id, '_lf_image_optimized', '1');
 	}
@@ -460,6 +475,20 @@ function lf_image_intelligence_seed_hash(string $seed, string $slot, string $fil
 	return abs((int) crc32($seed . '|' . $slot . '|' . $filename));
 }
 
+function lf_image_intelligence_context_discriminator(array $context): string {
+	$parts = [
+		(string) ($context['page_type'] ?? ''),
+		(string) ($context['service_slug'] ?? ''),
+		(string) ($context['area_slug'] ?? ''),
+		(string) ($context['city_slug'] ?? ''),
+	];
+	$tokens = is_array($context['primary_tokens'] ?? null) ? $context['primary_tokens'] : [];
+	if (!empty($tokens)) {
+		$parts[] = implode('-', array_slice($tokens, 0, 3));
+	}
+	return implode('|', array_filter($parts));
+}
+
 /**
  * @param array<int,array<string,mixed>> $index
  * @param array<string,mixed>            $context
@@ -483,7 +512,11 @@ function lf_image_intelligence_pick_slot(array $index, array $context, string $s
 			'id' => $id,
 			'filename' => (string) ($item['normalized_filename'] ?? ''),
 			'vector' => lf_image_intelligence_score_vector($score),
-			'hash' => lf_image_intelligence_seed_hash($seed, $slot, (string) ($item['normalized_filename'] ?? '')),
+			'hash' => lf_image_intelligence_seed_hash(
+				$seed . '|' . lf_image_intelligence_context_discriminator($context),
+				$slot,
+				(string) ($item['normalized_filename'] ?? '')
+			),
 		];
 	}
 	if (empty($candidates)) {
@@ -636,13 +669,28 @@ function lf_image_intelligence_finalize_uploaded_attachment(int $attachment_id):
 	}
 	$file = (string) get_attached_file($attachment_id);
 	$filename = $file !== '' ? basename($file) : '';
-	$title = trim(str_replace('-', ' ', lf_image_intelligence_normalize_filename($filename)));
+	$normalized_filename = lf_image_intelligence_normalize_filename($filename);
+	if (preg_match('/^upload-\d+$/', $normalized_filename) === 1 || $normalized_filename === '' || $normalized_filename === 'image') {
+		$fallback_slug = lf_image_intelligence_upload_base_slug() . '-' . sprintf('%03d', lf_image_intelligence_next_upload_index());
+		if (lf_image_intelligence_rename_attachment_file($attachment_id, $fallback_slug)) {
+			$file = (string) get_attached_file($attachment_id);
+			$filename = $file !== '' ? basename($file) : $filename;
+			$normalized_filename = lf_image_intelligence_normalize_filename($filename);
+		}
+	}
+	$title = trim(str_replace('-', ' ', $normalized_filename));
 	if ($title !== '') {
 		$title = ucwords($title);
+		$description = sprintf(
+			'%s optimized reference image for local SEO and section distribution.',
+			$title
+		);
 		wp_update_post([
 			'ID' => $attachment_id,
 			'post_title' => $title,
 			'post_name' => sanitize_title($title),
+			'post_excerpt' => $description,
+			'post_content' => $description,
 		]);
 	}
 	lf_image_intelligence_maybe_set_alt_text($attachment_id, lf_image_intelligence_upload_context_defaults());
@@ -709,6 +757,11 @@ function lf_image_intelligence_apply_vision_annotations(array $annotations): arr
 		}
 		if ($entry['description'] !== '') {
 			update_post_meta($attachment_id, '_lf_vision_description', $entry['description']);
+			wp_update_post([
+				'ID' => $attachment_id,
+				'post_excerpt' => $entry['description'],
+				'post_content' => $entry['description'],
+			]);
 		}
 		$applied++;
 	}
@@ -768,13 +821,110 @@ function lf_image_intelligence_empty_image_value($value): bool {
 	return false;
 }
 
+function lf_image_intelligence_assign_images_to_post_sections(\WP_Post $post, array $matches, array $context): int {
+	if (!function_exists('lf_pb_get_context_for_post') || !function_exists('lf_pb_get_post_config')) {
+		return 0;
+	}
+	$builder_context = lf_pb_get_context_for_post($post);
+	if ($builder_context === '') {
+		return 0;
+	}
+	$config = lf_pb_get_post_config((int) $post->ID, $builder_context);
+	$order = is_array($config['order'] ?? null) ? $config['order'] : [];
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
+	if (empty($order) || empty($sections) || empty($registry)) {
+		return 0;
+	}
+	$assigned = 0;
+	foreach ($order as $instance_id) {
+		$section = $sections[$instance_id] ?? null;
+		if (!is_array($section) || empty($section['enabled'])) {
+			continue;
+		}
+		$type = (string) ($section['type'] ?? '');
+		if ($type === '' || !isset($registry[$type])) {
+			continue;
+		}
+		$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+		$image_fields = lf_image_intelligence_registry_image_fields($registry[$type]);
+		$changed = false;
+		foreach ($image_fields as $field_key) {
+			$current = $settings[$field_key] ?? '';
+			if (!lf_image_intelligence_empty_image_value($current)) {
+				continue;
+			}
+			$slot = lf_image_intelligence_slot_for_section_field($type, $field_key);
+			$image_id = (int) ($matches[$slot] ?? 0);
+			if ($image_id <= 0) {
+				continue;
+			}
+			$settings[$field_key] = $image_id;
+			lf_image_intelligence_maybe_set_alt_text($image_id, $context);
+			$assigned++;
+			$changed = true;
+		}
+		if ($changed) {
+			$sections[$instance_id]['settings'] = $settings;
+		}
+	}
+	if ($assigned > 0) {
+		$meta_key = defined('LF_PB_META_KEY') ? LF_PB_META_KEY : '_lf_pagebuilder_config';
+		update_post_meta((int) $post->ID, $meta_key, [
+			'order' => $order,
+			'sections' => $sections,
+			'seo' => $config['seo'] ?? ['title' => '', 'description' => '', 'noindex' => false],
+		]);
+	}
+	return $assigned;
+}
+
+function lf_image_intelligence_assign_images_to_homepage_sections(array $matches, array $context): int {
+	if (!function_exists('lf_get_homepage_section_config') || !function_exists('lf_sections_registry')) {
+		return 0;
+	}
+	$config = lf_get_homepage_section_config();
+	$registry = lf_sections_registry();
+	if (!is_array($config) || empty($config) || !is_array($registry) || empty($registry)) {
+		return 0;
+	}
+	$assigned = 0;
+	$changed = false;
+	foreach ($config as $section_id => $settings) {
+		$section_id = (string) $section_id;
+		if (!is_array($settings) || !isset($registry[$section_id])) {
+			continue;
+		}
+		$image_fields = lf_image_intelligence_registry_image_fields($registry[$section_id]);
+		foreach ($image_fields as $field_key) {
+			$current = $settings[$field_key] ?? '';
+			if (!lf_image_intelligence_empty_image_value($current)) {
+				continue;
+			}
+			$slot = lf_image_intelligence_slot_for_section_field($section_id, $field_key);
+			$image_id = (int) ($matches[$slot] ?? 0);
+			if ($image_id <= 0) {
+				continue;
+			}
+			$config[$section_id][$field_key] = $image_id;
+			lf_image_intelligence_maybe_set_alt_text($image_id, $context);
+			$assigned++;
+			$changed = true;
+		}
+	}
+	if ($changed) {
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+	}
+	return $assigned;
+}
+
 /**
  * Pre-prime deterministic image distribution for current site content.
  *
  * @return array<string,int>
  */
 function lf_prime_image_distribution_for_site(): array {
-	$summary = ['featured_set' => 0, 'processed' => 0];
+	$summary = ['featured_set' => 0, 'processed' => 0, 'section_images_set' => 0];
 	lf_build_media_index();
 
 	$post_ids = [];
@@ -813,7 +963,25 @@ function lf_prime_image_distribution_for_site(): array {
 			lf_image_intelligence_maybe_set_alt_text($featured, $context);
 			$summary['featured_set']++;
 		}
+		$summary['section_images_set'] += lf_image_intelligence_assign_images_to_post_sections($post, $matches, $context);
 	}
+	$home_keywords = get_option('lf_homepage_keywords', []);
+	$home_primary = is_array($home_keywords) ? (string) ($home_keywords['primary'] ?? '') : '';
+	$home_secondary = is_array($home_keywords) ? ($home_keywords['secondary'] ?? []) : [];
+	if (!is_array($home_secondary)) {
+		$home_secondary = [];
+	}
+	$home_context = [
+		'page_type' => 'homepage',
+		'niche' => (string) (defined('LF_HOMEPAGE_NICHE_OPTION') ? get_option(LF_HOMEPAGE_NICHE_OPTION, '') : ''),
+		'city' => (string) get_option('lf_homepage_city', ''),
+		'primary_keyword' => $home_primary,
+		'secondary_keywords' => $home_secondary,
+		'variation_seed' => (string) get_option('lf_homepage_variation_seed', ''),
+		'service_name' => $home_primary,
+	];
+	$home_matches = lf_match_images_for_context($home_context);
+	$summary['section_images_set'] += lf_image_intelligence_assign_images_to_homepage_sections($home_matches, $home_context);
 
 	return $summary;
 }
