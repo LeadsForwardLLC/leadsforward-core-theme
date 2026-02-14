@@ -140,14 +140,10 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 				</div>
 			<?php endif; ?>
 		</header>
-		<?php if ($query->have_posts()) : ?>
+			<?php if ($query->have_posts()) : ?>
 		<div class="lf-block-trust-reviews__carousel" data-slider="<?php echo $is_slider ? '1' : '0'; ?>"<?php echo $is_reviews_page ? ' data-reviews-step="' . esc_attr((string) $reviews_page_limit) . '"' : ''; ?>>
 				<?php if ($is_slider) : ?>
 					<div class="lf-slider" data-lf-slider>
-						<div class="lf-slider__controls">
-							<button type="button" class="lf-slider__nav lf-block-trust-reviews__nav lf-block-trust-reviews__nav--prev" data-lf-slider-prev aria-label="<?php esc_attr_e('Previous reviews', 'leadsforward-core'); ?>">‹</button>
-							<button type="button" class="lf-slider__nav lf-block-trust-reviews__nav lf-block-trust-reviews__nav--next" data-lf-slider-next aria-label="<?php esc_attr_e('Next reviews', 'leadsforward-core'); ?>">›</button>
-						</div>
 						<div class="lf-slider__viewport" data-lf-slider-viewport>
 							<ul class="lf-block-trust-reviews__list lf-slider__track" role="list" data-lf-slider-track>
 				<?php else : ?>
@@ -183,7 +179,8 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 								<span class="lf-block-trust-reviews__quote-icon" aria-hidden="true">“</span>
 							<?php endif; ?>
 							<blockquote class="lf-block-trust-reviews__text"><?php echo esc_html($text); ?></blockquote>
-							<figcaption class="lf-block-trust-reviews__cite">
+						<figcaption class="lf-block-trust-reviews__cite">
+							<div class="lf-block-trust-reviews__identity">
 								<?php if ($show_avatars) : ?>
 									<span class="lf-block-trust-reviews__avatar" aria-hidden="true">
 										<?php
@@ -205,26 +202,31 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 										<?php endif; ?>
 									<?php endif; ?>
 								</span>
-								<?php if ($show_stars && $rating) : ?>
-									<span class="lf-block-trust-reviews__stars" aria-label="<?php echo esc_attr(sprintf(__('%d stars', 'leadsforward-core'), $rating)); ?>">
-										<?php for ($s = 1; $s <= 5; $s++) : ?>
-											<svg class="lf-block-trust-reviews__star<?php echo $s <= $rating ? ' lf-block-trust-reviews__star--filled' : ''; ?>" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-										<?php endfor; ?>
-									</span>
-								<?php endif; ?>
-							</figcaption>
+							</div>
+							<?php if ($show_stars && $rating) : ?>
+								<span class="lf-block-trust-reviews__stars" aria-label="<?php echo esc_attr(sprintf(__('%d stars', 'leadsforward-core'), $rating)); ?>">
+									<?php for ($s = 1; $s <= 5; $s++) : ?>
+										<svg class="lf-block-trust-reviews__star<?php echo $s <= $rating ? ' lf-block-trust-reviews__star--filled' : ''; ?>" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+									<?php endfor; ?>
+								</span>
+							<?php endif; ?>
+						</figcaption>
 						</figure>
 					</li>
 				<?php
 					$review_index++;
 				endwhile;
 				?>
-				</ul>
+			</ul>
 				<?php if ($is_slider) : ?>
 						</div>
-				<?php endif; ?>
-				<?php if ($is_slider) : ?>
-						<div class="lf-slider__dots" data-lf-slider-dots aria-label="<?php esc_attr_e('Review pages', 'leadsforward-core'); ?>"></div>
+						<div class="lf-slider__footer">
+							<div class="lf-slider__dots" data-lf-slider-dots aria-label="<?php esc_attr_e('Review pages', 'leadsforward-core'); ?>"></div>
+							<div class="lf-slider__controls">
+								<button type="button" class="lf-slider__nav lf-block-trust-reviews__nav lf-block-trust-reviews__nav--prev" data-lf-slider-prev aria-label="<?php esc_attr_e('Previous reviews', 'leadsforward-core'); ?>">‹</button>
+								<button type="button" class="lf-slider__nav lf-block-trust-reviews__nav lf-block-trust-reviews__nav--next" data-lf-slider-next aria-label="<?php esc_attr_e('Next reviews', 'leadsforward-core'); ?>">›</button>
+							</div>
+						</div>
 					</div>
 				<?php endif; ?>
 			</div>

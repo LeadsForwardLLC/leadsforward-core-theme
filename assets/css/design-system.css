@@ -3446,14 +3446,15 @@ button:focus-visible,
 
 .lf-block-trust-reviews__cite {
 	display: flex;
-	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
-	gap: 0.65rem;
+	gap: 1rem;
 	margin: 0;
+	padding-top: 1rem;
 	font-size: 0.9rem;
 	color: var(--lf-muted);
 	line-height: 1.4;
+	border-top: 1px solid rgba(15,23,42,0.08);
 }
 
 .lf-block-trust-reviews__quote-icon {
@@ -3469,9 +3470,16 @@ button:focus-visible,
 	pointer-events: none;
 }
 
+.lf-block-trust-reviews__identity {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	min-width: 0;
+}
+
 .lf-block-trust-reviews__avatar {
-	width: 44px;
-	height: 44px;
+	width: 42px;
+	height: 42px;
 	border-radius: 999px;
 	background: var(--lf-surface-soft);
 	display: inline-flex;
@@ -3480,7 +3488,7 @@ button:focus-visible,
 	font-weight: 700;
 	font-size: 0.95rem;
 	color: var(--lf-text-primary);
-	flex: 0 0 44px;
+	flex: 0 0 42px;
 	overflow: hidden;
 	border: 1px solid rgba(15,23,42,0.08);
 }
@@ -3497,6 +3505,7 @@ button:focus-visible,
 	flex-direction: column;
 	gap: 0.1rem;
 	flex: 1;
+	min-width: 0;
 }
 
 .lf-block-trust-reviews__name {
@@ -3509,6 +3518,9 @@ button:focus-visible,
 	font-size: 0.82rem;
 	color: var(--lf-muted);
 	text-decoration: none;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .lf-block-trust-reviews__source:hover {
@@ -3518,7 +3530,7 @@ button:focus-visible,
 .lf-block-trust-reviews__stars {
 	display: inline-flex;
 	gap: 2px;
-	margin-left: auto;
+	flex: 0 0 auto;
 }
 .lf-block-trust-reviews__star { width: 12px; height: 12px; color: var(--lf-neutral-300); }
 .lf-block-trust-reviews__star--filled { color: var(--lf-warning); }
@@ -3548,9 +3560,18 @@ button:focus-visible,
 .lf-block-trust-reviews--slider .lf-slider__controls {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
-	width: 100%;
-	margin-bottom: 0.75rem;
+	justify-content: center;
+	gap: 0.75rem;
+	width: auto;
+	margin: 0;
+}
+
+.lf-block-trust-reviews--slider .lf-slider__footer {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.65rem;
+	margin-top: 0.5rem;
 }
 
 .lf-block-trust-reviews--slider .lf-block-trust-reviews__list {
@@ -5174,9 +5195,9 @@ html {
 
 .lf-slider__viewport {
 	width: 100%;
-	overflow-x: hidden;
-	overflow-y: visible;
-	padding-bottom: 1rem;
+	box-sizing: border-box;
+	overflow: hidden;
+	padding: 0.25rem 0 1.75rem;
 }
 
 .lf-slider__track {
