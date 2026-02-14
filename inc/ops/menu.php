@@ -562,9 +562,28 @@ function lf_ops_render_global_settings_page(): void {
 		: '';
 	$reviews_last_sync = (int) get_option('lf_ai_airtable_reviews_last_sync', 0);
 	$reviews_last_imported = (int) get_option('lf_ai_airtable_reviews_last_imported', 0);
+	$seo_settings = get_option('lf_seo_settings', []);
+	$seo_header_scripts = is_array($seo_settings)
+		? (string) ($seo_settings['scripts']['header'] ?? '')
+		: '';
+	$show_gtm_header_reminder = trim($seo_header_scripts) === '';
+	$seo_settings_url = admin_url('admin.php?page=lf-seo');
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></h1>
+		<?php if ($show_gtm_header_reminder) : ?>
+			<div class="notice notice-warning">
+				<p>
+					<?php
+					printf(
+						/* translators: %s: SEO settings admin URL. */
+						wp_kses_post(__('Reminder: add your Google Tag Manager script in <a href="%s">SEO → Header scripts</a>.', 'leadsforward-core')),
+						esc_url($seo_settings_url)
+					);
+					?>
+				</p>
+			</div>
+		<?php endif; ?>
 		<?php if ($saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Settings saved.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>

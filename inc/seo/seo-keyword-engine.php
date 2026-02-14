@@ -164,6 +164,9 @@ function lf_seo_assign_keywords_from_manifest(array $manifest): void {
 		if (trim($current) !== '') {
 			$map['primary'][lf_seo_keyword_map_key((int) $service->ID)] = $current;
 			lf_seo_mark_used_primary($used, $current);
+			if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+				lf_seo_maybe_populate_generated_meta((int) $service->ID, $current, $secondary);
+			}
 			continue;
 		}
 		$keyword = lf_seo_pick_next_keyword($secondary, $used, $service_index, get_the_title($service), $city, $primary);
@@ -171,6 +174,9 @@ function lf_seo_assign_keywords_from_manifest(array $manifest): void {
 			continue;
 		}
 		update_post_meta($service->ID, '_lf_seo_primary_keyword', $keyword);
+		if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+			lf_seo_maybe_populate_generated_meta((int) $service->ID, $keyword, $secondary);
+		}
 		$map['primary'][lf_seo_keyword_map_key((int) $service->ID)] = $keyword;
 		lf_seo_mark_used_primary($used, $keyword);
 	}
@@ -190,6 +196,9 @@ function lf_seo_assign_keywords_from_manifest(array $manifest): void {
 		if (trim($current) !== '') {
 			$map['primary'][lf_seo_keyword_map_key((int) $area->ID)] = $current;
 			lf_seo_mark_used_primary($used, $current);
+			if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+				lf_seo_maybe_populate_generated_meta((int) $area->ID, $current, $secondary);
+			}
 			continue;
 		}
 		$service_name = '';
@@ -202,6 +211,9 @@ function lf_seo_assign_keywords_from_manifest(array $manifest): void {
 			continue;
 		}
 		update_post_meta($area->ID, '_lf_seo_primary_keyword', $keyword);
+		if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+			lf_seo_maybe_populate_generated_meta((int) $area->ID, $keyword, $secondary);
+		}
 		$map['primary'][lf_seo_keyword_map_key((int) $area->ID)] = $keyword;
 		lf_seo_mark_used_primary($used, $keyword);
 		$area_index++;
@@ -222,6 +234,9 @@ function lf_seo_assign_keywords_from_manifest(array $manifest): void {
 		if (trim($current) !== '') {
 			$map['primary'][lf_seo_keyword_map_key((int) $post->ID)] = $current;
 			lf_seo_mark_used_primary($used, $current);
+			if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+				lf_seo_maybe_populate_generated_meta((int) $post->ID, $current, $secondary);
+			}
 			continue;
 		}
 		$keyword = lf_seo_pick_next_keyword($secondary, $used, $post_index, get_the_title($post), $city, $primary);
@@ -229,6 +244,9 @@ function lf_seo_assign_keywords_from_manifest(array $manifest): void {
 			continue;
 		}
 		update_post_meta($post->ID, '_lf_seo_primary_keyword', $keyword);
+		if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+			lf_seo_maybe_populate_generated_meta((int) $post->ID, $keyword, $secondary);
+		}
 		$map['primary'][lf_seo_keyword_map_key((int) $post->ID)] = $keyword;
 		lf_seo_mark_used_primary($used, $keyword);
 	}
@@ -301,6 +319,9 @@ function lf_seo_handle_new_service(int $post_id, \WP_Post $post, bool $update): 
 		return;
 	}
 	update_post_meta($post_id, '_lf_seo_primary_keyword', $keyword);
+	if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+		lf_seo_maybe_populate_generated_meta($post_id, $keyword, $secondary);
+	}
 	$map['primary'][lf_seo_keyword_map_key($post_id)] = $keyword;
 	$map['last_index']['service'] = $index;
 	lf_seo_update_keyword_map($map);
@@ -337,6 +358,9 @@ function lf_seo_handle_new_service_area(int $post_id, \WP_Post $post, bool $upda
 		return;
 	}
 	update_post_meta($post_id, '_lf_seo_primary_keyword', $keyword);
+	if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+		lf_seo_maybe_populate_generated_meta($post_id, $keyword);
+	}
 	$map['primary'][lf_seo_keyword_map_key($post_id)] = $keyword;
 	lf_seo_update_keyword_map($map);
 }
@@ -361,6 +385,9 @@ function lf_seo_handle_new_post(int $post_id, \WP_Post $post, bool $update): voi
 		return;
 	}
 	update_post_meta($post_id, '_lf_seo_primary_keyword', $keyword);
+	if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+		lf_seo_maybe_populate_generated_meta($post_id, $keyword, $secondary);
+	}
 	$map['primary'][lf_seo_keyword_map_key($post_id)] = $keyword;
 	$map['last_index']['post'] = $index;
 	lf_seo_update_keyword_map($map);

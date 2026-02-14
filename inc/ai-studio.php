@@ -1767,6 +1767,9 @@ function lf_ai_studio_scaffold_manifest(array $manifest): array {
 			}
 			if ($homepage_id > 0 && $homepage_primary !== '') {
 				update_post_meta($homepage_id, '_lf_seo_primary_keyword', $homepage_primary);
+				if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+					lf_seo_maybe_populate_generated_meta($homepage_id, $homepage_primary, $secondary_pool);
+				}
 			}
 
 			$used = [];
@@ -1794,6 +1797,9 @@ function lf_ai_studio_scaffold_manifest(array $manifest): array {
 						continue;
 					}
 					update_post_meta($service->ID, '_lf_seo_primary_keyword', $keyword);
+					if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+						lf_seo_maybe_populate_generated_meta((int) $service->ID, $keyword, $secondary_pool);
+					}
 					$map['primary']['post:' . (int) $service->ID] = $keyword;
 					$used[strtolower($keyword)] = true;
 					$service_keywords[] = $keyword;
@@ -1823,6 +1829,9 @@ function lf_ai_studio_scaffold_manifest(array $manifest): array {
 						continue;
 					}
 					update_post_meta($area->ID, '_lf_seo_primary_keyword', $keyword);
+					if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+						lf_seo_maybe_populate_generated_meta((int) $area->ID, $keyword, $secondary_pool);
+					}
 					$map['primary']['post:' . (int) $area->ID] = $keyword;
 				}
 			}
@@ -1853,6 +1862,9 @@ function lf_ai_studio_scaffold_manifest(array $manifest): array {
 						continue;
 					}
 					update_post_meta($post_item->ID, '_lf_seo_primary_keyword', $keyword);
+					if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+						lf_seo_maybe_populate_generated_meta((int) $post_item->ID, $keyword, $secondary_pool);
+					}
 					$map['primary']['post:' . (int) $post_item->ID] = $keyword;
 				}
 			}

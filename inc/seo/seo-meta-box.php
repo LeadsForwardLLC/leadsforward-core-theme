@@ -185,6 +185,9 @@ function lf_seo_save_meta_box(int $post_id, \WP_Post $post): void {
 	if (function_exists('lf_seo_register_keyword_map_for_post')) {
 		lf_seo_register_keyword_map_for_post($post_id, $primary);
 	}
+	if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+		lf_seo_maybe_populate_generated_meta($post_id, $primary, $secondary);
+	}
 }
 
 function lf_seo_update_post_meta(int $post_id, string $key, string $value): void {
@@ -193,4 +196,154 @@ function lf_seo_update_post_meta(int $post_id, string $key, string $value): void
 		return;
 	}
 	update_post_meta($post_id, $key, $value);
+}
+
+/**
+ * Auto-fill SEO fields when keyword data exists but meta fields are blank.
+ *
+ * @param int          $post_id Post ID.
+ * @param string       $primary Optional primary keyword override.
+ * @param string|array $secondary Optional secondary keywords (CSV/newlines or array).
+ */
+function lf_seo_maybe_populate_generated_meta(int $post_id, string $primary = '', $secondary = ''): void {
+	if ($post_id <= 0) {
+		return;
+	}
+	$post_type = get_post_type($post_id);
+	if (!in_array($post_type, ['page', 'post', 'lf_service', 'lf_service_area'], true)) {
+		return;
+	}
+
+	$primary_keyword = trim($primary);
+	if ($primary_keyword === '') {
+		$primary_keyword = trim((string) get_post_meta($post_id, '_lf_seo_primary_keyword', true));
+	}
+	if ($primary_keyword === '') {
+		return;
+	}
+
+	$secondary_list = lf_seo_normalize_secondary_keywords($secondary);
+	if (empty($secondary_list)) {
+		$secondary_list = lf_seo_normalize_secondary_keywords((string) get_post_meta($post_id, '_lf_seo_secondary_keywords', true));
+	}
+	if (empty($secondary_list)) {
+		$map = function_exists('lf_seo_get_keyword_map') ? lf_seo_get_keyword_map() : [];
+		$pool = is_array($map['secondary']['pool'] ?? null) ? $map['secondary']['pool'] : [];
+		$pool = array_values(array_filter(array_map('sanitize_text_field', $pool)));
+		foreach ($pool as $candidate) {
+			if (strcasecmp($candidate, $primary_keyword) === 0) {
+				continue;
+			}
+			$secondary_list[] = $candidate;
+			if (count($secondary_list) >= 2) {
+				break;
+			}
+		}
+	}
+
+	$current_secondary = trim((string) get_post_meta($post_id, '_lf_seo_secondary_keywords', true));
+	if ($current_secondary === '' && !empty($secondary_list)) {
+		update_post_meta($post_id, '_lf_seo_secondary_keywords', implode(', ', $secondary_list));
+	}
+
+	$current_title = trim((string) get_post_meta($post_id, '_lf_seo_meta_title', true));
+	if ($current_title === '') {
+		$title = lf_seo_generate_meta_title_from_keywords($primary_keyword);
+		if ($title !== '') {
+			update_post_meta($post_id, '_lf_seo_meta_title', $title);
+		}
+	}
+
+	$current_description = trim((string) get_post_meta($post_id, '_lf_seo_meta_description', true));
+	if ($current_description === '') {
+		$description = lf_seo_generate_meta_description_from_keywords($post_id, $primary_keyword, $secondary_list);
+		if ($description !== '') {
+			update_post_meta($post_id, '_lf_seo_meta_description', $description);
+		}
+	}
+}
+
+/**
+ * @param string|array $value
+ * @return string[]
+ */
+function lf_seo_normalize_secondary_keywords($value): array {
+	if (is_array($value)) {
+		$items = $value;
+	} else {
+		$raw = trim((string) $value);
+		$items = $raw === '' ? [] : preg_split('/\r\n|\r|\n|,/', $raw);
+	}
+	if (!is_array($items)) {
+		return [];
+	}
+	$items = array_values(array_unique(array_filter(array_map(static function ($item): string {
+		return sanitize_text_field((string) $item);
+	}, $items))));
+	return $items;
+}
+
+function lf_seo_generate_meta_title_from_keywords(string $primary_keyword): string {
+	$primary_keyword = trim($primary_keyword);
+	if ($primary_keyword === '') {
+		return '';
+	}
+	$brand = trim((string) get_bloginfo('name'));
+	$title = $primary_keyword;
+	if ($brand !== '' && stripos($title, $brand) === false) {
+		$title .= ' | ' . $brand;
+	}
+	$title = trim($title);
+	if (function_exists('mb_substr') && mb_strlen($title) > 65) {
+		$title = rtrim(mb_substr($title, 0, 65));
+	}
+	return $title;
+}
+
+function lf_seo_generate_meta_description_from_keywords(int $post_id, string $primary_keyword, array $secondary_keywords = []): string {
+	$primary_keyword = trim($primary_keyword);
+	if ($primary_keyword === '') {
+		return '';
+	}
+	$secondary_keywords = array_values(array_filter($secondary_keywords, static function (string $keyword) use ($primary_keyword): bool {
+		return strcasecmp($keyword, $primary_keyword) !== 0;
+	}));
+	$secondary_keywords = array_slice($secondary_keywords, 0, 2);
+
+	$post_title = trim((string) get_the_title($post_id));
+	if ($post_title === '') {
+		$post_title = __('our services', 'leadsforward-core');
+	}
+
+	if (count($secondary_keywords) >= 2) {
+		$description = sprintf(
+			/* translators: 1: primary keyword, 2: post title, 3: secondary keyword one, 4: secondary keyword two. */
+			__('%1$s from trusted %2$s experts. We also specialize in %3$s and %4$s. Get a fast quote today.', 'leadsforward-core'),
+			$primary_keyword,
+			$post_title,
+			$secondary_keywords[0],
+			$secondary_keywords[1]
+		);
+	} elseif (count($secondary_keywords) === 1) {
+		$description = sprintf(
+			/* translators: 1: primary keyword, 2: post title, 3: secondary keyword. */
+			__('%1$s from trusted %2$s experts. We also specialize in %3$s. Get a fast quote today.', 'leadsforward-core'),
+			$primary_keyword,
+			$post_title,
+			$secondary_keywords[0]
+		);
+	} else {
+		$description = sprintf(
+			/* translators: 1: primary keyword, 2: post title. */
+			__('%1$s from trusted %2$s experts. Get a fast quote today.', 'leadsforward-core'),
+			$primary_keyword,
+			$post_title
+		);
+	}
+
+	$description = trim(preg_replace('/\s+/', ' ', $description));
+	if (function_exists('mb_substr') && mb_strlen($description) > 160) {
+		$description = rtrim(mb_substr($description, 0, 157), " \t\n\r\0\x0B,.;:-") . '...';
+	}
+	return $description;
 }
