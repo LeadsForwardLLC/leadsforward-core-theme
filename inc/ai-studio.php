@@ -19,6 +19,7 @@ add_action('init', 'lf_ai_studio_register_cpt');
 add_action('admin_post_lf_ai_studio_save', 'lf_ai_studio_handle_save');
 add_action('admin_post_lf_ai_studio_orchestrator_save', 'lf_ai_studio_handle_orchestrator_save');
 add_action('admin_post_lf_ai_studio_scope_save', 'lf_ai_studio_handle_scope_save');
+add_action('admin_post_lf_ai_studio_image_settings_save', 'lf_ai_studio_handle_image_settings_save');
 add_action('admin_post_lf_ai_studio_generate', 'lf_ai_studio_handle_generate');
 add_action('admin_post_lf_ai_studio_retry', 'lf_ai_studio_handle_retry');
 add_action('admin_post_lf_ai_studio_manifest', 'lf_ai_studio_handle_manifest');
@@ -247,7 +248,21 @@ function lf_ai_studio_handle_scope_save(): void {
 	update_option('lf_ai_gen_services', isset($_POST['lf_ai_gen_services']) ? '1' : '0');
 	update_option('lf_ai_gen_service_areas', isset($_POST['lf_ai_gen_service_areas']) ? '1' : '0');
 	update_option('lf_ai_gen_core_pages', isset($_POST['lf_ai_gen_core_pages']) ? '1' : '0');
+	update_option('lf_ai_gen_blog_posts', isset($_POST['lf_ai_gen_blog_posts']) ? '1' : '0');
+	update_option('lf_ai_gen_projects', isset($_POST['lf_ai_gen_projects']) ? '1' : '0');
 
+	wp_safe_redirect(admin_url('admin.php?page=lf-ops&saved=1'));
+	exit;
+}
+
+function lf_ai_studio_handle_image_settings_save(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
+	}
+	check_admin_referer('lf_ai_studio_image_settings_save', 'lf_ai_studio_image_settings_nonce');
+	$image_generation_limit = isset($_POST['lf_ai_image_generation_limit']) ? absint($_POST['lf_ai_image_generation_limit']) : 12;
+	$image_generation_limit = max(1, min(60, $image_generation_limit));
+	update_option('lf_ai_image_generation_limit', (string) $image_generation_limit, false);
 	wp_safe_redirect(admin_url('admin.php?page=lf-ops&saved=1'));
 	exit;
 }
@@ -562,10 +577,16 @@ function lf_ai_studio_handle_images_upload(): void {
 			'error' => (int) ($files['error'][$i] ?? UPLOAD_ERR_NO_FILE),
 			'size' => (int) ($files['size'][$i] ?? 0),
 		];
+		if (function_exists('lf_image_intelligence_generate_upload_filename')) {
+			$file['name'] = lf_image_intelligence_generate_upload_filename($name);
+		}
 		$attachment_id = media_handle_sideload($file, 0);
 		if (is_wp_error($attachment_id)) {
 			$errors++;
 			continue;
+		}
+		if (function_exists('lf_image_intelligence_maybe_set_alt_text') && function_exists('lf_image_intelligence_upload_context_defaults')) {
+			lf_image_intelligence_maybe_set_alt_text((int) $attachment_id, lf_image_intelligence_upload_context_defaults());
 		}
 		$uploaded++;
 	}
@@ -621,6 +642,9 @@ function lf_ai_studio_render_page(): void {
 	$gen_services = get_option('lf_ai_gen_services', '1') === '1';
 	$gen_service_areas = get_option('lf_ai_gen_service_areas', '1') === '1';
 	$gen_core_pages = get_option('lf_ai_gen_core_pages', '1') === '1';
+	$gen_blog_posts = get_option('lf_ai_gen_blog_posts', '1') === '1';
+	$gen_projects = get_option('lf_ai_gen_projects', '1') === '1';
+	$image_generation_limit = max(1, min(60, (int) get_option('lf_ai_image_generation_limit', 12)));
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Website Manifester', 'leadsforward-core'); ?></h1>
@@ -724,6 +748,8 @@ function lf_ai_studio_render_page(): void {
 										<label><input type="checkbox" name="lf_ai_gen_services" value="1" <?php checked($gen_services); ?> /> <?php esc_html_e('Service pages', 'leadsforward-core'); ?></label>
 										<label><input type="checkbox" name="lf_ai_gen_service_areas" value="1" <?php checked($gen_service_areas); ?> /> <?php esc_html_e('Service area pages', 'leadsforward-core'); ?></label>
 										<label><input type="checkbox" name="lf_ai_gen_core_pages" value="1" <?php checked($gen_core_pages); ?> /> <?php esc_html_e('Core pages', 'leadsforward-core'); ?></label>
+										<label><input type="checkbox" name="lf_ai_gen_blog_posts" value="1" <?php checked($gen_blog_posts); ?> /> <?php esc_html_e('AI blog posts (3 now + 4 weekly)', 'leadsforward-core'); ?></label>
+										<label><input type="checkbox" name="lf_ai_gen_projects" value="1" <?php checked($gen_projects); ?> /> <?php esc_html_e('Projects', 'leadsforward-core'); ?></label>
 										<button type="submit" class="button"><?php esc_html_e('Save Scope', 'leadsforward-core'); ?></button>
 									</div>
 									<p class="description" style="margin-top:8px;"><?php esc_html_e('Defaults to everything. Manifest can override with generation_scope=homepage_only.', 'leadsforward-core'); ?></p>
@@ -807,7 +833,7 @@ function lf_ai_studio_render_page(): void {
 					<div class="lf-manifester-step__badge">4</div>
 					<div class="lf-manifester-step__content">
 						<h3><?php esc_html_e('Upload required images for auto-distribution', 'leadsforward-core'); ?></h3>
-						<p class="description"><?php esc_html_e('Upload your image library now so AI can deterministically assign hero/content/featured images during generation.', 'leadsforward-core'); ?></p>
+						<p class="description"><?php esc_html_e('Upload your image library now. The theme auto-optimizes/compresses images, converts PNG to lightweight JPG when possible, normalizes filenames, and fills missing ALT text before deterministic placement.', 'leadsforward-core'); ?></p>
 						<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
 							<?php wp_nonce_field('lf_ai_studio_images_upload', 'lf_ai_studio_images_upload_nonce'); ?>
 							<input type="hidden" name="action" value="lf_ai_studio_images_upload" />
@@ -816,6 +842,18 @@ function lf_ai_studio_render_page(): void {
 								<button type="submit" class="button"><?php esc_html_e('Upload Images to Media Library', 'leadsforward-core'); ?></button>
 							</div>
 						</form>
+						<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:10px;">
+							<?php wp_nonce_field('lf_ai_studio_image_settings_save', 'lf_ai_studio_image_settings_nonce'); ?>
+							<input type="hidden" name="action" value="lf_ai_studio_image_settings_save" />
+							<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+								<label for="lf_ai_image_generation_limit"><?php esc_html_e('Hybrid image generation limit per run', 'leadsforward-core'); ?></label>
+								<input id="lf_ai_image_generation_limit" type="number" name="lf_ai_image_generation_limit" min="1" max="60" value="<?php echo esc_attr((string) $image_generation_limit); ?>" style="width:76px;" />
+								<button type="submit" class="button"><?php esc_html_e('Save Image Settings', 'leadsforward-core'); ?></button>
+							</div>
+						</form>
+						<p class="description" style="margin-top:8px;">
+							<?php esc_html_e('Hybrid generation uses AI to create only missing hero/content images (up to your limit), then vision annotations help rename assets, improve ALT text, and map images to the most relevant sections.', 'leadsforward-core'); ?>
+						</p>
 						<p class="description" style="margin-top:8px;">
 							<?php esc_html_e('Naming strategy examples: roof-repair-kansas-city-1.jpg, kitchen-remodel-sarasota-modern.jpg, bathroom-remodel-before-after.jpg, general-contractor-team.jpg. Include service + city + niche words in filenames for best matching.', 'leadsforward-core'); ?>
 						</p>
@@ -1120,6 +1158,9 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	$callback_url = lf_ai_studio_build_callback_url();
 	$request['job_id'] = $job_id;
 	$request['callback_url'] = $callback_url;
+	if (function_exists('lf_image_intelligence_build_media_candidates_for_vision')) {
+		$request['media_library_candidates'] = lf_image_intelligence_build_media_candidates_for_vision(250);
+	}
 	update_post_meta($job_id, 'lf_ai_job_status', 'queued');
 	update_post_meta($job_id, 'lf_ai_job_request', $request);
 	$log_payload = [
@@ -3337,12 +3378,16 @@ function lf_ai_studio_get_generation_scope(array $manifest): array {
 		'services' => true,
 		'service_areas' => true,
 		'core_pages' => true,
+		'blog_posts' => true,
+		'projects' => true,
 	];
 	$scope = [
 		'homepage' => get_option('lf_ai_gen_homepage', '1') === '1',
 		'services' => get_option('lf_ai_gen_services', '1') === '1',
 		'service_areas' => get_option('lf_ai_gen_service_areas', '1') === '1',
 		'core_pages' => get_option('lf_ai_gen_core_pages', '1') === '1',
+		'blog_posts' => get_option('lf_ai_gen_blog_posts', '1') === '1',
+		'projects' => get_option('lf_ai_gen_projects', '1') === '1',
 	];
 	foreach ($default as $key => $val) {
 		if (!isset($scope[$key])) {
@@ -3356,6 +3401,8 @@ function lf_ai_studio_get_generation_scope(array $manifest): array {
 			'services' => false,
 			'service_areas' => false,
 			'core_pages' => false,
+			'blog_posts' => false,
+			'projects' => false,
 		];
 	}
 	return $scope;
@@ -3677,17 +3724,19 @@ function lf_ai_studio_build_full_site_payload(): array {
 			}
 		}
 
-		$blog_topics = lf_ai_studio_blog_post_topics($manifest, $homepage_payload);
-		$blog_posts = lf_ai_studio_ensure_blog_posts($blog_topics);
-		foreach ($blog_posts as $entry) {
-			$post = $entry['post'] ?? null;
-			if (!$post instanceof \WP_Post) {
-				continue;
-			}
-			$keyword = (string) ($entry['keyword'] ?? '');
-			$blueprint = lf_ai_studio_build_post_blueprint($post, 'post', 'blog_post', $keyword);
-			if (!empty($blueprint)) {
-				$blueprints[] = $blueprint;
+		if (!empty($scope['blog_posts'])) {
+			$blog_topics = lf_ai_studio_blog_post_topics($manifest, $homepage_payload);
+			$blog_posts = lf_ai_studio_ensure_blog_posts($blog_topics);
+			foreach ($blog_posts as $entry) {
+				$post = $entry['post'] ?? null;
+				if (!$post instanceof \WP_Post) {
+					continue;
+				}
+				$keyword = (string) ($entry['keyword'] ?? '');
+				$blueprint = lf_ai_studio_build_post_blueprint($post, 'post', 'blog_post', $keyword);
+				if (!empty($blueprint)) {
+					$blueprints[] = $blueprint;
+				}
 			}
 		}
 	}
@@ -3728,6 +3777,10 @@ function lf_ai_studio_build_full_site_payload(): array {
 			'avoid_self_link' => true,
 			'prefer_services' => true,
 		],
+		'image_generation' => lf_ai_studio_build_hybrid_image_generation_plan(
+			(int) get_option('lf_ai_image_generation_limit', 12)
+		),
+		'generation_scope' => $scope,
 		'blueprints' => $blueprints,
 	];
 	$research = lf_ai_studio_get_research_document();
@@ -3788,6 +3841,9 @@ function lf_ai_studio_build_blog_payload(): array {
 			'avoid_self_link' => true,
 			'prefer_services' => true,
 		],
+		'image_generation' => lf_ai_studio_build_hybrid_image_generation_plan(
+			(int) get_option('lf_ai_image_generation_limit', 12)
+		),
 		'blueprints' => $blueprints,
 	];
 	$research = lf_ai_studio_get_research_document();
@@ -4104,6 +4160,122 @@ function lf_ai_studio_homepage_image_context(): array {
 		'secondary_keywords' => $secondary,
 		'variation_seed' => (string) get_option('lf_homepage_variation_seed', ''),
 		'service_name' => (string) get_bloginfo('name'),
+	];
+}
+
+function lf_ai_studio_collect_missing_image_targets(int $limit = 12): array {
+	$limit = max(1, min(60, $limit));
+	$out = [];
+	$allowed_slots = ['hero', 'content_image_a', 'image_content_b', 'content_image_c'];
+	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
+
+	$push_target = static function (array $target) use (&$out, $limit): void {
+		if (count($out) >= $limit) {
+			return;
+		}
+		$out[] = $target;
+	};
+
+	$home_context = lf_ai_studio_homepage_image_context();
+	$home_config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
+	foreach ($home_config as $section_type => $settings) {
+		if (count($out) >= $limit || !is_array($settings) || !isset($registry[$section_type]) || !function_exists('lf_image_intelligence_registry_image_fields')) {
+			continue;
+		}
+		$image_fields = lf_image_intelligence_registry_image_fields($registry[$section_type]);
+		foreach ($image_fields as $field_key) {
+			if (count($out) >= $limit || !function_exists('lf_image_intelligence_slot_for_section_field') || !function_exists('lf_image_intelligence_empty_image_value')) {
+				break;
+			}
+			$slot = lf_image_intelligence_slot_for_section_field($section_type, $field_key);
+			if (!in_array($slot, $allowed_slots, true)) {
+				continue;
+			}
+			$current = $settings[$field_key] ?? '';
+			if (!lf_image_intelligence_empty_image_value($current)) {
+				continue;
+			}
+			$push_target([
+				'target' => 'homepage',
+				'post_id' => (int) get_option('page_on_front'),
+				'section_type' => $section_type,
+				'field_key' => $field_key,
+				'slot' => $slot,
+				'context' => $home_context,
+			]);
+		}
+	}
+
+	$posts = get_posts([
+		'post_type' => ['lf_service', 'lf_service_area', 'page'],
+		'post_status' => 'publish',
+		'posts_per_page' => -1,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+		'no_found_rows' => true,
+	]);
+	foreach ($posts as $post) {
+		if (count($out) >= $limit || !$post instanceof \WP_Post) {
+			continue;
+		}
+		$context_key = function_exists('lf_pb_get_context_for_post') ? lf_pb_get_context_for_post($post) : '';
+		if ($context_key === '' || !function_exists('lf_pb_get_post_config')) {
+			continue;
+		}
+		$config = lf_pb_get_post_config((int) $post->ID, $context_key);
+		$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+		$image_context = function_exists('lf_image_intelligence_build_context_for_post')
+			? lf_image_intelligence_build_context_for_post($post)
+			: [];
+		foreach ($sections as $instance_id => $section) {
+			if (count($out) >= $limit || !is_array($section)) {
+				continue;
+			}
+			$section_type = (string) ($section['type'] ?? '');
+			$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+			if ($section_type === '' || !isset($registry[$section_type]) || !function_exists('lf_image_intelligence_registry_image_fields')) {
+				continue;
+			}
+			$image_fields = lf_image_intelligence_registry_image_fields($registry[$section_type]);
+			foreach ($image_fields as $field_key) {
+				if (count($out) >= $limit || !function_exists('lf_image_intelligence_slot_for_section_field') || !function_exists('lf_image_intelligence_empty_image_value')) {
+					break;
+				}
+				$slot = lf_image_intelligence_slot_for_section_field($section_type, $field_key);
+				if (!in_array($slot, $allowed_slots, true)) {
+					continue;
+				}
+				$current = $settings[$field_key] ?? '';
+				if (!lf_image_intelligence_empty_image_value($current)) {
+					continue;
+				}
+				$push_target([
+					'target' => 'post_meta',
+					'post_id' => (int) $post->ID,
+					'post_type' => (string) $post->post_type,
+					'section_instance' => (string) $instance_id,
+					'section_type' => $section_type,
+					'field_key' => $field_key,
+					'slot' => $slot,
+					'context' => $image_context,
+				]);
+			}
+		}
+	}
+
+	return $out;
+}
+
+function lf_ai_studio_build_hybrid_image_generation_plan(int $limit = 12): array {
+	$limit = max(1, min(60, $limit));
+	$targets = lf_ai_studio_collect_missing_image_targets($limit);
+	return [
+		'mode' => 'hybrid',
+		'generate_only_missing' => true,
+		'limit' => $limit,
+		'targets' => $targets,
+		'preferred_model' => 'flux-schnell',
+		'hq_hero_model' => 'flux-dev',
 	];
 }
 

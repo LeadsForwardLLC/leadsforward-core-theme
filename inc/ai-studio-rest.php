@@ -400,6 +400,11 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 	}
 
 	$apply_payload = $payload['apply'] ?? $payload;
+	$media_annotations = $payload['media_annotations'] ?? $apply_payload['media_annotations'] ?? [];
+	if (is_array($media_annotations) && !empty($media_annotations) && function_exists('lf_image_intelligence_apply_vision_annotations')) {
+		$vision_result = lf_image_intelligence_apply_vision_annotations($media_annotations);
+		update_post_meta($job_id, 'lf_ai_job_media_annotations_applied', (int) ($vision_result['applied'] ?? 0));
+	}
 	$errors = function_exists('lf_ai_studio_validate_payload')
 		? lf_ai_studio_validate_payload($apply_payload)
 		: [];
@@ -419,7 +424,13 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		$request = get_post_meta($job_id, 'lf_ai_job_request', true);
 		if (is_array($request)) {
 			lf_ai_studio_seed_dummy_posts((string) ($request['business_name'] ?? ''));
-			lf_ai_studio_seed_sample_projects();
+			$scope = is_array($request['generation_scope'] ?? null) ? $request['generation_scope'] : [];
+			$should_seed_projects = array_key_exists('projects', $scope)
+				? !empty($scope['projects'])
+				: (get_option('lf_ai_gen_projects', '1') === '1');
+			if ($should_seed_projects) {
+				lf_ai_studio_seed_sample_projects();
+			}
 		}
 		if (function_exists('lf_ai_studio_run_content_audit')) {
 			$report = lf_ai_studio_run_content_audit('orchestrator');

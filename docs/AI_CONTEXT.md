@@ -29,3 +29,8 @@ Best practices:
 - Include the target city when relevant (`kansas-city`, `sarasota`).
 - Include niche-specific descriptors when possible (`contractor`, `plumber`, `hvac`).
 - Use `general` in broadly reusable images.
+
+Automation note:
+
+- The theme now auto-renames uploaded images, optimizes quality, and sets missing ALT text.
+- Descriptive naming still improves matching confidence, but manual naming is no longer required for baseline operation.

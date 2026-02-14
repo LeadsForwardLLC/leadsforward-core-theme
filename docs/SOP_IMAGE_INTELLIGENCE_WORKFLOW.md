@@ -55,6 +55,22 @@ The image pipeline uses these core functions:
 
 No randomness is used. Tie-breaks are stable based on filename sorting and `variation_seed`.
 
+## Zero-Touch Upload Automation
+
+The theme now auto-processes uploaded images so users can upload files without manual prep:
+
+1. **Auto rename on upload**
+   - Uploads are renamed to deterministic keyword/location-aware filenames.
+   - This runs for Media Library uploads and Manifester image uploads.
+2. **Compression quality optimization**
+   - Uploaded images are processed with optimized quality defaults for web delivery.
+   - PNG uploads are converted to JPEG for lighter delivery where possible.
+3. **Attachment title + slug normalization**
+   - Title/slug are normalized from generated filename tokens.
+4. **ALT text auto-fill**
+   - If ALT is empty, theme generates keyword-aware ALT.
+   - Existing ALT is never overwritten.
+
 ## Matching Priority (Highest to Lowest)
 
 For each image candidate, matching is evaluated in this order:
@@ -101,6 +117,8 @@ Choose one source:
 - Manifest JSON upload
 
 Set generation scope as needed.
+
+Set **Hybrid image generation limit** to cap AI-generated missing hero/content images per run.
 
 ### Step 3: Upload required images
 
@@ -218,6 +236,12 @@ Reason:
 
 - Matching and assignment are performed in theme PHP after scaffold/apply
 - n8n does not need new fields for image selection
+
+Optional enhancement:
+
+- If desired, n8n can add **vision-based semantic labels** before theme ingest.
+- This is only needed when you want image-content-aware renaming from raw photos that have no descriptive context.
+- Implementation spec: `docs/N8N_VISION_STEP_SPEC.md`
 
 Optional improvement:
 
