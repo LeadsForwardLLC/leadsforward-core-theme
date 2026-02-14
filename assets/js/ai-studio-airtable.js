@@ -336,4 +336,59 @@
       uploadResearch(file);
     });
   }
+
+  var progressWrap = document.getElementById('lf-manifester-progress');
+  var progressBar = document.getElementById('lf-manifester-progress-bar');
+  var progressText = document.getElementById('lf-manifester-progress-text');
+  var progressPercent = document.getElementById('lf-manifester-progress-percent');
+  var progressTimer = null;
+
+  function updateProgressUI(progress) {
+    if (!progressWrap) return;
+    var percent = parseInt(progress && progress.percent ? progress.percent : 0, 10);
+    if (isNaN(percent) || percent < 0) percent = 0;
+    if (percent > 100) percent = 100;
+    if (progressBar) progressBar.style.width = percent + '%';
+    if (progressPercent) progressPercent.textContent = percent + '%';
+    if (progressText) {
+      progressText.textContent = progress && progress.message ? progress.message : 'Working…';
+    }
+    progressWrap.classList.add('is-active');
+  }
+
+  function fetchProgress(jobId) {
+    if (!cfg.progressNonce) return;
+    var params = new URLSearchParams({
+      action: 'lf_ai_studio_progress',
+      nonce: cfg.progressNonce,
+      job_id: jobId
+    });
+    fetch(cfg.ajaxUrl + '?' + params.toString(), { credentials: 'same-origin' })
+      .then(function (res) { return res.json(); })
+      .then(function (payload) {
+        if (!payload || !payload.success) return;
+        var progress = payload.data && payload.data.progress ? payload.data.progress : payload.progress;
+        if (!progress) return;
+        updateProgressUI(progress);
+        if (progress.status === 'done' || progress.status === 'failed') {
+          if (progressTimer) {
+            window.clearInterval(progressTimer);
+            progressTimer = null;
+          }
+        }
+      })
+      .catch(function () {
+        // ignore polling errors
+      });
+  }
+
+  if (progressWrap) {
+    var jobId = progressWrap.getAttribute('data-job-id');
+    if (jobId) {
+      fetchProgress(jobId);
+      progressTimer = window.setInterval(function () {
+        fetchProgress(jobId);
+      }, 4000);
+    }
+  }
 })();

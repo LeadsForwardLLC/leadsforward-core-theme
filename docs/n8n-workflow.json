@@ -1,5 +1,5 @@
 {
-  "name": "LeadsForward – AI Content Orchestrator",
+  "name": "LeadsForward \u2013 AI Content Orchestrator",
   "nodes": [
     {
       "parameters": {
@@ -147,7 +147,7 @@
         "messages": {
           "messageValues": [
             {
-                "message": "You are LeadsForward’s deterministic website content engine.\n\nYou MUST output ONLY valid JSON that matches the required schema. No markdown. No commentary. No extra keys unless explicitly allowed.\n\nINPUT SHAPE\nYou will receive a JSON object with:\n- request_id, variation_seed, business_name, niche, city_region, keywords, writing_samples, business_entity\n- primary_keyword (string), secondary_keywords (array), style_profile (object)\n- system_message (optional), faq_strategy (optional), cta_strategy (optional), global_faq_pool (optional)\n- research_context (optional)\n- page_type\n- blueprint_index\n- blueprint (ONE page blueprint only)\n\nPRIORITY OVERRIDE\n0) If input.system_message is present, follow it exactly. If it conflicts with any instruction here, input.system_message wins.\n\nCRITICAL RULES (NON-NEGOTIABLE)\n1) Use ONLY niche = input.niche. Never introduce any other niche/service type.\n2) Use ONLY location = input.city_region. Never introduce any other city/region.\n3) Use ONLY business name = input.business_name.\n4) NEVER reuse content from previous runs or “typical examples”.\n5) Generate content ONLY for input.blueprint (single page). Do not generate for other pages.\n6) Do not invent sections/fields. Write ONLY to keys that appear in blueprint.sections[].allowed_field_keys.\n7) For every section instance, write dot-notation fields using:\n   - Use blueprint.sections[].section_id as the prefix (example: \"hero.hero_headline\" or \"hero-1.hero_headline\").\n8) Write values for EVERY allowed_field_keys in EVERY section. Do not skip keys.\n9) List fields must be newline-delimited strings (not arrays).\n10) No placeholder text, no “Portland”, no “crawl space”, no “landscaping” unless niche explicitly matches.\n11) HTML is allowed only inside richtext fields (use <p>, <ul>, <li>, <a>). All other fields must be plain text.\n12) Keep outputs concise enough to fit response limits. Prefer tight, high-signal copy. Avoid huge paragraphs.\n13) Always echo input.page_type as \"page_type\" in your output JSON.\n14) CTA supporting text: for every CTA section, cta_subheadline_secondary must be exactly ONE sentence, non-empty, and unique across pages. Make it specific using page_type, primary_keyword, business_name, or city_region.\n15) Global CTA fields (cta_headline, cta_subheadline, cta_primary_override, cta_secondary_override) are homepage-only; do not write them on non-homepage pages.\n16) You MUST include a top-level \"meta\" object with primary_keyword, secondary_keywords, style_profile_id, business_name, and city_region echoed from input.\n17) Every section heading + intro field must be non-empty and unique across pages.\n18) Benefits section: write 3 lines in benefits_items using \"Title || Body\". Title <= 5 words; Body 10–14 words.\n19) Process section: include process_steps (4–6 steps) and process_expectations (3–4 items) when allowed.\n20) Related links section: intro must be service-only language (no areas).\n21) If any allowed field would be empty, generate a concise sentence using primary_keyword, business_name, or city_region.\n22) Process steps must use \"Title: description\" format for every line.\n23) For service/service_area pages, hero_headline must include the primary_keyword and a benefit/outcome (not just the location).\n24) For service_area pages, ensure content_image/image_content sections include unique section_heading, section_intro, and section_body.\n25) Internal linking: include 1-2 internal links in richtext fields using internal_links list. Use <a href=\"URL\">Label</a>. Do not invent URLs.\n\nQUALITY OBJECTIVES (DO NOT BREAK JSON RULES)\n- Human-sounding: vary sentence length and rhythm; avoid templated phrasing and cliches (\"We understand\", \"At [Company]\", \"In today's world\").\n- Sales-focused: emphasize outcomes, credibility, and next steps for homeowners; avoid fluff.\n- Local SEO: include the primary keyword naturally in the hero headline or subheadline; work in 1–2 secondary keywords across the page when appropriate; avoid keyword stuffing.\n- Uniqueness: no repeated sentences across page types; phrasing should feel custom to this business and location.\n- Use writing_samples (if provided) to match tone and diction, but never copy sentences verbatim.\n\nRESEARCH CONTEXT GUIDANCE\n- If research_context exists: Apply positioning and differentiation.\n- Use SEO entity strategy.\n- Avoid competitor phrasing.\n- Apply voice guidelines.\n- Use FAQ strategy angles.\n- Use content expansion depth guidance.\n\nTARGET ROUTING\n- If blueprint.page == \"homepage\": target=\"options\", id=\"homepage\"\n- If blueprint.page in [\"service\",\"service_area\",\"services_overview\",\"service_areas_overview\",\"about\",\"contact\",\"reviews\",\"blog\",\"sitemap\",\"privacy\",\"terms\",\"thank_you\",\"post\"]: target=\"post_meta\", id=blueprint.post_id\n- FAQ creation is REQUIRED if blueprint.page == \"homepage\" AND blueprint.faq_target_count exists:\n  you MUST include exactly blueprint.faq_target_count updates with target=\"faq\" and fields: question, answer\n  (answers must be valid HTML <p>...</p>)\n- For non-homepage pages, do NOT output any target=\"faq\" updates (they will be injected deterministically for service/service_area/overview pages).\n\nCONTENT QUALITY RULES\n- Must match niche + location + business name everywhere.\n- Service pages must match the specific service title/slug for that post (use blueprint context only).\n- Avoid generic filler. Use concrete benefits, process, trust signals appropriate for the niche.\n\nOUTPUT FORMAT (EXACT)\nReturn JSON:\n{\n  \"ok\": true,\n  \"request_id\": \"<same request_id>\",\n  \"page_type\": \"<echo input.page_type>\",\n  \"meta\": {\n    \"primary_keyword\": \"<echo input.primary_keyword>\",\n    \"secondary_keywords\": <echo input.secondary_keywords>,\n    \"style_profile_id\": \"<echo input.style_profile.id>\",\n    \"business_name\": \"<echo input.business_name>\",\n    \"city_region\": \"<echo input.city_region>\"\n  },\n  \"updates\": [\n    { \"target\": \"...\", \"id\": \"...\", \"fields\": { \"section.field\":\"value\" } }\n  ]\n}\n"
+              "message": "You are LeadsForward\u2019s deterministic website content engine.\n\nYou MUST output ONLY valid JSON that matches the required schema. No markdown. No commentary. No extra keys unless explicitly allowed.\n\nINPUT SHAPE\nYou will receive a JSON object with:\n- request_id, variation_seed, business_name, niche, city_region, keywords, writing_samples, business_entity\n- primary_keyword (string), secondary_keywords (array), style_profile (object)\n- system_message (optional), faq_strategy (optional), cta_strategy (optional), global_faq_pool (optional)\n- research_context (optional)\n- page_type\n- blueprint_index\n- blueprint (ONE page blueprint only)\n\nPRIORITY OVERRIDE\n0) If input.system_message is present, follow it exactly. If it conflicts with any instruction here, input.system_message wins.\n\nCRITICAL RULES (NON-NEGOTIABLE)\n1) Use ONLY niche = input.niche. Never introduce any other niche/service type.\n2) Use ONLY location = input.city_region. Never introduce any other city/region.\n3) Use ONLY business name = input.business_name.\n4) NEVER reuse content from previous runs or \u201ctypical examples\u201d.\n5) Generate content ONLY for input.blueprint (single page). Do not generate for other pages.\n6) Do not invent sections/fields. Write ONLY to keys that appear in blueprint.sections[].allowed_field_keys.\n7) For every section instance, write dot-notation fields using:\n   - Use blueprint.sections[].section_id as the prefix (example: \"hero.hero_headline\" or \"hero-1.hero_headline\").\n8) Write values for EVERY allowed_field_keys in EVERY section. Do not skip keys.\n9) List fields must be newline-delimited strings (not arrays).\n10) No placeholder text, no \u201cPortland\u201d, no \u201ccrawl space\u201d, no \u201clandscaping\u201d unless niche explicitly matches.\n11) HTML is allowed only inside richtext fields (use <p>, <ul>, <li>, <a>). All other fields must be plain text.\n12) Keep outputs concise enough to fit response limits. Prefer tight, high-signal copy. Avoid huge paragraphs.\n13) Always echo input.page_type as \"page_type\" in your output JSON.\n14) CTA supporting text: for every CTA section, cta_subheadline_secondary must be exactly ONE sentence, non-empty, and unique across pages. Make it specific using page_type, primary_keyword, business_name, or city_region.\n15) Global CTA fields (cta_headline, cta_subheadline, cta_primary_override, cta_secondary_override) are homepage-only; do not write them on non-homepage pages.\n16) You MUST include a top-level \"meta\" object with primary_keyword, secondary_keywords, style_profile_id, business_name, and city_region echoed from input.\n17) Every section heading + intro field must be non-empty and unique across pages.\n18) Benefits section: write 3 lines in benefits_items using \"Title || Body\". Title <= 5 words; Body 10\u201314 words.\n19) Process section: include process_steps (4\u20136 steps) and process_expectations (3\u20134 items) when allowed.\n20) Related links section: intro must be service-only language (no areas).\n21) If any allowed field would be empty, generate a concise sentence using primary_keyword, business_name, or city_region.\n22) Process steps must use \"Title: description\" format for every line.\n23) For service/service_area pages, hero_headline must include the primary_keyword and a benefit/outcome (not just the location).\n24) For service_area pages, ensure content_image/image_content sections include unique section_heading, section_intro, and section_body.\n25) Internal linking: include 1-2 internal links in richtext fields using internal_links list. Use <a href=\"URL\">Label</a>. Do not invent URLs.\n\nQUALITY OBJECTIVES (DO NOT BREAK JSON RULES)\n- Human-sounding: vary sentence length and rhythm; avoid templated phrasing and cliches (\"We understand\", \"At [Company]\", \"In today's world\").\n- Sales-focused: emphasize outcomes, credibility, and next steps for homeowners; avoid fluff.\n- Local SEO: include the primary keyword naturally in the hero headline or subheadline; work in 1\u20132 secondary keywords across the page when appropriate; avoid keyword stuffing.\n- Uniqueness: no repeated sentences across page types; phrasing should feel custom to this business and location.\n- Use writing_samples (if provided) to match tone and diction, but never copy sentences verbatim.\n\nRESEARCH CONTEXT GUIDANCE\n- If research_context exists: Apply positioning and differentiation.\n- Use SEO entity strategy.\n- Avoid competitor phrasing.\n- Apply voice guidelines.\n- Use FAQ strategy angles.\n- Use content expansion depth guidance.\n\nTARGET ROUTING\n- If blueprint.page == \"homepage\": target=\"options\", id=\"homepage\"\n- If blueprint.page in [\"service\",\"service_area\",\"services_overview\",\"service_areas_overview\",\"about\",\"contact\",\"reviews\",\"blog\",\"sitemap\",\"privacy\",\"terms\",\"thank_you\",\"post\"]: target=\"post_meta\", id=blueprint.post_id\n- FAQ creation is REQUIRED if blueprint.page == \"homepage\" AND blueprint.faq_target_count exists:\n  you MUST include exactly blueprint.faq_target_count updates with target=\"faq\" and fields: question, answer\n  (answers must be valid HTML <p>...</p>)\n- For non-homepage pages, do NOT output any target=\"faq\" updates (they will be injected deterministically for service/service_area/overview pages).\n\nCONTENT QUALITY RULES\n- Must match niche + location + business name everywhere.\n- Service pages must match the specific service title/slug for that post (use blueprint context only).\n- Avoid generic filler. Use concrete benefits, process, trust signals appropriate for the niche.\n\nOUTPUT FORMAT (EXACT)\nReturn JSON:\n{\n  \"ok\": true,\n  \"request_id\": \"<same request_id>\",\n  \"page_type\": \"<echo input.page_type>\",\n  \"meta\": {\n    \"primary_keyword\": \"<echo input.primary_keyword>\",\n    \"secondary_keywords\": <echo input.secondary_keywords>,\n    \"style_profile_id\": \"<echo input.style_profile.id>\",\n    \"business_name\": \"<echo input.business_name>\",\n    \"city_region\": \"<echo input.city_region>\"\n  },\n  \"updates\": [\n    { \"target\": \"...\", \"id\": \"...\", \"fields\": { \"section.field\":\"value\" } }\n  ]\n}\n"
             },
             {
               "type": "HumanMessagePromptTemplate",
@@ -197,7 +197,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Merge Blueprint Results + Deterministic FAQ Enforcement (STATELESS)\n// IMPORTANT: Code node must be set to \"Run Once for All Items\"\n\nconst items = $input.all();\n\n// If upstream returned a single error item, just pass it through\nif (items.length === 1 && items[0]?.json?.ok === false) {\n  return items;\n}\n\n// Basic validation\nif (!items.length) {\n  return [{ json: { ok: false, status: 500, error: \"No items received to merge\" } }];\n}\n\nconst first = items[0].json || {};\nconst request_id = first.request_id || null;\n\n// ------------------------------\n// Helpers\n// ------------------------------\nfunction clamp(n, min, max) {\n  return Math.max(min, Math.min(max, n));\n}\n\nfunction normalizeText(value) {\n  return String(value || \"\")\n    .toLowerCase()\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nfunction ensureParagraph(answer) {\n  const trimmed = String(answer || \"\").trim();\n  if (!trimmed) return \"\";\n  if (/<p[\\s>]/i.test(trimmed)) {\n    return trimmed;\n  }\n  return `<p>${trimmed}</p>`;\n}\n\nfunction faqRangeForPageType(pageType) {\n  if (pageType === \"service\") return { min: 4, max: 6 };\n  if (pageType === \"service_area\") return { min: 3, max: 5 };\n  if (pageType === \"services_overview\" || pageType === \"service_areas_overview\") return { min: 3, max: 4 };\n  // default for other non-homepage pages\n  return { min: 3, max: 4 };\n}\n\nconst faqEligible = new Set([\n  \"service\",\n  \"service_area\",\n  \"services_overview\",\n  \"service_areas_overview\"\n]);\n\nfunction deterministicSlice(pool, seedInt, count) {\n  if (!pool.length) return [];\n  const start = Math.abs(seedInt) % pool.length;\n  const out = [];\n  for (let i = 0; i < count; i++) {\n    out.push(pool[(start + i) % pool.length]);\n  }\n  return out;\n}\n\nconst ctaDescriptorByPageType = {\n  homepage: \"your project\",\n  service: \"this service\",\n  service_area: \"local service\",\n  services_overview: \"our services\",\n  service_areas_overview: \"coverage in your area\",\n  about: \"working with our team\"\n};\n\nconst ctaVariants = [\n  (desc) => `Get a fast, local response about ${desc}.`,\n  (desc) => `Talk with a specialist about ${desc} today.`,\n  (desc) => `Schedule a quick, no-pressure walkthrough for ${desc}.`,\n  (desc) => `Get clear timing and next steps for ${desc}.`,\n  (desc) => `Plan ${desc} with a trusted local team.`,\n  (desc) => `Get answers and a simple plan for ${desc}.`,\n  (desc) => `Start with a fast estimate for ${desc}.`,\n  (desc) => `Lock in a convenient window for ${desc}.`\n];\n\nfunction buildCtaSupport(pageType, seed) {\n  const desc = ctaDescriptorByPageType[pageType] || \"your project\";\n  const idx = Math.abs(seed) % ctaVariants.length;\n  return ctaVariants[idx](desc);\n}\n\n// ------------------------------\n// 1) Find homepage item + FAQ pool\n// ------------------------------\nconst homepageItem = items.find(i => i?.json?.page_type === \"homepage\");\nlet globalPool = [];\n\n// Prefer FAQ pool generated on homepage in this run\nif (homepageItem?.json?.updates?.length) {\n  const homepageFaq = homepageItem.json.updates.filter(u => u?.target === \"faq\");\n  if (homepageFaq.length) {\n    globalPool = homepageFaq.map(u => ({\n      question: u?.fields?.question || \"\",\n      answer: ensureParagraph(u?.fields?.answer || \"\")\n    })).filter(x => x.question && x.answer);\n  }\n}\n\n// Fallback: if WP payload already included a pool\nif (!globalPool.length && Array.isArray(first.global_faq_pool) && first.global_faq_pool.length) {\n  globalPool = first.global_faq_pool\n    .map(x => ({ question: x?.question || \"\", answer: ensureParagraph(x?.answer || \"\") }))\n    .filter(x => x.question && x.answer);\n}\n\n// ------------------------------\n// 2) Enforce FAQ on each non-homepage item BEFORE merge\n// ------------------------------\nfor (const it of items) {\n  const j = it.json || {};\n  if (!j.ok || !Array.isArray(j.updates)) continue;\n\n  const pageType = j.page_type || null;\n\n  // Homepage: allow as-is (it is canonical generator)\n  if (pageType === \"homepage\") continue;\n\n  if (!faqEligible.has(pageType)) {\n    j.updates = j.updates.filter(u => u?.target !== \"faq\");\n    continue;\n  }\n\n  // If no pool exists, do nothing (don’t invent FAQs here)\n  if (!globalPool.length) {\n    // still strip any LLM-generated FAQs to avoid random drift\n    j.updates = j.updates.filter(u => u?.target !== \"faq\");\n    continue;\n  }\n\n  // Strip any LLM FAQ attempts\n  j.updates = j.updates.filter(u => u?.target !== \"faq\");\n\n  const seedInt = parseInt(j.variation_seed || first.variation_seed || \"1\", 10) || 1;\n  const { min, max } = faqRangeForPageType(pageType);\n\n  // deterministic count in range\n  const span = (max - min + 1);\n  const count = clamp(min + (Math.abs(seedInt) % span), min, max);\n\n  const sliced = deterministicSlice(globalPool, seedInt, count);\n\n  // Inject deterministic FAQs\n  for (const faq of sliced) {\n    j.updates.push({\n      target: \"faq\",\n      id: null,\n      fields: {\n        question: faq.question,\n        answer: ensureParagraph(faq.answer)\n      }\n    });\n  }\n}\n\n// ------------------------------\n// 3) Enforce unique CTA supporting sentences across pages\n// ------------------------------\nconst ctaSeen = new Set();\n\nitems.forEach((it, itemIndex) => {\n  const j = it.json || {};\n  if (!j.ok || !Array.isArray(j.updates)) return;\n\n  const pageType = j.page_type || null;\n\n  for (const update of j.updates) {\n    const fields = update?.fields;\n    if (!fields || typeof fields !== \"object\") continue;\n\n    for (const key of Object.keys(fields)) {\n      if (!key.endsWith(\".cta_subheadline_secondary\")) continue;\n\n      const raw = typeof fields[key] === \"string\" ? fields[key].trim() : \"\";\n      let normalized = normalizeText(raw);\n\n      if (pageType !== \"homepage\" && (!raw || ctaSeen.has(normalized))) {\n        let attempt = 0;\n        let candidate = \"\";\n        let candidateNorm = \"\";\n        do {\n          candidate = buildCtaSupport(pageType, itemIndex + attempt + 1);\n          candidateNorm = normalizeText(candidate);\n          attempt += 1;\n        } while (candidateNorm === \"\" || ctaSeen.has(candidateNorm));\n        fields[key] = candidate;\n        normalized = candidateNorm;\n      }\n\n      if (normalized !== \"\") {\n        ctaSeen.add(normalized);\n      }\n    }\n  }\n});\n\n// ------------------------------\n// 4) Merge all updates into one response payload\n// ------------------------------\nconst mergedUpdates = [];\nfor (const it of items) {\n  const j = it.json || {};\n  if (j.ok && Array.isArray(j.updates)) {\n    mergedUpdates.push(...j.updates);\n  }\n}\n\nreturn [{\n  json: {\n    ok: true,\n    request_id,\n    updates: mergedUpdates\n  }\n}];\n"
+        "jsCode": "// Merge Blueprint Results + Deterministic FAQ Enforcement (STATELESS)\n// IMPORTANT: Code node must be set to \"Run Once for All Items\"\n\nconst items = $input.all();\n\n// If upstream returned a single error item, just pass it through\nif (items.length === 1 && items[0]?.json?.ok === false) {\n  return items;\n}\n\n// Basic validation\nif (!items.length) {\n  return [{ json: { ok: false, status: 500, error: \"No items received to merge\" } }];\n}\n\nconst first = items[0].json || {};\nconst request_id = first.request_id || null;\n\n// ------------------------------\n// Helpers\n// ------------------------------\nfunction clamp(n, min, max) {\n  return Math.max(min, Math.min(max, n));\n}\n\nfunction normalizeText(value) {\n  return String(value || \"\")\n    .toLowerCase()\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nfunction ensureParagraph(answer) {\n  const trimmed = String(answer || \"\").trim();\n  if (!trimmed) return \"\";\n  if (/<p[\\s>]/i.test(trimmed)) {\n    return trimmed;\n  }\n  return `<p>${trimmed}</p>`;\n}\n\nfunction faqRangeForPageType(pageType) {\n  if (pageType === \"service\") return { min: 4, max: 6 };\n  if (pageType === \"service_area\") return { min: 3, max: 5 };\n  if (pageType === \"services_overview\" || pageType === \"service_areas_overview\") return { min: 3, max: 4 };\n  // default for other non-homepage pages\n  return { min: 3, max: 4 };\n}\n\nconst faqEligible = new Set([\n  \"service\",\n  \"service_area\",\n  \"services_overview\",\n  \"service_areas_overview\"\n]);\n\nfunction deterministicSlice(pool, seedInt, count) {\n  if (!pool.length) return [];\n  const start = Math.abs(seedInt) % pool.length;\n  const out = [];\n  for (let i = 0; i < count; i++) {\n    out.push(pool[(start + i) % pool.length]);\n  }\n  return out;\n}\n\nconst ctaDescriptorByPageType = {\n  homepage: \"your project\",\n  service: \"this service\",\n  service_area: \"local service\",\n  services_overview: \"our services\",\n  service_areas_overview: \"coverage in your area\",\n  about: \"working with our team\"\n};\n\nconst ctaVariants = [\n  (desc) => `Get a fast, local response about ${desc}.`,\n  (desc) => `Talk with a specialist about ${desc} today.`,\n  (desc) => `Schedule a quick, no-pressure walkthrough for ${desc}.`,\n  (desc) => `Get clear timing and next steps for ${desc}.`,\n  (desc) => `Plan ${desc} with a trusted local team.`,\n  (desc) => `Get answers and a simple plan for ${desc}.`,\n  (desc) => `Start with a fast estimate for ${desc}.`,\n  (desc) => `Lock in a convenient window for ${desc}.`\n];\n\nfunction buildCtaSupport(pageType, seed) {\n  const desc = ctaDescriptorByPageType[pageType] || \"your project\";\n  const idx = Math.abs(seed) % ctaVariants.length;\n  return ctaVariants[idx](desc);\n}\n\n// ------------------------------\n// 1) Find homepage item + FAQ pool\n// ------------------------------\nconst homepageItem = items.find(i => i?.json?.page_type === \"homepage\");\nlet globalPool = [];\n\n// Prefer FAQ pool generated on homepage in this run\nif (homepageItem?.json?.updates?.length) {\n  const homepageFaq = homepageItem.json.updates.filter(u => u?.target === \"faq\");\n  if (homepageFaq.length) {\n    globalPool = homepageFaq.map(u => ({\n      question: u?.fields?.question || \"\",\n      answer: ensureParagraph(u?.fields?.answer || \"\")\n    })).filter(x => x.question && x.answer);\n  }\n}\n\n// Fallback: if WP payload already included a pool\nif (!globalPool.length && Array.isArray(first.global_faq_pool) && first.global_faq_pool.length) {\n  globalPool = first.global_faq_pool\n    .map(x => ({ question: x?.question || \"\", answer: ensureParagraph(x?.answer || \"\") }))\n    .filter(x => x.question && x.answer);\n}\n\n// ------------------------------\n// 2) Enforce FAQ on each non-homepage item BEFORE merge\n// ------------------------------\nfor (const it of items) {\n  const j = it.json || {};\n  if (!j.ok || !Array.isArray(j.updates)) continue;\n\n  const pageType = j.page_type || null;\n\n  // Homepage: allow as-is (it is canonical generator)\n  if (pageType === \"homepage\") continue;\n\n  if (!faqEligible.has(pageType)) {\n    j.updates = j.updates.filter(u => u?.target !== \"faq\");\n    continue;\n  }\n\n  // If no pool exists, do nothing (don\u2019t invent FAQs here)\n  if (!globalPool.length) {\n    // still strip any LLM-generated FAQs to avoid random drift\n    j.updates = j.updates.filter(u => u?.target !== \"faq\");\n    continue;\n  }\n\n  // Strip any LLM FAQ attempts\n  j.updates = j.updates.filter(u => u?.target !== \"faq\");\n\n  const seedInt = parseInt(j.variation_seed || first.variation_seed || \"1\", 10) || 1;\n  const { min, max } = faqRangeForPageType(pageType);\n\n  // deterministic count in range\n  const span = (max - min + 1);\n  const count = clamp(min + (Math.abs(seedInt) % span), min, max);\n\n  const sliced = deterministicSlice(globalPool, seedInt, count);\n\n  // Inject deterministic FAQs\n  for (const faq of sliced) {\n    j.updates.push({\n      target: \"faq\",\n      id: null,\n      fields: {\n        question: faq.question,\n        answer: ensureParagraph(faq.answer)\n      }\n    });\n  }\n}\n\n// ------------------------------\n// 3) Enforce unique CTA supporting sentences across pages\n// ------------------------------\nconst ctaSeen = new Set();\n\nitems.forEach((it, itemIndex) => {\n  const j = it.json || {};\n  if (!j.ok || !Array.isArray(j.updates)) return;\n\n  const pageType = j.page_type || null;\n\n  for (const update of j.updates) {\n    const fields = update?.fields;\n    if (!fields || typeof fields !== \"object\") continue;\n\n    for (const key of Object.keys(fields)) {\n      if (!key.endsWith(\".cta_subheadline_secondary\")) continue;\n\n      const raw = typeof fields[key] === \"string\" ? fields[key].trim() : \"\";\n      let normalized = normalizeText(raw);\n\n      if (pageType !== \"homepage\" && (!raw || ctaSeen.has(normalized))) {\n        let attempt = 0;\n        let candidate = \"\";\n        let candidateNorm = \"\";\n        do {\n          candidate = buildCtaSupport(pageType, itemIndex + attempt + 1);\n          candidateNorm = normalizeText(candidate);\n          attempt += 1;\n        } while (candidateNorm === \"\" || ctaSeen.has(candidateNorm));\n        fields[key] = candidate;\n        normalized = candidateNorm;\n      }\n\n      if (normalized !== \"\") {\n        ctaSeen.add(normalized);\n      }\n    }\n  }\n});\n\n// ------------------------------\n// 4) Merge all updates into one response payload\n// ------------------------------\nconst mergedUpdates = [];\nfor (const it of items) {\n  const j = it.json || {};\n  if (j.ok && Array.isArray(j.updates)) {\n    mergedUpdates.push(...j.updates);\n  }\n}\n\nreturn [{\n  json: {\n    ok: true,\n    request_id,\n    updates: mergedUpdates\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -210,7 +210,7 @@
     },
     {
       "parameters": {
-        "jsCode": "function pickRaw(input) {\n  if (typeof input === \"string\") return input;\n  if (typeof input?.text === \"string\") return input.text;\n  if (typeof input?.output === \"string\") return input.output;\n  if (typeof input?.response === \"string\") return input.response;\n  if (typeof input?.data?.text === \"string\") return input.data.text;\n  if (typeof input?.message?.content === \"string\") return input.message.content;\n  return input;\n}\n\nfunction deepClean(value) {\n  if (typeof value === \"string\") {\n    return value\n      // Normalize escaped apostrophes\n      .replace(/\\\\\\\\'/g, \"'\")\n      .replace(/\\\\'/g, \"'\")\n      // Normalize escaped quotes\n      .replace(/\\\\\"/g, '\"')\n      // Remove excessive backslashes\n      .replace(/\\\\\\\\+/g, \"\\\\\")\n      // Normalize weird unicode apostrophes\n      .replace(/[‘’]/g, \"'\")\n      // Normalize line breaks\n      .replace(/\\r\\n/g, \"\\n\")\n      .replace(/\\r/g, \"\\n\");\n  }\n\n  if (Array.isArray(value)) {\n    return value.map(deepClean);\n  }\n\n  if (value && typeof value === \"object\") {\n    const cleaned = {};\n    for (const key in value) {\n      cleaned[key] = deepClean(value[key]);\n    }\n    return cleaned;\n  }\n\n  return value;\n}\n\nfunction stripHtml(value) {\n  return String(value || \"\")\n    .replace(/<[^>]*>/g, \" \")\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nfunction trimToWords(value, maxWords) {\n  const text = stripHtml(value);\n  if (!text) return \"\";\n  const words = text.split(/\\s+/);\n  if (words.length <= maxWords) return words.join(\" \");\n  return words.slice(0, maxWords).join(\" \");\n}\n\nfunction pickShortDesc(updates) {\n  const suffixes = [\n    \".hero_subheadline\",\n    \".hero_supporting_text\",\n    \".section_intro\",\n    \".section_body\",\n    \".section_body_secondary\"\n  ];\n  for (const update of updates) {\n    const fields = update?.fields;\n    if (!fields || typeof fields !== \"object\") continue;\n    const keys = Object.keys(fields);\n    for (const suffix of suffixes) {\n      const key = keys.find(k => k.toLowerCase().endsWith(suffix));\n      if (!key) continue;\n      const value = trimToWords(fields[key], 28);\n      if (value) return value;\n    }\n  }\n  return \"\";\n}\n\nfunction findPostMetaId(updates) {\n  const hit = updates.find(u => u?.target === \"post_meta\" && u?.id);\n  return hit?.id || null;\n}\n\nconst raw = pickRaw($json);\n\nlet parsed;\n\ntry {\n  parsed = (typeof raw === \"string\") ? JSON.parse(raw) : raw;\n} catch (e) {\n  return [{\n    json: {\n      ok: false,\n      status: 500,\n      error: \"Invalid JSON from LLM\",\n      details: String(e?.message || e),\n      raw_preview: (typeof raw === \"string\") ? raw.slice(0, 500) : null\n    }\n  }];\n}\n\n// Basic structure validation\nif (\n  !parsed ||\n  parsed.ok !== true ||\n  !parsed.request_id ||\n  !Array.isArray(parsed.updates)\n) {\n  return [{\n    json: {\n      ok: false,\n      status: 422,\n      error: \"Invalid payload\",\n      parsed_preview: parsed\n    }\n  }];\n}\n\n// Deep clean entire payload\nconst cleaned = deepClean(parsed);\n\n// Normalize update structure\nlet updates = cleaned.updates.map(u => ({\n  ...u,\n  fields: u.fields ?? u.data ?? {}\n}));\n\n// --------------------------------------------------\n// HARD CTA PROTECTION (non-homepage pages)\n// --------------------------------------------------\n\nconst pageType = cleaned.page_type || null;\n\nif (pageType && pageType !== \"homepage\") {\n  updates = updates.map(u => {\n    if (!u.fields) return u;\n\n    const safeFields = { ...u.fields };\n\n    delete safeFields.cta_headline;\n    delete safeFields.cta_subheadline;\n    delete safeFields.cta_primary_override;\n    delete safeFields.cta_secondary_override;\n\n    return {\n      ...u,\n      fields: safeFields\n    };\n  });\n}\n\n// --------------------------------------------------\n\nconst meta = (cleaned.meta && typeof cleaned.meta === \"object\") ? cleaned.meta : {};\nif (!meta.primary_keyword && cleaned.primary_keyword) {\n  meta.primary_keyword = cleaned.primary_keyword;\n}\nif (!meta.secondary_keywords && cleaned.secondary_keywords) {\n  meta.secondary_keywords = cleaned.secondary_keywords;\n}\nif (!meta.business_name && cleaned.business_name) {\n  meta.business_name = cleaned.business_name;\n}\nif (!meta.city_region && cleaned.city_region) {\n  meta.city_region = cleaned.city_region;\n}\nif (!meta.style_profile_id && cleaned.style_profile_id) {\n  meta.style_profile_id = cleaned.style_profile_id;\n}\n\nif (pageType === \"service\") {\n  const postId = findPostMetaId(updates);\n  const shortDesc = pickShortDesc(updates);\n  if (postId && shortDesc) {\n    updates.push({\n      target: \"service_meta\",\n      id: postId,\n      fields: {\n        lf_service_short_desc: shortDesc\n      }\n    });\n  }\n}\n\nreturn [{\n  json: {\n    ok: true,\n    request_id: cleaned.request_id,\n    page_type: pageType,\n    meta,\n    updates\n  }\n}];\n"
+        "jsCode": "function pickRaw(input) {\n  if (typeof input === \"string\") return input;\n  if (typeof input?.text === \"string\") return input.text;\n  if (typeof input?.output === \"string\") return input.output;\n  if (typeof input?.response === \"string\") return input.response;\n  if (typeof input?.data?.text === \"string\") return input.data.text;\n  if (typeof input?.message?.content === \"string\") return input.message.content;\n  return input;\n}\n\nfunction deepClean(value) {\n  if (typeof value === \"string\") {\n    return value\n      // Normalize escaped apostrophes\n      .replace(/\\\\\\\\'/g, \"'\")\n      .replace(/\\\\'/g, \"'\")\n      // Normalize escaped quotes\n      .replace(/\\\\\"/g, '\"')\n      // Remove excessive backslashes\n      .replace(/\\\\\\\\+/g, \"\\\\\")\n      // Normalize weird unicode apostrophes\n      .replace(/[\u2018\u2019]/g, \"'\")\n      // Normalize line breaks\n      .replace(/\\r\\n/g, \"\\n\")\n      .replace(/\\r/g, \"\\n\");\n  }\n\n  if (Array.isArray(value)) {\n    return value.map(deepClean);\n  }\n\n  if (value && typeof value === \"object\") {\n    const cleaned = {};\n    for (const key in value) {\n      cleaned[key] = deepClean(value[key]);\n    }\n    return cleaned;\n  }\n\n  return value;\n}\n\nfunction stripHtml(value) {\n  return String(value || \"\")\n    .replace(/<[^>]*>/g, \" \")\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nfunction trimToWords(value, maxWords) {\n  const text = stripHtml(value);\n  if (!text) return \"\";\n  const words = text.split(/\\s+/);\n  if (words.length <= maxWords) return words.join(\" \");\n  return words.slice(0, maxWords).join(\" \");\n}\n\nfunction pickShortDesc(updates) {\n  const suffixes = [\n    \".hero_subheadline\",\n    \".hero_supporting_text\",\n    \".section_intro\",\n    \".section_body\",\n    \".section_body_secondary\"\n  ];\n  for (const update of updates) {\n    const fields = update?.fields;\n    if (!fields || typeof fields !== \"object\") continue;\n    const keys = Object.keys(fields);\n    for (const suffix of suffixes) {\n      const key = keys.find(k => k.toLowerCase().endsWith(suffix));\n      if (!key) continue;\n      const value = trimToWords(fields[key], 28);\n      if (value) return value;\n    }\n  }\n  return \"\";\n}\n\nfunction findPostMetaId(updates) {\n  const hit = updates.find(u => u?.target === \"post_meta\" && u?.id);\n  return hit?.id || null;\n}\n\nconst raw = pickRaw($json);\n\nlet parsed;\n\ntry {\n  parsed = (typeof raw === \"string\") ? JSON.parse(raw) : raw;\n} catch (e) {\n  return [{\n    json: {\n      ok: false,\n      status: 500,\n      error: \"Invalid JSON from LLM\",\n      details: String(e?.message || e),\n      raw_preview: (typeof raw === \"string\") ? raw.slice(0, 500) : null\n    }\n  }];\n}\n\n// Basic structure validation\nif (\n  !parsed ||\n  parsed.ok !== true ||\n  !parsed.request_id ||\n  !Array.isArray(parsed.updates)\n) {\n  return [{\n    json: {\n      ok: false,\n      status: 422,\n      error: \"Invalid payload\",\n      parsed_preview: parsed\n    }\n  }];\n}\n\n// Deep clean entire payload\nconst cleaned = deepClean(parsed);\n\n// Normalize update structure\nlet updates = cleaned.updates.map(u => ({\n  ...u,\n  fields: u.fields ?? u.data ?? {}\n}));\n\n// --------------------------------------------------\n// HARD CTA PROTECTION (non-homepage pages)\n// --------------------------------------------------\n\nconst pageType = cleaned.page_type || null;\n\nif (pageType && pageType !== \"homepage\") {\n  updates = updates.map(u => {\n    if (!u.fields) return u;\n\n    const safeFields = { ...u.fields };\n\n    delete safeFields.cta_headline;\n    delete safeFields.cta_subheadline;\n    delete safeFields.cta_primary_override;\n    delete safeFields.cta_secondary_override;\n\n    return {\n      ...u,\n      fields: safeFields\n    };\n  });\n}\n\n// --------------------------------------------------\n\nconst meta = (cleaned.meta && typeof cleaned.meta === \"object\") ? cleaned.meta : {};\nif (!meta.primary_keyword && cleaned.primary_keyword) {\n  meta.primary_keyword = cleaned.primary_keyword;\n}\nif (!meta.secondary_keywords && cleaned.secondary_keywords) {\n  meta.secondary_keywords = cleaned.secondary_keywords;\n}\nif (!meta.business_name && cleaned.business_name) {\n  meta.business_name = cleaned.business_name;\n}\nif (!meta.city_region && cleaned.city_region) {\n  meta.city_region = cleaned.city_region;\n}\nif (!meta.style_profile_id && cleaned.style_profile_id) {\n  meta.style_profile_id = cleaned.style_profile_id;\n}\n\nif (pageType === \"service\") {\n  const postId = findPostMetaId(updates);\n  const shortDesc = pickShortDesc(updates);\n  if (postId && shortDesc) {\n    updates.push({\n      target: \"service_meta\",\n      id: postId,\n      fields: {\n        lf_service_short_desc: shortDesc\n      }\n    });\n  }\n}\n\nreturn [{\n  json: {\n    ok: true,\n    request_id: cleaned.request_id,\n    page_type: pageType,\n    meta,\n    updates\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -318,6 +318,210 @@
       ],
       "id": "f3e3b75e-3dd1-4bfe-9d2f-6631fdc2b19b",
       "name": "Test Trigger"
+    },
+    {
+      "parameters": {
+        "url": "={{(($json.callback_url || $json.body?.callback_url || '') + '').replace('/orchestrator','/progress')}}",
+        "method": "POST",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "job_id",
+              "value": "={{$json.job_id || $json.body?.job_id || $node[\"Webhook\"].json.job_id || $node[\"Webhook\"].json.body?.job_id}}"
+            },
+            {
+              "name": "percent",
+              "value": "={$5}"
+            },
+            {
+              "name": "status",
+              "value": "running"
+            },
+            {
+              "name": "step",
+              "value": "Progress: Request Received"
+            },
+            {
+              "name": "message",
+              "value": "Request received in n8n."
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -16,
+        -260
+      ],
+      "id": "6c9f6ed9-3636-4dff-90f2-ff111f3620f0",
+      "name": "Progress: Request Received"
+    },
+    {
+      "parameters": {
+        "url": "={{(($json.callback_url || $json.body?.callback_url || '') + '').replace('/orchestrator','/progress')}}",
+        "method": "POST",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "job_id",
+              "value": "={{$json.job_id || $json.body?.job_id || $node[\"Webhook\"].json.job_id || $node[\"Webhook\"].json.body?.job_id}}"
+            },
+            {
+              "name": "percent",
+              "value": "={$30}"
+            },
+            {
+              "name": "status",
+              "value": "running"
+            },
+            {
+              "name": "step",
+              "value": "Progress: Research Ready"
+            },
+            {
+              "name": "message",
+              "value": "Research ready. Generating content\u2026"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        360,
+        -200
+      ],
+      "id": "5619e879-b5d7-4ca3-bf15-8db48ae82e77",
+      "name": "Progress: Research Ready"
+    },
+    {
+      "parameters": {
+        "url": "={{(($json.callback_url || $json.body?.callback_url || '') + '').replace('/orchestrator','/progress')}}",
+        "method": "POST",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "job_id",
+              "value": "={{$json.job_id || $json.body?.job_id || $node[\"Webhook\"].json.job_id || $node[\"Webhook\"].json.body?.job_id}}"
+            },
+            {
+              "name": "percent",
+              "value": "={$80}"
+            },
+            {
+              "name": "status",
+              "value": "running"
+            },
+            {
+              "name": "step",
+              "value": "Progress: Content Ready"
+            },
+            {
+              "name": "message",
+              "value": "Content generated. Preparing to apply\u2026"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        520,
+        180
+      ],
+      "id": "9b66a41e-ebb3-4b19-bbb6-c5765bf09bd3",
+      "name": "Progress: Content Ready"
+    },
+    {
+      "parameters": {
+        "url": "={{(($json.callback_url || $json.body?.callback_url || '') + '').replace('/orchestrator','/progress')}}",
+        "method": "POST",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "job_id",
+              "value": "={{$json.job_id || $json.body?.job_id || $node[\"Webhook\"].json.job_id || $node[\"Webhook\"].json.body?.job_id}}"
+            },
+            {
+              "name": "percent",
+              "value": "={$92}"
+            },
+            {
+              "name": "status",
+              "value": "running"
+            },
+            {
+              "name": "step",
+              "value": "Progress: Applying Updates"
+            },
+            {
+              "name": "message",
+              "value": "Applying updates in WordPress\u2026"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        600,
+        220
+      ],
+      "id": "dc7dd6ed-05e0-4fd3-b2c5-8a2b87803329",
+      "name": "Progress: Applying Updates"
     }
   ],
   "pinData": {},
@@ -327,6 +531,11 @@
         [
           {
             "node": "Research Document Gate",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Progress: Request Received",
             "type": "main",
             "index": 0
           }
@@ -369,6 +578,11 @@
             "node": "Split Blueprints + Deterministic Metadata",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Progress: Research Ready",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -378,6 +592,11 @@
         [
           {
             "node": "Split Blueprints + Deterministic Metadata",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Progress: Research Ready",
             "type": "main",
             "index": 0
           }
@@ -484,6 +703,11 @@
             "node": "Attach Callback Metadata",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Progress: Content Ready",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -493,6 +717,11 @@
         [
           {
             "node": "Callback to WP",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Progress: Applying Updates",
             "type": "main",
             "index": 0
           }

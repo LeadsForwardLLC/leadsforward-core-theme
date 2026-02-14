@@ -99,6 +99,25 @@
   border: 1px solid #e5e7eb;
 }
 
+.lf-manifester-card h2,
+.lf-manifester-card h3,
+.lf-manifester-card h4 {
+  color: #0f172a;
+}
+
+.lf-manifester-card .description {
+  color: #475569;
+}
+
+.lf-manifester-card .button {
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.lf-manifester-card .button.button-primary {
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.18);
+}
+
 .lf-manifester-steps {
   display: flex;
   flex-direction: column;
@@ -202,6 +221,39 @@
 
 .lf-manifester-status.is-info {
   color: #1d4ed8;
+}
+
+.lf-manifester-progress {
+  margin-top: 12px;
+  display: none;
+}
+
+.lf-manifester-progress.is-active {
+  display: block;
+}
+
+.lf-manifester-progress__bar {
+  position: relative;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.lf-manifester-progress__bar span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #60a5fa, #2563eb, #4f46e5);
+  transition: width 0.4s ease;
+}
+
+.lf-manifester-progress__meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #475569;
 }
 
 .lf-manifester-hidden {
