@@ -36,6 +36,7 @@ function lf_ai_studio_airtable_default_field_map(): array {
 		'secondary_keywords_all' => 'KW-All',
 		'secondary_keywords_focus' => 'KW-Focus',
 		'service_areas_list' => 'Service Areas',
+		'services_list' => 'Services List',
 		'services_json' => 'Services JSON',
 		'service_areas_json' => 'Service Areas JSON',
 		'manifest_json' => 'Manifest JSON',
@@ -736,6 +737,7 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	$services = lf_ai_studio_airtable_json_array_field($fields, $map['services_json'] ?? '', 'Services JSON', $errors);
 	$service_areas = lf_ai_studio_airtable_json_array_field($fields, $map['service_areas_json'] ?? '', 'Service Areas JSON', $errors);
 	$service_area_list = lf_ai_studio_airtable_string_field($fields, $map['service_areas_list'] ?? '');
+	$services_list = lf_ai_studio_airtable_string_field($fields, $map['services_list'] ?? '');
 
 	$website_url = lf_ai_studio_airtable_string_field($fields, $map['website_url'] ?? '');
 	$business_category = lf_ai_studio_airtable_string_field($fields, $map['business_category'] ?? '');
@@ -786,32 +788,33 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	if ($primary_keyword === '') {
 		$errors[] = __('Missing Primary Keyword field in Airtable.', 'leadsforward-core');
 	}
-	if (!empty($keyword_pool)) {
-		$generic_titles = ['main service', 'additional service', 'service', 'services'];
-		$service_titles = [];
-		foreach ($services as $svc) {
-			if (is_array($svc)) {
-				$service_titles[] = strtolower(trim((string) ($svc['title'] ?? '')));
+	$generic_titles = ['main service', 'additional service', 'service', 'services'];
+	$service_titles = [];
+	foreach ($services as $svc) {
+		if (is_array($svc)) {
+			$service_titles[] = strtolower(trim((string) ($svc['title'] ?? '')));
+		}
+	}
+	$has_only_generic = !empty($services);
+	if (!empty($service_titles)) {
+		foreach ($service_titles as $title) {
+			if ($title === '' || !in_array($title, $generic_titles, true)) {
+				$has_only_generic = false;
+				break;
 			}
 		}
-		$has_only_generic = !empty($services);
-		if (!empty($service_titles)) {
-			foreach ($service_titles as $title) {
-				if ($title === '' || !in_array($title, $generic_titles, true)) {
-					$has_only_generic = false;
-					break;
-				}
-			}
-		} else {
-			$has_only_generic = false;
-		}
-		if (empty($services) || count($services) < 3 || $has_only_generic) {
-			$services = lf_ai_studio_airtable_build_services_from_keywords($keyword_pool, $primary_city, $state, $business_name, $niche);
-		}
+	} else {
+		$has_only_generic = false;
+	}
+	if ((empty($services) || $has_only_generic) && $services_list !== '') {
+		$services = lf_ai_studio_airtable_build_services_from_list($services_list, $primary_city, $state, $business_name, $niche);
 	}
 	if (empty($services)) {
 		$niche_slug_guess = lf_ai_studio_airtable_resolve_niche_slug($niche, $niche_slug);
 		$services = lf_ai_studio_airtable_build_services_from_niche($niche_slug_guess, $primary_city, $state, $business_name);
+	}
+	if (empty($services) && !empty($keyword_pool)) {
+		$services = lf_ai_studio_airtable_build_services_from_keywords($keyword_pool, $primary_city, $state, $business_name, $niche);
 	}
 	if (empty($services)) {
 		$services = lf_ai_studio_airtable_build_generic_services($niche, $primary_city, $state, $business_name);
@@ -1143,6 +1146,67 @@ function lf_ai_studio_airtable_build_services_from_niche(string $niche_slug, str
 	return $services;
 }
 
+function lf_ai_studio_airtable_clean_service_label(string $raw, string $city, string $state, string $niche): string {
+	$label = strtolower(trim($raw));
+	if ($label === '') {
+		return '';
+	}
+	$label = preg_replace('/\bnear me\b/i', '', $label);
+	$label = preg_replace('/\bnearby\b|\bnear\b|\baround\b|\bwithin\b/i', '', $label);
+	$label = preg_replace('/\bservices?\b/i', '', $label);
+	$label = preg_replace('/\bcompanies?\b|\bcompany\b|\bcontractors?\b|\bexperts?\b|\bspecialists?\b/i', '', $label);
+	$label = preg_replace('/\b\d{5}(?:-\d{4})?\b/', '', $label);
+	if ($city !== '') {
+		$label = preg_replace('/\b' . preg_quote(strtolower($city), '/') . '\b/i', '', $label);
+	}
+	if ($state !== '') {
+		$label = preg_replace('/\b' . preg_quote(strtolower($state), '/') . '\b/i', '', $label);
+	}
+	$label = preg_replace('/\b(in|for)\b/i', '', $label);
+	$label = trim(preg_replace('/\s+/', ' ', $label));
+	if ($label === '') {
+		return '';
+	}
+	$clean = ucwords($label);
+	if ($niche !== '' && strtolower($clean) === strtolower($niche)) {
+		return '';
+	}
+	return $clean;
+}
+
+function lf_ai_studio_airtable_build_services_from_list(string $raw, string $city, string $state, string $business_name, string $niche): array {
+	$parts = preg_split('/\r\n|\r|\n|,|;/', (string) $raw);
+	if (!is_array($parts)) {
+		return [];
+	}
+	$services = [];
+	$seen = [];
+	foreach ($parts as $part) {
+		$label = trim((string) $part);
+		$label = trim($label, "-\t ");
+		if ($label === '') {
+			continue;
+		}
+		$clean = lf_ai_studio_airtable_clean_service_label($label, $city, $state, $niche);
+		if ($clean === '') {
+			continue;
+		}
+		$slug = sanitize_title($clean);
+		if ($slug === '' || isset($seen[$slug])) {
+			continue;
+		}
+		$seen[$slug] = true;
+		$services[] = [
+			'title' => $clean,
+			'slug' => $slug,
+			'primary_keyword' => trim(sprintf('%s %s %s', $clean, $city, $state)),
+			'secondary_keywords' => [],
+			'custom_cta_context' => trim(sprintf('Get trusted %s from %s.', $clean, $business_name)),
+		];
+	}
+	return $services;
+}
+
 function lf_ai_studio_airtable_build_services_from_keywords(array $keywords, string $city, string $state, string $business_name, string $niche): array {
 	$services = [];
 	$seen = [];
@@ -1158,32 +1222,18 @@ function lf_ai_studio_airtable_build_services_from_keywords(array $keywords, str
 		if ($raw === '') {
 			continue;
 		}
-		$candidate = strtolower($raw);
-		$candidate = preg_replace('/\bnear me\b/i', '', $candidate);
-		$candidate = preg_replace('/\bnear\b/i', '', $candidate);
-		$candidate = preg_replace('/\bservices?\b/i', '', $candidate);
-		$candidate = preg_replace('/\bcompany\b|\bcontractors?\b|\bexperts?\b/i', '', $candidate);
-		$candidate = preg_replace('/\b\d{5}(?:-\d{4})?\b/', '', $candidate);
-		if ($city !== '') {
-			$candidate = preg_replace('/\b' . preg_quote(strtolower($city), '/') . '\b/i', '', $candidate);
-		}
-		if ($state !== '') {
-			$candidate = preg_replace('/\b' . preg_quote(strtolower($state), '/') . '\b/i', '', $candidate);
-		}
-		if (!empty($stop_words)) {
-			$candidate = preg_replace('/\b(' . implode('|', array_map('preg_quote', $stop_words)) . ')\b/i', '', $candidate);
-		}
-		$candidate = trim(preg_replace('/\s+/', ' ', $candidate));
-		if ($candidate !== '' && $niche !== '' && stripos($candidate, $niche) === false) {
-			$candidate = trim($candidate . ' ' . $niche);
-		}
-		if ($candidate !== '' && $niche !== '' && strtolower($candidate) === strtolower($niche)) {
-			continue;
-		}
+		$candidate = lf_ai_studio_airtable_clean_service_label($raw, $city, $state, $niche);
 		if ($candidate === '') {
 			continue;
 		}
-		$title = ucwords($candidate);
+		if (!empty($stop_words)) {
+			$candidate = preg_replace('/\b(' . implode('|', array_map('preg_quote', $stop_words)) . ')\b/i', '', $candidate);
+			$candidate = trim(preg_replace('/\s+/', ' ', $candidate));
+		}
+		if ($candidate === '' || preg_match('/\bestimate\b|\bquote\b|\bquotes\b/i', $candidate)) {
+			continue;
+		}
+		$title = $candidate;
 		$slug = sanitize_title($title);
 		if ($slug === '' || isset($seen[$slug])) {
 			continue;

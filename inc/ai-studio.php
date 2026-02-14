@@ -2324,14 +2324,12 @@ function lf_ai_studio_clean_service_title(string $title, string $location): stri
 	$base = preg_replace('/\bservices?\b/i', '', $base);
 	$base = preg_replace('/\bcompany\b|\bcontractors?\b|\bexperts?\b/i', '', $base);
 	$base = preg_replace('/\bnear me\b|\bnear\b/i', '', $base);
+	$base = preg_replace('/\b(in|for)\b/i', '', $base);
 	$base = trim(preg_replace('/\s+/', ' ', $base));
 	if ($base === '') {
 		$base = __('Service', 'leadsforward-core');
 	}
 	$clean = ucwords($base);
-	if ($location !== '' && stripos($clean, $location) === false) {
-		$clean = trim($clean . ' in ' . $location);
-	}
 	return $clean;
 }
 
