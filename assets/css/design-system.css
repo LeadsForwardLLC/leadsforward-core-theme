@@ -3552,6 +3552,16 @@ button:focus-visible,
 	overflow: visible;
 }
 
+.lf-block-trust-reviews--slider .lf-slider__mask {
+	width: 100%;
+	overflow: hidden;
+	padding-bottom: 2.75rem;
+}
+
+.lf-block-trust-reviews--slider .lf-slider__viewport {
+	overflow: visible;
+}
+
 .lf-block-trust-reviews--slider .lf-slider__track {
 	width: 100%;
 	overflow: visible;
@@ -3571,7 +3581,7 @@ button:focus-visible,
 	flex-direction: column;
 	align-items: center;
 	gap: 0.65rem;
-	margin-top: 0.5rem;
+	margin-top: 0.25rem;
 }
 
 .lf-block-trust-reviews--slider .lf-block-trust-reviews__list {
@@ -5196,9 +5206,8 @@ html {
 .lf-slider__viewport {
 	width: 100%;
 	box-sizing: border-box;
-	overflow-x: hidden;
-	overflow-y: visible;
-	padding: 0.25rem 0 2.25rem;
+	overflow: visible;
+	padding: 0;
 }
 
 .lf-slider__track {

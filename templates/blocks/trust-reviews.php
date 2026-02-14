@@ -144,8 +144,9 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 		<div class="lf-block-trust-reviews__carousel" data-slider="<?php echo $is_slider ? '1' : '0'; ?>"<?php echo $is_reviews_page ? ' data-reviews-step="' . esc_attr((string) $reviews_page_limit) . '"' : ''; ?>>
 				<?php if ($is_slider) : ?>
 					<div class="lf-slider" data-lf-slider>
-						<div class="lf-slider__viewport" data-lf-slider-viewport>
-							<ul class="lf-block-trust-reviews__list lf-slider__track" role="list" data-lf-slider-track>
+						<div class="lf-slider__mask">
+							<div class="lf-slider__viewport" data-lf-slider-viewport>
+								<ul class="lf-block-trust-reviews__list lf-slider__track" role="list" data-lf-slider-track>
 				<?php else : ?>
 					<ul class="lf-block-trust-reviews__list" role="list">
 				<?php endif; ?>
@@ -219,6 +220,7 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 				?>
 			</ul>
 				<?php if ($is_slider) : ?>
+							</div>
 						</div>
 						<div class="lf-slider__footer">
 							<div class="lf-slider__dots" data-lf-slider-dots aria-label="<?php esc_attr_e('Review pages', 'leadsforward-core'); ?>"></div>
