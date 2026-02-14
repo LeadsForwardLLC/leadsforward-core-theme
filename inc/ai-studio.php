@@ -24,6 +24,7 @@ add_action('admin_post_lf_ai_studio_retry', 'lf_ai_studio_handle_retry');
 add_action('admin_post_lf_ai_studio_manifest', 'lf_ai_studio_handle_manifest');
 add_action('admin_post_lf_ai_studio_manifest_template', 'lf_ai_studio_handle_manifest_template');
 add_action('admin_post_lf_ai_studio_research', 'lf_ai_studio_handle_research');
+add_action('wp_ajax_lf_ai_studio_research_upload', 'lf_ai_studio_handle_research_ajax');
 add_action('admin_post_lf_ai_studio_run_audit', 'lf_ai_studio_handle_run_audit');
 add_action('admin_post_lf_ai_studio_regen_blog_posts', 'lf_ai_studio_handle_regen_blog_posts');
 add_action('admin_post_lf_ai_studio_save_logo', 'lf_ai_studio_handle_save_logo');
@@ -68,6 +69,7 @@ function lf_ai_studio_assets(string $hook): void {
 	wp_localize_script('lf-ai-studio-airtable', 'LFAirtableManifester', [
 		'ajaxUrl' => admin_url('admin-ajax.php'),
 		'nonce' => wp_create_nonce('lf_ai_airtable'),
+		'researchNonce' => wp_create_nonce('lf_ai_studio_research_ajax'),
 		'enabled' => !empty($airtable_settings['enabled']),
 		'strings' => [
 			'searchPlaceholder' => __('Search Airtable projects…', 'leadsforward-core'),
@@ -75,6 +77,11 @@ function lf_ai_studio_assets(string $hook): void {
 			'notConfigured' => __('Airtable is not configured.', 'leadsforward-core'),
 			'selectPrompt' => __('Select a project to preview before generating.', 'leadsforward-core'),
 			'generating' => __('Generating from Airtable…', 'leadsforward-core'),
+		],
+		'researchStrings' => [
+			'uploading' => __('Uploading research…', 'leadsforward-core'),
+			'success' => __('Research uploaded. Ready for generation.', 'leadsforward-core'),
+			'error' => __('Research upload failed.', 'leadsforward-core'),
 		],
 	]);
 }
@@ -339,6 +346,39 @@ function lf_ai_studio_handle_manifest_template(): void {
 	exit;
 }
 
+function lf_ai_studio_parse_research_upload(array $file): array {
+	if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+		return ['ok' => false, 'errors' => [__('Research upload failed.', 'leadsforward-core')]];
+	}
+	$filetype = wp_check_filetype_and_ext((string) ($file['tmp_name'] ?? ''), (string) ($file['name'] ?? ''));
+	$ext = strtolower((string) ($filetype['ext'] ?? ''));
+	if ($ext === '') {
+		$ext = strtolower(pathinfo((string) ($file['name'] ?? ''), PATHINFO_EXTENSION));
+	}
+	$type = strtolower((string) ($filetype['type'] ?? ''));
+	$allowed_mimes = ['application/json', 'text/plain', 'application/octet-stream'];
+	$looks_json = ($ext === 'json') || in_array($type, $allowed_mimes, true);
+	if (!$looks_json) {
+		return ['ok' => false, 'errors' => [__('Research file must be valid JSON.', 'leadsforward-core')]];
+	}
+	$raw = file_get_contents((string) ($file['tmp_name'] ?? ''));
+	if (!is_string($raw) || trim($raw) === '') {
+		return ['ok' => false, 'errors' => [__('Research file is empty.', 'leadsforward-core')]];
+	}
+	$raw = preg_replace('/^\xEF\xBB\xBF/', '', $raw);
+	$decoded = json_decode($raw, true);
+	if (!is_array($decoded)) {
+		$reason = function_exists('json_last_error_msg') ? json_last_error_msg() : '';
+		$message = $reason ? sprintf(__('Research JSON is invalid: %s', 'leadsforward-core'), $reason) : __('Research JSON is invalid.', 'leadsforward-core');
+		return ['ok' => false, 'errors' => [$message]];
+	}
+	$errors = lf_ai_studio_validate_research_document($decoded);
+	if (!empty($errors)) {
+		return ['ok' => false, 'errors' => $errors];
+	}
+	return ['ok' => true, 'document' => $decoded];
+}
+
 function lf_ai_studio_handle_research(): void {
 	if (!current_user_can('edit_theme_options')) {
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
@@ -350,50 +390,33 @@ function lf_ai_studio_handle_research(): void {
 		wp_safe_redirect(add_query_arg('research_error', '1', $redirect));
 		exit;
 	}
-	$file = $_FILES['lf_site_research'];
-	if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-		update_option('lf_ai_studio_research_errors', [__('Research upload failed.', 'leadsforward-core')], false);
+	$result = lf_ai_studio_parse_research_upload($_FILES['lf_site_research']);
+	if (empty($result['ok'])) {
+		update_option('lf_ai_studio_research_errors', $result['errors'] ?? [__('Research file must be valid JSON.', 'leadsforward-core')], false);
 		wp_safe_redirect(add_query_arg('research_error', '1', $redirect));
 		exit;
 	}
-	$filetype = wp_check_filetype_and_ext((string) ($file['tmp_name'] ?? ''), (string) ($file['name'] ?? ''));
-	$ext = strtolower((string) ($filetype['ext'] ?? ''));
-	if ($ext === '') {
-		$ext = strtolower(pathinfo((string) ($file['name'] ?? ''), PATHINFO_EXTENSION));
-	}
-	$type = strtolower((string) ($filetype['type'] ?? ''));
-	$allowed_mimes = ['application/json', 'text/plain', 'application/octet-stream'];
-	$looks_json = ($ext === 'json') || in_array($type, $allowed_mimes, true);
-	if (!$looks_json) {
-		update_option('lf_ai_studio_research_errors', [__('Research file must be valid JSON.', 'leadsforward-core')], false);
-		wp_safe_redirect(add_query_arg('research_error', '1', $redirect));
-		exit;
-	}
-	$raw = file_get_contents((string) ($file['tmp_name'] ?? ''));
-	if (!is_string($raw) || trim($raw) === '') {
-		update_option('lf_ai_studio_research_errors', [__('Research file is empty.', 'leadsforward-core')], false);
-		wp_safe_redirect(add_query_arg('research_error', '1', $redirect));
-		exit;
-	}
-	$raw = preg_replace('/^\xEF\xBB\xBF/', '', $raw);
-	$decoded = json_decode($raw, true);
-	if (!is_array($decoded)) {
-		$reason = function_exists('json_last_error_msg') ? json_last_error_msg() : '';
-		$message = $reason ? sprintf(__('Research JSON is invalid: %s', 'leadsforward-core'), $reason) : __('Research JSON is invalid.', 'leadsforward-core');
-		update_option('lf_ai_studio_research_errors', [$message], false);
-		wp_safe_redirect(add_query_arg('research_error', '1', $redirect));
-		exit;
-	}
-	$errors = lf_ai_studio_validate_research_document($decoded);
-	if (!empty($errors)) {
-		update_option('lf_ai_studio_research_errors', $errors, false);
-		wp_safe_redirect(add_query_arg('research_error', '1', $redirect));
-		exit;
-	}
-	update_option('lf_site_research_document', $decoded, false);
+	update_option('lf_site_research_document', $result['document'], false);
 	delete_option('lf_ai_studio_research_errors');
 	wp_safe_redirect(add_query_arg('research', '1', $redirect));
 	exit;
+}
+
+function lf_ai_studio_handle_research_ajax(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
+	}
+	check_ajax_referer('lf_ai_studio_research_ajax', 'nonce');
+	if (empty($_FILES['lf_site_research']) || !is_array($_FILES['lf_site_research'])) {
+		wp_send_json_error(['message' => __('Research file is required.', 'leadsforward-core')], 400);
+	}
+	$result = lf_ai_studio_parse_research_upload($_FILES['lf_site_research']);
+	if (empty($result['ok'])) {
+		wp_send_json_error(['message' => __('Research validation failed.', 'leadsforward-core'), 'errors' => $result['errors'] ?? []], 422);
+	}
+	update_option('lf_site_research_document', $result['document'], false);
+	delete_option('lf_ai_studio_research_errors');
+	wp_send_json_success(['message' => __('Research uploaded successfully.', 'leadsforward-core')]);
 }
 
 function lf_ai_studio_handle_run_audit(): void {
@@ -625,12 +648,12 @@ function lf_ai_studio_render_page(): void {
 							<?php wp_nonce_field('lf_ai_studio_research', 'lf_ai_studio_research_nonce'); ?>
 							<input type="hidden" name="action" value="lf_ai_studio_research" />
 							<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
-								<input type="file" name="lf_site_research" id="lf_site_research" accept="application/json,.json" />
-								<button type="submit" class="button button-primary"><?php esc_html_e('Upload Research', 'leadsforward-core'); ?></button>
+								<input type="file" name="lf_site_research" id="lf_site_research" class="lf-manifester-file" accept="application/json,.json" />
 								<a class="button" href="<?php echo esc_url($research_prompt_url); ?>" download><?php esc_html_e('Download Master Research Prompt', 'leadsforward-core'); ?></a>
 							</div>
 						</form>
-						<p class="description"><?php esc_html_e('Generate research using this prompt. Save as JSON. Upload before generating the site.', 'leadsforward-core'); ?></p>
+						<div id="lf-research-status" class="lf-manifester-status" role="status" aria-live="polite"></div>
+						<p class="description"><?php esc_html_e('Choose a JSON file to upload instantly. Generate research using the prompt and save as JSON.', 'leadsforward-core'); ?></p>
 						<?php if (!empty($research)) : ?>
 							<p class="description" style="margin-top:6px;"><?php esc_html_e('Research document stored and ready for the next generation run.', 'leadsforward-core'); ?></p>
 						<?php endif; ?>
@@ -643,28 +666,6 @@ function lf_ai_studio_render_page(): void {
 						<h3><?php esc_html_e('Select Airtable project or upload a manifest', 'leadsforward-core'); ?></h3>
 						<p class="description"><?php esc_html_e('Choose one source. Airtable is faster for single projects; manifest is best for full control.', 'leadsforward-core'); ?></p>
 						<div class="lf-manifester-source">
-							<div class="lf-manifester-panel">
-								<h4 style="margin-top:0;"><?php esc_html_e('Manifest Upload (Deterministic)', 'leadsforward-core'); ?></h4>
-								<?php if (!empty($manifest)) : ?>
-									<?php
-									$site_name = (string) ($manifest['business']['name'] ?? '');
-									$site_niche = (string) ($manifest['business']['niche'] ?? '');
-									$site_city = (string) ($manifest['business']['primary_city'] ?? ($manifest['business']['address']['city'] ?? ''));
-									?>
-									<p class="description">
-										<?php echo esc_html(sprintf(__('Active manifest: %1$s (%2$s) — %3$s', 'leadsforward-core'), $site_name ?: __('Unnamed', 'leadsforward-core'), $site_niche ?: __('No niche', 'leadsforward-core'), $site_city ?: __('No city', 'leadsforward-core'))); ?>
-									</p>
-								<?php endif; ?>
-								<form id="lf-ai-manifest-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
-									<?php wp_nonce_field('lf_ai_studio_manifest', 'lf_ai_studio_manifest_nonce'); ?>
-									<input type="hidden" name="action" value="lf_ai_studio_manifest" />
-									<input type="file" name="lf_site_manifest" id="lf_site_manifest" accept="application/json,.json" />
-									<button type="submit" class="button button-primary lf-manifester-hidden-submit"><?php esc_html_e('Upload Manifest', 'leadsforward-core'); ?></button>
-								</form>
-								<p class="description">
-									<a class="button" href="<?php echo esc_url($template_url); ?>"><?php esc_html_e('Download Manifest Template', 'leadsforward-core'); ?></a>
-								</p>
-							</div>
 							<div class="lf-manifester-panel" id="lf-airtable-picker">
 								<h4 style="margin-top:0;"><?php esc_html_e('Airtable Projects', 'leadsforward-core'); ?></h4>
 								<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-bottom: 12px;">
@@ -695,12 +696,32 @@ function lf_ai_studio_render_page(): void {
 										<div id="lf-airtable-preview" class="lf-airtable-preview-card">
 											<?php esc_html_e('Select a project to preview before generating.', 'leadsforward-core'); ?>
 										</div>
-										<button type="button" class="button button-primary lf-manifester-hidden" id="lf-airtable-generate" disabled>
-											<?php esc_html_e('Use Project & Generate', 'leadsforward-core'); ?>
-										</button>
 										<div id="lf-airtable-status" class="lf-airtable-status" role="status" aria-live="polite"></div>
 									</div>
 								</div>
+							</div>
+							<div class="lf-manifester-panel">
+								<h4 style="margin-top:0;"><?php esc_html_e('Manifest Upload (Deterministic)', 'leadsforward-core'); ?></h4>
+								<p class="description"><?php esc_html_e('Use a manifest JSON when you want full control over business data, services, and site structure.', 'leadsforward-core'); ?></p>
+								<?php if (!empty($manifest)) : ?>
+									<?php
+									$site_name = (string) ($manifest['business']['name'] ?? '');
+									$site_niche = (string) ($manifest['business']['niche'] ?? '');
+									$site_city = (string) ($manifest['business']['primary_city'] ?? ($manifest['business']['address']['city'] ?? ''));
+									?>
+									<p class="description">
+										<?php echo esc_html(sprintf(__('Active manifest: %1$s (%2$s) — %3$s', 'leadsforward-core'), $site_name ?: __('Unnamed', 'leadsforward-core'), $site_niche ?: __('No niche', 'leadsforward-core'), $site_city ?: __('No city', 'leadsforward-core'))); ?>
+									</p>
+								<?php endif; ?>
+								<form id="lf-ai-manifest-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+									<?php wp_nonce_field('lf_ai_studio_manifest', 'lf_ai_studio_manifest_nonce'); ?>
+									<input type="hidden" name="action" value="lf_ai_studio_manifest" />
+									<input type="file" name="lf_site_manifest" id="lf_site_manifest" class="lf-manifester-file" accept="application/json,.json" />
+									<button type="submit" class="button button-primary lf-manifester-hidden-submit"><?php esc_html_e('Upload Manifest', 'leadsforward-core'); ?></button>
+								</form>
+								<p class="description">
+									<a class="button" href="<?php echo esc_url($template_url); ?>"><?php esc_html_e('Download Manifest Template', 'leadsforward-core'); ?></a>
+								</p>
 							</div>
 						</div>
 					</div>

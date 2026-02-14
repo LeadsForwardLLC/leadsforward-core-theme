@@ -8,7 +8,6 @@
   var searchInput = document.getElementById('lf-airtable-search');
   var resultsEl = document.getElementById('lf-airtable-results');
   var previewEl = document.getElementById('lf-airtable-preview');
-  var generateBtn = document.getElementById('lf-airtable-generate');
   var manifestForm = document.getElementById('lf-ai-manifest-form');
   var manifestInput = document.getElementById('lf_site_manifest');
   var primaryGenerateBtn = document.getElementById('lf-manifester-generate');
@@ -23,7 +22,7 @@
     });
   }
 
-  if (!searchInput || !resultsEl || !previewEl || !generateBtn || !statusEl) return;
+  if (!searchInput || !resultsEl || !previewEl || !statusEl) return;
 
   if (cfg.strings && cfg.strings.searchPlaceholder) {
     searchInput.placeholder = cfg.strings.searchPlaceholder;
@@ -77,7 +76,6 @@
       button.textContent = record.name + (metaParts.length ? ' — ' + metaParts.join(' • ') : '');
       button.addEventListener('click', function () {
         selectedRecord = record;
-        generateBtn.disabled = false;
         updatePrimaryState();
         var previewParts = [record.name];
         if (record.city || record.state) {
@@ -150,7 +148,6 @@
 
   function generateFromRecord() {
     if (!selectedRecord || !selectedRecord.id) return;
-    generateBtn.disabled = true;
     if (primaryGenerateBtn) {
       primaryGenerateBtn.disabled = true;
     }
@@ -176,7 +173,6 @@
           }
           setStatus(msg, 'error');
           setPrimaryStatus(msg, 'error');
-          generateBtn.disabled = false;
           updatePrimaryState();
           return;
         }
@@ -190,7 +186,6 @@
       .catch(function () {
         setStatus('Generation failed.', 'error');
         setPrimaryStatus('Generation failed.', 'error');
-        generateBtn.disabled = false;
         updatePrimaryState();
       });
   }
@@ -220,7 +215,7 @@
     });
   }
 
-  generateBtn.addEventListener('click', generateFromRecord);
+  // No secondary generate button; primary button handles generation.
 
   if (manifestInput) {
     manifestInput.addEventListener('change', updatePrimaryState);
@@ -249,4 +244,53 @@
   }
 
   updatePrimaryState();
+
+  var researchInput = document.getElementById('lf_site_research');
+  var researchStatusEl = document.getElementById('lf-research-status');
+
+  function setResearchStatus(message, type) {
+    if (!researchStatusEl) return;
+    researchStatusEl.textContent = message || '';
+    researchStatusEl.className = 'lf-manifester-status' + (type ? ' is-' + type : '');
+  }
+
+  function uploadResearch(file) {
+    if (!file || !cfg.researchNonce) return;
+    var strings = cfg.researchStrings || {};
+    setResearchStatus(strings.uploading || 'Uploading research…', 'info');
+    var formData = new FormData();
+    formData.append('action', 'lf_ai_studio_research_upload');
+    formData.append('nonce', cfg.researchNonce);
+    formData.append('lf_site_research', file);
+    fetch(cfg.ajaxUrl, {
+      method: 'POST',
+      credentials: 'same-origin',
+      body: formData
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (payload) {
+        if (!payload || !payload.success) {
+          var message = strings.error || 'Research upload failed.';
+          if (payload && payload.data && payload.data.errors && payload.data.errors.length) {
+            message += '\n' + payload.data.errors.join('\n');
+          } else if (payload && payload.data && payload.data.message) {
+            message = payload.data.message;
+          }
+          setResearchStatus(message, 'error');
+          return;
+        }
+        setResearchStatus(strings.success || 'Research uploaded. Ready for generation.', 'success');
+      })
+      .catch(function () {
+        setResearchStatus(strings.error || 'Research upload failed.', 'error');
+      });
+  }
+
+  if (researchInput) {
+    researchInput.addEventListener('change', function () {
+      var file = researchInput.files && researchInput.files.length ? researchInput.files[0] : null;
+      if (!file) return;
+      uploadResearch(file);
+    });
+  }
 })();
