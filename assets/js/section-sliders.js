@@ -68,6 +68,81 @@
 		if (!state) return;
 		const current = parseInt(state.track.dataset.index || '0', 10);
 		setIndex(root, isNaN(current) ? 0 : current);
+		attachDrag(root);
+	};
+
+	const attachDrag = (root) => {
+		if (root.dataset.lfSliderDrag === 'true') {
+			return;
+		}
+		const viewport = getViewport(root);
+		const track = getTrack(root);
+		if (!viewport || !track) return;
+
+		let isDown = false;
+		let isDragging = false;
+		let startX = 0;
+		let startY = 0;
+		let startIndex = 0;
+
+		const getPoint = (event) => (event.touches ? event.touches[0] : event);
+
+		const onDown = (event) => {
+			if (event.button && event.button !== 0) return;
+			const point = getPoint(event);
+			isDown = true;
+			isDragging = false;
+			startX = point.clientX;
+			startY = point.clientY;
+			startIndex = parseInt(track.dataset.index || '0', 10) || 0;
+			track.style.transition = 'none';
+		};
+
+		const onMove = (event) => {
+			if (!isDown) return;
+			const point = getPoint(event);
+			const deltaX = point.clientX - startX;
+			const deltaY = point.clientY - startY;
+			if (!isDragging) {
+				if (Math.abs(deltaX) < 4 && Math.abs(deltaY) < 4) return;
+				if (Math.abs(deltaY) > Math.abs(deltaX)) {
+					isDown = false;
+					track.style.transition = '';
+					return;
+				}
+				isDragging = true;
+			}
+			event.preventDefault();
+			const state = buildSliderState(root);
+			if (!state) return;
+			track.style.transform = `translate3d(${-(startIndex * state.pageWidth) + deltaX}px, 0, 0)`;
+		};
+
+		const onUp = (event) => {
+			if (!isDown) return;
+			const point = getPoint(event);
+			const deltaX = point.clientX - startX;
+			isDown = false;
+			track.style.transition = '';
+			const state = buildSliderState(root);
+			if (!state) return;
+			const threshold = Math.min(120, state.pageWidth * 0.2);
+			let targetIndex = startIndex;
+			if (Math.abs(deltaX) > threshold) {
+				targetIndex = startIndex + (deltaX < 0 ? 1 : -1);
+			}
+			setIndex(root, targetIndex);
+		};
+
+		viewport.addEventListener('mousedown', onDown);
+		viewport.addEventListener('touchstart', onDown, { passive: true });
+		window.addEventListener('mousemove', onMove, { passive: false });
+		window.addEventListener('touchmove', onMove, { passive: false });
+		window.addEventListener('mouseup', onUp);
+		window.addEventListener('touchend', onUp);
+		window.addEventListener('touchcancel', onUp);
+
+		root.dataset.lfSliderDrag = 'true';
 	};
 
 	const initSliders = () => {
