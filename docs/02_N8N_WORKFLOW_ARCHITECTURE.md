@@ -14,6 +14,7 @@ Webhook
 -> Parse + Normalize + CTA Guard
 -> Quality Gate + SEO Enforcement
 -> Deterministic FAQ Enforcement
+-> Global Completeness + Blog Gate
 -> Merge Blueprint Results
 -> Attach Callback Metadata
 -> Callback to WP
@@ -35,8 +36,13 @@ Webhook
 9. **Deterministic FAQ Enforcement**:
    - Only homepage generates FAQs.
    - Non-homepage pages receive a deterministic slice from the homepage FAQ pool.
-10. **Merge Blueprint Results** collects all page updates.
-11. **Callback to WP** posts the merged updates to the WP orchestrator endpoint.
+10. **Global Completeness + Blog Gate** (run once for all generated items):
+   - validates generation scope coverage (services, service areas, core pages, blog scope).
+   - enforces minimum content volume per page type.
+   - rejects placeholder/generic phrases.
+   - enforces blog blueprint count floor (`>= 5` when blog scope is enabled).
+11. **Merge Blueprint Results** collects all page updates.
+12. **Callback to WP** posts the merged updates to the WP orchestrator endpoint.
 
 ## Model Settings
 - **Page generation LLM**: `gpt-5.2-chat-latest`, `maxTokens=3500`, `temperature=0.5`
@@ -44,3 +50,8 @@ Webhook
 
 ## Progress Reporting
 Progress updates are sent to the WP `/progress` endpoint at key milestones (research ready, content generation start, merge).
+
+## Why This Is Layered
+- n8n is the first quality gate and catches low-quality output before callback.
+- WordPress is still authoritative and applies deterministic fallback logic server-side.
+- If n8n is unavailable, theme-side scaffold + fallback copy/image/SEO systems still populate the site without AI.

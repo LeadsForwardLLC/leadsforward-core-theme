@@ -336,6 +336,19 @@
       "name": "Callback to WP"
     },
     {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (!items.length) {\n  return [{ json: { ok: false, status: 500, error: 'No items for global completeness gate.' } }];\n}\n\nfunction wordCount(v) {\n  const t = String(v || '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();\n  return t ? t.split(' ').length : 0;\n}\n\nfunction normalized(v) {\n  return String(v || '').toLowerCase().replace(/\\s+/g, ' ').trim();\n}\n\nconst genericFlags = [\n  'short overview of',\n  'sample project created during site generation',\n  'what to expect',\n  'placeholder',\n  'lorem ipsum'\n];\n\nfunction hasGenericText(text) {\n  const n = normalized(text);\n  return genericFlags.some(flag => n.includes(flag));\n}\n\nconst errors = [];\nconst pageTypeCounts = {};\n\nfor (const item of items) {\n  const j = item.json || {};\n  const pageType = String(j.page_type || '').trim();\n  if (pageType) {\n    pageTypeCounts[pageType] = (pageTypeCounts[pageType] || 0) + 1;\n  }\n\n  if (!j.ok || !Array.isArray(j.updates) || !j.updates.length) {\n    errors.push(`Missing updates for page_type=${pageType || 'unknown'}`);\n    continue;\n  }\n\n  let pageWords = 0;\n  let hasPrimary = false;\n  const primary = String(j?.meta?.primary_keyword || '').trim();\n\n  for (const update of j.updates) {\n    if (!update || !update.fields || typeof update.fields !== 'object') continue;\n    for (const key of Object.keys(update.fields)) {\n      const value = update.fields[key];\n      if (typeof value !== 'string') continue;\n      pageWords += wordCount(value);\n      if (primary && normalized(value).includes(normalized(primary))) {\n        hasPrimary = true;\n      }\n      if (hasGenericText(value)) {\n        errors.push(`Generic placeholder phrase found in ${pageType || 'unknown'} field ${key}`);\n      }\n    }\n  }\n\n  if (primary && !hasPrimary) {\n    errors.push(`Primary keyword missing in content body for ${pageType || 'unknown'}`);\n  }\n\n  const minWords = pageType === 'post' ? 450 : (pageType === 'homepage' ? 180 : 120);\n  if (pageWords < minWords) {\n    errors.push(`Low content volume for ${pageType || 'unknown'} (${pageWords} words, min ${minWords})`);\n  }\n}\n\nconst webhook = $node['Webhook'].json || {};\nconst payload = webhook.body ?? webhook;\nconst scope = payload.generation_scope || {};\n\nif (scope.services && !pageTypeCounts.service) {\n  errors.push('Generation scope enabled services but no service blueprints were produced.');\n}\nif (scope.service_areas && !pageTypeCounts.service_area) {\n  errors.push('Generation scope enabled service_areas but no service_area blueprints were produced.');\n}\nif (scope.core_pages) {\n  const required = ['about', 'contact'];\n  for (const type of required) {\n    if (!pageTypeCounts[type]) {\n      errors.push(`Core pages enabled but missing page_type=${type}`);\n    }\n  }\n}\nif (scope.blog_posts) {\n  const blogCount = pageTypeCounts.post || 0;\n  if (blogCount < 5) {\n    errors.push(`Blog scope enabled but only ${blogCount} blog blueprints were produced (expected at least 5).`);\n  }\n}\n\nif (errors.length) {\n  return [{\n    json: {\n      ok: false,\n      status: 422,\n      error: 'Global completeness + blog quality gate failed',\n      details: errors,\n      page_type_counts: pageTypeCounts\n    }\n  }];\n}\n\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        332,
+        592
+      ],
+      "id": "29b24d00-8f11-43f0-9242-6fa44391a2cc",
+      "name": "Global Completeness + Blog Gate"
+    },
+    {
       "parameters": {},
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
@@ -470,7 +483,7 @@
       "main": [
         [
           {
-            "node": "Merge Blueprint Results",
+            "node": "Global Completeness + Blog Gate",
             "type": "main",
             "index": 0
           }
@@ -526,6 +539,17 @@
         [
           {
             "node": "Callback to WP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Global Completeness + Blog Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Blueprint Results",
             "type": "main",
             "index": 0
           }

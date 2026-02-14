@@ -11,6 +11,17 @@ Manifest/Airtable -> lf_ai_studio_scaffold_manifest()
 -> lf_apply_orchestrator_updates()
 ```
 
+## No-AI / n8n-Down Fallback
+The theme now includes a deterministic local fallback pass so the site can still launch with strong baseline content even without n8n:
+
+- `lf_ai_studio_scaffold_manifest()` now also:
+  - ensures AI blog shells are created/scheduled (`3 publish now + 2 future weekly`),
+  - runs `lf_ai_studio_fill_site_content_without_ai()` to replace generic/empty section copy,
+  - runs image distribution and SEO refresh passes.
+- `lf_apply_orchestrator_updates()` continues to overwrite weak generic copy with deterministic fallback if AI output is thin.
+
+This keeps the theme operational as a standalone engine while still benefiting from n8n when available.
+
 ## Core Integration Points
 - **Manifest scaffold**: `lf_ai_studio_scaffold_manifest()` creates/updates services and service areas, then seeds sample projects.
 - **Payload builder**: `lf_ai_studio_build_full_site_payload()` assembles blueprints using:
@@ -26,7 +37,7 @@ Manifest/Airtable -> lf_ai_studio_scaffold_manifest()
 
 ## SEO Enforcement
 Two layers are enforced:
-1. **n8n Quality Gate** injects missing primary/secondary keywords and enforces minimum word counts.
-2. **WP SEO engine** assigns keywords during manifest scaffold when `lf_seo_settings.ai_keyword_engine` is enabled.
+1. **n8n quality/completeness gates** inject/fix keyword coverage and reject low-volume/generic output.
+2. **WP SEO engine + metadata refresh** assigns keywords and rewrites weak title/description/canonical/OG fields during scaffold and apply.
 
 Keywords are stored per page in `_lf_seo_primary_keyword` and the deterministic map in `lf_keyword_map`.

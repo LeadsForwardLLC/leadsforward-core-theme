@@ -88,3 +88,19 @@ The research generator must return **JSON only** with the following schema:
 - `maxTokens` applies to a single page response.
 - Typical page responses fit well under 3500 tokens with the current schema.
 - We cap at **3500** to prevent runaway responses and keep the workflow stable.
+
+## Post-LLM Guard Rails
+After the LLM returns per-blueprint JSON, the workflow runs layered code-node gates:
+
+1. **Parse + Normalize + CTA Guard**
+   - strict JSON parsing and cleanup
+   - strips global CTA fields from non-homepage pages
+2. **Quality Gate + SEO Enforcement**
+   - validates keyword presence and minimum page-level density
+   - injects missing keyword context when possible
+3. **Deterministic FAQ Enforcement**
+   - normalizes homepage FAQ output and deterministic FAQ reuse
+4. **Global Completeness + Blog Gate**
+   - validates scope coverage and page-type presence
+   - enforces blog quality depth and minimum blog blueprint volume
+   - blocks common placeholder/generic phrasing
