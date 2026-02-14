@@ -31,7 +31,7 @@ function lf_ai_studio_register_rest(): void {
 		'permission_callback' => 'lf_ai_studio_rest_auth',
 	]);
 	register_rest_route('leadsforward/v1', '/progress', [
-		'methods' => ['GET', 'POST'],
+		'methods' => 'POST',
 		'callback' => 'lf_ai_studio_rest_progress',
 		'permission_callback' => 'lf_ai_studio_rest_auth',
 	]);
@@ -435,25 +435,6 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 }
 
 function lf_ai_studio_rest_progress(\WP_REST_Request $request): \WP_REST_Response {
-	$method = strtoupper((string) $request->get_method());
-	if ($method === 'GET') {
-		$job_id = absint((string) $request->get_param('job_id'));
-		if (!$job_id) {
-			return new \WP_REST_Response(['error' => 'missing_job_id'], 400);
-		}
-		$job = get_post($job_id);
-		if (!$job instanceof \WP_Post || $job->post_type !== LF_AI_STUDIO_JOB_CPT) {
-			return new \WP_REST_Response(['error' => 'invalid_job_id'], 404);
-		}
-		$progress = get_post_meta($job_id, 'lf_ai_job_progress', true);
-		if (!is_array($progress)) {
-			$progress = [];
-		}
-		$progress['job_id'] = $job_id;
-		$progress['status'] = (string) (get_post_meta($job_id, 'lf_ai_job_status', true) ?: ($progress['status'] ?? ''));
-		return new \WP_REST_Response(['progress' => $progress], 200);
-	}
-
 	$payload = $request->get_json_params();
 	if (!is_array($payload)) {
 		$raw = (string) $request->get_body();
@@ -473,23 +454,27 @@ function lf_ai_studio_rest_progress(\WP_REST_Request $request): \WP_REST_Respons
 	}
 	$job = get_post($job_id);
 	if (!$job instanceof \WP_Post || $job->post_type !== LF_AI_STUDIO_JOB_CPT) {
-		return new \WP_REST_Response(['error' => 'invalid_job_id'], 404);
+		return new \WP_REST_Response(['error' => 'invalid_job'], 404);
 	}
-	$percent = isset($payload['percent']) ? floatval($payload['percent']) : 0;
+	$current_status = (string) get_post_meta($job_id, 'lf_ai_job_status', true);
+	if (!in_array($current_status, ['done', 'failed'], true)) {
+		$status = sanitize_text_field((string) ($payload['status'] ?? 'running'));
+		if ($status !== '') {
+			update_post_meta($job_id, 'lf_ai_job_status', $status);
+		}
+	}
+	$percent = isset($payload['percent']) ? (float) $payload['percent'] : 0;
 	$percent = max(0, min(100, $percent));
+	$step = sanitize_text_field((string) ($payload['step'] ?? ''));
+	$message = sanitize_text_field((string) ($payload['message'] ?? ''));
 	$progress = [
-		'job_id' => $job_id,
 		'percent' => $percent,
-		'step' => isset($payload['step']) ? sanitize_text_field((string) $payload['step']) : '',
-		'message' => isset($payload['message']) ? sanitize_text_field((string) $payload['message']) : '',
-		'status' => isset($payload['status']) ? sanitize_text_field((string) $payload['status']) : 'running',
-		'updated_at' => time(),
+		'step' => $step,
+		'message' => $message,
+		'updated' => time(),
 	];
 	update_post_meta($job_id, 'lf_ai_job_progress', $progress);
-	if (!empty($progress['status'])) {
-		update_post_meta($job_id, 'lf_ai_job_status', $progress['status']);
-	}
-	return new \WP_REST_Response(['ok' => true, 'progress' => $progress], 200);
+	return new \WP_REST_Response(['ok' => true], 200);
 }
 
 function lf_ai_studio_validate_apply_payload(array $payload): array {

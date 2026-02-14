@@ -25,10 +25,10 @@ add_action('admin_post_lf_ai_studio_manifest', 'lf_ai_studio_handle_manifest');
 add_action('admin_post_lf_ai_studio_manifest_template', 'lf_ai_studio_handle_manifest_template');
 add_action('admin_post_lf_ai_studio_research', 'lf_ai_studio_handle_research');
 add_action('wp_ajax_lf_ai_studio_research_upload', 'lf_ai_studio_handle_research_ajax');
-add_action('wp_ajax_lf_ai_studio_progress', 'lf_ai_studio_handle_progress_ajax');
 add_action('admin_post_lf_ai_studio_run_audit', 'lf_ai_studio_handle_run_audit');
 add_action('admin_post_lf_ai_studio_regen_blog_posts', 'lf_ai_studio_handle_regen_blog_posts');
 add_action('admin_post_lf_ai_studio_save_logo', 'lf_ai_studio_handle_save_logo');
+add_action('wp_ajax_lf_ai_studio_job_status', 'lf_ai_studio_job_status_ajax');
 add_action('admin_enqueue_scripts', 'lf_ai_studio_assets');
 
 function lf_ai_studio_register_cpt(): void {
@@ -71,7 +71,7 @@ function lf_ai_studio_assets(string $hook): void {
 		'ajaxUrl' => admin_url('admin-ajax.php'),
 		'nonce' => wp_create_nonce('lf_ai_airtable'),
 		'researchNonce' => wp_create_nonce('lf_ai_studio_research_ajax'),
-		'progressNonce' => wp_create_nonce('lf_ai_studio_progress'),
+		'jobStatusNonce' => wp_create_nonce('lf_ai_studio_job_status'),
 		'enabled' => !empty($airtable_settings['enabled']),
 		'strings' => [
 			'searchPlaceholder' => __('Search Airtable projects…', 'leadsforward-core'),
@@ -85,6 +85,33 @@ function lf_ai_studio_assets(string $hook): void {
 			'success' => __('Research uploaded. Ready for generation.', 'leadsforward-core'),
 			'error' => __('Research upload failed.', 'leadsforward-core'),
 		],
+	]);
+}
+
+function lf_ai_studio_job_status_ajax(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
+	}
+	check_ajax_referer('lf_ai_studio_job_status', 'nonce');
+	$job_id = isset($_GET['job_id']) ? absint($_GET['job_id']) : (isset($_POST['job_id']) ? absint($_POST['job_id']) : 0);
+	if (!$job_id) {
+		wp_send_json_error(['message' => __('Missing job ID.', 'leadsforward-core')], 400);
+	}
+	$job = get_post($job_id);
+	if (!$job instanceof \WP_Post || $job->post_type !== LF_AI_STUDIO_JOB_CPT) {
+		wp_send_json_error(['message' => __('Invalid job.', 'leadsforward-core')], 404);
+	}
+	$status = (string) get_post_meta($job_id, 'lf_ai_job_status', true);
+	$error = (string) get_post_meta($job_id, 'lf_ai_job_error', true);
+	$progress = get_post_meta($job_id, 'lf_ai_job_progress', true);
+	if (!is_array($progress)) {
+		$progress = [];
+	}
+	wp_send_json_success([
+		'job_id' => $job_id,
+		'status' => $status,
+		'error' => $error,
+		'progress' => $progress,
 	]);
 }
 
@@ -421,28 +448,6 @@ function lf_ai_studio_handle_research_ajax(): void {
 	wp_send_json_success(['message' => __('Research uploaded successfully.', 'leadsforward-core')]);
 }
 
-function lf_ai_studio_handle_progress_ajax(): void {
-	if (!current_user_can('edit_theme_options')) {
-		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
-	}
-	check_ajax_referer('lf_ai_studio_progress', 'nonce');
-	$job_id = isset($_GET['job_id']) ? absint($_GET['job_id']) : 0;
-	if (!$job_id) {
-		wp_send_json_error(['message' => __('Missing job ID.', 'leadsforward-core')], 400);
-	}
-	$job = get_post($job_id);
-	if (!$job instanceof \WP_Post || $job->post_type !== LF_AI_STUDIO_JOB_CPT) {
-		wp_send_json_error(['message' => __('Invalid job ID.', 'leadsforward-core')], 404);
-	}
-	$progress = get_post_meta($job_id, 'lf_ai_job_progress', true);
-	if (!is_array($progress)) {
-		$progress = [];
-	}
-	$progress['job_id'] = $job_id;
-	$progress['status'] = (string) (get_post_meta($job_id, 'lf_ai_job_status', true) ?: ($progress['status'] ?? ''));
-	wp_send_json_success(['progress' => $progress]);
-}
-
 function lf_ai_studio_handle_run_audit(): void {
 	if (!current_user_can('edit_theme_options')) {
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
@@ -711,18 +716,23 @@ function lf_ai_studio_render_page(): void {
 					<div class="lf-manifester-step__badge">3</div>
 					<div class="lf-manifester-step__content">
 						<h3><?php esc_html_e('Research runs automatically', 'leadsforward-core'); ?></h3>
-						<?php
-						$research_link = sprintf(
-							'<a href="%s" target="_blank" rel="noopener">%s</a>',
-							esc_url($research_prompt_url),
-							esc_html__('research template', 'leadsforward-core')
-						);
-						$research_text = sprintf(
-							__('After you select a project or manifest, n8n generates structured research using the %s and stores it before content generation.', 'leadsforward-core'),
-							$research_link
-						);
-						echo wp_kses($research_text, ['a' => ['href' => [], 'target' => [], 'rel' => []]]);
-						?>
+						<p class="description">
+							<?php
+							echo wp_kses(
+								sprintf(
+									__('n8n runs a research pass to build positioning, SEO strategy, and FAQ angles before content is written. You can review the <a href="%s" target="_blank" rel="noopener noreferrer">research template</a> any time.', 'leadsforward-core'),
+									esc_url($research_prompt_url)
+								),
+								[
+									'a' => [
+										'href' => true,
+										'target' => true,
+										'rel' => true,
+									],
+								]
+							);
+							?>
+						</p>
 						<?php if (!empty($research)) : ?>
 							<div class="lf-manifester-status is-success"><?php esc_html_e('Research document is already stored and will be reused.', 'leadsforward-core'); ?></div>
 						<?php else : ?>
@@ -763,18 +773,26 @@ function lf_ai_studio_render_page(): void {
 							<?php esc_html_e('Manifest Your Website', 'leadsforward-core'); ?>
 						</button>
 						<div id="lf-manifester-status" class="lf-manifester-status" role="status" aria-live="polite"></div>
-						<div
-							id="lf-manifester-progress"
-							class="lf-manifester-progress"
-							data-job-id="<?php echo esc_attr((string) $job_id); ?>"
-						>
+						<?php
+						$progress = $job_id ? get_post_meta($job_id, 'lf_ai_job_progress', true) : [];
+						$progress_percent = is_array($progress) ? (float) ($progress['percent'] ?? 0) : 0;
+						$progress_label = is_array($progress) ? (string) ($progress['step'] ?? ($progress['message'] ?? '')) : '';
+						if ($job_id && $job_status && $progress_label === '') {
+							if ($job_status === 'done') {
+								$progress_label = __('Complete.', 'leadsforward-core');
+								$progress_percent = 100;
+							} elseif ($job_status === 'failed') {
+								$progress_label = __('Failed.', 'leadsforward-core');
+							} else {
+								$progress_label = __('In progress…', 'leadsforward-core');
+							}
+						}
+						?>
+						<div class="lf-manifester-progress" data-job-id="<?php echo esc_attr((string) $job_id); ?>" data-job-status="<?php echo esc_attr($job_status); ?>">
 							<div class="lf-manifester-progress__bar">
-								<span id="lf-manifester-progress-bar" style="width:0%"></span>
+								<span style="width: <?php echo esc_attr((string) $progress_percent); ?>%;"></span>
 							</div>
-							<div class="lf-manifester-progress__meta">
-								<span id="lf-manifester-progress-text"><?php esc_html_e('Waiting for progress updates…', 'leadsforward-core'); ?></span>
-								<span id="lf-manifester-progress-percent">0%</span>
-							</div>
+							<div class="lf-manifester-progress__label"><?php echo esc_html($progress_label); ?></div>
 						</div>
 					</div>
 				</div>

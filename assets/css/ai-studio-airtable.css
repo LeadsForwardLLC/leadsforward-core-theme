@@ -97,25 +97,8 @@
 
 .lf-manifester-card {
   border: 1px solid #e5e7eb;
-}
-
-.lf-manifester-card h2,
-.lf-manifester-card h3,
-.lf-manifester-card h4 {
-  color: #0f172a;
-}
-
-.lf-manifester-card .description {
-  color: #475569;
-}
-
-.lf-manifester-card .button {
-  border-radius: 8px;
-  font-weight: 600;
-}
-
-.lf-manifester-card .button.button-primary {
-  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.18);
+  background: #fff;
+  border-radius: 14px;
 }
 
 .lf-manifester-steps {
@@ -129,23 +112,23 @@
   display: flex;
   gap: 16px;
   align-items: flex-start;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 16px;
-  background: #fff;
+  background: #f8fafc;
 }
 
 .lf-manifester-step--action {
   border-color: #bfdbfe;
-  background: #f8fafc;
+  background: #eff6ff;
 }
 
 .lf-manifester-step__badge {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #e0f2fe;
-  color: #0369a1;
+  background: #dbeafe;
+  color: #1d4ed8;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -155,6 +138,16 @@
 
 .lf-manifester-step__content {
   flex: 1 1 auto;
+}
+
+.lf-manifester-step__content h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.lf-manifester-step__content .description {
+  color: #475569;
 }
 
 .lf-manifester-logo {
@@ -204,6 +197,14 @@
   background: #fff;
 }
 
+.lf-manifester-card .button {
+  border-radius: 8px;
+}
+
+.lf-manifester-card .button.button-primary {
+  box-shadow: 0 8px 18px rgba(59, 130, 246, 0.15);
+}
+
 .lf-manifester-status {
   margin-top: 8px;
   font-size: 0.95rem;
@@ -223,39 +224,6 @@
   color: #1d4ed8;
 }
 
-.lf-manifester-progress {
-  margin-top: 12px;
-  display: none;
-}
-
-.lf-manifester-progress.is-active {
-  display: block;
-}
-
-.lf-manifester-progress__bar {
-  position: relative;
-  height: 8px;
-  background: #e5e7eb;
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.lf-manifester-progress__bar span {
-  display: block;
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, #60a5fa, #2563eb, #4f46e5);
-  transition: width 0.4s ease;
-}
-
-.lf-manifester-progress__meta {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 6px;
-  font-size: 0.85rem;
-  color: #475569;
-}
-
 .lf-manifester-hidden {
   display: none;
 }
@@ -271,6 +239,31 @@
 .button-hero {
   font-size: 1.05rem;
   padding: 10px 18px;
+}
+
+.lf-manifester-progress {
+  margin-top: 12px;
+}
+
+.lf-manifester-progress__bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.lf-manifester-progress__bar span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  transition: width 0.4s ease;
+}
+
+.lf-manifester-progress__label {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: #475569;
 }
 
 .lf-airtable-field-map {

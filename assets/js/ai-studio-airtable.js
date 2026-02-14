@@ -16,6 +16,11 @@
   var tokenToggle = document.getElementById('lf-airtable-token-toggle');
   var tokenInput = document.getElementById('lf_ai_airtable_pat');
   var storageKey = 'lfAirtableSelectedProject';
+  var progressWrap = document.querySelector('.lf-manifester-progress');
+  var progressBar = progressWrap ? progressWrap.querySelector('.lf-manifester-progress__bar span') : null;
+  var progressLabel = progressWrap ? progressWrap.querySelector('.lf-manifester-progress__label') : null;
+  var jobId = progressWrap ? progressWrap.getAttribute('data-job-id') : '';
+  var polling = false;
 
   if (tokenToggle && tokenInput) {
     tokenToggle.addEventListener('change', function () {
@@ -231,6 +236,7 @@
   function submitManifestForm() {
     if (!manifestForm) return;
     setPrimaryStatus('Uploading manifest…', 'info');
+    setProgress(10, 'Uploading manifest…');
     if (manifestForm.requestSubmit) {
       manifestForm.requestSubmit();
       return;
@@ -262,10 +268,12 @@
   if (primaryGenerateBtn) {
     primaryGenerateBtn.addEventListener('click', function () {
       if (hasManifestFile()) {
+        setProgress(5, 'Queued…');
         submitManifestForm();
         return;
       }
       if (hasAirtableSelection()) {
+        setProgress(5, 'Queued…');
         generateFromRecord();
         return;
       }
@@ -287,6 +295,58 @@
     updatePreview(storedSelection);
   }
   updatePrimaryState();
+
+  function setProgress(percent, label) {
+    if (progressBar) {
+      progressBar.style.width = Math.max(0, Math.min(100, percent || 0)) + '%';
+    }
+    if (progressLabel && label) {
+      progressLabel.textContent = label;
+    }
+  }
+
+  function fetchJobStatus() {
+    if (!jobId || !cfg.jobStatusNonce || polling) return;
+    polling = true;
+    var params = new URLSearchParams({
+      action: 'lf_ai_studio_job_status',
+      nonce: cfg.jobStatusNonce,
+      job_id: jobId
+    });
+    fetch(cfg.ajaxUrl + '?' + params.toString(), { credentials: 'same-origin' })
+      .then(function (res) { return res.json(); })
+      .then(function (payload) {
+        if (!payload || !payload.success || !payload.data) return;
+        var data = payload.data;
+        var progress = data.progress || {};
+        var percent = progress.percent || 0;
+        var label = progress.step || progress.message || '';
+        if (data.status === 'done') {
+          percent = 100;
+          label = label || 'Complete.';
+        } else if (data.status === 'failed') {
+          label = label || 'Failed.';
+        } else if (!label) {
+          label = 'In progress…';
+        }
+        setProgress(percent, label);
+        if (data.status === 'done' || data.status === 'failed') {
+          return;
+        }
+        window.setTimeout(function () {
+          polling = false;
+          fetchJobStatus();
+        }, 4000);
+      })
+      .catch(function () {
+        window.setTimeout(function () {
+          polling = false;
+          fetchJobStatus();
+        }, 5000);
+      });
+  }
+
+  fetchJobStatus();
 
   var researchInput = document.getElementById('lf_site_research');
   var researchStatusEl = document.getElementById('lf-research-status');
@@ -335,60 +395,5 @@
       if (!file) return;
       uploadResearch(file);
     });
-  }
-
-  var progressWrap = document.getElementById('lf-manifester-progress');
-  var progressBar = document.getElementById('lf-manifester-progress-bar');
-  var progressText = document.getElementById('lf-manifester-progress-text');
-  var progressPercent = document.getElementById('lf-manifester-progress-percent');
-  var progressTimer = null;
-
-  function updateProgressUI(progress) {
-    if (!progressWrap) return;
-    var percent = parseInt(progress && progress.percent ? progress.percent : 0, 10);
-    if (isNaN(percent) || percent < 0) percent = 0;
-    if (percent > 100) percent = 100;
-    if (progressBar) progressBar.style.width = percent + '%';
-    if (progressPercent) progressPercent.textContent = percent + '%';
-    if (progressText) {
-      progressText.textContent = progress && progress.message ? progress.message : 'Working…';
-    }
-    progressWrap.classList.add('is-active');
-  }
-
-  function fetchProgress(jobId) {
-    if (!cfg.progressNonce) return;
-    var params = new URLSearchParams({
-      action: 'lf_ai_studio_progress',
-      nonce: cfg.progressNonce,
-      job_id: jobId
-    });
-    fetch(cfg.ajaxUrl + '?' + params.toString(), { credentials: 'same-origin' })
-      .then(function (res) { return res.json(); })
-      .then(function (payload) {
-        if (!payload || !payload.success) return;
-        var progress = payload.data && payload.data.progress ? payload.data.progress : payload.progress;
-        if (!progress) return;
-        updateProgressUI(progress);
-        if (progress.status === 'done' || progress.status === 'failed') {
-          if (progressTimer) {
-            window.clearInterval(progressTimer);
-            progressTimer = null;
-          }
-        }
-      })
-      .catch(function () {
-        // ignore polling errors
-      });
-  }
-
-  if (progressWrap) {
-    var jobId = progressWrap.getAttribute('data-job-id');
-    if (jobId) {
-      fetchProgress(jobId);
-      progressTimer = window.setInterval(function () {
-        fetchProgress(jobId);
-      }, 4000);
-    }
   }
 })();
