@@ -60,6 +60,10 @@ foreach (['about-us', 'contact', 'reviews', 'blog'] as $slug) {
 		$company_links[] = ['label' => get_the_title($page), 'url' => get_permalink($page)];
 	}
 }
+$project_archive = get_post_type_archive_link('lf_project');
+if ($project_archive) {
+	$company_links[] = ['label' => __('Projects', 'leadsforward-core'), 'url' => $project_archive];
+}
 $resource_links = [];
 foreach (['sitemap', 'privacy-policy', 'terms-of-service'] as $slug) {
 	$page = get_page_by_path($slug);

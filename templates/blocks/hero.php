@@ -104,12 +104,8 @@ if ($show_hero_image) {
 	}
 }
 $review_count = 0;
-if (function_exists('wp_count_posts')) {
-	$counts = wp_count_posts('lf_testimonial');
-	$review_count = isset($counts->publish) ? (int) $counts->publish : 0;
-}
 $review_rating = 0.0;
-if ($review_count > 0 && post_type_exists('lf_testimonial')) {
+if (post_type_exists('lf_testimonial')) {
 	$rating_posts = get_posts([
 		'post_type'      => 'lf_testimonial',
 		'posts_per_page' => -1,
@@ -121,19 +117,19 @@ if ($review_count > 0 && post_type_exists('lf_testimonial')) {
 	$ratings_count = 0;
 	foreach ($rating_posts as $rating_post_id) {
 		$rating_value = function_exists('get_field') ? (int) get_field('lf_testimonial_rating', (int) $rating_post_id) : 5;
-		if ($rating_value > 0) {
-			$ratings_total += $rating_value;
-			$ratings_count++;
+		if ($rating_value <= 1) {
+			continue;
 		}
+		$review_count++;
+		$ratings_total += $rating_value;
+		$ratings_count++;
 	}
 	$review_rating = $ratings_count > 0 ? round($ratings_total / $ratings_count, 1) : 5.0;
 }
 $show_trust_strip = $review_count > 0;
-$trust_label = __('Trusted by local homeowners', 'leadsforward-core');
-$trust_reviews = sprintf(_n('%d review', '%d reviews', $review_count, 'leadsforward-core'), $review_count);
 $homeowner_count = $review_count > 0 ? $review_count : 200;
 $homeowner_display = number_format_i18n($homeowner_count);
-$homeowner_label = __('Trusted by local homeowners', 'leadsforward-core');
+$homeowner_label = sprintf(__('Trusted by %s homeowners', 'leadsforward-core'), $homeowner_display);
 if ($review_rating <= 0) {
 	$review_rating = 5.0;
 }
@@ -144,11 +140,7 @@ ob_start();
 ?>
 <div class="lf-hero-trust">
 	<span class="lf-hero-trust__icon" aria-hidden="true">
-		<?php
-		if (function_exists('lf_icon')) {
-			echo lf_icon('home', ['class' => 'lf-icon--sm lf-icon--inherit']);
-		}
-		?>
+		<img src="<?php echo esc_url(LF_THEME_URI . '/assets/images/customers.png'); ?>" alt="<?php esc_attr_e('Customers', 'leadsforward-core'); ?>" width="50" height="50" loading="lazy" decoding="async" />
 	</span>
 	<span class="lf-hero-trust__badge">
 		<span class="lf-block-hero__stars" aria-hidden="true">
@@ -159,15 +151,8 @@ ob_start();
 		<span class="lf-hero-trust__rating"><?php echo esc_html($rating_display); ?></span>
 	</span>
 	<span class="lf-hero-trust__stat lf-hero-trust__stat--emphasis">
-		<span class="lf-hero-trust__value"><?php echo esc_html($homeowner_display); ?></span>
-		<span class="lf-hero-trust__label"><?php echo esc_html($homeowner_label); ?></span>
+		<span class="lf-hero-trust__label-only"><?php echo esc_html($homeowner_label); ?></span>
 	</span>
-	<?php if ($review_count > 0) : ?>
-		<span class="lf-hero-trust__stat">
-			<span class="lf-hero-trust__value"><?php echo esc_html($reviews_display); ?></span>
-			<span class="lf-hero-trust__label"><?php echo esc_html(_n('Review', 'Reviews', $review_count, 'leadsforward-core')); ?></span>
-		</span>
-	<?php endif; ?>
 </div>
 <?php
 $trust_strip_html = (string) ob_get_clean();
@@ -177,17 +162,22 @@ $latest_testimonial_text = '';
 if (post_type_exists('lf_testimonial')) {
 	$testimonials = get_posts([
 		'post_type'      => 'lf_testimonial',
-		'posts_per_page' => 1,
+		'posts_per_page' => 6,
 		'orderby'        => 'date',
 		'order'          => 'DESC',
 		'post_status'    => 'publish',
 		'no_found_rows'  => true,
 	]);
-	if (!empty($testimonials)) {
-		$latest_testimonial = $testimonials[0];
+	foreach ($testimonials as $testimonial) {
+		$rating_value = function_exists('get_field') ? (int) get_field('lf_testimonial_rating', $testimonial->ID) : 5;
+		if ($rating_value <= 1) {
+			continue;
+		}
+		$latest_testimonial = $testimonial;
 		if ($latest_testimonial && function_exists('get_field')) {
 			$latest_testimonial_text = (string) get_field('lf_testimonial_review_text', $latest_testimonial->ID);
 		}
+		break;
 	}
 }
 $show_form_in_hero = $cta_type === 'form' && !empty($cta_resolved_for_type['ghl_embed']);

@@ -1048,7 +1048,7 @@ function lf_quote_builder_get_review_previews(int $limit = 3): array {
 	$limit = max(1, min(5, $limit));
 	$posts = get_posts([
 		'post_type'      => 'lf_testimonial',
-		'posts_per_page' => $limit,
+		'posts_per_page' => $limit * 2,
 		'orderby'        => 'date',
 		'order'          => 'DESC',
 		'post_status'    => 'publish',
@@ -1059,7 +1059,7 @@ function lf_quote_builder_get_review_previews(int $limit = 3): array {
 		$name = function_exists('get_field') ? (string) get_field('lf_testimonial_reviewer_name', $post->ID) : '';
 		$text = function_exists('get_field') ? (string) get_field('lf_testimonial_review_text', $post->ID) : '';
 		$rating = function_exists('get_field') ? (int) get_field('lf_testimonial_rating', $post->ID) : 5;
-		if ($text === '') {
+		if ($rating <= 1 || $text === '') {
 			continue;
 		}
 		$text = wp_trim_words($text, 18, '…');
@@ -1071,6 +1071,9 @@ function lf_quote_builder_get_review_previews(int $limit = 3): array {
 			'text' => $text,
 			'rating' => max(1, min(5, $rating ?: 5)),
 		];
+		if (count($out) >= $limit) {
+			break;
+		}
 	}
 	return $out;
 }

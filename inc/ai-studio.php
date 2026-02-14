@@ -1889,9 +1889,10 @@ function lf_ai_studio_ensure_header_menu_more_children(): void {
 	if (!$more_item) {
 		return;
 	}
+	$existing_children = [];
 	foreach ($items as $item) {
 		if ((int) $item->menu_item_parent === (int) $more_item->ID) {
-			return;
+			$existing_children[] = (string) $item->url;
 		}
 	}
 	$slugs = ['about-us', 'blog', 'contact'];
@@ -1900,14 +1901,28 @@ function lf_ai_studio_ensure_header_menu_more_children(): void {
 		if (!$page instanceof \WP_Post) {
 			continue;
 		}
+		$url = get_permalink($page->ID);
+		if ($url && in_array($url, $existing_children, true)) {
+			continue;
+		}
 		wp_update_nav_menu_item($menu_id, 0, [
 			'menu-item-title' => get_the_title($page->ID),
-			'menu-item-url' => get_permalink($page->ID),
+			'menu-item-url' => $url,
 			'menu-item-type' => 'post_type',
 			'menu-item-object' => 'page',
 			'menu-item-object-id' => $page->ID,
 			'menu-item-parent-id' => (int) $more_item->ID,
 			'menu-item-status' => 'publish',
+		]);
+	}
+	$project_archive = get_post_type_archive_link('lf_project');
+	if ($project_archive && !in_array($project_archive, $existing_children, true)) {
+		wp_update_nav_menu_item($menu_id, 0, [
+			'menu-item-title' => __('Projects', 'leadsforward-core'),
+			'menu-item-url' => $project_archive,
+			'menu-item-type' => 'custom',
+			'menu-item-status' => 'publish',
+			'menu-item-parent-id' => (int) $more_item->ID,
 		]);
 	}
 }
@@ -1923,7 +1938,7 @@ function lf_ai_studio_ensure_header_menu_primary_pages(): void {
 		return;
 	}
 	$services_page = get_page_by_path('our-services');
-	$areas_page = get_page_by_path('our-service-areas');
+$areas_page = get_page_by_path('service-areas');
 	if (!$services_page instanceof \WP_Post && !$areas_page instanceof \WP_Post) {
 		return;
 	}
@@ -3189,12 +3204,23 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = []): void {
 	}
 	$slugs = function_exists('lf_wizard_required_page_slugs')
 		? lf_wizard_required_page_slugs()
-		: ['about-us', 'our-services', 'our-service-areas', 'reviews', 'blog', 'sitemap', 'contact', 'privacy-policy', 'terms-of-service', 'thank-you'];
+		: ['about-us', 'our-services', 'service-areas', 'reviews', 'blog', 'sitemap', 'contact', 'privacy-policy', 'terms-of-service', 'thank-you'];
 	$created_pages = [];
 	foreach ($slugs as $slug) {
 		$page = get_page_by_path($slug);
 		if ($page instanceof \WP_Post) {
 			$created_pages[$slug] = $page->ID;
+		}
+	}
+	if (empty($created_pages['service-areas'])) {
+		$legacy_areas = get_page_by_path('our-service-areas');
+		if ($legacy_areas instanceof \WP_Post) {
+			wp_update_post([
+				'ID' => $legacy_areas->ID,
+				'post_name' => 'service-areas',
+				'post_title' => __('Service Areas', 'leadsforward-core'),
+			]);
+			$created_pages['service-areas'] = $legacy_areas->ID;
 		}
 	}
 	foreach ($created_pages as $slug => $page_id) {
@@ -3207,8 +3233,18 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = []): void {
 			: (!is_array($existing_config) || empty($existing_config));
 		$force_reseed = false;
 		if ($slug === 'about-us') {
-			$force_reseed = !lf_ai_studio_config_has_section_types($existing_config, ['content_image', 'benefits', 'process']);
+		$force_reseed = !lf_ai_studio_config_has_section_types($existing_config, ['content_image', 'image_content_b', 'benefits', 'process']);
 		}
+	if ($slug === 'our-services') {
+		$has_new = lf_ai_studio_config_has_section_types($existing_config, ['service_intro', 'faq_accordion', 'cta']);
+		$has_old = lf_ai_studio_config_has_section_types($existing_config, ['content_centered', 'process']);
+		$force_reseed = !$has_new || $has_old;
+	}
+	if ($slug === 'service-areas') {
+		$has_new = lf_ai_studio_config_has_section_types($existing_config, ['service_areas', 'faq_accordion', 'cta']);
+		$has_old = lf_ai_studio_config_has_section_types($existing_config, ['nearby_areas', 'content_image_a']);
+		$force_reseed = !$has_new || $has_old;
+	}
 		if (!$is_minimal && !$force_reseed) {
 			continue;
 		}
@@ -3220,8 +3256,8 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = []): void {
 			wp_update_post(['ID' => $page->ID, 'post_title' => __('Services', 'leadsforward-core')]);
 		}
 	}
-	if (!empty($created_pages['our-service-areas'])) {
-		$page = get_post((int) $created_pages['our-service-areas']);
+if (!empty($created_pages['service-areas'])) {
+	$page = get_post((int) $created_pages['service-areas']);
 		if ($page instanceof \WP_Post && $page->post_title !== __('Service Areas', 'leadsforward-core')) {
 			wp_update_post(['ID' => $page->ID, 'post_title' => __('Service Areas', 'leadsforward-core')]);
 		}
@@ -3448,7 +3484,7 @@ function lf_ai_studio_build_full_site_payload(): array {
 			$core_pages['our-services'] = ['page' => 'services_overview', 'intent' => 'services_overview', 'keyword' => $overview_keyword];
 		}
 		if ($scope['service_areas']) {
-			$core_pages['our-service-areas'] = ['page' => 'service_areas_overview', 'intent' => 'service_areas_overview', 'keyword' => $overview_keyword];
+			$core_pages['service-areas'] = ['page' => 'service_areas_overview', 'intent' => 'service_areas_overview', 'keyword' => $overview_keyword];
 		}
 		foreach ($core_pages as $slug => $meta) {
 			$page = get_page_by_path($slug);
@@ -3602,7 +3638,7 @@ function lf_ai_studio_internal_links_catalog(): array {
 	};
 
 	$add('page', __('Home', 'leadsforward-core'), home_url('/'));
-	foreach (['about-us', 'our-services', 'our-service-areas', 'reviews', 'blog', 'contact'] as $slug) {
+	foreach (['about-us', 'our-services', 'service-areas', 'reviews', 'blog', 'contact'] as $slug) {
 		$page = get_page_by_path($slug);
 		if ($page instanceof \WP_Post) {
 			$add('page', get_the_title($page), get_permalink($page));

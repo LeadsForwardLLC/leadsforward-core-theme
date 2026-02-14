@@ -733,7 +733,6 @@ function lf_sections_default_order(string $context): array {
 			'services_offered_here',
 			'faq_accordion',
 			'nearby_areas',
-			'map_nap',
 			'cta',
 		];
 	}
@@ -1159,10 +1158,11 @@ function lf_sections_render_trust_bar(string $context, array $settings, \WP_Post
 		$ratings_count = 0;
 		foreach ($query->posts as $p) {
 			$r = function_exists('get_field') ? (int) get_field('lf_testimonial_rating', $p->ID) : 5;
-			if ($r > 0) {
-				$ratings_total += $r;
-				$ratings_count++;
+			if ($r <= 1) {
+				continue;
 			}
+			$ratings_total += $r;
+			$ratings_count++;
 		}
 		$computed_rating = $ratings_count > 0 ? round($ratings_total / $ratings_count, 1) : 5.0;
 		$computed_count = $ratings_count > 0 ? $ratings_count : 0;
@@ -1344,7 +1344,7 @@ function lf_sections_benefits_pick_icon_slug(array $item, array $overrides, arra
 	$text = trim(($item['title'] ?? '') . ' ' . ($item['body'] ?? ''));
 	if (function_exists('lf_icon_slug_for_text')) {
 		$slug = lf_icon_slug_for_text($text, $pool);
-		if ($slug !== '') {
+		if ($slug !== '' && !in_array($slug, $used_icons, true)) {
 			return $slug;
 		}
 	}
@@ -1673,6 +1673,25 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 	$expectations = trim((string) ($settings['process_expectations'] ?? ''));
 	$process_class = 'lf-process';
 	$intro_text = $intro_secondary !== '' ? trim($intro . "\n\n" . $intro_secondary) : $intro;
+	$expectations_text = '';
+	if ($expectations !== '') {
+		$expectations_text = wp_strip_all_tags($expectations);
+		$expectations_text = preg_replace('/^[\s\-\*•]+/m', '', $expectations_text);
+		$expectations_text = preg_replace('/\s+/', ' ', (string) $expectations_text);
+		$parts = preg_split('/[.!?]+\s*/', trim((string) $expectations_text));
+		$first = '';
+		if (is_array($parts)) {
+			foreach ($parts as $part) {
+				if (trim($part) !== '') {
+					$first = trim($part);
+					break;
+				}
+			}
+		}
+		if ($first !== '') {
+			$expectations_text = rtrim($first, '.!?') . '.';
+		}
+	}
 	lf_sections_render_shell_open('process', $title, $intro_text, $settings['section_background'] ?? 'light', $settings);
 	?>
 	<ol class="<?php echo esc_attr($process_class); ?>">
@@ -1715,8 +1734,8 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 			</li>
 		<?php endforeach; ?>
 	</ol>
-	<?php if ($expectations !== '') : ?>
-		<div class="lf-process__expectations"><?php echo wpautop(wp_kses_post($expectations)); ?></div>
+	<?php if ($expectations_text !== '') : ?>
+		<p class="lf-process__expectations"><?php echo esc_html($expectations_text); ?></p>
 	<?php endif; ?>
 	<?php
 	lf_sections_render_shell_close();

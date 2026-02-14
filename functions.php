@@ -89,6 +89,7 @@ lf_load_inc('images.php');
 lf_load_inc('branding.php');
 lf_load_inc('global-settings.php');
 lf_load_inc('quote-builder.php');
+lf_load_inc('contact-form.php');
 lf_load_inc('sections.php');
 lf_load_inc('page-builder.php');
 

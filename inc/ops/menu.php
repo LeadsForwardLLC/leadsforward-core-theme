@@ -68,6 +68,15 @@ function lf_ops_register_menu(): void {
 		'lf-quote-builder',
 		'lf_quote_builder_render_admin'
 	);
+	// 4b. Contact Form
+	add_submenu_page(
+		'lf-ops',
+		__('Contact Form', 'leadsforward-core'),
+		__('Contact Form', 'leadsforward-core'),
+		LF_OPS_CAP,
+		'lf-contact-form',
+		'lf_contact_form_render_admin'
+	);
 	$has_acf_options = function_exists('acf_options_page_html');
 	// Remaining ACF option pages (only render if ACF options pages exist).
 	if ($has_acf_options) {

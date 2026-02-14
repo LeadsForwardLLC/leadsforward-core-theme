@@ -141,7 +141,7 @@ function lf_ai_studio_collect_pages_inventory(): array {
 		'terms' => 'terms-of-service',
 		'thank_you' => 'thank-you',
 		'services_hub' => 'our-services',
-		'service_areas_hub' => 'our-service-areas',
+		'service_areas_hub' => 'service-areas',
 	];
 	foreach ($page_slugs as $key => $slug) {
 		$page = get_page_by_path($slug);

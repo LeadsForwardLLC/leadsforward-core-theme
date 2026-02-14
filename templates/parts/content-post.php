@@ -44,8 +44,16 @@ $meta_date = get_the_date();
 		<h2 class="lf-post-card__title"><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2>
 		<p class="lf-post-card__excerpt"><?php echo esc_html(get_the_excerpt()); ?></p>
 		<div class="lf-post-card__footer">
-			<span class="lf-post-card__author"><?php the_author(); ?></span>
-			<span class="lf-post-card__cta"><?php esc_html_e('Read article', 'leadsforward-core'); ?></span>
+			<span class="lf-post-card__author">
+				<span class="lf-post-card__author-avatar" aria-hidden="true">
+					<?php echo get_avatar(get_the_author_meta('ID'), 28, '', '', ['class' => 'lf-post-card__author-image']); ?>
+				</span>
+				<span class="lf-post-card__author-name"><?php the_author(); ?></span>
+			</span>
+			<a class="lf-post-card__cta" href="<?php the_permalink(); ?>">
+				<?php esc_html_e('Read article', 'leadsforward-core'); ?>
+				<span aria-hidden="true">→</span>
+			</a>
 		</div>
 	</div>
 </article>

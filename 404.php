@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 get_header();
 
 $services_page = get_page_by_path('our-services');
-$areas_page = get_page_by_path('our-service-areas');
+$areas_page = get_page_by_path('service-areas');
 $contact_page = get_page_by_path('contact');
 ?>
 <main id="main" class="site-main site-main--blog" role="main">

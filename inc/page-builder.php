@@ -835,6 +835,7 @@ function lf_pb_render_sections(\WP_Post $post): void {
 	$config = lf_pb_get_post_config($post->ID, $context);
 	$order = $config['order'] ?? [];
 	$sections = $config['sections'] ?? [];
+	$deferred = [];
 	foreach ($order as $section_id) {
 		$sec_cfg = $sections[$section_id] ?? null;
 		if (!$sec_cfg || empty($sec_cfg['enabled'])) {
@@ -842,6 +843,19 @@ function lf_pb_render_sections(\WP_Post $post): void {
 		}
 		$type = $sec_cfg['type'] ?? '';
 		if ($type === '') {
+			continue;
+		}
+		if ($context === 'page' && $post->post_name === 'our-services' && $type === 'content_centered') {
+			continue;
+		}
+		if ($context === 'page' && $post->post_name === 'contact' && $type === 'content_centered') {
+			continue;
+		}
+		if ($context === 'page' && $post->post_name === 'contact' && $type === 'trust_reviews') {
+			$deferred[] = $sec_cfg;
+			continue;
+		}
+		if ($context === 'service_area' && $type === 'map_nap') {
 			continue;
 		}
 		if (current_user_can('manage_options') && defined('WP_DEBUG') && WP_DEBUG) {
@@ -874,6 +888,15 @@ function lf_pb_render_sections(\WP_Post $post): void {
 			));
 		}
 		lf_sections_render_section($type, $context, $sec_cfg['settings'] ?? [], $post);
+	}
+	if (!empty($deferred)) {
+		foreach ($deferred as $sec_cfg) {
+			$type = $sec_cfg['type'] ?? '';
+			if ($type === '') {
+				continue;
+			}
+			lf_sections_render_section($type, $context, $sec_cfg['settings'] ?? [], $post);
+		}
 	}
 }
 

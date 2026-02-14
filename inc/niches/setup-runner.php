@@ -343,7 +343,7 @@ function lf_wizard_placeholder_content(string $slug, string $title, array $data)
 			return '<!-- wp:paragraph --><p>' . sprintf(esc_html__('About %s. Add your story and why customers choose you.', 'leadsforward-core'), $business) . '</p><!-- /wp:paragraph -->';
 		case 'our-services':
 			return '<!-- wp:paragraph --><p>' . esc_html__('We offer a range of services. Browse the list below or use the Services menu.', 'leadsforward-core') . '</p><!-- /wp:paragraph -->';
-		case 'our-service-areas':
+		case 'service-areas':
 			return '<!-- wp:paragraph --><p>' . esc_html__('We serve multiple areas. Select a location to learn more.', 'leadsforward-core') . '</p><!-- /wp:paragraph -->';
 		case 'reviews':
 			return '<!-- wp:paragraph --><p>' . esc_html__('Read what local homeowners are saying about our work.', 'leadsforward-core') . '</p><!-- /wp:paragraph -->';
@@ -762,7 +762,7 @@ function lf_wizard_build_sitemap_body(array $created_pages): string {
 	$add_page('home', __('Home', 'leadsforward-core'));
 	$add_page('about-us', __('About Us', 'leadsforward-core'));
 	$add_page('our-services', __('Services', 'leadsforward-core'));
-	$add_page('our-service-areas', __('Service Areas', 'leadsforward-core'));
+	$add_page('service-areas', __('Service Areas', 'leadsforward-core'));
 	$add_page('reviews', __('Reviews', 'leadsforward-core'));
 	$add_page('blog', __('Blog', 'leadsforward-core'));
 	$add_page('contact', __('Contact', 'leadsforward-core'));
@@ -815,7 +815,7 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 
 	return [
 		'about-us' => [
-			'order' => ['hero', 'trust_bar', 'content_image', 'benefits', 'process', 'related_links', 'cta'],
+			'order' => ['hero', 'trust_bar', 'content_image', 'image_content_b', 'benefits', 'process', 'related_links', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'About ' . $business,
@@ -828,6 +828,11 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'section_heading' => 'Our story',
 					'section_intro' => 'Built for homeowners who want clear pricing and reliable service.',
 					'section_body' => 'We started ' . $business . ' to make home services simple and dependable. Our team shows up on time, keeps you informed, and treats your home with care from start to finish.',
+				],
+				'image_content_b' => [
+					'section_heading' => 'Meet the team',
+					'section_intro' => 'Skilled specialists who treat your home with care.',
+					'section_body' => 'Our technicians and project leads bring hands-on experience, clear communication, and a respect-first approach to every home we visit. We train on safety, workmanship, and homeowner communication so you always know what to expect.',
 				],
 				'benefits' => [
 					'section_heading' => 'Why homeowners choose us',
@@ -855,7 +860,7 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'our-services' => [
-			'order' => ['hero', 'trust_bar', 'content_centered', 'service_intro', 'content_image_a', 'process', 'faq_accordion', 'cta'],
+			'order' => ['hero', 'trust_bar', 'service_intro', 'content_image_a', 'faq_accordion', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Services' . ($business ? ' by ' . $business : ''),
@@ -865,11 +870,6 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'trust_heading' => 'Trusted by local homeowners',
 					'trust_badges' => __('Licensed and insured' . "\n" . 'Clear timelines' . "\n" . 'Respectful crews', 'leadsforward-core'),
 				],
-				'content_centered' => [
-					'section_heading' => 'Choose the right service',
-					'optional_subheading' => 'Clear scopes and helpful guidance',
-					'supporting_text' => 'Review each service to understand what’s included, what to expect, and how quickly we can schedule your project.',
-				],
 				'service_intro' => [
 					'section_heading' => 'Service options',
 					'section_intro' => 'Explore our core services with clear scopes and upfront expectations.',
@@ -877,10 +877,6 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 				'content_image_a' => [
 					'section_heading' => 'How we deliver great results',
 					'section_intro' => 'Clear communication and quality workmanship at every step.',
-				],
-				'process' => [
-					'section_heading' => 'Our service process',
-					'section_intro' => 'Simple steps from first call to completion.',
 				],
 				'faq_accordion' => [
 					'section_heading' => 'Service FAQs',
@@ -896,8 +892,8 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 				'description' => 'Browse our services and request a fast, free estimate' . $city_line . '.',
 			],
 		],
-		'our-service-areas' => [
-			'order' => ['hero', 'content_centered', 'nearby_areas', 'content_image_a', 'faq_accordion', 'cta'],
+		'service-areas' => [
+			'order' => ['hero', 'content_centered', 'service_areas', 'faq_accordion', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Service areas' . ($business ? ' for ' . $business : ''),
@@ -908,13 +904,9 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'optional_subheading' => 'Local teams, fast response',
 					'supporting_text' => 'Find your city or neighborhood and see how quickly we can schedule service for your area.',
 				],
-				'nearby_areas' => [
-					'section_heading' => 'Nearby service areas',
-					'section_intro' => 'We also serve these locations near you.',
-				],
-				'content_image_a' => [
-					'section_heading' => 'Consistent service everywhere',
-					'section_intro' => 'Same standards, same quality, across every area we serve.',
+				'service_areas' => [
+					'section_heading' => 'Browse our service areas',
+					'section_intro' => 'Select your city to view local service details and scheduling.',
 				],
 				'faq_accordion' => [
 					'section_heading' => 'Service area FAQs',
@@ -1005,20 +997,11 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'contact' => [
-			'order' => ['hero', 'content_centered', 'trust_reviews', 'map_nap', 'cta'],
+			'order' => ['hero', 'map_nap', 'cta', 'trust_reviews'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Contact ' . $business,
 					'hero_subheadline' => 'Fast responses and clear next steps' . $city_line . '.',
-				],
-				'content_centered' => [
-					'section_heading' => 'Get in touch',
-					'optional_subheading' => 'We respond quickly and keep you informed.',
-					'supporting_text' => implode("\n\n", array_filter([
-						$phone ? 'Phone: ' . $phone : '',
-						$email ? 'Email: ' . $email : '',
-						$vars['address'] ? 'Address: ' . $vars['address'] : '',
-					])),
 				],
 				'trust_reviews' => [
 					'trust_heading' => 'Recent reviews',
@@ -1029,8 +1012,9 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'trust_show_source' => '0',
 				],
 				'map_nap' => [
-					'section_heading' => 'Our service area',
-					'section_intro' => 'See the areas we cover and find us on the map.',
+					'section_intent' => 'contact',
+					'section_heading' => 'Get in touch',
+					'section_intro' => 'Share a few details and we will reply with next steps.',
 				],
 				'cta' => [
 					'cta_headline' => $cta_headline,
@@ -1262,7 +1246,7 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	$privacy_id = $created_pages['privacy-policy'] ?? null;
 	$terms_id = $created_pages['terms-of-service'] ?? null;
 	$services_page_id = $created_pages['our-services'] ?? null;
-	$areas_page_id = $created_pages['our-service-areas'] ?? null;
+	$areas_page_id = $created_pages['service-areas'] ?? null;
 
 	$service_children = [];
 	if (!empty($service_ids)) {
@@ -1338,6 +1322,8 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	$more_children = [];
 	if ($about_id) $more_children[] = ['type' => 'page', 'object_id' => $about_id];
 	if ($blog_id) $more_children[] = ['type' => 'page', 'object_id' => $blog_id];
+	$project_archive = get_post_type_archive_link('lf_project');
+	if ($project_archive) $more_children[] = ['type' => 'custom', 'url' => $project_archive, 'title' => __('Projects', 'leadsforward-core')];
 	if ($contact_id) $more_children[] = ['type' => 'page', 'object_id' => $contact_id];
 	if (!empty($more_children)) {
 		$header_items[] = [
@@ -1368,6 +1354,7 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	if ($contact_id) $footer_items[] = ['type' => 'page', 'object_id' => $contact_id];
 	if ($reviews_id) $footer_items[] = ['type' => 'page', 'object_id' => $reviews_id];
 	if ($blog_id) $footer_items[] = ['type' => 'page', 'object_id' => $blog_id];
+	if ($project_archive) $footer_items[] = ['type' => 'custom', 'url' => $project_archive, 'title' => __('Projects', 'leadsforward-core')];
 	if ($sitemap_id) $footer_items[] = ['type' => 'page', 'object_id' => $sitemap_id];
 	if ($privacy_id) $footer_items[] = ['type' => 'page', 'object_id' => $privacy_id];
 	if ($terms_id) $footer_items[] = ['type' => 'page', 'object_id' => $terms_id];

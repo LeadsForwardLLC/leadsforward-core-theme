@@ -64,6 +64,12 @@ $query = new WP_Query([
 					$short_desc = function_exists('get_field') ? (string) get_field('lf_service_short_desc', get_the_ID()) : '';
 					$desc = $short_desc !== '' ? wp_trim_words(wp_strip_all_tags($short_desc), 28) : '';
 					if ($desc === '') {
+						$excerpt = get_the_excerpt();
+						if (is_string($excerpt) && $excerpt !== '') {
+							$desc = wp_trim_words(wp_strip_all_tags($excerpt), 28);
+						}
+					}
+					if ($desc === '') {
 						$desc = sprintf(__('Short overview of %s and what to expect.', 'leadsforward-core'), get_the_title());
 					}
 					$image_id = $show_images ? (int) get_post_thumbnail_id(get_the_ID()) : 0;
