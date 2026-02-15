@@ -68,6 +68,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 	]);
 
 	wp_add_inline_script('lf-ai-floating-assistant', lf_ai_assistant_widget_js());
+	wp_add_inline_script('lf-ai-floating-assistant', lf_ai_assistant_widget_fallback_js());
 	wp_register_style('lf-ai-floating-assistant', false, [], LF_THEME_VERSION);
 	wp_enqueue_style('lf-ai-floating-assistant');
 	wp_add_inline_style('lf-ai-floating-assistant', lf_ai_assistant_widget_css());
@@ -672,4 +673,41 @@ function lf_ai_assistant_widget_js(): string {
 		try { $mode.val("auto"); } catch (e) {}
 		syncModeUi();
 	})(jQuery);';
+}
+
+function lf_ai_assistant_widget_fallback_js(): string {
+	return '(function(){
+		"use strict";
+		var roots = document.querySelectorAll("[data-lf-ai-float]");
+		if (!roots || !roots.length) return;
+		roots.forEach(function(root){
+			var panel = root.querySelector("#lf-ai-float-panel");
+			var toggle = root.querySelector("[data-lf-ai-toggle]");
+			var closeButtons = root.querySelectorAll("[data-lf-ai-close],[data-lf-ai-minimize]");
+			if (!panel || !toggle) return;
+			var key = "lfAiFloatState";
+			function setOpen(open){
+				panel.hidden = !open;
+				toggle.setAttribute("aria-expanded", open ? "true" : "false");
+				try { window.localStorage.setItem(key, open ? "open" : "closed"); } catch (e) {}
+			}
+			toggle.addEventListener("click", function(){
+				setOpen(panel.hidden);
+			});
+			closeButtons.forEach(function(btn){
+				btn.addEventListener("click", function(){
+					setOpen(false);
+				});
+			});
+			document.addEventListener("keydown", function(e){
+				if ((e.key === "Escape" || e.keyCode === 27) && !panel.hidden) {
+					setOpen(false);
+				}
+			});
+			try {
+				var current = window.localStorage.getItem(key);
+				if (current === "open") setOpen(true);
+			} catch (e) {}
+		});
+	})();';
 }
