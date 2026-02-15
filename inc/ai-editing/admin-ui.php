@@ -229,11 +229,37 @@ function lf_ai_assistant_requested_edit_keys(string $prompt, $context_id): array
 			$keys[] = $key;
 		}
 	};
-	// "headline" should mean hero_headline unless explicitly subheadline.
-	if (strpos($prompt_lower, 'subheadline') !== false) {
+
+	$subheadline_signals = [
+		'subheadline',
+		'sub headline',
+		'sub-heading',
+		'subheading',
+		'sub heading',
+		'subtitle',
+		'tagline',
+		'supporting text',
+		'support text',
+		'under the headline',
+		'below the headline',
+		'text under the headline',
+		'text below the headline',
+	];
+	$has_subheadline_signal = false;
+	foreach ($subheadline_signals as $signal) {
+		if (strpos($prompt_lower, $signal) !== false) {
+			$has_subheadline_signal = true;
+			break;
+		}
+	}
+
+	// Subheadline/supporting-copy intent should map to hero_subheadline.
+	if ($has_subheadline_signal) {
 		$add_if_allowed('hero_subheadline');
 	}
-	if (strpos($prompt_lower, 'headline') !== false && strpos($prompt_lower, 'subheadline') === false) {
+
+	// "headline" should mean hero_headline unless prompt indicates supporting/subheadline copy.
+	if (strpos($prompt_lower, 'headline') !== false && !$has_subheadline_signal) {
 		$add_if_allowed('hero_headline');
 	}
 	if (strpos($prompt_lower, 'primary cta') !== false || strpos($prompt_lower, 'cta primary') !== false) {
