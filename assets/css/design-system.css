@@ -3403,6 +3403,67 @@ button:focus-visible,
 	color: var(--lf-text-muted);
 }
 
+.lf-block-service-areas__controls {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 0.875rem;
+	margin-bottom: 1rem;
+}
+@media (min-width: 48rem) {
+	.lf-block-service-areas__controls {
+		grid-template-columns: 2fr 1fr;
+	}
+}
+.lf-block-service-areas__control {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+.lf-block-service-areas__control-label {
+	font-size: 0.84rem;
+	font-weight: 600;
+	color: var(--lf-text-muted);
+}
+.lf-block-service-areas__search,
+.lf-block-service-areas__filter {
+	width: 100%;
+	min-height: 44px;
+	padding: 0.65rem 0.75rem;
+	border: 1px solid var(--lf-neutral-300);
+	border-radius: 0.5rem;
+	background: #fff;
+	color: var(--lf-text-primary);
+}
+.lf-block-service-areas__map-wrap {
+	margin: 0 0 1.5rem;
+}
+.lf-block-service-areas__map-heading {
+	margin: 0 0 0.45rem;
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: var(--lf-text-primary);
+}
+.lf-block-service-areas__map-intro {
+	margin: 0 0 0.65rem;
+	color: var(--lf-text-muted);
+	font-size: 0.96rem;
+}
+.lf-block-service-areas__map {
+	width: 100%;
+	height: 320px;
+	border: 1px solid var(--lf-neutral-300);
+	border-radius: 0.65rem;
+	overflow: hidden;
+	background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+}
+.lf-block-service-areas__map[data-map-empty="1"]::before {
+	content: "Map pins will appear when service area coordinates are available.";
+	display: block;
+	padding: 1rem;
+	color: var(--lf-text-muted);
+	font-size: 0.9rem;
+}
+
 .lf-block-service-areas__list {
 	display: grid;
 	grid-template-columns: 1fr;
@@ -3475,6 +3536,11 @@ button:focus-visible,
 .lf-block-service-areas__card-action::after { content: "→"; }
 .lf-block-service-areas__link:hover .lf-block-service-areas__card-action { opacity: 1; }
 .lf-block-service-areas__empty { margin: 0; color: var(--lf-muted); }
+.lf-block-service-areas__no-results {
+	margin: 1rem 0 0;
+	color: var(--lf-text-muted);
+	font-size: 0.95rem;
+}
 
 /* -------------------------------------------------------------------------
    Block: Social Proof — Quote-forward, 1–3 testimonials, distinct surface

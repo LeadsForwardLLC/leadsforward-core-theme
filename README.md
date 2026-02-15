@@ -194,8 +194,8 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 
 - **Services (single):** `hero → trust_bar → benefits → content_image_a → image_content_b → service_details → process → faq_accordion → related_links → cta`
 - **Service Areas (single):** `hero → trust_bar → benefits → content_image_a → image_content_b → services_offered_here → faq_accordion → nearby_areas → cta`
-- **Services Overview (Services page):** `hero → trust_bar → service_intro → content_image_a → faq_accordion → cta`
-- **Service Areas Overview (Service Areas page):** `hero → content_centered → service_areas → faq_accordion → cta`
+- **Services Overview (Services page):** `hero → trust_bar → service_intro → benefits → content_image_a → process → faq_accordion → related_links → cta`
+- **Service Areas Overview (Service Areas page):** `hero → trust_bar → content_centered → service_areas (map + search/filter + cards) → benefits → faq_accordion → cta`
 - **Contact:** `hero → map_nap → trust_reviews → cta`
 - **Terms / Privacy:** `hero → content`
 

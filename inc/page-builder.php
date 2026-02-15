@@ -213,27 +213,6 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 	if ($context === 'page') {
 		$post = get_post($post_id);
 		$post_slug = $post ? (string) $post->post_name : '';
-		if ($post && lf_pb_is_basic_page($post) && !in_array($post_slug, ['contact', 'reviews'], true)) {
-			$default_types = ['hero', 'content'];
-			foreach ($sections_out as $instance_id => $row) {
-				$type = $row['type'] ?? '';
-				if (!in_array($type, $default_types, true)) {
-					if (empty($row['deletable'])) {
-						unset($sections_out[$instance_id]);
-					} else {
-						$sections_out[$instance_id]['deletable'] = true;
-					}
-				}
-			}
-			$order_out = array_values(array_filter($order_out, function ($instance_id) use ($sections_out) {
-				return isset($sections_out[$instance_id]);
-			}));
-			if (empty($sections_out)) {
-				$default = lf_pb_default_config('page');
-				$sections_out = $default['sections'] ?? [];
-				$order_out = $default['order'] ?? [];
-			}
-		}
 		if ($post) {
 			$slug = $post_slug;
 			if (in_array($slug, ['contact', 'reviews'], true)) {
@@ -867,19 +846,6 @@ function lf_pb_handle_save(int $post_id, \WP_Post $post): void {
 			'deletable' => $deletable,
 			'settings' => $settings,
 		];
-	}
-	if ($context === 'page' && lf_pb_is_basic_page($post)) {
-		$default_types = ['hero', 'content'];
-		foreach ($clean_sections as $instance_id => $row) {
-			$type = $row['type'] ?? '';
-			if (!in_array($type, $default_types, true)) {
-				if (empty($row['deletable'])) {
-					unset($clean_sections[$instance_id]);
-					continue;
-				}
-				$clean_sections[$instance_id]['deletable'] = true;
-			}
-		}
 	}
 	$order_raw = isset($_POST['lf_pb_order']) ? (array) $_POST['lf_pb_order'] : [];
 	$order = lf_pb_sanitize_order(array_map('sanitize_text_field', $order_raw), array_keys($clean_sections));

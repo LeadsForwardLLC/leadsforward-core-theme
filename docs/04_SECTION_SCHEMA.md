@@ -35,3 +35,12 @@ The schema is derived from:
 - Homepage config: `inc/homepage.php`
 
 If a field or section changes, update the registry and keep this doc aligned.
+
+## Notable Section Keys
+- `service_areas` now supports map/filter UX copy keys for overview pages:
+  - `map_heading`
+  - `map_intro`
+  - `search_placeholder`
+  - `filter_label`
+  - `filter_all_label`
+  - `no_results_text`
