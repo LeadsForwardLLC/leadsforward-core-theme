@@ -602,6 +602,59 @@ function lf_ai_studio_handle_images_upload(): void {
 	exit;
 }
 
+function lf_ai_studio_latest_job_id_for_debug(): int {
+	$posts = get_posts([
+		'post_type' => LF_AI_STUDIO_JOB_CPT,
+		'post_status' => ['publish', 'private', 'draft', 'pending', 'future'],
+		'posts_per_page' => 1,
+		'orderby' => 'date',
+		'order' => 'DESC',
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	]);
+	return !empty($posts) ? (int) $posts[0] : 0;
+}
+
+function lf_ai_studio_decode_job_payload($payload): array {
+	if (is_array($payload)) {
+		return $payload;
+	}
+	if (is_string($payload) && trim($payload) !== '') {
+		$decoded = json_decode($payload, true);
+		if (is_array($decoded)) {
+			return $decoded;
+		}
+	}
+	return [];
+}
+
+function lf_ai_studio_extract_media_annotations_for_debug(array $payload): array {
+	$candidates = [];
+	$top = $payload['media_annotations'] ?? null;
+	if (is_array($top)) {
+		$candidates = $top;
+	}
+	if (empty($candidates) && is_array($payload['apply'] ?? null)) {
+		$apply_media = $payload['apply']['media_annotations'] ?? null;
+		if (is_array($apply_media)) {
+			$candidates = $apply_media;
+		}
+	}
+	if (empty($candidates) && is_array($payload['vision'] ?? null)) {
+		$vision_media = $payload['vision']['media_annotations'] ?? null;
+		if (is_array($vision_media)) {
+			$candidates = $vision_media;
+		}
+	}
+	if (empty($candidates) && is_array($payload['image_analysis'] ?? null)) {
+		$analysis_media = $payload['image_analysis']['media_annotations'] ?? null;
+		if (is_array($analysis_media)) {
+			$candidates = $analysis_media;
+		}
+	}
+	return is_array($candidates) ? $candidates : [];
+}
+
 function lf_ai_studio_render_page(): void {
 	if (!current_user_can('edit_theme_options')) {
 		return;
@@ -645,6 +698,36 @@ function lf_ai_studio_render_page(): void {
 	$gen_blog_posts = get_option('lf_ai_gen_blog_posts', '1') === '1';
 	$gen_projects = get_option('lf_ai_gen_projects', '1') === '1';
 	$image_generation_limit = max(1, min(60, (int) get_option('lf_ai_image_generation_limit', 12)));
+	$vision_debug_job_id = $job_id > 0 ? $job_id : lf_ai_studio_latest_job_id_for_debug();
+	$vision_debug_payload = [];
+	$vision_annotations = [];
+	$vision_applied_count = 0;
+	$vision_warning_items = [];
+	if ($vision_debug_job_id > 0) {
+		$vision_debug_payload = lf_ai_studio_decode_job_payload(get_post_meta($vision_debug_job_id, 'lf_ai_job_response', true));
+		$vision_annotations = lf_ai_studio_extract_media_annotations_for_debug($vision_debug_payload);
+		$vision_applied_count = (int) get_post_meta($vision_debug_job_id, 'lf_ai_job_media_annotations_applied', true);
+		$warnings_raw = get_post_meta($vision_debug_job_id, 'lf_ai_job_quality_warnings', true);
+		if (is_array($warnings_raw)) {
+			$vision_warning_items = array_values(array_filter(array_map('sanitize_text_field', $warnings_raw)));
+		}
+	}
+	$vision_received_count = is_array($vision_annotations) ? count($vision_annotations) : 0;
+	$vision_samples = [];
+	if (!empty($vision_annotations)) {
+		foreach (array_slice($vision_annotations, 0, 3) as $row) {
+			if (!is_array($row)) {
+				continue;
+			}
+			$vision_samples[] = [
+				'attachment_id' => (int) ($row['attachment_id'] ?? 0),
+				'alt_text' => sanitize_text_field((string) ($row['alt_text'] ?? ($row['altText'] ?? ($row['alt'] ?? '')))),
+				'title' => sanitize_text_field((string) ($row['title'] ?? ($row['image_title'] ?? ''))),
+				'caption' => sanitize_text_field((string) ($row['caption'] ?? ($row['image_caption'] ?? ''))),
+				'description' => sanitize_text_field((string) ($row['description'] ?? ($row['summary'] ?? ''))),
+			];
+		}
+	}
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Website Manifester', 'leadsforward-core'); ?></h1>
@@ -1003,6 +1086,33 @@ function lf_ai_studio_render_page(): void {
 				<?php endif; ?>
 			<?php else : ?>
 				<p class="description"><?php esc_html_e('No audit results yet. Run the audit to see coverage.', 'leadsforward-core'); ?></p>
+			<?php endif; ?>
+		</div>
+		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
+			<h2 style="margin-top:0;"><?php esc_html_e('Vision Metadata Debug', 'leadsforward-core'); ?></h2>
+			<p class="description"><?php esc_html_e('Checks whether n8n returned image annotations and how many were actually applied to Media Library metadata.', 'leadsforward-core'); ?></p>
+			<?php if ($vision_debug_job_id > 0) : ?>
+				<p class="description"><?php echo esc_html(sprintf(__('Latest checked job: #%d', 'leadsforward-core'), $vision_debug_job_id)); ?></p>
+				<div style="display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;">
+					<div><strong><?php esc_html_e('Annotations received:', 'leadsforward-core'); ?></strong> <?php echo esc_html((string) $vision_received_count); ?></div>
+					<div><strong><?php esc_html_e('Annotations applied:', 'leadsforward-core'); ?></strong> <?php echo esc_html((string) $vision_applied_count); ?></div>
+				</div>
+				<?php if (!empty($vision_warning_items)) : ?>
+					<p><strong><?php esc_html_e('Warnings:', 'leadsforward-core'); ?></strong></p>
+					<ul style="margin: 0 0 12px 18px;">
+						<?php foreach ($vision_warning_items as $warning) : ?>
+							<li><?php echo esc_html($warning); ?></li>
+						<?php endforeach; ?>
+					</ul>
+				<?php endif; ?>
+				<?php if (!empty($vision_samples)) : ?>
+					<p><strong><?php esc_html_e('Sample annotations (first 3):', 'leadsforward-core'); ?></strong></p>
+					<pre style="max-height:220px;overflow:auto;background:#fff;border:1px solid #dcdcde;padding:12px;"><?php echo esc_html(wp_json_encode($vision_samples, JSON_PRETTY_PRINT)); ?></pre>
+				<?php else : ?>
+					<p class="description"><?php esc_html_e('No annotation samples found for this job payload.', 'leadsforward-core'); ?></p>
+				<?php endif; ?>
+			<?php else : ?>
+				<p class="description"><?php esc_html_e('No AI jobs found yet. Run the manifester once to populate vision debug data.', 'leadsforward-core'); ?></p>
 			<?php endif; ?>
 		</div>
 		<?php if (function_exists('lf_dev_reset_allowed') && lf_dev_reset_allowed() && current_user_can('manage_options')) : ?>
