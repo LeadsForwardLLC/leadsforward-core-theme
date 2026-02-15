@@ -1471,28 +1471,6 @@ function lf_ai_assistant_widget_js(): string {
 					persistHeroPills(wrap);
 				});
 				controls.appendChild(addBtn);
-				var editBtn = document.createElement("button");
-				editBtn.type = "button";
-				editBtn.className = "lf-ai-hero-pill-add lf-ai-inline-editor-ignore";
-				editBtn.textContent = "Edit pills";
-				editBtn.addEventListener("click", function(e){
-					e.preventDefault();
-					e.stopPropagation();
-					var current = heroPillsFromWrap(wrap);
-					var raw = "";
-					try {
-						raw = String(window.prompt("Edit pills (one per line):", current.join("\n")) || "");
-					} catch (err) {
-						raw = "";
-					}
-					var parsed = raw.split(/\r\n|\r|\n/).map(function(v){ return String(v || "").trim(); }).filter(function(v){ return v !== ""; });
-					list.innerHTML = "";
-					parsed.forEach(function(text){
-						list.appendChild(createHeroPillNode(wrap, text, function(){ persistHeroPills(wrap); }));
-					});
-					persistHeroPills(wrap);
-				});
-				controls.appendChild(editBtn);
 				var parent = list.parentNode;
 				if (parent) {
 					parent.appendChild(controls);
