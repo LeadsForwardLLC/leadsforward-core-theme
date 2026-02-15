@@ -290,6 +290,7 @@ function lf_ai_assistant_render_floating_widget(): void {
 				<div class="lf-ai-float__header-actions">
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-undo aria-label="<?php esc_attr_e('Undo last change', 'leadsforward-core'); ?>" title="<?php esc_attr_e('Undo last change (click repeatedly to step back)', 'leadsforward-core'); ?>">↶</button>
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-redo aria-label="<?php esc_attr_e('Redo last reverted change', 'leadsforward-core'); ?>" title="<?php esc_attr_e('Redo last reverted change (click repeatedly to step forward)', 'leadsforward-core'); ?>">↷</button>
+					<button type="button" class="lf-ai-float__icon" data-lf-ai-editor-toggle aria-label="<?php esc_attr_e('Toggle editor mode', 'leadsforward-core'); ?>" title="<?php esc_attr_e('Toggle editor mode on/off', 'leadsforward-core'); ?>">Ed</button>
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-minimize aria-label="<?php esc_attr_e('Minimize', 'leadsforward-core'); ?>">−</button>
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-close aria-label="<?php esc_attr_e('Close', 'leadsforward-core'); ?>">×</button>
 				</div>
@@ -386,6 +387,7 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float__header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:#f8fafc; border-bottom:1px solid #e2e8f0; }
 		.lf-ai-float__header-actions { display:flex; gap:6px; }
 		.lf-ai-float__icon { border:1px solid #d6c8fb; background:#fff; width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:16px; line-height:1; color:#6a33e8; }
+		.lf-ai-float__icon.is-active { background:#f5f0ff; border-color:#8348f9; color:#5b21b6; }
 		.lf-ai-float__body { padding:12px; display:flex; flex-direction:column; gap:10px; flex:1; min-height:0; overflow:auto; overflow-x:hidden; }
 		.lf-ai-float__body, .lf-ai-float__body * { box-sizing:border-box; }
 		.lf-ai-float .button { appearance:none; border:1px solid #8c8f94; border-radius:4px; background:#f6f7f7; color:#2c3338; min-height:30px; line-height:2.15384615; padding:0 10px; font-size:13px; cursor:pointer; text-decoration:none; }
@@ -523,6 +525,7 @@ function lf_ai_assistant_widget_js(): string {
 		var $btnRevert = $root.find("[data-lf-ai-revert]");
 		var $btnUndo = $root.find("[data-lf-ai-undo]");
 		var $btnRedo = $root.find("[data-lf-ai-redo]");
+		var $btnEditorToggle = $root.find("[data-lf-ai-editor-toggle]");
 		var $target = $root.find("[data-lf-ai-target]");
 		var $targetRef = $root.find("[data-lf-ai-target-ref]");
 		var $mode = $root.find("[data-lf-ai-mode]");
@@ -573,6 +576,8 @@ function lf_ai_assistant_widget_js(): string {
 		var sectionRailEl = null;
 		var railCollapsed = false;
 		var railStateKey = "lfAiRailState";
+		var editorModeKey = "lfAiEditorMode";
+		var editingEnabled = true;
 		var activeRailDragSectionId = "";
 		var railPointerDrag = null;
 		var activeLibraryDragSectionType = "";
@@ -657,6 +662,74 @@ function lf_ai_assistant_widget_js(): string {
 				saveInlineEdit();
 			}
 			try { window.localStorage.setItem(stateKey, open ? "open" : "closed"); } catch (e) {}
+		}
+		function setEditorToggleUi() {
+			if (!$btnEditorToggle || !$btnEditorToggle.length) return;
+			$btnEditorToggle.toggleClass("is-active", editingEnabled);
+			$btnEditorToggle.text(editingEnabled ? "✎" : "👁");
+			$btnEditorToggle.attr("title", editingEnabled ? "Editor ON (click for live mode)" : "Live mode ON (click for editor)");
+		}
+		function clearEditorUi() {
+			saveInlineEdit();
+			cancelInlineEdit(false);
+			selectedSectionWrap = null;
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap) return;
+				wrap.classList.remove("lf-ai-section-active");
+				wrap.setAttribute("draggable", "false");
+				wrap.onmousedown = null;
+				wrap.ondragstart = null;
+				wrap.ondragover = null;
+				wrap.ondrop = null;
+				wrap.ondragend = null;
+			});
+			Array.prototype.slice.call(document.querySelectorAll("[data-lf-inline-editable=\"1\"],[data-lf-inline-selector]")).forEach(function(node){
+				node.removeAttribute("data-lf-inline-editable");
+				node.removeAttribute("data-lf-inline-selector");
+			});
+			Array.prototype.slice.call(document.querySelectorAll("[data-lf-inline-image=\"1\"],[data-lf-inline-image-selector]")).forEach(function(node){
+				node.removeAttribute("data-lf-inline-image");
+				node.removeAttribute("data-lf-inline-image-selector");
+			});
+			Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-controls,[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"]")).forEach(function(node){
+				if (node && node.parentNode) node.parentNode.removeChild(node);
+			});
+			if (sectionRailEl && sectionRailEl.parentNode) {
+				sectionRailEl.parentNode.removeChild(sectionRailEl);
+			}
+			sectionRailEl = null;
+		}
+		function buildEditorUi() {
+			buildInlineTargets();
+			buildInlineImageTargets();
+			buildSectionTargets();
+			buildSectionControls();
+			buildSectionButtonEditors();
+			buildHeroPillsControls();
+			buildHeroProofChecklistControls();
+			buildTrustBadgePillsControls();
+			buildChecklistControls();
+			buildProcessStepControls();
+			buildSectionColumnSwapTargets();
+			buildFaqReorderControls();
+			buildBenefitsIconEditors();
+			refreshSectionRail();
+			var firstWrap = collectSectionWrappers()[0] || null;
+			if (firstWrap) {
+				setSelectedSection(firstWrap);
+			}
+		}
+		function setEditorEnabled(enabled) {
+			editingEnabled = !!enabled;
+			setEditorToggleUi();
+			try { window.localStorage.setItem(editorModeKey, editingEnabled ? "on" : "off"); } catch (e) {}
+			if (!editingEnabled) {
+				clearEditorUi();
+				setStatus("Live mode enabled. Editing is off.", false);
+				return;
+			}
+			buildEditorUi();
+			setStatus("Editor mode enabled.", false);
 		}
 		function isDragBlockedTarget(target) {
 			if (!target) return false;
@@ -837,6 +910,10 @@ function lf_ai_assistant_widget_js(): string {
 			return text.length > 42 ? (text.slice(0, 39) + "...") : text;
 		}
 		function setSelectedSection(wrap) {
+			if (!editingEnabled) {
+				selectedSectionWrap = null;
+				return;
+			}
 			collectSectionWrappers().forEach(function(node){
 				node.classList.remove("lf-ai-section-active");
 			});
@@ -999,6 +1076,13 @@ function lf_ai_assistant_widget_js(): string {
 			return null;
 		}
 		function refreshSectionRail() {
+			if (!editingEnabled) {
+				if (sectionRailEl && sectionRailEl.parentNode) {
+					sectionRailEl.parentNode.removeChild(sectionRailEl);
+				}
+				sectionRailEl = null;
+				return;
+			}
 			var wraps = collectSectionWrappers();
 			if (!wraps.length) {
 				if (sectionRailEl && sectionRailEl.parentNode) {
@@ -2014,6 +2098,7 @@ function lf_ai_assistant_widget_js(): string {
 			persistSectionButtonCta(wrap, slot, newText, actionInput, newUrl);
 		}
 		function buildSectionButtonEditors() {
+			if (!editingEnabled) return;
 			collectSectionWrappers().forEach(function(wrap){
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
 				var nodes = Array.prototype.slice.call(wrap.querySelectorAll("a.lf-btn,button.lf-btn,span.lf-btn"));
@@ -2021,8 +2106,15 @@ function lf_ai_assistant_widget_js(): string {
 					if (!node || (node.closest && node.closest(".lf-ai-float"))) return;
 					if (node.getAttribute("data-lf-ai-cta-editable") === "1") return;
 					node.setAttribute("data-lf-ai-cta-editable", "1");
-					node.setAttribute("title", "Double-click to edit button text and action/link");
+					node.setAttribute("title", "Click to edit button text and action/link");
+					node.addEventListener("click", function(e){
+						if (!editingEnabled) return;
+						e.preventDefault();
+						e.stopPropagation();
+						openCtaButtonEditor(wrap, node);
+					});
 					node.addEventListener("dblclick", function(e){
+						if (!editingEnabled) return;
 						e.preventDefault();
 						e.stopPropagation();
 						openCtaButtonEditor(wrap, node);
@@ -2921,10 +3013,14 @@ function lf_ai_assistant_widget_js(): string {
 
 		$toggle.on("click", function(){ setConfirmOpen(false); setOpen($panel.prop("hidden")); });
 		$root.find("[data-lf-ai-close],[data-lf-ai-minimize]").on("click", function(){ setConfirmOpen(false); setOpen(false); });
+		$btnEditorToggle.on("click", function(){
+			setEditorEnabled(!editingEnabled);
+		});
 		$root.find("[data-lf-ai-preset]").on("click", function(){
 			$prompt.val($(this).attr("data-lf-ai-preset") || "").trigger("focus");
 		});
 		$(document).on("click", "[data-lf-inline-image=\"1\"]", function(e){
+			if (!editingEnabled) return;
 			if (Date.now() < suppressInlineClickUntil) {
 				return;
 			}
@@ -2933,6 +3029,7 @@ function lf_ai_assistant_widget_js(): string {
 			beginInlineImageReplace(this);
 		});
 		$(document).on("click", "[data-lf-inline-editable=\"1\"]", function(e){
+			if (!editingEnabled) return;
 			if (Date.now() < suppressInlineClickUntil) {
 				return;
 			}
@@ -3347,30 +3444,22 @@ function lf_ai_assistant_widget_js(): string {
 		try {
 			railCollapsed = window.localStorage.getItem(railStateKey) === "collapsed";
 		} catch (e) {}
+		try {
+			editingEnabled = window.localStorage.getItem(editorModeKey) !== "off";
+		} catch (e) {}
+		setEditorToggleUi();
 		$prompt.attr("placeholder", (lfAiFloating.i18n && lfAiFloating.i18n.placeholder) ? lfAiFloating.i18n.placeholder : "Ask for specific edits...");
 		setStatus((lfAiFloating.i18n && lfAiFloating.i18n.statusReady) ? lfAiFloating.i18n.statusReady : "Ready.", false);
 		setConfirmOpen(false);
 		try { $mode.val("auto"); } catch (e) {}
 		syncModeUi();
-		buildInlineTargets();
-		buildInlineImageTargets();
-		buildSectionTargets();
-		buildSectionControls();
-		buildSectionButtonEditors();
-		buildHeroPillsControls();
-		buildHeroProofChecklistControls();
-		buildTrustBadgePillsControls();
-		buildChecklistControls();
-		buildProcessStepControls();
-		buildSectionColumnSwapTargets();
-		buildFaqReorderControls();
-		buildBenefitsIconEditors();
-		refreshSectionRail();
-		var firstWrap = collectSectionWrappers()[0] || null;
-		if (firstWrap) {
-			setSelectedSection(firstWrap);
+		if (editingEnabled) {
+			buildEditorUi();
+			setStatus("Click to edit text/images, drag sections to reorder, reverse columns, hide/show, duplicate, or delete.", false);
+		} else {
+			clearEditorUi();
+			setStatus("Live mode enabled. Toggle ✎ to edit.", false);
 		}
-		setStatus("Click to edit text/images, drag sections to reorder, reverse columns, hide/show, duplicate, or delete.", false);
 	})(jQuery);';
 }
 
