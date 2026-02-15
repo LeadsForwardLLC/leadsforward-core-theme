@@ -83,20 +83,15 @@ function lf_ai_rollback(string $id): bool {
 	$old          = $found['changes_old'] ?? [];
 	if ($context_type === 'homepage') {
 		$hero_keys = ['hero_headline', 'hero_subheadline', 'cta_primary_override'];
-		$sections = function_exists('get_field') ? get_field('homepage_sections', 'option') : [];
-		if (!empty($sections) && is_array($sections)) {
-			foreach ($sections as $i => $row) {
-				if (($row['section_type'] ?? '') === 'hero') {
-					foreach ($hero_keys as $hk) {
-						if (array_key_exists($hk, $old)) {
-							$sections[$i][$hk] = $old[$hk];
-						}
-					}
-					if (function_exists('update_field')) {
-						update_field('homepage_sections', $sections, 'option');
-					}
-					break;
+		$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
+		if (!empty($config['hero']) && is_array($config['hero'])) {
+			foreach ($hero_keys as $hk) {
+				if (array_key_exists($hk, $old)) {
+					$config['hero'][$hk] = $old[$hk];
 				}
+			}
+			if (defined('LF_HOMEPAGE_CONFIG_OPTION')) {
+				update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 			}
 		}
 		foreach ($old as $field_key => $value) {
