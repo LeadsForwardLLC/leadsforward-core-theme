@@ -1915,6 +1915,22 @@ function lf_ai_assistant_widget_js(): string {
 				try { commandInputEl.focus(); } catch (e) {}
 			}
 		}
+		function showShortcutHelp() {
+			var lines = [
+				"Shortcuts:",
+				"Cmd/Ctrl+Z = Undo",
+				"Cmd/Ctrl+Shift+Z or Ctrl+Y = Redo",
+				"Cmd/Ctrl+K = Command Palette",
+				"/ = Command Palette",
+				"D = Duplicate selected section",
+				"H = Hide/Show selected section",
+				"Delete/Backspace = Delete selected section",
+				"Alt/Shift+Arrow Up/Down = Move section"
+			];
+			var msg = lines.join("\n");
+			setStatus("Shortcut help opened.", false);
+			try { window.alert(msg); } catch (e) {}
+		}
 
 		$toggle.on("click", function(){ setConfirmOpen(false); setOpen($panel.prop("hidden")); });
 		$root.find("[data-lf-ai-close],[data-lf-ai-minimize]").on("click", function(){ setConfirmOpen(false); setOpen(false); });
@@ -2228,10 +2244,39 @@ function lf_ai_assistant_widget_js(): string {
 			var isTypingTarget = !!(target && (target.isContentEditable || targetTag === "input" || targetTag === "textarea" || targetTag === "select"));
 			var key = String(e.key || "");
 			var keyLower = key.toLowerCase();
+			if (!isTypingTarget && (e.metaKey || e.ctrlKey) && keyLower === "z" && !e.shiftKey) {
+				e.preventDefault();
+				runRollback();
+				return;
+			}
+			if (!isTypingTarget && ((e.metaKey || e.ctrlKey) && e.shiftKey && keyLower === "z")) {
+				e.preventDefault();
+				runRedo();
+				return;
+			}
+			if (!isTypingTarget && e.ctrlKey && keyLower === "y") {
+				e.preventDefault();
+				runRedo();
+				return;
+			}
+			if (!isTypingTarget && (e.metaKey || e.ctrlKey) && keyLower === "s") {
+				e.preventDefault();
+				if (inlineActiveEl) {
+					saveInlineEdit();
+				} else {
+					setStatus("No active inline edit to save.", false);
+				}
+				return;
+			}
 			if ((e.metaKey || e.ctrlKey) && (keyLower === "k" || ((e.shiftKey && keyLower === "p")))) {
 				e.preventDefault();
 				ensureCommandPalette();
 				toggleCommandPalette(commandPaletteEl.hidden);
+				return;
+			}
+			if (!isTypingTarget && ((e.shiftKey && key === "?") || key === "F1")) {
+				e.preventDefault();
+				showShortcutHelp();
 				return;
 			}
 			if (!isTypingTarget && key === "/") {

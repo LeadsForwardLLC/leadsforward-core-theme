@@ -30,9 +30,14 @@ Notes on duplication:
 
 ## Keyboard Shortcuts
 
+- `Cmd/Ctrl + Z` Undo.
+- `Cmd/Ctrl + Shift + Z` Redo.
+- `Ctrl + Y` Redo (Windows-style fallback).
 - `Cmd/Ctrl + K` Open command palette.
 - `Cmd/Ctrl + Shift + P` Alternate command palette shortcut.
 - `/` Open command palette when not typing in an input.
+- `Cmd/Ctrl + S` Save active inline text edit.
+- `Shift + ?` or `F1` Show shortcut help.
 - `Alt + ArrowUp` Move selected section up.
 - `Alt + ArrowDown` Move selected section down.
 - `Shift + ArrowUp` Move selected section up (alternate).
