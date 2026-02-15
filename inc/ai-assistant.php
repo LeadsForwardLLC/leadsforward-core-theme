@@ -222,10 +222,10 @@ function lf_ai_assistant_render_floating_widget(): void {
 
 function lf_ai_assistant_widget_css(): string {
 	return '
-		.lf-ai-float { position: fixed; right: 20px; bottom: 20px; z-index: 99999; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
+		.lf-ai-float { position: fixed; right: 20px; bottom: 20px; z-index: 99999; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; display:flex; flex-direction:column; align-items:flex-end; }
 		.lf-ai-float__toggle { background: linear-gradient(135deg,#4f23b4,#8348f9); color:#fff; border:0; border-radius:999px; padding:10px 14px; font-weight:600; box-shadow:0 10px 30px rgba(79,35,180,.32); cursor:pointer; display:flex; gap:8px; align-items:center; }
 		.lf-ai-float__dot { width:8px; height:8px; border-radius:99px; background:#22c55e; box-shadow:0 0 0 4px rgba(34,197,94,.2); }
-		.lf-ai-float__panel { width:min(440px, calc(100vw - 36px)); max-height:min(80vh, 860px); background:#fff; border:1px solid #dbe3ef; border-radius:14px; box-shadow:0 18px 55px rgba(15,23,42,.25); overflow:hidden; margin-top:10px; position:relative; display:flex; flex-direction:column; }
+		.lf-ai-float__panel { width:min(440px, calc(100vw - 36px)); max-height:min(80vh, 860px); background:#fff; border:1px solid #dbe3ef; border-radius:14px; box-shadow:0 18px 55px rgba(15,23,42,.25); overflow:hidden; position:absolute; right:0; bottom:calc(100% + 10px); display:flex; flex-direction:column; }
 		.lf-ai-float__panel[hidden] { display:none !important; }
 		.lf-ai-float__header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:#f8fafc; border-bottom:1px solid #e2e8f0; }
 		.lf-ai-float__header-actions { display:flex; gap:6px; }
@@ -269,7 +269,7 @@ function lf_ai_assistant_widget_css(): string {
 		@media (max-width: 782px) {
 			.lf-ai-float { right:12px; bottom:12px; left:12px; }
 			.lf-ai-float__toggle { width:100%; justify-content:center; }
-			.lf-ai-float__panel { width:100%; }
+			.lf-ai-float__panel { width:100%; left:0; right:0; }
 			.lf-ai-float__mode { grid-template-columns:1fr; }
 		}
 	';
