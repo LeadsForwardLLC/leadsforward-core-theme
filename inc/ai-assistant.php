@@ -61,6 +61,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 			'statusGenerating' => __('Generating suggestions...', 'leadsforward-core'),
 			'statusApplying' => __('Applying changes...', 'leadsforward-core'),
 			'statusReverting' => __('Reverting last AI change...', 'leadsforward-core'),
+			'statusRedoing' => __('Re-applying last reverted change...', 'leadsforward-core'),
 			'statusParsingDoc' => __('Reading document context...', 'leadsforward-core'),
 			'confirmRevert' => __('Revert the most recent AI change on this page? This cannot be undone.', 'leadsforward-core'),
 			'placeholder' => __('Ask for precise copy edits, SEO rewrites, CTA improvements, or schema-safe content upgrades...', 'leadsforward-core'),
@@ -135,6 +136,7 @@ function lf_ai_assistant_render_floating_widget(): void {
 				<strong><?php esc_html_e('LeadsForward AI Assistant', 'leadsforward-core'); ?></strong>
 				<div class="lf-ai-float__header-actions">
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-undo aria-label="<?php esc_attr_e('Undo last change', 'leadsforward-core'); ?>" title="<?php esc_attr_e('Undo last change (click repeatedly to step back)', 'leadsforward-core'); ?>">↶</button>
+					<button type="button" class="lf-ai-float__icon" data-lf-ai-redo aria-label="<?php esc_attr_e('Redo last reverted change', 'leadsforward-core'); ?>" title="<?php esc_attr_e('Redo last reverted change (click repeatedly to step forward)', 'leadsforward-core'); ?>">↷</button>
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-minimize aria-label="<?php esc_attr_e('Minimize', 'leadsforward-core'); ?>">−</button>
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-close aria-label="<?php esc_attr_e('Close', 'leadsforward-core'); ?>">×</button>
 				</div>
@@ -297,6 +299,7 @@ function lf_ai_assistant_widget_js(): string {
 		var $btnReject = $root.find("[data-lf-ai-reject]");
 		var $btnRevert = $root.find("[data-lf-ai-revert]");
 		var $btnUndo = $root.find("[data-lf-ai-undo]");
+		var $btnRedo = $root.find("[data-lf-ai-redo]");
 		var $target = $root.find("[data-lf-ai-target]");
 		var $targetRef = $root.find("[data-lf-ai-target-ref]");
 		var $mode = $root.find("[data-lf-ai-mode]");
@@ -625,6 +628,24 @@ function lf_ai_assistant_widget_js(): string {
 				setStatus(msg, true);
 			});
 		}
+		function runRedo() {
+			setStatus(lfAiFloating.i18n && lfAiFloating.i18n.statusRedoing ? lfAiFloating.i18n.statusRedoing : "Redoing...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_redo_latest",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType || "homepage",
+				context_id: activeContextId || "homepage"
+			}).done(function(res){
+				if (res && res.success && res.data && res.data.reload) {
+					window.location.reload();
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "No redo available.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Redo failed.";
+				setStatus(msg, true);
+			});
+		}
 
 		$toggle.on("click", function(){ setConfirmOpen(false); setOpen($panel.prop("hidden")); });
 		$root.find("[data-lf-ai-close],[data-lf-ai-minimize]").on("click", function(){ setConfirmOpen(false); setOpen(false); });
@@ -817,6 +838,9 @@ function lf_ai_assistant_widget_js(): string {
 		});
 		$btnUndo.on("click", function(){
 			runRollback();
+		});
+		$btnRedo.on("click", function(){
+			runRedo();
 		});
 		$confirmNo.on("click", function(){ setConfirmOpen(false); });
 		$confirmYes.on("click", function(){

@@ -473,6 +473,7 @@ add_action('wp_ajax_lf_ai_generate', 'lf_ai_ajax_generate');
 add_action('wp_ajax_lf_ai_apply', 'lf_ai_ajax_apply');
 add_action('wp_ajax_lf_ai_rollback', 'lf_ai_ajax_rollback');
 add_action('wp_ajax_lf_ai_rollback_latest', 'lf_ai_ajax_rollback_latest');
+add_action('wp_ajax_lf_ai_redo_latest', 'lf_ai_ajax_redo_latest');
 add_action('wp_ajax_lf_ai_extract_context_doc', 'lf_ai_ajax_extract_context_doc');
 add_action('wp_ajax_lf_ai_inline_save', 'lf_ai_ajax_inline_save');
 
@@ -1032,6 +1033,30 @@ function lf_ai_ajax_rollback_latest(): void {
 	$ok = lf_ai_rollback($log_id);
 	if (!$ok) {
 		wp_send_json_error(['message' => __('Rollback failed or already rolled back.', 'leadsforward-core')]);
+	}
+	wp_send_json_success(['reload' => true, 'log_id' => $log_id]);
+}
+
+function lf_ai_ajax_redo_latest(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
+	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
+	if ($context_type === '' || $context_id === '') {
+		wp_send_json_error(['message' => __('Invalid request.', 'leadsforward-core')]);
+	}
+	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	$log_id = function_exists('lf_ai_latest_redo_candidate')
+		? lf_ai_latest_redo_candidate($context_type, $context_id_use, get_current_user_id())
+		: '';
+	if ($log_id === '') {
+		wp_send_json_error(['message' => __('No redo action found for this page.', 'leadsforward-core')]);
+	}
+	$ok = function_exists('lf_ai_redo') ? lf_ai_redo($log_id) : false;
+	if (!$ok) {
+		wp_send_json_error(['message' => __('Redo failed.', 'leadsforward-core')]);
 	}
 	wp_send_json_success(['reload' => true, 'log_id' => $log_id]);
 }
