@@ -410,14 +410,25 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 			}
 		}
 	}
-	if (!empty($quality_warnings)) {
-		update_post_meta($job_id, 'lf_ai_job_quality_warnings', $quality_warnings);
-		update_option('lf_ai_studio_quality_warnings', $quality_warnings, false);
-	}
 	$media_annotations = $payload['media_annotations'] ?? $apply_payload['media_annotations'] ?? [];
+	if (!is_array($media_annotations) || empty($media_annotations)) {
+		$media_annotations = $payload['vision']['media_annotations'] ?? $payload['image_analysis']['media_annotations'] ?? [];
+	}
 	if (is_array($media_annotations) && !empty($media_annotations) && function_exists('lf_image_intelligence_apply_vision_annotations')) {
 		$vision_result = lf_image_intelligence_apply_vision_annotations($media_annotations);
 		update_post_meta($job_id, 'lf_ai_job_media_annotations_applied', (int) ($vision_result['applied'] ?? 0));
+		if ((int) ($vision_result['applied'] ?? 0) === 0) {
+			$quality_warnings[] = __('Vision annotations were provided but none were applied. Check attachment_id mapping and field names.', 'leadsforward-core');
+		}
+	} else {
+		$quality_warnings[] = __('No media_annotations returned from orchestrator; image metadata stayed on theme fallback mode.', 'leadsforward-core');
+	}
+	if (!empty($quality_warnings)) {
+		$quality_warnings = array_values(array_unique(array_filter(array_map(static function ($w): string {
+			return sanitize_text_field((string) $w);
+		}, $quality_warnings))));
+		update_post_meta($job_id, 'lf_ai_job_quality_warnings', $quality_warnings);
+		update_option('lf_ai_studio_quality_warnings', $quality_warnings, false);
 	}
 	$errors = function_exists('lf_ai_studio_validate_payload')
 		? lf_ai_studio_validate_payload($apply_payload)

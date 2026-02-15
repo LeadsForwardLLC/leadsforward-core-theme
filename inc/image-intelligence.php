@@ -892,19 +892,37 @@ function lf_image_intelligence_apply_vision_annotations(array $annotations): arr
 		if (!$post instanceof \WP_Post || $post->post_type !== 'attachment') {
 			continue;
 		}
-		$keywords = $row['keywords'] ?? [];
+		$keywords = $row['keywords'] ?? ($row['keyword_tags'] ?? []);
 		if (is_string($keywords)) {
 			$keywords = preg_split('/\r\n|\r|\n|,/', $keywords);
 		}
+		$description_raw = (string) ($row['description'] ?? ($row['summary'] ?? ''));
+		$alt_raw = (string) ($row['alt_text'] ?? ($row['altText'] ?? ($row['alt'] ?? '')));
+		$title_raw = (string) ($row['title'] ?? ($row['image_title'] ?? ''));
+		$caption_raw = (string) ($row['caption'] ?? ($row['image_caption'] ?? ''));
+		$recommended_filename_raw = (string) ($row['recommended_filename'] ?? ($row['recommendedFilename'] ?? ($row['filename_suggestion'] ?? '')));
+		$description_clean = lf_image_intelligence_clean_media_text($description_raw);
+		$alt_clean = lf_image_intelligence_clean_media_text($alt_raw);
+		$title_clean = lf_image_intelligence_clean_media_text($title_raw);
+		$caption_clean = lf_image_intelligence_clean_media_text($caption_raw);
+		$recommended_filename_clean = sanitize_title($recommended_filename_raw);
+		if ($caption_clean === '' && $description_clean !== '') {
+			$caption_clean = $description_clean;
+		}
+		if ($description_clean === '' && $alt_clean !== '') {
+			$description_clean = $alt_clean;
+		}
 		$entry = [
-			'description' => sanitize_text_field((string) ($row['description'] ?? '')),
-			'alt_text' => sanitize_text_field((string) ($row['alt_text'] ?? '')),
+			'description' => sanitize_text_field($description_clean),
+			'alt_text' => sanitize_text_field($alt_clean),
+			'title' => sanitize_text_field($title_clean),
+			'caption' => sanitize_text_field($caption_clean),
 			'keywords' => is_array($keywords) ? array_values(array_filter(array_map('sanitize_text_field', $keywords))) : [],
 			'service_slugs' => is_array($row['service_slugs'] ?? null) ? array_values(array_map('sanitize_title', $row['service_slugs'])) : [],
 			'area_slugs' => is_array($row['area_slugs'] ?? null) ? array_values(array_map('sanitize_title', $row['area_slugs'])) : [],
 			'page_types' => is_array($row['page_types'] ?? null) ? array_values(array_map('sanitize_key', $row['page_types'])) : [],
 			'slots' => is_array($row['slots'] ?? null) ? array_values(array_map('sanitize_key', $row['slots'])) : [],
-			'recommended_filename' => sanitize_title((string) ($row['recommended_filename'] ?? '')),
+			'recommended_filename' => $recommended_filename_clean,
 		];
 		$stored[$attachment_id] = $entry;
 		if ($entry['recommended_filename'] !== '') {
@@ -916,17 +934,24 @@ function lf_image_intelligence_apply_vision_annotations(array $annotations): arr
 				update_post_meta($attachment_id, '_wp_attachment_image_alt', $entry['alt_text']);
 			}
 		}
+		$post_updates = ['ID' => $attachment_id];
+		$has_post_update = false;
+		if ($entry['title'] !== '') {
+			$post_updates['post_title'] = $entry['title'];
+			$post_updates['post_name'] = sanitize_title($entry['title']);
+			$has_post_update = true;
+		}
+		if ($entry['caption'] !== '') {
+			$post_updates['post_excerpt'] = $entry['caption'];
+			$has_post_update = true;
+		}
 		if ($entry['description'] !== '') {
-			$clean_description = lf_image_intelligence_clean_media_text($entry['description']);
-			if ($clean_description === '') {
-				$clean_description = $entry['description'];
-			}
-			update_post_meta($attachment_id, '_lf_vision_description', $clean_description);
-			wp_update_post([
-				'ID' => $attachment_id,
-				'post_excerpt' => $clean_description,
-				'post_content' => $clean_description,
-			]);
+			update_post_meta($attachment_id, '_lf_vision_description', $entry['description']);
+			$post_updates['post_content'] = $entry['description'];
+			$has_post_update = true;
+		}
+		if ($has_post_update) {
+			wp_update_post($post_updates);
 		}
 		$applied++;
 	}
