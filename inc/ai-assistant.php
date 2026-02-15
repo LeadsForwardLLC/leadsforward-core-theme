@@ -1314,11 +1314,40 @@ function lf_ai_assistant_widget_js(): string {
 		function heroPillsFromWrap(wrap) {
 			var list = wrap ? wrap.querySelector(".lf-hero-chips") : null;
 			if (!list) return [];
+			function cleanPillText(raw) {
+				var text = String(raw || "").replace(/\s+/g, " ").trim();
+				text = text.replace(/\s*[xX×]\s*$/, "").trim();
+				return text;
+			}
 			return Array.prototype.slice.call(list.querySelectorAll("li.lf-hero-chip")).map(function(li){
 				var textNode = li.querySelector("[data-lf-hero-pill-text]");
 				var raw = textNode ? String(textNode.textContent || "") : String(li.textContent || "");
-				return raw.trim();
+				return cleanPillText(raw);
 			}).filter(function(value){ return value !== ""; });
+		}
+		function createHeroPillNode(wrap, text, onChange) {
+			var li = document.createElement("li");
+			li.className = "lf-hero-chip";
+			var textNode = document.createElement("span");
+			textNode.setAttribute("data-lf-hero-pill-text", "1");
+			textNode.textContent = String(text || "").trim();
+			li.appendChild(textNode);
+			var removeBtn = document.createElement("button");
+			removeBtn.type = "button";
+			removeBtn.className = "lf-ai-hero-pill-remove lf-ai-inline-editor-ignore";
+			removeBtn.setAttribute("data-lf-ai-hero-pill-remove", "1");
+			removeBtn.setAttribute("title", "Remove pill");
+			removeBtn.textContent = "x";
+			removeBtn.addEventListener("click", function(e){
+				e.preventDefault();
+				e.stopPropagation();
+				if (li && li.parentNode) {
+					li.parentNode.removeChild(li);
+				}
+				if (typeof onChange === "function") onChange();
+			});
+			li.appendChild(removeBtn);
+			return li;
 		}
 		function persistHeroPills(wrap) {
 			if (!wrap) return;
@@ -1358,28 +1387,10 @@ function lf_ai_assistant_widget_js(): string {
 				if (sectionType !== "hero") return;
 				var list = wrap.querySelector(".lf-hero-chips");
 				if (!list) return;
-				Array.prototype.slice.call(list.querySelectorAll("li.lf-hero-chip")).forEach(function(li){
-					var text = String(li.textContent || "").trim();
-					var textNode = document.createElement("span");
-					textNode.setAttribute("data-lf-hero-pill-text", "1");
-					textNode.textContent = text;
-					li.textContent = "";
-					li.appendChild(textNode);
-					var removeBtn = document.createElement("button");
-					removeBtn.type = "button";
-					removeBtn.className = "lf-ai-hero-pill-remove lf-ai-inline-editor-ignore";
-					removeBtn.setAttribute("data-lf-ai-hero-pill-remove", "1");
-					removeBtn.setAttribute("title", "Remove pill");
-					removeBtn.textContent = "x";
-					removeBtn.addEventListener("click", function(e){
-						e.preventDefault();
-						e.stopPropagation();
-						if (li && li.parentNode) {
-							li.parentNode.removeChild(li);
-						}
-						persistHeroPills(wrap);
-					});
-					li.appendChild(removeBtn);
+				var items = heroPillsFromWrap(wrap);
+				list.innerHTML = "";
+				items.forEach(function(text){
+					list.appendChild(createHeroPillNode(wrap, text, function(){ persistHeroPills(wrap); }));
 				});
 				var controls = document.createElement("div");
 				controls.className = "lf-ai-hero-pills-controls lf-ai-inline-editor-ignore";
@@ -1398,31 +1409,32 @@ function lf_ai_assistant_widget_js(): string {
 						text = "";
 					}
 					if (!text) return;
-					var li = document.createElement("li");
-					li.className = "lf-hero-chip";
-					var textNode = document.createElement("span");
-					textNode.setAttribute("data-lf-hero-pill-text", "1");
-					textNode.textContent = text;
-					li.appendChild(textNode);
-					var removeBtn = document.createElement("button");
-					removeBtn.type = "button";
-					removeBtn.className = "lf-ai-hero-pill-remove lf-ai-inline-editor-ignore";
-					removeBtn.setAttribute("data-lf-ai-hero-pill-remove", "1");
-					removeBtn.setAttribute("title", "Remove pill");
-					removeBtn.textContent = "x";
-					removeBtn.addEventListener("click", function(ev){
-						ev.preventDefault();
-						ev.stopPropagation();
-						if (li && li.parentNode) {
-							li.parentNode.removeChild(li);
-						}
-						persistHeroPills(wrap);
-					});
-					li.appendChild(removeBtn);
-					list.appendChild(li);
+					list.appendChild(createHeroPillNode(wrap, text, function(){ persistHeroPills(wrap); }));
 					persistHeroPills(wrap);
 				});
 				controls.appendChild(addBtn);
+				var editBtn = document.createElement("button");
+				editBtn.type = "button";
+				editBtn.className = "lf-ai-hero-pill-add lf-ai-inline-editor-ignore";
+				editBtn.textContent = "Edit pills";
+				editBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					var current = heroPillsFromWrap(wrap);
+					var raw = "";
+					try {
+						raw = String(window.prompt("Edit pills (one per line):", current.join("\n")) || "");
+					} catch (err) {
+						raw = "";
+					}
+					var parsed = raw.split(/\r\n|\r|\n/).map(function(v){ return String(v || "").trim(); }).filter(function(v){ return v !== ""; });
+					list.innerHTML = "";
+					parsed.forEach(function(text){
+						list.appendChild(createHeroPillNode(wrap, text, function(){ persistHeroPills(wrap); }));
+					});
+					persistHeroPills(wrap);
+				});
+				controls.appendChild(editBtn);
 				var parent = list.parentNode;
 				if (parent) {
 					parent.appendChild(controls);
