@@ -378,6 +378,23 @@ function lf_ai_apply_section_record_to_context(string $context_type, $context_id
 }
 
 /**
+ * Persist full homepage section row by section key.
+ */
+function lf_ai_apply_homepage_section_row(string $section_id, array $row): bool {
+	$section_id = sanitize_text_field($section_id);
+	if ($section_id === '' || !defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+		return false;
+	}
+	$config = lf_get_homepage_section_config();
+	if (!is_array($config[$section_id] ?? null)) {
+		return false;
+	}
+	$config[$section_id] = $row;
+	update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+	return true;
+}
+
+/**
  * Apply a field-value map to a specific AI context.
  */
 function lf_ai_apply_changes_to_context(string $context_type, $context_id, array $changes): void {
@@ -390,6 +407,7 @@ function lf_ai_apply_changes_to_context(string $context_type, $context_id, array
 	$layout_updates = [];
 	$section_enabled_updates = [];
 	$section_record_updates = [];
+	$homepage_section_row_updates = [];
 	$content_updates = [];
 	foreach ($changes as $field_key => $value) {
 		$key = (string) $field_key;
@@ -437,6 +455,13 @@ function lf_ai_apply_changes_to_context(string $context_type, $context_id, array
 			}
 			continue;
 		}
+		if (str_starts_with($key, '__homepage_section_row::')) {
+			$section_id = sanitize_text_field((string) substr($key, strlen('__homepage_section_row::')));
+			if ($section_id !== '' && is_array($value)) {
+				$homepage_section_row_updates[$section_id] = $value;
+			}
+			continue;
+		}
 		$content_updates[$key] = $value;
 	}
 	if (!empty($dom_updates)) {
@@ -481,6 +506,11 @@ function lf_ai_apply_changes_to_context(string $context_type, $context_id, array
 	if (!empty($section_enabled_updates)) {
 		foreach ($section_enabled_updates as $section_id => $enabled) {
 			lf_ai_apply_section_enabled_to_context($context_type, $context_id, (string) $section_id, (bool) $enabled);
+		}
+	}
+	if (($context_type === 'homepage' || $context_id === 'homepage') && !empty($homepage_section_row_updates)) {
+		foreach ($homepage_section_row_updates as $section_id => $row) {
+			lf_ai_apply_homepage_section_row((string) $section_id, is_array($row) ? $row : []);
 		}
 	}
 	if (empty($content_updates)) {

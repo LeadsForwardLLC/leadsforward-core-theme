@@ -376,12 +376,19 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-column-draggable:hover { outline:2px dashed rgba(131,72,249,.3); outline-offset:3px; }
 		.lf-ai-column-draggable.is-dragging { outline:2px solid #8348f9 !important; outline-offset:3px; opacity:.85; }
 		.lf-ai-rail { position:fixed; left:12px; top:72px; z-index:99997; width:220px; max-height:calc(100vh - 94px); overflow:auto; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 12px 36px rgba(15,23,42,.18); padding:8px; }
-		.lf-ai-rail__title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#64748b; margin:0 0 6px; }
+		.lf-ai-rail.is-collapsed { width:46px; overflow:visible; }
+		.lf-ai-rail__head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 6px; }
+		.lf-ai-rail__title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#64748b; margin:0; }
+		.lf-ai-rail.is-collapsed .lf-ai-rail__title { display:none; }
+		.lf-ai-rail__toggle { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:14px; line-height:1; }
+		.lf-ai-rail.is-collapsed .lf-ai-rail__toggle { width:30px; }
 		.lf-ai-rail__list { display:flex; flex-direction:column; gap:6px; }
+		.lf-ai-rail.is-collapsed .lf-ai-rail__list { display:none; }
 		.lf-ai-rail__item { border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; font-size:12px; cursor:pointer; color:#0f172a; background:#fff; }
 		.lf-ai-rail__item:hover { border-color:#c4b5fd; background:#faf7ff; }
 		.lf-ai-rail__item.is-active { border-color:#8348f9; background:#f5f0ff; }
 		.lf-ai-rail__item small { display:block; color:#64748b; margin-top:2px; }
+		.lf-ai-rail__item.is-dragging { opacity:.55; border-color:#8348f9; }
 		.lf-ai-command { position:fixed; left:50%; top:16%; transform:translateX(-50%); z-index:100001; width:min(560px, calc(100vw - 26px)); background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); padding:10px; }
 		.lf-ai-command[hidden] { display:none !important; }
 		.lf-ai-command__input { width:100%; border:1px solid #d6c8fb; border-radius:8px; padding:10px; font-size:14px; }
@@ -469,6 +476,9 @@ function lf_ai_assistant_widget_js(): string {
 		var commandRows = [];
 		var commandActiveIndex = 0;
 		var sectionRailEl = null;
+		var railCollapsed = false;
+		var railStateKey = "lfAiRailState";
+		var activeRailDragSectionId = "";
 		var suppressInlineClickUntil = 0;
 		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption";
 		var inlineImageCandidateSelector = "main img";
@@ -730,9 +740,35 @@ function lf_ai_assistant_widget_js(): string {
 			if (sectionRailEl) return sectionRailEl;
 			sectionRailEl = document.createElement("aside");
 			sectionRailEl.className = "lf-ai-rail lf-ai-inline-editor-ignore";
-			sectionRailEl.innerHTML = "<div class=\"lf-ai-rail__title\">Page Structure</div><div class=\"lf-ai-rail__list\" data-lf-ai-rail-list></div>";
+			sectionRailEl.innerHTML = "<div class=\"lf-ai-rail__head\"><div class=\"lf-ai-rail__title\">Page Structure</div><button type=\"button\" class=\"lf-ai-rail__toggle\" data-lf-ai-rail-toggle aria-label=\"Minimize structure rail\" title=\"Minimize structure rail\">\u2212</button></div><div class=\"lf-ai-rail__list\" data-lf-ai-rail-list></div>";
+			var toggle = sectionRailEl.querySelector("[data-lf-ai-rail-toggle]");
+			if (toggle) {
+				toggle.addEventListener("click", function(){
+					railCollapsed = !railCollapsed;
+					sectionRailEl.classList.toggle("is-collapsed", railCollapsed);
+					toggle.textContent = railCollapsed ? "\u2261" : "\u2212";
+					toggle.setAttribute("aria-label", railCollapsed ? "Expand structure rail" : "Minimize structure rail");
+					try { window.localStorage.setItem(railStateKey, railCollapsed ? "collapsed" : "expanded"); } catch (e) {}
+				});
+			}
 			document.body.appendChild(sectionRailEl);
+			sectionRailEl.classList.toggle("is-collapsed", railCollapsed);
+			if (toggle) {
+				toggle.textContent = railCollapsed ? "\u2261" : "\u2212";
+				toggle.setAttribute("aria-label", railCollapsed ? "Expand structure rail" : "Minimize structure rail");
+			}
 			return sectionRailEl;
+		}
+		function sectionWrapById(sectionId) {
+			var id = String(sectionId || "");
+			if (!id) return null;
+			var wraps = collectSectionWrappers();
+			for (var i = 0; i < wraps.length; i++) {
+				if (String(wraps[i].getAttribute("data-lf-section-id") || "") === id) {
+					return wraps[i];
+				}
+			}
+			return null;
 		}
 		function refreshSectionRail() {
 			var wraps = collectSectionWrappers();
@@ -749,12 +785,47 @@ function lf_ai_assistant_widget_js(): string {
 			list.innerHTML = "";
 			wraps.forEach(function(wrap){
 				var row = document.createElement("div");
+				var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 				var isHidden = String(wrap.getAttribute("data-lf-section-visible") || "1") === "0";
 				row.className = "lf-ai-rail__item" + (wrap === selectedSectionWrap ? " is-active" : "");
+				row.setAttribute("draggable", "true");
+				row.setAttribute("data-lf-rail-section-id", sectionId);
 				row.innerHTML = escapeHtml(sectionLabelForWrap(wrap)) + "<small>" + escapeHtml(String(wrap.getAttribute("data-lf-section-type") || "section")) + (isHidden ? " • hidden" : "") + "</small>";
 				row.addEventListener("click", function(){
 					setSelectedSection(wrap);
 					try { wrap.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {}
+				});
+				row.addEventListener("dragstart", function(e){
+					activeRailDragSectionId = sectionId;
+					row.classList.add("is-dragging");
+					if (e.dataTransfer) {
+						e.dataTransfer.effectAllowed = "move";
+						e.dataTransfer.setData("text/plain", sectionId);
+					}
+				});
+				row.addEventListener("dragover", function(e){
+					if (!activeRailDragSectionId || activeRailDragSectionId === sectionId) return;
+					e.preventDefault();
+				});
+				row.addEventListener("drop", function(e){
+					if (!activeRailDragSectionId || activeRailDragSectionId === sectionId) return;
+					e.preventDefault();
+					var dragWrap = sectionWrapById(activeRailDragSectionId);
+					var targetWrap = sectionWrapById(sectionId);
+					if (!dragWrap || !targetWrap || !dragWrap.parentNode) return;
+					var rect = row.getBoundingClientRect();
+					var after = e.clientY > (rect.top + rect.height / 2);
+					if (after) {
+						targetWrap.parentNode.insertBefore(dragWrap, targetWrap.nextSibling);
+					} else {
+						targetWrap.parentNode.insertBefore(dragWrap, targetWrap);
+					}
+					setSelectedSection(dragWrap);
+					persistSectionOrder();
+				});
+				row.addEventListener("dragend", function(){
+					row.classList.remove("is-dragging");
+					activeRailDragSectionId = "";
 				});
 				list.appendChild(row);
 			});
@@ -776,8 +847,16 @@ function lf_ai_assistant_widget_js(): string {
 			persistSectionOrder();
 			refreshSectionRail();
 		}
-		function sectionSupportsDuplicate() {
-			return activeContextType !== "homepage";
+		function sectionSupportsDuplicate(sectionType, sectionId) {
+			var type = String(sectionType || "");
+			var id = String(sectionId || "");
+			if (type === "" || type === "hero" || type === "hero_1") {
+				return false;
+			}
+			if (activeContextType === "homepage") {
+				return ["service_details", "content_image_a", "image_content_b", "content_image_c", "trust_reviews"].indexOf(id) !== -1;
+			}
+			return true;
 		}
 		function sectionSupportsColumnSwap(sectionType) {
 			var type = String(sectionType || "");
@@ -888,11 +967,14 @@ function lf_ai_assistant_widget_js(): string {
 					setStatus((res.data && res.data.message) ? res.data.message : "Section deleted. Use undo to restore.", false);
 					refreshSectionRail();
 				} else {
-					setStatus((res && res.data && res.data.message) ? res.data.message : "Section delete failed.", true);
+					var failMsg = (res && res.data && res.data.message) ? res.data.message : "Section delete failed.";
+					setStatus(failMsg, true);
+					try { window.alert(failMsg); } catch (e) {}
 				}
 			}).fail(function(xhr){
 				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Section delete failed.";
 				setStatus(msg, true);
+				try { window.alert(msg); } catch (e) {}
 			});
 		}
 		function persistSectionDuplicate(wrap) {
@@ -907,6 +989,10 @@ function lf_ai_assistant_widget_js(): string {
 				context_id: activeContextId,
 				section_id: sectionId
 			}).done(function(res){
+				if (res && res.success && res.data && res.data.reload) {
+					window.location.reload();
+					return;
+				}
 				if (res && res.success && res.data && res.data.new_section_id) {
 					var clone = wrap.cloneNode(true);
 					clone.classList.remove("is-dragging", "lf-ai-section-active");
@@ -919,12 +1005,32 @@ function lf_ai_assistant_widget_js(): string {
 					setSelectedSection(clone);
 					setStatus((res.data && res.data.message) ? res.data.message : "Section duplicated.", false);
 				} else {
-					setStatus((res && res.data && res.data.message) ? res.data.message : "Section duplicate failed.", true);
+					var failMsg = (res && res.data && res.data.message) ? res.data.message : "Section duplicate failed.";
+					setStatus(failMsg, true);
+					try { window.alert(failMsg); } catch (e) {}
 				}
 			}).fail(function(xhr){
 				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Section duplicate failed.";
 				setStatus(msg, true);
+				try { window.alert(msg); } catch (e) {}
 			});
+		}
+		function moveSectionByStep(wrap, delta) {
+			if (!wrap || !delta) return;
+			var wraps = collectSectionWrappers();
+			var idx = wraps.indexOf(wrap);
+			if (idx < 0) return;
+			var targetIdx = idx + delta;
+			if (targetIdx < 0 || targetIdx >= wraps.length) return;
+			var target = wraps[targetIdx];
+			if (!target || !target.parentNode) return;
+			if (delta < 0) {
+				target.parentNode.insertBefore(wrap, target);
+			} else {
+				target.parentNode.insertBefore(wrap, target.nextSibling);
+			}
+			setSelectedSection(wrap);
+			persistSectionOrder();
 		}
 		function buildSectionControls() {
 			collectSectionWrappers().forEach(function(wrap){
@@ -947,7 +1053,31 @@ function lf_ai_assistant_widget_js(): string {
 					});
 					controls.appendChild(swapBtn);
 				}
-				if (sectionSupportsDuplicate()) {
+				var upBtn = document.createElement("button");
+				upBtn.type = "button";
+				upBtn.className = "lf-ai-section-btn";
+				upBtn.textContent = "↑";
+				upBtn.setAttribute("title", "Move section up");
+				upBtn.setAttribute("aria-label", "Move section up");
+				upBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					moveSectionByStep(wrap, -1);
+				});
+				controls.appendChild(upBtn);
+				var downBtn = document.createElement("button");
+				downBtn.type = "button";
+				downBtn.className = "lf-ai-section-btn";
+				downBtn.textContent = "↓";
+				downBtn.setAttribute("title", "Move section down");
+				downBtn.setAttribute("aria-label", "Move section down");
+				downBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					moveSectionByStep(wrap, 1);
+				});
+				controls.appendChild(downBtn);
+				if (sectionSupportsDuplicate(sectionType, String(wrap.getAttribute("data-lf-section-id") || ""))) {
 					var dupBtn = document.createElement("button");
 					dupBtn.type = "button";
 					dupBtn.className = "lf-ai-section-btn";
@@ -981,9 +1111,15 @@ function lf_ai_assistant_widget_js(): string {
 				deleteBtn.addEventListener("click", function(e){
 					e.preventDefault();
 					e.stopPropagation();
-					openConfirm("Delete this section? You can undo after deleting.", "Delete Section", function(){
+					var ok = false;
+					try {
+						ok = window.confirm("Delete this section? You can undo after deleting.");
+					} catch (err) {
+						ok = true;
+					}
+					if (ok) {
 						persistSectionDelete(wrap);
-					});
+					}
 				});
 				controls.appendChild(deleteBtn);
 				wrap.appendChild(controls);
@@ -1429,7 +1565,10 @@ function lf_ai_assistant_widget_js(): string {
 			persistSectionColumnSwap(selectedSectionWrap);
 		}
 		function selectedSectionDuplicate() {
-			if (!selectedSectionWrap || !sectionSupportsDuplicate()) return;
+			if (!selectedSectionWrap) return;
+			var type = String(selectedSectionWrap.getAttribute("data-lf-section-type") || "");
+			var id = String(selectedSectionWrap.getAttribute("data-lf-section-id") || "");
+			if (!sectionSupportsDuplicate(type, id)) return;
 			persistSectionDuplicate(selectedSectionWrap);
 		}
 		function ensureCommandPalette() {
@@ -1480,7 +1619,7 @@ function lf_ai_assistant_widget_js(): string {
 				{ label: "Move selected section down", enabled: hasSel, run: function(){ moveSelectedSection(1); } },
 				{ label: visible ? "Hide selected section" : "Show selected section", enabled: hasSel, run: selectedSectionToggleVisibility },
 				{ label: "Delete selected section", enabled: hasSel, run: selectedSectionDelete },
-				{ label: "Duplicate selected section", enabled: hasSel && sectionSupportsDuplicate(), run: selectedSectionDuplicate },
+				{ label: "Duplicate selected section", enabled: hasSel && sectionSupportsDuplicate(selectedSectionWrap ? selectedSectionWrap.getAttribute("data-lf-section-type") : "", selectedSectionWrap ? selectedSectionWrap.getAttribute("data-lf-section-id") : ""), run: selectedSectionDuplicate },
 				{ label: "Reverse selected columns", enabled: hasSel && selectedSectionCanReverse(), run: selectedSectionReverseColumns }
 			];
 		}
@@ -1832,10 +1971,18 @@ function lf_ai_assistant_widget_js(): string {
 			var target = e.target;
 			var targetTag = target && target.tagName ? String(target.tagName).toLowerCase() : "";
 			var isTypingTarget = !!(target && (target.isContentEditable || targetTag === "input" || targetTag === "textarea" || targetTag === "select"));
-			if ((e.metaKey || e.ctrlKey) && String(e.key || "").toLowerCase() === "k") {
+			var key = String(e.key || "");
+			var keyLower = key.toLowerCase();
+			if ((e.metaKey || e.ctrlKey) && (keyLower === "k" || ((e.shiftKey && keyLower === "p")))) {
 				e.preventDefault();
 				ensureCommandPalette();
 				toggleCommandPalette(commandPaletteEl.hidden);
+				return;
+			}
+			if (!isTypingTarget && key === "/") {
+				e.preventDefault();
+				ensureCommandPalette();
+				toggleCommandPalette(true);
 				return;
 			}
 			if (inlineActiveEl) {
@@ -1850,23 +1997,39 @@ function lf_ai_assistant_widget_js(): string {
 					return;
 				}
 			}
+			if (!selectedSectionWrap && !isTypingTarget) {
+				var first = collectSectionWrappers()[0] || null;
+				if (first) {
+					setSelectedSection(first);
+				}
+			}
 			if (!isTypingTarget && selectedSectionWrap && $confirm.prop("hidden") && (!commandPaletteEl || commandPaletteEl.hidden)) {
-				if ((e.altKey || e.metaKey) && e.key === "ArrowUp") {
+				if ((e.altKey || e.metaKey || e.shiftKey) && key === "ArrowUp") {
 					e.preventDefault();
 					moveSelectedSection(-1);
 					return;
 				}
-				if ((e.altKey || e.metaKey) && e.key === "ArrowDown") {
+				if ((e.altKey || e.metaKey || e.shiftKey) && key === "ArrowDown") {
 					e.preventDefault();
 					moveSelectedSection(1);
 					return;
 				}
-				if (String(e.key || "").toLowerCase() === "d") {
+				if (keyLower === "k" && !e.metaKey && !e.ctrlKey) {
+					e.preventDefault();
+					moveSelectedSection(-1);
+					return;
+				}
+				if (keyLower === "j" && !e.metaKey && !e.ctrlKey) {
+					e.preventDefault();
+					moveSelectedSection(1);
+					return;
+				}
+				if (keyLower === "d" && !e.metaKey && !e.ctrlKey) {
 					e.preventDefault();
 					selectedSectionDuplicate();
 					return;
 				}
-				if (String(e.key || "").toLowerCase() === "h") {
+				if (keyLower === "h" && !e.metaKey && !e.ctrlKey) {
 					e.preventDefault();
 					selectedSectionToggleVisibility();
 					return;
@@ -1891,6 +2054,9 @@ function lf_ai_assistant_widget_js(): string {
 		try {
 			var initial = window.localStorage.getItem(stateKey);
 			if (initial === "open") setOpen(true);
+		} catch (e) {}
+		try {
+			railCollapsed = window.localStorage.getItem(railStateKey) === "collapsed";
 		} catch (e) {}
 		$prompt.attr("placeholder", (lfAiFloating.i18n && lfAiFloating.i18n.placeholder) ? lfAiFloating.i18n.placeholder : "Ask for specific edits...");
 		setStatus((lfAiFloating.i18n && lfAiFloating.i18n.statusReady) ? lfAiFloating.i18n.statusReady : "Ready.", false);

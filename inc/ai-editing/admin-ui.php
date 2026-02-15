@@ -1217,7 +1217,59 @@ function lf_ai_ajax_duplicate_section(): void {
 	}
 	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
 	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
-		wp_send_json_error(['message' => __('Section duplication is currently available on page-builder pages/CPTs.', 'leadsforward-core')]);
+		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+			wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
+		}
+		$config = lf_get_homepage_section_config();
+		if (!is_array($config[$section_id] ?? null)) {
+			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+		}
+		$source_row = is_array($config[$section_id]) ? $config[$section_id] : [];
+		$slot_groups = [
+			'service_details' => ['content_image_a', 'image_content_b', 'content_image_c', 'service_details'],
+			'content_image_a' => ['content_image_a', 'image_content_b', 'content_image_c', 'service_details'],
+			'image_content_b' => ['content_image_a', 'image_content_b', 'content_image_c', 'service_details'],
+			'content_image_c' => ['content_image_a', 'image_content_b', 'content_image_c', 'service_details'],
+			'trust_reviews' => ['trust_reviews'],
+		];
+		$group = $slot_groups[$section_id] ?? [];
+		if (empty($group)) {
+			wp_send_json_error(['message' => __('No duplicate slot is available for this section type on homepage.', 'leadsforward-core')]);
+		}
+		$target_id = '';
+		foreach ($group as $candidate) {
+			if ($candidate === $section_id) {
+				continue;
+			}
+			$candidate_row = is_array($config[$candidate] ?? null) ? $config[$candidate] : null;
+			if (is_array($candidate_row) && empty($candidate_row['enabled'])) {
+				$target_id = $candidate;
+				break;
+			}
+		}
+		if ($target_id === '') {
+			wp_send_json_error(['message' => __('No free duplicate slot found. Hide one existing paired section first, then duplicate again.', 'leadsforward-core')]);
+		}
+		$old_target_row = is_array($config[$target_id] ?? null) ? $config[$target_id] : [];
+		$new_target_row = array_merge($old_target_row, $source_row);
+		$new_target_row['enabled'] = true;
+		$config[$target_id] = $new_target_row;
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		$log_id = function_exists('lf_ai_log_action')
+			? lf_ai_log_action(
+				$context_type,
+				$context_id_use,
+				['__homepage_section_row::' . $target_id => $old_target_row],
+				['__homepage_section_row::' . $target_id => $new_target_row],
+				'Inline section duplicate (homepage slot)'
+			)
+			: '';
+		wp_send_json_success([
+			'message' => __('Section duplicated into an available homepage slot.', 'leadsforward-core'),
+			'new_section_id' => $target_id,
+			'reload' => true,
+			'log_id' => $log_id,
+		]);
 	}
 	$pid = (int) $context_id_use;
 	$post = get_post($pid);

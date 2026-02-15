@@ -23,11 +23,20 @@ Each editable section now exposes hover controls:
 
 All actions are logged through the AI change log and can be undone/redone.
 
+Notes on duplication:
+
+- Page-builder contexts: creates a true duplicated section instance.
+- Homepage context: duplicates into the next available predefined homepage slot for that section family.
+
 ## Keyboard Shortcuts
 
 - `Cmd/Ctrl + K` Open command palette.
+- `Cmd/Ctrl + Shift + P` Alternate command palette shortcut.
+- `/` Open command palette when not typing in an input.
 - `Alt + ArrowUp` Move selected section up.
 - `Alt + ArrowDown` Move selected section down.
+- `Shift + ArrowUp` Move selected section up (alternate).
+- `Shift + ArrowDown` Move selected section down (alternate).
 - `D` Duplicate selected section.
 - `H` Hide/show selected section.
 - `Delete` or `Backspace` Delete selected section (confirmation required).
@@ -58,6 +67,8 @@ A compact left-side "Page Structure" rail lists currently rendered sections and 
 - Quick jump/scroll to section
 - Active section highlighting
 - Hidden-state visibility in the list
+- Drag-and-drop reordering directly from the rail
+- Collapse/expand toggle (state persisted in local storage)
 
 ## Persistence + Safety
 
