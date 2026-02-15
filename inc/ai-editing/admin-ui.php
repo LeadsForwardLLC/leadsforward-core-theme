@@ -1375,12 +1375,46 @@ function lf_ai_ajax_add_section(): void {
 		$config = lf_get_homepage_section_config();
 		$order = lf_homepage_controller_order();
 		$old_order = $order;
-		$old_row = is_array($config[$section_type] ?? null) ? $config[$section_type] : [];
-		if (!is_array($config[$section_type] ?? null)) {
-			$config[$section_type] = function_exists('lf_homepage_default_section_config') ? lf_homepage_default_section_config($section_type) : ['enabled' => true, 'variant' => 'default'];
+		$slot_groups = [
+			'service_details' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
+			'content_image_a' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
+			'image_content_b' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
+			'content_image_c' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
+			'content_image' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
+			'image_content' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
+			'trust_reviews' => ['trust_reviews'],
+		];
+		$target_section_id = $section_type;
+		$current_row = is_array($config[$section_type] ?? null) ? $config[$section_type] : [];
+		$current_enabled = !empty($current_row['enabled']);
+		if ($current_enabled) {
+			$group = $slot_groups[$section_type] ?? [];
+			if (empty($group)) {
+				wp_send_json_error(['message' => __('This section is already on the homepage. Use duplicate only for repeatable section families.', 'leadsforward-core')]);
+			}
+			foreach ($group as $candidate) {
+				if ($candidate === $section_type) {
+					continue;
+				}
+				$candidate_row = is_array($config[$candidate] ?? null) ? $config[$candidate] : null;
+				if (!is_array($candidate_row)) {
+					continue;
+				}
+				if (empty($candidate_row['enabled'])) {
+					$target_section_id = $candidate;
+					break;
+				}
+			}
+			if ($target_section_id === $section_type) {
+				wp_send_json_error(['message' => __('No free slot available for this repeatable section family on homepage.', 'leadsforward-core')]);
+			}
 		}
-		$config[$section_type]['enabled'] = true;
-		if (!in_array($section_type, $order, true)) {
+		$old_row = is_array($config[$target_section_id] ?? null) ? $config[$target_section_id] : [];
+		if (!is_array($config[$target_section_id] ?? null)) {
+			$config[$target_section_id] = function_exists('lf_homepage_default_section_config') ? lf_homepage_default_section_config($target_section_id) : ['enabled' => true, 'variant' => 'default'];
+		}
+		$config[$target_section_id]['enabled'] = true;
+		if (!in_array($target_section_id, $order, true)) {
 			$insert_at = count($order);
 			$cta_idx = array_search('cta', $order, true);
 			if ($cta_idx !== false) {
@@ -1392,20 +1426,29 @@ function lf_ai_ajax_add_section(): void {
 					$insert_at = (int) $after_idx + 1;
 				}
 			}
-			array_splice($order, $insert_at, 0, [$section_type]);
+			array_splice($order, $insert_at, 0, [$target_section_id]);
+		} elseif ($after_section_id !== '' && $after_section_id !== $target_section_id) {
+			$current_idx = array_search($target_section_id, $order, true);
+			$after_idx = array_search($after_section_id, $order, true);
+			if ($current_idx !== false && $after_idx !== false) {
+				array_splice($order, (int) $current_idx, 1);
+				$after_idx = array_search($after_section_id, $order, true);
+				$insert_at = $after_idx === false ? count($order) : ((int) $after_idx + 1);
+				array_splice($order, $insert_at, 0, [$target_section_id]);
+			}
 		}
 		$order = lf_homepage_sanitize_order($order, true);
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 		update_option(LF_HOMEPAGE_ORDER_OPTION, $order, true);
 		$log_old = [
-			'__section_enabled::' . $section_type => !empty($old_row['enabled']),
+			'__section_enabled::' . $target_section_id => !empty($old_row['enabled']),
 			'__section_order' => $old_order,
-			'__homepage_section_row::' . $section_type => $old_row,
+			'__homepage_section_row::' . $target_section_id => $old_row,
 		];
 		$log_new = [
-			'__section_enabled::' . $section_type => true,
+			'__section_enabled::' . $target_section_id => true,
 			'__section_order' => $order,
-			'__homepage_section_row::' . $section_type => $config[$section_type],
+			'__homepage_section_row::' . $target_section_id => $config[$target_section_id],
 		];
 		$log_id = function_exists('lf_ai_log_action')
 			? lf_ai_log_action($context_type, $context_id_use, $log_old, $log_new, 'Inline add section from library')
@@ -1413,7 +1456,7 @@ function lf_ai_ajax_add_section(): void {
 		wp_send_json_success([
 			'message' => __('Section added from library.', 'leadsforward-core'),
 			'reload' => true,
-			'section_id' => $section_type,
+			'section_id' => $target_section_id,
 			'log_id' => $log_id,
 		]);
 	}

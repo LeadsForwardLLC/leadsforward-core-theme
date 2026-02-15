@@ -536,6 +536,7 @@ function lf_ai_assistant_widget_js(): string {
 		var railCollapsed = false;
 		var railStateKey = "lfAiRailState";
 		var activeRailDragSectionId = "";
+		var activeLibraryDragSectionType = "";
 		var railLibraryOpen = false;
 		var suppressInlineClickUntil = 0;
 		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption";
@@ -833,7 +834,7 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			return sectionRailEl;
 		}
-		function addSectionFromLibrary(sectionType) {
+		function addSectionFromLibrary(sectionType, afterSectionId) {
 			var type = String(sectionType || "");
 			if (!type) return;
 			setStatus("Adding section...", false);
@@ -843,7 +844,7 @@ function lf_ai_assistant_widget_js(): string {
 				context_type: activeContextType,
 				context_id: activeContextId,
 				section_type: type,
-				after_section_id: selectedSectionWrap ? String(selectedSectionWrap.getAttribute("data-lf-section-id") || "") : ""
+				after_section_id: String(afterSectionId || (selectedSectionWrap ? String(selectedSectionWrap.getAttribute("data-lf-section-id") || "") : ""))
 			}).done(function(res){
 				if (res && res.success && res.data && res.data.reload) {
 					window.location.reload();
@@ -884,12 +885,21 @@ function lf_ai_assistant_widget_js(): string {
 				btn.type = "button";
 				btn.className = "lf-ai-rail__library-item";
 				btn.textContent = label + " (" + id + ")";
-				if (visibleIds[id] && activeContextType === "homepage") {
-					btn.disabled = true;
-					btn.title = "Already on this homepage";
-				}
+				btn.setAttribute("draggable", "true");
+				btn.setAttribute("data-lf-library-section-type", id);
+				btn.addEventListener("dragstart", function(e){
+					activeLibraryDragSectionType = id;
+					btn.classList.add("is-dragging");
+					if (e.dataTransfer) {
+						e.dataTransfer.effectAllowed = "copyMove";
+						e.dataTransfer.setData("text/plain", id);
+					}
+				});
+				btn.addEventListener("dragend", function(){
+					btn.classList.remove("is-dragging");
+					activeLibraryDragSectionType = "";
+				});
 				btn.addEventListener("click", function(){
-					if (btn.disabled) return;
 					addSectionFromLibrary(id);
 				});
 				list.appendChild(btn);
@@ -940,10 +950,20 @@ function lf_ai_assistant_widget_js(): string {
 					}
 				});
 				row.addEventListener("dragover", function(e){
+					if (activeLibraryDragSectionType) {
+						e.preventDefault();
+						return;
+					}
 					if (!activeRailDragSectionId || activeRailDragSectionId === sectionId) return;
 					e.preventDefault();
 				});
 				row.addEventListener("drop", function(e){
+					if (activeLibraryDragSectionType) {
+						e.preventDefault();
+						addSectionFromLibrary(activeLibraryDragSectionType, sectionId);
+						activeLibraryDragSectionType = "";
+						return;
+					}
 					if (!activeRailDragSectionId || activeRailDragSectionId === sectionId) return;
 					e.preventDefault();
 					var dragWrap = sectionWrapById(activeRailDragSectionId);
@@ -964,6 +984,17 @@ function lf_ai_assistant_widget_js(): string {
 					activeRailDragSectionId = "";
 				});
 				list.appendChild(row);
+			});
+			list.addEventListener("dragover", function(e){
+				if (activeLibraryDragSectionType) {
+					e.preventDefault();
+				}
+			});
+			list.addEventListener("drop", function(e){
+				if (!activeLibraryDragSectionType) return;
+				e.preventDefault();
+				addSectionFromLibrary(activeLibraryDragSectionType, "");
+				activeLibraryDragSectionType = "";
 			});
 		}
 		function moveSelectedSection(delta) {
@@ -1383,11 +1414,21 @@ function lf_ai_assistant_widget_js(): string {
 					}
 				};
 				wrap.ondragover = function(e){
+					if (activeLibraryDragSectionType) {
+						e.preventDefault();
+						return;
+					}
 					if (!activeDragSection || wrap === activeDragSection) return;
 					e.preventDefault();
 					reorderSectionInDom(wrap, e.clientY);
 				};
 				wrap.ondrop = function(e){
+					if (activeLibraryDragSectionType) {
+						e.preventDefault();
+						addSectionFromLibrary(activeLibraryDragSectionType, String(wrap.getAttribute("data-lf-section-id") || ""));
+						activeLibraryDragSectionType = "";
+						return;
+					}
 					e.preventDefault();
 				};
 				wrap.ondragend = function(){
