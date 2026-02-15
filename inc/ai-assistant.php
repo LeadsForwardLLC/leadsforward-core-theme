@@ -1650,6 +1650,41 @@ function lf_ai_assistant_widget_js(): string {
 				return processStepValueFromLi(li);
 			}).filter(function(v){ return v !== ""; });
 		}
+		function processPromptEditStep(li, wrap, list) {
+			if (!li || !wrap || !list) return;
+			var current = processStepValueFromLi(li);
+			var next = "";
+			try {
+				next = String(window.prompt("Edit step text (use \"Title || Body\" for two-line step):", current) || "").trim();
+			} catch (err) {
+				next = "";
+			}
+			if (!next) return;
+			var removeBtn = li.querySelector("[data-lf-ai-list-remove=\"1\"]");
+			Array.prototype.slice.call(li.querySelectorAll(".lf-process__step-title,.lf-process__step-body,.lf-process__text")).forEach(function(node){
+				if (node && node.parentNode) node.parentNode.removeChild(node);
+			});
+			var parts = next.split("||");
+			if (parts.length > 1) {
+				var title = document.createElement("span");
+				title.className = "lf-process__step-title";
+				title.textContent = String(parts[0] || "").trim();
+				li.insertBefore(title, removeBtn || null);
+				var bodyText = String(parts.slice(1).join("||") || "").trim();
+				if (bodyText) {
+					var body = document.createElement("span");
+					body.className = "lf-process__step-body";
+					body.textContent = bodyText;
+					li.insertBefore(body, removeBtn || null);
+				}
+			} else {
+				var plain = document.createElement("span");
+				plain.className = "lf-process__text";
+				plain.textContent = next;
+				li.insertBefore(plain, removeBtn || null);
+			}
+			persistSectionLineItems(wrap, "process_steps", processValuesFromList(list), "Saving process steps...");
+		}
 		function buildProcessStepControls() {
 			collectSectionWrappers().forEach(function(wrap){
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
@@ -1699,6 +1734,16 @@ function lf_ai_assistant_widget_js(): string {
 						if (li && li.parentNode) li.parentNode.removeChild(li);
 						persistSectionLineItems(wrap, "process_steps", processValuesFromList(list), "Saving process steps...");
 					}));
+					li.setAttribute("title", "Double-click to edit step text");
+					li.ondblclick = function(e){
+						var target = e && e.target && e.target.nodeType === 1 ? e.target : null;
+						if (target && target.closest && target.closest("[data-lf-ai-list-remove=\"1\"]")) {
+							return;
+						}
+						e.preventDefault();
+						e.stopPropagation();
+						processPromptEditStep(li, wrap, list);
+					};
 				});
 				var controls = document.createElement("div");
 				controls.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
@@ -1718,7 +1763,7 @@ function lf_ai_assistant_widget_js(): string {
 					li.appendChild(text);
 					list.appendChild(li);
 					buildProcessStepControls();
-					persistSectionLineItems(wrap, "process_steps", processValuesFromList(list), "Saving process steps...");
+					processPromptEditStep(li, wrap, list);
 				});
 				controls.appendChild(addBtn);
 				if (list.parentNode) {
