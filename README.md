@@ -27,7 +27,7 @@ LeadsForward Core provides:
 - **Legal pages:** Fixed Privacy Policy + Terms templates with dynamic business info
 - **Duplicate:** One-click duplicate action for any post type in admin lists
 - **AI Assistant (bounded):** Safe copy suggestions + field edits only (no layout/CSS changes)
-- **AI Studio:** Orchestrator-driven site content generation (no OpenAI keys stored) plus post-gen QA audit + one-pass auto-repair, with hourly Airtable review sync
+- **AI Studio:** Orchestrator-driven site content generation plus post-gen QA audit + one-pass auto-repair, with hourly Airtable review sync
 - **Server-rendered blocks:** Hero, Trust/Reviews, CTA, FAQ Accordion, Map+NAP
 - **SEO engine:** Global SEO settings, per-page meta, canonical/noindex/robots, OG/Twitter, XML sitemap, keyword assignment, JSON-LD, script injections
 - **Heading rules:** Enforced single H1 + heading hierarchy validation (warnings only)
@@ -49,6 +49,7 @@ Core system documentation (read in order):
 - `docs/04_SECTION_SCHEMA.md`
 - `docs/05_THEME_INTEGRATION.md`
 - `docs/06_AI_PROMPT_ENGINE.md`
+- `docs/07_ICON_SYSTEM.md`
 
 ---
 
@@ -67,7 +68,7 @@ leadsforward-core-theme/
 ├── assets/
 │   ├── css/          # editor.css, variation-tokens.css, projects.css, future front-end CSS
 │   ├── js/           # quote-builder.js, lf-section-sortable.js, project-gallery.js, section-sliders.js
-│   ├── icons/        # Local Heroicons SVGs (inline usage)
+│   ├── icons/        # Runtime SVG sprite (`sprite.svg`)
 │   └── images/
 ├── docs/             # System documentation
 ├── inc/
@@ -248,7 +249,7 @@ New section type: **Centered Content** (`content_centered`) — minimal, text-on
 
 ## Homepage Generation Flow
 
-- **Where:** LeadsForward → Setup (single guided flow).
+- **Where:** LeadsForward → Website Manifester (with supporting values in Global Settings).
 - **Inputs:** Business info, niche, city/region, homepage keywords, hero variant, variation profile.
 - **Trigger:** “Generate homepage now” calls the orchestrator and applies homepage-only updates.
 - **Storage:** `lf_homepage_keywords` + homepage hero variant stored in homepage config.

@@ -324,6 +324,13 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
 	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
 	update_option('lf_ai_studio_callback_url', isset($_POST['lf_ai_studio_callback_url']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_callback_url'])) : '');
+	$openai_key_clear = !empty($_POST['lf_openai_api_key_clear']);
+	$openai_key_input = isset($_POST['lf_openai_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_openai_api_key'])) : '';
+	if ($openai_key_clear) {
+		delete_option('lf_openai_api_key');
+	} elseif ($openai_key_input !== '') {
+		update_option('lf_openai_api_key', $openai_key_input);
+	}
 	update_option('lf_ai_airtable_enabled', isset($_POST['lf_ai_airtable_enabled']) ? '1' : '0');
 	update_option('lf_ai_airtable_pat', isset($_POST['lf_ai_airtable_pat']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_pat'])) : '');
 	update_option('lf_ai_airtable_base', isset($_POST['lf_ai_airtable_base']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_base'])) : '');
@@ -669,6 +676,7 @@ function lf_ops_render_global_settings_page(): void {
 	$manifester_webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$manifester_secret = (string) get_option('lf_ai_studio_secret', '');
 	$manifester_callback = (string) get_option('lf_ai_studio_callback_url', '');
+	$openai_key_set = (string) get_option('lf_openai_api_key', '') !== '';
 	$airtable_settings = function_exists('lf_ai_studio_airtable_get_settings')
 		? lf_ai_studio_airtable_get_settings()
 		: [];
@@ -792,6 +800,21 @@ function lf_ops_render_global_settings_page(): void {
 								</td>
 							</tr>
 							<tr>
+								<th scope="row"><label for="lf_openai_api_key_global"><?php esc_html_e('OpenAI API key (AI Assistant)', 'leadsforward-core'); ?></label></th>
+								<td>
+									<input type="password" class="large-text" name="lf_openai_api_key" id="lf_openai_api_key_global" value="" autocomplete="new-password" placeholder="<?php echo $openai_key_set ? esc_attr__('Saved (hidden)', 'leadsforward-core') : esc_attr__('sk-...', 'leadsforward-core'); ?>" />
+									<label style="display:inline-block;margin-top:6px;">
+										<input type="checkbox" id="lf-openai-token-toggle-global" />
+										<?php esc_html_e('Show key', 'leadsforward-core'); ?>
+									</label>
+									<label style="display:inline-block;margin-top:6px;margin-left:10px;">
+										<input type="checkbox" name="lf_openai_api_key_clear" value="1" />
+										<?php esc_html_e('Clear saved key', 'leadsforward-core'); ?>
+									</label>
+									<p class="description"><?php esc_html_e('Used by the floating AI Assistant for guarded copy edits only.', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
 								<th colspan="2" style="padding-top: 16px;"><?php esc_html_e('Airtable Connection', 'leadsforward-core'); ?></th>
 							</tr>
 							<tr>
@@ -911,12 +934,20 @@ function lf_ops_render_global_settings_page(): void {
 						(function() {
 							var toggle = document.getElementById('lf-airtable-token-toggle-global');
 							var input = document.getElementById('lf_ai_airtable_pat_global');
+							var openaiToggle = document.getElementById('lf-openai-token-toggle-global');
+							var openaiInput = document.getElementById('lf_openai_api_key_global');
 							if (!toggle || !input) {
-								return;
+								// Continue to optional OpenAI toggle below.
+							} else {
+								toggle.addEventListener('change', function() {
+									input.type = toggle.checked ? 'text' : 'password';
+								});
 							}
-							toggle.addEventListener('change', function() {
-								input.type = toggle.checked ? 'text' : 'password';
-							});
+							if (openaiToggle && openaiInput) {
+								openaiToggle.addEventListener('change', function() {
+									openaiInput.type = openaiToggle.checked ? 'text' : 'password';
+								});
+							}
 						})();
 					</script>
 				</div>

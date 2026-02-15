@@ -121,3 +121,32 @@ function lf_ai_rollback(string $id): bool {
 	update_option(LF_AI_LOG_OPTION, $log);
 	return true;
 }
+
+/**
+ * Find latest non-rolled-back log id for a context and user.
+ */
+function lf_ai_latest_rollback_candidate(string $context_type, $context_id, int $user_id): string {
+	$context_id_string = (string) $context_id;
+	foreach (lf_ai_get_log() as $entry) {
+		if (!is_array($entry)) {
+			continue;
+		}
+		if (($entry['context_type'] ?? '') !== $context_type) {
+			continue;
+		}
+		if ((string) ($entry['context_id'] ?? '') !== $context_id_string) {
+			continue;
+		}
+		if (!empty($entry['rolled_back'])) {
+			continue;
+		}
+		if ((int) ($entry['user_id'] ?? 0) !== $user_id) {
+			continue;
+		}
+		$id = (string) ($entry['id'] ?? '');
+		if ($id !== '') {
+			return $id;
+		}
+	}
+	return '';
+}

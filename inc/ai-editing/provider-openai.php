@@ -22,7 +22,7 @@ function lf_ai_openai_get_key(): string {
 function lf_ai_openai_completion($response, string $system, string $user, string $context_type, $context_id) {
 	$key = lf_ai_openai_get_key();
 	if ($key === '') {
-		return new WP_Error('lf_ai_no_key', __('OpenAI key is missing. Add it in LeadsForward → Setup.', 'leadsforward-core'));
+		return new WP_Error('lf_ai_no_key', __('OpenAI key is missing. Add it in LeadsForward → Global Settings → Website Manifester Settings.', 'leadsforward-core'));
 	}
 	$payload = [
 		'model'       => 'gpt-4o-mini',
