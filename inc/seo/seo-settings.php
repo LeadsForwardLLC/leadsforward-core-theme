@@ -259,7 +259,7 @@ function lf_seo_render_settings_page(): void {
 		<?php if ($saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('SEO settings saved.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
-		<form method="post">
+		<form method="post" class="lf-seo-settings-form">
 			<?php wp_nonce_field('lf_seo_settings', 'lf_seo_settings_nonce'); ?>
 
 			<h2><?php esc_html_e('General', 'leadsforward-core'); ?></h2>
@@ -462,6 +462,65 @@ function lf_seo_render_settings_page(): void {
 	</div>
 	<script>
 		(function () {
+			function buildSeoPanels() {
+				var form = document.querySelector('.lf-seo-settings-form');
+				if (!form) return;
+				var storageKey = 'lfSeoPanelsStateV1';
+				var saved = {};
+				try {
+					saved = JSON.parse(window.localStorage.getItem(storageKey) || '{}') || {};
+				} catch (e) {
+					saved = {};
+				}
+				var h2s = Array.prototype.slice.call(form.querySelectorAll(':scope > h2'));
+				h2s.forEach(function (h2) {
+					var panelId = (h2.textContent || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+					var panel = document.createElement('section');
+					panel.className = 'lf-seo-panel';
+					panel.setAttribute('data-panel-id', panelId);
+
+					var header = document.createElement('button');
+					header.type = 'button';
+					header.className = 'lf-seo-panel__header';
+					header.setAttribute('aria-expanded', 'false');
+					header.innerHTML = '<span class="lf-seo-panel__title">' + (h2.textContent || '') + '</span><span class="lf-seo-panel__chevron" aria-hidden="true">▾</span>';
+
+					var body = document.createElement('div');
+					body.className = 'lf-seo-panel__body';
+					body.hidden = true;
+
+					var next = h2.nextElementSibling;
+					while (next && next.tagName !== 'H2' && !(next.classList && next.classList.contains('submit'))) {
+						var move = next;
+						next = next.nextElementSibling;
+						body.appendChild(move);
+					}
+
+					panel.appendChild(header);
+					panel.appendChild(body);
+					form.insertBefore(panel, h2);
+					h2.remove();
+
+					var startOpen = !!saved[panelId];
+					panel.classList.toggle('is-open', startOpen);
+					body.hidden = !startOpen;
+					header.setAttribute('aria-expanded', startOpen ? 'true' : 'false');
+
+					header.addEventListener('click', function () {
+						var open = !panel.classList.contains('is-open');
+						panel.classList.toggle('is-open', open);
+						body.hidden = !open;
+						header.setAttribute('aria-expanded', open ? 'true' : 'false');
+						saved[panelId] = open;
+						try {
+							window.localStorage.setItem(storageKey, JSON.stringify(saved));
+						} catch (e) {}
+					});
+				});
+			}
+
+			buildSeoPanels();
+
 			var frame;
 			var selectBtn = document.getElementById('lf-seo-og-select');
 			var clearBtn = document.getElementById('lf-seo-og-clear');

@@ -139,3 +139,54 @@ body[class*="leadsforward_page_lf-"] a:hover {
   color: #66528f;
   font-size: 12px;
 }
+
+.lf-seo-settings-form {
+  display: grid;
+  gap: 12px;
+}
+
+.lf-seo-panel {
+  border: 1px solid var(--lf-admin-border);
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.lf-seo-panel__header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  background: linear-gradient(180deg, #fbf8ff, #f5efff);
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.lf-seo-panel__title {
+  font-weight: 600;
+  color: #2d2050;
+}
+
+.lf-seo-panel__chevron {
+  color: #6a33e8;
+  transition: transform 0.2s ease;
+}
+
+.lf-seo-panel.is-open .lf-seo-panel__chevron {
+  transform: rotate(180deg);
+}
+
+.lf-seo-panel__body {
+  padding: 2px 14px 10px;
+  border-top: 1px solid #efe7ff;
+}
+
+.lf-seo-panel__body .form-table {
+  margin-top: 0;
+}
+
+.lf-seo-panel__body .description {
+  margin-top: 8px;
+}
