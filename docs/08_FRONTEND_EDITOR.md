@@ -124,6 +124,7 @@ Hero pills (`.lf-hero-chips`) and hero proof checklist (`.lf-block-hero__card-li
 - Homepage hero wrappers now harden `section_id` fallback (empty IDs are normalized to section type), preventing silent no-op saves for hero pills/checklist on reload.
 - Hero subheadline inline edits now prefer explicit `hero_subheadline` field-key persistence for better homepage reliability.
 - Homepage save endpoints now use the same resolver for checklist, generic list fields, CTA, and media updates, so legacy homepage IDs cannot drift writes into missing rows.
+- A one-time homepage migration now normalizes legacy section IDs to canonical IDs (config + order), then stores a completion flag to avoid repeated overhead.
 
 ## FAQ Library Selection
 

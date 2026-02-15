@@ -25,6 +25,9 @@ const LF_HOMEPAGE_ORDER_OPTION = 'lf_homepage_section_order';
 /** Option key to track manual overrides (admin saves). */
 const LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION = 'lf_homepage_manual_override';
 
+/** Option key to track one-time legacy section-id normalization. */
+const LF_HOMEPAGE_SECTION_ID_MIGRATED_OPTION = 'lf_homepage_section_id_migrated';
+
 /**
  * Recommended default order: Hero → Trust → Services → Projects → Benefits → Media → Process → FAQ → Links → Areas + Map → CTA.
  * Drag-and-drop order is stored in options and always respected.
@@ -338,9 +341,16 @@ function lf_homepage_apply_niche_config(string $niche_slug, ?array $wizard_data 
  * @return array<string, array<string, mixed>>
  */
 function lf_get_homepage_section_config(): array {
+	$normalized_once = lf_homepage_maybe_normalize_legacy_section_ids();
 	$stored = get_option(LF_HOMEPAGE_CONFIG_OPTION, null);
 	if (is_array($stored)) {
 		$stored = wp_unslash($stored);
+	}
+	if ($normalized_once) {
+		$stored = get_option(LF_HOMEPAGE_CONFIG_OPTION, null);
+		if (is_array($stored)) {
+			$stored = wp_unslash($stored);
+		}
 	}
 	if (is_array($stored) && !empty($stored)) {
 		$config = lf_homepage_merge_config_with_defaults($stored);
@@ -367,6 +377,93 @@ function lf_get_homepage_section_config(): array {
 	}
 	$niche = get_option(LF_HOMEPAGE_NICHE_OPTION, '');
 	return lf_homepage_default_config($niche ?: null);
+}
+
+/**
+ * Resolve a canonical homepage section ID from legacy aliases/variants.
+ */
+function lf_homepage_canonical_section_id(string $section_id, array $row = []): string {
+	$sid = sanitize_text_field($section_id);
+	if ($sid === '') {
+		return '';
+	}
+	$canonical = lf_homepage_default_order();
+	if (in_array($sid, $canonical, true)) {
+		return $sid;
+	}
+	$legacy_map = [
+		'trust_reviews' => 'trust_bar',
+		'service_grid' => 'benefits',
+		'service_areas' => 'map_nap',
+		'hero_1' => 'hero',
+	];
+	if (isset($legacy_map[$sid]) && in_array($legacy_map[$sid], $canonical, true)) {
+		return $legacy_map[$sid];
+	}
+	$row_type = sanitize_text_field((string) ($row['section_type'] ?? $row['type'] ?? ''));
+	if ($row_type !== '' && in_array($row_type, $canonical, true)) {
+		return $row_type;
+	}
+	$base = lf_homepage_base_section_type($sid);
+	if ($base !== '' && in_array($base, $canonical, true)) {
+		return $base;
+	}
+	if (preg_match('/^(.+)_\d+$/', $sid, $m) === 1) {
+		$candidate = sanitize_text_field((string) ($m[1] ?? ''));
+		if ($candidate !== '' && in_array($candidate, $canonical, true)) {
+			return $candidate;
+		}
+	}
+	return $sid;
+}
+
+/**
+ * One-time migration: normalize legacy homepage section IDs to canonical IDs.
+ */
+function lf_homepage_maybe_normalize_legacy_section_ids(): bool {
+	$done = (bool) get_option(LF_HOMEPAGE_SECTION_ID_MIGRATED_OPTION, false);
+	if ($done) {
+		return false;
+	}
+	$stored = get_option(LF_HOMEPAGE_CONFIG_OPTION, null);
+	if (!is_array($stored) || empty($stored)) {
+		update_option(LF_HOMEPAGE_SECTION_ID_MIGRATED_OPTION, true, true);
+		return false;
+	}
+	$stored = wp_unslash($stored);
+	$normalized = [];
+	foreach ($stored as $section_id => $row) {
+		if (!is_string($section_id) || !is_array($row)) {
+			continue;
+		}
+		$target_id = lf_homepage_canonical_section_id($section_id, $row);
+		if (!isset($normalized[$target_id]) || !is_array($normalized[$target_id])) {
+			$normalized[$target_id] = [];
+		}
+		$normalized[$target_id] = array_merge($normalized[$target_id], $row);
+	}
+	$changed = wp_json_encode($stored) !== wp_json_encode($normalized);
+	if ($changed) {
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $normalized, true);
+	}
+	$order = get_option(LF_HOMEPAGE_ORDER_OPTION, null);
+	if (is_array($order) && !empty($order)) {
+		$rewritten_order = [];
+		foreach ($order as $section_id) {
+			if (!is_string($section_id)) {
+				continue;
+			}
+			$rewritten_order[] = lf_homepage_canonical_section_id($section_id);
+		}
+		$rewritten_order = lf_homepage_sanitize_order($rewritten_order, false);
+		$order_changed = wp_json_encode($order) !== wp_json_encode($rewritten_order);
+		if ($order_changed) {
+			update_option(LF_HOMEPAGE_ORDER_OPTION, $rewritten_order, true);
+			$changed = true;
+		}
+	}
+	update_option(LF_HOMEPAGE_SECTION_ID_MIGRATED_OPTION, true, true);
+	return $changed;
 }
 
 /**
