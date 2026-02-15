@@ -15,6 +15,81 @@ if (!defined('ABSPATH')) {
 
 const LF_AI_PROPOSED_TRANSIENT_PREFIX = 'lf_ai_proposed_';
 
+/**
+ * Map known editable fields to frontend inline selector targets.
+ *
+ * @return string[]
+ */
+function lf_ai_inline_selectors_for_field(string $field_key): array {
+	if ($field_key === 'hero_headline') {
+		return [
+			'main > article:nth-of-type(1) > section:nth-of-type(1) h1:nth-of-type(1)',
+			'main > article:nth-of-type(1) > section:nth-of-type(1) h2:nth-of-type(1)',
+			'main .lf-hero-basic__title',
+			'main .lf-hero-stack__title',
+			'main .lf-hero-form__title',
+			'main .lf-hero-visual__title',
+			'main .lf-hero-split__title',
+		];
+	}
+	if ($field_key === 'hero_subheadline') {
+		return [
+			'main .lf-hero-basic__subtitle',
+			'main .lf-hero-stack__subtitle',
+			'main .lf-hero-form__subtitle',
+			'main .lf-hero-visual__subtitle',
+			'main .lf-hero-split__subtitle',
+		];
+	}
+	return [];
+}
+
+function lf_ai_get_inline_dom_override_for_field(string $context_type, $context_id, string $field_key): string {
+	if (!function_exists('lf_ai_get_inline_dom_overrides')) {
+		return '';
+	}
+	$map = lf_ai_get_inline_dom_overrides($context_type, $context_id);
+	if (!is_array($map) || empty($map)) {
+		return '';
+	}
+	foreach (lf_ai_inline_selectors_for_field($field_key) as $selector) {
+		$value = trim((string) ($map[$selector] ?? ''));
+		if ($value !== '') {
+			return $value;
+		}
+	}
+	return '';
+}
+
+function lf_ai_sync_inline_dom_overrides_for_fields(string $context_type, $context_id, array $updates): void {
+	if (!function_exists('lf_ai_get_inline_dom_overrides') || !function_exists('lf_ai_set_inline_dom_overrides')) {
+		return;
+	}
+	$map = lf_ai_get_inline_dom_overrides($context_type, $context_id);
+	if (!is_array($map)) {
+		$map = [];
+	}
+	$changed = false;
+	foreach ($updates as $field_key => $value) {
+		$field_key = (string) $field_key;
+		$text = trim((string) $value);
+		if ($text === '') {
+			continue;
+		}
+		$selectors = lf_ai_inline_selectors_for_field($field_key);
+		if (empty($selectors)) {
+			continue;
+		}
+		foreach ($selectors as $selector) {
+			$map[$selector] = $text;
+			$changed = true;
+		}
+	}
+	if ($changed) {
+		lf_ai_set_inline_dom_overrides($context_type, $context_id, $map);
+	}
+}
+
 function lf_ai_pb_context_for_post(\WP_Post $post): string {
 	if ($post->post_type === 'page') {
 		return 'page';
@@ -115,7 +190,9 @@ function lf_ai_get_current_values(string $context_type, $context_id, array $fiel
 		$hero_row = lf_ai_get_homepage_hero_row();
 		foreach ($field_keys as $key) {
 			if (in_array($key, ['hero_headline', 'hero_subheadline', 'cta_primary_override'], true)) {
-				$out[$key] = $hero_row[$key] ?? '';
+				$value = (string) ($hero_row[$key] ?? '');
+				$override = lf_ai_get_inline_dom_override_for_field($context_type, $context_id, (string) $key);
+				$out[$key] = $override !== '' ? $override : $value;
 			} else {
 				$out[$key] = function_exists('get_field') ? (string) get_field($key, 'option') : '';
 			}
@@ -126,7 +203,9 @@ function lf_ai_get_current_values(string $context_type, $context_id, array $fiel
 	$hero_settings = lf_ai_get_pb_hero_settings_for_post($pid);
 	foreach ($field_keys as $key) {
 		if (in_array($key, ['hero_headline', 'hero_subheadline'], true) && isset($hero_settings[$key])) {
-			$out[$key] = (string) $hero_settings[$key];
+			$value = (string) $hero_settings[$key];
+			$override = lf_ai_get_inline_dom_override_for_field($context_type, $context_id, (string) $key);
+			$out[$key] = $override !== '' ? $override : $value;
 		} elseif ($key === 'post_content') {
 			$post = get_post($pid);
 			$out[$key] = $post ? $post->post_content : '';
@@ -238,6 +317,7 @@ function lf_ai_apply_proposal(string $context_type, $context_id, array $proposed
 		}
 	}
 	$log_id = lf_ai_log_action($context_type, $context_id, $current, $to_apply, $prompt_snippet);
+	lf_ai_sync_inline_dom_overrides_for_fields($context_type, $context_id, $to_apply);
 	$transient_key = LF_AI_PROPOSED_TRANSIENT_PREFIX . get_current_user_id() . '_' . $context_type . '_' . (is_numeric($context_id) ? $context_id : 'opt');
 	delete_transient($transient_key);
 	return ['success' => true, 'log_id' => $log_id];
