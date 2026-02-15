@@ -435,9 +435,9 @@ function lf_ai_assistant_render_floating_widget(): void {
 function lf_ai_assistant_widget_css(): string {
 	return '
 		.lf-ai-float { position: fixed; right: 20px; bottom: 20px; z-index: 99999; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; display:flex; flex-direction:column; align-items:flex-end; }
-		.lf-ai-float--seo { right: 202px; z-index: 99998; }
-		.lf-ai-float__toggle { background: linear-gradient(135deg,#4f23b4,#8348f9); color:#fff; border:0; border-radius:999px; padding:10px 14px; font-weight:600; box-shadow:0 10px 30px rgba(79,35,180,.32); cursor:pointer; display:flex; gap:8px; align-items:center; }
-		.lf-ai-float__toggle--seo { background: linear-gradient(135deg,#4f23b4,#8348f9); box-shadow:0 10px 30px rgba(79,35,180,.32); }
+		.lf-ai-float--seo { right: 188px; z-index: 99998; }
+		.lf-ai-float__toggle { background:#6a3be8; color:#fff; border:0; border-radius:999px; padding:10px 14px; font-weight:600; box-shadow:none; cursor:pointer; display:flex; gap:8px; align-items:center; }
+		.lf-ai-float__toggle--seo { background:#6a3be8; box-shadow:none; }
 		.lf-ai-float__dot { width:8px; height:8px; border-radius:99px; background:#22c55e; box-shadow:0 0 0 4px rgba(34,197,94,.2); }
 		.lf-ai-float__toggle--seo .lf-ai-float__dot { background:#a7f3d0; box-shadow:0 0 0 4px rgba(167,243,208,.25); }
 		.lf-ai-float__panel { width:min(440px, calc(100vw - 36px)); max-height:min(80vh, 860px); background:#fff; border:1px solid #dbe3ef; border-radius:14px; box-shadow:0 18px 55px rgba(15,23,42,.25); overflow:hidden; position:absolute; right:0; bottom:calc(100% + 10px); display:flex; flex-direction:column; }
@@ -547,7 +547,7 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-column-draggable { cursor:ew-resize; transition:outline-color .15s ease; }
 		.lf-ai-column-draggable:hover { outline:2px dashed rgba(131,72,249,.3); outline-offset:3px; }
 		.lf-ai-column-draggable.is-dragging { outline:2px solid #8348f9 !important; outline-offset:3px; opacity:.85; }
-		.lf-ai-rail { position:fixed; left:14px; top:78px; z-index:99997; width:248px; max-height:calc(100vh - 104px); overflow:auto; background:rgba(255,255,255,.98); border:1px solid #ddd6fe; border-radius:16px; box-shadow:0 18px 44px rgba(79,35,180,.2); padding:10px; backdrop-filter:blur(8px); }
+		.lf-ai-rail { position:fixed; left:14px; top:54px; z-index:99997; width:248px; max-height:calc(100vh - 84px); overflow:auto; background:rgba(255,255,255,.98); border:1px solid #ddd6fe; border-radius:16px; box-shadow:0 18px 44px rgba(79,35,180,.2); padding:10px; backdrop-filter:blur(8px); }
 		.lf-ai-rail.is-collapsed { width:auto; background:transparent; border:0; box-shadow:none; padding:0; max-height:none; }
 		.lf-ai-rail__head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 8px; }
 		.lf-ai-rail__title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#5b21b6; margin:0; }
@@ -557,7 +557,7 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-rail__add { border:1px solid #c4b5fd; background:#fff; color:#5b21b6; border-radius:10px; width:30px; height:30px; cursor:pointer; font-size:16px; line-height:1; }
 		.lf-ai-rail__toggle:hover, .lf-ai-rail__add:hover { background:#f5f3ff; border-color:#a78bfa; }
 		.lf-ai-rail.is-collapsed .lf-ai-rail__head { margin:0; }
-		.lf-ai-rail.is-collapsed .lf-ai-rail__toggle { width:auto; min-width:0; height:44px; border-radius:999px; padding:0 16px; border:0; color:#fff; background:linear-gradient(135deg,#4f23b4,#8348f9); box-shadow:0 10px 30px rgba(79,35,180,.32); font-size:22px; font-weight:700; letter-spacing:.02em; }
+		.lf-ai-rail.is-collapsed .lf-ai-rail__toggle { width:auto; min-width:0; height:44px; border-radius:999px; padding:0 16px; border:0; color:#fff; background:#6a3be8; box-shadow:none; font-size:22px; font-weight:700; letter-spacing:.02em; }
 		.lf-ai-rail.is-collapsed .lf-ai-rail__toggle::before { content:"●"; color:#22c55e; font-size:12px; margin-right:8px; vertical-align:middle; text-shadow:0 0 0 4px rgba(34,197,94,.2); }
 		.lf-ai-rail.is-collapsed .lf-ai-rail__add { display:none; }
 		.lf-ai-rail__list { display:flex; flex-direction:column; gap:7px; }
@@ -739,6 +739,7 @@ function lf_ai_assistant_widget_js(): string {
 		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption,#primary h1,#primary h2,#primary h3,#primary h4,#primary h5,#primary h6,#primary p,#primary li,#primary blockquote,#primary figcaption,.site-main h1,.site-main h2,.site-main h3,.site-main h4,.site-main h5,.site-main h6,.site-main p,.site-main li,.site-main blockquote,.site-main figcaption,.site-content h1,.site-content h2,.site-content h3,.site-content h4,.site-content h5,.site-content h6,.site-content p,.site-content li,.site-content blockquote,.site-content figcaption,article h1,article h2,article h3,article h4,article h5,article h6,article p,article li,article blockquote,article figcaption";
 		var inlineImageCandidateSelector = "main img,#primary img,.site-main img,.site-content img,article img";
 		var mediaFrame = null;
+		var launcherGapPx = 8;
 
 		function escapeHtml(text) {
 			var div = document.createElement("div");
@@ -865,6 +866,10 @@ function lf_ai_assistant_widget_js(): string {
 			var videoCount = root ? root.querySelectorAll("video").length : 0;
 			var domNodes = root ? root.querySelectorAll("*").length : 0;
 			var scriptCount = document.querySelectorAll("script[src]").length;
+			var requestCount = null;
+			var totalTransferKb = null;
+			var scriptTransferKb = null;
+			var imageTransferKb = null;
 			var perfApi = window.performance || null;
 			var navEntry = null;
 			var ttfbMs = null;
@@ -873,6 +878,30 @@ function lf_ai_assistant_widget_js(): string {
 			var fcpMs = null;
 			var lcpMs = null;
 			var clsScore = null;
+			var serverTimingRows = [];
+			try {
+				var resourceEntries = perfApi && perfApi.getEntriesByType ? perfApi.getEntriesByType("resource") : [];
+				if (resourceEntries && resourceEntries.length) {
+					requestCount = resourceEntries.length;
+					var totalBytes = 0;
+					var scriptBytes = 0;
+					var imageBytes = 0;
+					var hasByteSignals = false;
+					resourceEntries.forEach(function(entry){
+						if (!entry) return;
+						var transfer = isFinite(entry.transferSize) && entry.transferSize > 0 ? entry.transferSize : (isFinite(entry.encodedBodySize) && entry.encodedBodySize > 0 ? entry.encodedBodySize : 0);
+						if (transfer > 0) hasByteSignals = true;
+						totalBytes += transfer;
+						if (entry.initiatorType === "script") scriptBytes += transfer;
+						if (entry.initiatorType === "img") imageBytes += transfer;
+					});
+					if (hasByteSignals) {
+						totalTransferKb = Math.round(totalBytes / 1024);
+						scriptTransferKb = Math.round(scriptBytes / 1024);
+						imageTransferKb = Math.round(imageBytes / 1024);
+					}
+				}
+			} catch (e) {}
 			try {
 				var navEntries = perfApi && perfApi.getEntriesByType ? perfApi.getEntriesByType("navigation") : [];
 				navEntry = navEntries && navEntries.length ? navEntries[0] : null;
@@ -880,6 +909,14 @@ function lf_ai_assistant_widget_js(): string {
 					ttfbMs = isFinite(navEntry.responseStart) ? Math.round(navEntry.responseStart) : null;
 					dclMs = isFinite(navEntry.domContentLoadedEventEnd) ? Math.round(navEntry.domContentLoadedEventEnd) : null;
 					loadMs = isFinite(navEntry.loadEventEnd) ? Math.round(navEntry.loadEventEnd) : null;
+					var serverTiming = Array.isArray(navEntry.serverTiming) ? navEntry.serverTiming : [];
+					serverTimingRows = serverTiming.slice(0, 3).map(function(metric){
+						var name = String(metric && metric.name ? metric.name : "metric");
+						var dur = (metric && isFinite(metric.duration)) ? (Math.round(metric.duration * 10) / 10) : null;
+						var desc = String(metric && metric.description ? metric.description : "");
+						var status = dur === null ? "warn" : (dur <= 150 ? "ok" : (dur <= 500 ? "warn" : "error"));
+						return { label: "Server timing (" + name + "): " + (dur === null ? "unavailable" : (dur + " ms")) + (desc ? " - " + desc : ""), status: status };
+					});
 				}
 			} catch (e) {}
 			try {
@@ -944,6 +981,14 @@ function lf_ai_assistant_widget_js(): string {
 			if (imgs.length > 2 && lazyImgs < Math.max(1, imgs.length - 1)) perfScore -= 10;
 			if (scriptCount > 25) perfScore -= 12;
 			else if (scriptCount > 18) perfScore -= 6;
+			if (requestCount !== null) {
+				if (requestCount > 120) perfScore -= 10;
+				else if (requestCount > 80) perfScore -= 5;
+			}
+			if (totalTransferKb !== null) {
+				if (totalTransferKb > 3500) perfScore -= 10;
+				else if (totalTransferKb > 2200) perfScore -= 5;
+			}
 			if (loadMs !== null) {
 				if (loadMs > 5000) perfScore -= 12;
 				else if (loadMs > 3000) perfScore -= 6;
@@ -1060,12 +1105,19 @@ function lf_ai_assistant_widget_js(): string {
 					{ label: "First contentful paint (" + (fcpMs === null ? "unavailable" : (fcpMs + " ms")) + ")", status: metricStatus(fcpMs, 1800, 3000) },
 					{ label: "Largest contentful paint (" + (lcpMs === null ? "unavailable" : (lcpMs + " ms")) + ")", status: metricStatus(lcpMs, 2500, 4000) },
 					{ label: "Cumulative layout shift (" + (clsScore === null ? "unavailable" : clsScore) + ")", status: clsScore === null ? "warn" : (clsScore <= 0.1 ? "ok" : (clsScore <= 0.25 ? "warn" : "error")) },
+					{ label: "Requests (" + (requestCount === null ? "unavailable" : requestCount) + ")", status: requestCount === null ? "warn" : (requestCount <= 80 ? "ok" : (requestCount <= 120 ? "warn" : "error")) },
+					{ label: "Transferred bytes (" + (totalTransferKb === null ? "unavailable" : (totalTransferKb + " KB")) + ")", status: totalTransferKb === null ? "warn" : (totalTransferKb <= 2200 ? "ok" : (totalTransferKb <= 3500 ? "warn" : "error")) },
+					{ label: "Script bytes (" + (scriptTransferKb === null ? "unavailable" : (scriptTransferKb + " KB")) + ")", status: scriptTransferKb === null ? "warn" : (scriptTransferKb <= 600 ? "ok" : (scriptTransferKb <= 1100 ? "warn" : "error")) },
+					{ label: "Image bytes (" + (imageTransferKb === null ? "unavailable" : (imageTransferKb + " KB")) + ")", status: imageTransferKb === null ? "warn" : (imageTransferKb <= 1000 ? "ok" : (imageTransferKb <= 1800 ? "warn" : "error")) },
 					{ label: "DOM nodes (" + domNodes + ")", status: domNodes <= 1200 ? "ok" : (domNodes <= 1800 ? "warn" : "error") },
 					{ label: "Lazy-loaded images (" + lazyImgs + "/" + imgs.length + ")", status: imgs.length === 0 || lazyImgs >= Math.max(1, imgs.length - 1) ? "ok" : "warn" },
 					{ label: "Images with dimensions missing (" + missingDimensions + ")", status: missingDimensions === 0 ? "ok" : (missingDimensions < 3 ? "warn" : "error") },
 					{ label: "Embedded heavy media (iframes/videos: " + (iframeCount + videoCount) + ")", status: (iframeCount + videoCount) <= 2 ? "ok" : "warn" },
 					{ label: "External script count (" + scriptCount + ")", status: scriptCount <= 18 ? "ok" : (scriptCount <= 25 ? "warn" : "error") }
 				];
+				serverTimingRows.forEach(function(row){
+					vitalsRows.push(row);
+				});
 				var vitalsHtml = "";
 				vitalsRows.forEach(function(row){
 					var cls = statusClass(row.status);
@@ -1093,6 +1145,8 @@ function lf_ai_assistant_widget_js(): string {
 				if ($seoVitals.length) $seoVitals.html(
 					"<div class=\"lf-ai-seo__vital-row\"><span class=\"lf-ai-seo__badge lf-ai-seo__badge--" + ((loadMs !== null && loadMs <= 2500) ? "ok" : ((loadMs !== null && loadMs <= 5000) ? "warn" : "error")) + "\">" + ((loadMs !== null && loadMs <= 2500) ? "GOOD" : ((loadMs !== null && loadMs <= 5000) ? "MED" : "HIGH")) + "</span><span>Window load: " + (loadMs === null ? "unavailable" : (loadMs + " ms")) + "</span></div>" +
 					"<div class=\"lf-ai-seo__vital-row\"><span class=\"lf-ai-seo__badge lf-ai-seo__badge--" + ((lcpMs !== null && lcpMs <= 2500) ? "ok" : ((lcpMs !== null && lcpMs <= 4000) ? "warn" : "error")) + "\">" + ((lcpMs !== null && lcpMs <= 2500) ? "GOOD" : ((lcpMs !== null && lcpMs <= 4000) ? "MED" : "HIGH")) + "</span><span>LCP: " + (lcpMs === null ? "unavailable" : (lcpMs + " ms")) + "</span></div>" +
+					"<div class=\"lf-ai-seo__vital-row\"><span class=\"lf-ai-seo__badge lf-ai-seo__badge--" + ((requestCount !== null && requestCount <= 80) ? "ok" : ((requestCount !== null && requestCount <= 120) ? "warn" : "error")) + "\">" + ((requestCount !== null && requestCount <= 80) ? "GOOD" : ((requestCount !== null && requestCount <= 120) ? "MED" : "HIGH")) + "</span><span>Requests: " + (requestCount === null ? "unavailable" : requestCount) + "</span></div>" +
+					"<div class=\"lf-ai-seo__vital-row\"><span class=\"lf-ai-seo__badge lf-ai-seo__badge--" + ((totalTransferKb !== null && totalTransferKb <= 2200) ? "ok" : ((totalTransferKb !== null && totalTransferKb <= 3500) ? "warn" : "error")) + "\">" + ((totalTransferKb !== null && totalTransferKb <= 2200) ? "GOOD" : ((totalTransferKb !== null && totalTransferKb <= 3500) ? "MED" : "HIGH")) + "</span><span>Transferred bytes: " + (totalTransferKb === null ? "unavailable" : (totalTransferKb + " KB")) + "</span></div>" +
 					"<div class=\"lf-ai-seo__vital-row\"><span class=\"lf-ai-seo__badge lf-ai-seo__badge--" + (domNodes <= 1200 ? "ok" : "warn") + "\">" + (domNodes <= 1200 ? "GOOD" : "MED") + "</span><span>DOM nodes: " + domNodes + "</span></div>" +
 					"<div class=\"lf-ai-seo__vital-row\"><span class=\"lf-ai-seo__badge lf-ai-seo__badge--" + (missingDimensions === 0 ? "ok" : "warn") + "\">" + (missingDimensions === 0 ? "GOOD" : "MED") + "</span><span>Images missing dimensions: " + missingDimensions + "</span></div>"
 				);
@@ -1101,6 +1155,19 @@ function lf_ai_assistant_widget_js(): string {
 		function setStatus(msg, isError) {
 			$status.text(msg || "");
 			$status.toggleClass("is-error", !!isError);
+		}
+		function updateLauncherOffsets() {
+			if (!$seoRoot.length || !$toggle.length) return;
+			var narrow = false;
+			try { narrow = !!(window.matchMedia && window.matchMedia("(max-width: 782px)").matches); } catch (e) {}
+			if (narrow) {
+				$seoRoot.css("right", "12px");
+				return;
+			}
+			var aiWidth = Math.ceil($toggle.outerWidth() || 0);
+			var aiRight = 20;
+			var seoRight = aiRight + aiWidth + launcherGapPx;
+			$seoRoot.css("right", Math.max(130, seoRight) + "px");
 		}
 		function setAiOpen(open) {
 			$panel.prop("hidden", !open);
@@ -4055,15 +4122,18 @@ function lf_ai_assistant_widget_js(): string {
 			setConfirmOpen(false);
 			setAiOpen(willOpen);
 			if (willOpen) setSeoOpen(false);
+			updateLauncherOffsets();
 		});
 		$seoToggle.on("click", function(){
 			var willOpen = $seoPanel.prop("hidden");
 			setConfirmOpen(false);
 			setSeoOpen(willOpen);
 			if (willOpen) setAiOpen(false);
+			updateLauncherOffsets();
 		});
 		$root.find("[data-lf-ai-close],[data-lf-ai-minimize]").on("click", function(){ setConfirmOpen(false); setAiOpen(false); });
 		$seoRoot.find("[data-lf-ai-seo-close],[data-lf-ai-seo-minimize]").on("click", function(){ setSeoOpen(false); });
+		$(window).on("resize", function(){ updateLauncherOffsets(); });
 		$btnEditorToggle.on("click", function(){
 			setEditorEnabled(!editingEnabled);
 		});
@@ -4515,6 +4585,8 @@ function lf_ai_assistant_widget_js(): string {
 			editingEnabled = window.localStorage.getItem(editorModeKey) !== "off";
 		} catch (e) {}
 		setEditorToggleUi();
+		updateLauncherOffsets();
+		try { window.setTimeout(updateLauncherOffsets, 180); } catch (e) {}
 		$prompt.attr("placeholder", (lfAiFloating.i18n && lfAiFloating.i18n.placeholder) ? lfAiFloating.i18n.placeholder : "Ask for specific edits...");
 		setStatus((lfAiFloating.i18n && lfAiFloating.i18n.statusReady) ? lfAiFloating.i18n.statusReady : "Ready.", false);
 		setConfirmOpen(false);

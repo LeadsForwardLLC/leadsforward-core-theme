@@ -94,7 +94,18 @@ SEO is now decoupled from the AI assistant body and launched from its own floati
 - Mutual exclusivity: opening the SEO window closes the AI window, and opening AI closes SEO.
 - SEO panel uses the same backend-connected snapshot pipeline and keeps `Refresh`, priority actions, SERP preview, keyword coverage, and CWV-oriented checks.
 - SEO panel state persists with its own local storage key (`lfAiSeoFloatState`) without conflicting with AI panel state (`lfAiFloatState`).
-- Runtime performance diagnostics are now included in the SEO vitals module (TTFB, DOMContentLoaded, window load, FCP, LCP, CLS) with lightweight browser `Performance` API reads.
+- Runtime performance diagnostics are now included in the SEO vitals module via lightweight browser `Performance` API reads:
+  - Core timings: `TTFB`, `DOMContentLoaded`, `window load`, `FCP`, `LCP`, `CLS`
+  - Network budgets: request count, transferred bytes, script bytes, image bytes
+  - Optional backend visibility: `Server-Timing` metrics (when exposed by the stack/server)
+
+### Launcher Positioning + Brand Rules
+
+- `AI Assistant` and `SEO Health` launchers use a flat LeadsForward purple style (no gradient / no drop shadow).
+- Launcher spacing is dynamically computed on desktop so both buttons stay visually tight and aligned.
+- Structure rail collapsed launcher is positioned higher for faster access while editing.
+- SEO vitals also include request/transfer-size budget signals plus available `Server-Timing` metrics from the current page response.
+- Launchers use a flat purple branded style and dynamic spacing so `SEO Health` sits tighter to `AI Assistant`.
 
 ## Hero Lists Persistence Guardrails
 
@@ -103,6 +114,7 @@ Hero pills (`.lf-hero-chips`) and hero proof checklist (`.lf-block-hero__card-li
 - Both editors now normalize text-node structure before save to prevent duplicate text artifacts.
 - Saves are synchronized so pill edits update proof checklist DOM and vice versa before persistence.
 - A single canonical payload is persisted to backend settings, ensuring reliable reload behavior.
+- The collapsed Structure launcher is positioned higher for faster access while editing.
 
 ## Persistence + Safety
 
