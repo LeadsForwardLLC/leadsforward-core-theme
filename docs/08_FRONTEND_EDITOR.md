@@ -77,6 +77,24 @@ A compact left-side "Page Structure" rail lists currently rendered sections and 
 - Collapse/expand toggle (state persisted in local storage)
 - Add section from global section library (with search)
 
+### Branded UI Shell
+
+The rail now shares the AI Assistant visual system so the editor feels like one unified LeadsForward product:
+
+- Premium purple gradient floating trigger in collapsed mode (`☰ Structure`) with the same visual language as the AI Assistant launcher.
+- Glass-style panel treatment, softer corners, and elevated shadows for a cleaner, more modern sidepanel.
+- Consistent interactive states (hover, focus, active) across rail controls and section items.
+- Branded section-library search and action controls for a tighter, more polished editing workflow.
+
+## Dedicated SEO Window
+
+SEO is now decoupled from the AI assistant body and launched from its own floating button beside `AI Assistant`.
+
+- Separate floating launcher and panel for SEO (`SEO Health`) with the same visual system and interaction model.
+- Mutual exclusivity: opening the SEO window closes the AI window, and opening AI closes SEO.
+- SEO panel uses the same backend-connected snapshot pipeline and keeps `Refresh`, priority actions, SERP preview, keyword coverage, and CWV-oriented checks.
+- SEO panel state persists with its own local storage key (`lfAiSeoFloatState`) without conflicting with AI panel state (`lfAiFloatState`).
+
 ## Persistence + Safety
 
 The frontend editor persists through AJAX endpoints and logs all structural operations:

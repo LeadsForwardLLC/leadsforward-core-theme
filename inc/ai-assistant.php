@@ -374,15 +374,74 @@ function lf_ai_assistant_render_floating_widget(): void {
 			</div>
 		</div>
 	</div>
+	<div class="lf-ai-float lf-ai-float--seo" data-lf-ai-seo-float>
+		<button type="button" class="lf-ai-float__toggle lf-ai-float__toggle--seo" data-lf-ai-seo-toggle aria-expanded="false" aria-controls="lf-ai-seo-panel">
+			<span class="lf-ai-float__dot" aria-hidden="true"></span>
+			<?php esc_html_e('SEO Health', 'leadsforward-core'); ?>
+		</button>
+		<div class="lf-ai-float__panel lf-ai-float__panel--seo" id="lf-ai-seo-panel" hidden>
+			<div class="lf-ai-float__header">
+				<strong><?php esc_html_e('LeadsForward SEO Report', 'leadsforward-core'); ?></strong>
+				<div class="lf-ai-float__header-actions">
+					<button type="button" class="lf-ai-float__icon" data-lf-ai-seo-refresh aria-label="<?php esc_attr_e('Refresh SEO report', 'leadsforward-core'); ?>"><?php esc_html_e('↻', 'leadsforward-core'); ?></button>
+					<button type="button" class="lf-ai-float__icon" data-lf-ai-seo-minimize aria-label="<?php esc_attr_e('Minimize', 'leadsforward-core'); ?>">−</button>
+					<button type="button" class="lf-ai-float__icon" data-lf-ai-seo-close aria-label="<?php esc_attr_e('Close', 'leadsforward-core'); ?>">×</button>
+				</div>
+			</div>
+			<div class="lf-ai-float__body">
+				<div class="lf-ai-seo" data-lf-ai-seo>
+					<div class="lf-ai-seo__score" data-lf-ai-seo-score><?php esc_html_e('Overall: --', 'leadsforward-core'); ?></div>
+					<div class="lf-ai-seo__meter"><span data-lf-ai-seo-overall-fill style="width:0%;"></span></div>
+					<div class="lf-ai-seo__subscores">
+						<div class="lf-ai-seo__subscore">
+							<span><?php esc_html_e('SEO', 'leadsforward-core'); ?></span>
+							<b data-lf-ai-seo-sub-seo>--</b>
+						</div>
+						<div class="lf-ai-seo__subscore">
+							<span><?php esc_html_e('Conversion', 'leadsforward-core'); ?></span>
+							<b data-lf-ai-seo-sub-conv>--</b>
+						</div>
+						<div class="lf-ai-seo__subscore">
+							<span><?php esc_html_e('Performance', 'leadsforward-core'); ?></span>
+							<b data-lf-ai-seo-sub-perf>--</b>
+						</div>
+					</div>
+					<div class="lf-ai-seo__list" data-lf-ai-seo-list></div>
+					<div class="lf-ai-seo__queue" data-lf-ai-seo-queue>
+						<div class="lf-ai-seo__section-title"><?php esc_html_e('Priority Actions', 'leadsforward-core'); ?></div>
+						<div class="lf-ai-seo__queue-list" data-lf-ai-seo-tasks></div>
+					</div>
+					<div class="lf-ai-seo__serp" data-lf-ai-seo-serp>
+						<div class="lf-ai-seo__section-title"><?php esc_html_e('SERP Preview', 'leadsforward-core'); ?></div>
+						<div class="lf-ai-seo__serp-url" data-lf-ai-seo-serp-url></div>
+						<div class="lf-ai-seo__serp-title" data-lf-ai-seo-serp-title></div>
+						<div class="lf-ai-seo__serp-desc" data-lf-ai-seo-serp-desc></div>
+					</div>
+					<div class="lf-ai-seo__coverage" data-lf-ai-seo-coverage-wrap>
+						<div class="lf-ai-seo__section-title"><?php esc_html_e('Keyword Coverage', 'leadsforward-core'); ?></div>
+						<div class="lf-ai-seo__coverage-list" data-lf-ai-seo-coverage></div>
+					</div>
+					<div class="lf-ai-seo__vitals" data-lf-ai-seo-vitals-wrap>
+						<div class="lf-ai-seo__section-title"><?php esc_html_e('CWV-Oriented Checks', 'leadsforward-core'); ?></div>
+						<div class="lf-ai-seo__vitals-list" data-lf-ai-seo-vitals></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 	<?php
 }
 
 function lf_ai_assistant_widget_css(): string {
 	return '
 		.lf-ai-float { position: fixed; right: 20px; bottom: 20px; z-index: 99999; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; display:flex; flex-direction:column; align-items:flex-end; }
+		.lf-ai-float--seo { right: 202px; z-index: 99998; }
 		.lf-ai-float__toggle { background: linear-gradient(135deg,#4f23b4,#8348f9); color:#fff; border:0; border-radius:999px; padding:10px 14px; font-weight:600; box-shadow:0 10px 30px rgba(79,35,180,.32); cursor:pointer; display:flex; gap:8px; align-items:center; }
+		.lf-ai-float__toggle--seo { background: linear-gradient(135deg,#4f23b4,#8348f9); box-shadow:0 10px 30px rgba(79,35,180,.32); }
 		.lf-ai-float__dot { width:8px; height:8px; border-radius:99px; background:#22c55e; box-shadow:0 0 0 4px rgba(34,197,94,.2); }
+		.lf-ai-float__toggle--seo .lf-ai-float__dot { background:#a7f3d0; box-shadow:0 0 0 4px rgba(167,243,208,.25); }
 		.lf-ai-float__panel { width:min(440px, calc(100vw - 36px)); max-height:min(80vh, 860px); background:#fff; border:1px solid #dbe3ef; border-radius:14px; box-shadow:0 18px 55px rgba(15,23,42,.25); overflow:hidden; position:absolute; right:0; bottom:calc(100% + 10px); display:flex; flex-direction:column; }
+		.lf-ai-float__panel--seo { width:min(460px, calc(100vw - 36px)); }
 		.lf-ai-float__panel[hidden] { display:none !important; }
 		.lf-ai-float__header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:#f8fafc; border-bottom:1px solid #e2e8f0; }
 		.lf-ai-float__header-actions { display:flex; gap:6px; }
@@ -410,6 +469,39 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float__doc-name { font-size:12px; color:#475569; overflow-wrap:anywhere; }
 		.lf-ai-float__actions { display:flex; gap:8px; align-items:center; }
 		.lf-ai-float__actions [data-lf-ai-revert] { margin-left:auto; }
+		.lf-ai-seo { border:1px solid #c7f0eb; border-radius:12px; background:linear-gradient(180deg,#f4fffd 0%,#f8fafc 100%); padding:10px; display:flex; flex-direction:column; gap:7px; }
+		.lf-ai-seo__head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+		.lf-ai-seo__title { font-size:12px; font-weight:700; color:#0f172a; }
+		.lf-ai-seo__score { font-size:12px; color:#334155; }
+		.lf-ai-seo__score strong { color:#0f172a; }
+		.lf-ai-seo__meter { width:100%; height:8px; border-radius:999px; background:#e2e8f0; overflow:hidden; }
+		.lf-ai-seo__meter > span { display:block; height:100%; width:0; background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e); transition:width .2s ease; }
+		.lf-ai-seo__subscores { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px; }
+		.lf-ai-seo__subscore { border:1px solid #e2e8f0; border-radius:8px; background:#fff; padding:5px 6px; display:flex; flex-direction:column; gap:2px; }
+		.lf-ai-seo__subscore span { font-size:10px; color:#64748b; }
+		.lf-ai-seo__subscore b { font-size:12px; color:#0f172a; line-height:1.1; }
+		.lf-ai-seo__list { display:flex; flex-direction:column; gap:4px; }
+		.lf-ai-seo__item { font-size:11px; color:#334155; display:flex; align-items:flex-start; gap:6px; }
+		.lf-ai-seo__item-dot { font-weight:700; min-width:12px; line-height:1.2; }
+		.lf-ai-seo__item--ok .lf-ai-seo__item-dot { color:#16a34a; }
+		.lf-ai-seo__item--warn .lf-ai-seo__item-dot { color:#d97706; }
+		.lf-ai-seo__item--error .lf-ai-seo__item-dot { color:#dc2626; }
+		.lf-ai-seo__section-title { font-size:11px; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:.03em; margin-top:2px; }
+		.lf-ai-seo__queue, .lf-ai-seo__serp, .lf-ai-seo__coverage, .lf-ai-seo__vitals { border:1px solid #e2e8f0; border-radius:8px; background:#fff; padding:6px; display:flex; flex-direction:column; gap:4px; }
+		.lf-ai-seo__queue-list, .lf-ai-seo__coverage-list, .lf-ai-seo__vitals-list { display:flex; flex-direction:column; gap:3px; }
+		.lf-ai-seo__task { font-size:11px; color:#334155; display:flex; gap:6px; align-items:flex-start; }
+		.lf-ai-seo__task-priority { font-size:10px; font-weight:700; border-radius:999px; padding:1px 6px; line-height:1.6; }
+		.lf-ai-seo__task-priority--high { background:#fee2e2; color:#b91c1c; }
+		.lf-ai-seo__task-priority--med { background:#fef3c7; color:#92400e; }
+		.lf-ai-seo__task-priority--low { background:#dcfce7; color:#166534; }
+		.lf-ai-seo__serp-url { font-size:11px; color:#166534; line-height:1.25; word-break:break-all; }
+		.lf-ai-seo__serp-title { font-size:13px; color:#1a0dab; line-height:1.25; }
+		.lf-ai-seo__serp-desc { font-size:11px; color:#4b5563; line-height:1.35; }
+		.lf-ai-seo__coverage-row, .lf-ai-seo__vital-row { font-size:11px; color:#334155; display:flex; align-items:flex-start; gap:6px; }
+		.lf-ai-seo__badge { font-size:10px; border-radius:999px; padding:1px 6px; line-height:1.5; font-weight:700; }
+		.lf-ai-seo__badge--ok { background:#dcfce7; color:#166534; }
+		.lf-ai-seo__badge--warn { background:#fef3c7; color:#92400e; }
+		.lf-ai-seo__badge--error { background:#fee2e2; color:#b91c1c; }
 		.lf-ai-float__status { font-size:12px; color:#475569; min-height:16px; }
 		.lf-ai-float__status.is-error { color:#b91c1c; }
 		.lf-ai-float__diff { border:1px solid #e2e8f0; border-radius:10px; max-height:280px; overflow:auto; background:#f8fafc; font-size:12px; }
@@ -455,35 +547,39 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-column-draggable { cursor:ew-resize; transition:outline-color .15s ease; }
 		.lf-ai-column-draggable:hover { outline:2px dashed rgba(131,72,249,.3); outline-offset:3px; }
 		.lf-ai-column-draggable.is-dragging { outline:2px solid #8348f9 !important; outline-offset:3px; opacity:.85; }
-		.lf-ai-rail { position:fixed; left:12px; top:72px; z-index:99997; width:220px; max-height:calc(100vh - 94px); overflow:auto; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 12px 36px rgba(15,23,42,.18); padding:8px; }
-		.lf-ai-rail.is-collapsed { width:46px; overflow:visible; }
-		.lf-ai-rail__head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 6px; }
-		.lf-ai-rail__title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#64748b; margin:0; }
+		.lf-ai-rail { position:fixed; left:14px; top:78px; z-index:99997; width:248px; max-height:calc(100vh - 104px); overflow:auto; background:rgba(255,255,255,.98); border:1px solid #ddd6fe; border-radius:16px; box-shadow:0 18px 44px rgba(79,35,180,.2); padding:10px; backdrop-filter:blur(8px); }
+		.lf-ai-rail.is-collapsed { width:auto; background:transparent; border:0; box-shadow:none; padding:0; max-height:none; }
+		.lf-ai-rail__head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 8px; }
+		.lf-ai-rail__title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#5b21b6; margin:0; }
 		.lf-ai-rail.is-collapsed .lf-ai-rail__title { display:none; }
 		.lf-ai-rail__head-actions { display:flex; gap:6px; }
-		.lf-ai-rail__toggle { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:14px; line-height:1; }
-		.lf-ai-rail__add { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1; }
-		.lf-ai-rail.is-collapsed .lf-ai-rail__toggle { width:30px; }
+		.lf-ai-rail__toggle { border:1px solid #c4b5fd; background:#fff; color:#5b21b6; border-radius:10px; min-width:30px; height:30px; cursor:pointer; font-size:14px; line-height:1; font-weight:700; }
+		.lf-ai-rail__add { border:1px solid #c4b5fd; background:#fff; color:#5b21b6; border-radius:10px; width:30px; height:30px; cursor:pointer; font-size:16px; line-height:1; }
+		.lf-ai-rail__toggle:hover, .lf-ai-rail__add:hover { background:#f5f3ff; border-color:#a78bfa; }
+		.lf-ai-rail.is-collapsed .lf-ai-rail__head { margin:0; }
+		.lf-ai-rail.is-collapsed .lf-ai-rail__toggle { width:auto; min-width:0; height:44px; border-radius:999px; padding:0 16px; border:0; color:#fff; background:linear-gradient(135deg,#4f23b4,#8348f9); box-shadow:0 10px 30px rgba(79,35,180,.32); font-size:22px; font-weight:700; letter-spacing:.02em; }
+		.lf-ai-rail.is-collapsed .lf-ai-rail__toggle::before { content:"●"; color:#22c55e; font-size:12px; margin-right:8px; vertical-align:middle; text-shadow:0 0 0 4px rgba(34,197,94,.2); }
 		.lf-ai-rail.is-collapsed .lf-ai-rail__add { display:none; }
-		.lf-ai-rail__list { display:flex; flex-direction:column; gap:6px; }
+		.lf-ai-rail__list { display:flex; flex-direction:column; gap:7px; }
 		.lf-ai-rail.is-collapsed .lf-ai-rail__list { display:none; }
-		.lf-ai-rail__item { border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; font-size:12px; cursor:pointer; color:#0f172a; background:#fff; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
-		.lf-ai-rail__item:hover { border-color:#c4b5fd; background:#faf7ff; }
-		.lf-ai-rail__item.is-active { border-color:#8348f9; background:#f5f0ff; }
-		.lf-ai-rail__item small { display:block; color:#64748b; margin-top:2px; }
+		.lf-ai-rail__item { border:1px solid #e9e1ff; border-radius:10px; padding:7px 9px; font-size:12px; cursor:pointer; color:#0f172a; background:#fff; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+		.lf-ai-rail__item:hover { border-color:#a78bfa; background:#faf7ff; box-shadow:0 4px 12px rgba(131,72,249,.12); }
+		.lf-ai-rail__item.is-active { border-color:#8348f9; background:#f5f0ff; box-shadow:0 0 0 2px rgba(131,72,249,.15); }
+		.lf-ai-rail__item small { display:block; color:#6b7280; margin-top:2px; }
 		.lf-ai-rail__item-body { min-width:0; flex:1; }
-		.lf-ai-rail__drag { border:1px solid #e2e8f0; border-radius:6px; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; color:#64748b; cursor:grab; user-select:none; background:#fff; font-size:12px; line-height:1; }
+		.lf-ai-rail__drag { border:1px solid #e9e1ff; border-radius:7px; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; color:#6b7280; cursor:grab; user-select:none; background:#fff; font-size:12px; line-height:1; }
 		.lf-ai-rail__drag:active { cursor:grabbing; }
 		.lf-ai-rail__item.is-dragging { opacity:.55; border-color:#8348f9; }
 		.lf-ai-rail__item.is-drop-before { box-shadow: inset 0 3px 0 #8348f9; }
 		.lf-ai-rail__item.is-drop-after { box-shadow: inset 0 -3px 0 #8348f9; }
 		body.lf-ai-rail-dragging { user-select:none; -webkit-user-select:none; }
-		.lf-ai-rail__library { border:1px solid #e2e8f0; border-radius:10px; padding:6px; margin:0 0 8px; background:#f8fafc; display:flex; flex-direction:column; gap:6px; }
+		.lf-ai-rail__library { border:1px solid #ddd6fe; border-radius:12px; padding:7px; margin:0 0 9px; background:#f6f1ff; display:flex; flex-direction:column; gap:6px; }
 		.lf-ai-rail__library[hidden] { display:none !important; }
-		.lf-ai-rail__library-search { width:100%; border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:12px; }
+		.lf-ai-rail__library-search { width:100%; border:1px solid #c4b5fd; border-radius:9px; padding:7px 8px; font-size:12px; }
+		.lf-ai-rail__library-search:focus { outline:none; border-color:#8348f9; box-shadow:0 0 0 3px rgba(131,72,249,.18); }
 		.lf-ai-rail__library-list { max-height:180px; overflow:auto; display:flex; flex-direction:column; gap:4px; }
-		.lf-ai-rail__library-item { border:1px solid #e2e8f0; border-radius:8px; background:#fff; padding:6px 8px; font-size:12px; cursor:pointer; text-align:left; color:#0f172a; }
-		.lf-ai-rail__library-item:hover { border-color:#c4b5fd; background:#faf7ff; }
+		.lf-ai-rail__library-item { border:1px solid #e9e1ff; border-radius:9px; background:#fff; padding:6px 8px; font-size:12px; cursor:pointer; text-align:left; color:#0f172a; }
+		.lf-ai-rail__library-item:hover { border-color:#a78bfa; background:#faf7ff; }
 		.lf-ai-rail__library-item[disabled] { opacity:.5; cursor:default; }
 		.lf-ai-command { position:fixed; left:50%; top:16%; transform:translateX(-50%); z-index:100001; width:min(560px, calc(100vw - 26px)); background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); padding:10px; }
 		.lf-ai-command[hidden] { display:none !important; }
@@ -492,6 +588,34 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-command__row { border:1px solid #e2e8f0; border-radius:8px; padding:8px; font-size:13px; cursor:pointer; }
 		.lf-ai-command__row:hover, .lf-ai-command__row.is-active { border-color:#8348f9; background:#f6f2ff; }
 		.lf-ai-command__hint { margin-top:8px; font-size:11px; color:#64748b; }
+		.lf-ai-icon-picker { position:fixed; inset:0; z-index:100002; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; padding:18px; }
+		.lf-ai-icon-picker[hidden] { display:none !important; }
+		.lf-ai-icon-picker__card { width:min(560px, calc(100vw - 30px)); max-height:80vh; overflow:hidden; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); display:flex; flex-direction:column; }
+		.lf-ai-icon-picker__head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-bottom:1px solid #e2e8f0; background:#f8fafc; }
+		.lf-ai-icon-picker__title { font-size:13px; font-weight:700; color:#0f172a; }
+		.lf-ai-icon-picker__close { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:15px; line-height:1; }
+		.lf-ai-icon-picker__search { border:1px solid #d6c8fb; border-radius:8px; padding:8px 10px; margin:10px 12px; font-size:13px; }
+		.lf-ai-icon-picker__list { padding:0 12px 12px; overflow:auto; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+		.lf-ai-icon-picker__item { border:1px solid #e2e8f0; border-radius:8px; background:#fff; color:#0f172a; text-align:left; padding:8px 10px; cursor:pointer; font-size:12px; }
+		.lf-ai-icon-picker__item:hover { border-color:#c4b5fd; background:#faf7ff; }
+		.lf-ai-icon-picker__item.is-active { border-color:#8348f9; background:#f5f0ff; color:#5b21b6; }
+		.lf-ai-icon-picker__empty { padding:10px; color:#64748b; font-size:12px; }
+		.lf-ai-media-add-wrap { margin-top:10px; }
+		.lf-ai-media-add { border:1px dashed #bba5f8; background:#faf7ff; color:#6a33e8; border-radius:10px; min-height:34px; padding:0 12px; font-size:12px; cursor:pointer; }
+		.lf-ai-media-add:hover { background:#f5f0ff; border-color:#8348f9; }
+		.lf-service-details__media .lf-ai-media-add-wrap { position:absolute; top:10px; left:10px; margin-top:0; z-index:3; }
+		.lf-service-details__media, .lf-media-section__media { position:relative; }
+		.lf-ai-media-picker { position:fixed; inset:0; z-index:100003; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; padding:18px; }
+		.lf-ai-media-picker[hidden] { display:none !important; }
+		.lf-ai-media-picker__card { width:min(560px, calc(100vw - 30px)); max-height:82vh; overflow:hidden; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); display:flex; flex-direction:column; }
+		.lf-ai-media-picker__head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-bottom:1px solid #e2e8f0; background:#f8fafc; }
+		.lf-ai-media-picker__title { font-size:13px; font-weight:700; color:#0f172a; }
+		.lf-ai-media-picker__close { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:15px; line-height:1; }
+		.lf-ai-media-picker__body { padding:12px; display:flex; flex-direction:column; gap:8px; }
+		.lf-ai-media-picker__actions { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+		.lf-ai-media-picker__actions button { border:1px solid #e2e8f0; background:#fff; color:#0f172a; border-radius:8px; min-height:34px; padding:0 10px; font-size:12px; cursor:pointer; }
+		.lf-ai-media-picker__actions button:hover { border-color:#c4b5fd; background:#faf7ff; }
+		.lf-ai-media-picker__hint { font-size:12px; color:#64748b; }
 		.lf-ai-float__confirm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.4); z-index:5; padding:12px; pointer-events:auto; }
 		.lf-ai-float__confirm[hidden] { display:none !important; pointer-events:none !important; }
 		.lf-ai-float__confirm-card { width:100%; max-width:360px; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 10px 34px rgba(15,23,42,.28); padding:14px; }
@@ -499,6 +623,7 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float__confirm-actions { display:flex; gap:8px; justify-content:flex-end; }
 		@media (max-width: 782px) {
 			.lf-ai-float { right:12px; bottom:12px; left:12px; }
+			.lf-ai-float--seo { right:12px; bottom:68px; left:12px; }
 			.lf-ai-float__toggle { width:100%; justify-content:center; }
 			.lf-ai-float__panel { width:100%; left:0; right:0; }
 			.lf-ai-float__mode { grid-template-columns:1fr; }
@@ -511,11 +636,15 @@ function lf_ai_assistant_widget_js(): string {
 	return '(function($){
 		"use strict";
 		var stateKey = "lfAiFloatState";
+		var seoStateKey = "lfAiSeoFloatState";
 		var $root = $("[data-lf-ai-float]");
+		var $seoRoot = $("[data-lf-ai-seo-float]");
 		if (!$root.length || typeof lfAiFloating === "undefined") return;
 		$root.attr("data-lf-ai-js-init", "1");
 		var $toggle = $root.find("[data-lf-ai-toggle]");
 		var $panel = $root.find("#lf-ai-float-panel");
+		var $seoToggle = $seoRoot.find("[data-lf-ai-seo-toggle]");
+		var $seoPanel = $seoRoot.find("#lf-ai-seo-panel");
 		var $prompt = $root.find("[data-lf-ai-prompt]");
 		var $status = $root.find("[data-lf-ai-status]");
 		var $diff = $root.find("[data-lf-ai-diff]");
@@ -539,6 +668,20 @@ function lf_ai_assistant_widget_js(): string {
 		var $docAttach = $root.find("[data-lf-ai-doc-attach]");
 		var $docClear = $root.find("[data-lf-ai-doc-clear]");
 		var $docName = $root.find("[data-lf-ai-doc-name]");
+		var $seo = $seoRoot.find("[data-lf-ai-seo]");
+		var $seoScore = $seoRoot.find("[data-lf-ai-seo-score]");
+		var $seoList = $seoRoot.find("[data-lf-ai-seo-list]");
+		var $seoRefresh = $seoRoot.find("[data-lf-ai-seo-refresh]");
+		var $seoOverallFill = $seoRoot.find("[data-lf-ai-seo-overall-fill]");
+		var $seoSubSeo = $seoRoot.find("[data-lf-ai-seo-sub-seo]");
+		var $seoSubConv = $seoRoot.find("[data-lf-ai-seo-sub-conv]");
+		var $seoSubPerf = $seoRoot.find("[data-lf-ai-seo-sub-perf]");
+		var $seoTasks = $seoRoot.find("[data-lf-ai-seo-tasks]");
+		var $seoSerpUrl = $seoRoot.find("[data-lf-ai-seo-serp-url]");
+		var $seoSerpTitle = $seoRoot.find("[data-lf-ai-seo-serp-title]");
+		var $seoSerpDesc = $seoRoot.find("[data-lf-ai-seo-serp-desc]");
+		var $seoCoverage = $seoRoot.find("[data-lf-ai-seo-coverage]");
+		var $seoVitals = $seoRoot.find("[data-lf-ai-seo-vitals]");
 		var $confirm = $root.find("[data-lf-ai-confirm]");
 		var $confirmText = $root.find("[data-lf-ai-confirm-text]");
 		var $confirmYes = $root.find("[data-lf-ai-confirm-yes]");
@@ -586,8 +729,15 @@ function lf_ai_assistant_widget_js(): string {
 		var railLibraryOpen = false;
 		var suppressInlineClickUntil = 0;
 		var iconSlugs = Array.isArray(lfAiFloating.icon_slugs) ? lfAiFloating.icon_slugs : [];
-		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption";
-		var inlineImageCandidateSelector = "main img";
+		var iconPickerEl = null;
+		var iconPickerSearchEl = null;
+		var iconPickerListEl = null;
+		var iconPickerCurrentSlug = "";
+		var iconPickerOnSelect = null;
+		var mediaPickerEl = null;
+		var mediaPickerWrap = null;
+		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption,#primary h1,#primary h2,#primary h3,#primary h4,#primary h5,#primary h6,#primary p,#primary li,#primary blockquote,#primary figcaption,.site-main h1,.site-main h2,.site-main h3,.site-main h4,.site-main h5,.site-main h6,.site-main p,.site-main li,.site-main blockquote,.site-main figcaption,.site-content h1,.site-content h2,.site-content h3,.site-content h4,.site-content h5,.site-content h6,.site-content p,.site-content li,.site-content blockquote,.site-content figcaption,article h1,article h2,article h3,article h4,article h5,article h6,article p,article li,article blockquote,article figcaption";
+		var inlineImageCandidateSelector = "main img,#primary img,.site-main img,.site-content img,article img";
 		var mediaFrame = null;
 
 		function escapeHtml(text) {
@@ -651,17 +801,271 @@ function lf_ai_assistant_widget_js(): string {
 			});
 			return best;
 		}
+		function countWords(text) {
+			var clean = String(text || "").replace(/\s+/g, " ").trim();
+			if (!clean) return 0;
+			return clean.split(" ").filter(function(token){ return token !== ""; }).length;
+		}
+		function seoMainRoot() {
+			return document.querySelector("main") || document.querySelector("#primary") || document.querySelector(".site-main") || document.querySelector("article") || document.body;
+		}
+		function seoMainText() {
+			var root = seoMainRoot();
+			if (!root) return "";
+			var clone = root.cloneNode(true);
+			Array.prototype.slice.call(clone.querySelectorAll("script,style,noscript,nav,footer,.lf-ai-float,.lf-ai-rail,.lf-ai-command,.lf-ai-seo-float")).forEach(function(node){
+				if (node && node.parentNode) node.parentNode.removeChild(node);
+			});
+			return String(clone.textContent || "").replace(/\s+/g, " ").trim();
+		}
+		function normalizeKeywordTokens(value) {
+			return String(value || "")
+				.split(/[\r\n,]+/)
+				.map(function(v){ return String(v || "").trim(); })
+				.filter(function(v){ return v !== ""; });
+		}
+		function containsPhrase(haystack, needle) {
+			var h = normalizeInlineText(haystack);
+			var n = normalizeInlineText(needle);
+			if (!h || !n) return false;
+			return h.indexOf(n) !== -1;
+		}
+		function statusClass(status) {
+			return status === "ok" ? "ok" : (status === "error" ? "error" : "warn");
+		}
+		function renderSeoSnapshot() {
+			if (!$seo.length || !$seoScore.length || !$seoList.length) return;
+			var title = String(document.title || "").trim();
+			var titleLen = title.length;
+			var metaDescNode = document.querySelector("meta[name=\"description\"]");
+			var metaDesc = metaDescNode ? String(metaDescNode.getAttribute("content") || "").trim() : "";
+			var metaDescLen = metaDesc.length;
+			var canonical = !!document.querySelector("link[rel=\"canonical\"]");
+			var robotsNode = document.querySelector("meta[name=\"robots\"]");
+			var robots = robotsNode ? String(robotsNode.getAttribute("content") || "").toLowerCase() : "";
+			var noindex = robots.indexOf("noindex") !== -1;
+			var h1Count = document.querySelectorAll("main h1,#primary h1,.site-main h1,article h1,h1.entry-title,h1.wp-block-post-title").length;
+			var wordCount = countWords(seoMainText());
+			var root = seoMainRoot();
+			var ctaCount = root ? root.querySelectorAll("a.lf-btn,button.lf-btn,a[href^=\"tel:\"],a[href*=\"contact\"],a[href*=\"quote\"],a[href*=\"book\"],button[type=\"submit\"]").length : 0;
+			var formCount = root ? root.querySelectorAll("form").length : 0;
+			var imgs = root ? Array.prototype.slice.call(root.querySelectorAll("img")) : [];
+			var missingAlt = imgs.filter(function(img){
+				return String(img.getAttribute("alt") || "").trim() === "";
+			}).length;
+			var missingDimensions = imgs.filter(function(img){
+				var hasW = !!img.getAttribute("width");
+				var hasH = !!img.getAttribute("height");
+				return !(hasW && hasH);
+			}).length;
+			var lazyImgs = imgs.filter(function(img){
+				return String(img.getAttribute("loading") || "").toLowerCase() === "lazy";
+			}).length;
+			var iframeCount = root ? root.querySelectorAll("iframe").length : 0;
+			var videoCount = root ? root.querySelectorAll("video").length : 0;
+			var domNodes = root ? root.querySelectorAll("*").length : 0;
+			var scriptCount = document.querySelectorAll("script[src]").length;
+			var internalLinks = root ? Array.prototype.slice.call(root.querySelectorAll("a[href]")).filter(function(link){
+				var href = String(link.getAttribute("href") || "");
+				return href && href.indexOf("#") !== 0 && href.indexOf("mailto:") !== 0 && href.indexOf("tel:") !== 0 && (href.indexOf("http") !== 0 || href.indexOf(window.location.origin) === 0);
+			}).length : 0;
+			var qHeadings = root ? root.querySelectorAll("h2,h3").length : 0;
+			var faqCount = root ? root.querySelectorAll(".lf-block-faq-accordion__item").length : 0;
+			var seoScoreClient = 100;
+			if (!title) seoScoreClient -= 20;
+			else if (titleLen < 35 || titleLen > 65) seoScoreClient -= 8;
+			if (!metaDesc) seoScoreClient -= 12;
+			else if (metaDescLen < 120 || metaDescLen > 165) seoScoreClient -= 6;
+			if (h1Count === 0) seoScoreClient -= 14;
+			if (h1Count > 1) seoScoreClient -= 8;
+			if (!canonical) seoScoreClient -= 6;
+			if (noindex) seoScoreClient -= 24;
+			if (wordCount < 250) seoScoreClient -= 12;
+			if (internalLinks < 2) seoScoreClient -= 8;
+			if (missingAlt > 0) seoScoreClient -= Math.min(14, missingAlt * 2);
+			seoScoreClient = Math.max(0, Math.min(100, seoScoreClient));
+
+			var convScore = 100;
+			if (ctaCount === 0) convScore -= 25;
+			if (formCount === 0 && ctaCount < 2) convScore -= 15;
+			if (faqCount === 0) convScore -= 10;
+			if (qHeadings < 2) convScore -= 8;
+			if (wordCount < 250) convScore -= 12;
+			convScore = Math.max(0, Math.min(100, convScore));
+
+			var perfScore = 100;
+			if (domNodes > 1800) perfScore -= 18;
+			else if (domNodes > 1200) perfScore -= 10;
+			if (iframeCount > 1) perfScore -= 8;
+			if ((iframeCount + videoCount) > 2) perfScore -= 6;
+			if (missingDimensions > 0) perfScore -= Math.min(15, missingDimensions * 2);
+			if (imgs.length > 2 && lazyImgs < Math.max(1, imgs.length - 1)) perfScore -= 10;
+			if (scriptCount > 25) perfScore -= 12;
+			else if (scriptCount > 18) perfScore -= 6;
+			perfScore = Math.max(0, Math.min(100, perfScore));
+
+			$seoScore.html("Overall: <strong>Analyzing...</strong>");
+			if ($seoOverallFill.length) $seoOverallFill.css("width", "0%");
+			if ($seoSubSeo.length) $seoSubSeo.text(seoScoreClient + "/100");
+			if ($seoSubConv.length) $seoSubConv.text(convScore + "/100");
+			if ($seoSubPerf.length) $seoSubPerf.text(perfScore + "/100");
+
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_seo_snapshot",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId
+			}).done(function(res){
+				var backendSeo = seoScoreClient;
+				var backendChecks = [];
+				var intent = "";
+				if (res && res.success && res.data) {
+					backendSeo = parseInt(String(res.data.backend_seo_score || seoScoreClient), 10);
+					if (isNaN(backendSeo)) backendSeo = seoScoreClient;
+					backendChecks = Array.isArray(res.data.checks) ? res.data.checks : [];
+					intent = String(res.data.intent || "");
+				}
+				var seoScore = Math.round((seoScoreClient * 0.45) + (backendSeo * 0.55));
+				var overall = Math.round((seoScore * 0.58) + (convScore * 0.25) + (perfScore * 0.17));
+				overall = Math.max(0, Math.min(100, overall));
+				$seoScore.html("Overall: <strong>" + overall + "/100</strong>" + (intent ? " • Intent: " + escapeHtml(intent) : ""));
+				if ($seoOverallFill.length) $seoOverallFill.css("width", overall + "%");
+				if ($seoSubSeo.length) $seoSubSeo.text(seoScore + "/100");
+				if ($seoSubConv.length) $seoSubConv.text(convScore + "/100");
+				if ($seoSubPerf.length) $seoSubPerf.text(perfScore + "/100");
+
+				var rows = [
+					{ status: (!!title && titleLen >= 35 && titleLen <= 65) ? "ok" : "warn", label: "Title length: " + titleLen + " chars (35-65)." },
+					{ status: (!!metaDesc && metaDescLen >= 120 && metaDescLen <= 165) ? "ok" : "warn", label: "Meta description: " + metaDescLen + " chars (120-165)." },
+					{ status: (h1Count === 1) ? "ok" : (h1Count > 1 ? "warn" : "error"), label: "H1 count: " + h1Count + " (target 1)." },
+					{ status: (internalLinks >= 2) ? "ok" : "warn", label: "Internal links in content: " + internalLinks + " (target 2+)." },
+					{ status: (ctaCount >= 1) ? "ok" : "error", label: "Primary CTA presence: " + ctaCount + " found." },
+					{ status: (missingAlt === 0) ? "ok" : (missingAlt < 3 ? "warn" : "error"), label: "Images missing alt text: " + missingAlt + "." },
+					{ status: (perfScore >= 85) ? "ok" : (perfScore >= 70 ? "warn" : "error"), label: "Performance hygiene score: " + perfScore + "/100." }
+				];
+				backendChecks.forEach(function(ch){
+					if (!ch || !ch.label) return;
+					var st = String(ch.status || "warn");
+					var msg = String(ch.message || "");
+					var action = String(ch.action || "");
+					rows.push({ status: st, label: String(ch.label) + ": " + msg + (action ? " " + action : "") });
+				});
+				var actionable = rows.filter(function(row){ return row.status !== "ok"; });
+				var taskRows = actionable.slice(0, 8).map(function(row, idx){
+					var pr = row.status === "error" ? "high" : (idx < 3 ? "med" : "low");
+					return { priority: pr, label: row.label };
+				});
+				var taskHtml = "";
+				if (!taskRows.length) {
+					taskHtml = "<div class=\"lf-ai-seo__task\"><span class=\"lf-ai-seo__task-priority lf-ai-seo__task-priority--low\">OK</span><span>No urgent SEO actions. Keep refining for conversions.</span></div>";
+				} else {
+					taskRows.forEach(function(task){
+						taskHtml += "<div class=\"lf-ai-seo__task\"><span class=\"lf-ai-seo__task-priority lf-ai-seo__task-priority--" + task.priority + "\">" + (task.priority === "high" ? "HIGH" : (task.priority === "med" ? "MED" : "LOW")) + "</span><span>" + escapeHtml(task.label) + "</span></div>";
+					});
+				}
+				if ($seoTasks.length) $seoTasks.html(taskHtml);
+
+				var meta = (res && res.success && res.data && res.data.meta) ? res.data.meta : {};
+				var backendTitle = (res && res.success && res.data) ? String(res.data.post_title || "") : "";
+				var backendPermalink = (res && res.success && res.data) ? String(res.data.permalink || "") : "";
+				var serpTitle = String((meta.meta_title || "") || title || backendTitle || "").trim();
+				var serpDesc = String((meta.meta_description || "") || metaDesc || "").trim();
+				var serpUrl = String((meta.canonical || "") || backendPermalink || window.location.href || "").trim();
+				if ($seoSerpUrl.length) $seoSerpUrl.text(serpUrl);
+				if ($seoSerpTitle.length) $seoSerpTitle.text(serpTitle || "(missing title)");
+				if ($seoSerpDesc.length) $seoSerpDesc.text(serpDesc || "(missing meta description)");
+
+				var primaryKw = String(meta.primary_keyword || "").trim();
+				var secondaryKws = normalizeKeywordTokens(meta.secondary_keywords || "");
+				var h1TextNode = document.querySelector("main h1,#primary h1,.site-main h1,article h1,h1.entry-title,h1.wp-block-post-title");
+				var h1Text = h1TextNode ? String(h1TextNode.textContent || "") : "";
+				var introNode = document.querySelector("main p,#primary p,.site-main p,article p");
+				var introText = introNode ? String(introNode.textContent || "") : "";
+				var coverageRows = [];
+				if (primaryKw) {
+					coverageRows.push({ label: "Primary keyword in title", status: containsPhrase(serpTitle, primaryKw) ? "ok" : "warn" });
+					coverageRows.push({ label: "Primary keyword in H1", status: containsPhrase(h1Text, primaryKw) ? "ok" : "warn" });
+					coverageRows.push({ label: "Primary keyword in intro", status: containsPhrase(introText, primaryKw) ? "ok" : "warn" });
+				} else {
+					coverageRows.push({ label: "Primary keyword missing in backend SEO settings", status: "error" });
+				}
+				secondaryKws.slice(0, 3).forEach(function(kw){
+					coverageRows.push({ label: "Secondary keyword \"" + kw + "\" in page copy", status: containsPhrase(seoMainText(), kw) ? "ok" : "warn" });
+				});
+				var coverageHtml = "";
+				coverageRows.forEach(function(row){
+					var cls = statusClass(row.status);
+					coverageHtml += "<div class=\"lf-ai-seo__coverage-row\"><span class=\"lf-ai-seo__badge lf-ai-seo__badge--" + cls + "\">" + (cls === "ok" ? "OK" : (cls === "error" ? "FIX" : "CHECK")) + "</span><span>" + escapeHtml(row.label) + "</span></div>";
+				});
+				if ($seoCoverage.length) $seoCoverage.html(coverageHtml);
+
+				var vitalsRows = [
+					{ label: "DOM nodes (" + domNodes + ")", status: domNodes <= 1200 ? "ok" : (domNodes <= 1800 ? "warn" : "error") },
+					{ label: "Lazy-loaded images (" + lazyImgs + "/" + imgs.length + ")", status: imgs.length === 0 || lazyImgs >= Math.max(1, imgs.length - 1) ? "ok" : "warn" },
+					{ label: "Images with dimensions missing (" + missingDimensions + ")", status: missingDimensions === 0 ? "ok" : (missingDimensions < 3 ? "warn" : "error") },
+					{ label: "Embedded heavy media (iframes/videos: " + (iframeCount + videoCount) + ")", status: (iframeCount + videoCount) <= 2 ? "ok" : "warn" },
+					{ label: "External script count (" + scriptCount + ")", status: scriptCount <= 18 ? "ok" : (scriptCount <= 25 ? "warn" : "error") }
+				];
+				var vitalsHtml = "";
+				vitalsRows.forEach(function(row){
+					var cls = statusClass(row.status);
+					vitalsHtml += "<div class=\"lf-ai-seo__vital-row\"><span class=\"lf-ai-seo__badge lf-ai-seo__badge--" + cls + "\">" + (cls === "ok" ? "GOOD" : (cls === "error" ? "HIGH" : "MED")) + "</span><span>" + escapeHtml(row.label) + "</span></div>";
+				});
+				if ($seoVitals.length) $seoVitals.html(vitalsHtml);
+				var html = "";
+				rows.slice(0, 12).forEach(function(row){
+					var cls = row.status === "ok" ? "ok" : (row.status === "error" ? "error" : "warn");
+					var dot = cls === "ok" ? "●" : (cls === "error" ? "■" : "▲");
+					html += "<div class=\"lf-ai-seo__item lf-ai-seo__item--" + cls + "\"><span class=\"lf-ai-seo__item-dot\">" + dot + "</span><span>" + escapeHtml(row.label) + "</span></div>";
+				});
+				$seoList.html(html);
+			}).fail(function(){
+				var overallFallback = Math.round((seoScoreClient * 0.58) + (convScore * 0.25) + (perfScore * 0.17));
+				overallFallback = Math.max(0, Math.min(100, overallFallback));
+				$seoScore.html("Overall: <strong>" + overallFallback + "/100</strong>");
+				if ($seoOverallFill.length) $seoOverallFill.css("width", overallFallback + "%");
+				$seoList.html("<div class=\"lf-ai-seo__item lf-ai-seo__item--warn\"><span class=\"lf-ai-seo__item-dot\">▲</span><span>Backend SEO snapshot unavailable right now. Showing client-side diagnostics only.</span></div>");
+				if ($seoTasks.length) $seoTasks.html("<div class=\"lf-ai-seo__task\"><span class=\"lf-ai-seo__task-priority lf-ai-seo__task-priority--med\">MED</span><span>Reconnect backend SEO snapshot for full guidance; continue fixing on-page warnings first.</span></div>");
+				if ($seoSerpUrl.length) $seoSerpUrl.text(window.location.href || "");
+				if ($seoSerpTitle.length) $seoSerpTitle.text(title || "(missing title)");
+				if ($seoSerpDesc.length) $seoSerpDesc.text(metaDesc || "(missing meta description)");
+				if ($seoCoverage.length) $seoCoverage.html("<div class=\"lf-ai-seo__coverage-row\"><span class=\"lf-ai-seo__badge lf-ai-seo__badge--warn\">CHECK</span><span>Set primary/secondary keywords in SEO meta box to enable full keyword coverage mapping.</span></div>");
+				if ($seoVitals.length) $seoVitals.html(
+					"<div class=\"lf-ai-seo__vital-row\"><span class=\"lf-ai-seo__badge lf-ai-seo__badge--" + (domNodes <= 1200 ? "ok" : "warn") + "\">" + (domNodes <= 1200 ? "GOOD" : "MED") + "</span><span>DOM nodes: " + domNodes + "</span></div>" +
+					"<div class=\"lf-ai-seo__vital-row\"><span class=\"lf-ai-seo__badge lf-ai-seo__badge--" + (missingDimensions === 0 ? "ok" : "warn") + "\">" + (missingDimensions === 0 ? "GOOD" : "MED") + "</span><span>Images missing dimensions: " + missingDimensions + "</span></div>"
+				);
+			});
+		}
 		function setStatus(msg, isError) {
 			$status.text(msg || "");
 			$status.toggleClass("is-error", !!isError);
 		}
-		function setOpen(open) {
+		function setAiOpen(open) {
 			$panel.prop("hidden", !open);
 			$toggle.attr("aria-expanded", open ? "true" : "false");
+			if (open && $seoPanel.length) {
+				$seoPanel.prop("hidden", true);
+				$seoToggle.attr("aria-expanded", "false");
+				try { window.localStorage.setItem(seoStateKey, "closed"); } catch (e) {}
+			}
 			if (!open) {
 				saveInlineEdit();
 			}
 			try { window.localStorage.setItem(stateKey, open ? "open" : "closed"); } catch (e) {}
+		}
+		function setSeoOpen(open) {
+			if (!$seoPanel.length || !$seoToggle.length) return;
+			$seoPanel.prop("hidden", !open);
+			$seoToggle.attr("aria-expanded", open ? "true" : "false");
+			if (open) {
+				setConfirmOpen(false);
+				$panel.prop("hidden", true);
+				$toggle.attr("aria-expanded", "false");
+				saveInlineEdit();
+				try { window.localStorage.setItem(stateKey, "closed"); } catch (e) {}
+				renderSeoSnapshot();
+			}
+			try { window.localStorage.setItem(seoStateKey, open ? "open" : "closed"); } catch (e) {}
 		}
 		function setEditorToggleUi() {
 			if (!$btnEditorToggle || !$btnEditorToggle.length) return;
@@ -691,13 +1095,308 @@ function lf_ai_assistant_widget_js(): string {
 				node.removeAttribute("data-lf-inline-image");
 				node.removeAttribute("data-lf-inline-image-selector");
 			});
-			Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-controls,[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"]")).forEach(function(node){
+			Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-controls,[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
 				if (node && node.parentNode) node.parentNode.removeChild(node);
+			});
+			Array.prototype.slice.call(document.querySelectorAll(".lf-service-details__text")).forEach(function(node){
+				if (!node) return;
+				node.onmousedown = null;
+				node.onclick = null;
+				node.onblur = null;
+				node.onkeydown = null;
+				node.removeAttribute("contenteditable");
+				node.removeAttribute("spellcheck");
+				node.removeAttribute("data-lf-ai-editing");
+				node.removeAttribute("data-lf-ai-original-text");
+			});
+			Array.prototype.slice.call(document.querySelectorAll(".lf-block-hero__card-item-text")).forEach(function(node){
+				if (!node) return;
+				node.onmousedown = null;
+				node.onclick = null;
+				node.onblur = null;
+				node.onkeydown = null;
+				node.removeAttribute("contenteditable");
+				node.removeAttribute("spellcheck");
+				node.removeAttribute("data-lf-ai-editing");
+				node.removeAttribute("data-lf-ai-original-text");
+			});
+			Array.prototype.slice.call(document.querySelectorAll(".lf-benefits__icon[data-lf-benefit-icon-index]")).forEach(function(node){
+				if (!node) return;
+				node.onclick = null;
+				node.style.cursor = "";
+			});
+			Array.prototype.slice.call(document.querySelectorAll(".lf-process__step,.lf-block-faq-accordion__item[data-lf-faq-id],.lf-ai-column-draggable")).forEach(function(node){
+				if (!node) return;
+				node.setAttribute("draggable", "false");
+				node.ondragstart = null;
+				node.ondragover = null;
+				node.ondrop = null;
+				node.ondragend = null;
+				node.ondblclick = null;
+				node.classList.remove("is-dragging", "lf-ai-process-step", "lf-ai-column-draggable");
+			});
+			Array.prototype.slice.call(document.querySelectorAll(".lf-service-details--media")).forEach(function(node){
+				if (!node) return;
+				node.ondragover = null;
+				node.ondrop = null;
 			});
 			if (sectionRailEl && sectionRailEl.parentNode) {
 				sectionRailEl.parentNode.removeChild(sectionRailEl);
 			}
 			sectionRailEl = null;
+			if (iconPickerEl) {
+				iconPickerEl.hidden = true;
+			}
+			if (mediaPickerEl) {
+				mediaPickerEl.hidden = true;
+			}
+		}
+		function closeIconPicker() {
+			if (!iconPickerEl) return;
+			iconPickerEl.hidden = true;
+			iconPickerOnSelect = null;
+			try { if (iconPickerSearchEl) iconPickerSearchEl.value = ""; } catch (e) {}
+		}
+		function renderIconPickerList(query) {
+			if (!iconPickerListEl) return;
+			var q = String(query || "").trim().toLowerCase();
+			var rows = iconSlugs.filter(function(slug){
+				var s = String(slug || "").toLowerCase();
+				return !q || s.indexOf(q) !== -1;
+			});
+			iconPickerListEl.innerHTML = "";
+			var clearBtn = document.createElement("button");
+			clearBtn.type = "button";
+			clearBtn.className = "lf-ai-icon-picker__item" + (iconPickerCurrentSlug === "" ? " is-active" : "");
+			clearBtn.textContent = "Use default icon";
+			clearBtn.addEventListener("click", function(){
+				if (typeof iconPickerOnSelect === "function") iconPickerOnSelect("");
+				closeIconPicker();
+			});
+			iconPickerListEl.appendChild(clearBtn);
+			if (!rows.length) {
+				var empty = document.createElement("div");
+				empty.className = "lf-ai-icon-picker__empty";
+				empty.textContent = "No matching icons in library.";
+				iconPickerListEl.appendChild(empty);
+				return;
+			}
+			rows.forEach(function(slug){
+				var btn = document.createElement("button");
+				btn.type = "button";
+				btn.className = "lf-ai-icon-picker__item" + (String(slug) === iconPickerCurrentSlug ? " is-active" : "");
+				btn.textContent = String(slug);
+				btn.addEventListener("click", function(){
+					if (typeof iconPickerOnSelect === "function") iconPickerOnSelect(String(slug));
+					closeIconPicker();
+				});
+				iconPickerListEl.appendChild(btn);
+			});
+		}
+		function ensureIconPicker() {
+			if (iconPickerEl) return iconPickerEl;
+			iconPickerEl = document.createElement("div");
+			iconPickerEl.className = "lf-ai-icon-picker lf-ai-inline-editor-ignore";
+			iconPickerEl.hidden = true;
+			iconPickerEl.innerHTML = "<div class=\"lf-ai-icon-picker__card\"><div class=\"lf-ai-icon-picker__head\"><div class=\"lf-ai-icon-picker__title\">Choose an icon</div><button type=\"button\" class=\"lf-ai-icon-picker__close\" data-lf-ai-icon-picker-close aria-label=\"Close icon picker\">×</button></div><input type=\"text\" class=\"lf-ai-icon-picker__search\" data-lf-ai-icon-picker-search placeholder=\"Search icon slug...\" /><div class=\"lf-ai-icon-picker__list\" data-lf-ai-icon-picker-list></div></div>";
+			iconPickerSearchEl = iconPickerEl.querySelector("[data-lf-ai-icon-picker-search]");
+			iconPickerListEl = iconPickerEl.querySelector("[data-lf-ai-icon-picker-list]");
+			var closeBtn = iconPickerEl.querySelector("[data-lf-ai-icon-picker-close]");
+			if (closeBtn) {
+				closeBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					closeIconPicker();
+				});
+			}
+			if (iconPickerSearchEl) {
+				iconPickerSearchEl.addEventListener("input", function(){
+					renderIconPickerList(iconPickerSearchEl.value);
+				});
+			}
+			iconPickerEl.addEventListener("click", function(e){
+				if (e.target === iconPickerEl) closeIconPicker();
+			});
+			document.body.appendChild(iconPickerEl);
+			return iconPickerEl;
+		}
+		function openIconPicker(currentSlug, onSelect) {
+			if (!iconSlugs.length) {
+				setStatus("Icon library is unavailable on this screen.", true);
+				return;
+			}
+			ensureIconPicker();
+			iconPickerCurrentSlug = String(currentSlug || "");
+			iconPickerOnSelect = typeof onSelect === "function" ? onSelect : null;
+			if (!iconPickerEl) return;
+			iconPickerEl.hidden = false;
+			if (iconPickerSearchEl) iconPickerSearchEl.value = "";
+			renderIconPickerList("");
+			try { if (iconPickerSearchEl) iconPickerSearchEl.focus(); } catch (e) {}
+		}
+		function sectionSupportsMediaEditor(sectionType) {
+			var type = String(sectionType || "");
+			return ["service_details", "content_image", "content_image_a", "image_content", "image_content_b", "content_image_c"].indexOf(type) !== -1;
+		}
+		function persistSectionMediaSettings(wrap, payload) {
+			if (!wrap || !payload) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+			if (!sectionId || !sectionSupportsMediaEditor(sectionType)) return;
+			setStatus("Saving section media...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_update_section_media",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_id: sectionId,
+				mode: String(payload.mode || "image"),
+				image_id: parseInt(String(payload.image_id || "0"), 10) || 0,
+				video_url: String(payload.video_url || ""),
+				embed_code: String(payload.embed_code || "")
+			}).done(function(res){
+				if (res && res.success) {
+					setStatus((res.data && res.data.message) ? res.data.message : "Section media updated.", false);
+					if (res.data && res.data.reload) {
+						window.location.reload();
+					}
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Section media update failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Section media update failed.";
+				setStatus(msg, true);
+			});
+		}
+		function closeMediaPicker() {
+			if (!mediaPickerEl) return;
+			mediaPickerEl.hidden = true;
+			mediaPickerWrap = null;
+		}
+		function openMediaLibraryForWrap(wrap) {
+			if (!wrap || !(window.wp && wp.media)) {
+				setStatus("Media Library is unavailable on this screen.", true);
+				return;
+			}
+			var frame = wp.media({
+				title: "Select section media image",
+				button: { text: "Use image" },
+				library: { type: "image" },
+				multiple: false
+			});
+			frame.on("select", function(){
+				var selection = frame.state().get("selection");
+				var attachment = selection && selection.first ? selection.first().toJSON() : null;
+				var attachmentId = parseInt(String(attachment && attachment.id ? attachment.id : "0"), 10);
+				if (!attachmentId) return;
+				persistSectionMediaSettings(wrap, { mode: "image", image_id: attachmentId, video_url: "", embed_code: "" });
+				closeMediaPicker();
+			});
+			frame.open();
+		}
+		function ensureMediaPicker() {
+			if (mediaPickerEl) return mediaPickerEl;
+			mediaPickerEl = document.createElement("div");
+			mediaPickerEl.className = "lf-ai-media-picker lf-ai-inline-editor-ignore";
+			mediaPickerEl.hidden = true;
+			mediaPickerEl.innerHTML = "<div class=\"lf-ai-media-picker__card\"><div class=\"lf-ai-media-picker__head\"><div class=\"lf-ai-media-picker__title\">Section media</div><button type=\"button\" class=\"lf-ai-media-picker__close\" data-lf-ai-media-picker-close aria-label=\"Close media picker\">×</button></div><div class=\"lf-ai-media-picker__body\"><div class=\"lf-ai-media-picker__actions\"><button type=\"button\" data-lf-ai-media-image>+ Add / replace image</button><button type=\"button\" data-lf-ai-media-video-url>Video URL (YouTube/Vimeo/MP4)</button><button type=\"button\" data-lf-ai-media-embed>Embed code (iframe)</button><button type=\"button\" data-lf-ai-media-none>Remove media</button></div><div class=\"lf-ai-media-picker__hint\">Tip: choose Video URL for YouTube links, or Embed code for a custom iframe.</div></div></div>";
+			var closeBtn = mediaPickerEl.querySelector("[data-lf-ai-media-picker-close]");
+			var imageBtn = mediaPickerEl.querySelector("[data-lf-ai-media-image]");
+			var videoBtn = mediaPickerEl.querySelector("[data-lf-ai-media-video-url]");
+			var embedBtn = mediaPickerEl.querySelector("[data-lf-ai-media-embed]");
+			var noneBtn = mediaPickerEl.querySelector("[data-lf-ai-media-none]");
+			if (closeBtn) {
+				closeBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					closeMediaPicker();
+				});
+			}
+			if (imageBtn) {
+				imageBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					if (!mediaPickerWrap) return;
+					openMediaLibraryForWrap(mediaPickerWrap);
+				});
+			}
+			if (videoBtn) {
+				videoBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					if (!mediaPickerWrap) return;
+					var url = "";
+					try {
+						url = String(window.prompt("Enter a video URL (YouTube/Vimeo/MP4):", "") || "").trim();
+					} catch (err) {
+						url = "";
+					}
+					if (!url) return;
+					persistSectionMediaSettings(mediaPickerWrap, { mode: "video", image_id: 0, video_url: url, embed_code: "" });
+					closeMediaPicker();
+				});
+			}
+			if (embedBtn) {
+				embedBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					if (!mediaPickerWrap) return;
+					var code = "";
+					try {
+						code = String(window.prompt("Paste embed code (iframe):", "") || "").trim();
+					} catch (err) {
+						code = "";
+					}
+					if (!code) return;
+					persistSectionMediaSettings(mediaPickerWrap, { mode: "video", image_id: 0, video_url: "", embed_code: code });
+					closeMediaPicker();
+				});
+			}
+			if (noneBtn) {
+				noneBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					if (!mediaPickerWrap) return;
+					persistSectionMediaSettings(mediaPickerWrap, { mode: "none", image_id: 0, video_url: "", embed_code: "" });
+					closeMediaPicker();
+				});
+			}
+			mediaPickerEl.addEventListener("click", function(e){
+				if (e.target === mediaPickerEl) closeMediaPicker();
+			});
+			document.body.appendChild(mediaPickerEl);
+			return mediaPickerEl;
+		}
+		function openSectionMediaPicker(wrap) {
+			if (!wrap) return;
+			ensureMediaPicker();
+			mediaPickerWrap = wrap;
+			mediaPickerEl.hidden = false;
+		}
+		function buildSectionMediaEditors() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+				if (!sectionSupportsMediaEditor(sectionType)) return;
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				var mediaHost = wrap.querySelector(".lf-service-details__media,.lf-media-section__media");
+				var container = mediaHost;
+				if (!container) {
+					container = wrap.querySelector(".lf-service-details__content,.lf-media-section__content");
+					if (!container) return;
+				}
+				var addWrap = document.createElement("div");
+				addWrap.className = "lf-ai-media-add-wrap lf-ai-inline-editor-ignore";
+				addWrap.setAttribute("data-lf-ai-media-add", "1");
+				var addBtn = document.createElement("button");
+				addBtn.type = "button";
+				addBtn.className = "lf-ai-media-add";
+				addBtn.textContent = mediaHost ? "+ Media" : "+ Add media";
+				addBtn.setAttribute("title", "Add or replace image/video");
+				addBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					openSectionMediaPicker(wrap);
+				});
+				addWrap.appendChild(addBtn);
+				container.appendChild(addWrap);
+			});
 		}
 		function buildEditorUi() {
 			buildInlineTargets();
@@ -711,9 +1410,11 @@ function lf_ai_assistant_widget_js(): string {
 			buildChecklistControls();
 			buildProcessStepControls();
 			buildSectionColumnSwapTargets();
+			buildSectionMediaEditors();
 			buildFaqReorderControls();
 			buildBenefitsIconEditors();
 			refreshSectionRail();
+			renderSeoSnapshot();
 			var firstWrap = collectSectionWrappers()[0] || null;
 			if (firstWrap) {
 				setSelectedSection(firstWrap);
@@ -726,20 +1427,22 @@ function lf_ai_assistant_widget_js(): string {
 			if (!editingEnabled) {
 				clearEditorUi();
 				setStatus("Live mode enabled. Editing is off.", false);
+				renderSeoSnapshot();
 				return;
 			}
 			buildEditorUi();
 			setStatus("Editor mode enabled.", false);
+			renderSeoSnapshot();
 		}
 		function isDragBlockedTarget(target) {
 			if (!target) return false;
-			if (target.closest(".lf-ai-float")) return true;
+			if (target.closest(".lf-ai-float,.lf-ai-seo-float")) return true;
 			if (target.closest("a,button,input,textarea,select,label,[contenteditable=\"true\"],.lf-ai-inline-editor-ignore")) return true;
 			return false;
 		}
 		function inlineNodeEligible(node) {
 			if (!node || !node.textContent) return false;
-			if (node.closest(".lf-ai-float")) return false;
+			if (node.closest(".lf-ai-float,.lf-ai-seo-float")) return false;
 			if (node.closest("nav, footer, [aria-hidden=\"true\"]")) return false;
 			if (node.closest(".site-header, .site-footer, #masthead, #colophon")) return false;
 			if (node.closest("button, a, label, script, style, noscript")) return false;
@@ -751,7 +1454,14 @@ function lf_ai_assistant_widget_js(): string {
 			var isHeading = /^h[1-6]$/.test(tag);
 			// SEO safety: do not allow inline editing of entity/archive titles.
 			if (node.closest(".lf-blog-hero__title,.lf-post-card__title,.entry-title,[class*=\"project\"][class*=\"title\"],[class*=\"service\"][class*=\"title\"],[class*=\"blog\"][class*=\"title\"]")) return false;
-			if (isHeading && node.closest("article,.hentry,.type-post,.type-page,.type-lf_project,.type-lf_service,.type-lf_service_area,.type-lf_faq")) return false;
+			if (isHeading) {
+				var entity = node.closest("article,.hentry,.type-post,.type-page,.type-lf_project,.type-lf_service,.type-lf_service_area,.type-lf_faq");
+				if (entity) {
+					var lockedTitle = entity.querySelector(".entry-title,h1.entry-title,h1.page-title,h1.post-title,h1.wp-block-post-title,[data-lf-seo-title=\"1\"]");
+					if (lockedTitle && lockedTitle === node) return false;
+					if (node.closest(".entry-header")) return false;
+				}
+			}
 			var text = String(node.textContent || "").trim();
 			return text !== "";
 		}
@@ -805,7 +1515,7 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function inlineImageEligible(img) {
 			if (!img || !img.getAttribute) return false;
-			if (img.closest(".lf-ai-float")) return false;
+			if (img.closest(".lf-ai-float,.lf-ai-seo-float")) return false;
 			if (img.closest("nav, footer, .site-header, .site-footer, #masthead, #colophon")) return false;
 			var src = String(img.getAttribute("src") || "").trim();
 			if (src === "") return false;
@@ -926,6 +1636,7 @@ function lf_ai_assistant_widget_js(): string {
 				buildTrustBadgePillsControls();
 				buildChecklistControls();
 				buildProcessStepControls();
+				buildSectionMediaEditors();
 				buildFaqReorderControls();
 				buildBenefitsIconEditors();
 				try {
@@ -967,8 +1678,9 @@ function lf_ai_assistant_widget_js(): string {
 				toggle.addEventListener("click", function(){
 					railCollapsed = !railCollapsed;
 					sectionRailEl.classList.toggle("is-collapsed", railCollapsed);
-					toggle.textContent = railCollapsed ? "\u2261" : "\u2212";
+					toggle.textContent = railCollapsed ? "\u2630 Structure" : "\u2212";
 					toggle.setAttribute("aria-label", railCollapsed ? "Expand structure rail" : "Minimize structure rail");
+					toggle.setAttribute("title", railCollapsed ? "Expand structure rail" : "Minimize structure rail");
 					try { window.localStorage.setItem(railStateKey, railCollapsed ? "collapsed" : "expanded"); } catch (e) {}
 				});
 			}
@@ -988,8 +1700,9 @@ function lf_ai_assistant_widget_js(): string {
 			document.body.appendChild(sectionRailEl);
 			sectionRailEl.classList.toggle("is-collapsed", railCollapsed);
 			if (toggle) {
-				toggle.textContent = railCollapsed ? "\u2261" : "\u2212";
+				toggle.textContent = railCollapsed ? "\u2630 Structure" : "\u2212";
 				toggle.setAttribute("aria-label", railCollapsed ? "Expand structure rail" : "Minimize structure rail");
+				toggle.setAttribute("title", railCollapsed ? "Expand structure rail" : "Minimize structure rail");
 			}
 			return sectionRailEl;
 		}
@@ -1337,6 +2050,96 @@ function lf_ai_assistant_widget_js(): string {
 			});
 		}
 		function buildChecklistControls() {
+			function focusNodeEnd(node) {
+				if (!node || !window.getSelection || !document.createRange) return;
+				try {
+					var range = document.createRange();
+					range.selectNodeContents(node);
+					range.collapse(false);
+					var sel = window.getSelection();
+					sel.removeAllRanges();
+					sel.addRange(range);
+				} catch (e) {}
+			}
+			function checklistTextNodeFromLi(li) {
+				if (!li) return null;
+				var textNode = li.querySelector(".lf-service-details__text");
+				if (!textNode) {
+					textNode = document.createElement("span");
+					textNode.className = "lf-service-details__text";
+					textNode.textContent = textFromNodeWithoutAiControls(li);
+					li.insertBefore(textNode, li.firstChild || null);
+				}
+				textNode.removeAttribute("data-lf-inline-editable");
+				textNode.removeAttribute("data-lf-inline-selector");
+				li.removeAttribute("data-lf-inline-editable");
+				li.removeAttribute("data-lf-inline-selector");
+				return textNode;
+			}
+			function finishChecklistTextEdit(textNode, li, wrap, commit) {
+				if (!textNode) return;
+				var original = String(textNode.getAttribute("data-lf-ai-original-text") || "").trim();
+				var next = String(textNode.textContent || "").replace(/\s+/g, " ").trim();
+				textNode.removeAttribute("contenteditable");
+				textNode.removeAttribute("spellcheck");
+				textNode.removeAttribute("data-lf-ai-editing");
+				textNode.removeAttribute("data-lf-ai-original-text");
+				if (!commit) {
+					textNode.textContent = original || next || "Checklist item";
+					return;
+				}
+				if (next === "") {
+					textNode.textContent = original || "Checklist item";
+					return;
+				}
+				textNode.textContent = next;
+				if (next !== original) {
+					persistSectionChecklist(wrap);
+				}
+			}
+			function startChecklistTextEdit(textNode, li, wrap) {
+				if (!textNode) return;
+				if (String(textNode.getAttribute("data-lf-ai-editing") || "0") === "1") return;
+				textNode.setAttribute("data-lf-ai-original-text", String(textNode.textContent || "").trim());
+				textNode.setAttribute("data-lf-ai-editing", "1");
+				textNode.setAttribute("contenteditable", "true");
+				textNode.setAttribute("spellcheck", "true");
+				try { textNode.focus(); } catch (e) {}
+				focusNodeEnd(textNode);
+			}
+			function bindChecklistItemEditor(li, wrap) {
+				if (!li || !wrap) return;
+				var textNode = checklistTextNodeFromLi(li);
+				if (!textNode) return;
+				textNode.classList.add("lf-ai-inline-editor-ignore");
+				textNode.setAttribute("title", "Click to edit checklist item");
+				textNode.onmousedown = function(e){
+					if (e) e.stopPropagation();
+				};
+				textNode.onclick = function(e){
+					if (!editingEnabled) return;
+					if (e) {
+						e.preventDefault();
+						e.stopPropagation();
+					}
+					startChecklistTextEdit(textNode, li, wrap);
+				};
+				textNode.onblur = function(){
+					finishChecklistTextEdit(textNode, li, wrap, true);
+				};
+				textNode.onkeydown = function(e){
+					var key = String((e && e.key) || "");
+					if (key === "Enter") {
+						e.preventDefault();
+						finishChecklistTextEdit(textNode, li, wrap, true);
+						return;
+					}
+					if (key === "Escape") {
+						e.preventDefault();
+						finishChecklistTextEdit(textNode, li, wrap, false);
+					}
+				};
+			}
 			collectSectionWrappers().forEach(function(wrap){
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
 				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-checklist-controls=\"1\"]")).forEach(function(node){
@@ -1357,14 +2160,10 @@ function lf_ai_assistant_widget_js(): string {
 					content.appendChild(list);
 				}
 				Array.prototype.slice.call(list.querySelectorAll("li")).forEach(function(li){
-					var textNode = li.querySelector(".lf-service-details__text");
-					if (!textNode) {
-						textNode = document.createElement("span");
-						textNode.className = "lf-service-details__text";
-						textNode.textContent = String(li.textContent || "").trim();
-						li.textContent = "";
-						li.appendChild(textNode);
-					}
+					var textNode = checklistTextNodeFromLi(li);
+					Array.prototype.slice.call(li.querySelectorAll("[data-lf-ai-checklist-remove=\"1\"]")).forEach(function(node){
+						if (node && node.parentNode) node.parentNode.removeChild(node);
+					});
 					var removeBtn = document.createElement("button");
 					removeBtn.type = "button";
 					removeBtn.className = "lf-ai-checklist-remove lf-ai-inline-editor-ignore";
@@ -1380,6 +2179,7 @@ function lf_ai_assistant_widget_js(): string {
 						persistSectionChecklist(wrap);
 					});
 					li.appendChild(removeBtn);
+					bindChecklistItemEditor(li, wrap);
 				});
 				var controls = document.createElement("div");
 				controls.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
@@ -1412,8 +2212,9 @@ function lf_ai_assistant_widget_js(): string {
 					});
 					li.appendChild(removeBtn);
 					list.appendChild(li);
+					bindChecklistItemEditor(li, wrap);
 					persistSectionChecklist(wrap);
-					beginInlineEdit(textNode);
+					startChecklistTextEdit(textNode, li, wrap);
 				});
 				controls.appendChild(addBtn);
 				content.appendChild(controls);
@@ -1621,6 +2422,96 @@ function lf_ai_assistant_widget_js(): string {
 			});
 		}
 		function buildHeroProofChecklistControls() {
+			function focusNodeEnd(node) {
+				if (!node || !window.getSelection || !document.createRange) return;
+				try {
+					var range = document.createRange();
+					range.selectNodeContents(node);
+					range.collapse(false);
+					var sel = window.getSelection();
+					sel.removeAllRanges();
+					sel.addRange(range);
+				} catch (e) {}
+			}
+			function heroProofTextNodeFromLi(li) {
+				if (!li) return null;
+				var textNode = li.querySelector(".lf-block-hero__card-item-text");
+				if (!textNode) {
+					textNode = document.createElement("span");
+					textNode.className = "lf-block-hero__card-item-text";
+					textNode.textContent = textFromNodeWithoutAiControls(li);
+					li.insertBefore(textNode, li.firstChild || null);
+				}
+				textNode.removeAttribute("data-lf-inline-editable");
+				textNode.removeAttribute("data-lf-inline-selector");
+				li.removeAttribute("data-lf-inline-editable");
+				li.removeAttribute("data-lf-inline-selector");
+				return textNode;
+			}
+			function finishHeroProofTextEdit(textNode, wrap, list, commit) {
+				if (!textNode || !wrap || !list) return;
+				var original = String(textNode.getAttribute("data-lf-ai-original-text") || "").trim();
+				var next = String(textNode.textContent || "").replace(/\s+/g, " ").trim();
+				textNode.removeAttribute("contenteditable");
+				textNode.removeAttribute("spellcheck");
+				textNode.removeAttribute("data-lf-ai-editing");
+				textNode.removeAttribute("data-lf-ai-original-text");
+				if (!commit) {
+					textNode.textContent = original || next || "New item";
+					return;
+				}
+				if (next === "") {
+					textNode.textContent = original || "New item";
+					return;
+				}
+				textNode.textContent = next;
+				if (next !== original) {
+					persistSectionLineItems(wrap, "hero_proof_bullets", simpleListItemsFromContainer(list, "li"), "Saving checklist...");
+				}
+			}
+			function startHeroProofTextEdit(textNode) {
+				if (!textNode) return;
+				if (String(textNode.getAttribute("data-lf-ai-editing") || "0") === "1") return;
+				textNode.setAttribute("data-lf-ai-original-text", String(textNode.textContent || "").trim());
+				textNode.setAttribute("data-lf-ai-editing", "1");
+				textNode.setAttribute("contenteditable", "true");
+				textNode.setAttribute("spellcheck", "true");
+				try { textNode.focus(); } catch (e) {}
+				focusNodeEnd(textNode);
+			}
+			function bindHeroProofItemEditor(li, wrap, list) {
+				if (!li || !wrap || !list) return;
+				var textNode = heroProofTextNodeFromLi(li);
+				if (!textNode) return;
+				textNode.classList.add("lf-ai-inline-editor-ignore");
+				textNode.setAttribute("title", "Click to edit checklist item");
+				textNode.onmousedown = function(e){
+					if (e) e.stopPropagation();
+				};
+				textNode.onclick = function(e){
+					if (!editingEnabled) return;
+					if (e) {
+						e.preventDefault();
+						e.stopPropagation();
+					}
+					startHeroProofTextEdit(textNode);
+				};
+				textNode.onblur = function(){
+					finishHeroProofTextEdit(textNode, wrap, list, true);
+				};
+				textNode.onkeydown = function(e){
+					var key = String((e && e.key) || "");
+					if (key === "Enter") {
+						e.preventDefault();
+						finishHeroProofTextEdit(textNode, wrap, list, true);
+						return;
+					}
+					if (key === "Escape") {
+						e.preventDefault();
+						finishHeroProofTextEdit(textNode, wrap, list, false);
+					}
+				};
+			}
 			collectSectionWrappers().forEach(function(wrap){
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
 				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
@@ -1635,11 +2526,16 @@ function lf_ai_assistant_widget_js(): string {
 					node.removeAttribute("data-lf-inline-selector");
 				});
 				Array.prototype.slice.call(list.querySelectorAll("li")).forEach(function(li){
+					heroProofTextNodeFromLi(li);
+					Array.prototype.slice.call(li.querySelectorAll("[data-lf-ai-list-remove=\"1\"]")).forEach(function(node){
+						if (node && node.parentNode) node.parentNode.removeChild(node);
+					});
 					var btn = createGenericRemoveButton(function(){
 						if (li && li.parentNode) li.parentNode.removeChild(li);
 						persistSectionLineItems(wrap, "hero_proof_bullets", simpleListItemsFromContainer(list, "li"), "Saving checklist...");
 					});
 					li.appendChild(btn);
+					bindHeroProofItemEditor(li, wrap, list);
 				});
 				var controls = document.createElement("div");
 				controls.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
@@ -1652,13 +2548,18 @@ function lf_ai_assistant_widget_js(): string {
 					e.preventDefault();
 					e.stopPropagation();
 					var li = document.createElement("li");
-					li.textContent = "New item";
+					var textNode = document.createElement("span");
+					textNode.className = "lf-block-hero__card-item-text";
+					textNode.textContent = "New item";
+					li.appendChild(textNode);
 					li.appendChild(createGenericRemoveButton(function(){
 						if (li && li.parentNode) li.parentNode.removeChild(li);
 						persistSectionLineItems(wrap, "hero_proof_bullets", simpleListItemsFromContainer(list, "li"), "Saving checklist...");
 					}));
 					list.appendChild(li);
+					bindHeroProofItemEditor(li, wrap, list);
 					persistSectionLineItems(wrap, "hero_proof_bullets", simpleListItemsFromContainer(list, "li"), "Saving checklist...");
+					startHeroProofTextEdit(textNode);
 				});
 				controls.appendChild(addBtn);
 				if (list.parentNode) {
@@ -1989,17 +2890,17 @@ function lf_ai_assistant_widget_js(): string {
 					iconNode.setAttribute("title", "Click to change icon");
 					iconNode.style.cursor = "pointer";
 					iconNode.onclick = function(e){
+						if (!editingEnabled) return;
 						e.preventDefault();
 						e.stopPropagation();
 						var idx = parseInt(String(iconNode.getAttribute("data-lf-benefit-icon-index") || "0"), 10);
 						if (isNaN(idx) || idx < 0) idx = 0;
 						while (currentOverrides.length <= idx) currentOverrides.push("");
 						var currentSlug = String(currentOverrides[idx] || "");
-						var currentPos = iconSlugs.indexOf(currentSlug);
-						if (currentPos < 0) currentPos = -1;
-						var nextPos = (currentPos + 1) % iconSlugs.length;
-						currentOverrides[idx] = String(iconSlugs[nextPos] || "");
-						persistOverrides();
+						openIconPicker(currentSlug, function(selectedSlug){
+							currentOverrides[idx] = String(selectedSlug || "");
+							persistOverrides();
+						});
 					};
 				});
 			});
@@ -2277,6 +3178,7 @@ function lf_ai_assistant_widget_js(): string {
 					buildChecklistControls();
 					buildProcessStepControls();
 					buildSectionColumnSwapTargets();
+					buildSectionMediaEditors();
 					buildFaqReorderControls();
 					buildBenefitsIconEditors();
 					setSelectedSection(clone);
@@ -2517,6 +3419,8 @@ function lf_ai_assistant_widget_js(): string {
 					if (!e || !e.target) return;
 					var t = e.target.nodeType === 1 ? e.target : e.target.parentElement;
 					if (!t) return;
+					// Do not reselect/rebuild when clicking inline editor controls.
+					if (isDragBlockedTarget(t)) return;
 					if ((t.closest && t.closest(".lf-ai-section-controls")) || (t.closest && t.closest(".lf-ai-float"))) return;
 					setSelectedSection(wrap);
 				};
@@ -2696,6 +3600,26 @@ function lf_ai_assistant_widget_js(): string {
 				+ "<div class=\"lf-ai-float__col\"><b>Current</b>" + escapeHtml(currentText) + "</div>"
 				+ "<div class=\"lf-ai-float__col\"><b>Suggested</b>" + escapeHtml(newText) + "</div>"
 				+ "</div></div>";
+			$diff.html(html).prop("hidden", false);
+		}
+		function renderQaAnswer(answer, snapshot) {
+			var text = String(answer || "").trim();
+			var data = snapshot && typeof snapshot === "object" ? snapshot : {};
+			var score = parseInt(String(data.backend_seo_score || "0"), 10);
+			if (isNaN(score)) score = 0;
+			var intent = String(data.intent || "");
+			var primary = data.meta && data.meta.primary_keyword ? String(data.meta.primary_keyword) : "";
+			var html = "<div class=\"lf-ai-float__row\">"
+				+ "<div class=\"lf-ai-float__field\">AI Answer</div>"
+				+ "<div>" + escapeHtml(text || "No answer returned.") + "</div>";
+			if (score > 0 || intent || primary) {
+				html += "<div style=\"margin-top:8px;font-size:11px;color:#475569;\">"
+					+ (score > 0 ? ("SEO score: <b>" + score + "/100</b>. ") : "")
+					+ (intent ? ("Intent: <b>" + escapeHtml(intent) + "</b>. ") : "")
+					+ (primary ? ("Primary keyword: <b>" + escapeHtml(primary) + "</b>.") : "")
+					+ "</div>";
+			}
+			html += "</div>";
 			$diff.html(html).prop("hidden", false);
 		}
 		function renderCreationPreview(data) {
@@ -2921,7 +3845,7 @@ function lf_ai_assistant_widget_js(): string {
 			var hasSel = !!selectedSectionWrap;
 			var visible = hasSel ? (String(selectedSectionWrap.getAttribute("data-lf-section-visible") || "1") !== "0") : true;
 			return [
-				{ label: "Focus AI prompt", enabled: true, run: function(){ setOpen(true); try { $prompt.trigger("focus"); } catch (e) {} } },
+				{ label: "Focus AI prompt", enabled: true, run: function(){ setAiOpen(true); setSeoOpen(false); try { $prompt.trigger("focus"); } catch (e) {} } },
 				{ label: "Undo last action", enabled: true, run: runRollback },
 				{ label: "Redo last action", enabled: true, run: runRedo },
 				{ label: "Move selected section up", enabled: hasSel, run: function(){ moveSelectedSection(-1); } },
@@ -3011,13 +3935,30 @@ function lf_ai_assistant_widget_js(): string {
 			try { window.alert(msg); } catch (e) {}
 		}
 
-		$toggle.on("click", function(){ setConfirmOpen(false); setOpen($panel.prop("hidden")); });
-		$root.find("[data-lf-ai-close],[data-lf-ai-minimize]").on("click", function(){ setConfirmOpen(false); setOpen(false); });
+		$toggle.on("click", function(){
+			var willOpen = $panel.prop("hidden");
+			setConfirmOpen(false);
+			setAiOpen(willOpen);
+			if (willOpen) setSeoOpen(false);
+		});
+		$seoToggle.on("click", function(){
+			var willOpen = $seoPanel.prop("hidden");
+			setConfirmOpen(false);
+			setSeoOpen(willOpen);
+			if (willOpen) setAiOpen(false);
+		});
+		$root.find("[data-lf-ai-close],[data-lf-ai-minimize]").on("click", function(){ setConfirmOpen(false); setAiOpen(false); });
+		$seoRoot.find("[data-lf-ai-seo-close],[data-lf-ai-seo-minimize]").on("click", function(){ setSeoOpen(false); });
 		$btnEditorToggle.on("click", function(){
 			setEditorEnabled(!editingEnabled);
 		});
 		$root.find("[data-lf-ai-preset]").on("click", function(){
 			$prompt.val($(this).attr("data-lf-ai-preset") || "").trigger("focus");
+		});
+		$seoRefresh.on("click", function(e){
+			e.preventDefault();
+			renderSeoSnapshot();
+			setStatus("SEO snapshot refreshed.", false);
 		});
 		$(document).on("click", "[data-lf-inline-image=\"1\"]", function(e){
 			if (!editingEnabled) return;
@@ -3045,7 +3986,7 @@ function lf_ai_assistant_widget_js(): string {
 			if (target === inlineActiveEl || inlineActiveEl.contains(target)) {
 				return;
 			}
-			if ($(target).closest("[data-lf-ai-float]").length) {
+			if ($(target).closest("[data-lf-ai-float],[data-lf-ai-seo-float]").length) {
 				return;
 			}
 			saveInlineEdit();
@@ -3170,7 +4111,11 @@ function lf_ai_assistant_widget_js(): string {
 					}
 					syncModeUi();
 				}
-				if (res && res.success && res.data && res.data.mode === "edit_existing" && res.data.proposed) {
+				if (res && res.success && res.data && res.data.mode === "qa" && res.data.answer) {
+					renderQaAnswer(res.data.answer, res.data.snapshot || {});
+					setStatus("Answer ready. Ask follow-up questions anytime.", false);
+					setProposalEnabled(false);
+				} else if (res && res.success && res.data && res.data.mode === "edit_existing" && res.data.proposed) {
 					proposed = res.data.proposed;
 					current = res.data.current || {};
 					labels = res.data.labels || labels;
@@ -3439,7 +4384,14 @@ function lf_ai_assistant_widget_js(): string {
 
 		try {
 			var initial = window.localStorage.getItem(stateKey);
-			if (initial === "open") setOpen(true);
+			if (initial === "open") setAiOpen(true);
+		} catch (e) {}
+		try {
+			var seoInitial = window.localStorage.getItem(seoStateKey);
+			if (seoInitial === "open") {
+				setSeoOpen(true);
+				setAiOpen(false);
+			}
 		} catch (e) {}
 		try {
 			railCollapsed = window.localStorage.getItem(railStateKey) === "collapsed";
@@ -3460,6 +4412,7 @@ function lf_ai_assistant_widget_js(): string {
 			clearEditorUi();
 			setStatus("Live mode enabled. Toggle ✎ to edit.", false);
 		}
+		renderSeoSnapshot();
 	})(jQuery);';
 }
 

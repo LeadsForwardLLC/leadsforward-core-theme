@@ -525,11 +525,13 @@ add_action('wp_ajax_lf_ai_extract_context_doc', 'lf_ai_ajax_extract_context_doc'
 add_action('wp_ajax_lf_ai_inline_save', 'lf_ai_ajax_inline_save');
 add_action('wp_ajax_lf_ai_inline_rewrite', 'lf_ai_ajax_inline_rewrite');
 add_action('wp_ajax_lf_ai_inline_image_save', 'lf_ai_ajax_inline_image_save');
+add_action('wp_ajax_lf_ai_seo_snapshot', 'lf_ai_ajax_seo_snapshot');
 add_action('wp_ajax_lf_ai_reorder_sections', 'lf_ai_ajax_reorder_sections');
 add_action('wp_ajax_lf_ai_toggle_section_columns', 'lf_ai_ajax_toggle_section_columns');
 add_action('wp_ajax_lf_ai_update_section_checklist', 'lf_ai_ajax_update_section_checklist');
 add_action('wp_ajax_lf_ai_update_hero_pills', 'lf_ai_ajax_update_hero_pills');
 add_action('wp_ajax_lf_ai_update_section_cta', 'lf_ai_ajax_update_section_cta');
+add_action('wp_ajax_lf_ai_update_section_media', 'lf_ai_ajax_update_section_media');
 add_action('wp_ajax_lf_ai_update_section_lines', 'lf_ai_ajax_update_section_lines');
 add_action('wp_ajax_lf_ai_reorder_faq_items', 'lf_ai_ajax_reorder_faq_items');
 add_action('wp_ajax_lf_ai_set_trust_layout', 'lf_ai_ajax_set_trust_layout');
@@ -724,6 +726,20 @@ function lf_ai_ajax_generate(): void {
 		$context_type_use = (string) ($resolved['type'] ?? $context_type_use);
 		$context_id_use = $resolved['id'] ?? $context_id_use;
 	}
+	$qa_answer = lf_ai_assistant_try_answer_question($prompt, $context_type_use, $context_id_use);
+	if (is_array($qa_answer) && !empty($qa_answer['answer'])) {
+		wp_send_json_success([
+			'mode' => 'qa',
+			'assistant_cpt_type' => $assistant_cpt_type,
+			'assistant_batch_type' => $assistant_batch_type,
+			'assistant_batch_count' => $assistant_batch_count,
+			'context_type' => $context_type_use,
+			'context_id' => (string) $context_id_use,
+			'target_label' => lf_ai_assistant_target_label_for_context($context_type_use, $context_id_use),
+			'answer' => (string) $qa_answer['answer'],
+			'snapshot' => is_array($qa_answer['snapshot'] ?? null) ? $qa_answer['snapshot'] : [],
+		]);
+	}
 	if ($assistant_mode === 'edit_existing') {
 		$result = lf_ai_generate_proposal($context_type_use, $context_id_use, $prompt);
 		if (!$result['success']) {
@@ -841,6 +857,93 @@ function lf_ai_ajax_generate(): void {
 		'creation_payload' => $payload,
 		'creation_preview' => lf_ai_assistant_creation_preview($payload),
 	]);
+}
+
+function lf_ai_assistant_is_question_prompt(string $prompt): bool {
+	$p = strtolower(trim($prompt));
+	if ($p === '') return false;
+	if (strpos($p, '?') !== false) return true;
+	foreach (['what ', 'how ', 'why ', 'where ', 'which ', 'who ', 'does ', 'is ', 'are ', 'can ', 'could ', 'should '] as $start) {
+		if (strpos($p, $start) === 0) return true;
+	}
+	return false;
+}
+
+function lf_ai_assistant_try_answer_question(string $prompt, string $context_type, $context_id): ?array {
+	if (!lf_ai_assistant_is_question_prompt($prompt)) {
+		return null;
+	}
+	$post_id = lf_ai_resolve_post_id_for_context($context_type, $context_id);
+	if ($post_id <= 0) {
+		return [
+			'answer' => __('I could not resolve this page context, so I cannot answer reliably yet.', 'leadsforward-core'),
+			'snapshot' => [],
+		];
+	}
+	$snapshot = lf_ai_collect_seo_snapshot_payload($post_id);
+	$meta = is_array($snapshot['meta'] ?? null) ? $snapshot['meta'] : [];
+	$checks = is_array($snapshot['checks'] ?? null) ? $snapshot['checks'] : [];
+	$prompt_l = strtolower(trim($prompt));
+
+	if (strpos($prompt_l, 'primary keyword') !== false || strpos($prompt_l, 'target keyword') !== false) {
+		$pk = trim((string) ($meta['primary_keyword'] ?? ''));
+		$ans = $pk !== ''
+			? sprintf(__('Primary target keyword: "%s".', 'leadsforward-core'), $pk)
+			: __('No primary keyword is set yet in the SEO meta fields for this page.', 'leadsforward-core');
+		return ['answer' => $ans, 'snapshot' => $snapshot];
+	}
+	if (strpos($prompt_l, 'secondary keyword') !== false) {
+		$sk = trim((string) ($meta['secondary_keywords'] ?? ''));
+		$ans = $sk !== ''
+			? sprintf(__('Secondary keywords: %s.', 'leadsforward-core'), $sk)
+			: __('No secondary keywords are set yet for this page.', 'leadsforward-core');
+		return ['answer' => $ans, 'snapshot' => $snapshot];
+	}
+	if (strpos($prompt_l, 'intent') !== false) {
+		$intent = trim((string) ($snapshot['intent'] ?? ''));
+		$ans = $intent !== ''
+			? sprintf(__('Detected search intent: %s.', 'leadsforward-core'), $intent)
+			: __('Search intent is not clearly detected yet.', 'leadsforward-core');
+		return ['answer' => $ans, 'snapshot' => $snapshot];
+	}
+	if (strpos($prompt_l, 'score') !== false || strpos($prompt_l, 'seo health') !== false) {
+		$score = (int) ($snapshot['backend_seo_score'] ?? 0);
+		$q = (int) ($snapshot['quality_score'] ?? 0);
+		$grade = (string) ($snapshot['quality_grade'] ?? '');
+		$ans = sprintf(__('SEO health score is %1$d/100. Backend content quality is %2$d (%3$s).', 'leadsforward-core'), $score, $q, $grade !== '' ? $grade : '-');
+		return ['answer' => $ans, 'snapshot' => $snapshot];
+	}
+	if (strpos($prompt_l, 'missing') !== false || strpos($prompt_l, 'what should') !== false || strpos($prompt_l, 'what to do') !== false || strpos($prompt_l, 'improve') !== false) {
+		$todo = [];
+		foreach ($checks as $check) {
+			if (!is_array($check)) continue;
+			$status = (string) ($check['status'] ?? 'ok');
+			if ($status === 'ok') continue;
+			$action = trim((string) ($check['action'] ?? ''));
+			$label = trim((string) ($check['label'] ?? ''));
+			if ($action !== '') {
+				$todo[] = $action;
+			} elseif ($label !== '') {
+				$todo[] = sprintf(__('Review: %s.', 'leadsforward-core'), $label);
+			}
+			if (count($todo) >= 3) break;
+		}
+		if (empty($todo)) {
+			return ['answer' => __('No critical SEO gaps detected right now. Focus next on conversion copy testing and media performance polish.', 'leadsforward-core'), 'snapshot' => $snapshot];
+		}
+		return ['answer' => __('Top priorities: ', 'leadsforward-core') . implode(' ', $todo), 'snapshot' => $snapshot];
+	}
+
+	$score = (int) ($snapshot['backend_seo_score'] ?? 0);
+	$intent = trim((string) ($snapshot['intent'] ?? ''));
+	$pk = trim((string) ($meta['primary_keyword'] ?? ''));
+	$fallback = sprintf(
+		__('Page SEO summary: score %1$d/100, intent %2$s, primary keyword %3$s. Ask about keyword, intent, score, missing items, conversion, or performance and I will answer specifically from this page report.', 'leadsforward-core'),
+		$score,
+		$intent !== '' ? $intent : __('unknown', 'leadsforward-core'),
+		$pk !== '' ? '"' . $pk . '"' : __('not set', 'leadsforward-core')
+	);
+	return ['answer' => $fallback, 'snapshot' => $snapshot];
 }
 
 function lf_ai_ajax_extract_context_doc(): void {
@@ -1406,6 +1509,130 @@ function lf_ai_ajax_update_section_cta(): void {
 		: '';
 	wp_send_json_success([
 		'message' => __('Button updated.', 'leadsforward-core'),
+		'reload' => true,
+		'log_id' => $log_id,
+	]);
+}
+
+function lf_ai_media_capable_section_types(): array {
+	return ['service_details', 'content_image', 'content_image_a', 'image_content', 'image_content_b', 'content_image_c'];
+}
+
+function lf_ai_ajax_update_section_media(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
+	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
+	$section_id = isset($_POST['section_id']) ? sanitize_text_field(wp_unslash($_POST['section_id'])) : '';
+	$mode = isset($_POST['mode']) ? sanitize_text_field(wp_unslash($_POST['mode'])) : 'image';
+	$image_id = isset($_POST['image_id']) ? (int) $_POST['image_id'] : 0;
+	$video_url = isset($_POST['video_url']) ? esc_url_raw((string) wp_unslash($_POST['video_url'])) : '';
+	$embed_code = isset($_POST['embed_code']) ? trim((string) wp_unslash($_POST['embed_code'])) : '';
+	if ($context_type === '' || $context_id === '' || $section_id === '') {
+		wp_send_json_error(['message' => __('Invalid media update payload.', 'leadsforward-core')]);
+	}
+	if (!in_array($mode, ['image', 'video', 'none'], true)) {
+		$mode = 'image';
+	}
+	if ($mode === 'image' && $image_id <= 0) {
+		wp_send_json_error(['message' => __('Please select an image.', 'leadsforward-core')]);
+	}
+	if ($mode === 'video' && $video_url === '' && $embed_code === '') {
+		wp_send_json_error(['message' => __('Provide a video URL or embed code.', 'leadsforward-core')]);
+	}
+	if ($mode !== 'video') {
+		$video_url = '';
+		$embed_code = '';
+	}
+	if ($mode === 'none') {
+		$image_id = 0;
+		$video_url = '';
+		$embed_code = '';
+	}
+	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	$allowed_types = lf_ai_media_capable_section_types();
+	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+			wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
+		}
+		$section_type = $section_id;
+		if (function_exists('lf_homepage_base_section_type')) {
+			$section_type = lf_homepage_base_section_type($section_id);
+		}
+		if ($section_type === '' || !in_array($section_type, $allowed_types, true)) {
+			wp_send_json_error(['message' => __('This section does not support media editing.', 'leadsforward-core')]);
+		}
+		$config = lf_get_homepage_section_config();
+		$old_row = is_array($config[$section_id] ?? null) ? $config[$section_id] : [];
+		if (empty($old_row)) {
+			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+		}
+		$config[$section_id]['service_details_media_mode'] = $mode;
+		$config[$section_id]['service_details_media_image_id'] = $image_id;
+		$config[$section_id]['service_details_media_video_url'] = $video_url;
+		$config[$section_id]['service_details_media_embed'] = $embed_code;
+		if ($image_id > 0) {
+			$config[$section_id]['image_id'] = $image_id;
+		}
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		$new_row = is_array($config[$section_id] ?? null) ? $config[$section_id] : [];
+		$log_id = function_exists('lf_ai_log_action')
+			? lf_ai_log_action(
+				$context_type,
+				$context_id_use,
+				['__homepage_section_row::' . $section_id => $old_row],
+				['__homepage_section_row::' . $section_id => $new_row],
+				'Inline section media edit'
+			)
+			: '';
+		wp_send_json_success([
+			'message' => __('Section media updated.', 'leadsforward-core'),
+			'reload' => true,
+			'log_id' => $log_id,
+		]);
+	}
+	$pid = (int) $context_id_use;
+	$post = get_post($pid);
+	if (!$post instanceof \WP_Post || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+		wp_send_json_error(['message' => __('Section settings are unavailable for this target.', 'leadsforward-core')]);
+	}
+	$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+	if ($pb_context === '') {
+		wp_send_json_error(['message' => __('This target does not support media editing.', 'leadsforward-core')]);
+	}
+	$config = lf_pb_get_post_config($pid, $pb_context);
+	$old_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+	if (empty($old_row)) {
+		wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+	}
+	$section_type = sanitize_text_field((string) ($old_row['type'] ?? ''));
+	if ($section_type === '' || !in_array($section_type, $allowed_types, true)) {
+		wp_send_json_error(['message' => __('This section does not support media editing.', 'leadsforward-core')]);
+	}
+	$settings = is_array($old_row['settings'] ?? null) ? $old_row['settings'] : [];
+	$settings['service_details_media_mode'] = $mode;
+	$settings['service_details_media_image_id'] = $image_id;
+	$settings['service_details_media_video_url'] = $video_url;
+	$settings['service_details_media_embed'] = $embed_code;
+	if ($image_id > 0) {
+		$settings['image_id'] = $image_id;
+	}
+	$config['sections'][$section_id]['settings'] = $settings;
+	update_post_meta($pid, LF_PB_META_KEY, $config);
+	$new_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+	$log_id = function_exists('lf_ai_log_action')
+		? lf_ai_log_action(
+			$context_type,
+			$context_id_use,
+			['__section_record::' . $section_id => $old_row],
+			['__section_record::' . $section_id => $new_row],
+			'Inline section media edit'
+		)
+		: '';
+	wp_send_json_success([
+		'message' => __('Section media updated.', 'leadsforward-core'),
 		'reload' => true,
 		'log_id' => $log_id,
 	]);
@@ -2232,6 +2459,147 @@ function lf_ai_ajax_inline_image_save(): void {
 		'attachment_id' => $attachment_id,
 		'log_id' => $log_id,
 	]);
+}
+
+function lf_ai_resolve_post_id_for_context(string $context_type, $context_id) {
+	if ($context_type === 'homepage' || $context_id === 'homepage') {
+		$front_id = (int) get_option('page_on_front');
+		return $front_id > 0 ? $front_id : 0;
+	}
+	$pid = (int) $context_id;
+	return $pid > 0 ? $pid : 0;
+}
+
+function lf_ai_collect_seo_snapshot_payload(int $post_id): array {
+	$post = get_post($post_id);
+	if (!$post instanceof \WP_Post) {
+		return [
+			'post_id' => 0,
+			'post_type' => '',
+			'post_title' => '',
+			'permalink' => '',
+			'intent' => '',
+			'quality_score' => 0,
+			'quality_grade' => '',
+			'signals' => [],
+			'backend_seo_score' => 0,
+			'meta' => [],
+			'checks' => [],
+		];
+	}
+	$quality = function_exists('lf_seo_calculate_content_quality')
+		? lf_seo_calculate_content_quality($post_id)
+		: ['score' => (int) get_post_meta($post_id, '_lf_seo_quality_score', true), 'grade' => (string) get_post_meta($post_id, '_lf_seo_quality_grade', true), 'signals' => get_post_meta($post_id, '_lf_seo_quality_signals', true)];
+	$quality_score = max(0, min(100, (int) ($quality['score'] ?? 0)));
+	$quality_grade = sanitize_text_field((string) ($quality['grade'] ?? ''));
+	$signals = $quality['signals'] ?? [];
+	if (!is_array($signals)) {
+		$signals = [];
+	}
+
+	$primary = trim((string) get_post_meta($post_id, '_lf_seo_primary_keyword', true));
+	$secondary = trim((string) get_post_meta($post_id, '_lf_seo_secondary_keywords', true));
+	$meta_title = trim((string) get_post_meta($post_id, '_lf_seo_meta_title', true));
+	$meta_desc = trim((string) get_post_meta($post_id, '_lf_seo_meta_description', true));
+	$canonical = trim((string) get_post_meta($post_id, '_lf_seo_canonical_url', true));
+	$noindex = (string) get_post_meta($post_id, '_lf_seo_noindex', true) === '1';
+	$nofollow = (string) get_post_meta($post_id, '_lf_seo_nofollow', true) === '1';
+	$intent = trim((string) get_post_meta($post_id, '_lf_seo_serp_intent_detected', true));
+	if ($intent === '' && function_exists('lf_seo_detect_serp_intent')) {
+		$intent = (string) lf_seo_detect_serp_intent($post_id, $primary);
+	}
+
+	$checks = [];
+	$checks[] = [
+		'status' => $primary !== '' ? 'ok' : 'warn',
+		'label' => __('Primary keyword', 'leadsforward-core'),
+		'message' => $primary !== '' ? __('Primary keyword is set.', 'leadsforward-core') : __('Primary keyword is missing.', 'leadsforward-core'),
+		'action' => $primary !== '' ? '' : __('Set one clear primary keyword for this page intent.', 'leadsforward-core'),
+	];
+	$checks[] = [
+		'status' => $meta_title !== '' ? 'ok' : 'warn',
+		'label' => __('Meta title', 'leadsforward-core'),
+		'message' => $meta_title !== '' ? __('Custom meta title is set.', 'leadsforward-core') : __('Meta title fallback is being used.', 'leadsforward-core'),
+		'action' => $meta_title !== '' ? '' : __('Set a custom title aligned to search intent.', 'leadsforward-core'),
+	];
+	$checks[] = [
+		'status' => $meta_desc !== '' ? 'ok' : 'warn',
+		'label' => __('Meta description', 'leadsforward-core'),
+		'message' => $meta_desc !== '' ? __('Custom meta description is set.', 'leadsforward-core') : __('Meta description fallback is being used.', 'leadsforward-core'),
+		'action' => $meta_desc !== '' ? '' : __('Set a custom description focused on value + CTA.', 'leadsforward-core'),
+	];
+	$checks[] = [
+		'status' => $canonical !== '' ? 'ok' : 'warn',
+		'label' => __('Canonical URL', 'leadsforward-core'),
+		'message' => $canonical !== '' ? __('Canonical URL is set.', 'leadsforward-core') : __('Canonical URL not explicitly set.', 'leadsforward-core'),
+		'action' => $canonical !== '' ? '' : __('Set canonical to avoid duplicate-url ambiguity.', 'leadsforward-core'),
+	];
+	$checks[] = [
+		'status' => !$noindex ? 'ok' : 'error',
+		'label' => __('Indexing', 'leadsforward-core'),
+		'message' => !$noindex ? __('Page is indexable.', 'leadsforward-core') : __('Page is marked noindex.', 'leadsforward-core'),
+		'action' => !$noindex ? '' : __('Remove noindex if this page should rank.', 'leadsforward-core'),
+	];
+	$checks[] = [
+		'status' => $quality_score >= 80 ? 'ok' : ($quality_score >= 60 ? 'warn' : 'error'),
+		'label' => __('Backend quality score', 'leadsforward-core'),
+		'message' => sprintf(__('Current score: %d (%s).', 'leadsforward-core'), $quality_score, $quality_grade !== '' ? $quality_grade : '-'),
+		'action' => $quality_score >= 80 ? '' : __('Increase depth, intent-match, internal linking, and metadata quality.', 'leadsforward-core'),
+	];
+
+	$backend_score = 100;
+	if ($primary === '') $backend_score -= 12;
+	if ($secondary === '') $backend_score -= 4;
+	if ($meta_title === '') $backend_score -= 10;
+	if ($meta_desc === '') $backend_score -= 10;
+	if ($canonical === '') $backend_score -= 6;
+	if ($noindex) $backend_score -= 24;
+	if ($nofollow) $backend_score -= 5;
+	$backend_score = (int) round(max(0, min(100, ($backend_score * 0.45) + ($quality_score * 0.55))));
+
+	return [
+		'post_id' => $post_id,
+		'post_type' => (string) $post->post_type,
+		'post_title' => (string) get_the_title($post_id),
+		'permalink' => (string) get_permalink($post_id),
+		'intent' => $intent,
+		'quality_score' => $quality_score,
+		'quality_grade' => $quality_grade,
+		'signals' => array_values(array_map('sanitize_text_field', $signals)),
+		'backend_seo_score' => $backend_score,
+		'meta' => [
+			'primary_keyword' => $primary,
+			'secondary_keywords' => $secondary,
+			'meta_title' => $meta_title,
+			'meta_description' => $meta_desc,
+			'canonical' => $canonical,
+			'noindex' => $noindex,
+			'nofollow' => $nofollow,
+		],
+		'checks' => $checks,
+	];
+}
+
+function lf_ai_ajax_seo_snapshot(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
+	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
+	if ($context_type === '' || $context_id === '') {
+		wp_send_json_error(['message' => __('Invalid SEO snapshot request.', 'leadsforward-core')]);
+	}
+	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	$post_id = lf_ai_resolve_post_id_for_context($context_type, $context_id_use);
+	if ($post_id <= 0) {
+		wp_send_json_error(['message' => __('Unable to resolve target page for SEO snapshot.', 'leadsforward-core')]);
+	}
+	$payload = lf_ai_collect_seo_snapshot_payload($post_id);
+	if (empty($payload['post_id'])) {
+		wp_send_json_error(['message' => __('Target page is unavailable.', 'leadsforward-core')]);
+	}
+	wp_send_json_success($payload);
 }
 
 function lf_ai_ajax_apply(): void {
