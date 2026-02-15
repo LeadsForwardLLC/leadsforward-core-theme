@@ -1385,7 +1385,7 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 		$media_image_id = lf_get_placeholder_image_id();
 	}
 	$show_media = $media_mode !== 'none' && ($media_embed !== '' || $media_video_url !== '' || $media_image_id);
-	$render_header_in_content = $layout === 'media_content' && $show_media;
+	$render_header_in_content = $show_media;
 	$embed_html = '';
 	if ($media_mode === 'video' && $media_embed !== '') {
 		$allowed = wp_kses_allowed_html('post');

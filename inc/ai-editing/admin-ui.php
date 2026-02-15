@@ -476,8 +476,12 @@ add_action('wp_ajax_lf_ai_rollback_latest', 'lf_ai_ajax_rollback_latest');
 add_action('wp_ajax_lf_ai_redo_latest', 'lf_ai_ajax_redo_latest');
 add_action('wp_ajax_lf_ai_extract_context_doc', 'lf_ai_ajax_extract_context_doc');
 add_action('wp_ajax_lf_ai_inline_save', 'lf_ai_ajax_inline_save');
+add_action('wp_ajax_lf_ai_inline_rewrite', 'lf_ai_ajax_inline_rewrite');
 add_action('wp_ajax_lf_ai_inline_image_save', 'lf_ai_ajax_inline_image_save');
 add_action('wp_ajax_lf_ai_reorder_sections', 'lf_ai_ajax_reorder_sections');
+add_action('wp_ajax_lf_ai_toggle_section_columns', 'lf_ai_ajax_toggle_section_columns');
+add_action('wp_ajax_lf_ai_toggle_section_visibility', 'lf_ai_ajax_toggle_section_visibility');
+add_action('wp_ajax_lf_ai_delete_section', 'lf_ai_ajax_delete_section');
 
 function lf_ai_editing_meta_box(): void {
 	if (!current_user_can(LF_AI_CAP)) {
@@ -899,6 +903,303 @@ function lf_ai_ajax_inline_save(): void {
 		'field_key' => $field_key,
 		'value' => $value,
 		'log_id' => (string) ($result['log_id'] ?? ''),
+	]);
+}
+
+function lf_ai_ajax_inline_rewrite(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
+	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
+	$selector = isset($_POST['selector']) ? sanitize_text_field(wp_unslash($_POST['selector'])) : '';
+	$current_text = isset($_POST['current_text']) ? sanitize_textarea_field(wp_unslash($_POST['current_text'])) : '';
+	$prompt = isset($_POST['prompt']) ? sanitize_textarea_field(wp_unslash($_POST['prompt'])) : '';
+	if ($context_type === '' || $context_id === '' || $selector === '' || $current_text === '' || $prompt === '') {
+		wp_send_json_error(['message' => __('Invalid rewrite payload.', 'leadsforward-core')]);
+	}
+	if (strlen($current_text) > 1200 || strlen($prompt) > 1200) {
+		wp_send_json_error(['message' => __('Rewrite payload is too long.', 'leadsforward-core')]);
+	}
+	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	$is_heading = function_exists('mb_strlen') ? mb_strlen($current_text) <= 90 : strlen($current_text) <= 90;
+	$system = "You are editing one specific website text snippet.\n";
+	$system .= "Output ONLY the rewritten text. No JSON. No quotes. No preface.\n";
+	$system .= "Do not change scope beyond this one snippet.\n";
+	if ($is_heading) {
+		$system .= "Keep it concise and headline-like (roughly 3-10 words).\n";
+	} else {
+		$system .= "Keep similar length and style to the original snippet.\n";
+	}
+	$user = "User instruction:\n" . $prompt . "\n\n";
+	$user .= "Current snippet text:\n" . $current_text . "\n\n";
+	$user .= "Rewrite only this snippet.";
+	$response = apply_filters('lf_ai_completion', '', $system, $user, $context_type, $context_id_use);
+	if (is_wp_error($response)) {
+		wp_send_json_error(['message' => $response->get_error_message()]);
+	}
+	$rewritten = is_string($response) ? trim(wp_strip_all_tags($response)) : '';
+	$rewritten = trim((string) preg_replace('/\s+/', ' ', $rewritten));
+	$rewritten = trim($rewritten, "\"' \t\n\r\0\x0B");
+	if ($rewritten === '') {
+		wp_send_json_error(['message' => __('AI did not return a valid rewrite.', 'leadsforward-core')]);
+	}
+	wp_send_json_success([
+		'rewritten_text' => $rewritten,
+		'selector' => $selector,
+	]);
+}
+
+function lf_ai_reversible_section_types(): array {
+	return ['service_details', 'content_image', 'content_image_a', 'image_content', 'image_content_b', 'content_image_c'];
+}
+
+function lf_ai_toggle_section_layout_for_context(string $context_type, $context_id, string $section_id): array {
+	$allowed_types = lf_ai_reversible_section_types();
+	if ($context_type === 'homepage' || $context_id === 'homepage') {
+		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+			return ['error' => __('Homepage section settings are unavailable.', 'leadsforward-core')];
+		}
+		$config = lf_get_homepage_section_config();
+		if (!isset($config[$section_id]) || !is_array($config[$section_id])) {
+			return ['error' => __('That section was not found on the homepage.', 'leadsforward-core')];
+		}
+		if (!in_array($section_id, $allowed_types, true)) {
+			return ['error' => __('This section does not support column reversal.', 'leadsforward-core')];
+		}
+		$row = $config[$section_id];
+		if (function_exists('lf_sections_normalize_service_details_settings')) {
+			$row = lf_sections_normalize_service_details_settings($section_id, $row);
+		}
+		$old_layout = (string) ($row['service_details_layout'] ?? 'content_media');
+		if (!in_array($old_layout, ['content_media', 'media_content'], true)) {
+			$old_layout = 'content_media';
+		}
+		$new_layout = $old_layout === 'media_content' ? 'content_media' : 'media_content';
+		$config[$section_id]['service_details_layout'] = $new_layout;
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		return ['old_layout' => $old_layout, 'new_layout' => $new_layout, 'section_type' => $section_id];
+	}
+	$pid = (int) $context_id;
+	$post = get_post($pid);
+	if (!$post instanceof \WP_Post || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+		return ['error' => __('Section settings are unavailable for this target.', 'leadsforward-core')];
+	}
+	$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+	if ($pb_context === '') {
+		return ['error' => __('This target does not support column reversal.', 'leadsforward-core')];
+	}
+	$config = lf_pb_get_post_config($pid, $pb_context);
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	$row = is_array($sections[$section_id] ?? null) ? $sections[$section_id] : [];
+	$section_type = (string) ($row['type'] ?? '');
+	if ($section_type === '' || !in_array($section_type, $allowed_types, true)) {
+		return ['error' => __('This section does not support column reversal.', 'leadsforward-core')];
+	}
+	$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+	if (function_exists('lf_sections_normalize_service_details_settings')) {
+		$settings = lf_sections_normalize_service_details_settings($section_type, $settings);
+	}
+	$old_layout = (string) ($settings['service_details_layout'] ?? 'content_media');
+	if (!in_array($old_layout, ['content_media', 'media_content'], true)) {
+		$old_layout = 'content_media';
+	}
+	$new_layout = $old_layout === 'media_content' ? 'content_media' : 'media_content';
+	$config['sections'][$section_id]['settings']['service_details_layout'] = $new_layout;
+	update_post_meta($pid, LF_PB_META_KEY, $config);
+	return ['old_layout' => $old_layout, 'new_layout' => $new_layout, 'section_type' => $section_type];
+}
+
+function lf_ai_ajax_toggle_section_columns(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
+	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
+	$section_id = isset($_POST['section_id']) ? sanitize_text_field(wp_unslash($_POST['section_id'])) : '';
+	if ($context_type === '' || $context_id === '' || $section_id === '') {
+		wp_send_json_error(['message' => __('Invalid column toggle payload.', 'leadsforward-core')]);
+	}
+	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	$result = lf_ai_toggle_section_layout_for_context($context_type, $context_id_use, $section_id);
+	if (!empty($result['error'])) {
+		wp_send_json_error(['message' => (string) $result['error']]);
+	}
+	$old_layout = (string) ($result['old_layout'] ?? '');
+	$new_layout = (string) ($result['new_layout'] ?? '');
+	if (!in_array($old_layout, ['content_media', 'media_content'], true) || !in_array($new_layout, ['content_media', 'media_content'], true)) {
+		wp_send_json_error(['message' => __('Unable to update this section layout.', 'leadsforward-core')]);
+	}
+	$log_id = function_exists('lf_ai_log_action')
+		? lf_ai_log_action(
+			$context_type,
+			$context_id_use,
+			['__section_layout::' . $section_id => $old_layout],
+			['__section_layout::' . $section_id => $new_layout],
+			'Inline section column reversal'
+		)
+		: '';
+	wp_send_json_success([
+		'message' => __('Section columns reversed.', 'leadsforward-core'),
+		'log_id' => $log_id,
+		'section_id' => $section_id,
+		'old_layout' => $old_layout,
+		'new_layout' => $new_layout,
+	]);
+}
+
+function lf_ai_ajax_toggle_section_visibility(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
+	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
+	$section_id = isset($_POST['section_id']) ? sanitize_text_field(wp_unslash($_POST['section_id'])) : '';
+	$visible_raw = isset($_POST['visible']) ? sanitize_text_field(wp_unslash($_POST['visible'])) : '1';
+	$visible = $visible_raw === '1';
+	if ($context_type === '' || $context_id === '' || $section_id === '') {
+		wp_send_json_error(['message' => __('Invalid visibility payload.', 'leadsforward-core')]);
+	}
+	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+			wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
+		}
+		$config = lf_get_homepage_section_config();
+		if (!is_array($config[$section_id] ?? null)) {
+			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+		}
+		$old_enabled = !empty($config[$section_id]['enabled']);
+		$config[$section_id]['enabled'] = $visible;
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		$log_id = function_exists('lf_ai_log_action')
+			? lf_ai_log_action(
+				$context_type,
+				$context_id_use,
+				['__section_enabled::' . $section_id => $old_enabled],
+				['__section_enabled::' . $section_id => $visible],
+				$visible ? 'Inline section show' : 'Inline section hide'
+			)
+			: '';
+		wp_send_json_success([
+			'message' => $visible ? __('Section shown.', 'leadsforward-core') : __('Section hidden.', 'leadsforward-core'),
+			'visible' => $visible,
+			'log_id' => $log_id,
+		]);
+	}
+	$pid = (int) $context_id_use;
+	$post = get_post($pid);
+	if (!$post instanceof \WP_Post || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+		wp_send_json_error(['message' => __('Section settings are unavailable for this target.', 'leadsforward-core')]);
+	}
+	$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+	if ($pb_context === '') {
+		wp_send_json_error(['message' => __('This target does not support section visibility updates.', 'leadsforward-core')]);
+	}
+	$config = lf_pb_get_post_config($pid, $pb_context);
+	if (!is_array($config['sections'] ?? null) || !is_array($config['sections'][$section_id] ?? null)) {
+		wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+	}
+	$old_enabled = !empty($config['sections'][$section_id]['enabled']);
+	$config['sections'][$section_id]['enabled'] = $visible;
+	update_post_meta($pid, LF_PB_META_KEY, $config);
+	$log_id = function_exists('lf_ai_log_action')
+		? lf_ai_log_action(
+			$context_type,
+			$context_id_use,
+			['__section_enabled::' . $section_id => $old_enabled],
+			['__section_enabled::' . $section_id => $visible],
+			$visible ? 'Inline section show' : 'Inline section hide'
+		)
+		: '';
+	wp_send_json_success([
+		'message' => $visible ? __('Section shown.', 'leadsforward-core') : __('Section hidden.', 'leadsforward-core'),
+		'visible' => $visible,
+		'log_id' => $log_id,
+	]);
+}
+
+function lf_ai_ajax_delete_section(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
+	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
+	$section_id = isset($_POST['section_id']) ? sanitize_text_field(wp_unslash($_POST['section_id'])) : '';
+	if ($context_type === '' || $context_id === '' || $section_id === '') {
+		wp_send_json_error(['message' => __('Invalid delete payload.', 'leadsforward-core')]);
+	}
+	if ($section_id === 'hero' || $section_id === 'hero_1') {
+		wp_send_json_error(['message' => __('Hero cannot be deleted from this inline editor.', 'leadsforward-core')]);
+	}
+	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+			wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
+		}
+		$config = lf_get_homepage_section_config();
+		if (!is_array($config[$section_id] ?? null)) {
+			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+		}
+		$old_enabled = !empty($config[$section_id]['enabled']);
+		$config[$section_id]['enabled'] = false;
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		$log_id = function_exists('lf_ai_log_action')
+			? lf_ai_log_action(
+				$context_type,
+				$context_id_use,
+				['__section_enabled::' . $section_id => $old_enabled],
+				['__section_enabled::' . $section_id => false],
+				'Inline section delete (soft)'
+			)
+			: '';
+		wp_send_json_success([
+			'message' => __('Section deleted. Use undo to restore.', 'leadsforward-core'),
+			'soft_delete' => true,
+			'log_id' => $log_id,
+		]);
+	}
+	$pid = (int) $context_id_use;
+	$post = get_post($pid);
+	if (!$post instanceof \WP_Post || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+		wp_send_json_error(['message' => __('Section settings are unavailable for this target.', 'leadsforward-core')]);
+	}
+	$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+	if ($pb_context === '') {
+		wp_send_json_error(['message' => __('This target does not support section deletion.', 'leadsforward-core')]);
+	}
+	$config = lf_pb_get_post_config($pid, $pb_context);
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	$order = is_array($config['order'] ?? null) ? $config['order'] : [];
+	if (!is_array($sections[$section_id] ?? null)) {
+		wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+	}
+	$old_row = $sections[$section_id];
+	$old_order = $order;
+	unset($sections[$section_id]);
+	$new_order = array_values(array_filter($order, static function ($id) use ($section_id): bool {
+		return (string) $id !== (string) $section_id;
+	}));
+	$config['sections'] = $sections;
+	$config['order'] = $new_order;
+	update_post_meta($pid, LF_PB_META_KEY, $config);
+	$log_id = function_exists('lf_ai_log_action')
+		? lf_ai_log_action(
+			$context_type,
+			$context_id_use,
+			['__section_record::' . $section_id => $old_row, '__section_order' => $old_order],
+			['__section_record::' . $section_id => [], '__section_order' => $new_order],
+			'Inline section delete'
+		)
+		: '';
+	wp_send_json_success([
+		'message' => __('Section deleted. Use undo to restore.', 'leadsforward-core'),
+		'deleted' => true,
+		'log_id' => $log_id,
 	]);
 }
 

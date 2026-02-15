@@ -253,6 +253,131 @@ function lf_ai_apply_section_order_to_context(string $context_type, $context_id,
 }
 
 /**
+ * Persist service-details column layout for a section in homepage/page-builder contexts.
+ */
+function lf_ai_apply_section_layout_to_context(string $context_type, $context_id, string $section_id, string $layout): bool {
+	$layout = $layout === 'media_content' ? 'media_content' : 'content_media';
+	$allowed_types = ['service_details', 'content_image', 'content_image_a', 'image_content', 'image_content_b', 'content_image_c'];
+	$section_id = sanitize_text_field($section_id);
+	if ($section_id === '') {
+		return false;
+	}
+	if ($context_type === 'homepage' || $context_id === 'homepage') {
+		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+			return false;
+		}
+		if (!in_array($section_id, $allowed_types, true)) {
+			return false;
+		}
+		$config = lf_get_homepage_section_config();
+		if (!is_array($config) || !is_array($config[$section_id] ?? null)) {
+			return false;
+		}
+		$config[$section_id]['service_details_layout'] = $layout;
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		return true;
+	}
+	if (!is_numeric($context_id) || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+		return false;
+	}
+	$pid = (int) $context_id;
+	$post = get_post($pid);
+	if (!$post instanceof \WP_Post) {
+		return false;
+	}
+	$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+	if ($pb_context === '') {
+		return false;
+	}
+	$config = lf_pb_get_post_config($pid, $pb_context);
+	if (!is_array($config['sections'] ?? null) || !is_array($config['sections'][$section_id] ?? null)) {
+		return false;
+	}
+	$type = (string) ($config['sections'][$section_id]['type'] ?? '');
+	if (!in_array($type, $allowed_types, true)) {
+		return false;
+	}
+	$config['sections'][$section_id]['settings']['service_details_layout'] = $layout;
+	update_post_meta($pid, LF_PB_META_KEY, $config);
+	return true;
+}
+
+/**
+ * Persist section visibility for homepage/page-builder contexts.
+ */
+function lf_ai_apply_section_enabled_to_context(string $context_type, $context_id, string $section_id, bool $enabled): bool {
+	$section_id = sanitize_text_field($section_id);
+	if ($section_id === '') {
+		return false;
+	}
+	if ($context_type === 'homepage' || $context_id === 'homepage') {
+		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+			return false;
+		}
+		$config = lf_get_homepage_section_config();
+		if (!is_array($config[$section_id] ?? null)) {
+			return false;
+		}
+		$config[$section_id]['enabled'] = $enabled;
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		return true;
+	}
+	if (!is_numeric($context_id) || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+		return false;
+	}
+	$pid = (int) $context_id;
+	$post = get_post($pid);
+	if (!$post instanceof \WP_Post) {
+		return false;
+	}
+	$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+	if ($pb_context === '') {
+		return false;
+	}
+	$config = lf_pb_get_post_config($pid, $pb_context);
+	if (!is_array($config['sections'] ?? null) || !is_array($config['sections'][$section_id] ?? null)) {
+		return false;
+	}
+	$config['sections'][$section_id]['enabled'] = $enabled;
+	update_post_meta($pid, LF_PB_META_KEY, $config);
+	return true;
+}
+
+/**
+ * Persist full section record for page-builder contexts (used by delete undo/redo).
+ */
+function lf_ai_apply_section_record_to_context(string $context_type, $context_id, string $section_id, array $record): bool {
+	$section_id = sanitize_text_field($section_id);
+	if ($section_id === '' || $context_type === 'homepage' || $context_id === 'homepage') {
+		return false;
+	}
+	if (!is_numeric($context_id) || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+		return false;
+	}
+	$pid = (int) $context_id;
+	$post = get_post($pid);
+	if (!$post instanceof \WP_Post) {
+		return false;
+	}
+	$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+	if ($pb_context === '') {
+		return false;
+	}
+	$config = lf_pb_get_post_config($pid, $pb_context);
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	if (empty($record)) {
+		unset($sections[$section_id]);
+		$config['sections'] = $sections;
+		update_post_meta($pid, LF_PB_META_KEY, $config);
+		return true;
+	}
+	$sections[$section_id] = $record;
+	$config['sections'] = $sections;
+	update_post_meta($pid, LF_PB_META_KEY, $config);
+	return true;
+}
+
+/**
  * Apply a field-value map to a specific AI context.
  */
 function lf_ai_apply_changes_to_context(string $context_type, $context_id, array $changes): void {
@@ -262,6 +387,9 @@ function lf_ai_apply_changes_to_context(string $context_type, $context_id, array
 	$dom_updates = [];
 	$image_updates = [];
 	$order_updates = null;
+	$layout_updates = [];
+	$section_enabled_updates = [];
+	$section_record_updates = [];
 	$content_updates = [];
 	foreach ($changes as $field_key => $value) {
 		$key = (string) $field_key;
@@ -284,6 +412,28 @@ function lf_ai_apply_changes_to_context(string $context_type, $context_id, array
 			$selector = sanitize_text_field((string) $selector);
 			if ($selector !== '') {
 				$image_updates[$selector] = is_array($value) ? $value : [];
+			}
+			continue;
+		}
+		if (str_starts_with($key, '__section_layout::')) {
+			$section_id = sanitize_text_field((string) substr($key, strlen('__section_layout::')));
+			$layout = sanitize_text_field((string) $value);
+			if ($section_id !== '' && in_array($layout, ['content_media', 'media_content'], true)) {
+				$layout_updates[$section_id] = $layout;
+			}
+			continue;
+		}
+		if (str_starts_with($key, '__section_enabled::')) {
+			$section_id = sanitize_text_field((string) substr($key, strlen('__section_enabled::')));
+			if ($section_id !== '') {
+				$section_enabled_updates[$section_id] = !empty($value);
+			}
+			continue;
+		}
+		if (str_starts_with($key, '__section_record::')) {
+			$section_id = sanitize_text_field((string) substr($key, strlen('__section_record::')));
+			if ($section_id !== '') {
+				$section_record_updates[$section_id] = is_array($value) ? $value : [];
 			}
 			continue;
 		}
@@ -317,6 +467,21 @@ function lf_ai_apply_changes_to_context(string $context_type, $context_id, array
 	}
 	if (is_array($order_updates)) {
 		lf_ai_apply_section_order_to_context($context_type, $context_id, $order_updates);
+	}
+	if (!empty($layout_updates)) {
+		foreach ($layout_updates as $section_id => $layout) {
+			lf_ai_apply_section_layout_to_context($context_type, $context_id, (string) $section_id, (string) $layout);
+		}
+	}
+	if (!empty($section_record_updates)) {
+		foreach ($section_record_updates as $section_id => $record) {
+			lf_ai_apply_section_record_to_context($context_type, $context_id, (string) $section_id, is_array($record) ? $record : []);
+		}
+	}
+	if (!empty($section_enabled_updates)) {
+		foreach ($section_enabled_updates as $section_id => $enabled) {
+			lf_ai_apply_section_enabled_to_context($context_type, $context_id, (string) $section_id, (bool) $enabled);
+		}
 	}
 	if (empty($content_updates)) {
 		return;

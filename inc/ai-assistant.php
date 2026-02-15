@@ -364,6 +364,16 @@ function lf_ai_assistant_widget_css(): string {
 		[data-lf-section-wrap="1"] { position:relative; cursor:grab; transition:outline-color .15s ease, box-shadow .15s ease; }
 		[data-lf-section-wrap="1"]:hover { outline:2px dashed rgba(131,72,249,.35); outline-offset:3px; }
 		[data-lf-section-wrap="1"].is-dragging { opacity:.55; outline:2px solid #8348f9 !important; outline-offset:3px; cursor:grabbing; }
+		.lf-ai-section-controls { position:absolute; top:8px; right:8px; display:flex; gap:6px; z-index:4; opacity:0; transition:opacity .15s ease; }
+		[data-lf-section-wrap="1"]:hover .lf-ai-section-controls, [data-lf-section-wrap="1"].lf-ai-section-is-hidden .lf-ai-section-controls { opacity:1; }
+		.lf-ai-section-btn { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-width:28px; height:28px; padding:0 7px; font-size:12px; line-height:26px; cursor:pointer; }
+		.lf-ai-section-btn:hover { background:#f5f0ff; }
+		.lf-ai-section-btn--danger { border-color:#fecaca; color:#b91c1c; }
+		[data-lf-section-wrap="1"].lf-ai-section-is-hidden { min-height:56px; background:rgba(131,72,249,.06); outline:2px dashed rgba(131,72,249,.35); outline-offset:3px; }
+		[data-lf-section-wrap="1"].lf-ai-section-is-hidden > :not(.lf-ai-section-controls) { display:none !important; }
+		.lf-ai-column-draggable { cursor:ew-resize; transition:outline-color .15s ease; }
+		.lf-ai-column-draggable:hover { outline:2px dashed rgba(131,72,249,.3); outline-offset:3px; }
+		.lf-ai-column-draggable.is-dragging { outline:2px solid #8348f9 !important; outline-offset:3px; opacity:.85; }
 		.lf-ai-float__confirm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.4); z-index:5; padding:12px; pointer-events:auto; }
 		.lf-ai-float__confirm[hidden] { display:none !important; pointer-events:none !important; }
 		.lf-ai-float__confirm-card { width:100%; max-width:360px; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 10px 34px rgba(15,23,42,.28); padding:14px; }
@@ -413,6 +423,9 @@ function lf_ai_assistant_widget_js(): string {
 		var $confirmText = $root.find("[data-lf-ai-confirm-text]");
 		var $confirmYes = $root.find("[data-lf-ai-confirm-yes]");
 		var $confirmNo = $root.find("[data-lf-ai-confirm-no]");
+		var defaultConfirmText = String($confirmText.text() || "");
+		var defaultConfirmYesText = String($confirmYes.text() || "");
+		var pendingConfirmAction = null;
 		var proposed = null;
 		var current = null;
 		var creationPayload = null;
@@ -432,6 +445,7 @@ function lf_ai_assistant_widget_js(): string {
 		var inlineOriginalText = "";
 		var inlineIsSaving = false;
 		var activeDragSection = null;
+		var activeColumnDrag = null;
 		var suppressInlineClickUntil = 0;
 		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption";
 		var inlineImageCandidateSelector = "main img";
@@ -456,6 +470,20 @@ function lf_ai_assistant_widget_js(): string {
 				var m = p.match(patterns[i]);
 				if (m && m[1] && m[2]) {
 					return { from: String(m[1]).trim(), to: String(m[2]).trim() };
+				}
+			}
+			return null;
+		}
+		function parseInlineTargetPrompt(prompt) {
+			var p = String(prompt || "");
+			var patterns = [
+				/(?:where\s+it\s+says|where\s+it\s+reads)\s*["“]([^"”]+)["”]/i,
+				/(?:change|replace|update|rewrite)\s*["“]([^"”]+)["”]/i
+			];
+			for (var i = 0; i < patterns.length; i++) {
+				var m = p.match(patterns[i]);
+				if (m && m[1]) {
+					return { from: String(m[1]).trim() };
 				}
 			}
 			return null;
@@ -656,6 +684,222 @@ function lf_ai_assistant_widget_js(): string {
 		function collectSectionWrappers() {
 			return Array.prototype.slice.call(document.querySelectorAll("[data-lf-section-wrap=\"1\"][data-lf-section-id]"));
 		}
+		function sectionSupportsColumnSwap(sectionType) {
+			var type = String(sectionType || "");
+			return ["service_details", "content_image", "content_image_a", "image_content", "image_content_b", "content_image_c"].indexOf(type) !== -1;
+		}
+		function toggleSectionColumnsInDom(wrap, newLayout) {
+			if (!wrap) return;
+			var details = wrap.querySelector(".lf-service-details--media");
+			if (!details) return;
+			var contentNode = null;
+			var mediaNode = null;
+			Array.prototype.slice.call(details.children || []).forEach(function(child){
+				if (!child || !child.classList) return;
+				if (child.classList.contains("lf-service-details__content")) contentNode = child;
+				if (child.classList.contains("lf-service-details__media")) mediaNode = child;
+			});
+			if (!contentNode || !mediaNode) return;
+			var mediaLeft = String(newLayout || "") === "media_content";
+			if (mediaLeft) {
+				details.classList.add("lf-service-details--media-left");
+				if (details.firstElementChild !== mediaNode) {
+					details.insertBefore(mediaNode, contentNode);
+				}
+			} else {
+				details.classList.remove("lf-service-details--media-left");
+				if (details.firstElementChild !== contentNode) {
+					details.insertBefore(contentNode, mediaNode);
+				}
+			}
+		}
+		function persistSectionColumnSwap(wrap) {
+			if (!wrap) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+			if (!sectionId || !sectionSupportsColumnSwap(sectionType)) return;
+			setStatus("Reversing section columns...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_toggle_section_columns",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_id: sectionId
+			}).done(function(res){
+				if (res && res.success && res.data) {
+					toggleSectionColumnsInDom(wrap, String(res.data.new_layout || ""));
+					setStatus((res.data && res.data.message) ? res.data.message : "Section columns reversed.", false);
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Column reversal failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Column reversal failed.";
+				setStatus(msg, true);
+			});
+		}
+		function applySectionVisibilityUi(wrap, visible) {
+			if (!wrap) return;
+			var isVisible = !!visible;
+			wrap.setAttribute("data-lf-section-visible", isVisible ? "1" : "0");
+			wrap.classList.toggle("lf-ai-section-is-hidden", !isVisible);
+			var btn = wrap.querySelector("[data-lf-section-toggle]");
+			if (btn) {
+				btn.textContent = isVisible ? "Hide" : "Show";
+				btn.setAttribute("aria-label", isVisible ? "Hide section" : "Show section");
+			}
+		}
+		function persistSectionVisibility(wrap, visible) {
+			if (!wrap) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			if (!sectionId) return;
+			setStatus(visible ? "Showing section..." : "Hiding section...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_toggle_section_visibility",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_id: sectionId,
+				visible: visible ? "1" : "0"
+			}).done(function(res){
+				if (res && res.success) {
+					applySectionVisibilityUi(wrap, !!(res.data && res.data.visible));
+					setStatus((res.data && res.data.message) ? res.data.message : "Section visibility updated.", false);
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Section visibility update failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Section visibility update failed.";
+				setStatus(msg, true);
+			});
+		}
+		function persistSectionDelete(wrap) {
+			if (!wrap) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			if (!sectionId) return;
+			setStatus("Deleting section...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_delete_section",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_id: sectionId
+			}).done(function(res){
+				if (res && res.success) {
+					wrap.remove();
+					setStatus((res.data && res.data.message) ? res.data.message : "Section deleted. Use undo to restore.", false);
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Section delete failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Section delete failed.";
+				setStatus(msg, true);
+			});
+		}
+		function buildSectionControls() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				if (wrap.querySelector(".lf-ai-section-controls")) return;
+				var controls = document.createElement("div");
+				controls.className = "lf-ai-section-controls lf-ai-inline-editor-ignore";
+				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+				if (sectionSupportsColumnSwap(sectionType)) {
+					var swapBtn = document.createElement("button");
+					swapBtn.type = "button";
+					swapBtn.className = "lf-ai-section-btn";
+					swapBtn.textContent = "⇆";
+					swapBtn.setAttribute("title", "Reverse image/content columns");
+					swapBtn.setAttribute("aria-label", "Reverse image/content columns");
+					swapBtn.addEventListener("click", function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						persistSectionColumnSwap(wrap);
+					});
+					controls.appendChild(swapBtn);
+				}
+				var toggleBtn = document.createElement("button");
+				toggleBtn.type = "button";
+				toggleBtn.className = "lf-ai-section-btn";
+				toggleBtn.setAttribute("data-lf-section-toggle", "1");
+				toggleBtn.textContent = "Hide";
+				toggleBtn.setAttribute("title", "Hide or show section");
+				toggleBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					var isVisible = String(wrap.getAttribute("data-lf-section-visible") || "1") !== "0";
+					persistSectionVisibility(wrap, !isVisible);
+				});
+				controls.appendChild(toggleBtn);
+				var deleteBtn = document.createElement("button");
+				deleteBtn.type = "button";
+				deleteBtn.className = "lf-ai-section-btn lf-ai-section-btn--danger";
+				deleteBtn.textContent = "Del";
+				deleteBtn.setAttribute("title", "Delete section");
+				deleteBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					openConfirm("Delete this section? You can undo after deleting.", "Delete Section", function(){
+						persistSectionDelete(wrap);
+					});
+				});
+				controls.appendChild(deleteBtn);
+				wrap.appendChild(controls);
+				applySectionVisibilityUi(wrap, true);
+			});
+		}
+		function buildSectionColumnSwapTargets() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+				if (!sectionSupportsColumnSwap(sectionType)) return;
+				var details = wrap.querySelector(".lf-service-details--media");
+				if (!details) return;
+				var contentNode = null;
+				var mediaNode = null;
+				Array.prototype.slice.call(details.children || []).forEach(function(child){
+					if (!child || !child.classList) return;
+					if (child.classList.contains("lf-service-details__content")) contentNode = child;
+					if (child.classList.contains("lf-service-details__media")) mediaNode = child;
+				});
+				if (!contentNode || !mediaNode) return;
+				[contentNode, mediaNode].forEach(function(col){
+					col.classList.add("lf-ai-column-draggable", "lf-ai-inline-editor-ignore");
+					col.setAttribute("draggable", "true");
+					col.ondragstart = function(e){
+						var role = col.classList.contains("lf-service-details__media") ? "media" : "content";
+						activeColumnDrag = { wrap: wrap, role: role };
+						col.classList.add("is-dragging");
+						if (e.dataTransfer) {
+							e.dataTransfer.effectAllowed = "move";
+							e.dataTransfer.setData("text/plain", role);
+						}
+						suppressInlineClickUntil = Date.now() + 350;
+					};
+					col.ondragover = function(e){
+						if (!activeColumnDrag || activeColumnDrag.wrap !== wrap) return;
+						e.preventDefault();
+					};
+					col.ondragend = function(){
+						col.classList.remove("is-dragging");
+						activeColumnDrag = null;
+					};
+				});
+				details.ondragover = function(e){
+					if (!activeColumnDrag || activeColumnDrag.wrap !== wrap) return;
+					e.preventDefault();
+				};
+				details.ondrop = function(e){
+					if (!activeColumnDrag || activeColumnDrag.wrap !== wrap) return;
+					e.preventDefault();
+					var rect = details.getBoundingClientRect();
+					var dropOnLeftHalf = e.clientX < (rect.left + rect.width / 2);
+					var currentMediaLeft = details.classList.contains("lf-service-details--media-left");
+					var desiredMediaLeft = dropOnLeftHalf;
+					if (desiredMediaLeft !== currentMediaLeft) {
+						persistSectionColumnSwap(wrap);
+					}
+				};
+			});
+		}
 		function reorderSectionInDom(targetWrap, clientY) {
 			if (!activeDragSection || !targetWrap || targetWrap === activeDragSection) {
 				return;
@@ -701,6 +945,10 @@ function lf_ai_assistant_widget_js(): string {
 				wrap.setAttribute("draggable", "true");
 				wrap.ondragstart = function(e){
 					if (isDragBlockedTarget(e.target)) {
+						e.preventDefault();
+						return;
+					}
+					if (activeColumnDrag) {
 						e.preventDefault();
 						return;
 					}
@@ -967,6 +1215,12 @@ function lf_ai_assistant_widget_js(): string {
 		function setConfirmOpen(open) {
 			$confirm.prop("hidden", !open);
 		}
+		function openConfirm(message, yesLabel, onYes) {
+			pendingConfirmAction = typeof onYes === "function" ? onYes : null;
+			$confirmText.text(String(message || defaultConfirmText));
+			$confirmYes.text(String(yesLabel || defaultConfirmYesText));
+			setConfirmOpen(true);
+		}
 		function runRollback() {
 			setStatus(lfAiFloating.i18n && lfAiFloating.i18n.statusReverting ? lfAiFloating.i18n.statusReverting : "Reverting...", false);
 			$.post(lfAiFloating.ajax_url, {
@@ -1083,6 +1337,39 @@ function lf_ai_assistant_widget_js(): string {
 					renderInlineQuickPreview(inlineQuickEdit.current, inlineQuickEdit.value);
 					setStatus("Direct text replacement ready. Review and apply.", false);
 					setProposalEnabled(true);
+					return;
+				}
+			}
+			var parsedInlineTarget = parseInlineTargetPrompt(prompt);
+			if (parsedInlineTarget && parsedInlineTarget.from) {
+				var resolvedTarget = resolveInlineSelectorByText(parsedInlineTarget.from);
+				if (resolvedTarget && resolvedTarget.selector) {
+					setStatus("Rewriting targeted text only...", false);
+					$.post(lfAiFloating.ajax_url, {
+						action: "lf_ai_inline_rewrite",
+						nonce: lfAiFloating.nonce,
+						context_type: activeContextType,
+						context_id: activeContextId,
+						selector: resolvedTarget.selector,
+						current_text: resolvedTarget.current || parsedInlineTarget.from,
+						prompt: prompt
+					}).done(function(rewriteRes){
+						if (rewriteRes && rewriteRes.success && rewriteRes.data && rewriteRes.data.rewritten_text) {
+							inlineQuickEdit = {
+								selector: resolvedTarget.selector,
+								value: String(rewriteRes.data.rewritten_text),
+								current: resolvedTarget.current || parsedInlineTarget.from
+							};
+							renderInlineQuickPreview(inlineQuickEdit.current, inlineQuickEdit.value);
+							setStatus("Targeted rewrite ready. Review and apply.", false);
+							setProposalEnabled(true);
+						} else {
+							setStatus((rewriteRes && rewriteRes.data && rewriteRes.data.message) ? rewriteRes.data.message : "Targeted rewrite failed.", true);
+						}
+					}).fail(function(xhr){
+						var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Targeted rewrite failed.";
+						setStatus(msg, true);
+					});
 					return;
 				}
 			}
@@ -1254,9 +1541,22 @@ function lf_ai_assistant_widget_js(): string {
 		$btnRedo.on("click", function(){
 			runRedo();
 		});
-		$confirmNo.on("click", function(){ setConfirmOpen(false); });
-		$confirmYes.on("click", function(){
+		$confirmNo.on("click", function(){
+			pendingConfirmAction = null;
+			$confirmText.text(defaultConfirmText);
+			$confirmYes.text(defaultConfirmYesText);
 			setConfirmOpen(false);
+		});
+		$confirmYes.on("click", function(){
+			var action = pendingConfirmAction;
+			pendingConfirmAction = null;
+			$confirmText.text(defaultConfirmText);
+			$confirmYes.text(defaultConfirmYesText);
+			setConfirmOpen(false);
+			if (typeof action === "function") {
+				action();
+				return;
+			}
 			runRollback();
 		});
 		$confirm.on("click", function(e){
@@ -1294,7 +1594,9 @@ function lf_ai_assistant_widget_js(): string {
 		buildInlineTargets();
 		buildInlineImageTargets();
 		buildSectionTargets();
-		setStatus("Click to edit text/images, or drag any section to reorder.", false);
+		buildSectionControls();
+		buildSectionColumnSwapTargets();
+		setStatus("Click to edit text/images, drag sections to reorder, reverse columns, hide/show, or delete.", false);
 	})(jQuery);';
 }
 
