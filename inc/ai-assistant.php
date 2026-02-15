@@ -281,6 +281,7 @@ function lf_ai_assistant_widget_js(): string {
 		var stateKey = "lfAiFloatState";
 		var $root = $("[data-lf-ai-float]");
 		if (!$root.length || typeof lfAiFloating === "undefined") return;
+		$root.attr("data-lf-ai-js-init", "1");
 		var $toggle = $root.find("[data-lf-ai-toggle]");
 		var $panel = $root.find("#lf-ai-float-panel");
 		var $prompt = $root.find("[data-lf-ai-prompt]");
@@ -682,6 +683,11 @@ function lf_ai_assistant_widget_fallback_js(): string {
 		var roots = document.querySelectorAll("[data-lf-ai-float]");
 		if (!roots || !roots.length) return;
 		roots.forEach(function(root){
+			// If the primary jQuery controller initialized, skip fallback bindings
+			// to avoid double-toggle behavior (open then immediate close).
+			if (root.getAttribute("data-lf-ai-js-init") === "1") {
+				return;
+			}
 			var panel = root.querySelector("#lf-ai-float-panel");
 			var toggle = root.querySelector("[data-lf-ai-toggle]");
 			var closeButtons = root.querySelectorAll("[data-lf-ai-close],[data-lf-ai-minimize]");
