@@ -587,5 +587,7 @@ function lf_render_homepage_section(array $section, int $index): void {
 			implode(', ', $rendered)
 		));
 	}
+	echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $type) . '" data-lf-section-type="' . esc_attr((string) $type) . '">';
 	lf_sections_render_section($type, 'homepage', $section, $post);
+	echo '</div>';
 }

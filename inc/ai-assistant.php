@@ -63,6 +63,9 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 			'statusApplying' => __('Applying changes...', 'leadsforward-core'),
 			'statusReverting' => __('Reverting last AI change...', 'leadsforward-core'),
 			'statusRedoing' => __('Re-applying last reverted change...', 'leadsforward-core'),
+			'statusLayoutOn' => __('Layout mode on. Drag sections by the handle to reorder.', 'leadsforward-core'),
+			'statusLayoutOff' => __('Layout mode off.', 'leadsforward-core'),
+			'statusReordering' => __('Saving section order...', 'leadsforward-core'),
 			'statusParsingDoc' => __('Reading document context...', 'leadsforward-core'),
 			'confirmRevert' => __('Revert the most recent AI change on this page? This cannot be undone.', 'leadsforward-core'),
 			'placeholder' => __('Ask for precise copy edits, SEO rewrites, CTA improvements, or schema-safe content upgrades...', 'leadsforward-core'),
@@ -191,6 +194,7 @@ function lf_ai_assistant_render_floating_widget(): void {
 			<div class="lf-ai-float__header">
 				<strong><?php esc_html_e('LeadsForward AI Assistant', 'leadsforward-core'); ?></strong>
 				<div class="lf-ai-float__header-actions">
+					<button type="button" class="lf-ai-float__icon" data-lf-ai-layout aria-label="<?php esc_attr_e('Toggle layout mode', 'leadsforward-core'); ?>" title="<?php esc_attr_e('Toggle layout mode for drag and drop section ordering', 'leadsforward-core'); ?>">⇅</button>
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-undo aria-label="<?php esc_attr_e('Undo last change', 'leadsforward-core'); ?>" title="<?php esc_attr_e('Undo last change (click repeatedly to step back)', 'leadsforward-core'); ?>">↶</button>
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-redo aria-label="<?php esc_attr_e('Redo last reverted change', 'leadsforward-core'); ?>" title="<?php esc_attr_e('Redo last reverted change (click repeatedly to step forward)', 'leadsforward-core'); ?>">↷</button>
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-minimize aria-label="<?php esc_attr_e('Minimize', 'leadsforward-core'); ?>">−</button>
@@ -324,6 +328,12 @@ function lf_ai_assistant_widget_css(): string {
 		[data-lf-inline-editable="1"]:hover { outline:2px dashed rgba(131,72,249,.45); outline-offset:2px; }
 		[data-lf-inline-active="1"] { outline:2px solid #8348f9 !important; outline-offset:2px; background:rgba(131,72,249,.08); }
 		[data-lf-inline-saving="1"] { opacity:.72; pointer-events:none; }
+		[data-lf-section-wrap="1"] { position:relative; }
+		.lf-ai-layout-handle { display:none; position:absolute; top:10px; right:10px; width:28px; height:28px; border:1px solid #d6c8fb; border-radius:8px; background:#fff; color:#6a33e8; font-weight:700; align-items:center; justify-content:center; cursor:grab; z-index:4; box-shadow:0 4px 12px rgba(15,23,42,.15); }
+		body.lf-ai-layout-mode [data-lf-section-wrap="1"] { outline:2px dashed rgba(131,72,249,.45); outline-offset:3px; }
+		body.lf-ai-layout-mode [data-lf-section-wrap="1"].is-dragging { opacity:.55; }
+		body.lf-ai-layout-mode .lf-ai-layout-handle { display:inline-flex; }
+		body.lf-ai-layout-mode [data-lf-inline-editable="1"] { outline:none !important; background:transparent !important; }
 		.lf-ai-float__confirm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.4); z-index:5; padding:12px; pointer-events:auto; }
 		.lf-ai-float__confirm[hidden] { display:none !important; pointer-events:none !important; }
 		.lf-ai-float__confirm-card { width:100%; max-width:360px; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 10px 34px rgba(15,23,42,.28); padding:14px; }
@@ -354,6 +364,7 @@ function lf_ai_assistant_widget_js(): string {
 		var $btnApply = $root.find("[data-lf-ai-apply]");
 		var $btnReject = $root.find("[data-lf-ai-reject]");
 		var $btnRevert = $root.find("[data-lf-ai-revert]");
+		var $btnLayout = $root.find("[data-lf-ai-layout]");
 		var $btnUndo = $root.find("[data-lf-ai-undo]");
 		var $btnRedo = $root.find("[data-lf-ai-redo]");
 		var $target = $root.find("[data-lf-ai-target]");
@@ -390,6 +401,8 @@ function lf_ai_assistant_widget_js(): string {
 		var inlineActiveEl = null;
 		var inlineOriginalText = "";
 		var inlineIsSaving = false;
+		var layoutMode = false;
+		var activeDragSection = null;
 		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption";
 
 		function escapeHtml(text) {
@@ -406,6 +419,7 @@ function lf_ai_assistant_widget_js(): string {
 			$toggle.attr("aria-expanded", open ? "true" : "false");
 			if (!open) {
 				saveInlineEdit();
+				setLayoutMode(false);
 			}
 			try { window.localStorage.setItem(stateKey, open ? "open" : "closed"); } catch (e) {}
 		}
@@ -465,6 +479,116 @@ function lf_ai_assistant_widget_js(): string {
 				node.setAttribute("data-lf-inline-editable", "1");
 				node.setAttribute("data-lf-inline-selector", selector);
 			});
+		}
+		function collectSectionWrappers() {
+			return Array.prototype.slice.call(document.querySelectorAll("[data-lf-section-wrap=\"1\"][data-lf-section-id]"));
+		}
+		function reorderSectionInDom(targetWrap, clientY) {
+			if (!activeDragSection || !targetWrap || targetWrap === activeDragSection) {
+				return;
+			}
+			var rect = targetWrap.getBoundingClientRect();
+			var after = clientY > (rect.top + rect.height / 2);
+			if (after) {
+				if (targetWrap.nextSibling !== activeDragSection) {
+					targetWrap.parentNode.insertBefore(activeDragSection, targetWrap.nextSibling);
+				}
+			} else if (targetWrap.previousSibling !== activeDragSection) {
+				targetWrap.parentNode.insertBefore(activeDragSection, targetWrap);
+			}
+		}
+		function persistSectionOrder() {
+			var ids = collectSectionWrappers().map(function(node){
+				return String(node.getAttribute("data-lf-section-id") || "");
+			}).filter(function(id){ return id !== ""; });
+			if (!ids.length) {
+				return;
+			}
+			setStatus((lfAiFloating.i18n && lfAiFloating.i18n.statusReordering) ? lfAiFloating.i18n.statusReordering : "Saving section order...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_reorder_sections",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				ordered_ids: JSON.stringify(ids)
+			}).done(function(res){
+				if (res && res.success) {
+					setStatus((res.data && res.data.message) ? res.data.message : "Section order saved.", false);
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Section reorder failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Section reorder failed.";
+				setStatus(msg, true);
+			});
+		}
+		function buildSectionTargets() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				var handle = wrap.querySelector(".lf-ai-layout-handle");
+				if (!handle) {
+					handle = document.createElement("button");
+					handle.type = "button";
+					handle.className = "lf-ai-layout-handle";
+					handle.setAttribute("data-lf-ai-layout-handle", "1");
+					handle.setAttribute("aria-label", "Drag section");
+					handle.title = "Drag to reorder section";
+					handle.textContent = "⋮⋮";
+					wrap.appendChild(handle);
+				}
+				handle.onmousedown = function(e){ e.preventDefault(); };
+				handle.onclick = function(e){ e.preventDefault(); e.stopPropagation(); };
+				handle.onmouseenter = function(){ handle.style.cursor = layoutMode ? "grab" : "default"; };
+				wrap.setAttribute("draggable", layoutMode ? "true" : "false");
+				wrap.ondragstart = function(e){
+					if (!layoutMode) {
+						e.preventDefault();
+						return;
+					}
+					var target = e.target;
+					if (!target || !target.closest("[data-lf-ai-layout-handle=\"1\"]")) {
+						e.preventDefault();
+						return;
+					}
+					activeDragSection = wrap;
+					wrap.classList.add("is-dragging");
+					if (e.dataTransfer) {
+						e.dataTransfer.effectAllowed = "move";
+						e.dataTransfer.setData("text/plain", String(wrap.getAttribute("data-lf-section-id") || ""));
+					}
+				};
+				wrap.ondragover = function(e){
+					if (!layoutMode || !activeDragSection || wrap === activeDragSection) return;
+					e.preventDefault();
+					reorderSectionInDom(wrap, e.clientY);
+				};
+				wrap.ondrop = function(e){
+					if (!layoutMode) return;
+					e.preventDefault();
+				};
+				wrap.ondragend = function(){
+					if (activeDragSection) {
+						activeDragSection.classList.remove("is-dragging");
+					}
+					activeDragSection = null;
+					if (layoutMode) {
+						persistSectionOrder();
+					}
+				};
+			});
+		}
+		function setLayoutMode(on) {
+			layoutMode = !!on;
+			$btnLayout.attr("aria-pressed", layoutMode ? "true" : "false");
+			if (layoutMode) {
+				document.body.classList.add("lf-ai-layout-mode");
+				cancelInlineEdit(false);
+				setStatus((lfAiFloating.i18n && lfAiFloating.i18n.statusLayoutOn) ? lfAiFloating.i18n.statusLayoutOn : "Layout mode on.", false);
+			} else {
+				document.body.classList.remove("lf-ai-layout-mode");
+				setStatus((lfAiFloating.i18n && lfAiFloating.i18n.statusLayoutOff) ? lfAiFloating.i18n.statusLayoutOff : "Layout mode off.", false);
+			}
+			buildSectionTargets();
 		}
 		function beginInlineEdit(el) {
 			if (!el || inlineIsSaving) return;
@@ -734,12 +858,21 @@ function lf_ai_assistant_widget_js(): string {
 		$root.find("[data-lf-ai-preset]").on("click", function(){
 			$prompt.val($(this).attr("data-lf-ai-preset") || "").trigger("focus");
 		});
+		$btnLayout.on("click", function(){
+			setLayoutMode(!layoutMode);
+		});
 		$(document).on("click", "[data-lf-inline-editable=\"1\"]", function(e){
+			if (layoutMode) {
+				return;
+			}
 			e.preventDefault();
 			e.stopPropagation();
 			beginInlineEdit(this);
 		});
 		$(document).on("click", function(e){
+			if (layoutMode) {
+				return;
+			}
 			if (!inlineActiveEl || inlineIsSaving) {
 				return;
 			}
@@ -935,6 +1068,11 @@ function lf_ai_assistant_widget_js(): string {
 			}
 		});
 		$(document).on("keydown", function(e){
+			if (layoutMode && (e.key === "Escape" || e.keyCode === 27)) {
+				e.preventDefault();
+				setLayoutMode(false);
+				return;
+			}
 			if (inlineActiveEl) {
 				if (e.key === "Escape" || e.keyCode === 27) {
 					e.preventDefault();
@@ -962,7 +1100,9 @@ function lf_ai_assistant_widget_js(): string {
 		try { $mode.val("auto"); } catch (e) {}
 		syncModeUi();
 		buildInlineTargets();
-		setStatus("Direct edit is always available. Click headline/subheadline text and click away to auto-save.", false);
+		buildSectionTargets();
+		$btnLayout.attr("aria-pressed", "false");
+		setStatus("Direct edit is always available. Click page text and click away to auto-save.", false);
 	})(jQuery);';
 }
 

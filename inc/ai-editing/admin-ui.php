@@ -476,6 +476,7 @@ add_action('wp_ajax_lf_ai_rollback_latest', 'lf_ai_ajax_rollback_latest');
 add_action('wp_ajax_lf_ai_redo_latest', 'lf_ai_ajax_redo_latest');
 add_action('wp_ajax_lf_ai_extract_context_doc', 'lf_ai_ajax_extract_context_doc');
 add_action('wp_ajax_lf_ai_inline_save', 'lf_ai_ajax_inline_save');
+add_action('wp_ajax_lf_ai_reorder_sections', 'lf_ai_ajax_reorder_sections');
 
 function lf_ai_editing_meta_box(): void {
 	if (!current_user_can(LF_AI_CAP)) {
@@ -897,6 +898,77 @@ function lf_ai_ajax_inline_save(): void {
 		'field_key' => $field_key,
 		'value' => $value,
 		'log_id' => (string) ($result['log_id'] ?? ''),
+	]);
+}
+
+function lf_ai_ajax_reorder_sections(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
+	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
+	$ordered_ids_raw = isset($_POST['ordered_ids']) ? wp_unslash((string) $_POST['ordered_ids']) : '';
+	$ordered_ids = json_decode($ordered_ids_raw, true);
+	if ($context_type === '' || $context_id === '' || !is_array($ordered_ids) || empty($ordered_ids)) {
+		wp_send_json_error(['message' => __('Invalid reorder payload.', 'leadsforward-core')]);
+	}
+	$ordered_ids = array_values(array_filter(array_map(static function ($id): string {
+		return sanitize_text_field((string) $id);
+	}, $ordered_ids)));
+	if (empty($ordered_ids)) {
+		wp_send_json_error(['message' => __('No section IDs were provided.', 'leadsforward-core')]);
+	}
+	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	$old_order = [];
+	$new_order = [];
+	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+		if (!defined('LF_HOMEPAGE_ORDER_OPTION') || !function_exists('lf_homepage_controller_order') || !function_exists('lf_homepage_sanitize_order')) {
+			wp_send_json_error(['message' => __('Homepage section reorder is unavailable.', 'leadsforward-core')]);
+		}
+		$old_order = lf_homepage_controller_order();
+		$new_order = lf_homepage_sanitize_order($ordered_ids, true);
+		update_option(LF_HOMEPAGE_ORDER_OPTION, $new_order, true);
+	} else {
+		$pid = (int) $context_id_use;
+		$post = get_post($pid);
+		if (!$post instanceof \WP_Post || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+			wp_send_json_error(['message' => __('Section reorder is unavailable for this target.', 'leadsforward-core')]);
+		}
+		$pb_context = '';
+		if (function_exists('lf_ai_pb_context_for_post')) {
+			$pb_context = lf_ai_pb_context_for_post($post);
+		}
+		if ($pb_context === '') {
+			wp_send_json_error(['message' => __('This post type does not support section reordering.', 'leadsforward-core')]);
+		}
+		$config = lf_pb_get_post_config($pid, $pb_context);
+		$current_order = is_array($config['order'] ?? null) ? $config['order'] : [];
+		if (empty($current_order)) {
+			wp_send_json_error(['message' => __('No sections found to reorder.', 'leadsforward-core')]);
+		}
+		$new_order = [];
+		foreach ($ordered_ids as $id) {
+			if (in_array($id, $current_order, true) && !in_array($id, $new_order, true)) {
+				$new_order[] = $id;
+			}
+		}
+		foreach ($current_order as $id) {
+			if (!in_array($id, $new_order, true)) {
+				$new_order[] = $id;
+			}
+		}
+		$old_order = $current_order;
+		$config['order'] = $new_order;
+		update_post_meta($pid, LF_PB_META_KEY, $config);
+	}
+	$log_id = function_exists('lf_ai_log_action')
+		? lf_ai_log_action($context_type, $context_id_use, ['__section_order' => $old_order], ['__section_order' => $new_order], 'Inline section reorder')
+		: '';
+	wp_send_json_success([
+		'message' => __('Section order saved.', 'leadsforward-core'),
+		'log_id' => $log_id,
+		'order' => $new_order,
 	]);
 }
 

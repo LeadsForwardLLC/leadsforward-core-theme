@@ -911,7 +911,9 @@ function lf_pb_render_sections(\WP_Post $post): void {
 				implode(', ', $rendered)
 			));
 		}
+		echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '">';
 		lf_sections_render_section($type, $context, $sec_cfg['settings'] ?? [], $post);
+		echo '</div>';
 	}
 }
 

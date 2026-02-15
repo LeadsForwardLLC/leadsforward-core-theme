@@ -139,6 +139,71 @@ function lf_ai_set_inline_dom_overrides(string $context_type, $context_id, array
 }
 
 /**
+ * Persist section order for homepage/page-builder contexts.
+ */
+function lf_ai_apply_section_order_to_context(string $context_type, $context_id, array $order): bool {
+	$order = array_values(array_filter(array_map(static function ($id): string {
+		return sanitize_text_field((string) $id);
+	}, $order)));
+	if (empty($order)) {
+		return false;
+	}
+	if ($context_type === 'homepage' || $context_id === 'homepage') {
+		if (!defined('LF_HOMEPAGE_ORDER_OPTION') || !function_exists('lf_homepage_sanitize_order')) {
+			return false;
+		}
+		$sanitized = lf_homepage_sanitize_order($order, true);
+		update_option(LF_HOMEPAGE_ORDER_OPTION, $sanitized, true);
+		return true;
+	}
+	if (!is_numeric($context_id) || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+		return false;
+	}
+	$pid = (int) $context_id;
+	$post = get_post($pid);
+	if (!$post instanceof \WP_Post) {
+		return false;
+	}
+	$pb_context = '';
+	if (function_exists('lf_ai_pb_context_for_post')) {
+		$pb_context = lf_ai_pb_context_for_post($post);
+	}
+	if ($pb_context === '') {
+		if ($post->post_type === 'page') {
+			$pb_context = 'page';
+		} elseif ($post->post_type === 'post') {
+			$pb_context = 'post';
+		} elseif ($post->post_type === 'lf_service') {
+			$pb_context = 'service';
+		} elseif ($post->post_type === 'lf_service_area') {
+			$pb_context = 'service_area';
+		}
+	}
+	if ($pb_context === '') {
+		return false;
+	}
+	$config = lf_pb_get_post_config($pid, $pb_context);
+	$current = is_array($config['order'] ?? null) ? $config['order'] : [];
+	if (empty($current)) {
+		return false;
+	}
+	$clean = [];
+	foreach ($order as $id) {
+		if (in_array($id, $current, true) && !in_array($id, $clean, true)) {
+			$clean[] = $id;
+		}
+	}
+	foreach ($current as $id) {
+		if (!in_array($id, $clean, true)) {
+			$clean[] = $id;
+		}
+	}
+	$config['order'] = $clean;
+	update_post_meta($pid, LF_PB_META_KEY, $config);
+	return true;
+}
+
+/**
  * Apply a field-value map to a specific AI context.
  */
 function lf_ai_apply_changes_to_context(string $context_type, $context_id, array $changes): void {
@@ -146,9 +211,16 @@ function lf_ai_apply_changes_to_context(string $context_type, $context_id, array
 		return;
 	}
 	$dom_updates = [];
+	$order_updates = null;
 	$content_updates = [];
 	foreach ($changes as $field_key => $value) {
 		$key = (string) $field_key;
+		if ($key === '__section_order') {
+			if (is_array($value)) {
+				$order_updates = $value;
+			}
+			continue;
+		}
 		if (str_starts_with($key, '__dom_override::')) {
 			$selector = substr($key, strlen('__dom_override::'));
 			$selector = sanitize_text_field((string) $selector);
@@ -169,6 +241,9 @@ function lf_ai_apply_changes_to_context(string $context_type, $context_id, array
 			}
 		}
 		lf_ai_set_inline_dom_overrides($context_type, $context_id, $current_overrides);
+	}
+	if (is_array($order_updates)) {
+		lf_ai_apply_section_order_to_context($context_type, $context_id, $order_updates);
 	}
 	if (empty($content_updates)) {
 		return;
