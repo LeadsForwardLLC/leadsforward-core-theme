@@ -1,0 +1,84 @@
+:root {
+  --lf-admin-primary: #8348f9;
+  --lf-admin-primary-dark: #6a33e8;
+  --lf-admin-primary-soft: #f4edff;
+  --lf-admin-ink: #1f1735;
+  --lf-admin-border: #e6dbff;
+}
+
+body.toplevel_page_lf-ops,
+body[class*="leadsforward_page_lf-"] {
+  --wp-admin-theme-color: var(--lf-admin-primary);
+  --wp-admin-theme-color-darker-10: #763ef0;
+  --wp-admin-theme-color-darker-20: #6735df;
+}
+
+body.toplevel_page_lf-ops .wrap h1,
+body[class*="leadsforward_page_lf-"] .wrap h1 {
+  color: var(--lf-admin-ink);
+  letter-spacing: -0.01em;
+}
+
+body.toplevel_page_lf-ops .card,
+body[class*="leadsforward_page_lf-"] .card {
+  border-radius: 14px;
+  border: 1px solid var(--lf-admin-border);
+  box-shadow: 0 10px 28px rgba(79, 36, 180, 0.08);
+}
+
+body.toplevel_page_lf-ops .button.button-primary,
+body[class*="leadsforward_page_lf-"] .button.button-primary {
+  background: linear-gradient(135deg, var(--lf-admin-primary), var(--lf-admin-primary-dark));
+  border-color: var(--lf-admin-primary-dark);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(131, 72, 249, 0.22);
+}
+
+body.toplevel_page_lf-ops .button.button-primary:hover,
+body[class*="leadsforward_page_lf-"] .button.button-primary:hover {
+  background: linear-gradient(135deg, #925bff, #7137f2);
+  border-color: #6930e3;
+}
+
+body.toplevel_page_lf-ops .button:not(.button-primary),
+body[class*="leadsforward_page_lf-"] .button:not(.button-primary) {
+  border-color: #d9c8ff;
+}
+
+body.toplevel_page_lf-ops .button:not(.button-primary):hover,
+body[class*="leadsforward_page_lf-"] .button:not(.button-primary):hover {
+  border-color: var(--lf-admin-primary);
+  color: var(--lf-admin-primary);
+}
+
+body.toplevel_page_lf-ops .lf-manifester-step__badge,
+body[class*="leadsforward_page_lf-"] .lf-manifester-step__badge {
+  background: #eadcff;
+  color: var(--lf-admin-primary-dark);
+}
+
+body.toplevel_page_lf-ops .lf-manifester-step--action,
+body[class*="leadsforward_page_lf-"] .lf-manifester-step--action {
+  border-color: #cfb7ff;
+  background: #f6f0ff;
+}
+
+body.toplevel_page_lf-ops .lf-manifester-progress__bar span,
+body[class*="leadsforward_page_lf-"] .lf-manifester-progress__bar span {
+  background: linear-gradient(90deg, #8348f9, #a679ff);
+}
+
+body.toplevel_page_lf-ops .notice.notice-success,
+body[class*="leadsforward_page_lf-"] .notice.notice-success {
+  border-left-color: var(--lf-admin-primary);
+}
+
+body.toplevel_page_lf-ops a,
+body[class*="leadsforward_page_lf-"] a {
+  color: var(--lf-admin-primary-dark);
+}
+
+body.toplevel_page_lf-ops a:hover,
+body[class*="leadsforward_page_lf-"] a:hover {
+  color: var(--lf-admin-primary);
+}

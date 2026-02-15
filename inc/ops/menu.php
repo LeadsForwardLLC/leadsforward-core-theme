@@ -18,6 +18,7 @@ add_action('admin_menu', 'lf_ops_register_menu', 10);
 add_action('admin_menu', 'lf_ops_remove_theme_options_menu', 999);
 add_action('admin_init', 'lf_ops_handle_global_settings_save');
 add_action('admin_enqueue_scripts', 'lf_ops_settings_assets');
+add_action('admin_enqueue_scripts', 'lf_ops_brand_admin_assets');
 add_action('admin_post_lf_reviews_sync', 'lf_ops_handle_reviews_sync');
 
 function lf_ops_register_menu(): void {
@@ -139,6 +140,22 @@ function lf_ops_settings_assets(string $hook): void {
 	wp_enqueue_style(
 		'lf-ai-studio-airtable',
 		LF_THEME_URI . '/assets/css/ai-studio-airtable.css',
+		[],
+		LF_THEME_VERSION
+	);
+}
+
+function lf_ops_brand_admin_assets(string $hook): void {
+	if (!current_user_can(LF_OPS_CAP)) {
+		return;
+	}
+	$is_leadsforward_page = $hook === 'toplevel_page_lf-ops' || str_starts_with($hook, 'leadsforward_page_lf-');
+	if (!$is_leadsforward_page) {
+		return;
+	}
+	wp_enqueue_style(
+		'lf-admin-brand',
+		LF_THEME_URI . '/assets/css/admin-brand.css',
 		[],
 		LF_THEME_VERSION
 	);
