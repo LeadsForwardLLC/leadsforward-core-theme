@@ -936,10 +936,35 @@ function lf_ai_assistant_widget_js(): string {
 				row.className = "lf-ai-rail__item" + (wrap === selectedSectionWrap ? " is-active" : "");
 				row.setAttribute("draggable", "true");
 				row.setAttribute("data-lf-rail-section-id", sectionId);
+				row.setAttribute("tabindex", "0");
 				row.innerHTML = escapeHtml(sectionLabelForWrap(wrap)) + "<small>" + escapeHtml(String(wrap.getAttribute("data-lf-section-type") || "section")) + (isHidden ? " • hidden" : "") + "</small>";
 				row.addEventListener("click", function(){
 					setSelectedSection(wrap);
 					try { wrap.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {}
+				});
+				row.addEventListener("focus", function(){
+					setSelectedSection(wrap);
+				});
+				row.addEventListener("keydown", function(e){
+					var key = String(e.key || "");
+					if (key === "Backspace" || key === "Delete") {
+						e.preventDefault();
+						setSelectedSection(wrap);
+						selectedSectionDelete();
+						return;
+					}
+					if (key === "ArrowUp" && (e.altKey || e.metaKey || e.shiftKey)) {
+						e.preventDefault();
+						setSelectedSection(wrap);
+						moveSelectedSection(-1);
+						return;
+					}
+					if (key === "ArrowDown" && (e.altKey || e.metaKey || e.shiftKey)) {
+						e.preventDefault();
+						setSelectedSection(wrap);
+						moveSelectedSection(1);
+						return;
+					}
 				});
 				row.addEventListener("dragstart", function(e){
 					activeRailDragSectionId = sectionId;
@@ -985,17 +1010,20 @@ function lf_ai_assistant_widget_js(): string {
 				});
 				list.appendChild(row);
 			});
-			list.addEventListener("dragover", function(e){
-				if (activeLibraryDragSectionType) {
+			if (!list.__lfRailDropBound) {
+				list.__lfRailDropBound = true;
+				list.addEventListener("dragover", function(e){
+					if (activeLibraryDragSectionType) {
+						e.preventDefault();
+					}
+				});
+				list.addEventListener("drop", function(e){
+					if (!activeLibraryDragSectionType) return;
 					e.preventDefault();
-				}
-			});
-			list.addEventListener("drop", function(e){
-				if (!activeLibraryDragSectionType) return;
-				e.preventDefault();
-				addSectionFromLibrary(activeLibraryDragSectionType, "");
-				activeLibraryDragSectionType = "";
-			});
+					addSectionFromLibrary(activeLibraryDragSectionType, "");
+					activeLibraryDragSectionType = "";
+				});
+			}
 		}
 		function moveSelectedSection(delta) {
 			if (!selectedSectionWrap || !delta) return;
@@ -1729,9 +1757,14 @@ function lf_ai_assistant_widget_js(): string {
 		function selectedSectionDelete() {
 			if (!selectedSectionWrap) return;
 			var targetWrap = selectedSectionWrap;
-			openConfirm("Delete this section? You can undo after deleting.", "Delete Section", function(){
-				persistSectionDelete(targetWrap);
-			});
+			var ok = false;
+			try {
+				ok = window.confirm("Delete this section? You can undo after deleting.");
+			} catch (e) {
+				ok = true;
+			}
+			if (!ok) return;
+			persistSectionDelete(targetWrap);
 		}
 		function selectedSectionReverseColumns() {
 			if (!selectedSectionWrap || !selectedSectionCanReverse()) return;
