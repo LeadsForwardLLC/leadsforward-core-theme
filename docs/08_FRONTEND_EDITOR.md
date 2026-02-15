@@ -69,6 +69,7 @@ A compact left-side "Page Structure" rail lists currently rendered sections and 
 - Hidden-state visibility in the list
 - Drag-and-drop reordering directly from the rail
 - Collapse/expand toggle (state persisted in local storage)
+- Add section from global section library (with search)
 
 ## Persistence + Safety
 

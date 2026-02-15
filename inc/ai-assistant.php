@@ -29,6 +29,52 @@ function lf_ai_assistant_keep_jquery_for_frontend_admins($keep): bool {
 	return (bool) $keep;
 }
 
+function lf_ai_assistant_section_library(array $context): array {
+	if (!function_exists('lf_sections_get_context_sections')) {
+		return [];
+	}
+	$type = (string) ($context['type'] ?? '');
+	$id = (string) ($context['id'] ?? '');
+	$context_key = '';
+	if ($type === 'homepage' || $id === 'homepage') {
+		$context_key = 'homepage';
+	} elseif ($type === 'page') {
+		$context_key = 'page';
+	} elseif ($type === 'post') {
+		$context_key = 'post';
+	} elseif ($type === 'lf_service') {
+		$context_key = 'service';
+	} elseif ($type === 'lf_service_area') {
+		$context_key = 'service_area';
+	}
+	if ($context_key === '' && is_numeric($id) && function_exists('lf_ai_pb_context_for_post')) {
+		$post = get_post((int) $id);
+		if ($post instanceof \WP_Post) {
+			$context_key = (string) lf_ai_pb_context_for_post($post);
+		}
+	}
+	if ($context_key === '') {
+		return [];
+	}
+	$sections = lf_sections_get_context_sections($context_key);
+	if (!is_array($sections) || empty($sections)) {
+		return [];
+	}
+	$rows = [];
+	foreach ($sections as $section_id => $row) {
+		$sid = sanitize_text_field((string) $section_id);
+		if ($sid === '') {
+			continue;
+		}
+		$label = sanitize_text_field((string) ($row['label'] ?? $sid));
+		$rows[] = ['id' => $sid, 'label' => $label];
+	}
+	usort($rows, static function (array $a, array $b): int {
+		return strcmp((string) ($a['label'] ?? ''), (string) ($b['label'] ?? ''));
+	});
+	return $rows;
+}
+
 function lf_ai_assistant_assets(string $hook = ''): void {
 	if (!current_user_can('edit_theme_options')) {
 		return;
@@ -60,6 +106,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		'context_id' => (string) ($context['id'] ?? 'homepage'),
 		'target_label' => $target_label,
 		'labels' => $editable,
+		'section_library' => lf_ai_assistant_section_library($context),
 		'i18n' => [
 			'statusReady' => __('Ready.', 'leadsforward-core'),
 			'statusGenerating' => __('Generating suggestions...', 'leadsforward-core'),
@@ -380,8 +427,11 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-rail__head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 6px; }
 		.lf-ai-rail__title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#64748b; margin:0; }
 		.lf-ai-rail.is-collapsed .lf-ai-rail__title { display:none; }
+		.lf-ai-rail__head-actions { display:flex; gap:6px; }
 		.lf-ai-rail__toggle { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:14px; line-height:1; }
+		.lf-ai-rail__add { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1; }
 		.lf-ai-rail.is-collapsed .lf-ai-rail__toggle { width:30px; }
+		.lf-ai-rail.is-collapsed .lf-ai-rail__add { display:none; }
 		.lf-ai-rail__list { display:flex; flex-direction:column; gap:6px; }
 		.lf-ai-rail.is-collapsed .lf-ai-rail__list { display:none; }
 		.lf-ai-rail__item { border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; font-size:12px; cursor:pointer; color:#0f172a; background:#fff; }
@@ -389,6 +439,13 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-rail__item.is-active { border-color:#8348f9; background:#f5f0ff; }
 		.lf-ai-rail__item small { display:block; color:#64748b; margin-top:2px; }
 		.lf-ai-rail__item.is-dragging { opacity:.55; border-color:#8348f9; }
+		.lf-ai-rail__library { border:1px solid #e2e8f0; border-radius:10px; padding:6px; margin:0 0 8px; background:#f8fafc; display:flex; flex-direction:column; gap:6px; }
+		.lf-ai-rail__library[hidden] { display:none !important; }
+		.lf-ai-rail__library-search { width:100%; border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:12px; }
+		.lf-ai-rail__library-list { max-height:180px; overflow:auto; display:flex; flex-direction:column; gap:4px; }
+		.lf-ai-rail__library-item { border:1px solid #e2e8f0; border-radius:8px; background:#fff; padding:6px 8px; font-size:12px; cursor:pointer; text-align:left; color:#0f172a; }
+		.lf-ai-rail__library-item:hover { border-color:#c4b5fd; background:#faf7ff; }
+		.lf-ai-rail__library-item[disabled] { opacity:.5; cursor:default; }
 		.lf-ai-command { position:fixed; left:50%; top:16%; transform:translateX(-50%); z-index:100001; width:min(560px, calc(100vw - 26px)); background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); padding:10px; }
 		.lf-ai-command[hidden] { display:none !important; }
 		.lf-ai-command__input { width:100%; border:1px solid #d6c8fb; border-radius:8px; padding:10px; font-size:14px; }
@@ -479,6 +536,7 @@ function lf_ai_assistant_widget_js(): string {
 		var railCollapsed = false;
 		var railStateKey = "lfAiRailState";
 		var activeRailDragSectionId = "";
+		var railLibraryOpen = false;
 		var suppressInlineClickUntil = 0;
 		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption";
 		var inlineImageCandidateSelector = "main img";
@@ -740,8 +798,11 @@ function lf_ai_assistant_widget_js(): string {
 			if (sectionRailEl) return sectionRailEl;
 			sectionRailEl = document.createElement("aside");
 			sectionRailEl.className = "lf-ai-rail lf-ai-inline-editor-ignore";
-			sectionRailEl.innerHTML = "<div class=\"lf-ai-rail__head\"><div class=\"lf-ai-rail__title\">Page Structure</div><button type=\"button\" class=\"lf-ai-rail__toggle\" data-lf-ai-rail-toggle aria-label=\"Minimize structure rail\" title=\"Minimize structure rail\">\u2212</button></div><div class=\"lf-ai-rail__list\" data-lf-ai-rail-list></div>";
+			sectionRailEl.innerHTML = "<div class=\"lf-ai-rail__head\"><div class=\"lf-ai-rail__title\">Page Structure</div><div class=\"lf-ai-rail__head-actions\"><button type=\"button\" class=\"lf-ai-rail__add\" data-lf-ai-rail-add aria-label=\"Add section\" title=\"Add section\">+</button><button type=\"button\" class=\"lf-ai-rail__toggle\" data-lf-ai-rail-toggle aria-label=\"Minimize structure rail\" title=\"Minimize structure rail\">\u2212</button></div></div><div class=\"lf-ai-rail__library\" data-lf-ai-rail-library hidden><input type=\"text\" class=\"lf-ai-rail__library-search\" data-lf-ai-rail-library-search placeholder=\"Search sections...\" /><div class=\"lf-ai-rail__library-list\" data-lf-ai-rail-library-list></div></div><div class=\"lf-ai-rail__list\" data-lf-ai-rail-list></div>";
 			var toggle = sectionRailEl.querySelector("[data-lf-ai-rail-toggle]");
+			var addBtn = sectionRailEl.querySelector("[data-lf-ai-rail-add]");
+			var library = sectionRailEl.querySelector("[data-lf-ai-rail-library]");
+			var librarySearch = sectionRailEl.querySelector("[data-lf-ai-rail-library-search]");
 			if (toggle) {
 				toggle.addEventListener("click", function(){
 					railCollapsed = !railCollapsed;
@@ -751,6 +812,19 @@ function lf_ai_assistant_widget_js(): string {
 					try { window.localStorage.setItem(railStateKey, railCollapsed ? "collapsed" : "expanded"); } catch (e) {}
 				});
 			}
+			if (addBtn && library) {
+				addBtn.addEventListener("click", function(){
+					railLibraryOpen = !railLibraryOpen;
+					library.hidden = !railLibraryOpen;
+					if (railLibraryOpen) {
+						refreshRailLibrary();
+						try { if (librarySearch) librarySearch.focus(); } catch (e) {}
+					}
+				});
+			}
+			if (librarySearch) {
+				librarySearch.addEventListener("input", refreshRailLibrary);
+			}
 			document.body.appendChild(sectionRailEl);
 			sectionRailEl.classList.toggle("is-collapsed", railCollapsed);
 			if (toggle) {
@@ -758,6 +832,68 @@ function lf_ai_assistant_widget_js(): string {
 				toggle.setAttribute("aria-label", railCollapsed ? "Expand structure rail" : "Minimize structure rail");
 			}
 			return sectionRailEl;
+		}
+		function addSectionFromLibrary(sectionType) {
+			var type = String(sectionType || "");
+			if (!type) return;
+			setStatus("Adding section...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_add_section",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_type: type,
+				after_section_id: selectedSectionWrap ? String(selectedSectionWrap.getAttribute("data-lf-section-id") || "") : ""
+			}).done(function(res){
+				if (res && res.success && res.data && res.data.reload) {
+					window.location.reload();
+					return;
+				}
+				if (res && res.success) {
+					setStatus((res.data && res.data.message) ? res.data.message : "Section added.", false);
+				} else {
+					var msg = (res && res.data && res.data.message) ? res.data.message : "Section add failed.";
+					setStatus(msg, true);
+					try { window.alert(msg); } catch (e) {}
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Section add failed.";
+				setStatus(msg, true);
+				try { window.alert(msg); } catch (e) {}
+			});
+		}
+		function refreshRailLibrary() {
+			if (!sectionRailEl) return;
+			var library = sectionRailEl.querySelector("[data-lf-ai-rail-library]");
+			var list = sectionRailEl.querySelector("[data-lf-ai-rail-library-list]");
+			var search = sectionRailEl.querySelector("[data-lf-ai-rail-library-search]");
+			if (!library || !list) return;
+			var visibleIds = {};
+			collectSectionWrappers().forEach(function(w){
+				visibleIds[String(w.getAttribute("data-lf-section-id") || "")] = true;
+			});
+			var q = String(search && search.value ? search.value : "").trim().toLowerCase();
+			var rows = Array.isArray(lfAiFloating.section_library) ? lfAiFloating.section_library : [];
+			list.innerHTML = "";
+			rows.forEach(function(row){
+				var id = String(row && row.id ? row.id : "");
+				var label = String(row && row.label ? row.label : id);
+				if (!id) return;
+				if (q && label.toLowerCase().indexOf(q) === -1 && id.toLowerCase().indexOf(q) === -1) return;
+				var btn = document.createElement("button");
+				btn.type = "button";
+				btn.className = "lf-ai-rail__library-item";
+				btn.textContent = label + " (" + id + ")";
+				if (visibleIds[id] && activeContextType === "homepage") {
+					btn.disabled = true;
+					btn.title = "Already on this homepage";
+				}
+				btn.addEventListener("click", function(){
+					if (btn.disabled) return;
+					addSectionFromLibrary(id);
+				});
+				list.appendChild(btn);
+			});
 		}
 		function sectionWrapById(sectionId) {
 			var id = String(sectionId || "");
@@ -849,12 +985,8 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function sectionSupportsDuplicate(sectionType, sectionId) {
 			var type = String(sectionType || "");
-			var id = String(sectionId || "");
 			if (type === "" || type === "hero" || type === "hero_1") {
 				return false;
-			}
-			if (activeContextType === "homepage") {
-				return ["service_details", "content_image_a", "image_content_b", "content_image_c", "content_image", "image_content", "trust_reviews"].indexOf(id) !== -1;
 			}
 			return true;
 		}
