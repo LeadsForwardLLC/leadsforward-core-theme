@@ -98,6 +98,20 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 	if (empty($editable) && function_exists('lf_get_ai_editable_fields')) {
 		$editable = lf_get_ai_editable_fields('homepage');
 	}
+	$homepage_enabled = [];
+	if ((string) ($context['type'] ?? '') === 'homepage' || (string) ($context['id'] ?? '') === 'homepage') {
+		if (function_exists('lf_get_homepage_section_config')) {
+			$hp = lf_get_homepage_section_config();
+			if (is_array($hp)) {
+				foreach ($hp as $sid => $row) {
+					if (!is_string($sid) || !is_array($row)) {
+						continue;
+					}
+					$homepage_enabled[$sid] = !empty($row['enabled']);
+				}
+			}
+		}
+	}
 
 	wp_localize_script('lf-ai-floating-assistant', 'lfAiFloating', [
 		'ajax_url' => admin_url('admin-ajax.php'),
@@ -107,6 +121,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		'target_label' => $target_label,
 		'labels' => $editable,
 		'section_library' => lf_ai_assistant_section_library($context),
+		'homepage_enabled' => $homepage_enabled,
 		'i18n' => [
 			'statusReady' => __('Ready.', 'leadsforward-core'),
 			'statusGenerating' => __('Generating suggestions...', 'leadsforward-core'),
@@ -517,6 +532,7 @@ function lf_ai_assistant_widget_js(): string {
 		var activeContextId = String(lfAiFloating.context_id || "homepage");
 		var activeTargetLabel = String(lfAiFloating.target_label || "Homepage");
 		var labels = lfAiFloating.labels || {};
+		var homepageEnabledMap = (lfAiFloating.homepage_enabled && typeof lfAiFloating.homepage_enabled === "object") ? lfAiFloating.homepage_enabled : {};
 		var promptSnippet = "";
 		var docContext = "";
 		var docLabel = "";
@@ -1047,6 +1063,30 @@ function lf_ai_assistant_widget_js(): string {
 			if (type === "" || type === "hero" || type === "hero_1") {
 				return false;
 			}
+			if (activeContextType === "homepage") {
+				var id = String(sectionId || "");
+				var slotGroups = {
+					service_details: ["content_image_a", "image_content_b", "content_image_c", "content_image", "image_content", "service_details"],
+					content_image_a: ["content_image_a", "image_content_b", "content_image_c", "content_image", "image_content", "service_details"],
+					image_content_b: ["content_image_a", "image_content_b", "content_image_c", "content_image", "image_content", "service_details"],
+					content_image_c: ["content_image_a", "image_content_b", "content_image_c", "content_image", "image_content", "service_details"],
+					content_image: ["content_image_a", "image_content_b", "content_image_c", "content_image", "image_content", "service_details"],
+					image_content: ["content_image_a", "image_content_b", "content_image_c", "content_image", "image_content", "service_details"],
+					trust_reviews: ["trust_reviews"]
+				};
+				var group = slotGroups[id] || [];
+				if (!group.length) {
+					return false;
+				}
+				for (var i = 0; i < group.length; i++) {
+					var candidate = String(group[i] || "");
+					if (!candidate || candidate === id) continue;
+					if (!homepageEnabledMap[candidate]) {
+						return true;
+					}
+				}
+				return false;
+			}
 			return true;
 		}
 		function sectionSupportsColumnSwap(sectionType) {
@@ -1105,6 +1145,10 @@ function lf_ai_assistant_widget_js(): string {
 		function applySectionVisibilityUi(wrap, visible) {
 			if (!wrap) return;
 			var isVisible = !!visible;
+			var sid = String(wrap.getAttribute("data-lf-section-id") || "");
+			if (sid) {
+				homepageEnabledMap[sid] = isVisible;
+			}
 			wrap.setAttribute("data-lf-section-visible", isVisible ? "1" : "0");
 			wrap.classList.toggle("lf-ai-section-is-hidden", !isVisible);
 			var btn = wrap.querySelector("[data-lf-section-toggle]");
@@ -1154,6 +1198,10 @@ function lf_ai_assistant_widget_js(): string {
 					if (selectedSectionWrap === wrap) {
 						selectedSectionWrap = null;
 					}
+					var sid = String(wrap.getAttribute("data-lf-section-id") || "");
+					if (sid) {
+						homepageEnabledMap[sid] = false;
+					}
 					wrap.remove();
 					setStatus((res.data && res.data.message) ? res.data.message : "Section deleted. Use undo to restore.", false);
 					refreshSectionRail();
@@ -1189,6 +1237,7 @@ function lf_ai_assistant_widget_js(): string {
 					clone.classList.remove("is-dragging", "lf-ai-section-active");
 					clone.setAttribute("data-lf-section-id", String(res.data.new_section_id));
 					clone.removeAttribute("data-lf-section-visible");
+					homepageEnabledMap[String(res.data.new_section_id)] = true;
 					wrap.parentNode.insertBefore(clone, wrap.nextSibling);
 					buildSectionTargets();
 					buildSectionControls();
