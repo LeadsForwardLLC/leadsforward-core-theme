@@ -71,7 +71,11 @@ function lf_homepage_sanitize_order(array $order, bool $append_missing = true): 
 			continue;
 		}
 		$item = trim($item);
-		if ($item !== '' && in_array($item, $canonical, true) && !in_array($item, $clean, true)) {
+		if ($item === '' || in_array($item, $clean, true)) {
+			continue;
+		}
+		$base = lf_homepage_base_section_type($item);
+		if ($base !== '' && in_array($base, $canonical, true)) {
 			$clean[] = $item;
 		}
 	}
@@ -83,6 +87,20 @@ function lf_homepage_sanitize_order(array $order, bool $append_missing = true): 
 		}
 	}
 	return $clean;
+}
+
+/**
+ * Resolve canonical section type from a homepage section ID.
+ *
+ * Supports repeated IDs in the shape "{type}__{n}".
+ */
+function lf_homepage_base_section_type(string $section_id): string {
+	$section_id = trim($section_id);
+	if ($section_id === '') {
+		return '';
+	}
+	$parts = explode('__', $section_id, 2);
+	return sanitize_text_field((string) ($parts[0] ?? ''));
 }
 
 /**
@@ -361,9 +379,10 @@ function lf_homepage_merge_config_with_defaults(array $stored): array {
 	$stored = lf_homepage_upgrade_legacy_config($stored);
 	$order = lf_homepage_controller_order();
 	$out = [];
-	foreach ($order as $type) {
+	foreach ($order as $section_id) {
+		$type = lf_homepage_base_section_type((string) $section_id);
 		$default = lf_homepage_default_section_config($type);
-		$row = $stored[$type] ?? [];
+		$row = $stored[$section_id] ?? [];
 		if (!is_array($row)) {
 			$row = [];
 		}
@@ -373,7 +392,7 @@ function lf_homepage_merge_config_with_defaults(array $stored): array {
 		if (function_exists('lf_sections_normalize_service_details_settings')) {
 			$row = lf_sections_normalize_service_details_settings($type, $row);
 		}
-		$out[$type] = array_merge($default, $row);
+		$out[$section_id] = array_merge($default, $row);
 	}
 	return $out;
 }
@@ -513,13 +532,14 @@ function lf_get_homepage_sections(): array {
 	$order = lf_homepage_controller_order();
 	$out = [];
 	$index = 0;
-	foreach ($order as $type) {
-		$sec = $config[$type] ?? null;
+	foreach ($order as $section_id) {
+		$type = lf_homepage_base_section_type((string) $section_id);
+		$sec = $config[$section_id] ?? null;
 		if (!is_array($sec) || empty($sec['enabled'])) {
 			continue;
 		}
 		$out[] = array_merge(
-			['section_type' => $type, 'layout_variant' => $sec['variant'] ?? 'default'],
+			['section_id' => (string) $section_id, 'section_type' => $type, 'layout_variant' => $sec['variant'] ?? 'default'],
 			$sec
 		);
 		$index++;
@@ -553,6 +573,7 @@ function lf_get_cta_phone(): string {
  */
 function lf_render_homepage_section(array $section, int $index): void {
 	$type = $section['section_type'] ?? '';
+	$section_id = $section['section_id'] ?? $type;
 	if ($type === '') {
 		return;
 	}
@@ -587,7 +608,7 @@ function lf_render_homepage_section(array $section, int $index): void {
 			implode(', ', $rendered)
 		));
 	}
-	echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $type) . '" data-lf-section-type="' . esc_attr((string) $type) . '">';
+	echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '">';
 	lf_sections_render_section($type, 'homepage', $section, $post);
 	echo '</div>';
 }

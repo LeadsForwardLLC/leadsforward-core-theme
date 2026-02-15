@@ -1274,7 +1274,7 @@ function lf_ai_ajax_duplicate_section(): void {
 	}
 	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
 	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
-		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !defined('LF_HOMEPAGE_ORDER_OPTION') || !function_exists('lf_get_homepage_section_config') || !function_exists('lf_homepage_controller_order') || !function_exists('lf_homepage_sanitize_order') || !function_exists('lf_homepage_base_section_type')) {
 			wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
 		}
 		$config = lf_get_homepage_section_config();
@@ -1282,49 +1282,46 @@ function lf_ai_ajax_duplicate_section(): void {
 			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
 		}
 		$source_row = is_array($config[$section_id]) ? $config[$section_id] : [];
-		$slot_groups = [
-			'service_details' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
-			'content_image_a' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
-			'image_content_b' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
-			'content_image_c' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
-			'content_image' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
-			'image_content' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
-			'trust_reviews' => ['trust_reviews'],
-		];
-		$group = $slot_groups[$section_id] ?? [];
-		if (empty($group)) {
-			wp_send_json_error(['message' => __('No duplicate slot is available for this section type on homepage.', 'leadsforward-core')]);
+		$source_type = lf_homepage_base_section_type($section_id);
+		if ($source_type === '' || $source_type === 'hero') {
+			wp_send_json_error(['message' => __('This section type cannot be duplicated on homepage.', 'leadsforward-core')]);
 		}
-		$target_id = '';
-		foreach ($group as $candidate) {
-			if ($candidate === $section_id) {
-				continue;
-			}
-			$candidate_row = is_array($config[$candidate] ?? null) ? $config[$candidate] : null;
-			if (is_array($candidate_row) && empty($candidate_row['enabled'])) {
-				$target_id = $candidate;
-				break;
-			}
-		}
-		if ($target_id === '') {
-			wp_send_json_error(['message' => __('No free duplicate slot found. Hide one existing paired section first, then duplicate again.', 'leadsforward-core')]);
-		}
-		$old_target_row = is_array($config[$target_id] ?? null) ? $config[$target_id] : [];
-		$new_target_row = array_merge($old_target_row, $source_row);
+		$new_index = 2;
+		do {
+			$target_id = $source_type . '__' . $new_index;
+			$new_index++;
+		} while (isset($config[$target_id]));
+		$old_order = lf_homepage_controller_order();
+		$new_target_row = $source_row;
 		$new_target_row['enabled'] = true;
+		$new_target_row['type'] = $source_type;
 		$config[$target_id] = $new_target_row;
+		$order = [];
+		$inserted = false;
+		foreach ($old_order as $id) {
+			$order[] = (string) $id;
+			if ((string) $id === $section_id) {
+				$order[] = $target_id;
+				$inserted = true;
+			}
+		}
+		if (!$inserted) {
+			$order[] = $target_id;
+		}
+		$order = lf_homepage_sanitize_order($order, true);
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		update_option(LF_HOMEPAGE_ORDER_OPTION, $order, true);
 		$log_id = function_exists('lf_ai_log_action')
 			? lf_ai_log_action(
 				$context_type,
 				$context_id_use,
-				['__homepage_section_row::' . $target_id => $old_target_row],
-				['__homepage_section_row::' . $target_id => $new_target_row],
-				'Inline section duplicate (homepage slot)'
+				['__homepage_section_row::' . $target_id => [], '__section_order' => $old_order],
+				['__homepage_section_row::' . $target_id => $new_target_row, '__section_order' => $order],
+				'Inline section duplicate'
 			)
 			: '';
 		wp_send_json_success([
-			'message' => __('Section duplicated into an available homepage slot.', 'leadsforward-core'),
+			'message' => __('Section duplicated.', 'leadsforward-core'),
 			'new_section_id' => $target_id,
 			'reload' => true,
 			'log_id' => $log_id,
@@ -1425,50 +1422,32 @@ function lf_ai_ajax_add_section(): void {
 		if (!in_array($section_type, $allowed, true)) {
 			wp_send_json_error(['message' => __('That section type is not available for homepage.', 'leadsforward-core')]);
 		}
-		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !defined('LF_HOMEPAGE_ORDER_OPTION') || !function_exists('lf_get_homepage_section_config') || !function_exists('lf_homepage_controller_order') || !function_exists('lf_homepage_sanitize_order')) {
+		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !defined('LF_HOMEPAGE_ORDER_OPTION') || !function_exists('lf_get_homepage_section_config') || !function_exists('lf_homepage_controller_order') || !function_exists('lf_homepage_sanitize_order') || !function_exists('lf_homepage_base_section_type')) {
 			wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
 		}
 		$config = lf_get_homepage_section_config();
 		$order = lf_homepage_controller_order();
 		$old_order = $order;
-		$slot_groups = [
-			'service_details' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
-			'content_image_a' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
-			'image_content_b' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
-			'content_image_c' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
-			'content_image' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
-			'image_content' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
-			'trust_reviews' => ['trust_reviews'],
-		];
 		$target_section_id = $section_type;
 		$current_row = is_array($config[$section_type] ?? null) ? $config[$section_type] : [];
 		$current_enabled = !empty($current_row['enabled']);
 		if ($current_enabled) {
-			$group = $slot_groups[$section_type] ?? [];
-			if (empty($group)) {
-				wp_send_json_error(['message' => __('This section is already on the homepage. Use duplicate only for repeatable section families.', 'leadsforward-core')]);
+			$target_type = lf_homepage_base_section_type($section_type);
+			if ($target_type === '' || $target_type === 'hero') {
+				wp_send_json_error(['message' => __('This section type cannot be added again on homepage.', 'leadsforward-core')]);
 			}
-			foreach ($group as $candidate) {
-				if ($candidate === $section_type) {
-					continue;
-				}
-				$candidate_row = is_array($config[$candidate] ?? null) ? $config[$candidate] : null;
-				if (!is_array($candidate_row)) {
-					continue;
-				}
-				if (empty($candidate_row['enabled'])) {
-					$target_section_id = $candidate;
-					break;
-				}
-			}
-			if ($target_section_id === $section_type) {
-				wp_send_json_error(['message' => __('No free slot available for this repeatable section family on homepage.', 'leadsforward-core')]);
-			}
+			$new_index = 2;
+			do {
+				$target_section_id = $target_type . '__' . $new_index;
+				$new_index++;
+			} while (isset($config[$target_section_id]));
 		}
 		$old_row = is_array($config[$target_section_id] ?? null) ? $config[$target_section_id] : [];
 		if (!is_array($config[$target_section_id] ?? null)) {
-			$config[$target_section_id] = function_exists('lf_homepage_default_section_config') ? lf_homepage_default_section_config($target_section_id) : ['enabled' => true, 'variant' => 'default'];
+			$target_type = lf_homepage_base_section_type((string) $target_section_id);
+			$config[$target_section_id] = function_exists('lf_homepage_default_section_config') ? lf_homepage_default_section_config($target_type) : ['enabled' => true, 'variant' => 'default'];
 		}
+		$config[$target_section_id]['type'] = lf_homepage_base_section_type((string) $target_section_id);
 		$config[$target_section_id]['enabled'] = true;
 		if (!in_array($target_section_id, $order, true)) {
 			$insert_at = count($order);
