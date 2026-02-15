@@ -1218,6 +1218,41 @@ function lf_ai_ajax_toggle_section_columns(): void {
 	]);
 }
 
+function lf_ai_homepage_resolve_section_id(string $section_id, string $expected_type = ''): string {
+	$sid = sanitize_text_field($section_id);
+	if ($sid === '' || !function_exists('lf_get_homepage_section_config')) {
+		return $sid;
+	}
+	$config = lf_get_homepage_section_config();
+	if (!is_array($config)) {
+		return $sid;
+	}
+	if (is_array($config[$sid] ?? null)) {
+		return $sid;
+	}
+	$type = sanitize_text_field($expected_type);
+	if ($type === '') {
+		$type = $sid;
+		if (function_exists('lf_homepage_base_section_type')) {
+			$type = (string) lf_homepage_base_section_type($sid);
+		}
+	}
+	foreach ($config as $candidate_id => $row) {
+		if (!is_string($candidate_id) || !is_array($row)) {
+			continue;
+		}
+		$base = $candidate_id;
+		if (function_exists('lf_homepage_base_section_type')) {
+			$base = (string) lf_homepage_base_section_type($candidate_id);
+		}
+		$row_type = sanitize_text_field((string) ($row['section_type'] ?? $row['type'] ?? ''));
+		if ($base === $type || $row_type === $type) {
+			return $candidate_id;
+		}
+	}
+	return $sid;
+}
+
 function lf_ai_ajax_update_section_checklist(): void {
 	check_ajax_referer('lf_ai_editing', 'nonce');
 	if (!current_user_can(LF_AI_CAP)) {
@@ -1258,19 +1293,20 @@ function lf_ai_ajax_update_section_checklist(): void {
 			wp_send_json_error(['message' => __('This section does not support checklist editing.', 'leadsforward-core')]);
 		}
 		$config = lf_get_homepage_section_config();
-		$old_row = is_array($config[$section_id] ?? null) ? $config[$section_id] : [];
+		$resolved_section_id = lf_ai_homepage_resolve_section_id($section_id, $section_type);
+		$old_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 		if (empty($old_row)) {
 			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
 		}
-		$config[$section_id]['service_details_checklist'] = $value;
+		$config[$resolved_section_id]['service_details_checklist'] = $value;
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
-		$new_row = is_array($config[$section_id] ?? null) ? $config[$section_id] : [];
+		$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 		$log_id = function_exists('lf_ai_log_action')
 			? lf_ai_log_action(
 				$context_type,
 				$context_id_use,
-				['__homepage_section_row::' . $section_id => $old_row],
-				['__homepage_section_row::' . $section_id => $new_row],
+				['__homepage_section_row::' . $resolved_section_id => $old_row],
+				['__homepage_section_row::' . $resolved_section_id => $new_row],
 				'Inline checklist edit'
 			)
 			: '';
@@ -1358,19 +1394,20 @@ function lf_ai_ajax_update_hero_pills(): void {
 			wp_send_json_error(['message' => __('This section does not support hero pills editing.', 'leadsforward-core')]);
 		}
 		$config = lf_get_homepage_section_config();
-		$old_row = is_array($config[$section_id] ?? null) ? $config[$section_id] : [];
+		$resolved_section_id = lf_ai_homepage_resolve_section_id($section_id, 'hero');
+		$old_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 		if (empty($old_row)) {
 			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
 		}
-		$config[$section_id]['hero_proof_bullets'] = $value;
+		$config[$resolved_section_id]['hero_proof_bullets'] = $value;
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
-		$new_row = is_array($config[$section_id] ?? null) ? $config[$section_id] : [];
+		$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 		$log_id = function_exists('lf_ai_log_action')
 			? lf_ai_log_action(
 				$context_type,
 				$context_id_use,
-				['__homepage_section_row::' . $section_id => $old_row],
-				['__homepage_section_row::' . $section_id => $new_row],
+				['__homepage_section_row::' . $resolved_section_id => $old_row],
+				['__homepage_section_row::' . $resolved_section_id => $new_row],
 				'Inline hero pills edit'
 			)
 			: '';
@@ -1454,21 +1491,22 @@ function lf_ai_ajax_update_section_cta(): void {
 			wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
 		}
 		$config = lf_get_homepage_section_config();
-		$old_row = is_array($config[$section_id] ?? null) ? $config[$section_id] : [];
+		$resolved_section_id = lf_ai_homepage_resolve_section_id($section_id);
+		$old_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 		if (empty($old_row)) {
 			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
 		}
-		$config[$section_id][$override_key] = $text;
-		$config[$section_id][$action_key] = $cta_action;
-		$config[$section_id][$url_key] = $url;
+		$config[$resolved_section_id][$override_key] = $text;
+		$config[$resolved_section_id][$action_key] = $cta_action;
+		$config[$resolved_section_id][$url_key] = $url;
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
-		$new_row = is_array($config[$section_id] ?? null) ? $config[$section_id] : [];
+		$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 		$log_id = function_exists('lf_ai_log_action')
 			? lf_ai_log_action(
 				$context_type,
 				$context_id_use,
-				['__homepage_section_row::' . $section_id => $old_row],
-				['__homepage_section_row::' . $section_id => $new_row],
+				['__homepage_section_row::' . $resolved_section_id => $old_row],
+				['__homepage_section_row::' . $resolved_section_id => $new_row],
 				'Inline CTA edit'
 			)
 			: '';
@@ -1566,25 +1604,26 @@ function lf_ai_ajax_update_section_media(): void {
 			wp_send_json_error(['message' => __('This section does not support media editing.', 'leadsforward-core')]);
 		}
 		$config = lf_get_homepage_section_config();
-		$old_row = is_array($config[$section_id] ?? null) ? $config[$section_id] : [];
+		$resolved_section_id = lf_ai_homepage_resolve_section_id($section_id, $section_type);
+		$old_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 		if (empty($old_row)) {
 			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
 		}
-		$config[$section_id]['service_details_media_mode'] = $mode;
-		$config[$section_id]['service_details_media_image_id'] = $image_id;
-		$config[$section_id]['service_details_media_video_url'] = $video_url;
-		$config[$section_id]['service_details_media_embed'] = $embed_code;
+		$config[$resolved_section_id]['service_details_media_mode'] = $mode;
+		$config[$resolved_section_id]['service_details_media_image_id'] = $image_id;
+		$config[$resolved_section_id]['service_details_media_video_url'] = $video_url;
+		$config[$resolved_section_id]['service_details_media_embed'] = $embed_code;
 		if ($image_id > 0) {
-			$config[$section_id]['image_id'] = $image_id;
+			$config[$resolved_section_id]['image_id'] = $image_id;
 		}
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
-		$new_row = is_array($config[$section_id] ?? null) ? $config[$section_id] : [];
+		$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 		$log_id = function_exists('lf_ai_log_action')
 			? lf_ai_log_action(
 				$context_type,
 				$context_id_use,
-				['__homepage_section_row::' . $section_id => $old_row],
-				['__homepage_section_row::' . $section_id => $new_row],
+				['__homepage_section_row::' . $resolved_section_id => $old_row],
+				['__homepage_section_row::' . $resolved_section_id => $new_row],
 				'Inline section media edit'
 			)
 			: '';
@@ -1739,19 +1778,20 @@ function lf_ai_ajax_update_section_lines(): void {
 			wp_send_json_error(['message' => __('This list is not editable for the selected section.', 'leadsforward-core')]);
 		}
 		$config = lf_get_homepage_section_config();
-		$old_row = is_array($config[$section_id] ?? null) ? $config[$section_id] : [];
+		$resolved_section_id = lf_ai_homepage_resolve_section_id($section_id, $section_type);
+		$old_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 		if (empty($old_row)) {
 			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
 		}
-		$config[$section_id][$field_key] = $value;
+		$config[$resolved_section_id][$field_key] = $value;
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
-		$new_row = is_array($config[$section_id] ?? null) ? $config[$section_id] : [];
+		$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 		$log_id = function_exists('lf_ai_log_action')
 			? lf_ai_log_action(
 				$context_type,
 				$context_id_use,
-				['__homepage_section_row::' . $section_id => $old_row],
-				['__homepage_section_row::' . $section_id => $new_row],
+				['__homepage_section_row::' . $resolved_section_id => $old_row],
+				['__homepage_section_row::' . $resolved_section_id => $new_row],
 				'Inline list edit'
 			)
 			: '';
