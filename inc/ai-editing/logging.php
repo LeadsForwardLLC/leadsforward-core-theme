@@ -158,12 +158,18 @@ function lf_ai_rollback(string $id): bool {
 		}
 	} elseif (is_numeric($context_id)) {
 		$pid = (int) $context_id;
+		$hero_updates = [];
 		foreach ($old as $field_key => $value) {
-			if ($field_key === 'post_content') {
+			if (in_array($field_key, ['hero_headline', 'hero_subheadline'], true)) {
+				$hero_updates[$field_key] = $value;
+			} elseif ($field_key === 'post_content') {
 				wp_update_post(['ID' => $pid, 'post_content' => $value]);
 			} elseif (function_exists('update_field')) {
 				update_field($field_key, $value, $pid);
 			}
+		}
+		if (!empty($hero_updates) && function_exists('lf_ai_update_pb_hero_settings_for_post')) {
+			lf_ai_update_pb_hero_settings_for_post($pid, $hero_updates);
 		}
 	}
 	$log[$index]['rolled_back'] = true;

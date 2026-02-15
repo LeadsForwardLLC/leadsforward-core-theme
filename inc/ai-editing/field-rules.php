@@ -103,15 +103,19 @@ function lf_get_ai_editable_fields($post_id): array {
 	foreach ($editable_keys as $key) {
 		$allowed = false;
 		if ($context === 'lf_service') {
-			$allowed = in_array($key, ['post_content'], true);
+			$allowed = in_array($key, ['hero_headline', 'hero_subheadline', 'post_content'], true);
 		} elseif ($context === 'lf_service_area') {
-			$allowed = in_array($key, ['lf_service_area_map_override', 'post_content'], true);
+			$allowed = in_array($key, ['hero_headline', 'hero_subheadline', 'lf_service_area_map_override', 'post_content'], true);
 		} elseif ($context === 'lf_faq') {
 			$allowed = in_array($key, ['lf_faq_question', 'lf_faq_answer', 'post_content'], true);
 		} elseif ($context === 'lf_testimonial') {
 			$allowed = in_array($key, ['lf_testimonial_review_text'], true);
 		} elseif ($context === 'page' && (int) $post_id === (int) get_option('page_on_front')) {
 			$allowed = in_array($key, ['lf_homepage_cta_primary', 'lf_homepage_cta_secondary', 'hero_headline', 'hero_subheadline', 'cta_primary_override', 'post_content'], true);
+		} elseif ($context === 'page') {
+			$allowed = in_array($key, ['hero_headline', 'hero_subheadline', 'post_content'], true);
+		} elseif ($context === 'post') {
+			$allowed = in_array($key, ['hero_headline', 'hero_subheadline', 'post_content'], true);
 		} elseif ($context === 'homepage') {
 			$allowed = in_array($key, ['lf_homepage_cta_primary', 'lf_homepage_cta_secondary', 'hero_headline', 'hero_subheadline', 'cta_primary_override'], true);
 		}

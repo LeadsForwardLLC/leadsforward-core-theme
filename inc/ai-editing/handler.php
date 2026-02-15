@@ -15,6 +15,82 @@ if (!defined('ABSPATH')) {
 
 const LF_AI_PROPOSED_TRANSIENT_PREFIX = 'lf_ai_proposed_';
 
+function lf_ai_pb_context_for_post(\WP_Post $post): string {
+	if ($post->post_type === 'page') {
+		return 'page';
+	}
+	if ($post->post_type === 'post') {
+		return 'post';
+	}
+	if ($post->post_type === 'lf_service') {
+		return 'service';
+	}
+	if ($post->post_type === 'lf_service_area') {
+		return 'service_area';
+	}
+	return '';
+}
+
+function lf_ai_get_pb_hero_settings_for_post(int $post_id): array {
+	$post = get_post($post_id);
+	if (!$post instanceof \WP_Post || !function_exists('lf_pb_get_post_config')) {
+		return [];
+	}
+	$context = lf_ai_pb_context_for_post($post);
+	if ($context === '') {
+		return [];
+	}
+	$config = lf_pb_get_post_config($post_id, $context);
+	$order = is_array($config['order'] ?? null) ? $config['order'] : [];
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	foreach ($order as $instance_id) {
+		$row = is_array($sections[$instance_id] ?? null) ? $sections[$instance_id] : null;
+		if (!is_array($row) || (($row['type'] ?? '') !== 'hero')) {
+			continue;
+		}
+		$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+		return [
+			'hero_headline' => (string) ($settings['hero_headline'] ?? ''),
+			'hero_subheadline' => (string) ($settings['hero_subheadline'] ?? ''),
+		];
+	}
+	return [];
+}
+
+function lf_ai_update_pb_hero_settings_for_post(int $post_id, array $updates): bool {
+	$post = get_post($post_id);
+	if (!$post instanceof \WP_Post || !function_exists('lf_pb_get_post_config')) {
+		return false;
+	}
+	$context = lf_ai_pb_context_for_post($post);
+	if ($context === '') {
+		return false;
+	}
+	$config = lf_pb_get_post_config($post_id, $context);
+	$order = is_array($config['order'] ?? null) ? $config['order'] : [];
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	foreach ($order as $instance_id) {
+		$row = is_array($sections[$instance_id] ?? null) ? $sections[$instance_id] : null;
+		if (!is_array($row) || (($row['type'] ?? '') !== 'hero')) {
+			continue;
+		}
+		$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+		foreach (['hero_headline', 'hero_subheadline'] as $key) {
+			if (array_key_exists($key, $updates)) {
+				$settings[$key] = (string) $updates[$key];
+			}
+		}
+		$sections[$instance_id]['settings'] = $settings;
+		$config['sections'] = $sections;
+		if (defined('LF_PB_META_KEY')) {
+			update_post_meta($post_id, LF_PB_META_KEY, $config);
+			return true;
+		}
+		return false;
+	}
+	return false;
+}
+
 /**
  * Get hero section from homepage config (for reading/writing hero_* in options).
  */
@@ -47,8 +123,11 @@ function lf_ai_get_current_values(string $context_type, $context_id, array $fiel
 		return $out;
 	}
 	$pid = (int) $context_id;
+	$hero_settings = lf_ai_get_pb_hero_settings_for_post($pid);
 	foreach ($field_keys as $key) {
-		if ($key === 'post_content') {
+		if (in_array($key, ['hero_headline', 'hero_subheadline'], true) && isset($hero_settings[$key])) {
+			$out[$key] = (string) $hero_settings[$key];
+		} elseif ($key === 'post_content') {
 			$post = get_post($pid);
 			$out[$key] = $post ? $post->post_content : '';
 		} else {
@@ -144,12 +223,18 @@ function lf_ai_apply_proposal(string $context_type, $context_id, array $proposed
 		}
 	} else {
 		$pid = (int) $context_id;
+		$hero_updates = [];
 		foreach ($to_apply as $key => $value) {
-			if ($key === 'post_content') {
+			if (in_array($key, ['hero_headline', 'hero_subheadline'], true)) {
+				$hero_updates[$key] = $value;
+			} elseif ($key === 'post_content') {
 				wp_update_post(['ID' => $pid, 'post_content' => $value]);
 			} elseif (function_exists('update_field')) {
 				update_field($key, $value, $pid);
 			}
+		}
+		if (!empty($hero_updates)) {
+			lf_ai_update_pb_hero_settings_for_post($pid, $hero_updates);
 		}
 	}
 	$log_id = lf_ai_log_action($context_type, $context_id, $current, $to_apply, $prompt_snippet);

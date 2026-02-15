@@ -24,6 +24,13 @@ function lf_ai_assistant_assets(string $hook): void {
 	wp_enqueue_script('lf-ai-floating-assistant');
 
 	$context = lf_ai_assistant_widget_context();
+	$target_label = __('Homepage', 'leadsforward-core');
+	if (($context['id'] ?? '') !== 'homepage') {
+		$target_post = get_post((int) ($context['id'] ?? 0));
+		if ($target_post instanceof \WP_Post) {
+			$target_label = sprintf('%s (%s)', $target_post->post_title, strtoupper((string) $target_post->post_type));
+		}
+	}
 	$editable = function_exists('lf_get_ai_editable_fields') ? lf_get_ai_editable_fields($context['id']) : [];
 	if (empty($editable) && function_exists('lf_get_ai_editable_fields')) {
 		$editable = lf_get_ai_editable_fields('homepage');
@@ -34,6 +41,7 @@ function lf_ai_assistant_assets(string $hook): void {
 		'nonce'    => wp_create_nonce('lf_ai_editing'),
 		'context_type' => (string) ($context['type'] ?? 'homepage'),
 		'context_id' => (string) ($context['id'] ?? 'homepage'),
+		'target_label' => $target_label,
 		'labels' => $editable,
 		'i18n' => [
 			'statusReady' => __('Ready.', 'leadsforward-core'),
@@ -92,6 +100,7 @@ function lf_ai_assistant_render_floating_widget(): void {
 				</div>
 			</div>
 			<div class="lf-ai-float__body">
+				<div class="lf-ai-float__target" data-lf-ai-target></div>
 				<div class="lf-ai-float__mode">
 					<label>
 						<span><?php esc_html_e('Mode', 'leadsforward-core'); ?></span>
@@ -175,8 +184,10 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float__header-actions { display:flex; gap:6px; }
 		.lf-ai-float__icon { border:1px solid #d6c8fb; background:#fff; width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:16px; line-height:1; color:#6a33e8; }
 		.lf-ai-float__body { padding:12px; display:flex; flex-direction:column; gap:10px; }
+		.lf-ai-float__target { font-size:12px; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; }
 		.lf-ai-float__mode { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 		.lf-ai-float__mode label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:#475569; }
+		.lf-ai-float__mode label[hidden] { display:none !important; }
 		.lf-ai-float__mode select { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; }
 		.lf-ai-float__mode input[type="number"] { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; width:100%; box-sizing:border-box; }
 		.lf-ai-float__presets { display:flex; flex-wrap:wrap; gap:6px; }
@@ -224,6 +235,7 @@ function lf_ai_assistant_widget_js(): string {
 		var $btnApply = $root.find("[data-lf-ai-apply]");
 		var $btnReject = $root.find("[data-lf-ai-reject]");
 		var $btnRevert = $root.find("[data-lf-ai-revert]");
+		var $target = $root.find("[data-lf-ai-target]");
 		var $mode = $root.find("[data-lf-ai-mode]");
 		var $cptWrap = $root.find("[data-lf-ai-cpt-wrap]");
 		var $cptType = $root.find("[data-lf-ai-cpt-type]");
@@ -344,6 +356,7 @@ function lf_ai_assistant_widget_js(): string {
 			$cptWrap.prop("hidden", mode !== "create_cpt");
 			$batchWrap.prop("hidden", mode !== "create_batch");
 			$batchCountWrap.prop("hidden", mode !== "create_batch");
+			$target.text("Target: " + (lfAiFloating.target_label || "Homepage") + (mode === "edit_existing" ? " (from current editor screen)" : " (used for context only)"));
 		}
 		function setDocState(name, content) {
 			docLabel = String(name || "");
