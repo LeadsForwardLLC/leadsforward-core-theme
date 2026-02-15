@@ -196,6 +196,47 @@ function lf_ai_assistant_infer_mode_from_prompt(string $prompt): array {
 	return ['mode' => 'edit_existing', 'cpt_type' => '', 'batch_type' => 'post', 'batch_count' => $count];
 }
 
+function lf_ai_assistant_requested_edit_keys(string $prompt, $context_id): array {
+	$prompt_lower = strtolower($prompt);
+	$editable = lf_get_ai_editable_fields($context_id);
+	$keys = [];
+	$add_if_allowed = static function (string $key) use (&$keys, $editable): void {
+		if (isset($editable[$key])) {
+			$keys[] = $key;
+		}
+	};
+	// "headline" should mean hero_headline unless explicitly subheadline.
+	if (strpos($prompt_lower, 'subheadline') !== false) {
+		$add_if_allowed('hero_subheadline');
+	}
+	if (strpos($prompt_lower, 'headline') !== false && strpos($prompt_lower, 'subheadline') === false) {
+		$add_if_allowed('hero_headline');
+	}
+	if (strpos($prompt_lower, 'primary cta') !== false || strpos($prompt_lower, 'cta primary') !== false) {
+		$add_if_allowed('cta_primary_override');
+		$add_if_allowed('lf_homepage_cta_primary');
+		$add_if_allowed('lf_cta_primary_text');
+	}
+	if (strpos($prompt_lower, 'secondary cta') !== false || strpos($prompt_lower, 'cta secondary') !== false) {
+		$add_if_allowed('lf_homepage_cta_secondary');
+		$add_if_allowed('lf_cta_secondary_text');
+	}
+	if (strpos($prompt_lower, 'map') !== false) {
+		$add_if_allowed('lf_service_area_map_override');
+	}
+	if (strpos($prompt_lower, 'faq question') !== false) {
+		$add_if_allowed('lf_faq_question');
+	}
+	if (strpos($prompt_lower, 'faq answer') !== false) {
+		$add_if_allowed('lf_faq_answer');
+	}
+	if (strpos($prompt_lower, 'review text') !== false || strpos($prompt_lower, 'testimonial text') !== false) {
+		$add_if_allowed('lf_testimonial_review_text');
+	}
+	$keys = array_values(array_unique($keys));
+	return $keys;
+}
+
 function lf_ai_assistant_parse_secondary_keywords($value): array {
 	if (is_array($value)) {
 		$list = $value;
@@ -538,9 +579,6 @@ function lf_ai_ajax_generate(): void {
 	if (!in_array($assistant_mode, lf_ai_assistant_modes(), true)) {
 		$assistant_mode = 'edit_existing';
 	}
-	if ($assistant_mode === 'auto') {
-		$assistant_mode = 'edit_existing';
-	}
 	$document_context = isset($_POST['document_context']) ? sanitize_textarea_field(wp_unslash($_POST['document_context'])) : '';
 	$document_name = isset($_POST['document_name']) ? sanitize_text_field(wp_unslash($_POST['document_name'])) : '';
 	if ($prompt === '' || $context_type === '') {
@@ -575,6 +613,13 @@ function lf_ai_ajax_generate(): void {
 		$result = lf_ai_generate_proposal($context_type_use, $context_id_use, $prompt);
 		if (!$result['success']) {
 			wp_send_json_error(['message' => $result['error']]);
+		}
+		$requested_keys = lf_ai_assistant_requested_edit_keys($prompt, $context_id_use);
+		if (!empty($requested_keys)) {
+			$result['proposed'] = array_intersect_key($result['proposed'], array_flip($requested_keys));
+			if (empty($result['proposed'])) {
+				wp_send_json_error(['message' => __('No matching editable field found for that exact request on this target page.', 'leadsforward-core')]);
+			}
 		}
 		$current = lf_ai_get_current_values($context_type_use, $context_id_use, array_keys($result['proposed']));
 		wp_send_json_success([
