@@ -152,7 +152,9 @@ function lf_ai_assistant_infer_mode_from_prompt(string $prompt): array {
 	if (preg_match('/\b([1-9]|1\d|20)\b/', $lower, $m) === 1) {
 		$count = max(1, min(20, (int) $m[1]));
 	}
-	if (preg_match('/\b(create|add|generate)\b/', $lower) !== 1) {
+	$has_create_verb = preg_match('/\b(create|add|generate)\b/', $lower) === 1;
+	$has_new_object = preg_match('/\bnew\s+(faq|service area|service|project|testimonial|review|blog post|post|page)\b/', $lower) === 1;
+	if (!$has_create_verb && !$has_new_object) {
 		return ['mode' => 'edit_existing', 'cpt_type' => '', 'batch_type' => 'post', 'batch_count' => $count];
 	}
 	if (preg_match('/\b(batch|multiple|several|list of)\b/', $lower) === 1) {
