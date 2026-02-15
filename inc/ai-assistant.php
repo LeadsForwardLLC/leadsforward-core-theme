@@ -439,6 +439,11 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-checklist-add:hover { background:#f5f0ff; }
 		.lf-ai-checklist-remove { border:1px solid #e2e8f0; background:#fff; color:#64748b; border-radius:6px; min-width:20px; height:20px; padding:0 5px; font-size:11px; line-height:18px; margin-left:8px; cursor:pointer; vertical-align:middle; }
 		.lf-ai-checklist-remove:hover { border-color:#fecaca; color:#b91c1c; background:#fff5f5; }
+		.lf-ai-hero-pills-controls { margin-top:8px; display:flex; gap:8px; align-items:center; }
+		.lf-ai-hero-pill-add { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:28px; padding:0 10px; font-size:12px; cursor:pointer; }
+		.lf-ai-hero-pill-add:hover { background:#f5f0ff; }
+		.lf-ai-hero-pill-remove { border:1px solid rgba(255,255,255,.65); background:rgba(255,255,255,.2); color:inherit; border-radius:999px; min-width:18px; height:18px; padding:0 5px; font-size:11px; line-height:16px; margin-left:8px; cursor:pointer; vertical-align:middle; }
+		.lf-ai-hero-pill-remove:hover { background:rgba(255,255,255,.38); }
 		.lf-ai-column-draggable { cursor:ew-resize; transition:outline-color .15s ease; }
 		.lf-ai-column-draggable:hover { outline:2px dashed rgba(131,72,249,.3); outline-offset:3px; }
 		.lf-ai-column-draggable.is-dragging { outline:2px solid #8348f9 !important; outline-offset:3px; opacity:.85; }
@@ -1304,6 +1309,124 @@ function lf_ai_assistant_widget_js(): string {
 				content.appendChild(controls);
 			});
 		}
+		function heroPillsFromWrap(wrap) {
+			var list = wrap ? wrap.querySelector(".lf-hero-chips") : null;
+			if (!list) return [];
+			return Array.prototype.slice.call(list.querySelectorAll("li.lf-hero-chip")).map(function(li){
+				var textNode = li.querySelector("[data-lf-hero-pill-text]");
+				var raw = textNode ? String(textNode.textContent || "") : String(li.textContent || "");
+				return raw.trim();
+			}).filter(function(value){ return value !== ""; });
+		}
+		function persistHeroPills(wrap) {
+			if (!wrap) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+			if (!sectionId || sectionType !== "hero") return;
+			var items = heroPillsFromWrap(wrap);
+			setStatus("Saving hero pills...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_update_hero_pills",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_id: sectionId,
+				items: JSON.stringify(items)
+			}).done(function(res){
+				if (res && res.success) {
+					setStatus((res.data && res.data.message) ? res.data.message : "Hero pills saved.", false);
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Hero pills save failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Hero pills save failed.";
+				setStatus(msg, true);
+			});
+		}
+		function buildHeroPillsControls() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-hero-pills-controls=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-hero-pill-remove=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+				if (sectionType !== "hero") return;
+				var list = wrap.querySelector(".lf-hero-chips");
+				if (!list) return;
+				Array.prototype.slice.call(list.querySelectorAll("li.lf-hero-chip")).forEach(function(li){
+					var text = String(li.textContent || "").trim();
+					var textNode = document.createElement("span");
+					textNode.setAttribute("data-lf-hero-pill-text", "1");
+					textNode.textContent = text;
+					li.textContent = "";
+					li.appendChild(textNode);
+					var removeBtn = document.createElement("button");
+					removeBtn.type = "button";
+					removeBtn.className = "lf-ai-hero-pill-remove lf-ai-inline-editor-ignore";
+					removeBtn.setAttribute("data-lf-ai-hero-pill-remove", "1");
+					removeBtn.setAttribute("title", "Remove pill");
+					removeBtn.textContent = "x";
+					removeBtn.addEventListener("click", function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						if (li && li.parentNode) {
+							li.parentNode.removeChild(li);
+						}
+						persistHeroPills(wrap);
+					});
+					li.appendChild(removeBtn);
+				});
+				var controls = document.createElement("div");
+				controls.className = "lf-ai-hero-pills-controls lf-ai-inline-editor-ignore";
+				controls.setAttribute("data-lf-ai-hero-pills-controls", "1");
+				var addBtn = document.createElement("button");
+				addBtn.type = "button";
+				addBtn.className = "lf-ai-hero-pill-add lf-ai-inline-editor-ignore";
+				addBtn.textContent = "+ Add pill";
+				addBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					var text = "";
+					try {
+						text = String(window.prompt("New pill text:", "") || "").trim();
+					} catch (err) {
+						text = "";
+					}
+					if (!text) return;
+					var li = document.createElement("li");
+					li.className = "lf-hero-chip";
+					var textNode = document.createElement("span");
+					textNode.setAttribute("data-lf-hero-pill-text", "1");
+					textNode.textContent = text;
+					li.appendChild(textNode);
+					var removeBtn = document.createElement("button");
+					removeBtn.type = "button";
+					removeBtn.className = "lf-ai-hero-pill-remove lf-ai-inline-editor-ignore";
+					removeBtn.setAttribute("data-lf-ai-hero-pill-remove", "1");
+					removeBtn.setAttribute("title", "Remove pill");
+					removeBtn.textContent = "x";
+					removeBtn.addEventListener("click", function(ev){
+						ev.preventDefault();
+						ev.stopPropagation();
+						if (li && li.parentNode) {
+							li.parentNode.removeChild(li);
+						}
+						persistHeroPills(wrap);
+					});
+					li.appendChild(removeBtn);
+					list.appendChild(li);
+					persistHeroPills(wrap);
+				});
+				controls.appendChild(addBtn);
+				var parent = list.parentNode;
+				if (parent) {
+					parent.appendChild(controls);
+				}
+			});
+		}
 		function toggleSectionColumnsInDom(wrap, newLayout) {
 			if (!wrap) return;
 			var details = wrap.querySelector(".lf-service-details--media");
@@ -1452,6 +1575,7 @@ function lf_ai_assistant_widget_js(): string {
 					wrap.parentNode.insertBefore(clone, wrap.nextSibling);
 					buildSectionTargets();
 					buildSectionControls();
+					buildHeroPillsControls();
 					buildChecklistControls();
 					buildSectionColumnSwapTargets();
 					setSelectedSection(clone);
@@ -2609,6 +2733,7 @@ function lf_ai_assistant_widget_js(): string {
 		buildInlineImageTargets();
 		buildSectionTargets();
 		buildSectionControls();
+		buildHeroPillsControls();
 		buildChecklistControls();
 		buildSectionColumnSwapTargets();
 		refreshSectionRail();

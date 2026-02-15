@@ -202,14 +202,7 @@ $proof_items = array_values(array_filter(array_map('trim', is_array($proof_items
 if (empty($proof_items)) {
 	$proof_items = $proof_default_items;
 }
-if (count($proof_items) > 3) {
-	$proof_items = array_slice($proof_items, 0, 3);
-}
-
 $chip_items = $proof_items;
-if (count($chip_items) < 3) {
-	$chip_items = array_slice(array_merge($chip_items, $proof_default_items), 0, 3);
-}
 $show_hero_chips = $variant !== 'internal' && !empty($chip_items);
 $hero_chips_html = '';
 if ($show_hero_chips) {
