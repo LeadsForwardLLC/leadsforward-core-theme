@@ -117,7 +117,13 @@ function lf_ai_assistant_extract_reference_from_prompt(string $prompt): string {
 	];
 	foreach ($patterns as $pattern) {
 		if (preg_match($pattern, $prompt, $m) === 1) {
-			return sanitize_text_field((string) ($m[1] ?? ''));
+			$reference = sanitize_text_field((string) ($m[1] ?? ''));
+			$reference_lower = strtolower(trim($reference));
+			// "this/current page" should always mean the active context.
+			if (in_array($reference_lower, ['this', 'current', 'that', 'here'], true)) {
+				return '';
+			}
+			return $reference;
 		}
 	}
 	return '';
@@ -129,6 +135,9 @@ function lf_ai_assistant_resolve_target_context(string $reference, string $fallb
 		return ['type' => $fallback_context_type, 'id' => $fallback_context_id];
 	}
 	$ref_lower = strtolower($reference);
+	if (in_array($ref_lower, ['this', 'this page', 'current', 'current page', 'here', 'that page'], true)) {
+		return ['type' => $fallback_context_type, 'id' => $fallback_context_id];
+	}
 	if (in_array($ref_lower, ['homepage', 'home page', 'front page', 'home'], true)) {
 		return ['type' => 'homepage', 'id' => 'homepage'];
 	}
