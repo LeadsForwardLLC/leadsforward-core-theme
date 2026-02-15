@@ -94,6 +94,15 @@ SEO is now decoupled from the AI assistant body and launched from its own floati
 - Mutual exclusivity: opening the SEO window closes the AI window, and opening AI closes SEO.
 - SEO panel uses the same backend-connected snapshot pipeline and keeps `Refresh`, priority actions, SERP preview, keyword coverage, and CWV-oriented checks.
 - SEO panel state persists with its own local storage key (`lfAiSeoFloatState`) without conflicting with AI panel state (`lfAiFloatState`).
+- Runtime performance diagnostics are now included in the SEO vitals module (TTFB, DOMContentLoaded, window load, FCP, LCP, CLS) with lightweight browser `Performance` API reads.
+
+## Hero Lists Persistence Guardrails
+
+Hero pills (`.lf-hero-chips`) and hero proof checklist (`.lf-block-hero__card-list`) are two visual editors for the same source field (`hero_proof_bullets`).
+
+- Both editors now normalize text-node structure before save to prevent duplicate text artifacts.
+- Saves are synchronized so pill edits update proof checklist DOM and vice versa before persistence.
+- A single canonical payload is persisted to backend settings, ensuring reliable reload behavior.
 
 ## Persistence + Safety
 
