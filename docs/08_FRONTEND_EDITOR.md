@@ -120,6 +120,8 @@ Hero pills (`.lf-hero-chips`) and hero proof checklist (`.lf-block-hero__card-li
 - Saves are synchronized so pill edits update proof checklist DOM and vice versa before persistence.
 - A single canonical payload is persisted to backend settings, ensuring reliable reload behavior.
 - The collapsed Structure launcher is positioned higher for faster access while editing.
+- Homepage hero wrappers now harden `section_id` fallback (empty IDs are normalized to section type), preventing silent no-op saves for hero pills/checklist on reload.
+- Hero subheadline inline edits now prefer explicit `hero_subheadline` field-key persistence for better homepage reliability.
 
 ## FAQ Library Selection
 

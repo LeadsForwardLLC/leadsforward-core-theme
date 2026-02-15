@@ -1285,6 +1285,7 @@ function lf_ai_assistant_widget_js(): string {
 			Array.prototype.slice.call(document.querySelectorAll("[data-lf-inline-editable=\"1\"],[data-lf-inline-selector]")).forEach(function(node){
 				node.removeAttribute("data-lf-inline-editable");
 				node.removeAttribute("data-lf-inline-selector");
+				node.removeAttribute("data-lf-inline-field-key");
 			});
 			Array.prototype.slice.call(document.querySelectorAll("[data-lf-inline-image=\"1\"],[data-lf-inline-image-selector]")).forEach(function(node){
 				node.removeAttribute("data-lf-inline-image");
@@ -1711,6 +1712,12 @@ function lf_ai_assistant_widget_js(): string {
 				if (!selector) return;
 				node.setAttribute("data-lf-inline-editable", "1");
 				node.setAttribute("data-lf-inline-selector", selector);
+				var cls = String(node.className || "");
+				if (/\blf-hero-split__subtitle\b/.test(cls) || /\blf-hero-basic__subtitle\b/.test(cls)) {
+					node.setAttribute("data-lf-inline-field-key", "hero_subheadline");
+				} else {
+					node.removeAttribute("data-lf-inline-field-key");
+				}
 			});
 		}
 		function inlineImageEligible(img) {
@@ -2207,6 +2214,15 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			return true;
 		}
+		function baseSectionType(sectionType, sectionId) {
+			var type = String(sectionType || "").trim();
+			var id = String(sectionId || "").trim();
+			var heroLike = function(value) {
+				return /^hero(?:_\d+)?$/i.test(String(value || ""));
+			};
+			if (heroLike(type) || heroLike(id)) return "hero";
+			return type !== "" ? type : id;
+		}
 		function sectionSupportsColumnSwap(sectionType) {
 			var type = String(sectionType || "");
 			return ["service_details", "content_image", "content_image_a", "image_content", "image_content_b", "content_image_c"].indexOf(type) !== -1;
@@ -2432,7 +2448,11 @@ function lf_ai_assistant_widget_js(): string {
 			if (!wrap) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
-			if (!sectionId || sectionType !== "hero") return;
+			var baseType = baseSectionType(sectionType, sectionId);
+			if (!sectionId && baseType === "hero") {
+				sectionId = "hero";
+			}
+			if (!sectionId || baseType !== "hero") return;
 			var items = heroPillsFromWrap(wrap);
 			syncHeroListsFromItems(wrap, items, "chips");
 			setStatus("Saving hero pills...", false);
@@ -2447,11 +2467,10 @@ function lf_ai_assistant_widget_js(): string {
 				if (res && res.success) {
 					setStatus((res.data && res.data.message) ? res.data.message : "Hero pills saved.", false);
 				} else {
-					setStatus((res && res.data && res.data.message) ? res.data.message : "Hero pills save failed.", true);
+					persistSectionLineItems(wrap, "hero_proof_bullets", items, "Saving checklist...");
 				}
 			}).fail(function(xhr){
-				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Hero pills save failed.";
-				setStatus(msg, true);
+				persistSectionLineItems(wrap, "hero_proof_bullets", items, "Saving checklist...");
 			});
 		}
 		function textFromNodeWithoutAiControls(node) {
@@ -2574,7 +2593,8 @@ function lf_ai_assistant_widget_js(): string {
 					if (node && node.parentNode) node.parentNode.removeChild(node);
 				});
 				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
-				if (sectionType !== "hero") return;
+				var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+				if (baseSectionType(sectionType, sectionId) !== "hero") return;
 				var list = wrap.querySelector(".lf-hero-chips");
 				if (!list) return;
 				Array.prototype.slice.call(list.querySelectorAll(".lf-hero-chip,[data-lf-hero-pill-text]")).forEach(function(node){
@@ -2768,7 +2788,8 @@ function lf_ai_assistant_widget_js(): string {
 			collectSectionWrappers().forEach(function(wrap){
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
 				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
-				if (sectionType !== "hero") return;
+				var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+				if (baseSectionType(sectionType, sectionId) !== "hero") return;
 				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-list-remove=\"1\"]")).forEach(function(node){
 					if (node && node.parentNode) node.parentNode.removeChild(node);
 				});
@@ -3952,8 +3973,9 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			var el = inlineActiveEl;
 			var selector = String(el.getAttribute("data-lf-inline-selector") || "");
+			var fieldKey = String(el.getAttribute("data-lf-inline-field-key") || "");
 			var value = String(el.textContent || "").trim();
-			if (!selector) {
+			if (!selector && !fieldKey) {
 				setStatus("Invalid inline target.", true);
 				if (typeof done === "function") done();
 				return;
@@ -3976,14 +3998,19 @@ function lf_ai_assistant_widget_js(): string {
 			inlineIsSaving = true;
 			el.setAttribute("data-lf-inline-saving", "1");
 			setStatus("Saving inline edit...", false);
-			$.post(lfAiFloating.ajax_url, {
+			var payload = {
 				action: "lf_ai_inline_save",
 				nonce: lfAiFloating.nonce,
 				context_type: activeContextType,
 				context_id: activeContextId,
-				selector: selector,
 				value: value
-			}).done(function(res){
+			};
+			if (fieldKey) {
+				payload.field_key = fieldKey;
+			} else {
+				payload.selector = selector;
+			}
+			$.post(lfAiFloating.ajax_url, payload).done(function(res){
 				if (res && res.success) {
 					el.removeAttribute("contenteditable");
 					el.removeAttribute("spellcheck");

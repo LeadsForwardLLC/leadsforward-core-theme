@@ -573,7 +573,8 @@ function lf_get_cta_phone(): string {
  */
 function lf_render_homepage_section(array $section, int $index): void {
 	$type = $section['section_type'] ?? '';
-	$section_id = $section['section_id'] ?? $type;
+	$section_id_raw = isset($section['section_id']) ? (string) $section['section_id'] : '';
+	$section_id = trim($section_id_raw) !== '' ? $section_id_raw : $type;
 	if ($type === '') {
 		return;
 	}
