@@ -205,11 +205,11 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float { position: fixed; right: 20px; bottom: 20px; z-index: 99999; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
 		.lf-ai-float__toggle { background: linear-gradient(135deg,#4f23b4,#8348f9); color:#fff; border:0; border-radius:999px; padding:10px 14px; font-weight:600; box-shadow:0 10px 30px rgba(79,35,180,.32); cursor:pointer; display:flex; gap:8px; align-items:center; }
 		.lf-ai-float__dot { width:8px; height:8px; border-radius:99px; background:#22c55e; box-shadow:0 0 0 4px rgba(34,197,94,.2); }
-		.lf-ai-float__panel { width:min(440px, calc(100vw - 36px)); max-height:min(70vh, 760px); background:#fff; border:1px solid #dbe3ef; border-radius:14px; box-shadow:0 18px 55px rgba(15,23,42,.25); overflow:hidden; margin-top:10px; position:relative; }
+		.lf-ai-float__panel { width:min(440px, calc(100vw - 36px)); max-height:min(80vh, 860px); background:#fff; border:1px solid #dbe3ef; border-radius:14px; box-shadow:0 18px 55px rgba(15,23,42,.25); overflow:hidden; margin-top:10px; position:relative; display:flex; flex-direction:column; }
 		.lf-ai-float__header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:#f8fafc; border-bottom:1px solid #e2e8f0; }
 		.lf-ai-float__header-actions { display:flex; gap:6px; }
 		.lf-ai-float__icon { border:1px solid #d6c8fb; background:#fff; width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:16px; line-height:1; color:#6a33e8; }
-		.lf-ai-float__body { padding:12px; display:flex; flex-direction:column; gap:10px; }
+		.lf-ai-float__body { padding:12px; display:flex; flex-direction:column; gap:10px; flex:1; min-height:0; overflow:auto; }
 		.lf-ai-float__target { font-size:12px; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; }
 		.lf-ai-float__mode { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 		.lf-ai-float__mode label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:#475569; }
@@ -284,6 +284,9 @@ function lf_ai_assistant_widget_js(): string {
 		var current = null;
 		var creationPayload = null;
 		var lastMode = "auto";
+		var activeAssistantCptType = String($cptType.val() || "lf_service");
+		var activeAssistantBatchType = String($batchType.val() || "post");
+		var activeAssistantBatchCount = 5;
 		var activeContextType = String(lfAiFloating.context_type || "homepage");
 		var activeContextId = String(lfAiFloating.context_id || "homepage");
 		var activeTargetLabel = String(lfAiFloating.target_label || "Homepage");
@@ -381,6 +384,7 @@ function lf_ai_assistant_widget_js(): string {
 			var n = parseInt(String($batchCount.val() || "5"), 10);
 			if (!n || n < 1) n = 1;
 			if (n > 20) n = 20;
+			activeAssistantBatchCount = n;
 			return n;
 		}
 		function syncModeUi() {
@@ -483,6 +487,9 @@ function lf_ai_assistant_widget_js(): string {
 			current = null;
 			creationPayload = null;
 			lastMode = modeValue();
+			activeAssistantCptType = cptTypeValue();
+			activeAssistantBatchType = batchTypeValue();
+			activeAssistantBatchCount = batchCountValue();
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_generate",
 				nonce: lfAiFloating.nonce,
@@ -492,9 +499,9 @@ function lf_ai_assistant_widget_js(): string {
 				document_context: docContext,
 				document_name: docLabel,
 				assistant_mode: lastMode,
-				assistant_cpt_type: cptTypeValue(),
-				assistant_batch_type: batchTypeValue(),
-				assistant_batch_count: batchCountValue(),
+				assistant_cpt_type: activeAssistantCptType,
+				assistant_batch_type: activeAssistantBatchType,
+				assistant_batch_count: activeAssistantBatchCount,
 				target_reference: String($targetRef.val() || "").trim()
 			}).done(function(res){
 				if (res && res.success && res.data) {
@@ -502,6 +509,18 @@ function lf_ai_assistant_widget_js(): string {
 					if (res.data.context_id !== undefined) activeContextId = String(res.data.context_id);
 					if (res.data.target_label) activeTargetLabel = String(res.data.target_label);
 					if (res.data.mode) lastMode = String(res.data.mode);
+					if (res.data.assistant_cpt_type) {
+						activeAssistantCptType = String(res.data.assistant_cpt_type);
+						try { $cptType.val(activeAssistantCptType); } catch (e) {}
+					}
+					if (res.data.assistant_batch_type) {
+						activeAssistantBatchType = String(res.data.assistant_batch_type);
+						try { $batchType.val(activeAssistantBatchType); } catch (e) {}
+					}
+					if (res.data.assistant_batch_count) {
+						activeAssistantBatchCount = parseInt(String(res.data.assistant_batch_count), 10) || activeAssistantBatchCount;
+						try { $batchCount.val(String(activeAssistantBatchCount)); } catch (e) {}
+					}
 					syncModeUi();
 				}
 				if (res && res.success && res.data && res.data.mode === "edit_existing" && res.data.proposed) {
@@ -548,8 +567,8 @@ function lf_ai_assistant_widget_js(): string {
 				proposed: JSON.stringify(proposed || {}),
 				creation_payload: JSON.stringify(creationPayload || {}),
 				assistant_mode: lastMode,
-				assistant_cpt_type: cptTypeValue(),
-				assistant_batch_type: batchTypeValue()
+				assistant_cpt_type: activeAssistantCptType,
+				assistant_batch_type: activeAssistantBatchType
 			}).done(function(res){
 				if (res && res.success && res.data && res.data.reload) {
 					window.location.reload();

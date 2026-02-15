@@ -74,6 +74,19 @@ function lf_ai_assistant_mode_and_cpt_for_batch_type(string $batch_type): array 
 	return ['mode' => '', 'cpt' => ''];
 }
 
+function lf_ai_assistant_mode_and_cpt_for_post_type(string $post_type): array {
+	if ($post_type === 'page') {
+		return ['mode' => 'create_page', 'cpt' => ''];
+	}
+	if ($post_type === 'post') {
+		return ['mode' => 'create_blog_post', 'cpt' => ''];
+	}
+	if (in_array($post_type, lf_ai_assistant_allowed_cpt_types(), true)) {
+		return ['mode' => 'create_cpt', 'cpt' => $post_type];
+	}
+	return ['mode' => '', 'cpt' => ''];
+}
+
 function lf_ai_assistant_context_for_post(\WP_Post $post): array {
 	$front_id = (int) get_option('page_on_front');
 	if ($post->post_type === 'page' && (int) $post->ID === $front_id) {
@@ -626,6 +639,9 @@ function lf_ai_ajax_generate(): void {
 		$current = lf_ai_get_current_values($context_type_use, $context_id_use, array_keys($result['proposed']));
 		wp_send_json_success([
 			'mode' => $assistant_mode,
+			'assistant_cpt_type' => $assistant_cpt_type,
+			'assistant_batch_type' => $assistant_batch_type,
+			'assistant_batch_count' => $assistant_batch_count,
 			'context_type' => $context_type_use,
 			'context_id' => (string) $context_id_use,
 			'target_label' => lf_ai_assistant_target_label_for_context($context_type_use, $context_id_use),
@@ -677,6 +693,9 @@ function lf_ai_ajax_generate(): void {
 		}
 		wp_send_json_success([
 			'mode' => $assistant_mode,
+			'assistant_cpt_type' => $assistant_cpt_type,
+			'assistant_batch_type' => $assistant_batch_type,
+			'assistant_batch_count' => $assistant_batch_count,
 			'context_type' => $context_type_use,
 			'context_id' => (string) $context_id_use,
 			'target_label' => lf_ai_assistant_target_label_for_context($context_type_use, $context_id_use),
@@ -706,6 +725,9 @@ function lf_ai_ajax_generate(): void {
 	}
 	wp_send_json_success([
 		'mode' => $assistant_mode,
+		'assistant_cpt_type' => $assistant_cpt_type,
+		'assistant_batch_type' => $assistant_batch_type,
+		'assistant_batch_count' => $assistant_batch_count,
 		'context_type' => $context_type_use,
 		'context_id' => (string) $context_id_use,
 		'target_label' => lf_ai_assistant_target_label_for_context($context_type_use, $context_id_use),
@@ -813,6 +835,12 @@ function lf_ai_ajax_apply(): void {
 			}
 			$payload = lf_ai_assistant_validate_creation_payload($row, $batch_mode, $batch_cpt);
 			if (empty($payload)) {
+				$mapped = lf_ai_assistant_mode_and_cpt_for_post_type((string) ($row['post_type'] ?? ''));
+				if (($mapped['mode'] ?? '') !== '') {
+					$payload = lf_ai_assistant_validate_creation_payload($row, (string) $mapped['mode'], (string) $mapped['cpt']);
+				}
+			}
+			if (empty($payload)) {
 				continue;
 			}
 			$created = lf_ai_assistant_create_post_from_payload($payload);
@@ -851,6 +879,12 @@ function lf_ai_ajax_apply(): void {
 			$submitted_creation = [];
 		}
 		$payload = lf_ai_assistant_validate_creation_payload($submitted_creation, $assistant_mode, $assistant_cpt_type);
+		if (empty($payload)) {
+			$mapped = lf_ai_assistant_mode_and_cpt_for_post_type((string) ($submitted_creation['post_type'] ?? ''));
+			if (($mapped['mode'] ?? '') !== '') {
+				$payload = lf_ai_assistant_validate_creation_payload($submitted_creation, (string) $mapped['mode'], (string) $mapped['cpt']);
+			}
+		}
 		if (empty($payload)) {
 			wp_send_json_error(['message' => __('Invalid creation payload. Generate again.', 'leadsforward-core')]);
 		}
