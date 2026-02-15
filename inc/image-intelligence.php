@@ -19,10 +19,145 @@ add_action('add_attachment', 'lf_invalidate_media_index_cache');
 add_action('edit_attachment', 'lf_invalidate_media_index_cache');
 add_action('delete_attachment', 'lf_invalidate_media_index_cache');
 add_action('add_attachment', 'lf_image_intelligence_finalize_uploaded_attachment', 20);
+add_action('admin_enqueue_scripts', 'lf_image_intelligence_enqueue_upload_feedback_assets');
+add_action('wp_enqueue_scripts', 'lf_image_intelligence_enqueue_upload_feedback_assets');
 add_filter('wp_handle_upload_prefilter', 'lf_image_intelligence_upload_prefilter');
 add_filter('wp_editor_set_quality', 'lf_image_intelligence_editor_quality', 10, 2);
 add_filter('wp_generate_attachment_metadata', 'lf_image_intelligence_optimize_uploaded_image', 10, 2);
 add_action('admin_menu', 'lf_image_intelligence_register_debug_page');
+
+function lf_image_intelligence_enqueue_upload_feedback_assets(): void {
+	if (!current_user_can('upload_files')) {
+		return;
+	}
+	if (!function_exists('wp_enqueue_media')) {
+		return;
+	}
+	wp_enqueue_media();
+	wp_register_style('lf-image-intelligence-upload-feedback', false, [], LF_THEME_VERSION);
+	wp_enqueue_style('lf-image-intelligence-upload-feedback');
+	wp_add_inline_style('lf-image-intelligence-upload-feedback', '
+		#lf-image-upload-feedback {
+			position: fixed;
+			right: 18px;
+			bottom: 18px;
+			z-index: 100001;
+			min-width: 280px;
+			max-width: min(420px, calc(100vw - 28px));
+			background: #111827;
+			color: #fff;
+			border-radius: 12px;
+			box-shadow: 0 14px 34px rgba(15, 23, 42, .35);
+			padding: 12px 14px;
+			font-size: 13px;
+			line-height: 1.4;
+			opacity: 0;
+			transform: translateY(8px);
+			pointer-events: none;
+			transition: opacity .18s ease, transform .18s ease;
+		}
+		#lf-image-upload-feedback.is-visible {
+			opacity: 1;
+			transform: translateY(0);
+		}
+		#lf-image-upload-feedback .lf-upload-feedback__title {
+			display: block;
+			font-weight: 600;
+			margin-bottom: 2px;
+		}
+		#lf-image-upload-feedback .lf-upload-feedback__meta {
+			display: block;
+			color: #cbd5e1;
+			font-size: 12px;
+		}
+	');
+	wp_register_script('lf-image-intelligence-upload-feedback', '', ['jquery'], LF_THEME_VERSION, true);
+	wp_enqueue_script('lf-image-intelligence-upload-feedback');
+	wp_add_inline_script('lf-image-intelligence-upload-feedback', '(function($){
+		"use strict";
+		if (!$ || typeof window.wp === "undefined") return;
+		var activeCount = 0;
+		var doneTimer = null;
+		var toast = null;
+		function getToast(){
+			if (toast) return toast;
+			toast = document.getElementById("lf-image-upload-feedback");
+			if (toast) return toast;
+			toast = document.createElement("div");
+			toast.id = "lf-image-upload-feedback";
+			toast.innerHTML = "<span class=\"lf-upload-feedback__title\"></span><span class=\"lf-upload-feedback__meta\"></span>";
+			document.body.appendChild(toast);
+			return toast;
+		}
+		function show(title, meta){
+			var el = getToast();
+			var titleNode = el.querySelector(".lf-upload-feedback__title");
+			var metaNode = el.querySelector(".lf-upload-feedback__meta");
+			if (titleNode) titleNode.textContent = String(title || "");
+			if (metaNode) metaNode.textContent = String(meta || "");
+			el.classList.add("is-visible");
+		}
+		function hideSoon(ms){
+			if (doneTimer) {
+				window.clearTimeout(doneTimer);
+			}
+			doneTimer = window.setTimeout(function(){
+				var el = getToast();
+				el.classList.remove("is-visible");
+			}, ms || 1400);
+		}
+		function labelForCount(count){
+			return count === 1 ? "image" : "images";
+		}
+		function bindPlupload(pl){
+			if (!pl || pl.__lfUploadBound) return;
+			pl.__lfUploadBound = true;
+			pl.bind("FilesAdded", function(up, files){
+				activeCount += Array.isArray(files) ? files.length : 0;
+				show("Uploading and optimizing " + activeCount + " " + labelForCount(activeCount) + "...", "Compression and resizing run automatically.");
+			});
+			pl.bind("UploadProgress", function(up, file){
+				var pct = file && typeof file.percent === "number" ? Math.max(0, Math.min(100, file.percent)) : 0;
+				var msg = activeCount > 0 ? ("Processing " + activeCount + " " + labelForCount(activeCount)) : "Processing uploads";
+				show(msg + " (" + pct + "%)", "Optimizing for performance.");
+			});
+			pl.bind("FileUploaded", function(){
+				activeCount = Math.max(0, activeCount - 1);
+				if (activeCount > 0) {
+					show("Continuing optimization...", activeCount + " " + labelForCount(activeCount) + " remaining.");
+				} else {
+					show("Image optimization complete.", "Uploads are compressed and resized.");
+					hideSoon(1600);
+				}
+			});
+			pl.bind("Error", function(up, err){
+				var message = err && err.message ? err.message : "Upload error";
+				show("Upload issue detected.", message);
+				hideSoon(2600);
+			});
+		}
+		function bindKnownUploaders(){
+			try {
+				if (window.wp && wp.Uploader && wp.Uploader.queue && wp.Uploader.queue.uploader) {
+					bindPlupload(wp.Uploader.queue.uploader);
+				}
+			} catch (e) {}
+			try {
+				if (window.plupload && Array.isArray(plupload.instances)) {
+					plupload.instances.forEach(function(instance){ bindPlupload(instance); });
+				}
+			} catch (e) {}
+		}
+		$(document).ready(function(){
+			bindKnownUploaders();
+			window.setTimeout(bindKnownUploaders, 600);
+			window.setTimeout(bindKnownUploaders, 1500);
+		});
+		$(document).on("click", ".media-modal, .media-frame-router, .upload-ui", function(){
+			bindKnownUploaders();
+		});
+	})(jQuery);');
+}
 
 function lf_invalidate_media_index_cache(): void {
 	delete_transient(LF_MEDIA_INDEX_TRANSIENT);
