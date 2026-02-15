@@ -464,6 +464,7 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-rail__item.is-dragging { opacity:.55; border-color:#8348f9; }
 		.lf-ai-rail__item.is-drop-before { box-shadow: inset 0 3px 0 #8348f9; }
 		.lf-ai-rail__item.is-drop-after { box-shadow: inset 0 -3px 0 #8348f9; }
+		body.lf-ai-rail-dragging { user-select:none; -webkit-user-select:none; }
 		.lf-ai-rail__library { border:1px solid #e2e8f0; border-radius:10px; padding:6px; margin:0 0 8px; background:#f8fafc; display:flex; flex-direction:column; gap:6px; }
 		.lf-ai-rail__library[hidden] { display:none !important; }
 		.lf-ai-rail__library-search { width:100%; border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:12px; }
@@ -562,6 +563,7 @@ function lf_ai_assistant_widget_js(): string {
 		var railCollapsed = false;
 		var railStateKey = "lfAiRailState";
 		var activeRailDragSectionId = "";
+		var railPointerDrag = null;
 		var activeLibraryDragSectionType = "";
 		var railLibraryOpen = false;
 		var suppressInlineClickUntil = 0;
@@ -982,6 +984,26 @@ function lf_ai_assistant_widget_js(): string {
 					node.classList.remove("is-drop-before", "is-drop-after");
 				});
 			}
+			function reorderFromRailDrop(sourceId, targetId, after) {
+				var dragWrap = sectionWrapById(sourceId);
+				var targetWrap = sectionWrapById(targetId);
+				if (!dragWrap || !targetWrap || !dragWrap.parentNode) return false;
+				if (after) {
+					targetWrap.parentNode.insertBefore(dragWrap, targetWrap.nextSibling);
+				} else {
+					targetWrap.parentNode.insertBefore(dragWrap, targetWrap);
+				}
+				setSelectedSection(dragWrap);
+				persistSectionOrder();
+				return true;
+			}
+			function railRowFromPoint(clientX, clientY) {
+				var el = document.elementFromPoint(clientX, clientY);
+				if (!el || !el.closest) return null;
+				var row = el.closest(".lf-ai-rail__item[data-lf-rail-section-id]");
+				if (!row || !list.contains(row)) return null;
+				return row;
+			}
 			list.innerHTML = "";
 			wraps.forEach(function(wrap){
 				var row = document.createElement("div");
@@ -1033,6 +1055,18 @@ function lf_ai_assistant_widget_js(): string {
 						e.dataTransfer.setData("text/plain", sectionId);
 					}
 				});
+				row.addEventListener("mousedown", function(e){
+					if (!e || e.button !== 0) return;
+					var target = e.target && e.target.nodeType === 1 ? e.target : null;
+					if (!target || (target.closest && target.closest("a,button,input,textarea,select,label"))) {
+						return;
+					}
+					railPointerDrag = { sectionId: sectionId, row: row, targetId: "", after: false };
+					activeRailDragSectionId = sectionId;
+					row.classList.add("is-dragging");
+					document.body.classList.add("lf-ai-rail-dragging");
+					e.preventDefault();
+				});
 				row.addEventListener("dragover", function(e){
 					if (activeLibraryDragSectionType) {
 						e.preventDefault();
@@ -1057,24 +1091,17 @@ function lf_ai_assistant_widget_js(): string {
 					}
 					if (!activeRailDragSectionId || activeRailDragSectionId === sectionId) return;
 					e.preventDefault();
-					var dragWrap = sectionWrapById(activeRailDragSectionId);
-					var targetWrap = sectionWrapById(sectionId);
-					if (!dragWrap || !targetWrap || !dragWrap.parentNode) return;
 					var rect = row.getBoundingClientRect();
 					var after = e.clientY > (rect.top + rect.height / 2);
-					if (after) {
-						targetWrap.parentNode.insertBefore(dragWrap, targetWrap.nextSibling);
-					} else {
-						targetWrap.parentNode.insertBefore(dragWrap, targetWrap);
-					}
+					if (!reorderFromRailDrop(activeRailDragSectionId, sectionId, after)) return;
 					row.__draggedOnce = true;
 					clearRailDropMarkers();
-					setSelectedSection(dragWrap);
-					persistSectionOrder();
 				});
 				row.addEventListener("dragend", function(){
 					row.classList.remove("is-dragging");
 					activeRailDragSectionId = "";
+					railPointerDrag = null;
+					document.body.classList.remove("lf-ai-rail-dragging");
 					clearRailDropMarkers();
 				});
 				list.appendChild(row);
@@ -1091,6 +1118,40 @@ function lf_ai_assistant_widget_js(): string {
 					e.preventDefault();
 					addSectionFromLibrary(activeLibraryDragSectionType, "");
 					activeLibraryDragSectionType = "";
+				});
+				document.addEventListener("mousemove", function(e){
+					if (!railPointerDrag || !railPointerDrag.row) return;
+					var row = railRowFromPoint(e.clientX, e.clientY);
+					clearRailDropMarkers();
+					if (!row) {
+						railPointerDrag.targetId = "";
+						return;
+					}
+					var targetId = String(row.getAttribute("data-lf-rail-section-id") || "");
+					if (!targetId || targetId === railPointerDrag.sectionId) {
+						railPointerDrag.targetId = "";
+						return;
+					}
+					var rect = row.getBoundingClientRect();
+					var after = e.clientY > (rect.top + rect.height / 2);
+					row.classList.add(after ? "is-drop-after" : "is-drop-before");
+					railPointerDrag.targetId = targetId;
+					railPointerDrag.after = after;
+				});
+				document.addEventListener("mouseup", function(){
+					if (!railPointerDrag || !railPointerDrag.row) return;
+					var didReorder = false;
+					if (railPointerDrag.targetId && railPointerDrag.targetId !== railPointerDrag.sectionId) {
+						didReorder = reorderFromRailDrop(railPointerDrag.sectionId, railPointerDrag.targetId, !!railPointerDrag.after);
+					}
+					if (didReorder) {
+						railPointerDrag.row.__draggedOnce = true;
+					}
+					railPointerDrag.row.classList.remove("is-dragging");
+					railPointerDrag = null;
+					activeRailDragSectionId = "";
+					document.body.classList.remove("lf-ai-rail-dragging");
+					clearRailDropMarkers();
 				});
 			}
 		}
