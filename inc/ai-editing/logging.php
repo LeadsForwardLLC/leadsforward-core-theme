@@ -14,6 +14,8 @@ if (!defined('ABSPATH')) {
 
 const LF_AI_LOG_OPTION = 'lf_ai_edit_log';
 const LF_AI_LOG_MAX = 50;
+const LF_AI_INLINE_OVERRIDES_OPTION = 'lf_ai_inline_dom_overrides_homepage';
+const LF_AI_INLINE_OVERRIDES_META_KEY = '_lf_ai_inline_dom_overrides';
 
 /**
  * Append one AI action to the log. Returns the log entry id.
@@ -96,10 +98,79 @@ function lf_ai_get_log_entry(string $id): ?array {
 }
 
 /**
+ * Get persisted inline DOM text overrides for a context.
+ */
+function lf_ai_get_inline_dom_overrides(string $context_type, $context_id): array {
+	if ($context_type === 'homepage' || $context_id === 'homepage') {
+		$stored = get_option(LF_AI_INLINE_OVERRIDES_OPTION, []);
+		return is_array($stored) ? $stored : [];
+	}
+	if (!is_numeric($context_id)) {
+		return [];
+	}
+	$stored = get_post_meta((int) $context_id, LF_AI_INLINE_OVERRIDES_META_KEY, true);
+	return is_array($stored) ? $stored : [];
+}
+
+/**
+ * Persist inline DOM text overrides for a context.
+ */
+function lf_ai_set_inline_dom_overrides(string $context_type, $context_id, array $overrides): void {
+	$clean = [];
+	foreach ($overrides as $selector => $value) {
+		$selector_clean = sanitize_text_field((string) $selector);
+		if ($selector_clean === '') {
+			continue;
+		}
+		$value_clean = sanitize_textarea_field((string) $value);
+		if ($value_clean === '') {
+			continue;
+		}
+		$clean[$selector_clean] = $value_clean;
+	}
+	if ($context_type === 'homepage' || $context_id === 'homepage') {
+		update_option(LF_AI_INLINE_OVERRIDES_OPTION, $clean, false);
+		return;
+	}
+	if (!is_numeric($context_id)) {
+		return;
+	}
+	update_post_meta((int) $context_id, LF_AI_INLINE_OVERRIDES_META_KEY, $clean);
+}
+
+/**
  * Apply a field-value map to a specific AI context.
  */
 function lf_ai_apply_changes_to_context(string $context_type, $context_id, array $changes): void {
 	if (empty($changes)) {
+		return;
+	}
+	$dom_updates = [];
+	$content_updates = [];
+	foreach ($changes as $field_key => $value) {
+		$key = (string) $field_key;
+		if (str_starts_with($key, '__dom_override::')) {
+			$selector = substr($key, strlen('__dom_override::'));
+			$selector = sanitize_text_field((string) $selector);
+			if ($selector !== '') {
+				$dom_updates[$selector] = sanitize_textarea_field((string) $value);
+			}
+			continue;
+		}
+		$content_updates[$key] = $value;
+	}
+	if (!empty($dom_updates)) {
+		$current_overrides = lf_ai_get_inline_dom_overrides($context_type, $context_id);
+		foreach ($dom_updates as $selector => $text_value) {
+			if ($text_value === '') {
+				unset($current_overrides[$selector]);
+			} else {
+				$current_overrides[$selector] = $text_value;
+			}
+		}
+		lf_ai_set_inline_dom_overrides($context_type, $context_id, $current_overrides);
+	}
+	if (empty($content_updates)) {
 		return;
 	}
 	if ($context_type === 'homepage') {
@@ -107,15 +178,15 @@ function lf_ai_apply_changes_to_context(string $context_type, $context_id, array
 		$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
 		if (!empty($config['hero']) && is_array($config['hero'])) {
 			foreach ($hero_keys as $hk) {
-				if (array_key_exists($hk, $changes)) {
-					$config['hero'][$hk] = $changes[$hk];
+				if (array_key_exists($hk, $content_updates)) {
+					$config['hero'][$hk] = $content_updates[$hk];
 				}
 			}
 			if (defined('LF_HOMEPAGE_CONFIG_OPTION')) {
 				update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 			}
 		}
-		foreach ($changes as $field_key => $value) {
+		foreach ($content_updates as $field_key => $value) {
 			if (in_array($field_key, $hero_keys, true)) {
 				continue;
 			}
@@ -130,7 +201,7 @@ function lf_ai_apply_changes_to_context(string $context_type, $context_id, array
 	}
 	$pid = (int) $context_id;
 	$hero_updates = [];
-	foreach ($changes as $field_key => $value) {
+	foreach ($content_updates as $field_key => $value) {
 		if (in_array($field_key, ['hero_headline', 'hero_subheadline'], true)) {
 			$hero_updates[$field_key] = $value;
 		} elseif ($field_key === 'post_content') {

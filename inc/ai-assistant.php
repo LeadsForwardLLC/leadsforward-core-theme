@@ -16,6 +16,7 @@ add_action('admin_enqueue_scripts', 'lf_ai_assistant_assets');
 add_action('wp_enqueue_scripts', 'lf_ai_assistant_assets');
 add_action('admin_footer', 'lf_ai_assistant_render_floating_widget');
 add_action('wp_footer', 'lf_ai_assistant_render_floating_widget');
+add_action('wp_footer', 'lf_ai_inline_overrides_frontend_script', 5);
 add_filter('lf_keep_jquery', 'lf_ai_assistant_keep_jquery_for_frontend_admins');
 
 function lf_ai_assistant_keep_jquery_for_frontend_admins($keep): bool {
@@ -111,6 +112,61 @@ function lf_ai_assistant_widget_context(): array {
 		}
 	}
 	return ['type' => 'homepage', 'id' => 'homepage'];
+}
+
+function lf_ai_inline_overrides_frontend_script(): void {
+	if (is_admin()) {
+		return;
+	}
+	if (!function_exists('lf_ai_get_inline_dom_overrides')) {
+		return;
+	}
+	$context = lf_ai_assistant_widget_context();
+	$context_type = (string) ($context['type'] ?? 'homepage');
+	$context_id = $context['id'] ?? 'homepage';
+	$overrides = lf_ai_get_inline_dom_overrides($context_type, $context_id);
+	if (!is_array($overrides) || empty($overrides)) {
+		return;
+	}
+	$payload = [];
+	foreach ($overrides as $selector => $value) {
+		$selector_clean = sanitize_text_field((string) $selector);
+		$text_clean = sanitize_textarea_field((string) $value);
+		if ($selector_clean === '' || $text_clean === '') {
+			continue;
+		}
+		$payload[$selector_clean] = $text_clean;
+	}
+	if (empty($payload)) {
+		return;
+	}
+	$json = wp_json_encode($payload);
+	if (!is_string($json) || $json === '') {
+		return;
+	}
+	?>
+	<script>
+	(function(){
+		var map = <?php echo $json; ?>;
+		if (!map || typeof map !== "object") return;
+		function applyMap(){
+			Object.keys(map).forEach(function(selector){
+				try {
+					var node = document.querySelector(selector);
+					if (node) {
+						node.textContent = String(map[selector] || "");
+					}
+				} catch (e) {}
+			});
+		}
+		if (document.readyState === "loading") {
+			document.addEventListener("DOMContentLoaded", applyMap);
+		} else {
+			applyMap();
+		}
+	})();
+	</script>
+	<?php
 }
 
 function lf_ai_assistant_render_floating_widget(): void {
@@ -334,23 +390,7 @@ function lf_ai_assistant_widget_js(): string {
 		var inlineActiveEl = null;
 		var inlineOriginalText = "";
 		var inlineIsSaving = false;
-
-		var inlineFieldSelectors = {
-			hero_headline: [
-				".lf-hero-basic__title",
-				".lf-hero-stack__title",
-				".lf-hero-form__title",
-				".lf-hero-visual__title",
-				".lf-hero-split__title"
-			],
-			hero_subheadline: [
-				".lf-hero-basic__subtitle",
-				".lf-hero-stack__subtitle",
-				".lf-hero-form__subtitle",
-				".lf-hero-visual__subtitle",
-				".lf-hero-split__subtitle"
-			]
-		};
+		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption";
 
 		function escapeHtml(text) {
 			var div = document.createElement("div");
@@ -369,25 +409,66 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			try { window.localStorage.setItem(stateKey, open ? "open" : "closed"); } catch (e) {}
 		}
+		function inlineNodeEligible(node) {
+			if (!node || !node.textContent) return false;
+			if (node.closest(".lf-ai-float")) return false;
+			if (node.closest("nav, header, footer, [aria-hidden=\"true\"]")) return false;
+			if (node.closest("button, a, label, script, style, noscript")) return false;
+			var text = String(node.textContent || "").trim();
+			return text !== "";
+		}
+		function nodeSegment(node) {
+			var parent = node.parentElement;
+			if (!parent) {
+				return node.tagName.toLowerCase();
+			}
+			var tag = node.tagName.toLowerCase();
+			var index = 1;
+			var sibling = node.previousElementSibling;
+			while (sibling) {
+				if (sibling.tagName && sibling.tagName.toLowerCase() === tag) {
+					index++;
+				}
+				sibling = sibling.previousElementSibling;
+			}
+			return tag + ":nth-of-type(" + index + ")";
+		}
+		function buildInlineSelector(node) {
+			var root = node.closest("main, .site-main, #primary, .site-content");
+			if (!root) {
+				root = document.querySelector("main") || document.body;
+			}
+			var segments = [];
+			var cursor = node;
+			while (cursor && cursor !== root && cursor.nodeType === 1) {
+				segments.unshift(nodeSegment(cursor));
+				cursor = cursor.parentElement;
+			}
+			var rootPrefix = "main";
+			if (root && root.id) {
+				rootPrefix = "#" + root.id;
+			} else if (root && root.classList && root.classList.length) {
+				rootPrefix = root.tagName.toLowerCase() + "." + root.classList[0];
+			}
+			return rootPrefix + " > " + segments.join(" > ");
+		}
 		function buildInlineTargets() {
-			Object.keys(inlineFieldSelectors).forEach(function(fieldKey){
-				if (!labels || !labels[fieldKey]) return;
-				(inlineFieldSelectors[fieldKey] || []).forEach(function(selector){
-					var nodes = document.querySelectorAll(selector);
-					if (!nodes || !nodes.length) return;
-					nodes.forEach(function(node){
-						if (!node || !node.textContent || String(node.textContent).trim() === "") return;
-						if (node.closest(".lf-ai-float")) return;
-						node.setAttribute("data-lf-inline-editable", "1");
-						node.setAttribute("data-lf-inline-field", fieldKey);
-					});
-				});
+			var nodes = document.querySelectorAll(inlineCandidateSelector);
+			if (!nodes || !nodes.length) {
+				return;
+			}
+			nodes.forEach(function(node){
+				if (!inlineNodeEligible(node)) return;
+				var selector = buildInlineSelector(node);
+				if (!selector) return;
+				node.setAttribute("data-lf-inline-editable", "1");
+				node.setAttribute("data-lf-inline-selector", selector);
 			});
 		}
 		function beginInlineEdit(el) {
 			if (!el || inlineIsSaving) return;
-			var fieldKey = el.getAttribute("data-lf-inline-field");
-			if (!fieldKey) return;
+			var selector = String(el.getAttribute("data-lf-inline-selector") || "");
+			if (!selector) return;
 			if (inlineActiveEl && inlineActiveEl !== el) {
 				saveInlineEdit(function(){
 					beginInlineEdit(el);
@@ -403,7 +484,7 @@ function lf_ai_assistant_widget_js(): string {
 			el.setAttribute("contenteditable", "true");
 			el.setAttribute("spellcheck", "true");
 			try { el.focus(); } catch (e) {}
-			setStatus("Editing " + (labels[fieldKey] || fieldKey) + ". Click away to auto-save.", false);
+			setStatus("Editing text. Click away to auto-save.", false);
 			el.addEventListener("blur", function onBlur(){
 				setTimeout(function(){
 					if (inlineActiveEl === el) {
@@ -433,10 +514,10 @@ function lf_ai_assistant_widget_js(): string {
 				return;
 			}
 			var el = inlineActiveEl;
-			var fieldKey = String(el.getAttribute("data-lf-inline-field") || "");
+			var selector = String(el.getAttribute("data-lf-inline-selector") || "");
 			var value = String(el.textContent || "").trim();
-			if (!fieldKey) {
-				setStatus("Invalid inline field mapping.", true);
+			if (!selector) {
+				setStatus("Invalid inline target.", true);
 				if (typeof done === "function") done();
 				return;
 			}
@@ -463,7 +544,7 @@ function lf_ai_assistant_widget_js(): string {
 				nonce: lfAiFloating.nonce,
 				context_type: activeContextType,
 				context_id: activeContextId,
-				field_key: fieldKey,
+				selector: selector,
 				value: value
 			}).done(function(res){
 				if (res && res.success) {

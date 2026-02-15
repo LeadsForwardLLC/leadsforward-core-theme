@@ -839,18 +839,54 @@ function lf_ai_ajax_inline_save(): void {
 	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
 	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
 	$field_key = isset($_POST['field_key']) ? sanitize_text_field(wp_unslash($_POST['field_key'])) : '';
+	$selector = isset($_POST['selector']) ? sanitize_text_field(wp_unslash($_POST['selector'])) : '';
 	$value_raw = isset($_POST['value']) ? (string) wp_unslash($_POST['value']) : '';
 	$value = trim(sanitize_textarea_field($value_raw));
-	if ($context_type === '' || $context_id === '' || $field_key === '') {
+	if ($context_type === '' || $context_id === '') {
 		wp_send_json_error(['message' => __('Invalid request payload.', 'leadsforward-core')]);
 	}
 	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	if (strlen($value) > 4000) {
+		wp_send_json_error(['message' => __('Text is too long for inline editing.', 'leadsforward-core')]);
+	}
+
+	// New site-wide inline text path: selector-based DOM text overrides.
+	if ($selector !== '') {
+		if (!function_exists('lf_ai_get_inline_dom_overrides') || !function_exists('lf_ai_set_inline_dom_overrides')) {
+			wp_send_json_error(['message' => __('Inline override storage is unavailable.', 'leadsforward-core')]);
+		}
+		$selector = trim($selector);
+		if ($selector === '' || strlen($selector) > 500) {
+			wp_send_json_error(['message' => __('Invalid selector payload.', 'leadsforward-core')]);
+		}
+		$current_map = lf_ai_get_inline_dom_overrides($context_type, $context_id_use);
+		$old_value = isset($current_map[$selector]) ? (string) $current_map[$selector] : '';
+		$current_map[$selector] = $value;
+		lf_ai_set_inline_dom_overrides($context_type, $context_id_use, $current_map);
+		$log_id = function_exists('lf_ai_log_action')
+			? lf_ai_log_action(
+				$context_type,
+				$context_id_use,
+				['__dom_override::' . $selector => $old_value],
+				['__dom_override::' . $selector => $value],
+				'Inline frontend DOM edit'
+			)
+			: '';
+		wp_send_json_success([
+			'message' => __('Inline edit saved.', 'leadsforward-core'),
+			'selector' => $selector,
+			'value' => $value,
+			'log_id' => $log_id,
+		]);
+	}
+
+	// Backward-compatible field-key path for existing scoped inline edits.
+	if ($field_key === '') {
+		wp_send_json_error(['message' => __('Invalid request payload.', 'leadsforward-core')]);
+	}
 	$editable = lf_get_ai_editable_fields($context_id_use);
 	if (!lf_is_field_ai_editable($field_key) || !isset($editable[$field_key])) {
 		wp_send_json_error(['message' => __('That field is not editable in this context.', 'leadsforward-core')]);
-	}
-	if (strlen($value) > 4000) {
-		wp_send_json_error(['message' => __('Text is too long for inline editing.', 'leadsforward-core')]);
 	}
 	$result = lf_ai_apply_proposal($context_type, $context_id_use, [$field_key => $value], 'Inline frontend edit');
 	if (empty($result['success'])) {
