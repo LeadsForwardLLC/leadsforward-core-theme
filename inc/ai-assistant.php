@@ -36,6 +36,9 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 
 	wp_register_script('lf-ai-floating-assistant', '', ['jquery'], LF_THEME_VERSION, true);
 	wp_enqueue_script('lf-ai-floating-assistant');
+	if (function_exists('wp_enqueue_media')) {
+		wp_enqueue_media();
+	}
 
 	$context = lf_ai_assistant_widget_context();
 	$target_label = __('Homepage', 'leadsforward-core');
@@ -121,51 +124,81 @@ function lf_ai_inline_overrides_frontend_script(): void {
 	if (is_admin()) {
 		return;
 	}
-	if (!function_exists('lf_ai_get_inline_dom_overrides')) {
+	if (!function_exists('lf_ai_get_inline_dom_overrides') || !function_exists('lf_ai_get_inline_image_overrides')) {
 		return;
 	}
 	$context = lf_ai_assistant_widget_context();
 	$context_type = (string) ($context['type'] ?? 'homepage');
 	$context_id = $context['id'] ?? 'homepage';
-	$overrides = lf_ai_get_inline_dom_overrides($context_type, $context_id);
-	if (!is_array($overrides) || empty($overrides)) {
-		return;
-	}
-	$payload = [];
-	foreach ($overrides as $selector => $value) {
+	$text_overrides = lf_ai_get_inline_dom_overrides($context_type, $context_id);
+	$image_overrides = lf_ai_get_inline_image_overrides($context_type, $context_id);
+	$text_payload = [];
+	foreach ((array) $text_overrides as $selector => $value) {
 		$selector_clean = sanitize_text_field((string) $selector);
 		$text_clean = sanitize_textarea_field((string) $value);
 		if ($selector_clean === '' || $text_clean === '') {
 			continue;
 		}
-		$payload[$selector_clean] = $text_clean;
+		$text_payload[$selector_clean] = $text_clean;
 	}
-	if (empty($payload)) {
+	$image_payload = [];
+	foreach ((array) $image_overrides as $selector => $row) {
+		$selector_clean = sanitize_text_field((string) $selector);
+		if ($selector_clean === '' || !is_array($row)) {
+			continue;
+		}
+		$attachment_id = (int) ($row['attachment_id'] ?? 0);
+		$url = esc_url_raw((string) ($row['url'] ?? ''));
+		$alt = sanitize_text_field((string) ($row['alt'] ?? ''));
+		if ($attachment_id <= 0 || $url === '') {
+			continue;
+		}
+		$image_payload[$selector_clean] = [
+			'attachment_id' => $attachment_id,
+			'url' => $url,
+			'alt' => $alt,
+		];
+	}
+	if (empty($text_payload) && empty($image_payload)) {
 		return;
 	}
-	$json = wp_json_encode($payload);
-	if (!is_string($json) || $json === '') {
+	$text_json = wp_json_encode($text_payload);
+	$image_json = wp_json_encode($image_payload);
+	if (!is_string($text_json) || !is_string($image_json)) {
 		return;
 	}
 	?>
 	<script>
 	(function(){
-		var map = <?php echo $json; ?>;
-		if (!map || typeof map !== "object") return;
-		function applyMap(){
-			Object.keys(map).forEach(function(selector){
+		var textMap = <?php echo $text_json; ?>;
+		var imageMap = <?php echo $image_json; ?>;
+		function applyMaps(){
+			Object.keys(textMap || {}).forEach(function(selector){
 				try {
 					var node = document.querySelector(selector);
 					if (node) {
-						node.textContent = String(map[selector] || "");
+						node.textContent = String(textMap[selector] || "");
+					}
+				} catch (e) {}
+			});
+			Object.keys(imageMap || {}).forEach(function(selector){
+				try {
+					var img = document.querySelector(selector);
+					var row = imageMap[selector] || {};
+					if (img && img.tagName && img.tagName.toLowerCase() === "img" && row.url) {
+						img.setAttribute("src", String(row.url));
+						img.removeAttribute("srcset");
+						if (row.alt !== undefined) {
+							img.setAttribute("alt", String(row.alt || ""));
+						}
 					}
 				} catch (e) {}
 			});
 		}
 		if (document.readyState === "loading") {
-			document.addEventListener("DOMContentLoaded", applyMap);
+			document.addEventListener("DOMContentLoaded", applyMaps);
 		} else {
-			applyMap();
+			applyMaps();
 		}
 	})();
 	</script>
@@ -328,6 +361,9 @@ function lf_ai_assistant_widget_css(): string {
 		[data-lf-inline-editable="1"]:hover { outline:2px dashed rgba(131,72,249,.45); outline-offset:2px; }
 		[data-lf-inline-active="1"] { outline:2px solid #8348f9 !important; outline-offset:2px; background:rgba(131,72,249,.08); }
 		[data-lf-inline-saving="1"] { opacity:.72; pointer-events:none; }
+		[data-lf-inline-image="1"] { cursor:pointer; transition:outline-color .15s ease, box-shadow .15s ease; }
+		[data-lf-inline-image="1"]:hover { outline:2px dashed rgba(131,72,249,.45); outline-offset:3px; box-shadow:0 8px 20px rgba(15,23,42,.12); }
+		[data-lf-inline-image-active="1"] { outline:2px solid #8348f9 !important; outline-offset:3px; }
 		[data-lf-section-wrap="1"] { position:relative; }
 		.lf-ai-layout-handle { display:none; position:absolute; top:10px; right:10px; width:28px; height:28px; border:1px solid #d6c8fb; border-radius:8px; background:#fff; color:#6a33e8; font-weight:700; align-items:center; justify-content:center; cursor:grab; z-index:4; box-shadow:0 4px 12px rgba(15,23,42,.15); }
 		body.lf-ai-layout-mode [data-lf-section-wrap="1"] { outline:2px dashed rgba(131,72,249,.45); outline-offset:3px; }
@@ -404,6 +440,8 @@ function lf_ai_assistant_widget_js(): string {
 		var layoutMode = false;
 		var activeDragSection = null;
 		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption";
+		var inlineImageCandidateSelector = "main img";
+		var mediaFrame = null;
 
 		function escapeHtml(text) {
 			var div = document.createElement("div");
@@ -479,6 +517,100 @@ function lf_ai_assistant_widget_js(): string {
 				node.setAttribute("data-lf-inline-editable", "1");
 				node.setAttribute("data-lf-inline-selector", selector);
 			});
+		}
+		function inlineImageEligible(img) {
+			if (!img || !img.getAttribute) return false;
+			if (img.closest(".lf-ai-float")) return false;
+			if (img.closest("nav, footer, .site-header, .site-footer, #masthead, #colophon")) return false;
+			var src = String(img.getAttribute("src") || "").trim();
+			if (src === "") return false;
+			var width = img.naturalWidth || img.clientWidth || 0;
+			var height = img.naturalHeight || img.clientHeight || 0;
+			if (width > 0 && height > 0 && (width < 40 || height < 40)) {
+				return false;
+			}
+			return true;
+		}
+		function buildInlineImageTargets() {
+			var nodes = document.querySelectorAll(inlineImageCandidateSelector);
+			if (!nodes || !nodes.length) return;
+			nodes.forEach(function(img){
+				if (!inlineImageEligible(img)) return;
+				var selector = buildInlineSelector(img);
+				if (!selector) return;
+				img.setAttribute("data-lf-inline-image", "1");
+				img.setAttribute("data-lf-inline-image-selector", selector);
+			});
+		}
+		function saveInlineImageOverride(img, attachment) {
+			var selector = String(img.getAttribute("data-lf-inline-image-selector") || "");
+			if (!selector) {
+				setStatus("Invalid image target.", true);
+				return;
+			}
+			var attachmentId = parseInt(String(attachment && attachment.id ? attachment.id : "0"), 10);
+			var url = "";
+			if (attachment && attachment.sizes && attachment.sizes.large && attachment.sizes.large.url) {
+				url = String(attachment.sizes.large.url);
+			} else if (attachment && attachment.sizes && attachment.sizes.full && attachment.sizes.full.url) {
+				url = String(attachment.sizes.full.url);
+			} else if (attachment && attachment.url) {
+				url = String(attachment.url);
+			}
+			if (!attachmentId || !url) {
+				setStatus("Unable to use selected image.", true);
+				return;
+			}
+			var alt = String((attachment && attachment.alt) ? attachment.alt : "");
+			setStatus("Saving image replacement...", false);
+			img.setAttribute("data-lf-inline-image-active", "1");
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_inline_image_save",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				selector: selector,
+				attachment_id: attachmentId,
+				image_url: url,
+				image_alt: alt
+			}).done(function(res){
+				if (res && res.success) {
+					img.setAttribute("src", url);
+					img.removeAttribute("srcset");
+					img.setAttribute("alt", alt);
+					setStatus("Image replaced. Use ↶ / ↷ to undo/redo.", false);
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Image replace failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Image replace failed.";
+				setStatus(msg, true);
+			}).always(function(){
+				img.removeAttribute("data-lf-inline-image-active");
+			});
+		}
+		function beginInlineImageReplace(img) {
+			if (!img || layoutMode || inlineIsSaving) return;
+			if (!(window.wp && wp.media)) {
+				setStatus("Media Library is unavailable on this screen.", true);
+				return;
+			}
+			if (mediaFrame) {
+				mediaFrame.off("select");
+			}
+			mediaFrame = wp.media({
+				title: "Replace image",
+				button: { text: "Use this image" },
+				library: { type: "image" },
+				multiple: false
+			});
+			mediaFrame.on("select", function(){
+				var selection = mediaFrame.state().get("selection");
+				var attachment = selection && selection.first ? selection.first().toJSON() : null;
+				if (!attachment) return;
+				saveInlineImageOverride(img, attachment);
+			});
+			mediaFrame.open();
 		}
 		function collectSectionWrappers() {
 			return Array.prototype.slice.call(document.querySelectorAll("[data-lf-section-wrap=\"1\"][data-lf-section-id]"));
@@ -861,6 +993,14 @@ function lf_ai_assistant_widget_js(): string {
 		$btnLayout.on("click", function(){
 			setLayoutMode(!layoutMode);
 		});
+		$(document).on("click", "[data-lf-inline-image=\"1\"]", function(e){
+			if (layoutMode) {
+				return;
+			}
+			e.preventDefault();
+			e.stopPropagation();
+			beginInlineImageReplace(this);
+		});
 		$(document).on("click", "[data-lf-inline-editable=\"1\"]", function(e){
 			if (layoutMode) {
 				return;
@@ -1100,6 +1240,7 @@ function lf_ai_assistant_widget_js(): string {
 		try { $mode.val("auto"); } catch (e) {}
 		syncModeUi();
 		buildInlineTargets();
+		buildInlineImageTargets();
 		buildSectionTargets();
 		$btnLayout.attr("aria-pressed", "false");
 		setStatus("Direct edit is always available. Click page text and click away to auto-save.", false);

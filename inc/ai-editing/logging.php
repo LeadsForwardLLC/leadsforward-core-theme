@@ -16,6 +16,8 @@ const LF_AI_LOG_OPTION = 'lf_ai_edit_log';
 const LF_AI_LOG_MAX = 50;
 const LF_AI_INLINE_OVERRIDES_OPTION = 'lf_ai_inline_dom_overrides_homepage';
 const LF_AI_INLINE_OVERRIDES_META_KEY = '_lf_ai_inline_dom_overrides';
+const LF_AI_INLINE_IMAGE_OVERRIDES_OPTION = 'lf_ai_inline_image_overrides_homepage';
+const LF_AI_INLINE_IMAGE_OVERRIDES_META_KEY = '_lf_ai_inline_image_overrides';
 
 /**
  * Append one AI action to the log. Returns the log entry id.
@@ -139,6 +141,53 @@ function lf_ai_set_inline_dom_overrides(string $context_type, $context_id, array
 }
 
 /**
+ * Get persisted inline image overrides for a context.
+ */
+function lf_ai_get_inline_image_overrides(string $context_type, $context_id): array {
+	if ($context_type === 'homepage' || $context_id === 'homepage') {
+		$stored = get_option(LF_AI_INLINE_IMAGE_OVERRIDES_OPTION, []);
+		return is_array($stored) ? $stored : [];
+	}
+	if (!is_numeric($context_id)) {
+		return [];
+	}
+	$stored = get_post_meta((int) $context_id, LF_AI_INLINE_IMAGE_OVERRIDES_META_KEY, true);
+	return is_array($stored) ? $stored : [];
+}
+
+/**
+ * Persist inline image overrides for a context.
+ */
+function lf_ai_set_inline_image_overrides(string $context_type, $context_id, array $overrides): void {
+	$clean = [];
+	foreach ($overrides as $selector => $row) {
+		$selector_clean = sanitize_text_field((string) $selector);
+		if ($selector_clean === '' || !is_array($row)) {
+			continue;
+		}
+		$attachment_id = (int) ($row['attachment_id'] ?? 0);
+		$url = esc_url_raw((string) ($row['url'] ?? ''));
+		$alt = sanitize_text_field((string) ($row['alt'] ?? ''));
+		if ($attachment_id <= 0 || $url === '') {
+			continue;
+		}
+		$clean[$selector_clean] = [
+			'attachment_id' => $attachment_id,
+			'url' => $url,
+			'alt' => $alt,
+		];
+	}
+	if ($context_type === 'homepage' || $context_id === 'homepage') {
+		update_option(LF_AI_INLINE_IMAGE_OVERRIDES_OPTION, $clean, false);
+		return;
+	}
+	if (!is_numeric($context_id)) {
+		return;
+	}
+	update_post_meta((int) $context_id, LF_AI_INLINE_IMAGE_OVERRIDES_META_KEY, $clean);
+}
+
+/**
  * Persist section order for homepage/page-builder contexts.
  */
 function lf_ai_apply_section_order_to_context(string $context_type, $context_id, array $order): bool {
@@ -211,6 +260,7 @@ function lf_ai_apply_changes_to_context(string $context_type, $context_id, array
 		return;
 	}
 	$dom_updates = [];
+	$image_updates = [];
 	$order_updates = null;
 	$content_updates = [];
 	foreach ($changes as $field_key => $value) {
@@ -229,6 +279,14 @@ function lf_ai_apply_changes_to_context(string $context_type, $context_id, array
 			}
 			continue;
 		}
+		if (str_starts_with($key, '__img_override::')) {
+			$selector = substr($key, strlen('__img_override::'));
+			$selector = sanitize_text_field((string) $selector);
+			if ($selector !== '') {
+				$image_updates[$selector] = is_array($value) ? $value : [];
+			}
+			continue;
+		}
 		$content_updates[$key] = $value;
 	}
 	if (!empty($dom_updates)) {
@@ -241,6 +299,21 @@ function lf_ai_apply_changes_to_context(string $context_type, $context_id, array
 			}
 		}
 		lf_ai_set_inline_dom_overrides($context_type, $context_id, $current_overrides);
+	}
+	if (!empty($image_updates)) {
+		$current_images = lf_ai_get_inline_image_overrides($context_type, $context_id);
+		foreach ($image_updates as $selector => $row) {
+			if (!is_array($row) || empty($row['url']) || (int) ($row['attachment_id'] ?? 0) <= 0) {
+				unset($current_images[$selector]);
+				continue;
+			}
+			$current_images[$selector] = [
+				'attachment_id' => (int) ($row['attachment_id'] ?? 0),
+				'url' => esc_url_raw((string) ($row['url'] ?? '')),
+				'alt' => sanitize_text_field((string) ($row['alt'] ?? '')),
+			];
+		}
+		lf_ai_set_inline_image_overrides($context_type, $context_id, $current_images);
 	}
 	if (is_array($order_updates)) {
 		lf_ai_apply_section_order_to_context($context_type, $context_id, $order_updates);

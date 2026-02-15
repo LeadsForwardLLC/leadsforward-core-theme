@@ -476,6 +476,7 @@ add_action('wp_ajax_lf_ai_rollback_latest', 'lf_ai_ajax_rollback_latest');
 add_action('wp_ajax_lf_ai_redo_latest', 'lf_ai_ajax_redo_latest');
 add_action('wp_ajax_lf_ai_extract_context_doc', 'lf_ai_ajax_extract_context_doc');
 add_action('wp_ajax_lf_ai_inline_save', 'lf_ai_ajax_inline_save');
+add_action('wp_ajax_lf_ai_inline_image_save', 'lf_ai_ajax_inline_image_save');
 add_action('wp_ajax_lf_ai_reorder_sections', 'lf_ai_ajax_reorder_sections');
 
 function lf_ai_editing_meta_box(): void {
@@ -969,6 +970,56 @@ function lf_ai_ajax_reorder_sections(): void {
 		'message' => __('Section order saved.', 'leadsforward-core'),
 		'log_id' => $log_id,
 		'order' => $new_order,
+	]);
+}
+
+function lf_ai_ajax_inline_image_save(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
+	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
+	$selector = isset($_POST['selector']) ? sanitize_text_field(wp_unslash($_POST['selector'])) : '';
+	$attachment_id = isset($_POST['attachment_id']) ? (int) $_POST['attachment_id'] : 0;
+	$image_url = isset($_POST['image_url']) ? esc_url_raw((string) wp_unslash($_POST['image_url'])) : '';
+	$image_alt = isset($_POST['image_alt']) ? sanitize_text_field((string) wp_unslash($_POST['image_alt'])) : '';
+	if ($context_type === '' || $context_id === '' || $selector === '' || $attachment_id <= 0 || $image_url === '') {
+		wp_send_json_error(['message' => __('Invalid image replacement payload.', 'leadsforward-core')]);
+	}
+	if (!function_exists('lf_ai_get_inline_image_overrides') || !function_exists('lf_ai_set_inline_image_overrides')) {
+		wp_send_json_error(['message' => __('Inline image override storage is unavailable.', 'leadsforward-core')]);
+	}
+	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	$selector = trim($selector);
+	if ($selector === '' || strlen($selector) > 500) {
+		wp_send_json_error(['message' => __('Invalid selector payload.', 'leadsforward-core')]);
+	}
+	$current_map = lf_ai_get_inline_image_overrides($context_type, $context_id_use);
+	$old_value = isset($current_map[$selector]) && is_array($current_map[$selector]) ? $current_map[$selector] : [];
+	$new_value = [
+		'attachment_id' => $attachment_id,
+		'url' => $image_url,
+		'alt' => $image_alt,
+	];
+	$current_map[$selector] = $new_value;
+	lf_ai_set_inline_image_overrides($context_type, $context_id_use, $current_map);
+	$log_id = function_exists('lf_ai_log_action')
+		? lf_ai_log_action(
+			$context_type,
+			$context_id_use,
+			['__img_override::' . $selector => $old_value],
+			['__img_override::' . $selector => $new_value],
+			'Inline frontend image replace'
+		)
+		: '';
+	wp_send_json_success([
+		'message' => __('Image replaced.', 'leadsforward-core'),
+		'selector' => $selector,
+		'image_url' => $image_url,
+		'image_alt' => $image_alt,
+		'attachment_id' => $attachment_id,
+		'log_id' => $log_id,
 	]);
 }
 
