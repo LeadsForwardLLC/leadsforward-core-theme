@@ -427,6 +427,7 @@ function lf_ai_assistant_widget_js(): string {
 		var promptSnippet = "";
 		var docContext = "";
 		var docLabel = "";
+		var inlineQuickEdit = null;
 		var inlineActiveEl = null;
 		var inlineOriginalText = "";
 		var inlineIsSaving = false;
@@ -440,6 +441,48 @@ function lf_ai_assistant_widget_js(): string {
 			var div = document.createElement("div");
 			div.textContent = String(text || "");
 			return div.innerHTML;
+		}
+		function normalizeInlineText(text) {
+			return String(text || "").replace(/\s+/g, " ").trim().toLowerCase();
+		}
+		function parseInlineReplacePrompt(prompt) {
+			var p = String(prompt || "");
+			var patterns = [
+				/(?:change|replace|update|rewrite)[^"\n]*["“]([^"”]+)["”]\s*(?:to|with)\s*["“]([^"”]+)["”]/i,
+				/(?:where\s+it\s+says|where\s+it\s+reads)\s*["“]([^"”]+)["”]\s*(?:to|with)\s*["“]([^"”]+)["”]/i,
+				/(?:replace)\s*["“]([^"”]+)["”]\s*(?:with)\s*["“]([^"”]+)["”]/i
+			];
+			for (var i = 0; i < patterns.length; i++) {
+				var m = p.match(patterns[i]);
+				if (m && m[1] && m[2]) {
+					return { from: String(m[1]).trim(), to: String(m[2]).trim() };
+				}
+			}
+			return null;
+		}
+		function resolveInlineSelectorByText(fromText) {
+			var needle = normalizeInlineText(fromText);
+			if (needle === "") return null;
+			var nodes = document.querySelectorAll("[data-lf-inline-editable=\"1\"]");
+			if (!nodes || !nodes.length) return null;
+			var best = null;
+			nodes.forEach(function(node){
+				var current = String(node.textContent || "").trim();
+				var normalized = normalizeInlineText(current);
+				if (normalized === "") return;
+				var idx = normalized.indexOf(needle);
+				if (idx === -1) return;
+				var selector = String(node.getAttribute("data-lf-inline-selector") || "");
+				if (selector === "") return;
+				var score = 0;
+				if (normalized === needle) score += 50;
+				if (idx === 0) score += 15;
+				score -= Math.abs(normalized.length - needle.length) / 100;
+				if (!best || score > best.score) {
+					best = { selector: selector, current: current, score: score };
+				}
+			});
+			return best;
 		}
 		function setStatus(msg, isError) {
 			$status.text(msg || "");
@@ -810,6 +853,15 @@ function lf_ai_assistant_widget_js(): string {
 			});
 			$diff.html(html).prop("hidden", false);
 		}
+		function renderInlineQuickPreview(currentText, newText) {
+			var html = "<div class=\"lf-ai-float__row\">"
+				+ "<div class=\"lf-ai-float__field\">Matched on-page text</div>"
+				+ "<div class=\"lf-ai-float__cols\">"
+				+ "<div class=\"lf-ai-float__col\"><b>Current</b>" + escapeHtml(currentText) + "</div>"
+				+ "<div class=\"lf-ai-float__col\"><b>Suggested</b>" + escapeHtml(newText) + "</div>"
+				+ "</div></div>";
+			$diff.html(html).prop("hidden", false);
+		}
 		function renderCreationPreview(data) {
 			var html = "";
 			var title = data && data.title ? data.title : "";
@@ -1011,6 +1063,7 @@ function lf_ai_assistant_widget_js(): string {
 				setStatus("Please enter a prompt.", true);
 				return;
 			}
+			inlineQuickEdit = null;
 			promptSnippet = prompt.length > 80 ? prompt.slice(0,77) + "..." : prompt;
 			setStatus(lfAiFloating.i18n && lfAiFloating.i18n.statusGenerating ? lfAiFloating.i18n.statusGenerating : "Generating...", false);
 			$diff.prop("hidden", true).empty();
@@ -1018,6 +1071,21 @@ function lf_ai_assistant_widget_js(): string {
 			proposed = null;
 			current = null;
 			creationPayload = null;
+			var parsedInlineReplace = parseInlineReplacePrompt(prompt);
+			if (parsedInlineReplace && parsedInlineReplace.from && parsedInlineReplace.to) {
+				var resolvedInline = resolveInlineSelectorByText(parsedInlineReplace.from);
+				if (resolvedInline && resolvedInline.selector) {
+					inlineQuickEdit = {
+						selector: resolvedInline.selector,
+						value: parsedInlineReplace.to,
+						current: resolvedInline.current || parsedInlineReplace.from
+					};
+					renderInlineQuickPreview(inlineQuickEdit.current, inlineQuickEdit.value);
+					setStatus("Direct text replacement ready. Review and apply.", false);
+					setProposalEnabled(true);
+					return;
+				}
+			}
 			lastMode = modeValue();
 			activeAssistantCptType = cptTypeValue();
 			activeAssistantBatchType = batchTypeValue();
@@ -1081,6 +1149,33 @@ function lf_ai_assistant_widget_js(): string {
 		});
 
 		$btnApply.on("click", function(){
+			if (inlineQuickEdit && inlineQuickEdit.selector) {
+				setStatus("Applying direct text replacement...", false);
+				$.post(lfAiFloating.ajax_url, {
+					action: "lf_ai_inline_save",
+					nonce: lfAiFloating.nonce,
+					context_type: activeContextType,
+					context_id: activeContextId,
+					selector: inlineQuickEdit.selector,
+					value: inlineQuickEdit.value
+				}).done(function(res){
+					if (res && res.success) {
+						try {
+							var node = document.querySelector(inlineQuickEdit.selector);
+							if (node) node.textContent = String(inlineQuickEdit.value || "");
+						} catch (e) {}
+						setStatus((res.data && res.data.message) ? res.data.message : "Change applied.", false);
+						inlineQuickEdit = null;
+						setProposalEnabled(false);
+					} else {
+						setStatus((res && res.data && res.data.message) ? res.data.message : "Apply failed.", true);
+					}
+				}).fail(function(xhr){
+					var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Apply failed.";
+					setStatus(msg, true);
+				});
+				return;
+			}
 			if (lastMode === "edit_existing" && !proposed) {
 				setStatus("No suggestions to apply.", true);
 				return;
@@ -1141,6 +1236,7 @@ function lf_ai_assistant_widget_js(): string {
 		});
 
 		$btnReject.on("click", function(){
+			inlineQuickEdit = null;
 			proposed = null;
 			current = null;
 			creationPayload = null;
