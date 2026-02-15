@@ -107,6 +107,11 @@ SEO is now decoupled from the AI assistant body and launched from its own floati
 - SEO vitals also include request/transfer-size budget signals plus available `Server-Timing` metrics from the current page response.
 - Launchers use a flat purple branded style and dynamic spacing so `SEO Health` sits tighter to `AI Assistant`.
 
+### Performance Grade Chip
+
+- SEO window now includes a compact performance grade chip (`Perf A/B/C...`) with trend delta vs the previous refresh in the same session.
+- Grade and trend are computed from the live performance subscore and update on each snapshot refresh.
+
 ## Hero Lists Persistence Guardrails
 
 Hero pills (`.lf-hero-chips`) and hero proof checklist (`.lf-block-hero__card-list`) are two visual editors for the same source field (`hero_proof_bullets`).
@@ -115,6 +120,15 @@ Hero pills (`.lf-hero-chips`) and hero proof checklist (`.lf-block-hero__card-li
 - Saves are synchronized so pill edits update proof checklist DOM and vice versa before persistence.
 - A single canonical payload is persisted to backend settings, ensuring reliable reload behavior.
 - The collapsed Structure launcher is positioned higher for faster access while editing.
+
+## FAQ Library Selection
+
+FAQ sections now support curated, per-section FAQ selection instead of only global FAQ order.
+
+- Frontend editor can open an FAQ picker, search the FAQ database, and add selected FAQs into the section.
+- Editors can remove and reorder selected FAQs directly in the section; selection persists per page/section.
+- The section stores selected FAQ IDs in `faq_selected_ids` (line list) through section settings.
+- If no explicit selection exists, theme-side auto-selection chooses best-fit FAQs using section/page intent overlap.
 
 ## Persistence + Safety
 

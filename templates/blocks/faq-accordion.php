@@ -24,14 +24,98 @@ $max_items = isset($section['faq_max_items']) ? (int) $section['faq_max_items'] 
 if ($max_items === 0) {
 	$max_items = -1;
 }
-$query = new WP_Query([
-	'post_type'      => 'lf_faq',
+$selected_faq_ids_raw = (string) ($section['faq_selected_ids'] ?? '');
+$selected_faq_ids = preg_split('/[\r\n,]+/', $selected_faq_ids_raw);
+$selected_faq_ids = array_values(array_filter(array_map(static function ($value): int {
+	return (int) trim((string) $value);
+}, is_array($selected_faq_ids) ? $selected_faq_ids : []), static function (int $id): bool {
+	return $id > 0;
+}));
+
+/**
+ * Lightweight FAQ auto-selector:
+ * if a section has no manual selection, choose FAQs by overlap
+ * between page/section intent text and FAQ question/answer tokens.
+ */
+$auto_select_faq_ids = static function (int $limit) use ($section): array {
+	$query = new WP_Query([
+		'post_type' => 'lf_faq',
+		'posts_per_page' => 80,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+		'post_status' => 'publish',
+		'no_found_rows' => true,
+	]);
+	if (!$query->have_posts()) {
+		return [];
+	}
+	$page_title = get_the_title(get_queried_object_id());
+	$intent_source = trim(implode(' ', array_filter([
+		(string) ($section['section_heading'] ?? ''),
+		(string) ($section['section_intro'] ?? ''),
+		(string) $page_title,
+		(string) get_post_field('post_excerpt', get_queried_object_id()),
+	])));
+	$terms = preg_split('/[^a-z0-9]+/i', strtolower($intent_source));
+	$terms = array_values(array_unique(array_filter(array_map(static function ($term): string {
+		return trim((string) $term);
+	}, is_array($terms) ? $terms : []), static function (string $term): bool {
+		return strlen($term) >= 4;
+	})));
+	$scores = [];
+	while ($query->have_posts()) {
+		$query->the_post();
+		$faq_id = (int) get_the_ID();
+		$question = function_exists('get_field') ? (string) get_field('lf_faq_question', $faq_id) : '';
+		$answer = function_exists('get_field') ? (string) get_field('lf_faq_answer', $faq_id) : '';
+		if ($question === '') {
+			$question = (string) get_the_title($faq_id);
+		}
+		$haystack = strtolower(trim($question . ' ' . wp_strip_all_tags((string) $answer)));
+		$score = 0;
+		foreach ($terms as $term) {
+			if ($term !== '' && strpos($haystack, $term) !== false) {
+				$score += 3;
+			}
+		}
+		$score += max(0, 10 - ((int) get_post_field('menu_order', $faq_id) / 10));
+		$scores[] = ['id' => $faq_id, 'score' => $score];
+	}
+	wp_reset_postdata();
+	usort($scores, static function (array $a, array $b): int {
+		if ((int) $a['score'] === (int) $b['score']) {
+			return 0;
+		}
+		return ((int) $a['score'] > (int) $b['score']) ? -1 : 1;
+	});
+	$ids = array_values(array_map(static function (array $row): int {
+		return (int) ($row['id'] ?? 0);
+	}, $scores));
+	$ids = array_values(array_filter($ids, static function (int $id): bool {
+		return $id > 0;
+	}));
+	if ($limit > 0) {
+		$ids = array_slice($ids, 0, $limit);
+	}
+	return $ids;
+};
+
+$faq_ids_for_query = !empty($selected_faq_ids) ? $selected_faq_ids : $auto_select_faq_ids($max_items > 0 ? $max_items : 6);
+$query_args = [
+	'post_type' => 'lf_faq',
 	'posts_per_page' => $max_items > 0 ? $max_items : -1,
-	'orderby'        => 'menu_order title',
-	'order'          => 'ASC',
-	'post_status'    => 'publish',
-	'no_found_rows'  => true,
-]);
+	'post_status' => 'publish',
+	'no_found_rows' => true,
+];
+if (!empty($faq_ids_for_query)) {
+	$query_args['post__in'] = $faq_ids_for_query;
+	$query_args['orderby'] = 'post__in';
+} else {
+	$query_args['orderby'] = 'menu_order title';
+	$query_args['order'] = 'ASC';
+}
+$query = new WP_Query($query_args);
+$has_faq_posts = $query->have_posts();
 ?>
 <section class="lf-block lf-block-faq-accordion <?php echo esc_attr($bg_class ?: 'lf-surface-light'); ?> lf-block-faq-accordion--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" aria-label="<?php esc_attr_e('FAQs', 'leadsforward-core'); ?>">
 	<div class="lf-block-faq-accordion__inner">
@@ -49,8 +133,8 @@ $query = new WP_Query([
 				<p class="lf-block-faq-accordion__intro"><?php echo esc_html($intro); ?></p>
 			<?php endif; ?>
 		</header>
-		<?php if ($query->have_posts()) : ?>
-			<div class="lf-block-faq-accordion__list" role="list">
+		<div class="lf-block-faq-accordion__list" role="list">
+			<?php if ($has_faq_posts) : ?>
 				<?php while ($query->have_posts()) : $query->the_post();
 					$q = function_exists('get_field') ? get_field('lf_faq_question') : '';
 					$a = function_exists('get_field') ? get_field('lf_faq_answer') : '';
@@ -80,10 +164,11 @@ $query = new WP_Query([
 						<div class="lf-block-faq-accordion__answer"><?php echo wp_kses_post($a); ?></div>
 					</details>
 				<?php endwhile; ?>
-			</div>
-			<?php wp_reset_postdata(); ?>
-		<?php else : ?>
-			<p class="lf-block-faq-accordion__empty"><?php esc_html_e('No FAQs yet.', 'leadsforward-core'); ?></p>
+				<?php wp_reset_postdata(); ?>
+			<?php endif; ?>
+		</div>
+		<?php if (!$has_faq_posts) : ?>
+			<p class="lf-block-faq-accordion__empty"><?php esc_html_e('No FAQs selected yet. Use editor controls to pick from your FAQ library.', 'leadsforward-core'); ?></p>
 		<?php endif; ?>
 	</div>
 </section>

@@ -482,6 +482,7 @@ function lf_sections_registry(): array {
 				// Added for density expansion – vNext
 				['key' => 'section_intro_secondary', 'label' => __('Secondary intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				['key' => 'faq_max_items', 'label' => __('Max items', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
+				['key' => 'faq_selected_ids', 'label' => __('Selected FAQ IDs (one ID per line, optional)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 				// Added for density expansion – vNext
 				['key' => 'faq_trust_block', 'label' => __('Trust / credibility block', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 			],
@@ -1755,6 +1756,7 @@ function lf_sections_render_faq(string $context, array $settings, \WP_Post $post
 			'section_heading' => $settings['section_heading'] ?? '',
 			'section_intro' => $settings['section_intro'] ?? '',
 			'faq_max_items' => $settings['faq_max_items'] ?? '',
+			'faq_selected_ids' => $settings['faq_selected_ids'] ?? '',
 			'section_background' => $settings['section_background'] ?? 'light',
 			'icon_enabled' => $settings['icon_enabled'] ?? '0',
 			'icon_slug' => $settings['icon_slug'] ?? '',

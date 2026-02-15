@@ -391,6 +391,7 @@ function lf_ai_assistant_render_floating_widget(): void {
 			<div class="lf-ai-float__body">
 				<div class="lf-ai-seo" data-lf-ai-seo>
 					<div class="lf-ai-seo__score" data-lf-ai-seo-score><?php esc_html_e('Overall: --', 'leadsforward-core'); ?></div>
+					<div class="lf-ai-seo__perf-chip lf-ai-seo__perf-chip--pending" data-lf-ai-seo-perf-chip><?php esc_html_e('Perf --', 'leadsforward-core'); ?></div>
 					<div class="lf-ai-seo__meter"><span data-lf-ai-seo-overall-fill style="width:0%;"></span></div>
 					<div class="lf-ai-seo__subscores">
 						<div class="lf-ai-seo__subscore">
@@ -474,6 +475,11 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-seo__title { font-size:12px; font-weight:700; color:#0f172a; }
 		.lf-ai-seo__score { font-size:12px; color:#334155; }
 		.lf-ai-seo__score strong { color:#0f172a; }
+		.lf-ai-seo__perf-chip { align-self:flex-start; font-size:11px; font-weight:700; border-radius:999px; padding:2px 8px; line-height:1.5; border:1px solid transparent; }
+		.lf-ai-seo__perf-chip--pending { color:#475569; background:#f1f5f9; border-color:#e2e8f0; }
+		.lf-ai-seo__perf-chip--good { color:#166534; background:#dcfce7; border-color:#86efac; }
+		.lf-ai-seo__perf-chip--warn { color:#92400e; background:#fef3c7; border-color:#fcd34d; }
+		.lf-ai-seo__perf-chip--bad { color:#b91c1c; background:#fee2e2; border-color:#fca5a5; }
 		.lf-ai-seo__meter { width:100%; height:8px; border-radius:999px; background:#e2e8f0; overflow:hidden; }
 		.lf-ai-seo__meter > span { display:block; height:100%; width:0; background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e); transition:width .2s ease; }
 		.lf-ai-seo__subscores { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px; }
@@ -616,6 +622,25 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-media-picker__actions button { border:1px solid #e2e8f0; background:#fff; color:#0f172a; border-radius:8px; min-height:34px; padding:0 10px; font-size:12px; cursor:pointer; }
 		.lf-ai-media-picker__actions button:hover { border-color:#c4b5fd; background:#faf7ff; }
 		.lf-ai-media-picker__hint { font-size:12px; color:#64748b; }
+		.lf-ai-faq-controls { margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+		.lf-ai-faq-add { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:28px; padding:0 10px; font-size:12px; cursor:pointer; }
+		.lf-ai-faq-add:hover { background:#f5f0ff; }
+		.lf-ai-faq-picker { position:fixed; inset:0; z-index:100004; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; padding:18px; }
+		.lf-ai-faq-picker[hidden] { display:none !important; }
+		.lf-ai-faq-picker__card { width:min(720px, calc(100vw - 30px)); max-height:82vh; overflow:hidden; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); display:flex; flex-direction:column; }
+		.lf-ai-faq-picker__head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-bottom:1px solid #e2e8f0; background:#f8fafc; }
+		.lf-ai-faq-picker__title { font-size:13px; font-weight:700; color:#0f172a; }
+		.lf-ai-faq-picker__close { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:15px; line-height:1; }
+		.lf-ai-faq-picker__search { border:1px solid #d6c8fb; border-radius:8px; padding:8px 10px; margin:10px 12px; font-size:13px; }
+		.lf-ai-faq-picker__list { padding:0 12px 12px; overflow:auto; display:flex; flex-direction:column; gap:8px; }
+		.lf-ai-faq-picker__item { border:1px solid #e2e8f0; border-radius:8px; background:#fff; padding:8px 10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+		.lf-ai-faq-picker__item:hover { border-color:#c4b5fd; background:#faf7ff; }
+		.lf-ai-faq-picker__meta b { display:block; font-size:12px; color:#0f172a; margin-bottom:3px; }
+		.lf-ai-faq-picker__meta small { display:block; font-size:11px; color:#64748b; line-height:1.35; }
+		.lf-ai-faq-picker__add { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:28px; padding:0 10px; font-size:12px; cursor:pointer; white-space:nowrap; }
+		.lf-ai-faq-picker__add:hover { background:#f5f0ff; }
+		.lf-ai-faq-picker__add[disabled] { opacity:.5; cursor:default; background:#f8fafc; }
+		.lf-ai-faq-picker__empty { padding:10px; color:#64748b; font-size:12px; }
 		.lf-ai-float__confirm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.4); z-index:5; padding:12px; pointer-events:auto; }
 		.lf-ai-float__confirm[hidden] { display:none !important; pointer-events:none !important; }
 		.lf-ai-float__confirm-card { width:100%; max-width:360px; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 10px 34px rgba(15,23,42,.28); padding:14px; }
@@ -670,6 +695,7 @@ function lf_ai_assistant_widget_js(): string {
 		var $docName = $root.find("[data-lf-ai-doc-name]");
 		var $seo = $seoRoot.find("[data-lf-ai-seo]");
 		var $seoScore = $seoRoot.find("[data-lf-ai-seo-score]");
+		var $seoPerfChip = $seoRoot.find("[data-lf-ai-seo-perf-chip]");
 		var $seoList = $seoRoot.find("[data-lf-ai-seo-list]");
 		var $seoRefresh = $seoRoot.find("[data-lf-ai-seo-refresh]");
 		var $seoOverallFill = $seoRoot.find("[data-lf-ai-seo-overall-fill]");
@@ -736,10 +762,17 @@ function lf_ai_assistant_widget_js(): string {
 		var iconPickerOnSelect = null;
 		var mediaPickerEl = null;
 		var mediaPickerWrap = null;
+		var faqPickerEl = null;
+		var faqPickerSearchEl = null;
+		var faqPickerListEl = null;
+		var faqPickerWrap = null;
+		var faqPickerList = null;
+		var faqLibraryCache = null;
 		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption,#primary h1,#primary h2,#primary h3,#primary h4,#primary h5,#primary h6,#primary p,#primary li,#primary blockquote,#primary figcaption,.site-main h1,.site-main h2,.site-main h3,.site-main h4,.site-main h5,.site-main h6,.site-main p,.site-main li,.site-main blockquote,.site-main figcaption,.site-content h1,.site-content h2,.site-content h3,.site-content h4,.site-content h5,.site-content h6,.site-content p,.site-content li,.site-content blockquote,.site-content figcaption,article h1,article h2,article h3,article h4,article h5,article h6,article p,article li,article blockquote,article figcaption";
 		var inlineImageCandidateSelector = "main img,#primary img,.site-main img,.site-content img,article img";
 		var mediaFrame = null;
 		var launcherGapPx = 8;
+		var lastPerfScore = null;
 
 		function escapeHtml(text) {
 			var div = document.createElement("div");
@@ -833,6 +866,33 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function statusClass(status) {
 			return status === "ok" ? "ok" : (status === "error" ? "error" : "warn");
+		}
+		function perfGrade(score) {
+			var s = parseInt(String(score || "0"), 10);
+			if (isNaN(s)) s = 0;
+			if (s >= 92) return "A";
+			if (s >= 82) return "B";
+			if (s >= 70) return "C";
+			if (s >= 58) return "D";
+			return "F";
+		}
+		function renderPerfChip(score) {
+			if (!$seoPerfChip.length) return;
+			var s = parseInt(String(score || "0"), 10);
+			if (isNaN(s)) s = 0;
+			var grade = perfGrade(s);
+			var delta = (lastPerfScore === null || !isFinite(lastPerfScore)) ? null : (s - lastPerfScore);
+			var trend = "";
+			if (delta !== null) {
+				if (delta > 0) trend = " ▲+" + delta;
+				else if (delta < 0) trend = " ▼" + delta;
+				else trend = " •0";
+			}
+			$seoPerfChip.removeClass("lf-ai-seo__perf-chip--pending lf-ai-seo__perf-chip--good lf-ai-seo__perf-chip--warn lf-ai-seo__perf-chip--bad");
+			var cls = s >= 85 ? "good" : (s >= 70 ? "warn" : "bad");
+			$seoPerfChip.addClass("lf-ai-seo__perf-chip--" + cls);
+			$seoPerfChip.text("Perf " + grade + " (" + s + ")" + trend);
+			lastPerfScore = s;
 		}
 		function renderSeoSnapshot() {
 			if (!$seo.length || !$seoScore.length || !$seoList.length) return;
@@ -1000,6 +1060,10 @@ function lf_ai_assistant_widget_js(): string {
 			perfScore = Math.max(0, Math.min(100, perfScore));
 
 			$seoScore.html("Overall: <strong>Analyzing...</strong>");
+			if ($seoPerfChip.length) {
+				$seoPerfChip.removeClass("lf-ai-seo__perf-chip--good lf-ai-seo__perf-chip--warn lf-ai-seo__perf-chip--bad").addClass("lf-ai-seo__perf-chip--pending");
+				$seoPerfChip.text("Perf " + perfGrade(perfScore) + " (" + perfScore + ")");
+			}
 			if ($seoOverallFill.length) $seoOverallFill.css("width", "0%");
 			if ($seoSubSeo.length) $seoSubSeo.text(seoScoreClient + "/100");
 			if ($seoSubConv.length) $seoSubConv.text(convScore + "/100");
@@ -1028,6 +1092,7 @@ function lf_ai_assistant_widget_js(): string {
 				if ($seoSubSeo.length) $seoSubSeo.text(seoScore + "/100");
 				if ($seoSubConv.length) $seoSubConv.text(convScore + "/100");
 				if ($seoSubPerf.length) $seoSubPerf.text(perfScore + "/100");
+				renderPerfChip(perfScore);
 
 				var rows = [
 					{ status: (!!title && titleLen >= 35 && titleLen <= 65) ? "ok" : "warn", label: "Title length: " + titleLen + " chars (35-65)." },
@@ -1135,6 +1200,7 @@ function lf_ai_assistant_widget_js(): string {
 				var overallFallback = Math.round((seoScoreClient * 0.58) + (convScore * 0.25) + (perfScore * 0.17));
 				overallFallback = Math.max(0, Math.min(100, overallFallback));
 				$seoScore.html("Overall: <strong>" + overallFallback + "/100</strong>");
+				renderPerfChip(perfScore);
 				if ($seoOverallFill.length) $seoOverallFill.css("width", overallFallback + "%");
 				$seoList.html("<div class=\"lf-ai-seo__item lf-ai-seo__item--warn\"><span class=\"lf-ai-seo__item-dot\">▲</span><span>Backend SEO snapshot unavailable right now. Showing client-side diagnostics only.</span></div>");
 				if ($seoTasks.length) $seoTasks.html("<div class=\"lf-ai-seo__task\"><span class=\"lf-ai-seo__task-priority lf-ai-seo__task-priority--med\">MED</span><span>Reconnect backend SEO snapshot for full guidance; continue fixing on-page warnings first.</span></div>");
@@ -1224,7 +1290,7 @@ function lf_ai_assistant_widget_js(): string {
 				node.removeAttribute("data-lf-inline-image");
 				node.removeAttribute("data-lf-inline-image-selector");
 			});
-			Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-controls,[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
+			Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-controls,[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
 				if (node && node.parentNode) node.parentNode.removeChild(node);
 			});
 			Array.prototype.slice.call(document.querySelectorAll(".lf-service-details__text")).forEach(function(node){
@@ -1279,6 +1345,11 @@ function lf_ai_assistant_widget_js(): string {
 			if (mediaPickerEl) {
 				mediaPickerEl.hidden = true;
 			}
+			if (faqPickerEl) {
+				faqPickerEl.hidden = true;
+			}
+			faqPickerWrap = null;
+			faqPickerList = null;
 		}
 		function closeIconPicker() {
 			if (!iconPickerEl) return;
@@ -2938,35 +3009,191 @@ function lf_ai_assistant_widget_js(): string {
 				}
 			});
 		}
-		function persistFaqOrder(list) {
-			if (!list) return;
-			var ids = Array.prototype.slice.call(list.querySelectorAll(".lf-block-faq-accordion__item[data-lf-faq-id]")).map(function(node){
+		function faqIdsFromList(list) {
+			if (!list) return [];
+			return Array.prototype.slice.call(list.querySelectorAll(".lf-block-faq-accordion__item[data-lf-faq-id]")).map(function(node){
 				return parseInt(String(node.getAttribute("data-lf-faq-id") || "0"), 10);
 			}).filter(function(id){ return id > 0; });
-			if (!ids.length) return;
-			setStatus("Saving FAQ order...", false);
+		}
+		function persistFaqSelection(list, savingLabel) {
+			if (!list) return;
+			var wrap = list.closest("[data-lf-section-wrap=\"1\"]");
+			if (!wrap) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+			if (!sectionId || sectionType !== "faq_accordion") return;
+			var ids = faqIdsFromList(list);
+			setStatus(savingLabel || "Saving selected FAQs...", false);
 			$.post(lfAiFloating.ajax_url, {
-				action: "lf_ai_reorder_faq_items",
+				action: "lf_ai_update_section_lines",
 				nonce: lfAiFloating.nonce,
-				faq_ids: JSON.stringify(ids)
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_id: sectionId,
+				field_key: "faq_selected_ids",
+				items: JSON.stringify(ids.map(function(id){ return String(id); }))
 			}).done(function(res){
 				if (res && res.success) {
-					setStatus((res.data && res.data.message) ? res.data.message : "FAQ order saved.", false);
+					setStatus((res.data && res.data.message) ? res.data.message : "Selected FAQs saved.", false);
 				} else {
-					setStatus((res && res.data && res.data.message) ? res.data.message : "FAQ reorder failed.", true);
+					setStatus((res && res.data && res.data.message) ? res.data.message : "FAQ selection save failed.", true);
 				}
 			}).fail(function(xhr){
-				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "FAQ reorder failed.";
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "FAQ selection save failed.";
 				setStatus(msg, true);
+			});
+		}
+		function closeFaqPicker() {
+			if (!faqPickerEl) return;
+			faqPickerEl.hidden = true;
+			faqPickerWrap = null;
+			faqPickerList = null;
+			try { if (faqPickerSearchEl) faqPickerSearchEl.value = ""; } catch (e) {}
+		}
+		function addFaqItemToList(list, row) {
+			if (!list || !row) return;
+			var faqId = parseInt(String(row.id || "0"), 10);
+			if (!faqId) return;
+			var exists = list.querySelector(".lf-block-faq-accordion__item[data-lf-faq-id=\"" + faqId + "\"]");
+			if (exists) return;
+			var item = document.createElement("details");
+			item.className = "lf-block-faq-accordion__item";
+			item.setAttribute("data-lf-faq-id", String(faqId));
+			var q = document.createElement("summary");
+			q.className = "lf-block-faq-accordion__question";
+			q.textContent = String(row.question || "FAQ");
+			var a = document.createElement("div");
+			a.className = "lf-block-faq-accordion__answer";
+			a.textContent = String(row.answer || "");
+			item.appendChild(q);
+			item.appendChild(a);
+			list.appendChild(item);
+			buildFaqReorderControls();
+			persistFaqSelection(list, "Saving selected FAQs...");
+		}
+		function renderFaqPickerList(query) {
+			if (!faqPickerListEl) return;
+			var rows = Array.isArray(faqLibraryCache) ? faqLibraryCache : [];
+			var q = String(query || "").trim().toLowerCase();
+			var selectedMap = {};
+			if (faqPickerList) {
+				faqIdsFromList(faqPickerList).forEach(function(id){
+					selectedMap[String(id)] = true;
+				});
+			}
+			faqPickerListEl.innerHTML = "";
+			var filtered = rows.filter(function(row){
+				var text = (String(row.question || "") + " " + String(row.answer || "")).toLowerCase();
+				return !q || text.indexOf(q) !== -1;
+			});
+			if (!filtered.length) {
+				var empty = document.createElement("div");
+				empty.className = "lf-ai-faq-picker__empty";
+				empty.textContent = "No FAQs match this search.";
+				faqPickerListEl.appendChild(empty);
+				return;
+			}
+			filtered.forEach(function(row){
+				var item = document.createElement("div");
+				item.className = "lf-ai-faq-picker__item";
+				var meta = document.createElement("div");
+				meta.className = "lf-ai-faq-picker__meta";
+				var title = document.createElement("b");
+				title.textContent = String(row.question || "FAQ");
+				var preview = document.createElement("small");
+				var previewText = String(row.answer || "").replace(/\s+/g, " ").trim();
+				preview.textContent = previewText.length > 140 ? (previewText.slice(0, 137) + "...") : previewText;
+				meta.appendChild(title);
+				meta.appendChild(preview);
+				var addBtn = document.createElement("button");
+				addBtn.type = "button";
+				addBtn.className = "lf-ai-faq-picker__add lf-ai-inline-editor-ignore";
+				var selected = !!selectedMap[String(row.id || "")];
+				addBtn.textContent = selected ? "Added" : "Add";
+				addBtn.disabled = selected;
+				addBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					if (!faqPickerList) return;
+					addFaqItemToList(faqPickerList, row);
+					renderFaqPickerList(faqPickerSearchEl ? faqPickerSearchEl.value : "");
+				});
+				item.appendChild(meta);
+				item.appendChild(addBtn);
+				faqPickerListEl.appendChild(item);
+			});
+		}
+		function loadFaqLibrary(done) {
+			if (Array.isArray(faqLibraryCache)) {
+				if (typeof done === "function") done(faqLibraryCache);
+				return;
+			}
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_faq_library",
+				nonce: lfAiFloating.nonce
+			}).done(function(res){
+				faqLibraryCache = (res && res.success && res.data && Array.isArray(res.data.items)) ? res.data.items : [];
+				if (typeof done === "function") done(faqLibraryCache);
+			}).fail(function(){
+				faqLibraryCache = [];
+				setStatus("FAQ library unavailable right now.", true);
+				if (typeof done === "function") done(faqLibraryCache);
+			});
+		}
+		function ensureFaqPicker() {
+			if (faqPickerEl) return faqPickerEl;
+			faqPickerEl = document.createElement("div");
+			faqPickerEl.className = "lf-ai-faq-picker lf-ai-inline-editor-ignore";
+			faqPickerEl.hidden = true;
+			faqPickerEl.innerHTML = "<div class=\"lf-ai-faq-picker__card\"><div class=\"lf-ai-faq-picker__head\"><div class=\"lf-ai-faq-picker__title\">Select FAQs from library</div><button type=\"button\" class=\"lf-ai-faq-picker__close\" data-lf-ai-faq-picker-close aria-label=\"Close FAQ picker\">×</button></div><input type=\"text\" class=\"lf-ai-faq-picker__search\" data-lf-ai-faq-picker-search placeholder=\"Search FAQs...\" /><div class=\"lf-ai-faq-picker__list\" data-lf-ai-faq-picker-list></div></div>";
+			faqPickerSearchEl = faqPickerEl.querySelector("[data-lf-ai-faq-picker-search]");
+			faqPickerListEl = faqPickerEl.querySelector("[data-lf-ai-faq-picker-list]");
+			var closeBtn = faqPickerEl.querySelector("[data-lf-ai-faq-picker-close]");
+			if (closeBtn) {
+				closeBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					closeFaqPicker();
+				});
+			}
+			if (faqPickerSearchEl) {
+				faqPickerSearchEl.addEventListener("input", function(){
+					renderFaqPickerList(faqPickerSearchEl.value);
+				});
+			}
+			faqPickerEl.addEventListener("click", function(e){
+				if (e.target === faqPickerEl) closeFaqPicker();
+			});
+			document.body.appendChild(faqPickerEl);
+			return faqPickerEl;
+		}
+		function openFaqPicker(wrap, list) {
+			if (!wrap || !list) return;
+			ensureFaqPicker();
+			faqPickerWrap = wrap;
+			faqPickerList = list;
+			faqPickerEl.hidden = false;
+			if (faqPickerSearchEl) faqPickerSearchEl.value = "";
+			loadFaqLibrary(function(){
+				renderFaqPickerList("");
+				try { if (faqPickerSearchEl) faqPickerSearchEl.focus(); } catch (e) {}
 			});
 		}
 		function buildFaqReorderControls() {
 			Array.prototype.slice.call(document.querySelectorAll(".lf-block-faq-accordion__list")).forEach(function(list){
+				var wrap = list.closest("[data-lf-section-wrap=\"1\"]");
+				var sectionType = String(wrap && wrap.getAttribute ? (wrap.getAttribute("data-lf-section-type") || "") : "");
+				if (!wrap || sectionType !== "faq_accordion") return;
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-faq-controls=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
 				Array.prototype.slice.call(list.querySelectorAll(".lf-block-faq-accordion__item,.lf-block-faq-accordion__question,.lf-block-faq-accordion__answer")).forEach(function(node){
 					node.removeAttribute("data-lf-inline-editable");
 					node.removeAttribute("data-lf-inline-selector");
 				});
 				Array.prototype.slice.call(list.querySelectorAll(".lf-block-faq-accordion__item[data-lf-faq-id]")).forEach(function(item){
+					Array.prototype.slice.call(item.querySelectorAll("[data-lf-ai-list-remove=\"1\"]")).forEach(function(node){
+						if (node && node.parentNode) node.parentNode.removeChild(node);
+					});
 					item.setAttribute("draggable", "true");
 					item.ondragstart = function(e){
 						activeFaqDragEl = item;
@@ -2990,13 +3217,34 @@ function lf_ai_assistant_widget_js(): string {
 						} else {
 							item.parentNode.insertBefore(activeFaqDragEl, item);
 						}
-						persistFaqOrder(list);
+						persistFaqSelection(list, "Saving selected FAQs...");
 					};
 					item.ondragend = function(){
 						item.classList.remove("is-dragging");
 						activeFaqDragEl = null;
 					};
+					var removeBtn = createGenericRemoveButton(function(){
+						if (item && item.parentNode) item.parentNode.removeChild(item);
+						persistFaqSelection(list, "Saving selected FAQs...");
+					});
+					item.appendChild(removeBtn);
 				});
+				var controls = document.createElement("div");
+				controls.className = "lf-ai-faq-controls lf-ai-inline-editor-ignore";
+				controls.setAttribute("data-lf-ai-faq-controls", "1");
+				var addBtn = document.createElement("button");
+				addBtn.type = "button";
+				addBtn.className = "lf-ai-faq-add lf-ai-inline-editor-ignore";
+				addBtn.textContent = "+ Select FAQs";
+				addBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					openFaqPicker(wrap, list);
+				});
+				controls.appendChild(addBtn);
+				if (list.parentNode) {
+					list.parentNode.insertBefore(controls, list.nextSibling);
+				}
 			});
 		}
 		function trustLayoutFromWrap(wrap) {

@@ -533,6 +533,7 @@ add_action('wp_ajax_lf_ai_update_hero_pills', 'lf_ai_ajax_update_hero_pills');
 add_action('wp_ajax_lf_ai_update_section_cta', 'lf_ai_ajax_update_section_cta');
 add_action('wp_ajax_lf_ai_update_section_media', 'lf_ai_ajax_update_section_media');
 add_action('wp_ajax_lf_ai_update_section_lines', 'lf_ai_ajax_update_section_lines');
+add_action('wp_ajax_lf_ai_faq_library', 'lf_ai_ajax_faq_library');
 add_action('wp_ajax_lf_ai_reorder_faq_items', 'lf_ai_ajax_reorder_faq_items');
 add_action('wp_ajax_lf_ai_set_trust_layout', 'lf_ai_ajax_set_trust_layout');
 add_action('wp_ajax_lf_ai_toggle_section_visibility', 'lf_ai_ajax_toggle_section_visibility');
@@ -1645,6 +1646,7 @@ function lf_ai_allowed_line_fields_for_section_type(string $section_type): array
 		'trust_bar' => ['trust_badges'],
 		'benefits' => ['benefits_icon_overrides'],
 		'process' => ['process_steps'],
+		'faq_accordion' => ['faq_selected_ids'],
 		'service_details' => ['service_details_checklist'],
 		'content_image' => ['service_details_checklist'],
 		'content_image_a' => ['service_details_checklist'],
@@ -1653,6 +1655,48 @@ function lf_ai_allowed_line_fields_for_section_type(string $section_type): array
 		'content_image_c' => ['service_details_checklist'],
 	];
 	return $map[$type] ?? [];
+}
+
+function lf_ai_ajax_faq_library(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$search = isset($_POST['search']) ? sanitize_text_field(wp_unslash($_POST['search'])) : '';
+	$query_args = [
+		'post_type' => 'lf_faq',
+		'post_status' => 'publish',
+		'posts_per_page' => 200,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+		'no_found_rows' => true,
+	];
+	if ($search !== '') {
+		$query_args['s'] = $search;
+	}
+	$query = new WP_Query($query_args);
+	$rows = [];
+	while ($query->have_posts()) {
+		$query->the_post();
+		$faq_id = (int) get_the_ID();
+		$question = function_exists('get_field') ? (string) get_field('lf_faq_question', $faq_id) : '';
+		$answer = function_exists('get_field') ? (string) get_field('lf_faq_answer', $faq_id) : '';
+		if ($question === '') {
+			$question = (string) get_the_title($faq_id);
+		}
+		if ($answer === '') {
+			$answer = trim((string) get_post_field('post_content', $faq_id));
+		}
+		$rows[] = [
+			'id' => $faq_id,
+			'question' => $question,
+			'answer' => wp_strip_all_tags($answer),
+		];
+	}
+	wp_reset_postdata();
+	wp_send_json_success([
+		'items' => $rows,
+	]);
 }
 
 function lf_ai_ajax_update_section_lines(): void {
