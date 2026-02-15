@@ -144,8 +144,8 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float__cols { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 		.lf-ai-float__col { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:6px; }
 		.lf-ai-float__col b { display:block; margin-bottom:4px; color:#334155; }
-		.lf-ai-float__confirm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.4); z-index:5; padding:12px; }
-		.lf-ai-float__confirm[hidden] { display:none !important; }
+		.lf-ai-float__confirm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.4); z-index:5; padding:12px; pointer-events:auto; }
+		.lf-ai-float__confirm[hidden] { display:none !important; pointer-events:none !important; }
 		.lf-ai-float__confirm-card { width:100%; max-width:360px; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 10px 34px rgba(15,23,42,.28); padding:14px; }
 		.lf-ai-float__confirm-text { margin:0 0 10px; color:#1e293b; font-size:13px; line-height:1.45; }
 		.lf-ai-float__confirm-actions { display:flex; gap:8px; justify-content:flex-end; }
@@ -287,7 +287,8 @@ function lf_ai_assistant_widget_js(): string {
 				nonce: lfAiFloating.nonce,
 				context_type: lfAiFloating.context_type || "homepage",
 				context_id: lfAiFloating.context_id || "homepage",
-				prompt_snippet: promptSnippet
+				prompt_snippet: promptSnippet,
+				proposed: JSON.stringify(proposed || {})
 			}).done(function(res){
 				if (res && res.success && res.data && res.data.reload) {
 					window.location.reload();

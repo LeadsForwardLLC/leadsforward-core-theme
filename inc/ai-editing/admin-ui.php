@@ -192,12 +192,30 @@ function lf_ai_ajax_apply(): void {
 	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
 	$context_id   = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
 	$prompt_snippet = isset($_POST['prompt_snippet']) ? sanitize_textarea_field(wp_unslash($_POST['prompt_snippet'])) : '';
+	$submitted_raw = isset($_POST['proposed']) ? wp_unslash((string) $_POST['proposed']) : '';
+	$submitted_proposed = json_decode($submitted_raw, true);
+	if (!is_array($submitted_proposed)) {
+		$submitted_proposed = [];
+	}
 	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
 	$stored = lf_ai_get_stored_proposal($context_type, $context_id_use);
-	if (!$stored || empty($stored['proposed'])) {
+	$proposed = [];
+	if ($stored && !empty($stored['proposed']) && is_array($stored['proposed'])) {
+		$proposed = $stored['proposed'];
+	} elseif (!empty($submitted_proposed)) {
+		// Fallback: allow apply from client payload if transient key was lost.
+		$editable = lf_get_ai_editable_fields($context_id_use);
+		foreach ($submitted_proposed as $key => $value) {
+			if (!is_string($key) || !lf_is_field_ai_editable($key) || !isset($editable[$key])) {
+				continue;
+			}
+			$proposed[$key] = is_string($value) ? $value : (string) $value;
+		}
+	}
+	if (empty($proposed)) {
 		wp_send_json_error(['message' => __('No pending suggestions. Generate again.', 'leadsforward-core')]);
 	}
-	$result = lf_ai_apply_proposal($context_type, $context_id_use, $stored['proposed'], $prompt_snippet);
+	$result = lf_ai_apply_proposal($context_type, $context_id_use, $proposed, $prompt_snippet);
 	if (!$result['success']) {
 		wp_send_json_error(['message' => __('Apply failed.', 'leadsforward-core')]);
 	}
