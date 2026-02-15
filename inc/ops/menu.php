@@ -16,6 +16,7 @@ if (!defined('ABSPATH')) {
 
 add_action('admin_menu', 'lf_ops_register_menu', 10);
 add_action('admin_menu', 'lf_ops_remove_theme_options_menu', 999);
+add_action('admin_menu', 'lf_ops_reorder_submenus', 1000);
 add_action('admin_init', 'lf_ops_handle_global_settings_save');
 add_action('admin_enqueue_scripts', 'lf_ops_settings_assets');
 add_action('admin_enqueue_scripts', 'lf_ops_brand_admin_assets');
@@ -159,6 +160,38 @@ function lf_ops_brand_admin_assets(string $hook): void {
 		[],
 		LF_THEME_VERSION
 	);
+}
+
+function lf_ops_reorder_submenus(): void {
+	global $submenu;
+	if (!isset($submenu['lf-ops']) || !is_array($submenu['lf-ops'])) {
+		return;
+	}
+	$preferred_order = [
+		'lf-ops',
+		'lf-global',
+		'lf-homepage-settings',
+		'lf-quote-builder',
+		'lf-contact-form',
+		'lf-seo',
+		'lf-site-health',
+		'lf-ops-bulk',
+		'lf-ops-audit',
+		'lf-ops-config',
+	];
+	$rank = array_flip($preferred_order);
+	$items = $submenu['lf-ops'];
+	usort($items, static function ($a, $b) use ($rank): int {
+		$slug_a = (string) ($a[2] ?? '');
+		$slug_b = (string) ($b[2] ?? '');
+		$ra = $rank[$slug_a] ?? 5000;
+		$rb = $rank[$slug_b] ?? 5000;
+		if ($ra === $rb) {
+			return 0;
+		}
+		return $ra < $rb ? -1 : 1;
+	});
+	$submenu['lf-ops'] = $items;
 }
 
 function lf_admin_quality_snapshot(int $limit = 400): array {
