@@ -110,15 +110,17 @@ lf_load_inc('niches/reset-dev.php');
 // Safety: CPT protect, admin notices, ACF-off fallbacks.
 lf_load_inc('guardrails.php');
 
-// AI-assisted editing (admin only): editable vs locked rules, prompt guardrails, apply/rollback.
+// AI assistant core + ajax handlers are loaded globally so admins can use the
+// floating assistant on both admin screens and frontend pages.
+lf_load_inc('ai-editing/field-rules.php');
+lf_load_inc('ai-editing/prompt-builder.php');
+lf_load_inc('ai-editing/logging.php');
+lf_load_inc('ai-editing/handler.php');
+lf_load_inc('ai-editing/provider-openai.php');
+lf_load_inc('ai-editing/admin-ui.php');
+lf_load_inc('ai-assistant.php');
+
 if (is_admin()) {
-	lf_load_inc('ai-editing/field-rules.php');
-	lf_load_inc('ai-editing/prompt-builder.php');
-	lf_load_inc('ai-editing/logging.php');
-	lf_load_inc('ai-editing/handler.php');
-	lf_load_inc('ai-editing/provider-openai.php');
-	lf_load_inc('ai-editing/admin-ui.php');
-	lf_load_inc('ai-assistant.php');
 	// Homepage controller admin UI (must load before ops menu).
 	lf_load_inc('homepage-admin.php');
 	// Bulk-safe ops: export/import config, bulk actions, audit log.
