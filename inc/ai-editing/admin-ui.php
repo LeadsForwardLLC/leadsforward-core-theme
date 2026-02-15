@@ -482,6 +482,7 @@ add_action('wp_ajax_lf_ai_reorder_sections', 'lf_ai_ajax_reorder_sections');
 add_action('wp_ajax_lf_ai_toggle_section_columns', 'lf_ai_ajax_toggle_section_columns');
 add_action('wp_ajax_lf_ai_toggle_section_visibility', 'lf_ai_ajax_toggle_section_visibility');
 add_action('wp_ajax_lf_ai_delete_section', 'lf_ai_ajax_delete_section');
+add_action('wp_ajax_lf_ai_duplicate_section', 'lf_ai_ajax_duplicate_section');
 
 function lf_ai_editing_meta_box(): void {
 	if (!current_user_can(LF_AI_CAP)) {
@@ -1199,6 +1200,85 @@ function lf_ai_ajax_delete_section(): void {
 	wp_send_json_success([
 		'message' => __('Section deleted. Use undo to restore.', 'leadsforward-core'),
 		'deleted' => true,
+		'log_id' => $log_id,
+	]);
+}
+
+function lf_ai_ajax_duplicate_section(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
+	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
+	$section_id = isset($_POST['section_id']) ? sanitize_text_field(wp_unslash($_POST['section_id'])) : '';
+	if ($context_type === '' || $context_id === '' || $section_id === '') {
+		wp_send_json_error(['message' => __('Invalid duplicate payload.', 'leadsforward-core')]);
+	}
+	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+		wp_send_json_error(['message' => __('Section duplication is currently available on page-builder pages/CPTs.', 'leadsforward-core')]);
+	}
+	$pid = (int) $context_id_use;
+	$post = get_post($pid);
+	if (!$post instanceof \WP_Post || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+		wp_send_json_error(['message' => __('Section settings are unavailable for this target.', 'leadsforward-core')]);
+	}
+	$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+	if ($pb_context === '') {
+		wp_send_json_error(['message' => __('This target does not support section duplication.', 'leadsforward-core')]);
+	}
+	$config = lf_pb_get_post_config($pid, $pb_context);
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	$order = is_array($config['order'] ?? null) ? $config['order'] : [];
+	$row = is_array($sections[$section_id] ?? null) ? $sections[$section_id] : [];
+	if (empty($row)) {
+		wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+	}
+	$type = sanitize_text_field((string) ($row['type'] ?? ''));
+	if ($type === '') {
+		wp_send_json_error(['message' => __('Unable to determine section type for duplication.', 'leadsforward-core')]);
+	}
+	$new_index = 1;
+	if (function_exists('lf_pb_instance_id')) {
+		do {
+			$new_index++;
+			$new_id = lf_pb_instance_id($type, $new_index);
+		} while (isset($sections[$new_id]));
+	} else {
+		$new_id = $type . '_copy_' . wp_generate_password(6, false, false);
+	}
+	$new_row = $row;
+	$new_row['enabled'] = true;
+	$new_row['deletable'] = true;
+	$sections[$new_id] = $new_row;
+	$old_order = $order;
+	$new_order = [];
+	foreach ($order as $id) {
+		$new_order[] = (string) $id;
+		if ((string) $id === $section_id) {
+			$new_order[] = $new_id;
+		}
+	}
+	if (!in_array($new_id, $new_order, true)) {
+		$new_order[] = $new_id;
+	}
+	$config['sections'] = $sections;
+	$config['order'] = $new_order;
+	update_post_meta($pid, LF_PB_META_KEY, $config);
+	$log_id = function_exists('lf_ai_log_action')
+		? lf_ai_log_action(
+			$context_type,
+			$context_id_use,
+			['__section_record::' . $new_id => [], '__section_order' => $old_order],
+			['__section_record::' . $new_id => $new_row, '__section_order' => $new_order],
+			'Inline section duplicate'
+		)
+		: '';
+	wp_send_json_success([
+		'message' => __('Section duplicated.', 'leadsforward-core'),
+		'new_section_id' => $new_id,
+		'section_type' => $type,
 		'log_id' => $log_id,
 	]);
 }

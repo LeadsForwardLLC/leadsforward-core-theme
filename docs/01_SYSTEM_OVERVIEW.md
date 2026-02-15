@@ -6,6 +6,7 @@ This system turns a single manifest (or Airtable project) into a fully generated
 - WordPress theme: stores inputs, builds blueprints, applies updates, persists jobs.
 - n8n orchestrator: generates research, runs page-level LLM calls, enforces determinism.
 - LLM: produces JSON updates for one blueprint at a time.
+- Frontend editor layer: always-on admin inline editing (text, images, section structure) with undo/redo logging.
 
 ## End-to-End Flow (Simplified)
 ```
@@ -25,3 +26,6 @@ Manifest/Airtable -> WP payload -> n8n orchestrator
 - Manifest: `lf_site_manifest`
 - Research document: `lf_site_research_document`
 - Jobs + progress: `lf_ai_job` CPT + `lf_ai_job_progress` meta
+- Frontend inline text overrides: context-scoped selector map (`__dom_override` log path)
+- Frontend inline image overrides: context-scoped selector map (`__img_override` log path)
+- Frontend section structure changes: section order/layout/enabled/record entries in AI log

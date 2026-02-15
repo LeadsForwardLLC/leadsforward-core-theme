@@ -34,3 +34,19 @@ Automation note:
 
 - The theme now auto-renames uploaded images, optimizes quality, and sets missing ALT text.
 - Descriptive naming still improves matching confidence, but manual naming is no longer required for baseline operation.
+
+## Frontend Editor Context
+
+The AI Assistant includes an always-on frontend editor for admins:
+
+- Inline text editing and inline image replacement.
+- Section-level structure controls (reorder, reverse columns, hide/show, delete, duplicate where supported).
+- Command palette (`Cmd/Ctrl + K`) and keyboard-first structural actions.
+- Context-aware section navigator rail with active section focus.
+
+All structural operations are persisted and undo/redo safe via the AI action log:
+
+- `__section_order`
+- `__section_layout::<section_id>`
+- `__section_enabled::<section_id>`
+- `__section_record::<section_id>`

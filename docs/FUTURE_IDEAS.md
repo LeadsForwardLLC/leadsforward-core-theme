@@ -19,6 +19,12 @@ Living backlog of high-upside product/system ideas for LeadsForward + JobCapture
 - **Offer Experiment Grid:** Continuously test guarantees, financing, urgency, and CTA framing with stop-loss rules.
 - **Cross-Account Learning Network:** Use anonymized benchmark patterns to pre-seed new launches with proven structures.
 
+## Frontend Editor Evolution
+- **Section Add from Command Palette:** Insert new sections inline without opening wp-admin builders.
+- **Timeline History Panel:** Visual per-page change timeline with jump-to-state navigation.
+- **Multi-Select Structural Edits:** Batch hide/show/move for selected section groups.
+- **Atomic Publish/Discard Layer:** Local draft session before persisting structural edits.
+
 ## Always-On Constraints
 - Security first: signed callbacks, replay protection, strict schema validation, least-privilege data handling.
 - Determinism first: no random writes to live content.

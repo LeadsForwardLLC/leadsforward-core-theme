@@ -371,9 +371,24 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-section-btn--danger { border-color:#fecaca; color:#b91c1c; }
 		[data-lf-section-wrap="1"].lf-ai-section-is-hidden { min-height:56px; background:rgba(131,72,249,.06); outline:2px dashed rgba(131,72,249,.35); outline-offset:3px; }
 		[data-lf-section-wrap="1"].lf-ai-section-is-hidden > :not(.lf-ai-section-controls) { display:none !important; }
+		[data-lf-section-wrap="1"].lf-ai-section-active { outline:2px solid #8348f9 !important; outline-offset:3px; box-shadow:0 0 0 4px rgba(131,72,249,.12); }
 		.lf-ai-column-draggable { cursor:ew-resize; transition:outline-color .15s ease; }
 		.lf-ai-column-draggable:hover { outline:2px dashed rgba(131,72,249,.3); outline-offset:3px; }
 		.lf-ai-column-draggable.is-dragging { outline:2px solid #8348f9 !important; outline-offset:3px; opacity:.85; }
+		.lf-ai-rail { position:fixed; left:12px; top:72px; z-index:99997; width:220px; max-height:calc(100vh - 94px); overflow:auto; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 12px 36px rgba(15,23,42,.18); padding:8px; }
+		.lf-ai-rail__title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#64748b; margin:0 0 6px; }
+		.lf-ai-rail__list { display:flex; flex-direction:column; gap:6px; }
+		.lf-ai-rail__item { border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; font-size:12px; cursor:pointer; color:#0f172a; background:#fff; }
+		.lf-ai-rail__item:hover { border-color:#c4b5fd; background:#faf7ff; }
+		.lf-ai-rail__item.is-active { border-color:#8348f9; background:#f5f0ff; }
+		.lf-ai-rail__item small { display:block; color:#64748b; margin-top:2px; }
+		.lf-ai-command { position:fixed; left:50%; top:16%; transform:translateX(-50%); z-index:100001; width:min(560px, calc(100vw - 26px)); background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); padding:10px; }
+		.lf-ai-command[hidden] { display:none !important; }
+		.lf-ai-command__input { width:100%; border:1px solid #d6c8fb; border-radius:8px; padding:10px; font-size:14px; }
+		.lf-ai-command__list { margin-top:8px; max-height:300px; overflow:auto; display:flex; flex-direction:column; gap:6px; }
+		.lf-ai-command__row { border:1px solid #e2e8f0; border-radius:8px; padding:8px; font-size:13px; cursor:pointer; }
+		.lf-ai-command__row:hover, .lf-ai-command__row.is-active { border-color:#8348f9; background:#f6f2ff; }
+		.lf-ai-command__hint { margin-top:8px; font-size:11px; color:#64748b; }
 		.lf-ai-float__confirm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.4); z-index:5; padding:12px; pointer-events:auto; }
 		.lf-ai-float__confirm[hidden] { display:none !important; pointer-events:none !important; }
 		.lf-ai-float__confirm-card { width:100%; max-width:360px; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 10px 34px rgba(15,23,42,.28); padding:14px; }
@@ -384,6 +399,7 @@ function lf_ai_assistant_widget_css(): string {
 			.lf-ai-float__toggle { width:100%; justify-content:center; }
 			.lf-ai-float__panel { width:100%; left:0; right:0; }
 			.lf-ai-float__mode { grid-template-columns:1fr; }
+			.lf-ai-rail { display:none; }
 		}
 	';
 }
@@ -446,6 +462,13 @@ function lf_ai_assistant_widget_js(): string {
 		var inlineIsSaving = false;
 		var activeDragSection = null;
 		var activeColumnDrag = null;
+		var selectedSectionWrap = null;
+		var commandPaletteEl = null;
+		var commandInputEl = null;
+		var commandListEl = null;
+		var commandRows = [];
+		var commandActiveIndex = 0;
+		var sectionRailEl = null;
 		var suppressInlineClickUntil = 0;
 		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption";
 		var inlineImageCandidateSelector = "main img";
@@ -684,6 +707,78 @@ function lf_ai_assistant_widget_js(): string {
 		function collectSectionWrappers() {
 			return Array.prototype.slice.call(document.querySelectorAll("[data-lf-section-wrap=\"1\"][data-lf-section-id]"));
 		}
+		function sectionLabelForWrap(wrap) {
+			if (!wrap) return "Section";
+			var heading = wrap.querySelector("h1,h2,h3,.lf-section__title,.lf-media-section__title");
+			var text = heading ? String(heading.textContent || "").trim() : "";
+			if (!text) {
+				text = String(wrap.getAttribute("data-lf-section-type") || "section");
+			}
+			return text.length > 42 ? (text.slice(0, 39) + "...") : text;
+		}
+		function setSelectedSection(wrap) {
+			collectSectionWrappers().forEach(function(node){
+				node.classList.remove("lf-ai-section-active");
+			});
+			selectedSectionWrap = wrap || null;
+			if (selectedSectionWrap) {
+				selectedSectionWrap.classList.add("lf-ai-section-active");
+			}
+			refreshSectionRail();
+		}
+		function ensureSectionRail() {
+			if (sectionRailEl) return sectionRailEl;
+			sectionRailEl = document.createElement("aside");
+			sectionRailEl.className = "lf-ai-rail lf-ai-inline-editor-ignore";
+			sectionRailEl.innerHTML = "<div class=\"lf-ai-rail__title\">Page Structure</div><div class=\"lf-ai-rail__list\" data-lf-ai-rail-list></div>";
+			document.body.appendChild(sectionRailEl);
+			return sectionRailEl;
+		}
+		function refreshSectionRail() {
+			var wraps = collectSectionWrappers();
+			if (!wraps.length) {
+				if (sectionRailEl && sectionRailEl.parentNode) {
+					sectionRailEl.parentNode.removeChild(sectionRailEl);
+				}
+				sectionRailEl = null;
+				return;
+			}
+			var rail = ensureSectionRail();
+			var list = rail.querySelector("[data-lf-ai-rail-list]");
+			if (!list) return;
+			list.innerHTML = "";
+			wraps.forEach(function(wrap){
+				var row = document.createElement("div");
+				var isHidden = String(wrap.getAttribute("data-lf-section-visible") || "1") === "0";
+				row.className = "lf-ai-rail__item" + (wrap === selectedSectionWrap ? " is-active" : "");
+				row.innerHTML = escapeHtml(sectionLabelForWrap(wrap)) + "<small>" + escapeHtml(String(wrap.getAttribute("data-lf-section-type") || "section")) + (isHidden ? " • hidden" : "") + "</small>";
+				row.addEventListener("click", function(){
+					setSelectedSection(wrap);
+					try { wrap.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {}
+				});
+				list.appendChild(row);
+			});
+		}
+		function moveSelectedSection(delta) {
+			if (!selectedSectionWrap || !delta) return;
+			var wraps = collectSectionWrappers();
+			var idx = wraps.indexOf(selectedSectionWrap);
+			if (idx < 0) return;
+			var targetIdx = idx + delta;
+			if (targetIdx < 0 || targetIdx >= wraps.length) return;
+			var target = wraps[targetIdx];
+			if (!target || !target.parentNode) return;
+			if (delta < 0) {
+				target.parentNode.insertBefore(selectedSectionWrap, target);
+			} else {
+				target.parentNode.insertBefore(selectedSectionWrap, target.nextSibling);
+			}
+			persistSectionOrder();
+			refreshSectionRail();
+		}
+		function sectionSupportsDuplicate() {
+			return activeContextType !== "homepage";
+		}
 		function sectionSupportsColumnSwap(sectionType) {
 			var type = String(sectionType || "");
 			return ["service_details", "content_image", "content_image_a", "image_content", "image_content_b", "content_image_c"].indexOf(type) !== -1;
@@ -764,6 +859,7 @@ function lf_ai_assistant_widget_js(): string {
 				if (res && res.success) {
 					applySectionVisibilityUi(wrap, !!(res.data && res.data.visible));
 					setStatus((res.data && res.data.message) ? res.data.message : "Section visibility updated.", false);
+					refreshSectionRail();
 				} else {
 					setStatus((res && res.data && res.data.message) ? res.data.message : "Section visibility update failed.", true);
 				}
@@ -785,13 +881,48 @@ function lf_ai_assistant_widget_js(): string {
 				section_id: sectionId
 			}).done(function(res){
 				if (res && res.success) {
+					if (selectedSectionWrap === wrap) {
+						selectedSectionWrap = null;
+					}
 					wrap.remove();
 					setStatus((res.data && res.data.message) ? res.data.message : "Section deleted. Use undo to restore.", false);
+					refreshSectionRail();
 				} else {
 					setStatus((res && res.data && res.data.message) ? res.data.message : "Section delete failed.", true);
 				}
 			}).fail(function(xhr){
 				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Section delete failed.";
+				setStatus(msg, true);
+			});
+		}
+		function persistSectionDuplicate(wrap) {
+			if (!wrap) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			if (!sectionId) return;
+			setStatus("Duplicating section...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_duplicate_section",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_id: sectionId
+			}).done(function(res){
+				if (res && res.success && res.data && res.data.new_section_id) {
+					var clone = wrap.cloneNode(true);
+					clone.classList.remove("is-dragging", "lf-ai-section-active");
+					clone.setAttribute("data-lf-section-id", String(res.data.new_section_id));
+					clone.removeAttribute("data-lf-section-visible");
+					wrap.parentNode.insertBefore(clone, wrap.nextSibling);
+					buildSectionTargets();
+					buildSectionControls();
+					buildSectionColumnSwapTargets();
+					setSelectedSection(clone);
+					setStatus((res.data && res.data.message) ? res.data.message : "Section duplicated.", false);
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Section duplicate failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Section duplicate failed.";
 				setStatus(msg, true);
 			});
 		}
@@ -815,6 +946,19 @@ function lf_ai_assistant_widget_js(): string {
 						persistSectionColumnSwap(wrap);
 					});
 					controls.appendChild(swapBtn);
+				}
+				if (sectionSupportsDuplicate()) {
+					var dupBtn = document.createElement("button");
+					dupBtn.type = "button";
+					dupBtn.className = "lf-ai-section-btn";
+					dupBtn.textContent = "Dup";
+					dupBtn.setAttribute("title", "Duplicate section");
+					dupBtn.addEventListener("click", function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						persistSectionDuplicate(wrap);
+					});
+					controls.appendChild(dupBtn);
 				}
 				var toggleBtn = document.createElement("button");
 				toggleBtn.type = "button";
@@ -843,7 +987,7 @@ function lf_ai_assistant_widget_js(): string {
 				});
 				controls.appendChild(deleteBtn);
 				wrap.appendChild(controls);
-				applySectionVisibilityUi(wrap, true);
+				applySectionVisibilityUi(wrap, String(wrap.getAttribute("data-lf-section-visible") || "1") !== "0");
 			});
 		}
 		function buildSectionColumnSwapTargets() {
@@ -942,6 +1086,13 @@ function lf_ai_assistant_widget_js(): string {
 		function buildSectionTargets() {
 			collectSectionWrappers().forEach(function(wrap){
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				wrap.onmousedown = function(e){
+					if (!e || !e.target) return;
+					var t = e.target.nodeType === 1 ? e.target : e.target.parentElement;
+					if (!t) return;
+					if ((t.closest && t.closest(".lf-ai-section-controls")) || (t.closest && t.closest(".lf-ai-float"))) return;
+					setSelectedSection(wrap);
+				};
 				wrap.setAttribute("draggable", "true");
 				wrap.ondragstart = function(e){
 					if (isDragBlockedTarget(e.target)) {
@@ -1257,6 +1408,119 @@ function lf_ai_assistant_widget_js(): string {
 				setStatus(msg, true);
 			});
 		}
+		function selectedSectionCanReverse() {
+			if (!selectedSectionWrap) return false;
+			return sectionSupportsColumnSwap(String(selectedSectionWrap.getAttribute("data-lf-section-type") || ""));
+		}
+		function selectedSectionToggleVisibility() {
+			if (!selectedSectionWrap) return;
+			var isVisible = String(selectedSectionWrap.getAttribute("data-lf-section-visible") || "1") !== "0";
+			persistSectionVisibility(selectedSectionWrap, !isVisible);
+		}
+		function selectedSectionDelete() {
+			if (!selectedSectionWrap) return;
+			var targetWrap = selectedSectionWrap;
+			openConfirm("Delete this section? You can undo after deleting.", "Delete Section", function(){
+				persistSectionDelete(targetWrap);
+			});
+		}
+		function selectedSectionReverseColumns() {
+			if (!selectedSectionWrap || !selectedSectionCanReverse()) return;
+			persistSectionColumnSwap(selectedSectionWrap);
+		}
+		function selectedSectionDuplicate() {
+			if (!selectedSectionWrap || !sectionSupportsDuplicate()) return;
+			persistSectionDuplicate(selectedSectionWrap);
+		}
+		function ensureCommandPalette() {
+			if (commandPaletteEl) return commandPaletteEl;
+			commandPaletteEl = document.createElement("div");
+			commandPaletteEl.className = "lf-ai-command lf-ai-inline-editor-ignore";
+			commandPaletteEl.hidden = true;
+			commandPaletteEl.innerHTML = "<input type=\"text\" class=\"lf-ai-command__input\" placeholder=\"Type a command...\" /><div class=\"lf-ai-command__list\"></div><div class=\"lf-ai-command__hint\">Enter to run • Esc to close • \u2318/\u2303+K to toggle</div>";
+			document.body.appendChild(commandPaletteEl);
+			commandInputEl = commandPaletteEl.querySelector(".lf-ai-command__input");
+			commandListEl = commandPaletteEl.querySelector(".lf-ai-command__list");
+			commandInputEl.addEventListener("input", refreshCommandPalette);
+			commandInputEl.addEventListener("keydown", function(e){
+				if (e.key === "ArrowDown") {
+					e.preventDefault();
+					commandActiveIndex = Math.min(commandRows.length - 1, commandActiveIndex + 1);
+					refreshCommandPalette();
+				} else if (e.key === "ArrowUp") {
+					e.preventDefault();
+					commandActiveIndex = Math.max(0, commandActiveIndex - 1);
+					refreshCommandPalette();
+				} else if (e.key === "Enter") {
+					e.preventDefault();
+					if (commandRows[commandActiveIndex] && typeof commandRows[commandActiveIndex].run === "function") {
+						commandRows[commandActiveIndex].run();
+						toggleCommandPalette(false);
+					}
+				} else if (e.key === "Escape") {
+					e.preventDefault();
+					toggleCommandPalette(false);
+				}
+			});
+			commandPaletteEl.addEventListener("click", function(e){
+				if (e.target === commandPaletteEl) {
+					toggleCommandPalette(false);
+				}
+			});
+			return commandPaletteEl;
+		}
+		function commandItems() {
+			var hasSel = !!selectedSectionWrap;
+			var visible = hasSel ? (String(selectedSectionWrap.getAttribute("data-lf-section-visible") || "1") !== "0") : true;
+			return [
+				{ label: "Focus AI prompt", enabled: true, run: function(){ setOpen(true); try { $prompt.trigger("focus"); } catch (e) {} } },
+				{ label: "Undo last action", enabled: true, run: runRollback },
+				{ label: "Redo last action", enabled: true, run: runRedo },
+				{ label: "Move selected section up", enabled: hasSel, run: function(){ moveSelectedSection(-1); } },
+				{ label: "Move selected section down", enabled: hasSel, run: function(){ moveSelectedSection(1); } },
+				{ label: visible ? "Hide selected section" : "Show selected section", enabled: hasSel, run: selectedSectionToggleVisibility },
+				{ label: "Delete selected section", enabled: hasSel, run: selectedSectionDelete },
+				{ label: "Duplicate selected section", enabled: hasSel && sectionSupportsDuplicate(), run: selectedSectionDuplicate },
+				{ label: "Reverse selected columns", enabled: hasSel && selectedSectionCanReverse(), run: selectedSectionReverseColumns }
+			];
+		}
+		function refreshCommandPalette() {
+			if (!commandPaletteEl || !commandListEl || commandPaletteEl.hidden) return;
+			var q = String(commandInputEl && commandInputEl.value ? commandInputEl.value : "").trim().toLowerCase();
+			commandRows = commandItems().filter(function(item){
+				if (!item.enabled) return false;
+				if (!q) return true;
+				return String(item.label || "").toLowerCase().indexOf(q) !== -1;
+			});
+			if (commandActiveIndex >= commandRows.length) {
+				commandActiveIndex = Math.max(0, commandRows.length - 1);
+			}
+			commandListEl.innerHTML = "";
+			commandRows.forEach(function(item, idx){
+				var row = document.createElement("div");
+				row.className = "lf-ai-command__row" + (idx === commandActiveIndex ? " is-active" : "");
+				row.textContent = String(item.label || "");
+				row.addEventListener("mouseenter", function(){
+					commandActiveIndex = idx;
+					refreshCommandPalette();
+				});
+				row.addEventListener("click", function(){
+					item.run();
+					toggleCommandPalette(false);
+				});
+				commandListEl.appendChild(row);
+			});
+		}
+		function toggleCommandPalette(open) {
+			ensureCommandPalette();
+			commandPaletteEl.hidden = !open;
+			if (open) {
+				commandActiveIndex = 0;
+				commandInputEl.value = "";
+				refreshCommandPalette();
+				try { commandInputEl.focus(); } catch (e) {}
+			}
+		}
 
 		$toggle.on("click", function(){ setConfirmOpen(false); setOpen($panel.prop("hidden")); });
 		$root.find("[data-lf-ai-close],[data-lf-ai-minimize]").on("click", function(){ setConfirmOpen(false); setOpen(false); });
@@ -1565,6 +1829,15 @@ function lf_ai_assistant_widget_js(): string {
 			}
 		});
 		$(document).on("keydown", function(e){
+			var target = e.target;
+			var targetTag = target && target.tagName ? String(target.tagName).toLowerCase() : "";
+			var isTypingTarget = !!(target && (target.isContentEditable || targetTag === "input" || targetTag === "textarea" || targetTag === "select"));
+			if ((e.metaKey || e.ctrlKey) && String(e.key || "").toLowerCase() === "k") {
+				e.preventDefault();
+				ensureCommandPalette();
+				toggleCommandPalette(commandPaletteEl.hidden);
+				return;
+			}
 			if (inlineActiveEl) {
 				if (e.key === "Escape" || e.keyCode === 27) {
 					e.preventDefault();
@@ -1577,8 +1850,41 @@ function lf_ai_assistant_widget_js(): string {
 					return;
 				}
 			}
+			if (!isTypingTarget && selectedSectionWrap && $confirm.prop("hidden") && (!commandPaletteEl || commandPaletteEl.hidden)) {
+				if ((e.altKey || e.metaKey) && e.key === "ArrowUp") {
+					e.preventDefault();
+					moveSelectedSection(-1);
+					return;
+				}
+				if ((e.altKey || e.metaKey) && e.key === "ArrowDown") {
+					e.preventDefault();
+					moveSelectedSection(1);
+					return;
+				}
+				if (String(e.key || "").toLowerCase() === "d") {
+					e.preventDefault();
+					selectedSectionDuplicate();
+					return;
+				}
+				if (String(e.key || "").toLowerCase() === "h") {
+					e.preventDefault();
+					selectedSectionToggleVisibility();
+					return;
+				}
+				if (e.key === "Backspace" || e.key === "Delete") {
+					e.preventDefault();
+					selectedSectionDelete();
+					return;
+				}
+			}
 			if ((e.key === "Escape" || e.keyCode === 27) && !$confirm.prop("hidden")) {
+				pendingConfirmAction = null;
+				$confirmText.text(defaultConfirmText);
+				$confirmYes.text(defaultConfirmYesText);
 				setConfirmOpen(false);
+			}
+			if ((e.key === "Escape" || e.keyCode === 27) && commandPaletteEl && !commandPaletteEl.hidden) {
+				toggleCommandPalette(false);
 			}
 		});
 
@@ -1596,7 +1902,12 @@ function lf_ai_assistant_widget_js(): string {
 		buildSectionTargets();
 		buildSectionControls();
 		buildSectionColumnSwapTargets();
-		setStatus("Click to edit text/images, drag sections to reorder, reverse columns, hide/show, or delete.", false);
+		refreshSectionRail();
+		var firstWrap = collectSectionWrappers()[0] || null;
+		if (firstWrap) {
+			setSelectedSection(firstWrap);
+		}
+		setStatus("Click to edit text/images, drag sections to reorder, reverse columns, hide/show, duplicate, or delete.", false);
 	})(jQuery);';
 }
 
