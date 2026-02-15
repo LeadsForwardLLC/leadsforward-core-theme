@@ -769,6 +769,44 @@ function lf_image_intelligence_maybe_set_alt_text(int $attachment_id, array $con
 	}
 }
 
+function lf_image_intelligence_clean_media_text(string $text): string {
+	$text = wp_strip_all_tags($text);
+	$text = preg_replace('/\s+/', ' ', trim($text));
+	if ($text === '') {
+		return '';
+	}
+	// Remove machine-sounding SEO jargon from media metadata.
+	$patterns = [
+		'/\boptimized local seo asset\b/i',
+		'/\boptimized for seo\b/i',
+		'/\bfor section distribution\b/i',
+		'/\bfeatured imagery\b/i',
+		'/\bsection distribution\b/i',
+	];
+	foreach ($patterns as $pattern) {
+		$text = preg_replace($pattern, '', $text);
+	}
+	$text = preg_replace('/\s+/', ' ', trim((string) $text));
+	if ($text === '') {
+		return '';
+	}
+	// Collapse accidental adjacent duplicate words (e.g. "Boston Boston").
+	$parts = preg_split('/\s+/', $text) ?: [];
+	$deduped = [];
+	$prev = '';
+	foreach ($parts as $part) {
+		$normalized = strtolower(trim($part, " \t\n\r\0\x0B.,;:!?"));
+		if ($normalized !== '' && $normalized === $prev) {
+			continue;
+		}
+		$deduped[] = $part;
+		$prev = $normalized;
+	}
+	$text = trim(implode(' ', $deduped));
+	$text = preg_replace('/\s+([.,;:!?])/', '$1', $text);
+	return trim((string) $text);
+}
+
 function lf_image_intelligence_finalize_uploaded_attachment(int $attachment_id): void {
 	$attachment_id = (int) $attachment_id;
 	if ($attachment_id <= 0) {
@@ -795,12 +833,18 @@ function lf_image_intelligence_finalize_uploaded_attachment(int $attachment_id):
 		$business = trim((string) get_bloginfo('name'));
 		$city = trim((string) get_option('lf_homepage_city', ''));
 		$caption = $city !== ''
-			? sprintf('%s serving %s', $title, $city)
-			: sprintf('%s by %s', $title, $business !== '' ? $business : get_bloginfo('name'));
-		$description = sprintf(
-			'%s optimized local SEO asset for section distribution and featured imagery.',
-			$caption
-		);
+			? sprintf('%s in %s', $title, $city)
+			: $title;
+		$description_parts = [sprintf('Photo of %s', $title)];
+		if ($city !== '') {
+			$description_parts[] = sprintf('in %s', $city);
+		}
+		if ($business !== '') {
+			$description_parts[] = sprintf('for %s', $business);
+		}
+		$description = implode(' ', $description_parts) . '.';
+		$caption = lf_image_intelligence_clean_media_text($caption);
+		$description = lf_image_intelligence_clean_media_text($description);
 		wp_update_post([
 			'ID' => $attachment_id,
 			'post_title' => $title,
@@ -873,11 +917,15 @@ function lf_image_intelligence_apply_vision_annotations(array $annotations): arr
 			}
 		}
 		if ($entry['description'] !== '') {
-			update_post_meta($attachment_id, '_lf_vision_description', $entry['description']);
+			$clean_description = lf_image_intelligence_clean_media_text($entry['description']);
+			if ($clean_description === '') {
+				$clean_description = $entry['description'];
+			}
+			update_post_meta($attachment_id, '_lf_vision_description', $clean_description);
 			wp_update_post([
 				'ID' => $attachment_id,
-				'post_excerpt' => $entry['description'],
-				'post_content' => $entry['description'],
+				'post_excerpt' => $clean_description,
+				'post_content' => $clean_description,
 			]);
 		}
 		$applied++;
