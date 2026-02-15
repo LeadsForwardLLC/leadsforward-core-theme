@@ -444,6 +444,8 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-hero-pill-add:hover { background:#f5f0ff; }
 		.lf-ai-hero-pill-remove { border:1px solid rgba(255,255,255,.65); background:rgba(255,255,255,.2); color:inherit; border-radius:999px; min-width:18px; height:18px; padding:0 5px; font-size:11px; line-height:16px; margin-left:8px; cursor:pointer; vertical-align:middle; }
 		.lf-ai-hero-pill-remove:hover { background:rgba(255,255,255,.38); }
+		[data-lf-ai-cta-editable="1"] { position:relative; }
+		[data-lf-ai-cta-editable="1"]:hover { outline:2px dashed rgba(131,72,249,.45); outline-offset:2px; }
 		.lf-ai-column-draggable { cursor:ew-resize; transition:outline-color .15s ease; }
 		.lf-ai-column-draggable:hover { outline:2px dashed rgba(131,72,249,.3); outline-offset:3px; }
 		.lf-ai-column-draggable.is-dragging { outline:2px solid #8348f9 !important; outline-offset:3px; opacity:.85; }
@@ -1427,6 +1429,116 @@ function lf_ai_assistant_widget_js(): string {
 				}
 			});
 		}
+		function ctaSlotForButton(node) {
+			if (!node || !node.classList) return "primary";
+			if (node.classList.contains("lf-btn--secondary") || /secondary/i.test(String(node.className || ""))) {
+				return "secondary";
+			}
+			return "primary";
+		}
+		function ctaActionForButton(node) {
+			if (!node) return "quote";
+			if (node.getAttribute("data-lf-quote-trigger") === "1") return "quote";
+			if (node.tagName && node.tagName.toLowerCase() === "a") {
+				var href = String(node.getAttribute("href") || "").trim().toLowerCase();
+				if (href.indexOf("tel:") === 0) return "call";
+				if (href !== "") return "link";
+			}
+			return "quote";
+		}
+		function ctaUrlForButton(node) {
+			if (!node || !node.getAttribute) return "";
+			var href = String(node.getAttribute("href") || "").trim();
+			if (!href || /^tel:/i.test(href)) return "";
+			return href;
+		}
+		function persistSectionButtonCta(wrap, slot, text, action, url) {
+			if (!wrap) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			if (!sectionId) return;
+			setStatus("Saving button...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_update_section_cta",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_id: sectionId,
+				slot: String(slot || "primary"),
+				text: String(text || ""),
+				cta_action: String(action || "quote"),
+				url: String(url || "")
+			}).done(function(res){
+				if (res && res.success) {
+					setStatus((res.data && res.data.message) ? res.data.message : "Button saved.", false);
+					if (res.data && res.data.reload) {
+						window.location.reload();
+					}
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Button save failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Button save failed.";
+				setStatus(msg, true);
+			});
+		}
+		function openCtaButtonEditor(wrap, node) {
+			if (!wrap || !node) return;
+			var currentText = String(node.textContent || "").trim();
+			var slot = ctaSlotForButton(node);
+			var currentAction = ctaActionForButton(node);
+			var currentUrl = ctaUrlForButton(node);
+			var actionInput = "";
+			try {
+				actionInput = String(window.prompt("Button action (quote, call, link):", currentAction) || "").trim().toLowerCase();
+			} catch (e) {
+				actionInput = "";
+			}
+			if (!actionInput) return;
+			if (["quote", "call", "link"].indexOf(actionInput) === -1) {
+				setStatus("Invalid action. Use quote, call, or link.", true);
+				return;
+			}
+			var newText = "";
+			try {
+				newText = String(window.prompt("Button text:", currentText) || "").trim();
+			} catch (err) {
+				newText = "";
+			}
+			if (!newText) {
+				setStatus("Button text cannot be empty.", true);
+				return;
+			}
+			var newUrl = "";
+			if (actionInput === "link") {
+				try {
+					newUrl = String(window.prompt("Button link URL:", currentUrl || "https://") || "").trim();
+				} catch (err2) {
+					newUrl = "";
+				}
+				if (!newUrl) {
+					setStatus("Link URL is required for link action.", true);
+					return;
+				}
+			}
+			persistSectionButtonCta(wrap, slot, newText, actionInput, newUrl);
+		}
+		function buildSectionButtonEditors() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				var nodes = Array.prototype.slice.call(wrap.querySelectorAll("a.lf-btn,button.lf-btn,span.lf-btn"));
+				nodes.forEach(function(node){
+					if (!node || (node.closest && node.closest(".lf-ai-float"))) return;
+					if (node.getAttribute("data-lf-ai-cta-editable") === "1") return;
+					node.setAttribute("data-lf-ai-cta-editable", "1");
+					node.setAttribute("title", "Double-click to edit button text and action/link");
+					node.addEventListener("dblclick", function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						openCtaButtonEditor(wrap, node);
+					});
+				});
+			});
+		}
 		function toggleSectionColumnsInDom(wrap, newLayout) {
 			if (!wrap) return;
 			var details = wrap.querySelector(".lf-service-details--media");
@@ -1575,6 +1687,7 @@ function lf_ai_assistant_widget_js(): string {
 					wrap.parentNode.insertBefore(clone, wrap.nextSibling);
 					buildSectionTargets();
 					buildSectionControls();
+					buildSectionButtonEditors();
 					buildHeroPillsControls();
 					buildChecklistControls();
 					buildSectionColumnSwapTargets();
@@ -2733,6 +2846,7 @@ function lf_ai_assistant_widget_js(): string {
 		buildInlineImageTargets();
 		buildSectionTargets();
 		buildSectionControls();
+		buildSectionButtonEditors();
 		buildHeroPillsControls();
 		buildChecklistControls();
 		buildSectionColumnSwapTargets();
