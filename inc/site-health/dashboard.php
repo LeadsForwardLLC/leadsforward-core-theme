@@ -71,6 +71,9 @@ function lf_health_render_page(): void {
 	$last = lf_health_get_last_result();
 
 	echo '<div class="wrap"><h1>' . esc_html__('Site Health', 'leadsforward-core') . '</h1>';
+	if (function_exists('lf_admin_render_quality_summary_strip')) {
+		lf_admin_render_quality_summary_strip('health');
+	}
 
 	// Dashboard: quick checks (green / yellow / red)
 	$dashboard = lf_health_dashboard_checks();

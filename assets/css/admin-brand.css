@@ -82,3 +82,60 @@ body.toplevel_page_lf-ops a:hover,
 body[class*="leadsforward_page_lf-"] a:hover {
   color: var(--lf-admin-primary);
 }
+
+.lf-admin-summary-strip {
+  border: 1px solid var(--lf-admin-border);
+  background: linear-gradient(180deg, #fbf8ff, #f5efff);
+  border-radius: 14px;
+  padding: 14px;
+  margin: 12px 0 18px;
+}
+
+.lf-admin-summary-strip__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.lf-admin-summary-strip__links {
+  display: inline-flex;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.lf-admin-summary-strip__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.lf-admin-summary-strip__grid > div {
+  background: #fff;
+  border: 1px solid #eadfff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lf-admin-summary-strip__grid span {
+  color: #5b4a88;
+  font-size: 12px;
+}
+
+.lf-admin-summary-strip__grid strong {
+  color: #2d2050;
+  font-size: 16px;
+}
+
+.lf-admin-summary-strip__meta {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  color: #66528f;
+  font-size: 12px;
+}

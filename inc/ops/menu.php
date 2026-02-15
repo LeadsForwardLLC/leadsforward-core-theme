@@ -161,6 +161,83 @@ function lf_ops_brand_admin_assets(string $hook): void {
 	);
 }
 
+function lf_admin_quality_snapshot(int $limit = 400): array {
+	$audit = get_option('lf_ai_studio_last_audit', []);
+	$audit_summary = is_array($audit['summary'] ?? null) ? $audit['summary'] : [];
+	$health_result = function_exists('lf_health_get_last_result') ? lf_health_get_last_result() : null;
+	$health_blockers = is_array($health_result) ? (int) ($health_result['blockers'] ?? 0) : 0;
+	$health_warnings = is_array($health_result) ? (int) ($health_result['warnings'] ?? 0) : 0;
+	$health_time = is_array($health_result) ? (int) ($health_result['time'] ?? 0) : 0;
+
+	$posts = get_posts([
+		'post_type' => ['page', 'post', 'lf_service', 'lf_service_area'],
+		'post_status' => ['publish', 'future', 'draft', 'pending', 'private'],
+		'posts_per_page' => $limit,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	]);
+	$total = 0;
+	$count = 0;
+	foreach (array_map('intval', $posts) as $post_id) {
+		if ($post_id <= 0) {
+			continue;
+		}
+		$score = (int) get_post_meta($post_id, '_lf_seo_quality_score', true);
+		if ($score <= 0 && function_exists('lf_seo_calculate_content_quality')) {
+			$result = lf_seo_calculate_content_quality($post_id);
+			$score = (int) ($result['score'] ?? 0);
+		}
+		if ($score > 0) {
+			$total += $score;
+			$count++;
+		}
+	}
+	$avg_quality = $count > 0 ? (int) round($total / $count) : 0;
+
+	return [
+		'avg_quality' => $avg_quality,
+		'scored_pages' => $count,
+		'missing_fields' => (int) ($audit_summary['missing_fields'] ?? 0),
+		'pages_with_issues' => (int) ($audit_summary['pages_with_issues'] ?? 0),
+		'internal_links_total' => (int) ($audit_summary['internal_links_total'] ?? 0),
+		'health_blockers' => $health_blockers,
+		'health_warnings' => $health_warnings,
+		'health_time' => $health_time,
+		'audit_time' => isset($audit['timestamp']) ? (int) $audit['timestamp'] : 0,
+	];
+}
+
+function lf_admin_render_quality_summary_strip(string $context = 'seo'): void {
+	$s = lf_admin_quality_snapshot();
+	$seo_url = admin_url('admin.php?page=lf-seo');
+	$health_url = admin_url('admin.php?page=lf-site-health');
+	$audit_time = $s['audit_time'] > 0 ? date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $s['audit_time']) : __('Never', 'leadsforward-core');
+	$health_time = $s['health_time'] > 0 ? date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $s['health_time']) : __('Never', 'leadsforward-core');
+	?>
+	<div class="lf-admin-summary-strip">
+		<div class="lf-admin-summary-strip__head">
+			<strong><?php esc_html_e('SEO + Site Health Snapshot', 'leadsforward-core'); ?></strong>
+			<div class="lf-admin-summary-strip__links">
+				<?php if ($context !== 'seo') : ?><a href="<?php echo esc_url($seo_url); ?>"><?php esc_html_e('Open SEO', 'leadsforward-core'); ?></a><?php endif; ?>
+				<?php if ($context !== 'health') : ?><a href="<?php echo esc_url($health_url); ?>"><?php esc_html_e('Open Site Health', 'leadsforward-core'); ?></a><?php endif; ?>
+			</div>
+		</div>
+		<div class="lf-admin-summary-strip__grid">
+			<div><span><?php esc_html_e('Avg SEO quality', 'leadsforward-core'); ?></span><strong><?php echo esc_html((string) $s['avg_quality']); ?>/100</strong></div>
+			<div><span><?php esc_html_e('Scored pages', 'leadsforward-core'); ?></span><strong><?php echo esc_html((string) $s['scored_pages']); ?></strong></div>
+			<div><span><?php esc_html_e('Missing content fields', 'leadsforward-core'); ?></span><strong><?php echo esc_html((string) $s['missing_fields']); ?></strong></div>
+			<div><span><?php esc_html_e('Pages with issues', 'leadsforward-core'); ?></span><strong><?php echo esc_html((string) $s['pages_with_issues']); ?></strong></div>
+			<div><span><?php esc_html_e('Internal links', 'leadsforward-core'); ?></span><strong><?php echo esc_html((string) $s['internal_links_total']); ?></strong></div>
+			<div><span><?php esc_html_e('Health blockers / warnings', 'leadsforward-core'); ?></span><strong><?php echo esc_html((string) $s['health_blockers']); ?> / <?php echo esc_html((string) $s['health_warnings']); ?></strong></div>
+		</div>
+		<div class="lf-admin-summary-strip__meta">
+			<span><?php echo esc_html(sprintf(__('Last content audit: %s', 'leadsforward-core'), $audit_time)); ?></span>
+			<span><?php echo esc_html(sprintf(__('Last site health run: %s', 'leadsforward-core'), $health_time)); ?></span>
+		</div>
+	</div>
+	<?php
+}
+
 function lf_ops_handle_reviews_sync(): void {
 	if (!current_user_can(LF_OPS_CAP)) {
 		wp_die(esc_html__('Insufficient permissions.', 'leadsforward-core'));

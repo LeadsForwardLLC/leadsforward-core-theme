@@ -255,6 +255,7 @@ function lf_seo_render_settings_page(): void {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('SEO', 'leadsforward-core'); ?></h1>
+		<?php if (function_exists('lf_admin_render_quality_summary_strip')) { lf_admin_render_quality_summary_strip('seo'); } ?>
 		<?php if ($saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('SEO settings saved.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
