@@ -13,10 +13,12 @@ if (!defined('ABSPATH')) {
 }
 
 add_action('admin_enqueue_scripts', 'lf_ai_assistant_assets');
+add_action('wp_enqueue_scripts', 'lf_ai_assistant_assets');
 add_action('admin_footer', 'lf_ai_assistant_render_floating_widget');
+add_action('wp_footer', 'lf_ai_assistant_render_floating_widget');
 
-function lf_ai_assistant_assets(string $hook): void {
-	if (!is_admin() || !current_user_can('edit_theme_options')) {
+function lf_ai_assistant_assets(string $hook = ''): void {
+	if (!current_user_can('edit_theme_options')) {
 		return;
 	}
 
@@ -61,6 +63,23 @@ function lf_ai_assistant_assets(string $hook): void {
 }
 
 function lf_ai_assistant_widget_context(): array {
+	if (!is_admin()) {
+		if (is_front_page()) {
+			return ['type' => 'homepage', 'id' => 'homepage'];
+		}
+		$queried_id = get_queried_object_id();
+		if ($queried_id > 0) {
+			$post = get_post($queried_id);
+			if ($post instanceof \WP_Post) {
+				$front_id = (int) get_option('page_on_front');
+				if ($post->post_type === 'page' && (int) $post->ID === $front_id) {
+					return ['type' => 'homepage', 'id' => 'homepage'];
+				}
+				return ['type' => (string) $post->post_type, 'id' => (string) $post->ID];
+			}
+		}
+		return ['type' => 'homepage', 'id' => 'homepage'];
+	}
 	$screen = function_exists('get_current_screen') ? get_current_screen() : null;
 	if ($screen && $screen->base === 'post') {
 		$post_id = 0;
@@ -82,7 +101,7 @@ function lf_ai_assistant_widget_context(): array {
 }
 
 function lf_ai_assistant_render_floating_widget(): void {
-	if (!is_admin() || !current_user_can('edit_theme_options')) {
+	if (!current_user_can('edit_theme_options')) {
 		return;
 	}
 	?>
@@ -105,6 +124,7 @@ function lf_ai_assistant_render_floating_widget(): void {
 					<label>
 						<span><?php esc_html_e('Mode', 'leadsforward-core'); ?></span>
 						<select data-lf-ai-mode>
+							<option value="auto"><?php esc_html_e('Auto (Infer Action)', 'leadsforward-core'); ?></option>
 							<option value="edit_existing"><?php esc_html_e('Edit Current Page', 'leadsforward-core'); ?></option>
 							<option value="create_page"><?php esc_html_e('Create New Page (Draft)', 'leadsforward-core'); ?></option>
 							<option value="create_cpt"><?php esc_html_e('Create New CPT Item (Draft)', 'leadsforward-core'); ?></option>
@@ -137,6 +157,12 @@ function lf_ai_assistant_render_floating_widget(): void {
 					<label data-lf-ai-batch-count-wrap hidden>
 						<span><?php esc_html_e('Count', 'leadsforward-core'); ?></span>
 						<input type="number" min="1" max="20" value="5" data-lf-ai-batch-count />
+					</label>
+				</div>
+				<div class="lf-ai-float__target-ref">
+					<label>
+						<span><?php esc_html_e('Reference target page/post (optional)', 'leadsforward-core'); ?></span>
+						<input type="text" data-lf-ai-target-ref placeholder="<?php esc_attr_e('e.g. contact page, /about-us, full URL', 'leadsforward-core'); ?>" />
 					</label>
 				</div>
 				<div class="lf-ai-float__presets">
@@ -190,6 +216,8 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float__mode label[hidden] { display:none !important; }
 		.lf-ai-float__mode select { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; }
 		.lf-ai-float__mode input[type="number"] { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; width:100%; box-sizing:border-box; }
+		.lf-ai-float__target-ref label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:#475569; }
+		.lf-ai-float__target-ref input { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; width:100%; box-sizing:border-box; }
 		.lf-ai-float__presets { display:flex; flex-wrap:wrap; gap:6px; }
 		.lf-ai-float__prompt { width:100%; resize:vertical; min-height:88px; border:1px solid #d6c8fb; border-radius:10px; padding:10px; font-size:13px; }
 		.lf-ai-float__prompt:focus { border-color:#8348f9; box-shadow:0 0 0 1px #8348f9; outline:none; }
@@ -236,6 +264,7 @@ function lf_ai_assistant_widget_js(): string {
 		var $btnReject = $root.find("[data-lf-ai-reject]");
 		var $btnRevert = $root.find("[data-lf-ai-revert]");
 		var $target = $root.find("[data-lf-ai-target]");
+		var $targetRef = $root.find("[data-lf-ai-target-ref]");
 		var $mode = $root.find("[data-lf-ai-mode]");
 		var $cptWrap = $root.find("[data-lf-ai-cpt-wrap]");
 		var $cptType = $root.find("[data-lf-ai-cpt-type]");
@@ -254,7 +283,10 @@ function lf_ai_assistant_widget_js(): string {
 		var proposed = null;
 		var current = null;
 		var creationPayload = null;
-		var lastMode = "edit_existing";
+		var lastMode = "auto";
+		var activeContextType = String(lfAiFloating.context_type || "homepage");
+		var activeContextId = String(lfAiFloating.context_id || "homepage");
+		var activeTargetLabel = String(lfAiFloating.target_label || "Homepage");
 		var labels = lfAiFloating.labels || {};
 		var promptSnippet = "";
 		var docContext = "";
@@ -356,7 +388,8 @@ function lf_ai_assistant_widget_js(): string {
 			$cptWrap.prop("hidden", mode !== "create_cpt");
 			$batchWrap.prop("hidden", mode !== "create_batch");
 			$batchCountWrap.prop("hidden", mode !== "create_batch");
-			$target.text("Target: " + (lfAiFloating.target_label || "Homepage") + (mode === "edit_existing" ? " (from current editor screen)" : " (used for context only)"));
+			var targetSuffix = (mode === "edit_existing" || mode === "auto") ? " (editable target)" : " (context source)";
+			$target.text("Target: " + (activeTargetLabel || "Homepage") + targetSuffix);
 		}
 		function setDocState(name, content) {
 			docLabel = String(name || "");
@@ -453,16 +486,24 @@ function lf_ai_assistant_widget_js(): string {
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_generate",
 				nonce: lfAiFloating.nonce,
-				context_type: lfAiFloating.context_type || "homepage",
-				context_id: lfAiFloating.context_id || "homepage",
+				context_type: activeContextType,
+				context_id: activeContextId,
 				prompt: prompt,
 				document_context: docContext,
 				document_name: docLabel,
 				assistant_mode: lastMode,
 				assistant_cpt_type: cptTypeValue(),
 				assistant_batch_type: batchTypeValue(),
-				assistant_batch_count: batchCountValue()
+				assistant_batch_count: batchCountValue(),
+				target_reference: String($targetRef.val() || "").trim()
 			}).done(function(res){
+				if (res && res.success && res.data) {
+					if (res.data.context_type) activeContextType = String(res.data.context_type);
+					if (res.data.context_id !== undefined) activeContextId = String(res.data.context_id);
+					if (res.data.target_label) activeTargetLabel = String(res.data.target_label);
+					if (res.data.mode) lastMode = String(res.data.mode);
+					syncModeUi();
+				}
 				if (res && res.success && res.data && res.data.mode === "edit_existing" && res.data.proposed) {
 					proposed = res.data.proposed;
 					current = res.data.current || {};
@@ -501,8 +542,8 @@ function lf_ai_assistant_widget_js(): string {
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_apply",
 				nonce: lfAiFloating.nonce,
-				context_type: lfAiFloating.context_type || "homepage",
-				context_id: lfAiFloating.context_id || "homepage",
+				context_type: activeContextType,
+				context_id: activeContextId,
 				prompt_snippet: promptSnippet,
 				proposed: JSON.stringify(proposed || {}),
 				creation_payload: JSON.stringify(creationPayload || {}),
@@ -584,6 +625,7 @@ function lf_ai_assistant_widget_js(): string {
 		$prompt.attr("placeholder", (lfAiFloating.i18n && lfAiFloating.i18n.placeholder) ? lfAiFloating.i18n.placeholder : "Ask for specific edits...");
 		setStatus((lfAiFloating.i18n && lfAiFloating.i18n.statusReady) ? lfAiFloating.i18n.statusReady : "Ready.", false);
 		setConfirmOpen(false);
+		try { $mode.val("auto"); } catch (e) {}
 		syncModeUi();
 	})(jQuery);';
 }

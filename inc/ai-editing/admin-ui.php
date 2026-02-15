@@ -17,6 +17,7 @@ const LF_AI_CAP = 'edit_posts';
 
 function lf_ai_assistant_modes(): array {
 	return [
+		'auto',
 		'edit_existing',
 		'create_page',
 		'create_cpt',
@@ -71,6 +72,128 @@ function lf_ai_assistant_mode_and_cpt_for_batch_type(string $batch_type): array 
 		return ['mode' => 'create_cpt', 'cpt' => $batch_type];
 	}
 	return ['mode' => '', 'cpt' => ''];
+}
+
+function lf_ai_assistant_context_for_post(\WP_Post $post): array {
+	$front_id = (int) get_option('page_on_front');
+	if ($post->post_type === 'page' && (int) $post->ID === $front_id) {
+		return ['type' => 'homepage', 'id' => 'homepage'];
+	}
+	return ['type' => (string) $post->post_type, 'id' => (int) $post->ID];
+}
+
+function lf_ai_assistant_target_label_for_context(string $context_type, $context_id): string {
+	if ($context_type === 'homepage' || $context_id === 'homepage') {
+		return __('Homepage', 'leadsforward-core');
+	}
+	$post = is_numeric($context_id) ? get_post((int) $context_id) : null;
+	if ($post instanceof \WP_Post) {
+		return sprintf('%s (%s)', $post->post_title, strtoupper((string) $post->post_type));
+	}
+	return __('Current context', 'leadsforward-core');
+}
+
+function lf_ai_assistant_extract_reference_from_prompt(string $prompt): string {
+	$prompt = trim($prompt);
+	if ($prompt === '') {
+		return '';
+	}
+	$patterns = [
+		'/(?:on|for|to|in)\s+(?:the\s+)?["\']?([a-z0-9\- ]{2,80})["\']?\s+page\b/i',
+		'/\b(?:update|edit|change|rewrite)\s+["\']?([a-z0-9\- ]{2,80})["\']?\s+page\b/i',
+	];
+	foreach ($patterns as $pattern) {
+		if (preg_match($pattern, $prompt, $m) === 1) {
+			return sanitize_text_field((string) ($m[1] ?? ''));
+		}
+	}
+	return '';
+}
+
+function lf_ai_assistant_resolve_target_context(string $reference, string $fallback_context_type, $fallback_context_id): array {
+	$reference = sanitize_text_field(trim($reference));
+	if ($reference === '') {
+		return ['type' => $fallback_context_type, 'id' => $fallback_context_id];
+	}
+	$ref_lower = strtolower($reference);
+	if (in_array($ref_lower, ['homepage', 'home page', 'front page', 'home'], true)) {
+		return ['type' => 'homepage', 'id' => 'homepage'];
+	}
+	$slug = sanitize_title($reference);
+	if (preg_match('#https?://#i', $reference) === 1) {
+		$path = (string) parse_url($reference, PHP_URL_PATH);
+		$slug = sanitize_title((string) basename(trim($path, '/')));
+	}
+	$post_types = ['page', 'post', 'lf_service', 'lf_service_area', 'lf_faq', 'lf_project', 'lf_testimonial'];
+	if ($slug !== '') {
+		$by_path = get_page_by_path($slug, OBJECT, $post_types);
+		if ($by_path instanceof \WP_Post) {
+			return lf_ai_assistant_context_for_post($by_path);
+		}
+	}
+	$matches = get_posts([
+		'post_type' => $post_types,
+		'post_status' => ['publish', 'draft', 'pending', 'future', 'private'],
+		'posts_per_page' => 1,
+		's' => $reference,
+		'orderby' => 'relevance',
+		'order' => 'DESC',
+		'no_found_rows' => true,
+	]);
+	if (!empty($matches) && $matches[0] instanceof \WP_Post) {
+		return lf_ai_assistant_context_for_post($matches[0]);
+	}
+	return ['type' => $fallback_context_type, 'id' => $fallback_context_id];
+}
+
+function lf_ai_assistant_infer_mode_from_prompt(string $prompt): array {
+	$lower = strtolower($prompt);
+	$count = 5;
+	if (preg_match('/\b([1-9]|1\d|20)\b/', $lower, $m) === 1) {
+		$count = max(1, min(20, (int) $m[1]));
+	}
+	if (preg_match('/\b(create|add|generate)\b/', $lower) !== 1) {
+		return ['mode' => 'edit_existing', 'cpt_type' => '', 'batch_type' => 'post', 'batch_count' => $count];
+	}
+	if (preg_match('/\b(batch|multiple|several|list of)\b/', $lower) === 1) {
+		$batch_type = 'post';
+		if (strpos($lower, 'service area') !== false) {
+			$batch_type = 'lf_service_area';
+		} elseif (strpos($lower, 'service') !== false) {
+			$batch_type = 'lf_service';
+		} elseif (strpos($lower, 'faq') !== false) {
+			$batch_type = 'lf_faq';
+		} elseif (strpos($lower, 'project') !== false) {
+			$batch_type = 'lf_project';
+		} elseif (strpos($lower, 'testimonial') !== false || strpos($lower, 'review') !== false) {
+			$batch_type = 'lf_testimonial';
+		} elseif (strpos($lower, 'page') !== false) {
+			$batch_type = 'page';
+		}
+		return ['mode' => 'create_batch', 'cpt_type' => '', 'batch_type' => $batch_type, 'batch_count' => $count];
+	}
+	if (strpos($lower, 'faq') !== false) {
+		return ['mode' => 'create_cpt', 'cpt_type' => 'lf_faq', 'batch_type' => 'post', 'batch_count' => $count];
+	}
+	if (strpos($lower, 'service area') !== false) {
+		return ['mode' => 'create_cpt', 'cpt_type' => 'lf_service_area', 'batch_type' => 'post', 'batch_count' => $count];
+	}
+	if (strpos($lower, 'service') !== false) {
+		return ['mode' => 'create_cpt', 'cpt_type' => 'lf_service', 'batch_type' => 'post', 'batch_count' => $count];
+	}
+	if (strpos($lower, 'project') !== false) {
+		return ['mode' => 'create_cpt', 'cpt_type' => 'lf_project', 'batch_type' => 'post', 'batch_count' => $count];
+	}
+	if (strpos($lower, 'testimonial') !== false || strpos($lower, 'review') !== false) {
+		return ['mode' => 'create_cpt', 'cpt_type' => 'lf_testimonial', 'batch_type' => 'post', 'batch_count' => $count];
+	}
+	if (strpos($lower, 'blog') !== false || strpos($lower, 'post') !== false) {
+		return ['mode' => 'create_blog_post', 'cpt_type' => '', 'batch_type' => 'post', 'batch_count' => $count];
+	}
+	if (strpos($lower, 'page') !== false) {
+		return ['mode' => 'create_page', 'cpt_type' => '', 'batch_type' => 'post', 'batch_count' => $count];
+	}
+	return ['mode' => 'edit_existing', 'cpt_type' => '', 'batch_type' => 'post', 'batch_count' => $count];
 }
 
 function lf_ai_assistant_parse_secondary_keywords($value): array {
@@ -411,7 +534,11 @@ function lf_ai_ajax_generate(): void {
 	$assistant_cpt_type = isset($_POST['assistant_cpt_type']) ? sanitize_text_field(wp_unslash($_POST['assistant_cpt_type'])) : '';
 	$assistant_batch_type = isset($_POST['assistant_batch_type']) ? sanitize_text_field(wp_unslash($_POST['assistant_batch_type'])) : 'post';
 	$assistant_batch_count = isset($_POST['assistant_batch_count']) ? (int) $_POST['assistant_batch_count'] : 5;
+	$target_reference = isset($_POST['target_reference']) ? sanitize_text_field(wp_unslash($_POST['target_reference'])) : '';
 	if (!in_array($assistant_mode, lf_ai_assistant_modes(), true)) {
+		$assistant_mode = 'edit_existing';
+	}
+	if ($assistant_mode === 'auto') {
 		$assistant_mode = 'edit_existing';
 	}
 	$document_context = isset($_POST['document_context']) ? sanitize_textarea_field(wp_unslash($_POST['document_context'])) : '';
@@ -427,14 +554,34 @@ function lf_ai_ajax_generate(): void {
 		$prompt .= "\n\nDocument context (" . $doc_heading . "):\n" . $document_context;
 	}
 	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	$context_type_use = $context_type;
+	$auto_inference = ['mode' => 'edit_existing', 'cpt_type' => '', 'batch_type' => 'post', 'batch_count' => $assistant_batch_count];
+	if ($assistant_mode === 'auto') {
+		$auto_inference = lf_ai_assistant_infer_mode_from_prompt($prompt);
+		$assistant_mode = (string) ($auto_inference['mode'] ?? 'edit_existing');
+		$assistant_cpt_type = (string) ($auto_inference['cpt_type'] ?? '');
+		$assistant_batch_type = (string) ($auto_inference['batch_type'] ?? 'post');
+		$assistant_batch_count = (int) ($auto_inference['batch_count'] ?? $assistant_batch_count);
+	}
 	if ($assistant_mode === 'edit_existing') {
-		$result = lf_ai_generate_proposal($context_type, $context_id_use, $prompt);
+		if ($target_reference === '') {
+			$target_reference = lf_ai_assistant_extract_reference_from_prompt($prompt);
+		}
+		$resolved = lf_ai_assistant_resolve_target_context($target_reference, $context_type_use, $context_id_use);
+		$context_type_use = (string) ($resolved['type'] ?? $context_type_use);
+		$context_id_use = $resolved['id'] ?? $context_id_use;
+	}
+	if ($assistant_mode === 'edit_existing') {
+		$result = lf_ai_generate_proposal($context_type_use, $context_id_use, $prompt);
 		if (!$result['success']) {
 			wp_send_json_error(['message' => $result['error']]);
 		}
-		$current = lf_ai_get_current_values($context_type, $context_id_use, array_keys($result['proposed']));
+		$current = lf_ai_get_current_values($context_type_use, $context_id_use, array_keys($result['proposed']));
 		wp_send_json_success([
 			'mode' => $assistant_mode,
+			'context_type' => $context_type_use,
+			'context_id' => (string) $context_id_use,
+			'target_label' => lf_ai_assistant_target_label_for_context($context_type_use, $context_id_use),
 			'proposed' => $result['proposed'],
 			'current'  => $current,
 			'labels'   => array_intersect_key(lf_get_ai_editable_fields($context_id_use), $result['proposed']),
@@ -453,7 +600,7 @@ function lf_ai_ajax_generate(): void {
 			wp_send_json_error(['message' => __('Unsupported batch configuration.', 'leadsforward-core')]);
 		}
 		$system = lf_ai_assistant_build_batch_prompt($assistant_batch_type, $assistant_batch_count, $context_type, $prompt);
-		$response = apply_filters('lf_ai_completion', '', $system, $prompt, $context_type, $context_id_use);
+		$response = apply_filters('lf_ai_completion', '', $system, $prompt, $context_type_use, $context_id_use);
 		if (is_wp_error($response)) {
 			wp_send_json_error(['message' => $response->get_error_message()]);
 		}
@@ -483,6 +630,9 @@ function lf_ai_ajax_generate(): void {
 		}
 		wp_send_json_success([
 			'mode' => $assistant_mode,
+			'context_type' => $context_type_use,
+			'context_id' => (string) $context_id_use,
+			'target_label' => lf_ai_assistant_target_label_for_context($context_type_use, $context_id_use),
 			'creation_payload' => ['items' => $payloads, 'batch_type' => $assistant_batch_type],
 			'creation_queue' => lf_ai_assistant_batch_preview($payloads),
 		]);
@@ -492,7 +642,7 @@ function lf_ai_ajax_generate(): void {
 		wp_send_json_error(['message' => __('Invalid create mode.', 'leadsforward-core')]);
 	}
 	$system = lf_ai_assistant_build_creation_prompt($assistant_mode, $post_type, $context_type, $prompt);
-	$response = apply_filters('lf_ai_completion', '', $system, $prompt, $context_type, $context_id_use);
+	$response = apply_filters('lf_ai_completion', '', $system, $prompt, $context_type_use, $context_id_use);
 	if (is_wp_error($response)) {
 		wp_send_json_error(['message' => $response->get_error_message()]);
 	}
@@ -509,6 +659,9 @@ function lf_ai_ajax_generate(): void {
 	}
 	wp_send_json_success([
 		'mode' => $assistant_mode,
+		'context_type' => $context_type_use,
+		'context_id' => (string) $context_id_use,
+		'target_label' => lf_ai_assistant_target_label_for_context($context_type_use, $context_id_use),
 		'creation_payload' => $payload,
 		'creation_preview' => lf_ai_assistant_creation_preview($payload),
 	]);
