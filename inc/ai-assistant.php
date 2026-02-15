@@ -668,6 +668,11 @@ function lf_ai_assistant_widget_js(): string {
 			if (node.closest("nav, footer, [aria-hidden=\"true\"]")) return false;
 			if (node.closest(".site-header, .site-footer, #masthead, #colophon")) return false;
 			if (node.closest("button, a, label, script, style, noscript")) return false;
+			var tag = node.tagName ? node.tagName.toLowerCase() : "";
+			var isHeading = /^h[1-6]$/.test(tag);
+			// SEO safety: do not allow inline editing of entity/archive titles.
+			if (node.closest(".lf-blog-hero__title,.lf-post-card__title,.entry-title,[class*=\"project\"][class*=\"title\"],[class*=\"service\"][class*=\"title\"],[class*=\"blog\"][class*=\"title\"]")) return false;
+			if (isHeading && node.closest("article,.hentry,.type-post,.type-page,.type-lf_project,.type-lf_service,.type-lf_service_area,.type-lf_faq")) return false;
 			var text = String(node.textContent || "").trim();
 			return text !== "";
 		}
