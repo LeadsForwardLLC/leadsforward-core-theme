@@ -333,11 +333,13 @@ function lf_seo_get_template_vars(int $post_id = 0): array {
 	$city = lf_seo_get_city_name();
 	$page_title = lf_seo_get_page_title($post_id);
 	$primary = lf_seo_get_primary_keyword_for_context($post_id);
+	$intent = ($post_id > 0 && function_exists('lf_seo_detect_serp_intent')) ? lf_seo_detect_serp_intent($post_id, $primary) : '';
 	return [
 		'{{page_title}}' => $page_title,
 		'{{city}}' => $city,
 		'{{brand}}' => $brand,
 		'{{primary_keyword}}' => $primary,
+		'{{intent}}' => $intent,
 	];
 }
 

@@ -14,6 +14,10 @@ if (!defined('ABSPATH')) {
 }
 
 add_action('wp_head', 'lf_output_schema_json_ld', 5);
+add_filter('lf_schema_local_business', 'lf_schema_enrich_with_image_objects', 20);
+add_filter('lf_schema_organization', 'lf_schema_enrich_with_image_objects', 20);
+add_filter('lf_schema_service', 'lf_schema_enrich_with_image_objects', 20);
+add_filter('lf_schema_service_area', 'lf_schema_enrich_with_image_objects', 20);
 
 /**
  * Output all applicable schema scripts in head. Respects toggles; no output if incomplete.
@@ -583,4 +587,102 @@ function lf_build_review_schema(): array {
 	];
 	$business['review'] = array_slice($reviews, 0, 5);
 	return $business;
+}
+
+function lf_schema_image_object_from_attachment(int $attachment_id, string $size = 'large'): array {
+	$attachment_id = absint($attachment_id);
+	if ($attachment_id <= 0) {
+		return [];
+	}
+	$src = wp_get_attachment_image_src($attachment_id, $size);
+	if (!is_array($src) || empty($src[0])) {
+		return [];
+	}
+	$mime = (string) get_post_mime_type($attachment_id);
+	$alt = trim((string) get_post_meta($attachment_id, '_wp_attachment_image_alt', true));
+	$caption = trim((string) wp_get_attachment_caption($attachment_id));
+	$image = [
+		'@type' => 'ImageObject',
+		'url' => esc_url_raw((string) $src[0]),
+		'contentUrl' => esc_url_raw((string) $src[0]),
+		'width' => (int) ($src[1] ?? 0),
+		'height' => (int) ($src[2] ?? 0),
+	];
+	if ($mime !== '') {
+		$image['encodingFormat'] = $mime;
+	}
+	if ($alt !== '') {
+		$image['name'] = $alt;
+	}
+	if ($caption !== '') {
+		$image['caption'] = $caption;
+	}
+	return $image;
+}
+
+function lf_schema_image_object_from_url(string $url): array {
+	$url = trim($url);
+	if ($url === '') {
+		return [];
+	}
+	$attachment_id = attachment_url_to_postid($url);
+	if ($attachment_id > 0) {
+		return lf_schema_image_object_from_attachment($attachment_id);
+	}
+	return [
+		'@type' => 'ImageObject',
+		'url' => esc_url_raw($url),
+		'contentUrl' => esc_url_raw($url),
+	];
+}
+
+function lf_schema_context_image_object(): array {
+	if (!is_singular()) {
+		return [];
+	}
+	$post_id = (int) get_queried_object_id();
+	if ($post_id <= 0 || !has_post_thumbnail($post_id)) {
+		return [];
+	}
+	return lf_schema_image_object_from_attachment((int) get_post_thumbnail_id($post_id), 'large');
+}
+
+function lf_schema_enrich_with_image_objects(array $schema): array {
+	if (empty($schema['@type'])) {
+		return $schema;
+	}
+	if (isset($schema['logo']) && is_string($schema['logo'])) {
+		$logo = lf_schema_image_object_from_url((string) $schema['logo']);
+		if (!empty($logo)) {
+			$schema['logo'] = $logo;
+		}
+	}
+	if (isset($schema['image']) && is_string($schema['image'])) {
+		$image = lf_schema_image_object_from_url((string) $schema['image']);
+		if (!empty($image)) {
+			$schema['image'] = $image;
+		}
+	}
+	if (empty($schema['image'])) {
+		$context_image = lf_schema_context_image_object();
+		if (!empty($context_image)) {
+			$schema['image'] = $context_image;
+		}
+	}
+	return lf_schema_strip_empty_values($schema);
+}
+
+function lf_schema_strip_empty_values($value) {
+	if (is_array($value)) {
+		$clean = [];
+		foreach ($value as $key => $item) {
+			$filtered = lf_schema_strip_empty_values($item);
+			if ($filtered === '' || $filtered === null || $filtered === [] || $filtered === false) {
+				continue;
+			}
+			$clean[$key] = $filtered;
+		}
+		return $clean;
+	}
+	return $value;
 }

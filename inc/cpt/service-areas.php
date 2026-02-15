@@ -48,3 +48,26 @@ function lf_register_cpt_service_areas(): void {
 	register_post_type('lf_service_area', $args);
 }
 add_action('init', 'lf_register_cpt_service_areas');
+
+/**
+ * Ensure /service-areas/ resolves to the overview page when it exists.
+ * Keeps single service area URLs intact at /service-areas/{city}/.
+ */
+function lf_service_areas_overview_page_priority(\WP $wp): void {
+	if (is_admin()) {
+		return;
+	}
+	$request_path = trim((string) ($wp->request ?? ''), '/');
+	if ($request_path !== 'service-areas') {
+		return;
+	}
+	$overview = get_page_by_path('service-areas');
+	if (!$overview instanceof \WP_Post || $overview->post_type !== 'page') {
+		return;
+	}
+	$wp->query_vars = [
+		'page_id' => (string) $overview->ID,
+		'pagename' => 'service-areas',
+	];
+}
+add_action('parse_request', 'lf_service_areas_overview_page_priority', 1);

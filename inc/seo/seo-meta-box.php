@@ -38,6 +38,10 @@ function lf_seo_render_meta_box(\WP_Post $post): void {
 	$canonical = (string) get_post_meta($post->ID, '_lf_seo_canonical_url', true);
 	$noindex = (string) get_post_meta($post->ID, '_lf_seo_noindex', true) === '1';
 	$nofollow = (string) get_post_meta($post->ID, '_lf_seo_nofollow', true) === '1';
+	$intent = (string) get_post_meta($post->ID, '_lf_seo_serp_intent', true);
+	$quality_score = (int) get_post_meta($post->ID, '_lf_seo_quality_score', true);
+	$quality_grade = (string) get_post_meta($post->ID, '_lf_seo_quality_grade', true);
+	$detected_intent = (string) get_post_meta($post->ID, '_lf_seo_serp_intent_detected', true);
 	$og_image_id = (int) get_post_meta($post->ID, '_lf_seo_og_image_id', true);
 	$og_image_url = $og_image_id ? wp_get_attachment_image_url($og_image_id, 'medium') : '';
 	$scripts = get_post_meta($post->ID, '_lf_seo_scripts', true);
@@ -63,6 +67,32 @@ function lf_seo_render_meta_box(\WP_Post $post): void {
 		<tr>
 			<th scope="row"><label for="lf_seo_meta_description"><?php esc_html_e('Custom Meta Description', 'leadsforward-core'); ?></label></th>
 			<td><textarea class="large-text" rows="2" id="lf_seo_meta_description" name="lf_seo_meta_description"><?php echo esc_textarea($description); ?></textarea></td>
+		</tr>
+		<tr>
+			<th scope="row"><label for="lf_seo_serp_intent"><?php esc_html_e('SERP Intent', 'leadsforward-core'); ?></label></th>
+			<td>
+				<select id="lf_seo_serp_intent" name="lf_seo_serp_intent">
+					<option value=""><?php esc_html_e('Auto-detect', 'leadsforward-core'); ?></option>
+					<?php
+					$intent_options = function_exists('lf_seo_serp_intent_options') ? lf_seo_serp_intent_options() : [];
+					foreach ($intent_options as $value => $label) {
+						echo '<option value="' . esc_attr((string) $value) . '"' . selected($intent === (string) $value, true, false) . '>' . esc_html((string) $label) . '</option>';
+					}
+					?>
+				</select>
+				<p class="description">
+					<?php
+					if ($quality_score > 0) {
+						echo esc_html(sprintf(__('SEO quality score: %1$d (%2$s).', 'leadsforward-core'), $quality_score, $quality_grade !== '' ? $quality_grade : ''));
+					} else {
+						esc_html_e('SEO quality score will be calculated after save/generation.', 'leadsforward-core');
+					}
+					if ($detected_intent !== '') {
+						echo ' ' . esc_html(sprintf(__('Detected intent: %s.', 'leadsforward-core'), $detected_intent));
+					}
+					?>
+				</p>
+			</td>
 		</tr>
 		<tr>
 			<th scope="row"><label for="lf_seo_canonical_url"><?php esc_html_e('Canonical URL', 'leadsforward-core'); ?></label></th>
@@ -156,6 +186,7 @@ function lf_seo_save_meta_box(int $post_id, \WP_Post $post): void {
 	$title = isset($_POST['lf_seo_meta_title']) ? sanitize_text_field(wp_unslash($_POST['lf_seo_meta_title'])) : '';
 	$description = isset($_POST['lf_seo_meta_description']) ? sanitize_textarea_field(wp_unslash($_POST['lf_seo_meta_description'])) : '';
 	$canonical = isset($_POST['lf_seo_canonical_url']) ? esc_url_raw(wp_unslash($_POST['lf_seo_canonical_url'])) : '';
+	$intent = isset($_POST['lf_seo_serp_intent']) ? sanitize_text_field(wp_unslash($_POST['lf_seo_serp_intent'])) : '';
 	$noindex = !empty($_POST['lf_seo_noindex']) ? '1' : '';
 	$nofollow = !empty($_POST['lf_seo_nofollow']) ? '1' : '';
 	$og_image_id = isset($_POST['lf_seo_og_image_id']) ? (int) $_POST['lf_seo_og_image_id'] : 0;
@@ -167,6 +198,7 @@ function lf_seo_save_meta_box(int $post_id, \WP_Post $post): void {
 	lf_seo_update_post_meta($post_id, '_lf_seo_meta_title', $title);
 	lf_seo_update_post_meta($post_id, '_lf_seo_meta_description', $description);
 	lf_seo_update_post_meta($post_id, '_lf_seo_canonical_url', $canonical);
+	lf_seo_update_post_meta($post_id, '_lf_seo_serp_intent', $intent);
 	lf_seo_update_post_meta($post_id, '_lf_seo_noindex', $noindex);
 	lf_seo_update_post_meta($post_id, '_lf_seo_nofollow', $nofollow);
 	lf_seo_update_post_meta($post_id, '_lf_seo_og_image_id', $og_image_id ? (string) $og_image_id : '');
@@ -187,6 +219,9 @@ function lf_seo_save_meta_box(int $post_id, \WP_Post $post): void {
 	}
 	if (function_exists('lf_seo_maybe_populate_generated_meta')) {
 		lf_seo_maybe_populate_generated_meta($post_id, $primary, $secondary);
+	}
+	if (function_exists('lf_seo_calculate_content_quality')) {
+		lf_seo_calculate_content_quality($post_id);
 	}
 }
 
@@ -248,7 +283,9 @@ function lf_seo_maybe_populate_generated_meta(int $post_id, string $primary = ''
 
 	$current_title = trim((string) get_post_meta($post_id, '_lf_seo_meta_title', true));
 	if ($current_title === '' || lf_seo_meta_text_needs_upgrade($current_title, 'title')) {
-		$title = lf_seo_generate_meta_title_from_keywords($primary_keyword);
+		$title = function_exists('lf_seo_generate_meta_title_for_intent')
+			? lf_seo_generate_meta_title_for_intent($post_id, $primary_keyword)
+			: lf_seo_generate_meta_title_from_keywords($primary_keyword);
 		if ($title !== '') {
 			update_post_meta($post_id, '_lf_seo_meta_title', $title);
 		}
@@ -256,10 +293,15 @@ function lf_seo_maybe_populate_generated_meta(int $post_id, string $primary = ''
 
 	$current_description = trim((string) get_post_meta($post_id, '_lf_seo_meta_description', true));
 	if ($current_description === '' || lf_seo_meta_text_needs_upgrade($current_description, 'description')) {
-		$description = lf_seo_generate_meta_description_from_keywords($post_id, $primary_keyword, $secondary_list);
+		$description = function_exists('lf_seo_generate_meta_description_for_intent')
+			? lf_seo_generate_meta_description_for_intent($post_id, $primary_keyword, $secondary_list)
+			: lf_seo_generate_meta_description_from_keywords($post_id, $primary_keyword, $secondary_list);
 		if ($description !== '') {
 			update_post_meta($post_id, '_lf_seo_meta_description', $description);
 		}
+	}
+	if (function_exists('lf_seo_calculate_content_quality')) {
+		lf_seo_calculate_content_quality($post_id);
 	}
 }
 
@@ -428,14 +470,18 @@ function lf_seo_refresh_metadata_for_generated_content(int $limit = 400): void {
 
 		$current_title = trim((string) get_post_meta($post_id, '_lf_seo_meta_title', true));
 		if (lf_seo_meta_text_needs_upgrade($current_title, 'title')) {
-			$new_title = lf_seo_generate_meta_title_from_keywords($primary);
+			$new_title = function_exists('lf_seo_generate_meta_title_for_intent')
+				? lf_seo_generate_meta_title_for_intent($post_id, $primary)
+				: lf_seo_generate_meta_title_from_keywords($primary);
 			if ($new_title !== '') {
 				update_post_meta($post_id, '_lf_seo_meta_title', $new_title);
 			}
 		}
 		$current_description = trim((string) get_post_meta($post_id, '_lf_seo_meta_description', true));
 		if (lf_seo_meta_text_needs_upgrade($current_description, 'description')) {
-			$new_description = lf_seo_generate_meta_description_from_keywords($post_id, $primary, $secondary);
+			$new_description = function_exists('lf_seo_generate_meta_description_for_intent')
+				? lf_seo_generate_meta_description_for_intent($post_id, $primary, $secondary)
+				: lf_seo_generate_meta_description_from_keywords($post_id, $primary, $secondary);
 			if ($new_description !== '') {
 				update_post_meta($post_id, '_lf_seo_meta_description', $new_description);
 			}
@@ -448,6 +494,9 @@ function lf_seo_refresh_metadata_for_generated_content(int $limit = 400): void {
 		$og_image = (int) get_post_meta($post_id, '_lf_seo_og_image_id', true);
 		if ($og_image <= 0 && has_post_thumbnail($post_id)) {
 			update_post_meta($post_id, '_lf_seo_og_image_id', (string) get_post_thumbnail_id($post_id));
+		}
+		if (function_exists('lf_seo_calculate_content_quality')) {
+			lf_seo_calculate_content_quality($post_id);
 		}
 	}
 }

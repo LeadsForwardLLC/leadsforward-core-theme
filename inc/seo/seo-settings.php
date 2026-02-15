@@ -72,6 +72,22 @@ function lf_seo_get_settings(): array {
 			'enable_auto_keywords' => true,
 			'enable_keyword_map' => true,
 			'enable_keyword_density' => true,
+			'enable_quality_scorer' => true,
+			'enable_serp_templates' => true,
+		],
+		'serp' => [
+			'title' => [
+				'transactional' => '{{primary_keyword}} | {{city}} | {{brand}}',
+				'local' => '{{primary_keyword}} in {{city}} | {{brand}}',
+				'informational' => '{{page_title}}: {{primary_keyword}} Guide | {{brand}}',
+				'navigational' => '{{brand}} | {{page_title}}',
+			],
+			'description' => [
+				'transactional' => '{{primary_keyword}} in {{city}} from {{brand}}. Get clear pricing, scope, and scheduling with fast quote turnaround.',
+				'local' => 'Local {{primary_keyword}} in {{city}} by {{brand}}. Licensed team, clear timelines, and service-area coverage.',
+				'informational' => 'Learn {{primary_keyword}} with practical guidance from {{brand}} in {{city}}. Includes process, pricing factors, and expert tips.',
+				'navigational' => '{{page_title}} at {{brand}}. Find services, coverage areas, and next steps quickly.',
+			],
 		],
 	];
 	$saved = get_option('lf_seo_settings', []);
@@ -155,6 +171,20 @@ function lf_seo_handle_save(): void {
 	$settings['ai']['enable_auto_keywords'] = !empty($_POST['lf_seo_ai_auto_keywords']);
 	$settings['ai']['enable_keyword_map'] = !empty($_POST['lf_seo_ai_keyword_map']);
 	$settings['ai']['enable_keyword_density'] = !empty($_POST['lf_seo_ai_keyword_density']);
+	$settings['ai']['enable_quality_scorer'] = !empty($_POST['lf_seo_ai_quality_scorer']);
+	$settings['ai']['enable_serp_templates'] = !empty($_POST['lf_seo_ai_serp_templates']);
+
+	$serp_intents = ['transactional', 'local', 'informational', 'navigational'];
+	foreach ($serp_intents as $intent) {
+		$title_key = 'lf_seo_serp_title_' . $intent;
+		$desc_key = 'lf_seo_serp_desc_' . $intent;
+		$settings['serp']['title'][$intent] = isset($_POST[$title_key])
+			? sanitize_text_field(wp_unslash((string) $_POST[$title_key]))
+			: (string) ($settings['serp']['title'][$intent] ?? '');
+		$settings['serp']['description'][$intent] = isset($_POST[$desc_key])
+			? sanitize_textarea_field(wp_unslash((string) $_POST[$desc_key]))
+			: (string) ($settings['serp']['description'][$intent] ?? '');
+	}
 
 	update_option('lf_seo_settings', $settings);
 	wp_safe_redirect(add_query_arg('saved', '1', admin_url('admin.php?page=lf-seo')));
@@ -391,6 +421,39 @@ function lf_seo_render_settings_page(): void {
 					<th scope="row"><?php esc_html_e('Enable keyword density enforcement', 'leadsforward-core'); ?></th>
 					<td><label><input type="checkbox" name="lf_seo_ai_keyword_density" value="1" <?php checked(!empty($settings['ai']['enable_keyword_density'])); ?> /> <?php esc_html_e('Apply density guardrails in AI content generation.', 'leadsforward-core'); ?></label></td>
 				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e('Enable content quality scorer', 'leadsforward-core'); ?></th>
+					<td><label><input type="checkbox" name="lf_seo_ai_quality_scorer" value="1" <?php checked(!empty($settings['ai']['enable_quality_scorer'])); ?> /> <?php esc_html_e('Score each page for content depth, keyword coverage, metadata quality, and internal links.', 'leadsforward-core'); ?></label></td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e('Enable SERP intent templates', 'leadsforward-core'); ?></th>
+					<td><label><input type="checkbox" name="lf_seo_ai_serp_templates" value="1" <?php checked(!empty($settings['ai']['enable_serp_templates'])); ?> /> <?php esc_html_e('Generate meta titles/descriptions by intent (transactional, local, informational, navigational).', 'leadsforward-core'); ?></label></td>
+				</tr>
+			</table>
+
+			<h2><?php esc_html_e('SERP Intent Templates', 'leadsforward-core'); ?></h2>
+			<p class="description"><?php esc_html_e('Used when auto-generating meta tags. Available variables: {{page_title}}, {{city}}, {{brand}}, {{primary_keyword}}.', 'leadsforward-core'); ?></p>
+			<table class="form-table" role="presentation">
+				<?php
+				$serp_intents = [
+					'transactional' => __('Transactional', 'leadsforward-core'),
+					'local' => __('Local', 'leadsforward-core'),
+					'informational' => __('Informational', 'leadsforward-core'),
+					'navigational' => __('Navigational', 'leadsforward-core'),
+				];
+				foreach ($serp_intents as $intent => $label) :
+					$title_value = (string) ($settings['serp']['title'][$intent] ?? '');
+					$desc_value = (string) ($settings['serp']['description'][$intent] ?? '');
+					?>
+					<tr>
+						<th scope="row"><label for="lf_seo_serp_title_<?php echo esc_attr($intent); ?>"><?php echo esc_html(sprintf(__('%s title template', 'leadsforward-core'), $label)); ?></label></th>
+						<td><input type="text" class="large-text" id="lf_seo_serp_title_<?php echo esc_attr($intent); ?>" name="lf_seo_serp_title_<?php echo esc_attr($intent); ?>" value="<?php echo esc_attr($title_value); ?>" /></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="lf_seo_serp_desc_<?php echo esc_attr($intent); ?>"><?php echo esc_html(sprintf(__('%s description template', 'leadsforward-core'), $label)); ?></label></th>
+						<td><textarea class="large-text" rows="2" id="lf_seo_serp_desc_<?php echo esc_attr($intent); ?>" name="lf_seo_serp_desc_<?php echo esc_attr($intent); ?>"><?php echo esc_textarea($desc_value); ?></textarea></td>
+					</tr>
+				<?php endforeach; ?>
 			</table>
 
 			<?php submit_button(__('Save SEO Settings', 'leadsforward-core')); ?>

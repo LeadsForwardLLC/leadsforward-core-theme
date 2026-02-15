@@ -105,6 +105,17 @@ if ($logo_text === '') {
 		var panel = header.querySelector('.site-header__panel');
 		var closeBtn = header.querySelector('.site-header__close');
 		var submenuToggles = [];
+		function closeSubmenus() {
+			if (!submenuToggles.length) return;
+			submenuToggles.forEach(function (entry) {
+				entry.item.classList.remove('is-open');
+				entry.toggle.setAttribute('aria-expanded', 'false');
+				var entryMore = entry.item.querySelector(':scope > .site-header__more-toggle');
+				if (entryMore) {
+					entryMore.setAttribute('aria-expanded', 'false');
+				}
+			});
+		}
 		function setOpen(open) {
 			header.classList.toggle('site-header--open', open);
 			if (toggle) {
@@ -114,11 +125,8 @@ if ($logo_text === '') {
 				panel.setAttribute('aria-hidden', open ? 'false' : 'true');
 			}
 			document.body.classList.toggle('site-header--menu-open', open);
-			if (!open && submenuToggles.length) {
-				submenuToggles.forEach(function (entry) {
-					entry.item.classList.remove('is-open');
-					entry.toggle.setAttribute('aria-expanded', 'false');
-				});
+			if (!open) {
+				closeSubmenus();
 			}
 		}
 		if (toggle && panel) {
@@ -146,6 +154,7 @@ if ($logo_text === '') {
 						if (toggleBtn) toggleBtn.click();
 						return;
 					}
+					closeSubmenus();
 					setOpen(false);
 				}
 			});
@@ -173,16 +182,9 @@ if ($logo_text === '') {
 				submenuToggles.push({ item: item, toggle: toggleBtn });
 				var handleToggle = function (event) {
 					event.preventDefault();
-					submenuToggles.forEach(function (entry) {
-						if (entry.item === item) return;
-						entry.item.classList.remove('is-open');
-						entry.toggle.setAttribute('aria-expanded', 'false');
-						var entryMore = entry.item.querySelector(':scope > .site-header__more-toggle');
-						if (entryMore) {
-							entryMore.setAttribute('aria-expanded', 'false');
-						}
-					});
-					var open = !item.classList.contains('is-open');
+					var wasOpen = item.classList.contains('is-open');
+					closeSubmenus();
+					var open = !wasOpen;
 					item.classList.toggle('is-open', open);
 					toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
 					if (moreToggle) {
@@ -195,6 +197,12 @@ if ($logo_text === '') {
 				}
 			});
 		}
+		document.addEventListener('click', function (event) {
+			if (!event.target || !header.contains(event.target)) {
+				closeSubmenus();
+				setOpen(false);
+			}
+		});
 		document.addEventListener('keydown', function (event) {
 			if (event.key === 'Escape') {
 				setOpen(false);

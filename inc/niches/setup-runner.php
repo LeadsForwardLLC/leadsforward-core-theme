@@ -1340,28 +1340,88 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 		$header_items[] = [
 			'type' => 'page',
 			'object_id' => $services_page_id,
+			'classes' => ['lf-menu-group-parent', 'lf-menu-services-parent'],
 			'children' => $service_children,
+		];
+		if (!empty($service_children)) {
+			$header_items[count($header_items) - 1]['children'][] = [
+				'type' => 'custom',
+				'url' => '#',
+				'title' => '',
+				'classes' => 'lf-submenu-divider',
+			];
+		}
+		$header_items[count($header_items) - 1]['children'][] = [
+			'type' => 'page',
+			'object_id' => $services_page_id,
+			'classes' => 'lf-submenu-all-link',
+			'title' => __('All Services', 'leadsforward-core'),
 		];
 	} else {
 		$header_items[] = [
 			'type' => 'custom',
 			'url' => get_post_type_archive_link('lf_service'),
 			'title' => __('Services', 'leadsforward-core'),
+			'classes' => ['lf-menu-group-parent', 'lf-menu-services-parent'],
 			'children' => $service_children,
+		];
+		if (!empty($service_children)) {
+			$header_items[count($header_items) - 1]['children'][] = [
+				'type' => 'custom',
+				'url' => '#',
+				'title' => '',
+				'classes' => 'lf-submenu-divider',
+			];
+		}
+		$header_items[count($header_items) - 1]['children'][] = [
+			'type' => 'custom',
+			'url' => get_post_type_archive_link('lf_service'),
+			'title' => __('All Services', 'leadsforward-core'),
+			'classes' => 'lf-submenu-all-link',
 		];
 	}
 	if ($areas_page_id) {
 		$header_items[] = [
 			'type' => 'page',
 			'object_id' => $areas_page_id,
+			'classes' => ['lf-menu-group-parent', 'lf-menu-areas-parent'],
 			'children' => $area_children,
+		];
+		if (!empty($area_children)) {
+			$header_items[count($header_items) - 1]['children'][] = [
+				'type' => 'custom',
+				'url' => '#',
+				'title' => '',
+				'classes' => 'lf-submenu-divider',
+			];
+		}
+		$header_items[count($header_items) - 1]['children'][] = [
+			'type' => 'page',
+			'object_id' => $areas_page_id,
+			'classes' => 'lf-submenu-all-link',
+			'title' => __('All Service Areas', 'leadsforward-core'),
 		];
 	} else {
 		$header_items[] = [
 			'type' => 'custom',
 			'url' => get_post_type_archive_link('lf_service_area'),
 			'title' => __('Service Areas', 'leadsforward-core'),
+			'classes' => ['lf-menu-group-parent', 'lf-menu-areas-parent'],
 			'children' => $area_children,
+		];
+		if (!empty($area_children)) {
+			$header_items[count($header_items) - 1]['children'][] = [
+				'type' => 'custom',
+				'url' => '#',
+				'title' => '',
+				'classes' => 'lf-submenu-divider',
+			];
+		}
+		$header_items[count($header_items) - 1]['children'][] = [
+			'type' => 'custom',
+			'url' => get_post_type_archive_link('lf_service_area'),
+			'title' => __('All Service Areas', 'leadsforward-core'),
+			'classes' => 'lf-submenu-all-link',
 		];
 	}
 	if ($reviews_id) $header_items[] = ['type' => 'page', 'object_id' => $reviews_id];
@@ -1486,19 +1546,50 @@ function lf_wizard_ensure_menu(string $menu_name, string $location, array $items
 		}
 		if (!empty($item['children']) && is_array($item['children']) && $parent_id && !is_wp_error($parent_id)) {
 			foreach ($item['children'] as $child) {
-				if (($child['type'] ?? '') !== 'post_type' || empty($child['object_id']) || empty($child['object'])) {
+				$child_classes = '';
+				if (!empty($child['classes'])) {
+					$child_classes = is_array($child['classes']) ? implode(' ', $child['classes']) : (string) $child['classes'];
+				}
+				$child_type = (string) ($child['type'] ?? '');
+				if ($child_type === 'post_type' && !empty($child['object_id']) && !empty($child['object'])) {
+					wp_update_nav_menu_item($menu_id, 0, [
+						'menu-item-title'     => get_the_title($child['object_id']),
+						'menu-item-url'       => get_permalink($child['object_id']),
+						'menu-item-type'      => 'post_type',
+						'menu-item-object'    => $child['object'],
+						'menu-item-object-id' => $child['object_id'],
+						'menu-item-status'    => 'publish',
+						'menu-item-parent-id' => $parent_id,
+						'menu-item-position'  => $position++,
+						'menu-item-classes'   => $child_classes,
+					]);
 					continue;
 				}
-				wp_update_nav_menu_item($menu_id, 0, [
-					'menu-item-title'     => get_the_title($child['object_id']),
-					'menu-item-url'       => get_permalink($child['object_id']),
-					'menu-item-type'      => 'post_type',
-					'menu-item-object'    => $child['object'],
-					'menu-item-object-id' => $child['object_id'],
-					'menu-item-status'    => 'publish',
-					'menu-item-parent-id' => $parent_id,
-					'menu-item-position'  => $position++,
-				]);
+				if ($child_type === 'page' && !empty($child['object_id'])) {
+					wp_update_nav_menu_item($menu_id, 0, [
+						'menu-item-title'     => $child['title'] ?? get_the_title($child['object_id']),
+						'menu-item-url'       => get_permalink($child['object_id']),
+						'menu-item-type'      => 'post_type',
+						'menu-item-object'    => 'page',
+						'menu-item-object-id' => $child['object_id'],
+						'menu-item-status'    => 'publish',
+						'menu-item-parent-id' => $parent_id,
+						'menu-item-position'  => $position++,
+						'menu-item-classes'   => $child_classes,
+					]);
+					continue;
+				}
+				if ($child_type === 'custom' && isset($child['url'])) {
+					wp_update_nav_menu_item($menu_id, 0, [
+						'menu-item-title'     => $child['title'] ?? '',
+						'menu-item-url'       => (string) $child['url'],
+						'menu-item-type'      => 'custom',
+						'menu-item-status'    => 'publish',
+						'menu-item-parent-id' => $parent_id,
+						'menu-item-position'  => $position++,
+						'menu-item-classes'   => $child_classes,
+					]);
+				}
 			}
 		}
 	}

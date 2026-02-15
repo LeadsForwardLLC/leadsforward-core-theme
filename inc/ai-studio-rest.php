@@ -400,6 +400,20 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 	}
 
 	$apply_payload = $payload['apply'] ?? $payload;
+	$quality_warnings = [];
+	$candidate_warnings = $payload['quality_warnings'] ?? ($apply_payload['quality_warnings'] ?? []);
+	if (is_array($candidate_warnings)) {
+		foreach ($candidate_warnings as $warning) {
+			$text = sanitize_text_field((string) $warning);
+			if ($text !== '') {
+				$quality_warnings[] = $text;
+			}
+		}
+	}
+	if (!empty($quality_warnings)) {
+		update_post_meta($job_id, 'lf_ai_job_quality_warnings', $quality_warnings);
+		update_option('lf_ai_studio_quality_warnings', $quality_warnings, false);
+	}
 	$media_annotations = $payload['media_annotations'] ?? $apply_payload['media_annotations'] ?? [];
 	if (is_array($media_annotations) && !empty($media_annotations) && function_exists('lf_image_intelligence_apply_vision_annotations')) {
 		$vision_result = lf_image_intelligence_apply_vision_annotations($media_annotations);
@@ -434,6 +448,9 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		}
 		if (function_exists('lf_ai_studio_run_content_audit')) {
 			$report = lf_ai_studio_run_content_audit('orchestrator');
+			if (!empty($quality_warnings)) {
+				$report['quality_warnings'] = $quality_warnings;
+			}
 			lf_ai_studio_store_audit_report($report, $job_id);
 			lf_ai_studio_maybe_requeue_from_audit($job_id, $report);
 		}

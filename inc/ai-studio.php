@@ -962,7 +962,19 @@ function lf_ai_studio_render_page(): void {
 					<div><strong><?php esc_html_e('Missing fields:', 'leadsforward-core'); ?></strong> <?php echo esc_html((string) ($summary['missing_fields'] ?? 0)); ?></div>
 					<div><strong><?php esc_html_e('Pages with issues:', 'leadsforward-core'); ?></strong> <?php echo esc_html((string) ($summary['pages_with_issues'] ?? 0)); ?></div>
 					<div><strong><?php esc_html_e('CTA uniqueness:', 'leadsforward-core'); ?></strong> <?php echo esc_html((string) ($summary['cta_unique'] ?? 0)); ?>/<?php echo esc_html((string) ($summary['cta_total'] ?? 0)); ?></div>
+					<div><strong><?php esc_html_e('Internal links:', 'leadsforward-core'); ?></strong> <?php echo esc_html((string) ($summary['internal_links_total'] ?? 0)); ?></div>
+					<div><strong><?php esc_html_e('Pages with links:', 'leadsforward-core'); ?></strong> <?php echo esc_html((string) ($summary['pages_with_internal_links'] ?? 0)); ?></div>
+					<div><strong><?php esc_html_e('Avg SEO quality:', 'leadsforward-core'); ?></strong> <?php echo esc_html((string) ($summary['seo_quality_avg'] ?? 0)); ?>/100</div>
 				</div>
+				<?php $quality_warnings = is_array($audit_report['quality_warnings'] ?? null) ? $audit_report['quality_warnings'] : []; ?>
+				<?php if (!empty($quality_warnings)) : ?>
+					<p><strong><?php esc_html_e('Quality warnings from orchestrator:', 'leadsforward-core'); ?></strong></p>
+					<ul style="margin: 0 0 12px 18px;">
+						<?php foreach ($quality_warnings as $warning) : ?>
+							<li><?php echo esc_html((string) $warning); ?></li>
+						<?php endforeach; ?>
+					</ul>
+				<?php endif; ?>
 				<?php if (!empty($pages) && is_array($pages)) : ?>
 					<ul style="margin: 0 0 12px 18px;">
 						<?php foreach ($pages as $page) : ?>
@@ -1840,8 +1852,10 @@ function lf_ai_studio_fill_site_content_without_ai(): array {
 			$type = (string) ($section['type'] ?? '');
 			$section_registry = ($type !== '' && isset($registry[$type]) && is_array($registry[$type])) ? $registry[$type] : [];
 			$filled = lf_ai_studio_fill_generic_section_copy($settings, $post, $type, $section_registry);
-			if ($filled !== $settings) {
-				$sections[$instance_id]['settings'] = lf_sections_sanitize_settings($type, $filled);
+			$link_result = lf_ai_studio_orchestrate_internal_links_for_settings($filled, $type, $registry, $post);
+			$linked = is_array($link_result['settings'] ?? null) ? $link_result['settings'] : $filled;
+			if ($linked !== $settings) {
+				$sections[$instance_id]['settings'] = lf_sections_sanitize_settings($type, $linked);
 				$updated['post_sections']++;
 				$changed = true;
 			}
@@ -3141,6 +3155,7 @@ function lf_ai_studio_llm_system_message(): string {
 		'Headlines: never use dash or hyphen separators. Sentence case or title case only. No trailing punctuation unless a question mark. Hero headline max 12 words.',
 		'Benefits: 15-35 words each, max 2 sentences per benefit. No dash separators in benefit titles.',
 		'Internal linking: include 1-2 internal links in richtext fields using internal_links list. Use <a href="URL">Label</a>. Do not invent URLs.',
+		'SERP intent alignment: service/service-area pages should read transactional+local, and blog posts should read informational. Keep metadata-aligned language in headlines and first paragraph.',
 		'You may receive research_context. Use it for positioning, differentiation, SEO entity strategy, tone alignment, FAQ angle selection, and authority modeling. Do NOT copy research text verbatim. Apply strategically.',
 		'Content separation by page type:',
 		'Homepage: broad positioning; do not reuse service or area copy verbatim.',
@@ -4251,6 +4266,90 @@ function lf_ai_studio_internal_links_catalog(): array {
 	return $links;
 }
 
+function lf_ai_studio_registry_richtext_keys(string $section_type, array $registry): array {
+	$schema = is_array($registry[$section_type] ?? null) ? $registry[$section_type] : [];
+	$fields = is_array($schema['fields'] ?? null) ? $schema['fields'] : [];
+	$keys = [];
+	foreach ($fields as $field) {
+		if (!is_array($field)) {
+			continue;
+		}
+		$key = sanitize_key((string) ($field['key'] ?? ''));
+		$type = (string) ($field['type'] ?? '');
+		if ($key !== '' && in_array($type, ['richtext', 'textarea', 'text'], true)) {
+			$keys[] = $key;
+		}
+	}
+	return array_values(array_unique($keys));
+}
+
+function lf_ai_studio_pick_internal_link(array $catalog, \WP_Post $post, string $section_type, string $field_key): array {
+	$self_url = (string) get_permalink($post);
+	$candidates = [];
+	foreach ($catalog as $entry) {
+		if (!is_array($entry)) {
+			continue;
+		}
+		$url = trim((string) ($entry['url'] ?? ''));
+		$label = trim((string) ($entry['label'] ?? ''));
+		if ($url === '' || $label === '' || $url === $self_url) {
+			continue;
+		}
+		$candidates[] = ['url' => $url, 'label' => $label];
+	}
+	if (empty($candidates)) {
+		return [];
+	}
+	$seed = crc32($post->ID . '|' . $section_type . '|' . $field_key);
+	$index = (int) (abs($seed) % count($candidates));
+	return $candidates[$index] ?? [];
+}
+
+function lf_ai_studio_inject_internal_link_markup(string $value, array $target): string {
+	$clean = trim($value);
+	if ($clean === '' || stripos($clean, '<a ') !== false) {
+		return $value;
+	}
+	$url = trim((string) ($target['url'] ?? ''));
+	$label = trim((string) ($target['label'] ?? ''));
+	if ($url === '' || $label === '') {
+		return $value;
+	}
+	$link = '<a href="' . esc_url($url) . '">' . esc_html($label) . '</a>';
+	if (stripos($clean, '</p>') !== false) {
+		return preg_replace('/<\/p>\s*$/i', ' ' . $link . '</p>', $clean, 1) ?: ($clean . ' ' . $link);
+	}
+	return wp_kses_post($clean . ' ' . $link);
+}
+
+function lf_ai_studio_orchestrate_internal_links_for_settings(array $settings, string $section_type, array $registry, \WP_Post $post): array {
+	$catalog = lf_ai_studio_internal_links_catalog();
+	if (empty($catalog)) {
+		return ['settings' => $settings, 'inserted' => 0];
+	}
+	$rich_keys = lf_ai_studio_registry_richtext_keys($section_type, $registry);
+	if (empty($rich_keys)) {
+		return ['settings' => $settings, 'inserted' => 0];
+	}
+	$inserted = 0;
+	foreach ($rich_keys as $field_key) {
+		$value = $settings[$field_key] ?? null;
+		if (!is_string($value) || trim($value) === '') {
+			continue;
+		}
+		$target = lf_ai_studio_pick_internal_link($catalog, $post, $section_type, $field_key);
+		if (empty($target)) {
+			continue;
+		}
+		$updated = lf_ai_studio_inject_internal_link_markup($value, $target);
+		if ($updated !== $value) {
+			$settings[$field_key] = $updated;
+			$inserted++;
+		}
+	}
+	return ['settings' => $settings, 'inserted' => $inserted];
+}
+
 function lf_ai_studio_homepage_internal_links(): array {
 	$services = get_posts([
 		'post_type' => 'lf_service',
@@ -4946,7 +5045,9 @@ function lf_apply_orchestrator_updates(array $response): array {
 				lf_sections_sanitize_settings($type, $injected)
 			);
 			$section_registry = isset($registry[$type]) && is_array($registry[$type]) ? $registry[$type] : [];
-			$sections[$instance_id]['settings'] = lf_ai_studio_fill_generic_section_copy($merged_settings, $post, $type, $section_registry);
+			$filled_settings = lf_ai_studio_fill_generic_section_copy($merged_settings, $post, $type, $section_registry);
+			$link_result = lf_ai_studio_orchestrate_internal_links_for_settings($filled_settings, $type, $registry, $post);
+			$sections[$instance_id]['settings'] = is_array($link_result['settings'] ?? null) ? $link_result['settings'] : $filled_settings;
 		}
 		update_post_meta($post_id, LF_PB_META_KEY, [
 			'order' => $order,
@@ -5343,9 +5444,13 @@ function lf_ai_studio_audit_site_content(): array {
 			'pages_with_issues' => 0,
 			'cta_total' => 0,
 			'cta_unique' => 0,
+			'internal_links_total' => 0,
+			'pages_with_internal_links' => 0,
+			'seo_quality_avg' => 0,
 		],
 		'pages' => [],
 		'cta_duplicates' => [],
+		'quality_warnings' => array_values(array_filter((array) get_option('lf_ai_studio_quality_warnings', []))),
 	];
 	$cta_signatures = [];
 
@@ -5471,6 +5576,11 @@ function lf_ai_studio_audit_site_content(): array {
 	}
 	$report['summary']['cta_total'] = $cta_total;
 	$report['summary']['cta_unique'] = $cta_unique;
+	$link_stats = lf_ai_studio_internal_link_coverage_for_report($report['pages']);
+	$report['summary']['internal_links_total'] = (int) ($link_stats['total_links'] ?? 0);
+	$report['summary']['pages_with_internal_links'] = (int) ($link_stats['pages_with_links'] ?? 0);
+	$quality_avg = lf_ai_studio_average_quality_score_for_report($report['pages']);
+	$report['summary']['seo_quality_avg'] = $quality_avg;
 	return $report;
 }
 
@@ -5559,6 +5669,72 @@ function lf_ai_studio_audit_normalize_text($value): string {
 	$text = wp_strip_all_tags((string) $value);
 	$text = preg_replace('/\s+/', ' ', $text);
 	return trim((string) $text);
+}
+
+function lf_ai_studio_internal_link_coverage_for_report(array $pages): array {
+	$total_links = 0;
+	$pages_with_links = 0;
+	foreach ($pages as $page) {
+		$post_id = isset($page['id']) ? absint($page['id']) : 0;
+		if ($post_id <= 0) {
+			continue;
+		}
+		$count = lf_ai_studio_count_internal_links_for_post($post_id);
+		$total_links += $count;
+		if ($count > 0) {
+			$pages_with_links++;
+		}
+	}
+	return [
+		'total_links' => $total_links,
+		'pages_with_links' => $pages_with_links,
+	];
+}
+
+function lf_ai_studio_count_internal_links_for_post(int $post_id): int {
+	$post = get_post($post_id);
+	if (!$post instanceof \WP_Post) {
+		return 0;
+	}
+	$count = (int) preg_match_all('/<a\s[^>]*href=/i', (string) $post->post_content);
+	$config = get_post_meta($post_id, LF_PB_META_KEY, true);
+	if (!is_array($config)) {
+		return $count;
+	}
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	foreach ($sections as $section) {
+		$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+		foreach ($settings as $value) {
+			if (!is_string($value) || $value === '') {
+				continue;
+			}
+			$count += (int) preg_match_all('/<a\s[^>]*href=/i', $value);
+		}
+	}
+	return $count;
+}
+
+function lf_ai_studio_average_quality_score_for_report(array $pages): int {
+	$total = 0;
+	$count = 0;
+	foreach ($pages as $page) {
+		$post_id = isset($page['id']) ? absint($page['id']) : 0;
+		if ($post_id <= 0) {
+			continue;
+		}
+		if (function_exists('lf_seo_calculate_content_quality')) {
+			lf_seo_calculate_content_quality($post_id);
+		}
+		$score = (int) get_post_meta($post_id, '_lf_seo_quality_score', true);
+		if ($score > 0) {
+			$total += $score;
+			$count++;
+		}
+	}
+	if ($count === 0) {
+		return 0;
+	}
+	return (int) round($total / $count);
 }
 
 function lf_ai_studio_build_service_short_desc(int $post_id): string {

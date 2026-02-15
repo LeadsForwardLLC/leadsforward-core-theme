@@ -235,9 +235,31 @@ function lf_image_intelligence_optimize_uploaded_image(array $metadata, int $att
 	}
 	if (!is_wp_error($saved)) {
 		update_post_meta($attachment_id, '_lf_image_optimized', '1');
+		lf_image_intelligence_store_image_profile($attachment_id);
 	}
 	delete_post_meta($attachment_id, '_lf_image_processing_lock');
 	return $metadata;
+}
+
+function lf_image_intelligence_store_image_profile(int $attachment_id): void {
+	$file = (string) get_attached_file($attachment_id);
+	if ($file === '' || !file_exists($file)) {
+		return;
+	}
+	$size = @getimagesize($file);
+	$width = is_array($size) ? (int) ($size[0] ?? 0) : 0;
+	$height = is_array($size) ? (int) ($size[1] ?? 0) : 0;
+	$bytes = @filesize($file);
+	$mime = (string) get_post_mime_type($attachment_id);
+	$profile = [
+		'width' => $width,
+		'height' => $height,
+		'bytes' => is_int($bytes) ? $bytes : 0,
+		'mime' => $mime,
+		'ext' => strtolower((string) pathinfo($file, PATHINFO_EXTENSION)),
+		'updated' => time(),
+	];
+	update_post_meta($attachment_id, '_lf_image_profile', $profile);
 }
 
 function lf_image_intelligence_png_has_transparency(string $file): bool {
@@ -272,7 +294,7 @@ function lf_image_intelligence_convert_png_to_jpeg(int $attachment_id, string $s
 		return [];
 	}
 	if (method_exists($editor, 'set_quality')) {
-		$editor->set_quality(82);
+		$editor->set_quality(72);
 	}
 	$dir = dirname($source_file);
 	$base = sanitize_title((string) pathinfo($source_file, PATHINFO_FILENAME));
@@ -294,6 +316,7 @@ function lf_image_intelligence_convert_png_to_jpeg(int $attachment_id, string $s
 	if (is_array($new_metadata)) {
 		wp_update_attachment_metadata($attachment_id, $new_metadata);
 	}
+	lf_image_intelligence_store_image_profile($attachment_id);
 	if ($source_file !== $jpg_path && file_exists($source_file)) {
 		@unlink($source_file);
 	}
@@ -787,6 +810,7 @@ function lf_image_intelligence_finalize_uploaded_attachment(int $attachment_id):
 		]);
 	}
 	lf_image_intelligence_maybe_set_alt_text($attachment_id, lf_image_intelligence_upload_context_defaults());
+	lf_image_intelligence_store_image_profile($attachment_id);
 }
 
 function lf_image_intelligence_build_media_candidates_for_vision(int $limit = 200): array {

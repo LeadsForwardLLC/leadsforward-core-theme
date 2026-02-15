@@ -1879,6 +1879,23 @@ button:focus-visible,
 	opacity: 0.7;
 }
 
+.site-header__menu .lf-menu-group-parent > .site-header__group-label {
+	display: block;
+	padding: 0.45rem 0.7rem;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.site-header__menu .sub-menu .lf-submenu-divider {
+	padding: 0.2rem 0.7rem;
+}
+
+.site-header__menu .sub-menu .lf-submenu-divider .site-header__submenu-divider {
+	display: block;
+	height: 1px;
+	background: rgba(15, 23, 42, 0.14);
+}
+
 .site-header__menu .sub-menu {
 	position: absolute;
 	top: 100%;
@@ -1928,6 +1945,15 @@ button:focus-visible,
 @media (max-width: 900px) {
 	.site-header__menu .menu-item-has-children > a::after {
 		content: '';
+	}
+	.site-header__menu .lf-menu-group-parent > .site-header__group-label {
+		padding: 0.9rem 0;
+		font-size: 1.05rem;
+		font-weight: 600;
+	}
+	.site-header__menu .sub-menu .lf-submenu-divider {
+		padding: 0.35rem 0;
+		border-bottom: 0;
 	}
 	.site-header__menu .sub-menu {
 		position: static;
