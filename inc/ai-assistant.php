@@ -444,6 +444,9 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-hero-pill-add:hover { background:#f5f0ff; }
 		.lf-ai-hero-pill-remove { border:1px solid rgba(255,255,255,.65); background:rgba(255,255,255,.2); color:inherit; border-radius:999px; min-width:18px; height:18px; padding:0 5px; font-size:11px; line-height:16px; margin-left:8px; cursor:pointer; vertical-align:middle; }
 		.lf-ai-hero-pill-remove:hover { background:rgba(255,255,255,.38); }
+		.lf-ai-list-remove { border:1px solid #e2e8f0; background:#fff; color:#64748b; border-radius:999px; min-width:18px; height:18px; padding:0 5px; font-size:11px; line-height:16px; margin-left:8px; cursor:pointer; vertical-align:middle; }
+		.lf-ai-list-remove:hover { border-color:#fecaca; color:#b91c1c; background:#fff5f5; }
+		.lf-ai-process-step.is-dragging { opacity:.6; outline:2px dashed rgba(131,72,249,.4); outline-offset:2px; }
 		[data-lf-ai-cta-editable="1"] { position:relative; }
 		[data-lf-ai-cta-editable="1"]:hover { outline:2px dashed rgba(131,72,249,.45); outline-offset:2px; }
 		.lf-ai-column-draggable { cursor:ew-resize; transition:outline-color .15s ease; }
@@ -572,6 +575,8 @@ function lf_ai_assistant_widget_js(): string {
 		var activeRailDragSectionId = "";
 		var railPointerDrag = null;
 		var activeLibraryDragSectionType = "";
+		var activeProcessDragEl = null;
+		var activeFaqDragEl = null;
 		var railLibraryOpen = false;
 		var suppressInlineClickUntil = 0;
 		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption";
@@ -1374,6 +1379,59 @@ function lf_ai_assistant_widget_js(): string {
 				setStatus(msg, true);
 			});
 		}
+		function textFromNodeWithoutAiControls(node) {
+			if (!node) return "";
+			var clone = node.cloneNode(true);
+			Array.prototype.slice.call(clone.querySelectorAll("[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-list-remove=\"1\"],.lf-ai-inline-editor-ignore")).forEach(function(btn){
+				if (btn && btn.parentNode) btn.parentNode.removeChild(btn);
+			});
+			return String(clone.textContent || "").replace(/\s+/g, " ").trim();
+		}
+		function persistSectionLineItems(wrap, fieldKey, items, savingLabel) {
+			if (!wrap || !fieldKey) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			if (!sectionId) return;
+			var lines = Array.isArray(items) ? items.map(function(v){ return String(v || "").trim(); }).filter(function(v){ return v !== ""; }) : [];
+			setStatus(savingLabel || "Saving list...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_update_section_lines",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_id: sectionId,
+				field_key: String(fieldKey),
+				items: JSON.stringify(lines)
+			}).done(function(res){
+				if (res && res.success) {
+					setStatus((res.data && res.data.message) ? res.data.message : "List saved.", false);
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "List save failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "List save failed.";
+				setStatus(msg, true);
+			});
+		}
+		function simpleListItemsFromContainer(container, itemSelector) {
+			if (!container) return [];
+			return Array.prototype.slice.call(container.querySelectorAll(itemSelector)).map(function(node){
+				return textFromNodeWithoutAiControls(node);
+			}).filter(function(text){ return text !== ""; });
+		}
+		function createGenericRemoveButton(onClick) {
+			var btn = document.createElement("button");
+			btn.type = "button";
+			btn.className = "lf-ai-list-remove lf-ai-inline-editor-ignore";
+			btn.setAttribute("data-lf-ai-list-remove", "1");
+			btn.setAttribute("title", "Remove item");
+			btn.textContent = "x";
+			btn.addEventListener("click", function(e){
+				e.preventDefault();
+				e.stopPropagation();
+				if (typeof onClick === "function") onClick();
+			});
+			return btn;
+		}
 		function buildHeroPillsControls() {
 			collectSectionWrappers().forEach(function(wrap){
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
@@ -1439,6 +1497,241 @@ function lf_ai_assistant_widget_js(): string {
 				if (parent) {
 					parent.appendChild(controls);
 				}
+			});
+		}
+		function buildHeroProofChecklistControls() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+				if (sectionType !== "hero") return;
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-list-remove=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				var list = wrap.querySelector(".lf-block-hero__card-list");
+				if (!list) return;
+				Array.prototype.slice.call(list.querySelectorAll("li")).forEach(function(li){
+					var btn = createGenericRemoveButton(function(){
+						if (li && li.parentNode) li.parentNode.removeChild(li);
+						persistSectionLineItems(wrap, "hero_proof_bullets", simpleListItemsFromContainer(list, "li"), "Saving checklist...");
+					});
+					li.appendChild(btn);
+				});
+				var controls = document.createElement("div");
+				controls.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
+				controls.setAttribute("data-lf-ai-hero-proof-controls", "1");
+				var addBtn = document.createElement("button");
+				addBtn.type = "button";
+				addBtn.className = "lf-ai-checklist-add lf-ai-inline-editor-ignore";
+				addBtn.textContent = "+ Add item";
+				addBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					var li = document.createElement("li");
+					li.textContent = "New item";
+					li.appendChild(createGenericRemoveButton(function(){
+						if (li && li.parentNode) li.parentNode.removeChild(li);
+						persistSectionLineItems(wrap, "hero_proof_bullets", simpleListItemsFromContainer(list, "li"), "Saving checklist...");
+					}));
+					list.appendChild(li);
+					persistSectionLineItems(wrap, "hero_proof_bullets", simpleListItemsFromContainer(list, "li"), "Saving checklist...");
+				});
+				controls.appendChild(addBtn);
+				if (list.parentNode) {
+					list.parentNode.appendChild(controls);
+				}
+			});
+		}
+		function buildTrustBadgePillsControls() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+				if (sectionType !== "trust_bar") return;
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-list-remove=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				var list = wrap.querySelector(".lf-trust-bar__badges");
+				if (!list) return;
+				Array.prototype.slice.call(list.querySelectorAll(".lf-trust-bar__badge")).forEach(function(badge){
+					var btn = createGenericRemoveButton(function(){
+						if (badge && badge.parentNode) badge.parentNode.removeChild(badge);
+						persistSectionLineItems(wrap, "trust_badges", simpleListItemsFromContainer(list, ".lf-trust-bar__badge"), "Saving badges...");
+					});
+					badge.appendChild(btn);
+				});
+				var controls = document.createElement("div");
+				controls.className = "lf-ai-hero-pills-controls lf-ai-inline-editor-ignore";
+				controls.setAttribute("data-lf-ai-trust-pill-controls", "1");
+				var addBtn = document.createElement("button");
+				addBtn.type = "button";
+				addBtn.className = "lf-ai-hero-pill-add lf-ai-inline-editor-ignore";
+				addBtn.textContent = "+ Add pill";
+				addBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					var text = "";
+					try { text = String(window.prompt("New badge text:", "") || "").trim(); } catch (err) { text = ""; }
+					if (!text) return;
+					var badge = document.createElement("span");
+					badge.className = "lf-trust-bar__badge";
+					badge.textContent = text;
+					badge.appendChild(createGenericRemoveButton(function(){
+						if (badge && badge.parentNode) badge.parentNode.removeChild(badge);
+						persistSectionLineItems(wrap, "trust_badges", simpleListItemsFromContainer(list, ".lf-trust-bar__badge"), "Saving badges...");
+					}));
+					list.appendChild(badge);
+					persistSectionLineItems(wrap, "trust_badges", simpleListItemsFromContainer(list, ".lf-trust-bar__badge"), "Saving badges...");
+				});
+				controls.appendChild(addBtn);
+				if (list.parentNode) {
+					list.parentNode.appendChild(controls);
+				}
+			});
+		}
+		function processStepValueFromLi(li) {
+			if (!li) return "";
+			var title = li.querySelector(".lf-process__step-title");
+			var body = li.querySelector(".lf-process__step-body");
+			if (title) {
+				var titleText = String(title.textContent || "").trim();
+				var bodyText = body ? String(body.textContent || "").trim() : "";
+				return bodyText ? (titleText + " || " + bodyText) : titleText;
+			}
+			var plain = li.querySelector(".lf-process__text");
+			return plain ? String(plain.textContent || "").trim() : textFromNodeWithoutAiControls(li);
+		}
+		function processValuesFromList(list) {
+			if (!list) return [];
+			return Array.prototype.slice.call(list.querySelectorAll(".lf-process__step")).map(function(li){
+				return processStepValueFromLi(li);
+			}).filter(function(v){ return v !== ""; });
+		}
+		function buildProcessStepControls() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+				if (sectionType !== "process") return;
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-process-controls=\"1\"],[data-lf-ai-list-remove=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				var list = wrap.querySelector(".lf-process");
+				if (!list) return;
+				Array.prototype.slice.call(list.querySelectorAll(".lf-process__step")).forEach(function(li){
+					li.classList.add("lf-ai-process-step");
+					li.setAttribute("draggable", "true");
+					li.ondragstart = function(e){
+						activeProcessDragEl = li;
+						li.classList.add("is-dragging");
+						if (e.dataTransfer) {
+							e.dataTransfer.effectAllowed = "move";
+							e.dataTransfer.setData("text/plain", "process-step");
+						}
+					};
+					li.ondragover = function(e){
+						if (!activeProcessDragEl || activeProcessDragEl === li) return;
+						e.preventDefault();
+					};
+					li.ondrop = function(e){
+						if (!activeProcessDragEl || activeProcessDragEl === li) return;
+						e.preventDefault();
+						var rect = li.getBoundingClientRect();
+						var after = e.clientY > (rect.top + rect.height / 2);
+						if (after) {
+							li.parentNode.insertBefore(activeProcessDragEl, li.nextSibling);
+						} else {
+							li.parentNode.insertBefore(activeProcessDragEl, li);
+						}
+						persistSectionLineItems(wrap, "process_steps", processValuesFromList(list), "Saving process steps...");
+					};
+					li.ondragend = function(){
+						li.classList.remove("is-dragging");
+						activeProcessDragEl = null;
+					};
+					li.appendChild(createGenericRemoveButton(function(){
+						if (li && li.parentNode) li.parentNode.removeChild(li);
+						persistSectionLineItems(wrap, "process_steps", processValuesFromList(list), "Saving process steps...");
+					}));
+				});
+				var controls = document.createElement("div");
+				controls.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
+				controls.setAttribute("data-lf-ai-process-controls", "1");
+				var addBtn = document.createElement("button");
+				addBtn.type = "button";
+				addBtn.className = "lf-ai-checklist-add lf-ai-inline-editor-ignore";
+				addBtn.textContent = "+ Add step";
+				addBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					var li = document.createElement("li");
+					li.className = "lf-process__step";
+					var text = document.createElement("span");
+					text.className = "lf-process__text";
+					text.textContent = "New step";
+					li.appendChild(text);
+					list.appendChild(li);
+					buildProcessStepControls();
+					persistSectionLineItems(wrap, "process_steps", processValuesFromList(list), "Saving process steps...");
+				});
+				controls.appendChild(addBtn);
+				if (list.parentNode) {
+					list.parentNode.insertBefore(controls, list.nextSibling);
+				}
+			});
+		}
+		function persistFaqOrder(list) {
+			if (!list) return;
+			var ids = Array.prototype.slice.call(list.querySelectorAll(".lf-block-faq-accordion__item[data-lf-faq-id]")).map(function(node){
+				return parseInt(String(node.getAttribute("data-lf-faq-id") || "0"), 10);
+			}).filter(function(id){ return id > 0; });
+			if (!ids.length) return;
+			setStatus("Saving FAQ order...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_reorder_faq_items",
+				nonce: lfAiFloating.nonce,
+				faq_ids: JSON.stringify(ids)
+			}).done(function(res){
+				if (res && res.success) {
+					setStatus((res.data && res.data.message) ? res.data.message : "FAQ order saved.", false);
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "FAQ reorder failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "FAQ reorder failed.";
+				setStatus(msg, true);
+			});
+		}
+		function buildFaqReorderControls() {
+			Array.prototype.slice.call(document.querySelectorAll(".lf-block-faq-accordion__list")).forEach(function(list){
+				Array.prototype.slice.call(list.querySelectorAll(".lf-block-faq-accordion__item[data-lf-faq-id]")).forEach(function(item){
+					item.setAttribute("draggable", "true");
+					item.ondragstart = function(e){
+						activeFaqDragEl = item;
+						item.classList.add("is-dragging");
+						if (e.dataTransfer) {
+							e.dataTransfer.effectAllowed = "move";
+							e.dataTransfer.setData("text/plain", String(item.getAttribute("data-lf-faq-id") || ""));
+						}
+					};
+					item.ondragover = function(e){
+						if (!activeFaqDragEl || activeFaqDragEl === item) return;
+						e.preventDefault();
+					};
+					item.ondrop = function(e){
+						if (!activeFaqDragEl || activeFaqDragEl === item) return;
+						e.preventDefault();
+						var rect = item.getBoundingClientRect();
+						var after = e.clientY > (rect.top + rect.height / 2);
+						if (after) {
+							item.parentNode.insertBefore(activeFaqDragEl, item.nextSibling);
+						} else {
+							item.parentNode.insertBefore(activeFaqDragEl, item);
+						}
+						persistFaqOrder(list);
+					};
+					item.ondragend = function(){
+						item.classList.remove("is-dragging");
+						activeFaqDragEl = null;
+					};
+				});
 			});
 		}
 		function ctaSlotForButton(node) {
@@ -1701,8 +1994,12 @@ function lf_ai_assistant_widget_js(): string {
 					buildSectionControls();
 					buildSectionButtonEditors();
 					buildHeroPillsControls();
+					buildHeroProofChecklistControls();
+					buildTrustBadgePillsControls();
 					buildChecklistControls();
+					buildProcessStepControls();
 					buildSectionColumnSwapTargets();
+					buildFaqReorderControls();
 					setSelectedSection(clone);
 					setStatus((res.data && res.data.message) ? res.data.message : "Section duplicated.", false);
 				} else {
@@ -2860,8 +3157,12 @@ function lf_ai_assistant_widget_js(): string {
 		buildSectionControls();
 		buildSectionButtonEditors();
 		buildHeroPillsControls();
+		buildHeroProofChecklistControls();
+		buildTrustBadgePillsControls();
 		buildChecklistControls();
+		buildProcessStepControls();
 		buildSectionColumnSwapTargets();
+		buildFaqReorderControls();
 		refreshSectionRail();
 		var firstWrap = collectSectionWrappers()[0] || null;
 		if (firstWrap) {

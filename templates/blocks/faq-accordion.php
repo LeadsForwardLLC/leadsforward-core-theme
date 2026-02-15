@@ -75,7 +75,7 @@ $query = new WP_Query([
 						$a = wpautop($a);
 					}
 				?>
-					<details class="lf-block-faq-accordion__item">
+					<details class="lf-block-faq-accordion__item" data-lf-faq-id="<?php echo esc_attr((string) get_the_ID()); ?>">
 						<summary class="lf-block-faq-accordion__question"><?php echo esc_html($q); ?></summary>
 						<div class="lf-block-faq-accordion__answer"><?php echo wp_kses_post($a); ?></div>
 					</details>
