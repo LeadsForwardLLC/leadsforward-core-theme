@@ -474,6 +474,7 @@ add_action('wp_ajax_lf_ai_apply', 'lf_ai_ajax_apply');
 add_action('wp_ajax_lf_ai_rollback', 'lf_ai_ajax_rollback');
 add_action('wp_ajax_lf_ai_rollback_latest', 'lf_ai_ajax_rollback_latest');
 add_action('wp_ajax_lf_ai_extract_context_doc', 'lf_ai_ajax_extract_context_doc');
+add_action('wp_ajax_lf_ai_inline_save', 'lf_ai_ajax_inline_save');
 
 function lf_ai_editing_meta_box(): void {
 	if (!current_user_can(LF_AI_CAP)) {
@@ -826,6 +827,39 @@ function lf_ai_ajax_extract_context_doc(): void {
 	wp_send_json_success([
 		'name' => $name,
 		'context' => $context,
+	]);
+}
+
+function lf_ai_ajax_inline_save(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
+	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
+	$field_key = isset($_POST['field_key']) ? sanitize_text_field(wp_unslash($_POST['field_key'])) : '';
+	$value_raw = isset($_POST['value']) ? (string) wp_unslash($_POST['value']) : '';
+	$value = trim(sanitize_textarea_field($value_raw));
+	if ($context_type === '' || $context_id === '' || $field_key === '') {
+		wp_send_json_error(['message' => __('Invalid request payload.', 'leadsforward-core')]);
+	}
+	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	$editable = lf_get_ai_editable_fields($context_id_use);
+	if (!lf_is_field_ai_editable($field_key) || !isset($editable[$field_key])) {
+		wp_send_json_error(['message' => __('That field is not editable in this context.', 'leadsforward-core')]);
+	}
+	if (strlen($value) > 4000) {
+		wp_send_json_error(['message' => __('Text is too long for inline editing.', 'leadsforward-core')]);
+	}
+	$result = lf_ai_apply_proposal($context_type, $context_id_use, [$field_key => $value], 'Inline frontend edit');
+	if (empty($result['success'])) {
+		wp_send_json_error(['message' => __('Could not save inline edit.', 'leadsforward-core')]);
+	}
+	wp_send_json_success([
+		'message' => __('Inline edit saved.', 'leadsforward-core'),
+		'field_key' => $field_key,
+		'value' => $value,
+		'log_id' => (string) ($result['log_id'] ?? ''),
 	]);
 }
 
