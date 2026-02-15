@@ -819,6 +819,21 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			refreshSectionRail();
 		}
+		function scrollToSectionWrap(wrap) {
+			if (!wrap || !wrap.getBoundingClientRect) return;
+			try {
+				wrap.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+			} catch (e) {
+				// no-op, fallback below
+			}
+			try {
+				var rect = wrap.getBoundingClientRect();
+				var pageTop = window.pageYOffset || document.documentElement.scrollTop || 0;
+				var desired = pageTop + rect.top - 120;
+				if (desired < 0) desired = 0;
+				window.scrollTo({ top: desired, behavior: "smooth" });
+			} catch (e) {}
+		}
 		function ensureSectionRail() {
 			if (sectionRailEl) return sectionRailEl;
 			sectionRailEl = document.createElement("aside");
@@ -964,7 +979,7 @@ function lf_ai_assistant_widget_js(): string {
 				row.innerHTML = escapeHtml(sectionLabelForWrap(wrap)) + "<small>" + escapeHtml(String(wrap.getAttribute("data-lf-section-type") || "section")) + (isHidden ? " • hidden" : "") + "</small>";
 				row.addEventListener("click", function(){
 					setSelectedSection(wrap);
-					try { wrap.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {}
+					scrollToSectionWrap(wrap);
 				});
 				row.addEventListener("focus", function(){
 					setSelectedSection(wrap);
