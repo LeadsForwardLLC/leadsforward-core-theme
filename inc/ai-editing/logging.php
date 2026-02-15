@@ -42,6 +42,40 @@ function lf_ai_log_action(string $context_type, $context_id, array $changes_old,
 }
 
 /**
+ * Append one AI creation action to the log for rollback of created drafts.
+ */
+function lf_ai_log_creation_action(string $context_type, $context_id, array $created_post_ids, string $prompt_snippet = ''): string {
+	$log = get_option(LF_AI_LOG_OPTION, []);
+	if (!is_array($log)) {
+		$log = [];
+	}
+	$created_post_ids = array_values(array_filter(array_map('intval', $created_post_ids), static function (int $id): bool {
+		return $id > 0;
+	}));
+	if (empty($created_post_ids)) {
+		return '';
+	}
+	$id = 'ai-' . wp_generate_password(8, false);
+	$entry = [
+		'id'               => $id,
+		'user_id'          => get_current_user_id(),
+		'time'             => time(),
+		'context_type'     => $context_type,
+		'context_id'       => $context_id,
+		'changes_old'      => [],
+		'changes_new'      => [],
+		'created_post_ids' => $created_post_ids,
+		'action_type'      => 'create',
+		'prompt'           => $prompt_snippet,
+		'rolled_back'      => false,
+	];
+	array_unshift($log, $entry);
+	$log = array_slice($log, 0, LF_AI_LOG_MAX);
+	update_option(LF_AI_LOG_OPTION, $log);
+	return $id;
+}
+
+/**
  * Get full log (recent first).
  */
 function lf_ai_get_log(): array {
@@ -80,7 +114,27 @@ function lf_ai_rollback(string $id): bool {
 	}
 	$context_type = $found['context_type'] ?? '';
 	$context_id   = $found['context_id'] ?? '';
+	$action_type  = (string) ($found['action_type'] ?? 'edit');
 	$old          = $found['changes_old'] ?? [];
+	if ($action_type === 'create') {
+		$created_ids = $found['created_post_ids'] ?? [];
+		if (is_array($created_ids)) {
+			foreach ($created_ids as $created_id) {
+				$post_id = (int) $created_id;
+				if ($post_id <= 0) {
+					continue;
+				}
+				$post = get_post($post_id);
+				// Safety: only remove drafts created by assistant rollback flow.
+				if ($post && $post->post_status === 'draft') {
+					wp_delete_post($post_id, true);
+				}
+			}
+		}
+		$log[$index]['rolled_back'] = true;
+		update_option(LF_AI_LOG_OPTION, $log);
+		return true;
+	}
 	if ($context_type === 'homepage') {
 		$hero_keys = ['hero_headline', 'hero_subheadline', 'cta_primary_override'];
 		$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];

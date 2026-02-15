@@ -100,6 +100,7 @@ function lf_ai_assistant_render_floating_widget(): void {
 							<option value="create_page"><?php esc_html_e('Create New Page (Draft)', 'leadsforward-core'); ?></option>
 							<option value="create_cpt"><?php esc_html_e('Create New CPT Item (Draft)', 'leadsforward-core'); ?></option>
 							<option value="create_blog_post"><?php esc_html_e('Create New Blog Post (Draft)', 'leadsforward-core'); ?></option>
+							<option value="create_batch"><?php esc_html_e('Create Batch (Drafts)', 'leadsforward-core'); ?></option>
 						</select>
 					</label>
 					<label data-lf-ai-cpt-wrap hidden>
@@ -111,6 +112,22 @@ function lf_ai_assistant_render_floating_widget(): void {
 							<option value="lf_project"><?php esc_html_e('Project', 'leadsforward-core'); ?></option>
 							<option value="lf_testimonial"><?php esc_html_e('Review/Testimonial', 'leadsforward-core'); ?></option>
 						</select>
+					</label>
+					<label data-lf-ai-batch-wrap hidden>
+						<span><?php esc_html_e('Batch Type', 'leadsforward-core'); ?></span>
+						<select data-lf-ai-batch-type>
+							<option value="post"><?php esc_html_e('Blog Posts', 'leadsforward-core'); ?></option>
+							<option value="page"><?php esc_html_e('Pages', 'leadsforward-core'); ?></option>
+							<option value="lf_service"><?php esc_html_e('Services', 'leadsforward-core'); ?></option>
+							<option value="lf_service_area"><?php esc_html_e('Service Areas', 'leadsforward-core'); ?></option>
+							<option value="lf_faq"><?php esc_html_e('FAQs', 'leadsforward-core'); ?></option>
+							<option value="lf_project"><?php esc_html_e('Projects', 'leadsforward-core'); ?></option>
+							<option value="lf_testimonial"><?php esc_html_e('Reviews/Testimonials', 'leadsforward-core'); ?></option>
+						</select>
+					</label>
+					<label data-lf-ai-batch-count-wrap hidden>
+						<span><?php esc_html_e('Count', 'leadsforward-core'); ?></span>
+						<input type="number" min="1" max="20" value="5" data-lf-ai-batch-count />
 					</label>
 				</div>
 				<div class="lf-ai-float__presets">
@@ -161,6 +178,7 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float__mode { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 		.lf-ai-float__mode label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:#475569; }
 		.lf-ai-float__mode select { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; }
+		.lf-ai-float__mode input[type="number"] { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; width:100%; box-sizing:border-box; }
 		.lf-ai-float__presets { display:flex; flex-wrap:wrap; gap:6px; }
 		.lf-ai-float__prompt { width:100%; resize:vertical; min-height:88px; border:1px solid #d6c8fb; border-radius:10px; padding:10px; font-size:13px; }
 		.lf-ai-float__prompt:focus { border-color:#8348f9; box-shadow:0 0 0 1px #8348f9; outline:none; }
@@ -209,6 +227,10 @@ function lf_ai_assistant_widget_js(): string {
 		var $mode = $root.find("[data-lf-ai-mode]");
 		var $cptWrap = $root.find("[data-lf-ai-cpt-wrap]");
 		var $cptType = $root.find("[data-lf-ai-cpt-type]");
+		var $batchWrap = $root.find("[data-lf-ai-batch-wrap]");
+		var $batchType = $root.find("[data-lf-ai-batch-type]");
+		var $batchCountWrap = $root.find("[data-lf-ai-batch-count-wrap]");
+		var $batchCount = $root.find("[data-lf-ai-batch-count]");
 		var $docInput = $root.find("[data-lf-ai-doc-input]");
 		var $docAttach = $root.find("[data-lf-ai-doc-attach]");
 		var $docClear = $root.find("[data-lf-ai-doc-clear]");
@@ -277,6 +299,27 @@ function lf_ai_assistant_widget_js(): string {
 			html += "</div>";
 			$diff.html(html).prop("hidden", false);
 		}
+		function renderCreationQueue(items) {
+			var rows = Array.isArray(items) ? items : [];
+			if (!rows.length) {
+				$diff.html("").prop("hidden", true);
+				return;
+			}
+			var html = "<div class=\"lf-ai-float__row\"><div class=\"lf-ai-float__field\">Batch Draft Queue (" + rows.length + ")</div></div>";
+			rows.forEach(function(item, idx){
+				var notes = item && item.notes && Array.isArray(item.notes) ? item.notes : [];
+				html += "<div class=\"lf-ai-float__row\">"
+					+ "<div class=\"lf-ai-float__field\">#" + (idx + 1) + " " + escapeHtml(item && item.title ? item.title : "") + "</div>"
+					+ "<div><b>Type:</b> " + escapeHtml(item && item.type ? item.type : "") + " | <b>Status:</b> draft</div>";
+				if (notes.length) {
+					html += "<div style=\"margin-top:6px;\"><ul style=\"margin:0 0 0 16px;\">";
+					notes.forEach(function(note){ html += "<li>" + escapeHtml(note) + "</li>"; });
+					html += "</ul></div>";
+				}
+				html += "</div>";
+			});
+			$diff.html(html).prop("hidden", false);
+		}
 		function setProposalEnabled(enabled){
 			$btnApply.prop("disabled", !enabled);
 			$btnReject.prop("disabled", !enabled);
@@ -287,9 +330,20 @@ function lf_ai_assistant_widget_js(): string {
 		function cptTypeValue() {
 			return String($cptType.val() || "lf_service");
 		}
+		function batchTypeValue() {
+			return String($batchType.val() || "post");
+		}
+		function batchCountValue() {
+			var n = parseInt(String($batchCount.val() || "5"), 10);
+			if (!n || n < 1) n = 1;
+			if (n > 20) n = 20;
+			return n;
+		}
 		function syncModeUi() {
 			var mode = modeValue();
 			$cptWrap.prop("hidden", mode !== "create_cpt");
+			$batchWrap.prop("hidden", mode !== "create_batch");
+			$batchCountWrap.prop("hidden", mode !== "create_batch");
 		}
 		function setDocState(name, content) {
 			docLabel = String(name || "");
@@ -392,7 +446,9 @@ function lf_ai_assistant_widget_js(): string {
 				document_context: docContext,
 				document_name: docLabel,
 				assistant_mode: lastMode,
-				assistant_cpt_type: cptTypeValue()
+				assistant_cpt_type: cptTypeValue(),
+				assistant_batch_type: batchTypeValue(),
+				assistant_batch_count: batchCountValue()
 			}).done(function(res){
 				if (res && res.success && res.data && res.data.mode === "edit_existing" && res.data.proposed) {
 					proposed = res.data.proposed;
@@ -403,7 +459,11 @@ function lf_ai_assistant_widget_js(): string {
 					setProposalEnabled(true);
 				} else if (res && res.success && res.data && res.data.creation_payload) {
 					creationPayload = res.data.creation_payload;
-					renderCreationPreview(res.data.creation_preview || {});
+					if (res.data.creation_queue) {
+						renderCreationQueue(res.data.creation_queue || []);
+					} else {
+						renderCreationPreview(res.data.creation_preview || {});
+					}
 					setStatus("Draft plan ready. Review and apply.", false);
 					setProposalEnabled(true);
 				} else {
@@ -434,7 +494,8 @@ function lf_ai_assistant_widget_js(): string {
 				proposed: JSON.stringify(proposed || {}),
 				creation_payload: JSON.stringify(creationPayload || {}),
 				assistant_mode: lastMode,
-				assistant_cpt_type: cptTypeValue()
+				assistant_cpt_type: cptTypeValue(),
+				assistant_batch_type: batchTypeValue()
 			}).done(function(res){
 				if (res && res.success && res.data && res.data.reload) {
 					window.location.reload();
@@ -448,6 +509,22 @@ function lf_ai_assistant_widget_js(): string {
 					}
 					$diff.html("<div class=\"lf-ai-float__row\"><div class=\"lf-ai-float__field\">Draft Created</div><div>" + links + "</div></div>").prop("hidden", false);
 					setStatus((res.data.message || "Draft created successfully."), false);
+					setProposalEnabled(false);
+				} else if (res && res.success && res.data && res.data.created_batch) {
+					var items = Array.isArray(res.data.created_items) ? res.data.created_items : [];
+					var html = "<div class=\"lf-ai-float__row\"><div class=\"lf-ai-float__field\">Batch Drafts Created (" + items.length + ")</div></div>";
+					items.forEach(function(item, idx){
+						var links = "";
+						if (item.edit_link) {
+							links += "<a href=\"" + escapeHtml(item.edit_link) + "\" target=\"_blank\" rel=\"noopener\">Open Draft</a>";
+						}
+						if (item.view_link) {
+							links += (links ? " | " : "") + "<a href=\"" + escapeHtml(item.view_link) + "\" target=\"_blank\" rel=\"noopener\">View</a>";
+						}
+						html += "<div class=\"lf-ai-float__row\"><div class=\"lf-ai-float__field\">#" + (idx + 1) + " " + escapeHtml(item.title || "") + "</div><div>" + links + "</div></div>";
+					});
+					$diff.html(html).prop("hidden", false);
+					setStatus((res.data.message || "Batch drafts created."), false);
 					setProposalEnabled(false);
 				} else {
 					setStatus((res && res.data && res.data.message) ? res.data.message : "Apply failed.", true);

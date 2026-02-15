@@ -21,11 +21,24 @@ function lf_ai_assistant_modes(): array {
 		'create_page',
 		'create_cpt',
 		'create_blog_post',
+		'create_batch',
 	];
 }
 
 function lf_ai_assistant_allowed_cpt_types(): array {
 	return [
+		'lf_service',
+		'lf_service_area',
+		'lf_faq',
+		'lf_project',
+		'lf_testimonial',
+	];
+}
+
+function lf_ai_assistant_batch_types(): array {
+	return [
+		'page',
+		'post',
 		'lf_service',
 		'lf_service_area',
 		'lf_faq',
@@ -45,6 +58,19 @@ function lf_ai_assistant_creation_post_type(string $mode, string $cpt_type): str
 		return $cpt_type;
 	}
 	return '';
+}
+
+function lf_ai_assistant_mode_and_cpt_for_batch_type(string $batch_type): array {
+	if ($batch_type === 'page') {
+		return ['mode' => 'create_page', 'cpt' => ''];
+	}
+	if ($batch_type === 'post') {
+		return ['mode' => 'create_blog_post', 'cpt' => ''];
+	}
+	if (in_array($batch_type, lf_ai_assistant_allowed_cpt_types(), true)) {
+		return ['mode' => 'create_cpt', 'cpt' => $batch_type];
+	}
+	return ['mode' => '', 'cpt' => ''];
 }
 
 function lf_ai_assistant_parse_secondary_keywords($value): array {
@@ -87,6 +113,25 @@ function lf_ai_assistant_build_creation_prompt(string $mode, string $post_type, 
 	$rules .= "- If mode is create_cpt and post_type is lf_faq, include question and answer.\n";
 	$rules .= "- If mode is create_cpt and post_type is lf_service_area, include city and state when possible.\n";
 	return $base . $schema . $rules . "\nUser request:\n" . $prompt;
+}
+
+function lf_ai_assistant_build_batch_prompt(string $batch_type, int $count, string $context_type, string $prompt): string {
+	$count = max(1, min(20, $count));
+	$mapping = lf_ai_assistant_mode_and_cpt_for_batch_type($batch_type);
+	$mode = (string) ($mapping['mode'] ?? '');
+	$cpt = (string) ($mapping['cpt'] ?? '');
+	$post_type = lf_ai_assistant_creation_post_type($mode, $cpt);
+	$base = "You are a WordPress content builder for a local business site.\n";
+	$base .= "Return ONLY one JSON object. No markdown. No explanation.\n";
+	$base .= "Context type: {$context_type}. Batch post_type: {$post_type}. Requested count: {$count}.\n";
+	$base .= "Output schema:\n";
+	$base .= "{ \"items\": [ { \"title\": \"string\", \"slug\": \"string optional\", \"excerpt\": \"string optional\", \"content\": \"string\", \"primary_keyword\": \"string optional\", \"secondary_keywords\": [\"string\"], \"question\": \"string optional\", \"answer\": \"string optional\", \"city\": \"string optional\", \"state\": \"string optional\" } ] }\n";
+	$base .= "Rules:\n";
+	$base .= "- Return exactly {$count} useful items.\n";
+	$base .= "- Avoid duplicates in titles and slugs.\n";
+	$base .= "- Each item must be substantial and unique.\n";
+	$base .= "- Status is always draft, do not include status field.\n";
+	return $base . "\nUser request:\n" . $prompt;
 }
 
 function lf_ai_assistant_validate_creation_payload(array $decoded, string $mode, string $cpt_type): array {
@@ -144,6 +189,17 @@ function lf_ai_assistant_creation_preview(array $payload): array {
 		'status' => 'draft',
 		'notes' => $notes,
 	];
+}
+
+function lf_ai_assistant_batch_preview(array $payloads): array {
+	$items = [];
+	foreach ($payloads as $payload) {
+		if (!is_array($payload)) {
+			continue;
+		}
+		$items[] = lf_ai_assistant_creation_preview($payload);
+	}
+	return $items;
 }
 
 function lf_ai_assistant_create_post_from_payload(array $payload): array {
@@ -353,6 +409,8 @@ function lf_ai_ajax_generate(): void {
 	$prompt       = isset($_POST['prompt']) ? sanitize_textarea_field(wp_unslash($_POST['prompt'])) : '';
 	$assistant_mode = isset($_POST['assistant_mode']) ? sanitize_text_field(wp_unslash($_POST['assistant_mode'])) : 'edit_existing';
 	$assistant_cpt_type = isset($_POST['assistant_cpt_type']) ? sanitize_text_field(wp_unslash($_POST['assistant_cpt_type'])) : '';
+	$assistant_batch_type = isset($_POST['assistant_batch_type']) ? sanitize_text_field(wp_unslash($_POST['assistant_batch_type'])) : 'post';
+	$assistant_batch_count = isset($_POST['assistant_batch_count']) ? (int) $_POST['assistant_batch_count'] : 5;
 	if (!in_array($assistant_mode, lf_ai_assistant_modes(), true)) {
 		$assistant_mode = 'edit_existing';
 	}
@@ -380,6 +438,53 @@ function lf_ai_ajax_generate(): void {
 			'proposed' => $result['proposed'],
 			'current'  => $current,
 			'labels'   => array_intersect_key(lf_get_ai_editable_fields($context_id_use), $result['proposed']),
+		]);
+	}
+	if ($assistant_mode === 'create_batch') {
+		if (!in_array($assistant_batch_type, lf_ai_assistant_batch_types(), true)) {
+			wp_send_json_error(['message' => __('Invalid batch type.', 'leadsforward-core')]);
+		}
+		$assistant_batch_count = max(1, min(20, $assistant_batch_count));
+		$mapping = lf_ai_assistant_mode_and_cpt_for_batch_type($assistant_batch_type);
+		$batch_mode = (string) ($mapping['mode'] ?? '');
+		$batch_cpt = (string) ($mapping['cpt'] ?? '');
+		$post_type = lf_ai_assistant_creation_post_type($batch_mode, $batch_cpt);
+		if ($post_type === '') {
+			wp_send_json_error(['message' => __('Unsupported batch configuration.', 'leadsforward-core')]);
+		}
+		$system = lf_ai_assistant_build_batch_prompt($assistant_batch_type, $assistant_batch_count, $context_type, $prompt);
+		$response = apply_filters('lf_ai_completion', '', $system, $prompt, $context_type, $context_id_use);
+		if (is_wp_error($response)) {
+			wp_send_json_error(['message' => $response->get_error_message()]);
+		}
+		if (!is_string($response) || trim($response) === '') {
+			wp_send_json_error(['message' => __('AI response was empty.', 'leadsforward-core')]);
+		}
+		$decoded = json_decode(trim($response), true);
+		$items = is_array($decoded['items'] ?? null) ? $decoded['items'] : [];
+		if (empty($items)) {
+			wp_send_json_error(['message' => __('AI returned no batch items.', 'leadsforward-core')]);
+		}
+		$payloads = [];
+		foreach ($items as $item) {
+			if (!is_array($item)) {
+				continue;
+			}
+			$payload = lf_ai_assistant_validate_creation_payload($item, $batch_mode, $batch_cpt);
+			if (!empty($payload)) {
+				$payloads[] = $payload;
+			}
+			if (count($payloads) >= $assistant_batch_count) {
+				break;
+			}
+		}
+		if (empty($payloads)) {
+			wp_send_json_error(['message' => __('Could not validate batch payloads. Try a more specific prompt.', 'leadsforward-core')]);
+		}
+		wp_send_json_success([
+			'mode' => $assistant_mode,
+			'creation_payload' => ['items' => $payloads, 'batch_type' => $assistant_batch_type],
+			'creation_queue' => lf_ai_assistant_batch_preview($payloads),
 		]);
 	}
 	$post_type = lf_ai_assistant_creation_post_type($assistant_mode, $assistant_cpt_type);
@@ -476,6 +581,7 @@ function lf_ai_ajax_apply(): void {
 	$context_id   = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
 	$assistant_mode = isset($_POST['assistant_mode']) ? sanitize_text_field(wp_unslash($_POST['assistant_mode'])) : 'edit_existing';
 	$assistant_cpt_type = isset($_POST['assistant_cpt_type']) ? sanitize_text_field(wp_unslash($_POST['assistant_cpt_type'])) : '';
+	$assistant_batch_type = isset($_POST['assistant_batch_type']) ? sanitize_text_field(wp_unslash($_POST['assistant_batch_type'])) : 'post';
 	if (!in_array($assistant_mode, lf_ai_assistant_modes(), true)) {
 		$assistant_mode = 'edit_existing';
 	}
@@ -486,6 +592,58 @@ function lf_ai_ajax_apply(): void {
 		$submitted_proposed = [];
 	}
 	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	if ($assistant_mode === 'create_batch') {
+		if (!in_array($assistant_batch_type, lf_ai_assistant_batch_types(), true)) {
+			wp_send_json_error(['message' => __('Invalid batch type.', 'leadsforward-core')]);
+		}
+		$mapping = lf_ai_assistant_mode_and_cpt_for_batch_type($assistant_batch_type);
+		$batch_mode = (string) ($mapping['mode'] ?? '');
+		$batch_cpt = (string) ($mapping['cpt'] ?? '');
+		$submitted_creation_raw = isset($_POST['creation_payload']) ? wp_unslash((string) $_POST['creation_payload']) : '';
+		$submitted_creation = json_decode($submitted_creation_raw, true);
+		$raw_items = is_array($submitted_creation['items'] ?? null) ? $submitted_creation['items'] : [];
+		if (empty($raw_items)) {
+			wp_send_json_error(['message' => __('Invalid batch payload. Generate again.', 'leadsforward-core')]);
+		}
+		$created_ids = [];
+		$created_rows = [];
+		foreach ($raw_items as $row) {
+			if (!is_array($row)) {
+				continue;
+			}
+			$payload = lf_ai_assistant_validate_creation_payload($row, $batch_mode, $batch_cpt);
+			if (empty($payload)) {
+				continue;
+			}
+			$created = lf_ai_assistant_create_post_from_payload($payload);
+			if (empty($created['success'])) {
+				continue;
+			}
+			$post_id = (int) ($created['post_id'] ?? 0);
+			if ($post_id > 0) {
+				$created_ids[] = $post_id;
+				$created_rows[] = [
+					'post_id' => $post_id,
+					'edit_link' => (string) ($created['edit_link'] ?? ''),
+					'view_link' => (string) ($created['view_link'] ?? ''),
+					'title' => get_the_title($post_id),
+				];
+			}
+		}
+		if (empty($created_ids)) {
+			wp_send_json_error(['message' => __('No drafts were created from this batch payload.', 'leadsforward-core')]);
+		}
+		$log_id = function_exists('lf_ai_log_creation_action')
+			? lf_ai_log_creation_action($context_type, $context_id_use, $created_ids, $prompt_snippet)
+			: '';
+		wp_send_json_success([
+			'created_batch' => true,
+			'created_items' => $created_rows,
+			'count' => count($created_rows),
+			'log_id' => $log_id,
+			'message' => sprintf(__('Created %d draft items.', 'leadsforward-core'), count($created_rows)),
+		]);
+	}
 	if ($assistant_mode !== 'edit_existing') {
 		$submitted_creation_raw = isset($_POST['creation_payload']) ? wp_unslash((string) $_POST['creation_payload']) : '';
 		$submitted_creation = json_decode($submitted_creation_raw, true);
@@ -501,11 +659,15 @@ function lf_ai_ajax_apply(): void {
 			wp_send_json_error(['message' => (string) ($created['message'] ?? __('Creation failed.', 'leadsforward-core'))]);
 		}
 		$post_id = (int) ($created['post_id'] ?? 0);
+		$log_id = function_exists('lf_ai_log_creation_action')
+			? lf_ai_log_creation_action($context_type, $context_id_use, [$post_id], $prompt_snippet)
+			: '';
 		wp_send_json_success([
 			'created' => true,
 			'post_id' => $post_id,
 			'edit_link' => (string) ($created['edit_link'] ?? ''),
 			'view_link' => (string) ($created['view_link'] ?? ''),
+			'log_id' => $log_id,
 			'message' => __('Draft created successfully.', 'leadsforward-core'),
 		]);
 	}
