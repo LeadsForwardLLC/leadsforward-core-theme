@@ -54,8 +54,25 @@ $query = new WP_Query([
 				<?php while ($query->have_posts()) : $query->the_post();
 					$q = function_exists('get_field') ? get_field('lf_faq_question') : '';
 					$a = function_exists('get_field') ? get_field('lf_faq_answer') : '';
+					if (!is_string($q)) {
+						$q = '';
+					}
+					if (!is_string($a)) {
+						$a = '';
+					}
+					$q = trim($q);
+					$a = trim($a);
 					if (!$q) {
 						$q = get_the_title();
+					}
+					if ($a === '') {
+						$a = trim((string) get_post_field('post_content', get_the_ID()));
+					}
+					if ($a === '') {
+						$a = trim((string) get_post_meta(get_the_ID(), 'lf_faq_answer', true));
+					}
+					if ($a !== '') {
+						$a = wpautop($a);
 					}
 				?>
 					<details class="lf-block-faq-accordion__item">
