@@ -134,6 +134,7 @@ function lf_ai_assistant_render_floating_widget(): void {
 			<div class="lf-ai-float__header">
 				<strong><?php esc_html_e('LeadsForward AI Assistant', 'leadsforward-core'); ?></strong>
 				<div class="lf-ai-float__header-actions">
+					<button type="button" class="lf-ai-float__icon" data-lf-ai-undo aria-label="<?php esc_attr_e('Undo last change', 'leadsforward-core'); ?>" title="<?php esc_attr_e('Undo last change (click repeatedly to step back)', 'leadsforward-core'); ?>">↶</button>
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-minimize aria-label="<?php esc_attr_e('Minimize', 'leadsforward-core'); ?>">−</button>
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-close aria-label="<?php esc_attr_e('Close', 'leadsforward-core'); ?>">×</button>
 				</div>
@@ -189,7 +190,6 @@ function lf_ai_assistant_render_floating_widget(): void {
 					<button type="button" class="button button-small" data-lf-ai-preset="<?php esc_attr_e('Tighten this page copy for higher conversions and local trust signals.', 'leadsforward-core'); ?>"><?php esc_html_e('Optimize Copy', 'leadsforward-core'); ?></button>
 					<button type="button" class="button button-small" data-lf-ai-preset="<?php esc_attr_e('Rewrite metadata and opening copy to better match transactional local intent.', 'leadsforward-core'); ?>"><?php esc_html_e('SERP Intent', 'leadsforward-core'); ?></button>
 					<button type="button" class="button button-small" data-lf-ai-preset="<?php esc_attr_e('Improve CTA language for urgency, clarity, and lead quality.', 'leadsforward-core'); ?>"><?php esc_html_e('Improve CTA', 'leadsforward-core'); ?></button>
-					<button type="button" class="button button-small" data-lf-ai-inline-toggle><?php esc_html_e('Direct Edit: Off', 'leadsforward-core'); ?></button>
 				</div>
 				<textarea class="lf-ai-float__prompt" rows="4" data-lf-ai-prompt placeholder="<?php esc_attr_e('Ask for specific edits...', 'leadsforward-core'); ?>"></textarea>
 				<div class="lf-ai-float__doc">
@@ -202,17 +202,10 @@ function lf_ai_assistant_render_floating_widget(): void {
 					<button type="button" class="button button-primary" data-lf-ai-generate><?php esc_html_e('Generate', 'leadsforward-core'); ?></button>
 					<button type="button" class="button" data-lf-ai-apply disabled><?php esc_html_e('Apply', 'leadsforward-core'); ?></button>
 					<button type="button" class="button" data-lf-ai-reject disabled><?php esc_html_e('Reject', 'leadsforward-core'); ?></button>
-					<button type="button" class="button" data-lf-ai-revert><?php esc_html_e('Revert Last AI Change', 'leadsforward-core'); ?></button>
+					<button type="button" class="button" data-lf-ai-revert><?php esc_html_e('Undo Last Change', 'leadsforward-core'); ?></button>
 				</div>
 				<div class="lf-ai-float__status" data-lf-ai-status><?php esc_html_e('Ready.', 'leadsforward-core'); ?></div>
 				<div class="lf-ai-float__diff" data-lf-ai-diff hidden></div>
-			</div>
-			<div class="lf-ai-inline-bar" data-lf-ai-inline-bar hidden>
-				<span class="lf-ai-inline-bar__label" data-lf-ai-inline-label><?php esc_html_e('Editing text...', 'leadsforward-core'); ?></span>
-				<div class="lf-ai-inline-bar__actions">
-					<button type="button" class="button button-primary button-small" data-lf-ai-inline-save><?php esc_html_e('Save', 'leadsforward-core'); ?></button>
-					<button type="button" class="button button-small" data-lf-ai-inline-cancel><?php esc_html_e('Cancel', 'leadsforward-core'); ?></button>
-				</div>
 			</div>
 			<div class="lf-ai-float__confirm" data-lf-ai-confirm hidden>
 				<div class="lf-ai-float__confirm-card">
@@ -269,13 +262,10 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float__cols { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 		.lf-ai-float__col { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:6px; }
 		.lf-ai-float__col b { display:block; margin-bottom:4px; color:#334155; }
-		.lf-ai-inline-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-top:1px solid #e2e8f0; background:#f8fafc; }
-		.lf-ai-inline-bar[hidden] { display:none !important; }
-		.lf-ai-inline-bar__label { font-size:12px; color:#334155; overflow-wrap:anywhere; }
-		.lf-ai-inline-bar__actions { display:flex; gap:8px; }
-		body.lf-ai-inline-mode [data-lf-inline-editable="1"] { outline:2px dashed rgba(131,72,249,.45); outline-offset:2px; cursor:text; transition:outline-color .15s ease; }
-		body.lf-ai-inline-mode [data-lf-inline-editable="1"]:hover { outline-color:#8348f9; }
-		body.lf-ai-inline-mode [data-lf-inline-active="1"] { outline:2px solid #8348f9 !important; background:rgba(131,72,249,.08); }
+		[data-lf-inline-editable="1"] { cursor:text; transition:outline-color .15s ease, background-color .15s ease; }
+		[data-lf-inline-editable="1"]:hover { outline:2px dashed rgba(131,72,249,.45); outline-offset:2px; }
+		[data-lf-inline-active="1"] { outline:2px solid #8348f9 !important; outline-offset:2px; background:rgba(131,72,249,.08); }
+		[data-lf-inline-saving="1"] { opacity:.72; pointer-events:none; }
 		.lf-ai-float__confirm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.4); z-index:5; padding:12px; pointer-events:auto; }
 		.lf-ai-float__confirm[hidden] { display:none !important; pointer-events:none !important; }
 		.lf-ai-float__confirm-card { width:100%; max-width:360px; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 10px 34px rgba(15,23,42,.28); padding:14px; }
@@ -306,6 +296,7 @@ function lf_ai_assistant_widget_js(): string {
 		var $btnApply = $root.find("[data-lf-ai-apply]");
 		var $btnReject = $root.find("[data-lf-ai-reject]");
 		var $btnRevert = $root.find("[data-lf-ai-revert]");
+		var $btnUndo = $root.find("[data-lf-ai-undo]");
 		var $target = $root.find("[data-lf-ai-target]");
 		var $targetRef = $root.find("[data-lf-ai-target-ref]");
 		var $mode = $root.find("[data-lf-ai-mode]");
@@ -323,11 +314,6 @@ function lf_ai_assistant_widget_js(): string {
 		var $confirmText = $root.find("[data-lf-ai-confirm-text]");
 		var $confirmYes = $root.find("[data-lf-ai-confirm-yes]");
 		var $confirmNo = $root.find("[data-lf-ai-confirm-no]");
-		var $inlineToggle = $root.find("[data-lf-ai-inline-toggle]");
-		var $inlineBar = $root.find("[data-lf-ai-inline-bar]");
-		var $inlineLabel = $root.find("[data-lf-ai-inline-label]");
-		var $inlineSave = $root.find("[data-lf-ai-inline-save]");
-		var $inlineCancel = $root.find("[data-lf-ai-inline-cancel]");
 		var proposed = null;
 		var current = null;
 		var creationPayload = null;
@@ -342,10 +328,9 @@ function lf_ai_assistant_widget_js(): string {
 		var promptSnippet = "";
 		var docContext = "";
 		var docLabel = "";
-		var inlineMode = false;
-		var inlineTargets = [];
 		var inlineActiveEl = null;
 		var inlineOriginalText = "";
+		var inlineIsSaving = false;
 
 		var inlineFieldSelectors = {
 			hero_headline: [
@@ -377,23 +362,11 @@ function lf_ai_assistant_widget_js(): string {
 			$panel.prop("hidden", !open);
 			$toggle.attr("aria-expanded", open ? "true" : "false");
 			if (!open) {
-				cancelInlineEdit(false);
+				saveInlineEdit();
 			}
 			try { window.localStorage.setItem(stateKey, open ? "open" : "closed"); } catch (e) {}
 		}
-		function setInlineMode(next) {
-			inlineMode = !!next;
-			$inlineToggle.text(inlineMode ? "Direct Edit: On" : "Direct Edit: Off");
-			if (inlineMode) {
-				document.body.classList.add("lf-ai-inline-mode");
-				setStatus("Direct edit mode enabled. Click highlighted text to edit.", false);
-			} else {
-				document.body.classList.remove("lf-ai-inline-mode");
-				cancelInlineEdit(false);
-			}
-		}
 		function buildInlineTargets() {
-			inlineTargets = [];
 			Object.keys(inlineFieldSelectors).forEach(function(fieldKey){
 				if (!labels || !labels[fieldKey]) return;
 				(inlineFieldSelectors[fieldKey] || []).forEach(function(selector){
@@ -404,17 +377,22 @@ function lf_ai_assistant_widget_js(): string {
 						if (node.closest(".lf-ai-float")) return;
 						node.setAttribute("data-lf-inline-editable", "1");
 						node.setAttribute("data-lf-inline-field", fieldKey);
-						inlineTargets.push(node);
 					});
 				});
 			});
 		}
 		function beginInlineEdit(el) {
-			if (!inlineMode || !el) return;
+			if (!el || inlineIsSaving) return;
 			var fieldKey = el.getAttribute("data-lf-inline-field");
 			if (!fieldKey) return;
 			if (inlineActiveEl && inlineActiveEl !== el) {
-				cancelInlineEdit(false);
+				saveInlineEdit(function(){
+					beginInlineEdit(el);
+				});
+				return;
+			}
+			if (inlineActiveEl === el) {
+				return;
 			}
 			inlineActiveEl = el;
 			inlineOriginalText = String(el.textContent || "").trim();
@@ -422,39 +400,60 @@ function lf_ai_assistant_widget_js(): string {
 			el.setAttribute("contenteditable", "true");
 			el.setAttribute("spellcheck", "true");
 			try { el.focus(); } catch (e) {}
-			$inlineLabel.text("Editing " + (labels[fieldKey] || fieldKey));
-			$inlineBar.prop("hidden", false);
+			setStatus("Editing " + (labels[fieldKey] || fieldKey) + ". Click away to auto-save.", false);
+			el.addEventListener("blur", function onBlur(){
+				setTimeout(function(){
+					if (inlineActiveEl === el) {
+						saveInlineEdit();
+					}
+				}, 0);
+			}, { once: true });
 		}
 		function cancelInlineEdit(showStatus) {
 			if (!inlineActiveEl) {
-				$inlineBar.prop("hidden", true);
 				return;
 			}
 			inlineActiveEl.textContent = inlineOriginalText;
 			inlineActiveEl.removeAttribute("contenteditable");
 			inlineActiveEl.removeAttribute("spellcheck");
 			inlineActiveEl.removeAttribute("data-lf-inline-active");
+			inlineActiveEl.removeAttribute("data-lf-inline-saving");
 			inlineActiveEl = null;
 			inlineOriginalText = "";
-			$inlineBar.prop("hidden", true);
 			if (showStatus !== false) {
 				setStatus("Inline edit cancelled.", false);
 			}
 		}
-		function saveInlineEdit() {
-			if (!inlineActiveEl) {
+		function saveInlineEdit(done) {
+			if (!inlineActiveEl || inlineIsSaving) {
+				if (typeof done === "function") done();
 				return;
 			}
-			var fieldKey = String(inlineActiveEl.getAttribute("data-lf-inline-field") || "");
-			var value = String(inlineActiveEl.textContent || "").trim();
+			var el = inlineActiveEl;
+			var fieldKey = String(el.getAttribute("data-lf-inline-field") || "");
+			var value = String(el.textContent || "").trim();
 			if (!fieldKey) {
 				setStatus("Invalid inline field mapping.", true);
+				if (typeof done === "function") done();
 				return;
 			}
 			if (value === "") {
 				setStatus("Text cannot be empty.", true);
+				if (typeof done === "function") done();
 				return;
 			}
+			if (value === inlineOriginalText) {
+				el.removeAttribute("contenteditable");
+				el.removeAttribute("spellcheck");
+				el.removeAttribute("data-lf-inline-active");
+				el.removeAttribute("data-lf-inline-saving");
+				inlineActiveEl = null;
+				inlineOriginalText = "";
+				if (typeof done === "function") done();
+				return;
+			}
+			inlineIsSaving = true;
+			el.setAttribute("data-lf-inline-saving", "1");
 			setStatus("Saving inline edit...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_inline_save",
@@ -465,19 +464,26 @@ function lf_ai_assistant_widget_js(): string {
 				value: value
 			}).done(function(res){
 				if (res && res.success) {
-					inlineActiveEl.removeAttribute("contenteditable");
-					inlineActiveEl.removeAttribute("spellcheck");
-					inlineActiveEl.removeAttribute("data-lf-inline-active");
-					inlineActiveEl = null;
-					inlineOriginalText = "";
-					$inlineBar.prop("hidden", true);
-					setStatus((res.data && res.data.message) ? res.data.message : "Inline edit saved.", false);
+					el.removeAttribute("contenteditable");
+					el.removeAttribute("spellcheck");
+					el.removeAttribute("data-lf-inline-active");
+					el.removeAttribute("data-lf-inline-saving");
+					if (inlineActiveEl === el) {
+						inlineActiveEl = null;
+						inlineOriginalText = "";
+					}
+					setStatus("Saved. Use the ↶ icon to undo (repeat to go back further).", false);
 				} else {
+					el.removeAttribute("data-lf-inline-saving");
 					setStatus((res && res.data && res.data.message) ? res.data.message : "Inline save failed.", true);
 				}
 			}).fail(function(xhr){
+				el.removeAttribute("data-lf-inline-saving");
 				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Inline save failed.";
 				setStatus(msg, true);
+			}).always(function(){
+				inlineIsSaving = false;
+				if (typeof done === "function") done();
 			});
 		}
 		function renderDiff() {
@@ -606,8 +612,8 @@ function lf_ai_assistant_widget_js(): string {
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_rollback_latest",
 				nonce: lfAiFloating.nonce,
-				context_type: lfAiFloating.context_type || "homepage",
-				context_id: lfAiFloating.context_id || "homepage"
+				context_type: activeContextType || "homepage",
+				context_id: activeContextId || "homepage"
 			}).done(function(res){
 				if (res && res.success && res.data && res.data.reload) {
 					window.location.reload();
@@ -625,17 +631,24 @@ function lf_ai_assistant_widget_js(): string {
 		$root.find("[data-lf-ai-preset]").on("click", function(){
 			$prompt.val($(this).attr("data-lf-ai-preset") || "").trigger("focus");
 		});
-		$inlineToggle.on("click", function(){
-			setInlineMode(!inlineMode);
-		});
 		$(document).on("click", "[data-lf-inline-editable=\"1\"]", function(e){
-			if (!inlineMode) return;
 			e.preventDefault();
 			e.stopPropagation();
 			beginInlineEdit(this);
 		});
-		$inlineSave.on("click", function(){ saveInlineEdit(); });
-		$inlineCancel.on("click", function(){ cancelInlineEdit(true); });
+		$(document).on("click", function(e){
+			if (!inlineActiveEl || inlineIsSaving) {
+				return;
+			}
+			var target = e.target;
+			if (target === inlineActiveEl || inlineActiveEl.contains(target)) {
+				return;
+			}
+			if ($(target).closest("[data-lf-ai-float]").length) {
+				return;
+			}
+			saveInlineEdit();
+		});
 		$mode.on("change", function(){
 			syncModeUi();
 		});
@@ -800,8 +813,10 @@ function lf_ai_assistant_widget_js(): string {
 		});
 
 		$btnRevert.on("click", function(){
-			$confirmText.text((lfAiFloating.i18n && lfAiFloating.i18n.confirmRevert) ? lfAiFloating.i18n.confirmRevert : "Revert the most recent AI change on this page? This cannot be undone.");
-			setConfirmOpen(true);
+			runRollback();
+		});
+		$btnUndo.on("click", function(){
+			runRollback();
 		});
 		$confirmNo.on("click", function(){ setConfirmOpen(false); });
 		$confirmYes.on("click", function(){
@@ -814,7 +829,7 @@ function lf_ai_assistant_widget_js(): string {
 			}
 		});
 		$(document).on("keydown", function(e){
-			if (inlineMode && inlineActiveEl) {
+			if (inlineActiveEl) {
 				if (e.key === "Escape" || e.keyCode === 27) {
 					e.preventDefault();
 					cancelInlineEdit(true);
@@ -841,7 +856,7 @@ function lf_ai_assistant_widget_js(): string {
 		try { $mode.val("auto"); } catch (e) {}
 		syncModeUi();
 		buildInlineTargets();
-		setInlineMode(false);
+		setStatus("Direct edit is always available. Click headline/subheadline text and click away to auto-save.", false);
 	})(jQuery);';
 }
 
