@@ -668,6 +668,8 @@ function lf_ai_assistant_widget_js(): string {
 			if (node.closest("nav, footer, [aria-hidden=\"true\"]")) return false;
 			if (node.closest(".site-header, .site-footer, #masthead, #colophon")) return false;
 			if (node.closest("button, a, label, script, style, noscript")) return false;
+			// Managed lists/pills use dedicated controls; block generic inline editing for their rows.
+			if (node.closest(".lf-hero-chips,.lf-block-hero__card-list,.lf-trust-bar__badges,.lf-service-details__checklist,.lf-process,.lf-block-faq-accordion__list")) return false;
 			var tag = node.tagName ? node.tagName.toLowerCase() : "";
 			var isHeading = /^h[1-6]$/.test(tag);
 			// SEO safety: do not allow inline editing of entity/archive titles.
@@ -837,6 +839,13 @@ function lf_ai_assistant_widget_js(): string {
 			selectedSectionWrap = wrap || null;
 			if (selectedSectionWrap) {
 				selectedSectionWrap.classList.add("lf-ai-section-active");
+				// Self-heal list/pill controls in case a row lost its remove button.
+				buildHeroPillsControls();
+				buildHeroProofChecklistControls();
+				buildTrustBadgePillsControls();
+				buildChecklistControls();
+				buildProcessStepControls();
+				buildFaqReorderControls();
 				try {
 					var sid = String(selectedSectionWrap.getAttribute("data-lf-section-id") || "");
 					var stype = String(selectedSectionWrap.getAttribute("data-lf-section-type") || "");
@@ -1450,6 +1459,10 @@ function lf_ai_assistant_widget_js(): string {
 				if (sectionType !== "hero") return;
 				var list = wrap.querySelector(".lf-hero-chips");
 				if (!list) return;
+				Array.prototype.slice.call(list.querySelectorAll("li.lf-hero-chip,[data-lf-hero-pill-text]")).forEach(function(node){
+					node.removeAttribute("data-lf-inline-editable");
+					node.removeAttribute("data-lf-inline-selector");
+				});
 				var items = heroPillsFromWrap(wrap);
 				list.innerHTML = "";
 				items.forEach(function(text){
@@ -1492,6 +1505,10 @@ function lf_ai_assistant_widget_js(): string {
 				});
 				var list = wrap.querySelector(".lf-block-hero__card-list");
 				if (!list) return;
+				Array.prototype.slice.call(list.querySelectorAll("li")).forEach(function(node){
+					node.removeAttribute("data-lf-inline-editable");
+					node.removeAttribute("data-lf-inline-selector");
+				});
 				Array.prototype.slice.call(list.querySelectorAll("li")).forEach(function(li){
 					var btn = createGenericRemoveButton(function(){
 						if (li && li.parentNode) li.parentNode.removeChild(li);
@@ -1534,6 +1551,10 @@ function lf_ai_assistant_widget_js(): string {
 				});
 				var list = wrap.querySelector(".lf-trust-bar__badges");
 				if (!list) return;
+				Array.prototype.slice.call(list.querySelectorAll(".lf-trust-bar__badge")).forEach(function(node){
+					node.removeAttribute("data-lf-inline-editable");
+					node.removeAttribute("data-lf-inline-selector");
+				});
 				Array.prototype.slice.call(list.querySelectorAll(".lf-trust-bar__badge")).forEach(function(badge){
 					var btn = createGenericRemoveButton(function(){
 						if (badge && badge.parentNode) badge.parentNode.removeChild(badge);
@@ -1598,6 +1619,10 @@ function lf_ai_assistant_widget_js(): string {
 				});
 				var list = wrap.querySelector(".lf-process");
 				if (!list) return;
+				Array.prototype.slice.call(list.querySelectorAll(".lf-process__step,.lf-process__step-title,.lf-process__step-body,.lf-process__text")).forEach(function(node){
+					node.removeAttribute("data-lf-inline-editable");
+					node.removeAttribute("data-lf-inline-selector");
+				});
 				Array.prototype.slice.call(list.querySelectorAll(".lf-process__step")).forEach(function(li){
 					li.classList.add("lf-ai-process-step");
 					li.setAttribute("draggable", "true");
@@ -1684,6 +1709,10 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function buildFaqReorderControls() {
 			Array.prototype.slice.call(document.querySelectorAll(".lf-block-faq-accordion__list")).forEach(function(list){
+				Array.prototype.slice.call(list.querySelectorAll(".lf-block-faq-accordion__item,.lf-block-faq-accordion__question,.lf-block-faq-accordion__answer")).forEach(function(node){
+					node.removeAttribute("data-lf-inline-editable");
+					node.removeAttribute("data-lf-inline-selector");
+				});
 				Array.prototype.slice.call(list.querySelectorAll(".lf-block-faq-accordion__item[data-lf-faq-id]")).forEach(function(item){
 					item.setAttribute("draggable", "true");
 					item.ondragstart = function(e){
