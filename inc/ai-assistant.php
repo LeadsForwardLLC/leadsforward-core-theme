@@ -121,6 +121,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		'target_label' => $target_label,
 		'labels' => $editable,
 		'section_library' => lf_ai_assistant_section_library($context),
+		'icon_slugs' => function_exists('lf_icon_list') ? array_values(array_map('sanitize_text_field', lf_icon_list())) : [],
 		'homepage_enabled' => $homepage_enabled,
 		'i18n' => [
 			'statusReady' => __('Ready.', 'leadsforward-core'),
@@ -579,6 +580,7 @@ function lf_ai_assistant_widget_js(): string {
 		var activeFaqDragEl = null;
 		var railLibraryOpen = false;
 		var suppressInlineClickUntil = 0;
+		var iconSlugs = Array.isArray(lfAiFloating.icon_slugs) ? lfAiFloating.icon_slugs : [];
 		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption";
 		var inlineImageCandidateSelector = "main img";
 		var mediaFrame = null;
@@ -846,6 +848,7 @@ function lf_ai_assistant_widget_js(): string {
 				buildChecklistControls();
 				buildProcessStepControls();
 				buildFaqReorderControls();
+				buildBenefitsIconEditors();
 				try {
 					var sid = String(selectedSectionWrap.getAttribute("data-lf-section-id") || "");
 					var stype = String(selectedSectionWrap.getAttribute("data-lf-section-type") || "");
@@ -1782,6 +1785,52 @@ function lf_ai_assistant_widget_js(): string {
 				});
 			});
 		}
+		function buildBenefitsIconEditors() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+				if (sectionType !== "benefits") return;
+				var nodes = Array.prototype.slice.call(wrap.querySelectorAll(".lf-benefits__icon[data-lf-benefit-icon-index]"));
+				if (!nodes.length || !iconSlugs.length) return;
+				var currentOverrides = [];
+				function parseCurrentOverrides() {
+					currentOverrides = [];
+					nodes.forEach(function(iconNode){
+						var svg = iconNode.querySelector("svg");
+						if (!svg) {
+							currentOverrides.push("");
+							return;
+						}
+						var cls = String(svg.getAttribute("class") || "");
+						var m = cls.match(/\blf-icon--([a-z0-9-]+)\b/i);
+						currentOverrides.push(m && m[1] ? String(m[1]) : "");
+					});
+				}
+				function persistOverrides() {
+					persistSectionLineItems(wrap, "benefits_icon_overrides", currentOverrides, "Saving icons...");
+					setTimeout(function(){ window.location.reload(); }, 220);
+				}
+				parseCurrentOverrides();
+				nodes.forEach(function(iconNode){
+					iconNode.classList.add("lf-ai-inline-editor-ignore");
+					iconNode.setAttribute("title", "Click to change icon");
+					iconNode.style.cursor = "pointer";
+					iconNode.onclick = function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						var idx = parseInt(String(iconNode.getAttribute("data-lf-benefit-icon-index") || "0"), 10);
+						if (isNaN(idx) || idx < 0) idx = 0;
+						while (currentOverrides.length <= idx) currentOverrides.push("");
+						var currentSlug = String(currentOverrides[idx] || "");
+						var currentPos = iconSlugs.indexOf(currentSlug);
+						if (currentPos < 0) currentPos = -1;
+						var nextPos = (currentPos + 1) % iconSlugs.length;
+						currentOverrides[idx] = String(iconSlugs[nextPos] || "");
+						persistOverrides();
+					};
+				});
+			});
+		}
 		function ctaSlotForButton(node) {
 			if (!node || !node.classList) return "primary";
 			if (node.classList.contains("lf-btn--secondary") || /secondary/i.test(String(node.className || ""))) {
@@ -2048,6 +2097,7 @@ function lf_ai_assistant_widget_js(): string {
 					buildProcessStepControls();
 					buildSectionColumnSwapTargets();
 					buildFaqReorderControls();
+					buildBenefitsIconEditors();
 					setSelectedSection(clone);
 					setStatus((res.data && res.data.message) ? res.data.message : "Section duplicated.", false);
 				} else {
@@ -3211,6 +3261,7 @@ function lf_ai_assistant_widget_js(): string {
 		buildProcessStepControls();
 		buildSectionColumnSwapTargets();
 		buildFaqReorderControls();
+		buildBenefitsIconEditors();
 		refreshSectionRail();
 		var firstWrap = collectSectionWrappers()[0] || null;
 		if (firstWrap) {

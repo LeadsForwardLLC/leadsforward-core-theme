@@ -1279,7 +1279,7 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 					<?php $icon_slug = lf_sections_benefits_pick_icon_slug($item, $icon_overrides, $used_icons, $index); ?>
 					<?php if ($icon_slug !== '' && function_exists('lf_icon')) : ?>
 						<?php $used_icons[] = $icon_slug; ?>
-						<span class="lf-benefits__icon" aria-hidden="true">
+						<span class="lf-benefits__icon" aria-hidden="true" data-lf-benefit-icon-index="<?php echo esc_attr((string) $index); ?>">
 							<?php echo lf_icon($icon_slug, ['class' => trim('lf-icon--' . $icon_size . ' lf-icon--' . $icon_color)]); ?>
 						</span>
 					<?php endif; ?>

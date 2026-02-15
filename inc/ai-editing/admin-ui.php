@@ -1415,6 +1415,7 @@ function lf_ai_allowed_line_fields_for_section_type(string $section_type): array
 	$map = [
 		'hero' => ['hero_proof_bullets'],
 		'trust_bar' => ['trust_badges'],
+		'benefits' => ['benefits_icon_overrides'],
 		'process' => ['process_steps'],
 		'service_details' => ['service_details_checklist'],
 		'content_image' => ['service_details_checklist'],
