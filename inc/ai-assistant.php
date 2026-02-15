@@ -412,7 +412,8 @@ function lf_ai_assistant_widget_js(): string {
 		function inlineNodeEligible(node) {
 			if (!node || !node.textContent) return false;
 			if (node.closest(".lf-ai-float")) return false;
-			if (node.closest("nav, header, footer, [aria-hidden=\"true\"]")) return false;
+			if (node.closest("nav, footer, [aria-hidden=\"true\"]")) return false;
+			if (node.closest(".site-header, .site-footer, #masthead, #colophon")) return false;
 			if (node.closest("button, a, label, script, style, noscript")) return false;
 			var text = String(node.textContent || "").trim();
 			return text !== "";
