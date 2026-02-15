@@ -808,6 +808,14 @@ function lf_ai_assistant_widget_js(): string {
 			selectedSectionWrap = wrap || null;
 			if (selectedSectionWrap) {
 				selectedSectionWrap.classList.add("lf-ai-section-active");
+				try {
+					var sid = String(selectedSectionWrap.getAttribute("data-lf-section-id") || "");
+					var stype = String(selectedSectionWrap.getAttribute("data-lf-section-type") || "");
+					var label = sectionLabelForWrap(selectedSectionWrap);
+					if (sid || stype) {
+						setStatus("Selected section target: " + label + " (" + (stype || sid) + ")", false);
+					}
+				} catch (e) {}
 			}
 			refreshSectionRail();
 		}
@@ -2063,7 +2071,9 @@ function lf_ai_assistant_widget_js(): string {
 				assistant_cpt_type: activeAssistantCptType,
 				assistant_batch_type: activeAssistantBatchType,
 				assistant_batch_count: activeAssistantBatchCount,
-				target_reference: String($targetRef.val() || "").trim()
+				target_reference: String($targetRef.val() || "").trim(),
+				selected_section_id: selectedSectionWrap ? String(selectedSectionWrap.getAttribute("data-lf-section-id") || "") : "",
+				selected_section_type: selectedSectionWrap ? String(selectedSectionWrap.getAttribute("data-lf-section-type") || "") : ""
 			}).done(function(res){
 				if (res && res.success && res.data) {
 					if (res.data.context_type) activeContextType = String(res.data.context_type);

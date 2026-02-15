@@ -287,6 +287,53 @@ function lf_ai_assistant_requested_edit_keys(string $prompt, $context_id): array
 	return $keys;
 }
 
+function lf_ai_assistant_section_allowed_keys(string $context_type, $context_id, string $selected_section_id, string $selected_section_type): array {
+	$section_id = sanitize_text_field($selected_section_id);
+	$section_type = sanitize_text_field($selected_section_type);
+	if ($section_id === '' && $section_type === '') {
+		return [];
+	}
+	$resolved_type = $section_type;
+	if ($resolved_type === '') {
+		$resolved_type = $section_id;
+	}
+	if (($context_type === 'homepage' || $context_id === 'homepage') && function_exists('lf_get_homepage_section_config')) {
+		$config = lf_get_homepage_section_config();
+		if ($section_id !== '' && is_array($config[$section_id] ?? null)) {
+			$resolved_type = $section_id;
+		}
+	}
+	if ($resolved_type === '' && is_numeric($context_id) && defined('LF_PB_META_KEY') && function_exists('lf_pb_get_post_config') && function_exists('lf_ai_pb_context_for_post')) {
+		$post = get_post((int) $context_id);
+		if ($post instanceof \WP_Post) {
+			$pb_context = (string) lf_ai_pb_context_for_post($post);
+			if ($pb_context !== '') {
+				$config = lf_pb_get_post_config((int) $context_id, $pb_context);
+				$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+				$row = is_array($sections[$section_id] ?? null) ? $sections[$section_id] : [];
+				$resolved_type = sanitize_text_field((string) ($row['type'] ?? $resolved_type));
+			}
+		}
+	}
+	if ($resolved_type === '' || !function_exists('lf_sections_registry')) {
+		return [];
+	}
+	$registry = lf_sections_registry();
+	$section_def = is_array($registry[$resolved_type] ?? null) ? $registry[$resolved_type] : [];
+	$fields = is_array($section_def['fields'] ?? null) ? $section_def['fields'] : [];
+	$keys = [];
+	foreach ($fields as $field) {
+		if (!is_array($field)) {
+			continue;
+		}
+		$key = sanitize_text_field((string) ($field['key'] ?? ''));
+		if ($key !== '') {
+			$keys[] = $key;
+		}
+	}
+	return array_values(array_unique($keys));
+}
+
 function lf_ai_assistant_parse_secondary_keywords($value): array {
 	if (is_array($value)) {
 		$list = $value;
@@ -636,6 +683,8 @@ function lf_ai_ajax_generate(): void {
 	$assistant_batch_type = isset($_POST['assistant_batch_type']) ? sanitize_text_field(wp_unslash($_POST['assistant_batch_type'])) : 'post';
 	$assistant_batch_count = isset($_POST['assistant_batch_count']) ? (int) $_POST['assistant_batch_count'] : 5;
 	$target_reference = isset($_POST['target_reference']) ? sanitize_text_field(wp_unslash($_POST['target_reference'])) : '';
+	$selected_section_id = isset($_POST['selected_section_id']) ? sanitize_text_field(wp_unslash($_POST['selected_section_id'])) : '';
+	$selected_section_type = isset($_POST['selected_section_type']) ? sanitize_text_field(wp_unslash($_POST['selected_section_type'])) : '';
 	if (!in_array($assistant_mode, lf_ai_assistant_modes(), true)) {
 		$assistant_mode = 'edit_existing';
 	}
@@ -679,6 +728,13 @@ function lf_ai_ajax_generate(): void {
 			$result['proposed'] = array_intersect_key($result['proposed'], array_flip($requested_keys));
 			if (empty($result['proposed'])) {
 				wp_send_json_error(['message' => __('No matching editable field found for that exact request on this target page.', 'leadsforward-core')]);
+			}
+		}
+		$section_keys = lf_ai_assistant_section_allowed_keys($context_type_use, $context_id_use, $selected_section_id, $selected_section_type);
+		if (!empty($section_keys)) {
+			$result['proposed'] = array_intersect_key($result['proposed'], array_flip($section_keys));
+			if (empty($result['proposed'])) {
+				wp_send_json_error(['message' => __('No editable fields were found for the selected section target.', 'leadsforward-core')]);
 			}
 		}
 		$current = lf_ai_get_current_values($context_type_use, $context_id_use, array_keys($result['proposed']));

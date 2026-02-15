@@ -11,6 +11,7 @@ The LeadsForward frontend editor is an always-on, inline editing layer for admin
 - Hide/show sections inline.
 - Delete sections with confirmation (undo/redo safe).
 - Duplicate sections (page-builder contexts).
+- Selected section targeting: AI Generate requests are scoped to the currently selected section when possible.
 
 ## Section Controls
 
