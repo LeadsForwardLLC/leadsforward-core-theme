@@ -1855,13 +1855,16 @@ function lf_ai_assistant_widget_js(): string {
 					refreshCommandPalette();
 				} else if (e.key === "Enter") {
 					e.preventDefault();
-					if (commandRows[commandActiveIndex] && typeof commandRows[commandActiveIndex].run === "function") {
-						commandRows[commandActiveIndex].run();
-						toggleCommandPalette(false);
-					}
+					executeCommandAt(commandActiveIndex);
 				} else if (e.key === "Escape") {
 					e.preventDefault();
 					toggleCommandPalette(false);
+				}
+			});
+			commandInputEl.addEventListener("keyup", function(e){
+				if (e.key === "Enter") {
+					e.preventDefault();
+					executeCommandAt(commandActiveIndex);
 				}
 			});
 			commandPaletteEl.addEventListener("click", function(e){
@@ -1901,17 +1904,42 @@ function lf_ai_assistant_widget_js(): string {
 			commandRows.forEach(function(item, idx){
 				var row = document.createElement("div");
 				row.className = "lf-ai-command__row" + (idx === commandActiveIndex ? " is-active" : "");
+				row.setAttribute("tabindex", "0");
 				row.textContent = String(item.label || "");
 				row.addEventListener("mouseenter", function(){
 					commandActiveIndex = idx;
 					refreshCommandPalette();
 				});
 				row.addEventListener("click", function(){
-					item.run();
-					toggleCommandPalette(false);
+					executeCommandAt(idx);
+				});
+				row.addEventListener("keydown", function(e){
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault();
+						executeCommandAt(idx);
+					}
 				});
 				commandListEl.appendChild(row);
 			});
+		}
+		function executeCommandAt(index) {
+			var idx = parseInt(String(index), 10);
+			if (isNaN(idx) || idx < 0 || idx >= commandRows.length) {
+				setStatus("No command selected.", true);
+				return;
+			}
+			var cmd = commandRows[idx] || null;
+			if (!cmd || typeof cmd.run !== "function") {
+				setStatus("Selected command is unavailable.", true);
+				return;
+			}
+			try {
+				cmd.run();
+				setStatus("Ran command: " + String(cmd.label || "action"), false);
+			} catch (err) {
+				setStatus("Command failed.", true);
+			}
+			toggleCommandPalette(false);
 		}
 		function toggleCommandPalette(open) {
 			ensureCommandPalette();
