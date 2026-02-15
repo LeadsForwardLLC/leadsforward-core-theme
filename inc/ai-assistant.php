@@ -434,6 +434,11 @@ function lf_ai_assistant_widget_css(): string {
 		[data-lf-section-wrap="1"].lf-ai-section-is-hidden { min-height:56px; background:rgba(131,72,249,.06); outline:2px dashed rgba(131,72,249,.35); outline-offset:3px; }
 		[data-lf-section-wrap="1"].lf-ai-section-is-hidden > :not(.lf-ai-section-controls) { display:none !important; }
 		[data-lf-section-wrap="1"].lf-ai-section-active { outline:2px solid #8348f9 !important; outline-offset:3px; box-shadow:0 0 0 4px rgba(131,72,249,.12); }
+		.lf-ai-checklist-controls { margin-top:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+		.lf-ai-checklist-add { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:28px; padding:0 10px; font-size:12px; cursor:pointer; }
+		.lf-ai-checklist-add:hover { background:#f5f0ff; }
+		.lf-ai-checklist-remove { border:1px solid #e2e8f0; background:#fff; color:#64748b; border-radius:6px; min-width:20px; height:20px; padding:0 5px; font-size:11px; line-height:18px; margin-left:8px; cursor:pointer; vertical-align:middle; }
+		.lf-ai-checklist-remove:hover { border-color:#fecaca; color:#b91c1c; background:#fff5f5; }
 		.lf-ai-column-draggable { cursor:ew-resize; transition:outline-color .15s ease; }
 		.lf-ai-column-draggable:hover { outline:2px dashed rgba(131,72,249,.3); outline-offset:3px; }
 		.lf-ai-column-draggable.is-dragging { outline:2px solid #8348f9 !important; outline-offset:3px; opacity:.85; }
@@ -1117,6 +1122,127 @@ function lf_ai_assistant_widget_js(): string {
 			var type = String(sectionType || "");
 			return ["service_details", "content_image", "content_image_a", "image_content", "image_content_b", "content_image_c"].indexOf(type) !== -1;
 		}
+		function sectionSupportsChecklistEditor(sectionType) {
+			var type = String(sectionType || "");
+			return ["service_details", "content_image", "content_image_a", "image_content", "image_content_b", "content_image_c"].indexOf(type) !== -1;
+		}
+		function checklistItemsFromWrap(wrap) {
+			var list = wrap ? wrap.querySelector(".lf-service-details__checklist") : null;
+			if (!list) return [];
+			return Array.prototype.slice.call(list.querySelectorAll("li")).map(function(li){
+				var textNode = li.querySelector(".lf-service-details__text");
+				var raw = textNode ? String(textNode.textContent || "") : String(li.textContent || "");
+				return raw.trim();
+			}).filter(function(value){ return value !== ""; });
+		}
+		function persistSectionChecklist(wrap) {
+			if (!wrap) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+			if (!sectionId || !sectionSupportsChecklistEditor(sectionType)) return;
+			var items = checklistItemsFromWrap(wrap);
+			setStatus("Saving checklist...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_update_section_checklist",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_id: sectionId,
+				items: JSON.stringify(items)
+			}).done(function(res){
+				if (res && res.success) {
+					setStatus((res.data && res.data.message) ? res.data.message : "Checklist saved.", false);
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Checklist save failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Checklist save failed.";
+				setStatus(msg, true);
+			});
+		}
+		function buildChecklistControls() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-checklist-controls=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-checklist-remove=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+				if (!sectionSupportsChecklistEditor(sectionType)) return;
+				var content = wrap.querySelector(".lf-service-details__content");
+				if (!content) return;
+				var list = wrap.querySelector(".lf-service-details__checklist");
+				if (!list) {
+					list = document.createElement("ul");
+					list.className = "lf-service-details__checklist";
+					list.setAttribute("role", "list");
+					content.appendChild(list);
+				}
+				Array.prototype.slice.call(list.querySelectorAll("li")).forEach(function(li){
+					var textNode = li.querySelector(".lf-service-details__text");
+					if (!textNode) {
+						textNode = document.createElement("span");
+						textNode.className = "lf-service-details__text";
+						textNode.textContent = String(li.textContent || "").trim();
+						li.textContent = "";
+						li.appendChild(textNode);
+					}
+					var removeBtn = document.createElement("button");
+					removeBtn.type = "button";
+					removeBtn.className = "lf-ai-checklist-remove lf-ai-inline-editor-ignore";
+					removeBtn.setAttribute("data-lf-ai-checklist-remove", "1");
+					removeBtn.textContent = "x";
+					removeBtn.setAttribute("title", "Remove checklist item");
+					removeBtn.addEventListener("click", function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						if (li && li.parentNode) {
+							li.parentNode.removeChild(li);
+						}
+						persistSectionChecklist(wrap);
+					});
+					li.appendChild(removeBtn);
+				});
+				var controls = document.createElement("div");
+				controls.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
+				controls.setAttribute("data-lf-ai-checklist-controls", "1");
+				var addBtn = document.createElement("button");
+				addBtn.type = "button";
+				addBtn.className = "lf-ai-checklist-add lf-ai-inline-editor-ignore";
+				addBtn.textContent = "+ Add item";
+				addBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					var li = document.createElement("li");
+					var textNode = document.createElement("span");
+					textNode.className = "lf-service-details__text";
+					textNode.textContent = "New checklist item";
+					li.appendChild(textNode);
+					var removeBtn = document.createElement("button");
+					removeBtn.type = "button";
+					removeBtn.className = "lf-ai-checklist-remove lf-ai-inline-editor-ignore";
+					removeBtn.setAttribute("data-lf-ai-checklist-remove", "1");
+					removeBtn.textContent = "x";
+					removeBtn.setAttribute("title", "Remove checklist item");
+					removeBtn.addEventListener("click", function(ev){
+						ev.preventDefault();
+						ev.stopPropagation();
+						if (li && li.parentNode) {
+							li.parentNode.removeChild(li);
+						}
+						persistSectionChecklist(wrap);
+					});
+					li.appendChild(removeBtn);
+					list.appendChild(li);
+					persistSectionChecklist(wrap);
+					beginInlineEdit(textNode);
+				});
+				controls.appendChild(addBtn);
+				content.appendChild(controls);
+			});
+		}
 		function toggleSectionColumnsInDom(wrap, newLayout) {
 			if (!wrap) return;
 			var details = wrap.querySelector(".lf-service-details--media");
@@ -1265,6 +1391,7 @@ function lf_ai_assistant_widget_js(): string {
 					wrap.parentNode.insertBefore(clone, wrap.nextSibling);
 					buildSectionTargets();
 					buildSectionControls();
+					buildChecklistControls();
 					buildSectionColumnSwapTargets();
 					setSelectedSection(clone);
 					setStatus((res.data && res.data.message) ? res.data.message : "Section duplicated.", false);
@@ -2421,6 +2548,7 @@ function lf_ai_assistant_widget_js(): string {
 		buildInlineImageTargets();
 		buildSectionTargets();
 		buildSectionControls();
+		buildChecklistControls();
 		buildSectionColumnSwapTargets();
 		refreshSectionRail();
 		var firstWrap = collectSectionWrappers()[0] || null;
