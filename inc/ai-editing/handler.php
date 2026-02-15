@@ -175,6 +175,22 @@ function lf_ai_get_homepage_hero_row(): ?array {
 	}
 	$config = lf_get_homepage_section_config();
 	$hero = $config['hero'] ?? null;
+	if (!is_array($hero) && is_array($config)) {
+		foreach ($config as $sid => $row) {
+			if (!is_string($sid) || !is_array($row)) {
+				continue;
+			}
+			$base = $sid;
+			if (function_exists('lf_homepage_base_section_type')) {
+				$base = lf_homepage_base_section_type($sid);
+			}
+			$row_type = (string) ($row['section_type'] ?? $row['type'] ?? '');
+			if ($base === 'hero' || $row_type === 'hero') {
+				$hero = $row;
+				break;
+			}
+		}
+	}
 	if (!is_array($hero)) {
 		return null;
 	}
@@ -284,10 +300,29 @@ function lf_ai_apply_proposal(string $context_type, $context_id, array $proposed
 	if ($context_type === 'homepage') {
 		$hero_keys = ['hero_headline', 'hero_subheadline', 'cta_primary_override'];
 		$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
-		if (!empty($config['hero'])) {
+		$hero_section_key = '';
+		if (is_array($config['hero'] ?? null)) {
+			$hero_section_key = 'hero';
+		} elseif (is_array($config)) {
+			foreach ($config as $sid => $row) {
+				if (!is_string($sid) || !is_array($row)) {
+					continue;
+				}
+				$base = $sid;
+				if (function_exists('lf_homepage_base_section_type')) {
+					$base = lf_homepage_base_section_type($sid);
+				}
+				$row_type = (string) ($row['section_type'] ?? $row['type'] ?? '');
+				if ($base === 'hero' || $row_type === 'hero') {
+					$hero_section_key = $sid;
+					break;
+				}
+			}
+		}
+		if ($hero_section_key !== '' && !empty($config[$hero_section_key]) && is_array($config[$hero_section_key])) {
 			foreach ($hero_keys as $hk) {
 				if (isset($to_apply[$hk])) {
-					$config['hero'][$hk] = $to_apply[$hk];
+					$config[$hero_section_key][$hk] = $to_apply[$hk];
 				}
 			}
 			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
