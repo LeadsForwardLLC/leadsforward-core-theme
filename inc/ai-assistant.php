@@ -1020,11 +1020,7 @@ function lf_ai_assistant_widget_js(): string {
 					}
 				});
 				row.addEventListener("dragstart", function(e){
-					var dragHandle = e && e.target && e.target.closest ? e.target.closest("[data-lf-rail-drag]") : null;
-					if (!dragHandle) {
-						e.preventDefault();
-						return;
-					}
+					// Allow drag from the full row for reliability across browsers.
 					activeRailDragSectionId = sectionId;
 					row.classList.add("is-dragging");
 					if (e.dataTransfer) {
