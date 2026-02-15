@@ -40,6 +40,7 @@ function lf_ai_assistant_assets(string $hook): void {
 			'statusGenerating' => __('Generating suggestions...', 'leadsforward-core'),
 			'statusApplying' => __('Applying changes...', 'leadsforward-core'),
 			'statusReverting' => __('Reverting last AI change...', 'leadsforward-core'),
+			'statusParsingDoc' => __('Reading document context...', 'leadsforward-core'),
 			'confirmRevert' => __('Revert the most recent AI change on this page? This cannot be undone.', 'leadsforward-core'),
 			'placeholder' => __('Ask for precise copy edits, SEO rewrites, CTA improvements, or schema-safe content upgrades...', 'leadsforward-core'),
 		],
@@ -97,6 +98,12 @@ function lf_ai_assistant_render_floating_widget(): void {
 					<button type="button" class="button button-small" data-lf-ai-preset="<?php esc_attr_e('Improve CTA language for urgency, clarity, and lead quality.', 'leadsforward-core'); ?>"><?php esc_html_e('Improve CTA', 'leadsforward-core'); ?></button>
 				</div>
 				<textarea class="lf-ai-float__prompt" rows="4" data-lf-ai-prompt placeholder="<?php esc_attr_e('Ask for specific edits...', 'leadsforward-core'); ?>"></textarea>
+				<div class="lf-ai-float__doc">
+					<input type="file" accept=".txt,.md,.csv,.json,.html,.htm,.rtf,.docx" data-lf-ai-doc-input hidden />
+					<button type="button" class="button button-small" data-lf-ai-doc-attach><?php esc_html_e('Attach Document Context', 'leadsforward-core'); ?></button>
+					<button type="button" class="button button-small" data-lf-ai-doc-clear hidden><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
+					<span class="lf-ai-float__doc-name" data-lf-ai-doc-name></span>
+				</div>
 				<div class="lf-ai-float__actions">
 					<button type="button" class="button button-primary" data-lf-ai-generate><?php esc_html_e('Generate', 'leadsforward-core'); ?></button>
 					<button type="button" class="button" data-lf-ai-apply disabled><?php esc_html_e('Apply', 'leadsforward-core'); ?></button>
@@ -133,6 +140,8 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float__presets { display:flex; flex-wrap:wrap; gap:6px; }
 		.lf-ai-float__prompt { width:100%; resize:vertical; min-height:88px; border:1px solid #d6c8fb; border-radius:10px; padding:10px; font-size:13px; }
 		.lf-ai-float__prompt:focus { border-color:#8348f9; box-shadow:0 0 0 1px #8348f9; outline:none; }
+		.lf-ai-float__doc { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+		.lf-ai-float__doc-name { font-size:12px; color:#475569; overflow-wrap:anywhere; }
 		.lf-ai-float__actions { display:flex; gap:8px; align-items:center; }
 		.lf-ai-float__actions [data-lf-ai-revert] { margin-left:auto; }
 		.lf-ai-float__status { font-size:12px; color:#475569; min-height:16px; }
@@ -172,6 +181,10 @@ function lf_ai_assistant_widget_js(): string {
 		var $btnApply = $root.find("[data-lf-ai-apply]");
 		var $btnReject = $root.find("[data-lf-ai-reject]");
 		var $btnRevert = $root.find("[data-lf-ai-revert]");
+		var $docInput = $root.find("[data-lf-ai-doc-input]");
+		var $docAttach = $root.find("[data-lf-ai-doc-attach]");
+		var $docClear = $root.find("[data-lf-ai-doc-clear]");
+		var $docName = $root.find("[data-lf-ai-doc-name]");
 		var $confirm = $root.find("[data-lf-ai-confirm]");
 		var $confirmText = $root.find("[data-lf-ai-confirm-text]");
 		var $confirmYes = $root.find("[data-lf-ai-confirm-yes]");
@@ -180,6 +193,8 @@ function lf_ai_assistant_widget_js(): string {
 		var current = null;
 		var labels = lfAiFloating.labels || {};
 		var promptSnippet = "";
+		var docContext = "";
+		var docLabel = "";
 
 		function escapeHtml(text) {
 			var div = document.createElement("div");
@@ -215,6 +230,38 @@ function lf_ai_assistant_widget_js(): string {
 			$btnApply.prop("disabled", !enabled);
 			$btnReject.prop("disabled", !enabled);
 		}
+		function setDocState(name, content) {
+			docLabel = String(name || "");
+			docContext = String(content || "");
+			$docName.text(docLabel !== "" ? ("Attached: " + docLabel) : "");
+			$docClear.prop("hidden", docLabel === "");
+		}
+		function parseDoc(file) {
+			var form = new FormData();
+			form.append("action", "lf_ai_extract_context_doc");
+			form.append("nonce", lfAiFloating.nonce);
+			form.append("document", file);
+			setStatus(lfAiFloating.i18n && lfAiFloating.i18n.statusParsingDoc ? lfAiFloating.i18n.statusParsingDoc : "Reading document...", false);
+			$.ajax({
+				url: lfAiFloating.ajax_url,
+				type: "POST",
+				data: form,
+				processData: false,
+				contentType: false
+			}).done(function(res){
+				if (res && res.success && res.data) {
+					setDocState(res.data.name || file.name || "document", res.data.context || "");
+					setStatus("Document context attached.", false);
+				} else {
+					setDocState("", "");
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Unable to parse document.", true);
+				}
+			}).fail(function(xhr){
+				setDocState("", "");
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Document upload failed.";
+				setStatus(msg, true);
+			});
+		}
 		function setConfirmOpen(open) {
 			$confirm.prop("hidden", !open);
 		}
@@ -242,6 +289,21 @@ function lf_ai_assistant_widget_js(): string {
 		$root.find("[data-lf-ai-preset]").on("click", function(){
 			$prompt.val($(this).attr("data-lf-ai-preset") || "").trigger("focus");
 		});
+		$docAttach.on("click", function(){
+			$docInput.trigger("click");
+		});
+		$docInput.on("change", function(){
+			var file = this.files && this.files[0] ? this.files[0] : null;
+			if (!file) {
+				return;
+			}
+			parseDoc(file);
+		});
+		$docClear.on("click", function(){
+			setDocState("", "");
+			try { $docInput.val(""); } catch (e) {}
+			setStatus("Document context removed.", false);
+		});
 
 		$btnGenerate.on("click", function(){
 			var prompt = String($prompt.val() || "").trim();
@@ -258,7 +320,9 @@ function lf_ai_assistant_widget_js(): string {
 				nonce: lfAiFloating.nonce,
 				context_type: lfAiFloating.context_type || "homepage",
 				context_id: lfAiFloating.context_id || "homepage",
-				prompt: prompt
+				prompt: prompt,
+				document_context: docContext,
+				document_name: docLabel
 			}).done(function(res){
 				if (res && res.success && res.data && res.data.proposed) {
 					proposed = res.data.proposed;

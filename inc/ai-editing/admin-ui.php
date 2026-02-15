@@ -21,6 +21,7 @@ add_action('wp_ajax_lf_ai_generate', 'lf_ai_ajax_generate');
 add_action('wp_ajax_lf_ai_apply', 'lf_ai_ajax_apply');
 add_action('wp_ajax_lf_ai_rollback', 'lf_ai_ajax_rollback');
 add_action('wp_ajax_lf_ai_rollback_latest', 'lf_ai_ajax_rollback_latest');
+add_action('wp_ajax_lf_ai_extract_context_doc', 'lf_ai_ajax_extract_context_doc');
 
 function lf_ai_editing_meta_box(): void {
 	if (!current_user_can(LF_AI_CAP)) {
@@ -168,8 +169,17 @@ function lf_ai_ajax_generate(): void {
 	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
 	$context_id   = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
 	$prompt       = isset($_POST['prompt']) ? sanitize_textarea_field(wp_unslash($_POST['prompt'])) : '';
+	$document_context = isset($_POST['document_context']) ? sanitize_textarea_field(wp_unslash($_POST['document_context'])) : '';
+	$document_name = isset($_POST['document_name']) ? sanitize_text_field(wp_unslash($_POST['document_name'])) : '';
 	if ($prompt === '' || $context_type === '') {
 		wp_send_json_error(['message' => __('Invalid request.', 'leadsforward-core')]);
+	}
+	if ($document_context !== '') {
+		if (strlen($document_context) > 12000) {
+			$document_context = substr($document_context, 0, 12000);
+		}
+		$doc_heading = $document_name !== '' ? $document_name : __('Uploaded document', 'leadsforward-core');
+		$prompt .= "\n\nDocument context (" . $doc_heading . "):\n" . $document_context;
 	}
 	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
 	$result = lf_ai_generate_proposal($context_type, $context_id_use, $prompt);
@@ -181,6 +191,64 @@ function lf_ai_ajax_generate(): void {
 		'proposed' => $result['proposed'],
 		'current'  => $current,
 		'labels'   => array_intersect_key(lf_get_ai_editable_fields($context_id_use), $result['proposed']),
+	]);
+}
+
+function lf_ai_ajax_extract_context_doc(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	if (empty($_FILES['document']) || !is_array($_FILES['document'])) {
+		wp_send_json_error(['message' => __('No document uploaded.', 'leadsforward-core')]);
+	}
+	$file = $_FILES['document'];
+	$error = isset($file['error']) ? (int) $file['error'] : UPLOAD_ERR_NO_FILE;
+	if ($error !== UPLOAD_ERR_OK) {
+		wp_send_json_error(['message' => __('Upload failed. Please try again.', 'leadsforward-core')]);
+	}
+	$size = isset($file['size']) ? (int) $file['size'] : 0;
+	if ($size <= 0 || $size > 5 * 1024 * 1024) {
+		wp_send_json_error(['message' => __('Document must be between 1 byte and 5MB.', 'leadsforward-core')]);
+	}
+	$name = isset($file['name']) ? sanitize_file_name((string) $file['name']) : 'document';
+	$ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
+	$tmp = isset($file['tmp_name']) ? (string) $file['tmp_name'] : '';
+	if ($tmp === '' || !is_uploaded_file($tmp)) {
+		wp_send_json_error(['message' => __('Invalid upload payload.', 'leadsforward-core')]);
+	}
+	$supported_text_ext = ['txt', 'md', 'csv', 'json', 'html', 'htm', 'rtf'];
+	$context = '';
+	if (in_array($ext, $supported_text_ext, true)) {
+		$raw = (string) file_get_contents($tmp);
+		$context = wp_strip_all_tags($raw);
+	} elseif ($ext === 'docx') {
+		if (!class_exists('ZipArchive')) {
+			wp_send_json_error(['message' => __('DOCX import requires ZipArchive support on this server.', 'leadsforward-core')]);
+		}
+		$zip = new \ZipArchive();
+		if ($zip->open($tmp) !== true) {
+			wp_send_json_error(['message' => __('Could not read DOCX file.', 'leadsforward-core')]);
+		}
+		$xml = (string) $zip->getFromName('word/document.xml');
+		$zip->close();
+		if ($xml === '') {
+			wp_send_json_error(['message' => __('DOCX file contained no readable text.', 'leadsforward-core')]);
+		}
+		$context = html_entity_decode(wp_strip_all_tags($xml), ENT_QUOTES | ENT_XML1, 'UTF-8');
+	} else {
+		wp_send_json_error(['message' => __('Supported document types: txt, md, csv, json, html, rtf, docx.', 'leadsforward-core')]);
+	}
+	$context = preg_replace('/\s+/', ' ', trim((string) $context));
+	if ($context === '') {
+		wp_send_json_error(['message' => __('This document did not include readable text context.', 'leadsforward-core')]);
+	}
+	if (strlen($context) > 12000) {
+		$context = substr($context, 0, 12000);
+	}
+	wp_send_json_success([
+		'name' => $name,
+		'context' => $context,
 	]);
 }
 
