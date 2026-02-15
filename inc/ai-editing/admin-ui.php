@@ -532,6 +532,7 @@ add_action('wp_ajax_lf_ai_update_hero_pills', 'lf_ai_ajax_update_hero_pills');
 add_action('wp_ajax_lf_ai_update_section_cta', 'lf_ai_ajax_update_section_cta');
 add_action('wp_ajax_lf_ai_update_section_lines', 'lf_ai_ajax_update_section_lines');
 add_action('wp_ajax_lf_ai_reorder_faq_items', 'lf_ai_ajax_reorder_faq_items');
+add_action('wp_ajax_lf_ai_set_trust_layout', 'lf_ai_ajax_set_trust_layout');
 add_action('wp_ajax_lf_ai_toggle_section_visibility', 'lf_ai_ajax_toggle_section_visibility');
 add_action('wp_ajax_lf_ai_delete_section', 'lf_ai_ajax_delete_section');
 add_action('wp_ajax_lf_ai_duplicate_section', 'lf_ai_ajax_duplicate_section');
@@ -1563,6 +1564,98 @@ function lf_ai_ajax_reorder_faq_items(): void {
 	wp_send_json_success([
 		'message' => $updated > 0 ? __('FAQ order saved.', 'leadsforward-core') : __('No FAQ items were updated.', 'leadsforward-core'),
 		'updated' => $updated,
+	]);
+}
+
+function lf_ai_set_trust_layout_for_context(string $context_type, $context_id, string $section_id, string $layout): array {
+	$allowed = ['grid', 'masonry', 'slider'];
+	if (!in_array($layout, $allowed, true)) {
+		return ['error' => __('Invalid trust layout.', 'leadsforward-core')];
+	}
+	if ($context_type === 'homepage' || $context_id === 'homepage') {
+		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+			return ['error' => __('Homepage section settings are unavailable.', 'leadsforward-core')];
+		}
+		$section_type = $section_id;
+		if (function_exists('lf_homepage_base_section_type')) {
+			$section_type = lf_homepage_base_section_type($section_id);
+		}
+		if ($section_type !== 'trust_reviews') {
+			return ['error' => __('This section does not support trust layout switching.', 'leadsforward-core')];
+		}
+		$config = lf_get_homepage_section_config();
+		$row = is_array($config[$section_id] ?? null) ? $config[$section_id] : [];
+		if (empty($row)) {
+			return ['error' => __('Section not found for this page.', 'leadsforward-core')];
+		}
+		$old_layout = (string) ($row['trust_layout'] ?? 'grid');
+		if (!in_array($old_layout, $allowed, true)) {
+			$old_layout = 'grid';
+		}
+		$config[$section_id]['trust_layout'] = $layout;
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		return ['old_layout' => $old_layout, 'new_layout' => $layout, 'section_type' => $section_type];
+	}
+	$pid = (int) $context_id;
+	$post = get_post($pid);
+	if (!$post instanceof \WP_Post || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+		return ['error' => __('Section settings are unavailable for this target.', 'leadsforward-core')];
+	}
+	$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+	if ($pb_context === '') {
+		return ['error' => __('This target does not support trust layout switching.', 'leadsforward-core')];
+	}
+	$config = lf_pb_get_post_config($pid, $pb_context);
+	$row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+	$section_type = (string) ($row['type'] ?? '');
+	if ($section_type !== 'trust_reviews') {
+		return ['error' => __('This section does not support trust layout switching.', 'leadsforward-core')];
+	}
+	$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+	$old_layout = (string) ($settings['trust_layout'] ?? 'grid');
+	if (!in_array($old_layout, $allowed, true)) {
+		$old_layout = 'grid';
+	}
+	$config['sections'][$section_id]['settings']['trust_layout'] = $layout;
+	update_post_meta($pid, LF_PB_META_KEY, $config);
+	return ['old_layout' => $old_layout, 'new_layout' => $layout, 'section_type' => $section_type];
+}
+
+function lf_ai_ajax_set_trust_layout(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
+	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
+	$section_id = isset($_POST['section_id']) ? sanitize_text_field(wp_unslash($_POST['section_id'])) : '';
+	$layout = isset($_POST['layout']) ? sanitize_text_field(wp_unslash($_POST['layout'])) : 'grid';
+	if ($context_type === '' || $context_id === '' || $section_id === '') {
+		wp_send_json_error(['message' => __('Invalid trust layout payload.', 'leadsforward-core')]);
+	}
+	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	$result = lf_ai_set_trust_layout_for_context($context_type, $context_id_use, $section_id, $layout);
+	if (!empty($result['error'])) {
+		wp_send_json_error(['message' => (string) $result['error']]);
+	}
+	$old_layout = (string) ($result['old_layout'] ?? 'grid');
+	$new_layout = (string) ($result['new_layout'] ?? 'grid');
+	$log_id = function_exists('lf_ai_log_action')
+		? lf_ai_log_action(
+			$context_type,
+			$context_id_use,
+			['__section_layout::' . $section_id => $old_layout],
+			['__section_layout::' . $section_id => $new_layout],
+			'Inline trust layout switch'
+		)
+		: '';
+	wp_send_json_success([
+		'message' => __('Review layout updated.', 'leadsforward-core'),
+		'section_id' => $section_id,
+		'old_layout' => $old_layout,
+		'new_layout' => $new_layout,
+		'reload' => true,
+		'log_id' => $log_id,
 	]);
 }
 

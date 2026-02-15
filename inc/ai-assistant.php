@@ -672,6 +672,8 @@ function lf_ai_assistant_widget_js(): string {
 			if (node.closest("button, a, label, script, style, noscript")) return false;
 			// Managed lists/pills use dedicated controls; block generic inline editing for their rows.
 			if (node.closest(".lf-hero-chips,.lf-block-hero__card-list,.lf-trust-bar__badges,.lf-service-details__checklist,.lf-process,.lf-block-faq-accordion__list")) return false;
+			// Reviews content is source-of-truth data; do not edit testimonial copy inline.
+			if (node.closest(".lf-block-trust-reviews__item,.lf-block-trust-reviews__summary")) return false;
 			var tag = node.tagName ? node.tagName.toLowerCase() : "";
 			var isHeading = /^h[1-6]$/.test(tag);
 			// SEO safety: do not allow inline editing of entity/archive titles.
@@ -1785,6 +1787,48 @@ function lf_ai_assistant_widget_js(): string {
 				});
 			});
 		}
+		function trustLayoutFromWrap(wrap) {
+			var block = wrap ? wrap.querySelector(".lf-block-trust-reviews") : null;
+			if (!block || !block.classList) return "grid";
+			if (block.classList.contains("lf-block-trust-reviews--slider")) return "slider";
+			if (block.classList.contains("lf-block-trust-reviews--masonry")) return "masonry";
+			return "grid";
+		}
+		function nextTrustLayout(current) {
+			var cycle = ["slider", "masonry", "grid"];
+			var idx = cycle.indexOf(String(current || "grid"));
+			if (idx < 0) idx = 0;
+			return cycle[(idx + 1) % cycle.length];
+		}
+		function persistTrustLayout(wrap) {
+			if (!wrap) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			if (!sectionId) return;
+			var current = trustLayoutFromWrap(wrap);
+			var layout = nextTrustLayout(current);
+			setStatus("Switching review layout...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_set_trust_layout",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_id: sectionId,
+				layout: layout
+			}).done(function(res){
+				if (res && res.success && res.data && res.data.reload) {
+					window.location.reload();
+					return;
+				}
+				if (res && res.success) {
+					setStatus((res.data && res.data.message) ? res.data.message : "Review layout updated.", false);
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Review layout update failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Review layout update failed.";
+				setStatus(msg, true);
+			});
+		}
 		function buildBenefitsIconEditors() {
 			collectSectionWrappers().forEach(function(wrap){
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
@@ -2148,6 +2192,20 @@ function lf_ai_assistant_widget_js(): string {
 						persistSectionColumnSwap(wrap);
 					});
 					controls.appendChild(swapBtn);
+				}
+				if (sectionType === "trust_reviews") {
+					var layoutBtn = document.createElement("button");
+					layoutBtn.type = "button";
+					layoutBtn.className = "lf-ai-section-btn";
+					layoutBtn.textContent = "Layout";
+					layoutBtn.setAttribute("title", "Cycle review layout (slider, masonry, grid)");
+					layoutBtn.setAttribute("aria-label", "Cycle review layout");
+					layoutBtn.addEventListener("click", function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						persistTrustLayout(wrap);
+					});
+					controls.appendChild(layoutBtn);
 				}
 				var upBtn = document.createElement("button");
 				upBtn.type = "button";
