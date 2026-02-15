@@ -16,6 +16,17 @@ add_action('admin_enqueue_scripts', 'lf_ai_assistant_assets');
 add_action('wp_enqueue_scripts', 'lf_ai_assistant_assets');
 add_action('admin_footer', 'lf_ai_assistant_render_floating_widget');
 add_action('wp_footer', 'lf_ai_assistant_render_floating_widget');
+add_filter('lf_keep_jquery', 'lf_ai_assistant_keep_jquery_for_frontend_admins');
+
+function lf_ai_assistant_keep_jquery_for_frontend_admins($keep): bool {
+	if (is_admin()) {
+		return (bool) $keep;
+	}
+	if (current_user_can('edit_theme_options')) {
+		return true;
+	}
+	return (bool) $keep;
+}
 
 function lf_ai_assistant_assets(string $hook = ''): void {
 	if (!current_user_can('edit_theme_options')) {
@@ -104,6 +115,14 @@ function lf_ai_assistant_render_floating_widget(): void {
 	if (!current_user_can('edit_theme_options')) {
 		return;
 	}
+	$context = lf_ai_assistant_widget_context();
+	$target_label = __('Homepage', 'leadsforward-core');
+	if (($context['id'] ?? '') !== 'homepage') {
+		$target_post = get_post((int) ($context['id'] ?? 0));
+		if ($target_post instanceof \WP_Post) {
+			$target_label = sprintf('%s (%s)', $target_post->post_title, strtoupper((string) $target_post->post_type));
+		}
+	}
 	?>
 	<div class="lf-ai-float" data-lf-ai-float>
 		<button type="button" class="lf-ai-float__toggle" data-lf-ai-toggle aria-expanded="false" aria-controls="lf-ai-float-panel">
@@ -119,7 +138,7 @@ function lf_ai_assistant_render_floating_widget(): void {
 				</div>
 			</div>
 			<div class="lf-ai-float__body">
-				<div class="lf-ai-float__target" data-lf-ai-target></div>
+				<div class="lf-ai-float__target" data-lf-ai-target><?php echo esc_html(sprintf(__('Target: %s (editable target)', 'leadsforward-core'), $target_label)); ?></div>
 				<div class="lf-ai-float__mode">
 					<label>
 						<span><?php esc_html_e('Mode', 'leadsforward-core'); ?></span>
@@ -209,17 +228,23 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float__header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:#f8fafc; border-bottom:1px solid #e2e8f0; }
 		.lf-ai-float__header-actions { display:flex; gap:6px; }
 		.lf-ai-float__icon { border:1px solid #d6c8fb; background:#fff; width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:16px; line-height:1; color:#6a33e8; }
-		.lf-ai-float__body { padding:12px; display:flex; flex-direction:column; gap:10px; flex:1; min-height:0; overflow:auto; }
+		.lf-ai-float__body { padding:12px; display:flex; flex-direction:column; gap:10px; flex:1; min-height:0; overflow:auto; overflow-x:hidden; }
+		.lf-ai-float__body, .lf-ai-float__body * { box-sizing:border-box; }
+		.lf-ai-float .button { appearance:none; border:1px solid #8c8f94; border-radius:4px; background:#f6f7f7; color:#2c3338; min-height:30px; line-height:2.15384615; padding:0 10px; font-size:13px; cursor:pointer; text-decoration:none; }
+		.lf-ai-float .button:hover { background:#f0f0f1; border-color:#0a4b78; color:#0a4b78; }
+		.lf-ai-float .button.button-primary { background:#2271b1; border-color:#2271b1; color:#fff; }
+		.lf-ai-float .button.button-primary:hover { background:#135e96; border-color:#135e96; color:#fff; }
+		.lf-ai-float .button[disabled] { background:#f6f7f7; border-color:#dcdcde; color:#a7aaad; cursor:default; }
 		.lf-ai-float__target { font-size:12px; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; }
 		.lf-ai-float__mode { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 		.lf-ai-float__mode label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:#475569; }
 		.lf-ai-float__mode label[hidden] { display:none !important; }
-		.lf-ai-float__mode select { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; }
-		.lf-ai-float__mode input[type="number"] { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; width:100%; box-sizing:border-box; }
+		.lf-ai-float__mode select { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; width:100%; max-width:100%; font-family:inherit; }
+		.lf-ai-float__mode input[type="number"] { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; width:100%; max-width:100%; box-sizing:border-box; font-family:inherit; }
 		.lf-ai-float__target-ref label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:#475569; }
-		.lf-ai-float__target-ref input { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; width:100%; box-sizing:border-box; }
+		.lf-ai-float__target-ref input { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; width:100%; max-width:100%; box-sizing:border-box; font-family:inherit; }
 		.lf-ai-float__presets { display:flex; flex-wrap:wrap; gap:6px; }
-		.lf-ai-float__prompt { width:100%; resize:vertical; min-height:88px; border:1px solid #d6c8fb; border-radius:10px; padding:10px; font-size:13px; }
+		.lf-ai-float__prompt { width:100%; max-width:100%; resize:vertical; min-height:88px; border:1px solid #d6c8fb; border-radius:10px; padding:10px; font-size:13px; font-family:inherit; }
 		.lf-ai-float__prompt:focus { border-color:#8348f9; box-shadow:0 0 0 1px #8348f9; outline:none; }
 		.lf-ai-float__doc { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 		.lf-ai-float__doc-name { font-size:12px; color:#475569; overflow-wrap:anywhere; }
