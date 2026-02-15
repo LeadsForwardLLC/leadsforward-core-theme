@@ -92,6 +92,27 @@ function lf_ai_assistant_render_floating_widget(): void {
 				</div>
 			</div>
 			<div class="lf-ai-float__body">
+				<div class="lf-ai-float__mode">
+					<label>
+						<span><?php esc_html_e('Mode', 'leadsforward-core'); ?></span>
+						<select data-lf-ai-mode>
+							<option value="edit_existing"><?php esc_html_e('Edit Current Page', 'leadsforward-core'); ?></option>
+							<option value="create_page"><?php esc_html_e('Create New Page (Draft)', 'leadsforward-core'); ?></option>
+							<option value="create_cpt"><?php esc_html_e('Create New CPT Item (Draft)', 'leadsforward-core'); ?></option>
+							<option value="create_blog_post"><?php esc_html_e('Create New Blog Post (Draft)', 'leadsforward-core'); ?></option>
+						</select>
+					</label>
+					<label data-lf-ai-cpt-wrap hidden>
+						<span><?php esc_html_e('CPT Type', 'leadsforward-core'); ?></span>
+						<select data-lf-ai-cpt-type>
+							<option value="lf_service"><?php esc_html_e('Service', 'leadsforward-core'); ?></option>
+							<option value="lf_service_area"><?php esc_html_e('Service Area', 'leadsforward-core'); ?></option>
+							<option value="lf_faq"><?php esc_html_e('FAQ', 'leadsforward-core'); ?></option>
+							<option value="lf_project"><?php esc_html_e('Project', 'leadsforward-core'); ?></option>
+							<option value="lf_testimonial"><?php esc_html_e('Review/Testimonial', 'leadsforward-core'); ?></option>
+						</select>
+					</label>
+				</div>
 				<div class="lf-ai-float__presets">
 					<button type="button" class="button button-small" data-lf-ai-preset="<?php esc_attr_e('Tighten this page copy for higher conversions and local trust signals.', 'leadsforward-core'); ?>"><?php esc_html_e('Optimize Copy', 'leadsforward-core'); ?></button>
 					<button type="button" class="button button-small" data-lf-ai-preset="<?php esc_attr_e('Rewrite metadata and opening copy to better match transactional local intent.', 'leadsforward-core'); ?>"><?php esc_html_e('SERP Intent', 'leadsforward-core'); ?></button>
@@ -137,6 +158,9 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float__header-actions { display:flex; gap:6px; }
 		.lf-ai-float__icon { border:1px solid #d6c8fb; background:#fff; width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:16px; line-height:1; color:#6a33e8; }
 		.lf-ai-float__body { padding:12px; display:flex; flex-direction:column; gap:10px; }
+		.lf-ai-float__mode { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+		.lf-ai-float__mode label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:#475569; }
+		.lf-ai-float__mode select { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; }
 		.lf-ai-float__presets { display:flex; flex-wrap:wrap; gap:6px; }
 		.lf-ai-float__prompt { width:100%; resize:vertical; min-height:88px; border:1px solid #d6c8fb; border-radius:10px; padding:10px; font-size:13px; }
 		.lf-ai-float__prompt:focus { border-color:#8348f9; box-shadow:0 0 0 1px #8348f9; outline:none; }
@@ -162,6 +186,7 @@ function lf_ai_assistant_widget_css(): string {
 			.lf-ai-float { right:12px; bottom:12px; left:12px; }
 			.lf-ai-float__toggle { width:100%; justify-content:center; }
 			.lf-ai-float__panel { width:100%; }
+			.lf-ai-float__mode { grid-template-columns:1fr; }
 		}
 	';
 }
@@ -181,6 +206,9 @@ function lf_ai_assistant_widget_js(): string {
 		var $btnApply = $root.find("[data-lf-ai-apply]");
 		var $btnReject = $root.find("[data-lf-ai-reject]");
 		var $btnRevert = $root.find("[data-lf-ai-revert]");
+		var $mode = $root.find("[data-lf-ai-mode]");
+		var $cptWrap = $root.find("[data-lf-ai-cpt-wrap]");
+		var $cptType = $root.find("[data-lf-ai-cpt-type]");
 		var $docInput = $root.find("[data-lf-ai-doc-input]");
 		var $docAttach = $root.find("[data-lf-ai-doc-attach]");
 		var $docClear = $root.find("[data-lf-ai-doc-clear]");
@@ -191,6 +219,8 @@ function lf_ai_assistant_widget_js(): string {
 		var $confirmNo = $root.find("[data-lf-ai-confirm-no]");
 		var proposed = null;
 		var current = null;
+		var creationPayload = null;
+		var lastMode = "edit_existing";
 		var labels = lfAiFloating.labels || {};
 		var promptSnippet = "";
 		var docContext = "";
@@ -226,9 +256,40 @@ function lf_ai_assistant_widget_js(): string {
 			});
 			$diff.html(html).prop("hidden", false);
 		}
+		function renderCreationPreview(data) {
+			var html = "";
+			var title = data && data.title ? data.title : "";
+			var type = data && data.type ? data.type : "";
+			var status = data && data.status ? data.status : "draft";
+			var notes = data && data.notes && Array.isArray(data.notes) ? data.notes : [];
+			html += "<div class=\"lf-ai-float__row\">"
+				+ "<div class=\"lf-ai-float__field\">Draft Preview</div>"
+				+ "<div><b>Title:</b> " + escapeHtml(title) + "</div>"
+				+ "<div><b>Type:</b> " + escapeHtml(type) + "</div>"
+				+ "<div><b>Status:</b> " + escapeHtml(status) + "</div>";
+			if (notes.length) {
+				html += "<div style=\"margin-top:6px;\"><b>Notes:</b><ul style=\"margin:6px 0 0 16px;\">";
+				notes.forEach(function(note){
+					html += "<li>" + escapeHtml(note) + "</li>";
+				});
+				html += "</ul></div>";
+			}
+			html += "</div>";
+			$diff.html(html).prop("hidden", false);
+		}
 		function setProposalEnabled(enabled){
 			$btnApply.prop("disabled", !enabled);
 			$btnReject.prop("disabled", !enabled);
+		}
+		function modeValue() {
+			return String($mode.val() || "edit_existing");
+		}
+		function cptTypeValue() {
+			return String($cptType.val() || "lf_service");
+		}
+		function syncModeUi() {
+			var mode = modeValue();
+			$cptWrap.prop("hidden", mode !== "create_cpt");
 		}
 		function setDocState(name, content) {
 			docLabel = String(name || "");
@@ -289,6 +350,9 @@ function lf_ai_assistant_widget_js(): string {
 		$root.find("[data-lf-ai-preset]").on("click", function(){
 			$prompt.val($(this).attr("data-lf-ai-preset") || "").trigger("focus");
 		});
+		$mode.on("change", function(){
+			syncModeUi();
+		});
 		$docAttach.on("click", function(){
 			$docInput.trigger("click");
 		});
@@ -315,6 +379,10 @@ function lf_ai_assistant_widget_js(): string {
 			setStatus(lfAiFloating.i18n && lfAiFloating.i18n.statusGenerating ? lfAiFloating.i18n.statusGenerating : "Generating...", false);
 			$diff.prop("hidden", true).empty();
 			setProposalEnabled(false);
+			proposed = null;
+			current = null;
+			creationPayload = null;
+			lastMode = modeValue();
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_generate",
 				nonce: lfAiFloating.nonce,
@@ -322,14 +390,21 @@ function lf_ai_assistant_widget_js(): string {
 				context_id: lfAiFloating.context_id || "homepage",
 				prompt: prompt,
 				document_context: docContext,
-				document_name: docLabel
+				document_name: docLabel,
+				assistant_mode: lastMode,
+				assistant_cpt_type: cptTypeValue()
 			}).done(function(res){
-				if (res && res.success && res.data && res.data.proposed) {
+				if (res && res.success && res.data && res.data.mode === "edit_existing" && res.data.proposed) {
 					proposed = res.data.proposed;
 					current = res.data.current || {};
 					labels = res.data.labels || labels;
 					renderDiff();
 					setStatus("Suggestions ready. Review and apply.", false);
+					setProposalEnabled(true);
+				} else if (res && res.success && res.data && res.data.creation_payload) {
+					creationPayload = res.data.creation_payload;
+					renderCreationPreview(res.data.creation_preview || {});
+					setStatus("Draft plan ready. Review and apply.", false);
 					setProposalEnabled(true);
 				} else {
 					setStatus((res && res.data && res.data.message) ? res.data.message : "No suggestions returned.", true);
@@ -341,8 +416,12 @@ function lf_ai_assistant_widget_js(): string {
 		});
 
 		$btnApply.on("click", function(){
-			if (!proposed) {
+			if (lastMode === "edit_existing" && !proposed) {
 				setStatus("No suggestions to apply.", true);
+				return;
+			}
+			if (lastMode !== "edit_existing" && !creationPayload) {
+				setStatus("No draft plan to apply.", true);
 				return;
 			}
 			setStatus(lfAiFloating.i18n && lfAiFloating.i18n.statusApplying ? lfAiFloating.i18n.statusApplying : "Applying...", false);
@@ -352,10 +431,24 @@ function lf_ai_assistant_widget_js(): string {
 				context_type: lfAiFloating.context_type || "homepage",
 				context_id: lfAiFloating.context_id || "homepage",
 				prompt_snippet: promptSnippet,
-				proposed: JSON.stringify(proposed || {})
+				proposed: JSON.stringify(proposed || {}),
+				creation_payload: JSON.stringify(creationPayload || {}),
+				assistant_mode: lastMode,
+				assistant_cpt_type: cptTypeValue()
 			}).done(function(res){
 				if (res && res.success && res.data && res.data.reload) {
 					window.location.reload();
+				} else if (res && res.success && res.data && res.data.created) {
+					var links = "";
+					if (res.data.edit_link) {
+						links += "<a href=\"" + escapeHtml(res.data.edit_link) + "\" target=\"_blank\" rel=\"noopener\">Open Draft</a>";
+					}
+					if (res.data.view_link) {
+						links += (links ? " | " : "") + "<a href=\"" + escapeHtml(res.data.view_link) + "\" target=\"_blank\" rel=\"noopener\">View</a>";
+					}
+					$diff.html("<div class=\"lf-ai-float__row\"><div class=\"lf-ai-float__field\">Draft Created</div><div>" + links + "</div></div>").prop("hidden", false);
+					setStatus((res.data.message || "Draft created successfully."), false);
+					setProposalEnabled(false);
 				} else {
 					setStatus((res && res.data && res.data.message) ? res.data.message : "Apply failed.", true);
 				}
@@ -368,6 +461,7 @@ function lf_ai_assistant_widget_js(): string {
 		$btnReject.on("click", function(){
 			proposed = null;
 			current = null;
+			creationPayload = null;
 			$diff.prop("hidden", true).empty();
 			setProposalEnabled(false);
 			setStatus("Suggestions rejected.", false);
@@ -400,5 +494,6 @@ function lf_ai_assistant_widget_js(): string {
 		$prompt.attr("placeholder", (lfAiFloating.i18n && lfAiFloating.i18n.placeholder) ? lfAiFloating.i18n.placeholder : "Ask for specific edits...");
 		setStatus((lfAiFloating.i18n && lfAiFloating.i18n.statusReady) ? lfAiFloating.i18n.statusReady : "Ready.", false);
 		setConfirmOpen(false);
+		syncModeUi();
 	})(jQuery);';
 }

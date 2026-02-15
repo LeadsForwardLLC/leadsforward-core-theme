@@ -15,6 +15,188 @@ if (!defined('ABSPATH')) {
 
 const LF_AI_CAP = 'edit_posts';
 
+function lf_ai_assistant_modes(): array {
+	return [
+		'edit_existing',
+		'create_page',
+		'create_cpt',
+		'create_blog_post',
+	];
+}
+
+function lf_ai_assistant_allowed_cpt_types(): array {
+	return [
+		'lf_service',
+		'lf_service_area',
+		'lf_faq',
+		'lf_project',
+		'lf_testimonial',
+	];
+}
+
+function lf_ai_assistant_creation_post_type(string $mode, string $cpt_type): string {
+	if ($mode === 'create_page') {
+		return 'page';
+	}
+	if ($mode === 'create_blog_post') {
+		return 'post';
+	}
+	if ($mode === 'create_cpt' && in_array($cpt_type, lf_ai_assistant_allowed_cpt_types(), true)) {
+		return $cpt_type;
+	}
+	return '';
+}
+
+function lf_ai_assistant_parse_secondary_keywords($value): array {
+	if (is_array($value)) {
+		$list = $value;
+	} else {
+		$list = preg_split('/[\n,]+/', (string) $value) ?: [];
+	}
+	$list = array_values(array_filter(array_map(static function ($item): string {
+		return sanitize_text_field((string) $item);
+	}, $list)));
+	$list = array_values(array_unique($list));
+	return array_slice($list, 0, 8);
+}
+
+function lf_ai_assistant_build_creation_prompt(string $mode, string $post_type, string $context_type, string $prompt): string {
+	$base = "You are a WordPress content builder for a local business site.\n";
+	$base .= "Return ONLY one JSON object. No markdown. No explanation.\n";
+	$base .= "Context type: {$context_type}. Target post_type: {$post_type}.\n";
+	$base .= "Create HIGH quality, concrete local-business copy. Avoid generic placeholders.\n";
+	$schema = "JSON schema:\n";
+	$schema .= "{\n";
+	$schema .= "  \"title\": \"string (required)\",\n";
+	$schema .= "  \"slug\": \"string optional\",\n";
+	$schema .= "  \"excerpt\": \"string optional\",\n";
+	$schema .= "  \"content\": \"string (required, >= 120 chars)\",\n";
+	$schema .= "  \"primary_keyword\": \"string optional\",\n";
+	$schema .= "  \"secondary_keywords\": [\"string\", \"...\"] optional,\n";
+	$schema .= "  \"question\": \"string optional (FAQ only)\",\n";
+	$schema .= "  \"answer\": \"string optional (FAQ only)\",\n";
+	$schema .= "  \"city\": \"string optional (service area only)\",\n";
+	$schema .= "  \"state\": \"string optional (service area only)\"\n";
+	$schema .= "}\n";
+	$rules = "Rules:\n";
+	$rules .= "- status is always draft; do not include status.\n";
+	$rules .= "- Keep title under 70 chars.\n";
+	$rules .= "- Provide strong content body, not bullet fragments.\n";
+	$rules .= "- Do not include HTML wrappers like <html> or markdown fences.\n";
+	$rules .= "- If mode is create_blog_post, write as a full blog draft.\n";
+	$rules .= "- If mode is create_cpt and post_type is lf_faq, include question and answer.\n";
+	$rules .= "- If mode is create_cpt and post_type is lf_service_area, include city and state when possible.\n";
+	return $base . $schema . $rules . "\nUser request:\n" . $prompt;
+}
+
+function lf_ai_assistant_validate_creation_payload(array $decoded, string $mode, string $cpt_type): array {
+	$post_type = lf_ai_assistant_creation_post_type($mode, $cpt_type);
+	if ($post_type === '') {
+		return [];
+	}
+	$title = sanitize_text_field((string) ($decoded['title'] ?? ''));
+	$content = wp_kses_post((string) ($decoded['content'] ?? ''));
+	$content = trim($content);
+	if ($title === '' || $content === '' || strlen(wp_strip_all_tags($content)) < 40) {
+		return [];
+	}
+	$payload = [
+		'post_type' => $post_type,
+		'title' => $title,
+		'slug' => sanitize_title((string) ($decoded['slug'] ?? '')),
+		'excerpt' => sanitize_textarea_field((string) ($decoded['excerpt'] ?? '')),
+		'content' => $content,
+		'primary_keyword' => sanitize_text_field((string) ($decoded['primary_keyword'] ?? '')),
+		'secondary_keywords' => lf_ai_assistant_parse_secondary_keywords($decoded['secondary_keywords'] ?? []),
+		'question' => sanitize_text_field((string) ($decoded['question'] ?? '')),
+		'answer' => sanitize_textarea_field((string) ($decoded['answer'] ?? '')),
+		'city' => sanitize_text_field((string) ($decoded['city'] ?? '')),
+		'state' => sanitize_text_field((string) ($decoded['state'] ?? '')),
+		'mode' => $mode,
+	];
+	if ($post_type === 'lf_faq') {
+		if ($payload['question'] === '') {
+			$payload['question'] = $title;
+		}
+		if ($payload['answer'] === '') {
+			$payload['answer'] = wp_strip_all_tags($content);
+		}
+	}
+	return $payload;
+}
+
+function lf_ai_assistant_creation_preview(array $payload): array {
+	$pt_obj = get_post_type_object((string) ($payload['post_type'] ?? ''));
+	$pt_label = $pt_obj ? (string) $pt_obj->labels->singular_name : (string) ($payload['post_type'] ?? '');
+	$notes = [];
+	if (!empty($payload['primary_keyword'])) {
+		$notes[] = sprintf(__('Primary keyword: %s', 'leadsforward-core'), $payload['primary_keyword']);
+	}
+	if (!empty($payload['secondary_keywords']) && is_array($payload['secondary_keywords'])) {
+		$notes[] = sprintf(__('Secondary keywords: %s', 'leadsforward-core'), implode(', ', $payload['secondary_keywords']));
+	}
+	if (($payload['post_type'] ?? '') === 'lf_service_area' && (!empty($payload['city']) || !empty($payload['state']))) {
+		$notes[] = sprintf(__('Area: %s %s', 'leadsforward-core'), (string) ($payload['city'] ?? ''), (string) ($payload['state'] ?? ''));
+	}
+	return [
+		'title' => (string) ($payload['title'] ?? ''),
+		'type' => $pt_label,
+		'status' => 'draft',
+		'notes' => $notes,
+	];
+}
+
+function lf_ai_assistant_create_post_from_payload(array $payload): array {
+	$postarr = [
+		'post_type' => (string) ($payload['post_type'] ?? ''),
+		'post_status' => 'draft',
+		'post_title' => (string) ($payload['title'] ?? ''),
+		'post_content' => (string) ($payload['content'] ?? ''),
+		'post_excerpt' => (string) ($payload['excerpt'] ?? ''),
+	];
+	$slug = (string) ($payload['slug'] ?? '');
+	if ($slug !== '') {
+		$postarr['post_name'] = $slug;
+	}
+	$post_id = wp_insert_post($postarr, true);
+	if (is_wp_error($post_id)) {
+		return ['success' => false, 'message' => $post_id->get_error_message()];
+	}
+	$post_id = (int) $post_id;
+	$primary_keyword = (string) ($payload['primary_keyword'] ?? '');
+	$secondary_keywords = (array) ($payload['secondary_keywords'] ?? []);
+	if ($primary_keyword !== '') {
+		update_post_meta($post_id, '_lf_seo_primary_keyword', $primary_keyword);
+	}
+	if (!empty($secondary_keywords)) {
+		update_post_meta($post_id, '_lf_seo_secondary_keywords', implode(', ', $secondary_keywords));
+	}
+	$post_type = (string) ($payload['post_type'] ?? '');
+	if ($post_type === 'lf_faq') {
+		if (function_exists('update_field')) {
+			update_field('lf_faq_question', (string) ($payload['question'] ?? ''), $post_id);
+			update_field('lf_faq_answer', (string) ($payload['answer'] ?? ''), $post_id);
+		}
+	}
+	if ($post_type === 'lf_service_area') {
+		if (function_exists('update_field') && !empty($payload['state'])) {
+			update_field('lf_service_area_state', (string) $payload['state'], $post_id);
+		}
+	}
+	if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+		lf_seo_maybe_populate_generated_meta($post_id);
+	}
+	if (function_exists('lf_seo_calculate_content_quality')) {
+		lf_seo_calculate_content_quality($post_id);
+	}
+	return [
+		'success' => true,
+		'post_id' => $post_id,
+		'edit_link' => get_edit_post_link($post_id, ''),
+		'view_link' => get_permalink($post_id),
+	];
+}
+
 add_action('add_meta_boxes', 'lf_ai_editing_meta_box');
 add_action('admin_enqueue_scripts', 'lf_ai_editing_scripts');
 add_action('wp_ajax_lf_ai_generate', 'lf_ai_ajax_generate');
@@ -169,6 +351,11 @@ function lf_ai_ajax_generate(): void {
 	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
 	$context_id   = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
 	$prompt       = isset($_POST['prompt']) ? sanitize_textarea_field(wp_unslash($_POST['prompt'])) : '';
+	$assistant_mode = isset($_POST['assistant_mode']) ? sanitize_text_field(wp_unslash($_POST['assistant_mode'])) : 'edit_existing';
+	$assistant_cpt_type = isset($_POST['assistant_cpt_type']) ? sanitize_text_field(wp_unslash($_POST['assistant_cpt_type'])) : '';
+	if (!in_array($assistant_mode, lf_ai_assistant_modes(), true)) {
+		$assistant_mode = 'edit_existing';
+	}
 	$document_context = isset($_POST['document_context']) ? sanitize_textarea_field(wp_unslash($_POST['document_context'])) : '';
 	$document_name = isset($_POST['document_name']) ? sanitize_text_field(wp_unslash($_POST['document_name'])) : '';
 	if ($prompt === '' || $context_type === '') {
@@ -182,15 +369,43 @@ function lf_ai_ajax_generate(): void {
 		$prompt .= "\n\nDocument context (" . $doc_heading . "):\n" . $document_context;
 	}
 	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
-	$result = lf_ai_generate_proposal($context_type, $context_id_use, $prompt);
-	if (!$result['success']) {
-		wp_send_json_error(['message' => $result['error']]);
+	if ($assistant_mode === 'edit_existing') {
+		$result = lf_ai_generate_proposal($context_type, $context_id_use, $prompt);
+		if (!$result['success']) {
+			wp_send_json_error(['message' => $result['error']]);
+		}
+		$current = lf_ai_get_current_values($context_type, $context_id_use, array_keys($result['proposed']));
+		wp_send_json_success([
+			'mode' => $assistant_mode,
+			'proposed' => $result['proposed'],
+			'current'  => $current,
+			'labels'   => array_intersect_key(lf_get_ai_editable_fields($context_id_use), $result['proposed']),
+		]);
 	}
-	$current = lf_ai_get_current_values($context_type, $context_id_use, array_keys($result['proposed']));
+	$post_type = lf_ai_assistant_creation_post_type($assistant_mode, $assistant_cpt_type);
+	if ($post_type === '') {
+		wp_send_json_error(['message' => __('Invalid create mode.', 'leadsforward-core')]);
+	}
+	$system = lf_ai_assistant_build_creation_prompt($assistant_mode, $post_type, $context_type, $prompt);
+	$response = apply_filters('lf_ai_completion', '', $system, $prompt, $context_type, $context_id_use);
+	if (is_wp_error($response)) {
+		wp_send_json_error(['message' => $response->get_error_message()]);
+	}
+	if (!is_string($response) || trim($response) === '') {
+		wp_send_json_error(['message' => __('AI response was empty.', 'leadsforward-core')]);
+	}
+	$decoded = json_decode(trim($response), true);
+	if (!is_array($decoded)) {
+		wp_send_json_error(['message' => __('AI response was invalid JSON.', 'leadsforward-core')]);
+	}
+	$payload = lf_ai_assistant_validate_creation_payload($decoded, $assistant_mode, $assistant_cpt_type);
+	if (empty($payload)) {
+		wp_send_json_error(['message' => __('Could not validate creation payload. Try a more specific prompt.', 'leadsforward-core')]);
+	}
 	wp_send_json_success([
-		'proposed' => $result['proposed'],
-		'current'  => $current,
-		'labels'   => array_intersect_key(lf_get_ai_editable_fields($context_id_use), $result['proposed']),
+		'mode' => $assistant_mode,
+		'creation_payload' => $payload,
+		'creation_preview' => lf_ai_assistant_creation_preview($payload),
 	]);
 }
 
@@ -259,6 +474,11 @@ function lf_ai_ajax_apply(): void {
 	}
 	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
 	$context_id   = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
+	$assistant_mode = isset($_POST['assistant_mode']) ? sanitize_text_field(wp_unslash($_POST['assistant_mode'])) : 'edit_existing';
+	$assistant_cpt_type = isset($_POST['assistant_cpt_type']) ? sanitize_text_field(wp_unslash($_POST['assistant_cpt_type'])) : '';
+	if (!in_array($assistant_mode, lf_ai_assistant_modes(), true)) {
+		$assistant_mode = 'edit_existing';
+	}
 	$prompt_snippet = isset($_POST['prompt_snippet']) ? sanitize_textarea_field(wp_unslash($_POST['prompt_snippet'])) : '';
 	$submitted_raw = isset($_POST['proposed']) ? wp_unslash((string) $_POST['proposed']) : '';
 	$submitted_proposed = json_decode($submitted_raw, true);
@@ -266,6 +486,29 @@ function lf_ai_ajax_apply(): void {
 		$submitted_proposed = [];
 	}
 	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	if ($assistant_mode !== 'edit_existing') {
+		$submitted_creation_raw = isset($_POST['creation_payload']) ? wp_unslash((string) $_POST['creation_payload']) : '';
+		$submitted_creation = json_decode($submitted_creation_raw, true);
+		if (!is_array($submitted_creation)) {
+			$submitted_creation = [];
+		}
+		$payload = lf_ai_assistant_validate_creation_payload($submitted_creation, $assistant_mode, $assistant_cpt_type);
+		if (empty($payload)) {
+			wp_send_json_error(['message' => __('Invalid creation payload. Generate again.', 'leadsforward-core')]);
+		}
+		$created = lf_ai_assistant_create_post_from_payload($payload);
+		if (empty($created['success'])) {
+			wp_send_json_error(['message' => (string) ($created['message'] ?? __('Creation failed.', 'leadsforward-core'))]);
+		}
+		$post_id = (int) ($created['post_id'] ?? 0);
+		wp_send_json_success([
+			'created' => true,
+			'post_id' => $post_id,
+			'edit_link' => (string) ($created['edit_link'] ?? ''),
+			'view_link' => (string) ($created['view_link'] ?? ''),
+			'message' => __('Draft created successfully.', 'leadsforward-core'),
+		]);
+	}
 	$stored = lf_ai_get_stored_proposal($context_type, $context_id_use);
 	$proposed = [];
 	if ($stored && !empty($stored['proposed']) && is_array($stored['proposed'])) {
