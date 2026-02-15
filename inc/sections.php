@@ -706,6 +706,8 @@ function lf_sections_default_order(string $context): array {
 			'content_image_a',
 			'image_content_b',
 			'content_image_c',
+			'content_image',
+			'image_content',
 			'service_details',
 			'trust_reviews',
 			'process',

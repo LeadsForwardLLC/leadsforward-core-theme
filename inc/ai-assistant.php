@@ -854,7 +854,7 @@ function lf_ai_assistant_widget_js(): string {
 				return false;
 			}
 			if (activeContextType === "homepage") {
-				return ["service_details", "content_image_a", "image_content_b", "content_image_c", "trust_reviews"].indexOf(id) !== -1;
+				return ["service_details", "content_image_a", "image_content_b", "content_image_c", "content_image", "image_content", "trust_reviews"].indexOf(id) !== -1;
 			}
 			return true;
 		}

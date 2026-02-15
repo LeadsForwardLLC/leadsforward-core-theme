@@ -1226,10 +1226,12 @@ function lf_ai_ajax_duplicate_section(): void {
 		}
 		$source_row = is_array($config[$section_id]) ? $config[$section_id] : [];
 		$slot_groups = [
-			'service_details' => ['content_image_a', 'image_content_b', 'content_image_c', 'service_details'],
-			'content_image_a' => ['content_image_a', 'image_content_b', 'content_image_c', 'service_details'],
-			'image_content_b' => ['content_image_a', 'image_content_b', 'content_image_c', 'service_details'],
-			'content_image_c' => ['content_image_a', 'image_content_b', 'content_image_c', 'service_details'],
+			'service_details' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
+			'content_image_a' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
+			'image_content_b' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
+			'content_image_c' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
+			'content_image' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
+			'image_content' => ['content_image_a', 'image_content_b', 'content_image_c', 'content_image', 'image_content', 'service_details'],
 			'trust_reviews' => ['trust_reviews'],
 		];
 		$group = $slot_groups[$section_id] ?? [];
