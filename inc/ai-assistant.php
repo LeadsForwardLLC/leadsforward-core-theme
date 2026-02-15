@@ -1086,30 +1086,6 @@ function lf_ai_assistant_widget_js(): string {
 			if (type === "" || type === "hero" || type === "hero_1") {
 				return false;
 			}
-			if (activeContextType === "homepage") {
-				var id = String(sectionId || "");
-				var slotGroups = {
-					service_details: ["content_image_a", "image_content_b", "content_image_c", "content_image", "image_content", "service_details"],
-					content_image_a: ["content_image_a", "image_content_b", "content_image_c", "content_image", "image_content", "service_details"],
-					image_content_b: ["content_image_a", "image_content_b", "content_image_c", "content_image", "image_content", "service_details"],
-					content_image_c: ["content_image_a", "image_content_b", "content_image_c", "content_image", "image_content", "service_details"],
-					content_image: ["content_image_a", "image_content_b", "content_image_c", "content_image", "image_content", "service_details"],
-					image_content: ["content_image_a", "image_content_b", "content_image_c", "content_image", "image_content", "service_details"],
-					trust_reviews: ["trust_reviews"]
-				};
-				var group = slotGroups[id] || [];
-				if (!group.length) {
-					return false;
-				}
-				for (var i = 0; i < group.length; i++) {
-					var candidate = String(group[i] || "");
-					if (!candidate || candidate === id) continue;
-					if (!homepageEnabledMap[candidate]) {
-						return true;
-					}
-				}
-				return false;
-			}
 			return true;
 		}
 		function sectionSupportsColumnSwap(sectionType) {
