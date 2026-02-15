@@ -449,11 +449,16 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-rail.is-collapsed .lf-ai-rail__add { display:none; }
 		.lf-ai-rail__list { display:flex; flex-direction:column; gap:6px; }
 		.lf-ai-rail.is-collapsed .lf-ai-rail__list { display:none; }
-		.lf-ai-rail__item { border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; font-size:12px; cursor:pointer; color:#0f172a; background:#fff; }
+		.lf-ai-rail__item { border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; font-size:12px; cursor:pointer; color:#0f172a; background:#fff; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
 		.lf-ai-rail__item:hover { border-color:#c4b5fd; background:#faf7ff; }
 		.lf-ai-rail__item.is-active { border-color:#8348f9; background:#f5f0ff; }
 		.lf-ai-rail__item small { display:block; color:#64748b; margin-top:2px; }
+		.lf-ai-rail__item-body { min-width:0; flex:1; }
+		.lf-ai-rail__drag { border:1px solid #e2e8f0; border-radius:6px; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; color:#64748b; cursor:grab; user-select:none; background:#fff; font-size:12px; line-height:1; }
+		.lf-ai-rail__drag:active { cursor:grabbing; }
 		.lf-ai-rail__item.is-dragging { opacity:.55; border-color:#8348f9; }
+		.lf-ai-rail__item.is-drop-before { box-shadow: inset 0 3px 0 #8348f9; }
+		.lf-ai-rail__item.is-drop-after { box-shadow: inset 0 -3px 0 #8348f9; }
 		.lf-ai-rail__library { border:1px solid #e2e8f0; border-radius:10px; padding:6px; margin:0 0 8px; background:#f8fafc; display:flex; flex-direction:column; gap:6px; }
 		.lf-ai-rail__library[hidden] { display:none !important; }
 		.lf-ai-rail__library-search { width:100%; border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:12px; }
@@ -967,6 +972,11 @@ function lf_ai_assistant_widget_js(): string {
 			var rail = ensureSectionRail();
 			var list = rail.querySelector("[data-lf-ai-rail-list]");
 			if (!list) return;
+			function clearRailDropMarkers() {
+				Array.prototype.slice.call(list.querySelectorAll(".lf-ai-rail__item.is-drop-before,.lf-ai-rail__item.is-drop-after")).forEach(function(node){
+					node.classList.remove("is-drop-before", "is-drop-after");
+				});
+			}
 			list.innerHTML = "";
 			wraps.forEach(function(wrap){
 				var row = document.createElement("div");
@@ -976,8 +986,12 @@ function lf_ai_assistant_widget_js(): string {
 				row.setAttribute("draggable", "true");
 				row.setAttribute("data-lf-rail-section-id", sectionId);
 				row.setAttribute("tabindex", "0");
-				row.innerHTML = escapeHtml(sectionLabelForWrap(wrap)) + "<small>" + escapeHtml(String(wrap.getAttribute("data-lf-section-type") || "section")) + (isHidden ? " • hidden" : "") + "</small>";
+				row.innerHTML = "<div class=\"lf-ai-rail__item-body\">" + escapeHtml(sectionLabelForWrap(wrap)) + "<small>" + escapeHtml(String(wrap.getAttribute("data-lf-section-type") || "section")) + (isHidden ? " • hidden" : "") + "</small></div><span class=\"lf-ai-rail__drag\" data-lf-rail-drag title=\"Drag to reorder\" aria-label=\"Drag to reorder\">⋮⋮</span>";
 				row.addEventListener("click", function(){
+					if (row.__draggedOnce) {
+						row.__draggedOnce = false;
+						return;
+					}
 					setSelectedSection(wrap);
 					scrollToSectionWrap(wrap);
 				});
@@ -1006,6 +1020,11 @@ function lf_ai_assistant_widget_js(): string {
 					}
 				});
 				row.addEventListener("dragstart", function(e){
+					var dragHandle = e && e.target && e.target.closest ? e.target.closest("[data-lf-rail-drag]") : null;
+					if (!dragHandle) {
+						e.preventDefault();
+						return;
+					}
 					activeRailDragSectionId = sectionId;
 					row.classList.add("is-dragging");
 					if (e.dataTransfer) {
@@ -1020,6 +1039,13 @@ function lf_ai_assistant_widget_js(): string {
 					}
 					if (!activeRailDragSectionId || activeRailDragSectionId === sectionId) return;
 					e.preventDefault();
+					clearRailDropMarkers();
+					var rect = row.getBoundingClientRect();
+					var after = e.clientY > (rect.top + rect.height / 2);
+					row.classList.add(after ? "is-drop-after" : "is-drop-before");
+				});
+				row.addEventListener("dragleave", function(){
+					row.classList.remove("is-drop-before", "is-drop-after");
 				});
 				row.addEventListener("drop", function(e){
 					if (activeLibraryDragSectionType) {
@@ -1040,12 +1066,15 @@ function lf_ai_assistant_widget_js(): string {
 					} else {
 						targetWrap.parentNode.insertBefore(dragWrap, targetWrap);
 					}
+					row.__draggedOnce = true;
+					clearRailDropMarkers();
 					setSelectedSection(dragWrap);
 					persistSectionOrder();
 				});
 				row.addEventListener("dragend", function(){
 					row.classList.remove("is-dragging");
 					activeRailDragSectionId = "";
+					clearRailDropMarkers();
 				});
 				list.appendChild(row);
 			});
