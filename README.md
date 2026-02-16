@@ -232,6 +232,7 @@ New section type: **Centered Content** (`content_centered`) — minimal, text-on
 - **Dev reset scope:** Also resets site title/description to blank to remove any business evidence.
 - **Flow:** Build homepage blueprint → send to orchestrator → validate payload → apply to homepage fields.
 - **Jobs:** Logged with status, user, time, and summary. Retry resends same payload.
+- **Autonomous mode (optional):** Disabled by default and can only be enabled after a successful Manifester run establishes a valid baseline.
 - **REST endpoints (secret auth):**
   - `GET /wp-json/leadsforward/v1/blueprint`
   - `POST /wp-json/leadsforward/v1/apply`

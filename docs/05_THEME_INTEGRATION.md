@@ -31,6 +31,7 @@ This keeps the theme operational as a standalone engine while still benefiting f
 - **Orchestrator callback**: `/wp-json/leadsforward/v1/orchestrator` handled by `lf_ai_studio_rest_orchestrator()`.
 - **Apply (strict)**: `lf_apply_orchestrator_updates()` applies updates and logs a job outcome.
 - **Callback auth**: `/orchestrator`, `/progress`, and `/airtable-webhook` support HMAC header verification (`X-LF-Timestamp`, `X-LF-Nonce`, `X-LF-Signature`) with replay window controls.
+- **Autonomy launch gate**: optional autonomous mode remains disabled until a successful Manifester run completes and records a baseline health state.
 - **Autonomy eligibility gate**: autonomous Airtable runs remain optional/off by default and only become enable-able after a successful manifester callback stores a fresh baseline audit/hash.
 
 ## Deterministic CTA + FAQ
