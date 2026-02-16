@@ -238,6 +238,9 @@ function lf_dev_reset_run(): void {
 	delete_option('lf_ai_last_generation_log');
 	delete_option('lf_ai_studio_manifest_errors');
 	delete_option('lf_ai_studio_keywords');
+	delete_option('lf_ai_edit_log');
+	delete_option('lf_ai_inline_dom_overrides_homepage');
+	delete_option('lf_ai_inline_image_overrides_homepage');
 	delete_option('lf_homepage_city');
 	delete_option('lf_homepage_keywords');
 	delete_option('lf_homepage_variation_seed');
@@ -301,6 +304,9 @@ function lf_dev_reset_run(): void {
 	if (defined('LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION')) {
 		delete_option(LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION);
 	}
+	if (defined('LF_HOMEPAGE_SECTION_ID_MIGRATED_OPTION')) {
+		delete_option(LF_HOMEPAGE_SECTION_ID_MIGRATED_OPTION);
+	}
 	if (defined('LF_QUOTE_BUILDER_OPTION')) {
 		delete_option(LF_QUOTE_BUILDER_OPTION);
 	}
@@ -309,6 +315,17 @@ function lf_dev_reset_run(): void {
 	}
 	if (defined('LF_QUOTE_BUILDER_SUBMISSIONS')) {
 		delete_option(LF_QUOTE_BUILDER_SUBMISSIONS);
+	}
+	$post_ids_for_inline_clear = get_posts([
+		'post_type' => ['page', 'post', 'lf_service', 'lf_service_area'],
+		'post_status' => 'any',
+		'posts_per_page' => -1,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	]);
+	foreach ((array) $post_ids_for_inline_clear as $inline_post_id) {
+		delete_post_meta((int) $inline_post_id, '_lf_ai_inline_dom_overrides');
+		delete_post_meta((int) $inline_post_id, '_lf_ai_inline_image_overrides');
 	}
 
 	update_option('show_on_front', 'posts');

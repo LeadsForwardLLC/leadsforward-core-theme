@@ -213,11 +213,20 @@ function lf_image_intelligence_upload_context_defaults(): array {
 	$primary = is_array($keywords) ? sanitize_text_field((string) ($keywords['primary'] ?? '')) : '';
 	$city = sanitize_text_field((string) get_option('lf_homepage_city', ''));
 	$niche = sanitize_text_field((string) (defined('LF_HOMEPAGE_NICHE_OPTION') ? get_option(LF_HOMEPAGE_NICHE_OPTION, '') : ''));
-	$service_name = $primary !== '' ? $primary : ($niche !== '' ? $niche : __('service image', 'leadsforward-core'));
+	$business = '';
+	if (function_exists('lf_business_entity_get')) {
+		$entity = lf_business_entity_get();
+		$business = sanitize_text_field((string) ($entity['name'] ?? ''));
+	}
+	if ($business === '') {
+		$business = sanitize_text_field((string) get_bloginfo('name'));
+	}
+	$service_name = $primary !== '' ? $primary : ($niche !== '' ? $niche : ($business !== '' ? $business : __('service image', 'leadsforward-core')));
 	return [
 		'primary_keyword' => $primary,
 		'city' => $city,
 		'niche' => $niche,
+		'business_name' => $business,
 		'service_name' => $service_name,
 	];
 }
@@ -230,10 +239,15 @@ function lf_image_intelligence_upload_base_slug(): string {
 		(string) ($context['niche'] ?? ''),
 	]);
 	if (empty($parts)) {
-		$parts = [(string) get_bloginfo('name'), 'upload'];
+		$parts = array_filter([
+			(string) ($context['business_name'] ?? ''),
+			(string) ($context['city'] ?? ''),
+			(string) ($context['niche'] ?? ''),
+			'image',
+		]);
 	}
 	$slug = sanitize_title(implode(' ', $parts));
-	return $slug !== '' ? $slug : 'site-image';
+	return $slug !== '' ? $slug : 'local-service-image';
 }
 
 function lf_image_intelligence_next_upload_index(): int {
@@ -992,6 +1006,61 @@ function lf_image_intelligence_finalize_uploaded_attachment(int $attachment_id):
 	lf_image_intelligence_store_image_profile($attachment_id);
 }
 
+function lf_image_intelligence_resolve_annotation_attachment_id(array $row): int {
+	$direct_keys = ['attachment_id', 'id', 'media_id', 'image_id', 'wp_attachment_id'];
+	foreach ($direct_keys as $key) {
+		$candidate = absint($row[$key] ?? 0);
+		if ($candidate > 0) {
+			$post = get_post($candidate);
+			if ($post instanceof \WP_Post && $post->post_type === 'attachment') {
+				return $candidate;
+			}
+		}
+	}
+
+	$url_keys = ['url', 'image_url', 'imageUrl', 'src', 'image'];
+	foreach ($url_keys as $key) {
+		$url = esc_url_raw((string) ($row[$key] ?? ''));
+		if ($url === '') {
+			continue;
+		}
+		$by_url = (int) attachment_url_to_postid($url);
+		if ($by_url > 0) {
+			return $by_url;
+		}
+	}
+
+	$filename_keys = ['filename', 'file_name', 'image_name', 'recommended_filename', 'recommendedFilename', 'original_filename'];
+	foreach ($filename_keys as $key) {
+		$raw = trim((string) ($row[$key] ?? ''));
+		if ($raw === '') {
+			continue;
+		}
+		$basename = basename($raw);
+		$basename = sanitize_file_name($basename);
+		if ($basename === '') {
+			continue;
+		}
+		$query = get_posts([
+			'post_type' => 'attachment',
+			'post_status' => 'inherit',
+			'posts_per_page' => 1,
+			'fields' => 'ids',
+			'meta_query' => [[
+				'key' => '_wp_attached_file',
+				'value' => '/' . $basename,
+				'compare' => 'LIKE',
+			]],
+			'no_found_rows' => true,
+		]);
+		if (!empty($query)) {
+			return (int) $query[0];
+		}
+	}
+
+	return 0;
+}
+
 function lf_image_intelligence_build_media_candidates_for_vision(int $limit = 200): array {
 	$index = lf_build_media_index();
 	$out = [];
@@ -1019,7 +1088,7 @@ function lf_image_intelligence_apply_vision_annotations(array $annotations): arr
 		if (!is_array($row)) {
 			continue;
 		}
-		$attachment_id = absint($row['attachment_id'] ?? 0);
+		$attachment_id = lf_image_intelligence_resolve_annotation_attachment_id($row);
 		if ($attachment_id <= 0) {
 			continue;
 		}

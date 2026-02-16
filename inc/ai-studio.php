@@ -574,7 +574,7 @@ function lf_ai_studio_handle_run_audit(): void {
 	}
 	check_admin_referer('lf_ai_studio_run_audit', 'lf_ai_studio_run_audit_nonce');
 	$manifest = lf_ai_studio_get_manifest();
-	lf_ai_studio_ensure_core_page_sections($manifest);
+	lf_ai_studio_ensure_core_page_sections($manifest, true);
 	$report = lf_ai_studio_run_content_audit('manual');
 	lf_ai_studio_store_audit_report($report, 0);
 	$redirect = add_query_arg('audit', '1', admin_url('admin.php?page=lf-ops'));
@@ -688,6 +688,9 @@ function lf_ai_studio_handle_images_upload(): void {
 		if (is_wp_error($attachment_id)) {
 			$errors++;
 			continue;
+		}
+		if (function_exists('lf_image_intelligence_finalize_uploaded_attachment')) {
+			lf_image_intelligence_finalize_uploaded_attachment((int) $attachment_id);
 		}
 		if (function_exists('lf_image_intelligence_maybe_set_alt_text') && function_exists('lf_image_intelligence_upload_context_defaults')) {
 			lf_image_intelligence_maybe_set_alt_text((int) $attachment_id, lf_image_intelligence_upload_context_defaults());
@@ -1846,6 +1849,9 @@ function lf_ai_studio_backfill_post_title_excerpt(int $post_id): void {
 	}
 	$title = trim((string) $title);
 	$excerpt = trim((string) $excerpt);
+	if ($title !== '' && !preg_match('/[A-Z]/', $title)) {
+		$title = ucwords($title);
+	}
 	$update = ['ID' => $post_id];
 	if ($title !== '') {
 		$update['post_title'] = sanitize_text_field($title);
@@ -3385,7 +3391,7 @@ function lf_ai_studio_llm_system_message(): string {
 		'Use only allowed_field_keys. Do not invent fields.',
 		'Headlines: never use dash or hyphen separators. Sentence case or title case only. No trailing punctuation unless a question mark. Hero headline max 12 words.',
 		'Benefits: 15-35 words each, max 2 sentences per benefit. No dash separators in benefit titles.',
-		'Internal linking: include 1-2 internal links in richtext fields using internal_links list. Use <a href="URL">Label</a>. Do not invent URLs.',
+		'Internal linking: include 1-2 internal links only in richtext/body fields using internal_links list. Never add links in headlines, subheadlines, intros, trust bars, chips, bullets, labels, or CTA button text.',
 		'SERP intent alignment: service/service-area pages should read transactional+local, and blog posts should read informational. Keep metadata-aligned language in headlines and first paragraph.',
 		'You may receive research_context. Use it for positioning, differentiation, SEO entity strategy, tone alignment, FAQ angle selection, and authority modeling. Do NOT copy research text verbatim. Apply strategically.',
 		'Content separation by page type:',
@@ -4016,6 +4022,12 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 		if (defined('LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION')) {
 			update_option(LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION, false, true);
 		}
+		if (function_exists('lf_ai_set_inline_dom_overrides')) {
+			lf_ai_set_inline_dom_overrides('homepage', 'homepage', []);
+		}
+		if (function_exists('lf_ai_set_inline_image_overrides')) {
+			lf_ai_set_inline_image_overrides('homepage', 'homepage', []);
+		}
 	}
 	$slugs = function_exists('lf_wizard_required_page_slugs')
 		? lf_wizard_required_page_slugs()
@@ -4078,6 +4090,12 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 			if (!$service_post instanceof \WP_Post) {
 				continue;
 			}
+			if (function_exists('lf_ai_set_inline_dom_overrides')) {
+				lf_ai_set_inline_dom_overrides('page_builder', (int) $service_post->ID, []);
+			}
+			if (function_exists('lf_ai_set_inline_image_overrides')) {
+				lf_ai_set_inline_image_overrides('page_builder', (int) $service_post->ID, []);
+			}
 			lf_wizard_seed_pb_config((int) $service_post->ID, 'service', $data, is_array($niche) ? $niche : [], (int) $index, ['service' => (string) $service_post->post_title]);
 		}
 		$area_posts = get_posts([
@@ -4092,6 +4110,12 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 			if (!$area_post instanceof \WP_Post) {
 				continue;
 			}
+			if (function_exists('lf_ai_set_inline_dom_overrides')) {
+				lf_ai_set_inline_dom_overrides('page_builder', (int) $area_post->ID, []);
+			}
+			if (function_exists('lf_ai_set_inline_image_overrides')) {
+				lf_ai_set_inline_image_overrides('page_builder', (int) $area_post->ID, []);
+			}
 			$area_title = trim((string) $area_post->post_title);
 			$loc = $area_title;
 			if (preg_match('/^(.+?),\s*([A-Za-z]{2})$/', $area_title, $m)) {
@@ -4100,6 +4124,27 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 				$loc = $city_part !== '' ? $city_part . ', ' . $state_part : $state_part;
 			}
 			lf_wizard_seed_pb_config((int) $area_post->ID, 'service_area', $data, is_array($niche) ? $niche : [], (int) $index, ['area' => $loc]);
+		}
+	}
+	if ($force_reseed_all) {
+		$page_posts = get_posts([
+			'post_type' => 'page',
+			'post_status' => ['publish', 'draft', 'pending', 'private'],
+			'posts_per_page' => 300,
+			'fields' => 'ids',
+			'no_found_rows' => true,
+		]);
+		foreach ($page_posts as $page_id) {
+			$page_id = absint($page_id);
+			if ($page_id <= 0) {
+				continue;
+			}
+			if (function_exists('lf_ai_set_inline_dom_overrides')) {
+				lf_ai_set_inline_dom_overrides('page_builder', $page_id, []);
+			}
+			if (function_exists('lf_ai_set_inline_image_overrides')) {
+				lf_ai_set_inline_image_overrides('page_builder', $page_id, []);
+			}
 		}
 	}
 	if (!empty($created_pages['our-services'])) {
@@ -4561,7 +4606,7 @@ function lf_ai_studio_registry_richtext_keys(string $section_type, array $regist
 		}
 		$key = sanitize_key((string) ($field['key'] ?? ''));
 		$type = (string) ($field['type'] ?? '');
-		if ($key !== '' && in_array($type, ['richtext', 'textarea', 'text'], true)) {
+		if ($key !== '' && $type === 'richtext') {
 			$keys[] = $key;
 		}
 	}
@@ -4817,11 +4862,14 @@ function lf_ai_studio_normalize_text(string $text): string {
 }
 
 function lf_ai_studio_strip_link_markup(string $text): string {
+	$text = str_replace(["\u{201C}", "\u{201D}", "\u{201E}", "\u{2033}"], '"', $text);
+	$text = str_replace(["\u{2018}", "\u{2019}", "\u{2032}"], "'", $text);
 	$text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 	$text = preg_replace('/\[(.*?)\]\((https?:\/\/[^\s)]+)\)/iu', '$1', $text);
 	$text = preg_replace('/<a\b[^>]*>(.*?)<\/a>/iu', '$1', $text);
-	$text = preg_replace('/<\/?a\b[^>]*>/iu', '', $text);
-	$text = preg_replace('/\s*href\s*=\s*["\'][^"\']*["\']/iu', ' ', $text);
+	$text = preg_replace('/<\/?a\b[^>]*>?/iu', '', $text);
+	$text = preg_replace('/\s*href\s*=\s*["\'\x{201C}\x{201D}\x{2018}\x{2019}][^"\'\x{201C}\x{201D}\x{2018}\x{2019}]*["\'\x{201C}\x{201D}\x{2018}\x{2019}]/iu', ' ', $text);
+	$text = preg_replace('/<\s*\/?\s*a\b/iu', '', $text);
 	return is_string($text) ? $text : '';
 }
 
@@ -4832,7 +4880,28 @@ function lf_ai_studio_clean_text_field_value(string $text): string {
 	return trim((string) $text);
 }
 
-function lf_ai_studio_clean_value_for_field($value, string $field_type) {
+function lf_ai_studio_maybe_limit_pill_text(string $line, string $field_key): string {
+	if (!in_array($field_key, ['trust_badges', 'hero_proof_bullets'], true)) {
+		return trim($line);
+	}
+	$line = trim((string) preg_replace('/\s+/u', ' ', $line));
+	if ($line === '') {
+		return '';
+	}
+	$words = preg_split('/\s+/u', $line);
+	$words = is_array($words) ? array_values(array_filter($words, static function ($word): bool {
+		return trim((string) $word) !== '';
+	})) : [];
+	if (empty($words)) {
+		return '';
+	}
+	if (count($words) > 5) {
+		$words = array_slice($words, 0, 5);
+	}
+	return implode(' ', $words);
+}
+
+function lf_ai_studio_clean_value_for_field($value, string $field_type, string $field_key = '') {
 	if (!is_string($value) && !is_array($value)) {
 		return $value;
 	}
@@ -4844,6 +4913,7 @@ function lf_ai_studio_clean_value_for_field($value, string $field_type) {
 		$clean_lines = [];
 		foreach ($raw_lines as $line) {
 			$line_text = lf_ai_studio_clean_text_field_value((string) $line);
+			$line_text = lf_ai_studio_maybe_limit_pill_text($line_text, $field_key);
 			if ($line_text !== '') {
 				$clean_lines[] = $line_text;
 			}
@@ -5451,7 +5521,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 				if ($field_type === 'list') {
 					$normalized_value = lf_ai_studio_coerce_list_value($normalized_value);
 				}
-				$normalized_value = lf_ai_studio_clean_value_for_field($normalized_value, $field_type);
+				$normalized_value = lf_ai_studio_clean_value_for_field($normalized_value, $field_type, $field_key);
 				if ($section_id === 'faq_accordion' && $field_key === 'faq_selected_ids') {
 					$normalized_value = lf_ai_studio_normalize_faq_selected_ids_value($normalized_value);
 				}
@@ -5580,7 +5650,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 			if ($field_type === 'list') {
 				$normalized_value = lf_ai_studio_coerce_list_value($normalized_value);
 			}
-			$normalized_value = lf_ai_studio_clean_value_for_field($normalized_value, $field_type);
+			$normalized_value = lf_ai_studio_clean_value_for_field($normalized_value, $field_type, $field_key);
 			if ($type === 'faq_accordion' && $field_key === 'faq_selected_ids') {
 				$normalized_value = lf_ai_studio_normalize_faq_selected_ids_value($normalized_value);
 			}
@@ -5672,10 +5742,22 @@ function lf_apply_orchestrator_updates(array $response): array {
 	}
 	if (is_array($staged_homepage_config)) {
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $staged_homepage_config, true);
+		if (function_exists('lf_ai_set_inline_dom_overrides')) {
+			lf_ai_set_inline_dom_overrides('homepage', 'homepage', []);
+		}
+		if (function_exists('lf_ai_set_inline_image_overrides')) {
+			lf_ai_set_inline_image_overrides('homepage', 'homepage', []);
+		}
 	}
 	if (!empty($staged_post_meta_updates)) {
 		foreach ($staged_post_meta_updates as $post_id => $pb_meta) {
 			update_post_meta((int) $post_id, LF_PB_META_KEY, $pb_meta);
+			if (function_exists('lf_ai_set_inline_dom_overrides')) {
+				lf_ai_set_inline_dom_overrides('page_builder', (int) $post_id, []);
+			}
+			if (function_exists('lf_ai_set_inline_image_overrides')) {
+				lf_ai_set_inline_image_overrides('page_builder', (int) $post_id, []);
+			}
 		}
 	}
 	if (!empty($staged_featured_updates)) {
@@ -5695,7 +5777,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 			foreach ($filtered_fields as $key => $value) {
 				$normalized = lf_ai_studio_normalize_value($value);
 				$field_type = ($key === 'answer') ? 'richtext' : 'text';
-				$filtered_fields[$key] = lf_ai_studio_clean_value_for_field($normalized, $field_type);
+				$filtered_fields[$key] = lf_ai_studio_clean_value_for_field($normalized, $field_type, (string) $key);
 			}
 			if (count($filtered_fields) !== count($fields)) {
 				$errors[] = __('FAQ update contains unsupported fields.', 'leadsforward-core');
