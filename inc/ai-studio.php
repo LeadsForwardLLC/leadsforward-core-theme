@@ -187,6 +187,25 @@ function lf_ai_studio_job_status_ajax(): void {
 	if (!is_array($progress)) {
 		$progress = [];
 	}
+	if (in_array($status, ['queued', 'running'], true)) {
+		$queued_at = (int) get_post_meta($job_id, 'lf_ai_job_queued_at', true);
+		$running_at = (int) get_post_meta($job_id, 'lf_ai_job_running_at', true);
+		$progress_updated = isset($progress['updated']) ? (int) $progress['updated'] : 0;
+		$heartbeat = max($progress_updated, $running_at, $queued_at, (int) get_post_time('U', true, $job_id));
+		if ($heartbeat <= 0) {
+			$heartbeat = time();
+		}
+		$timeout_seconds = 12 * MINUTE_IN_SECONDS;
+		if ((time() - $heartbeat) > $timeout_seconds) {
+			$status = 'failed';
+			$error = __('Generation timed out while waiting for orchestrator callback. Check n8n execution logs and callback mapping.', 'leadsforward-core');
+			update_post_meta($job_id, 'lf_ai_job_status', $status);
+			update_post_meta($job_id, 'lf_ai_job_error', $error);
+			if (function_exists('lf_ai_autonomy_mark_generation_failed')) {
+				lf_ai_autonomy_mark_generation_failed($job_id, 'callback_timeout');
+			}
+		}
+	}
 	wp_send_json_success([
 		'job_id' => $job_id,
 		'status' => $status,
@@ -1405,9 +1424,11 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 		$request['media_library_candidates'] = lf_image_intelligence_build_media_candidates_for_vision(250);
 	}
 	$media_candidate_count = is_array($request['media_library_candidates'] ?? null) ? count($request['media_library_candidates']) : 0;
-	$request['media_annotation_required'] = $media_candidate_count > 0;
-	$request['media_annotation_min_expected'] = $media_candidate_count > 0 ? 1 : 0;
+	$strict_media_annotations = get_option('lf_ai_require_media_annotations', '0') === '1';
+	$request['media_annotation_required'] = $strict_media_annotations && $media_candidate_count > 0;
+	$request['media_annotation_min_expected'] = ($strict_media_annotations && $media_candidate_count > 0) ? 1 : 0;
 	update_post_meta($job_id, 'lf_ai_job_status', 'queued');
+	update_post_meta($job_id, 'lf_ai_job_queued_at', time());
 	update_post_meta($job_id, 'lf_ai_job_request', $request);
 	update_post_meta($job_id, 'lf_ai_job_request_id', $request_id);
 	update_post_meta($job_id, 'lf_ai_job_run_phase', $request['run_phase']);
@@ -1464,6 +1485,7 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 		update_post_meta($job_id, 'lf_ai_job_response', $body);
 	}
 	update_post_meta($job_id, 'lf_ai_job_status', 'running');
+	update_post_meta($job_id, 'lf_ai_job_running_at', time());
 	return ['job_id' => $job_id];
 }
 

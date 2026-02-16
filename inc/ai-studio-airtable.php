@@ -287,7 +287,10 @@ function lf_ai_studio_airtable_generate(): void {
 
 	$run = lf_ai_studio_airtable_generate_from_record_id($record_id, 'manual');
 	if (empty($run['ok'])) {
-		wp_send_json_error(['message' => (string) ($run['error'] ?? __('Generation failed.', 'leadsforward-core'))], 400);
+		wp_send_json_error([
+			'message' => (string) ($run['error'] ?? __('Generation failed.', 'leadsforward-core')),
+			'errors' => is_array($run['errors'] ?? null) ? array_values(array_filter(array_map('strval', $run['errors']))) : [],
+		], 400);
 	}
 
 	$redirect = admin_url('admin.php?page=lf-ops&manifest=1');
@@ -314,13 +317,21 @@ function lf_ai_studio_airtable_generate_from_record_id(string $record_id, string
 	$build = lf_ai_studio_airtable_record_to_manifest($record, $settings);
 	if (!empty($build['errors'])) {
 		update_option('lf_ai_studio_manifest_errors', $build['errors'], false);
-		return ['ok' => false, 'error' => __('Manifest validation failed.', 'leadsforward-core')];
+		return [
+			'ok' => false,
+			'error' => __('Manifest validation failed.', 'leadsforward-core'),
+			'errors' => $build['errors'],
+		];
 	}
 	$manifest = $build['manifest'] ?? [];
 	$errors = lf_ai_studio_validate_manifest($manifest);
 	if (!empty($errors)) {
 		update_option('lf_ai_studio_manifest_errors', $errors, false);
-		return ['ok' => false, 'error' => __('Manifest validation failed.', 'leadsforward-core')];
+		return [
+			'ok' => false,
+			'error' => __('Manifest validation failed.', 'leadsforward-core'),
+			'errors' => $errors,
+		];
 	}
 	$normalized = lf_ai_studio_normalize_manifest($manifest);
 	update_option('lf_site_manifest', $normalized, false);
@@ -334,7 +345,7 @@ function lf_ai_studio_airtable_generate_from_record_id(string $record_id, string
 	if (!empty($result['error'])) {
 		$message = sprintf(__('Generation failed: %s', 'leadsforward-core'), (string) $result['error']);
 		update_option('lf_ai_studio_manifest_errors', [$message], false);
-		return ['ok' => false, 'error' => $message];
+		return ['ok' => false, 'error' => $message, 'errors' => [$message]];
 	}
 	update_option('lf_ai_autonomy_last_source', sanitize_text_field($source), false);
 	update_option('lf_ai_autonomy_last_run', time(), false);
@@ -913,6 +924,35 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	if ($primary_keyword === '') {
 		$primary_keyword = trim(sprintf('%s %s %s', $niche, $city, $state));
 	}
+	if ($city !== '' && $state === '' && strpos($city, ',') !== false) {
+		$city_parts = array_map('trim', explode(',', $city));
+		if (count($city_parts) >= 2) {
+			$city = (string) $city_parts[0];
+			$state = (string) $city_parts[1];
+		}
+	}
+	if ($primary_city === '') {
+		$primary_city = $city;
+	}
+	if ($niche === '') {
+		$niche = lf_ai_studio_airtable_string_field($fields, $map['business_category'] ?? '');
+	}
+	if ($niche === '') {
+		$niche = __('Home Services', 'leadsforward-core');
+	}
+	if ($phone === '') {
+		$phone = '(000) 000-0000';
+	}
+	if ($email === '') {
+		$domain_seed = sanitize_title($business_name !== '' ? $business_name : 'lead');
+		if ($domain_seed === '') {
+			$domain_seed = 'lead';
+		}
+		$email = $domain_seed . '@example.com';
+	}
+	if ($primary_keyword === '') {
+		$primary_keyword = trim(sprintf('%s %s %s', $niche, $primary_city, $state));
+	}
 
 	$services = lf_ai_studio_airtable_json_array_field($fields, $map['services_json'] ?? '', 'Services JSON', $errors);
 	$service_areas = lf_ai_studio_airtable_json_array_field($fields, $map['service_areas_json'] ?? '', 'Service Areas JSON', $errors);
@@ -950,20 +990,8 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	if ($business_name === '') {
 		$errors[] = __('Missing Project field in Airtable.', 'leadsforward-core');
 	}
-	if ($phone === '') {
-		$errors[] = __('Missing Phone Number field in Airtable.', 'leadsforward-core');
-	}
-	if ($email === '') {
-		$errors[] = __('Missing Email field in Airtable (Client Email or Google Account).', 'leadsforward-core');
-	}
 	if ($city === '' || $state === '') {
 		$errors[] = __('Missing required location fields in Airtable (City, State).', 'leadsforward-core');
-	}
-	if ($primary_city === '') {
-		$primary_city = $city;
-	}
-	if ($niche === '') {
-		$errors[] = __('Missing Niche field in Airtable.', 'leadsforward-core');
 	}
 	if ($primary_keyword === '') {
 		$errors[] = __('Missing Primary Keyword field in Airtable.', 'leadsforward-core');
