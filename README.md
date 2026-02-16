@@ -235,7 +235,9 @@ New section type: **Centered Content** (`content_centered`) — minimal, text-on
 - **REST endpoints (secret auth):**
   - `GET /wp-json/leadsforward/v1/blueprint`
   - `POST /wp-json/leadsforward/v1/apply`
-  - Header: `Authorization: Bearer <shared_secret>`
+  - For blueprint/apply: header `Authorization: Bearer <shared_secret>`
+  - For orchestrator/progress callbacks: HMAC headers `X-LF-Timestamp`, `X-LF-Nonce`, `X-LF-Signature` (compatibility mode can temporarily accept legacy bearer during migration)
+  - Do not use token query parameters in callback URLs
 - **Quality rules (system message):**
   - Headlines use sentence or title case with no dash or hyphen separators.
   - Hero headline max 12 words; no trailing punctuation unless a question.

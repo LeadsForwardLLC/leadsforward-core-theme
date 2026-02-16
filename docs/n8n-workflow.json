@@ -92,7 +92,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const webhook = $json || {};\nconst defaultCallbackUrl = \"http://localhost:10008/wp-json/leadsforward/v1/orchestrator?token=LF-THEME-DEV\";\nconst callbackUrl = webhook.callback_url || webhook.body?.callback_url || defaultCallbackUrl;\n\nreturn [{\n  json: {\n    ok: true,\n    request_id: \"callback-test\",\n    updates: [],\n    callback_url: callbackUrl\n  }\n}];\n"
+        "jsCode": "const webhook = $json || {};\nconst defaultCallbackUrl = \"http://localhost:10008/wp-json/leadsforward/v1/orchestrator\";\nconst callbackUrl = webhook.callback_url || webhook.body?.callback_url || defaultCallbackUrl;\n\nreturn [{\n  json: {\n    ok: true,\n    request_id: \"callback-test\",\n    updates: [],\n    callback_url: callbackUrl\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -115,6 +115,18 @@
             {
               "name": "Content-Type",
               "value": "application/json"
+            },
+            {
+              "name": "X-LF-Timestamp",
+              "value": "={{$json.callback_headers[\"X-LF-Timestamp\"]}}"
+            },
+            {
+              "name": "X-LF-Nonce",
+              "value": "={{$json.callback_headers[\"X-LF-Nonce\"]}}"
+            },
+            {
+              "name": "X-LF-Signature",
+              "value": "={{$json.callback_headers[\"X-LF-Signature\"]}}"
             }
           ]
         },
@@ -125,7 +137,7 @@
           "parameters": [
             {
               "name": "payload",
-              "value": "={{JSON.stringify($json)}}"
+              "value": "={{$json.callback_payload?.payload || JSON.stringify($json)}}"
             }
           ]
         }
@@ -289,7 +301,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const webhook = $node[\"Webhook\"].json || {};\nconst jobId = webhook.job_id || webhook.body?.job_id || $json?.job_id || null;\nconst callbackUrl = webhook.callback_url || webhook.body?.callback_url || $json?.callback_url || \"\";\n\nreturn [{\n  json: {\n    ...$json,\n    job_id: jobId,\n    callback_url: callbackUrl\n  }\n}];\n"
+        "jsCode": "const crypto = require(\"crypto\");\nconst webhook = $node[\"Webhook\"].json || {};\nconst jobId = webhook.job_id || webhook.body?.job_id || $json?.job_id || null;\nconst callbackUrl = webhook.callback_url || webhook.body?.callback_url || $json?.callback_url || \"\";\nconst requestId = $json?.request_id || webhook.request_id || webhook.body?.request_id || \"\";\n\nconst authHeader = webhook.headers?.authorization || webhook.headers?.Authorization || \"\";\nlet sharedSecret = \"\";\nif (typeof authHeader === \"string\" && authHeader.toLowerCase().startsWith(\"bearer \")) {\n  sharedSecret = authHeader.slice(7).trim();\n}\nif (!sharedSecret && typeof webhook.shared_secret === \"string\") {\n  sharedSecret = webhook.shared_secret.trim();\n}\nconst callbackBodyObj = {\n  ...$json,\n  job_id: jobId,\n  request_id: requestId,\n  callback_url: callbackUrl\n};\nconst payloadValue = JSON.stringify(callbackBodyObj);\nconst rawBody = JSON.stringify({ payload: payloadValue });\nconst timestamp = String(Math.floor(Date.now() / 1000));\nconst nonce = typeof crypto.randomUUID === \"function\"\n  ? crypto.randomUUID()\n  : `${Date.now()}-${Math.random().toString(16).slice(2)}`;\nconst signature = sharedSecret\n  ? crypto.createHmac(\"sha256\", sharedSecret).update(`${timestamp}\\n${nonce}\\n${rawBody}`).digest(\"hex\")\n  : \"\";\n\nconst callbackHeaders = {\n  \"Content-Type\": \"application/json\",\n  \"X-LF-Timestamp\": timestamp,\n  \"X-LF-Nonce\": nonce,\n  \"X-LF-Signature\": signature\n};\n\nreturn [{\n  json: {\n    ...callbackBodyObj,\n    callback_payload: { payload: payloadValue },\n    callback_headers: callbackHeaders\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -311,6 +323,18 @@
             {
               "name": "Content-Type",
               "value": "application/json"
+            },
+            {
+              "name": "X-LF-Timestamp",
+              "value": "={{$json.callback_headers[\"X-LF-Timestamp\"]}}"
+            },
+            {
+              "name": "X-LF-Nonce",
+              "value": "={{$json.callback_headers[\"X-LF-Nonce\"]}}"
+            },
+            {
+              "name": "X-LF-Signature",
+              "value": "={{$json.callback_headers[\"X-LF-Signature\"]}}"
             }
           ]
         },
@@ -321,7 +345,7 @@
           "parameters": [
             {
               "name": "payload",
-              "value": "={{JSON.stringify($json)}}"
+              "value": "={{$json.callback_payload?.payload || JSON.stringify($json)}}"
             }
           ]
         }

@@ -324,6 +324,18 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
 	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
 	update_option('lf_ai_studio_callback_url', isset($_POST['lf_ai_studio_callback_url']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_callback_url'])) : '');
+	$auth_mode = isset($_POST['lf_ai_auth_mode']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_auth_mode'])) : 'compatibility';
+	update_option('lf_ai_auth_mode', $auth_mode === 'strict_hmac' ? 'strict_hmac' : 'compatibility');
+	$tolerance = isset($_POST['lf_ai_hmac_tolerance_seconds']) ? (int) $_POST['lf_ai_hmac_tolerance_seconds'] : 300;
+	update_option('lf_ai_hmac_tolerance_seconds', max(60, min(1800, $tolerance)));
+	update_option('lf_ai_autonomy_enabled', isset($_POST['lf_ai_autonomy_enabled']) ? '1' : '0');
+	update_option('lf_ai_autonomy_dry_run', isset($_POST['lf_ai_autonomy_dry_run']) ? '1' : '0');
+	$max_retries = isset($_POST['lf_ai_autonomy_max_retries']) ? (int) $_POST['lf_ai_autonomy_max_retries'] : 3;
+	update_option('lf_ai_autonomy_max_retries', max(1, min(10, $max_retries)));
+	$cooldown = isset($_POST['lf_ai_autonomy_cooldown_seconds']) ? (int) $_POST['lf_ai_autonomy_cooldown_seconds'] : 900;
+	update_option('lf_ai_autonomy_cooldown_seconds', max(60, min(86400, $cooldown)));
+	$circuit_threshold = isset($_POST['lf_ai_autonomy_circuit_threshold']) ? (int) $_POST['lf_ai_autonomy_circuit_threshold'] : 3;
+	update_option('lf_ai_autonomy_circuit_threshold', max(1, min(20, $circuit_threshold)));
 	$openai_key_clear = !empty($_POST['lf_openai_api_key_clear']);
 	$openai_key_input = isset($_POST['lf_openai_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_openai_api_key'])) : '';
 	if ($openai_key_clear) {
@@ -676,6 +688,20 @@ function lf_ops_render_global_settings_page(): void {
 	$manifester_webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$manifester_secret = (string) get_option('lf_ai_studio_secret', '');
 	$manifester_callback = (string) get_option('lf_ai_studio_callback_url', '');
+	$manifester_auth_mode = (string) get_option('lf_ai_auth_mode', 'compatibility');
+	if (!in_array($manifester_auth_mode, ['compatibility', 'strict_hmac'], true)) {
+		$manifester_auth_mode = 'compatibility';
+	}
+	$manifester_hmac_tolerance = (int) get_option('lf_ai_hmac_tolerance_seconds', 300);
+	$manifester_hmac_tolerance = max(60, min(1800, $manifester_hmac_tolerance));
+	$autonomy_enabled = get_option('lf_ai_autonomy_enabled', '0') === '1';
+	$autonomy_dry_run = get_option('lf_ai_autonomy_dry_run', '0') === '1';
+	$autonomy_max_retries = (int) get_option('lf_ai_autonomy_max_retries', 3);
+	$autonomy_max_retries = max(1, min(10, $autonomy_max_retries));
+	$autonomy_cooldown = (int) get_option('lf_ai_autonomy_cooldown_seconds', 900);
+	$autonomy_cooldown = max(60, min(86400, $autonomy_cooldown));
+	$autonomy_circuit_threshold = (int) get_option('lf_ai_autonomy_circuit_threshold', 3);
+	$autonomy_circuit_threshold = max(1, min(20, $autonomy_circuit_threshold));
 	$openai_key_set = (string) get_option('lf_openai_api_key', '') !== '';
 	$airtable_settings = function_exists('lf_ai_studio_airtable_get_settings')
 		? lf_ai_studio_airtable_get_settings()
@@ -786,11 +812,47 @@ function lf_ops_render_global_settings_page(): void {
 								<td><input type="text" class="large-text" name="lf_ai_studio_secret" id="lf_ai_studio_secret_global" value="<?php echo esc_attr($manifester_secret); ?>" required /></td>
 							</tr>
 							<tr>
+								<th scope="row"><label for="lf_ai_auth_mode"><?php esc_html_e('Auth mode', 'leadsforward-core'); ?></label></th>
+								<td>
+									<select name="lf_ai_auth_mode" id="lf_ai_auth_mode">
+										<option value="compatibility" <?php selected($manifester_auth_mode, 'compatibility'); ?>><?php esc_html_e('Compatibility (HMAC preferred, legacy fallback)', 'leadsforward-core'); ?></option>
+										<option value="strict_hmac" <?php selected($manifester_auth_mode, 'strict_hmac'); ?>><?php esc_html_e('Strict HMAC only', 'leadsforward-core'); ?></option>
+									</select>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_hmac_tolerance_seconds"><?php esc_html_e('HMAC tolerance (seconds)', 'leadsforward-core'); ?></label></th>
+								<td><input type="number" min="60" max="1800" step="10" class="small-text" name="lf_ai_hmac_tolerance_seconds" id="lf_ai_hmac_tolerance_seconds" value="<?php echo esc_attr((string) $manifester_hmac_tolerance); ?>" /></td>
+							</tr>
+							<tr>
 								<th scope="row"><label for="lf_ai_studio_callback_url_global"><?php esc_html_e('Callback URL (WordPress)', 'leadsforward-core'); ?></label></th>
 								<td>
 									<input type="url" class="large-text" name="lf_ai_studio_callback_url" id="lf_ai_studio_callback_url_global" value="<?php echo esc_attr($manifester_callback); ?>" placeholder="https://your-site.com/wp-json/leadsforward/v1/orchestrator" />
-									<p class="description"><?php esc_html_e('Use this if n8n cannot reach localhost. For Docker: http://host.docker.internal:10008/wp-json/leadsforward/v1/orchestrator', 'leadsforward-core'); ?></p>
+									<p class="description"><?php esc_html_e('Use this if n8n cannot reach localhost. For Docker: http://host.docker.internal:10008/wp-json/leadsforward/v1/orchestrator. Do not append any token query parameter.', 'leadsforward-core'); ?></p>
 								</td>
+							</tr>
+							<tr>
+								<th colspan="2" style="padding-top: 16px;"><?php esc_html_e('Autonomous Airtable Runs', 'leadsforward-core'); ?></th>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e('Enable autonomy', 'leadsforward-core'); ?></th>
+								<td><label><input type="checkbox" name="lf_ai_autonomy_enabled" value="1" <?php checked($autonomy_enabled); ?> /> <?php esc_html_e('Allow webhook/reconciliation queue to trigger generation automatically', 'leadsforward-core'); ?></label></td>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e('Dry run only', 'leadsforward-core'); ?></th>
+								<td><label><input type="checkbox" name="lf_ai_autonomy_dry_run" value="1" <?php checked($autonomy_dry_run); ?> /> <?php esc_html_e('Validate and audit callbacks without committing writes', 'leadsforward-core'); ?></label></td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_autonomy_max_retries"><?php esc_html_e('Max retries', 'leadsforward-core'); ?></label></th>
+								<td><input type="number" min="1" max="10" class="small-text" name="lf_ai_autonomy_max_retries" id="lf_ai_autonomy_max_retries" value="<?php echo esc_attr((string) $autonomy_max_retries); ?>" /></td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_autonomy_circuit_threshold"><?php esc_html_e('Circuit-break threshold', 'leadsforward-core'); ?></label></th>
+								<td><input type="number" min="1" max="20" class="small-text" name="lf_ai_autonomy_circuit_threshold" id="lf_ai_autonomy_circuit_threshold" value="<?php echo esc_attr((string) $autonomy_circuit_threshold); ?>" /></td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_autonomy_cooldown_seconds"><?php esc_html_e('Cooldown seconds', 'leadsforward-core'); ?></label></th>
+								<td><input type="number" min="60" max="86400" step="60" class="small-text" name="lf_ai_autonomy_cooldown_seconds" id="lf_ai_autonomy_cooldown_seconds" value="<?php echo esc_attr((string) $autonomy_cooldown); ?>" /></td>
 							</tr>
 							<tr>
 								<th scope="row"><label for="lf_maps_api_key"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></label></th>

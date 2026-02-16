@@ -52,6 +52,15 @@ Webhook
 ## Progress Reporting
 Progress updates are sent to the WP `/progress` endpoint at key milestones (research ready, content generation start, merge).
 
+## Callback Security Contract (Phase 1)
+- Callback and progress requests are HMAC-signed using shared secret.
+- Required headers:
+  - `X-LF-Timestamp` (unix seconds)
+  - `X-LF-Nonce` (uuid)
+  - `X-LF-Signature` (`hex(hmac_sha256(secret, timestamp + "\\n" + nonce + "\\n" + raw_body))`)
+- WordPress validates timestamp window and nonce replay protection.
+- Compatibility mode can temporarily allow legacy bearer auth while migrating n8n nodes.
+
 ## Why This Is Layered
 - n8n is the first quality gate and catches low-quality output before callback.
 - WordPress is still authoritative and applies deterministic fallback logic server-side.

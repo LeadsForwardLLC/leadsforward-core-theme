@@ -33,6 +33,22 @@ add_action('admin_post_lf_ai_studio_images_upload', 'lf_ai_studio_handle_images_
 add_action('wp_ajax_lf_ai_studio_job_status', 'lf_ai_studio_job_status_ajax');
 add_action('admin_enqueue_scripts', 'lf_ai_studio_assets');
 
+function lf_ai_studio_auth_mode(): string {
+	$mode = sanitize_text_field((string) get_option('lf_ai_auth_mode', 'compatibility'));
+	return $mode === 'strict_hmac' ? 'strict_hmac' : 'compatibility';
+}
+
+function lf_ai_studio_hmac_tolerance_seconds(): int {
+	$seconds = (int) get_option('lf_ai_hmac_tolerance_seconds', 300);
+	if ($seconds < 60) {
+		return 60;
+	}
+	if ($seconds > 1800) {
+		return 1800;
+	}
+	return $seconds;
+}
+
 function lf_ai_studio_register_cpt(): void {
 	register_post_type(LF_AI_STUDIO_JOB_CPT, [
 		'label' => __('AI Generation Jobs', 'leadsforward-core'),
@@ -137,6 +153,18 @@ function lf_ai_studio_handle_save(): void {
 	update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
 	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
 	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
+	$auth_mode = isset($_POST['lf_ai_auth_mode']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_auth_mode'])) : 'compatibility';
+	update_option('lf_ai_auth_mode', $auth_mode === 'strict_hmac' ? 'strict_hmac' : 'compatibility');
+	$tolerance = isset($_POST['lf_ai_hmac_tolerance_seconds']) ? (int) $_POST['lf_ai_hmac_tolerance_seconds'] : 300;
+	update_option('lf_ai_hmac_tolerance_seconds', max(60, min(1800, $tolerance)));
+	update_option('lf_ai_autonomy_enabled', isset($_POST['lf_ai_autonomy_enabled']) ? '1' : '0');
+	update_option('lf_ai_autonomy_dry_run', isset($_POST['lf_ai_autonomy_dry_run']) ? '1' : '0');
+	$max_retries = isset($_POST['lf_ai_autonomy_max_retries']) ? (int) $_POST['lf_ai_autonomy_max_retries'] : 3;
+	update_option('lf_ai_autonomy_max_retries', max(1, min(10, $max_retries)));
+	$cooldown = isset($_POST['lf_ai_autonomy_cooldown_seconds']) ? (int) $_POST['lf_ai_autonomy_cooldown_seconds'] : 900;
+	update_option('lf_ai_autonomy_cooldown_seconds', max(60, min(86400, $cooldown)));
+	$circuit_threshold = isset($_POST['lf_ai_autonomy_circuit_threshold']) ? (int) $_POST['lf_ai_autonomy_circuit_threshold'] : 3;
+	update_option('lf_ai_autonomy_circuit_threshold', max(1, min(20, $circuit_threshold)));
 	update_option('lf_ai_studio_keywords', isset($_POST['lf_ai_studio_keywords']) ? sanitize_textarea_field(wp_unslash($_POST['lf_ai_studio_keywords'])) : '');
 	update_option('lf_ai_studio_scope', isset($_POST['lf_ai_studio_scope']) && $_POST['lf_ai_studio_scope'] === 'selected' ? 'selected' : 'all');
 	$scope_types = isset($_POST['lf_ai_studio_scope_types']) && is_array($_POST['lf_ai_studio_scope_types'])
@@ -201,6 +229,18 @@ function lf_ai_studio_handle_orchestrator_save(): void {
 	update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
 	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
 	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
+	$auth_mode = isset($_POST['lf_ai_auth_mode']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_auth_mode'])) : 'compatibility';
+	update_option('lf_ai_auth_mode', $auth_mode === 'strict_hmac' ? 'strict_hmac' : 'compatibility');
+	$tolerance = isset($_POST['lf_ai_hmac_tolerance_seconds']) ? (int) $_POST['lf_ai_hmac_tolerance_seconds'] : 300;
+	update_option('lf_ai_hmac_tolerance_seconds', max(60, min(1800, $tolerance)));
+	update_option('lf_ai_autonomy_enabled', isset($_POST['lf_ai_autonomy_enabled']) ? '1' : '0');
+	update_option('lf_ai_autonomy_dry_run', isset($_POST['lf_ai_autonomy_dry_run']) ? '1' : '0');
+	$max_retries = isset($_POST['lf_ai_autonomy_max_retries']) ? (int) $_POST['lf_ai_autonomy_max_retries'] : 3;
+	update_option('lf_ai_autonomy_max_retries', max(1, min(10, $max_retries)));
+	$cooldown = isset($_POST['lf_ai_autonomy_cooldown_seconds']) ? (int) $_POST['lf_ai_autonomy_cooldown_seconds'] : 900;
+	update_option('lf_ai_autonomy_cooldown_seconds', max(60, min(86400, $cooldown)));
+	$circuit_threshold = isset($_POST['lf_ai_autonomy_circuit_threshold']) ? (int) $_POST['lf_ai_autonomy_circuit_threshold'] : 3;
+	update_option('lf_ai_autonomy_circuit_threshold', max(1, min(20, $circuit_threshold)));
 
 	update_option('lf_ai_airtable_enabled', isset($_POST['lf_ai_airtable_enabled']) ? '1' : '0');
 	update_option('lf_ai_airtable_pat', isset($_POST['lf_ai_airtable_pat']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_pat'])) : '');
@@ -1278,13 +1318,22 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$secret = (string) get_option('lf_ai_studio_secret', '');
 	$callback_url = lf_ai_studio_build_callback_url();
+	$request_id = sanitize_text_field((string) ($request['request_id'] ?? ''));
+	if ($request_id === '') {
+		$request_id = wp_generate_uuid4();
+	}
+	$request['request_id'] = $request_id;
 	$request['job_id'] = $job_id;
 	$request['callback_url'] = $callback_url;
+	$request['callback_auth_mode'] = function_exists('lf_ai_studio_auth_mode') ? lf_ai_studio_auth_mode() : 'compatibility';
+	$request['callback_hmac_tolerance_seconds'] = function_exists('lf_ai_studio_hmac_tolerance_seconds') ? lf_ai_studio_hmac_tolerance_seconds() : 300;
 	if (function_exists('lf_image_intelligence_build_media_candidates_for_vision')) {
 		$request['media_library_candidates'] = lf_image_intelligence_build_media_candidates_for_vision(250);
 	}
 	update_post_meta($job_id, 'lf_ai_job_status', 'queued');
 	update_post_meta($job_id, 'lf_ai_job_request', $request);
+	update_post_meta($job_id, 'lf_ai_job_request_id', $request_id);
+	update_post_meta($job_id, 'lf_ai_job_request_hash', hash('sha256', (string) wp_json_encode($request)));
 	$log_payload = [
 		'keys' => array_keys($request),
 		'blueprints' => isset($request['blueprints']) && is_array($request['blueprints'])
@@ -1309,7 +1358,8 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 		],
 		'body' => wp_json_encode($request),
 	]);
-	error_log('LF DEBUG: Webhook call returned' . print_r($response, true));
+	$status_code = is_wp_error($response) ? 0 : (int) wp_remote_retrieve_response_code($response);
+	error_log('LF DEBUG: Webhook call returned status=' . $status_code);
 	if (is_wp_error($response)) {
 		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
 		update_post_meta($job_id, 'lf_ai_job_error', $response->get_error_message());
@@ -1337,7 +1387,6 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 }
 
 function lf_ai_studio_build_callback_url(): string {
-	$secret = (string) get_option('lf_ai_studio_secret', '');
 	$override = (string) get_option('lf_ai_studio_callback_url', '');
 	$callback_url = '';
 	if ($override !== '') {
@@ -1347,9 +1396,6 @@ function lf_ai_studio_build_callback_url(): string {
 		}
 	} else {
 		$callback_url = rest_url('leadsforward/v1/orchestrator');
-	}
-	if ($secret !== '') {
-		$callback_url = add_query_arg('token', rawurlencode($secret), $callback_url);
 	}
 	return $callback_url;
 }
@@ -4875,10 +4921,138 @@ function lf_ai_studio_resolve_homepage_field_key(string $field_key, array $confi
 	return null;
 }
 
+function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
+	$updates = $response['updates'] ?? [];
+	if (!is_array($updates)) {
+		return [__('Missing updates array.', 'leadsforward-core')];
+	}
+	$errors = [];
+	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
+	$homepage_config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
+	foreach ($updates as $index => $update) {
+		if (!is_array($update)) {
+			$errors[] = sprintf(__('Update at index %d must be an object.', 'leadsforward-core'), $index);
+			continue;
+		}
+		$target = (string) ($update['target'] ?? '');
+		$id = $update['id'] ?? '';
+		$fields = $update['fields'] ?? $update['data'] ?? [];
+		if (!is_array($fields)) {
+			$errors[] = sprintf(__('Update at index %d is missing fields.', 'leadsforward-core'), $index);
+			continue;
+		}
+		if ($target === 'options' && $id === 'homepage') {
+			foreach ($fields as $key => $value) {
+				if (!is_string($key)) {
+					continue;
+				}
+				$parts = explode('.', $key, 2);
+				if (count($parts) !== 2) {
+					$resolved = lf_ai_studio_resolve_homepage_field_key(trim($key), $homepage_config, $registry);
+					if (!is_array($resolved)) {
+						$errors[] = sprintf(__('Homepage field "%s" must use section.field notation.', 'leadsforward-core'), $key);
+						continue;
+					}
+					$section_id = (string) ($resolved['section_id'] ?? '');
+					$field_key = (string) ($resolved['field_key'] ?? '');
+				} else {
+					$section_id = trim($parts[0]);
+					$field_key = trim($parts[1]);
+				}
+				if (!isset($homepage_config[$section_id]) || !isset($registry[$section_id])) {
+					$errors[] = sprintf(__('Homepage section "%s" is not registered.', 'leadsforward-core'), $section_id);
+					continue;
+				}
+				$allowed = lf_ai_studio_homepage_allowed_field_keys($section_id, $registry[$section_id]);
+				if (!in_array($field_key, $allowed, true)) {
+					$errors[] = sprintf(__('Homepage field "%s" is not allowed.', 'leadsforward-core'), $key);
+				}
+			}
+			continue;
+		}
+		if ($target === 'post_meta') {
+			$post_id = absint($id);
+			$post = $post_id ? get_post($post_id) : null;
+			if (!$post instanceof \WP_Post) {
+				$errors[] = sprintf(__('Post update for id %d not found.', 'leadsforward-core'), $post_id);
+				continue;
+			}
+			$context = function_exists('lf_pb_get_context_for_post') ? lf_pb_get_context_for_post($post) : '';
+			if ($context === '') {
+				$errors[] = sprintf(__('Post update for id %d has no builder context.', 'leadsforward-core'), $post_id);
+				continue;
+			}
+			$config = lf_pb_get_post_config($post_id, $context);
+			$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+			foreach ($fields as $key => $value) {
+				if (!is_string($key)) {
+					continue;
+				}
+				$parts = explode('.', $key, 2);
+				if (count($parts) !== 2) {
+					$errors[] = sprintf(__('Post field "%s" must use section.field notation.', 'leadsforward-core'), $key);
+					continue;
+				}
+				$instance_id = trim($parts[0]);
+				$field_key = trim($parts[1]);
+				$section = $sections[$instance_id] ?? null;
+				if (!is_array($section)) {
+					foreach ($sections as $maybe_id => $maybe_section) {
+						if (is_array($maybe_section) && ($maybe_section['type'] ?? '') === $instance_id) {
+							$section = $maybe_section;
+							$instance_id = (string) $maybe_id;
+							break;
+						}
+					}
+				}
+				$type = is_array($section) ? (string) ($section['type'] ?? '') : '';
+				if ($type === '' || !isset($registry[$type])) {
+					$errors[] = sprintf(__('Section "%s" is not registered for post %d.', 'leadsforward-core'), $instance_id, $post_id);
+					continue;
+				}
+				$allowed = lf_ai_studio_homepage_allowed_field_keys($type, $registry[$type]);
+				if (!in_array($field_key, $allowed, true)) {
+					$errors[] = sprintf(__('Field "%s" is not allowed for section "%s".', 'leadsforward-core'), $field_key, $instance_id);
+				}
+			}
+			continue;
+		}
+		if ($target === 'faq') {
+			$allowed_keys = ['question', 'answer'];
+			foreach (array_keys($fields) as $key) {
+				if (!in_array($key, $allowed_keys, true)) {
+					$errors[] = __('FAQ update contains unsupported fields.', 'leadsforward-core');
+					break;
+				}
+			}
+			continue;
+		}
+		if ($target === 'service_meta') {
+			$post_id = absint($id);
+			$post = $post_id ? get_post($post_id) : null;
+			if (!$post instanceof \WP_Post || $post->post_type !== 'lf_service') {
+				$errors[] = sprintf(__('Service meta update for id %d not found.', 'leadsforward-core'), $post_id);
+			}
+			continue;
+		}
+		$errors[] = sprintf(__('Update at index %d has unknown target.', 'leadsforward-core'), $index);
+	}
+	return array_values(array_unique($errors));
+}
+
 function lf_apply_orchestrator_updates(array $response): array {
 	$updates = $response['updates'] ?? [];
 	if (!is_array($updates)) {
 		return ['success' => false, 'summary' => __('Missing updates array.', 'leadsforward-core'), 'changes' => [], 'errors' => [__('Missing updates array.', 'leadsforward-core')]];
+	}
+	$preflight_errors = lf_ai_studio_prevalidate_orchestrator_updates($response);
+	if (!empty($preflight_errors)) {
+		return [
+			'success' => false,
+			'summary' => __('Validation failed before apply.', 'leadsforward-core'),
+			'changes' => [],
+			'errors' => $preflight_errors,
+		];
 	}
 	$errors = [];
 	$changes = ['homepage' => false, 'posts' => [], 'faqs' => []];
@@ -4897,6 +5071,9 @@ function lf_apply_orchestrator_updates(array $response): array {
 	$service_posts_for_short_desc = [];
 	$blog_posts_for_title = [];
 	$assigned_images = [];
+	$staged_homepage_config = null;
+	$staged_post_meta_updates = [];
+	$staged_featured_updates = [];
 
 	foreach ($updates as $index => $update) {
 		if (!is_array($update)) {
@@ -5034,7 +5211,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 			}
 		}
 		if ($config !== $homepage_config) {
-			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+			$staged_homepage_config = $config;
 			$changes['homepage'] = true;
 			$pages_updated++;
 		}
@@ -5159,11 +5336,11 @@ function lf_apply_orchestrator_updates(array $response): array {
 			$link_result = lf_ai_studio_orchestrate_internal_links_for_settings($filled_settings, $type, $registry, $post);
 			$sections[$instance_id]['settings'] = is_array($link_result['settings'] ?? null) ? $link_result['settings'] : $filled_settings;
 		}
-		update_post_meta($post_id, LF_PB_META_KEY, [
+		$staged_post_meta_updates[$post_id] = [
 			'order' => $order,
 			'sections' => $sections,
 			'seo' => $config['seo'] ?? ['title' => '', 'description' => '', 'noindex' => false],
-		]);
+		];
 		$changes['posts'][] = $post_id;
 		$pages_updated++;
 		$featured_id = absint($post_matches['featured'] ?? 0);
@@ -5172,7 +5349,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 			? lf_image_intelligence_is_placeholder_asset($current_thumb_id)
 			: false;
 		if ($featured_id > 0 && (!has_post_thumbnail($post_id) || $current_thumb_placeholder)) {
-			set_post_thumbnail($post_id, $featured_id);
+			$staged_featured_updates[$post_id] = $featured_id;
 			$assigned_images[] = [
 				'image_id' => $featured_id,
 				'context' => $post_image_context,
@@ -5186,6 +5363,27 @@ function lf_apply_orchestrator_updates(array $response): array {
 		}
 	}
 
+	if (!empty($errors)) {
+		return [
+			'success' => false,
+			'summary' => '',
+			'changes' => $changes,
+			'errors' => $errors,
+		];
+	}
+	if (is_array($staged_homepage_config)) {
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $staged_homepage_config, true);
+	}
+	if (!empty($staged_post_meta_updates)) {
+		foreach ($staged_post_meta_updates as $post_id => $pb_meta) {
+			update_post_meta((int) $post_id, LF_PB_META_KEY, $pb_meta);
+		}
+	}
+	if (!empty($staged_featured_updates)) {
+		foreach ($staged_featured_updates as $post_id => $image_id) {
+			set_post_thumbnail((int) $post_id, (int) $image_id);
+		}
+	}
 	if (!empty($faq_updates)) {
 		$filtered = [];
 		foreach ($faq_updates as $update) {

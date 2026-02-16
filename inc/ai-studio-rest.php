@@ -35,6 +35,11 @@ function lf_ai_studio_register_rest(): void {
 		'callback' => 'lf_ai_studio_rest_progress',
 		'permission_callback' => 'lf_ai_studio_rest_auth',
 	]);
+	register_rest_route('leadsforward/v1', '/airtable-webhook', [
+		'methods' => 'POST',
+		'callback' => 'lf_ai_studio_rest_airtable_webhook',
+		'permission_callback' => 'lf_ai_studio_rest_auth',
+	]);
 }
 
 function lf_ai_studio_rest_auth(\WP_REST_Request $request) {
@@ -42,6 +47,39 @@ function lf_ai_studio_rest_auth(\WP_REST_Request $request) {
 	if ($secret === '') {
 		return new \WP_Error('lf_ai_auth_missing', 'Shared secret is not configured.', ['status' => 401]);
 	}
+	$mode = function_exists('lf_ai_studio_auth_mode') ? lf_ai_studio_auth_mode() : 'compatibility';
+	$requires_hmac = lf_ai_studio_rest_requires_hmac($request);
+	$hmac_result = lf_ai_studio_rest_hmac_auth($request, $secret, $requires_hmac);
+	if ($hmac_result === true) {
+		return true;
+	}
+	$legacy_result = lf_ai_studio_rest_legacy_auth($request, $secret);
+	if ($legacy_result === true) {
+		if ($mode === 'strict_hmac' && $requires_hmac) {
+			return new \WP_Error('lf_ai_auth_hmac_required', 'HMAC signature headers are required for this endpoint.', ['status' => 401]);
+		}
+		update_option('lf_ai_studio_auth_legacy_last_seen', time(), false);
+		return true;
+	}
+	if ($mode === 'compatibility' && (string) $request->get_route() === '/leadsforward/v1/progress') {
+		$progress_binding = lf_ai_studio_rest_progress_binding_auth($request);
+		if ($progress_binding === true) {
+			update_option('lf_ai_studio_auth_compat_progress_last_seen', time(), false);
+			return true;
+		}
+	}
+	if ($mode === 'compatibility' && !$requires_hmac) {
+		return $legacy_result instanceof \WP_Error ? $legacy_result : $hmac_result;
+	}
+	return $hmac_result instanceof \WP_Error ? $hmac_result : $legacy_result;
+}
+
+function lf_ai_studio_rest_requires_hmac(\WP_REST_Request $request): bool {
+	$route = (string) $request->get_route();
+	return $route === '/leadsforward/v1/orchestrator' || $route === '/leadsforward/v1/progress' || $route === '/leadsforward/v1/airtable-webhook';
+}
+
+function lf_ai_studio_rest_legacy_auth(\WP_REST_Request $request, string $secret) {
 	$auth = (string) $request->get_header('authorization');
 	$token = '';
 	if ($auth === '') {
@@ -59,6 +97,96 @@ function lf_ai_studio_rest_auth(\WP_REST_Request $request) {
 		return new \WP_Error('lf_ai_auth_invalid', 'Invalid bearer token.', ['status' => 401]);
 	}
 	return true;
+}
+
+function lf_ai_studio_rest_hmac_auth(\WP_REST_Request $request, string $secret, bool $required) {
+	$timestamp_raw = trim((string) $request->get_header('x-lf-timestamp'));
+	$nonce = trim((string) $request->get_header('x-lf-nonce'));
+	$signature = trim((string) $request->get_header('x-lf-signature'));
+	if ($timestamp_raw === '' || $nonce === '' || $signature === '') {
+		return $required
+			? new \WP_Error('lf_ai_auth_hmac_missing', 'Missing HMAC signature headers.', ['status' => 401])
+			: new \WP_Error('lf_ai_auth_hmac_missing', 'Missing HMAC signature headers.', ['status' => 401]);
+	}
+	$timestamp = (int) $timestamp_raw;
+	if ($timestamp <= 0) {
+		return new \WP_Error('lf_ai_auth_hmac_invalid', 'Invalid signature timestamp.', ['status' => 401]);
+	}
+	$tolerance = function_exists('lf_ai_studio_hmac_tolerance_seconds')
+		? lf_ai_studio_hmac_tolerance_seconds()
+		: 300;
+	if (abs(time() - $timestamp) > $tolerance) {
+		return new \WP_Error('lf_ai_auth_hmac_stale', 'Signature timestamp outside allowed window.', ['status' => 401]);
+	}
+	$nonce_key = 'lf_ai_hmac_nonce_' . md5($nonce);
+	if (get_transient($nonce_key)) {
+		return new \WP_Error('lf_ai_auth_hmac_replay', 'Signature nonce already used.', ['status' => 401]);
+	}
+	$body = (string) $request->get_body();
+	$expected = hash_hmac('sha256', $timestamp_raw . "\n" . $nonce . "\n" . $body, $secret);
+	if (!hash_equals($expected, strtolower($signature))) {
+		return new \WP_Error('lf_ai_auth_hmac_invalid', 'Invalid HMAC signature.', ['status' => 401]);
+	}
+	set_transient($nonce_key, 1, $tolerance);
+	return true;
+}
+
+function lf_ai_studio_rest_payload_hash(array $payload): string {
+	return hash('sha256', (string) wp_json_encode($payload));
+}
+
+function lf_ai_studio_rest_progress_binding_auth(\WP_REST_Request $request): bool {
+	$payload = $request->get_json_params();
+	if (!is_array($payload)) {
+		$raw = (string) $request->get_body();
+		if ($raw === '') {
+			return false;
+		}
+		$decoded = json_decode($raw, true);
+		if (!is_array($decoded)) {
+			return false;
+		}
+		$payload = $decoded;
+	}
+	$job_id = isset($payload['job_id']) ? absint($payload['job_id']) : 0;
+	$request_id = sanitize_text_field((string) ($payload['request_id'] ?? ''));
+	if ($job_id <= 0 || $request_id === '') {
+		return false;
+	}
+	$job = get_post($job_id);
+	if (!$job instanceof \WP_Post || $job->post_type !== LF_AI_STUDIO_JOB_CPT) {
+		return false;
+	}
+	$stored_request_id = (string) get_post_meta($job_id, 'lf_ai_job_request_id', true);
+	if ($stored_request_id === '') {
+		return false;
+	}
+	return hash_equals($stored_request_id, $request_id);
+}
+
+function lf_ai_studio_rest_validate_callback_binding(int $job_id, string $request_id, string $payload_hash): array {
+	if ($job_id <= 0 || $request_id === '') {
+		return ['ok' => false, 'error' => 'missing_job_or_request', 'status' => 400];
+	}
+	$job = get_post($job_id);
+	if (!$job instanceof \WP_Post || $job->post_type !== LF_AI_STUDIO_JOB_CPT) {
+		return ['ok' => false, 'error' => 'invalid_job', 'status' => 404];
+	}
+	$stored_request_id = (string) get_post_meta($job_id, 'lf_ai_job_request_id', true);
+	if ($stored_request_id !== '' && !hash_equals($stored_request_id, $request_id)) {
+		return ['ok' => false, 'error' => 'request_id_mismatch', 'status' => 409];
+	}
+	$last_hash = (string) get_post_meta($job_id, 'lf_ai_job_last_callback_hash', true);
+	$current_status = (string) get_post_meta($job_id, 'lf_ai_job_status', true);
+	if ($last_hash !== '' && hash_equals($last_hash, $payload_hash) && in_array($current_status, ['done', 'failed'], true)) {
+		return ['ok' => true, 'idempotent' => true, 'status' => 200];
+	}
+	$idem_key = 'lf_ai_cb_' . md5($job_id . '|' . $request_id . '|' . $payload_hash);
+	if (get_transient($idem_key)) {
+		return ['ok' => true, 'idempotent' => true, 'status' => 200];
+	}
+	set_transient($idem_key, 1, 15 * MINUTE_IN_SECONDS);
+	return ['ok' => true, 'idempotent' => false, 'status' => 200];
 }
 
 function lf_ai_studio_rest_blueprint(\WP_REST_Request $request): \WP_REST_Response {
@@ -384,20 +512,23 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		}
 	}
 	$job_id = isset($payload['job_id']) ? absint($payload['job_id']) : 0;
-	if ($job_id) {
-		$job = get_post($job_id);
-		if (!$job instanceof \WP_Post || $job->post_type !== LF_AI_STUDIO_JOB_CPT) {
-			$job_id = 0;
-		}
+	$request_id = sanitize_text_field((string) ($payload['request_id'] ?? ''));
+	$payload_hash = lf_ai_studio_rest_payload_hash($payload);
+	$binding = lf_ai_studio_rest_validate_callback_binding($job_id, $request_id, $payload_hash);
+	if (empty($binding['ok'])) {
+		return new \WP_REST_Response(['error' => (string) ($binding['error'] ?? 'invalid_binding')], (int) ($binding['status'] ?? 400));
 	}
-	if (!$job_id) {
-		$job_id = lf_ai_studio_create_job(['source' => 'orchestrator_callback']);
+	if (!empty($binding['idempotent'])) {
+		return new \WP_REST_Response([
+			'job_id' => $job_id,
+			'success' => true,
+			'idempotent' => true,
+		], 200);
 	}
 	update_post_meta($job_id, 'lf_ai_job_status', 'running');
 	update_post_meta($job_id, 'lf_ai_job_response', $payload);
-	if (!empty($payload['request_id'])) {
-		update_post_meta($job_id, 'lf_ai_job_request_id', sanitize_text_field((string) $payload['request_id']));
-	}
+	update_post_meta($job_id, 'lf_ai_job_request_id', $request_id);
+	update_post_meta($job_id, 'lf_ai_job_last_callback_hash', $payload_hash);
 
 	$apply_payload = $payload['apply'] ?? $payload;
 	$quality_warnings = [];
@@ -437,6 +568,16 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
 		update_post_meta($job_id, 'lf_ai_job_error', implode('; ', $errors));
 		return new \WP_REST_Response(['error' => 'validation_failed', 'messages' => $errors, 'job_id' => $job_id], 400);
+	}
+	$dry_run = get_option('lf_ai_autonomy_dry_run', '0') === '1';
+	if ($dry_run) {
+		update_post_meta($job_id, 'lf_ai_job_status', 'done');
+		update_post_meta($job_id, 'lf_ai_job_summary', 'Dry-run validation succeeded; no writes committed.');
+		return new \WP_REST_Response([
+			'job_id' => $job_id,
+			'success' => true,
+			'dry_run' => true,
+		], 200);
 	}
 
 	$apply_result = lf_apply_orchestrator_updates($apply_payload);
@@ -492,9 +633,17 @@ function lf_ai_studio_rest_progress(\WP_REST_Request $request): \WP_REST_Respons
 	if (!$job_id) {
 		return new \WP_REST_Response(['error' => 'missing_job_id'], 400);
 	}
+	$request_id = sanitize_text_field((string) ($payload['request_id'] ?? ''));
+	if ($request_id === '') {
+		return new \WP_REST_Response(['error' => 'missing_request_id'], 400);
+	}
 	$job = get_post($job_id);
 	if (!$job instanceof \WP_Post || $job->post_type !== LF_AI_STUDIO_JOB_CPT) {
 		return new \WP_REST_Response(['error' => 'invalid_job'], 404);
+	}
+	$stored_request_id = (string) get_post_meta($job_id, 'lf_ai_job_request_id', true);
+	if ($stored_request_id !== '' && !hash_equals($stored_request_id, $request_id)) {
+		return new \WP_REST_Response(['error' => 'request_id_mismatch'], 409);
 	}
 	$current_status = (string) get_post_meta($job_id, 'lf_ai_job_status', true);
 	if (!in_array($current_status, ['done', 'failed'], true)) {
@@ -515,6 +664,43 @@ function lf_ai_studio_rest_progress(\WP_REST_Request $request): \WP_REST_Respons
 	];
 	update_post_meta($job_id, 'lf_ai_job_progress', $progress);
 	return new \WP_REST_Response(['ok' => true], 200);
+}
+
+function lf_ai_studio_rest_airtable_webhook(\WP_REST_Request $request): \WP_REST_Response {
+	$payload = $request->get_json_params();
+	if (!is_array($payload)) {
+		$raw = (string) $request->get_body();
+		if ($raw !== '') {
+			$decoded = json_decode($raw, true);
+			if (is_array($decoded)) {
+				$payload = $decoded;
+			}
+		}
+	}
+	if (!is_array($payload)) {
+		return new \WP_REST_Response(['error' => 'invalid_json'], 400);
+	}
+	$record_id = sanitize_text_field((string) ($payload['record_id'] ?? ''));
+	$updated_at = sanitize_text_field((string) ($payload['updated_at'] ?? ''));
+	$source = sanitize_text_field((string) ($payload['source'] ?? 'airtable_webhook'));
+	if ($record_id === '' && function_exists('lf_ai_studio_airtable_get_stored_record_id')) {
+		$record_id = lf_ai_studio_airtable_get_stored_record_id();
+	}
+	if ($record_id === '') {
+		return new \WP_REST_Response(['error' => 'missing_record_id'], 400);
+	}
+	if (!function_exists('lf_ai_studio_airtable_enqueue_generation_run')) {
+		return new \WP_REST_Response(['error' => 'airtable_queue_unavailable'], 500);
+	}
+	$enqueue = lf_ai_studio_airtable_enqueue_generation_run($record_id, $updated_at, $source);
+	if (empty($enqueue['ok'])) {
+		return new \WP_REST_Response(['error' => (string) ($enqueue['error'] ?? 'enqueue_failed')], 400);
+	}
+	return new \WP_REST_Response([
+		'ok' => true,
+		'queued' => !empty($enqueue['queued']),
+		'queue_size' => (int) ($enqueue['queue_size'] ?? 0),
+	], 200);
 }
 
 function lf_ai_studio_validate_apply_payload(array $payload): array {

@@ -15,7 +15,10 @@ if (!defined('ABSPATH')) {
 add_action('wp_ajax_lf_ai_airtable_search', 'lf_ai_studio_airtable_search');
 add_action('wp_ajax_lf_ai_airtable_generate', 'lf_ai_studio_airtable_generate');
 add_action('init', 'lf_ai_studio_airtable_schedule_reviews_sync');
+add_action('init', 'lf_ai_studio_airtable_schedule_generation_jobs');
 add_action('lf_ai_airtable_reviews_sync', 'lf_ai_studio_airtable_run_reviews_sync');
+add_action('lf_ai_airtable_generation_queue', 'lf_ai_studio_airtable_process_generation_queue');
+add_action('lf_ai_airtable_generation_reconcile', 'lf_ai_studio_airtable_run_reconcile');
 add_action('switch_theme', 'lf_ai_studio_airtable_clear_reviews_sync');
 
 function lf_ai_studio_airtable_default_field_map(): array {
@@ -164,11 +167,42 @@ function lf_ai_studio_airtable_schedule_reviews_sync(): void {
 	}
 }
 
+function lf_ai_studio_airtable_schedule_generation_jobs(): void {
+	$queue_hook = 'lf_ai_airtable_generation_queue';
+	$reconcile_hook = 'lf_ai_airtable_generation_reconcile';
+	$next_reconcile = wp_next_scheduled($reconcile_hook);
+	$settings = lf_ai_studio_airtable_get_settings();
+	$autonomy_enabled = get_option('lf_ai_autonomy_enabled', '0') === '1';
+	if (empty($settings['enabled']) || !$autonomy_enabled) {
+		if ($next_reconcile) {
+			wp_unschedule_event($next_reconcile, $reconcile_hook);
+		}
+		$next_queue = wp_next_scheduled($queue_hook);
+		if ($next_queue) {
+			wp_unschedule_event($next_queue, $queue_hook);
+		}
+		return;
+	}
+	if (!$next_reconcile) {
+		wp_schedule_event(time() + 300, 'hourly', $reconcile_hook);
+	}
+}
+
 function lf_ai_studio_airtable_clear_reviews_sync(): void {
 	$hook = 'lf_ai_airtable_reviews_sync';
 	$next = wp_next_scheduled($hook);
 	if ($next) {
 		wp_unschedule_event($next, $hook);
+	}
+	$queue_hook = 'lf_ai_airtable_generation_queue';
+	$queue_next = wp_next_scheduled($queue_hook);
+	if ($queue_next) {
+		wp_unschedule_event($queue_next, $queue_hook);
+	}
+	$reconcile_hook = 'lf_ai_airtable_generation_reconcile';
+	$reconcile_next = wp_next_scheduled($reconcile_hook);
+	if ($reconcile_next) {
+		wp_unschedule_event($reconcile_next, $reconcile_hook);
 	}
 }
 
@@ -249,11 +283,26 @@ function lf_ai_studio_airtable_generate(): void {
 		wp_send_json_error(['message' => __('Missing Airtable record ID.', 'leadsforward-core')], 400);
 	}
 
-	$record_result = lf_ai_studio_airtable_fetch_record($record_id);
-	if (!empty($record_result['error'])) {
-		wp_send_json_error(['message' => $record_result['error']], 400);
+	$run = lf_ai_studio_airtable_generate_from_record_id($record_id, 'manual');
+	if (empty($run['ok'])) {
+		wp_send_json_error(['message' => (string) ($run['error'] ?? __('Generation failed.', 'leadsforward-core'))], 400);
 	}
 
+	$redirect = admin_url('admin.php?page=lf-ops&manifest=1');
+	if (!empty($run['job_id'])) {
+		$redirect = add_query_arg('job', (string) $run['job_id'], $redirect);
+	}
+	wp_send_json_success([
+		'job_id' => $run['job_id'] ?? 0,
+		'redirect' => $redirect,
+	]);
+}
+
+function lf_ai_studio_airtable_generate_from_record_id(string $record_id, string $source = 'manual'): array {
+	$record_result = lf_ai_studio_airtable_fetch_record($record_id);
+	if (!empty($record_result['error'])) {
+		return ['ok' => false, 'error' => (string) $record_result['error']];
+	}
 	$record = $record_result['record'] ?? [];
 	$settings = lf_ai_studio_airtable_get_settings();
 	$project_name = lf_ai_studio_airtable_project_name_from_record($record, $settings);
@@ -263,16 +312,14 @@ function lf_ai_studio_airtable_generate(): void {
 	$build = lf_ai_studio_airtable_record_to_manifest($record, $settings);
 	if (!empty($build['errors'])) {
 		update_option('lf_ai_studio_manifest_errors', $build['errors'], false);
-		wp_send_json_error(['message' => __('Manifest validation failed.', 'leadsforward-core'), 'errors' => $build['errors']], 400);
+		return ['ok' => false, 'error' => __('Manifest validation failed.', 'leadsforward-core')];
 	}
-
 	$manifest = $build['manifest'] ?? [];
 	$errors = lf_ai_studio_validate_manifest($manifest);
 	if (!empty($errors)) {
 		update_option('lf_ai_studio_manifest_errors', $errors, false);
-		wp_send_json_error(['message' => __('Manifest validation failed.', 'leadsforward-core'), 'errors' => $errors], 400);
+		return ['ok' => false, 'error' => __('Manifest validation failed.', 'leadsforward-core')];
 	}
-
 	$normalized = lf_ai_studio_normalize_manifest($manifest);
 	update_option('lf_site_manifest', $normalized, false);
 	delete_option('lf_ai_studio_manifest_errors');
@@ -281,22 +328,141 @@ function lf_ai_studio_airtable_generate(): void {
 	if (!empty($review_result['error'])) {
 		error_log('LF Airtable Reviews: ' . (string) $review_result['error']);
 	}
-
 	$result = lf_ai_studio_run_generation();
 	if (!empty($result['error'])) {
 		$message = sprintf(__('Generation failed: %s', 'leadsforward-core'), (string) $result['error']);
 		update_option('lf_ai_studio_manifest_errors', [$message], false);
-		wp_send_json_error(['message' => $message], 400);
+		return ['ok' => false, 'error' => $message];
 	}
+	update_option('lf_ai_autonomy_last_source', sanitize_text_field($source), false);
+	update_option('lf_ai_autonomy_last_run', time(), false);
+	return ['ok' => true, 'job_id' => (int) ($result['job_id'] ?? 0)];
+}
 
-	$redirect = admin_url('admin.php?page=lf-ops&manifest=1');
-	if (!empty($result['job_id'])) {
-		$redirect = add_query_arg('job', (string) $result['job_id'], $redirect);
+function lf_ai_studio_airtable_get_stored_record_id(): string {
+	return trim((string) get_option('lf_ai_airtable_project_record_id', ''));
+}
+
+function lf_ai_studio_airtable_queue_items(): array {
+	$queue = get_option('lf_ai_airtable_generation_queue', []);
+	return is_array($queue) ? array_values($queue) : [];
+}
+
+function lf_ai_studio_airtable_save_queue_items(array $queue): void {
+	update_option('lf_ai_airtable_generation_queue', array_values($queue), false);
+}
+
+function lf_ai_studio_airtable_enqueue_generation_run(string $record_id, string $updated_at = '', string $source = 'webhook'): array {
+	$settings = lf_ai_studio_airtable_get_settings();
+	if (empty($settings['enabled']) || get_option('lf_ai_autonomy_enabled', '0') !== '1') {
+		return ['ok' => false, 'error' => 'autonomy_disabled'];
 	}
-	wp_send_json_success([
-		'job_id' => $result['job_id'] ?? 0,
-		'redirect' => $redirect,
-	]);
+	$record_id = sanitize_text_field($record_id);
+	if ($record_id === '') {
+		return ['ok' => false, 'error' => 'missing_record_id'];
+	}
+	$updated_at = sanitize_text_field($updated_at);
+	$source = sanitize_text_field($source);
+	$queue = lf_ai_studio_airtable_queue_items();
+	$dedupe_hash = hash('sha256', $record_id . '|' . $updated_at);
+	foreach ($queue as $item) {
+		$item_hash = sanitize_text_field((string) ($item['dedupe_hash'] ?? ''));
+		if ($item_hash !== '' && hash_equals($item_hash, $dedupe_hash)) {
+			return ['ok' => true, 'queued' => false, 'queue_size' => count($queue)];
+		}
+	}
+	$queue[] = [
+		'record_id' => $record_id,
+		'updated_at' => $updated_at,
+		'source' => $source !== '' ? $source : 'webhook',
+		'attempts' => 0,
+		'next_attempt_at' => time(),
+		'queued_at' => time(),
+		'dedupe_hash' => $dedupe_hash,
+	];
+	lf_ai_studio_airtable_save_queue_items($queue);
+	if (!wp_next_scheduled('lf_ai_airtable_generation_queue')) {
+		wp_schedule_single_event(time() + 5, 'lf_ai_airtable_generation_queue');
+	}
+	return ['ok' => true, 'queued' => true, 'queue_size' => count($queue)];
+}
+
+function lf_ai_studio_airtable_run_reconcile(): void {
+	$settings = lf_ai_studio_airtable_get_settings();
+	if (empty($settings['enabled']) || get_option('lf_ai_autonomy_enabled', '0') !== '1') {
+		return;
+	}
+	$record_id = lf_ai_studio_airtable_get_stored_record_id();
+	if ($record_id === '') {
+		return;
+	}
+	lf_ai_studio_airtable_enqueue_generation_run($record_id, gmdate('c'), 'reconcile');
+}
+
+function lf_ai_studio_airtable_process_generation_queue(): void {
+	$lock_key = 'lf_ai_airtable_generation_lock';
+	if (get_transient($lock_key)) {
+		return;
+	}
+	set_transient($lock_key, 1, 4 * MINUTE_IN_SECONDS);
+	$paused_until = (int) get_option('lf_ai_autonomy_paused_until', 0);
+	if ($paused_until > time()) {
+		delete_transient($lock_key);
+		return;
+	}
+	$queue = lf_ai_studio_airtable_queue_items();
+	if (empty($queue)) {
+		delete_transient($lock_key);
+		return;
+	}
+	$index = -1;
+	$item = null;
+	foreach ($queue as $i => $candidate) {
+		$next_attempt_at = isset($candidate['next_attempt_at']) ? (int) $candidate['next_attempt_at'] : 0;
+		if ($next_attempt_at <= time()) {
+			$index = (int) $i;
+			$item = $candidate;
+			break;
+		}
+	}
+	if ($index < 0 || !is_array($item)) {
+		delete_transient($lock_key);
+		return;
+	}
+	$record_id = sanitize_text_field((string) ($item['record_id'] ?? ''));
+	$attempts = isset($item['attempts']) ? (int) $item['attempts'] : 0;
+	$max_retries = (int) get_option('lf_ai_autonomy_max_retries', 3);
+	$max_retries = max(1, min(10, $max_retries));
+	$result = lf_ai_studio_airtable_generate_from_record_id($record_id, (string) ($item['source'] ?? 'queue'));
+	if (!empty($result['ok'])) {
+		array_splice($queue, $index, 1);
+		lf_ai_studio_airtable_save_queue_items($queue);
+		update_option('lf_ai_autonomy_failures_count', 0, false);
+		update_option('lf_ai_autonomy_paused_until', 0, false);
+	} else {
+		$attempts++;
+		$queue[$index]['attempts'] = $attempts;
+		if ($attempts >= $max_retries) {
+			array_splice($queue, $index, 1);
+			$failures = (int) get_option('lf_ai_autonomy_failures_count', 0) + 1;
+			update_option('lf_ai_autonomy_failures_count', $failures, false);
+			$threshold = (int) get_option('lf_ai_autonomy_circuit_threshold', 3);
+			$threshold = max(1, min(20, $threshold));
+			if ($failures >= $threshold) {
+				$cooldown = (int) get_option('lf_ai_autonomy_cooldown_seconds', 900);
+				$cooldown = max(60, min(86400, $cooldown));
+				update_option('lf_ai_autonomy_paused_until', time() + $cooldown, false);
+			}
+		} else {
+			$delay = min(3600, (int) pow(2, $attempts) * 60);
+			$queue[$index]['next_attempt_at'] = time() + $delay;
+		}
+		lf_ai_studio_airtable_save_queue_items($queue);
+	}
+	if (!empty($queue) && !wp_next_scheduled('lf_ai_airtable_generation_queue')) {
+		wp_schedule_single_event(time() + 60, 'lf_ai_airtable_generation_queue');
+	}
+	delete_transient($lock_key);
 }
 
 function lf_ai_studio_airtable_search_records(string $query): array {

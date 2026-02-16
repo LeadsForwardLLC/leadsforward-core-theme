@@ -30,6 +30,7 @@ This keeps the theme operational as a standalone engine while still benefiting f
   - `lf_ai_studio_build_post_blueprint()`
 - **Orchestrator callback**: `/wp-json/leadsforward/v1/orchestrator` handled by `lf_ai_studio_rest_orchestrator()`.
 - **Apply (strict)**: `lf_apply_orchestrator_updates()` applies updates and logs a job outcome.
+- **Callback auth**: `/orchestrator`, `/progress`, and `/airtable-webhook` support HMAC header verification (`X-LF-Timestamp`, `X-LF-Nonce`, `X-LF-Signature`) with replay window controls.
 
 ## Deterministic CTA + FAQ
 - Homepage is the only page allowed to generate global CTA fields.
