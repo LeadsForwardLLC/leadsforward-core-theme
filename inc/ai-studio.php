@@ -3984,7 +3984,7 @@ function lf_ai_studio_get_generation_scope(array $manifest): array {
 	return $scope;
 }
 
-function lf_ai_studio_ensure_core_page_sections(array $manifest = []): void {
+function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $force_reseed_all = false): void {
 	if (!function_exists('lf_wizard_seed_page_pb_config')) {
 		return;
 	}
@@ -4007,6 +4007,15 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = []): void {
 	$niche = function_exists('lf_get_niche') ? lf_get_niche($niche_slug) : null;
 	if (!$niche && function_exists('lf_get_niche')) {
 		$niche = lf_get_niche('general');
+	}
+	if ($force_reseed_all && function_exists('lf_homepage_apply_niche_config')) {
+		lf_homepage_apply_niche_config($niche_slug !== '' ? $niche_slug : 'general', $data);
+		if (defined('LF_HOMEPAGE_ORDER_OPTION') && function_exists('lf_homepage_default_order')) {
+			update_option(LF_HOMEPAGE_ORDER_OPTION, lf_homepage_default_order(), true);
+		}
+		if (defined('LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION')) {
+			update_option(LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION, false, true);
+		}
 	}
 	$slugs = function_exists('lf_wizard_required_page_slugs')
 		? lf_wizard_required_page_slugs()
@@ -4037,24 +4046,61 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = []): void {
 		$is_minimal = function_exists('lf_wizard_is_minimal_pb_config')
 			? lf_wizard_is_minimal_pb_config($existing_config)
 			: (!is_array($existing_config) || empty($existing_config));
-		$force_reseed = false;
+		$force_reseed = $force_reseed_all;
 		if ($slug === 'about-us') {
-		$force_reseed = !lf_ai_studio_config_has_section_types($existing_config, ['content_image', 'image_content_b', 'benefits', 'process']);
+			$force_reseed = $force_reseed || !lf_ai_studio_config_has_section_types($existing_config, ['content_image', 'image_content_b', 'benefits', 'process']);
 		}
-	if ($slug === 'our-services') {
-		$has_new = lf_ai_studio_config_has_section_types($existing_config, ['service_intro', 'faq_accordion', 'cta']);
-		$has_old = lf_ai_studio_config_has_section_types($existing_config, ['content_centered', 'process']);
-		$force_reseed = !$has_new || $has_old;
-	}
-	if ($slug === 'service-areas') {
-		$has_new = lf_ai_studio_config_has_section_types($existing_config, ['service_areas', 'faq_accordion', 'cta']);
-		$has_old = lf_ai_studio_config_has_section_types($existing_config, ['nearby_areas', 'content_image_a']);
-		$force_reseed = !$has_new || $has_old;
-	}
+		if ($slug === 'our-services') {
+			$has_new = lf_ai_studio_config_has_section_types($existing_config, ['service_intro', 'faq_accordion', 'cta']);
+			$has_old = lf_ai_studio_config_has_section_types($existing_config, ['content_centered', 'process']);
+			$force_reseed = $force_reseed || !$has_new || $has_old;
+		}
+		if ($slug === 'service-areas') {
+			$has_new = lf_ai_studio_config_has_section_types($existing_config, ['service_areas', 'faq_accordion', 'cta']);
+			$has_old = lf_ai_studio_config_has_section_types($existing_config, ['nearby_areas', 'content_image_a']);
+			$force_reseed = $force_reseed || !$has_new || $has_old;
+		}
 		if (!$is_minimal && !$force_reseed) {
 			continue;
 		}
 		lf_wizard_seed_page_pb_config((int) $page_id, $slug, $data, is_array($niche) ? $niche : [], $created_pages);
+	}
+	if ($force_reseed_all && function_exists('lf_wizard_seed_pb_config')) {
+		$service_posts = get_posts([
+			'post_type' => 'lf_service',
+			'post_status' => 'publish',
+			'posts_per_page' => 300,
+			'orderby' => 'menu_order title',
+			'order' => 'ASC',
+			'no_found_rows' => true,
+		]);
+		foreach (array_values($service_posts) as $index => $service_post) {
+			if (!$service_post instanceof \WP_Post) {
+				continue;
+			}
+			lf_wizard_seed_pb_config((int) $service_post->ID, 'service', $data, is_array($niche) ? $niche : [], (int) $index, ['service' => (string) $service_post->post_title]);
+		}
+		$area_posts = get_posts([
+			'post_type' => 'lf_service_area',
+			'post_status' => 'publish',
+			'posts_per_page' => 300,
+			'orderby' => 'menu_order title',
+			'order' => 'ASC',
+			'no_found_rows' => true,
+		]);
+		foreach (array_values($area_posts) as $index => $area_post) {
+			if (!$area_post instanceof \WP_Post) {
+				continue;
+			}
+			$area_title = trim((string) $area_post->post_title);
+			$loc = $area_title;
+			if (preg_match('/^(.+?),\s*([A-Za-z]{2})$/', $area_title, $m)) {
+				$city_part = trim((string) ($m[1] ?? ''));
+				$state_part = strtoupper(trim((string) ($m[2] ?? '')));
+				$loc = $city_part !== '' ? $city_part . ', ' . $state_part : $state_part;
+			}
+			lf_wizard_seed_pb_config((int) $area_post->ID, 'service_area', $data, is_array($niche) ? $niche : [], (int) $index, ['area' => $loc]);
+		}
 	}
 	if (!empty($created_pages['our-services'])) {
 		$page = get_post((int) $created_pages['our-services']);
@@ -4179,7 +4225,7 @@ function lf_ai_studio_build_full_site_payload(): array {
 		}
 		lf_ai_studio_sync_manifest_posts($manifest);
 	}
-	lf_ai_studio_ensure_core_page_sections($manifest);
+	lf_ai_studio_ensure_core_page_sections($manifest, true);
 	$homepage_payload = lf_ai_studio_build_homepage_blueprint();
 	if (!is_array($homepage_payload)) {
 		return ['error' => __('Full site payload build failed.', 'leadsforward-core')];
@@ -4770,6 +4816,44 @@ function lf_ai_studio_normalize_text(string $text): string {
 	return $clean;
 }
 
+function lf_ai_studio_strip_link_markup(string $text): string {
+	$text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+	$text = preg_replace('/\[(.*?)\]\((https?:\/\/[^\s)]+)\)/iu', '$1', $text);
+	$text = preg_replace('/<a\b[^>]*>(.*?)<\/a>/iu', '$1', $text);
+	$text = preg_replace('/<\/?a\b[^>]*>/iu', '', $text);
+	$text = preg_replace('/\s*href\s*=\s*["\'][^"\']*["\']/iu', ' ', $text);
+	return is_string($text) ? $text : '';
+}
+
+function lf_ai_studio_clean_text_field_value(string $text): string {
+	$text = lf_ai_studio_strip_link_markup($text);
+	$text = preg_replace('/https?:\/\/[^\s<>"\']+/iu', '', $text);
+	$text = preg_replace('/\s+/u', ' ', (string) $text);
+	return trim((string) $text);
+}
+
+function lf_ai_studio_clean_value_for_field($value, string $field_type) {
+	if (!is_string($value) && !is_array($value)) {
+		return $value;
+	}
+	if ($field_type === 'richtext' || $field_type === 'url' || $field_type === 'image' || $field_type === 'number') {
+		return $value;
+	}
+	if ($field_type === 'list') {
+		$raw_lines = is_array($value) ? $value : explode("\n", (string) $value);
+		$clean_lines = [];
+		foreach ($raw_lines as $line) {
+			$line_text = lf_ai_studio_clean_text_field_value((string) $line);
+			if ($line_text !== '') {
+				$clean_lines[] = $line_text;
+			}
+		}
+		$clean_lines = array_values(array_unique($clean_lines));
+		return implode("\n", $clean_lines);
+	}
+	return lf_ai_studio_clean_text_field_value((string) $value);
+}
+
 function lf_ai_studio_normalize_value($value) {
 	if (is_array($value)) {
 		foreach ($value as $key => $item) {
@@ -5295,6 +5379,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 				if ($field_type === 'list') {
 					$normalized_value = lf_ai_studio_coerce_list_value($normalized_value);
 				}
+				$normalized_value = lf_ai_studio_clean_value_for_field($normalized_value, $field_type);
 				$homepage_fields[$section_id][$field_key] = $normalized_value;
 				$homepage_fields_count++;
 				$fields_updated++;
@@ -5420,6 +5505,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 			if ($field_type === 'list') {
 				$normalized_value = lf_ai_studio_coerce_list_value($normalized_value);
 			}
+			$normalized_value = lf_ai_studio_clean_value_for_field($normalized_value, $field_type);
 			$incoming_by_instance[$instance_id][$field_key] = $normalized_value;
 			$fields_updated++;
 		}
@@ -5529,7 +5615,9 @@ function lf_apply_orchestrator_updates(array $response): array {
 			$allowed_keys = ['question', 'answer'];
 			$filtered_fields = array_intersect_key($fields, array_flip($allowed_keys));
 			foreach ($filtered_fields as $key => $value) {
-				$filtered_fields[$key] = lf_ai_studio_normalize_value($value);
+				$normalized = lf_ai_studio_normalize_value($value);
+				$field_type = ($key === 'answer') ? 'richtext' : 'text';
+				$filtered_fields[$key] = lf_ai_studio_clean_value_for_field($normalized, $field_type);
 			}
 			if (count($filtered_fields) !== count($fields)) {
 				$errors[] = __('FAQ update contains unsupported fields.', 'leadsforward-core');
@@ -5694,6 +5782,7 @@ function lf_ai_studio_apply_faq_updates(array $payload): array {
 		return [];
 	}
 	$changed = [];
+	$question_to_id = [];
 	foreach ($updates as $update) {
 		if (!is_array($update)) {
 			continue;
@@ -5707,12 +5796,16 @@ function lf_ai_studio_apply_faq_updates(array $payload): array {
 		}
 		$question_raw = isset($fields['question']) ? (string) $fields['question'] : '';
 		$answer_raw = isset($fields['answer']) ? (string) $fields['answer'] : '';
-		$question = sanitize_text_field(lf_ai_studio_normalize_text($question_raw));
+		$question = sanitize_text_field(lf_ai_studio_clean_text_field_value(lf_ai_studio_normalize_text($question_raw)));
 		$answer = wp_kses_post(lf_ai_studio_normalize_text($answer_raw));
 		if ($question === '' && $answer === '') {
 			continue;
 		}
+		$question_key = strtolower(trim((string) preg_replace('/\s+/', ' ', $question)));
 		$faq_id = isset($update['id']) ? absint($update['id']) : 0;
+		if ($faq_id <= 0 && $question_key !== '' && !empty($question_to_id[$question_key])) {
+			$faq_id = (int) $question_to_id[$question_key];
+		}
 		if ($faq_id) {
 			$post = get_post($faq_id);
 			if (!$post instanceof \WP_Post || $post->post_type !== 'lf_faq') {
@@ -5727,6 +5820,9 @@ function lf_ai_studio_apply_faq_updates(array $payload): array {
 			if (!$faq_id || is_wp_error($faq_id)) {
 				continue;
 			}
+		}
+		if ($question_key !== '') {
+			$question_to_id[$question_key] = (int) $faq_id;
 		}
 		if ($question !== '') {
 			wp_update_post(['ID' => $faq_id, 'post_title' => $question]);
@@ -5746,7 +5842,7 @@ function lf_ai_studio_apply_faq_updates(array $payload): array {
 		}
 		$changed[] = (int) $faq_id;
 	}
-	return $changed;
+	return array_values(array_unique(array_map('intval', $changed)));
 }
 
 function lf_ai_studio_run_content_audit(string $source = ''): array {
