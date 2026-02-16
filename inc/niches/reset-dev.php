@@ -30,6 +30,23 @@ function lf_dev_reset_delete_posts_by_type(string $post_type): void {
 	}
 }
 
+function lf_dev_reset_delete_all_terms(string $taxonomy): void {
+	if (!taxonomy_exists($taxonomy)) {
+		return;
+	}
+	$terms = get_terms([
+		'taxonomy' => $taxonomy,
+		'hide_empty' => false,
+		'fields' => 'ids',
+	]);
+	if (is_wp_error($terms) || !is_array($terms)) {
+		return;
+	}
+	foreach ($terms as $term_id) {
+		wp_delete_term((int) $term_id, $taxonomy);
+	}
+}
+
 /**
  * True only when WP_DEBUG, WP_ENV=local, or LF_DEV_RESET_ENABLED. Used for visibility and abort.
  */
@@ -145,9 +162,11 @@ function lf_dev_reset_run(): void {
 	lf_dev_reset_delete_posts_by_type('post');
 	lf_dev_reset_delete_posts_by_type('lf_service');
 	lf_dev_reset_delete_posts_by_type('lf_service_area');
+	lf_dev_reset_delete_posts_by_type('lf_project');
 	lf_dev_reset_delete_posts_by_type('lf_faq');
 	lf_dev_reset_delete_posts_by_type('lf_testimonial');
 	lf_dev_reset_delete_posts_by_type('lf_ai_job');
+	lf_dev_reset_delete_all_terms('lf_project_type');
 
 	$menus = wp_get_nav_menus();
 	foreach ($menus as $menu) {
