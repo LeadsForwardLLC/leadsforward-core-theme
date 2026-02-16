@@ -14,6 +14,7 @@ if (!defined('ABSPATH')) {
 const LF_PLACEHOLDER_IMAGE_OPTION = 'lf_placeholder_image_id';
 const LF_PLACEHOLDER_IMAGE_FILENAME = 'leadsforward-placeholder.png';
 const LF_PLACEHOLDER_IMAGE_RELATIVE_PATH = '/assets/images/leadsforward-placeholder.png';
+const LF_PLACEHOLDER_IMAGE_SEED_LOCK = 'lf_placeholder_seed_lock';
 
 /**
  * Ensure media functions are available when sideloading.
@@ -27,30 +28,75 @@ function lf_images_require_media_functions(): void {
 }
 
 /**
- * Try to find an existing placeholder attachment by seeded filename.
+ * Detect whether attachment looks like the theme placeholder asset.
  */
-function lf_find_existing_placeholder_attachment_id(): int {
+function lf_is_placeholder_attachment_candidate(int $attachment_id): bool {
+	$attachment_id = (int) $attachment_id;
+	if ($attachment_id <= 0) {
+		return false;
+	}
+	$file = (string) get_post_meta($attachment_id, '_wp_attached_file', true);
+	$filename = strtolower((string) basename($file));
+	$title = strtolower((string) get_the_title($attachment_id));
+	$excerpt = strtolower((string) get_post_field('post_excerpt', $attachment_id));
+	$content = strtolower((string) get_post_field('post_content', $attachment_id));
+	$stack = trim($filename . ' ' . $title . ' ' . $excerpt . ' ' . $content);
+	if ($stack === '') {
+		return false;
+	}
+	if (strpos($stack, 'leadsforward placeholder') !== false || strpos($stack, 'leadsforward default placeholder image') !== false) {
+		return true;
+	}
+	return strpos($filename, 'leadsforward-placeholder') !== false || strpos($filename, 'leadforward-placeholder') !== false;
+}
+
+/**
+ * Find all existing placeholder attachment IDs, newest first.
+ *
+ * @return int[]
+ */
+function lf_find_existing_placeholder_attachment_ids(): array {
 	$candidates = get_posts([
 		'post_type' => 'attachment',
 		'post_status' => 'inherit',
 		'post_mime_type' => 'image',
-		'posts_per_page' => 20,
+		'posts_per_page' => 50,
 		'orderby' => 'date',
 		'order' => 'DESC',
-		's' => 'leadsforward placeholder',
 		'fields' => 'ids',
 	]);
+	$found = [];
 	foreach ($candidates as $candidate_id) {
 		$attachment_id = (int) $candidate_id;
 		if ($attachment_id <= 0) {
 			continue;
 		}
-		$file = (string) get_post_meta($attachment_id, '_wp_attached_file', true);
-		if ($file !== '' && stripos($file, LF_PLACEHOLDER_IMAGE_FILENAME) !== false) {
-			return $attachment_id;
+		if (lf_is_placeholder_attachment_candidate($attachment_id)) {
+			$found[] = $attachment_id;
 		}
 	}
-	return 0;
+	return $found;
+}
+
+/**
+ * Keep one placeholder attachment and remove duplicate copies.
+ */
+function lf_dedupe_placeholder_attachments(array $attachment_ids): int {
+	$attachment_ids = array_values(array_unique(array_map('intval', $attachment_ids)));
+	if (empty($attachment_ids)) {
+		return 0;
+	}
+	$keep_id = (int) $attachment_ids[0];
+	if ($keep_id <= 0) {
+		return 0;
+	}
+	foreach (array_slice($attachment_ids, 1) as $duplicate_id) {
+		$duplicate_id = (int) $duplicate_id;
+		if ($duplicate_id > 0 && $duplicate_id !== $keep_id) {
+			wp_delete_attachment($duplicate_id, true);
+		}
+	}
+	return $keep_id;
 }
 
 /**
@@ -59,23 +105,36 @@ function lf_find_existing_placeholder_attachment_id(): int {
  * @return int Attachment ID or 0 on failure.
  */
 function lf_seed_placeholder_image(): int {
+	if (get_transient(LF_PLACEHOLDER_IMAGE_SEED_LOCK)) {
+		$existing = (int) get_option(LF_PLACEHOLDER_IMAGE_OPTION, 0);
+		return ($existing > 0 && get_post($existing)) ? $existing : 0;
+	}
+	set_transient(LF_PLACEHOLDER_IMAGE_SEED_LOCK, 1, 30);
+
 	$existing = (int) get_option(LF_PLACEHOLDER_IMAGE_OPTION, 0);
 	if ($existing && get_post($existing)) {
+		delete_transient(LF_PLACEHOLDER_IMAGE_SEED_LOCK);
 		return $existing;
 	}
-	$existing_attachment = lf_find_existing_placeholder_attachment_id();
-	if ($existing_attachment > 0) {
-		update_option(LF_PLACEHOLDER_IMAGE_OPTION, $existing_attachment, true);
-		return $existing_attachment;
+	$existing_attachments = lf_find_existing_placeholder_attachment_ids();
+	if (!empty($existing_attachments)) {
+		$existing_attachment = lf_dedupe_placeholder_attachments($existing_attachments);
+		if ($existing_attachment > 0) {
+			update_option(LF_PLACEHOLDER_IMAGE_OPTION, $existing_attachment, true);
+			delete_transient(LF_PLACEHOLDER_IMAGE_SEED_LOCK);
+			return $existing_attachment;
+		}
 	}
 
 	lf_images_require_media_functions();
 	$source_file = LF_THEME_DIR . LF_PLACEHOLDER_IMAGE_RELATIVE_PATH;
 	if (!is_readable($source_file)) {
+		delete_transient(LF_PLACEHOLDER_IMAGE_SEED_LOCK);
 		return 0;
 	}
 	$tmp = wp_tempnam(LF_PLACEHOLDER_IMAGE_FILENAME);
 	if (!$tmp || !@copy($source_file, $tmp)) {
+		delete_transient(LF_PLACEHOLDER_IMAGE_SEED_LOCK);
 		return 0;
 	}
 
@@ -86,6 +145,7 @@ function lf_seed_placeholder_image(): int {
 	$attachment_id = media_handle_sideload($file_array, 0, __('LeadsForward default placeholder image', 'leadsforward-core'));
 	if (is_wp_error($attachment_id)) {
 		@unlink($tmp);
+		delete_transient(LF_PLACEHOLDER_IMAGE_SEED_LOCK);
 		return 0;
 	}
 
@@ -96,8 +156,14 @@ function lf_seed_placeholder_image(): int {
 		'post_excerpt' => __('LeadsForward default placeholder image for safe fallback content.', 'leadsforward-core'),
 		'post_content' => __('LeadsForward default placeholder image for safe fallback content.', 'leadsforward-core'),
 	]);
-	update_option(LF_PLACEHOLDER_IMAGE_OPTION, (int) $attachment_id, true);
-	return (int) $attachment_id;
+	$all_placeholders = lf_find_existing_placeholder_attachment_ids();
+	if (!in_array((int) $attachment_id, $all_placeholders, true)) {
+		$all_placeholders[] = (int) $attachment_id;
+	}
+	$final_id = lf_dedupe_placeholder_attachments($all_placeholders);
+	update_option(LF_PLACEHOLDER_IMAGE_OPTION, (int) $final_id, true);
+	delete_transient(LF_PLACEHOLDER_IMAGE_SEED_LOCK);
+	return (int) $final_id;
 }
 
 /**
