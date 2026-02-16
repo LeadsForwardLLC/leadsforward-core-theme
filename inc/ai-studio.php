@@ -49,6 +49,68 @@ function lf_ai_studio_hmac_tolerance_seconds(): int {
 	return $seconds;
 }
 
+function lf_ai_autonomy_is_eligible(): bool {
+	return get_option('lf_ai_autonomy_eligible', '0') === '1';
+}
+
+function lf_ai_autonomy_is_paused(): bool {
+	$paused_until = (int) get_option('lf_ai_autonomy_paused_until', 0);
+	return $paused_until > time();
+}
+
+function lf_ai_autonomy_pause_reason(): string {
+	return sanitize_text_field((string) get_option('lf_ai_autonomy_pause_reason', ''));
+}
+
+function lf_ai_autonomy_can_enable(): bool {
+	return lf_ai_autonomy_is_eligible() && !lf_ai_autonomy_is_paused();
+}
+
+function lf_ai_autonomy_runtime_enabled(): bool {
+	return get_option('lf_ai_autonomy_enabled', '0') === '1' && lf_ai_autonomy_can_enable();
+}
+
+function lf_ai_autonomy_set_enabled_from_request(bool $requested): string {
+	if (!$requested) {
+		delete_option('lf_ai_autonomy_enable_error');
+		return '0';
+	}
+	if (!lf_ai_autonomy_can_enable()) {
+		update_option('lf_ai_autonomy_enable_error', 'Autonomous mode is not eligible yet. Run the Website Manifester successfully first.', false);
+		return '0';
+	}
+	update_option('lf_ai_autonomy_enabled_at', time(), false);
+	delete_option('lf_ai_autonomy_enable_error');
+	return '1';
+}
+
+function lf_ai_autonomy_mark_generation_started(int $job_id = 0): void {
+	update_option('lf_ai_autonomy_enabled', '0', false);
+	update_option('lf_ai_autonomy_eligible', '0', false);
+	update_option('lf_ai_autonomy_pause_reason', 'awaiting_post_manifester_baseline', false);
+	update_option('lf_ai_autonomy_last_baseline_job_id', (int) $job_id, false);
+}
+
+function lf_ai_autonomy_mark_generation_failed(int $job_id = 0, string $reason = ''): void {
+	update_option('lf_ai_autonomy_eligible', '0', false);
+	$pause_reason = $reason !== '' ? $reason : 'manifester_failed';
+	update_option('lf_ai_autonomy_pause_reason', sanitize_text_field($pause_reason), false);
+	if ($job_id > 0) {
+		update_option('lf_ai_autonomy_last_baseline_job_id', $job_id, false);
+	}
+}
+
+function lf_ai_autonomy_mark_generation_success(int $job_id, array $report = []): void {
+	$baseline_hash = hash('sha256', (string) wp_json_encode($report));
+	update_option('lf_ai_autonomy_eligible', '1', false);
+	update_option('lf_ai_autonomy_last_baseline_job_id', $job_id, false);
+	update_option('lf_ai_autonomy_last_baseline_hash', $baseline_hash, false);
+	update_option('lf_ai_autonomy_last_health_check', time(), false);
+	update_option('lf_ai_autonomy_pause_reason', '', false);
+	update_option('lf_ai_autonomy_paused_until', 0, false);
+	update_option('lf_ai_autonomy_failures_count', 0, false);
+}
+
 function lf_ai_studio_register_cpt(): void {
 	register_post_type(LF_AI_STUDIO_JOB_CPT, [
 		'label' => __('AI Generation Jobs', 'leadsforward-core'),
@@ -157,7 +219,8 @@ function lf_ai_studio_handle_save(): void {
 	update_option('lf_ai_auth_mode', $auth_mode === 'strict_hmac' ? 'strict_hmac' : 'compatibility');
 	$tolerance = isset($_POST['lf_ai_hmac_tolerance_seconds']) ? (int) $_POST['lf_ai_hmac_tolerance_seconds'] : 300;
 	update_option('lf_ai_hmac_tolerance_seconds', max(60, min(1800, $tolerance)));
-	update_option('lf_ai_autonomy_enabled', isset($_POST['lf_ai_autonomy_enabled']) ? '1' : '0');
+	$autonomy_requested = isset($_POST['lf_ai_autonomy_enabled']);
+	update_option('lf_ai_autonomy_enabled', lf_ai_autonomy_set_enabled_from_request($autonomy_requested));
 	update_option('lf_ai_autonomy_dry_run', isset($_POST['lf_ai_autonomy_dry_run']) ? '1' : '0');
 	$max_retries = isset($_POST['lf_ai_autonomy_max_retries']) ? (int) $_POST['lf_ai_autonomy_max_retries'] : 3;
 	update_option('lf_ai_autonomy_max_retries', max(1, min(10, $max_retries)));
@@ -233,7 +296,8 @@ function lf_ai_studio_handle_orchestrator_save(): void {
 	update_option('lf_ai_auth_mode', $auth_mode === 'strict_hmac' ? 'strict_hmac' : 'compatibility');
 	$tolerance = isset($_POST['lf_ai_hmac_tolerance_seconds']) ? (int) $_POST['lf_ai_hmac_tolerance_seconds'] : 300;
 	update_option('lf_ai_hmac_tolerance_seconds', max(60, min(1800, $tolerance)));
-	update_option('lf_ai_autonomy_enabled', isset($_POST['lf_ai_autonomy_enabled']) ? '1' : '0');
+	$autonomy_requested = isset($_POST['lf_ai_autonomy_enabled']);
+	update_option('lf_ai_autonomy_enabled', lf_ai_autonomy_set_enabled_from_request($autonomy_requested));
 	update_option('lf_ai_autonomy_dry_run', isset($_POST['lf_ai_autonomy_dry_run']) ? '1' : '0');
 	$max_retries = isset($_POST['lf_ai_autonomy_max_retries']) ? (int) $_POST['lf_ai_autonomy_max_retries'] : 3;
 	update_option('lf_ai_autonomy_max_retries', max(1, min(10, $max_retries)));
@@ -1334,6 +1398,7 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	update_post_meta($job_id, 'lf_ai_job_request', $request);
 	update_post_meta($job_id, 'lf_ai_job_request_id', $request_id);
 	update_post_meta($job_id, 'lf_ai_job_request_hash', hash('sha256', (string) wp_json_encode($request)));
+	lf_ai_autonomy_mark_generation_started($job_id);
 	$log_payload = [
 		'keys' => array_keys($request),
 		'blueprints' => isset($request['blueprints']) && is_array($request['blueprints'])
@@ -1363,6 +1428,7 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	if (is_wp_error($response)) {
 		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
 		update_post_meta($job_id, 'lf_ai_job_error', $response->get_error_message());
+		lf_ai_autonomy_mark_generation_failed($job_id, 'webhook_request_failed');
 		error_log('LF DEBUG: Regenerate Site failed: WP error on webhook call: ' . $response->get_error_message());
 		return ['error' => $response->get_error_message(), 'job_id' => $job_id];
 	}
@@ -1372,6 +1438,7 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
 		update_post_meta($job_id, 'lf_ai_job_error', 'http_' . $status);
 		update_post_meta($job_id, 'lf_ai_job_response', $body);
+		lf_ai_autonomy_mark_generation_failed($job_id, 'webhook_http_' . $status);
 		error_log('LF DEBUG: Regenerate Site failed: HTTP ' . $status);
 		return ['error' => sprintf(__('Orchestrator returned HTTP %d: %s', 'leadsforward-core'), $status, (string) $body), 'job_id' => $job_id];
 	}

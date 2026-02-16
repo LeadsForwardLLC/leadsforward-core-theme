@@ -172,8 +172,10 @@ function lf_ai_studio_airtable_schedule_generation_jobs(): void {
 	$reconcile_hook = 'lf_ai_airtable_generation_reconcile';
 	$next_reconcile = wp_next_scheduled($reconcile_hook);
 	$settings = lf_ai_studio_airtable_get_settings();
-	$autonomy_enabled = get_option('lf_ai_autonomy_enabled', '0') === '1';
-	if (empty($settings['enabled']) || !$autonomy_enabled) {
+	$autonomy_runtime = function_exists('lf_ai_autonomy_runtime_enabled')
+		? lf_ai_autonomy_runtime_enabled()
+		: (get_option('lf_ai_autonomy_enabled', '0') === '1');
+	if (empty($settings['enabled']) || !$autonomy_runtime) {
 		if ($next_reconcile) {
 			wp_unschedule_event($next_reconcile, $reconcile_hook);
 		}
@@ -354,7 +356,10 @@ function lf_ai_studio_airtable_save_queue_items(array $queue): void {
 
 function lf_ai_studio_airtable_enqueue_generation_run(string $record_id, string $updated_at = '', string $source = 'webhook'): array {
 	$settings = lf_ai_studio_airtable_get_settings();
-	if (empty($settings['enabled']) || get_option('lf_ai_autonomy_enabled', '0') !== '1') {
+	$autonomy_runtime = function_exists('lf_ai_autonomy_runtime_enabled')
+		? lf_ai_autonomy_runtime_enabled()
+		: (get_option('lf_ai_autonomy_enabled', '0') === '1');
+	if (empty($settings['enabled']) || !$autonomy_runtime) {
 		return ['ok' => false, 'error' => 'autonomy_disabled'];
 	}
 	$record_id = sanitize_text_field($record_id);
@@ -389,7 +394,10 @@ function lf_ai_studio_airtable_enqueue_generation_run(string $record_id, string 
 
 function lf_ai_studio_airtable_run_reconcile(): void {
 	$settings = lf_ai_studio_airtable_get_settings();
-	if (empty($settings['enabled']) || get_option('lf_ai_autonomy_enabled', '0') !== '1') {
+	$autonomy_runtime = function_exists('lf_ai_autonomy_runtime_enabled')
+		? lf_ai_autonomy_runtime_enabled()
+		: (get_option('lf_ai_autonomy_enabled', '0') === '1');
+	if (empty($settings['enabled']) || !$autonomy_runtime) {
 		return;
 	}
 	$record_id = lf_ai_studio_airtable_get_stored_record_id();
@@ -400,6 +408,12 @@ function lf_ai_studio_airtable_run_reconcile(): void {
 }
 
 function lf_ai_studio_airtable_process_generation_queue(): void {
+	$autonomy_runtime = function_exists('lf_ai_autonomy_runtime_enabled')
+		? lf_ai_autonomy_runtime_enabled()
+		: (get_option('lf_ai_autonomy_enabled', '0') === '1');
+	if (!$autonomy_runtime) {
+		return;
+	}
 	$lock_key = 'lf_ai_airtable_generation_lock';
 	if (get_transient($lock_key)) {
 		return;

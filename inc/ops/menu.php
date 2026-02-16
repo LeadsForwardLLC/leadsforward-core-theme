@@ -328,7 +328,12 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('lf_ai_auth_mode', $auth_mode === 'strict_hmac' ? 'strict_hmac' : 'compatibility');
 	$tolerance = isset($_POST['lf_ai_hmac_tolerance_seconds']) ? (int) $_POST['lf_ai_hmac_tolerance_seconds'] : 300;
 	update_option('lf_ai_hmac_tolerance_seconds', max(60, min(1800, $tolerance)));
-	update_option('lf_ai_autonomy_enabled', isset($_POST['lf_ai_autonomy_enabled']) ? '1' : '0');
+	$autonomy_requested = isset($_POST['lf_ai_autonomy_enabled']);
+	if (function_exists('lf_ai_autonomy_set_enabled_from_request')) {
+		update_option('lf_ai_autonomy_enabled', lf_ai_autonomy_set_enabled_from_request($autonomy_requested));
+	} else {
+		update_option('lf_ai_autonomy_enabled', $autonomy_requested ? '1' : '0');
+	}
 	update_option('lf_ai_autonomy_dry_run', isset($_POST['lf_ai_autonomy_dry_run']) ? '1' : '0');
 	$max_retries = isset($_POST['lf_ai_autonomy_max_retries']) ? (int) $_POST['lf_ai_autonomy_max_retries'] : 3;
 	update_option('lf_ai_autonomy_max_retries', max(1, min(10, $max_retries)));
@@ -684,6 +689,10 @@ function lf_ops_render_global_settings_page(): void {
 		return is_string($val) && $val !== '' ? $val : $default;
 	};
 	$saved = isset($_GET['saved']) && $_GET['saved'] === '1';
+	$autonomy_enable_error = sanitize_text_field((string) get_option('lf_ai_autonomy_enable_error', ''));
+	if ($autonomy_enable_error !== '') {
+		delete_option('lf_ai_autonomy_enable_error');
+	}
 	$manifester_enabled = get_option('lf_ai_studio_enabled', '0') === '1';
 	$manifester_webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$manifester_secret = (string) get_option('lf_ai_studio_secret', '');
@@ -702,6 +711,12 @@ function lf_ops_render_global_settings_page(): void {
 	$autonomy_cooldown = max(60, min(86400, $autonomy_cooldown));
 	$autonomy_circuit_threshold = (int) get_option('lf_ai_autonomy_circuit_threshold', 3);
 	$autonomy_circuit_threshold = max(1, min(20, $autonomy_circuit_threshold));
+	$autonomy_eligible = function_exists('lf_ai_autonomy_is_eligible') ? lf_ai_autonomy_is_eligible() : (get_option('lf_ai_autonomy_eligible', '0') === '1');
+	$autonomy_paused = function_exists('lf_ai_autonomy_is_paused') ? lf_ai_autonomy_is_paused() : ((int) get_option('lf_ai_autonomy_paused_until', 0) > time());
+	$autonomy_pause_reason = function_exists('lf_ai_autonomy_pause_reason') ? lf_ai_autonomy_pause_reason() : sanitize_text_field((string) get_option('lf_ai_autonomy_pause_reason', ''));
+	$autonomy_can_enable = function_exists('lf_ai_autonomy_can_enable') ? lf_ai_autonomy_can_enable() : ($autonomy_eligible && !$autonomy_paused);
+	$autonomy_last_baseline_job = (int) get_option('lf_ai_autonomy_last_baseline_job_id', 0);
+	$autonomy_last_health_check = (int) get_option('lf_ai_autonomy_last_health_check', 0);
 	$openai_key_set = (string) get_option('lf_openai_api_key', '') !== '';
 	$airtable_settings = function_exists('lf_ai_studio_airtable_get_settings')
 		? lf_ai_studio_airtable_get_settings()
@@ -747,6 +762,9 @@ function lf_ops_render_global_settings_page(): void {
 		<?php endif; ?>
 		<?php if ($saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Settings saved.', 'leadsforward-core'); ?></p></div>
+		<?php endif; ?>
+		<?php if ($autonomy_enable_error !== '') : ?>
+			<div class="notice notice-warning is-dismissible"><p><?php echo esc_html($autonomy_enable_error); ?></p></div>
 		<?php endif; ?>
 		<?php if ($reviews_sync === '1') : ?>
 			<div class="notice notice-success is-dismissible">
@@ -836,7 +854,34 @@ function lf_ops_render_global_settings_page(): void {
 							</tr>
 							<tr>
 								<th scope="row"><?php esc_html_e('Enable autonomy', 'leadsforward-core'); ?></th>
-								<td><label><input type="checkbox" name="lf_ai_autonomy_enabled" value="1" <?php checked($autonomy_enabled); ?> /> <?php esc_html_e('Allow webhook/reconciliation queue to trigger generation automatically', 'leadsforward-core'); ?></label></td>
+								<td>
+									<label><input type="checkbox" name="lf_ai_autonomy_enabled" value="1" <?php checked($autonomy_enabled); ?> <?php disabled(!$autonomy_can_enable && !$autonomy_enabled); ?> /> <?php esc_html_e('Allow webhook/reconciliation queue to trigger generation automatically', 'leadsforward-core'); ?></label>
+									<p class="description">
+										<?php
+										if ($autonomy_enabled) {
+											esc_html_e('Status: Active', 'leadsforward-core');
+										} elseif ($autonomy_eligible && !$autonomy_paused) {
+											esc_html_e('Status: Eligible (optional, not active).', 'leadsforward-core');
+										} elseif ($autonomy_paused) {
+											echo esc_html(sprintf(__('Status: Paused (%s).', 'leadsforward-core'), $autonomy_pause_reason !== '' ? $autonomy_pause_reason : __('cooldown or circuit break', 'leadsforward-core')));
+										} else {
+											esc_html_e('Status: Not eligible yet. Run Website Manifester successfully to unlock.', 'leadsforward-core');
+										}
+										?>
+									</p>
+									<p class="description">
+										<?php
+										if ($autonomy_last_baseline_job > 0) {
+											echo esc_html(sprintf(__('Last baseline job: #%d', 'leadsforward-core'), $autonomy_last_baseline_job));
+										} else {
+											esc_html_e('No baseline job recorded yet.', 'leadsforward-core');
+										}
+										if ($autonomy_last_health_check > 0) {
+											echo ' ' . esc_html(sprintf(__('Last health check: %s', 'leadsforward-core'), date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $autonomy_last_health_check)));
+										}
+										?>
+									</p>
+								</td>
 							</tr>
 							<tr>
 								<th scope="row"><?php esc_html_e('Dry run only', 'leadsforward-core'); ?></th>

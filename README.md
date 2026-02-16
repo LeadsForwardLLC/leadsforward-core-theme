@@ -238,6 +238,7 @@ New section type: **Centered Content** (`content_centered`) — minimal, text-on
   - For blueprint/apply: header `Authorization: Bearer <shared_secret>`
   - For orchestrator/progress callbacks: HMAC headers `X-LF-Timestamp`, `X-LF-Nonce`, `X-LF-Signature` (compatibility mode can temporarily accept legacy bearer during migration)
   - Do not use token query parameters in callback URLs
+- **Autonomous mode launch rule:** optional and off by default; it can only be enabled after a successful Website Manifester run establishes a fresh baseline.
 - **Quality rules (system message):**
   - Headlines use sentence or title case with no dash or hyphen separators.
   - Hero headline max 12 words; no trailing punctuation unless a question.

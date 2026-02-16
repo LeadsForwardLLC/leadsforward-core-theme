@@ -567,12 +567,18 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 	if (!empty($errors)) {
 		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
 		update_post_meta($job_id, 'lf_ai_job_error', implode('; ', $errors));
+		if (function_exists('lf_ai_autonomy_mark_generation_failed')) {
+			lf_ai_autonomy_mark_generation_failed($job_id, 'validation_failed');
+		}
 		return new \WP_REST_Response(['error' => 'validation_failed', 'messages' => $errors, 'job_id' => $job_id], 400);
 	}
 	$dry_run = get_option('lf_ai_autonomy_dry_run', '0') === '1';
 	if ($dry_run) {
 		update_post_meta($job_id, 'lf_ai_job_status', 'done');
 		update_post_meta($job_id, 'lf_ai_job_summary', 'Dry-run validation succeeded; no writes committed.');
+		if (function_exists('lf_ai_autonomy_mark_generation_success')) {
+			lf_ai_autonomy_mark_generation_success($job_id, ['dry_run' => true, 'request_id' => $request_id]);
+		}
 		return new \WP_REST_Response([
 			'job_id' => $job_id,
 			'success' => true,
@@ -585,6 +591,9 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 	update_post_meta($job_id, 'lf_ai_job_summary', $apply_result['summary'] ?? '');
 	update_post_meta($job_id, 'lf_ai_job_changes', $apply_result['changes'] ?? []);
 	update_post_meta($job_id, 'lf_ai_job_error', !empty($apply_result['errors']) ? implode('; ', $apply_result['errors']) : '');
+	if (empty($apply_result['success']) && function_exists('lf_ai_autonomy_mark_generation_failed')) {
+		lf_ai_autonomy_mark_generation_failed($job_id, 'apply_failed');
+	}
 
 	if (!empty($apply_result['success'])) {
 		$request = get_post_meta($job_id, 'lf_ai_job_request', true);
@@ -604,6 +613,9 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 				$report['quality_warnings'] = $quality_warnings;
 			}
 			lf_ai_studio_store_audit_report($report, $job_id);
+			if (function_exists('lf_ai_autonomy_mark_generation_success')) {
+				lf_ai_autonomy_mark_generation_success($job_id, $report);
+			}
 			lf_ai_studio_maybe_requeue_from_audit($job_id, $report);
 		}
 	}
