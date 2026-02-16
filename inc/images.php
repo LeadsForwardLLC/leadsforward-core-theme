@@ -170,14 +170,14 @@ function lf_seed_placeholder_image(): int {
 
 	$existing = (int) get_option(LF_PLACEHOLDER_IMAGE_OPTION, 0);
 	if ($existing && get_post($existing)) {
-		$canonical = lf_cleanup_placeholder_duplicates();
+		$canonical = lf_cleanup_placeholder_duplicates(true);
 		if ($canonical > 0) {
 			$existing = $canonical;
 		}
 		delete_transient(LF_PLACEHOLDER_IMAGE_SEED_LOCK);
 		return $existing;
 	}
-	$existing_attachment = lf_cleanup_placeholder_duplicates();
+	$existing_attachment = lf_cleanup_placeholder_duplicates(true);
 	if ($existing_attachment > 0) {
 		delete_transient(LF_PLACEHOLDER_IMAGE_SEED_LOCK);
 		return $existing_attachment;
@@ -213,7 +213,7 @@ function lf_seed_placeholder_image(): int {
 		'post_excerpt' => __('LeadsForward default placeholder image for safe fallback content.', 'leadsforward-core'),
 		'post_content' => __('LeadsForward default placeholder image for safe fallback content.', 'leadsforward-core'),
 	]);
-	$all_placeholders = lf_find_existing_placeholder_attachment_ids();
+	$all_placeholders = lf_find_existing_placeholder_attachment_ids(true);
 	if (!in_array((int) $attachment_id, $all_placeholders, true)) {
 		$all_placeholders[] = (int) $attachment_id;
 	}
