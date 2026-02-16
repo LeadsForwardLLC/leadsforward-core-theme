@@ -3993,7 +3993,15 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = []): void {
 		$data = lf_ai_studio_manifest_to_setup_data($manifest);
 	}
 	if (empty($data) && function_exists('lf_wizard_data_from_entity')) {
-		$data = lf_wizard_data_from_entity();
+		try {
+			$entity_data = lf_wizard_data_from_entity();
+			$data = is_array($entity_data) ? $entity_data : [];
+		} catch (\Throwable $e) {
+			$data = [];
+			if (defined('WP_DEBUG') && WP_DEBUG) {
+				error_log('LF AI Studio: failed reading wizard entity data: ' . $e->getMessage());
+			}
+		}
 	}
 	$niche_slug = (string) ($data['niche_slug'] ?? get_option('lf_homepage_niche_slug', 'general'));
 	$niche = function_exists('lf_get_niche') ? lf_get_niche($niche_slug) : null;
@@ -4996,6 +5004,46 @@ function lf_ai_studio_resolve_homepage_field_key(string $field_key, array $confi
 	return null;
 }
 
+function lf_ai_studio_resolve_post_field_key(string $field_key, array $sections, array $registry): ?array {
+	if ($field_key === '' || strpos($field_key, '.') !== false) {
+		return null;
+	}
+	$matches = [];
+	foreach ($sections as $instance_id => $section) {
+		if (!is_array($section)) {
+			continue;
+		}
+		$type = (string) ($section['type'] ?? '');
+		if ($type === '' || !isset($registry[$type])) {
+			continue;
+		}
+		$allowed = lf_ai_studio_homepage_allowed_field_keys($type, $registry[$type]);
+		if (in_array($field_key, $allowed, true)) {
+			$matches[] = [
+				'instance_id' => (string) $instance_id,
+				'field_key' => $field_key,
+				'section_type' => $type,
+			];
+		}
+	}
+	if (empty($matches)) {
+		return null;
+	}
+	if (count($matches) === 1) {
+		return $matches[0];
+	}
+	$prefix = strtolower((string) strtok($field_key, '_'));
+	if ($prefix !== '') {
+		foreach ($matches as $match) {
+			$type = strtolower((string) ($match['section_type'] ?? ''));
+			if ($type !== '' && strpos($type, $prefix) !== false) {
+				return $match;
+			}
+		}
+	}
+	return $matches[0];
+}
+
 function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 	$updates = $response['updates'] ?? [];
 	if (!is_array($updates)) {
@@ -5065,11 +5113,17 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 				}
 				$parts = explode('.', $key, 2);
 				if (count($parts) !== 2) {
-					$errors[] = sprintf(__('Post field "%s" must use section.field notation.', 'leadsforward-core'), $key);
-					continue;
+					$resolved = lf_ai_studio_resolve_post_field_key(trim($key), $sections, $registry);
+					if (!is_array($resolved)) {
+						$errors[] = sprintf(__('Post field "%s" must use section.field notation.', 'leadsforward-core'), $key);
+						continue;
+					}
+					$instance_id = (string) ($resolved['instance_id'] ?? '');
+					$field_key = (string) ($resolved['field_key'] ?? '');
+				} else {
+					$instance_id = trim($parts[0]);
+					$field_key = trim($parts[1]);
 				}
-				$instance_id = trim($parts[0]);
-				$field_key = trim($parts[1]);
 				$section = $sections[$instance_id] ?? null;
 				if (!is_array($section)) {
 					foreach ($sections as $maybe_id => $maybe_section) {
@@ -5324,11 +5378,17 @@ function lf_apply_orchestrator_updates(array $response): array {
 			}
 			$parts = explode('.', $key, 2);
 			if (count($parts) !== 2) {
-				$errors[] = sprintf(__('Post field "%s" must use section.field notation.', 'leadsforward-core'), (string) $key);
-				continue;
+				$resolved = lf_ai_studio_resolve_post_field_key(trim((string) $key), $sections, $registry);
+				if (!is_array($resolved)) {
+					$errors[] = sprintf(__('Post field "%s" must use section.field notation.', 'leadsforward-core'), (string) $key);
+					continue;
+				}
+				$instance_id = (string) ($resolved['instance_id'] ?? '');
+				$field_key = (string) ($resolved['field_key'] ?? '');
+			} else {
+				$instance_id = trim($parts[0]);
+				$field_key = trim($parts[1]);
 			}
-			$instance_id = trim($parts[0]);
-			$field_key = trim($parts[1]);
 			if ($instance_id === '' || $field_key === '') {
 				continue;
 			}
