@@ -4854,6 +4854,78 @@ function lf_ai_studio_clean_value_for_field($value, string $field_type) {
 	return lf_ai_studio_clean_text_field_value((string) $value);
 }
 
+function lf_ai_studio_normalize_faq_question_key(string $question): string {
+	$key = strtolower(trim((string) preg_replace('/\s+/', ' ', $question)));
+	return (string) preg_replace('/[^\p{L}\p{N}\s\-_]+/u', '', $key);
+}
+
+function lf_ai_studio_build_faq_lookup_map(): array {
+	$lookup = [];
+	$faq_ids = get_posts([
+		'post_type' => 'lf_faq',
+		'post_status' => ['publish', 'draft', 'pending', 'private'],
+		'posts_per_page' => -1,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	]);
+	foreach ($faq_ids as $faq_id) {
+		$faq_id = absint($faq_id);
+		if ($faq_id <= 0) {
+			continue;
+		}
+		$title = trim((string) get_the_title($faq_id));
+		if ($title !== '') {
+			$lookup[lf_ai_studio_normalize_faq_question_key($title)] = $faq_id;
+		}
+		$meta_question = trim((string) get_post_meta($faq_id, 'lf_faq_question', true));
+		if ($meta_question !== '') {
+			$lookup[lf_ai_studio_normalize_faq_question_key($meta_question)] = $faq_id;
+		}
+		$post_name = trim((string) get_post_field('post_name', $faq_id));
+		if ($post_name !== '') {
+			$lookup[strtolower($post_name)] = $faq_id;
+		}
+	}
+	return $lookup;
+}
+
+function lf_ai_studio_normalize_faq_selected_ids_value($value): string {
+	$tokens = [];
+	if (is_array($value)) {
+		$tokens = $value;
+	} else {
+		$tokens = preg_split('/[\r\n,]+/', (string) $value);
+	}
+	$tokens = is_array($tokens) ? $tokens : [];
+	$lookup = lf_ai_studio_build_faq_lookup_map();
+	$ids = [];
+	foreach ($tokens as $token) {
+		$text = trim((string) $token);
+		if ($text === '') {
+			continue;
+		}
+		$numeric = absint($text);
+		if ($numeric > 0) {
+			$post = get_post($numeric);
+			if ($post instanceof \WP_Post && $post->post_type === 'lf_faq') {
+				$ids[] = $numeric;
+				continue;
+			}
+		}
+		$key = lf_ai_studio_normalize_faq_question_key($text);
+		if ($key !== '' && !empty($lookup[$key])) {
+			$ids[] = absint($lookup[$key]);
+			continue;
+		}
+		$slug_key = strtolower(sanitize_title($text));
+		if ($slug_key !== '' && !empty($lookup[$slug_key])) {
+			$ids[] = absint($lookup[$slug_key]);
+		}
+	}
+	$ids = array_values(array_unique(array_filter(array_map('absint', $ids))));
+	return !empty($ids) ? implode("\n", $ids) : '';
+}
+
 function lf_ai_studio_normalize_value($value) {
 	if (is_array($value)) {
 		foreach ($value as $key => $item) {
@@ -5380,6 +5452,9 @@ function lf_apply_orchestrator_updates(array $response): array {
 					$normalized_value = lf_ai_studio_coerce_list_value($normalized_value);
 				}
 				$normalized_value = lf_ai_studio_clean_value_for_field($normalized_value, $field_type);
+				if ($section_id === 'faq_accordion' && $field_key === 'faq_selected_ids') {
+					$normalized_value = lf_ai_studio_normalize_faq_selected_ids_value($normalized_value);
+				}
 				$homepage_fields[$section_id][$field_key] = $normalized_value;
 				$homepage_fields_count++;
 				$fields_updated++;
@@ -5506,6 +5581,9 @@ function lf_apply_orchestrator_updates(array $response): array {
 				$normalized_value = lf_ai_studio_coerce_list_value($normalized_value);
 			}
 			$normalized_value = lf_ai_studio_clean_value_for_field($normalized_value, $field_type);
+			if ($type === 'faq_accordion' && $field_key === 'faq_selected_ids') {
+				$normalized_value = lf_ai_studio_normalize_faq_selected_ids_value($normalized_value);
+			}
 			$incoming_by_instance[$instance_id][$field_key] = $normalized_value;
 			$fields_updated++;
 		}
@@ -5783,6 +5861,7 @@ function lf_ai_studio_apply_faq_updates(array $payload): array {
 	}
 	$changed = [];
 	$question_to_id = [];
+	$existing_question_to_id = lf_ai_studio_build_faq_lookup_map();
 	foreach ($updates as $update) {
 		if (!is_array($update)) {
 			continue;
@@ -5801,10 +5880,13 @@ function lf_ai_studio_apply_faq_updates(array $payload): array {
 		if ($question === '' && $answer === '') {
 			continue;
 		}
-		$question_key = strtolower(trim((string) preg_replace('/\s+/', ' ', $question)));
+		$question_key = lf_ai_studio_normalize_faq_question_key($question);
 		$faq_id = isset($update['id']) ? absint($update['id']) : 0;
 		if ($faq_id <= 0 && $question_key !== '' && !empty($question_to_id[$question_key])) {
 			$faq_id = (int) $question_to_id[$question_key];
+		}
+		if ($faq_id <= 0 && $question_key !== '' && !empty($existing_question_to_id[$question_key])) {
+			$faq_id = (int) $existing_question_to_id[$question_key];
 		}
 		if ($faq_id) {
 			$post = get_post($faq_id);
@@ -5823,6 +5905,7 @@ function lf_ai_studio_apply_faq_updates(array $payload): array {
 		}
 		if ($question_key !== '') {
 			$question_to_id[$question_key] = (int) $faq_id;
+			$existing_question_to_id[$question_key] = (int) $faq_id;
 		}
 		if ($question !== '') {
 			wp_update_post(['ID' => $faq_id, 'post_title' => $question]);
