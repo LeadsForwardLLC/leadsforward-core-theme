@@ -47,6 +47,9 @@ function lf_is_placeholder_attachment_candidate(int $attachment_id): bool {
 	if (strpos($stack, 'leadsforward placeholder') !== false || strpos($stack, 'leadsforward default placeholder image') !== false) {
 		return true;
 	}
+	if (strpos($stack, 'placeholder') !== false && (strpos($stack, 'leadsforward') !== false || strpos($stack, 'leadforward') !== false || (strpos($stack, 'lead') !== false && strpos($stack, 'forw') !== false))) {
+		return true;
+	}
 	return strpos($filename, 'leadsforward-placeholder') !== false || strpos($filename, 'leadforward-placeholder') !== false;
 }
 
@@ -60,10 +63,12 @@ function lf_find_existing_placeholder_attachment_ids(): array {
 		'post_type' => 'attachment',
 		'post_status' => 'inherit',
 		'post_mime_type' => 'image',
-		'posts_per_page' => 50,
+		'posts_per_page' => -1,
 		'orderby' => 'date',
 		'order' => 'DESC',
+		's' => 'placeholder',
 		'fields' => 'ids',
+		'no_found_rows' => true,
 	]);
 	$found = [];
 	foreach ($candidates as $candidate_id) {
@@ -81,12 +86,15 @@ function lf_find_existing_placeholder_attachment_ids(): array {
 /**
  * Keep one placeholder attachment and remove duplicate copies.
  */
-function lf_dedupe_placeholder_attachments(array $attachment_ids): int {
+function lf_dedupe_placeholder_attachments(array $attachment_ids, int $preferred_keep_id = 0): int {
 	$attachment_ids = array_values(array_unique(array_map('intval', $attachment_ids)));
 	if (empty($attachment_ids)) {
 		return 0;
 	}
 	$keep_id = (int) $attachment_ids[0];
+	if ($preferred_keep_id > 0 && in_array($preferred_keep_id, $attachment_ids, true)) {
+		$keep_id = $preferred_keep_id;
+	}
 	if ($keep_id <= 0) {
 		return 0;
 	}
@@ -113,6 +121,17 @@ function lf_seed_placeholder_image(): int {
 
 	$existing = (int) get_option(LF_PLACEHOLDER_IMAGE_OPTION, 0);
 	if ($existing && get_post($existing)) {
+		$existing_attachments = lf_find_existing_placeholder_attachment_ids();
+		if (!empty($existing_attachments)) {
+			if (!in_array($existing, $existing_attachments, true) && lf_is_placeholder_attachment_candidate($existing)) {
+				$existing_attachments[] = $existing;
+			}
+			$canonical = lf_dedupe_placeholder_attachments($existing_attachments, $existing);
+			if ($canonical > 0 && $canonical !== $existing) {
+				update_option(LF_PLACEHOLDER_IMAGE_OPTION, $canonical, true);
+				$existing = $canonical;
+			}
+		}
 		delete_transient(LF_PLACEHOLDER_IMAGE_SEED_LOCK);
 		return $existing;
 	}
@@ -160,7 +179,7 @@ function lf_seed_placeholder_image(): int {
 	if (!in_array((int) $attachment_id, $all_placeholders, true)) {
 		$all_placeholders[] = (int) $attachment_id;
 	}
-	$final_id = lf_dedupe_placeholder_attachments($all_placeholders);
+	$final_id = lf_dedupe_placeholder_attachments($all_placeholders, (int) $attachment_id);
 	update_option(LF_PLACEHOLDER_IMAGE_OPTION, (int) $final_id, true);
 	delete_transient(LF_PLACEHOLDER_IMAGE_SEED_LOCK);
 	return (int) $final_id;

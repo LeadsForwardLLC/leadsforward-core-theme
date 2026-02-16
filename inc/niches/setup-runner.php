@@ -419,14 +419,24 @@ function lf_wizard_data_from_entity(): array {
 	$entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
 	$areas = is_array($entity['service_areas'] ?? null) ? $entity['service_areas'] : [];
 	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
+	$homepage_city = sanitize_text_field((string) get_option('lf_homepage_city', ''));
+	if ($homepage_city === '') {
+		$seed = lf_wizard_primary_city(['service_areas' => $areas]);
+		$homepage_city = sanitize_text_field((string) $seed);
+	}
 	$blueprints = [
 		'niche_slug' => $niche_slug ?: 'general',
 		'business_name' => (string) ($entity['name'] ?? get_bloginfo('name')),
 		'business_phone' => (string) ($entity['phone_display'] ?? ''),
+		'business_phone_primary' => (string) ($entity['phone_primary'] ?? ($entity['phone_display'] ?? '')),
+		'business_phone_display' => (string) ($entity['phone_display'] ?? ''),
 		'business_email' => (string) ($entity['email'] ?? ''),
 		'business_address' => (string) ($entity['address'] ?? ''),
+		'business_hours' => (string) get_option('lf_business_hours', ''),
+		'homepage_city' => $homepage_city,
 		'service_areas' => $areas,
 	];
+	return $blueprints;
 }
 
 function lf_wizard_regenerate_legal_pages(array $data): array {
