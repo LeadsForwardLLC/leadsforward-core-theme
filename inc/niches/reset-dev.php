@@ -326,4 +326,12 @@ function lf_dev_reset_run(): void {
 	]);
 	$log = array_slice($log, 0, LF_DEV_RESET_LOG_MAX);
 	update_option(LF_DEV_RESET_OPTION_LOG, $log);
+
+	// Keep Media Library placeholder deterministic after each reset.
+	if (function_exists('lf_cleanup_placeholder_duplicates')) {
+		lf_cleanup_placeholder_duplicates(true);
+	}
+	if (function_exists('lf_seed_placeholder_image')) {
+		lf_seed_placeholder_image();
+	}
 }
