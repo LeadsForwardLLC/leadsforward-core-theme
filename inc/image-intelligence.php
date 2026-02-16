@@ -1133,10 +1133,7 @@ function lf_image_intelligence_apply_vision_annotations(array $annotations): arr
 			lf_image_intelligence_rename_attachment_file($attachment_id, $entry['recommended_filename']);
 		}
 		if ($entry['alt_text'] !== '') {
-			$current_alt = trim((string) get_post_meta($attachment_id, '_wp_attachment_image_alt', true));
-			if (lf_image_intelligence_alt_needs_upgrade($current_alt)) {
-				update_post_meta($attachment_id, '_wp_attachment_image_alt', $entry['alt_text']);
-			}
+			update_post_meta($attachment_id, '_wp_attachment_image_alt', $entry['alt_text']);
 		}
 		$post_updates = ['ID' => $attachment_id];
 		$has_post_update = false;

@@ -4901,6 +4901,32 @@ function lf_ai_studio_maybe_limit_pill_text(string $line, string $field_key): st
 	return implode(' ', $words);
 }
 
+function lf_ai_studio_maybe_title_case_heading(string $value): string {
+	$value = trim((string) preg_replace('/\s+/u', ' ', $value));
+	if ($value === '') {
+		return '';
+	}
+	if (!preg_match('/[A-Z]/', $value)) {
+		return ucwords($value);
+	}
+	return $value;
+}
+
+function lf_ai_studio_limit_cta_label(string $value, int $max_words = 6): string {
+	$value = trim((string) preg_replace('/\s+/u', ' ', $value));
+	if ($value === '') {
+		return '';
+	}
+	$words = preg_split('/\s+/u', $value);
+	$words = is_array($words) ? array_values(array_filter($words, static function ($word): bool {
+		return trim((string) $word) !== '';
+	})) : [];
+	if (count($words) > $max_words) {
+		$words = array_slice($words, 0, $max_words);
+	}
+	return implode(' ', $words);
+}
+
 function lf_ai_studio_clean_value_for_field($value, string $field_type, string $field_key = '') {
 	if (!is_string($value) && !is_array($value)) {
 		return $value;
@@ -4922,6 +4948,42 @@ function lf_ai_studio_clean_value_for_field($value, string $field_type, string $
 		return implode("\n", $clean_lines);
 	}
 	return lf_ai_studio_clean_text_field_value((string) $value);
+}
+
+function lf_ai_studio_enforce_section_quality(array $settings, string $section_type, array $registry): array {
+	$schema = is_array($registry[$section_type] ?? null) ? $registry[$section_type] : [];
+	$fields = is_array($schema['fields'] ?? null) ? $schema['fields'] : [];
+	if (empty($fields)) {
+		return $settings;
+	}
+	foreach ($fields as $field) {
+		if (!is_array($field)) {
+			continue;
+		}
+		$field_key = (string) ($field['key'] ?? '');
+		$field_type = (string) ($field['type'] ?? '');
+		if ($field_key === '' || !array_key_exists($field_key, $settings)) {
+			continue;
+		}
+		$value = lf_ai_studio_normalize_value($settings[$field_key]);
+		if ($field_type === 'list') {
+			$value = lf_ai_studio_coerce_list_value($value);
+		}
+		$value = lf_ai_studio_clean_value_for_field($value, $field_type, $field_key);
+		if (is_string($value)) {
+			if (strpos($field_key, 'headline') !== false || strpos($field_key, 'heading') !== false) {
+				$value = lf_ai_studio_maybe_title_case_heading($value);
+			}
+			if (in_array($field_key, ['cta_primary_override', 'cta_secondary_override'], true)) {
+				$value = lf_ai_studio_limit_cta_label($value, 6);
+			}
+		}
+		if ($section_type === 'faq_accordion' && $field_key === 'faq_selected_ids') {
+			$value = lf_ai_studio_normalize_faq_selected_ids_value($value);
+		}
+		$settings[$field_key] = $value;
+	}
+	return $settings;
 }
 
 function lf_ai_studio_normalize_faq_question_key(string $question): string {
@@ -5543,6 +5605,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 				$homepage_image_context,
 				$assigned_images
 			);
+			$fields = lf_ai_studio_enforce_section_quality($fields, $section_id, $registry);
 			$config[$section_id] = array_merge(
 				$config[$section_id],
 				lf_sections_sanitize_settings($section_id, $fields)
@@ -5563,11 +5626,16 @@ function lf_apply_orchestrator_updates(array $response): array {
 				$assigned_images
 			);
 			if (!empty($injected)) {
-				$config[$section_id] = array_merge(
-					$existing,
-					lf_sections_sanitize_settings((string) $section_id, $injected)
-				);
+				$injected = lf_ai_studio_enforce_section_quality($injected, (string) $section_id, $registry);
+				$config[$section_id] = array_merge($existing, lf_sections_sanitize_settings((string) $section_id, $injected));
 			}
+		}
+		foreach ($config as $section_id => $section_settings) {
+			if (!is_array($section_settings) || !isset($registry[$section_id])) {
+				continue;
+			}
+			$normalized_settings = lf_ai_studio_enforce_section_quality($section_settings, (string) $section_id, $registry);
+			$config[$section_id] = array_merge($section_settings, lf_sections_sanitize_settings((string) $section_id, $normalized_settings));
 		}
 		if ($config !== $homepage_config) {
 			$staged_homepage_config = $config;
@@ -5703,7 +5771,9 @@ function lf_apply_orchestrator_updates(array $response): array {
 			$section_registry = isset($registry[$type]) && is_array($registry[$type]) ? $registry[$type] : [];
 			$filled_settings = lf_ai_studio_fill_generic_section_copy($merged_settings, $post, $type, $section_registry);
 			$link_result = lf_ai_studio_orchestrate_internal_links_for_settings($filled_settings, $type, $registry, $post);
-			$sections[$instance_id]['settings'] = is_array($link_result['settings'] ?? null) ? $link_result['settings'] : $filled_settings;
+			$final_settings = is_array($link_result['settings'] ?? null) ? $link_result['settings'] : $filled_settings;
+			$final_settings = lf_ai_studio_enforce_section_quality($final_settings, $type, $registry);
+			$sections[$instance_id]['settings'] = lf_sections_sanitize_settings($type, $final_settings);
 		}
 		$staged_post_meta_updates[$post_id] = [
 			'order' => $order,
