@@ -546,11 +546,12 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		$media_annotations = $payload['vision']['media_annotations'] ?? $payload['image_analysis']['media_annotations'] ?? [];
 	}
 	$stored_request = get_post_meta($job_id, 'lf_ai_job_request', true);
+	$strict_media_annotations = get_option('lf_ai_require_media_annotations', '0') === '1';
 	$annotation_required = is_array($stored_request) && !empty($stored_request['media_annotation_required']);
 	$annotation_min_expected = is_array($stored_request)
 		? max(0, (int) ($stored_request['media_annotation_min_expected'] ?? 0))
 		: 0;
-	if ($annotation_required && $annotation_min_expected > 0) {
+	if ($strict_media_annotations && $annotation_required && $annotation_min_expected > 0) {
 		$annotation_count = is_array($media_annotations) ? count($media_annotations) : 0;
 		if ($annotation_count < $annotation_min_expected) {
 			$missing_error = sprintf(
