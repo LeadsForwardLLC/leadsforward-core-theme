@@ -241,6 +241,7 @@ function lf_dev_reset_run(): void {
 	delete_option('lf_ai_edit_log');
 	delete_option('lf_ai_inline_dom_overrides_homepage');
 	delete_option('lf_ai_inline_image_overrides_homepage');
+	delete_option('lf_image_upload_counter');
 	delete_option('lf_homepage_city');
 	delete_option('lf_homepage_keywords');
 	delete_option('lf_homepage_variation_seed');

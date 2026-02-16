@@ -4875,6 +4875,7 @@ function lf_ai_studio_strip_link_markup(string $text): string {
 
 function lf_ai_studio_clean_text_field_value(string $text): string {
 	$text = lf_ai_studio_strip_link_markup($text);
+	$text = wp_strip_all_tags((string) $text);
 	$text = preg_replace('/https?:\/\/[^\s<>"\']+/iu', '', $text);
 	$text = preg_replace('/\s+/u', ' ', (string) $text);
 	return trim((string) $text);
@@ -4927,6 +4928,42 @@ function lf_ai_studio_limit_cta_label(string $value, int $max_words = 6): string
 	return implode(' ', $words);
 }
 
+function lf_ai_studio_trim_to_words(string $value, int $max_words): string {
+	$value = trim((string) preg_replace('/\s+/u', ' ', $value));
+	if ($value === '' || $max_words <= 0) {
+		return $value;
+	}
+	$words = preg_split('/\s+/u', $value);
+	$words = is_array($words) ? array_values(array_filter($words, static function ($word): bool {
+		return trim((string) $word) !== '';
+	})) : [];
+	if (count($words) <= $max_words) {
+		return $value;
+	}
+	return implode(' ', array_slice($words, 0, $max_words));
+}
+
+function lf_ai_studio_limit_list_items(string $value, int $max_items): string {
+	$lines = preg_split('/\r\n|\r|\n/', (string) $value);
+	$lines = is_array($lines) ? array_values(array_filter(array_map('trim', $lines), static function ($line): bool {
+		return $line !== '';
+	})) : [];
+	if ($max_items > 0 && count($lines) > $max_items) {
+		$lines = array_slice($lines, 0, $max_items);
+	}
+	return implode("\n", $lines);
+}
+
+function lf_ai_studio_default_process_steps(): string {
+	return implode("\n", [
+		'Consultation And Site Review: We review goals, current conditions, and project priorities.',
+		'Scope And Plan: You receive a clear written scope with timeline expectations.',
+		'Preparation: Materials, site protection, and scheduling are finalized before work starts.',
+		'Execution: Work is completed with quality checks and clear progress communication.',
+		'Final Walkthrough: We review results, answer questions, and confirm next steps.',
+	]);
+}
+
 function lf_ai_studio_clean_value_for_field($value, string $field_type, string $field_key = '') {
 	if (!is_string($value) && !is_array($value)) {
 		return $value;
@@ -4974,8 +5011,26 @@ function lf_ai_studio_enforce_section_quality(array $settings, string $section_t
 			if (strpos($field_key, 'headline') !== false || strpos($field_key, 'heading') !== false) {
 				$value = lf_ai_studio_maybe_title_case_heading($value);
 			}
+			if ($field_key === 'hero_headline') {
+				$value = lf_ai_studio_trim_to_words($value, 12);
+			} elseif ($field_key === 'section_heading' || $field_key === 'cta_headline') {
+				$value = lf_ai_studio_trim_to_words($value, 14);
+			} elseif ($field_key === 'hero_subheadline' || $field_key === 'section_intro') {
+				$value = lf_ai_studio_trim_to_words($value, 32);
+			}
 			if (in_array($field_key, ['cta_primary_override', 'cta_secondary_override'], true)) {
 				$value = lf_ai_studio_limit_cta_label($value, 6);
+			}
+		}
+		if ($field_type === 'list' && is_string($value)) {
+			if (in_array($field_key, ['trust_badges', 'hero_proof_bullets', 'cta_bullets'], true)) {
+				$value = lf_ai_studio_limit_list_items($value, 4);
+			}
+			if ($field_key === 'process_steps') {
+				$value = lf_ai_studio_limit_list_items($value, 5);
+				if (trim($value) === '') {
+					$value = lf_ai_studio_default_process_steps();
+				}
 			}
 		}
 		if ($section_type === 'faq_accordion' && $field_key === 'faq_selected_ids') {
