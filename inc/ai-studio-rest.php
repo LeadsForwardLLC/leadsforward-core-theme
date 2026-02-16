@@ -545,6 +545,32 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 	if (!is_array($media_annotations) || empty($media_annotations)) {
 		$media_annotations = $payload['vision']['media_annotations'] ?? $payload['image_analysis']['media_annotations'] ?? [];
 	}
+	$stored_request = get_post_meta($job_id, 'lf_ai_job_request', true);
+	$annotation_required = is_array($stored_request) && !empty($stored_request['media_annotation_required']);
+	$annotation_min_expected = is_array($stored_request)
+		? max(0, (int) ($stored_request['media_annotation_min_expected'] ?? 0))
+		: 0;
+	if ($annotation_required && $annotation_min_expected > 0) {
+		$annotation_count = is_array($media_annotations) ? count($media_annotations) : 0;
+		if ($annotation_count < $annotation_min_expected) {
+			$missing_error = sprintf(
+				/* translators: 1: minimum expected annotations, 2: actual count */
+				__('Missing required media_annotations in callback (expected at least %1$d, got %2$d). Ensure n8n vision analysis is enabled and mapped to media_annotations.', 'leadsforward-core'),
+				$annotation_min_expected,
+				$annotation_count
+			);
+			update_post_meta($job_id, 'lf_ai_job_status', 'failed');
+			update_post_meta($job_id, 'lf_ai_job_error', $missing_error);
+			if (function_exists('lf_ai_autonomy_mark_generation_failed')) {
+				lf_ai_autonomy_mark_generation_failed($job_id, 'media_annotations_missing');
+			}
+			return new \WP_REST_Response([
+				'error' => 'media_annotations_missing',
+				'messages' => [$missing_error],
+				'job_id' => $job_id,
+			], 400);
+		}
+	}
 	if (is_array($media_annotations) && !empty($media_annotations) && function_exists('lf_image_intelligence_apply_vision_annotations')) {
 		$vision_result = lf_image_intelligence_apply_vision_annotations($media_annotations);
 		update_post_meta($job_id, 'lf_ai_job_media_annotations_applied', (int) ($vision_result['applied'] ?? 0));

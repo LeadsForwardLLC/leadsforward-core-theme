@@ -1404,6 +1404,9 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	if (function_exists('lf_image_intelligence_build_media_candidates_for_vision')) {
 		$request['media_library_candidates'] = lf_image_intelligence_build_media_candidates_for_vision(250);
 	}
+	$media_candidate_count = is_array($request['media_library_candidates'] ?? null) ? count($request['media_library_candidates']) : 0;
+	$request['media_annotation_required'] = $media_candidate_count > 0;
+	$request['media_annotation_min_expected'] = $media_candidate_count > 0 ? 1 : 0;
 	update_post_meta($job_id, 'lf_ai_job_status', 'queued');
 	update_post_meta($job_id, 'lf_ai_job_request', $request);
 	update_post_meta($job_id, 'lf_ai_job_request_id', $request_id);
@@ -4877,6 +4880,9 @@ function lf_ai_studio_clean_text_field_value(string $text): string {
 	$text = lf_ai_studio_strip_link_markup($text);
 	$text = wp_strip_all_tags((string) $text);
 	$text = preg_replace('/https?:\/\/[^\s<>"\']+/iu', '', $text);
+	$text = preg_replace('/[<>]+/u', ' ', (string) $text);
+	$text = preg_replace('/\s*\/\s*a\b/iu', ' ', (string) $text);
+	$text = preg_replace('/\b[aA]\s+href\s*=\s*[^ ]+/u', ' ', (string) $text);
 	$text = preg_replace('/\s+/u', ' ', (string) $text);
 	return trim((string) $text);
 }
