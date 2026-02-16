@@ -30,6 +30,19 @@ function lf_dev_reset_delete_posts_by_type(string $post_type): void {
 	}
 }
 
+function lf_dev_reset_delete_all_attachments(): void {
+	$attachment_ids = get_posts([
+		'post_type'      => 'attachment',
+		'post_status'    => 'any',
+		'posts_per_page' => -1,
+		'fields'         => 'ids',
+		'no_found_rows'  => true,
+	]);
+	foreach ((array) $attachment_ids as $attachment_id) {
+		wp_delete_attachment((int) $attachment_id, true);
+	}
+}
+
 function lf_dev_reset_delete_all_terms(string $taxonomy): void {
 	if (!taxonomy_exists($taxonomy)) {
 		return;
@@ -166,6 +179,7 @@ function lf_dev_reset_run(): void {
 	lf_dev_reset_delete_posts_by_type('lf_faq');
 	lf_dev_reset_delete_posts_by_type('lf_testimonial');
 	lf_dev_reset_delete_posts_by_type('lf_ai_job');
+	lf_dev_reset_delete_all_attachments();
 	lf_dev_reset_delete_all_terms('lf_project_type');
 
 	$menus = wp_get_nav_menus();
@@ -349,11 +363,4 @@ function lf_dev_reset_run(): void {
 	$log = array_slice($log, 0, LF_DEV_RESET_LOG_MAX);
 	update_option(LF_DEV_RESET_OPTION_LOG, $log);
 
-	// Keep Media Library placeholder deterministic after each reset.
-	if (function_exists('lf_cleanup_placeholder_duplicates')) {
-		lf_cleanup_placeholder_duplicates(true);
-	}
-	if (function_exists('lf_seed_placeholder_image')) {
-		lf_seed_placeholder_image();
-	}
 }
