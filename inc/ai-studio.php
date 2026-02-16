@@ -1388,6 +1388,13 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	}
 	$request['request_id'] = $request_id;
 	$request['job_id'] = $job_id;
+	$parent_job_id = (int) get_post_meta($job_id, 'lf_ai_job_parent', true);
+	if ($parent_job_id > 0) {
+		$request['parent_job_id'] = $parent_job_id;
+	}
+	$is_repair_phase = !empty($request['repair_only']) || ((int) get_post_meta($job_id, 'lf_ai_job_repair', true) === 1);
+	$request['run_phase'] = $is_repair_phase ? 'repair' : 'initial';
+	$request['repair_attempt'] = $is_repair_phase ? max(1, (int) ($request['repair_attempt'] ?? 1)) : 0;
 	$request['callback_url'] = $callback_url;
 	$request['callback_auth_mode'] = function_exists('lf_ai_studio_auth_mode') ? lf_ai_studio_auth_mode() : 'compatibility';
 	$request['callback_hmac_tolerance_seconds'] = function_exists('lf_ai_studio_hmac_tolerance_seconds') ? lf_ai_studio_hmac_tolerance_seconds() : 300;
@@ -1397,6 +1404,7 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	update_post_meta($job_id, 'lf_ai_job_status', 'queued');
 	update_post_meta($job_id, 'lf_ai_job_request', $request);
 	update_post_meta($job_id, 'lf_ai_job_request_id', $request_id);
+	update_post_meta($job_id, 'lf_ai_job_run_phase', $request['run_phase']);
 	update_post_meta($job_id, 'lf_ai_job_request_hash', hash('sha256', (string) wp_json_encode($request)));
 	lf_ai_autonomy_mark_generation_started($job_id);
 	$log_payload = [
@@ -5701,6 +5709,10 @@ function lf_ai_studio_maybe_requeue_from_audit(int $job_id, array $report): arra
 	if (!$auto || !$job_id) {
 		return [];
 	}
+	$is_repair_job = (int) get_post_meta($job_id, 'lf_ai_job_repair', true) === 1;
+	if ($is_repair_job) {
+		return [];
+	}
 	$pages = $report['pages'] ?? [];
 	if (!is_array($pages) || empty($pages)) {
 		return [];
@@ -5715,24 +5727,88 @@ function lf_ai_studio_maybe_requeue_from_audit(int $job_id, array $report): arra
 	if (!$has_issues) {
 		return [];
 	}
-	$requeue_count = (int) get_post_meta($job_id, 'lf_ai_job_requeue_count', true);
-	if ($requeue_count >= 1) {
+	$request = get_post_meta($job_id, 'lf_ai_job_request', true);
+	if (is_array($request) && !empty($request['repair_only'])) {
 		return [];
 	}
-	$request = get_post_meta($job_id, 'lf_ai_job_request', true);
+	$request_id = '';
+	if (is_array($request) && !empty($request['request_id'])) {
+		$request_id = sanitize_text_field((string) $request['request_id']);
+	}
+	if ($request_id === '') {
+		$request_id = sanitize_text_field((string) get_post_meta($job_id, 'lf_ai_job_request_id', true));
+	}
+	if ($request_id === '') {
+		return [];
+	}
+	$repair_lock_key = 'lf_ai_repair_lock_' . md5($request_id);
+	if (get_transient($repair_lock_key)) {
+		return [];
+	}
+	set_transient($repair_lock_key, 1, 10 * MINUTE_IN_SECONDS);
+	$root_job_id = $job_id;
+	$cursor = $job_id;
+	$guard = 0;
+	while ($cursor > 0 && $guard < 20) {
+		$parent = (int) get_post_meta($cursor, 'lf_ai_job_parent', true);
+		if ($parent <= 0 || $parent === $cursor) {
+			break;
+		}
+		$root_job_id = $parent;
+		$cursor = $parent;
+		$guard++;
+	}
+	$requeue_count = (int) get_post_meta($root_job_id, 'lf_ai_job_requeue_count', true);
+	if ($requeue_count >= 1) {
+		delete_transient($repair_lock_key);
+		return [];
+	}
+	$existing_repairs = get_posts([
+		'post_type' => LF_AI_STUDIO_JOB_CPT,
+		'post_status' => 'publish',
+		'posts_per_page' => 5,
+		'fields' => 'ids',
+		'meta_query' => [
+			[
+				'key' => 'lf_ai_job_parent',
+				'value' => $root_job_id,
+			],
+			[
+				'key' => 'lf_ai_job_repair',
+				'value' => 1,
+			],
+		],
+	]);
+	if (!empty($existing_repairs)) {
+		foreach ($existing_repairs as $existing_repair_id) {
+			$status = (string) get_post_meta((int) $existing_repair_id, 'lf_ai_job_status', true);
+			if (in_array($status, ['queued', 'running', 'done'], true)) {
+				delete_transient($repair_lock_key);
+				return [];
+			}
+		}
+	}
 	$repair_request = lf_ai_studio_build_repair_request($report, is_array($request) ? $request : []);
 	if (!is_array($repair_request) || !empty($repair_request['error'])) {
+		delete_transient($repair_lock_key);
 		return [];
 	}
+	$repair_request['request_id'] = $request_id;
+	$repair_request['run_phase'] = 'repair';
+	$repair_request['repair_attempt'] = 1;
 	$new_job_id = lf_ai_studio_create_job($repair_request);
 	if (!$new_job_id) {
+		delete_transient($repair_lock_key);
 		return [];
 	}
-	update_post_meta($new_job_id, 'lf_ai_job_parent', $job_id);
+	update_post_meta($new_job_id, 'lf_ai_job_parent', $root_job_id);
 	update_post_meta($new_job_id, 'lf_ai_job_repair', 1);
 	update_post_meta($new_job_id, 'lf_ai_job_requeue_count', $requeue_count + 1);
+	update_post_meta($new_job_id, 'lf_ai_job_run_phase', 'repair');
+	update_post_meta($root_job_id, 'lf_ai_job_requeue_count', $requeue_count + 1);
 	update_post_meta($job_id, 'lf_ai_job_requeue_count', $requeue_count + 1);
 	$result = lf_ai_studio_send_request($repair_request, $new_job_id);
+	delete_transient($repair_lock_key);
 	return ['job_id' => $new_job_id, 'result' => $result];
 }
 

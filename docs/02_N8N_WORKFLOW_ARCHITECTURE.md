@@ -37,11 +37,10 @@ Webhook
    - Only homepage generates FAQs.
    - Non-homepage pages receive a deterministic slice from the homepage FAQ pool.
 10. **Global Completeness + Blog Gate** (run once for all generated items):
-   - validates generation scope coverage (services, service areas, core pages, blog scope).
-   - enforces minimum content volume per page type.
-   - rejects placeholder/generic phrases.
-   - enforces blog blueprint count floor (`>= 5` when blog scope is enabled).
-   - emits `quality_warnings` for observability instead of hard-failing callback (WordPress fallback repair remains authoritative).
+   - validates scope coverage and homepage presence.
+   - enforces minimum content quality and volume checks.
+   - emits `quality_warnings` for observability.
+   - allows partial non-homepage scope mismatches as warnings (homepage remains critical).
 11. **Merge Blueprint Results** collects all page updates.
 12. **Callback to WP** posts the merged updates to the WP orchestrator endpoint.
 
@@ -50,16 +49,29 @@ Webhook
 - **Research generation LLM**: `gpt-5.2-chat-latest`, `maxTokens=3000`, `temperature=0.5`
 
 ## Progress Reporting
-Progress updates are sent to the WP `/progress` endpoint at key milestones (research ready, content generation start, merge).
+Progress updates are sent to the WP `/progress` endpoint at key milestones (research ready, generation, merge/finalize).
 
-## Callback Security Contract (Phase 1)
-- Callback and progress requests are HMAC-signed using shared secret.
-- Required headers:
-  - `X-LF-Timestamp` (unix seconds)
-  - `X-LF-Nonce` (uuid)
-  - `X-LF-Signature` (`hex(hmac_sha256(secret, timestamp + "\\n" + nonce + "\\n" + raw_body))`)
-- WordPress validates timestamp window and nonce replay protection.
-- Compatibility mode can temporarily allow legacy bearer auth while migrating n8n nodes.
+Current progress body fields:
+- `job_id`
+- `request_id`
+- `status`
+- `percent`
+- `step`
+- `message`
+- `run_phase` (`initial` or `repair`)
+
+## Callback/Auth Contract (Current)
+- n8n callback/progress currently use compatibility auth (`Authorization: Bearer ...`) in this environment.
+- WordPress validates callback binding using:
+  - `job_id`
+  - `request_id`
+  - payload hash idempotency checks
+- HMAC mode remains supported on WP side, but compatibility mode is the active default for this workflow export.
+
+## Execution Phases
+- `initial`: primary full generation run.
+- `repair`: targeted requeue pass from WP audit when needed.
+- The same `request_id` is preserved across phases for traceability.
 
 ## Why This Is Layered
 - n8n is the first quality gate and catches low-quality output before callback.

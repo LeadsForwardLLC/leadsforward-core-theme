@@ -1,5 +1,7 @@
 # AI Context
 
+For full architecture and operations navigation, start with `docs/README.md`.
+
 ## Image Naming Strategy
 
 Use descriptive filenames so deterministic matching can reliably map Media Library assets to sections.
