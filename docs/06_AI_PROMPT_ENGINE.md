@@ -10,6 +10,11 @@ System message (theme)
 -> LLM -> JSON updates
 ```
 
+### Blueprint Context Enhancements
+- Each section now includes `section_label`, `intent`, optional `purpose`, plus `field_labels` and `field_types` for every `allowed_field_keys`.
+- Page-level context includes `page_title`, `page_slug`, `page_excerpt`, and optional `page_template` for pages.
+- Service/service-area blueprints include `service` or `service_area` context (title/slug + local metadata).
+
 ## System Message
 The system message is generated in `lf_ai_studio_llm_system_message()` and enforces:
 - JSON-only output

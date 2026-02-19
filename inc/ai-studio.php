@@ -3414,6 +3414,7 @@ function lf_ai_studio_llm_system_message(): string {
 		'Return JSON only. No markdown, no commentary.',
 		'HTML is allowed only inside richtext fields (use <p>, <ul>, <li>, <a>).',
 		'Use only allowed_field_keys. Do not invent fields.',
+		'If section.intent, section.purpose, field_labels, or field_types are provided in the blueprint, use them to shape content appropriately.',
 		'Headlines: never use dash or hyphen separators. Sentence case or title case only. No trailing punctuation unless a question mark. Hero headline max 12 words.',
 		'Benefits: 15-35 words each, max 2 sentences per benefit. No dash separators in benefit titles.',
 		'Internal linking: include 1-2 internal links only in richtext/body fields using internal_links list. Never add links in headlines, subheadlines, intros, trust bars, chips, bullets, labels, or CTA button text.',
@@ -3589,6 +3590,11 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 	$hero_variant = isset($config['hero']['variant']) ? (string) $config['hero']['variant'] : 'default';
 	$variation_seed = lf_homepage_variation_seed();
+	$front_id = (int) get_option('page_on_front');
+	$page_title = $front_id ? get_the_title($front_id) : '';
+	$page_title = is_string($page_title) ? $page_title : '';
+	$page_slug = $front_id ? (string) get_post_field('post_name', $front_id) : 'home';
+	$page_excerpt = $front_id ? (string) get_post_field('post_excerpt', $front_id) : '';
 
 	$sections = [];
 	foreach ($order as $section_id) {
@@ -3616,13 +3622,18 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 		}
 		$section = $config[$section_id] ?? [];
 		$allowed_keys = lf_ai_studio_homepage_allowed_field_keys($section_id, $schema);
+		$field_meta = lf_ai_studio_section_field_meta($schema, $allowed_keys);
 		$blueprint_sections[] = [
 			'section_id' => $section_id,
 			'section_type' => lf_ai_studio_homepage_section_type($section_id),
 			'intent' => (string) ($section['section_intent'] ?? ''),
+			'purpose' => (string) ($section['section_purpose'] ?? ''),
+			'section_label' => (string) ($schema['label'] ?? ''),
 			// Long-form density expansion – Step 3
 			'length_targets' => lf_ai_studio_section_length_targets(lf_ai_studio_homepage_section_type($section_id), 'homepage'),
 			'allowed_field_keys' => $allowed_keys,
+			'field_labels' => $field_meta['labels'],
+			'field_types' => $field_meta['types'],
 		];
 	}
 	if (empty($order) || empty($blueprint_sections)) {
@@ -3656,6 +3667,9 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 		'blueprint' => [
 			'page' => 'homepage',
 			'page_intent' => 'homepage',
+			'page_title' => $page_title,
+			'page_slug' => $page_slug,
+			'page_excerpt' => $page_excerpt,
 			'hero_variant' => $hero_variant,
 			'sections' => $blueprint_sections,
 			'order' => $order,
@@ -3691,6 +3705,11 @@ function lf_ai_studio_build_default_homepage_blueprint(array $manifest = []): ar
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 	$hero_variant = isset($config['hero']['variant']) ? (string) $config['hero']['variant'] : 'default';
 	$blueprint_sections = [];
+	$front_id = (int) get_option('page_on_front');
+	$page_title = $front_id ? get_the_title($front_id) : '';
+	$page_title = is_string($page_title) ? $page_title : '';
+	$page_slug = $front_id ? (string) get_post_field('post_name', $front_id) : 'home';
+	$page_excerpt = $front_id ? (string) get_post_field('post_excerpt', $front_id) : '';
 	foreach ($order as $section_id) {
 		$schema = $registry[$section_id] ?? null;
 		if (!is_array($schema)) {
@@ -3698,12 +3717,17 @@ function lf_ai_studio_build_default_homepage_blueprint(array $manifest = []): ar
 		}
 		$section = $config[$section_id] ?? [];
 		$allowed_keys = lf_ai_studio_homepage_allowed_field_keys($section_id, $schema);
+		$field_meta = lf_ai_studio_section_field_meta($schema, $allowed_keys);
 		$blueprint_sections[] = [
 			'section_id' => $section_id,
 			'section_type' => lf_ai_studio_homepage_section_type($section_id),
 			'intent' => (string) ($section['section_intent'] ?? ''),
+			'purpose' => (string) ($section['section_purpose'] ?? ''),
+			'section_label' => (string) ($schema['label'] ?? ''),
 			'length_targets' => lf_ai_studio_section_length_targets(lf_ai_studio_homepage_section_type($section_id), 'homepage'),
 			'allowed_field_keys' => $allowed_keys,
+			'field_labels' => $field_meta['labels'],
+			'field_types' => $field_meta['types'],
 		];
 	}
 	if (empty($order) || empty($blueprint_sections)) {
@@ -3712,6 +3736,9 @@ function lf_ai_studio_build_default_homepage_blueprint(array $manifest = []): ar
 	return [
 		'page' => 'homepage',
 		'page_intent' => 'homepage',
+		'page_title' => $page_title,
+		'page_slug' => $page_slug,
+		'page_excerpt' => $page_excerpt,
 		'hero_variant' => $hero_variant,
 		'sections' => $blueprint_sections,
 		'order' => $order,
@@ -3776,6 +3803,36 @@ function lf_ai_studio_homepage_allowed_field_keys(string $section_id, array $sch
 		$out[] = $key;
 	}
 	return $out;
+}
+
+function lf_ai_studio_section_field_meta(array $schema, array $allowed_keys): array {
+	$labels = [];
+	$types = [];
+	$field_defs = $schema['fields'] ?? [];
+	if (!is_array($field_defs) || empty($allowed_keys)) {
+		return ['labels' => [], 'types' => []];
+	}
+	foreach ($field_defs as $field) {
+		if (!is_array($field)) {
+			continue;
+		}
+		$key = (string) ($field['key'] ?? '');
+		if ($key === '' || !in_array($key, $allowed_keys, true)) {
+			continue;
+		}
+		$label = $field['label'] ?? '';
+		if (is_string($label) && $label !== '') {
+			$labels[$key] = $label;
+		}
+		$type = $field['type'] ?? '';
+		if (is_string($type) && $type !== '') {
+			$types[$key] = $type;
+		}
+	}
+	return [
+		'labels' => $labels,
+		'types' => $types,
+	];
 }
 
 function lf_ai_studio_homepage_allowed_fields(string $section_id, array $schema): array {
@@ -3947,25 +4004,68 @@ function lf_ai_studio_build_post_blueprint(\WP_Post $post, string $page, string 
 			continue;
 		}
 		$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+		$allowed_keys = lf_ai_studio_homepage_allowed_field_keys($type, $registry[$type]);
+		$field_meta = lf_ai_studio_section_field_meta($registry[$type], $allowed_keys);
 		$out_sections[] = [
 			'section_id' => $instance_id,
 			'section_type' => $type,
 			'intent' => (string) ($settings['section_intent'] ?? ''),
+			'purpose' => (string) ($settings['section_purpose'] ?? ''),
+			'section_label' => (string) ($registry[$type]['label'] ?? ''),
 			// Long-form density expansion – Step 3
 			'length_targets' => lf_ai_studio_section_length_targets($type, $page),
-			'allowed_field_keys' => lf_ai_studio_homepage_allowed_field_keys($type, $registry[$type]),
+			'allowed_field_keys' => $allowed_keys,
+			'field_labels' => $field_meta['labels'],
+			'field_types' => $field_meta['types'],
 		];
 		$out_order[] = $instance_id;
 	}
+	$page_title = get_the_title($post);
+	$page_title = is_string($page_title) ? $page_title : '';
 	$blueprint = [
 		'page' => $page,
 		'post_id' => $post->ID,
 		'page_intent' => $page_intent,
 		'primary_keyword' => $primary_keyword,
+		'page_title' => $page_title,
+		'page_slug' => (string) ($post->post_name ?? ''),
+		'page_excerpt' => (string) get_post_field('post_excerpt', $post->ID),
 		'sections' => $out_sections,
 		'order' => $out_order,
 		'faq_target_range' => lf_ai_studio_faq_target_range($page),
 	];
+	if ($post->post_type === 'page') {
+		$blueprint['page_template'] = (string) get_page_template_slug($post->ID);
+	}
+	if ($page === 'service') {
+		$blueprint['service'] = [
+			'title' => (string) ($post->post_title ?? ''),
+			'slug' => (string) ($post->post_name ?? ''),
+			'short_description' => (string) get_post_meta((int) $post->ID, 'lf_service_short_desc', true),
+		];
+	}
+	if ($page === 'service_area') {
+		$service_ids = get_post_meta((int) $post->ID, 'lf_service_area_services', true);
+		if (!is_array($service_ids)) {
+			$service_ids = [];
+		}
+		$service_titles = [];
+		foreach ($service_ids as $service_id) {
+			$service_id = (int) $service_id;
+			if ($service_id > 0) {
+				$title = get_the_title($service_id);
+				if (is_string($title) && $title !== '') {
+					$service_titles[] = $title;
+				}
+			}
+		}
+		$blueprint['service_area'] = [
+			'city' => (string) ($post->post_title ?? ''),
+			'state' => (string) get_post_meta((int) $post->ID, 'lf_service_area_state', true),
+			'slug' => (string) ($post->post_name ?? ''),
+			'services' => $service_titles,
+		];
+	}
 	if ($page === 'post') {
 		$blog_post_type = (string) get_post_meta((int) $post->ID, 'lf_ai_post_format', true);
 		if ($blog_post_type !== '') {
@@ -4047,12 +4147,7 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 		if (defined('LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION')) {
 			update_option(LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION, false, true);
 		}
-		if (function_exists('lf_ai_set_inline_dom_overrides')) {
-			lf_ai_set_inline_dom_overrides('homepage', 'homepage', []);
-		}
-		if (function_exists('lf_ai_set_inline_image_overrides')) {
-			lf_ai_set_inline_image_overrides('homepage', 'homepage', []);
-		}
+		// Preserve frontend editor overrides during reseed.
 	}
 	$slugs = function_exists('lf_wizard_required_page_slugs')
 		? lf_wizard_required_page_slugs()
@@ -4115,12 +4210,7 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 			if (!$service_post instanceof \WP_Post) {
 				continue;
 			}
-			if (function_exists('lf_ai_set_inline_dom_overrides')) {
-				lf_ai_set_inline_dom_overrides('page_builder', (int) $service_post->ID, []);
-			}
-			if (function_exists('lf_ai_set_inline_image_overrides')) {
-				lf_ai_set_inline_image_overrides('page_builder', (int) $service_post->ID, []);
-			}
+			// Preserve frontend editor overrides during reseed.
 			lf_wizard_seed_pb_config((int) $service_post->ID, 'service', $data, is_array($niche) ? $niche : [], (int) $index, ['service' => (string) $service_post->post_title]);
 		}
 		$area_posts = get_posts([
@@ -4135,12 +4225,7 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 			if (!$area_post instanceof \WP_Post) {
 				continue;
 			}
-			if (function_exists('lf_ai_set_inline_dom_overrides')) {
-				lf_ai_set_inline_dom_overrides('page_builder', (int) $area_post->ID, []);
-			}
-			if (function_exists('lf_ai_set_inline_image_overrides')) {
-				lf_ai_set_inline_image_overrides('page_builder', (int) $area_post->ID, []);
-			}
+			// Preserve frontend editor overrides during reseed.
 			$area_title = trim((string) $area_post->post_title);
 			$loc = $area_title;
 			if (preg_match('/^(.+?),\s*([A-Za-z]{2})$/', $area_title, $m)) {
@@ -4164,12 +4249,7 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 			if ($page_id <= 0) {
 				continue;
 			}
-			if (function_exists('lf_ai_set_inline_dom_overrides')) {
-				lf_ai_set_inline_dom_overrides('page_builder', $page_id, []);
-			}
-			if (function_exists('lf_ai_set_inline_image_overrides')) {
-				lf_ai_set_inline_image_overrides('page_builder', $page_id, []);
-			}
+			// Preserve frontend editor overrides during reseed.
 		}
 	}
 	if (!empty($created_pages['our-services'])) {
@@ -5895,22 +5975,10 @@ function lf_apply_orchestrator_updates(array $response): array {
 	}
 	if (is_array($staged_homepage_config)) {
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $staged_homepage_config, true);
-		if (function_exists('lf_ai_set_inline_dom_overrides')) {
-			lf_ai_set_inline_dom_overrides('homepage', 'homepage', []);
-		}
-		if (function_exists('lf_ai_set_inline_image_overrides')) {
-			lf_ai_set_inline_image_overrides('homepage', 'homepage', []);
-		}
 	}
 	if (!empty($staged_post_meta_updates)) {
 		foreach ($staged_post_meta_updates as $post_id => $pb_meta) {
 			update_post_meta((int) $post_id, LF_PB_META_KEY, $pb_meta);
-			if (function_exists('lf_ai_set_inline_dom_overrides')) {
-				lf_ai_set_inline_dom_overrides('page_builder', (int) $post_id, []);
-			}
-			if (function_exists('lf_ai_set_inline_image_overrides')) {
-				lf_ai_set_inline_image_overrides('page_builder', (int) $post_id, []);
-			}
 		}
 	}
 	if (!empty($staged_featured_updates)) {

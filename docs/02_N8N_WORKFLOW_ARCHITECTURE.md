@@ -31,16 +31,14 @@ Webhook
    - a single `style_profile`
    - `primary_keyword` and `secondary_keywords` for that page
 6. **Basic LLM Chain** generates JSON for one page blueprint.
-7. **Parse + Normalize + CTA Guard** enforces JSON validity and strips global CTA fields from non-homepage pages.
-8. **Quality Gate + SEO Enforcement** ensures primary keyword coverage, injects one secondary keyword if missing, and enforces minimum word counts.
+7. **Parse + Normalize + CTA Guard** enforces JSON validity and preserves CTA fields for all pages.
+8. **Quality Gate + SEO Enforcement** is a soft gate that repairs missing keywords/phrases and appends warnings (never fails the run).
 9. **Deterministic FAQ Enforcement**:
-   - Only homepage generates FAQs.
-   - Non-homepage pages receive a deterministic slice from the homepage FAQ pool.
+   - Preserves per-page FAQ output (no cross-page injection).
+   - Normalizes FAQ answers to valid `<p>` HTML when needed.
 10. **Global Completeness + Blog Gate** (run once for all generated items):
-   - validates scope coverage and homepage presence.
-   - enforces minimum content quality and volume checks.
+   - soft gate: emits scope/quality warnings (no hard failures).
    - emits `quality_warnings` for observability.
-   - allows partial non-homepage scope mismatches as warnings (homepage remains critical).
 11. **Merge Blueprint Results** collects all page updates.
 12. **Callback to WP** posts the merged updates to the WP orchestrator endpoint.
 

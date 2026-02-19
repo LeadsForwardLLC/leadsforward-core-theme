@@ -246,7 +246,7 @@ New section type: **Centered Content** (`content_centered`) — minimal, text-on
   - Benefits: 15-35 words each, max 2 sentences, no dash separators in benefit titles.
   - Never reuse sentences across page types; follow page-specific focus rules.
   - FAQ strategy uses a global pool with per-page counts; reuse unless context requires variation.
-  - CTA strategy: homepage CTA is canonical; add one contextual sentence per page in `cta_subheadline_secondary`.
+  - CTA strategy: allow per-page CTA headlines/subheadlines; add one unique sentence per page in `cta_subheadline_secondary`.
   - Output normalization removes escaped apostrophes/backslashes before save.
 
 ---
