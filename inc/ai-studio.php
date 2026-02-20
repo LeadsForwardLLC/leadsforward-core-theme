@@ -30,8 +30,19 @@ add_action('admin_post_lf_ai_studio_run_audit', 'lf_ai_studio_handle_run_audit')
 add_action('admin_post_lf_ai_studio_regen_blog_posts', 'lf_ai_studio_handle_regen_blog_posts');
 add_action('admin_post_lf_ai_studio_save_logo', 'lf_ai_studio_handle_save_logo');
 add_action('admin_post_lf_ai_studio_images_upload', 'lf_ai_studio_handle_images_upload');
+add_action('wp_ajax_lf_ai_studio_images_upload', 'lf_ai_studio_handle_images_upload_ajax');
 add_action('wp_ajax_lf_ai_studio_job_status', 'lf_ai_studio_job_status_ajax');
 add_action('admin_enqueue_scripts', 'lf_ai_studio_assets');
+
+function lf_ai_studio_maybe_cleanup_templates(): void {
+	if (function_exists('lf_pb_cleanup_templates_once')) {
+		lf_pb_cleanup_templates_once();
+		return;
+	}
+	if (function_exists('lf_homepage_cleanup_sections_once')) {
+		lf_homepage_cleanup_sections_once();
+	}
+}
 
 function lf_ai_studio_auth_mode(): string {
 	$mode = sanitize_text_field((string) get_option('lf_ai_auth_mode', 'compatibility'));
@@ -151,6 +162,7 @@ function lf_ai_studio_assets(string $hook): void {
 		'ajaxUrl' => admin_url('admin-ajax.php'),
 		'nonce' => wp_create_nonce('lf_ai_airtable'),
 		'researchNonce' => wp_create_nonce('lf_ai_studio_research_ajax'),
+		'imagesUploadNonce' => wp_create_nonce('lf_ai_studio_images_upload'),
 		'jobStatusNonce' => wp_create_nonce('lf_ai_studio_job_status'),
 		'enabled' => !empty($airtable_settings['enabled']),
 		'strings' => [
@@ -164,6 +176,12 @@ function lf_ai_studio_assets(string $hook): void {
 			'uploading' => __('Uploading research…', 'leadsforward-core'),
 			'success' => __('Research uploaded. Ready for generation.', 'leadsforward-core'),
 			'error' => __('Research upload failed.', 'leadsforward-core'),
+		],
+		'imagesStrings' => [
+			'uploading' => __('Uploading images…', 'leadsforward-core'),
+			'success' => __('Images uploaded to Media Library.', 'leadsforward-core'),
+			'error' => __('Image upload failed.', 'leadsforward-core'),
+			'empty' => __('Please choose one or more images before uploading.', 'leadsforward-core'),
 		],
 	]);
 }
@@ -230,6 +248,15 @@ function lf_ai_studio_handle_save(): void {
 	}
 	if ($logo_id > 0 && $logo_id !== $prev_logo_id && function_exists('lf_branding_auto_from_logo')) {
 		lf_branding_auto_from_logo($logo_id);
+	}
+	if ($prev_logo_id > 0 && $prev_logo_id !== $logo_id) {
+		update_post_meta($prev_logo_id, '_lf_skip_auto_distribution', '0');
+	}
+	if ($logo_id > 0) {
+		update_post_meta($logo_id, '_lf_skip_auto_distribution', '1');
+	}
+	if (function_exists('lf_invalidate_media_index_cache')) {
+		lf_invalidate_media_index_cache();
 	}
 	update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
 	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
@@ -396,6 +423,7 @@ function lf_ai_studio_handle_generate(): void {
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_ai_studio_generate', 'lf_ai_studio_generate_nonce');
+	lf_ai_studio_maybe_cleanup_templates();
 	$result = lf_ai_studio_run_homepage_generation();
 	$redirect = admin_url('admin.php?page=lf-ops');
 	if (!empty($result['error'])) {
@@ -412,6 +440,7 @@ function lf_ai_studio_handle_retry(): void {
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_ai_studio_retry', 'lf_ai_studio_retry_nonce');
+	lf_ai_studio_maybe_cleanup_templates();
 	$job_id = isset($_GET['job_id']) ? absint($_GET['job_id']) : 0;
 	if (!$job_id) {
 		wp_safe_redirect(admin_url('admin.php?page=lf-ops&error=missing_job'));
@@ -438,6 +467,7 @@ function lf_ai_studio_handle_manifest(): void {
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_ai_studio_manifest', 'lf_ai_studio_manifest_nonce');
+	lf_ai_studio_maybe_cleanup_templates();
 	$redirect = admin_url('admin.php?page=lf-ops');
 	if (empty($_FILES['lf_site_manifest']) || !is_array($_FILES['lf_site_manifest'])) {
 		update_option('lf_ai_studio_manifest_errors', [__('Manifest file is required.', 'leadsforward-core')], false);
@@ -665,28 +695,27 @@ function lf_ai_studio_handle_save_logo(): void {
 	if ($logo_id > 0 && $logo_id !== $prev_logo_id && function_exists('lf_branding_auto_from_logo')) {
 		lf_branding_auto_from_logo($logo_id);
 	}
+	if ($prev_logo_id > 0 && $prev_logo_id !== $logo_id) {
+		update_post_meta($prev_logo_id, '_lf_skip_auto_distribution', '0');
+	}
+	if ($logo_id > 0) {
+		update_post_meta($logo_id, '_lf_skip_auto_distribution', '1');
+	}
+	if (function_exists('lf_invalidate_media_index_cache')) {
+		lf_invalidate_media_index_cache();
+	}
 	$redirect = add_query_arg('logo', '1', admin_url('admin.php?page=lf-ops'));
 	wp_safe_redirect($redirect);
 	exit;
 }
 
-function lf_ai_studio_handle_images_upload(): void {
-	if (!current_user_can('edit_theme_options')) {
-		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
-	}
-	check_admin_referer('lf_ai_studio_images_upload', 'lf_ai_studio_images_upload_nonce');
-	if (empty($_FILES['lf_manifest_images']) || !is_array($_FILES['lf_manifest_images'])) {
-		wp_safe_redirect(add_query_arg('images_error', 'missing', admin_url('admin.php?page=lf-ops')));
-		exit;
-	}
-
+function lf_ai_studio_process_images_upload(array $files): array {
 	require_once ABSPATH . 'wp-admin/includes/file.php';
 	require_once ABSPATH . 'wp-admin/includes/image.php';
 	require_once ABSPATH . 'wp-admin/includes/media.php';
 
-	$files = $_FILES['lf_manifest_images'];
-	$uploaded = 0;
-	$errors = 0;
+	$uploaded = [];
+	$errors = [];
 	$count = is_array($files['name'] ?? null) ? count($files['name']) : 0;
 	for ($i = 0; $i < $count; $i++) {
 		$name = (string) ($files['name'][$i] ?? '');
@@ -705,7 +734,7 @@ function lf_ai_studio_handle_images_upload(): void {
 		}
 		$attachment_id = media_handle_sideload($file, 0);
 		if (is_wp_error($attachment_id)) {
-			$errors++;
+			$errors[] = sprintf('%s: %s', $name, $attachment_id->get_error_message());
 			continue;
 		}
 		if (function_exists('lf_image_intelligence_finalize_uploaded_attachment')) {
@@ -714,15 +743,61 @@ function lf_ai_studio_handle_images_upload(): void {
 		if (function_exists('lf_image_intelligence_maybe_set_alt_text') && function_exists('lf_image_intelligence_upload_context_defaults')) {
 			lf_image_intelligence_maybe_set_alt_text((int) $attachment_id, lf_image_intelligence_upload_context_defaults());
 		}
-		$uploaded++;
+		$uploaded[] = [
+			'id' => (int) $attachment_id,
+			'name' => $name,
+			'url' => (string) wp_get_attachment_image_url((int) $attachment_id, 'medium'),
+			'full_url' => (string) wp_get_attachment_url((int) $attachment_id),
+		];
 	}
-	if ($uploaded > 0) {
+	if (!empty($uploaded)) {
 		lf_invalidate_media_index_cache();
 		lf_build_media_index();
 	}
-	$redirect = add_query_arg('images_uploaded', (string) $uploaded, admin_url('admin.php?page=lf-ops'));
-	if ($errors > 0) {
-		$redirect = add_query_arg('images_errors', (string) $errors, $redirect);
+	return [
+		'uploaded' => $uploaded,
+		'uploaded_count' => count($uploaded),
+		'errors' => $errors,
+		'error_count' => count($errors),
+	];
+}
+
+function lf_ai_studio_handle_images_upload_ajax(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
+	}
+	check_ajax_referer('lf_ai_studio_images_upload', 'nonce');
+	if (empty($_FILES['lf_manifest_images']) || !is_array($_FILES['lf_manifest_images'])) {
+		wp_send_json_error(['message' => __('Please choose one or more images before uploading.', 'leadsforward-core')], 400);
+	}
+	$result = lf_ai_studio_process_images_upload($_FILES['lf_manifest_images']);
+	if ($result['uploaded_count'] === 0) {
+		wp_send_json_error([
+			'message' => __('No images were uploaded.', 'leadsforward-core'),
+			'errors' => $result['errors'],
+		], 422);
+	}
+	wp_send_json_success([
+		'uploaded' => $result['uploaded'],
+		'uploaded_count' => $result['uploaded_count'],
+		'error_count' => $result['error_count'],
+		'errors' => $result['errors'],
+	]);
+}
+
+function lf_ai_studio_handle_images_upload(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
+	}
+	check_admin_referer('lf_ai_studio_images_upload', 'lf_ai_studio_images_upload_nonce');
+	if (empty($_FILES['lf_manifest_images']) || !is_array($_FILES['lf_manifest_images'])) {
+		wp_safe_redirect(add_query_arg('images_error', 'missing', admin_url('admin.php?page=lf-ops')));
+		exit;
+	}
+	$result = lf_ai_studio_process_images_upload($_FILES['lf_manifest_images']);
+	$redirect = add_query_arg('images_uploaded', (string) $result['uploaded_count'], admin_url('admin.php?page=lf-ops'));
+	if ($result['error_count'] > 0) {
+		$redirect = add_query_arg('images_errors', (string) $result['error_count'], $redirect);
 	}
 	wp_safe_redirect($redirect);
 	exit;
@@ -1043,14 +1118,16 @@ function lf_ai_studio_render_page(): void {
 					<div class="lf-manifester-step__content">
 						<h3><?php esc_html_e('Upload required images for auto-distribution', 'leadsforward-core'); ?></h3>
 						<p class="description"><?php esc_html_e('Upload your image library now. The theme auto-optimizes/compresses images, converts PNG to lightweight JPG when possible, normalizes filenames, and fills missing ALT text before deterministic placement.', 'leadsforward-core'); ?></p>
-						<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+						<form id="lf-manifester-images-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
 							<?php wp_nonce_field('lf_ai_studio_images_upload', 'lf_ai_studio_images_upload_nonce'); ?>
 							<input type="hidden" name="action" value="lf_ai_studio_images_upload" />
 							<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
-								<input type="file" name="lf_manifest_images[]" class="lf-manifester-file" multiple accept="image/*" />
-								<button type="submit" class="button"><?php esc_html_e('Upload Images to Media Library', 'leadsforward-core'); ?></button>
+								<input id="lf-manifester-images" type="file" name="lf_manifest_images[]" class="lf-manifester-file" multiple accept="image/*" />
+								<button type="submit" class="button lf-manifester-hidden-submit"><?php esc_html_e('Upload Images to Media Library', 'leadsforward-core'); ?></button>
 							</div>
 						</form>
+						<div id="lf-manifester-images-preview" class="lf-manifester-images-preview"></div>
+						<div id="lf-manifester-images-status" class="lf-manifester-status" role="status" aria-live="polite"></div>
 						<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:10px;">
 							<?php wp_nonce_field('lf_ai_studio_image_settings_save', 'lf_ai_studio_image_settings_nonce'); ?>
 							<input type="hidden" name="action" value="lf_ai_studio_image_settings_save" />
@@ -1356,7 +1433,7 @@ function lf_ai_studio_run_generation(): array {
 	if ($webhook === '' || $secret === '') {
 		return ['error' => __('Webhook URL and shared secret are required.', 'leadsforward-core')];
 	}
-	$request = lf_ai_studio_build_full_site_payload();
+	$request = lf_ai_studio_build_full_site_payload(false);
 	if (!is_array($request)) {
 		return ['error' => __('Full site payload build failed.', 'leadsforward-core')];
 	}
@@ -1387,7 +1464,7 @@ function lf_ai_studio_run_homepage_generation(): array {
 			return ['error' => __('Homepage primary keyword is required.', 'leadsforward-core')];
 		}
 	}
-	$request = lf_ai_studio_build_full_site_payload();
+	$request = lf_ai_studio_build_full_site_payload(false);
 	if (!is_array($request)) {
 		error_log('LF DEBUG: Regenerate Site blocked: payload build returned non-array.');
 		return ['error' => __('Full site payload build failed.', 'leadsforward-core')];
@@ -1440,6 +1517,11 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 			? ['count' => count($request['blueprints'])]
 			: ['count' => 0],
 	];
+	if (empty($request['blueprints']) || !is_array($request['blueprints'])) {
+		lf_ai_autonomy_mark_generation_failed($job_id, 'missing_blueprints');
+		error_log('LF DEBUG: Aborting orchestrator request: missing blueprints');
+		return ['success' => false, 'summary' => __('No blueprints to send. Check generation scope and setup data.', 'leadsforward-core')];
+	}
 	$research = lf_ai_studio_get_research_document();
 	$log_payload['research_present'] = !empty($research);
 	$log_payload['research_hash'] = !empty($research) ? lf_ai_studio_research_hash($research) : '';
@@ -1914,7 +1996,10 @@ function lf_ai_studio_is_generic_copy(string $value): bool {
 
 function lf_ai_studio_fallback_copy_for_field(string $field_key, \WP_Post $post, string $field_type = 'text'): string {
 	$business = trim((string) get_option('lf_business_name', get_bloginfo('name')));
-	$city = trim((string) get_option('lf_city_region', ''));
+	$city = trim((string) get_option('lf_city_region', get_option('lf_homepage_city', '')));
+	if ($post->post_type === 'lf_service_area') {
+		$city = trim((string) $post->post_title);
+	}
 	$keyword = trim((string) get_option('lf_primary_keyword', ''));
 	if ($keyword === '') {
 		$keyword = trim((string) get_post_meta($post->ID, 'lf_ai_post_keyword', true));
@@ -1923,34 +2008,664 @@ function lf_ai_studio_fallback_copy_for_field(string $field_key, \WP_Post $post,
 	if ($title === '') {
 		$title = __('Our team', 'leadsforward-core');
 	}
-	if ($city === '') {
-		$city = __('your area', 'leadsforward-core');
-	}
 	$focus = $keyword !== '' ? $keyword : $title;
+	$location_suffix = $city !== '' ? sprintf(__(' in %s', 'leadsforward-core'), $city) : '';
 	if ($field_type === 'list') {
-		return implode("\n", [
+		$items = [
 			sprintf(__('%s completed with careful planning and durable workmanship.', 'leadsforward-core'), $focus),
-			sprintf(__('Tailored for homeowners in %s with practical next-step guidance.', 'leadsforward-core'), $city),
 			sprintf(__('Delivered by %s with clear communication and reliable timelines.', 'leadsforward-core'), $business !== '' ? $business : get_bloginfo('name')),
-		]);
+		];
+		if ($city !== '') {
+			$items[] = sprintf(__('Tailored for homeowners in %s with practical next-step guidance.', 'leadsforward-core'), $city);
+		}
+		return implode("\n", $items);
 	}
 
 	if (strpos($field_key, 'heading') !== false || strpos($field_key, 'headline') !== false) {
-		return sanitize_text_field(sprintf(__('%1$s in %2$s', 'leadsforward-core'), $focus, $city));
+		return sanitize_text_field(sprintf(__('%1$s%2$s', 'leadsforward-core'), $focus, $location_suffix));
 	}
 	if (strpos($field_key, 'intro') !== false || strpos($field_key, 'subheadline') !== false) {
-		return sanitize_textarea_field(sprintf(__('%1$s delivers tailored solutions in %2$s with clear communication, clean execution, and long-lasting results.', 'leadsforward-core'), $business !== '' ? $business : get_bloginfo('name'), $city));
+		if ($city !== '') {
+			return sanitize_textarea_field(sprintf(__('%1$s delivers tailored solutions in %2$s with clear communication, clean execution, and long-lasting results.', 'leadsforward-core'), $business !== '' ? $business : get_bloginfo('name'), $city));
+		}
+		return sanitize_textarea_field(sprintf(__('%1$s delivers tailored solutions with clear communication, clean execution, and long-lasting results.', 'leadsforward-core'), $business !== '' ? $business : get_bloginfo('name')));
 	}
 	if (strpos($field_key, 'body') !== false || strpos($field_key, 'description') !== false || strpos($field_key, 'content') !== false) {
+		if ($city !== '') {
+			return wp_kses_post(sprintf(
+				/* translators: 1: focus keyword/title, 2: city, 3: business name */
+				__('%3$s plans every %1$s project around your property, goals, and budget in %2$s. We focus on durable materials, precise workmanship, and transparent timelines so homeowners get results that look great now and hold up over time.', 'leadsforward-core'),
+				$focus,
+				$city,
+				$business !== '' ? $business : get_bloginfo('name')
+			));
+		}
 		return wp_kses_post(sprintf(
-			/* translators: 1: focus keyword/title, 2: city, 3: business name */
-			__('%3$s plans every %1$s project around your property, goals, and budget in %2$s. We focus on durable materials, precise workmanship, and transparent timelines so homeowners get results that look great now and hold up over time.', 'leadsforward-core'),
+			/* translators: 1: focus keyword/title, 2: business name */
+			__('%2$s plans every %1$s project around your property, goals, and budget. We focus on durable materials, precise workmanship, and transparent timelines so homeowners get results that look great now and hold up over time.', 'leadsforward-core'),
 			$focus,
-			$city,
 			$business !== '' ? $business : get_bloginfo('name')
 		));
 	}
 	return '';
+}
+
+function lf_ai_studio_location_label_for_post(\WP_Post $post): string {
+	$city = trim((string) get_option('lf_city_region', get_option('lf_homepage_city', '')));
+	if ($post->post_type === 'lf_service_area') {
+		$city = trim((string) $post->post_title);
+	}
+	return $city;
+}
+
+function lf_ai_studio_replace_generic_location_phrases(array $settings, \WP_Post $post): array {
+	$location = lf_ai_studio_location_label_for_post($post);
+	$location_norm = strtolower($location);
+	foreach ($settings as $key => $value) {
+		if (!is_string($value) || $value === '') {
+			continue;
+		}
+		$plain = strtolower(wp_strip_all_tags($value));
+		if (strpos($plain, 'in your area') === false) {
+			continue;
+		}
+		$replacement = '';
+		if ($location !== '' && ($location_norm === '' || strpos($plain, $location_norm) === false)) {
+			$replacement = 'in ' . $location;
+		}
+		$updated = preg_replace('/\bin your area\b/i', $replacement, $value);
+		if ($replacement === '') {
+			$updated = preg_replace('/\s+/', ' ', (string) $updated);
+		}
+		$settings[$key] = trim((string) $updated);
+	}
+	return $settings;
+}
+
+function lf_ai_studio_heading_key_for_section_type(string $type): string {
+	if ($type === 'hero') {
+		return 'hero_headline';
+	}
+	if ($type === 'trust_bar') {
+		return 'trust_heading';
+	}
+	if ($type === 'cta') {
+		return 'cta_headline';
+	}
+	return 'section_heading';
+}
+
+function lf_ai_studio_pick_variant_index(string $seed, int $count): int {
+	if ($count <= 0) {
+		return 0;
+	}
+	$hash = crc32($seed);
+	if ($hash < 0) {
+		$hash = $hash * -1;
+	}
+	return (int) ($hash % $count);
+}
+
+function lf_ai_studio_service_label_for_post(\WP_Post $post): string {
+	$title = trim((string) ($post->post_title ?? ''));
+	if ($title !== '') {
+		return $title;
+	}
+	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
+	$niche = function_exists('lf_get_niche') ? lf_get_niche($niche_slug) : null;
+	$niche_name = is_array($niche) ? (string) ($niche['name'] ?? '') : '';
+	if ($niche_name !== '') {
+		return $niche_name;
+	}
+	return __('local services', 'leadsforward-core');
+}
+
+function lf_ai_studio_is_generic_heading_value(string $value, \WP_Post $post): bool {
+	$plain = strtolower(preg_replace('/\s+/', ' ', trim($value)));
+	if ($plain === '') {
+		return true;
+	}
+	if (strpos($plain, 'in your area') !== false) {
+		return true;
+	}
+	$service = strtolower(trim((string) ($post->post_title ?? '')));
+	$city = strtolower(trim(lf_ai_studio_location_label_for_post($post)));
+	if ($service !== '' && $city !== '' && $plain === strtolower($service . ' in ' . $city)) {
+		return true;
+	}
+	if ($service !== '' && $plain === $service) {
+		return true;
+	}
+	return false;
+}
+
+function lf_ai_studio_build_section_heading_candidate(string $type, array $section, \WP_Post $post, array $registry): string {
+	$service = lf_ai_studio_service_label_for_post($post);
+	$business = trim((string) get_option('lf_business_name', get_bloginfo('name')));
+	$city = lf_ai_studio_location_label_for_post($post);
+	$intent = trim((string) ($section['settings']['section_intent'] ?? ''));
+	$label = ($type !== '' && isset($registry[$type]['label'])) ? (string) $registry[$type]['label'] : '';
+	$variant = lf_ai_studio_pick_variant_index($post->ID . '|' . $type, 3);
+
+	if ($intent !== '') {
+		$candidate = $intent;
+		if ($service !== '' && stripos($candidate, $service) === false && $type !== 'hero') {
+			$candidate = $candidate . ' for ' . $service;
+		}
+		return $candidate;
+	}
+
+	switch ($type) {
+		case 'benefits':
+			$templates = [
+				__('Why homeowners choose our %s', 'leadsforward-core'),
+				__('Benefits of our %s', 'leadsforward-core'),
+				__('The %s advantage', 'leadsforward-core'),
+			];
+			return sprintf($templates[$variant], $service !== '' ? $service : __('services', 'leadsforward-core'));
+		case 'service_details':
+			$templates = [
+				__('What’s included with %s', 'leadsforward-core'),
+				__('Scope and details of %s', 'leadsforward-core'),
+				__('What to expect from our %s', 'leadsforward-core'),
+			];
+			return sprintf($templates[$variant], $service !== '' ? $service : __('this service', 'leadsforward-core'));
+		case 'process':
+			$templates = [
+				__('Our %s process', 'leadsforward-core'),
+				__('How %s projects work', 'leadsforward-core'),
+				__('Step-by-step %s delivery', 'leadsforward-core'),
+			];
+			return sprintf($templates[$variant], $service !== '' ? $service : __('projects', 'leadsforward-core'));
+		case 'faq_accordion':
+			$templates = [
+				__('Questions about %s', 'leadsforward-core'),
+				__('%s FAQs', 'leadsforward-core'),
+				__('Answers for %s projects', 'leadsforward-core'),
+			];
+			return sprintf($templates[$variant], $service !== '' ? $service : __('our services', 'leadsforward-core'));
+		case 'trust_bar':
+			$templates = [
+				__('Trusted by homeowners in %s', 'leadsforward-core'),
+				__('Local teams trusted across %s', 'leadsforward-core'),
+				__('Trusted local service in %s', 'leadsforward-core'),
+			];
+			if ($city !== '') {
+				return sprintf($templates[$variant], $city);
+			}
+			return __('Trusted by local homeowners', 'leadsforward-core');
+		case 'cta':
+			$templates = [
+				__('Ready for %s?', 'leadsforward-core'),
+				__('Start your %s project', 'leadsforward-core'),
+				__('Get %s scheduled', 'leadsforward-core'),
+			];
+			return sprintf($templates[$variant], $service !== '' ? $service : __('a project', 'leadsforward-core'));
+		case 'map_nap':
+			$templates = [
+				__('Serving %s', 'leadsforward-core'),
+				__('Service area & contact', 'leadsforward-core'),
+				__('Where we work', 'leadsforward-core'),
+			];
+			if ($city !== '') {
+				return sprintf($templates[$variant], $city);
+			}
+			return $templates[$variant];
+		case 'related_links':
+			$templates = [
+				__('Explore related services', 'leadsforward-core'),
+				__('Related services to consider', 'leadsforward-core'),
+				__('Similar services we offer', 'leadsforward-core'),
+			];
+			return $templates[$variant];
+		case 'services_offered_here':
+			$templates = [
+				__('Services available in %s', 'leadsforward-core'),
+				__('What we do in %s', 'leadsforward-core'),
+				__('Local services in %s', 'leadsforward-core'),
+			];
+			if ($city !== '') {
+				return sprintf($templates[$variant], $city);
+			}
+			return __('Services available here', 'leadsforward-core');
+		case 'nearby_areas':
+			$templates = [
+				__('Nearby areas we serve', 'leadsforward-core'),
+				__('Cities near %s', 'leadsforward-core'),
+				__('Also serving nearby neighborhoods', 'leadsforward-core'),
+			];
+			if ($city !== '') {
+				return sprintf($templates[$variant], $city);
+			}
+			return $templates[$variant];
+		case 'content_image':
+		case 'image_content':
+			$templates = [
+				__('What sets our %s apart', 'leadsforward-core'),
+				__('How we deliver %s', 'leadsforward-core'),
+				__('The standards behind our %s', 'leadsforward-core'),
+			];
+			return sprintf($templates[$variant], $service !== '' ? $service : __('our work', 'leadsforward-core'));
+		case 'hero':
+			$templates = [
+				__('%1$s built for %2$s homes', 'leadsforward-core'),
+				__('Trusted %1$s specialists in %2$s', 'leadsforward-core'),
+				__('High quality %1$s in %2$s', 'leadsforward-core'),
+			];
+			if ($city !== '') {
+				return sprintf($templates[$variant], $service !== '' ? $service : __('Local services', 'leadsforward-core'), $city);
+			}
+			return sprintf(__('Trusted %s specialists', 'leadsforward-core'), $service !== '' ? $service : __('Local services', 'leadsforward-core'));
+		default:
+			break;
+	}
+
+	if ($label !== '') {
+		return $label;
+	}
+	if ($service !== '') {
+		return $service;
+	}
+	if ($business !== '') {
+		return $business;
+	}
+	return '';
+}
+
+function lf_ai_studio_enforce_unique_headings_for_post_sections(array $sections, array $registry, \WP_Post $post): array {
+	$counts = [];
+	$hero_norm = '';
+	foreach ($sections as $section) {
+		if (!is_array($section)) {
+			continue;
+		}
+		$type = (string) ($section['type'] ?? '');
+		$key = lf_ai_studio_heading_key_for_section_type($type);
+		$value = is_array($section['settings'] ?? null) ? (string) ($section['settings'][$key] ?? '') : '';
+		$norm = strtolower(preg_replace('/\s+/', ' ', trim($value)));
+		if ($norm === '') {
+			continue;
+		}
+		if ($type === 'hero') {
+			$hero_norm = $norm;
+		}
+		$counts[$norm] = ($counts[$norm] ?? 0) + 1;
+	}
+
+	foreach ($sections as $id => $section) {
+		if (!is_array($section)) {
+			continue;
+		}
+		$type = (string) ($section['type'] ?? '');
+		$key = lf_ai_studio_heading_key_for_section_type($type);
+		$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+		$current = is_string($settings[$key] ?? null) ? trim((string) $settings[$key]) : '';
+		$norm = strtolower(preg_replace('/\s+/', ' ', $current));
+		$needs = ($current === '')
+			|| lf_ai_studio_is_generic_heading_value($current, $post)
+			|| ($norm !== '' && ($counts[$norm] ?? 0) > 1)
+			|| ($hero_norm !== '' && $norm === $hero_norm && $type !== 'hero');
+		if (!$needs) {
+			continue;
+		}
+		$candidate = lf_ai_studio_build_section_heading_candidate($type, $section, $post, $registry);
+		if ($candidate === '') {
+			continue;
+		}
+		$final = $candidate;
+		$final_norm = strtolower(preg_replace('/\s+/', ' ', trim($final)));
+		if ($final_norm !== '' && isset($counts[$final_norm])) {
+			$label = ($type !== '' && isset($registry[$type]['label'])) ? (string) $registry[$type]['label'] : '';
+			if ($label !== '' && stripos($final, $label) === false) {
+				$final = trim($final . ' — ' . $label);
+				$final_norm = strtolower(preg_replace('/\s+/', ' ', trim($final)));
+			}
+		}
+		$settings[$key] = $final;
+		$sections[$id]['settings'] = $settings;
+		$counts[$final_norm] = ($counts[$final_norm] ?? 0) + 1;
+	}
+
+	return $sections;
+}
+
+function lf_ai_studio_build_section_intro_candidate(string $type, \WP_Post $post): string {
+	$service = lf_ai_studio_service_label_for_post($post);
+	$business = trim((string) get_option('lf_business_name', get_bloginfo('name')));
+	$city = lf_ai_studio_location_label_for_post($post);
+	$variant = lf_ai_studio_pick_variant_index($post->ID . '|' . $type . '|intro', 3);
+	$location = $city !== '' ? ' in ' . $city : '';
+
+	switch ($type) {
+		case 'hero':
+			$templates = [
+				__('%1$s delivers %2$s%3$s with clear communication and reliable timelines.', 'leadsforward-core'),
+				__('We help homeowners plan %2$s%3$s with transparent pricing and clean execution.', 'leadsforward-core'),
+				__('Local team focused on %2$s%3$s with dependable results and clear next steps.', 'leadsforward-core'),
+			];
+			return sprintf($templates[$variant], $business !== '' ? $business : get_bloginfo('name'), $service, $location);
+		case 'benefits':
+			$templates = [
+				__('A few reasons homeowners choose our %1$s%2$s.', 'leadsforward-core'),
+				__('What sets our %1$s apart for local homeowners%2$s.', 'leadsforward-core'),
+				__('Built for quality, communication, and long-term performance in every %1$s%2$s.', 'leadsforward-core'),
+			];
+			return sprintf($templates[$variant], $service, $location);
+		case 'service_details':
+			return sprintf(__('We plan every %1$s project around your goals and property%2$s.', 'leadsforward-core'), $service, $location);
+		case 'process':
+			return sprintf(__('A clear, step-by-step process keeps your %1$s project on track%2$s.', 'leadsforward-core'), $service, $location);
+		case 'faq_accordion':
+			return sprintf(__('Common questions about %1$s%2$s.', 'leadsforward-core'), $service, $location);
+		case 'trust_bar':
+			if ($city !== '') {
+				return sprintf(__('Trusted by homeowners across %s.', 'leadsforward-core'), $city);
+			}
+			return __('Trusted by local homeowners.', 'leadsforward-core');
+		case 'map_nap':
+			if ($city !== '') {
+				return sprintf(__('Serving %s and nearby neighborhoods.', 'leadsforward-core'), $city);
+			}
+			return __('Serving nearby neighborhoods with responsive local service.', 'leadsforward-core');
+		case 'related_links':
+			return sprintf(__('Explore related services that complement %s.', 'leadsforward-core'), $service);
+		case 'services_offered_here':
+			if ($city !== '') {
+				return sprintf(__('See the services available in %s.', 'leadsforward-core'), $city);
+			}
+			return __('See the services available in this area.', 'leadsforward-core');
+		case 'nearby_areas':
+			if ($city !== '') {
+				return sprintf(__('We also work in nearby neighborhoods around %s.', 'leadsforward-core'), $city);
+			}
+			return __('We also work in nearby neighborhoods.', 'leadsforward-core');
+		case 'content_image':
+		case 'image_content':
+			return sprintf(__('We combine planning, craftsmanship, and clear communication to deliver %1$s%2$s.', 'leadsforward-core'), $service, $location);
+		default:
+			break;
+	}
+	return '';
+}
+
+function lf_ai_studio_build_cta_copy_candidate(\WP_Post $post): array {
+	$service = lf_ai_studio_service_label_for_post($post);
+	$city = lf_ai_studio_location_label_for_post($post);
+	$variant = lf_ai_studio_pick_variant_index($post->ID . '|cta', 3);
+	$location = $city !== '' ? ' in ' . $city : '';
+
+	$headlines = [
+		sprintf(__('Get a fast quote for %s', 'leadsforward-core'), $service),
+		sprintf(__('Plan your %s project', 'leadsforward-core'), $service),
+		sprintf(__('Schedule your %s estimate', 'leadsforward-core'), $service),
+	];
+	$subheadlines = [
+		__('Clear scope, timing, and pricing from a local team.', 'leadsforward-core'),
+		__('Talk with our team about your goals and next steps.', 'leadsforward-core'),
+		__('We make it easy to get started and stay informed.', 'leadsforward-core'),
+	];
+	$secondary = [
+		sprintf(__('Quick answers for %s%s.', 'leadsforward-core'), $service, $location),
+		sprintf(__('Get a clear plan for %s.', 'leadsforward-core'), $service),
+		sprintf(__('Start with a simple walkthrough for %s.', 'leadsforward-core'), $service),
+	];
+
+	return [
+		'cta_headline' => $headlines[$variant] ?? $headlines[0],
+		'cta_subheadline' => $subheadlines[$variant] ?? $subheadlines[0],
+		'cta_subheadline_secondary' => $secondary[$variant] ?? $secondary[0],
+	];
+}
+
+function lf_ai_studio_enforce_unique_text_fields_for_post_sections(array $sections, array $registry, \WP_Post $post): array {
+	$seen = [];
+	foreach ($sections as $id => $section) {
+		if (!is_array($section)) {
+			continue;
+		}
+		$type = (string) ($section['type'] ?? '');
+		$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+		$intro_keys = [];
+		if (isset($settings['section_intro'])) {
+			$intro_keys[] = 'section_intro';
+		}
+		if ($type === 'hero') {
+			foreach (['hero_subheadline', 'hero_supporting_text'] as $hero_key) {
+				if (isset($settings[$hero_key])) {
+					$intro_keys[] = $hero_key;
+				}
+			}
+		}
+		foreach ($intro_keys as $key) {
+			$value = is_string($settings[$key] ?? null) ? trim((string) $settings[$key]) : '';
+			$norm = strtolower(preg_replace('/\s+/', ' ', wp_strip_all_tags($value)));
+			$needs = ($value === '') || ($norm !== '' && isset($seen[$norm])) || lf_ai_studio_is_generic_copy($value);
+			if ($needs) {
+				$candidate = lf_ai_studio_build_section_intro_candidate($type, $post);
+				if ($candidate !== '') {
+					$settings[$key] = $candidate;
+					$norm = strtolower(preg_replace('/\s+/', ' ', wp_strip_all_tags($candidate)));
+				}
+			}
+			if ($norm !== '') {
+				$seen[$norm] = true;
+			}
+		}
+
+		if ($type === 'cta') {
+			$cta = lf_ai_studio_build_cta_copy_candidate($post);
+			foreach ($cta as $cta_key => $cta_value) {
+				$current = is_string($settings[$cta_key] ?? null) ? trim((string) $settings[$cta_key]) : '';
+				$norm = strtolower(preg_replace('/\s+/', ' ', wp_strip_all_tags($current)));
+				$needs = ($current === '') || lf_ai_studio_is_generic_copy($current) || isset($seen[$norm]);
+				if ($needs) {
+					$settings[$cta_key] = $cta_value;
+					$norm = strtolower(preg_replace('/\s+/', ' ', wp_strip_all_tags($cta_value)));
+				}
+				if ($norm !== '') {
+					$seen[$norm] = true;
+				}
+			}
+		}
+
+		$sections[$id]['settings'] = $settings;
+	}
+
+	return $sections;
+}
+
+function lf_ai_studio_normalize_for_uniqueness(string $value): string {
+	$plain = wp_strip_all_tags($value);
+	$plain = strtolower(preg_replace('/\s+/', ' ', trim($plain)));
+	return $plain;
+}
+
+function lf_ai_studio_should_enforce_uniqueness_on_field(string $field_key, string $field_type): bool {
+	if ($field_key === 'faq_selected_ids') {
+		return false;
+	}
+	if (in_array($field_type, ['text', 'textarea', 'richtext', 'wysiwyg', 'list'], true)) {
+		$deny = [
+			'url', 'link', 'target', 'slug', 'id', 'image', 'icon', 'color', 'background',
+			'layout', 'variant', 'toggle', 'enabled', 'size', 'position', 'align', 'style',
+			'map', 'address', 'phone', 'email', 'city', 'state', 'zip', 'latitude', 'longitude',
+			'hours', 'schema', 'shortcode',
+		];
+		foreach ($deny as $needle) {
+			if (strpos($field_key, $needle) !== false) {
+				return $field_key === 'image_alt';
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
+function lf_ai_studio_build_section_body_candidate(string $type, \WP_Post $post): string {
+	$service = lf_ai_studio_service_label_for_post($post);
+	$business = trim((string) get_option('lf_business_name', get_bloginfo('name')));
+	$city = lf_ai_studio_location_label_for_post($post);
+	$location = $city !== '' ? ' in ' . $city : '';
+	$variant = lf_ai_studio_pick_variant_index($post->ID . '|' . $type . '|body', 3);
+
+	switch ($type) {
+		case 'service_details':
+			$templates = [
+				__('%1$s plans every %2$s project around your property, goals, and budget%3$s. We focus on durable materials, precise workmanship, and transparent timelines so homeowners get results that look great now and hold up over time.', 'leadsforward-core'),
+				__('Our %2$s work starts with a clear scope and honest recommendations%3$s. You get consistent communication, clean execution, and a finished result that performs long term.', 'leadsforward-core'),
+				__('From planning to final walkthrough, we keep %2$s projects organized and predictable%3$s. Expect clear timelines, tidy job sites, and craftsmanship that lasts.', 'leadsforward-core'),
+			];
+			return sprintf($templates[$variant], $business !== '' ? $business : get_bloginfo('name'), $service, $location);
+		case 'content_image':
+		case 'image_content':
+			$templates = [
+				__('We combine planning, craftsmanship, and clear communication to deliver %1$s%2$s. Your goals guide the scope, and our team keeps every detail on track.', 'leadsforward-core'),
+				__('Every %1$s project is scoped around your property and priorities%2$s. We focus on clean execution, durable materials, and a finished look you can be proud of.', 'leadsforward-core'),
+				__('Our team treats %1$s work as a full-service process%2$s—clear estimates, consistent updates, and results that stand up over time.', 'leadsforward-core'),
+			];
+			return sprintf($templates[$variant], $service, $location);
+		default:
+			break;
+	}
+
+	return sprintf(__('%1$s delivers %2$s with clear communication, organized timelines, and results that hold up%3$s.', 'leadsforward-core'), $business !== '' ? $business : get_bloginfo('name'), $service, $location);
+}
+
+function lf_ai_studio_build_list_candidate(string $field_key, string $type, \WP_Post $post): string {
+	$service = lf_ai_studio_service_label_for_post($post);
+	$city = lf_ai_studio_location_label_for_post($post);
+	$location = $city !== '' ? ' in ' . $city : '';
+	$variant = lf_ai_studio_pick_variant_index($post->ID . '|' . $type . '|' . $field_key, 3);
+
+	if ($field_key === 'benefits_items') {
+		$sets = [
+			[
+				sprintf(__('Clear scope || Defined steps for every %s project.', 'leadsforward-core'), $service),
+				__('Respect for your home || Clean, careful work from start to finish.', 'leadsforward-core'),
+				__('Reliable timelines || We stay on schedule and keep you updated.', 'leadsforward-core'),
+			],
+			[
+				__('Craftsmanship || Durable materials and precise installation.', 'leadsforward-core'),
+				sprintf(__('Local experience || Proven results%s.', 'leadsforward-core'), $location),
+				__('Transparent pricing || No surprises, just clear next steps.', 'leadsforward-core'),
+			],
+			[
+				sprintf(__('Project planning || Every %s detail considered.', 'leadsforward-core'), $service),
+				__('Communication || Fast responses and clear updates.', 'leadsforward-core'),
+				__('Lasting results || Built to perform and look great.', 'leadsforward-core'),
+			],
+		];
+		return implode("\n", $sets[$variant]);
+	}
+
+	if ($field_key === 'process_steps') {
+		$sets = [
+			[
+				sprintf(__('Consultation: Review goals and property%s.', 'leadsforward-core'), $location),
+				__('Plan: Define scope, materials, and timeline.', 'leadsforward-core'),
+				sprintf(__('Build: Complete %s work with clean execution.', 'leadsforward-core'), $service),
+				__('Walkthrough: Confirm details and final touches.', 'leadsforward-core'),
+			],
+			[
+				sprintf(__('Site review: Evaluate the project%s.', 'leadsforward-core'), $location),
+				__('Design: Finalize approach and expectations.', 'leadsforward-core'),
+				sprintf(__('Delivery: Execute %s with skilled crews.', 'leadsforward-core'), $service),
+				__('Finish: Inspect and address any adjustments.', 'leadsforward-core'),
+			],
+			[
+				sprintf(__('Discovery: Clarify needs and priorities%s.', 'leadsforward-core'), $location),
+				__('Scope: Confirm materials and sequence.', 'leadsforward-core'),
+				sprintf(__('Work: Complete %s with quality control.', 'leadsforward-core'), $service),
+				__('Confirm: Review outcome and next steps.', 'leadsforward-core'),
+			],
+		];
+		return implode("\n", $sets[$variant]);
+	}
+
+	if ($field_key === 'trust_badges' || $field_key === 'hero_proof_bullets' || $field_key === 'cta_bullets') {
+		$sets = [
+			['Licensed and insured', 'Clear scope and pricing', 'Consistent communication'],
+			['Local crews', 'Clean job sites', 'On-time scheduling'],
+			['Skilled workmanship', 'Transparent timelines', 'Responsive support'],
+		];
+		return implode("\n", $sets[$variant]);
+	}
+
+	if ($field_key === 'service_details_checklist') {
+		$sets = [
+			['Project planning', 'Durable materials', 'Clean execution'],
+			['Property walkthrough', 'Clear scope', 'Final quality check'],
+			['Organized timeline', 'Consistent updates', 'Lasting results'],
+		];
+		return implode("\n", $sets[$variant]);
+	}
+
+	$generic = [
+		sprintf(__('%s completed with careful planning.', 'leadsforward-core'), $service),
+		sprintf(__('Tailored for homeowners%1$s.', 'leadsforward-core'), $location),
+		__('Delivered with clear communication.', 'leadsforward-core'),
+	];
+	return implode("\n", $generic);
+}
+
+function lf_ai_studio_build_unique_field_value(string $field_key, string $field_type, string $section_type, \WP_Post $post): string {
+	if ($field_type === 'list') {
+		return lf_ai_studio_build_list_candidate($field_key, $section_type, $post);
+	}
+	if ($field_key === 'image_alt') {
+		$service = lf_ai_studio_service_label_for_post($post);
+		$city = lf_ai_studio_location_label_for_post($post);
+		return $city !== '' ? sprintf(__('%1$s project in %2$s', 'leadsforward-core'), $service, $city) : sprintf(__('%s project', 'leadsforward-core'), $service);
+	}
+	if (strpos($field_key, 'headline') !== false || strpos($field_key, 'heading') !== false) {
+		return lf_ai_studio_build_section_heading_candidate($section_type, ['settings' => []], $post, []);
+	}
+	if (strpos($field_key, 'intro') !== false || strpos($field_key, 'subheadline') !== false || strpos($field_key, 'supporting') !== false) {
+		return lf_ai_studio_build_section_intro_candidate($section_type, $post);
+	}
+	if (strpos($field_key, 'body') !== false || strpos($field_key, 'description') !== false || strpos($field_key, 'content') !== false) {
+		return lf_ai_studio_build_section_body_candidate($section_type, $post);
+	}
+	return '';
+}
+
+function lf_ai_studio_enforce_unique_content_for_post_sections(array $sections, array $registry, \WP_Post $post, array &$global_seen): array {
+	$local_seen = [];
+	foreach ($sections as $id => $section) {
+		if (!is_array($section)) {
+			continue;
+		}
+		$type = (string) ($section['type'] ?? '');
+		$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+		foreach ($settings as $field_key => $value) {
+			if (!is_string($field_key)) {
+				continue;
+			}
+			$field_value = is_scalar($value) ? (string) $value : '';
+			$field_type = $type !== '' ? lf_ai_studio_registry_field_type($registry, $type, $field_key) : 'text';
+			if (!lf_ai_studio_should_enforce_uniqueness_on_field($field_key, $field_type)) {
+				continue;
+			}
+			$norm = lf_ai_studio_normalize_for_uniqueness($field_value);
+			$needs = ($field_value === '')
+				|| lf_ai_studio_is_generic_copy($field_value)
+				|| (isset($local_seen[$norm]) || isset($global_seen[$norm]));
+			if ($needs) {
+				$candidate = lf_ai_studio_build_unique_field_value($field_key, $field_type, $type, $post);
+				if ($candidate !== '') {
+					$field_value = $candidate;
+					$settings[$field_key] = $candidate;
+					$norm = lf_ai_studio_normalize_for_uniqueness($candidate);
+				}
+			}
+			if ($norm !== '') {
+				$local_seen[$norm] = true;
+				$global_seen[$norm] = true;
+			}
+		}
+		$sections[$id]['settings'] = $settings;
+	}
+	return $sections;
 }
 
 function lf_ai_studio_fill_generic_section_copy(array $settings, \WP_Post $post, string $section_type = '', array $section_registry = []): array {
@@ -1996,7 +2711,8 @@ function lf_ai_studio_fallback_homepage_field_value(string $section_id, string $
 	$primary = is_array($keywords) ? trim((string) ($keywords['primary'] ?? '')) : '';
 	$niche = trim((string) (defined('LF_HOMEPAGE_NICHE_OPTION') ? get_option(LF_HOMEPAGE_NICHE_OPTION, '') : ''));
 	$focus = $primary !== '' ? $primary : ($niche !== '' ? $niche : __('local services', 'leadsforward-core'));
-	$city_label = $city !== '' ? $city : __('your area', 'leadsforward-core');
+	$city_label = $city !== '' ? $city : '';
+	$location_suffix = $city_label !== '' ? sprintf(__(' in %s', 'leadsforward-core'), $city_label) : '';
 
 	if ($field_type === 'list') {
 		if (stripos($field_key, 'faq') !== false) {
@@ -2014,13 +2730,19 @@ function lf_ai_studio_fallback_homepage_field_value(string $section_id, string $
 	}
 
 	if (strpos($field_key, 'headline') !== false || strpos($field_key, 'heading') !== false) {
-		return sanitize_text_field(sprintf(__('%1$s in %2$s', 'leadsforward-core'), $focus, $city_label));
+		return sanitize_text_field(sprintf(__('%1$s%2$s', 'leadsforward-core'), $focus, $location_suffix));
 	}
 	if (strpos($field_key, 'subheadline') !== false || strpos($field_key, 'intro') !== false) {
-		return sanitize_textarea_field(sprintf(__('%1$s helps homeowners in %2$s plan and complete high-quality projects with clear timelines, fair pricing, and durable results.', 'leadsforward-core'), $business !== '' ? $business : get_bloginfo('name'), $city_label));
+		if ($city_label !== '') {
+			return sanitize_textarea_field(sprintf(__('%1$s helps homeowners in %2$s plan and complete high-quality projects with clear timelines, fair pricing, and durable results.', 'leadsforward-core'), $business !== '' ? $business : get_bloginfo('name'), $city_label));
+		}
+		return sanitize_textarea_field(sprintf(__('%1$s helps homeowners plan and complete high-quality projects with clear timelines, fair pricing, and durable results.', 'leadsforward-core'), $business !== '' ? $business : get_bloginfo('name')));
 	}
 	if (strpos($field_key, 'body') !== false || strpos($field_key, 'description') !== false || strpos($field_key, 'content') !== false) {
-		return wp_kses_post(sprintf(__('%1$s combines practical strategy and skilled execution for %2$s in %3$s. Every project is scoped around your goals, property conditions, and budget so you get clean workmanship and predictable outcomes.', 'leadsforward-core'), $business !== '' ? $business : get_bloginfo('name'), $focus, $city_label));
+		if ($city_label !== '') {
+			return wp_kses_post(sprintf(__('%1$s combines practical strategy and skilled execution for %2$s in %3$s. Every project is scoped around your goals, property conditions, and budget so you get clean workmanship and predictable outcomes.', 'leadsforward-core'), $business !== '' ? $business : get_bloginfo('name'), $focus, $city_label));
+		}
+		return wp_kses_post(sprintf(__('%1$s combines practical strategy and skilled execution for %2$s. Every project is scoped around your goals, property conditions, and budget so you get clean workmanship and predictable outcomes.', 'leadsforward-core'), $business !== '' ? $business : get_bloginfo('name'), $focus));
 	}
 	if (strpos($field_key, 'cta_primary') !== false) {
 		return __('Get a Free Quote', 'leadsforward-core');
@@ -4079,7 +4801,7 @@ function lf_ai_studio_build_post_blueprint(\WP_Post $post, string $page, string 
 	return $blueprint;
 }
 
-function lf_ai_studio_get_generation_scope(array $manifest): array {
+function lf_ai_studio_get_generation_scope(array $manifest, bool $respect_manifest_scope = true): array {
 	$default = [
 		'homepage' => true,
 		'services' => true,
@@ -4102,7 +4824,7 @@ function lf_ai_studio_get_generation_scope(array $manifest): array {
 		}
 	}
 	$manifest_scope = (string) ($manifest['generation_scope'] ?? '');
-	if ($manifest_scope === 'homepage_only') {
+	if ($respect_manifest_scope && $manifest_scope === 'homepage_only') {
 		$scope = [
 			'homepage' => true,
 			'services' => false,
@@ -4349,7 +5071,7 @@ function lf_ai_studio_force_related_links_services(): void {
 	}
 }
 
-function lf_ai_studio_build_full_site_payload(): array {
+function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = true): array {
 	$manifest = lf_ai_studio_get_manifest();
 	$use_manifest = !empty($manifest);
 	if ($use_manifest) {
@@ -4393,7 +5115,7 @@ function lf_ai_studio_build_full_site_payload(): array {
 		}
 	}
 
-	$scope = lf_ai_studio_get_generation_scope($manifest);
+	$scope = lf_ai_studio_get_generation_scope($manifest, $respect_manifest_scope);
 
 	$blueprints = [];
 	if ($scope['homepage']) {
@@ -5149,6 +5871,59 @@ function lf_ai_studio_enforce_section_quality(array $settings, string $section_t
 	return $settings;
 }
 
+function lf_ai_studio_deduplicate_headings(array $items, array $registry, bool $is_page_builder = false): array {
+	$seen = [];
+	foreach ($items as $id => $row) {
+		$settings = $is_page_builder ? ($row['settings'] ?? null) : $row;
+		if (!is_array($settings)) {
+			continue;
+		}
+		$type = $is_page_builder ? (string) ($row['type'] ?? '') : (string) $id;
+		$label = '';
+		if ($type !== '' && isset($registry[$type]['label'])) {
+			$label = (string) $registry[$type]['label'];
+		}
+		$label = trim($label);
+		$defaults = function_exists('lf_sections_defaults_for') && $type !== ''
+			? lf_sections_defaults_for($type, (string) get_option('lf_homepage_niche_slug', 'general'))
+			: [];
+		foreach (['hero_headline', 'section_heading', 'trust_heading', 'cta_headline'] as $key) {
+			$value = $settings[$key] ?? '';
+			if (!is_string($value)) {
+				continue;
+			}
+			$raw = trim($value);
+			if ($raw === '') {
+				continue;
+			}
+			$normalized = strtolower(preg_replace('/\s+/', ' ', $raw));
+			if (isset($seen[$normalized])) {
+				$limit = $key === 'hero_headline' ? 12 : 14;
+				$fallback = '';
+				if (isset($defaults[$key]) && is_string($defaults[$key])) {
+					$fallback = trim((string) $defaults[$key]);
+				}
+				$fallback_norm = $fallback !== '' ? strtolower(preg_replace('/\s+/', ' ', $fallback)) : '';
+				if ($fallback !== '' && !isset($seen[$fallback_norm])) {
+					$settings[$key] = lf_ai_studio_trim_to_words($fallback, $limit);
+				} elseif ($label !== '') {
+					$settings[$key] = lf_ai_studio_trim_to_words($label, $limit);
+				}
+			}
+			$final = trim((string) ($settings[$key] ?? $raw));
+			if ($final !== '') {
+				$seen[strtolower(preg_replace('/\s+/', ' ', $final))] = true;
+			}
+		}
+		if ($is_page_builder) {
+			$items[$id]['settings'] = $settings;
+		} else {
+			$items[$id] = $settings;
+		}
+	}
+	return $items;
+}
+
 function lf_ai_studio_normalize_faq_question_key(string $question): string {
 	$key = strtolower(trim((string) preg_replace('/\s+/', ' ', $question)));
 	return (string) preg_replace('/[^\p{L}\p{N}\s\-_]+/u', '', $key);
@@ -5285,7 +6060,7 @@ function lf_ai_studio_homepage_image_context(): array {
 function lf_ai_studio_collect_missing_image_targets(int $limit = 12): array {
 	$limit = max(1, min(60, $limit));
 	$out = [];
-	$allowed_slots = ['hero', 'content_image_a', 'image_content_b', 'content_image_c'];
+	$allowed_slots = ['hero', 'content_image_a'];
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 
 	$push_target = static function (array $target) use (&$out, $limit): void {
@@ -5501,6 +6276,7 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 		return [__('Missing updates array.', 'leadsforward-core')];
 	}
 	$errors = [];
+	$global_seen = [];
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 	$homepage_config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
 	foreach ($updates as $index => $update) {
@@ -5516,6 +6292,7 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 			continue;
 		}
 		if ($target === 'options' && $id === 'homepage') {
+			$field_meta = [];
 			foreach ($fields as $key => $value) {
 				if (!is_string($key)) {
 					continue;
@@ -5546,6 +6323,9 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 		}
 		if ($target === 'post_meta') {
 			$post_id = absint($id);
+			if (!$post_id) {
+				continue;
+			}
 			$post = $post_id ? get_post($post_id) : null;
 			if (!$post instanceof \WP_Post) {
 				$errors[] = sprintf(__('Post update for id %d not found.', 'leadsforward-core'), $post_id);
@@ -5594,6 +6374,51 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 				if (!in_array($field_key, $allowed, true)) {
 					$errors[] = sprintf(__('Field "%s" is not allowed for section "%s".', 'leadsforward-core'), $field_key, $instance_id);
 				}
+				$field_meta[$key] = [
+					'field_key' => $field_key,
+					'section_type' => $type,
+				];
+			}
+			$seen = [];
+			foreach ($fields as $key => $value) {
+				if (!is_string($key) || !is_scalar($value)) {
+					continue;
+				}
+				$meta = $field_meta[$key] ?? null;
+				if (is_array($meta)) {
+					$field_type = lf_ai_studio_registry_field_type($registry, (string) ($meta['section_type'] ?? ''), (string) ($meta['field_key'] ?? ''));
+					if (!lf_ai_studio_should_enforce_uniqueness_on_field((string) ($meta['field_key'] ?? ''), $field_type)) {
+						continue;
+					}
+				}
+				$text = trim((string) $value);
+				if ($text === '') {
+					continue;
+				}
+				$plain = strtolower(wp_strip_all_tags($text));
+				if (strpos($plain, 'in your area') !== false) {
+					$errors[] = sprintf(__('Generic phrase "in your area" found for post %d.', 'leadsforward-core'), $post_id);
+					break;
+				}
+				if (strpos($key, 'heading') !== false || strpos($key, 'headline') !== false) {
+					if (lf_ai_studio_is_generic_heading_value($text, $post)) {
+						$errors[] = sprintf(__('Generic heading value found for post %d.', 'leadsforward-core'), $post_id);
+						break;
+					}
+				}
+				$norm = lf_ai_studio_normalize_for_uniqueness($text);
+				if ($norm !== '' && isset($seen[$norm])) {
+					$errors[] = sprintf(__('Duplicate content detected in post %d.', 'leadsforward-core'), $post_id);
+					break;
+				}
+				if ($norm !== '' && isset($global_seen[$norm]) && $global_seen[$norm] !== $post_id) {
+					$errors[] = sprintf(__('Duplicate content detected across pages (post %d).', 'leadsforward-core'), $post_id);
+					break;
+				}
+				$seen[$norm] = true;
+				if ($norm !== '') {
+					$global_seen[$norm] = $post_id;
+				}
 			}
 			continue;
 		}
@@ -5609,13 +6434,16 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 		}
 		if ($target === 'service_meta') {
 			$post_id = absint($id);
+			if (!$post_id) {
+				continue;
+			}
 			$post = $post_id ? get_post($post_id) : null;
 			if (!$post instanceof \WP_Post || $post->post_type !== 'lf_service') {
 				$errors[] = sprintf(__('Service meta update for id %d not found.', 'leadsforward-core'), $post_id);
 			}
 			continue;
 		}
-		$errors[] = sprintf(__('Update at index %d has unknown target.', 'leadsforward-core'), $index);
+		continue;
 	}
 	return array_values(array_unique($errors));
 }
@@ -5675,7 +6503,6 @@ function lf_apply_orchestrator_updates(array $response): array {
 		if ($target === 'post_meta') {
 			$post_id = absint($id);
 			if (!$post_id) {
-				$errors[] = sprintf(__('Post update at index %d is missing id.', 'leadsforward-core'), $index);
 				continue;
 			}
 			$post_updates[] = $update;
@@ -5690,14 +6517,13 @@ function lf_apply_orchestrator_updates(array $response): array {
 		if ($target === 'service_meta') {
 			$post_id = absint($id);
 			if (!$post_id) {
-				$errors[] = sprintf(__('Service meta update at index %d is missing id.', 'leadsforward-core'), $index);
 				continue;
 			}
 			$service_meta_updates[] = $update;
 			$update_counts['service_meta']++;
 			continue;
 		}
-		$errors[] = sprintf(__('Update at index %d has unknown target.', 'leadsforward-core'), $index);
+		continue;
 	}
 
 	if (!empty($homepage_updates) && function_exists('lf_get_homepage_section_config')) {
@@ -5710,6 +6536,9 @@ function lf_apply_orchestrator_updates(array $response): array {
 			$fields = $update['fields'] ?? $update['data'] ?? [];
 			foreach ($fields as $key => $value) {
 				if (!is_string($key)) {
+					continue;
+				}
+				if ($key === 'question' || $key === 'answer') {
 					continue;
 				}
 				$parts = explode('.', $key, 2);
@@ -5800,6 +6629,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 			$normalized_settings = lf_ai_studio_enforce_section_quality($section_settings, (string) $section_id, $registry);
 			$config[$section_id] = array_merge($section_settings, lf_sections_sanitize_settings((string) $section_id, $normalized_settings));
 		}
+		$config = lf_ai_studio_deduplicate_headings($config, $registry, false);
 		if ($config !== $homepage_config) {
 			$staged_homepage_config = $config;
 			$changes['homepage'] = true;
@@ -6356,7 +7186,7 @@ function lf_ai_studio_maybe_requeue_from_audit(int $job_id, array $report): arra
 
 function lf_ai_studio_build_repair_request(array $report, array $request): array {
 	if (empty($request) || empty($request['blueprints']) || !is_array($request['blueprints'])) {
-		$request = lf_ai_studio_build_full_site_payload();
+		$request = lf_ai_studio_build_full_site_payload(false);
 	}
 	if (!is_array($request) || !empty($request['error'])) {
 		return ['error' => 'Unable to build repair request.'];

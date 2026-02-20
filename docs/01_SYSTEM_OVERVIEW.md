@@ -32,6 +32,14 @@ Expected behavior:
 - CTA supporting text remains unique by page context.
 - SEO/content quality enforcement runs before callback apply.
 
+## Template Defaults (Clean Layouts)
+- **Homepage:** hero → trust_bar → service_intro → benefits → service_details → process → faq_accordion → trust_reviews → related_links → map_nap → cta.
+- **Services overview (our-services):** hero → service_intro → content_image → faq_accordion → cta.
+- **Service areas overview:** hero → service_areas → faq_accordion → cta.
+- **Service pages:** hero → trust_bar → service_details → benefits → process → faq_accordion → cta.
+- **Service area pages:** hero → content_image → services_offered_here → nearby_areas → faq_accordion → cta.
+- **Core pages:** about-us (hero → content_image → benefits → cta); contact (hero → map_nap → cta); reviews (hero → trust_reviews → cta); blog (hero → blog_posts → cta); sitemap (hero → sitemap_links); privacy/terms/thank-you (hero → content).
+
 ## Storage
 - Manifest: `lf_site_manifest`
 - Research document: `lf_site_research_document`

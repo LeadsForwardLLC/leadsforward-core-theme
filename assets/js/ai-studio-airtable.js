@@ -3,7 +3,6 @@
   if (!cfg) return;
 
   var container = document.getElementById('lf-airtable-picker');
-  if (!container) return;
 
   var searchInput = document.getElementById('lf-airtable-search');
   var resultsEl = document.getElementById('lf-airtable-results');
@@ -21,6 +20,11 @@
   var progressLabel = progressWrap ? progressWrap.querySelector('.lf-manifester-progress__label') : null;
   var jobId = progressWrap ? progressWrap.getAttribute('data-job-id') : '';
   var polling = false;
+  var imagesForm = document.getElementById('lf-manifester-images-form');
+  var imagesInput = document.getElementById('lf-manifester-images');
+  var imagesPreview = document.getElementById('lf-manifester-images-preview');
+  var imagesStatusEl = document.getElementById('lf-manifester-images-status');
+  var imagesUploading = false;
 
   if (tokenToggle && tokenInput) {
     tokenToggle.addEventListener('change', function () {
@@ -28,9 +32,9 @@
     });
   }
 
-  if (!searchInput || !resultsEl || !previewEl || !statusEl) return;
+  var hasAirtableUI = !!(searchInput && resultsEl && previewEl && statusEl);
 
-  if (cfg.strings && cfg.strings.searchPlaceholder) {
+  if (hasAirtableUI && cfg.strings && cfg.strings.searchPlaceholder) {
     searchInput.placeholder = cfg.strings.searchPlaceholder;
   }
 
@@ -38,6 +42,7 @@
   var debounceTimer = null;
 
   function setStatus(message, type) {
+    if (!statusEl) return;
     statusEl.textContent = message || '';
     statusEl.className = 'lf-airtable-status' + (type ? ' is-' + type : '');
   }
@@ -49,6 +54,7 @@
   }
 
   function clearResults() {
+    if (!resultsEl) return;
     while (resultsEl.firstChild) {
       resultsEl.removeChild(resultsEl.firstChild);
     }
@@ -161,6 +167,7 @@
   }
 
   function fetchResults(query) {
+    if (!hasAirtableUI) return;
     if (!cfg.enabled) {
       setStatus(cfg.strings && cfg.strings.notConfigured ? cfg.strings.notConfigured : 'Airtable is not configured.', 'error');
       return;
@@ -247,7 +254,7 @@
     }
   }
 
-  if (searchInput) {
+  if (hasAirtableUI && searchInput) {
     searchInput.addEventListener('input', function () {
       var value = searchInput.value.trim();
       if (debounceTimer) {
@@ -282,11 +289,13 @@
     });
   }
 
-  if (!cfg.enabled) {
-    setStatus(cfg.strings && cfg.strings.notConfigured ? cfg.strings.notConfigured : 'Airtable is not configured.', 'error');
-    searchInput.disabled = true;
-  } else {
-    fetchResults('');
+  if (hasAirtableUI) {
+    if (!cfg.enabled) {
+      setStatus(cfg.strings && cfg.strings.notConfigured ? cfg.strings.notConfigured : 'Airtable is not configured.', 'error');
+      searchInput.disabled = true;
+    } else {
+      fetchResults('');
+    }
   }
 
   var storedSelection = loadStoredSelection();
@@ -347,6 +356,112 @@
   }
 
   fetchJobStatus();
+
+  function setImagesStatus(message, type) {
+    if (!imagesStatusEl) return;
+    imagesStatusEl.textContent = message || '';
+    imagesStatusEl.className = 'lf-manifester-status' + (type ? ' is-' + type : '');
+  }
+
+  function clearImagePreviews() {
+    if (!imagesPreview) return;
+    while (imagesPreview.firstChild) {
+      imagesPreview.removeChild(imagesPreview.firstChild);
+    }
+  }
+
+  function renderImagePreviews(files) {
+    if (!imagesPreview) return;
+    clearImagePreviews();
+    if (!files || !files.length) return;
+    Array.prototype.forEach.call(files, function (file, index) {
+      var card = document.createElement('div');
+      card.className = 'lf-manifester-image-card';
+      card.setAttribute('data-index', String(index));
+
+      var img = document.createElement('img');
+      img.alt = file && file.name ? file.name : '';
+      var objectUrl = URL.createObjectURL(file);
+      img.src = objectUrl;
+      img.onload = function () {
+        URL.revokeObjectURL(objectUrl);
+      };
+
+      var meta = document.createElement('div');
+      meta.className = 'lf-manifester-image-meta';
+      meta.textContent = file && file.name ? file.name : 'Image';
+
+      card.appendChild(img);
+      card.appendChild(meta);
+      imagesPreview.appendChild(card);
+    });
+  }
+
+  function uploadImages(files) {
+    if (!files || !files.length || imagesUploading) return;
+    if (!cfg.imagesUploadNonce) return;
+    var strings = cfg.imagesStrings || {};
+    setImagesStatus(strings.uploading || 'Uploading images…', 'info');
+    imagesUploading = true;
+    var formData = new FormData();
+    formData.append('action', 'lf_ai_studio_images_upload');
+    formData.append('nonce', cfg.imagesUploadNonce);
+    Array.prototype.forEach.call(files, function (file) {
+      formData.append('lf_manifest_images[]', file);
+    });
+    fetch(cfg.ajaxUrl, {
+      method: 'POST',
+      credentials: 'same-origin',
+      body: formData
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (payload) {
+        imagesUploading = false;
+        if (!payload || !payload.success) {
+          var message = strings.error || 'Image upload failed.';
+          if (payload && payload.data && payload.data.message) {
+            message = payload.data.message;
+          }
+          setImagesStatus(message, 'error');
+          return;
+        }
+        var data = payload.data || {};
+        var uploaded = Array.isArray(data.uploaded) ? data.uploaded : [];
+        var cards = imagesPreview ? imagesPreview.querySelectorAll('.lf-manifester-image-card') : [];
+        uploaded.forEach(function (item, index) {
+          var card = cards[index];
+          if (!card) return;
+          var img = card.querySelector('img');
+          if (img && item && item.url) {
+            img.src = item.url;
+          }
+          card.classList.add('is-uploaded');
+        });
+        var successMsg = strings.success || 'Images uploaded to Media Library.';
+        if (data.error_count) {
+          successMsg += ' ' + data.error_count + ' failed.';
+        }
+        setImagesStatus(successMsg, data.error_count ? 'error' : 'success');
+      })
+      .catch(function () {
+        imagesUploading = false;
+        setImagesStatus((cfg.imagesStrings && cfg.imagesStrings.error) || 'Image upload failed.', 'error');
+      });
+  }
+
+  if (imagesInput) {
+    imagesInput.addEventListener('change', function () {
+      var files = imagesInput.files;
+      if (!files || !files.length) {
+        setImagesStatus((cfg.imagesStrings && cfg.imagesStrings.empty) || 'Please choose one or more images before uploading.', 'error');
+        clearImagePreviews();
+        return;
+      }
+      renderImagePreviews(files);
+      uploadImages(files);
+      imagesInput.value = '';
+    });
+  }
 
   var researchInput = document.getElementById('lf_site_research');
   var researchStatusEl = document.getElementById('lf-research-status');

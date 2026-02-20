@@ -180,6 +180,41 @@ function lf_image_intelligence_normalize_filename(string $filename): string {
 	return $filename;
 }
 
+/**
+ * @return int[]
+ */
+function lf_image_intelligence_get_logo_ids(): array {
+	static $cache = null;
+	if (is_array($cache)) {
+		return $cache;
+	}
+	$ids = [];
+	if (function_exists('lf_get_global_option')) {
+		$ids[] = (int) lf_get_global_option('lf_global_logo', 0);
+	}
+	$ids[] = (int) get_option('options_lf_global_logo', 0);
+	if (function_exists('lf_get_business_info_value')) {
+		$ids[] = (int) lf_get_business_info_value('lf_business_logo', 0);
+	}
+	if (function_exists('lf_business_entity_get')) {
+		$entity = lf_business_entity_get();
+		if (is_array($entity)) {
+			$ids[] = (int) ($entity['logo_id'] ?? 0);
+		}
+	}
+	$ids = array_values(array_unique(array_filter(array_map('absint', $ids))));
+	$cache = $ids;
+	return $ids;
+}
+
+function lf_image_intelligence_is_logo_id(int $attachment_id): bool {
+	$attachment_id = (int) $attachment_id;
+	if ($attachment_id <= 0) {
+		return false;
+	}
+	return in_array($attachment_id, lf_image_intelligence_get_logo_ids(), true);
+}
+
 function lf_image_intelligence_is_placeholder_asset(int $attachment_id): bool {
 	$attachment_id = (int) $attachment_id;
 	if ($attachment_id <= 0) {
@@ -512,9 +547,13 @@ function lf_build_media_index(): array {
 	]);
 
 	$index = [];
+	$logo_ids = lf_image_intelligence_get_logo_ids();
 	$vision_map = lf_image_intelligence_get_vision_annotations();
 	foreach ($ids as $attachment_id) {
 		$attachment_id = (int) $attachment_id;
+		if ($attachment_id > 0 && in_array($attachment_id, $logo_ids, true)) {
+			continue;
+		}
 		if (lf_image_intelligence_is_placeholder_asset($attachment_id)) {
 			continue;
 		}
@@ -705,7 +744,7 @@ function lf_image_intelligence_pick_slot(array $index, array $context, string $s
 	$candidates = [];
 	foreach ($index as $item) {
 		$id = (int) ($item['id'] ?? 0);
-		if ($id <= 0 || in_array($id, $used_ids, true)) {
+		if ($id <= 0 || in_array($id, $used_ids, true) || lf_image_intelligence_is_logo_id($id)) {
 			continue;
 		}
 		$score = lf_image_intelligence_score_item($item, $context);
@@ -747,7 +786,7 @@ function lf_image_intelligence_pick_slot(array $index, array $context, string $s
  */
 function lf_match_images_for_context(array $context): array {
 	$index = lf_build_media_index();
-	$slots = ['hero', 'content_image_a', 'image_content_b', 'content_image_c', 'featured'];
+	$slots = ['hero', 'content_image_a', 'featured'];
 	$out = [
 		'hero' => 0,
 		'content_image_a' => 0,

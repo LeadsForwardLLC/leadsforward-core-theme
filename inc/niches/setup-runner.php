@@ -825,43 +825,21 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 
 	return [
 		'about-us' => [
-			'order' => ['hero', 'trust_bar', 'content_image', 'image_content_b', 'benefits', 'process', 'faq_accordion', 'related_links', 'cta'],
+			'order' => ['hero', 'content_image', 'benefits', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'About ' . $business,
 					'hero_subheadline' => 'Local home-service professionals' . $city_line . ' focused on quality, communication, and a clean job site.',
-				],
-				'trust_bar' => [
-					'trust_heading' => __('Trusted by local homeowners', 'leadsforward-core'),
 				],
 				'content_image' => [
 					'section_heading' => 'Our story',
 					'section_intro' => 'Built for homeowners who want clear pricing and reliable service.',
 					'section_body' => 'We started ' . $business . ' to make home services simple and dependable. Our team shows up on time, keeps you informed, and treats your home with care from start to finish.',
 				],
-				'image_content_b' => [
-					'section_heading' => 'Meet the team',
-					'section_intro' => 'Skilled specialists who treat your home with care.',
-					'section_body' => 'Our technicians and project leads bring hands-on experience, clear communication, and a respect-first approach to every home we visit. We train on safety, workmanship, and homeowner communication so you always know what to expect.',
-				],
 				'benefits' => [
 					'section_heading' => 'Why homeowners choose us',
 					'section_intro' => 'Clear communication, honest pricing, and consistent results.',
 					'benefits_items' => 'Licensed and insured professionals' . "\n" . 'Upfront pricing before work starts' . "\n" . 'Respectful, clean crews',
-				],
-				'process' => [
-					'section_heading' => 'How we work',
-					'section_intro' => 'A clear, homeowner-friendly experience from first call to final walkthrough.',
-					'process_steps' => 'Listen to your goals' . "\n" . 'Provide a clear plan and timeline' . "\n" . 'Deliver the work with care' . "\n" . 'Review every detail together',
-				],
-				'faq_accordion' => [
-					'section_heading' => 'About our team',
-					'section_intro' => 'Quick answers about how we work, communicate, and schedule projects.',
-				],
-				'related_links' => [
-					'section_heading' => 'Explore our services',
-					'section_intro' => 'Explore more of our services.',
-					'related_links_mode' => 'services',
 				],
 				'cta' => [
 					'cta_headline' => $cta_headline,
@@ -874,42 +852,23 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'our-services' => [
-			'order' => ['hero', 'trust_bar', 'service_intro', 'benefits', 'content_image_a', 'process', 'faq_accordion', 'related_links', 'cta'],
+			'order' => ['hero', 'service_intro', 'content_image', 'faq_accordion', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Services' . ($business ? ' by ' . $business : ''),
 					'hero_subheadline' => 'Explore our most requested services and schedule fast, reliable help' . $city_line . '.',
 				],
-				'trust_bar' => [
-					'trust_heading' => 'Trusted by local homeowners',
-					'trust_badges' => __('Licensed and insured' . "\n" . 'Clear timelines' . "\n" . 'Respectful crews', 'leadsforward-core'),
-				],
 				'service_intro' => [
 					'section_heading' => 'Service options',
 					'section_intro' => 'Explore our core services with clear scopes and upfront expectations.',
 				],
-				'benefits' => [
-					'section_heading' => 'What you can expect',
-					'section_intro' => 'Homeowner-first service standards on every visit.',
-					'benefits_items' => 'Clear scopes before work begins' . "\n" . 'Respectful crews and clean worksites' . "\n" . 'Reliable timelines and updates',
-				],
-				'content_image_a' => [
+				'content_image' => [
 					'section_heading' => 'How we deliver great results',
 					'section_intro' => 'Clear communication and quality workmanship at every step.',
-				],
-				'process' => [
-					'section_heading' => 'Our service process',
-					'section_intro' => 'A simple path from first call to finished work.',
-					'process_steps' => 'Review your goals' . "\n" . 'Confirm scope and schedule' . "\n" . 'Complete work with care' . "\n" . 'Final walkthrough and next steps',
 				],
 				'faq_accordion' => [
 					'section_heading' => 'Service FAQs',
 					'section_intro' => 'Answers to common scheduling and service questions.',
-				],
-				'related_links' => [
-					'section_heading' => 'Explore service areas',
-					'section_intro' => 'Find local service details for your neighborhood.',
-					'related_links_mode' => 'areas',
 				],
 				'cta' => [
 					'cta_headline' => $cta_headline,
@@ -922,20 +881,11 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'service-areas' => [
-			'order' => ['hero', 'trust_bar', 'content_centered', 'service_areas', 'benefits', 'faq_accordion', 'cta'],
+			'order' => ['hero', 'service_areas', 'faq_accordion', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Service areas' . ($business ? ' for ' . $business : ''),
 					'hero_subheadline' => 'See the neighborhoods and cities we serve' . $city_line . '.',
-				],
-				'trust_bar' => [
-					'trust_heading' => 'Locally trusted service coverage',
-					'trust_badges' => __('Fast local response' . "\n" . 'Coverage across nearby cities' . "\n" . 'Clear communication', 'leadsforward-core'),
-				],
-				'content_centered' => [
-					'section_heading' => 'We serve homeowners across the region',
-					'optional_subheading' => 'Local teams, fast response',
-					'supporting_text' => 'Find your city or neighborhood and see how quickly we can schedule service for your area.',
 				],
 				'service_areas' => [
 					'section_heading' => 'Browse our service areas',
@@ -946,11 +896,6 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'filter_label' => 'Filter by state',
 					'filter_all_label' => 'All areas',
 					'no_results_text' => 'No service areas match your search yet. Clear filters to view all coverage.',
-				],
-				'benefits' => [
-					'section_heading' => 'Why local coverage matters',
-					'section_intro' => 'Better scheduling, faster arrivals, and service tailored to local conditions.',
-					'benefits_items' => 'Faster route-based scheduling' . "\n" . 'Teams familiar with local properties' . "\n" . 'Consistent communication by area',
 				],
 				'faq_accordion' => [
 					'section_heading' => 'Service area FAQs',
@@ -967,7 +912,7 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'reviews' => [
-			'order' => ['hero', 'trust_reviews', 'benefits', 'related_links', 'cta'],
+			'order' => ['hero', 'trust_reviews', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Customer reviews',
@@ -976,16 +921,6 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 				'trust_reviews' => [
 					'trust_heading' => 'What customers are saying',
 					'trust_max_items' => 6,
-				],
-				'benefits' => [
-					'section_heading' => 'What clients value most',
-					'section_intro' => 'The standards homeowners mention most often in their feedback.',
-					'benefits_items' => 'On-time, respectful crews' . "\n" . 'Quality workmanship that lasts' . "\n" . 'Clear communication from start to finish',
-				],
-				'related_links' => [
-					'section_heading' => 'Explore services',
-					'section_intro' => 'Explore more of our services.',
-					'related_links_mode' => 'services',
 				],
 				'cta' => [
 					'cta_headline' => $cta_headline,
@@ -998,25 +933,16 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'blog' => [
-			'order' => ['hero', 'trust_bar', 'blog_posts', 'related_links', 'cta'],
+			'order' => ['hero', 'blog_posts', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Home service tips & updates',
 					'hero_subheadline' => 'Practical guidance, project checklists, and seasonal advice.',
 				],
-				'trust_bar' => [
-					'trust_heading' => 'Homeowner-tested guidance',
-					'trust_badges' => __('Local expertise' . "\n" . 'Clear how-to advice' . "\n" . 'Actionable next steps', 'leadsforward-core'),
-				],
 				'blog_posts' => [
 					'section_heading' => 'Latest articles',
 					'section_intro' => 'Helpful resources from our team.',
 					'posts_per_page' => 6,
-				],
-				'related_links' => [
-					'section_heading' => 'Explore services',
-					'section_intro' => 'See what we can help with today.',
-					'related_links_mode' => 'services',
 				],
 				'cta' => [
 					'cta_headline' => $cta_headline,
@@ -1029,7 +955,7 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'sitemap' => [
-			'order' => ['hero', 'sitemap_links', 'cta'],
+			'order' => ['hero', 'sitemap_links'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Sitemap',
@@ -1039,10 +965,6 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'section_heading' => 'Quick links',
 					'section_intro' => 'Browse the full site from one place.',
 				],
-				'cta' => [
-					'cta_headline' => $cta_headline,
-					'cta_subheadline' => 'Need a quick answer? Reach out and we will help.',
-				],
 			],
 			'seo' => [
 				'title' => $business ? 'Sitemap | ' . $business : 'Sitemap',
@@ -1050,19 +972,11 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'contact' => [
-			'order' => ['hero', 'map_nap', 'trust_reviews', 'cta'],
+			'order' => ['hero', 'map_nap', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Contact ' . $business,
 					'hero_subheadline' => 'Fast responses and clear next steps' . $city_line . '.',
-				],
-				'trust_reviews' => [
-					'trust_heading' => 'Recent reviews',
-					'trust_layout' => 'grid',
-					'trust_columns' => '2',
-					'trust_max_items' => 2,
-					'trust_show_summary' => '0',
-					'trust_show_source' => '0',
 				],
 				'map_nap' => [
 					'section_intent' => 'contact',
@@ -1080,15 +994,11 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'privacy-policy' => [
-			'order' => ['hero', 'content', 'cta'],
+			'order' => ['hero', 'content'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Privacy policy',
 					'hero_subheadline' => 'How we collect and protect your information.',
-				],
-				'cta' => [
-					'cta_headline' => $cta_headline,
-					'cta_subheadline' => 'Have a question about your data? We are happy to help.',
 				],
 			],
 			'seo' => [
@@ -1097,15 +1007,11 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'terms-of-service' => [
-			'order' => ['hero', 'content', 'cta'],
+			'order' => ['hero', 'content'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Terms of service',
 					'hero_subheadline' => 'Important details about using this site and our services.',
-				],
-				'cta' => [
-					'cta_headline' => $cta_headline,
-					'cta_subheadline' => 'Need clarification? Contact our team for quick answers.',
 				],
 			],
 			'seo' => [
@@ -1114,29 +1020,11 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'thank-you' => [
-			'order' => ['hero', 'content_image', 'trust_bar', 'related_links', 'cta'],
+			'order' => ['hero', 'content'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Thanks — we received your request',
 					'hero_subheadline' => 'A local specialist will follow up soon with next steps.',
-				],
-				'content_image' => [
-					'section_heading' => 'What happens next',
-					'section_intro' => 'We will review your details and respond quickly.',
-					'section_body' => 'If you have an urgent request, please call us directly and we will prioritize your service.',
-				],
-				'trust_bar' => [
-					'trust_heading' => 'You are in good hands',
-					'trust_badges' => __('Fast follow-up' . "\n" . 'Clear next steps' . "\n" . 'Local support team', 'leadsforward-core'),
-				],
-				'related_links' => [
-					'section_heading' => 'Explore services',
-					'section_intro' => 'Explore more of our services.',
-					'related_links_mode' => 'services',
-				],
-				'cta' => [
-					'cta_headline' => 'Need immediate help?',
-					'cta_subheadline' => 'Call us now and we will assist you.',
 				],
 			],
 			'seo' => [

@@ -1,5 +1,5 @@
 {
-  "name": "LeadsForward – AI Content Orchestrator",
+  "name": "LeadsForward \u2013 AI Content Orchestrator",
   "nodes": [
     {
       "parameters": {
@@ -11,7 +11,7 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -179,
+        -420,
         0
       ],
       "id": "c9d1af29-5c3d-46ab-b10c-9001b9cf27fe",
@@ -32,8 +32,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -22,
-        -196
+        -150,
+        -160
       ],
       "id": "7f7b7d63-6f42-4d59-9db1-7a4f1f593c1e",
       "name": "Research Document Gate"
@@ -58,8 +58,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.8,
       "position": [
-        224,
-        -196
+        150,
+        -200
       ],
       "id": "3c7b4b0c-8b36-4f3a-9e8f-1c02d5a13c9c",
       "name": "Research Generator"
@@ -71,8 +71,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        504,
-        -196
+        380,
+        -200
       ],
       "id": "9c2f1c52-6f2f-4c67-9a63-2d4a4e0a9b6f",
       "name": "Store Research Document"
@@ -84,8 +84,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        224,
-        84
+        150,
+        0
       ],
       "id": "d2a1c4e0-8d64-4c4e-9c6f-1f8a9b2e3c4d",
       "name": "Use Provided Research"
@@ -97,8 +97,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -179,
-        308
+        -200,
+        240
       ],
       "id": "b2f4b1c6-9b41-4a6a-9b3d-7a8d2e7e8a11",
       "name": "Callback Test Payload",
@@ -137,8 +137,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [
-        168,
-        308
+        0,
+        240
       ],
       "id": "d9d1e0e6-1c71-4a69-bd7b-4c2e5f4f9c33",
       "name": "Callback Test Request",
@@ -151,7 +151,7 @@
         "messages": {
           "messageValues": [
             {
-              "message": "You are LeadsForward’s deterministic website content engine.\n\nYou MUST output ONLY valid JSON that matches the required schema. No markdown. No commentary. No extra keys unless explicitly allowed.\n\nINPUT SHAPE\nYou will receive a JSON object with:\n- request_id, variation_seed, business_name, niche, city_region, keywords, writing_samples, business_entity\n- primary_keyword (string), secondary_keywords (array), style_profile (object)\n- system_message (optional), faq_strategy (optional), cta_strategy (optional), global_faq_pool (optional)\n- research_context (optional)\n- page_type\n- blueprint_index\n- blueprint (ONE page blueprint only)\n\nPRIORITY OVERRIDE\n0) If input.system_message is present, follow it exactly. If it conflicts with any instruction here, input.system_message wins.\n\nCRITICAL RULES (NON-NEGOTIABLE)\n1) Use ONLY niche = input.niche. Never introduce any other niche/service type.\n2) Use ONLY location = input.city_region. Never introduce any other city/region.\n3) Use ONLY business name = input.business_name.\n4) NEVER reuse content from previous runs or “typical examples”.\n5) Generate content ONLY for input.blueprint (single page). Do not generate for other pages.\n6) Do not invent sections/fields. Write ONLY to keys that appear in blueprint.sections[].allowed_field_keys.\n7) If blueprint provides section_label, intent, purpose, field_labels, or field_types, use them to shape content for that section.\n7) For every section instance, write dot-notation fields using:\n   - Use blueprint.sections[].section_id as the prefix (example: \"hero.hero_headline\" or \"hero-1.hero_headline\").\n8) Write values for EVERY allowed_field_keys in EVERY section. Do not skip keys.\n9) List fields must be newline-delimited strings (not arrays).\n10) No placeholder text, no “Portland”, no “crawl space”, no “landscaping” unless niche explicitly matches.\n11) HTML is allowed only inside richtext fields (use <p>, <ul>, <li>, <a>). All other fields must be plain text.\n12) Keep outputs concise enough to fit response limits. Prefer tight, high-signal copy. Avoid huge paragraphs.\n13) Always echo input.page_type as \"page_type\" in your output JSON. Hero headline must be unique per page and should incorporate blueprint.page_title or service/service_area context. Avoid the phrase \"in your area\" unless page_type is \"service_area\".\n14) CTA supporting text: for every CTA section, cta_subheadline_secondary must be exactly ONE sentence, non-empty, and unique across pages. Make it specific using page_type, primary_keyword, business_name, or city_region.\n15) CTA headline/subheadline: you MAY write cta_headline and cta_subheadline for every page. Make them unique per page and aligned to page_type.\n16) You MUST include a top-level \"meta\" object with primary_keyword, secondary_keywords, style_profile_id, business_name, and city_region echoed from input.\n17) Every section heading + intro field must be non-empty and unique across pages.\n18) Benefits section: write 3 lines in benefits_items using \"Title || Body\". Title <= 5 words; Body 10-14 words.\n19) Hero proof list: hero_proof_bullets must be exactly 3 lines, 3-5 words each, no punctuation.\n20) Process section: include process_steps (4-6 steps) and process_expectations (3-4 items) when allowed. For service pages, steps must reference the specific service but align with the core process.\n21) Related links section: intro must be service-only language (no areas).\n22) If any allowed field would be empty, generate a concise sentence using primary_keyword, business_name, or city_region.\n23) Process steps must use \"Title: description\" format for every line.\n24) For service/service_area pages, hero_headline must include the primary_keyword and a benefit/outcome (not just the location).\n25) For service_area pages, ensure content_image/image_content sections include unique section_heading, section_intro, and section_body.\n26) Service pages must include a 20-28 word overview sentence in hero_subheadline or section_intro to populate service intro cards.\n27) Internal linking: include 1-2 internal links in richtext fields using internal_links list. Use <a href=\"URL\">Label</a>. Do not invent URLs.\n\nQUALITY OBJECTIVES (DO NOT BREAK JSON RULES)\n- Human-sounding: vary sentence length and rhythm; avoid templated phrasing and cliches (\"We understand\", \"At [Company]\", \"In today's world\").\n- Sales-focused: emphasize outcomes, credibility, and next steps for homeowners; avoid fluff.\n- Local SEO: include the primary keyword naturally in the hero headline or subheadline; work in 1–2 secondary keywords across the page when appropriate; avoid keyword stuffing.\n- Uniqueness: no repeated sentences across page types; phrasing should feel custom to this business and location.\n- Use writing_samples (if provided) to match tone and diction, but never copy sentences verbatim.\n\nRESEARCH CONTEXT GUIDANCE\n- If research_context exists: Apply positioning and differentiation.\n- Use SEO entity strategy.\n- Avoid competitor phrasing.\n- Apply voice guidelines.\n- Use FAQ strategy angles.\n- Use content expansion depth guidance.\n\nTARGET ROUTING\n- If blueprint.page == \"homepage\": target=\"options\", id=\"homepage\"\n- If blueprint.page in [\"service\",\"service_area\",\"services_overview\",\"service_areas_overview\",\"about\",\"contact\",\"reviews\",\"blog\",\"sitemap\",\"privacy\",\"terms\",\"thank_you\",\"post\"]: target=\"post_meta\", id=blueprint.post_id\n- FAQ creation is REQUIRED when blueprint.faq_target_count or blueprint.faq_target_range is present:\n  - If faq_target_count exists: generate EXACTLY that many updates\n  - If faq_target_range exists: generate between min and max (inclusive)\n  - Return updates with target=\"faq\" and fields: question, answer (answers must be valid HTML <p>...</p>)\n\nCONTENT QUALITY RULES\n- Must match niche + location + business name everywhere.\n- Service pages must match the specific service title/slug for that post (use blueprint context only).\n- Avoid generic filler. Use concrete benefits, process, trust signals appropriate for the niche.\n\nOUTPUT FORMAT (EXACT)\nReturn JSON:\n{\n  \"ok\": true,\n  \"request_id\": \"<same request_id>\",\n  \"page_type\": \"<echo input.page_type>\",\n  \"meta\": {\n    \"primary_keyword\": \"<echo input.primary_keyword>\",\n    \"secondary_keywords\": <echo input.secondary_keywords>,\n    \"style_profile_id\": \"<echo input.style_profile.id>\",\n    \"business_name\": \"<echo input.business_name>\",\n    \"city_region\": \"<echo input.city_region>\"\n  },\n  \"updates\": [\n    { \"target\": \"...\", \"id\": \"...\", \"fields\": { \"section.field\":\"value\" } }\n  ]\n}\n"
+              "message": "You are LeadsForward\u2019s deterministic website content engine.\n\nYou MUST output ONLY valid JSON that matches the required schema. No markdown. No commentary. No extra keys unless explicitly allowed.\n\nINPUT SHAPE\nYou will receive a JSON object with:\n- request_id, variation_seed, business_name, niche, city_region, keywords, writing_samples, business_entity\n- primary_keyword (string), secondary_keywords (array), style_profile (object)\n- system_message (optional), faq_strategy (optional), cta_strategy (optional), global_faq_pool (optional)\n- research_context (optional)\n- page_type\n- blueprint_index\n- blueprint (ONE page blueprint only)\n\nPRIORITY OVERRIDE\n0) If input.system_message is present, follow it exactly. If it conflicts with any instruction here, input.system_message wins.\n0b) If input.retry_instructions is present, fix every item and rewrite the page from scratch with no reused sentences.\n\nCRITICAL RULES (NON-NEGOTIABLE)\n1) Use ONLY niche = input.niche. Never introduce any other niche/service type.\n2) Use ONLY location = input.city_region. Never introduce any other city/region.\n3) Use ONLY business name = input.business_name.\n4) NEVER reuse content from previous runs or \u201ctypical examples\u201d.\n5) Generate content ONLY for input.blueprint (single page). Do not generate for other pages.\n6) Do not invent sections/fields. Write ONLY to keys that appear in blueprint.sections[].allowed_field_keys.\n7) If blueprint provides section_label, intent, purpose, field_labels, or field_types, use them to shape content for that section.\n7) For every section instance, write dot-notation fields using:\n   - Use blueprint.sections[].section_id as the prefix (example: \"hero.hero_headline\" or \"hero-1.hero_headline\").\n8) Write values for EVERY allowed_field_keys in EVERY section. Do not skip keys.\n9) List fields must be newline-delimited strings (not arrays).\n10) No placeholder text, no \u201cPortland\u201d, no \u201ccrawl space\u201d, no \u201clandscaping\u201d unless niche explicitly matches.\n10b) Avoid these generic phrases: \"delivers tailored solutions\", \"clear communication, clean execution\", \"long-lasting results\", \"fast response and clear pricing\", \"upfront pricing before work starts\", \"trusted local team\".\n11) HTML is allowed only inside richtext fields (use <p>, <ul>, <li>, <a>). All other fields must be plain text.\n12) Keep outputs concise enough to fit response limits. Prefer tight, high-signal copy. Avoid huge paragraphs.\n13) Always echo input.page_type as \"page_type\" in your output JSON. Hero headline must be unique per page and should incorporate blueprint.page_title or service/service_area context. Avoid the phrase \"in your area\" unless page_type is \"service_area\".\n14) CTA supporting text: for every CTA section, cta_subheadline_secondary must be exactly ONE sentence, non-empty, and unique across pages. Make it specific using page_type, primary_keyword, business_name, or city_region.\n15) CTA headline/subheadline: you MAY write cta_headline and cta_subheadline for every page. Make them unique per page and aligned to page_type.\n16) You MUST include a top-level \"meta\" object with primary_keyword, secondary_keywords, style_profile_id, business_name, and city_region echoed from input.\n17) Every section heading + intro field must be non-empty and unique across pages.\n17b) NEVER repeat the same sentence or paragraph anywhere within the page. If two sections sound similar, rewrite one completely.\n17c) Use blueprint.page_title and blueprint.sections[].section_id to keep headings distinct; do NOT reuse the hero headline in any other section.\n17d) City/region can appear at most ONCE per page (hero preferred). All other headings must avoid repeating the city.\n17e) CTA headline/subheadline must be unique per page and must not repeat the hero wording.\n18) Benefits section: write 3 lines in benefits_items using \"Title || Body\". Title <= 5 words; Body 10-14 words.\n19) Hero proof list: hero_proof_bullets must be exactly 3 lines, 3-5 words each, no punctuation.\n20) Process section: include process_steps (4-6 steps) and process_expectations (3-4 items) when allowed. For service pages, steps must reference the specific service but align with the core process.\n21) Related links section: intro must be service-only language (no areas).\n21b) Related links section has NO list field; do NOT output related_links_list.\n22) If any allowed field would be empty, generate a concise sentence using primary_keyword, business_name, or city_region.\n23) Process steps must use \"Title: description\" format for every line.\n24) For service/service_area pages, hero_headline must include the primary_keyword and a benefit/outcome (not just the location).\n25) For service_area pages, ensure content_image/image_content sections include unique section_heading, section_intro, and section_body.\n26) Service pages must include a 20-28 word overview sentence in hero_subheadline or section_intro to populate service intro cards.\n27) Internal linking: include 1-2 internal links in richtext fields using internal_links list. Use <a href=\"URL\">Label</a>. Do not invent URLs.\n\nQUALITY OBJECTIVES (DO NOT BREAK JSON RULES)\n- Human-sounding: vary sentence length and rhythm; avoid templated phrasing and cliches (\"We understand\", \"At [Company]\", \"In today's world\").\n- Sales-focused: emphasize outcomes, credibility, and next steps for homeowners; avoid fluff.\n- Local SEO: include the primary keyword naturally in the hero headline or subheadline; work in 1\u20132 secondary keywords across the page when appropriate; avoid keyword stuffing.\n- Uniqueness: no repeated sentences across page types; phrasing should feel custom to this business and location.\n- Use writing_samples (if provided) to match tone and diction, but never copy sentences verbatim.\n\nRESEARCH CONTEXT GUIDANCE\n- If research_context exists: Apply positioning and differentiation.\n- Use SEO entity strategy.\n- Avoid competitor phrasing.\n- Apply voice guidelines.\n- Use FAQ strategy angles.\n- Use content expansion depth guidance.\n\nTARGET ROUTING\n- If blueprint.page == \"homepage\": target=\"options\", id=\"homepage\"\n- If blueprint.page in [\"service\",\"service_area\",\"services_overview\",\"service_areas_overview\",\"about\",\"contact\",\"reviews\",\"blog\",\"sitemap\",\"privacy\",\"terms\",\"thank_you\",\"post\"]: target=\"post_meta\", id=blueprint.post_id\n- FAQ creation is REQUIRED when blueprint.faq_target_count or blueprint.faq_target_range is present:\n  - If faq_target_count exists: generate EXACTLY that many updates\n  - If faq_target_range exists: generate between min and max (inclusive)\n  - Return updates with target=\"faq\" and fields: question, answer (answers must be valid HTML <p>...</p>)\n\nCONTENT QUALITY RULES\n- Must match niche + location + business name everywhere.\n- Service pages must match the specific service title/slug for that post (use blueprint context only).\n- Avoid generic filler. Use concrete benefits, process, trust signals appropriate for the niche.\n\nOUTPUT FORMAT (EXACT)\nReturn JSON:\n{\n  \"ok\": true,\n  \"request_id\": \"<same request_id>\",\n  \"page_type\": \"<echo input.page_type>\",\n  \"meta\": {\n    \"primary_keyword\": \"<echo input.primary_keyword>\",\n    \"secondary_keywords\": <echo input.secondary_keywords>,\n    \"style_profile_id\": \"<echo input.style_profile.id>\",\n    \"business_name\": \"<echo input.business_name>\",\n    \"city_region\": \"<echo input.city_region>\"\n  },\n  \"updates\": [\n    { \"target\": \"...\", \"id\": \"...\", \"fields\": { \"section.field\":\"value\" } }\n  ]\n}\n"
             },
             {
               "type": "HumanMessagePromptTemplate",
@@ -164,7 +164,7 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.8,
       "position": [
-        381,
+        950,
         0
       ],
       "id": "02e029ed-c3b2-421b-80d9-305df082453f",
@@ -186,8 +186,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        493,
-        202
+        950,
+        200
       ],
       "id": "fab4c233-c3fc-4a6f-b1be-9e00ce992c08",
       "name": "OpenAI Chat Model",
@@ -214,8 +214,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        493,
-        -56
+        150,
+        -340
       ],
       "id": "9f7a7d5b-4f4d-4bdf-9f7f-3fe1e6536cf8",
       "name": "OpenAI Chat Model (Research)",
@@ -233,46 +233,46 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        179,
-        426
+        2720,
+        0
       ],
       "id": "fa4077b7-e929-4af0-a80c-b44420cf4577",
       "name": "Deterministic FAQ Enforcement"
     },
     {
       "parameters": {
-        "jsCode": "function pickRaw(input) {\n  if (typeof input === \"string\") return input;\n  if (typeof input?.text === \"string\") return input.text;\n  if (typeof input?.output === \"string\") return input.output;\n  if (typeof input?.response === \"string\") return input.response;\n  if (typeof input?.data?.text === \"string\") return input.data.text;\n  if (typeof input?.message?.content === \"string\") return input.message.content;\n  return input;\n}\n\nfunction deepClean(value) {\n  if (typeof value === \"string\") {\n    return value.split(String.fromCharCode(13)).join(String.fromCharCode(10));\n  }\n  if (Array.isArray(value)) return value.map(deepClean);\n  if (value && typeof value === \"object\") {\n    const cleaned = {};\n    for (const key in value) cleaned[key] = deepClean(value[key]);\n    return cleaned;\n  }\n  return value;\n}\n\nfunction stripHtml(value) {\n  return String(value || \"\")\n    .replace(/<[^>]*>/g, \" \")\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nfunction trimToWords(value, maxWords) {\n  const text = stripHtml(value);\n  if (!text) return \"\";\n  const words = text.split(/\\s+/);\n  if (words.length <= maxWords) return words.join(\" \");\n  return words.slice(0, maxWords).join(\" \");\n}\n\nfunction findPostMetaId(updates) {\n  const hit = updates.find(u => u?.target === \"post_meta\" && u?.id);\n  return hit?.id || null;\n}\n\nfunction pickShortDesc(updates) {\n  const suffixes = [\n    \".hero_subheadline\",\n    \".hero_supporting_text\",\n    \".section_intro\",\n    \".section_body\",\n    \".section_body_secondary\"\n  ];\n  for (const update of updates) {\n    const fields = update?.fields;\n    if (!fields || typeof fields !== \"object\") continue;\n    const keys = Object.keys(fields);\n    for (const suffix of suffixes) {\n      const key = keys.find(k => k.toLowerCase().endsWith(suffix));\n      if (!key) continue;\n      const value = trimToWords(fields[key], 28);\n      if (value) return value;\n    }\n  }\n  return \"\";\n}\n\nfunction parseJsonSafely(raw) {\n  if (typeof raw !== \"string\") return { ok: true, value: raw };\n\n  const candidates = [];\n  const trimmed = raw.trim();\n  candidates.push(trimmed);\n\n  const fence = trimmed.match(/```(?:json)?\\s*([\\s\\S]*?)\\s*```/i);\n  if (fence && fence[1]) candidates.push(fence[1].trim());\n\n  const firstBrace = trimmed.indexOf('{');\n  const lastBrace = trimmed.lastIndexOf('}');\n  if (firstBrace >= 0 && lastBrace > firstBrace) {\n    candidates.push(trimmed.slice(firstBrace, lastBrace + 1));\n  }\n\n  const repaired = trimmed\n    .replace(/,\\s*}/g, \"}\")\n    .replace(/,\\s*]/g, \"]\");\n  candidates.push(repaired);\n\n  let lastError = null;\n  for (const candidate of candidates) {\n    try {\n      return { ok: true, value: JSON.parse(candidate) };\n    } catch (e) {\n      lastError = e;\n    }\n  }\n\n  return { ok: false, error: String(lastError?.message || 'Unable to parse JSON') };\n}\n\nfunction parseOne(itemJson) {\n  const inputCtx = itemJson && typeof itemJson === 'object' ? itemJson : {};\n  const requestIdHint = inputCtx.request_id || null;\n  const pageTypeHint = inputCtx.page_type || null;\n  const primaryHint = inputCtx.primary_keyword || '';\n  const secondaryHint = Array.isArray(inputCtx.secondary_keywords) ? inputCtx.secondary_keywords : [];\n  const businessHint = inputCtx.business_name || '';\n  const cityHint = inputCtx.city_region || '';\n  const styleHint = inputCtx.style_profile?.id || inputCtx.style_profile_id || '';\n\n  const raw = pickRaw(inputCtx);\n  const parsedResult = parseJsonSafely(raw);\n  if (!parsedResult.ok) {\n    return {\n      json: {\n        ok: false,\n        status: 500,\n        error: \"Invalid JSON from LLM\",\n        details: parsedResult.error,\n        page_type: pageTypeHint,\n        request_id: requestIdHint,\n        raw_preview: (typeof raw === \"string\") ? raw.slice(0, 800) : null\n      }\n    };\n  }\n\n  const parsed = parsedResult.value;\n  if (!parsed || parsed.ok !== true || !Array.isArray(parsed.updates)) {\n    return {\n      json: {\n        ok: false,\n        status: 422,\n        error: \"Invalid payload\",\n        page_type: pageTypeHint,\n        request_id: requestIdHint,\n        parsed_preview: parsed\n      }\n    };\n  }\n\n  const cleaned = deepClean(parsed);\n  let updates = (Array.isArray(cleaned.updates) ? cleaned.updates : []).map(u => ({\n    ...u,\n    fields: u?.fields ?? u?.data ?? {}\n  }));\n\n  const pageType = cleaned.page_type || pageTypeHint || null;\n\n  const meta = (cleaned.meta && typeof cleaned.meta === \"object\") ? cleaned.meta : {};\n  if (!meta.primary_keyword && primaryHint) meta.primary_keyword = primaryHint;\n  if (!meta.secondary_keywords && secondaryHint.length) meta.secondary_keywords = secondaryHint;\n  if (!meta.business_name && businessHint) meta.business_name = businessHint;\n  if (!meta.city_region && cityHint) meta.city_region = cityHint;\n  if (!meta.style_profile_id && styleHint) meta.style_profile_id = styleHint;\n\n  if (pageType === \"service\") {\n    const postId = findPostMetaId(updates);\n    const shortDesc = pickShortDesc(updates);\n    if (postId && shortDesc) {\n      updates.push({\n        target: \"service_meta\",\n        id: postId,\n        fields: { lf_service_short_desc: shortDesc }\n      });\n    }\n  }\n\n  return {\n    json: {\n      ok: true,\n      request_id: cleaned.request_id || requestIdHint,\n      page_type: pageType,\n      meta,\n      updates\n    }\n  };\n}\n\nconst inputItems = $input.all();\nreturn inputItems.map(item => parseOne(item.json || {}));"
+        "jsCode": "function pickRaw(input) {\n  if (typeof input === \"string\") return input;\n  if (typeof input?.text === \"string\") return input.text;\n  if (typeof input?.output === \"string\") return input.output;\n  if (typeof input?.response === \"string\") return input.response;\n  if (typeof input?.data?.text === \"string\") return input.data.text;\n  if (typeof input?.message?.content === \"string\") return input.message.content;\n  return input;\n}\n\nfunction deepClean(value) {\n  if (typeof value === \"string\") {\n    return value.split(String.fromCharCode(13)).join(String.fromCharCode(10));\n  }\n  if (Array.isArray(value)) return value.map(deepClean);\n  if (value && typeof value === \"object\") {\n    const cleaned = {};\n    for (const key in value) cleaned[key] = deepClean(value[key]);\n    return cleaned;\n  }\n  return value;\n}\n\nfunction stripHtml(value) {\n  return String(value || \"\")\n    .replace(/<[^>]*>/g, \" \")\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nfunction trimToWords(value, maxWords) {\n  const text = stripHtml(value);\n  if (!text) return \"\";\n  const words = text.split(/\\s+/);\n  if (words.length <= maxWords) return words.join(\" \");\n  return words.slice(0, maxWords).join(\" \");\n}\n\nfunction findPostMetaId(updates) {\n  const hit = updates.find(u => u?.target === \"post_meta\" && u?.id);\n  return hit?.id || null;\n}\n\nfunction pickShortDesc(updates) {\n  const suffixes = [\n    \".hero_subheadline\",\n    \".hero_supporting_text\",\n    \".section_intro\",\n    \".section_body\",\n    \".section_body_secondary\"\n  ];\n  for (const update of updates) {\n    const fields = update?.fields;\n    if (!fields || typeof fields !== \"object\") continue;\n    const keys = Object.keys(fields);\n    for (const suffix of suffixes) {\n      const key = keys.find(k => k.toLowerCase().endsWith(suffix));\n      if (!key) continue;\n      const value = trimToWords(fields[key], 28);\n      if (value) return value;\n    }\n  }\n  return \"\";\n}\n\nfunction parseJsonSafely(raw) {\n  if (typeof raw !== \"string\") return { ok: true, value: raw };\n\n  const candidates = [];\n  const trimmed = raw.trim();\n  candidates.push(trimmed);\n\n  const fence = trimmed.match(/```(?:json)?\\s*([\\s\\S]*?)\\s*```/i);\n  if (fence && fence[1]) candidates.push(fence[1].trim());\n\n  const firstBrace = trimmed.indexOf('{');\n  const lastBrace = trimmed.lastIndexOf('}');\n  if (firstBrace >= 0 && lastBrace > firstBrace) {\n    candidates.push(trimmed.slice(firstBrace, lastBrace + 1));\n  }\n\n  const repaired = trimmed\n    .replace(/,\\s*}/g, \"}\")\n    .replace(/,\\s*]/g, \"]\");\n  candidates.push(repaired);\n\n  let lastError = null;\n  for (const candidate of candidates) {\n    try {\n      return { ok: true, value: JSON.parse(candidate) };\n    } catch (e) {\n      lastError = e;\n    }\n  }\n\n  return { ok: false, error: String(lastError?.message || 'Unable to parse JSON') };\n}\n\nfunction parseOne(itemJson) {\n  const inputCtx = itemJson && typeof itemJson === 'object' ? itemJson : {};\n  const requestIdHint = inputCtx.request_id || null;\n  const pageTypeHint = inputCtx.page_type || null;\n  const primaryHint = inputCtx.primary_keyword || '';\n  const secondaryHint = Array.isArray(inputCtx.secondary_keywords) ? inputCtx.secondary_keywords : [];\n  const businessHint = inputCtx.business_name || '';\n  const cityHint = inputCtx.city_region || '';\n  const styleHint = inputCtx.style_profile?.id || inputCtx.style_profile_id || '';\n\n  const raw = pickRaw(inputCtx);\n  const parsedResult = parseJsonSafely(raw);\n  if (!parsedResult.ok) {\n    return {\n      json: {\n        ok: false,\n        status: 500,\n        error: \"Invalid JSON from LLM\",\n        details: parsedResult.error,\n        page_type: pageTypeHint,\n        request_id: requestIdHint,\n        blueprint_index: inputCtx.blueprint_index ?? null,\n        retry_count: inputCtx.retry_count ?? 0,\n        retry_instructions: inputCtx.retry_instructions ?? \"\",\n        raw_preview: (typeof raw === \"string\") ? raw.slice(0, 800) : null\n      }\n    };\n  }\n\n  const parsed = parsedResult.value;\n  if (!parsed || parsed.ok !== true || !Array.isArray(parsed.updates)) {\n    return {\n      json: {\n        ok: false,\n        status: 422,\n        error: \"Invalid payload\",\n        page_type: pageTypeHint,\n        request_id: requestIdHint,\n        blueprint_index: inputCtx.blueprint_index ?? null,\n        retry_count: inputCtx.retry_count ?? 0,\n        retry_instructions: inputCtx.retry_instructions ?? \"\",\n        parsed_preview: parsed\n      }\n    };\n  }\n\n  const cleaned = deepClean(parsed);\n  let updates = (Array.isArray(cleaned.updates) ? cleaned.updates : []).map(u => ({\n    ...u,\n    fields: u?.fields ?? u?.data ?? {}\n  }));\n\n  const pageType = cleaned.page_type || pageTypeHint || null;\n\n  const blueprintPostId = parseInt((inputCtx?.blueprint?.post_id || cleaned?.blueprint?.post_id || 0), 10) || 0;\n  const safeTargets = new Set([\"options\", \"post_meta\", \"faq\", \"service_meta\"]);\n  const isHomepage = pageType === \"homepage\";\n  const allowedFieldMap = (() => {\n    const out = new Set();\n  const allowedByType = (() => {\n    const out = {};\n    const sections = Array.isArray(inputCtx?.blueprint?.sections) ? inputCtx.blueprint.sections : [];\n    for (const section of sections) {\n      const type = section?.section_type;\n      const allowed = Array.isArray(section?.allowed_field_keys) ? section.allowed_field_keys : [];\n      if (!type) continue;\n      if (!out[type]) out[type] = new Set();\n      for (const key of allowed) {\n        if (typeof key === 'string' && key) out[type].add(key);\n      }\n    }\n    return out;\n  })();\n\n\n    const sections = Array.isArray(inputCtx?.blueprint?.sections) ? inputCtx.blueprint.sections : [];\n    for (const section of sections) {\n      const sectionId = section?.section_id;\n      const allowed = Array.isArray(section?.allowed_field_keys) ? section.allowed_field_keys : [];\n      if (!sectionId) continue;\n      for (const key of allowed) {\n        if (typeof key === 'string' && key) out.add(`${sectionId}.${key}`);\n      }\n    }\n    return out;\n  })();\n\n  const allowedBare = (() => {\n    const out = new Set();\n    const sections = Array.isArray(inputCtx?.blueprint?.sections) ? inputCtx.blueprint.sections : [];\n    for (const section of sections) {\n      const allowed = Array.isArray(section?.allowed_field_keys) ? section.allowed_field_keys : [];\n      for (const key of allowed) {\n        if (typeof key === 'string' && key) out.add(key);\n      }\n    }\n    return out;\n  })();\n\n  function filterFieldsByAllowed(fields) {\n    if (!fields || typeof fields !== 'object') return fields;\n    const next = {};\n    for (const key of Object.keys(fields)) {\n      if (key.includes('.')) {\n        const parts = key.split('.', 2);\n        const prefix = parts[0];\n        const field = parts[1] || '';\n        const allowedById = (!allowedFieldMap || allowedFieldMap.size === 0) || allowedFieldMap.has(key);\n        const allowedByType = (!allowedByType || !allowedByType[prefix]) ? false : allowedByType[prefix].has(field);\n        if (allowedById || allowedByType) {\n          next[key] = fields[key];\n        }\n      } else {\n        if (!allowedBare || allowedBare.size === 0 || allowedBare.has(key)) {\n          next[key] = fields[key];\n        }\n      }\n    }\n    return next;\n  }\n\n  updates = updates.map(update => {\n    const out = { ...update };\n    const targetRaw = typeof out.target === \"string\" ? out.target.trim() : \"\";\n\n    if (isHomepage) {\n      if (targetRaw === \"faq\") {\n        out.target = \"faq\";\n        return out;\n      }\n      out.target = \"options\";\n      out.id = \"homepage\";\n      return out;\n    }\n\n    if (!safeTargets.has(targetRaw) || targetRaw === \"options\") {\n      out.target = \"post_meta\";\n    } else {\n      out.target = targetRaw;\n    }\n\n    if (out.target === \"post_meta\" && (!out.id || out.id === 0) && blueprintPostId) {\n      out.id = blueprintPostId;\n    }\n    if (out.target === \"service_meta\" && (!out.id || out.id === 0) && blueprintPostId) {\n      out.id = blueprintPostId;\n    }\n    return out;\n  }).map(out => {\n    if (out.target !== \"faq\") {\n      out.fields = filterFieldsByAllowed(out.fields);\n    }\n    return out;\n  }).filter(out => {\n    if (out.target === \"options\") return true;\n    if (out.target === \"faq\") return true;\n    if (out.target === \"service_meta\") return !!out.id;\n    if (out.target === \"post_meta\") return !!out.id;\n    return false;\n  });\n\n  const meta = (cleaned.meta && typeof cleaned.meta === \"object\") ? cleaned.meta : {};\n  if (!meta.primary_keyword && primaryHint) meta.primary_keyword = primaryHint;\n  if (!meta.secondary_keywords && secondaryHint.length) meta.secondary_keywords = secondaryHint;\n  if (!meta.business_name && businessHint) meta.business_name = businessHint;\n  if (!meta.city_region && cityHint) meta.city_region = cityHint;\n  if (!meta.style_profile_id && styleHint) meta.style_profile_id = styleHint;\n\n  if (pageType === \"service\") {\n    const postId = findPostMetaId(updates);\n    const shortDesc = pickShortDesc(updates);\n    if (postId && shortDesc) {\n      updates.push({\n        target: \"service_meta\",\n        id: postId,\n        fields: { lf_service_short_desc: shortDesc }\n      });\n    }\n  }\n\n  return {\n    json: {\n      ok: true,\n      request_id: cleaned.request_id || requestIdHint,\n      blueprint_index: inputCtx.blueprint_index ?? null,\n      retry_count: inputCtx.retry_count ?? 0,\n      retry_instructions: inputCtx.retry_instructions ?? \"\",\n      page_type: pageType,\n      meta,\n      updates\n    }\n  };\n}\n\nconst inputItems = $input.all();\nreturn inputItems.map(item => parseOne(item.json || {}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -112,
-        426
+        1180,
+        0
       ],
       "id": "2268d928-fa08-4a61-a14c-4482f72b162c",
       "name": "Parse + Normalize + CTA Guard"
     },
     {
       "parameters": {
-        "jsCode": "// Quality Gate + SEO Enforcement (soft gate + auto-repair)\nconst allItems = $input.all();\nif (!allItems.length) {\n  return [{ json: { ok: true, updates: [], quality_warnings: [\"No items for quality gate\"] } }];\n}\n\nconst upstreamFailures = allItems\n  .map(i => i?.json || {})\n  .filter(j => j && j.ok === false);\n\nconst items = allItems.filter(i => i?.json?.ok !== false);\nif (!items.length) {\n  const warnings = upstreamFailures.map(f => {\n    const pageType = f.page_type || 'unknown';\n    const err = String(f.error || 'unknown_error');\n    const detail = String(f.details || '').trim();\n    return detail\n      ? `Dropped blueprint page_type=${pageType}: ${err} (${detail})`\n      : `Dropped blueprint page_type=${pageType}: ${err}`;\n  });\n  return [{ json: { ok: true, updates: [], quality_warnings: warnings.length ? warnings : ['All blueprints failed parse/validation'] } }];\n}\n\nconst parseWarnings = upstreamFailures.map(f => {\n  const pageType = f.page_type || 'unknown';\n  const err = String(f.error || 'unknown_error');\n  const detail = String(f.details || '').trim();\n  return detail\n    ? `Dropped blueprint page_type=${pageType}: ${err} (${detail})`\n    : `Dropped blueprint page_type=${pageType}: ${err}`;\n});\n\nfunction normalizeText(value) {\n  return String(value || \"\").toLowerCase().replace(/\\s+/g, \" \").trim();\n}\n\nfunction wordCount(value) {\n  const text = String(value || \"\").trim();\n  if (!text) return 0;\n  return text.split(/\\s+/).length;\n}\n\nfunction containsKeyword(value, keyword) {\n  const hay = normalizeText(value);\n  const needle = normalizeText(keyword);\n  if (!needle) return false;\n  return hay.includes(needle);\n}\n\nfunction injectKeyword(fields, keyword, preferredSuffix) {\n  const priorityKeys = [\n    \".hero_headline\", \".hero_subheadline\", \".hero_supporting_text\",\n    \".section_heading\", \".section_intro\", \".section_body\", \".section_body_secondary\"\n  ];\n  const keys = Object.keys(fields || {});\n  for (const suffix of priorityKeys) {\n    const key = keys.find(k => k.toLowerCase().endsWith(suffix));\n    if (!key) continue;\n    const value = String(fields[key] || \"\").trim();\n    if (!value) { fields[key] = keyword; return true; }\n    if (!containsKeyword(value, keyword)) {\n      fields[key] = `${value} ${preferredSuffix || keyword}`.trim();\n      return true;\n    }\n  }\n  for (const key of keys) {\n    if (typeof fields[key] !== \"string\") continue;\n    const value = String(fields[key] || \"\").trim();\n    if (!containsKeyword(value, keyword)) {\n      fields[key] = `${value} ${preferredSuffix || keyword}`.trim();\n      return true;\n    }\n  }\n  return false;\n}\n\nfunction appendSentence(value, sentence) {\n  const trimmed = String(value || \"\").trim();\n  if (!trimmed) return sentence;\n  const spacer = /[.!?]$/.test(trimmed) ? \" \" : \". \";\n  return `${trimmed}${spacer}${sentence}`.trim();\n}\n\nfunction enforceUniqueness(fields, cityRegion, businessName) {\n  const seen = new Map();\n  for (const key of Object.keys(fields || {})) {\n    if (typeof fields[key] !== \"string\") continue;\n    const value = String(fields[key] || \"\").trim();\n    if (!value) continue;\n    const normalized = normalizeText(value);\n    if (seen.has(normalized)) {\n      const suffix = cityRegion ? ` in ${cityRegion}` : (businessName ? ` with ${businessName}` : \"\");\n      fields[key] = `${value}${suffix}`.trim();\n    } else {\n      seen.set(normalized, true);\n    }\n  }\n}\n\nfunction replaceGenericPhrases(fields, pageType, cityRegion) {\n  if (!fields || typeof fields !== 'object') return;\n  const replacement = cityRegion ? `in ${cityRegion}` : 'locally';\n  const re = /\bin your area\b/gi;\n  for (const key of Object.keys(fields)) {\n    if (typeof fields[key] !== 'string') continue;\n    if (pageType === 'service_area') continue;\n    const value = fields[key];\n    if (re.test(value)) {\n      fields[key] = value.replace(re, replacement);\n    }\n  }\n}\n\nfunction minWordTarget(pageType) {\n  if (pageType === \"homepage\") return 140;\n  if ([\"sitemap\", \"privacy\", \"terms\", \"thank_you\"].includes(pageType)) return 60;\n  if ([\"contact\", \"reviews\", \"blog\", \"about\", \"services_overview\", \"service_areas_overview\"].includes(pageType)) return 80;\n  return 100;\n}\n\nfunction addFallbackSentence(updates, pageType, primaryKeyword, cityRegion) {\n  const sentence = primaryKeyword\n    ? `${primaryKeyword} services are available${cityRegion ? ' in ' + cityRegion : ' locally'}.`\n    : `Expert help is available${cityRegion ? ' in ' + cityRegion : ' locally'}.`;\n  for (const update of updates) {\n    const fields = update?.fields || {};\n    const keys = Object.keys(fields || {});\n    const key = keys.find(k => /section_body|section_intro|hero_supporting_text|cta_subheadline/i.test(k));\n    if (key && typeof fields[key] === 'string') {\n      fields[key] = appendSentence(fields[key], sentence);\n      return true;\n    }\n  }\n  return false;\n}\n\nconst warnings = [];\nfor (const item of items) {\n  const json = item.json || {};\n  if (!json.ok || !Array.isArray(json.updates)) continue;\n\n  const meta = json.meta || {};\n  const primaryKeyword = String(meta.primary_keyword || \"\").trim();\n  const secondaryKeywords = Array.isArray(meta.secondary_keywords) ? meta.secondary_keywords : [];\n  const businessName = String(meta.business_name || \"\").trim();\n  const cityRegion = String(meta.city_region || \"\").trim();\n  const pageType = json.page_type || \"unknown\";\n\n  let totalWords = 0;\n  let primaryFound = false;\n  let secondaryFound = false;\n\n  for (const update of json.updates) {\n    const fields = update?.fields || {};\n    replaceGenericPhrases(fields, pageType, cityRegion);\n    for (const key of Object.keys(fields)) {\n      const value = fields[key];\n      if (typeof value !== \"string\") continue;\n      totalWords += wordCount(value);\n      if (primaryKeyword && containsKeyword(value, primaryKeyword)) primaryFound = true;\n      if (!secondaryFound && secondaryKeywords.length) {\n        secondaryFound = secondaryKeywords.some(sk => containsKeyword(value, sk));\n      }\n    }\n  }\n\n  if (primaryKeyword && !primaryFound) {\n    let injected = false;\n    for (const update of json.updates) {\n      if (injectKeyword(update.fields, primaryKeyword)) { injected = true; break; }\n    }\n    if (!injected) warnings.push(f\"Missing primary keyword on {pageType}.\")\n  }\n\n  if (secondaryKeywords.length && !secondaryFound) {\n    const pick = String(secondaryKeywords[0] || \"\").trim();\n    if (pick) {\n      let injected = false;\n      for (const update of json.updates) {\n        const fields = update?.fields || {};\n        const keys = Object.keys(fields);\n        const key = keys.find(k => /section_body|section_intro|hero_supporting_text/i.test(k));\n        if (!key || typeof fields[key] !== \"string\") continue;\n        fields[key] = appendSentence(fields[key], `${pick} is available for local homeowners.`);\n        injected = true;\n        break;\n      }\n      if (!injected) warnings.push(`Missing secondary keyword on ${pageType}.`);\n    }\n  }\n\n  for (const update of json.updates) {\n    enforceUniqueness(update.fields, cityRegion, businessName);\n  }\n\n  const minTotal = minWordTarget(pageType);\n  if (totalWords < minTotal) {\n    const did = addFallbackSentence(json.updates, pageType, primaryKeyword, cityRegion);\n    warnings.push(`Low content volume on ${pageType} (${totalWords} words).` + (did ? ' Auto-expanded.' : ''));\n  }\n}\n\nfor (const item of items) {\n  if (!item.json || typeof item.json !== 'object') item.json = {};\n  const existing = Array.isArray(item.json.quality_warnings) ? item.json.quality_warnings : [];\n  item.json.quality_warnings = Array.from(new Set(existing.concat(parseWarnings).concat(warnings)));\n}\n\nreturn items;"
+        "jsCode": "// Quality Gate + SEO Enforcement (strict checks, no auto-repair)\nconst allItems = $input.all();\nif (!allItems.length) {\n  return [{ json: { ok: true, updates: [], quality_warnings: [\"No items for quality gate\"] } }];\n}\n\nconst upstreamFailures = allItems\n  .map(i => i?.json || {})\n  .filter(j => j && j.ok === false);\n\nconst items = allItems.filter(i => i?.json?.ok !== false);\n\nconst parseWarnings = upstreamFailures.map(f => {\n  const pageType = f.page_type || 'unknown';\n  const err = String(f.error || 'unknown_error');\n  const detail = String(f.details || '').trim();\n  return detail\n    ? `Dropped blueprint page_type=${pageType}: ${err} (${detail})`\n    : `Dropped blueprint page_type=${pageType}: ${err}`;\n});\n\nfunction normalizeText(value) {\n  return String(value || \"\").toLowerCase().replace(/\\s+/g, \" \").trim();\n}\n\nfunction wordCount(value) {\n  const text = String(value || \"\").trim();\n  if (!text) return 0;\n  return text.split(/\\s+/).length;\n}\n\nfunction containsKeyword(value, keyword) {\n  const hay = normalizeText(value);\n  const needle = normalizeText(keyword);\n  if (!needle) return false;\n  return hay.includes(needle);\n}\n\nfunction extractStrings(updates) {\n  const out = [];\n  for (const update of updates) {\n    const fields = update?.fields || {};\n    for (const key of Object.keys(fields)) {\n      const value = fields[key];\n      if (typeof value === \"string\") {\n        const trimmed = value.trim();\n        if (trimmed) out.push({ key, value: trimmed });\n      }\n    }\n  }\n  return out;\n}\n\nfunction splitSentences(text) {\n  return String(text || \"\")\n    .replace(/\\s+/g, \" \")\n    .split(/[.!?]\\s+/)\n    .map(s => s.trim())\n    .filter(s => s.length >= 16);\n}\n\nfunction detectDuplicateSentences(strings) {\n  const seen = new Set();\n  for (const { value } of strings) {\n    const sentences = splitSentences(value);\n    for (const s of sentences) {\n      const n = normalizeText(s);\n      if (!n) continue;\n      if (seen.has(n)) return true;\n      seen.add(n);\n    }\n  }\n  return false;\n}\n\nfunction detectDuplicateFields(strings) {\n  const seen = new Set();\n  for (const { value } of strings) {\n    const n = normalizeText(value);\n    if (!n) continue;\n    if (seen.has(n)) return true;\n    seen.add(n);\n  }\n  return false;\n}\n\nfunction detectCityRepeatInHeadings(strings, cityRegion) {\n  if (!cityRegion) return false;\n  const city = normalizeText(cityRegion);\n  let count = 0;\n  for (const { key, value } of strings) {\n    if (!/heading|headline|trust_heading|cta_headline/i.test(key)) continue;\n    if (normalizeText(value).includes(city)) count += 1;\n  }\n  return count > 1;\n}\n\nfunction detectInYourArea(strings, pageType) {\n  if (pageType === 'service_area') return false;\n  for (const { value } of strings) {\n    if (/\\bin your area\\b/i.test(value)) return true;\n  }\n  return false;\n}\n\nfunction detectGenericPhrases(strings) {\n  const patterns = [\n    /delivers tailored solutions/i,\n    /clear communication, clean execution/i,\n    /long-?lasting results/i,\n    /fast response and clear pricing/i,\n    /upfront pricing before work starts/i,\n    /trusted local team/i\n  ];\n  for (const { value } of strings) {\n    for (const re of patterns) {\n      if (re.test(value)) return true;\n    }\n  }\n  return false;\n}\n\nconst warnings = [];\nfor (const item of items) {\n  const json = item.json || {};\n  if (!json.ok || !Array.isArray(json.updates)) continue;\n\n  const meta = json.meta || {};\n  const primaryKeyword = String(meta.primary_keyword || \"\").trim();\n  const secondaryKeywords = Array.isArray(meta.secondary_keywords) ? meta.secondary_keywords : [];\n  const cityRegion = String(meta.city_region || \"\").trim();\n  const pageType = json.page_type || \"unknown\";\n\n  let totalWords = 0;\n  let primaryFound = false;\n  let secondaryFound = false;\n\n  const strings = extractStrings(json.updates);\n  for (const { value } of strings) {\n    totalWords += wordCount(value);\n    if (primaryKeyword && containsKeyword(value, primaryKeyword)) primaryFound = true;\n    if (!secondaryFound && secondaryKeywords.length) {\n      secondaryFound = secondaryKeywords.some(sk => containsKeyword(value, sk));\n    }\n  }\n\n  if (primaryKeyword && !primaryFound) warnings.push(`Missing primary keyword on ${pageType}.`);\n  if (secondaryKeywords.length && !secondaryFound) warnings.push(`Missing secondary keyword on ${pageType}.`);\n\n  if (detectDuplicateFields(strings)) warnings.push(`Duplicate fields detected on ${pageType}.`);\n  if (detectDuplicateSentences(strings)) warnings.push(`Repeated sentence detected on ${pageType}.`);\n  if (detectCityRepeatInHeadings(strings, cityRegion)) warnings.push(`City repeated in headings on ${pageType}.`);\n  if (detectInYourArea(strings, pageType)) warnings.push(`\"In your area\" detected on ${pageType}.`);\n  if (detectGenericPhrases(strings)) warnings.push(`Generic phrasing detected on ${pageType}.`);\n\n  const minTotal = (pageType === \"homepage\") ? 140\n    : ([\"sitemap\", \"privacy\", \"terms\", \"thank_you\"].includes(pageType) ? 60\n    : ([\"contact\", \"reviews\", \"blog\", \"about\", \"services_overview\", \"service_areas_overview\"].includes(pageType) ? 80 : 100));\n  if (totalWords < minTotal) warnings.push(`Low content volume on ${pageType} (${totalWords} words).`);\n}\n\nconst allWarnings = Array.from(new Set(warnings.concat(parseWarnings)));\n\n// Attach warnings to every item (including ok:false) so Retry Decision can act.\nfor (const item of allItems) {\n  if (!item.json || typeof item.json !== 'object') item.json = {};\n  const existing = Array.isArray(item.json.quality_warnings) ? item.json.quality_warnings : [];\n  item.json.quality_warnings = Array.from(new Set(existing.concat(allWarnings)));\n}\n\nreturn allItems;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        28,
-        426
+        1400,
+        0
       ],
       "id": "8f3d9b9a-9d3d-4eaa-9c2a-78f9c6f5e3b5",
       "name": "Quality Gate + SEO Enforcement"
     },
     {
       "parameters": {
-        "jsCode": "// Split FULL payload into ONE-blueprint-per-item for the LLM\n// Hardened: preserves full blueprint structure including sections\n\nconst raw = $json.body ?? $json;\nconst payload = raw.body ?? raw;\n\nif (!payload || !Array.isArray(payload.blueprints)) {\n  return [{\n    json: {\n      ok: false,\n      status: 400,\n      error: \"Invalid payload: missing blueprints[]\"\n    }\n  }];\n}\n\nconst homepageBlueprint = payload.blueprints.find(bp => {\n  const pageType = bp?.page_type || bp?.page;\n  return pageType === \"homepage\";\n});\n\nconst blueprintFaqPool = Array.isArray(homepageBlueprint?.faqs)\n  ? homepageBlueprint.faqs\n  : [];\nconst payloadFaqPool = Array.isArray(payload.global_faq_pool)\n  ? payload.global_faq_pool\n  : [];\n\nconst system_message = typeof payload.system_message === \"string\"\n  ? payload.system_message\n  : \"\";\nconst faq_strategy = payload.faq_strategy ?? {};\nconst cta_strategy = payload.cta_strategy ?? {};\nconst workflowData = $getWorkflowStaticData('global') || {};\nconst research_document = workflowData.research_document && typeof workflowData.research_document === 'object'\n  ? workflowData.research_document\n  : {};\n\nfunction buildResearchContext(doc) {\n  if (!doc || typeof doc !== 'object') return {};\n  const allowed = [\n    'brand_positioning',\n    'conversion_strategy',\n    'voice_guidelines',\n    'seo_strategy',\n    'faq_strategy',\n    'content_expansion_guidelines'\n  ];\n  const out = {};\n  for (const key of allowed) {\n    if (doc[key]) out[key] = doc[key];\n  }\n  return out;\n}\n\nconst research_context = buildResearchContext(research_document);\n\nfunction buildProgressUrl(payload) {\n  const callbackUrl = payload.callback_url || (payload.body ? payload.body.callback_url : \"\");\n  if (!callbackUrl) return \"\";\n  return callbackUrl.replace('/orchestrator', '/progress');\n}\n\nfunction sendProgress(payload, percent, step, message) {\n  const progressUrl = buildProgressUrl(payload);\n  const jobId = payload.job_id || (payload.body ? payload.body.job_id : null);\n  if (!progressUrl || !jobId) {\n    return Promise.resolve();\n  }\n  return this.helpers.httpRequest({\n    method: 'POST',\n    url: progressUrl,\n    json: true,\n    body: {\n      job_id: jobId,\n      status: 'running',\n      percent,\n      step: step || \"\",\n      message: message || \"\"\n    }\n  }).then(() => null).catch(() => null);\n}\n\n\nconst styleProfiles = [\n  {\n    id: \"authority\",\n    label: \"Authority\",\n    guidance: \"Confident, expert, precise. Short openers, concrete claims, strong trust signals.\"\n  },\n  {\n    id: \"warm_local\",\n    label: \"Warm Local\",\n    guidance: \"Neighborly, reassuring, practical. Emphasize care for the home and clear next steps.\"\n  },\n  {\n    id: \"premium\",\n    label: \"Premium\",\n    guidance: \"Polished, premium, quality-first. Focus on craftsmanship, clean process, concierge experience.\"\n  },\n  {\n    id: \"direct\",\n    label: \"Direct\",\n    guidance: \"Straightforward, action-oriented. Fast reads, benefit-first, minimal fluff.\"\n  }\n];\n\nfunction seedToInt(seed) {\n  const str = String(seed || \"\");\n  let hash = 0;\n  for (let i = 0; i < str.length; i++) {\n    hash = ((hash << 5) - hash) + str.charCodeAt(i);\n    hash |= 0;\n  }\n  return Math.abs(hash);\n}\n\nfunction pickStyleProfile(pageType, seedInt, idx) {\n  const typeWeight = pageType ? pageType.length : 0;\n  const index = (seedInt + (idx * 13) + typeWeight) % styleProfiles.length;\n  return styleProfiles[index];\n}\n\n// Deterministic seed\nfunction generateDeterministicSeed(input) {\n  const base = `${input.business_name || \"\"}|${input.city_region || \"\"}|${input.niche || \"\"}`;\n  let hash = 0;\n  for (let i = 0; i < base.length; i++) {\n    hash = ((hash << 5) - hash) + base.charCodeAt(i);\n    hash |= 0;\n  }\n  return Math.abs(hash).toString();\n}\n\nconst variation_seed =\n  payload.variation_seed ||\n  generateDeterministicSeed(payload);\n\nconst seedInt = seedToInt(variation_seed);\n\nreturn sendProgress(payload, 40, 'Generating content', 'Content generation started').then(() => payload.blueprints.map((bp, idx) => {\n\n  if (!bp || !Array.isArray(bp.sections)) {\n    return {\n      json: {\n        ok: false,\n        error: \"Blueprint missing sections array\",\n        blueprint_index: idx\n      }\n    };\n  }\n\n  const page_type =\n    bp.page_type ||\n    bp.page ||\n    \"unknown\";\n\n  const keywordFallbackPages = [\"homepage\", \"services_overview\", \"service_areas_overview\"];\n  let primary_keyword = String(bp.primary_keyword || \"\").trim();\n  if (!primary_keyword && keywordFallbackPages.includes(page_type)) {\n    primary_keyword = String(payload.keywords?.primary || \"\").trim();\n  }\n  let secondary_keywords = Array.isArray(bp.secondary_keywords)\n    ? bp.secondary_keywords\n    : [];\n  if (!secondary_keywords.length && keywordFallbackPages.includes(page_type)) {\n    secondary_keywords = Array.isArray(payload.keywords?.secondary) ? payload.keywords.secondary : [];\n  }\n\n  const style_profile = pickStyleProfile(page_type, seedInt, idx);\n\n  return {\n    json: {\n      request_id: payload.request_id || null,\n      variation_seed,\n      business_name: payload.business_name || \"\",\n      niche: payload.niche || \"\",\n      city_region: payload.city_region || \"\",\n      keywords: payload.keywords || {},\n      primary_keyword,\n      secondary_keywords,\n      style_profile,\n      writing_samples: payload.writing_samples || [],\n      business_entity: payload.business_entity || {},\n      global_faq_pool: payloadFaqPool.length\n        ? payloadFaqPool\n        : blueprintFaqPool,\n      system_message,\n      faq_strategy,\n      cta_strategy,\n      research_context,\n      blueprint_index: idx,\n      page_type,\n      global_write_rules: {\n        cta_global_write_allowed: page_type === \"homepage\",\n        faq_global_write_allowed: page_type === \"homepage\"\n      },\n      blueprint: bp // PASS FULL OBJECT\n    }\n  };\n}));"
+        "jsCode": "// Split FULL payload into ONE-blueprint-per-item for the LLM\n// Hardened: preserves full blueprint structure including sections\n\nconst raw = $json.body ?? $json;\nlet payload = raw.body ?? raw;\n\nfunction tryParse(value) {\n  if (typeof value !== 'string') return value;\n  try { return JSON.parse(value); } catch (e) { return value; }\n}\n\npayload = tryParse(payload);\nif (payload && typeof payload === 'object' && typeof payload.body === 'string') {\n  payload = tryParse(payload.body);\n}\n\nif (!payload || !Array.isArray(payload.blueprints)) {\n  return [{\n    json: {\n      ok: false,\n      status: 400,\n      error: \"Invalid payload: missing blueprints[]\",\n      payload_type: typeof payload,\n      payload_keys: payload && typeof payload === 'object' ? Object.keys(payload) : [],\n      raw_type: typeof raw,\n      raw_keys: raw && typeof raw === 'object' ? Object.keys(raw) : []\n    }\n  }];\n}\n\nconst homepageBlueprint = payload.blueprints.find(bp => {\n  const pageType = bp?.page_type || bp?.page;\n  return pageType === \"homepage\";\n});\n\nconst blueprintFaqPool = Array.isArray(homepageBlueprint?.faqs)\n  ? homepageBlueprint.faqs\n  : [];\nconst payloadFaqPool = Array.isArray(payload.global_faq_pool)\n  ? payload.global_faq_pool\n  : [];\n\nconst system_message = typeof payload.system_message === \"string\"\n  ? payload.system_message\n  : \"\";\nconst faq_strategy = payload.faq_strategy ?? {};\nconst cta_strategy = payload.cta_strategy ?? {};\nconst workflowData = $getWorkflowStaticData('global') || {};\nconst research_document = workflowData.research_document && typeof workflowData.research_document === 'object'\n  ? workflowData.research_document\n  : {};\n\nfunction buildResearchContext(doc) {\n  if (!doc || typeof doc !== 'object') return {};\n  const allowed = [\n    'brand_positioning',\n    'conversion_strategy',\n    'voice_guidelines',\n    'seo_strategy',\n    'faq_strategy',\n    'content_expansion_guidelines'\n  ];\n  const out = {};\n  for (const key of allowed) {\n    if (doc[key]) out[key] = doc[key];\n  }\n  return out;\n}\n\nconst research_context = buildResearchContext(research_document);\n\nfunction buildProgressUrl(payload) {\n  const callbackUrl = payload.callback_url || (payload.body ? payload.body.callback_url : \"\");\n  if (!callbackUrl) return \"\";\n  return callbackUrl.replace('/orchestrator', '/progress');\n}\n\nfunction sendProgress(payload, percent, step, message) {\n  const progressUrl = buildProgressUrl(payload);\n  const jobId = payload.job_id || (payload.body ? payload.body.job_id : null);\n  if (!progressUrl || !jobId) {\n    return Promise.resolve();\n  }\n  return this.helpers.httpRequest({\n    method: 'POST',\n    url: progressUrl,\n    json: true,\n    body: {\n      job_id: jobId,\n      status: 'running',\n      percent,\n      step: step || \"\",\n      message: message || \"\"\n    }\n  }).then(() => null).catch(() => null);\n}\n\n\nconst styleProfiles = [\n  {\n    id: \"authority\",\n    label: \"Authority\",\n    guidance: \"Confident, expert, precise. Short openers, concrete claims, strong trust signals.\"\n  },\n  {\n    id: \"warm_local\",\n    label: \"Warm Local\",\n    guidance: \"Neighborly, reassuring, practical. Emphasize care for the home and clear next steps.\"\n  },\n  {\n    id: \"premium\",\n    label: \"Premium\",\n    guidance: \"Polished, premium, quality-first. Focus on craftsmanship, clean process, concierge experience.\"\n  },\n  {\n    id: \"direct\",\n    label: \"Direct\",\n    guidance: \"Straightforward, action-oriented. Fast reads, benefit-first, minimal fluff.\"\n  }\n];\n\nfunction seedToInt(seed) {\n  const str = String(seed || \"\");\n  let hash = 0;\n  for (let i = 0; i < str.length; i++) {\n    hash = ((hash << 5) - hash) + str.charCodeAt(i);\n    hash |= 0;\n  }\n  return Math.abs(hash);\n}\n\nfunction pickStyleProfile(pageType, seedInt, idx) {\n  const typeWeight = pageType ? pageType.length : 0;\n  const index = (seedInt + (idx * 13) + typeWeight) % styleProfiles.length;\n  return styleProfiles[index];\n}\n\n// Deterministic seed\nfunction generateDeterministicSeed(input) {\n  const base = `${input.business_name || \"\"}|${input.city_region || \"\"}|${input.niche || \"\"}`;\n  let hash = 0;\n  for (let i = 0; i < base.length; i++) {\n    hash = ((hash << 5) - hash) + base.charCodeAt(i);\n    hash |= 0;\n  }\n  return Math.abs(hash).toString();\n}\n\nconst variation_seed =\n  payload.variation_seed ||\n  generateDeterministicSeed(payload);\n\nconst seedInt = seedToInt(variation_seed);\n\nreturn sendProgress(payload, 40, 'Generating content', 'Content generation started').then(() => payload.blueprints.map((bp, idx) => {\n\n  if (!bp || !Array.isArray(bp.sections)) {\n    return {\n      json: {\n        ok: false,\n        error: \"Blueprint missing sections array\",\n        blueprint_index: idx\n      }\n    };\n  }\n\n  const page_type =\n    bp.page_type ||\n    bp.page ||\n    \"unknown\";\n\n  const keywordFallbackPages = [\"homepage\", \"services_overview\", \"service_areas_overview\"];\n  let primary_keyword = String(bp.primary_keyword || \"\").trim();\n  if (!primary_keyword && keywordFallbackPages.includes(page_type)) {\n    primary_keyword = String(payload.keywords?.primary || \"\").trim();\n  }\n  let secondary_keywords = Array.isArray(bp.secondary_keywords)\n    ? bp.secondary_keywords\n    : [];\n  if (!secondary_keywords.length && keywordFallbackPages.includes(page_type)) {\n    secondary_keywords = Array.isArray(payload.keywords?.secondary) ? payload.keywords.secondary : [];\n  }\n\n  const style_profile = pickStyleProfile(page_type, seedInt, idx);\n\n  return {\n    json: {\n      request_id: payload.request_id || null,\n      variation_seed,\n      business_name: payload.business_name || \"\",\n      niche: payload.niche || \"\",\n      city_region: payload.city_region || \"\",\n      keywords: payload.keywords || {},\n      primary_keyword,\n      secondary_keywords,\n      style_profile,\n      writing_samples: payload.writing_samples || [],\n      business_entity: payload.business_entity || {},\n      global_faq_pool: payloadFaqPool.length\n        ? payloadFaqPool\n        : blueprintFaqPool,\n      system_message,\n      faq_strategy,\n      cta_strategy,\n      research_context,\n      blueprint_index: idx,\n      page_type,\n      global_write_rules: {\n        cta_global_write_allowed: page_type === \"homepage\",\n        faq_global_write_allowed: page_type === \"homepage\"\n      },\n      blueprint: bp // PASS FULL OBJECT\n    }\n  };\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        134,
+        500,
         0
       ],
       "id": "f3930d2d-52a3-4411-8a9d-a8c974d4ba44",
@@ -280,26 +280,26 @@
     },
     {
       "parameters": {
-        "jsCode": "// Merge all blueprint results into one final payload\n\nconst items = $input.all();\n\nlet mergedUpdates = [];\nlet requestId = null;\n\nfor (const item of items) {\n  const json = item.json;\n\n  if (json.request_id) {\n    requestId = json.request_id;\n  }\n\n  if (Array.isArray(json.updates)) {\n    mergedUpdates = mergedUpdates.concat(json.updates);\n  }\n}\n\nconst webhook = $node[\"Webhook\"].json || {};\nconst progressPayload = webhook.body ?? webhook;\n\nfunction buildProgressUrl(payload) {\n  const callbackUrl = payload.callback_url || (payload.body ? payload.body.callback_url : \"\");\n  if (!callbackUrl) return \"\";\n  return callbackUrl.replace('/orchestrator', '/progress');\n}\n\nfunction sendProgress(payload, percent, step, message, requestId) {\n  const progressUrl = buildProgressUrl(payload);\n  const jobId = payload.job_id || (payload.body ? payload.body.job_id : null);\n  const runPhase = payload.run_phase || (payload.body ? payload.body.run_phase : '') || 'initial';\n  if (!progressUrl || !jobId || !requestId) {\n    return Promise.resolve();\n  }\n  return this.helpers.httpRequest({\n    method: 'POST',\n    url: progressUrl,\n    json: true,\n    body: {\n      job_id: jobId,\n      request_id: requestId,\n      status: 'running',\n      percent,\n      step: step || '',\n      message: message || '',\n      run_phase: runPhase\n    }\n  }).then(() => null).catch(() => null);\n}\n\nreturn sendProgress(progressPayload, 85, 'Finalizing', 'Merging results', requestId).then(() => [{\n  json: {\n    ok: true,\n    request_id: requestId,\n    run_phase: progressPayload.run_phase || 'initial',\n    updates: mergedUpdates\n  }\n}]);"
+        "jsCode": "// Merge all blueprint results into one final payload\nconst items = $input.all();\nif (!items.length) {\n  return [{ json: { ok: false, error: 'No items received to merge', updates: [] } }];\n}\n\nlet mergedUpdates = [];\nlet requestId = null;\nlet warnings = [];\nlet hadFailure = false;\nconst pageTypeCounts = {};\nconst updateTargetCounts = {};\n\nfor (const item of items) {\n  const json = item.json || {};\n  if (json.request_id) requestId = json.request_id;\n  if (json.ok === false) hadFailure = true;\n  if (Array.isArray(json.quality_warnings)) warnings.push(...json.quality_warnings);\n  if (Array.isArray(json.updates)) mergedUpdates = mergedUpdates.concat(json.updates);\n  const pageType = String(json.page_type || '').trim();\n  if (pageType) pageTypeCounts[pageType] = (pageTypeCounts[pageType] || 0) + 1;\n}\n\nfor (const update of mergedUpdates) {\n  const target = String(update?.target || 'unknown').trim() || 'unknown';\n  updateTargetCounts[target] = (updateTargetCounts[target] || 0) + 1;\n}\n\nconst hasHomepage = mergedUpdates.some(u => String(u?.target || '') === 'options' && String(u?.id || '') === 'homepage');\n\nwarnings = Array.from(new Set(warnings));\n\nif (!mergedUpdates.length) {\n  return [{\n    json: {\n      ok: false,\n      request_id: requestId,\n      error: 'No updates produced',\n      page_type_counts: pageTypeCounts,\n      update_target_counts: updateTargetCounts,\n      quality_warnings: warnings,\n      updates: []\n    }\n  }];\n}\n\nif (!hasHomepage) {\n  return [{\n    json: {\n      ok: false,\n      request_id: requestId,\n      error: 'Homepage updates missing',\n      page_type_counts: pageTypeCounts,\n      update_target_counts: updateTargetCounts,\n      quality_warnings: warnings,\n      updates: []\n    }\n  }];\n}\n\nconst webhook = $node[\"Webhook\"].json || {};\nconst progressPayload = webhook.body ?? webhook;\n\nfunction buildProgressUrl(payload) {\n  const callbackUrl = payload.callback_url || (payload.body ? payload.body.callback_url : \"\");\n  if (!callbackUrl) return \"\";\n  return callbackUrl.replace('/orchestrator', '/progress');\n}\n\nfunction sendProgress(payload, percent, step, message, requestId) {\n  const progressUrl = buildProgressUrl(payload);\n  const jobId = payload.job_id || (payload.body ? payload.body.job_id : null);\n  const runPhase = payload.run_phase || (payload.body ? payload.body.run_phase : '') || 'initial';\n  if (!progressUrl || !jobId || !requestId) {\n    return Promise.resolve();\n  }\n  return this.helpers.httpRequest({\n    method: 'POST',\n    url: progressUrl,\n    json: true,\n    body: {\n      job_id: jobId,\n      request_id: requestId,\n      status: 'running',\n      percent,\n      step: step || '',\n      message: message || '',\n      run_phase: runPhase\n    }\n  }).then(() => null).catch(() => null);\n}\n\nreturn sendProgress(progressPayload, 85, 'Finalizing', 'Merging results', requestId).then(() => [{\n  json: {\n    ok: true,\n    request_id: requestId,\n    run_phase: progressPayload.run_phase || 'initial',\n    updates: mergedUpdates,\n    page_type_counts: pageTypeCounts,\n    update_target_counts: updateTargetCounts,\n    quality_warnings: warnings,\n    had_failures: hadFailure\n  }\n}]);\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        470,
-        426
+        3160,
+        0
       ],
       "id": "c3bbf996-9ce8-4335-a67e-8337eb20f24b",
       "name": "Merge Blueprint Results"
     },
     {
       "parameters": {
-        "jsCode": "const webhook = $node[\"Webhook\"].json || {};\nconst webhookPayload = webhook.body ?? webhook;\nconst jobId = webhook.job_id || webhook.body?.job_id || $json?.job_id || null;\nconst callbackUrl = webhook.callback_url || webhook.body?.callback_url || $json?.callback_url || \"\";\nconst requestId = $json?.request_id || webhook.request_id || webhook.body?.request_id || \"\";\nconst authHeader = webhook.headers?.authorization || webhook.headers?.Authorization || \"\";\n\nconst candidateRows = Array.isArray(webhookPayload.media_library_candidates)\n  ? webhookPayload.media_library_candidates\n  : [];\nconst mediaAnnotations = Array.isArray($json?.media_annotations)\n  ? $json.media_annotations\n  : (Array.isArray($json?.vision?.media_annotations)\n      ? $json.vision.media_annotations\n      : (Array.isArray($json?.image_analysis?.media_annotations)\n          ? $json.image_analysis.media_annotations\n          : []));\n\nconst qualityWarnings = Array.isArray($json?.quality_warnings) ? [...$json.quality_warnings] : [];\nconst strictMediaAnnotations = webhookPayload.media_annotation_mode === 'strict' || webhookPayload.media_annotation_required === true;\nconst minExpected = Math.max(0, Number(webhookPayload.media_annotation_min_expected || 0));\nif (strictMediaAnnotations && minExpected > 0 && mediaAnnotations.length < minExpected) {\n  qualityWarnings.push(`Missing media_annotations (expected>=${minExpected}, got=${mediaAnnotations.length}, candidates=${candidateRows.length}). Continuing in fallback mode.`);\n}\nif (candidateRows.length > 0 && mediaAnnotations.length === 0) {\n  qualityWarnings.push('No media_annotations present; callback will use theme fallback metadata only.');\n}\n\nconst callbackBodyObj = {\n  ...$json,\n  job_id: jobId,\n  request_id: requestId,\n  callback_url: callbackUrl,\n  media_annotations: mediaAnnotations,\n  quality_warnings: Array.from(new Set(qualityWarnings))\n};\n\nreturn [{\n  json: {\n    ...callbackBodyObj,\n    callback_payload: { payload: JSON.stringify(callbackBodyObj) },\n    callback_auth_header: authHeader\n  }\n}];\n"
+        "jsCode": "const webhook = $node[\"Webhook\"].json || {};\nconst webhookPayload = webhook.body ?? webhook;\nconst jobId = webhook.job_id || webhook.body?.job_id || $json?.job_id || null;\nconst callbackUrl = webhook.callback_url || webhook.body?.callback_url || $json?.callback_url || \"\";\nconst requestId = webhook.body?.request_id || webhook.request_id || $json?.request_id || \"\";\nconst authHeader = webhook.headers?.authorization || webhook.headers?.Authorization || \"\";\n\nconst candidateRows = Array.isArray(webhookPayload.media_library_candidates)\n  ? webhookPayload.media_library_candidates\n  : [];\nconst mediaAnnotations = Array.isArray($json?.media_annotations)\n  ? $json.media_annotations\n  : (Array.isArray($json?.vision?.media_annotations)\n      ? $json.vision.media_annotations\n      : (Array.isArray($json?.image_analysis?.media_annotations)\n          ? $json.image_analysis.media_annotations\n          : []));\n\nconst qualityWarnings = Array.isArray($json?.quality_warnings) ? [...$json.quality_warnings] : [];\nconst strictMediaAnnotations = webhookPayload.media_annotation_mode === 'strict' || webhookPayload.media_annotation_required === true;\nconst minExpected = Math.max(0, Number(webhookPayload.media_annotation_min_expected || 0));\nif (strictMediaAnnotations && minExpected > 0 && mediaAnnotations.length < minExpected) {\n  qualityWarnings.push(`Missing media_annotations (expected>=${minExpected}, got=${mediaAnnotations.length}, candidates=${candidateRows.length}). Continuing in fallback mode.`);\n}\nif (candidateRows.length > 0 && mediaAnnotations.length === 0) {\n  qualityWarnings.push('No media_annotations present; callback will use theme fallback metadata only.');\n}\n\nconst callbackBodyObj = {\n  ...$json,\n  job_id: jobId,\n  request_id: requestId,\n  callback_url: callbackUrl,\n  media_annotations: mediaAnnotations,\n  quality_warnings: Array.from(new Set(qualityWarnings))\n};\n\nreturn [{\n  json: {\n    ...callbackBodyObj,\n    callback_payload: { payload: JSON.stringify(callbackBodyObj) },\n    callback_auth_header: authHeader\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        728,
-        426
+        3380,
+        0
       ],
       "id": "e9b4c5a7-8a33-4e6f-9c5b-b3e6f9a1f0d4",
       "name": "Attach Callback Metadata"
@@ -337,8 +337,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [
-        1008,
-        426
+        3820,
+        0
       ],
       "id": "c0b5c159-7a7f-4d58-b7c1-1a7a2a1e3b42",
       "name": "Callback to WP"
@@ -350,8 +350,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        332,
-        592
+        2940,
+        0
       ],
       "id": "29b24d00-8f11-43f0-9242-6fa44391a2cc",
       "name": "Global Completeness + Blog Gate"
@@ -361,11 +361,142 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -392,
-        308
+        -420,
+        240
       ],
       "id": "f3e3b75e-3dd1-4bfe-9d2f-6631fdc2b19b",
       "name": "Test Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Cache blueprint input for retries\nconst data = $getWorkflowStaticData('global');\nif (!data.blueprint_cache || typeof data.blueprint_cache !== 'object') data.blueprint_cache = {};\nconst key = `${$json.request_id || ''}:${$json.blueprint_index ?? ''}`;\nif (key) data.blueprint_cache[key] = $json;\nreturn [{ json: $json }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ],
+      "id": "b5e3a9d3-2a3d-4c1b-9f5e-7d9f1c2d3e4f",
+      "name": "Store Blueprint Cache"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decide which pages need an LLM retry\nconst items = $input.all();\n\nfunction isSevere(w) {\n  return /duplicate|repeated|generic|in your area|city repeated/i.test(String(w || ''));\n}\n\nreturn items.map(item => {\n  const j = item.json || {};\n  const warnings = Array.isArray(j.quality_warnings) ? j.quality_warnings : [];\n  const retry_count = typeof j.retry_count === 'number' ? j.retry_count : 0;\n  const needs_retry = (j.ok === false || warnings.some(isSevere)) && retry_count < 2;\n  return { json: { ...j, needs_retry, retry_count, retry_instructions: warnings.join(' | ') } };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1620,
+        0
+      ],
+      "id": "a2b1c3d4-e5f6-47a8-9b10-1c2d3e4f5a6b",
+      "name": "Retry Decision"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.needs_retry}}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        0
+      ],
+      "id": "c1d2e3f4-a5b6-47c8-9d10-2e3f4a5b6c7d",
+      "name": "Retry Gate"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build retry input from cached blueprint\nconst data = $getWorkflowStaticData('global') || {};\nconst cache = data.blueprint_cache || {};\nconst requestId = $json.request_id || '';\nconst index = ($json.blueprint_index ?? '');\nconst key = `${requestId}:${index}`;\nconst base = cache[key] || {};\nconst retry_count = (base.retry_count ?? 0) + 1;\nreturn [{\n  json: {\n    ...base,\n    retry_instructions: $json.retry_instructions || 'Fix quality warnings and ensure uniqueness',\n    retry_count\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2060,
+        160
+      ],
+      "id": "d2e3f4a5-b6c7-48d9-0e1f-2a3b4c5d6e7f",
+      "name": "Retry Input Builder"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{$json}}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are LeadsForward\u2019s deterministic website content engine.\n\nYou MUST output ONLY valid JSON that matches the required schema. No markdown. No commentary. No extra keys unless explicitly allowed.\n\nINPUT SHAPE\nYou will receive a JSON object with:\n- request_id, variation_seed, business_name, niche, city_region, keywords, writing_samples, business_entity\n- primary_keyword (string), secondary_keywords (array), style_profile (object)\n- system_message (optional), faq_strategy (optional), cta_strategy (optional), global_faq_pool (optional)\n- research_context (optional)\n- page_type\n- blueprint_index\n- blueprint (ONE page blueprint only)\n\nPRIORITY OVERRIDE\n0) If input.system_message is present, follow it exactly. If it conflicts with any instruction here, input.system_message wins.\n0b) If input.retry_instructions is present, fix every item and rewrite the page from scratch with no reused sentences.\n\nCRITICAL RULES (NON-NEGOTIABLE)\n1) Use ONLY niche = input.niche. Never introduce any other niche/service type.\n2) Use ONLY location = input.city_region. Never introduce any other city/region.\n3) Use ONLY business name = input.business_name.\n4) NEVER reuse content from previous runs or \u201ctypical examples\u201d.\n5) Generate content ONLY for input.blueprint (single page). Do not generate for other pages.\n6) Do not invent sections/fields. Write ONLY to keys that appear in blueprint.sections[].allowed_field_keys.\n7) If blueprint provides section_label, intent, purpose, field_labels, or field_types, use them to shape content for that section.\n7) For every section instance, write dot-notation fields using:\n   - Use blueprint.sections[].section_id as the prefix (example: \"hero.hero_headline\" or \"hero-1.hero_headline\").\n8) Write values for EVERY allowed_field_keys in EVERY section. Do not skip keys.\n9) List fields must be newline-delimited strings (not arrays).\n10) No placeholder text, no \u201cPortland\u201d, no \u201ccrawl space\u201d, no \u201clandscaping\u201d unless niche explicitly matches.\n10b) Avoid these generic phrases: \"delivers tailored solutions\", \"clear communication, clean execution\", \"long-lasting results\", \"fast response and clear pricing\", \"upfront pricing before work starts\", \"trusted local team\".\n11) HTML is allowed only inside richtext fields (use <p>, <ul>, <li>, <a>). All other fields must be plain text.\n12) Keep outputs concise enough to fit response limits. Prefer tight, high-signal copy. Avoid huge paragraphs.\n13) Always echo input.page_type as \"page_type\" in your output JSON. Hero headline must be unique per page and should incorporate blueprint.page_title or service/service_area context. Avoid the phrase \"in your area\" unless page_type is \"service_area\".\n14) CTA supporting text: for every CTA section, cta_subheadline_secondary must be exactly ONE sentence, non-empty, and unique across pages. Make it specific using page_type, primary_keyword, business_name, or city_region.\n15) CTA headline/subheadline: you MAY write cta_headline and cta_subheadline for every page. Make them unique per page and aligned to page_type.\n16) You MUST include a top-level \"meta\" object with primary_keyword, secondary_keywords, style_profile_id, business_name, and city_region echoed from input.\n17) Every section heading + intro field must be non-empty and unique across pages.\n17b) NEVER repeat the same sentence or paragraph anywhere within the page. If two sections sound similar, rewrite one completely.\n17c) Use blueprint.page_title and blueprint.sections[].section_id to keep headings distinct; do NOT reuse the hero headline in any other section.\n17d) City/region can appear at most ONCE per page (hero preferred). All other headings must avoid repeating the city.\n17e) CTA headline/subheadline must be unique per page and must not repeat the hero wording.\n18) Benefits section: write 3 lines in benefits_items using \"Title || Body\". Title <= 5 words; Body 10-14 words.\n19) Hero proof list: hero_proof_bullets must be exactly 3 lines, 3-5 words each, no punctuation.\n20) Process section: include process_steps (4-6 steps) and process_expectations (3-4 items) when allowed. For service pages, steps must reference the specific service but align with the core process.\n21) Related links section: intro must be service-only language (no areas).\n21b) Related links section has NO list field; do NOT output related_links_list.\n22) If any allowed field would be empty, generate a concise sentence using primary_keyword, business_name, or city_region.\n23) Process steps must use \"Title: description\" format for every line.\n24) For service/service_area pages, hero_headline must include the primary_keyword and a benefit/outcome (not just the location).\n25) For service_area pages, ensure content_image/image_content sections include unique section_heading, section_intro, and section_body.\n26) Service pages must include a 20-28 word overview sentence in hero_subheadline or section_intro to populate service intro cards.\n27) Internal linking: include 1-2 internal links in richtext fields using internal_links list. Use <a href=\"URL\">Label</a>. Do not invent URLs.\n\nQUALITY OBJECTIVES (DO NOT BREAK JSON RULES)\n- Human-sounding: vary sentence length and rhythm; avoid templated phrasing and cliches (\"We understand\", \"At [Company]\", \"In today's world\").\n- Sales-focused: emphasize outcomes, credibility, and next steps for homeowners; avoid fluff.\n- Local SEO: include the primary keyword naturally in the hero headline or subheadline; work in 1\u20132 secondary keywords across the page when appropriate; avoid keyword stuffing.\n- Uniqueness: no repeated sentences across page types; phrasing should feel custom to this business and location.\n- Use writing_samples (if provided) to match tone and diction, but never copy sentences verbatim.\n\nRESEARCH CONTEXT GUIDANCE\n- If research_context exists: Apply positioning and differentiation.\n- Use SEO entity strategy.\n- Avoid competitor phrasing.\n- Apply voice guidelines.\n- Use FAQ strategy angles.\n- Use content expansion depth guidance.\n\nTARGET ROUTING\n- If blueprint.page == \"homepage\": target=\"options\", id=\"homepage\"\n- If blueprint.page in [\"service\",\"service_area\",\"services_overview\",\"service_areas_overview\",\"about\",\"contact\",\"reviews\",\"blog\",\"sitemap\",\"privacy\",\"terms\",\"thank_you\",\"post\"]: target=\"post_meta\", id=blueprint.post_id\n- FAQ creation is REQUIRED when blueprint.faq_target_count or blueprint.faq_target_range is present:\n  - If faq_target_count exists: generate EXACTLY that many updates\n  - If faq_target_range exists: generate between min and max (inclusive)\n  - Return updates with target=\"faq\" and fields: question, answer (answers must be valid HTML <p>...</p>)\n\nCONTENT QUALITY RULES\n- Must match niche + location + business name everywhere.\n- Service pages must match the specific service title/slug for that post (use blueprint context only).\n- Avoid generic filler. Use concrete benefits, process, trust signals appropriate for the niche.\n\nOUTPUT FORMAT (EXACT)\nReturn JSON:\n{\n  \"ok\": true,\n  \"request_id\": \"<same request_id>\",\n  \"page_type\": \"<echo input.page_type>\",\n  \"meta\": {\n    \"primary_keyword\": \"<echo input.primary_keyword>\",\n    \"secondary_keywords\": <echo input.secondary_keywords>,\n    \"style_profile_id\": \"<echo input.style_profile.id>\",\n    \"business_name\": \"<echo input.business_name>\",\n    \"city_region\": \"<echo input.city_region>\"\n  },\n  \"updates\": [\n    { \"target\": \"...\", \"id\": \"...\", \"fields\": { \"section.field\":\"value\" } }\n  ]\n}\n"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "THEME SYSTEM MESSAGE (must follow if present):\n{{$json.system_message}}\n\nSTRATEGIES (if present):\nfaq_strategy={{$json.faq_strategy}}\ncta_strategy={{$json.cta_strategy}}\n\nRESEARCH CONTEXT (if present):\n{{$json.research_context}}\n\nSTYLE PROFILE:\n{{$json.style_profile}}\n\nPRIMARY KEYWORD:\n{{$json.primary_keyword}}\n\nSECONDARY KEYWORDS:\n{{$json.secondary_keywords}}\n\nGenerate page content for this blueprint only.\n\n{{$json}}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.8,
+      "position": [
+        2280,
+        160
+      ],
+      "id": "e3f4a5b6-c7d8-49e0-1f2a-3b4c5d6e7f8a",
+      "name": "LLM Retry Chain"
+    },
+    {
+      "parameters": {
+        "jsCode": "function pickRaw(input) {\n  if (typeof input === \"string\") return input;\n  if (typeof input?.text === \"string\") return input.text;\n  if (typeof input?.output === \"string\") return input.output;\n  if (typeof input?.response === \"string\") return input.response;\n  if (typeof input?.data?.text === \"string\") return input.data.text;\n  if (typeof input?.message?.content === \"string\") return input.message.content;\n  return input;\n}\n\nfunction deepClean(value) {\n  if (typeof value === \"string\") {\n    return value.split(String.fromCharCode(13)).join(String.fromCharCode(10));\n  }\n  if (Array.isArray(value)) return value.map(deepClean);\n  if (value && typeof value === \"object\") {\n    const cleaned = {};\n    for (const key in value) cleaned[key] = deepClean(value[key]);\n    return cleaned;\n  }\n  return value;\n}\n\nfunction stripHtml(value) {\n  return String(value || \"\")\n    .replace(/<[^>]*>/g, \" \")\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nfunction trimToWords(value, maxWords) {\n  const text = stripHtml(value);\n  if (!text) return \"\";\n  const words = text.split(/\\s+/);\n  if (words.length <= maxWords) return words.join(\" \");\n  return words.slice(0, maxWords).join(\" \");\n}\n\nfunction findPostMetaId(updates) {\n  const hit = updates.find(u => u?.target === \"post_meta\" && u?.id);\n  return hit?.id || null;\n}\n\nfunction pickShortDesc(updates) {\n  const suffixes = [\n    \".hero_subheadline\",\n    \".hero_supporting_text\",\n    \".section_intro\",\n    \".section_body\",\n    \".section_body_secondary\"\n  ];\n  for (const update of updates) {\n    const fields = update?.fields;\n    if (!fields || typeof fields !== \"object\") continue;\n    const keys = Object.keys(fields);\n    for (const suffix of suffixes) {\n      const key = keys.find(k => k.toLowerCase().endsWith(suffix));\n      if (!key) continue;\n      const value = trimToWords(fields[key], 28);\n      if (value) return value;\n    }\n  }\n  return \"\";\n}\n\nfunction parseJsonSafely(raw) {\n  if (typeof raw !== \"string\") return { ok: true, value: raw };\n\n  const candidates = [];\n  const trimmed = raw.trim();\n  candidates.push(trimmed);\n\n  const fence = trimmed.match(/```(?:json)?\\s*([\\s\\S]*?)\\s*```/i);\n  if (fence && fence[1]) candidates.push(fence[1].trim());\n\n  const firstBrace = trimmed.indexOf('{');\n  const lastBrace = trimmed.lastIndexOf('}');\n  if (firstBrace >= 0 && lastBrace > firstBrace) {\n    candidates.push(trimmed.slice(firstBrace, lastBrace + 1));\n  }\n\n  const repaired = trimmed\n    .replace(/,\\s*}/g, \"}\")\n    .replace(/,\\s*]/g, \"]\");\n  candidates.push(repaired);\n\n  let lastError = null;\n  for (const candidate of candidates) {\n    try {\n      return { ok: true, value: JSON.parse(candidate) };\n    } catch (e) {\n      lastError = e;\n    }\n  }\n\n  return { ok: false, error: String(lastError?.message || 'Unable to parse JSON') };\n}\n\nfunction parseOne(itemJson) {\n  const inputCtx = itemJson && typeof itemJson === 'object' ? itemJson : {};\n  const requestIdHint = inputCtx.request_id || null;\n  const pageTypeHint = inputCtx.page_type || null;\n  const primaryHint = inputCtx.primary_keyword || '';\n  const secondaryHint = Array.isArray(inputCtx.secondary_keywords) ? inputCtx.secondary_keywords : [];\n  const businessHint = inputCtx.business_name || '';\n  const cityHint = inputCtx.city_region || '';\n  const styleHint = inputCtx.style_profile?.id || inputCtx.style_profile_id || '';\n\n  const raw = pickRaw(inputCtx);\n  const parsedResult = parseJsonSafely(raw);\n  if (!parsedResult.ok) {\n    return {\n      json: {\n        ok: false,\n        status: 500,\n        error: \"Invalid JSON from LLM\",\n        details: parsedResult.error,\n        page_type: pageTypeHint,\n        request_id: requestIdHint,\n        blueprint_index: inputCtx.blueprint_index ?? null,\n        retry_count: inputCtx.retry_count ?? 0,\n        retry_instructions: inputCtx.retry_instructions ?? \"\",\n        raw_preview: (typeof raw === \"string\") ? raw.slice(0, 800) : null\n      }\n    };\n  }\n\n  const parsed = parsedResult.value;\n  if (!parsed || parsed.ok !== true || !Array.isArray(parsed.updates)) {\n    return {\n      json: {\n        ok: false,\n        status: 422,\n        error: \"Invalid payload\",\n        page_type: pageTypeHint,\n        request_id: requestIdHint,\n        blueprint_index: inputCtx.blueprint_index ?? null,\n        retry_count: inputCtx.retry_count ?? 0,\n        retry_instructions: inputCtx.retry_instructions ?? \"\",\n        parsed_preview: parsed\n      }\n    };\n  }\n\n  const cleaned = deepClean(parsed);\n  let updates = (Array.isArray(cleaned.updates) ? cleaned.updates : []).map(u => ({\n    ...u,\n    fields: u?.fields ?? u?.data ?? {}\n  }));\n\n  const pageType = cleaned.page_type || pageTypeHint || null;\n\n  const blueprintPostId = parseInt((inputCtx?.blueprint?.post_id || cleaned?.blueprint?.post_id || 0), 10) || 0;\n  const safeTargets = new Set([\"options\", \"post_meta\", \"faq\", \"service_meta\"]);\n  const isHomepage = pageType === \"homepage\";\n  const allowedFieldMap = (() => {\n    const out = new Set();\n  const allowedByType = (() => {\n    const out = {};\n    const sections = Array.isArray(inputCtx?.blueprint?.sections) ? inputCtx.blueprint.sections : [];\n    for (const section of sections) {\n      const type = section?.section_type;\n      const allowed = Array.isArray(section?.allowed_field_keys) ? section.allowed_field_keys : [];\n      if (!type) continue;\n      if (!out[type]) out[type] = new Set();\n      for (const key of allowed) {\n        if (typeof key === 'string' && key) out[type].add(key);\n      }\n    }\n    return out;\n  })();\n\n\n    const sections = Array.isArray(inputCtx?.blueprint?.sections) ? inputCtx.blueprint.sections : [];\n    for (const section of sections) {\n      const sectionId = section?.section_id;\n      const allowed = Array.isArray(section?.allowed_field_keys) ? section.allowed_field_keys : [];\n      if (!sectionId) continue;\n      for (const key of allowed) {\n        if (typeof key === 'string' && key) out.add(`${sectionId}.${key}`);\n      }\n    }\n    return out;\n  })();\n\n  const allowedBare = (() => {\n    const out = new Set();\n    const sections = Array.isArray(inputCtx?.blueprint?.sections) ? inputCtx.blueprint.sections : [];\n    for (const section of sections) {\n      const allowed = Array.isArray(section?.allowed_field_keys) ? section.allowed_field_keys : [];\n      for (const key of allowed) {\n        if (typeof key === 'string' && key) out.add(key);\n      }\n    }\n    return out;\n  })();\n\n  function filterFieldsByAllowed(fields) {\n    if (!fields || typeof fields !== 'object') return fields;\n    const next = {};\n    for (const key of Object.keys(fields)) {\n      if (key.includes('.')) {\n        const parts = key.split('.', 2);\n        const prefix = parts[0];\n        const field = parts[1] || '';\n        const allowedById = (!allowedFieldMap || allowedFieldMap.size === 0) || allowedFieldMap.has(key);\n        const allowedByType = (!allowedByType || !allowedByType[prefix]) ? false : allowedByType[prefix].has(field);\n        if (allowedById || allowedByType) {\n          next[key] = fields[key];\n        }\n      } else {\n        if (!allowedBare || allowedBare.size === 0 || allowedBare.has(key)) {\n          next[key] = fields[key];\n        }\n      }\n    }\n    return next;\n  }\n\n  updates = updates.map(update => {\n    const out = { ...update };\n    const targetRaw = typeof out.target === \"string\" ? out.target.trim() : \"\";\n\n    if (isHomepage) {\n      if (targetRaw === \"faq\") {\n        out.target = \"faq\";\n        return out;\n      }\n      out.target = \"options\";\n      out.id = \"homepage\";\n      return out;\n    }\n\n    if (!safeTargets.has(targetRaw) || targetRaw === \"options\") {\n      out.target = \"post_meta\";\n    } else {\n      out.target = targetRaw;\n    }\n\n    if (out.target === \"post_meta\" && (!out.id || out.id === 0) && blueprintPostId) {\n      out.id = blueprintPostId;\n    }\n    if (out.target === \"service_meta\" && (!out.id || out.id === 0) && blueprintPostId) {\n      out.id = blueprintPostId;\n    }\n    return out;\n  }).map(out => {\n    if (out.target !== \"faq\") {\n      out.fields = filterFieldsByAllowed(out.fields);\n    }\n    return out;\n  }).filter(out => {\n    if (out.target === \"options\") return true;\n    if (out.target === \"faq\") return true;\n    if (out.target === \"service_meta\") return !!out.id;\n    if (out.target === \"post_meta\") return !!out.id;\n    return false;\n  });\n\n  const meta = (cleaned.meta && typeof cleaned.meta === \"object\") ? cleaned.meta : {};\n  if (!meta.primary_keyword && primaryHint) meta.primary_keyword = primaryHint;\n  if (!meta.secondary_keywords && secondaryHint.length) meta.secondary_keywords = secondaryHint;\n  if (!meta.business_name && businessHint) meta.business_name = businessHint;\n  if (!meta.city_region && cityHint) meta.city_region = cityHint;\n  if (!meta.style_profile_id && styleHint) meta.style_profile_id = styleHint;\n\n  if (pageType === \"service\") {\n    const postId = findPostMetaId(updates);\n    const shortDesc = pickShortDesc(updates);\n    if (postId && shortDesc) {\n      updates.push({\n        target: \"service_meta\",\n        id: postId,\n        fields: { lf_service_short_desc: shortDesc }\n      });\n    }\n  }\n\n  return {\n    json: {\n      ok: true,\n      request_id: cleaned.request_id || requestIdHint,\n      blueprint_index: inputCtx.blueprint_index ?? null,\n      retry_count: inputCtx.retry_count ?? 0,\n      retry_instructions: inputCtx.retry_instructions ?? \"\",\n      page_type: pageType,\n      meta,\n      updates\n    }\n  };\n}\n\nconst inputItems = $input.all();\nreturn inputItems.map(item => parseOne(item.json || {}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2500,
+        160
+      ],
+      "id": "f4a5b6c7-d8e9-40f1-2a3b-4c5d6e7f8a9b",
+      "name": "Retry Parse + Normalize + CTA Guard"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Quality Gate + SEO Enforcement (strict checks, no auto-repair)\nconst allItems = $input.all();\nif (!allItems.length) {\n  return [{ json: { ok: true, updates: [], quality_warnings: [\"No items for quality gate\"] } }];\n}\n\nconst upstreamFailures = allItems\n  .map(i => i?.json || {})\n  .filter(j => j && j.ok === false);\n\nconst items = allItems.filter(i => i?.json?.ok !== false);\n\nconst parseWarnings = upstreamFailures.map(f => {\n  const pageType = f.page_type || 'unknown';\n  const err = String(f.error || 'unknown_error');\n  const detail = String(f.details || '').trim();\n  return detail\n    ? `Dropped blueprint page_type=${pageType}: ${err} (${detail})`\n    : `Dropped blueprint page_type=${pageType}: ${err}`;\n});\n\nfunction normalizeText(value) {\n  return String(value || \"\").toLowerCase().replace(/\\s+/g, \" \").trim();\n}\n\nfunction wordCount(value) {\n  const text = String(value || \"\").trim();\n  if (!text) return 0;\n  return text.split(/\\s+/).length;\n}\n\nfunction containsKeyword(value, keyword) {\n  const hay = normalizeText(value);\n  const needle = normalizeText(keyword);\n  if (!needle) return false;\n  return hay.includes(needle);\n}\n\nfunction extractStrings(updates) {\n  const out = [];\n  for (const update of updates) {\n    const fields = update?.fields || {};\n    for (const key of Object.keys(fields)) {\n      const value = fields[key];\n      if (typeof value === \"string\") {\n        const trimmed = value.trim();\n        if (trimmed) out.push({ key, value: trimmed });\n      }\n    }\n  }\n  return out;\n}\n\nfunction splitSentences(text) {\n  return String(text || \"\")\n    .replace(/\\s+/g, \" \")\n    .split(/[.!?]\\s+/)\n    .map(s => s.trim())\n    .filter(s => s.length >= 16);\n}\n\nfunction detectDuplicateSentences(strings) {\n  const seen = new Set();\n  for (const { value } of strings) {\n    const sentences = splitSentences(value);\n    for (const s of sentences) {\n      const n = normalizeText(s);\n      if (!n) continue;\n      if (seen.has(n)) return true;\n      seen.add(n);\n    }\n  }\n  return false;\n}\n\nfunction detectDuplicateFields(strings) {\n  const seen = new Set();\n  for (const { value } of strings) {\n    const n = normalizeText(value);\n    if (!n) continue;\n    if (seen.has(n)) return true;\n    seen.add(n);\n  }\n  return false;\n}\n\nfunction detectCityRepeatInHeadings(strings, cityRegion) {\n  if (!cityRegion) return false;\n  const city = normalizeText(cityRegion);\n  let count = 0;\n  for (const { key, value } of strings) {\n    if (!/heading|headline|trust_heading|cta_headline/i.test(key)) continue;\n    if (normalizeText(value).includes(city)) count += 1;\n  }\n  return count > 1;\n}\n\nfunction detectInYourArea(strings, pageType) {\n  if (pageType === 'service_area') return false;\n  for (const { value } of strings) {\n    if (/\\bin your area\\b/i.test(value)) return true;\n  }\n  return false;\n}\n\nfunction detectGenericPhrases(strings) {\n  const patterns = [\n    /delivers tailored solutions/i,\n    /clear communication, clean execution/i,\n    /long-?lasting results/i,\n    /fast response and clear pricing/i,\n    /upfront pricing before work starts/i,\n    /trusted local team/i\n  ];\n  for (const { value } of strings) {\n    for (const re of patterns) {\n      if (re.test(value)) return true;\n    }\n  }\n  return false;\n}\n\nconst warnings = [];\nfor (const item of items) {\n  const json = item.json || {};\n  if (!json.ok || !Array.isArray(json.updates)) continue;\n\n  const meta = json.meta || {};\n  const primaryKeyword = String(meta.primary_keyword || \"\").trim();\n  const secondaryKeywords = Array.isArray(meta.secondary_keywords) ? meta.secondary_keywords : [];\n  const cityRegion = String(meta.city_region || \"\").trim();\n  const pageType = json.page_type || \"unknown\";\n\n  let totalWords = 0;\n  let primaryFound = false;\n  let secondaryFound = false;\n\n  const strings = extractStrings(json.updates);\n  for (const { value } of strings) {\n    totalWords += wordCount(value);\n    if (primaryKeyword && containsKeyword(value, primaryKeyword)) primaryFound = true;\n    if (!secondaryFound && secondaryKeywords.length) {\n      secondaryFound = secondaryKeywords.some(sk => containsKeyword(value, sk));\n    }\n  }\n\n  if (primaryKeyword && !primaryFound) warnings.push(`Missing primary keyword on ${pageType}.`);\n  if (secondaryKeywords.length && !secondaryFound) warnings.push(`Missing secondary keyword on ${pageType}.`);\n\n  if (detectDuplicateFields(strings)) warnings.push(`Duplicate fields detected on ${pageType}.`);\n  if (detectDuplicateSentences(strings)) warnings.push(`Repeated sentence detected on ${pageType}.`);\n  if (detectCityRepeatInHeadings(strings, cityRegion)) warnings.push(`City repeated in headings on ${pageType}.`);\n  if (detectInYourArea(strings, pageType)) warnings.push(`\"In your area\" detected on ${pageType}.`);\n  if (detectGenericPhrases(strings)) warnings.push(`Generic phrasing detected on ${pageType}.`);\n\n  const minTotal = (pageType === \"homepage\") ? 140\n    : ([\"sitemap\", \"privacy\", \"terms\", \"thank_you\"].includes(pageType) ? 60\n    : ([\"contact\", \"reviews\", \"blog\", \"about\", \"services_overview\", \"service_areas_overview\"].includes(pageType) ? 80 : 100));\n  if (totalWords < minTotal) warnings.push(`Low content volume on ${pageType} (${totalWords} words).`);\n}\n\nconst allWarnings = Array.from(new Set(warnings.concat(parseWarnings)));\n\n// Attach warnings to every item (including ok:false) so Retry Decision can act.\nfor (const item of allItems) {\n  if (!item.json || typeof item.json !== 'object') item.json = {};\n  const existing = Array.isArray(item.json.quality_warnings) ? item.json.quality_warnings : [];\n  item.json.quality_warnings = Array.from(new Set(existing.concat(allWarnings)));\n}\n\nreturn allItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2720,
+        160
+      ],
+      "id": "a5b6c7d8-e9f0-41a2-3b4c-5d6e7f8a9b0c",
+      "name": "Retry Quality Gate + SEO Enforcement"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.ok}}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3600,
+        0
+      ],
+      "id": "b7c8d9e0-f1a2-43b4-9c5d-6e7f8a9b0c1d",
+      "name": "Callback Gate"
     }
   ],
   "pinData": {},
@@ -461,6 +592,11 @@
             "node": "Basic LLM Chain",
             "type": "ai_languageModel",
             "index": 0
+          },
+          {
+            "node": "LLM Retry Chain",
+            "type": "ai_languageModel",
+            "index": 0
           }
         ]
       ]
@@ -513,7 +649,7 @@
       "main": [
         [
           {
-            "node": "Deterministic FAQ Enforcement",
+            "node": "Retry Decision",
             "type": "main",
             "index": 0
           }
@@ -524,7 +660,7 @@
       "main": [
         [
           {
-            "node": "Basic LLM Chain",
+            "node": "Store Blueprint Cache",
             "type": "main",
             "index": 0
           }
@@ -546,7 +682,7 @@
       "main": [
         [
           {
-            "node": "Callback to WP",
+            "node": "Callback Gate",
             "type": "main",
             "index": 0
           }
@@ -562,6 +698,102 @@
             "index": 0
           }
         ]
+      ]
+    },
+    "Store Blueprint Cache": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Decision": {
+      "main": [
+        [
+          {
+            "node": "Retry Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Gate": {
+      "main": [
+        [
+          {
+            "node": "Retry Input Builder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Deterministic FAQ Enforcement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Input Builder": {
+      "main": [
+        [
+          {
+            "node": "LLM Retry Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Retry Chain": {
+      "main": [
+        [
+          {
+            "node": "Retry Parse + Normalize + CTA Guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Parse + Normalize + CTA Guard": {
+      "main": [
+        [
+          {
+            "node": "Retry Quality Gate + SEO Enforcement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Quality Gate + SEO Enforcement": {
+      "main": [
+        [
+          {
+            "node": "Deterministic FAQ Enforcement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback Gate": {
+      "main": [
+        [
+          {
+            "node": "Callback to WP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     }
   },

@@ -177,6 +177,42 @@
   background: #dbeafe;
 }
 
+.lf-manifester-images-preview {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.lf-manifester-image-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.lf-manifester-image-card.is-uploaded {
+  border-color: #86efac;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.08);
+}
+
+.lf-manifester-image-card img {
+  display: block;
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  background: #f3f4f6;
+}
+
+.lf-manifester-image-meta {
+  padding: 6px 8px 8px;
+  font-size: 0.78rem;
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .lf-manifester-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));

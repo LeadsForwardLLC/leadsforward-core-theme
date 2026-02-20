@@ -193,11 +193,11 @@ Set once per site in **LeadsForward → Variation**. No runtime randomness; all 
 
 ## Page Builder Defaults (Deterministic)
 
-- **Services (single):** `hero → trust_bar → benefits → content_image_a → image_content_b → service_details → process → faq_accordion → related_links → cta`
-- **Service Areas (single):** `hero → trust_bar → benefits → content_image_a → image_content_b → services_offered_here → faq_accordion → nearby_areas → cta`
-- **Services Overview (Services page):** `hero → trust_bar → service_intro → benefits → content_image_a → process → faq_accordion → related_links → cta`
-- **Service Areas Overview (Service Areas page):** `hero → trust_bar → content_centered → service_areas (map + search/filter + cards) → benefits → faq_accordion → cta`
-- **Contact:** `hero → map_nap → trust_reviews → cta`
+- **Services (single):** `hero → trust_bar → service_details → benefits → process → faq_accordion → cta`
+- **Service Areas (single):** `hero → content_image → services_offered_here → nearby_areas → faq_accordion → cta`
+- **Services Overview (Services page):** `hero → service_intro → content_image → faq_accordion → cta`
+- **Service Areas Overview (Service Areas page):** `hero → service_areas (map + search/filter + cards) → faq_accordion → cta`
+- **Contact:** `hero → map_nap → cta`
 - **Terms / Privacy:** `hero → content`
 
 New section type: **Centered Content** (`content_centered`) — minimal, text-only section with heading, optional subheading, and rich supporting text.
@@ -282,9 +282,9 @@ New section type: **Centered Content** (`content_centered`) — minimal, text-on
 
 ## Homepage Default Sections & Intent
 
-- **Default order (fresh setups):** Hero → Trust Bar → Benefits → Service Intro Boxes → Service Details → Content with Image (A) → Image with Content (B) → Content with Image (C) → Process → FAQ → CTA → Related Links → Service Areas + Map.
-- **Repeatable media sections:** A/B/C are distinct instances with different placeholder copy.
-- **Intent metadata:** Each media instance stores `section_intent` + `section_purpose` for AI guidance (not rendered).
+- **Default order (fresh setups):** Hero → Trust Bar → Service Intro Boxes → Benefits → Service Details → Process → FAQ → Reviews → Related Links → Service Areas + Map → CTA.
+- **Service Details:** Single primary long-form section with layout toggle (content/media left-right).
+- **Intent metadata:** Each section can store `section_intent` + `section_purpose` for AI guidance (not rendered).
 - **Why it exists:** Clear, differentiated content goals produce higher-quality AI output while keeping layout fully editable.
 
 ---
@@ -484,9 +484,9 @@ Completion is stored in option `lf_setup_wizard_complete`. Site setup does not s
 
 ## Homepage Default Order (Conversion)
 
-- **Order:** hero → trust_bar → service_intro → benefits → content_image_a → image_content_b → content_image_c → service_details → process → faq_accordion → related_links → map_nap → cta.
+- **Order:** hero → trust_bar → service_intro → benefits → service_details → process → faq_accordion → trust_reviews → related_links → map_nap → cta.
 - **CTA placement:** CTA appears once and is last.
-- **Defaults:** All three content/image variants (A/B/C) are enabled by default.
+- **Defaults:** Single Service Details section is enabled by default.
 
 ---
 

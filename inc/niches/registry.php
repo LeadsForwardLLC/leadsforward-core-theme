@@ -76,7 +76,7 @@ function lf_niche_layout_profiles(): array {
 	return [
 		'core' => [
 			'homepage' => $homepage_base,
-			'page' => ['hero', 'content', 'cta'],
+			'page' => ['hero', 'content'],
 			'service' => function_exists('lf_sections_default_order') ? lf_sections_default_order('service') : ['hero', 'trust_bar', 'benefits', 'content_image_a', 'image_content_b', 'service_details', 'process', 'faq_accordion', 'related_links', 'cta'],
 			'service_area' => function_exists('lf_sections_default_order') ? lf_sections_default_order('service_area') : ['hero', 'trust_bar', 'benefits', 'content_image_a', 'image_content_b', 'services_offered_here', 'faq_accordion', 'nearby_areas', 'cta'],
 			'post' => function_exists('lf_sections_default_order') ? lf_sections_default_order('post') : ['hero', 'content', 'related_links', 'cta'],
@@ -84,7 +84,7 @@ function lf_niche_layout_profiles(): array {
 		],
 		'project-heavy' => [
 			'homepage' => $homepage_base,
-			'page' => ['hero', 'content', 'project_gallery', 'cta'],
+			'page' => ['hero', 'content', 'project_gallery'],
 			'service' => function_exists('lf_sections_default_order') ? lf_sections_default_order('service') : ['hero', 'trust_bar', 'benefits', 'content_image_a', 'image_content_b', 'service_details', 'process', 'faq_accordion', 'related_links', 'cta'],
 			'service_area' => function_exists('lf_sections_default_order') ? lf_sections_default_order('service_area') : ['hero', 'trust_bar', 'benefits', 'content_image_a', 'image_content_b', 'services_offered_here', 'faq_accordion', 'nearby_areas', 'cta'],
 			'post' => function_exists('lf_sections_default_order') ? lf_sections_default_order('post') : ['hero', 'content', 'related_links', 'cta'],
@@ -704,7 +704,9 @@ function lf_get_niche(string $slug): ?array {
 
 /** Default section type order when niche has none. Matches controller order. */
 function lf_wizard_default_section_order(): array {
-	return function_exists('lf_homepage_controller_order') ? lf_homepage_controller_order() : ['hero', 'trust_reviews', 'service_grid', 'service_areas', 'cta', 'faq_accordion', 'cta', 'map_nap'];
+	return function_exists('lf_homepage_controller_order')
+		? lf_homepage_controller_order()
+		: ['hero', 'trust_bar', 'service_intro', 'benefits', 'service_details', 'process', 'faq_accordion', 'trust_reviews', 'related_links', 'map_nap', 'cta'];
 }
 
 /**

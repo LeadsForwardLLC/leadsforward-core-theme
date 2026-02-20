@@ -318,6 +318,15 @@ function lf_ops_handle_global_settings_save(): void {
 	$prev_logo_id = (int) lf_get_global_option('lf_global_logo', 0);
 	$logo_id = isset($_POST['lf_global_logo']) ? (int) $_POST['lf_global_logo'] : 0;
 	update_option('options_lf_global_logo', $logo_id);
+	if ($prev_logo_id > 0 && $prev_logo_id !== $logo_id) {
+		update_post_meta($prev_logo_id, '_lf_skip_auto_distribution', '0');
+	}
+	if ($logo_id > 0) {
+		update_post_meta($logo_id, '_lf_skip_auto_distribution', '1');
+	}
+	if (function_exists('lf_invalidate_media_index_cache')) {
+		lf_invalidate_media_index_cache();
+	}
 	update_option('options_lf_header_cta_label', isset($_POST['lf_header_cta_label']) ? sanitize_text_field(wp_unslash($_POST['lf_header_cta_label'])) : '');
 	update_option('options_lf_header_cta_url', isset($_POST['lf_header_cta_url']) ? esc_url_raw(wp_unslash($_POST['lf_header_cta_url'])) : '');
 	update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');

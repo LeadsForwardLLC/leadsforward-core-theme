@@ -48,15 +48,14 @@ function lf_homepage_legacy_order(): array {
 		'hero',
 		'trust_bar',
 		'service_intro',
-		'service_details',
-		'content_image',
-		'image_content',
 		'benefits',
+		'service_details',
 		'process',
 		'faq_accordion',
-		'cta',
+		'trust_reviews',
 		'related_links',
 		'map_nap',
+		'cta',
 	];
 }
 
@@ -377,6 +376,42 @@ function lf_get_homepage_section_config(): array {
 	}
 	$niche = get_option(LF_HOMEPAGE_NICHE_OPTION, '');
 	return lf_homepage_default_config($niche ?: null);
+}
+
+/**
+ * One-time cleanup: trim homepage sections to the current default template.
+ */
+function lf_homepage_cleanup_sections_once(): bool {
+	if (!is_admin() || !current_user_can('edit_theme_options')) {
+		return false;
+	}
+	if (get_option('lf_homepage_cleanup_v2', '0') === '1') {
+		return false;
+	}
+	$stored = get_option(LF_HOMEPAGE_CONFIG_OPTION, null);
+	if (!is_array($stored) || empty($stored)) {
+		update_option('lf_homepage_cleanup_v2', '1', true);
+		return false;
+	}
+	$stored = wp_unslash($stored);
+	$allowed = lf_homepage_default_order();
+	$niche = get_option(LF_HOMEPAGE_NICHE_OPTION, '');
+	$defaults = lf_homepage_default_config($niche ?: null);
+	$clean = [];
+	foreach ($allowed as $type) {
+		if (isset($stored[$type]) && is_array($stored[$type])) {
+			$clean[$type] = $stored[$type];
+		} elseif (isset($defaults[$type]) && is_array($defaults[$type])) {
+			$clean[$type] = $defaults[$type];
+		}
+		if (isset($clean[$type]['enabled'])) {
+			$clean[$type]['enabled'] = true;
+		}
+	}
+	update_option(LF_HOMEPAGE_CONFIG_OPTION, $clean, true);
+	update_option(LF_HOMEPAGE_ORDER_OPTION, $allowed, true);
+	update_option('lf_homepage_cleanup_v2', '1', true);
+	return true;
 }
 
 /**

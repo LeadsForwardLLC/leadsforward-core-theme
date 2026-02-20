@@ -17,6 +17,7 @@ const LF_PB_META_KEY = 'lf_pb_config';
 add_action('add_meta_boxes', 'lf_pb_register_meta_box');
 add_action('admin_enqueue_scripts', 'lf_pb_admin_assets');
 add_action('save_post', 'lf_pb_handle_save', 10, 2);
+add_action('admin_init', 'lf_pb_cleanup_templates_once');
 
 function lf_pb_registry(): array {
 	return [
@@ -217,7 +218,7 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 			$slug = $post_slug;
 			if (in_array($slug, ['contact', 'reviews'], true)) {
 				if ($slug === 'contact') {
-					$required_contact_sections = ['map_nap', 'trust_reviews', 'cta'];
+					$required_contact_sections = ['map_nap', 'cta'];
 					foreach ($required_contact_sections as $required_type) {
 						$has_required = false;
 						foreach ($sections_out as $row) {
@@ -253,50 +254,32 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 						$order_out[] = $instance_id;
 					}
 				}
-				$has_reviews = false;
-				foreach ($sections_out as $row) {
-					if (($row['type'] ?? '') === 'trust_reviews') {
-						$has_reviews = true;
-						break;
+				if ($slug === 'reviews') {
+					$has_reviews = false;
+					foreach ($sections_out as $row) {
+						if (($row['type'] ?? '') === 'trust_reviews') {
+							$has_reviews = true;
+							break;
+						}
 					}
-				}
-				if (!$has_reviews) {
-					$settings = lf_sections_defaults_for('trust_reviews');
-					if ($slug === 'contact') {
-						$settings['trust_heading'] = __('Recent reviews', 'leadsforward-core');
-						$settings['trust_layout'] = 'grid';
-						$settings['trust_columns'] = 2;
-						$settings['trust_max_items'] = 2;
-						$settings['trust_show_summary'] = 0;
-						$settings['trust_show_source'] = 0;
-					} elseif ($slug === 'reviews') {
+					if (!$has_reviews) {
+						$settings = lf_sections_defaults_for('trust_reviews');
 						$settings['trust_heading'] = '';
 						$settings['trust_layout'] = 'masonry';
 						$settings['trust_max_items'] = -1;
-					}
-					$instance_index = 1;
-					$instance_id = lf_pb_instance_id('trust_reviews', $instance_index);
-					while (isset($sections_out[$instance_id])) {
-						$instance_index++;
+						$instance_index = 1;
 						$instance_id = lf_pb_instance_id('trust_reviews', $instance_index);
-					}
-					$sections_out[$instance_id] = [
-						'type' => 'trust_reviews',
-						'enabled' => true,
-						'deletable' => true,
-						'settings' => $settings,
-					];
-					$inserted = false;
-					if ($slug === 'contact') {
-						foreach ($order_out as $index => $id) {
-							$type = $sections_out[$id]['type'] ?? '';
-							if ($type === 'cta') {
-								array_splice($order_out, $index, 0, [$instance_id]);
-								$inserted = true;
-								break;
-							}
+						while (isset($sections_out[$instance_id])) {
+							$instance_index++;
+							$instance_id = lf_pb_instance_id('trust_reviews', $instance_index);
 						}
-					} elseif ($slug === 'reviews') {
+						$sections_out[$instance_id] = [
+							'type' => 'trust_reviews',
+							'enabled' => true,
+							'deletable' => true,
+							'settings' => $settings,
+						];
+						$inserted = false;
 						foreach ($order_out as $index => $id) {
 							$type = $sections_out[$id]['type'] ?? '';
 							if ($type === 'hero') {
@@ -305,13 +288,13 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 								break;
 							}
 						}
-					}
-					if (!$inserted) {
-						$order_out[] = $instance_id;
+						if (!$inserted) {
+							$order_out[] = $instance_id;
+						}
 					}
 				}
 				if ($slug === 'contact') {
-					$desired_order = ['hero', 'map_nap', 'trust_reviews', 'cta'];
+					$desired_order = ['hero', 'map_nap', 'cta'];
 					$placed_ids = [];
 					$reordered = [];
 					foreach ($desired_order as $desired_type) {
@@ -353,12 +336,6 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 					$cta_headline = $business ? 'Get a free estimate from ' . $business : __('Get a free estimate', 'leadsforward-core');
 					$sections_to_add = [
 						[
-							'type' => 'trust_bar',
-							'settings' => [
-								'trust_heading' => __('Trusted by local homeowners', 'leadsforward-core'),
-							],
-						],
-						[
 							'type' => 'content_image',
 							'settings' => [
 								'section_heading' => __('Our story', 'leadsforward-core'),
@@ -373,22 +350,6 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 								'section_heading' => __('Why homeowners choose us', 'leadsforward-core'),
 								'section_intro' => __('Honest pricing, reliable crews, and quality workmanship.', 'leadsforward-core'),
 								'benefits_items' => __('Licensed and insured professionals' . "\n" . 'Upfront pricing before work starts' . "\n" . 'Respectful, clean crews', 'leadsforward-core'),
-							],
-						],
-						[
-							'type' => 'process',
-							'settings' => [
-								'section_heading' => __('How we work', 'leadsforward-core'),
-								'section_intro' => __('A clear, homeowner-friendly experience from first call to final walkthrough.', 'leadsforward-core'),
-								'process_steps' => __('Listen to your goals' . "\n" . 'Provide a clear plan and timeline' . "\n" . 'Deliver the work with care' . "\n" . 'Review every detail together', 'leadsforward-core'),
-							],
-						],
-						[
-							'type' => 'related_links',
-							'settings' => [
-								'section_heading' => __('Explore our services', 'leadsforward-core'),
-								'section_intro' => __('Explore more of our services.', 'leadsforward-core'),
-								'related_links_mode' => 'services',
 							],
 						],
 						[
@@ -482,6 +443,161 @@ function lf_pb_sanitize_order(array $order, array $allowed): array {
 		}
 	}
 	return $clean;
+}
+
+function lf_pb_cleanup_templates_once(): void {
+	if (!is_admin() || !current_user_can('edit_theme_options')) {
+		return;
+	}
+	if (get_option('lf_pb_template_cleanup_v2', '0') === '1') {
+		return;
+	}
+	if (function_exists('lf_homepage_cleanup_sections_once')) {
+		lf_homepage_cleanup_sections_once();
+	}
+	$updated = 0;
+	$page_templates = [
+		'about-us' => ['hero', 'content_image', 'benefits', 'cta'],
+		'our-services' => ['hero', 'service_intro', 'content_image', 'faq_accordion', 'cta'],
+		'service-areas' => ['hero', 'service_areas', 'faq_accordion', 'cta'],
+		'reviews' => ['hero', 'trust_reviews', 'cta'],
+		'blog' => ['hero', 'blog_posts', 'cta'],
+		'contact' => ['hero', 'map_nap', 'cta'],
+		'sitemap' => ['hero', 'sitemap_links'],
+		'privacy-policy' => ['hero', 'content'],
+		'terms-of-service' => ['hero', 'content'],
+		'thank-you' => ['hero', 'content'],
+	];
+
+	$page_ids = get_posts([
+		'post_type' => 'page',
+		'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
+		'posts_per_page' => -1,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	]);
+	foreach ($page_ids as $page_id) {
+		$post = get_post((int) $page_id);
+		if (!$post instanceof \WP_Post) {
+			continue;
+		}
+		if ($post->post_name === 'home') {
+			continue;
+		}
+		$desired = $page_templates[$post->post_name] ?? ['hero', 'content'];
+		if (lf_pb_cleanup_post_config((int) $page_id, 'page', $desired)) {
+			$updated++;
+		}
+	}
+
+	$service_ids = get_posts([
+		'post_type' => 'lf_service',
+		'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
+		'posts_per_page' => -1,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	]);
+	foreach ($service_ids as $service_id) {
+		if (lf_pb_cleanup_post_config((int) $service_id, 'service', ['hero', 'trust_bar', 'service_details', 'benefits', 'process', 'faq_accordion', 'cta'])) {
+			$updated++;
+		}
+	}
+
+	$area_ids = get_posts([
+		'post_type' => 'lf_service_area',
+		'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
+		'posts_per_page' => -1,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	]);
+	foreach ($area_ids as $area_id) {
+		if (lf_pb_cleanup_post_config((int) $area_id, 'service_area', ['hero', 'content_image', 'services_offered_here', 'nearby_areas', 'faq_accordion', 'cta'])) {
+			$updated++;
+		}
+	}
+
+	$post_ids = get_posts([
+		'post_type' => 'post',
+		'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
+		'posts_per_page' => -1,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	]);
+	foreach ($post_ids as $post_id) {
+		if (lf_pb_cleanup_post_config((int) $post_id, 'post', ['hero', 'content', 'related_links', 'cta'])) {
+			$updated++;
+		}
+	}
+
+	update_option('lf_pb_template_cleanup_v2', '1', true);
+	update_option('lf_pb_template_cleanup_v2_count', (int) $updated, false);
+}
+
+function lf_pb_cleanup_post_config(int $post_id, string $context, array $desired_types): bool {
+	$stored = get_post_meta($post_id, LF_PB_META_KEY, true);
+	if (!is_array($stored) || empty($stored)) {
+		return false;
+	}
+	$config = lf_pb_get_post_config($post_id, $context);
+	if (!is_array($config) || empty($config['sections'])) {
+		return false;
+	}
+	$sections_in = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	$order_in = is_array($config['order'] ?? null) ? $config['order'] : array_keys($sections_in);
+	$seo = is_array($config['seo'] ?? null) ? $config['seo'] : ['title' => '', 'description' => ''];
+
+	$kept = [];
+	$by_type = [];
+	foreach ($order_in as $instance_id) {
+		$row = $sections_in[$instance_id] ?? null;
+		if (!is_array($row)) {
+			continue;
+		}
+		$type = (string) ($row['type'] ?? '');
+		if ($type === '' || !in_array($type, $desired_types, true)) {
+			continue;
+		}
+		if (isset($by_type[$type])) {
+			continue;
+		}
+		$row['enabled'] = true;
+		$kept[$instance_id] = $row;
+		$by_type[$type] = $instance_id;
+	}
+
+	foreach ($desired_types as $type) {
+		if (isset($by_type[$type])) {
+			continue;
+		}
+		$instance_index = 1;
+		$instance_id = lf_pb_instance_id($type, $instance_index);
+		while (isset($kept[$instance_id])) {
+			$instance_index++;
+			$instance_id = lf_pb_instance_id($type, $instance_index);
+		}
+		$kept[$instance_id] = [
+			'type' => $type,
+			'enabled' => true,
+			'deletable' => false,
+			'settings' => lf_sections_defaults_for($type),
+		];
+		$by_type[$type] = $instance_id;
+	}
+
+	$new_order = [];
+	foreach ($desired_types as $type) {
+		if (isset($by_type[$type])) {
+			$new_order[] = $by_type[$type];
+		}
+	}
+
+	$new_config = [
+		'order' => $new_order,
+		'sections' => $kept,
+		'seo' => $seo,
+	];
+	update_post_meta($post_id, LF_PB_META_KEY, $new_config);
+	return true;
 }
 
 function lf_pb_register_meta_box(): void {
