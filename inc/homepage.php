@@ -102,7 +102,11 @@ function lf_homepage_base_section_type(string $section_id): string {
 		return '';
 	}
 	$parts = explode('__', $section_id, 2);
-	return sanitize_text_field((string) ($parts[0] ?? ''));
+	$base = sanitize_text_field((string) ($parts[0] ?? ''));
+	if (preg_match('/^(.+)_\d+$/', $base, $m) === 1) {
+		return sanitize_text_field((string) ($m[1] ?? $base));
+	}
+	return $base;
 }
 
 /**
