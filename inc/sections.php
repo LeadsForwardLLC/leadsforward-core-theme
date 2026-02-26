@@ -1113,6 +1113,8 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 		'hero_headline' => $settings['hero_headline'] ?? '',
 		'hero_subheadline' => $settings['hero_subheadline'] ?? '',
 		'section_background' => $settings['section_background'] ?? 'soft',
+		'hero_proof_title' => $settings['hero_proof_title'] ?? '',
+		'hero_proof_bullets' => $settings['hero_proof_bullets'] ?? '',
 		'hero_eyebrow_enabled' => $settings['hero_eyebrow_enabled'] ?? '1',
 		'hero_eyebrow_text' => $settings['hero_eyebrow_text'] ?? '',
 		'hero_media' => $settings['hero_media'] ?? 'none',
