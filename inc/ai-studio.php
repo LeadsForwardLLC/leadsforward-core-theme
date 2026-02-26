@@ -4151,6 +4151,7 @@ function lf_ai_studio_llm_system_message(): string {
 		'Blog post rules: when page_intent is blog_post, write a complete long-form article suitable for publication with substantial depth, practical guidance, and concrete homeowner takeaways.',
 		'If blog_post_type is provided in blueprint, shape the article to that format (pillar, how_to, cost, comparison, checklist, local_guide, faq_roundup) while preserving factual accuracy for business and location context.',
 		'Never reuse sentences across page types.',
+		'Minimum total content: every page must contain at least 1000 words of unique body copy across all text/richtext fields. Expand each section with depth; do not pad with fluff or repetition.',
 		'FAQ strategy: create one global pool of 8-12 evergreen FAQs. Reuse across pages unless contextual variation is required. Homepage shows 5. Service pages show 4-6 relevant. Service area pages show 3-5 localized. Overview pages optionally 3-4.',
 		'CTA strategy: treat the homepage CTA section as the canonical global CTA copy. For each page, add exactly one contextual sentence in cta_subheadline_secondary. Never duplicate CTA sentences across pages.',
 		'CTA button labels: keep 2-5 words, max 32 characters, no trailing punctuation.',
@@ -6280,6 +6281,28 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 	$global_seen = [];
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 	$homepage_config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
+	$min_word_count = 1000;
+	$page_word_counts = [];
+	$page_labels = [];
+	$pages_seen = [];
+	$add_word_count = static function (string $page_key, string $label, $value) use (&$page_word_counts, &$page_labels): void {
+		if (!is_scalar($value)) {
+			return;
+		}
+		$text = trim(wp_strip_all_tags((string) $value));
+		if ($text === '') {
+			return;
+		}
+		$parts = preg_split('/\s+/', $text);
+		$count = is_array($parts) ? count(array_filter($parts, 'strlen')) : 0;
+		if ($count <= 0) {
+			return;
+		}
+		$page_word_counts[$page_key] = ($page_word_counts[$page_key] ?? 0) + $count;
+		if ($label !== '' && !isset($page_labels[$page_key])) {
+			$page_labels[$page_key] = $label;
+		}
+	};
 	foreach ($updates as $index => $update) {
 		if (!is_array($update)) {
 			$errors[] = sprintf(__('Update at index %d must be an object.', 'leadsforward-core'), $index);
@@ -6293,6 +6316,7 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 			continue;
 		}
 		if ($target === 'options' && $id === 'homepage') {
+			$pages_seen['homepage'] = __('Homepage', 'leadsforward-core');
 			$field_meta = [];
 			foreach ($fields as $key => $value) {
 				if (!is_string($key)) {
@@ -6319,6 +6343,7 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 				if (!in_array($field_key, $allowed, true)) {
 					$errors[] = sprintf(__('Homepage field "%s" is not allowed.', 'leadsforward-core'), $key);
 				}
+				$add_word_count('homepage', __('Homepage', 'leadsforward-core'), $value);
 			}
 			continue;
 		}
@@ -6332,6 +6357,7 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 				$errors[] = sprintf(__('Post update for id %d not found.', 'leadsforward-core'), $post_id);
 				continue;
 			}
+			$pages_seen['post:' . $post_id] = $post->post_title ?: sprintf(__('Post %d', 'leadsforward-core'), $post_id);
 			$context = function_exists('lf_pb_get_context_for_post') ? lf_pb_get_context_for_post($post) : '';
 			if ($context === '') {
 				$errors[] = sprintf(__('Post update for id %d has no builder context.', 'leadsforward-core'), $post_id);
@@ -6379,6 +6405,7 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 					'field_key' => $field_key,
 					'section_type' => $type,
 				];
+				$add_word_count('post:' . $post_id, $post->post_title ?: sprintf(__('Post %d', 'leadsforward-core'), $post_id), $value);
 			}
 			$seen = [];
 			foreach ($fields as $key => $value) {
@@ -6445,6 +6472,12 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 			continue;
 		}
 		continue;
+	}
+	foreach ($pages_seen as $page_key => $label) {
+		$count = $page_word_counts[$page_key] ?? 0;
+		if ($count < $min_word_count) {
+			$errors[] = sprintf(__('Page "%1$s" has only %2$d words; minimum is %3$d.', 'leadsforward-core'), $label, $count, $min_word_count);
+		}
 	}
 	return array_values(array_unique($errors));
 }

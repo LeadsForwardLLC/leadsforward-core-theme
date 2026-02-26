@@ -2567,7 +2567,23 @@ function lf_ai_assistant_widget_js(): string {
 			if (!wrap || !list) return;
 			var items = simpleListItemsFromContainer(list, "li");
 			syncHeroListsFromItems(wrap, items, "proof");
-			persistSectionLineItems(wrap, "hero_proof_bullets", items, "Saving checklist...");
+			setStatus("Saving checklist...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_update_hero_pills",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_id: String(wrap.getAttribute("data-lf-section-id") || ""),
+				items: JSON.stringify(items)
+			}).done(function(res){
+				if (res && res.success) {
+					setStatus((res.data && res.data.message) ? res.data.message : "Checklist saved.", false);
+				} else {
+					persistSectionLineItems(wrap, "hero_proof_bullets", items, "Saving checklist...");
+				}
+			}).fail(function(){
+				persistSectionLineItems(wrap, "hero_proof_bullets", items, "Saving checklist...");
+			});
 		}
 		function createGenericRemoveButton(onClick) {
 			var btn = document.createElement("button");
