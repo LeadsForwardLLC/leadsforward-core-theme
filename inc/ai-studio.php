@@ -4153,6 +4153,7 @@ function lf_ai_studio_llm_system_message(): string {
 		'Never reuse sentences across page types.',
 		'FAQ strategy: create one global pool of 8-12 evergreen FAQs. Reuse across pages unless contextual variation is required. Homepage shows 5. Service pages show 4-6 relevant. Service area pages show 3-5 localized. Overview pages optionally 3-4.',
 		'CTA strategy: treat the homepage CTA section as the canonical global CTA copy. For each page, add exactly one contextual sentence in cta_subheadline_secondary. Never duplicate CTA sentences across pages.',
+		'CTA button labels: keep 2-5 words, max 32 characters, no trailing punctuation.',
 	]);
 }
 

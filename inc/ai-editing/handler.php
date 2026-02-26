@@ -204,9 +204,19 @@ function lf_ai_get_current_values(string $context_type, $context_id, array $fiel
 	$out = [];
 	if ($context_type === 'homepage') {
 		$hero_row = lf_ai_get_homepage_hero_row();
+		$resolved_primary_cta = '';
+		if (function_exists('lf_resolve_cta') && is_array($hero_row)) {
+			$cta = lf_resolve_cta(['homepage' => true, 'section' => $hero_row], $hero_row, []);
+			if (is_array($cta) && isset($cta['primary_text'])) {
+				$resolved_primary_cta = (string) $cta['primary_text'];
+			}
+		}
 		foreach ($field_keys as $key) {
 			if (in_array($key, ['hero_headline', 'hero_subheadline', 'cta_primary_override'], true)) {
 				$value = (string) ($hero_row[$key] ?? '');
+				if ($key === 'cta_primary_override' && $value === '' && $resolved_primary_cta !== '') {
+					$value = $resolved_primary_cta;
+				}
 				$override = lf_ai_get_inline_dom_override_for_field($context_type, $context_id, (string) $key);
 				$out[$key] = $override !== '' ? $override : $value;
 			} else {
