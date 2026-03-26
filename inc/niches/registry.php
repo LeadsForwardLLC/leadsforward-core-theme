@@ -356,6 +356,14 @@ function lf_get_niche_registry(): array {
 				__('Piering & Underpinning', 'leadsforward-core'),
 				__('Foundation Waterproofing', 'leadsforward-core'),
 				__('Structural Stabilization', 'leadsforward-core'),
+			],
+			'core',
+			'c',
+			[
+				'cta_primary_default' => __('Schedule a Foundation Inspection', 'leadsforward-core'),
+				'cta_secondary_default' => __('Get a Structural Estimate', 'leadsforward-core'),
+				'hero_headline_default' => __('Foundation Repair in [Your City]', 'leadsforward-core'),
+				'hero_subheadline_default' => __('Local specialists for settlement, cracks, and long-term structural stability.', 'leadsforward-core'),
 			]
 		),
 		'gutter-services' => lf_niche_build_entry(
@@ -700,6 +708,18 @@ function lf_get_niche_registry(): array {
 function lf_get_niche(string $slug): ?array {
 	$reg = lf_get_niche_registry();
 	return $reg[$slug] ?? null;
+}
+
+/**
+ * Default niche slug for fresh installs/new setups.
+ */
+function lf_default_niche_slug(): string {
+	$default = (string) apply_filters('lf_default_niche_slug', 'foundation-repair');
+	$registry = lf_get_niche_registry();
+	if (isset($registry[$default])) {
+		return $default;
+	}
+	return 'general';
 }
 
 /** Default section type order when niche has none. Matches controller order. */

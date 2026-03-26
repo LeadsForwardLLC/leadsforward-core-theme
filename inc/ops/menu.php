@@ -426,10 +426,11 @@ function lf_ops_handle_global_settings_save(): void {
 		$section_spacing = '';
 	}
 	update_option('lf_design_section_spacing', $section_spacing);
-	$niche_slug = isset($_POST['lf_homepage_niche_slug']) ? sanitize_text_field(wp_unslash($_POST['lf_homepage_niche_slug'])) : 'general';
-	$allowed_niches = function_exists('lf_get_niche_registry') ? array_keys(lf_get_niche_registry()) : ['general'];
+	$default_niche = function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair';
+	$niche_slug = isset($_POST['lf_homepage_niche_slug']) ? sanitize_text_field(wp_unslash($_POST['lf_homepage_niche_slug'])) : $default_niche;
+	$allowed_niches = function_exists('lf_get_niche_registry') ? array_keys(lf_get_niche_registry()) : [$default_niche];
 	if (!in_array($niche_slug, $allowed_niches, true)) {
-		$niche_slug = 'general';
+		$niche_slug = $default_niche;
 	}
 	update_option('lf_homepage_niche_slug', $niche_slug);
 	$field_defaults = function_exists('lf_ai_studio_airtable_default_field_map') ? lf_ai_studio_airtable_default_field_map() : [];
@@ -642,16 +643,17 @@ function lf_ops_render_global_settings_page(): void {
 	$entity_insurance = (string) ($entity['insurance_statement'] ?? '');
 	$maps_api_key = get_option('lf_maps_api_key', '');
 	$maps_api_key = is_string($maps_api_key) ? $maps_api_key : '';
-	$homepage_niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
+	$default_niche = function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair';
+	$homepage_niche_slug = (string) get_option('lf_homepage_niche_slug', $default_niche);
 	$design_preset = (string) get_option('lf_global_design_preset', 'clean-precision');
 	$niche_registry = function_exists('lf_get_niche_registry') ? lf_get_niche_registry() : [];
 	if (empty($niche_registry)) {
 		$niche_registry = [
-			'general' => ['name' => __('General', 'leadsforward-core')],
+			$default_niche => ['name' => __('Foundation Repair', 'leadsforward-core')],
 		];
 	}
 	if (!isset($niche_registry[$homepage_niche_slug])) {
-		$homepage_niche_slug = 'general';
+		$homepage_niche_slug = $default_niche;
 	}
 	$design_presets = function_exists('lf_design_presets') ? lf_design_presets() : [];
 	if (empty($design_presets)) {

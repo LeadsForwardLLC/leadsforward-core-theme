@@ -37,6 +37,8 @@ lf_load_inc('cleanup.php');
 
 // Performance: defer scripts, heartbeat, head cleanup.
 lf_load_inc('performance.php');
+// Shared security helpers (rate limiting, client IP resolution).
+lf_load_inc('security.php');
 
 // Business entity (Local SEO single source of truth).
 lf_load_inc('business-entity.php');

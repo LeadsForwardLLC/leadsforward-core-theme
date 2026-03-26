@@ -560,6 +560,7 @@ function lf_contact_form_render(): void {
 	}
 	?>
 	<form class="lf-contact-form" data-lf-contact-form>
+		<input type="text" name="website" value="" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;opacity:0;" aria-hidden="true" />
 		<div class="lf-contact-form__fields">
 			<?php foreach ($fields as $field) : ?>
 				<?php
@@ -592,6 +593,14 @@ function lf_contact_form_render(): void {
 
 function lf_contact_form_handle_submit(): void {
 	check_ajax_referer('lf_contact_form_submit', 'nonce');
+	if (function_exists('lf_security_rate_limit_allow') && !lf_security_rate_limit_allow('contact_form_submit', 8, 300)) {
+		wp_send_json_error(['message' => __('Too many attempts. Please wait a few minutes and try again.', 'leadsforward-core')], 429);
+	}
+	$honeypot = isset($_POST['website']) ? trim((string) wp_unslash($_POST['website'])) : '';
+	if ($honeypot !== '') {
+		// Silent success keeps bots from probing validation behavior.
+		wp_send_json_success(['message' => __('Thanks! We will be in touch shortly.', 'leadsforward-core')]);
+	}
 	$config = lf_contact_form_get_config();
 	$fields = $config['fields'] ?? [];
 	$webhook = (string) ($config['webhook_url'] ?? '');

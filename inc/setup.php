@@ -46,6 +46,20 @@ function lf_theme_setup(): void {
 }
 add_action('after_setup_theme', 'lf_theme_setup');
 
+/**
+ * Seed default niche on activation for new installs.
+ */
+function lf_theme_seed_default_niche(): void {
+	$key = defined('LF_HOMEPAGE_NICHE_OPTION') ? LF_HOMEPAGE_NICHE_OPTION : 'lf_homepage_niche_slug';
+	$current = (string) get_option($key, '');
+	if ($current !== '') {
+		return;
+	}
+	$default = function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair';
+	update_option($key, $default, true);
+}
+add_action('after_switch_theme', 'lf_theme_seed_default_niche');
+
 function lf_header_menu_item_title(string $title, \WP_Post $item, $args, int $depth): string {
 	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu') {
 		return $title;

@@ -437,6 +437,10 @@ function lf_wizard_render_page(): void {
 	$method = 'post';
 	$action = admin_url('admin.php?page=lf-setup');
 	$niche = isset($_GET['niche']) ? sanitize_text_field($_GET['niche']) : '';
+	$default_niche = function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair';
+	if ($niche === '') {
+		$niche = $default_niche;
+	}
 	$profiles = ['a' => __('Clean + Minimal', 'leadsforward-core'), 'b' => __('Bold + High Contrast', 'leadsforward-core'), 'c' => __('Trust Heavy', 'leadsforward-core'), 'd' => __('Service Heavy', 'leadsforward-core'), 'e' => __('Offer/Promo Heavy', 'leadsforward-core')];
 
 	if ($step === 1) {
@@ -461,7 +465,7 @@ function lf_wizard_render_page(): void {
 		echo '</div>';
 		echo '</div>';
 	} elseif ($step === 2) {
-		$niche = $niche ?: array_key_first(lf_get_niche_registry());
+		$niche = $niche ?: $default_niche;
 		// Defaults: schema-friendly format examples (pre-fill when empty so user sees how to format)
 		$default_name = __('Quality Roofing of Sarasota', 'leadsforward-core');
 		$default_phone = __('(941) 555-0123', 'leadsforward-core');

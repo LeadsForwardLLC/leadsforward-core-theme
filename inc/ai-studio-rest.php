@@ -83,6 +83,12 @@ function lf_ai_studio_rest_legacy_auth(\WP_REST_Request $request, string $secret
 	$auth = (string) $request->get_header('authorization');
 	$token = '';
 	if ($auth === '') {
+		// Production hardening: query-string tokens are disabled by default.
+		$allow_query_token_default = wp_get_environment_type() !== 'production';
+		$allow_query_token = (bool) apply_filters('lf_ai_studio_allow_query_token', $allow_query_token_default, $request);
+		if (!$allow_query_token) {
+			return new \WP_Error('lf_ai_auth_missing', 'Missing Authorization token.', ['status' => 401]);
+		}
 		$token = (string) $request->get_param('token');
 	} else {
 		if (stripos($auth, 'bearer ') !== 0) {
@@ -199,7 +205,8 @@ function lf_ai_studio_build_blueprint_rest(): array {
 	$site_name = get_bloginfo('name');
 	$entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
 	$niche_option = defined('LF_HOMEPAGE_NICHE_OPTION') ? LF_HOMEPAGE_NICHE_OPTION : 'lf_homepage_niche_slug';
-	$niche = (string) get_option($niche_option, 'general');
+	$niche_default = function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair';
+	$niche = (string) get_option($niche_option, $niche_default);
 	$niche_profile = function_exists('lf_get_niche') ? lf_get_niche($niche) : ['slug' => $niche];
 	$homepage = lf_ai_studio_collect_homepage();
 	$inventory = lf_ai_studio_collect_pages_inventory();

@@ -18,6 +18,8 @@ const LF_QUOTE_BUILDER_SUBMISSIONS = 'lf_quote_builder_submissions';
 const LF_QUOTE_BUILDER_INTEGRATIONS = 'lf_quote_builder_integrations';
 const LF_QUOTE_BUILDER_GHL_ERRORS = 'lf_quote_builder_ghl_errors';
 const LF_QUOTE_BUILDER_ANALYTICS_TABLE = 'lf_quote_builder_analytics';
+const LF_QUOTE_BUILDER_GHL_RETRY_QUEUE = 'lf_quote_builder_ghl_retry_queue';
+const LF_QUOTE_BUILDER_GHL_RETRY_HOOK = 'lf_quote_builder_process_ghl_retries';
 
 add_action('admin_init', 'lf_quote_builder_handle_save');
 add_action('admin_init', 'lf_quote_builder_integrations_handle_save');
@@ -30,6 +32,7 @@ add_action('wp_ajax_lf_quote_builder_submit', 'lf_quote_builder_handle_submit');
 add_action('wp_ajax_nopriv_lf_quote_builder_submit', 'lf_quote_builder_handle_submit');
 add_action('wp_ajax_lf_quote_builder_event', 'lf_quote_builder_handle_event');
 add_action('wp_ajax_nopriv_lf_quote_builder_event', 'lf_quote_builder_handle_event');
+add_action(LF_QUOTE_BUILDER_GHL_RETRY_HOOK, 'lf_quote_builder_process_ghl_retries');
 
 function lf_quote_builder_default_config(?string $niche_slug = null): array {
 	$service_options = lf_quote_builder_service_options($niche_slug);
@@ -228,7 +231,9 @@ function lf_quote_builder_service_options(?string $niche_slug = null): array {
 
 function lf_quote_builder_niche_fields(?string $niche_slug = null): array {
 	$fields = [];
-	$niche = $niche_slug ? (string) $niche_slug : (string) get_option('lf_homepage_niche_slug', 'general');
+	$niche = $niche_slug
+		? (string) $niche_slug
+		: (string) get_option('lf_homepage_niche_slug', function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair');
 	$niche_data = function_exists('lf_get_niche') ? lf_get_niche($niche) : null;
 	$layout_profile = is_array($niche_data) ? (string) ($niche_data['layout_profile'] ?? '') : '';
 	$project_fields = [
@@ -1000,6 +1005,9 @@ function lf_quote_builder_record_event(string $event, string $step_id, string $c
 
 function lf_quote_builder_handle_event(): void {
 	check_ajax_referer('lf_quote_builder', 'nonce');
+	if (function_exists('lf_security_rate_limit_allow') && !lf_security_rate_limit_allow('quote_builder_event', 90, 300)) {
+		wp_send_json_success(['ok' => true]);
+	}
 	lf_quote_builder_maybe_create_analytics_table();
 	$event = isset($_POST['event']) ? sanitize_text_field(wp_unslash((string) $_POST['event'])) : '';
 	$allowed = ['open', 'step_view', 'step_complete', 'abandon', 'complete', 'validation_error'];
@@ -1143,6 +1151,7 @@ function lf_quote_builder_render_modal(): void {
 				<input type="hidden" name="lf_quote[returning]" value="0" />
 				<input type="hidden" name="lf_quote[submission_id]" value="" />
 				<input type="hidden" name="lf_quote[pages_path]" value="[]" />
+				<input type="text" name="lf_quote[website]" value="" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;opacity:0;" aria-hidden="true" />
 				<?php foreach ($steps as $index => $step) :
 					$step_id = $step['id'] ?? 'step-' . $index;
 					$step_type = $step['type'] ?? 'standard';
@@ -1284,7 +1293,7 @@ function lf_quote_builder_send_ghl(array $clean): void {
 
 	$args = [
 		'method'  => 'POST',
-		'timeout' => 3,
+		'timeout' => 10,
 		'headers' => [
 			'Content-Type' => 'application/json; charset=utf-8',
 		],
@@ -1294,22 +1303,110 @@ function lf_quote_builder_send_ghl(array $clean): void {
 	if (is_wp_error($response)) {
 		lf_quote_builder_log_ghl_error($response->get_error_message(), ['payload' => $payload]);
 		lf_quote_builder_record_event('ghl_fail', 'ghl', $clean['page_context'] ?? '', 0, (string) get_option('lf_homepage_niche_slug', ''), lf_quote_builder_get_form_variant(), 'error', $response->get_error_message());
+		lf_quote_builder_enqueue_ghl_retry($payload, ['reason' => 'wp_error', 'message' => $response->get_error_message()]);
 		return;
 	}
 	$code = wp_remote_retrieve_response_code($response);
 	if ($code < 200 || $code >= 300) {
 		lf_quote_builder_log_ghl_error('GHL webhook error: ' . $code, ['payload' => $payload]);
 		lf_quote_builder_record_event('ghl_fail', 'ghl', $clean['page_context'] ?? '', 0, (string) get_option('lf_homepage_niche_slug', ''), lf_quote_builder_get_form_variant(), 'http', (string) $code);
+		lf_quote_builder_enqueue_ghl_retry($payload, ['reason' => 'http_error', 'code' => $code]);
 		return;
 	}
 	lf_quote_builder_record_event('ghl_success', 'ghl', $clean['page_context'] ?? '', 0, (string) get_option('lf_homepage_niche_slug', ''), lf_quote_builder_get_form_variant());
 }
 
+function lf_quote_builder_enqueue_ghl_retry(array $payload, array $context = []): void {
+	$queue = get_option(LF_QUOTE_BUILDER_GHL_RETRY_QUEUE, []);
+	if (!is_array($queue)) {
+		$queue = [];
+	}
+	$queue[] = [
+		'payload' => $payload,
+		'attempts' => 0,
+		'next_try' => time() + 300,
+		'context' => $context,
+		'created_at' => time(),
+	];
+	$queue = array_slice($queue, -200);
+	update_option(LF_QUOTE_BUILDER_GHL_RETRY_QUEUE, $queue, false);
+	if (!wp_next_scheduled(LF_QUOTE_BUILDER_GHL_RETRY_HOOK)) {
+		wp_schedule_single_event(time() + 60, LF_QUOTE_BUILDER_GHL_RETRY_HOOK);
+	}
+}
+
+function lf_quote_builder_process_ghl_retries(): void {
+	$settings = lf_quote_builder_get_integrations();
+	if (empty($settings['ghl_enabled']) || empty($settings['ghl_webhook'])) {
+		return;
+	}
+	$queue = get_option(LF_QUOTE_BUILDER_GHL_RETRY_QUEUE, []);
+	if (!is_array($queue) || empty($queue)) {
+		return;
+	}
+	$now = time();
+	$remaining = [];
+	$processed = 0;
+	foreach ($queue as $job) {
+		if (!is_array($job) || empty($job['payload']) || !is_array($job['payload'])) {
+			continue;
+		}
+		if ($processed >= 20) {
+			$remaining[] = $job;
+			continue;
+		}
+		$next_try = isset($job['next_try']) ? (int) $job['next_try'] : 0;
+		if ($next_try > $now) {
+			$remaining[] = $job;
+			continue;
+		}
+		$processed++;
+		$attempts = isset($job['attempts']) ? (int) $job['attempts'] : 0;
+		$response = wp_remote_post((string) $settings['ghl_webhook'], [
+			'method' => 'POST',
+			'timeout' => 10,
+			'headers' => [
+				'Content-Type' => 'application/json; charset=utf-8',
+			],
+			'body' => wp_json_encode($job['payload']),
+		]);
+		$success = !is_wp_error($response);
+		if ($success) {
+			$code = (int) wp_remote_retrieve_response_code($response);
+			$success = $code >= 200 && $code < 300;
+		}
+		if ($success) {
+			continue;
+		}
+		$attempts++;
+		if ($attempts >= 5) {
+			lf_quote_builder_log_ghl_error('GHL retry exhausted after 5 attempts.', ['payload' => $job['payload']]);
+			continue;
+		}
+		$backoff = min(6 * HOUR_IN_SECONDS, (int) pow(2, $attempts) * 300);
+		$job['attempts'] = $attempts;
+		$job['next_try'] = $now + $backoff;
+		$remaining[] = $job;
+	}
+	update_option(LF_QUOTE_BUILDER_GHL_RETRY_QUEUE, $remaining, false);
+	if (!empty($remaining) && !wp_next_scheduled(LF_QUOTE_BUILDER_GHL_RETRY_HOOK)) {
+		wp_schedule_single_event(time() + 300, LF_QUOTE_BUILDER_GHL_RETRY_HOOK);
+	}
+}
+
 function lf_quote_builder_handle_submit(): void {
 	check_ajax_referer('lf_quote_builder', 'nonce');
+	if (function_exists('lf_security_rate_limit_allow') && !lf_security_rate_limit_allow('quote_builder_submit', 10, 300)) {
+		wp_send_json_error(['message' => __('Too many attempts. Please wait a few minutes and try again.', 'leadsforward-core')], 429);
+	}
 	$payload = $_POST['lf_quote'] ?? [];
 	if (!is_array($payload)) {
 		wp_send_json_error(['message' => __('Invalid submission.', 'leadsforward-core')]);
+	}
+	$honeypot = isset($payload['website']) ? trim((string) wp_unslash($payload['website'])) : '';
+	if ($honeypot !== '') {
+		// Silent success reduces bot feedback loops.
+		wp_send_json_success(['ok' => true]);
 	}
 	$config = lf_quote_builder_get_config();
 	$allowed = [];
