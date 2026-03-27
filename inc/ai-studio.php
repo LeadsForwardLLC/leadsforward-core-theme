@@ -1318,10 +1318,14 @@ function lf_ai_studio_render_page(): void {
 				<p class="description"><?php esc_html_e('No AI jobs found yet. Run the manifester once to populate vision debug data.', 'leadsforward-core'); ?></p>
 			<?php endif; ?>
 		</div>
-		<?php if (function_exists('lf_dev_reset_allowed') && lf_dev_reset_allowed() && current_user_can('manage_options')) : ?>
-			<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0; border: 1px solid #f87171;">
-				<h2 style="margin-top:0;"><?php esc_html_e('Reset site (dev only)', 'leadsforward-core'); ?></h2>
-				<p class="description"><?php esc_html_e('Deletes setup-created content. API/Airtable settings and legal pages are preserved.', 'leadsforward-core'); ?></p>
+		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0; border: 1px solid #f87171;">
+			<h2 style="margin-top:0;"><?php esc_html_e('Reset site (dev only)', 'leadsforward-core'); ?></h2>
+			<p class="description"><?php esc_html_e('Deletes setup-created content. API/Airtable settings and legal pages are preserved.', 'leadsforward-core'); ?></p>
+			<?php
+			$reset_allowed = function_exists('lf_dev_reset_allowed') ? lf_dev_reset_allowed() : false;
+			$reset_user_can = current_user_can('manage_options');
+			?>
+			<?php if ($reset_allowed && $reset_user_can) : ?>
 				<form method="post">
 					<?php wp_nonce_field('lf_dev_reset', 'lf_dev_reset_nonce'); ?>
 					<input type="hidden" name="lf_dev_reset" value="1" />
@@ -1331,8 +1335,10 @@ function lf_ai_studio_render_page(): void {
 					</p>
 					<p><button type="submit" class="button button-secondary"><?php esc_html_e('Reset Site', 'leadsforward-core'); ?></button></p>
 				</form>
-			</div>
-		<?php endif; ?>
+			<?php else : ?>
+				<p class="description"><?php esc_html_e('Reset is currently disabled for this environment. Enable it with LF_DEV_RESET_ENABLED in wp-config.php.', 'leadsforward-core'); ?></p>
+			<?php endif; ?>
+		</div>
 		<div id="lf-ai-manifest-loading" class="lf-ai-loading-overlay" aria-hidden="true">
 			<div class="lf-ai-loading-card" role="status" aria-live="polite">
 				<div class="lf-ai-loading-title"><?php esc_html_e('Generating site…', 'leadsforward-core'); ?></div>
