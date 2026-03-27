@@ -6287,7 +6287,59 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 	$global_seen = [];
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 	$homepage_config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
-	$min_word_count = 1000;
+	$min_word_count = (int) apply_filters('lf_ai_studio_min_word_count', 250);
+	$min_word_count = max(0, $min_word_count);
+	$legacy_homepage_alias_types = [
+		'intro' => ['content', 'content_centered', 'content_image', 'image_content'],
+		'about' => ['content', 'content_centered', 'content_image', 'image_content'],
+		'about_snippet' => ['content', 'content_centered', 'content_image', 'image_content'],
+		'services' => ['service_grid', 'services_offered_here', 'service_intro', 'service_details'],
+		'services_overview' => ['service_grid', 'services_offered_here', 'service_intro', 'service_details'],
+		'testimonials' => ['trust_bar', 'trust_reviews', 'reviews', 'social_proof'],
+		'faq' => ['faq_accordion'],
+	];
+	$resolve_legacy_homepage_section_id = static function (string $legacy_id) use ($homepage_config): string {
+		$legacy_id = trim($legacy_id);
+		if ($legacy_id === '') {
+			return '';
+		}
+		$type_map = [
+			'intro' => ['content', 'content_centered', 'content_image', 'image_content'],
+			'about' => ['content', 'content_centered', 'content_image', 'image_content'],
+			'about_snippet' => ['content', 'content_centered', 'content_image', 'image_content'],
+			'services' => ['service_grid', 'services_offered_here', 'service_intro', 'service_details'],
+			'services_overview' => ['service_grid', 'services_offered_here', 'service_intro', 'service_details'],
+			'testimonials' => ['trust_bar', 'trust_reviews', 'reviews', 'social_proof'],
+			'faq' => ['faq_accordion'],
+		];
+		$candidates = $type_map[$legacy_id] ?? [];
+		if (empty($candidates)) {
+			return '';
+		}
+		foreach ($homepage_config as $section_id => $section_settings) {
+			$type = (string) ($section_settings['type'] ?? '');
+			if ($type !== '' && in_array($type, $candidates, true)) {
+				return (string) $section_id;
+			}
+		}
+		return '';
+	};
+	$normalize_legacy_field_key = static function (string $section_id, string $field_key): array {
+		$section_id = trim($section_id);
+		$field_key = trim($field_key);
+		if ($section_id === 'cta') {
+			if ($field_key === 'section_heading') {
+				$field_key = 'cta_headline';
+			} elseif ($field_key === 'section_intro' || $field_key === 'section_subheadline') {
+				$field_key = 'cta_subheadline';
+			} elseif ($field_key === 'cta_primary') {
+				$field_key = 'cta_primary_override';
+			} elseif ($field_key === 'cta_secondary') {
+				$field_key = 'cta_secondary_override';
+			}
+		}
+		return [$section_id, $field_key];
+	};
 	$page_word_counts = [];
 	$page_labels = [];
 	$pages_seen = [];
@@ -6340,6 +6392,13 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 				} else {
 					$section_id = trim($parts[0]);
 					$field_key = trim($parts[1]);
+				}
+				[$section_id, $field_key] = $normalize_legacy_field_key($section_id, $field_key);
+				if (!isset($homepage_config[$section_id]) || !isset($registry[$section_id])) {
+					$remapped_section_id = $resolve_legacy_homepage_section_id($section_id);
+					if ($remapped_section_id !== '') {
+						$section_id = $remapped_section_id;
+					}
 				}
 				if (!isset($homepage_config[$section_id]) || !isset($registry[$section_id])) {
 					$errors[] = sprintf(__('Homepage section "%s" is not registered.', 'leadsforward-core'), $section_id);
