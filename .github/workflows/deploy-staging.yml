@@ -13,19 +13,23 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Validate PHP syntax
         run: |
           find . -name "*.php" -print0 | xargs -0 -n1 php -l
 
-      - name: Start SSH agent and add key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SG_SSH_KEY }}
+      - name: Configure SSH private key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SG_SSH_KEY }}" > ~/.ssh/id_sg_deploy
+          chmod 600 ~/.ssh/id_sg_deploy
+          ssh-keygen -y -f ~/.ssh/id_sg_deploy >/dev/null
 
       - name: Trust SiteGround host key
         run: |
@@ -35,6 +39,7 @@ jobs:
       - name: Deploy theme via rsync
         run: |
           rsync -az --delete \
+            -e "ssh -i ~/.ssh/id_sg_deploy -p ${{ secrets.SG_PORT }} -o StrictHostKeyChecking=yes" \
             --exclude ".git/" \
             --exclude ".github/" \
             --exclude "docs/" \
