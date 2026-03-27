@@ -64,7 +64,8 @@ Current progress body fields:
   - `job_id`
   - `request_id`
   - payload hash idempotency checks
-- HMAC mode remains supported on WP side, but compatibility mode is the active default for this workflow export.
+- HMAC mode remains supported on WP side.
+- Query-token auth is disabled by default in production; use Authorization header and/or HMAC headers for production callbacks.
 
 ## Execution Phases
 - `initial`: primary full generation run.

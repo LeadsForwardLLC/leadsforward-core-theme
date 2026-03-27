@@ -72,6 +72,9 @@ The manifest is the canonical input for deterministic site generation. It can be
 - `services[]` and `service_areas[]` must contain at least 1 item.
 - Slugs must be unique within their arrays.
 - `primary_keyword` is required for homepage, services, and service areas.
+- For builder consistency, prefer `business.niche` / `business.niche_slug` values from the supported set:
+  - `foundation-repair` (default)
+  - `roofing`, `pressure-washing`, `tree-service`, `hvac`, `windows-doors`, `remodeling`, `paving`
 
 ## Deterministic Behavior
 - The system computes a deterministic seed from `business.name + business.primary_city + business.niche`.

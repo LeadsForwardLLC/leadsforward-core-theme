@@ -34,6 +34,7 @@ This keeps the theme operational as a standalone engine while still benefiting f
   - compatibility bearer auth is currently used by n8n in this environment.
   - WP callback/progress handlers enforce request/job binding (`job_id`, `request_id`) and idempotent payload hashing.
   - HMAC verification remains supported on the WP side.
+  - query-token auth is disabled by default in production.
 - **Autonomy launch gate**: optional autonomous mode remains disabled until a successful Manifester run completes and records a baseline health state.
 - **Autonomy eligibility gate**: autonomous Airtable runs remain optional/off by default and only become enable-able after a successful manifester callback stores a fresh baseline audit/hash.
 - **Repair safeguards**:
@@ -46,6 +47,12 @@ This keeps the theme operational as a standalone engine while still benefiting f
 - Homepage is the only page allowed to generate global CTA fields.
 - FAQ content is generated on homepage and deterministically reused for service and service-area pages.
 - n8n enforces uniqueness and FAQ slicing before WordPress applies updates.
+
+## Lead Endpoint Hardening
+- Public lead endpoints (Quote Builder + Contact Form) now include:
+  - lightweight per-IP throttling
+  - honeypot bot filtering with silent-success behavior
+- Quote Builder webhook delivery now includes retry queue processing for transient remote failures.
 
 ## SEO Enforcement
 Two layers are enforced:

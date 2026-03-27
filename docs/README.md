@@ -26,6 +26,8 @@ Use this page as the starting point for architecture, operations, and troublesho
 - More than one repair pass is intentionally blocked.
 - n8n progress/callback payloads should include `run_phase` for easier debugging.
 - WordPress callback binding is validated via `job_id` + `request_id` + payload idempotency checks.
+- Production callback auth should use header/HMAC flows; query token auth is disabled by default in production.
+- Builder niche UX is intentionally constrained to: foundation-repair (default), roofing, pressure-washing, tree-service, hvac, windows-doors, remodeling, paving.
 
 ## Quick Troubleshooting
 1. If you see two executions: check whether second payload has `run_phase: repair` or `repair_only: true`.

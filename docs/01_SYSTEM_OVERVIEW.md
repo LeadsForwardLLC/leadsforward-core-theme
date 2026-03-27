@@ -8,6 +8,11 @@ This system turns one manifest (or Airtable project) into a deterministic WordPr
 - **LLM layer**: returns strict JSON updates for one blueprint at a time.
 - **Frontend editor**: inline admin editing for content, images, and section structure.
 
+## Builder Niche Scope
+- **Primary default:** Foundation Repair (`foundation-repair`)
+- **Secondary options:** Roofing, Pressure Washing, Tree Service, HVAC, Windows & Doors, Remodeling, Paving
+- Setup wizard and Global Settings niche selectors are intentionally restricted to this list for faster, less error-prone rollout.
+
 ## End-to-End Flow
 ```
 Manifest/Airtable -> WP payload -> n8n webhook
@@ -31,6 +36,7 @@ Expected behavior:
 - Homepage is source-of-truth for global CTA/FAQ strategy.
 - CTA supporting text remains unique by page context.
 - SEO/content quality enforcement runs before callback apply.
+- Public lead endpoints use lightweight throttle + honeypot safeguards.
 
 ## Template Defaults (Clean Layouts)
 - **Homepage:** hero → trust_bar → service_intro → benefits → service_details → process → faq_accordion → trust_reviews → related_links → map_nap → cta.

@@ -61,6 +61,15 @@ Core system documentation (read in order):
 
 ---
 
+## Niche Scope (Builder)
+
+- **Primary default niche:** Foundation Repair (`foundation-repair`)
+- **Supported secondary niches:** Roofing, Pressure Washing, Tree Service, HVAC, Windows & Doors, Remodeling, Paving
+- Builder-facing niche selectors (Setup + Global Settings) are intentionally limited to this curated set for speed and consistency.
+- The full registry can still contain additional/internal niches for future expansion, but they are hidden from normal builder UX by default.
+
+---
+
 ## Directory Structure
 
 ```
@@ -394,6 +403,8 @@ All use `show_in_rest => true` and clean rewrites.
 - **No unnecessary JS:** No front-end JS unless required for a feature.
 - **Images:** Use `loading="lazy"` for any images in block templates.
 - **Guardrails:** Core CPTs cannot be permanently deleted (trash only). Admin notices warn when Business Name, Phone, or other SEO-critical fields are missing.
+- **Public endpoint hardening:** Contact and Quote builder endpoints include lightweight per-IP throttling and honeypot checks.
+- **Webhook resilience:** Quote Builder webhook delivery includes retry queue processing for transient failures.
 
 ---
 
@@ -401,7 +412,7 @@ All use `show_in_rest => true` and clean rewrites.
 
 After theme activation, **Appearance → LeadsForward Setup** runs a one-time flow:
 
-1. **Select niche** — Roofing, Plumbing, HVAC, or General (from `inc/niches/registry.php`). Each niche defines core services, default CTA copy, recommended variation profile, and homepage section order.
+1. **Select niche** — Foundation Repair (default) plus curated secondary niches: Roofing, Pressure Washing, Tree Service, HVAC, Windows & Doors, Remodeling, Paving. Each niche defines core services, default CTA copy, recommended variation profile, and homepage section order.
 2. **Business info (NAP)** — Name, phone, email, address, opening hours. Saved to global business info options and editable in LeadsForward settings.
 3. **Confirm services & service areas** — Services come from the niche; add service areas (one per line, optional `City, ST`). Creates `lf_service` and `lf_service_area` posts.
 4. **Variation profile** — Pre-selected from niche; can override.
@@ -414,6 +425,7 @@ Completion is stored in option `lf_setup_wizard_complete`. Site setup does not s
 ## Extending
 
 - **New niche:** Add an entry to `lf_get_niche_registry()` in `inc/niches/registry.php` with `name`, `slug`, `services`, `required_pages` (optional), `homepage_section_order`, `variation_profile`, `cta_primary_default`, `cta_secondary_default`, `schema_review_enabled`. No change to setup or runner logic required.
+- **Expose niche in builder UX:** Add the slug to `lf_builder_supported_niche_slugs()` so it appears in Setup and Global Settings selectors.
 - **New section type:** Add to `lf_sections_registry()` in `inc/sections.php`, include defaults, and update homepage/page builder admin UI as needed for new fields.
 - **New placeholders:** Update `LF_PLACEHOLDER_IMAGE_URL` in `inc/images.php` and re-seed.
 - **New block:** Register in `inc/blocks/register.php` and add a template in `templates/blocks/`.
