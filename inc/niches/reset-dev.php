@@ -85,6 +85,10 @@ function lf_dev_reset_handle_post(): void {
 	if (!current_user_can('manage_options')) {
 		return;
 	}
+	if (!isset($_POST['lf_dev_reset_ack']) || $_POST['lf_dev_reset_ack'] !== '1') {
+		wp_safe_redirect(admin_url('admin.php?page=lf-ops&reset_error=ack'));
+		exit;
+	}
 	if (!isset($_POST['lf_dev_reset_confirm']) || trim($_POST['lf_dev_reset_confirm']) !== 'RESET') {
 		wp_safe_redirect(admin_url('admin.php?page=lf-ops&reset_error=confirm'));
 		exit;

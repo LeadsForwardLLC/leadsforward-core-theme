@@ -966,6 +966,9 @@ function lf_ai_studio_render_page(): void {
 		<?php if ($reset_error === 'confirm') : ?>
 			<div class="notice notice-error"><p><?php esc_html_e('Reset confirmation did not match. Type RESET to continue.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
+		<?php if ($reset_error === 'ack') : ?>
+			<div class="notice notice-error"><p><?php esc_html_e('Please confirm you understand this will delete site content before resetting.', 'leadsforward-core'); ?></p></div>
+		<?php endif; ?>
 		<?php if ($job_id && $job_status) : ?>
 			<?php if (in_array($job_status, ['queued', 'running'], true)) : ?>
 				<div class="notice notice-info is-dismissible"><p><?php echo esc_html(sprintf(__('Generation job #%d is running. Refresh in a minute to see completion.', 'leadsforward-core'), $job_id)); ?></p></div>
@@ -1328,6 +1331,12 @@ function lf_ai_studio_render_page(): void {
 					<p>
 						<label for="lf_dev_reset_confirm"><?php esc_html_e('Type RESET to confirm:', 'leadsforward-core'); ?></label><br />
 						<input type="text" id="lf_dev_reset_confirm" name="lf_dev_reset_confirm" class="regular-text" />
+					</p>
+					<p>
+						<label>
+							<input type="checkbox" name="lf_dev_reset_ack" value="1" required />
+							<?php esc_html_e('I understand this will permanently delete site content and cannot be undone.', 'leadsforward-core'); ?>
+						</label>
 					</p>
 					<p><button type="submit" class="button button-secondary"><?php esc_html_e('Reset Site', 'leadsforward-core'); ?></button></p>
 				</form>
