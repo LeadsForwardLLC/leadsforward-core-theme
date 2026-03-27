@@ -1,0 +1,43 @@
+name: Deploy Theme to SiteGround Staging
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate PHP syntax
+        run: |
+          find . -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: Start SSH agent and add key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SG_SSH_KEY }}
+
+      - name: Trust SiteGround host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${{ secrets.SG_PORT }}" -H "${{ secrets.SG_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy theme via rsync
+        run: |
+          rsync -az --delete \
+            --exclude ".git/" \
+            --exclude ".github/" \
+            --exclude "docs/" \
+            --exclude "README.md" \
+            ./ \
+            "${{ secrets.SG_USER }}@${{ secrets.SG_HOST }}:${{ secrets.SG_THEME_PATH }}/"
