@@ -25,10 +25,15 @@ jobs:
           find . -name "*.php" -print0 | xargs -0 -n1 php -l
 
       - name: Configure SSH private key
+        env:
+          SG_SSH_PASSPHRASE: ${{ secrets.SG_SSH_PASSPHRASE }}
         run: |
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.SG_SSH_KEY }}" > ~/.ssh/id_sg_deploy
           chmod 600 ~/.ssh/id_sg_deploy
+          if [ -n "${SG_SSH_PASSPHRASE}" ]; then
+            ssh-keygen -p -P "${SG_SSH_PASSPHRASE}" -N "" -f ~/.ssh/id_sg_deploy >/dev/null
+          fi
           ssh-keygen -y -f ~/.ssh/id_sg_deploy >/dev/null
 
       - name: Trust SiteGround host key
