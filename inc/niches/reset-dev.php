@@ -79,14 +79,15 @@ function lf_dev_reset_allowed(): bool {
 add_action('admin_init', 'lf_dev_reset_handle_post', 5);
 
 function lf_dev_reset_handle_post(): void {
-	if (!lf_dev_reset_allowed()) {
-		return;
-	}
 	if (!isset($_POST['lf_dev_reset']) || $_POST['lf_dev_reset'] !== '1') {
 		return;
 	}
 	if (!current_user_can('manage_options')) {
 		return;
+	}
+	if (!isset($_POST['lf_dev_reset_ack']) || $_POST['lf_dev_reset_ack'] !== '1') {
+		wp_safe_redirect(admin_url('admin.php?page=lf-ops&reset_error=ack'));
+		exit;
 	}
 	if (!isset($_POST['lf_dev_reset_confirm']) || trim($_POST['lf_dev_reset_confirm']) !== 'RESET') {
 		wp_safe_redirect(admin_url('admin.php?page=lf-ops&reset_error=confirm'));
@@ -112,10 +113,6 @@ function lf_dev_reset_render_page(): void {
  * Uses stored IDs when present; otherwise finds core pages by slug and all services/service areas.
  */
 function lf_dev_reset_run(): void {
-	if (!lf_dev_reset_allowed()) {
-		return;
-	}
-
 	$preserve_pages = [];
 	$privacy = get_page_by_path('privacy-policy', OBJECT, 'page');
 	if ($privacy instanceof \WP_Post) {

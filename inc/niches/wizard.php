@@ -977,6 +977,10 @@ function lf_wizard_render_setup_settings_panel(): void {
 				<input type="hidden" name="lf_dev_reset" value="1" />
 				<p><label for="lf_dev_reset_confirm"><?php esc_html_e('Type RESET to confirm:', 'leadsforward-core'); ?></label><br />
 					<input type="text" id="lf_dev_reset_confirm" name="lf_dev_reset_confirm" value="" autocomplete="off" style="text-transform:uppercase;" /></p>
+				<p><label>
+					<input type="checkbox" name="lf_dev_reset_ack" value="1" required />
+					<?php esc_html_e('I understand this will permanently delete site content and cannot be undone.', 'leadsforward-core'); ?>
+				</label></p>
 				<p><input type="submit" class="button" value="<?php esc_attr_e('RESET SITE (DEV ONLY)', 'leadsforward-core'); ?>" style="background:#b32d2e;border-color:#b32d2e;color:#fff;" /></p>
 			</form>
 		</div>
