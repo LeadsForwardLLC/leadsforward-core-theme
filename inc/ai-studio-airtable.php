@@ -702,6 +702,16 @@ function lf_ai_studio_airtable_fetch_reviews(
 			$page_params['offset'] = $offset;
 		}
 		$response = lf_ai_studio_airtable_get($base_url, $page_params, $pat);
+		if (
+			!empty($response['error'])
+			&& !empty($page_params['fields'])
+			&& stripos((string) $response['error'], 'Unknown field name') !== false
+		) {
+			// Backward-compatible fallback: if a mapped Airtable field no longer exists,
+			// retry without field projection so sync can still proceed.
+			unset($page_params['fields']);
+			$response = lf_ai_studio_airtable_get($base_url, $page_params, $pat);
+		}
 		if (!empty($response['error'])) {
 			return ['error' => $response['error']];
 		}
