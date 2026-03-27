@@ -428,7 +428,7 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('lf_design_section_spacing', $section_spacing);
 	$default_niche = function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair';
 	$niche_slug = isset($_POST['lf_homepage_niche_slug']) ? sanitize_text_field(wp_unslash($_POST['lf_homepage_niche_slug'])) : $default_niche;
-	$allowed_niches = function_exists('lf_get_niche_registry') ? array_keys(lf_get_niche_registry()) : [$default_niche];
+	$allowed_niches = function_exists('lf_builder_supported_niche_slugs') ? lf_builder_supported_niche_slugs() : [$default_niche];
 	if (!in_array($niche_slug, $allowed_niches, true)) {
 		$niche_slug = $default_niche;
 	}
@@ -646,7 +646,7 @@ function lf_ops_render_global_settings_page(): void {
 	$default_niche = function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair';
 	$homepage_niche_slug = (string) get_option('lf_homepage_niche_slug', $default_niche);
 	$design_preset = (string) get_option('lf_global_design_preset', 'clean-precision');
-	$niche_registry = function_exists('lf_get_niche_registry') ? lf_get_niche_registry() : [];
+	$niche_registry = function_exists('lf_builder_supported_niche_registry') ? lf_builder_supported_niche_registry() : [];
 	if (empty($niche_registry)) {
 		$niche_registry = [
 			$default_niche => ['name' => __('Foundation Repair', 'leadsforward-core')],

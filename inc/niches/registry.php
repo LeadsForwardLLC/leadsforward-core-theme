@@ -719,7 +719,46 @@ function lf_default_niche_slug(): string {
 	if (isset($registry[$default])) {
 		return $default;
 	}
-	return 'general';
+	return 'foundation-repair';
+}
+
+/**
+ * Supported niche set for the builder UX (primary + approved secondaries).
+ *
+ * @return array<int,string>
+ */
+function lf_builder_supported_niche_slugs(): array {
+	$slugs = [
+		'foundation-repair',
+		'roofing',
+		'pressure-washing',
+		'tree-service',
+		'hvac',
+		'windows-doors',
+		'remodeling',
+		'paving',
+	];
+	$registry = lf_get_niche_registry();
+	$filtered = array_values(array_filter($slugs, static function (string $slug) use ($registry): bool {
+		return isset($registry[$slug]);
+	}));
+	return !empty($filtered) ? $filtered : [lf_default_niche_slug()];
+}
+
+/**
+ * Supported niche map keyed by slug for select inputs.
+ *
+ * @return array<string,array<string,mixed>>
+ */
+function lf_builder_supported_niche_registry(): array {
+	$registry = lf_get_niche_registry();
+	$out = [];
+	foreach (lf_builder_supported_niche_slugs() as $slug) {
+		if (isset($registry[$slug]) && is_array($registry[$slug])) {
+			$out[$slug] = $registry[$slug];
+		}
+	}
+	return $out;
 }
 
 /** Default section type order when niche has none. Matches controller order. */
@@ -747,7 +786,7 @@ function lf_niche_section_order(string $context, string $niche_slug = ''): array
 	if (!function_exists('lf_sections_default_order')) {
 		return [];
 	}
-	$niche_slug = $niche_slug !== '' ? $niche_slug : (string) get_option('lf_homepage_niche_slug', 'general');
+	$niche_slug = $niche_slug !== '' ? $niche_slug : (string) get_option('lf_homepage_niche_slug', lf_default_niche_slug());
 	$niche = lf_get_niche($niche_slug);
 	$default = lf_sections_default_order($context);
 	if (!$niche) {

@@ -438,7 +438,14 @@ function lf_wizard_render_page(): void {
 	$action = admin_url('admin.php?page=lf-setup');
 	$niche = isset($_GET['niche']) ? sanitize_text_field($_GET['niche']) : '';
 	$default_niche = function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair';
+	$wizard_niche_registry = function_exists('lf_builder_supported_niche_registry') ? lf_builder_supported_niche_registry() : lf_get_niche_registry();
+	if (empty($wizard_niche_registry)) {
+		$wizard_niche_registry = [$default_niche => ['name' => __('Foundation Repair', 'leadsforward-core')]];
+	}
 	if ($niche === '') {
+		$niche = $default_niche;
+	}
+	if (!isset($wizard_niche_registry[$niche])) {
 		$niche = $default_niche;
 	}
 	$profiles = ['a' => __('Clean + Minimal', 'leadsforward-core'), 'b' => __('Bold + High Contrast', 'leadsforward-core'), 'c' => __('Trust Heavy', 'leadsforward-core'), 'd' => __('Service Heavy', 'leadsforward-core'), 'e' => __('Offer/Promo Heavy', 'leadsforward-core')];
@@ -457,7 +464,7 @@ function lf_wizard_render_page(): void {
 		echo '<input type="hidden" name="page" value="lf-ops" />';
 		echo '<input type="hidden" name="step" value="2" />';
 		echo '<table class="form-table"><tr><th scope="row">' . esc_html__('Industry', 'leadsforward-core') . '</th><td><select name="niche" required>';
-		foreach (lf_get_niche_registry() as $slug => $n) {
+		foreach ($wizard_niche_registry as $slug => $n) {
 			echo '<option value="' . esc_attr($slug) . '"' . selected($niche, $slug, false) . '>' . esc_html($n['name']) . '</option>';
 		}
 		echo '</select></td></tr></table>';
@@ -601,7 +608,7 @@ function lf_wizard_render_page(): void {
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Next', 'leadsforward-core') . '" /></p></form>';
 		echo '<script>(function(){function loadPlacesApi(key, callback){var status=document.getElementById("lf_maps_status");if(window.google&&window.google.maps&&window.google.maps.places){callback();return;}if(!key){if(status){status.textContent="Add your Google Maps API key in LeadsForward -> Global Settings to enable search.";}return;}var scriptId="lf-maps-places";if(document.getElementById(scriptId)){return;}var script=document.createElement("script");script.id=scriptId;script.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(key)+"&libraries=places";script.async=true;script.onerror=function(){if(status){status.textContent="Failed to load Google Maps. Check API key restrictions and billing.";}};script.onload=callback;document.head.appendChild(script);}function initPlacesSearch(){var input=document.getElementById("lf_business_place_search");var placeId=document.getElementById("lf_business_place_id");var placeName=document.getElementById("lf_business_place_name");var placeAddress=document.getElementById("lf_business_place_address");var selected=document.getElementById("lf_place_selected");var status=document.getElementById("lf_maps_status");if(!input){return;}var form=input.closest("form");var key=form?(form.getAttribute("data-maps-key")||""):"";key=key.trim();if(!key){if(selected){selected.textContent="Add your Google Maps API key in LeadsForward -> Global Settings to enable search.";}if(status){status.textContent="";}return;}if(status){status.textContent="Loading Google Maps...";}window.gm_authFailure=function(){if(status){status.textContent="Google Maps auth failed. Check key restrictions and billing.";}};loadPlacesApi(key,function(){if(!window.google||!google.maps||!google.maps.places){if(status){status.textContent="Google Maps loaded without Places library. Check API settings.";}return;}if(status){status.textContent="";}var ac=new google.maps.places.Autocomplete(input,{fields:["place_id","name","formatted_address"]});ac.addListener("place_changed",function(){var place=ac.getPlace();if(!place||!place.place_id){return;}if(placeId)placeId.value=place.place_id||"";if(placeName)placeName.value=place.name||"";if(placeAddress)placeAddress.value=place.formatted_address||"";if(selected){selected.textContent="Selected: "+(place.name||"")+(place.formatted_address?" ("+place.formatted_address+")":"");}});});}initPlacesSearch();})();</script>';
 	} elseif ($step === 3) {
-		$niche = $niche ?: array_key_first(lf_get_niche_registry());
+		$niche = $niche ?: $default_niche;
 		$n = lf_get_niche($niche);
 		$services_list = $n ? implode(', ', $n['services']) : '';
 		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup')) . '">';
@@ -678,7 +685,7 @@ function lf_wizard_render_page(): void {
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Next', 'leadsforward-core') . '" /></p></form>';
 		echo '</div>';
 	} elseif ($step === 4) {
-		$niche = $niche ?: array_key_first(lf_get_niche_registry());
+		$niche = $niche ?: $default_niche;
 		$n = lf_get_niche($niche);
 		$rec = $n['variation_profile'] ?? 'a';
 		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup')) . '">';
@@ -776,7 +783,7 @@ function lf_wizard_render_page(): void {
 		echo '</div>';
 	} else {
 		$step = 5;
-		$niche = $niche ?: array_key_first(lf_get_niche_registry());
+		$niche = $niche ?: $default_niche;
 		echo '<div class="lf-setup-card">';
 		echo '<h2 class="lf-setup-step-title">' . esc_html__('Generate your site', 'leadsforward-core') . '</h2>';
 		echo '<p class="lf-setup-help">' . esc_html__('Creates pages, services, service areas, menus, and applies homepage settings.', 'leadsforward-core') . '</p>';
