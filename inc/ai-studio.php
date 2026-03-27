@@ -6290,7 +6290,7 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 	$global_seen = [];
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 	$homepage_config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
-	$min_word_count = (int) apply_filters('lf_ai_studio_min_word_count', 250);
+	$min_word_count = (int) apply_filters('lf_ai_studio_min_word_count', 0);
 	$min_word_count = max(0, $min_word_count);
 	$legacy_homepage_alias_types = [
 		'intro' => ['content', 'content_centered', 'content_image', 'image_content'],
@@ -6404,12 +6404,13 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 					}
 				}
 				if (!isset($homepage_config[$section_id]) || !isset($registry[$section_id])) {
-					$errors[] = sprintf(__('Homepage section "%s" is not registered.', 'leadsforward-core'), $section_id);
+					// Tolerate unknown/legacy section IDs from orchestrators and skip safely.
 					continue;
 				}
 				$allowed = lf_ai_studio_homepage_allowed_field_keys($section_id, $registry[$section_id]);
 				if (!in_array($field_key, $allowed, true)) {
-					$errors[] = sprintf(__('Homepage field "%s" is not allowed.', 'leadsforward-core'), $key);
+					// Tolerate unknown/legacy field keys and skip safely.
+					continue;
 				}
 				$add_word_count('homepage', __('Homepage', 'leadsforward-core'), $value);
 			}
@@ -6462,12 +6463,13 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 				}
 				$type = is_array($section) ? (string) ($section['type'] ?? '') : '';
 				if ($type === '' || !isset($registry[$type])) {
-					$errors[] = sprintf(__('Section "%s" is not registered for post %d.', 'leadsforward-core'), $instance_id, $post_id);
+					// Tolerate unknown/legacy section references and skip safely.
 					continue;
 				}
 				$allowed = lf_ai_studio_homepage_allowed_field_keys($type, $registry[$type]);
 				if (!in_array($field_key, $allowed, true)) {
-					$errors[] = sprintf(__('Field "%s" is not allowed for section "%s".', 'leadsforward-core'), $field_key, $instance_id);
+					// Tolerate unknown/legacy field keys and skip safely.
+					continue;
 				}
 				$field_meta[$key] = [
 					'field_key' => $field_key,

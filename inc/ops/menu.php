@@ -48,7 +48,7 @@ function lf_ops_register_menu(): void {
 		'lf-ops',
 		__('Global Settings', 'leadsforward-core'),
 		__('Global Settings', 'leadsforward-core'),
-		LF_OPS_CAP,
+		'manage_options',
 		'lf-global',
 		'lf_ops_render_global_settings_page'
 	);
@@ -309,7 +309,7 @@ function lf_ops_handle_global_settings_save(): void {
 	if (!isset($_POST['lf_global_settings_nonce'])) {
 		return;
 	}
-	if (!current_user_can(LF_OPS_CAP)) {
+	if (!current_user_can('manage_options')) {
 		return;
 	}
 	if (!wp_verify_nonce($_POST['lf_global_settings_nonce'], 'lf_global_settings')) {
@@ -584,7 +584,7 @@ function lf_ops_handle_global_settings_save(): void {
 }
 
 function lf_ops_render_global_settings_page(): void {
-	if (!current_user_can(LF_OPS_CAP)) {
+	if (!current_user_can('manage_options')) {
 		return;
 	}
 	$logo_id = (int) lf_get_global_option('lf_global_logo', 0);
@@ -1021,6 +1021,7 @@ function lf_ops_render_global_settings_page(): void {
 							<tr>
 								<th scope="row"><?php esc_html_e('Manual sync', 'leadsforward-core'); ?></th>
 								<td>
+									<p class="description"><?php esc_html_e('Tip: the project filter must match the value in your Reviews table project column (for example "Project Name (from CID)").', 'leadsforward-core'); ?></p>
 									<p class="description">
 										<?php
 										if ($reviews_project_name !== '') {

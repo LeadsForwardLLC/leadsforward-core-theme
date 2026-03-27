@@ -1,0 +1,142 @@
+.lf-tour-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 99990;
+}
+
+.lf-tour-card {
+  position: absolute;
+  z-index: 99992;
+  width: min(380px, calc(100vw - 24px));
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(2, 6, 23, 0.28);
+  padding: 14px;
+}
+
+.lf-tour-card__title {
+  font-weight: 700;
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.lf-tour-card__body {
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.lf-tour-card__progress {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.lf-tour-card__why {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.lf-tour-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.lf-tour-btn {
+  border: 1px solid #0f172a;
+  background: #0f172a;
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.lf-tour-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.lf-tour-btn--ghost {
+  background: #fff;
+  color: #0f172a;
+}
+
+.lf-tour-launcher {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 99989;
+  border: 1px solid #0f172a;
+  background: #0f172a;
+  color: #fff;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.24);
+}
+
+.lf-tour-highlight {
+  position: relative;
+  z-index: 99991 !important;
+  outline: 3px solid #38bdf8 !important;
+  outline-offset: 2px !important;
+  border-radius: 8px;
+  background-clip: padding-box;
+}
+
+.lf-tour-tracks {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.lf-tour-track {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: left;
+  background: #fff;
+  cursor: pointer;
+}
+
+.lf-tour-track strong {
+  display: block;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.lf-tour-track span {
+  display: block;
+  color: #334155;
+  font-size: 13px;
+}
+
+.lf-tour-track em {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 4px;
+  font-style: normal;
+}
+
+.lf-tour-track:hover {
+  border-color: #0f172a;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+}
+
+.lf-tour-resume {
+  margin: 10px 0 8px;
+  color: #334155;
+}
