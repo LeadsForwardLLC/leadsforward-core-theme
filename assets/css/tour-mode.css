@@ -34,10 +34,22 @@
   color: #64748b;
 }
 
+.lf-tour-card__why {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
 .lf-tour-card__actions {
   display: flex;
   gap: 8px;
   margin-top: 12px;
+  flex-wrap: wrap;
 }
 
 .lf-tour-btn {
@@ -82,4 +94,49 @@
   outline-offset: 2px !important;
   border-radius: 8px;
   background-clip: padding-box;
+}
+
+.lf-tour-tracks {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.lf-tour-track {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: left;
+  background: #fff;
+  cursor: pointer;
+}
+
+.lf-tour-track strong {
+  display: block;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.lf-tour-track span {
+  display: block;
+  color: #334155;
+  font-size: 13px;
+}
+
+.lf-tour-track em {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 4px;
+  font-style: normal;
+}
+
+.lf-tour-track:hover {
+  border-color: #0f172a;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+}
+
+.lf-tour-resume {
+  margin: 10px 0 8px;
+  color: #334155;
 }
