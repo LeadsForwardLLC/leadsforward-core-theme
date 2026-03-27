@@ -41,10 +41,20 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -p "${{ secrets.SG_PORT }}" -H "${{ secrets.SG_HOST }}" >> ~/.ssh/known_hosts
 
+      - name: Verify SSH authentication
+        run: |
+          ssh -i ~/.ssh/id_sg_deploy \
+            -p "${{ secrets.SG_PORT }}" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "${{ secrets.SG_USER }}@${{ secrets.SG_HOST }}" \
+            "echo 'SSH auth OK'"
+
       - name: Deploy theme via rsync
         run: |
           rsync -az --delete \
-            -e "ssh -i ~/.ssh/id_sg_deploy -p ${{ secrets.SG_PORT }} -o StrictHostKeyChecking=yes" \
+            -e "ssh -i ~/.ssh/id_sg_deploy -p ${{ secrets.SG_PORT }} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
             --exclude ".git/" \
             --exclude ".github/" \
             --exclude "docs/" \
