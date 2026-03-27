@@ -59,6 +59,7 @@ lf_load_inc('image-intelligence.php');
 lf_load_inc('ai-studio.php');
 lf_load_inc('ai-studio-rest.php');
 lf_load_inc('ai-studio-airtable.php');
+lf_load_inc('tour-mode.php');
 
 // Custom post types.
 lf_load_inc('cpt/services.php');
