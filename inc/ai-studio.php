@@ -6321,6 +6321,9 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 		}
 		foreach ($homepage_config as $section_id => $section_settings) {
 			$type = (string) ($section_settings['type'] ?? '');
+			if ($type === '' && function_exists('lf_homepage_base_section_type')) {
+				$type = (string) lf_homepage_base_section_type((string) $section_id);
+			}
 			if ($type !== '' && in_array($type, $candidates, true)) {
 				return (string) $section_id;
 			}
