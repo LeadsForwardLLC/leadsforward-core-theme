@@ -801,7 +801,10 @@
     "availableInMCP": false,
     "timeSavedMode": "fixed",
     "saveDataSuccessExecution": "all",
-    "callerPolicy": "workflowsFromSameOwner"
+    "callerPolicy": "workflowsFromSameOwner",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
   },
   "versionId": "481c1684-8a77-4196-9be8-31d90ad97dcd",
   "meta": {
