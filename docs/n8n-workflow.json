@@ -193,7 +193,6 @@
       "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
-          "id": "LUVAFdjXdClrVNSC",
           "name": "OpenAi account 3"
         }
       }
@@ -221,7 +220,6 @@
       "name": "OpenAI Chat Model (Research)",
       "credentials": {
         "openAiApi": {
-          "id": "LUVAFdjXdClrVNSC",
           "name": "OpenAi account 3"
         }
       }
