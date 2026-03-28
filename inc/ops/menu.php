@@ -55,8 +55,8 @@ function lf_ops_register_menu(): void {
 	// 3. Homepage (sections)
 	add_submenu_page(
 		'lf-ops',
-		__('Homepage', 'leadsforward-core'),
-		__('Homepage', 'leadsforward-core'),
+		__('Homepage Builder', 'leadsforward-core'),
+		__('Homepage Builder', 'leadsforward-core'),
 		LF_OPS_CAP,
 		'lf-homepage-settings',
 		'lf_homepage_admin_render'
@@ -91,16 +91,16 @@ function lf_ops_register_menu(): void {
 	// Ops utilities.
 	add_submenu_page(
 		'lf-ops',
-		__('Bulk Actions', 'leadsforward-core'),
-		__('Bulk Actions', 'leadsforward-core'),
+		__('Bulk Tools', 'leadsforward-core'),
+		__('Bulk Tools', 'leadsforward-core'),
 		LF_OPS_CAP,
 		'lf-ops-bulk',
 		'lf_ops_bulk_render'
 	);
 	add_submenu_page(
 		'lf-ops',
-		__('Audit Log', 'leadsforward-core'),
-		__('Audit Log', 'leadsforward-core'),
+		__('Activity Log', 'leadsforward-core'),
+		__('Activity Log', 'leadsforward-core'),
 		LF_OPS_CAP,
 		'lf-ops-audit',
 		'lf_ops_audit_render'
@@ -108,8 +108,8 @@ function lf_ops_register_menu(): void {
 	// Config (Export + Import) — keep at the bottom.
 	add_submenu_page(
 		'lf-ops',
-		__('Config', 'leadsforward-core'),
-		__('Config', 'leadsforward-core'),
+		__('Backup & Restore', 'leadsforward-core'),
+		__('Backup & Restore', 'leadsforward-core'),
 		LF_OPS_CAP,
 		'lf-ops-config',
 		'lf_ops_config_render'
