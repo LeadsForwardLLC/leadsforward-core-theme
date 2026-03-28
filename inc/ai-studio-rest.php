@@ -553,6 +553,12 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		$media_annotations = $payload['vision']['media_annotations'] ?? $payload['image_analysis']['media_annotations'] ?? [];
 	}
 	$stored_request = get_post_meta($job_id, 'lf_ai_job_request', true);
+	if ((!is_array($media_annotations) || empty($media_annotations)) && is_array($stored_request)) {
+		$media_annotations = lf_ai_studio_rest_build_fallback_media_annotations($stored_request);
+		if (!empty($media_annotations)) {
+			$quality_warnings[] = __('No media_annotations returned from orchestrator; generated fallback annotations from available media candidates.', 'leadsforward-core');
+		}
+	}
 	$strict_media_annotations = get_option('lf_ai_require_media_annotations', '0') === '1';
 	$annotation_required = is_array($stored_request) && !empty($stored_request['media_annotation_required']);
 	$annotation_min_expected = is_array($stored_request)
@@ -659,6 +665,112 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		'success' => $apply_result['success'],
 		'error' => $apply_result['errors'] ?? [],
 	], $apply_result['success'] ? 200 : 400);
+}
+
+function lf_ai_studio_rest_candidate_score(array $target, array $candidate): int {
+	$haystack = strtolower(trim(
+		(string) ($candidate['filename'] ?? '') . ' ' .
+		(string) ($candidate['title'] ?? '') . ' ' .
+		(string) ($candidate['alt'] ?? '') . ' ' .
+		(string) ($candidate['caption'] ?? '')
+	));
+	if ($haystack === '') {
+		return 0;
+	}
+	$score = 0;
+	$slot = strtolower((string) ($target['slot'] ?? ''));
+	$section_type = strtolower((string) ($target['section_type'] ?? ''));
+	$target_type = strtolower((string) ($target['target'] ?? ''));
+	if ($slot !== '' && strpos($haystack, $slot) !== false) {
+		$score += 5;
+	}
+	if ($section_type !== '' && strpos($haystack, $section_type) !== false) {
+		$score += 4;
+	}
+	if ($target_type !== '' && strpos($haystack, $target_type) !== false) {
+		$score += 2;
+	}
+	$context = is_array($target['context'] ?? null) ? $target['context'] : [];
+	foreach (['city', 'niche', 'service_slug', 'area_slug', 'page_type'] as $key) {
+		$term = strtolower(trim((string) ($context[$key] ?? '')));
+		if ($term !== '' && strpos($haystack, $term) !== false) {
+			$score += 2;
+		}
+	}
+	return $score;
+}
+
+function lf_ai_studio_rest_pick_best_candidate(array $target, array $candidates, array $used_ids): int {
+	$best_id = 0;
+	$best_score = -1;
+	foreach ($candidates as $candidate) {
+		if (!is_array($candidate)) {
+			continue;
+		}
+		$id = (int) ($candidate['attachment_id'] ?? 0);
+		if ($id <= 0 || isset($used_ids[$id])) {
+			continue;
+		}
+		$score = lf_ai_studio_rest_candidate_score($target, $candidate);
+		if ($score > $best_score) {
+			$best_score = $score;
+			$best_id = $id;
+		}
+	}
+	if ($best_id > 0) {
+		return $best_id;
+	}
+	foreach ($candidates as $candidate) {
+		$id = (int) (is_array($candidate) ? ($candidate['attachment_id'] ?? 0) : 0);
+		if ($id > 0 && !isset($used_ids[$id])) {
+			return $id;
+		}
+	}
+	return 0;
+}
+
+function lf_ai_studio_rest_build_fallback_media_annotations(array $stored_request): array {
+	$plan = is_array($stored_request['image_generation'] ?? null) ? $stored_request['image_generation'] : [];
+	$targets = is_array($plan['targets'] ?? null) ? $plan['targets'] : [];
+	$candidates = is_array($stored_request['media_library_candidates'] ?? null) ? $stored_request['media_library_candidates'] : [];
+	if (empty($targets) || empty($candidates)) {
+		return [];
+	}
+	$used_ids = [];
+	$out = [];
+	foreach ($targets as $target) {
+		if (!is_array($target)) {
+			continue;
+		}
+		$attachment_id = lf_ai_studio_rest_pick_best_candidate($target, $candidates, $used_ids);
+		if ($attachment_id <= 0) {
+			continue;
+		}
+		$used_ids[$attachment_id] = true;
+		$section_type = sanitize_text_field((string) ($target['section_type'] ?? 'section'));
+		$slot = sanitize_text_field((string) ($target['slot'] ?? 'image'));
+		$context = is_array($target['context'] ?? null) ? $target['context'] : [];
+		$city = sanitize_text_field((string) ($context['city'] ?? ''));
+		$niche = sanitize_text_field((string) ($context['niche'] ?? ''));
+		$base_desc = trim($section_type . ' ' . $slot);
+		if ($city !== '') {
+			$base_desc .= ' in ' . $city;
+		}
+		if ($niche !== '') {
+			$base_desc .= ' for ' . $niche;
+		}
+		$base_desc = trim($base_desc);
+		$out[] = [
+			'attachment_id' => $attachment_id,
+			'title' => ucwords(str_replace(['_', '-'], ' ', $section_type . ' ' . $slot)),
+			'alt_text' => $base_desc,
+			'caption' => $base_desc,
+			'description' => 'Photo reference used for ' . $base_desc . '.',
+			'keywords' => array_values(array_filter([$section_type, $slot, $city, $niche])),
+			'recommended_filename' => sanitize_title($section_type . '-' . $slot . ($city !== '' ? '-' . $city : '')) . '.jpg',
+		];
+	}
+	return $out;
 }
 
 function lf_ai_studio_rest_progress(\WP_REST_Request $request): \WP_REST_Response {
