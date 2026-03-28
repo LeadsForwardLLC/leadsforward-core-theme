@@ -1141,7 +1141,7 @@ function lf_ai_studio_render_page(): void {
 							</div>
 						</form>
 						<p class="description" style="margin-top:8px;">
-							<?php esc_html_e('Hybrid generation uses AI to create only missing hero/content images (up to your limit), then vision annotations help rename assets, improve ALT text, and map images to the most relevant sections.', 'leadsforward-core'); ?>
+							<?php esc_html_e('Hybrid image mode targets only missing hero/content slots (up to your limit). If your workflow returns image annotations, they are applied directly; otherwise the theme falls back to media-library candidate mapping and deterministic placement.', 'leadsforward-core'); ?>
 						</p>
 						<p class="description" style="margin-top:8px;">
 							<?php esc_html_e('Naming strategy examples: roof-repair-kansas-city-1.jpg, kitchen-remodel-sarasota-modern.jpg, bathroom-remodel-before-after.jpg, general-contractor-team.jpg. Include service + city + niche words in filenames for best matching.', 'leadsforward-core'); ?>
