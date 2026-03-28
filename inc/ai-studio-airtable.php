@@ -652,6 +652,31 @@ function lf_ai_studio_airtable_import_reviews_by_project(string $project_name, a
 		(string) ($settings['pat'] ?? ''),
 		(string) ($settings['base_id'] ?? '')
 	);
+	if (
+		empty($review_records['error'])
+		&& empty($review_records['records'])
+		&& $project_name !== ''
+	) {
+		// Retry with safer fallback project names when stored filter is stale.
+		$fallback_names = lf_ai_studio_airtable_review_project_fallback_names($project_name);
+		foreach ($fallback_names as $fallback_name) {
+			$fallback_records = lf_ai_studio_airtable_fetch_reviews(
+				$fallback_name,
+				$reviews_settings,
+				$resolved,
+				(string) ($settings['pat'] ?? ''),
+				(string) ($settings['base_id'] ?? '')
+			);
+			if (!empty($fallback_records['error'])) {
+				continue;
+			}
+			if (!empty($fallback_records['records'])) {
+				$review_records = $fallback_records;
+				update_option('lf_ai_airtable_project_name', $fallback_name, false);
+				break;
+			}
+		}
+	}
 	if (!empty($review_records['error'])) {
 		return ['error' => $review_records['error']];
 	}
@@ -665,6 +690,40 @@ function lf_ai_studio_airtable_import_reviews_by_project(string $project_name, a
 	}
 
 	return ['imported' => $imported];
+}
+
+function lf_ai_studio_airtable_review_project_fallback_names(string $project_name): array {
+	$candidates = [];
+	$project_name = trim($project_name);
+	if ($project_name !== '') {
+		$candidates[] = $project_name;
+	}
+	$manifest = function_exists('lf_ai_studio_get_manifest') ? lf_ai_studio_get_manifest() : [];
+	$manifest_business = is_array($manifest['business'] ?? null) ? $manifest['business'] : [];
+	$manifest_name = trim((string) ($manifest_business['name'] ?? ''));
+	if ($manifest_name !== '') {
+		$candidates[] = $manifest_name;
+	}
+	$business_name = trim((string) get_option('lf_business_name', ''));
+	if ($business_name !== '') {
+		$candidates[] = $business_name;
+	}
+	$site_name = trim((string) get_bloginfo('name'));
+	if ($site_name !== '') {
+		$candidates[] = $site_name;
+	}
+	$cleaned = [];
+	foreach ($candidates as $candidate) {
+		$candidate = trim(preg_replace('/\s+/u', ' ', (string) $candidate));
+		if ($candidate !== '') {
+			$cleaned[] = $candidate;
+		}
+	}
+	$cleaned = array_values(array_unique($cleaned));
+	if (!empty($cleaned)) {
+		array_shift($cleaned); // first entry is original project name already attempted
+	}
+	return $cleaned;
 }
 
 function lf_ai_studio_airtable_fetch_reviews(
@@ -747,10 +806,11 @@ function lf_ai_studio_airtable_filter_reviews_by_project(array $records, string 
 	$out = [];
 	foreach ($records as $record) {
 		$fields = is_array($record['fields'] ?? null) ? $record['fields'] : [];
-		if (!array_key_exists($field, $fields)) {
+		$resolved_field = lf_ai_studio_airtable_resolve_field_key($fields, $field);
+		if ($resolved_field === '') {
 			continue;
 		}
-		$value = $fields[$field];
+		$value = $fields[$resolved_field];
 		$match = false;
 		if (is_array($value)) {
 			foreach ($value as $item) {
@@ -776,6 +836,32 @@ function lf_ai_studio_airtable_filter_reviews_by_project(array $records, string 
 		}
 	}
 	return $out;
+}
+
+function lf_ai_studio_airtable_resolve_field_key(array $fields, string $key): string {
+	$key = trim((string) $key);
+	if ($key === '') {
+		return '';
+	}
+	if (array_key_exists($key, $fields)) {
+		return $key;
+	}
+	$normalize = static function (string $value): string {
+		$value = strtolower(trim($value));
+		$value = preg_replace('/[^a-z0-9]+/', '', $value);
+		return is_string($value) ? $value : '';
+	};
+	$key_normalized = $normalize($key);
+	foreach (array_keys($fields) as $field_name) {
+		$field_name = (string) $field_name;
+		if (strcasecmp($field_name, $key) === 0) {
+			return $field_name;
+		}
+		if ($key_normalized !== '' && $normalize($field_name) === $key_normalized) {
+			return $field_name;
+		}
+	}
+	return '';
 }
 
 function lf_ai_studio_airtable_collect_review_fields(array $field_map): array {
@@ -1281,10 +1367,11 @@ function lf_ai_studio_airtable_match_view_in_table(array $table, string $needle)
 }
 
 function lf_ai_studio_airtable_string_field(array $fields, string $key): string {
-	if ($key === '' || !array_key_exists($key, $fields)) {
+	$resolved_key = lf_ai_studio_airtable_resolve_field_key($fields, $key);
+	if ($resolved_key === '') {
 		return '';
 	}
-	$value = $fields[$key];
+	$value = $fields[$resolved_key];
 	if (is_array($value)) {
 		$parts = array_map('strval', $value);
 		return trim(implode(', ', array_filter($parts)));

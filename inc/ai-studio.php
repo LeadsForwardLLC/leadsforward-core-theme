@@ -6404,12 +6404,12 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 					}
 				}
 				if (!isset($homepage_config[$section_id]) || !isset($registry[$section_id])) {
-					// Tolerate unknown/legacy homepage section ids from orchestrator payloads.
+					// Tolerate unknown/legacy section IDs from orchestrators and skip safely.
 					continue;
 				}
 				$allowed = lf_ai_studio_homepage_allowed_field_keys($section_id, $registry[$section_id]);
 				if (!in_array($field_key, $allowed, true)) {
-					// Tolerate legacy or deprecated homepage field keys.
+					// Tolerate unknown/legacy field keys and skip safely.
 					continue;
 				}
 				$add_word_count('homepage', __('Homepage', 'leadsforward-core'), $value);
@@ -6463,12 +6463,13 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 				}
 				$type = is_array($section) ? (string) ($section['type'] ?? '') : '';
 				if ($type === '' || !isset($registry[$type])) {
-					$errors[] = sprintf(__('Section "%s" is not registered for post %d.', 'leadsforward-core'), $instance_id, $post_id);
+					// Tolerate unknown/legacy section references and skip safely.
 					continue;
 				}
 				$allowed = lf_ai_studio_homepage_allowed_field_keys($type, $registry[$type]);
 				if (!in_array($field_key, $allowed, true)) {
-					$errors[] = sprintf(__('Field "%s" is not allowed for section "%s".', 'leadsforward-core'), $field_key, $instance_id);
+					// Tolerate unknown/legacy field keys and skip safely.
+					continue;
 				}
 				$field_meta[$key] = [
 					'field_key' => $field_key,

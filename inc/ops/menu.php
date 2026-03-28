@@ -1030,6 +1030,7 @@ function lf_ops_render_global_settings_page(): void {
 							<tr>
 								<th scope="row"><?php esc_html_e('Manual sync', 'leadsforward-core'); ?></th>
 								<td>
+									<p class="description"><?php esc_html_e('Tip: the project filter must match the value in your Reviews table project column (for example "Project Name (from CID)").', 'leadsforward-core'); ?></p>
 									<p class="description">
 										<?php
 										if ($reviews_project_name !== '') {
