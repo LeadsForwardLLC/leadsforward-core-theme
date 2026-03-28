@@ -6663,12 +6663,12 @@ function lf_apply_orchestrator_updates(array $response): array {
 					continue;
 				}
 				if (!isset($config[$section_id]) || !isset($registry[$section_id])) {
-					$errors[] = sprintf(__('Homepage section "%s" is not registered.', 'leadsforward-core'), $section_id);
+					// Ignore unknown/legacy homepage section ids instead of failing entire callback.
 					continue;
 				}
 				$allowed = lf_ai_studio_homepage_allowed_field_keys($section_id, $registry[$section_id]);
 				if (!in_array($field_key, $allowed, true)) {
-					$errors[] = sprintf(__('Homepage field "%s" is not allowed.', 'leadsforward-core'), $key);
+					// Ignore unsupported homepage fields coming from older orchestrator prompts.
 					continue;
 				}
 				if (!isset($homepage_fields[$section_id])) {
