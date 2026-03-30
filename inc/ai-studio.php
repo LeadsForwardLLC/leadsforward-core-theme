@@ -1987,6 +1987,9 @@ function lf_ai_studio_is_generic_copy(string $value): bool {
 		return true;
 	}
 	$needle = strtolower($value);
+	if (lf_ai_studio_contains_json_placeholder($needle)) {
+		return true;
+	}
 	$patterns = [
 		'short overview of',
 		'what to expect',
@@ -5861,7 +5864,27 @@ function lf_ai_studio_strip_llm_placeholder_tokens(string $text, array $ctx): st
 	if ($niche !== '') {
 		$text = str_ireplace('NICHE_TOKEN', $niche, $text);
 	}
+	$text = preg_replace_callback('/\{\{\s*\$?json\.([^}]+)\}\}/i', static function (array $match) use ($biz, $city, $pk, $niche): string {
+		$raw = trim((string) ($match[1] ?? ''));
+		$key = strtolower($raw);
+		$map = [
+			'business_name' => $biz,
+			'company_name' => $biz,
+			'primary_keyword' => $pk,
+			'city_region' => $city,
+			'city' => $city,
+			'niche' => $niche,
+		];
+		if (isset($map[$key]) && trim((string) $map[$key]) !== '') {
+			return trim((string) $map[$key]);
+		}
+		return $raw;
+	}, $text);
 	return $text;
+}
+
+function lf_ai_studio_contains_json_placeholder(string $value): bool {
+	return (bool) preg_match('/\{\{\s*\$?json\./i', $value);
 }
 
 /**
@@ -7768,10 +7791,21 @@ function lf_ai_studio_audit_section_settings(array $settings, array $defaults, s
 function lf_ai_studio_audit_value_empty($value, string $type): bool {
 	if ($type === 'list') {
 		$lines = array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string) $value)));
-		return empty($lines);
+		if (empty($lines)) {
+			return true;
+		}
+		foreach ($lines as $line) {
+			if (lf_ai_studio_contains_json_placeholder($line)) {
+				return true;
+			}
+		}
+		return false;
 	}
 	$text = lf_ai_studio_audit_normalize_text($value);
-	return $text === '';
+	if ($text === '') {
+		return true;
+	}
+	return lf_ai_studio_contains_json_placeholder($text);
 }
 
 function lf_ai_studio_audit_value_matches_default($value, $default, string $type): bool {
