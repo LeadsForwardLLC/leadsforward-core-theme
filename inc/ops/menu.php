@@ -809,16 +809,6 @@ function lf_ops_render_global_settings_page(): void {
 		</style>
 		<form method="post" data-maps-key="<?php echo esc_attr($maps_api_key); ?>">
 			<?php wp_nonce_field('lf_global_settings', 'lf_global_settings_nonce'); ?>
-			<table class="form-table" role="presentation">
-				<tr>
-					<th scope="row"><label for="lf_header_cta_label"><?php esc_html_e('Header CTA label', 'leadsforward-core'); ?></label></th>
-					<td><input type="text" class="regular-text" id="lf_header_cta_label" name="lf_header_cta_label" value="<?php echo esc_attr($cta_label); ?>" /></td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="lf_header_cta_url"><?php esc_html_e('Header CTA URL', 'leadsforward-core'); ?></label></th>
-					<td><input type="url" class="large-text" id="lf_header_cta_url" name="lf_header_cta_url" value="<?php echo esc_attr($cta_url); ?>" /></td>
-				</tr>
-			</table>
 			<div class="lf-settings-panel" data-section="manifester_settings">
 				<div class="lf-settings-panel-header">
 					<h2><?php esc_html_e('Website Manifester Settings', 'leadsforward-core'); ?></h2>
@@ -1102,6 +1092,21 @@ function lf_ops_render_global_settings_page(): void {
 									<button type="button" class="button" id="lf-global-logo-select"><?php esc_html_e('Select Logo', 'leadsforward-core'); ?></button>
 									<button type="button" class="button" id="lf-global-logo-clear"><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
 								</div>
+								<p class="description"><?php esc_html_e('Logo appears in the site header. Set the header button below, or leave blank to use defaults from Homepage Builder.', 'leadsforward-core'); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_header_cta_label"><?php esc_html_e('Header CTA label', 'leadsforward-core'); ?></label></th>
+							<td>
+								<input type="text" class="regular-text" id="lf_header_cta_label" name="lf_header_cta_label" value="<?php echo esc_attr($cta_label); ?>" />
+								<p class="description"><?php esc_html_e('Text for the primary header button. If empty, the site uses the Homepage Builder primary CTA label when available.', 'leadsforward-core'); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_header_cta_url"><?php esc_html_e('Header CTA URL', 'leadsforward-core'); ?></label></th>
+							<td>
+								<input type="url" class="large-text" id="lf_header_cta_url" name="lf_header_cta_url" value="<?php echo esc_attr($cta_url); ?>" />
+								<p class="description"><?php esc_html_e('Where the header button links (for example your quote or contact page).', 'leadsforward-core'); ?></p>
 							</td>
 						</tr>
 						<tr>
