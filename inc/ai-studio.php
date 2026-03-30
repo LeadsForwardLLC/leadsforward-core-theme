@@ -6672,7 +6672,12 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 					continue;
 				}
 				$meta = $field_meta[$key] ?? null;
-				if (is_array($meta)) {
+				if (!is_array($meta)) {
+					// Fall back to raw key checks if registry metadata is missing.
+					if (!lf_ai_studio_should_enforce_uniqueness_on_field((string) $key, 'text')) {
+						continue;
+					}
+				} else {
 					$field_type = lf_ai_studio_registry_field_type($registry, (string) ($meta['section_type'] ?? ''), (string) ($meta['field_key'] ?? ''));
 					if (!lf_ai_studio_should_enforce_uniqueness_on_field((string) ($meta['field_key'] ?? ''), $field_type)) {
 						continue;
