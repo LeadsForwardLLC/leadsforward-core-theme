@@ -81,10 +81,13 @@
 - Read: `inc/ai-studio-rest.php`, `inc/ai-studio.php`, `docs/02_N8N_WORKFLOW_ARCHITECTURE.md`
 
 - [ ] **Step 1: Compare required fields**
+  - Verify `GET /leadsforward/v1/blueprint` returns `business_entity`, `niche_profile`, `pages`, `section_schema`.
+  - Document auth requirements for each REST endpoint.
   - Ensure n8n callback payloads include `job_id`, `request_id`, and `updates[]` inside the `/orchestrator` apply payload (not `/apply`).
   - Confirm progress payloads include required fields and optional `step`/`message`.
   - Confirm callback URL mapping and `job_id`/`request_id` binding.
   - Verify `/airtable-webhook` payload updates Business Entity + manifest inputs.
+  - Confirm `/apply` does not accept `updates[]` (homepage/posts only).
 
 - [ ] **Step 2: Adjust workflow if needed**
   - Apply the smallest possible change to fix mismatches.
@@ -123,6 +126,7 @@
 
 - [ ] **Step 2: Final audit summary**
   - Ensure audit report is complete and accurate.
+  - Optional: dry Manifester apply to confirm Global Settings + header output changes.
 
 ---
 
