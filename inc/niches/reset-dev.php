@@ -191,47 +191,59 @@ function lf_dev_reset_run(): void {
 	}
 	set_theme_mod('nav_menu_locations', $locations);
 
-	if (function_exists('update_field')) {
-		if (function_exists('lf_update_business_info_value')) {
-			lf_update_business_info_value('lf_business_name', '');
-			lf_update_business_info_value('lf_business_legal_name', '');
-			lf_update_business_info_value('lf_business_phone', '');
-			lf_update_business_info_value('lf_business_phone_primary', '');
-			lf_update_business_info_value('lf_business_phone_tracking', '');
-			lf_update_business_info_value('lf_business_phone_display', '');
-			lf_update_business_info_value('lf_business_email', '');
-			lf_update_business_info_value('lf_business_address', '');
-			lf_update_business_info_value('lf_business_address_street', '');
-			lf_update_business_info_value('lf_business_address_city', '');
-			lf_update_business_info_value('lf_business_address_state', '');
-			lf_update_business_info_value('lf_business_address_zip', '');
-			lf_update_business_info_value('lf_business_service_area_type', '');
-			lf_update_business_info_value('lf_business_service_areas', '');
-			lf_update_business_info_value('lf_business_hours', '');
-			lf_update_business_info_value('lf_business_geo', ['lat' => '', 'lng' => '']);
-			lf_update_business_info_value('lf_business_category', '');
-			lf_update_business_info_value('lf_business_short_description', '');
-			lf_update_business_info_value('lf_business_primary_image', '');
-			lf_update_business_info_value('lf_business_social_facebook', '');
-			lf_update_business_info_value('lf_business_social_instagram', '');
-			lf_update_business_info_value('lf_business_social_youtube', '');
-			lf_update_business_info_value('lf_business_social_linkedin', '');
-			lf_update_business_info_value('lf_business_gbp_url', '');
-			lf_update_business_info_value('lf_business_same_as', '');
-			lf_update_business_info_value('lf_business_founding_year', '');
-			lf_update_business_info_value('lf_business_license_number', '');
-			lf_update_business_info_value('lf_business_insurance_statement', '');
-			lf_update_business_info_value('lf_business_place_id', '');
-			lf_update_business_info_value('lf_business_place_name', '');
-			lf_update_business_info_value('lf_business_place_address', '');
-			lf_update_business_info_value('lf_business_map_embed', '');
-		}
+	if (function_exists('lf_update_business_info_value')) {
+		lf_update_business_info_value('lf_business_name', '');
+		lf_update_business_info_value('lf_business_legal_name', '');
+		lf_update_business_info_value('lf_business_phone', '');
+		lf_update_business_info_value('lf_business_phone_primary', '');
+		lf_update_business_info_value('lf_business_phone_tracking', '');
+		lf_update_business_info_value('lf_business_phone_display', '');
+		lf_update_business_info_value('lf_business_email', '');
+		lf_update_business_info_value('lf_business_address', '');
+		lf_update_business_info_value('lf_business_address_street', '');
+		lf_update_business_info_value('lf_business_address_city', '');
+		lf_update_business_info_value('lf_business_address_state', '');
+		lf_update_business_info_value('lf_business_address_zip', '');
+		lf_update_business_info_value('lf_business_service_area_type', '');
+		lf_update_business_info_value('lf_business_service_areas', '');
+		lf_update_business_info_value('lf_business_hours', '');
+		lf_update_business_info_value('lf_business_geo', ['lat' => '', 'lng' => '']);
+		lf_update_business_info_value('lf_business_category', '');
+		lf_update_business_info_value('lf_business_short_description', '');
+		lf_update_business_info_value('lf_business_logo', 0);
+		lf_update_business_info_value('lf_business_primary_image', 0);
+		lf_update_business_info_value('lf_business_social_facebook', '');
+		lf_update_business_info_value('lf_business_social_instagram', '');
+		lf_update_business_info_value('lf_business_social_youtube', '');
+		lf_update_business_info_value('lf_business_social_linkedin', '');
+		lf_update_business_info_value('lf_business_social_tiktok', '');
+		lf_update_business_info_value('lf_business_social_x', '');
+		lf_update_business_info_value('lf_business_gbp_url', '');
+		lf_update_business_info_value('lf_business_same_as', '');
+		lf_update_business_info_value('lf_business_founding_year', '');
+		lf_update_business_info_value('lf_business_license_number', '');
+		lf_update_business_info_value('lf_business_insurance_statement', '');
+		lf_update_business_info_value('lf_business_place_id', '');
+		lf_update_business_info_value('lf_business_place_name', '');
+		lf_update_business_info_value('lf_business_place_address', '');
+		lf_update_business_info_value('lf_business_map_embed', '');
+	}
+	if (function_exists('lf_update_cta_option_value')) {
+		lf_update_cta_option_value('lf_cta_primary_text', '');
+		lf_update_cta_option_value('lf_cta_secondary_text', '');
+		lf_update_cta_option_value('lf_cta_primary_action', '');
+		lf_update_cta_option_value('lf_cta_primary_url', '');
+		lf_update_cta_option_value('lf_cta_secondary_action', '');
+		lf_update_cta_option_value('lf_cta_secondary_url', '');
+	} elseif (function_exists('update_field')) {
 		update_field('lf_cta_primary_text', '', 'option');
 		update_field('lf_cta_secondary_text', '', 'option');
 		update_field('lf_cta_primary_action', '', 'option');
 		update_field('lf_cta_primary_url', '', 'option');
 		update_field('lf_cta_secondary_action', '', 'option');
 		update_field('lf_cta_secondary_url', '', 'option');
+	}
+	if (function_exists('update_field')) {
 		update_field('variation_profile', 'a', 'option');
 		update_field('lf_schema_review', false, 'option');
 		update_field('homepage_sections', [], 'option');
