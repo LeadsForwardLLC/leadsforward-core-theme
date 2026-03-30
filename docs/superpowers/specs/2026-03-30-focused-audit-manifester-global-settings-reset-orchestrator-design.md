@@ -2,7 +2,7 @@
 title: Focused Audit: Manifester + Global Settings + Reset + Orchestrator
 date: 2026-03-30
 scope: focused
-status: ready
+status: draft
 ---
 
 ## Overview
@@ -44,6 +44,15 @@ Perform a focused wiring audit of the Website Manifester, Global Settings/Busine
 - n8n workflow node assumptions match REST payloads and callback endpoints.
 - Verify no unused helpers or duplicate code in the focused scope.
 
+## Reset Field Map (Clear vs Preserve)
+**Clear (Airtable/Manifester-provided):**
+- Business Entity fields in `lf_business_*` (name, legal name, phones, email, address, geo, hours, category, description, social, GBP, same_as, founding year, license, insurance, place_id/name/address, map_embed, primary image, business logo).
+- Global header fields: `lf_global_logo`, `lf_header_cta_label`, `lf_header_cta_url`.
+
+**Preserve (Manifester settings):**
+- Orchestrator/AI settings: `lf_ai_studio_webhook`, `lf_ai_studio_secret`, `lf_ai_studio_callback_url`, `lf_ai_auth_mode`, `lf_ai_hmac_tolerance_seconds`.
+- Airtable configuration: `lf_ai_airtable_*` and review mapping options.
+
 ## Removal Criteria
 Only remove code if ALL are true:
 - No references (search across theme).
@@ -60,15 +69,21 @@ Only remove code if ALL are true:
 - Orchestrator payload schema aligns with `docs/n8n-workflow.json` nodes and callback routing.
 - ACF may be disabled in some environments; options fallbacks must still reset correctly.
 
+## Acceptance Criteria for Readiness
+- Reset map is confirmed against actual option keys used in save/render.
+- Orchestrator/n8n payload expectations documented with required fields and auth.
+- ACF-off reset behavior verified (or explicitly accepted as not supported).
+
 ## Verification
 - PHP lint on touched files.
-- Inspect REST endpoints and payloads:
-  - `GET /leadsforward/v1/blueprint`
-  - `POST /leadsforward/v1/orchestrator`
-  - `POST /leadsforward/v1/progress`
-  - `POST /leadsforward/v1/apply`
-  - `POST /leadsforward/v1/airtable-webhook`
+- Inspect REST endpoints and payloads (required fields + auth):
+  - `GET /leadsforward/v1/blueprint` → includes `business_entity`, `niche_profile`, `pages`, `section_schema`.
+  - `POST /leadsforward/v1/orchestrator` → requires auth; contains `job_id`, `request_id`, `callback_url`, `updates`.
+  - `POST /leadsforward/v1/progress` → requires auth; contains `job_id`, `request_id`, `status`, `percent`.
+  - `POST /leadsforward/v1/apply` → requires auth; contains `updates[]` with `target`, `id`, `fields`.
+  - `POST /leadsforward/v1/airtable-webhook` → requires auth; updates Business Entity + manifest inputs.
 - Confirm callback URL mapping and request_id/job_id binding between n8n and WP.
+- Verify ACF-disabled reset path clears `options_*` values via guardrails helpers.
 - Optional: run a dry Manifester manifest apply and observe Global Settings + header changes.
 
 ## Deliverables
