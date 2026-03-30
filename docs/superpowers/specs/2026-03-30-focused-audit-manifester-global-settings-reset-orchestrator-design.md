@@ -57,6 +57,11 @@ Perform a focused wiring audit of the Website Manifester, Global Settings/Busine
   - Legal/Place: `lf_business_founding_year`, `lf_business_license_number`, `lf_business_insurance_statement`, `lf_business_place_id`, `lf_business_place_name`, `lf_business_place_address`, `lf_business_map_embed`
 - Global header fields: `lf_global_logo`, `lf_header_cta_label`, `lf_header_cta_url`.
 
+**Also cleared by reset (theme configuration, non-Airtable):**
+- CTA options: `lf_cta_primary_text`, `lf_cta_secondary_text`, `lf_cta_primary_action`, `lf_cta_primary_url`, `lf_cta_secondary_action`, `lf_cta_secondary_url`.
+- Branding palette: `lf_brand_primary`, `lf_brand_secondary`, `lf_brand_tertiary`, `lf_surface_*`, `lf_text_*`.
+- Homepage config/options: `LF_HOMEPAGE_CONFIG_OPTION`, `LF_HOMEPAGE_NICHE_OPTION`, `LF_HOMEPAGE_ORDER_OPTION`, `LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION`.
+
 **Preserve (Manifester settings):**
 - Orchestrator/AI settings: `lf_ai_studio_webhook`, `lf_ai_studio_secret`, `lf_ai_studio_callback_url`, `lf_ai_auth_mode`, `lf_ai_hmac_tolerance_seconds`.
 - Airtable configuration:
@@ -90,8 +95,8 @@ Only remove code if ALL are true:
 - PHP lint on touched files.
 - Inspect REST endpoints and payloads (required fields + auth):
   - `GET /leadsforward/v1/blueprint` → includes `business_entity`, `niche_profile`, `pages`, `section_schema`.
-  - `POST /leadsforward/v1/orchestrator` → requires auth; contains `job_id`, `request_id`, and payload or nested `apply` payload; supports `quality_warnings` + `media_annotations`.
-  - `POST /leadsforward/v1/progress` → requires auth; contains `job_id`, `request_id`, `status`, `percent`.
+  - `POST /leadsforward/v1/orchestrator` → requires auth; contains `job_id`, `request_id`, and payload or nested `apply` payload with `updates[]` (`target`, `id`, `fields`); supports `quality_warnings` + `media_annotations`.
+  - `POST /leadsforward/v1/progress` → requires auth; contains `job_id`, `request_id`, `status`, `percent` (optional `step`, `message`).
   - `POST /leadsforward/v1/apply` → requires auth; validates `homepage` and/or `posts` payload (no direct `updates[]`).
   - `POST /leadsforward/v1/airtable-webhook` → requires auth; updates Business Entity + manifest inputs.
 - Confirm callback URL mapping and request_id/job_id binding between n8n and WP.
