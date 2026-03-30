@@ -60,6 +60,7 @@
 - [ ] **Step 1: Compare reset map to actual options**
   - Validate reset clears Business Entity fields + header CTA/logo.
   - Confirm Manifester settings (webhook/Airtable/auth) are preserved.
+  - Note runtime markers that are safe to reset (e.g., `lf_ai_airtable_reviews_last_sync`).
   - Verify ACF-disabled path still clears `options_*` via guardrails helpers.
 
 - [ ] **Step 2: Implement minimal fix if mismatch found**
@@ -84,6 +85,7 @@
   - Verify `GET /leadsforward/v1/blueprint` returns `business_entity`, `niche_profile`, `pages`, `section_schema`.
   - Document auth requirements for each REST endpoint.
   - Ensure n8n callback payloads include `job_id`, `request_id`, and `updates[]` inside the `/orchestrator` apply payload (not `/apply`).
+  - Verify `/orchestrator` supports `quality_warnings` and `media_annotations` in callback payloads.
   - Confirm progress payloads include required fields and optional `step`/`message`.
   - Confirm callback URL mapping and `job_id`/`request_id` binding.
   - Verify `/airtable-webhook` payload updates Business Entity + manifest inputs.
