@@ -2000,6 +2000,12 @@ function lf_ai_studio_is_generic_copy(string $value): bool {
 			return true;
 		}
 	}
+	$token_markers = ['primary_keyword', 'business_name', 'city_region'];
+	foreach ($token_markers as $tok) {
+		if (strpos($needle, $tok) !== false) {
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -4161,6 +4167,7 @@ function lf_ai_studio_llm_system_message(): string {
 		'If blog_post_type is provided in blueprint, shape the article to that format (pillar, how_to, cost, comparison, checklist, local_guide, faq_roundup) while preserving factual accuracy for business and location context.',
 		'Never reuse sentences across page types.',
 		'Minimum total content: every page must contain at least 1000 words of unique body copy across all text/richtext fields. Expand each section with depth; do not pad with fluff or repetition.',
+		'Never output machine tokens (PRIMARY_KEYWORD, BUSINESS_NAME, CITY_REGION, NICHE_TOKEN) or bracket placeholders like [Your City] in customer-facing fields—always substitute real business facts from the payload.',
 		'FAQ strategy: create one global pool of 8-12 evergreen FAQs. Reuse across pages unless contextual variation is required. Homepage shows 5. Service pages show 4-6 relevant. Service area pages show 3-5 localized. Overview pages optionally 3-4.',
 		'CTA strategy: treat the homepage CTA section as the canonical global CTA copy. For each page, add exactly one contextual sentence in cta_subheadline_secondary. Never duplicate CTA sentences across pages.',
 		'CTA button labels: keep 2-5 words, max 32 characters, no trailing punctuation.',
@@ -5828,6 +5835,162 @@ function lf_ai_studio_clean_value_for_field($value, string $field_type, string $
 	return lf_ai_studio_clean_text_field_value((string) $value);
 }
 
+/**
+ * Replace common LLM/template tokens with real context before saving to the DB.
+ *
+ * @param array<string, string> $ctx Keys: business_name, city_region, primary_keyword, niche.
+ */
+function lf_ai_studio_strip_llm_placeholder_tokens(string $text, array $ctx): string {
+	if ($text === '') {
+		return $text;
+	}
+	$biz = trim((string) ($ctx['business_name'] ?? ''));
+	$city = trim((string) ($ctx['city_region'] ?? ''));
+	$pk = trim((string) ($ctx['primary_keyword'] ?? ''));
+	$niche = trim((string) ($ctx['niche'] ?? ''));
+	if ($biz !== '') {
+		$text = str_ireplace('BUSINESS_NAME', $biz, $text);
+	}
+	if ($city !== '') {
+		$text = str_ireplace('CITY_REGION', $city, $text);
+		$text = str_replace('[Your City]', $city, $text);
+	}
+	if ($pk !== '') {
+		$text = str_ireplace('PRIMARY_KEYWORD', $pk, $text);
+	}
+	if ($niche !== '') {
+		$text = str_ireplace('NICHE_TOKEN', $niche, $text);
+	}
+	return $text;
+}
+
+/**
+ * @param array<string, string> $ctx
+ * @return mixed
+ */
+function lf_ai_studio_strip_llm_tokens_from_mixed_value($value, array $ctx, string $field_type) {
+	if ($field_type === 'list' && is_string($value)) {
+		$lines = preg_split('/\R/', $value);
+		$out = [];
+		foreach ($lines as $line) {
+			$t = lf_ai_studio_strip_llm_placeholder_tokens((string) $line, $ctx);
+			if (trim($t) !== '') {
+				$out[] = $t;
+			}
+		}
+		return implode("\n", $out);
+	}
+	if (is_string($value)) {
+		return lf_ai_studio_strip_llm_placeholder_tokens($value, $ctx);
+	}
+	return $value;
+}
+
+/**
+ * When FAQ posts exist but accordion sections have no selection, attach recent FAQs.
+ */
+function lf_ai_studio_autofill_empty_faq_accordion_picks(): void {
+	$faq_ids = get_posts([
+		'post_type' => 'lf_faq',
+		'post_status' => 'publish',
+		'posts_per_page' => 18,
+		'orderby' => 'date',
+		'order' => 'DESC',
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	]);
+	if (empty($faq_ids)) {
+		return;
+	}
+	$faq_ids = array_values(array_filter(array_map('absint', $faq_ids)));
+	if (function_exists('lf_get_homepage_section_config') && defined('LF_HOMEPAGE_CONFIG_OPTION')) {
+		$config = lf_get_homepage_section_config();
+		if (is_array($config) && !empty($config)) {
+			$changed = false;
+			foreach ($config as $section_id => $settings) {
+				if (!is_array($settings) || empty($settings['enabled'])) {
+					continue;
+				}
+				$base = function_exists('lf_homepage_base_section_type') ? lf_homepage_base_section_type((string) $section_id) : '';
+				if ($base !== 'faq_accordion') {
+					continue;
+				}
+				if (trim((string) ($settings['faq_selected_ids'] ?? '')) !== '') {
+					continue;
+				}
+				$max = (int) ($settings['faq_max_items'] ?? 5);
+				$max = max(3, min(12, $max));
+				$slice = array_slice($faq_ids, 0, $max);
+				if (empty($slice)) {
+					continue;
+				}
+				$settings['faq_selected_ids'] = implode(',', $slice);
+				$config[ $section_id ] = $settings;
+				$changed = true;
+			}
+			if ($changed) {
+				update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+			}
+		}
+	}
+	if (!function_exists('lf_pb_get_post_config') || !function_exists('lf_pb_get_context_for_post') || !defined('LF_PB_META_KEY')) {
+		return;
+	}
+	foreach (['page', 'lf_service', 'lf_service_area'] as $pt) {
+		$pids = get_posts([
+			'post_type' => $pt,
+			'post_status' => 'any',
+			'posts_per_page' => 80,
+			'fields' => 'ids',
+			'no_found_rows' => true,
+		]);
+		foreach ($pids as $pid) {
+			$pid = (int) $pid;
+			$post = get_post($pid);
+			if (!$post instanceof \WP_Post) {
+				continue;
+			}
+			$ctx = lf_pb_get_context_for_post($post);
+			if ($ctx === '') {
+				continue;
+			}
+			$pb = lf_pb_get_post_config($pid, $ctx);
+			$sections = is_array($pb['sections'] ?? null) ? $pb['sections'] : [];
+			$order = is_array($pb['order'] ?? null) ? $pb['order'] : [];
+			$meta_changed = false;
+			foreach ($order as $iid) {
+				$section = $sections[ $iid ] ?? null;
+				if (!is_array($section) || empty($section['enabled'])) {
+					continue;
+				}
+				if ((string) ($section['type'] ?? '') !== 'faq_accordion') {
+					continue;
+				}
+				$st = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+				if (trim((string) ($st['faq_selected_ids'] ?? '')) !== '') {
+					continue;
+				}
+				$max = (int) ($st['faq_max_items'] ?? 5);
+				$max = max(3, min(12, $max));
+				$slice = array_slice($faq_ids, 0, $max);
+				if (empty($slice)) {
+					continue;
+				}
+				$st['faq_selected_ids'] = implode(',', $slice);
+				$sections[ $iid ]['settings'] = $st;
+				$meta_changed = true;
+			}
+			if ($meta_changed) {
+				update_post_meta($pid, LF_PB_META_KEY, [
+					'order' => $order,
+					'sections' => $sections,
+					'seo' => $pb['seo'] ?? ['title' => '', 'description' => '', 'noindex' => false],
+				]);
+			}
+		}
+	}
+}
+
 function lf_ai_studio_enforce_section_quality(array $settings, string $section_type, array $registry): array {
 	$schema = is_array($registry[$section_type] ?? null) ? $registry[$section_type] : [];
 	$fields = is_array($schema['fields'] ?? null) ? $schema['fields'] : [];
@@ -6590,6 +6753,16 @@ function lf_apply_orchestrator_updates(array $response): array {
 	$staged_post_meta_updates = [];
 	$staged_featured_updates = [];
 
+	$manifest_for_tokens = lf_ai_studio_get_manifest();
+	$tk_niche = is_array($manifest_for_tokens) ? (string) ($manifest_for_tokens['business']['niche'] ?? '') : '';
+	$tk_home_pk = is_array($manifest_for_tokens) ? trim((string) ($manifest_for_tokens['homepage']['primary_keyword'] ?? '')) : '';
+	$homepage_token_ctx = [
+		'business_name' => trim((string) get_option('lf_business_name', get_bloginfo('name'))),
+		'city_region' => trim((string) get_option('lf_city_region', get_option('lf_homepage_city', ''))),
+		'primary_keyword' => $tk_home_pk !== '' ? $tk_home_pk : trim((string) get_option('lf_primary_keyword', '')),
+		'niche' => $tk_niche,
+	];
+
 	foreach ($updates as $index => $update) {
 		if (!is_array($update)) {
 			$errors[] = sprintf(__('Update at index %d must be an object.', 'leadsforward-core'), $index);
@@ -6683,6 +6856,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 					$normalized_value = lf_ai_studio_coerce_list_value($normalized_value);
 				}
 				$normalized_value = lf_ai_studio_clean_value_for_field($normalized_value, $field_type, $field_key);
+				$normalized_value = lf_ai_studio_strip_llm_tokens_from_mixed_value($normalized_value, $homepage_token_ctx, $field_type);
 				if ($section_id === 'faq_accordion' && $field_key === 'faq_selected_ids') {
 					$normalized_value = lf_ai_studio_normalize_faq_selected_ids_value($normalized_value);
 				}
@@ -6769,6 +6943,13 @@ function lf_apply_orchestrator_updates(array $response): array {
 		$post_matches = (!empty($post_image_context) && function_exists('lf_match_images_for_context'))
 			? lf_match_images_for_context($post_image_context)
 			: [];
+		$post_pk = trim((string) get_post_meta($post_id, '_lf_seo_primary_keyword', true));
+		$post_token_ctx = [
+			'business_name' => $homepage_token_ctx['business_name'],
+			'city_region' => $post->post_type === 'lf_service_area' ? trim((string) $post->post_title) : $homepage_token_ctx['city_region'],
+			'primary_keyword' => $post_pk !== '' ? $post_pk : $homepage_token_ctx['primary_keyword'],
+			'niche' => $homepage_token_ctx['niche'],
+		];
 		$incoming_by_instance = [];
 		foreach ($incoming as $key => $value) {
 			if (!is_string($key)) {
@@ -6819,6 +7000,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 				$normalized_value = lf_ai_studio_coerce_list_value($normalized_value);
 			}
 			$normalized_value = lf_ai_studio_clean_value_for_field($normalized_value, $field_type, $field_key);
+			$normalized_value = lf_ai_studio_strip_llm_tokens_from_mixed_value($normalized_value, $post_token_ctx, $field_type);
 			if ($type === 'faq_accordion' && $field_key === 'faq_selected_ids') {
 				$normalized_value = lf_ai_studio_normalize_faq_selected_ids_value($normalized_value);
 			}
@@ -7003,6 +7185,7 @@ function lf_apply_orchestrator_updates(array $response): array {
 		}
 	}
 	lf_ai_studio_fill_site_content_without_ai();
+	lf_ai_studio_autofill_empty_faq_accordion_picks();
 	if (function_exists('lf_seo_refresh_metadata_for_generated_content')) {
 		lf_seo_refresh_metadata_for_generated_content();
 	}
@@ -7115,6 +7298,14 @@ function lf_ai_studio_apply_faq_updates(array $payload): array {
 		}
 		$question_raw = isset($fields['question']) ? (string) $fields['question'] : '';
 		$answer_raw = isset($fields['answer']) ? (string) $fields['answer'] : '';
+		$faq_ctx = [
+			'business_name' => trim((string) get_option('lf_business_name', get_bloginfo('name'))),
+			'city_region' => trim((string) get_option('lf_city_region', get_option('lf_homepage_city', ''))),
+			'primary_keyword' => trim((string) get_option('lf_primary_keyword', '')),
+			'niche' => (string) (defined('LF_HOMEPAGE_NICHE_OPTION') ? get_option(LF_HOMEPAGE_NICHE_OPTION, '') : ''),
+		];
+		$question_raw = lf_ai_studio_strip_llm_placeholder_tokens($question_raw, $faq_ctx);
+		$answer_raw = lf_ai_studio_strip_llm_placeholder_tokens($answer_raw, $faq_ctx);
 		$question = sanitize_text_field(lf_ai_studio_clean_text_field_value(lf_ai_studio_normalize_text($question_raw)));
 		$answer = wp_kses_post(lf_ai_studio_normalize_text($answer_raw));
 		if ($question === '' && $answer === '') {
