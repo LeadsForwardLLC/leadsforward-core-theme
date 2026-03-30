@@ -59,6 +59,7 @@
 
 - [ ] **Step 1: Compare reset map to actual options**
   - Validate reset clears Business Entity fields + header CTA/logo.
+  - Validate reset clears CTA options, branding palette options, and homepage config options per spec.
   - Confirm Manifester settings (webhook/Airtable/auth) are preserved.
   - Note runtime markers that are safe to reset (e.g., `lf_ai_airtable_reviews_last_sync`).
   - Verify ACF-disabled path still clears `options_*` via guardrails helpers.
