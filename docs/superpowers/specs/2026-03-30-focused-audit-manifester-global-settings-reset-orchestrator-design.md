@@ -2,7 +2,7 @@
 title: Focused Audit: Manifester + Global Settings + Reset + Orchestrator
 date: 2026-03-30
 scope: focused
-status: draft
+status: ready
 ---
 
 ## Overview
@@ -39,7 +39,7 @@ Perform a focused wiring audit of the Website Manifester, Global Settings/Busine
 ## Audit Checklist
 - Manifester fields saved correctly; no drift between UI and stored options.
 - Global Settings save maps to same options used by render.
-- Reset clears Business Entity and global logo/CTA; Manifester settings preserved.
+- Reset clears Airtable-provided Business Entity fields and global logo/CTA; Manifester settings preserved.
 - Orchestrator apply path handles callbacks and updates correctly.
 - n8n workflow node assumptions match REST payloads and callback endpoints.
 - Verify no unused helpers or duplicate code in the focused scope.
@@ -55,8 +55,20 @@ Only remove code if ALL are true:
 - Removing code used by hidden hooks or admin-only flows.
 - Reset behavior differences when ACF is disabled.
 
+## Assumptions / Open Questions
+- Airtable-to-Manifester import is the source of Business Entity + logo/CTA defaults; reset should clear those.
+- Orchestrator payload schema aligns with `docs/n8n-workflow.json` nodes and callback routing.
+- ACF may be disabled in some environments; options fallbacks must still reset correctly.
+
 ## Verification
 - PHP lint on touched files.
+- Inspect REST endpoints and payloads:
+  - `GET /leadsforward/v1/blueprint`
+  - `POST /leadsforward/v1/orchestrator`
+  - `POST /leadsforward/v1/progress`
+  - `POST /leadsforward/v1/apply`
+  - `POST /leadsforward/v1/airtable-webhook`
+- Confirm callback URL mapping and request_id/job_id binding between n8n and WP.
 - Optional: run a dry Manifester manifest apply and observe Global Settings + header changes.
 
 ## Deliverables
