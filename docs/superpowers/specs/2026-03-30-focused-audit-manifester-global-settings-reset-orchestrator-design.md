@@ -46,12 +46,24 @@ Perform a focused wiring audit of the Website Manifester, Global Settings/Busine
 
 ## Reset Field Map (Clear vs Preserve)
 **Clear (Airtable/Manifester-provided):**
-- Business Entity fields in `lf_business_*` (name, legal name, phones, email, address, geo, hours, category, description, social, GBP, same_as, founding year, license, insurance, place_id/name/address, map_embed, primary image, business logo).
+- Business Entity fields in `lf_business_*` including:
+  - Identity: `lf_business_name`, `lf_business_legal_name`
+  - Phones: `lf_business_phone`, `lf_business_phone_primary`, `lf_business_phone_tracking`, `lf_business_phone_display`
+  - Contact/location: `lf_business_email`, `lf_business_address`, `lf_business_address_street`, `lf_business_address_city`, `lf_business_address_state`, `lf_business_address_zip`
+  - Service coverage: `lf_business_service_area_type`, `lf_business_service_areas`
+  - Geo/ops: `lf_business_geo`, `lf_business_hours`, `lf_business_category`, `lf_business_short_description`
+  - Media: `lf_business_primary_image`, `lf_business_logo`
+  - Social/GBP: `lf_business_social_facebook`, `lf_business_social_instagram`, `lf_business_social_youtube`, `lf_business_social_linkedin`, `lf_business_social_tiktok`, `lf_business_social_x`, `lf_business_gbp_url`, `lf_business_same_as`
+  - Legal/Place: `lf_business_founding_year`, `lf_business_license_number`, `lf_business_insurance_statement`, `lf_business_place_id`, `lf_business_place_name`, `lf_business_place_address`, `lf_business_map_embed`
 - Global header fields: `lf_global_logo`, `lf_header_cta_label`, `lf_header_cta_url`.
 
 **Preserve (Manifester settings):**
 - Orchestrator/AI settings: `lf_ai_studio_webhook`, `lf_ai_studio_secret`, `lf_ai_studio_callback_url`, `lf_ai_auth_mode`, `lf_ai_hmac_tolerance_seconds`.
-- Airtable configuration: `lf_ai_airtable_*` and review mapping options.
+- Airtable configuration:
+  - `lf_ai_airtable_enabled`, `lf_ai_airtable_pat`, `lf_ai_airtable_base`, `lf_ai_airtable_table`, `lf_ai_airtable_view`
+  - `lf_ai_airtable_reviews_table`, `lf_ai_airtable_reviews_view`
+  - `lf_ai_airtable_field_map`, `lf_ai_airtable_reviews_field_map`
+  - **Reset OK** for runtime markers like `lf_ai_airtable_reviews_last_sync` and `lf_ai_airtable_reviews_last_imported`.
 
 ## Removal Criteria
 Only remove code if ALL are true:
@@ -78,9 +90,9 @@ Only remove code if ALL are true:
 - PHP lint on touched files.
 - Inspect REST endpoints and payloads (required fields + auth):
   - `GET /leadsforward/v1/blueprint` → includes `business_entity`, `niche_profile`, `pages`, `section_schema`.
-  - `POST /leadsforward/v1/orchestrator` → requires auth; contains `job_id`, `request_id`, `callback_url`, `updates`.
+  - `POST /leadsforward/v1/orchestrator` → requires auth; contains `job_id`, `request_id`, and payload or nested `apply` payload; supports `quality_warnings` + `media_annotations`.
   - `POST /leadsforward/v1/progress` → requires auth; contains `job_id`, `request_id`, `status`, `percent`.
-  - `POST /leadsforward/v1/apply` → requires auth; contains `updates[]` with `target`, `id`, `fields`.
+  - `POST /leadsforward/v1/apply` → requires auth; validates `homepage` and/or `posts` payload (no direct `updates[]`).
   - `POST /leadsforward/v1/airtable-webhook` → requires auth; updates Business Entity + manifest inputs.
 - Confirm callback URL mapping and request_id/job_id binding between n8n and WP.
 - Verify ACF-disabled reset path clears `options_*` values via guardrails helpers.
