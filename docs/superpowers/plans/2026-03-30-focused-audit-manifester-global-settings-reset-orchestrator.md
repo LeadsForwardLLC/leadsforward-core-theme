@@ -60,6 +60,7 @@
 - [ ] **Step 1: Compare reset map to actual options**
   - Validate reset clears Business Entity fields + header CTA/logo.
   - Confirm Manifester settings (webhook/Airtable/auth) are preserved.
+  - Verify ACF-disabled path still clears `options_*` via guardrails helpers.
 
 - [ ] **Step 2: Implement minimal fix if mismatch found**
   - Only change clear/preserve lists if the current code diverges from spec.
@@ -80,8 +81,10 @@
 - Read: `inc/ai-studio-rest.php`, `inc/ai-studio.php`, `docs/02_N8N_WORKFLOW_ARCHITECTURE.md`
 
 - [ ] **Step 1: Compare required fields**
-  - Ensure n8n callback payloads include `job_id`, `request_id`, and `updates[]` in `apply` payloads.
+  - Ensure n8n callback payloads include `job_id`, `request_id`, and `updates[]` inside the `/orchestrator` apply payload (not `/apply`).
   - Confirm progress payloads include required fields and optional `step`/`message`.
+  - Confirm callback URL mapping and `job_id`/`request_id` binding.
+  - Verify `/airtable-webhook` payload updates Business Entity + manifest inputs.
 
 - [ ] **Step 2: Adjust workflow if needed**
   - Apply the smallest possible change to fix mismatches.
