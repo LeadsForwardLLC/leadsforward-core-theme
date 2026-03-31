@@ -330,7 +330,6 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('options_lf_header_cta_label', isset($_POST['lf_header_cta_label']) ? sanitize_text_field(wp_unslash($_POST['lf_header_cta_label'])) : '');
 	update_option('options_lf_header_cta_url', isset($_POST['lf_header_cta_url']) ? esc_url_raw(wp_unslash($_POST['lf_header_cta_url'])) : '');
 	update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
-	update_option('lf_tour_mode_admin', isset($_POST['lf_tour_mode_admin']) ? '1' : '0');
 	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
 	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
 	update_option('lf_ai_studio_callback_url', isset($_POST['lf_ai_studio_callback_url']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_callback_url'])) : '');
@@ -706,7 +705,6 @@ function lf_ops_render_global_settings_page(): void {
 		delete_option('lf_ai_autonomy_enable_error');
 	}
 	$manifester_enabled = get_option('lf_ai_studio_enabled', '0') === '1';
-	$tour_mode_enabled = get_option('lf_tour_mode_admin', '0') === '1';
 	$manifester_webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$manifester_secret = (string) get_option('lf_ai_studio_secret', '');
 	$manifester_callback = (string) get_option('lf_ai_studio_callback_url', '');
@@ -823,13 +821,6 @@ function lf_ops_render_global_settings_page(): void {
 							<tr>
 								<th scope="row"><?php esc_html_e('Enable AI', 'leadsforward-core'); ?></th>
 								<td><label><input type="checkbox" name="lf_ai_studio_enabled" value="1" <?php checked($manifester_enabled); ?> /> <?php esc_html_e('Allow Manifester runs', 'leadsforward-core'); ?></label></td>
-							</tr>
-							<tr>
-								<th scope="row"><?php esc_html_e('Tour mode (admins only)', 'leadsforward-core'); ?></th>
-								<td>
-									<label><input type="checkbox" name="lf_tour_mode_admin" value="1" <?php checked($tour_mode_enabled); ?> /> <?php esc_html_e('Enable guided backend + frontend walkthrough for admin users', 'leadsforward-core'); ?></label>
-									<p class="description"><?php esc_html_e('When enabled, admins see an interactive tour overlay and step-by-step guidance. Disable to return to normal mode.', 'leadsforward-core'); ?></p>
-								</td>
 							</tr>
 							<tr>
 								<th scope="row"><label for="lf_ai_studio_webhook_global"><?php esc_html_e('Orchestrator Webhook URL', 'leadsforward-core'); ?></label></th>

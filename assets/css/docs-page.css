@@ -1,0 +1,63 @@
+.site-main--docs {
+	padding: 2rem 0 4rem;
+}
+
+.lf-docs {
+	display: grid;
+	grid-template-columns: 260px minmax(0, 1fr);
+	gap: 2rem;
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 0 1.5rem;
+}
+
+.lf-docs__sidebar {
+	position: sticky;
+	top: 2rem;
+	align-self: start;
+	border: 1px solid #e2e8f0;
+	border-radius: 12px;
+	padding: 1.25rem;
+	background: #fff;
+}
+
+.lf-docs__title {
+	margin: 0 0 1rem;
+	font-size: 1.1rem;
+}
+
+.lf-docs__nav {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.lf-docs__nav a {
+	color: #0f172a;
+	text-decoration: none;
+	padding: 0.35rem 0.5rem;
+	border-radius: 6px;
+	background: #f8fafc;
+}
+
+.lf-docs__nav a:hover {
+	background: #e2e8f0;
+}
+
+.lf-docs__content {
+	display: flex;
+	flex-direction: column;
+	gap: 2rem;
+}
+
+.lf-docs__section {
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 12px;
+	padding: 1.5rem;
+}
+
+.lf-docs__section h1,
+.lf-docs__section h2 {
+	margin-top: 0;
+}
