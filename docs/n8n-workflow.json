@@ -413,7 +413,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build retry input from cached blueprint\nconst data = $getWorkflowStaticData('global') || {};\nconst cache = data.blueprint_cache || {};\nconst requestId = $json.request_id || '';\nconst index = ($json.blueprint_index ?? '');\nconst key = `${requestId}:${index}`;\nconst base = cache[key] || {};\nconst retry_count = (base.retry_count ?? 0) + 1;\nreturn [{\n  json: {\n    ...base,\n    retry_instructions: $json.retry_instructions || 'Fix quality warnings and ensure uniqueness',\n    retry_count\n  }\n}];\n"
+        "jsCode": "// Build retry input from cached blueprint (retry_cache_key first, then fallbacks)\nconst data = $getWorkflowStaticData('global') || {};\nconst aliases = data.blueprint_cache_aliases || {};\nconst collisions = data.blueprint_cache_alias_collisions || {};\nconst byId = data.blueprint_cache_by_id || {};\nconst fallbackCache = data.retry_fallback_cache || {};\n\nfunction normalizeKeySegment(s) {\n  return String(s ?? '')\n    .trim()\n    .toLowerCase()\n    .replace(/\\s+/g, ' ')\n    .replace(/:/g, '-');\n}\n\nconst j = $json || {};\nconst requestId = String(j.request_id || '').trim();\nconst blueprintIndex = j.blueprint_index;\nconst meta = j.meta && typeof j.meta === 'object' ? j.meta : {};\nlet primary_keyword = '';\nif (meta.primary_keyword != null && String(meta.primary_keyword).trim() !== '') {\n  primary_keyword = String(meta.primary_keyword).trim();\n} else if (j.primary_keyword != null && String(j.primary_keyword).trim() !== '') {\n  primary_keyword = String(j.primary_keyword).trim();\n}\nconst normPageType = normalizeKeySegment(j.page_type);\nconst postRaw = j.blueprint?.post_id ?? j.post_id;\nconst postIdStr = postRaw != null && String(postRaw).trim() !== '' ? String(postRaw).trim() : '';\nconst normPk = normalizeKeySegment(primary_keyword);\n\nconst seen = new Set();\nconst keysToTry = [];\nfunction addKey(k) {\n  const ks = k != null ? String(k).trim() : '';\n  if (!ks || seen.has(ks)) return;\n  seen.add(ks);\n  keysToTry.push(ks);\n}\n\nif (j.retry_cache_key != null && String(j.retry_cache_key).trim() !== '') {\n  addKey(j.retry_cache_key);\n}\nconst indexPart = blueprintIndex !== undefined && blueprintIndex !== null ? String(blueprintIndex) : '';\nif (requestId && indexPart.trim() !== '') {\n  addKey(`${requestId}:${blueprintIndex}`);\n}\nif (requestId && normPageType && postIdStr) {\n  addKey(`${requestId}:${normPageType}:post:${postIdStr}`);\n}\nif (requestId && normPageType && normPk) {\n  addKey(`${requestId}:${normPageType}:${normPk}`);\n}\n\nfunction resolveKey(aliasKey) {\n  if (!aliasKey || collisions[aliasKey]) return null;\n  const cid = aliases[aliasKey];\n  if (cid === undefined || cid === null || String(cid) === '') return null;\n  const canonical = String(cid);\n  const base = byId[canonical];\n  if (!base || typeof base !== 'object') return null;\n  return { canonical, base };\n}\n\nlet resolved = null;\nlet matchedKey = '';\nfor (const k of keysToTry) {\n  resolved = resolveKey(k);\n  if (resolved) {\n    matchedKey = k;\n    break;\n  }\n}\n\nconst preservedRetryCacheId = j.retry_cache_id != null && String(j.retry_cache_id).trim() !== ''\n  ? String(j.retry_cache_id).trim()\n  : '';\n\nif (resolved) {\n  const { canonical, base } = resolved;\n  const retry_count = (base.retry_count ?? 0) + 1;\n  const out = {\n    ...base,\n    retry_instructions: j.retry_instructions || 'Fix quality warnings and ensure uniqueness',\n    retry_count,\n    retry_cache_miss: false,\n  };\n  out.retry_cache_id = preservedRetryCacheId || canonical;\n  if (matchedKey) out.retry_cache_key = matchedKey;\n  return [{ json: out }];\n}\n\nconst missId = preservedRetryCacheId;\nconst fb = missId && fallbackCache[missId] && typeof fallbackCache[missId] === 'object'\n  ? fallbackCache[missId]\n  : null;\n\nif (fb) {\n  return [{\n    json: {\n      ...fb,\n      retry_cache_miss: true,\n      retry_instructions: '',\n      ...(missId ? { retry_cache_id: missId } : {}),\n    },\n  }];\n}\n\nreturn [{\n  json: {\n    ...j,\n    retry_cache_miss: true,\n    retry_instructions: '',\n    ...(missId ? { retry_cache_id: missId } : {}),\n  },\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -423,6 +423,26 @@
       ],
       "id": "d2e3f4a5-b6c7-48d9-0e1f-2a3b4c5d6e7f",
       "name": "Retry Input Builder"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.retry_cache_miss}}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2170,
+        160
+      ],
+      "id": "e2d3c4b5-a6f7-4890-bcde-f1a2b3c4d5e6",
+      "name": "Retry Cache Gate"
     },
     {
       "parameters": {
@@ -740,6 +760,24 @@
     },
     "Retry Input Builder": {
       "main": [
+        [
+          {
+            "node": "Retry Cache Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Cache Gate": {
+      "main": [
+        [
+          {
+            "node": "Deterministic FAQ Enforcement",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "LLM Retry Chain",
