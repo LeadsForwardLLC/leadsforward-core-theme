@@ -626,6 +626,49 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		], 200);
 	}
 
+	// Orchestrator failure callbacks (n8n): ok:false / success:false / error string with zero updates.
+	// Return HTTP 200 so webhooks succeed while the job is marked failed in WordPress (400 breaks n8n HTTP Request).
+	$updates_for_ack = $apply_payload['updates'] ?? [];
+	$updates_empty_for_ack = !is_array($updates_for_ack) || count($updates_for_ack) === 0;
+	$orchestrator_reported_failure = (
+		(array_key_exists('ok', $apply_payload) && $apply_payload['ok'] === false)
+		|| (array_key_exists('success', $apply_payload) && $apply_payload['success'] === false)
+		|| (isset($apply_payload['error']) && is_string($apply_payload['error']) && trim($apply_payload['error']) !== '')
+	);
+	if ($updates_empty_for_ack && $orchestrator_reported_failure) {
+		$failure_parts = [];
+		if (isset($apply_payload['error']) && is_string($apply_payload['error']) && trim($apply_payload['error']) !== '') {
+			$failure_parts[] = sanitize_text_field((string) $apply_payload['error']);
+		}
+		if (!empty($quality_warnings) && is_array($quality_warnings)) {
+			foreach ($quality_warnings as $w) {
+				$t = sanitize_text_field((string) $w);
+				if ($t !== '') {
+					$failure_parts[] = $t;
+				}
+			}
+		}
+		$failure_parts = array_values(array_unique($failure_parts));
+		$failure_message = !empty($failure_parts)
+			? implode('; ', $failure_parts)
+			: __('Orchestrator returned no updates.', 'leadsforward-core');
+
+		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
+		update_post_meta($job_id, 'lf_ai_job_error', $failure_message);
+		update_post_meta($job_id, 'lf_ai_job_summary', __('No updates applied (orchestrator reported failure).', 'leadsforward-core'));
+		update_post_meta($job_id, 'lf_ai_job_changes', []);
+		if (function_exists('lf_ai_autonomy_mark_generation_failed')) {
+			lf_ai_autonomy_mark_generation_failed($job_id, 'orchestrator_no_updates');
+		}
+
+		return new \WP_REST_Response([
+			'job_id' => $job_id,
+			'success' => false,
+			'error' => [$failure_message],
+			'acknowledged' => true,
+		], 200);
+	}
+
 	$apply_result = lf_apply_orchestrator_updates($apply_payload);
 	update_post_meta($job_id, 'lf_ai_job_status', $apply_result['success'] ? 'done' : 'failed');
 	update_post_meta($job_id, 'lf_ai_job_summary', $apply_result['summary'] ?? '');
