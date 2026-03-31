@@ -57,9 +57,10 @@ lf_load_inc('headings.php');
 lf_load_inc('image-intelligence.php');
 // AI Studio core + REST endpoints (used outside admin).
 lf_load_inc('ai-studio.php');
+lf_load_inc('ai-studio-wiring.php');
 lf_load_inc('ai-studio-rest.php');
 lf_load_inc('ai-studio-airtable.php');
-lf_load_inc('tour-mode.php');
+lf_load_inc('docs-page.php');
 lf_load_inc('team-role.php');
 
 // Custom post types.

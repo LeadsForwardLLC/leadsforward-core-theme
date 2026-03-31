@@ -5224,6 +5224,8 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 			'blog' => ['page' => 'blog', 'intent' => 'blog', 'keyword' => ''],
 			'sitemap' => ['page' => 'sitemap', 'intent' => 'sitemap', 'keyword' => ''],
 			'thank-you' => ['page' => 'thank_you', 'intent' => 'thank_you', 'keyword' => ''],
+			'privacy-policy' => ['page' => 'privacy_policy', 'intent' => 'privacy_policy', 'keyword' => ''],
+			'terms-of-service' => ['page' => 'terms_of_service', 'intent' => 'terms_of_service', 'keyword' => ''],
 		];
 		if ($scope['services']) {
 			$core_pages['our-services'] = ['page' => 'services_overview', 'intent' => 'services_overview', 'keyword' => $overview_keyword];
@@ -5258,6 +5260,26 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 			}
 			$keyword = (string) ($entry['keyword'] ?? '');
 			$blueprint = lf_ai_studio_build_post_blueprint($post, 'post', 'blog_post', $keyword);
+			if (!empty($blueprint)) {
+				$blueprints[] = $blueprint;
+			}
+		}
+	}
+	if (!empty($scope['projects'])) {
+		$projects = get_posts(
+			[
+				'post_type'      => 'lf_project',
+				'post_status'    => 'publish',
+				'posts_per_page' => 200,
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+			]
+		);
+		foreach ($projects as $project) {
+			if (!$project instanceof \WP_Post) {
+				continue;
+			}
+			$blueprint = lf_ai_studio_build_post_blueprint($project, 'project', 'project_case_study', '');
 			if (!empty($blueprint)) {
 				$blueprints[] = $blueprint;
 			}
@@ -6472,6 +6494,9 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 	if (!is_array($updates)) {
 		return [__('Missing updates array.', 'leadsforward-core')];
 	}
+	if (empty($updates)) {
+		return [__('Updates array is empty.', 'leadsforward-core')];
+	}
 	$errors = [];
 	$global_seen = [];
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
@@ -6746,6 +6771,36 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 	return array_values(array_unique($errors));
 }
 
+function lf_ai_studio_extract_primary_post_content(array $sections, array $order): array {
+	$content = '';
+	$excerpt = '';
+	foreach ($order as $section_id) {
+		$section = $sections[ $section_id ] ?? null;
+		if (!is_array($section) || empty($section['enabled'])) {
+			continue;
+		}
+		$type = (string) ($section['type'] ?? '');
+		$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+		if (!in_array($type, ['content', 'content_centered', 'content_image', 'image_content', 'content_image_a', 'image_content_b', 'content_image_c'], true)) {
+			continue;
+		}
+		$body = trim((string) ($settings['section_body'] ?? ''));
+		$body_secondary = trim((string) ($settings['section_body_secondary'] ?? ''));
+		$intro = trim((string) ($settings['section_intro'] ?? ''));
+		$content = $body_secondary !== '' && $body !== '' ? ( $body . "\n\n" . $body_secondary ) : ( $body !== '' ? $body : $body_secondary );
+		if ($excerpt === '') {
+			$excerpt = $intro;
+		}
+		if ($content !== '') {
+			break;
+		}
+	}
+	return [
+		'content' => $content,
+		'excerpt' => $excerpt,
+	];
+}
+
 function lf_apply_orchestrator_updates(array $response): array {
 	$updates = $response['updates'] ?? [];
 	if (!is_array($updates)) {
@@ -7010,12 +7065,18 @@ function lf_apply_orchestrator_updates(array $response): array {
 				}
 			}
 			$type = is_array($section) ? (string) ($section['type'] ?? '') : '';
-			if ($type === '' || !isset($registry[$type])) {
+			if ($type === '' || !isset($registry[ $type ])) {
+				if (defined('WP_DEBUG') && WP_DEBUG) {
+					error_log(sprintf('LF DEBUG: Dropped section "%s" on post %d (unregistered or missing type).', $instance_id, $post_id));
+				}
 				$errors[] = sprintf(__('Section "%s" is not registered for post %d.', 'leadsforward-core'), $instance_id, $post_id);
 				continue;
 			}
-			$allowed = lf_ai_studio_homepage_allowed_field_keys($type, $registry[$type]);
+			$allowed = lf_ai_studio_homepage_allowed_field_keys($type, $registry[ $type ]);
 			if (!in_array($field_key, $allowed, true)) {
+				if (defined('WP_DEBUG') && WP_DEBUG) {
+					error_log(sprintf('LF DEBUG: Dropped field "%s" on post %d (section %s).', $field_key, $post_id, $instance_id));
+				}
 				$errors[] = sprintf(__('Field "%s" is not allowed for section "%s".', 'leadsforward-core'), $field_key, $instance_id);
 				continue;
 			}
@@ -7126,6 +7187,29 @@ function lf_apply_orchestrator_updates(array $response): array {
 	if (!empty($staged_post_meta_updates)) {
 		foreach ($staged_post_meta_updates as $post_id => $pb_meta) {
 			update_post_meta((int) $post_id, LF_PB_META_KEY, $pb_meta);
+		}
+		foreach ($staged_post_meta_updates as $post_id => $pb_meta) {
+			$post_after = get_post((int) $post_id);
+			if (!$post_after instanceof \WP_Post) {
+				continue;
+			}
+			if (!in_array($post_after->post_type, ['post', 'lf_project'], true)) {
+				continue;
+			}
+			$sections = is_array($pb_meta['sections'] ?? null) ? $pb_meta['sections'] : [];
+			$order = is_array($pb_meta['order'] ?? null) ? $pb_meta['order'] : [];
+			$derived = lf_ai_studio_extract_primary_post_content($sections, $order);
+			$content = trim((string) ($derived['content'] ?? ''));
+			$excerpt = trim((string) ($derived['excerpt'] ?? ''));
+			if ($content !== '') {
+				wp_update_post(
+					[
+						'ID'           => (int) $post_id,
+						'post_content' => $content,
+						'post_excerpt' => $excerpt,
+					]
+				);
+			}
 		}
 	}
 	if (!empty($staged_featured_updates)) {
@@ -7730,6 +7814,9 @@ function lf_ai_studio_audit_site_content(): array {
 	$report['summary']['pages_with_internal_links'] = (int) ($link_stats['pages_with_links'] ?? 0);
 	$quality_avg = lf_ai_studio_average_quality_score_for_report($report['pages']);
 	$report['summary']['seo_quality_avg'] = $quality_avg;
+	$report['wiring'] = function_exists('lf_ai_studio_wiring_report')
+		? lf_ai_studio_wiring_report()
+		: [];
 	return $report;
 }
 

@@ -47,6 +47,9 @@ function lf_pb_get_context_for_post(\WP_Post $post): string {
 	if ($post->post_type === 'lf_service_area') {
 		return 'service_area';
 	}
+	if ($post->post_type === 'lf_project') {
+		return 'post';
+	}
 	if ($post->post_type === 'page') {
 		if ($post->post_name === 'home') {
 			return '';
@@ -602,7 +605,7 @@ function lf_pb_cleanup_post_config(int $post_id, string $context, array $desired
 
 function lf_pb_register_meta_box(): void {
 	$screen = get_current_screen();
-	if (!$screen || !in_array($screen->post_type, ['lf_service', 'lf_service_area', 'page', 'post'], true)) {
+	if (!$screen || !in_array($screen->post_type, ['lf_service', 'lf_service_area', 'lf_project', 'page', 'post'], true)) {
 		return;
 	}
 	if ($screen->post_type === 'page') {
@@ -626,7 +629,7 @@ function lf_pb_admin_assets(string $hook): void {
 		return;
 	}
 	$screen = get_current_screen();
-	if (!$screen || !in_array($screen->post_type, ['lf_service', 'lf_service_area', 'page', 'post'], true)) {
+	if (!$screen || !in_array($screen->post_type, ['lf_service', 'lf_service_area', 'lf_project', 'page', 'post'], true)) {
 		return;
 	}
 	if ($screen->post_type === 'page') {
@@ -926,7 +929,7 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 }
 
 function lf_pb_handle_save(int $post_id, \WP_Post $post): void {
-	if (!in_array($post->post_type, ['lf_service', 'lf_service_area', 'page', 'post'], true)) {
+	if (!in_array($post->post_type, ['lf_service', 'lf_service_area', 'lf_project', 'page', 'post'], true)) {
 		return;
 	}
 	if (!isset($_POST['lf_pb_nonce']) || !wp_verify_nonce($_POST['lf_pb_nonce'], 'lf_pb_save')) {
