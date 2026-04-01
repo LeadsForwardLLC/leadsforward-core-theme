@@ -770,7 +770,7 @@
       "main": [
         [
           {
-            "node": "Retry Gate",
+            "node": "Deterministic FAQ Enforcement",
             "type": "main",
             "index": 0
           }
