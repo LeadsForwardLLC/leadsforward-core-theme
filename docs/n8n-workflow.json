@@ -393,6 +393,19 @@
     },
     {
       "parameters": {
+        "jsCode": "const items = $input.all();\nreturn items.map(item => {\n  const j = item.json || {};\n  const updatesEmpty = !Array.isArray(j.updates) || j.updates.length === 0;\n  if (!updatesEmpty && j.needs_retry) {\n    const existing = Array.isArray(j.quality_warnings) ? j.quality_warnings : [];\n    j.quality_warnings = Array.from(new Set(existing.concat([\n      'Retry skipped: content already generated despite quality warnings.'\n    ])));\n    j.needs_retry = false;\n    j.retry_instructions = '';\n  }\n  return { json: j };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1730,
+        0
+      ],
+      "id": "e8a1b2c3-d4e5-4f67-8a9b-0c1d2e3f4a5b",
+      "name": "Retry Suppress If Content"
+    },
+    {
+      "parameters": {
         "conditions": {
           "boolean": [
             {
@@ -482,6 +495,19 @@
       ],
       "id": "f4a5b6c7-d8e9-40f1-2a3b-4c5d6e7f8a9b",
       "name": "Retry Parse + Normalize + CTA Guard"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $getWorkflowStaticData('global') || {};\nconst aliases = data.blueprint_cache_aliases || {};\nconst collisions = data.blueprint_cache_alias_collisions || {};\nconst byId = data.blueprint_cache_by_id || {};\n\nfunction normalizeKeySegment(s) {\n  return String(s ?? '')\n    .trim()\n    .toLowerCase()\n    .replace(/\\s+/g, ' ')\n    .replace(/:/g, '-');\n}\n\nfunction resolveCachedContext(ctx) {\n  const requestId = String(ctx.request_id || '').trim();\n  const blueprintIndex = ctx.blueprint_index;\n  const meta = ctx.meta && typeof ctx.meta === 'object' ? ctx.meta : {};\n  let primaryKeyword = '';\n  if (meta.primary_keyword != null && String(meta.primary_keyword).trim() !== '') {\n    primaryKeyword = String(meta.primary_keyword).trim();\n  } else if (ctx.primary_keyword != null && String(ctx.primary_keyword).trim() !== '') {\n    primaryKeyword = String(ctx.primary_keyword).trim();\n  }\n  const normPageType = normalizeKeySegment(ctx.page_type);\n  const postRaw = ctx.blueprint?.post_id ?? ctx.post_id;\n  const postIdStr = postRaw != null && String(postRaw).trim() !== '' ? String(postRaw).trim() : '';\n  const normPk = normalizeKeySegment(primaryKeyword);\n\n  const seen = new Set();\n  const keysToTry = [];\n  function addKey(k) {\n    const ks = k != null ? String(k).trim() : '';\n    if (!ks || seen.has(ks)) return;\n    seen.add(ks);\n    keysToTry.push(ks);\n  }\n\n  if (ctx.retry_cache_key != null && String(ctx.retry_cache_key).trim() !== '') {\n    addKey(ctx.retry_cache_key);\n  }\n  const indexPart = blueprintIndex !== undefined && blueprintIndex !== null ? String(blueprintIndex) : '';\n  if (requestId && indexPart.trim() !== '') {\n    addKey(`${requestId}:${blueprintIndex}`);\n  }\n  if (requestId && normPageType && postIdStr) {\n    addKey(`${requestId}:${normPageType}:post:${postIdStr}`);\n  }\n  if (requestId && normPageType && normPk) {\n    addKey(`${requestId}:${normPageType}:${normPk}`);\n  }\n\n  for (const k of keysToTry) {\n    if (collisions[k]) continue;\n    const cid = aliases[k];\n    if (cid === undefined || cid === null || String(cid) === '') continue;\n    const canonical = String(cid);\n    const base = byId[canonical];\n    return { canonical, matchedKey: k, base };\n  }\n  return null;\n}\n\nreturn $input.all().map((item) => {\n  const j = item.json || {};\n  if (!j.retry_cache_id || String(j.retry_cache_id).trim() === '') {\n    const resolved = resolveCachedContext(j);\n    if (resolved && resolved.canonical) {\n      j.retry_cache_id = resolved.canonical;\n      if (!j.retry_cache_key && resolved.matchedKey) j.retry_cache_key = resolved.matchedKey;\n      if (!j.blueprint && resolved.base?.blueprint) {\n        j.blueprint = resolved.base.blueprint;\n      }\n      if (!j.request_id && resolved.base?.request_id) j.request_id = resolved.base.request_id;\n      if (!j.page_type && resolved.base?.page_type) j.page_type = resolved.base.page_type;\n    }\n  }\n  return { json: j };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2600,
+        160
+      ],
+      "id": "1f0d2e3c-4b5a-6c7d-8e9f-0a1b2c3d4e5f",
+      "name": "Retry Cache Reattach"
     },
     {
       "parameters": {
@@ -733,6 +759,17 @@
       "main": [
         [
           {
+            "node": "Retry Suppress If Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Suppress If Content": {
+      "main": [
+        [
+          {
             "node": "Retry Gate",
             "type": "main",
             "index": 0
@@ -799,6 +836,17 @@
       ]
     },
     "Retry Parse + Normalize + CTA Guard": {
+      "main": [
+        [
+          {
+            "node": "Retry Cache Reattach",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Cache Reattach": {
       "main": [
         [
           {
