@@ -313,6 +313,22 @@ $expected = lf_ai_studio_identity_build_expected(
     ['lf_city_region' => 'City A', 'lf_homepage_city' => 'City B']
 );
 expect($expected['city_region'] === 'City A', 'options city precedence');
+
+// 20) build_expected should fall back to manifest business.name
+$expected = lf_ai_studio_identity_build_expected(
+    ['business_name' => '', 'city_region' => '', 'niche' => ''],
+    ['business' => ['name' => 'Manifest Name', 'primary_city' => '', 'niche_slug' => '']],
+    ['lf_business_name' => 'Opt Name']
+);
+expect($expected['business_name'] === 'Manifest Name', 'manifest name fallback');
+
+// 21) build_expected should fall back to options business name
+$expected = lf_ai_studio_identity_build_expected(
+    ['business_name' => '', 'city_region' => '', 'niche' => ''],
+    ['business' => ['name' => '', 'primary_city' => '', 'niche_slug' => '']],
+    ['lf_business_name' => 'Opt Name']
+);
+expect($expected['business_name'] === 'Opt Name', 'options name fallback');
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -367,6 +383,7 @@ Expected: `PASS`.
 - Confirm guard is placed **after** the idempotent early return in `lf_ai_studio_rest_orchestrator()` (code review).
 - Replay the same callback twice and confirm the second (idempotent) call does not log `business_match`.
 - Trigger manifester with the correct manifest and confirm no mismatch logs.
+- Confirm `LF MANIFEST: updates applied` and content changes are present on the happy path.
 - Trigger with a wrong-business payload and confirm:
   - `business_identity_mismatch` error
   - HTTP 200 response body includes `acknowledged: true`

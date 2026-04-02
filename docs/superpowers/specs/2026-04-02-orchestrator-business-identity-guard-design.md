@@ -101,7 +101,7 @@ Manual verification:
 - Run with a wrong-business payload and confirm mismatch + no apply.
 - Manual verification:
   - Trigger manifester with correct manifest and confirm no guard logs.
-  - Trigger with a wrong business payload and confirm `business_mismatch` log and no apply.
+- Trigger with a wrong business payload and confirm `business_match` log and no apply.
 
 ## Rollout Notes
 - Safe to deploy to production; guard only blocks when clear mismatch exists.
