@@ -329,6 +329,14 @@ $expected = lf_ai_studio_identity_build_expected(
     ['lf_business_name' => 'Opt Name']
 );
 expect($expected['business_name'] === 'Opt Name', 'options name fallback');
+
+// 22) build_expected should fall back to business.address.city
+$expected = lf_ai_studio_identity_build_expected(
+    ['business_name' => '', 'city_region' => '', 'niche' => ''],
+    ['business' => ['primary_city' => '', 'address' => ['city' => 'Address City']]],
+    []
+);
+expect($expected['city_region'] === 'Address City', 'address city fallback');
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -356,9 +364,9 @@ Update `inc/ai-studio-rest.php`:
     - `apply.city_region` → `apply.meta.city_region` → `payload.city_region` → `payload.meta.city_region`
     - `apply.niche` → `apply.meta.niche` → `payload.niche` → `payload.meta.niche`
     - Payload fallbacks for city/niche are intentional (aligns with observed n8n payloads).
-  - Call `lf_ai_studio_identity_compare()`.
-  - If mismatch: update job meta, call `lf_ai_autonomy_mark_generation_failed` if available, log mismatch (full fields under `WP_DEBUG`), and return HTTP 200 with `success:false`.
-- If `reason === no_comparable_fields`: log a warning (under `WP_DEBUG`) and continue.
+  - Call `lf_ai_studio_identity_guard_decision()` to decide allow/block + response.
+  - If `allow` is false: update job meta, call `lf_ai_autonomy_mark_generation_failed` if available, log mismatch (full fields under `WP_DEBUG`), and return HTTP 200 with `success:false`.
+  - If `reason === no_comparable_fields`: log a warning (under `WP_DEBUG`) and continue.
 - Ensure guard runs **before** media annotations and **before** dry-run branch.
 - **Mismatch response shape:** `{ success:false, error:["business_identity_mismatch"], job_id, acknowledged:true }` (HTTP 200).
 - **Mismatch meta:** `lf_ai_job_status = failed`, `lf_ai_job_error = business_identity_mismatch`, `lf_ai_job_summary` set to a short readable message (e.g. `Orchestrator blocked: business identity mismatch.`).
