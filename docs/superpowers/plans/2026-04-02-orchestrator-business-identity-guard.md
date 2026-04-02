@@ -16,6 +16,14 @@
 - Create: `inc/ai-studio-identity.php`
 - Create: `tests/identity-guard.php`
 
+- [ ] **Step 0: Create stub helper file**
+
+Create a minimal stub so the test can require the path:
+```php
+<?php
+// Stub for TDD red phase. Real implementation added in Step 3.
+```
+
 - [ ] **Step 1: Write the failing test**
 
 Create `tests/identity-guard.php`:
@@ -297,6 +305,14 @@ $decision = lf_ai_studio_identity_guard_decision(
     7
 );
 expect($decision['allow'] === true, 'guard should allow matching identity');
+
+// 19) options city precedence should prefer lf_city_region
+$expected = lf_ai_studio_identity_build_expected(
+    ['business_name' => '', 'city_region' => '', 'niche' => ''],
+    [],
+    ['lf_city_region' => 'City A', 'lf_homepage_city' => 'City B']
+);
+expect($expected['city_region'] === 'City A', 'options city precedence');
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
