@@ -23,7 +23,7 @@ We observed n8n callbacks applying content from the wrong business (e.g., Fort C
 **Match on `business.name + primary_city + niche`** with normalization. This balances correctness and flexibility and is aligned with deterministic manifest inputs.
 
 ### Identity Sources
-**Expected (from WordPress), in order of precedence:**
+**Expected (from WordPress), per-field precedence:**
 1. `lf_ai_job_request` (stored request for this job). Use keys:
    - `business_name`
    - `city_region`
@@ -61,7 +61,7 @@ Compute match result on the **intersection** of fields where both expected and i
 Field mapping:
 - **business name**: expected `business.name` ↔ incoming `business_name`
 - **city**: expected `business.primary_city` (fallback `business.address.city`) ↔ incoming `city_region`
-- **niche**: expected `business.niche_slug` (fallback `business.niche`) ↔ incoming `niche`
+- **niche**: expected `business.niche_slug` (fallback `business.niche`) ↔ incoming `niche` (compare using `sanitize_title` on both sides; pass if either expected slug or expected label matches)
 
 Decision table:
 - expected name present + incoming name missing → **fail**
@@ -78,6 +78,7 @@ On mismatch:
   - `LF ORCH DEBUG: business_mismatch` with expected vs incoming identity fields
 - Return HTTP **200** with `{ success:false, error:["business_identity_mismatch"], job_id, acknowledged:true }`
   - Rationale: avoid n8n retry loops while still recording failure in WP.
+  - n8n should rely on response body (`success` / `acknowledged`) rather than HTTP status.
 
 ## Logging
 Add explicit `LF ORCH DEBUG` log lines:
@@ -86,7 +87,7 @@ Add explicit `LF ORCH DEBUG` log lines:
 - `business_match` (true/false + reason)
 
 Sanitize logs by truncating each field to 120 chars and stripping HTML.
-Always log mismatch; log full expected/incoming only when `WP_DEBUG` is true.
+Always log a mismatch summary; log full expected/incoming only when `WP_DEBUG` is true.
 
 ## Testing/Verification
 - Add a minimal test harness (CLI or phpunit if available) that feeds:
@@ -95,9 +96,9 @@ Always log mismatch; log full expected/incoming only when `WP_DEBUG` is true.
   - missing incoming name while expected name present → fail closed
   - missing incoming identity (no comparable fields) → guard skipped (with warning)
   - missing expected identity → guard skipped
-- Manual verification:
-  - Run manifester with correct manifest and confirm no mismatch logs.
-  - Run with a wrong-business payload and confirm mismatch + no apply.
+Manual verification:
+- Run manifester with correct manifest and confirm no mismatch logs.
+- Run with a wrong-business payload and confirm mismatch + no apply.
 - Manual verification:
   - Trigger manifester with correct manifest and confirm no guard logs.
   - Trigger with a wrong business payload and confirm `business_mismatch` log and no apply.
@@ -107,7 +108,7 @@ Always log mismatch; log full expected/incoming only when `WP_DEBUG` is true.
 - Keep logging enabled for initial validation; if noisy, gate via `WP_DEBUG`.
 
 ## Placement
-Run the guard **after** binding/idempotency checks and after `$apply_payload` is resolved, but **before** media annotations or any apply-side effects.
+Run the guard **after** binding/idempotency checks and after `$apply_payload` is resolved, but **before** media annotations, dry-run short-circuit, or any apply-side effects. This requires moving the guard earlier than the current media annotation block.
 
 If the callback is idempotent and returns early, the guard is skipped (consistent with current behavior).
 
