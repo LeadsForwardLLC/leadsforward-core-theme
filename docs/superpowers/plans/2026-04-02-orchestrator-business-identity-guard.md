@@ -355,6 +355,14 @@ $decision = lf_ai_studio_identity_guard_decision(
     9
 );
 expect($decision['allow'] === true, 'guard allows no comparable fields');
+
+// 25) build_expected should use lf_homepage_niche_slug when other sources empty
+$expected = lf_ai_studio_identity_build_expected(
+    ['business_name' => '', 'city_region' => '', 'niche' => ''],
+    [],
+    ['lf_homepage_niche_slug' => 'opt-niche']
+);
+expect($expected['niche'] === 'opt-niche', 'options niche_slug fallback');
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -369,6 +377,7 @@ Expected: FAIL (new functions or niche_slug support missing).
 Update `inc/ai-studio-rest.php`:
 - `require_once __DIR__ . '/ai-studio-identity.php';` near the top.
 - After `$apply_payload = $payload['apply'] ?? $payload;`, insert **guard block** that runs only after binding/idempotent checks (the existing early return stays before the guard):
+  - Place the guard immediately after `$apply_payload = ...` and **before** `$media_annotations = ...` (before any vision/media side effects).
   - Build expected identity with per-field precedence using:
     - `get_post_meta($job_id, 'lf_ai_job_request', true)`
     - `lf_ai_studio_get_manifest()` if available (`business.primary_city` fallback to `business.address.city`)
@@ -410,6 +419,7 @@ Expected: `PASS`.
 - Explicitly accept that end-to-end apply/no-apply behavior is manual-only (helper tests do not assert REST side effects).
 - Spec testing bullets for “matching applies normally” and “mismatch skips apply” are satisfied via this manual checklist.
 - Explicitly verify the guard returns **before** any apply/media side effects on mismatch.
+- Note: `lf_ai_job_response` is stored before the guard; mismatches will still capture payload for forensics.
 - Run tests in a WP-loaded context (e.g. `wp eval-file tests/identity-guard.php`) to validate `sanitize_title` parity; if unavailable, record the limitation.
 - Confirm guard is placed **after** the idempotent early return in `lf_ai_studio_rest_orchestrator()` (code review).
 - Replay the same callback twice and confirm the second (idempotent) call does not log `business_match`.
