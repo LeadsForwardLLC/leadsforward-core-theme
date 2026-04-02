@@ -322,11 +322,15 @@ Expected: `PASS`.
 - Note: REST/orchestrator behavior is verified manually (no WP harness in this repo).
 - Explicitly accept that end-to-end apply/no-apply behavior is manual-only (helper tests do not assert REST side effects).
 - If available, re-run tests in a WP-loaded context to validate `sanitize_title` parity.
+- Confirm guard is placed **after** the idempotent early return in `lf_ai_studio_rest_orchestrator()` (code review).
+- Replay the same callback twice and confirm the second (idempotent) call does not log `business_match`.
 - Trigger manifester with the correct manifest and confirm no mismatch logs.
 - Trigger with a wrong-business payload and confirm:
   - `business_identity_mismatch` error
   - HTTP 200 response body includes `acknowledged: true`
   - no content applied
+  - `lf_ai_job_changes` is empty and `lf_ai_job_status` is `failed`
+- Cross-check one real `lf_ai_job_request` and `lf_site_manifest` sample to confirm key shapes match helper expectations.
 
 - [ ] **Step 6: Commit**
 
