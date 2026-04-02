@@ -377,6 +377,7 @@ Update `inc/ai-studio-rest.php`:
 - Add `lf_ai_studio_identity_build_incoming()` helper to merge apply + payload sources.
 - Add `lf_ai_studio_identity_guard_decision($expected, $incoming, $job_id)` helper returning `allow`, `reason`, and response payload for mismatches.
  - Implement helper changes first, get `php tests/identity-guard.php` green, then wire `lf_ai_studio_rest_orchestrator()`.
+ - Suggested order: update `compare` niche_slug logic → `build_expected` → `build_incoming` → `guard_decision` → REST wiring; re-run tests after each.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -404,7 +405,7 @@ Expected: `PASS`.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add inc/ai-studio-rest.php tests/identity-guard.php
+git add inc/ai-studio-identity.php inc/ai-studio-rest.php tests/identity-guard.php
 git commit -m "feat(orchestrator): block mismatched business callbacks"
 ```
 
