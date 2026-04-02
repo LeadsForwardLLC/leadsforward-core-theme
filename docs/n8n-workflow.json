@@ -770,7 +770,7 @@
       "main": [
         [
           {
-            "node": "Retry Gate",
+            "node": "Deterministic FAQ Enforcement",
             "type": "main",
             "index": 0
           }
@@ -786,13 +786,7 @@
             "index": 0
           }
         ],
-        [
-          {
-            "node": "Deterministic FAQ Enforcement",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Retry Input Builder": {
@@ -808,13 +802,7 @@
     },
     "Retry Cache Gate": {
       "main": [
-        [
-          {
-            "node": "Deterministic FAQ Enforcement",
-            "type": "main",
-            "index": 0
-          }
-        ],
+        [],
         [
           {
             "node": "LLM Retry Chain",
@@ -859,13 +847,7 @@
     },
     "Retry Quality Gate + SEO Enforcement": {
       "main": [
-        [
-          {
-            "node": "Deterministic FAQ Enforcement",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Callback Gate": {

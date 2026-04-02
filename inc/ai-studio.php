@@ -6449,6 +6449,56 @@ function lf_ai_studio_resolve_homepage_field_key(string $field_key, array $confi
 	return null;
 }
 
+function lf_ai_studio_resolve_homepage_section_id_alias(string $section_id, array $config): string {
+	$legacy_id = trim($section_id);
+	if ($legacy_id === '') {
+		return '';
+	}
+	$direct_map = [
+		'hero_section' => 'hero',
+		'trust_signals' => 'trust_bar',
+		'trust_signals_bar' => 'trust_bar',
+		'services_overview' => 'service_intro',
+		'why_choose_us' => 'benefits',
+		'process_steps' => 'process',
+		'reviews_section' => 'trust_reviews',
+		'faq_section' => 'faq_accordion',
+		'additional_services' => 'related_links',
+		'service_areas' => 'map_nap',
+		'final_cta' => 'cta',
+	];
+	if (isset($direct_map[$legacy_id])) {
+		return $direct_map[$legacy_id];
+	}
+	$type_map = [
+		'intro' => ['content', 'content_centered', 'content_image', 'image_content'],
+		'about' => ['content', 'content_centered', 'content_image', 'image_content'],
+		'about_snippet' => ['content', 'content_centered', 'content_image', 'image_content'],
+		'services' => ['service_grid', 'services_offered_here', 'service_intro', 'service_details'],
+		'services_overview' => ['service_grid', 'services_offered_here', 'service_intro', 'service_details'],
+		'testimonials' => ['trust_bar', 'trust_reviews', 'reviews', 'social_proof'],
+		'faq' => ['faq_accordion'],
+	];
+	$candidates = $type_map[$legacy_id] ?? [];
+	if (empty($candidates)) {
+		return '';
+	}
+	foreach ($config as $sid => $row) {
+		if (!is_string($sid)) {
+			continue;
+		}
+		$base = function_exists('lf_homepage_base_section_type') ? lf_homepage_base_section_type($sid) : $sid;
+		if ($base !== '' && in_array($base, $candidates, true)) {
+			return $sid;
+		}
+		$type = is_array($row) ? (string) ($row['section_type'] ?? $row['type'] ?? '') : '';
+		if ($type !== '' && in_array($type, $candidates, true)) {
+			return $sid;
+		}
+	}
+	return '';
+}
+
 function lf_ai_studio_resolve_post_field_key(string $field_key, array $sections, array $registry): ?array {
 	if ($field_key === '' || strpos($field_key, '.') !== false) {
 		return null;
@@ -6835,6 +6885,16 @@ function lf_apply_orchestrator_updates(array $response): array {
 	$staged_homepage_config = null;
 	$staged_post_meta_updates = [];
 	$staged_featured_updates = [];
+	$debug_homepage_drops = [
+		'invalid_key' => 0,
+		'unknown_section' => 0,
+		'unknown_field' => 0,
+	];
+	$debug_homepage_drop_samples = [
+		'invalid_key' => [],
+		'unknown_section' => [],
+		'unknown_field' => [],
+	];
 
 	$manifest_for_tokens = lf_ai_studio_get_manifest();
 	$tk_niche = is_array($manifest_for_tokens) ? (string) ($manifest_for_tokens['business']['niche'] ?? '') : '';
@@ -6911,6 +6971,12 @@ function lf_apply_orchestrator_updates(array $response): array {
 						$section_id = (string) ($resolved['section_id'] ?? '');
 						$field_key = (string) ($resolved['field_key'] ?? '');
 					} else {
+						if (defined('WP_DEBUG') && WP_DEBUG) {
+							$debug_homepage_drops['invalid_key']++;
+							if (count($debug_homepage_drop_samples['invalid_key']) < 5) {
+								$debug_homepage_drop_samples['invalid_key'][] = (string) $key;
+							}
+						}
 						$errors[] = sprintf(__('Homepage field "%s" must use section.field notation.', 'leadsforward-core'), (string) $key);
 						continue;
 					}
@@ -6922,11 +6988,29 @@ function lf_apply_orchestrator_updates(array $response): array {
 					continue;
 				}
 				if (!isset($config[$section_id]) || !isset($registry[$section_id])) {
+					$resolved = lf_ai_studio_resolve_homepage_section_id_alias($section_id, $config);
+					if ($resolved !== '' && isset($config[$resolved]) && isset($registry[$resolved])) {
+						$section_id = $resolved;
+					}
+				}
+				if (!isset($config[$section_id]) || !isset($registry[$section_id])) {
+					if (defined('WP_DEBUG') && WP_DEBUG) {
+						$debug_homepage_drops['unknown_section']++;
+						if (count($debug_homepage_drop_samples['unknown_section']) < 5) {
+							$debug_homepage_drop_samples['unknown_section'][] = (string) $section_id;
+						}
+					}
 					// Ignore unknown/legacy homepage section ids instead of failing entire callback.
 					continue;
 				}
 				$allowed = lf_ai_studio_homepage_allowed_field_keys($section_id, $registry[$section_id]);
 				if (!in_array($field_key, $allowed, true)) {
+					if (defined('WP_DEBUG') && WP_DEBUG) {
+						$debug_homepage_drops['unknown_field']++;
+						if (count($debug_homepage_drop_samples['unknown_field']) < 5) {
+							$debug_homepage_drop_samples['unknown_field'][] = $section_id . '.' . $field_key;
+						}
+					}
 					// Ignore unsupported homepage fields coming from older orchestrator prompts.
 					continue;
 				}
@@ -6946,6 +7030,46 @@ function lf_apply_orchestrator_updates(array $response): array {
 				$homepage_fields[$section_id][$field_key] = $normalized_value;
 				$homepage_fields_count++;
 				$fields_updated++;
+			}
+		}
+		if (defined('WP_DEBUG') && WP_DEBUG) {
+			$section_counts = [];
+			$field_samples = [];
+			foreach ($homepage_fields as $sid => $fields) {
+				if (!is_array($fields)) {
+					continue;
+				}
+				$section_counts[$sid] = count($fields);
+				foreach ($fields as $key => $value) {
+					if (count($field_samples) >= 8) {
+						break 2;
+					}
+					$preview = '';
+					if (is_array($value)) {
+						$preview = 'array(' . count($value) . ')';
+					} else {
+						$preview = sanitize_text_field((string) $value);
+						if (strlen($preview) > 140) {
+							$preview = substr($preview, 0, 140) . '...';
+						}
+					}
+					$field_samples[] = [
+						'section' => (string) $sid,
+						'field' => (string) $key,
+						'preview' => $preview,
+					];
+				}
+			}
+			error_log('LF ORCH DEBUG: homepage_field_counts ' . wp_json_encode($section_counts));
+			error_log('LF ORCH DEBUG: homepage_drop_counts ' . wp_json_encode($debug_homepage_drops));
+			$drop_samples_filtered = array_filter($debug_homepage_drop_samples, static function ($items): bool {
+				return is_array($items) && !empty($items);
+			});
+			if (!empty($drop_samples_filtered)) {
+				error_log('LF ORCH DEBUG: homepage_drop_samples ' . wp_json_encode($drop_samples_filtered));
+			}
+			if (!empty($field_samples)) {
+				error_log('LF ORCH DEBUG: homepage_field_samples ' . wp_json_encode($field_samples));
 			}
 		}
 		foreach ($homepage_fields as $section_id => $fields) {

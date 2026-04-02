@@ -538,6 +538,38 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 	update_post_meta($job_id, 'lf_ai_job_last_callback_hash', $payload_hash);
 
 	$apply_payload = $payload['apply'] ?? $payload;
+	if (defined('WP_DEBUG') && WP_DEBUG) {
+		$updates = $apply_payload['updates'] ?? null;
+		if (!is_array($updates)) {
+			error_log('LF ORCH DEBUG: updates missing or not array');
+		} else {
+			$target_counts = [];
+			$sample_updates = [];
+			foreach ($updates as $update) {
+				if (!is_array($update)) {
+					continue;
+				}
+				$target = (string) ($update['target'] ?? 'unknown');
+				$target_counts[$target] = ($target_counts[$target] ?? 0) + 1;
+				if (count($sample_updates) < 5) {
+					$fields = $update['fields'] ?? $update['data'] ?? [];
+					$sample_updates[] = [
+						'target' => $target,
+						'id' => $update['id'] ?? '',
+						'field_keys' => is_array($fields) ? array_slice(array_keys($fields), 0, 12) : [],
+					];
+				}
+			}
+			error_log('LF ORCH DEBUG: update_target_counts ' . wp_json_encode($target_counts));
+			error_log('LF ORCH DEBUG: update_samples ' . wp_json_encode($sample_updates));
+			if (isset($apply_payload['page_type_counts']) && is_array($apply_payload['page_type_counts'])) {
+				error_log('LF ORCH DEBUG: page_type_counts ' . wp_json_encode($apply_payload['page_type_counts']));
+			}
+			if (isset($apply_payload['update_target_counts']) && is_array($apply_payload['update_target_counts'])) {
+				error_log('LF ORCH DEBUG: merge_target_counts ' . wp_json_encode($apply_payload['update_target_counts']));
+			}
+		}
+	}
 	$quality_warnings = [];
 	$candidate_warnings = $payload['quality_warnings'] ?? ($apply_payload['quality_warnings'] ?? []);
 	if (is_array($candidate_warnings)) {
@@ -613,6 +645,9 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		return new \WP_REST_Response(['error' => 'validation_failed', 'messages' => $errors, 'job_id' => $job_id], 400);
 	}
 	$dry_run = get_option('lf_ai_autonomy_dry_run', '0') === '1';
+	if (defined('WP_DEBUG') && WP_DEBUG && $dry_run) {
+		error_log('LF ORCH DEBUG: dry_run enabled; skipping apply for job ' . $job_id);
+	}
 	if ($dry_run) {
 		update_post_meta($job_id, 'lf_ai_job_status', 'done');
 		update_post_meta($job_id, 'lf_ai_job_summary', 'Dry-run validation succeeded; no writes committed.');
