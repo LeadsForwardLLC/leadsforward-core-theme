@@ -52,6 +52,15 @@ function lf_ops_register_menu(): void {
 		'lf-global',
 		'lf_ops_render_global_settings_page'
 	);
+	// 2b. Theme Docs (standalone docs route).
+	add_submenu_page(
+		'lf-ops',
+		__('Theme Docs', 'leadsforward-core'),
+		__('Theme Docs', 'leadsforward-core'),
+		LF_OPS_CAP,
+		'lf-theme-docs',
+		'lf_ops_render_theme_docs_link'
+	);
 	// 3. Homepage (sections)
 	add_submenu_page(
 		'lf-ops',
@@ -128,6 +137,16 @@ function lf_ops_render_acf_options_page(): void {
 	echo '<p>' . esc_html__('This page requires Advanced Custom Fields (ACF).', 'leadsforward-core') . '</p></div>';
 }
 
+function lf_ops_render_theme_docs_link(): void {
+	if (!current_user_can(LF_OPS_CAP)) {
+		return;
+	}
+	$slug = defined('LF_DOCS_SLUG') ? (string) LF_DOCS_SLUG : 'theme-docs';
+	$docs_url = home_url('/' . trim($slug, '/') . '/');
+	wp_safe_redirect($docs_url);
+	exit;
+}
+
 function lf_ops_settings_assets(string $hook): void {
 	if (!current_user_can(LF_OPS_CAP)) {
 		return;
@@ -170,6 +189,7 @@ function lf_ops_reorder_submenus(): void {
 	$preferred_order = [
 		'lf-ops',
 		'lf-global',
+		'lf-theme-docs',
 		'lf-homepage-settings',
 		'lf-quote-builder',
 		'lf-contact-form',
