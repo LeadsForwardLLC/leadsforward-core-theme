@@ -96,6 +96,7 @@ Always log a mismatch summary; log full expected/incoming only when `WP_DEBUG` i
   - missing incoming name while expected name present → fail closed
   - missing incoming identity (no comparable fields) → guard skipped (with warning)
   - missing expected identity → guard skipped
+- REST/orchestrator apply/no-apply verification is manual unless a WP test harness is added.
 Manual verification:
 - Run manifester with correct manifest and confirm no mismatch logs.
 - Run with a wrong-business payload and confirm mismatch + no apply.

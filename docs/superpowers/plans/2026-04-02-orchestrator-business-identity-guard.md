@@ -371,6 +371,7 @@ Update `inc/ai-studio-rest.php`:
 - **Mismatch response shape:** `{ success:false, error:["business_identity_mismatch"], job_id, acknowledged:true }` (HTTP 200).
 - **Mismatch meta:** `lf_ai_job_status = failed`, `lf_ai_job_error = business_identity_mismatch`, `lf_ai_job_summary` set to a short readable message (e.g. `Orchestrator blocked: business identity mismatch.`).
 - Confirm UI/ops pages read `lf_ai_job_summary` (not only `lf_ai_job_error`) for human-readable failure text.
+- Keep the machine code in `lf_ai_job_error` and the human summary in `lf_ai_job_summary`.
 - **Mismatch logs:** `LF ORCH DEBUG: business_expected`, `business_incoming`, `business_match`; truncate each field to 120 chars and strip HTML; always log a mismatch summary; full expected/incoming only when `WP_DEBUG`.
 - Update helper: accept `niche_slug` on expected identity and compare incoming slug against **either** expected slug **or** label slug (disjunctive match).
 - Add `lf_ai_studio_identity_build_expected()` helper with per-field precedence.
@@ -390,7 +391,7 @@ Expected: `PASS`.
 - Explicitly accept that end-to-end apply/no-apply behavior is manual-only (helper tests do not assert REST side effects).
 - Spec testing bullets for “matching applies normally” and “mismatch skips apply” are satisfied via this manual checklist.
 - Explicitly verify the guard returns **before** any apply/media side effects on mismatch.
-- If available, re-run tests in a WP-loaded context to validate `sanitize_title` parity.
+- Run tests in a WP-loaded context (e.g. `wp eval-file tests/identity-guard.php`) to validate `sanitize_title` parity; if unavailable, record the limitation.
 - Confirm guard is placed **after** the idempotent early return in `lf_ai_studio_rest_orchestrator()` (code review).
 - Replay the same callback twice and confirm the second (idempotent) call does not log `business_match`.
 - Trigger manifester with the correct manifest and confirm no mismatch logs.
