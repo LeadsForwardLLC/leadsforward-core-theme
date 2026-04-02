@@ -6984,6 +6984,13 @@ function lf_apply_orchestrator_updates(array $response): array {
 					$section_id = trim($parts[0]);
 					$field_key = trim($parts[1]);
 				}
+				if (function_exists('lf_homepage_base_section_type')) {
+					$normalized_section_id = lf_homepage_base_section_type($section_id);
+					if ($normalized_section_id !== '' && $normalized_section_id !== $section_id
+						&& isset($config[$normalized_section_id]) && isset($registry[$normalized_section_id])) {
+						$section_id = $normalized_section_id;
+					}
+				}
 				if ($section_id === '' || $field_key === '') {
 					continue;
 				}
