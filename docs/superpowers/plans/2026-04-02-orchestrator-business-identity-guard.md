@@ -49,9 +49,9 @@ $result = lf_ai_studio_identity_compare($expected, $incoming);
 expect($result['match'] === true, 'no comparable fields should pass');
 expect($result['reason'] === 'no_comparable_fields', 'no comparable reason');
 
-// 4) match should pass
+// 4) match should pass (exact slug)
 $expected = ['business_name' => 'Bethesda Piano Tuning', 'city_region' => 'Bethesda', 'niche' => 'piano-tuning'];
-$incoming = ['business_name' => 'Bethesda Piano Tuning', 'city_region' => 'Bethesda', 'niche' => 'piano tuning'];
+$incoming = ['business_name' => 'Bethesda Piano Tuning', 'city_region' => 'Bethesda', 'niche' => 'piano-tuning'];
 $result = lf_ai_studio_identity_compare($expected, $incoming);
 expect($result['match'] === true, 'expected match should pass');
 
@@ -163,17 +163,46 @@ git commit -m "feat(orchestrator): add identity guard helper"
 
 Add to `tests/identity-guard.php`:
 ```php
-// 5) helper should allow matching slug/label
-$expected = ['business_name' => 'Bethesda Piano Tuning', 'city_region' => 'Bethesda', 'niche' => 'piano-tuning'];
-$incoming = ['business_name' => 'Bethesda Piano Tuning', 'city_region' => 'Bethesda', 'niche' => 'Piano Tuning'];
+// 5) helper should honor explicit niche_slug even when label differs
+$expected = [
+    'business_name' => 'Bethesda Piano Tuning',
+    'city_region' => 'Bethesda',
+    'niche' => 'Concert Piano Service',
+    'niche_slug' => 'piano-tuning',
+];
+$incoming = ['business_name' => 'Bethesda Piano Tuning', 'city_region' => 'Bethesda', 'niche' => 'piano-tuning'];
 $result = lf_ai_studio_identity_compare($expected, $incoming);
 expect($result['match'] === true, 'slug/label match should pass');
+
+// 6) build_expected should honor per-field precedence
+$expected = lf_ai_studio_identity_build_expected(
+    ['business_name' => 'Job Name', 'city_region' => 'Job City', 'niche' => 'job-niche'],
+    ['business' => ['name' => 'Manifest Name', 'primary_city' => 'Manifest City', 'niche_slug' => 'manifest-niche']],
+    [
+        'lf_business_name' => 'Opt Name',
+        'lf_city_region' => 'Opt City',
+        'lf_homepage_city' => 'Opt City 2',
+        'lf_homepage_niche_slug' => 'opt-niche',
+    ]
+);
+expect($expected['business_name'] === 'Job Name', 'job name precedence');
+expect($expected['city_region'] === 'Job City', 'job city precedence');
+expect($expected['niche'] === 'job-niche', 'job niche precedence');
+
+// 7) build_incoming should prefer apply payload over top-level
+$incoming = lf_ai_studio_identity_build_incoming(
+    ['business_name' => 'Apply Name', 'meta' => ['city_region' => 'Apply City', 'niche' => 'apply-niche']],
+    ['business_name' => 'Payload Name', 'meta' => ['city_region' => 'Payload City', 'niche' => 'payload-niche']]
+);
+expect($incoming['business_name'] === 'Apply Name', 'apply business_name precedence');
+expect($incoming['city_region'] === 'Apply City', 'apply city precedence');
+expect($incoming['niche'] === 'apply-niche', 'apply niche precedence');
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `php tests/identity-guard.php`  
-Expected: FAIL (slug/label mismatch).
+Expected: FAIL (new functions or niche_slug support missing).
 
 - [ ] **Step 3: Implement guard integration**
 
@@ -183,7 +212,7 @@ Update `inc/ai-studio-rest.php`:
   - Build expected identity with per-field precedence using:
     - `get_post_meta($job_id, 'lf_ai_job_request', true)`
     - `lf_ai_studio_get_manifest()` if available (`business.primary_city` fallback to `business.address.city`)
-    - `get_option()` fallbacks
+    - `get_option()` fallbacks (`lf_business_name`, `lf_city_region`, `lf_homepage_city`, `lf_homepage_niche_slug`)
   - Build incoming identity from `$apply_payload` first, then `$payload` (including `.meta` fallbacks).
   - Call `lf_ai_studio_identity_compare()`.
   - If mismatch: update job meta, call `lf_ai_autonomy_mark_generation_failed` if available, log mismatch (full fields under `WP_DEBUG`), and return HTTP 200 with `success:false`.
@@ -192,6 +221,9 @@ Update `inc/ai-studio-rest.php`:
 - **Mismatch response shape:** `{ success:false, error:["business_identity_mismatch"], job_id, acknowledged:true }` (HTTP 200).
 - **Mismatch meta:** `lf_ai_job_status = failed`, `lf_ai_job_error = business_identity_mismatch`, `lf_ai_job_summary` set to a short readable message.
 - **Mismatch logs:** `LF ORCH DEBUG: business_expected`, `business_incoming`, `business_match`; truncate each field to 120 chars and strip HTML; always log a mismatch summary; full expected/incoming only when `WP_DEBUG`.
+- Update helper: accept `niche_slug` on expected identity and compare incoming slug against both expected slug and expected label.
+- Add `lf_ai_studio_identity_build_expected()` helper with per-field precedence.
+- Add `lf_ai_studio_identity_build_incoming()` helper to merge apply + payload sources.
 
 - [ ] **Step 4: Run test to verify it passes**
 
