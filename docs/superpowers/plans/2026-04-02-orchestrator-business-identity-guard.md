@@ -268,6 +268,15 @@ expect($decision['response']['success'] === false, 'response success false');
 expect($decision['response']['error'][0] === 'business_identity_mismatch', 'response error code');
 expect($decision['response']['job_id'] === 42, 'response job_id');
 expect($decision['response']['acknowledged'] === true, 'response acknowledged');
+
+// 15) incoming should fall back to payload if apply is missing fields
+$incoming = lf_ai_studio_identity_build_incoming(
+    ['meta' => ['city_region' => 'Apply City']],
+    ['business_name' => 'Payload Name', 'meta' => ['niche' => 'payload-niche']]
+);
+expect($incoming['business_name'] === 'Payload Name', 'payload name fallback when apply missing');
+expect($incoming['city_region'] === 'Apply City', 'apply city still wins');
+expect($incoming['niche'] === 'payload-niche', 'payload niche fallback when apply missing');
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -295,12 +304,13 @@ Update `inc/ai-studio-rest.php`:
 - If `reason === no_comparable_fields`: log a warning (under `WP_DEBUG`) and continue.
 - Ensure guard runs **before** media annotations and **before** dry-run branch.
 - **Mismatch response shape:** `{ success:false, error:["business_identity_mismatch"], job_id, acknowledged:true }` (HTTP 200).
-- **Mismatch meta:** `lf_ai_job_status = failed`, `lf_ai_job_error = business_identity_mismatch`, `lf_ai_job_summary` set to a short readable message.
+- **Mismatch meta:** `lf_ai_job_status = failed`, `lf_ai_job_error = business_identity_mismatch`, `lf_ai_job_summary` set to a short readable message (e.g. `Orchestrator blocked: business identity mismatch.`).
 - **Mismatch logs:** `LF ORCH DEBUG: business_expected`, `business_incoming`, `business_match`; truncate each field to 120 chars and strip HTML; always log a mismatch summary; full expected/incoming only when `WP_DEBUG`.
 - Update helper: accept `niche_slug` on expected identity and compare incoming slug against **either** expected slug **or** label slug (disjunctive match).
 - Add `lf_ai_studio_identity_build_expected()` helper with per-field precedence.
 - Add `lf_ai_studio_identity_build_incoming()` helper to merge apply + payload sources.
 - Add `lf_ai_studio_identity_guard_decision($expected, $incoming, $job_id)` helper returning `allow`, `reason`, and response payload for mismatches.
+ - Implement helper changes first, get `php tests/identity-guard.php` green, then wire `lf_ai_studio_rest_orchestrator()`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
