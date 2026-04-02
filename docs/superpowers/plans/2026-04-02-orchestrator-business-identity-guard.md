@@ -173,6 +173,7 @@ Also run: `wp eval-file tests/identity-guard.php` (required if WP CLI is availab
 git add inc/ai-studio-identity.php tests/identity-guard.php
 git commit -m "feat(orchestrator): add identity guard helper"
 ```
+Do not merge after Task 1 alone; Task 2 is required for spec-accurate niche rules.
 
 ---
 
@@ -201,7 +202,7 @@ $expected = [
     'business_name' => 'Bethesda Piano Tuning',
     'city_region' => 'Bethesda',
     'niche' => 'Piano Tuning Service',
-    'niche_slug' => 'piano-tuning',
+    'niche_slug' => 'piano-tuning-service',
 ];
 $incoming = ['business_name' => 'Bethesda Piano Tuning', 'city_region' => 'Bethesda', 'niche' => 'Piano Tuning Service'];
 $result = lf_ai_studio_identity_compare($expected, $incoming);
@@ -410,6 +411,7 @@ Expected: `PASS`.
   - no content applied
   - `lf_ai_job_changes` is empty and `lf_ai_job_status` is `failed`
 - Cross-check one real `lf_ai_job_request` and `lf_site_manifest` sample to confirm key shapes match helper expectations.
+- Open WP admin → AI Studio → Jobs (or the job detail screen) and confirm the summary text is visible for a failed job.
 
 - [ ] **Step 6: Commit**
 
