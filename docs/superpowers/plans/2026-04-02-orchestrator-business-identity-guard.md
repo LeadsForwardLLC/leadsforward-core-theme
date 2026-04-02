@@ -167,6 +167,7 @@ if (!function_exists('lf_ai_studio_identity_compare')) {
 Run: `php tests/identity-guard.php`  
 Expected: `PASS`.
 Also run: `wp eval-file tests/identity-guard.php` (required if WP CLI is available).
+Treat the WP-loaded run as authoritative for niche slug behavior; if unavailable, record the limitation and do not treat test 26 as definitive.
 
 - [ ] **Step 5: Commit**
 
@@ -385,6 +386,7 @@ Update `inc/ai-studio-rest.php`:
 - After `$apply_payload = $payload['apply'] ?? $payload;`, insert **guard block** that runs only after binding/idempotent checks (the existing early return stays before the guard):
   - Place the guard immediately after `$apply_payload = ...` and **before** `$media_annotations = ...` (before any vision/media side effects).
   - Review `lf_ai_studio_rest_orchestrator()` ordering (idempotent return → apply payload → media annotations) before inserting the guard.
+  - Enumerate side effects between `$apply_payload` and the guard; ensure none run before the guard except the existing job status/response meta writes.
   - Build expected identity with per-field precedence using:
     - `get_post_meta($job_id, 'lf_ai_job_request', true)`
     - `lf_ai_studio_get_manifest()` if available (`business.primary_city` fallback to `business.address.city`)
@@ -425,6 +427,7 @@ Expected: `PASS`.
 - Note: REST/orchestrator behavior is verified manually (no WP harness in this repo).
 - Explicitly accept that end-to-end apply/no-apply behavior is manual-only (helper tests do not assert REST side effects).
 - Spec testing bullets for “matching applies normally” and “mismatch skips apply” are satisfied via this manual checklist.
+- Matching “applies normally” is manual-only by design unless a WP test harness is added.
 - Explicitly verify the guard returns **before** any apply/media side effects on mismatch.
 - Note: `lf_ai_job_response` is stored before the guard; mismatches will still capture payload for forensics.
 - Run tests in a WP-loaded context (e.g. `wp eval-file tests/identity-guard.php`) to validate `sanitize_title` parity; if unavailable, record the limitation.
