@@ -277,6 +277,14 @@ $incoming = lf_ai_studio_identity_build_incoming(
 expect($incoming['business_name'] === 'Payload Name', 'payload name fallback when apply missing');
 expect($incoming['city_region'] === 'Apply City', 'apply city still wins');
 expect($incoming['niche'] === 'payload-niche', 'payload niche fallback when apply missing');
+
+// 16) guard decision should allow when identity matches
+$decision = lf_ai_studio_identity_guard_decision(
+    ['business_name' => 'Bethesda Piano Tuning', 'city_region' => 'Bethesda', 'niche' => 'piano-tuning'],
+    ['business_name' => 'Bethesda Piano Tuning', 'city_region' => 'Bethesda', 'niche' => 'piano-tuning'],
+    7
+);
+expect($decision['allow'] === true, 'guard should allow matching identity');
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -295,10 +303,12 @@ Update `inc/ai-studio-rest.php`:
     - `get_option()` fallbacks (`lf_business_name`, `lf_city_region`, `lf_homepage_city`, `lf_homepage_niche_slug`)
     - If `lf_ai_job_request` or manifest are not arrays, treat as empty arrays.
     - Expected niche: prefer `business.niche_slug`, then `business.niche`.
+    - Confirm `lf_ai_studio_get_manifest()` reads `lf_site_manifest` (matches spec).
   - Build incoming identity using explicit order:
     - `apply.business_name` → `apply.meta.business_name` → `payload.business_name` → `payload.meta.business_name`
     - `apply.city_region` → `apply.meta.city_region` → `payload.city_region` → `payload.meta.city_region`
     - `apply.niche` → `apply.meta.niche` → `payload.niche` → `payload.meta.niche`
+    - Payload fallbacks for city/niche are intentional (aligns with observed n8n payloads).
   - Call `lf_ai_studio_identity_compare()`.
   - If mismatch: update job meta, call `lf_ai_autonomy_mark_generation_failed` if available, log mismatch (full fields under `WP_DEBUG`), and return HTTP 200 with `success:false`.
 - If `reason === no_comparable_fields`: log a warning (under `WP_DEBUG`) and continue.
