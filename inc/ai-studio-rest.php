@@ -645,6 +645,9 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		return new \WP_REST_Response(['error' => 'validation_failed', 'messages' => $errors, 'job_id' => $job_id], 400);
 	}
 	$dry_run = get_option('lf_ai_autonomy_dry_run', '0') === '1';
+	if (defined('WP_DEBUG') && WP_DEBUG && $dry_run) {
+		error_log('LF ORCH DEBUG: dry_run enabled; skipping apply for job ' . $job_id);
+	}
 	if ($dry_run) {
 		update_post_meta($job_id, 'lf_ai_job_status', 'done');
 		update_post_meta($job_id, 'lf_ai_job_summary', 'Dry-run validation succeeded; no writes committed.');
