@@ -56,7 +56,7 @@ Empty string after normalization is treated as **missing**.
 ### Guard Decision
 Compute match result on the **intersection** of fields where both expected and incoming values are present:
 - If **any provided field mismatches**, fail the callback.
-- If **no comparable fields are present**, skip the guard and log a warning (allow apply).
+- If **no comparable fields are present**, skip the guard and log a warning (allow apply). Warning can be `WP_DEBUG`-only to reduce noise.
 
 Field mapping:
 - **business name**: expected `business.name` ↔ incoming `business_name`

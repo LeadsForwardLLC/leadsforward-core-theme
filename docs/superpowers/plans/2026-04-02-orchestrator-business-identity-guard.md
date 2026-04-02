@@ -265,6 +265,8 @@ $decision = lf_ai_studio_identity_guard_decision(
 );
 expect($decision['allow'] === false, 'guard should block mismatch');
 expect($decision['response']['success'] === false, 'response success false');
+expect($decision['response']['error'][0] === 'business_identity_mismatch', 'response error code');
+expect($decision['response']['job_id'] === 42, 'response job_id');
 expect($decision['response']['acknowledged'] === true, 'response acknowledged');
 ```
 
@@ -290,7 +292,7 @@ Update `inc/ai-studio-rest.php`:
     - `apply.niche` → `apply.meta.niche` → `payload.niche` → `payload.meta.niche`
   - Call `lf_ai_studio_identity_compare()`.
   - If mismatch: update job meta, call `lf_ai_autonomy_mark_generation_failed` if available, log mismatch (full fields under `WP_DEBUG`), and return HTTP 200 with `success:false`.
-  - If `reason === no_comparable_fields`: log a warning (under `WP_DEBUG`) and continue.
+- If `reason === no_comparable_fields`: log a warning (under `WP_DEBUG`) and continue.
 - Ensure guard runs **before** media annotations and **before** dry-run branch.
 - **Mismatch response shape:** `{ success:false, error:["business_identity_mismatch"], job_id, acknowledged:true }` (HTTP 200).
 - **Mismatch meta:** `lf_ai_job_status = failed`, `lf_ai_job_error = business_identity_mismatch`, `lf_ai_job_summary` set to a short readable message.
@@ -308,6 +310,7 @@ Expected: `PASS`.
 - [ ] **Step 5: Manual verification checklist (post-deploy)**
 
 - Note: REST/orchestrator behavior is verified manually (no WP harness in this repo).
+- Explicitly accept that end-to-end apply/no-apply behavior is manual-only (helper tests do not assert REST side effects).
 - If available, re-run tests in a WP-loaded context to validate `sanitize_title` parity.
 - Trigger manifester with the correct manifest and confirm no mismatch logs.
 - Trigger with a wrong-business payload and confirm:
