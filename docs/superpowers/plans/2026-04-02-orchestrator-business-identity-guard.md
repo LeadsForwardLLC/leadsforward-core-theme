@@ -228,6 +228,23 @@ $incoming = ['business_name' => '', 'city_region' => '', 'niche' => ''];
 $result = lf_ai_studio_identity_compare($expected, $incoming);
 expect($result['match'] === true, 'empty expected should pass');
 expect($result['reason'] === 'no_comparable_fields', 'empty expected no comparable');
+
+// 11) manifest should fall back to business.niche when niche_slug missing
+$expected = lf_ai_studio_identity_build_expected(
+    ['business_name' => '', 'city_region' => '', 'niche' => ''],
+    ['business' => ['name' => 'Manifest Name', 'primary_city' => 'Manifest City', 'niche' => 'Piano Tuning']],
+    []
+);
+expect($expected['niche'] === 'Piano Tuning', 'manifest niche label fallback');
+
+// 12) incoming should fall back to payload when apply is missing
+$incoming = lf_ai_studio_identity_build_incoming(
+    ['meta' => []],
+    ['business_name' => 'Payload Name', 'meta' => ['city_region' => 'Payload City', 'niche' => 'payload-niche']]
+);
+expect($incoming['business_name'] === 'Payload Name', 'payload business_name fallback');
+expect($incoming['city_region'] === 'Payload City', 'payload city fallback');
+expect($incoming['niche'] === 'payload-niche', 'payload niche fallback');
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -244,7 +261,12 @@ Update `inc/ai-studio-rest.php`:
     - `get_post_meta($job_id, 'lf_ai_job_request', true)`
     - `lf_ai_studio_get_manifest()` if available (`business.primary_city` fallback to `business.address.city`)
     - `get_option()` fallbacks (`lf_business_name`, `lf_city_region`, `lf_homepage_city`, `lf_homepage_niche_slug`)
-  - Build incoming identity from `$apply_payload` first, then `$payload` (including `.meta` fallbacks).
+    - If `lf_ai_job_request` or manifest are not arrays, treat as empty arrays.
+    - Expected niche: prefer `business.niche_slug`, then `business.niche`.
+  - Build incoming identity using explicit order:
+    - `apply.business_name` → `apply.meta.business_name` → `payload.business_name` → `payload.meta.business_name`
+    - `apply.city_region` → `apply.meta.city_region` → `payload.city_region` → `payload.meta.city_region`
+    - `apply.niche` → `apply.meta.niche` → `payload.niche` → `payload.meta.niche`
   - Call `lf_ai_studio_identity_compare()`.
   - If mismatch: update job meta, call `lf_ai_autonomy_mark_generation_failed` if available, log mismatch (full fields under `WP_DEBUG`), and return HTTP 200 with `success:false`.
   - If `reason === no_comparable_fields`: log a warning (under `WP_DEBUG`) and continue.
