@@ -538,6 +538,55 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 	update_post_meta($job_id, 'lf_ai_job_last_callback_hash', $payload_hash);
 
 	$apply_payload = $payload['apply'] ?? $payload;
+	$stored_request = get_post_meta($job_id, 'lf_ai_job_request', true);
+	$job_request = is_array($stored_request) ? $stored_request : [];
+	$manifest = function_exists('lf_ai_studio_get_manifest') ? lf_ai_studio_get_manifest() : [];
+	if (!is_array($manifest)) {
+		$manifest = [];
+	}
+	$options = [
+		'lf_business_name' => (string) get_option('lf_business_name', ''),
+		'lf_city_region' => (string) get_option('lf_city_region', ''),
+		'lf_homepage_city' => (string) get_option('lf_homepage_city', ''),
+		'lf_homepage_niche_slug' => (string) get_option('lf_homepage_niche_slug', ''),
+	];
+	$business_expected = lf_ai_studio_identity_build_expected($job_request, $manifest, $options);
+	$business_incoming = lf_ai_studio_identity_build_incoming($apply_payload, $payload);
+	$business_decision = lf_ai_studio_identity_guard_decision($business_expected, $business_incoming, $job_id);
+	$log_trimmed = static function ($value): string {
+		$text = is_string($value) ? $value : wp_json_encode($value);
+		$text = wp_strip_all_tags((string) $text);
+		if (strlen($text) > 120) {
+			$text = substr($text, 0, 120) . '...';
+		}
+		return $text;
+	};
+	if (empty($business_decision['allow'])) {
+		error_log('LF ORCH DEBUG: business_expected ' . $log_trimmed($business_expected));
+		error_log('LF ORCH DEBUG: business_incoming ' . $log_trimmed($business_incoming));
+		error_log('LF ORCH DEBUG: business_match ' . $log_trimmed($business_decision['reason'] ?? ''));
+		if (defined('WP_DEBUG') && WP_DEBUG) {
+			error_log('LF ORCH DEBUG: business_expected_full ' . wp_json_encode($business_expected));
+			error_log('LF ORCH DEBUG: business_incoming_full ' . wp_json_encode($business_incoming));
+		}
+		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
+		update_post_meta($job_id, 'lf_ai_job_error', 'business_identity_mismatch');
+		update_post_meta($job_id, 'lf_ai_job_summary', __('Orchestrator callback blocked due to business identity mismatch.', 'leadsforward-core'));
+		if (function_exists('lf_ai_autonomy_mark_generation_failed')) {
+			lf_ai_autonomy_mark_generation_failed($job_id, 'business_identity_mismatch');
+		}
+		return new \WP_REST_Response($business_decision['response'] ?? [], 200);
+	}
+	if (defined('WP_DEBUG') && WP_DEBUG) {
+		error_log('LF ORCH DEBUG: business_expected ' . $log_trimmed($business_expected));
+		error_log('LF ORCH DEBUG: business_incoming ' . $log_trimmed($business_incoming));
+		error_log('LF ORCH DEBUG: business_match ' . $log_trimmed($business_decision['reason'] ?? ''));
+		error_log('LF ORCH DEBUG: business_expected_full ' . wp_json_encode($business_expected));
+		error_log('LF ORCH DEBUG: business_incoming_full ' . wp_json_encode($business_incoming));
+		if (($business_decision['reason'] ?? '') === 'no_comparable_fields') {
+			error_log('LF ORCH DEBUG: business_match warning no_comparable_fields');
+		}
+	}
 	if (defined('WP_DEBUG') && WP_DEBUG) {
 		$updates = $apply_payload['updates'] ?? null;
 		if (!is_array($updates)) {
@@ -584,7 +633,6 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 	if (!is_array($media_annotations) || empty($media_annotations)) {
 		$media_annotations = $payload['vision']['media_annotations'] ?? $payload['image_analysis']['media_annotations'] ?? [];
 	}
-	$stored_request = get_post_meta($job_id, 'lf_ai_job_request', true);
 	if ((!is_array($media_annotations) || empty($media_annotations)) && is_array($stored_request)) {
 		$media_annotations = lf_ai_studio_rest_build_fallback_media_annotations($stored_request);
 		if (!empty($media_annotations)) {
