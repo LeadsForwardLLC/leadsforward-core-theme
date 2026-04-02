@@ -23,6 +23,7 @@ Create a minimal stub so the test can require the path:
 <?php
 // Stub for TDD red phase. Real implementation added in Step 3.
 ```
+Step 3 replaces this stub with the real implementation.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -164,6 +165,7 @@ if (!function_exists('lf_ai_studio_identity_compare')) {
 
 Run: `php tests/identity-guard.php`  
 Expected: `PASS`.
+Also run: `wp eval-file tests/identity-guard.php` (required if WP CLI is available).
 
 - [ ] **Step 5: Commit**
 
@@ -337,6 +339,12 @@ $expected = lf_ai_studio_identity_build_expected(
     []
 );
 expect($expected['city_region'] === 'Address City', 'address city fallback');
+
+// 23) partial expected identity should ignore missing fields
+$expected = ['business_name' => '', 'city_region' => 'Bethesda', 'niche' => ''];
+$incoming = ['business_name' => 'Other Name', 'city_region' => 'Bethesda', 'niche' => ''];
+$result = lf_ai_studio_identity_compare($expected, $incoming);
+expect($result['match'] === true, 'partial expected identity ignores missing name');
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -344,7 +352,7 @@ expect($expected['city_region'] === 'Address City', 'address city fallback');
 Run: `php tests/identity-guard.php`  
 Expected: FAIL (new functions or niche_slug support missing).
 
-- Note: This is a batch red step; implement helpers in the order tests fail.
+- Note: This is a batch red step (not strict one-test TDD); implement helpers in the order tests fail.
 
 - [ ] **Step 3: Implement guard integration**
 
