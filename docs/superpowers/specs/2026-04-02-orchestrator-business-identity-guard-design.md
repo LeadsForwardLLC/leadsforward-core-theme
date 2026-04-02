@@ -74,8 +74,8 @@ On mismatch:
 - Mark job as failed (`lf_ai_job_status = failed`)
 - Set `lf_ai_job_error = 'business_identity_mismatch'` plus a summary
 - Call `lf_ai_autonomy_mark_generation_failed($job_id, 'business_identity_mismatch')` if `function_exists`
-- Log a structured error:
-  - `LF ORCH DEBUG: business_mismatch` with expected vs incoming identity fields
+- Log a structured error using:
+  - `LF ORCH DEBUG: business_match` plus a short mismatch reason
 - Return HTTP **200** with `{ success:false, error:["business_identity_mismatch"], job_id, acknowledged:true }`
   - Rationale: avoid n8n retry loops while still recording failure in WP.
   - n8n should rely on response body (`success` / `acknowledged`) rather than HTTP status.

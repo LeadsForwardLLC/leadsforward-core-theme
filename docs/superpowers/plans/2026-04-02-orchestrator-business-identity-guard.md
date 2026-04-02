@@ -197,6 +197,37 @@ $incoming = lf_ai_studio_identity_build_incoming(
 expect($incoming['business_name'] === 'Apply Name', 'apply business_name precedence');
 expect($incoming['city_region'] === 'Apply City', 'apply city precedence');
 expect($incoming['niche'] === 'apply-niche', 'apply niche precedence');
+
+// 8) build_expected should mix sources per field when job is missing values
+$expected = lf_ai_studio_identity_build_expected(
+    ['business_name' => 'Job Name', 'city_region' => '', 'niche' => ''],
+    ['business' => ['name' => 'Manifest Name', 'primary_city' => 'Manifest City', 'niche_slug' => 'manifest-niche']],
+    [
+        'lf_business_name' => 'Opt Name',
+        'lf_city_region' => 'Opt City',
+        'lf_homepage_city' => 'Opt City 2',
+        'lf_homepage_niche_slug' => 'opt-niche',
+    ]
+);
+expect($expected['business_name'] === 'Job Name', 'job name still wins');
+expect($expected['city_region'] === 'Manifest City', 'manifest city fallback');
+expect($expected['niche'] === 'manifest-niche', 'manifest niche fallback');
+
+// 9) build_incoming should honor meta fallbacks
+$incoming = lf_ai_studio_identity_build_incoming(
+    ['meta' => ['business_name' => 'Meta Name', 'city_region' => 'Meta City', 'niche' => 'meta-niche']],
+    ['business_name' => 'Payload Name', 'meta' => ['city_region' => 'Payload City', 'niche' => 'payload-niche']]
+);
+expect($incoming['business_name'] === 'Meta Name', 'meta business_name fallback');
+expect($incoming['city_region'] === 'Meta City', 'meta city fallback');
+expect($incoming['niche'] === 'meta-niche', 'meta niche fallback');
+
+// 10) empty expected should still return no comparable fields
+$expected = lf_ai_studio_identity_build_expected([], [], []);
+$incoming = ['business_name' => '', 'city_region' => '', 'niche' => ''];
+$result = lf_ai_studio_identity_compare($expected, $incoming);
+expect($result['match'] === true, 'empty expected should pass');
+expect($result['reason'] === 'no_comparable_fields', 'empty expected no comparable');
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -232,6 +263,7 @@ Expected: `PASS`.
 
 - [ ] **Step 5: Manual verification checklist (post-deploy)**
 
+- Note: REST/orchestrator behavior is verified manually (no WP harness in this repo).
 - Trigger manifester with the correct manifest and confirm no mismatch logs.
 - Trigger with a wrong-business payload and confirm:
   - `business_identity_mismatch` error
