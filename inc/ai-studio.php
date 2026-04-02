@@ -6449,6 +6449,56 @@ function lf_ai_studio_resolve_homepage_field_key(string $field_key, array $confi
 	return null;
 }
 
+function lf_ai_studio_resolve_homepage_section_id_alias(string $section_id, array $config): string {
+	$legacy_id = trim($section_id);
+	if ($legacy_id === '') {
+		return '';
+	}
+	$direct_map = [
+		'hero_section' => 'hero',
+		'trust_signals' => 'trust_bar',
+		'trust_signals_bar' => 'trust_bar',
+		'services_overview' => 'service_intro',
+		'why_choose_us' => 'benefits',
+		'process_steps' => 'process',
+		'reviews_section' => 'trust_reviews',
+		'faq_section' => 'faq_accordion',
+		'additional_services' => 'related_links',
+		'service_areas' => 'map_nap',
+		'final_cta' => 'cta',
+	];
+	if (isset($direct_map[$legacy_id])) {
+		return $direct_map[$legacy_id];
+	}
+	$type_map = [
+		'intro' => ['content', 'content_centered', 'content_image', 'image_content'],
+		'about' => ['content', 'content_centered', 'content_image', 'image_content'],
+		'about_snippet' => ['content', 'content_centered', 'content_image', 'image_content'],
+		'services' => ['service_grid', 'services_offered_here', 'service_intro', 'service_details'],
+		'services_overview' => ['service_grid', 'services_offered_here', 'service_intro', 'service_details'],
+		'testimonials' => ['trust_bar', 'trust_reviews', 'reviews', 'social_proof'],
+		'faq' => ['faq_accordion'],
+	];
+	$candidates = $type_map[$legacy_id] ?? [];
+	if (empty($candidates)) {
+		return '';
+	}
+	foreach ($config as $sid => $row) {
+		if (!is_string($sid)) {
+			continue;
+		}
+		$base = function_exists('lf_homepage_base_section_type') ? lf_homepage_base_section_type($sid) : $sid;
+		if ($base !== '' && in_array($base, $candidates, true)) {
+			return $sid;
+		}
+		$type = is_array($row) ? (string) ($row['section_type'] ?? $row['type'] ?? '') : '';
+		if ($type !== '' && in_array($type, $candidates, true)) {
+			return $sid;
+		}
+	}
+	return '';
+}
+
 function lf_ai_studio_resolve_post_field_key(string $field_key, array $sections, array $registry): ?array {
 	if ($field_key === '' || strpos($field_key, '.') !== false) {
 		return null;
@@ -6920,6 +6970,12 @@ function lf_apply_orchestrator_updates(array $response): array {
 				}
 				if ($section_id === '' || $field_key === '') {
 					continue;
+				}
+				if (!isset($config[$section_id]) || !isset($registry[$section_id])) {
+					$resolved = lf_ai_studio_resolve_homepage_section_id_alias($section_id, $config);
+					if ($resolved !== '' && isset($config[$resolved]) && isset($registry[$resolved])) {
+						$section_id = $resolved;
+					}
 				}
 				if (!isset($config[$section_id]) || !isset($registry[$section_id])) {
 					// Ignore unknown/legacy homepage section ids instead of failing entire callback.
