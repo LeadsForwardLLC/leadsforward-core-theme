@@ -292,6 +292,8 @@ expect($decision['allow'] === true, 'guard should allow matching identity');
 Run: `php tests/identity-guard.php`  
 Expected: FAIL (new functions or niche_slug support missing).
 
+- Note: This is a batch red step; implement helpers in the order tests fail.
+
 - [ ] **Step 3: Implement guard integration**
 
 Update `inc/ai-studio-rest.php`:
@@ -331,6 +333,7 @@ Expected: `PASS`.
 
 - Note: REST/orchestrator behavior is verified manually (no WP harness in this repo).
 - Explicitly accept that end-to-end apply/no-apply behavior is manual-only (helper tests do not assert REST side effects).
+- Spec testing bullets for “matching applies normally” and “mismatch skips apply” are satisfied via this manual checklist.
 - If available, re-run tests in a WP-loaded context to validate `sanitize_title` parity.
 - Confirm guard is placed **after** the idempotent early return in `lf_ai_studio_rest_orchestrator()` (code review).
 - Replay the same callback twice and confirm the second (idempotent) call does not log `business_match`.
@@ -363,6 +366,7 @@ Add a short section noting the identity guard, including:
 - comparison fields
 - log keys (`business_expected`, `business_incoming`, `business_match`)
 - response body shape and error code
+- how to run `php tests/identity-guard.php` for helper verification
 
 - [ ] **Step 2: Commit**
 

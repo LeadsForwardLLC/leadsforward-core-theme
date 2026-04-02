@@ -37,8 +37,8 @@ We observed n8n callbacks applying content from the wrong business (e.g., Fort C
   - `apply_payload.meta.business_name`
   - `payload.business_name`
   - `payload.meta.business_name`
-  - `apply_payload.city_region` / `apply_payload.meta.city_region`
-  - `apply_payload.niche` / `apply_payload.meta.niche`
+  - `apply_payload.city_region` → `apply_payload.meta.city_region` → `payload.city_region` → `payload.meta.city_region`
+  - `apply_payload.niche` → `apply_payload.meta.niche` → `payload.niche` → `payload.meta.niche`
 
 If a specific expected field is empty, the guard ignores that field rather than fail.
 If expected `business_name` is present and incoming `business_name` is missing, **fail closed** (prevents silent cross-site contamination).
