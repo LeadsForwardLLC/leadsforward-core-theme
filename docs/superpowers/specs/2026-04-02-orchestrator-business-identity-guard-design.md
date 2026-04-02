@@ -86,6 +86,8 @@ Add explicit `LF ORCH DEBUG` log lines:
 - `business_incoming` (sanitized identity)
 - `business_match` (true/false + reason)
 
+Allow-path logs can be `WP_DEBUG`-only to avoid production noise.
+
 Sanitize logs by truncating each field to 120 chars and stripping HTML.
 Always log a mismatch summary; log full expected/incoming only when `WP_DEBUG` is true.
 

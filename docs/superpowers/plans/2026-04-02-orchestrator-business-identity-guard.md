@@ -24,6 +24,7 @@ Create a minimal stub so the test can require the path:
 // Stub for TDD red phase. Real implementation added in Step 3.
 ```
 Step 3 replaces this stub with the real implementation.
+If the repo enforces linting on PHP files, add minimal `function_exists` stubs instead of an empty file.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -382,6 +383,7 @@ Update `inc/ai-studio-rest.php`:
 - Confirm UI/ops pages read `lf_ai_job_summary` (not only `lf_ai_job_error`) for human-readable failure text.
 - Keep the machine code in `lf_ai_job_error` and the human summary in `lf_ai_job_summary`.
 - **Mismatch logs:** `LF ORCH DEBUG: business_expected`, `business_incoming`, `business_match`; truncate each field to 120 chars and strip HTML; always log a mismatch summary; full expected/incoming only when `WP_DEBUG`.
+- **Allow-path logs:** emit `business_expected` / `business_incoming` / `business_match` only under `WP_DEBUG` to avoid production noise.
 - Update helper: accept `niche_slug` on expected identity and compare incoming slug against **either** expected slug **or** label slug (disjunctive match).
 - Add `lf_ai_studio_identity_build_expected()` helper with per-field precedence.
 - Add `lf_ai_studio_identity_build_incoming()` helper to merge apply + payload sources.
@@ -434,6 +436,7 @@ Add a short section noting the identity guard, including:
 - comparison fields
 - log keys (`business_expected`, `business_incoming`, `business_match`)
 - response body shape and error code
+- note that n8n should rely on the response body (`success`/`acknowledged`), not HTTP status
 - how to run `php tests/identity-guard.php` for helper verification
 
 - [ ] **Step 2: Commit**
