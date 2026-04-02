@@ -174,7 +174,18 @@ $incoming = ['business_name' => 'Bethesda Piano Tuning', 'city_region' => 'Bethe
 $result = lf_ai_studio_identity_compare($expected, $incoming);
 expect($result['match'] === true, 'slug/label match should pass');
 
-// 6) build_expected should honor per-field precedence
+// 6) helper should allow incoming to match either slug or label
+$expected = [
+    'business_name' => 'Bethesda Piano Tuning',
+    'city_region' => 'Bethesda',
+    'niche' => 'Piano Tuning Service',
+    'niche_slug' => 'piano-tuning',
+];
+$incoming = ['business_name' => 'Bethesda Piano Tuning', 'city_region' => 'Bethesda', 'niche' => 'Piano Tuning Service'];
+$result = lf_ai_studio_identity_compare($expected, $incoming);
+expect($result['match'] === true, 'slug OR label match should pass');
+
+// 7) build_expected should honor per-field precedence
 $expected = lf_ai_studio_identity_build_expected(
     ['business_name' => 'Job Name', 'city_region' => 'Job City', 'niche' => 'job-niche'],
     ['business' => ['name' => 'Manifest Name', 'primary_city' => 'Manifest City', 'niche_slug' => 'manifest-niche']],
@@ -189,7 +200,7 @@ expect($expected['business_name'] === 'Job Name', 'job name precedence');
 expect($expected['city_region'] === 'Job City', 'job city precedence');
 expect($expected['niche'] === 'job-niche', 'job niche precedence');
 
-// 7) build_incoming should prefer apply payload over top-level
+// 8) build_incoming should prefer apply payload over top-level
 $incoming = lf_ai_studio_identity_build_incoming(
     ['business_name' => 'Apply Name', 'meta' => ['city_region' => 'Apply City', 'niche' => 'apply-niche']],
     ['business_name' => 'Payload Name', 'meta' => ['city_region' => 'Payload City', 'niche' => 'payload-niche']]
@@ -198,7 +209,7 @@ expect($incoming['business_name'] === 'Apply Name', 'apply business_name precede
 expect($incoming['city_region'] === 'Apply City', 'apply city precedence');
 expect($incoming['niche'] === 'apply-niche', 'apply niche precedence');
 
-// 8) build_expected should mix sources per field when job is missing values
+// 9) build_expected should mix sources per field when job is missing values
 $expected = lf_ai_studio_identity_build_expected(
     ['business_name' => 'Job Name', 'city_region' => '', 'niche' => ''],
     ['business' => ['name' => 'Manifest Name', 'primary_city' => 'Manifest City', 'niche_slug' => 'manifest-niche']],
@@ -213,7 +224,7 @@ expect($expected['business_name'] === 'Job Name', 'job name still wins');
 expect($expected['city_region'] === 'Manifest City', 'manifest city fallback');
 expect($expected['niche'] === 'manifest-niche', 'manifest niche fallback');
 
-// 9) build_incoming should honor meta fallbacks
+// 10) build_incoming should honor meta fallbacks
 $incoming = lf_ai_studio_identity_build_incoming(
     ['meta' => ['business_name' => 'Meta Name', 'city_region' => 'Meta City', 'niche' => 'meta-niche']],
     ['business_name' => 'Payload Name', 'meta' => ['city_region' => 'Payload City', 'niche' => 'payload-niche']]
@@ -222,14 +233,14 @@ expect($incoming['business_name'] === 'Meta Name', 'meta business_name fallback'
 expect($incoming['city_region'] === 'Meta City', 'meta city fallback');
 expect($incoming['niche'] === 'meta-niche', 'meta niche fallback');
 
-// 10) empty expected should still return no comparable fields
+// 11) empty expected should still return no comparable fields
 $expected = lf_ai_studio_identity_build_expected([], [], []);
 $incoming = ['business_name' => '', 'city_region' => '', 'niche' => ''];
 $result = lf_ai_studio_identity_compare($expected, $incoming);
 expect($result['match'] === true, 'empty expected should pass');
 expect($result['reason'] === 'no_comparable_fields', 'empty expected no comparable');
 
-// 11) manifest should fall back to business.niche when niche_slug missing
+// 12) manifest should fall back to business.niche when niche_slug missing
 $expected = lf_ai_studio_identity_build_expected(
     ['business_name' => '', 'city_region' => '', 'niche' => ''],
     ['business' => ['name' => 'Manifest Name', 'primary_city' => 'Manifest City', 'niche' => 'Piano Tuning']],
@@ -237,7 +248,7 @@ $expected = lf_ai_studio_identity_build_expected(
 );
 expect($expected['niche'] === 'Piano Tuning', 'manifest niche label fallback');
 
-// 12) incoming should fall back to payload when apply is missing
+// 13) incoming should fall back to payload when apply is missing
 $incoming = lf_ai_studio_identity_build_incoming(
     ['meta' => []],
     ['business_name' => 'Payload Name', 'meta' => ['city_region' => 'Payload City', 'niche' => 'payload-niche']]
@@ -245,6 +256,16 @@ $incoming = lf_ai_studio_identity_build_incoming(
 expect($incoming['business_name'] === 'Payload Name', 'payload business_name fallback');
 expect($incoming['city_region'] === 'Payload City', 'payload city fallback');
 expect($incoming['niche'] === 'payload-niche', 'payload niche fallback');
+
+// 14) guard decision should return mismatch response shape
+$decision = lf_ai_studio_identity_guard_decision(
+    ['business_name' => 'Bethesda Piano Tuning', 'city_region' => 'Bethesda', 'niche' => 'piano-tuning'],
+    ['business_name' => 'Fort Collins Roofing', 'city_region' => 'Fort Collins', 'niche' => 'roofing'],
+    42
+);
+expect($decision['allow'] === false, 'guard should block mismatch');
+expect($decision['response']['success'] === false, 'response success false');
+expect($decision['response']['acknowledged'] === true, 'response acknowledged');
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -274,9 +295,10 @@ Update `inc/ai-studio-rest.php`:
 - **Mismatch response shape:** `{ success:false, error:["business_identity_mismatch"], job_id, acknowledged:true }` (HTTP 200).
 - **Mismatch meta:** `lf_ai_job_status = failed`, `lf_ai_job_error = business_identity_mismatch`, `lf_ai_job_summary` set to a short readable message.
 - **Mismatch logs:** `LF ORCH DEBUG: business_expected`, `business_incoming`, `business_match`; truncate each field to 120 chars and strip HTML; always log a mismatch summary; full expected/incoming only when `WP_DEBUG`.
-- Update helper: accept `niche_slug` on expected identity and compare incoming slug against both expected slug and expected label.
+- Update helper: accept `niche_slug` on expected identity and compare incoming slug against **either** expected slug **or** label slug (disjunctive match).
 - Add `lf_ai_studio_identity_build_expected()` helper with per-field precedence.
 - Add `lf_ai_studio_identity_build_incoming()` helper to merge apply + payload sources.
+- Add `lf_ai_studio_identity_guard_decision($expected, $incoming, $job_id)` helper returning `allow`, `reason`, and response payload for mismatches.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -286,6 +308,7 @@ Expected: `PASS`.
 - [ ] **Step 5: Manual verification checklist (post-deploy)**
 
 - Note: REST/orchestrator behavior is verified manually (no WP harness in this repo).
+- If available, re-run tests in a WP-loaded context to validate `sanitize_title` parity.
 - Trigger manifester with the correct manifest and confirm no mismatch logs.
 - Trigger with a wrong-business payload and confirm:
   - `business_identity_mismatch` error
