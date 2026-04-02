@@ -12,6 +12,8 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+require_once __DIR__ . '/ai-studio-identity.php';
+
 add_action('rest_api_init', 'lf_ai_studio_register_rest');
 
 function lf_ai_studio_register_rest(): void {
@@ -572,6 +574,7 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
 		update_post_meta($job_id, 'lf_ai_job_error', 'business_identity_mismatch');
 		update_post_meta($job_id, 'lf_ai_job_summary', __('Orchestrator callback blocked due to business identity mismatch.', 'leadsforward-core'));
+		update_post_meta($job_id, 'lf_ai_job_changes', []);
 		if (function_exists('lf_ai_autonomy_mark_generation_failed')) {
 			lf_ai_autonomy_mark_generation_failed($job_id, 'business_identity_mismatch');
 		}
