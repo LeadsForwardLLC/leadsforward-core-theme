@@ -378,6 +378,7 @@ Run: `php tests/identity-guard.php`
 Expected: FAIL (new functions or niche_slug support missing).
 
 - Note: This is a batch red step (not strict one-test TDD); implement helpers in the order tests fail.
+- Note: Test 26 is non-authoritative under plain `php` (no `sanitize_title`); rely on the WP-loaded run for that case.
 
 - [ ] **Step 3: Implement guard integration**
 
@@ -387,6 +388,7 @@ Update `inc/ai-studio-rest.php`:
   - Place the guard immediately after `$apply_payload = ...` and **before** `$media_annotations = ...` (before any vision/media side effects).
   - Review `lf_ai_studio_rest_orchestrator()` ordering (idempotent return → apply payload → media annotations) before inserting the guard.
   - Enumerate side effects between `$apply_payload` and the guard; ensure none run before the guard except the existing job status/response meta writes.
+  - Confirm no alternate orchestrator entry points bypass this file (quick search for `lf_ai_studio_rest_orchestrator` usage / includes).
   - Build expected identity with per-field precedence using:
     - `get_post_meta($job_id, 'lf_ai_job_request', true)`
     - `lf_ai_studio_get_manifest()` if available (`business.primary_city` fallback to `business.address.city`)
@@ -468,6 +470,7 @@ Add a short section noting the identity guard, including:
 - note that n8n should rely on the response body (`success`/`acknowledged`), not HTTP status
 - how to run `php tests/identity-guard.php` for helper verification
 - recommend `wp eval-file tests/identity-guard.php` when WP CLI is available
+- mention that `lf_ai_job_response` may be stored even when apply is blocked; use job status + summary for truth
 
 - [ ] **Step 2: Commit**
 
