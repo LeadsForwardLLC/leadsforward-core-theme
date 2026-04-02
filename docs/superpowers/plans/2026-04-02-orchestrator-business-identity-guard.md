@@ -363,6 +363,12 @@ $expected = lf_ai_studio_identity_build_expected(
     ['lf_homepage_niche_slug' => 'opt-niche']
 );
 expect($expected['niche'] === 'opt-niche', 'options niche_slug fallback');
+
+// 26) niche label should compare via slug (sanitize_title) not raw normalize
+$expected = ['business_name' => 'Bethesda Piano Tuning', 'city_region' => 'Bethesda', 'niche' => 'Piano & Tuning'];
+$incoming = ['business_name' => 'Bethesda Piano Tuning', 'city_region' => 'Bethesda', 'niche' => 'Piano Tuning'];
+$result = lf_ai_studio_identity_compare($expected, $incoming);
+expect($result['match'] === true, 'label slug comparison should pass');
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -378,6 +384,7 @@ Update `inc/ai-studio-rest.php`:
 - `require_once __DIR__ . '/ai-studio-identity.php';` near the top.
 - After `$apply_payload = $payload['apply'] ?? $payload;`, insert **guard block** that runs only after binding/idempotent checks (the existing early return stays before the guard):
   - Place the guard immediately after `$apply_payload = ...` and **before** `$media_annotations = ...` (before any vision/media side effects).
+  - Review `lf_ai_studio_rest_orchestrator()` ordering (idempotent return → apply payload → media annotations) before inserting the guard.
   - Build expected identity with per-field precedence using:
     - `get_post_meta($job_id, 'lf_ai_job_request', true)`
     - `lf_ai_studio_get_manifest()` if available (`business.primary_city` fallback to `business.address.city`)
@@ -401,7 +408,7 @@ Update `inc/ai-studio-rest.php`:
 - Keep the machine code in `lf_ai_job_error` and the human summary in `lf_ai_job_summary`.
 - **Mismatch logs:** `LF ORCH DEBUG: business_expected`, `business_incoming`, `business_match`; truncate each field to 120 chars and strip HTML; always log a mismatch summary; full expected/incoming only when `WP_DEBUG`.
 - **Allow-path logs:** emit `business_expected` / `business_incoming` / `business_match` only under `WP_DEBUG` to avoid production noise.
-- Update helper: accept `niche_slug` on expected identity and compare incoming slug against **either** expected slug **or** label slug (disjunctive match).
+- Update helper: accept `niche_slug` on expected identity and compare incoming slug against **either** expected slug **or** `sanitize_title(expected label)` (disjunctive match).
 - Add `lf_ai_studio_identity_build_expected()` helper with per-field precedence.
 - Add `lf_ai_studio_identity_build_incoming()` helper to merge apply + payload sources.
 - Add `lf_ai_studio_identity_guard_decision($expected, $incoming, $job_id)` helper returning `allow`, `reason`, and response payload for mismatches.
