@@ -179,23 +179,34 @@ Expected: FAIL (slug/label mismatch).
 
 Update `inc/ai-studio-rest.php`:
 - `require_once __DIR__ . '/ai-studio-identity.php';` near the top.
-- After `$apply_payload = $payload['apply'] ?? $payload;`, insert:
+- After `$apply_payload = $payload['apply'] ?? $payload;`, insert **guard block** that runs only after binding/idempotent checks (the existing early return stays before the guard):
   - Build expected identity with per-field precedence using:
     - `get_post_meta($job_id, 'lf_ai_job_request', true)`
-    - `lf_ai_studio_get_manifest()` if available
+    - `lf_ai_studio_get_manifest()` if available (`business.primary_city` fallback to `business.address.city`)
     - `get_option()` fallbacks
   - Build incoming identity from `$apply_payload` first, then `$payload` (including `.meta` fallbacks).
   - Call `lf_ai_studio_identity_compare()`.
   - If mismatch: update job meta, call `lf_ai_autonomy_mark_generation_failed` if available, log mismatch (full fields under `WP_DEBUG`), and return HTTP 200 with `success:false`.
   - If `reason === no_comparable_fields`: log a warning (under `WP_DEBUG`) and continue.
 - Ensure guard runs **before** media annotations and **before** dry-run branch.
+- **Mismatch response shape:** `{ success:false, error:["business_identity_mismatch"], job_id, acknowledged:true }` (HTTP 200).
+- **Mismatch meta:** `lf_ai_job_status = failed`, `lf_ai_job_error = business_identity_mismatch`, `lf_ai_job_summary` set to a short readable message.
+- **Mismatch logs:** `LF ORCH DEBUG: business_expected`, `business_incoming`, `business_match`; truncate each field to 120 chars and strip HTML; always log a mismatch summary; full expected/incoming only when `WP_DEBUG`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `php tests/identity-guard.php`  
 Expected: `PASS`.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Manual verification checklist (post-deploy)**
+
+- Trigger manifester with the correct manifest and confirm no mismatch logs.
+- Trigger with a wrong-business payload and confirm:
+  - `business_identity_mismatch` error
+  - HTTP 200 response body includes `acknowledged: true`
+  - no content applied
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add inc/ai-studio-rest.php tests/identity-guard.php
@@ -214,7 +225,8 @@ git commit -m "feat(orchestrator): block mismatched business callbacks"
 Add a short section noting the identity guard, including:
 - mismatch failure behavior (HTTP 200 + job failed)
 - comparison fields
-- log keys
+- log keys (`business_expected`, `business_incoming`, `business_match`)
+- response body shape and error code
 
 - [ ] **Step 2: Commit**
 
@@ -235,4 +247,4 @@ Two execution options:
 1. **Subagent-Driven (recommended)** - dispatch a fresh subagent per task, review between tasks
 2. **Inline Execution** - execute tasks in this session using executing-plans with checkpoints
 
-Which approach?
+At execution time, ask the user which approach they prefer.
