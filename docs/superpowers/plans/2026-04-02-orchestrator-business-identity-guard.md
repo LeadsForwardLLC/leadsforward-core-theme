@@ -347,6 +347,14 @@ $expected = ['business_name' => '', 'city_region' => 'Bethesda', 'niche' => ''];
 $incoming = ['business_name' => 'Other Name', 'city_region' => 'Bethesda', 'niche' => ''];
 $result = lf_ai_studio_identity_compare($expected, $incoming);
 expect($result['match'] === true, 'partial expected identity ignores missing name');
+
+// 24) guard decision should allow when no comparable fields
+$decision = lf_ai_studio_identity_guard_decision(
+    ['business_name' => '', 'city_region' => '', 'niche' => ''],
+    ['business_name' => '', 'city_region' => '', 'niche' => ''],
+    9
+);
+expect($decision['allow'] === true, 'guard allows no comparable fields');
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -414,6 +422,7 @@ Expected: `PASS`.
   - `lf_ai_job_changes` is empty and `lf_ai_job_status` is `failed`
 - Cross-check one real `lf_ai_job_request` and `lf_site_manifest` sample to confirm key shapes match helper expectations.
 - Open WP admin → AI Studio → Jobs (or the job detail screen) and confirm the summary text is visible for a failed job.
+- Confirm no UI path displays only `lf_ai_job_error` without the summary text.
 
 - [ ] **Step 6: Commit**
 
@@ -438,6 +447,7 @@ Add a short section noting the identity guard, including:
 - response body shape and error code
 - note that n8n should rely on the response body (`success`/`acknowledged`), not HTTP status
 - how to run `php tests/identity-guard.php` for helper verification
+- recommend `wp eval-file tests/identity-guard.php` when WP CLI is available
 
 - [ ] **Step 2: Commit**
 
