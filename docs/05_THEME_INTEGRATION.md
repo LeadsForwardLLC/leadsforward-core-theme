@@ -43,6 +43,15 @@ This keeps the theme operational as a standalone engine while still benefiting f
   - request-level dedupe lock prevents concurrent duplicate repair jobs.
   - phase tagging (`run_phase`, `repair_attempt`) is included in request payloads.
 
+## Orchestrator identity guard
+Before apply runs, the orchestrator compares **expected** identity (from manifest / site context) to **incoming** identity from the callback payload on `business_name`, `city_region`, and `niche` (label/slug normalization). On mismatch, WordPress **does not apply** updates; the job is marked **failed** while the REST handler still returns **HTTP 200** so n8n does not treat the response as a transport error.
+
+**n8n should branch on the JSON body**, not on HTTP status: read `success` and `acknowledged`. A blocked callback responds with `success: false`, `acknowledged: true`, `job_id` set, and `error: ["business_identity_mismatch"]`.
+
+Server logs for the check use keys `business_expected`, `business_incoming`, and `business_match`. Stored `lf_ai_job_response` may still be written for observability even when apply is blocked—treat **job status** and the job **summary** as the source of truth for whether content was applied.
+
+**Tests:** from the theme root, run `php tests/identity-guard.php`. When WP CLI is available, prefer `wp eval-file tests/identity-guard.php` so WordPress helpers (e.g. `sanitize_title`) match production.
+
 ## Deterministic CTA + FAQ
 - Homepage is the only page allowed to generate global CTA fields.
 - FAQ content is generated on homepage and deterministically reused for service and service-area pages.

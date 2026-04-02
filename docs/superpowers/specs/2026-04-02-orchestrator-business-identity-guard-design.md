@@ -37,8 +37,8 @@ We observed n8n callbacks applying content from the wrong business (e.g., Fort C
   - `apply_payload.meta.business_name`
   - `payload.business_name`
   - `payload.meta.business_name`
-  - `apply_payload.city_region` / `apply_payload.meta.city_region`
-  - `apply_payload.niche` / `apply_payload.meta.niche`
+  - `apply_payload.city_region` → `apply_payload.meta.city_region` → `payload.city_region` → `payload.meta.city_region`
+  - `apply_payload.niche` → `apply_payload.meta.niche` → `payload.niche` → `payload.meta.niche`
 
 If a specific expected field is empty, the guard ignores that field rather than fail.
 If expected `business_name` is present and incoming `business_name` is missing, **fail closed** (prevents silent cross-site contamination).
@@ -56,7 +56,7 @@ Empty string after normalization is treated as **missing**.
 ### Guard Decision
 Compute match result on the **intersection** of fields where both expected and incoming values are present:
 - If **any provided field mismatches**, fail the callback.
-- If **no comparable fields are present**, skip the guard and log a warning (allow apply).
+- If **no comparable fields are present**, skip the guard and log a warning (allow apply). Warning can be `WP_DEBUG`-only to reduce noise.
 
 Field mapping:
 - **business name**: expected `business.name` ↔ incoming `business_name`
@@ -74,8 +74,8 @@ On mismatch:
 - Mark job as failed (`lf_ai_job_status = failed`)
 - Set `lf_ai_job_error = 'business_identity_mismatch'` plus a summary
 - Call `lf_ai_autonomy_mark_generation_failed($job_id, 'business_identity_mismatch')` if `function_exists`
-- Log a structured error:
-  - `LF ORCH DEBUG: business_mismatch` with expected vs incoming identity fields
+- Log a structured error using:
+  - `LF ORCH DEBUG: business_match` plus a short mismatch reason
 - Return HTTP **200** with `{ success:false, error:["business_identity_mismatch"], job_id, acknowledged:true }`
   - Rationale: avoid n8n retry loops while still recording failure in WP.
   - n8n should rely on response body (`success` / `acknowledged`) rather than HTTP status.
@@ -85,6 +85,8 @@ Add explicit `LF ORCH DEBUG` log lines:
 - `business_expected` (sanitized identity)
 - `business_incoming` (sanitized identity)
 - `business_match` (true/false + reason)
+
+Allow-path logs can be `WP_DEBUG`-only to avoid production noise.
 
 Sanitize logs by truncating each field to 120 chars and stripping HTML.
 Always log a mismatch summary; log full expected/incoming only when `WP_DEBUG` is true.
@@ -96,12 +98,13 @@ Always log a mismatch summary; log full expected/incoming only when `WP_DEBUG` i
   - missing incoming name while expected name present → fail closed
   - missing incoming identity (no comparable fields) → guard skipped (with warning)
   - missing expected identity → guard skipped
+- REST/orchestrator apply/no-apply verification is manual unless a WP test harness is added.
 Manual verification:
 - Run manifester with correct manifest and confirm no mismatch logs.
 - Run with a wrong-business payload and confirm mismatch + no apply.
 - Manual verification:
   - Trigger manifester with correct manifest and confirm no guard logs.
-  - Trigger with a wrong business payload and confirm `business_mismatch` log and no apply.
+- Trigger with a wrong business payload and confirm `business_match` log and no apply.
 
 ## Rollout Notes
 - Safe to deploy to production; guard only blocks when clear mismatch exists.
