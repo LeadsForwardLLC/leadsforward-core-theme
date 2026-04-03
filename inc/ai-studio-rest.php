@@ -791,7 +791,7 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		]), 200);
 	}
 
-	$apply_result = lf_apply_orchestrator_updates($apply_payload);
+	$apply_result = lf_apply_orchestrator_updates($apply_payload, ['force_apply' => $force_apply]);
 	update_post_meta($job_id, 'lf_ai_job_status', $apply_result['success'] ? 'done' : 'failed');
 	update_post_meta($job_id, 'lf_ai_job_summary', $apply_result['summary'] ?? '');
 	update_post_meta($job_id, 'lf_ai_job_changes', $apply_result['changes'] ?? []);
