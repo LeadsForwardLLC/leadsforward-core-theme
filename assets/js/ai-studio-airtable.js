@@ -151,8 +151,23 @@
     return !!(selectedRecord && selectedRecord.id);
   }
 
+  function confirmHomepageOnlyIfNeeded() {
+    var sc = cfg.scope || {};
+    if (!sc.isHomepageOnly || !sc.servicePostsPublished) {
+      return true;
+    }
+    var msg = (cfg.strings && cfg.strings.confirmHomepageOnly) ? cfg.strings.confirmHomepageOnly : '';
+    return window.confirm(msg);
+  }
+
   function updatePrimaryState() {
     if (!primaryGenerateBtn) return;
+    if (cfg.scope && cfg.scope.hasTargets === false) {
+      primaryGenerateBtn.disabled = true;
+      var needScope = (cfg.strings && cfg.strings.scopeNoTargets) ? cfg.strings.scopeNoTargets : 'Enable at least one generation target under step 2 and save.';
+      setPrimaryStatus(needScope, 'error');
+      return;
+    }
     var canGenerate = hasManifestFile() || hasAirtableSelection();
     primaryGenerateBtn.disabled = !canGenerate;
     if (!canGenerate) {
@@ -198,6 +213,10 @@
 
   function generateFromRecord() {
     if (!selectedRecord || !selectedRecord.id) return;
+    if (!confirmHomepageOnlyIfNeeded()) {
+      updatePrimaryState();
+      return;
+    }
     if (primaryGenerateBtn) {
       primaryGenerateBtn.disabled = true;
     }
@@ -275,6 +294,10 @@
   if (primaryGenerateBtn) {
     primaryGenerateBtn.addEventListener('click', function () {
       if (hasManifestFile()) {
+        if (!confirmHomepageOnlyIfNeeded()) {
+          setPrimaryStatus('', '');
+          return;
+        }
         setProgress(5, 'Queued…');
         submitManifestForm();
         return;
@@ -288,6 +311,41 @@
       setPrimaryStatus('Select a manifest file or Airtable project to continue.', 'error');
     });
   }
+
+  (function initScopeFormShortcuts() {
+    function byId(id) {
+      return document.getElementById(id);
+    }
+    var allBtn = byId('lf-ai-scope-select-all');
+    var hsBtn = byId('lf-ai-scope-homepage-services');
+    var ids = ['lf_ai_gen_homepage', 'lf_ai_gen_services', 'lf_ai_gen_service_areas', 'lf_ai_gen_core_pages', 'lf_ai_gen_blog_posts', 'lf_ai_gen_projects'];
+    function setAll(on) {
+      ids.forEach(function (id) {
+        var el = byId(id);
+        if (el) {
+          el.checked = on;
+        }
+      });
+    }
+    if (allBtn) {
+      allBtn.addEventListener('click', function () {
+        setAll(true);
+      });
+    }
+    if (hsBtn) {
+      hsBtn.addEventListener('click', function () {
+        setAll(false);
+        var h = byId('lf_ai_gen_homepage');
+        var s = byId('lf_ai_gen_services');
+        if (h) {
+          h.checked = true;
+        }
+        if (s) {
+          s.checked = true;
+        }
+      });
+    }
+  })();
 
   if (hasAirtableUI) {
     if (!cfg.enabled) {
