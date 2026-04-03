@@ -6539,7 +6539,7 @@ function lf_ai_studio_resolve_post_field_key(string $field_key, array $sections,
 	return $matches[0];
 }
 
-function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
+function lf_ai_studio_prevalidate_orchestrator_updates(array $response, array $options = []): array {
 	$updates = $response['updates'] ?? [];
 	if (!is_array($updates)) {
 		return [__('Missing updates array.', 'leadsforward-core')];
@@ -6549,6 +6549,10 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 	}
 	$errors = [];
 	$global_seen = [];
+	$force_apply = !empty($options['force_apply']);
+	// Cross-page uniqueness breaks real manifests: shared CTAs, legal lines, and template-style
+	// copy are normal across service/area pages. Default off; opt in via filter, or bypass when force_apply.
+	$enforce_cross_page = !$force_apply && (bool) apply_filters('lf_ai_studio_enforce_cross_page_content_uniqueness', false);
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 	$homepage_config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
 	$min_word_count = (int) apply_filters('lf_ai_studio_min_word_count', 0);
@@ -6778,12 +6782,12 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response): array {
 					$errors[] = sprintf(__('Duplicate content detected in post %d.', 'leadsforward-core'), $post_id);
 					break;
 				}
-				if ($norm !== '' && isset($global_seen[$norm]) && $global_seen[$norm] !== $post_id) {
+				if ($enforce_cross_page && $norm !== '' && isset($global_seen[$norm]) && $global_seen[$norm] !== $post_id) {
 					$errors[] = sprintf(__('Duplicate content detected across pages (post %d).', 'leadsforward-core'), $post_id);
 					break;
 				}
 				$seen[$norm] = true;
-				if ($norm !== '') {
+				if ($enforce_cross_page && $norm !== '') {
 					$global_seen[$norm] = $post_id;
 				}
 			}
@@ -6851,12 +6855,12 @@ function lf_ai_studio_extract_primary_post_content(array $sections, array $order
 	];
 }
 
-function lf_apply_orchestrator_updates(array $response): array {
+function lf_apply_orchestrator_updates(array $response, array $apply_options = []): array {
 	$updates = $response['updates'] ?? [];
 	if (!is_array($updates)) {
 		return ['success' => false, 'summary' => __('Missing updates array.', 'leadsforward-core'), 'changes' => [], 'errors' => [__('Missing updates array.', 'leadsforward-core')]];
 	}
-	$preflight_errors = lf_ai_studio_prevalidate_orchestrator_updates($response);
+	$preflight_errors = lf_ai_studio_prevalidate_orchestrator_updates($response, $apply_options);
 	if (!empty($preflight_errors)) {
 		return [
 			'success' => false,
