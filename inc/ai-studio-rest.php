@@ -727,6 +727,48 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 			'job_id' => $job_id,
 		]), 400);
 	}
+
+	// Optional n8n split: validate full payload once, then apply only homepage or only interior updates.
+	if (function_exists('lf_ai_studio_orchestrator_filter_updates_for_scope')) {
+		$scope_pack = lf_ai_studio_orchestrator_filter_updates_for_scope($apply_payload, $payload);
+		$apply_payload = $scope_pack['payload'];
+		if ($scope_pack['scope'] !== 'full') {
+			$diagnostics['apply_scope'] = $scope_pack['scope'];
+			$diagnostics['updates_filtered_from'] = $scope_pack['filtered_from'];
+			$diagnostics['updates_filtered_to'] = $scope_pack['filtered_to'];
+			if (function_exists('lf_ai_studio_orchestrator_resolve_run_phase')) {
+				$rp = lf_ai_studio_orchestrator_resolve_run_phase($apply_payload, $payload);
+				if ($rp === 'repair') {
+					$had_explicit_scope = isset($apply_payload['apply_scope']) || isset($payload['apply_scope']);
+					if (!$had_explicit_scope && function_exists('lf_ai_studio_repair_interior_only_enabled') && lf_ai_studio_repair_interior_only_enabled()) {
+						$diagnostics['repair_interior_only_default'] = true;
+					}
+				}
+			}
+		}
+		if (
+			$scope_pack['scope'] !== 'full'
+			&& $scope_pack['filtered_from'] > 0
+			&& $scope_pack['filtered_to'] === 0
+		) {
+			$scope_err = sprintf(
+				/* translators: 1: apply_scope value, 2: number of updates before filter */
+				__('apply_scope "%1$s" matched no updates (payload had %2$d update items). Use "homepage", "interior", or omit for full apply.', 'leadsforward-core'),
+				$scope_pack['scope'],
+				$scope_pack['filtered_from']
+			);
+			update_post_meta($job_id, 'lf_ai_job_status', 'failed');
+			update_post_meta($job_id, 'lf_ai_job_error', $scope_err);
+			if (function_exists('lf_ai_autonomy_mark_generation_failed')) {
+				lf_ai_autonomy_mark_generation_failed($job_id, 'apply_scope_empty');
+			}
+			return new \WP_REST_Response(array_merge($diagnostics, [
+				'error' => 'apply_scope_empty',
+				'messages' => [$scope_err],
+				'job_id' => $job_id,
+			]), 400);
+		}
+	}
 	if (defined('WP_DEBUG') && WP_DEBUG && $dry_run) {
 		if ($force_apply) {
 			error_log('LF ORCH DEBUG: dry_run enabled but force_apply; continuing apply for job ' . $job_id);
