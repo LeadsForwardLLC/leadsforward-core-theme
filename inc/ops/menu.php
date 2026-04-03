@@ -896,7 +896,7 @@ function lf_ops_render_global_settings_page(): void {
 							<tr>
 								<th scope="row"><?php esc_html_e('Repair callbacks: interior only', 'leadsforward-core'); ?></th>
 								<td>
-									<label><input type="checkbox" name="lf_ai_studio_repair_interior_only" value="1" <?php checked($manifester_repair_interior_only); ?> /> <?php esc_html_e('When run_phase is repair and the callback omits apply_scope, skip the homepage options row (posts/FAQs/service_meta still apply)', 'leadsforward-core'); ?></label>
+									<label><input type="checkbox" name="lf_ai_studio_repair_interior_only" value="1" <?php checked($manifester_repair_interior_only); ?> /> <?php esc_html_e('Repair without apply_scope: when the callback mixes homepage with posts/FAQs/service_meta, skip the homepage row. If the callback is homepage-only, homepage still applies.', 'leadsforward-core'); ?></label>
 									<p class="description"><?php esc_html_e('Prevents repair runs from rewriting the whole front page when the payload still includes options/homepage. Turn off if a repair must update homepage fields; or send apply_scope "homepage" or "full" in the JSON for that callback.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
