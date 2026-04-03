@@ -352,8 +352,15 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
 	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
 	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
-	update_option('lf_ai_studio_callback_url', isset($_POST['lf_ai_studio_callback_url']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_callback_url'])) : '');
+	$callback_raw = isset($_POST['lf_ai_studio_callback_url']) ? trim(wp_unslash((string) $_POST['lf_ai_studio_callback_url'])) : '';
+	// Reject placeholder / garbage so WordPress falls back to rest_url() via lf_ai_studio_build_callback_url().
+	if ($callback_raw === '' || stripos($callback_raw, 'your-site.com') !== false) {
+		update_option('lf_ai_studio_callback_url', '');
+	} else {
+		update_option('lf_ai_studio_callback_url', esc_url_raw($callback_raw));
+	}
 	update_option('lf_ai_studio_auto_requeue', isset($_POST['lf_ai_studio_auto_requeue']) ? '1' : '0');
+	update_option('lf_ai_studio_repair_interior_only', isset($_POST['lf_ai_studio_repair_interior_only']) ? '1' : '0');
 	$auth_mode = isset($_POST['lf_ai_auth_mode']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_auth_mode'])) : 'compatibility';
 	update_option('lf_ai_auth_mode', $auth_mode === 'strict_hmac' ? 'strict_hmac' : 'compatibility');
 	$tolerance = isset($_POST['lf_ai_hmac_tolerance_seconds']) ? (int) $_POST['lf_ai_hmac_tolerance_seconds'] : 300;
@@ -730,6 +737,7 @@ function lf_ops_render_global_settings_page(): void {
 	$manifester_secret = (string) get_option('lf_ai_studio_secret', '');
 	$manifester_callback = (string) get_option('lf_ai_studio_callback_url', '');
 	$manifester_auto_requeue = get_option('lf_ai_studio_auto_requeue', '0') === '1';
+	$manifester_repair_interior_only = get_option('lf_ai_studio_repair_interior_only', '1') === '1';
 	$manifester_auth_mode = (string) get_option('lf_ai_auth_mode', 'compatibility');
 	if (!in_array($manifester_auth_mode, ['compatibility', 'strict_hmac'], true)) {
 		$manifester_auth_mode = 'compatibility';
@@ -820,13 +828,27 @@ function lf_ops_render_global_settings_page(): void {
 		<?php endif; ?>
 		<?php
 		$manifester_callback_trim = trim($manifester_callback);
-		$callback_placeholder_active = $manifester_callback_trim === '' || stripos($manifester_callback_trim, 'your-site.com') !== false;
+		$callback_placeholder_active = stripos($manifester_callback_trim, 'your-site.com') !== false;
+		$callback_override_empty = $manifester_callback_trim === '';
 		?>
 		<?php if ($callback_placeholder_active) : ?>
 			<div class="notice notice-error">
 				<p>
-					<strong><?php esc_html_e('Callback URL (WordPress) is missing or still a placeholder.', 'leadsforward-core'); ?></strong>
-					<?php esc_html_e('Set it to your real site REST URL (example: https://theme.leadsforward.com/wp-json/leadsforward/v1/orchestrator). The gray placeholder text in the field is not a saved URL.', 'leadsforward-core'); ?>
+					<strong><?php esc_html_e('Callback URL (WordPress) is still a placeholder.', 'leadsforward-core'); ?></strong>
+					<?php esc_html_e('Clear the field and save, or enter the real REST URL n8n must call (example: https://theme.leadsforward.com/wp-json/leadsforward/v1/orchestrator).', 'leadsforward-core'); ?>
+				</p>
+			</div>
+		<?php elseif ($callback_override_empty) : ?>
+			<div class="notice notice-info">
+				<p>
+					<strong><?php esc_html_e('Callback URL override is empty.', 'leadsforward-core'); ?></strong>
+					<?php
+					printf(
+						/* translators: %s: resolved REST callback URL */
+						esc_html__('WordPress will send this URL to n8n: %s. If n8n runs on another host (Docker, cloud), paste a reachable URL in the field below and save.', 'leadsforward-core'),
+						esc_html(function_exists('lf_ai_studio_build_callback_url') ? lf_ai_studio_build_callback_url() : '')
+					);
+					?>
 				</p>
 			</div>
 		<?php endif; ?>
@@ -869,6 +891,13 @@ function lf_ops_render_global_settings_page(): void {
 								<td>
 									<label><input type="checkbox" name="lf_ai_studio_auto_requeue" value="1" <?php checked($manifester_auto_requeue); ?> /> <?php esc_html_e('If the post-apply content audit finds issues, automatically queue a second n8n repair run', 'leadsforward-core'); ?></label>
 									<p class="description"><?php esc_html_e('Leave off unless you rely on automatic repairs. When on, a noisy audit can trigger a follow-up n8n run that overwrites the first callback.', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e('Repair callbacks: interior only', 'leadsforward-core'); ?></th>
+								<td>
+									<label><input type="checkbox" name="lf_ai_studio_repair_interior_only" value="1" <?php checked($manifester_repair_interior_only); ?> /> <?php esc_html_e('When run_phase is repair and the callback omits apply_scope, skip the homepage options row (posts/FAQs/service_meta still apply)', 'leadsforward-core'); ?></label>
+									<p class="description"><?php esc_html_e('Prevents repair runs from rewriting the whole front page when the payload still includes options/homepage. Turn off if a repair must update homepage fields; or send apply_scope "homepage" or "full" in the JSON for that callback.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
