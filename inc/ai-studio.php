@@ -402,6 +402,42 @@ function lf_ai_studio_handle_orchestrator_save(): void {
 	exit;
 }
 
+/**
+ * Keep legacy lf_ai_studio_scope / lf_ai_studio_scope_types aligned with lf_ai_gen_* checkboxes.
+ * Orchestrator uses lf_ai_studio_get_generation_scope(); lf_ai_studio_build_blueprint() (legacy) reads the old options.
+ */
+function lf_ai_studio_sync_legacy_blueprint_scope_from_gen_flags(): void {
+	$h = get_option('lf_ai_gen_homepage', '1') === '1';
+	$s = get_option('lf_ai_gen_services', '1') === '1';
+	$sa = get_option('lf_ai_gen_service_areas', '1') === '1';
+	$c = get_option('lf_ai_gen_core_pages', '1') === '1';
+	$b = get_option('lf_ai_gen_blog_posts', '1') === '1';
+	$p = get_option('lf_ai_gen_projects', '1') === '1';
+	if ($h && $s && $sa && $c && $b && $p) {
+		update_option('lf_ai_studio_scope', 'all', false);
+		update_option('lf_ai_studio_scope_types', [], false);
+		return;
+	}
+	$types = [];
+	if ($h) {
+		$types[] = 'home';
+	}
+	if ($c) {
+		$types = array_merge($types, ['about', 'contact', 'reviews', 'blog']);
+	}
+	if ($b && ! in_array('blog', $types, true)) {
+		$types[] = 'blog';
+	}
+	if ($s) {
+		$types[] = 'services';
+	}
+	if ($sa) {
+		$types[] = 'service_areas';
+	}
+	update_option('lf_ai_studio_scope', 'selected', false);
+	update_option('lf_ai_studio_scope_types', array_values(array_unique($types)), false);
+}
+
 function lf_ai_studio_handle_scope_save(): void {
 	if (!current_user_can('edit_theme_options')) {
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
@@ -414,6 +450,7 @@ function lf_ai_studio_handle_scope_save(): void {
 	update_option('lf_ai_gen_core_pages', isset($_POST['lf_ai_gen_core_pages']) ? '1' : '0');
 	update_option('lf_ai_gen_blog_posts', isset($_POST['lf_ai_gen_blog_posts']) ? '1' : '0');
 	update_option('lf_ai_gen_projects', isset($_POST['lf_ai_gen_projects']) ? '1' : '0');
+	lf_ai_studio_sync_legacy_blueprint_scope_from_gen_flags();
 
 	wp_safe_redirect(admin_url('admin.php?page=lf-ops&scope_saved=1'));
 	exit;
@@ -5729,6 +5766,10 @@ function lf_ai_studio_homepage_request_id(array $base): string {
 	return substr($hash, 0, 16);
 }
 
+/**
+ * Legacy blueprint pack (scope via lf_ai_studio_scope / scope_types). Not used by Website Manifester;
+ * orchestrator payloads use lf_ai_studio_build_full_site_payload() + lf_ai_gen_* options. Kept for REST/tooling compatibility.
+ */
 function lf_ai_studio_build_blueprint(): array {
 	$scope = (string) get_option('lf_ai_studio_scope', 'all');
 	$scope_types = get_option('lf_ai_studio_scope_types', []);
