@@ -76,13 +76,36 @@ if (!function_exists('lf_ai_studio_orchestrator_resolve_run_phase')) {
 
 if (!function_exists('lf_ai_studio_repair_interior_only_enabled')) {
     /**
-     * When true (default in WordPress), repair callbacks without explicit apply_scope apply interior updates only.
+     * When true (default), repair callbacks without apply_scope skip homepage options if updates include non-homepage rows.
+     * Homepage-only repair payloads still apply in full (see lf_ai_studio_orchestrator_resolve_apply_scope).
      */
     function lf_ai_studio_repair_interior_only_enabled(): bool {
         if (!function_exists('get_option')) {
             return false;
         }
         return get_option('lf_ai_studio_repair_interior_only', '1') === '1';
+    }
+}
+
+if (!function_exists('lf_ai_studio_orchestrator_updates_are_only_homepage_options')) {
+    /**
+     * True when every update row is target=options, id=homepage (typical merged repair payload from n8n).
+     *
+     * @param array<int,mixed> $updates
+     */
+    function lf_ai_studio_orchestrator_updates_are_only_homepage_options(array $updates): bool {
+        if ($updates === []) {
+            return false;
+        }
+        foreach ($updates as $u) {
+            if (!is_array($u)) {
+                return false;
+            }
+            if (($u['target'] ?? '') !== 'options' || (string) ($u['id'] ?? '') !== 'homepage') {
+                return false;
+            }
+        }
+        return true;
     }
 }
 
@@ -93,7 +116,8 @@ if (!function_exists('lf_ai_studio_orchestrator_resolve_apply_scope')) {
      * - homepage: only target options + id homepage
      * - interior: everything except homepage options (posts, FAQs, service_meta, etc.)
      *
-     * Repair + option lf_ai_studio_repair_interior_only: defaults to interior when apply_scope omitted.
+     * Repair + lf_ai_studio_repair_interior_only: defaults to interior when apply_scope omitted,
+     * unless every update is homepage options — then full (interior would drop the entire payload).
      *
      * @param array<string,mixed> $apply_payload
      * @param array<string,mixed> $outer_payload Full REST body (e.g. wrapper with `apply` key)
@@ -114,6 +138,10 @@ if (!function_exists('lf_ai_studio_orchestrator_resolve_apply_scope')) {
         }
         $run_phase = lf_ai_studio_orchestrator_resolve_run_phase($apply_payload, $outer_payload);
         if ($run_phase === 'repair' && lf_ai_studio_repair_interior_only_enabled()) {
+            $updates = $apply_payload['updates'] ?? [];
+            if (is_array($updates) && lf_ai_studio_orchestrator_updates_are_only_homepage_options($updates)) {
+                return 'full';
+            }
             return 'interior';
         }
         return 'full';
@@ -150,6 +178,14 @@ if (!function_exists('lf_ai_studio_orchestrator_filter_updates_for_scope')) {
             $new = array_values(array_filter($updates, static function ($u) use ($is_homepage_options): bool {
                 return is_array($u) && !$is_homepage_options($u);
             }));
+        }
+        if ($from > 0 && $scope === 'interior' && count($new) === 0) {
+            return [
+                'payload' => $apply_payload,
+                'scope' => 'full',
+                'filtered_from' => $from,
+                'filtered_to' => $from,
+            ];
         }
         $out = $apply_payload;
         $out['updates'] = $new;

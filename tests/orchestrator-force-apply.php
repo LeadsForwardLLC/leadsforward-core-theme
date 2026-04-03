@@ -77,4 +77,17 @@ $f6 = lf_ai_studio_orchestrator_filter_updates_for_scope(['run_phase' => 'repair
 expect($f6['scope'] === 'interior', 'explicit interior on repair');
 expect($f6['filtered_to'] === 1, 'interior strips homepage row');
 
+expect(
+    lf_ai_studio_orchestrator_updates_are_only_homepage_options([$home]) === true,
+    'homepage-only detector single row'
+);
+expect(
+    lf_ai_studio_orchestrator_updates_are_only_homepage_options([$home, $post]) === false,
+    'homepage-only detector rejects mixed'
+);
+
+$f7 = lf_ai_studio_orchestrator_filter_updates_for_scope(['apply_scope' => 'interior', 'updates' => [$home]], []);
+expect($f7['scope'] === 'full', 'interior with only homepage rows falls back to full');
+expect($f7['filtered_to'] === 1, 'fallback preserves homepage update');
+
 echo "PASS\n";
