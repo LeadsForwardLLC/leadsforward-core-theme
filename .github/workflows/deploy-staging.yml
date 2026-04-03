@@ -57,6 +57,7 @@ jobs:
             -e "ssh -i ~/.ssh/id_sg_deploy -p ${{ secrets.SG_PORT }} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
             --exclude ".git/" \
             --exclude ".github/" \
+            --exclude ".cursor/" \
             --exclude "docs/" \
             --exclude "README.md" \
             ./ \
