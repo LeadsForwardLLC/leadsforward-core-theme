@@ -6562,6 +6562,45 @@ function lf_ai_studio_resolve_homepage_config_storage_key(string $llm_registry_t
 	return '';
 }
 
+/**
+ * After merging multiple orchestrator rows into one storage key, pick a registry section whose
+ * allowed fields cover all accumulated keys (e.g. trust_bar + trust_reviews share one option row).
+ */
+function lf_ai_studio_resolve_homepage_registry_type_for_fields(string $storage_key, array $fields, array $registry): string {
+	if (!is_array($fields) || $fields === [] || !is_array($registry)) {
+		$b = function_exists('lf_homepage_base_section_type') ? lf_homepage_base_section_type($storage_key) : $storage_key;
+		return $b !== '' ? $b : $storage_key;
+	}
+	$field_keys = array_keys($fields);
+	$base = function_exists('lf_homepage_base_section_type') ? lf_homepage_base_section_type($storage_key) : $storage_key;
+	if ($base === '') {
+		$base = $storage_key;
+	}
+	$candidates = [$base];
+	foreach (lf_ai_studio_homepage_equiv_storage_types($base) as $t) {
+		if (!in_array($t, $candidates, true)) {
+			$candidates[] = $t;
+		}
+	}
+	foreach ($candidates as $cand) {
+		if (!isset($registry[$cand])) {
+			continue;
+		}
+		$allowed = lf_ai_studio_homepage_allowed_field_keys($cand, $registry[$cand]);
+		$ok = true;
+		foreach ($field_keys as $fk) {
+			if (!in_array($fk, $allowed, true)) {
+				$ok = false;
+				break;
+			}
+		}
+		if ($ok) {
+			return $cand;
+		}
+	}
+	return isset($registry[$base]) ? $base : $storage_key;
+}
+
 function lf_ai_studio_resolve_post_field_key(string $field_key, array $sections, array $registry): ?array {
 	if ($field_key === '' || strpos($field_key, '.') !== false) {
 		return null;
@@ -6943,8 +6982,6 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 
 	$homepage_updates = [];
 	$homepage_fields = [];
-	/** @var array<string, string> */
-	$homepage_field_registry_types = [];
 	$post_updates = [];
 	$faq_updates = [];
 	$service_meta_updates = [];
@@ -7093,7 +7130,6 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 				}
 				if (!isset($homepage_fields[$storage_key])) {
 					$homepage_fields[$storage_key] = [];
-					$homepage_field_registry_types[$storage_key] = $llm_registry_type;
 				}
 				$normalized_value = lf_ai_studio_normalize_value($value);
 				$field_type = lf_ai_studio_registry_field_type($registry, $llm_registry_type, $field_key);
@@ -7154,11 +7190,7 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			if (!is_array($fields) || !isset($config[$storage_key])) {
 				continue;
 			}
-			$registry_type = $homepage_field_registry_types[$storage_key] ?? (
-				function_exists('lf_homepage_base_section_type')
-					? lf_homepage_base_section_type((string) $storage_key)
-					: (string) $storage_key
-			);
+			$registry_type = lf_ai_studio_resolve_homepage_registry_type_for_fields((string) $storage_key, $fields, $registry);
 			if ($registry_type === '' || !isset($registry[$registry_type])) {
 				continue;
 			}
