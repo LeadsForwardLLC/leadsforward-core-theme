@@ -360,10 +360,32 @@ function lf_get_homepage_section_config(): array {
 		$manual = (bool) get_option(LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION, false);
 		$wizard_done = (bool) get_option('lf_setup_wizard_complete', false);
 		$has_enabled = false;
-		foreach (lf_homepage_default_order() as $type) {
-			if (!empty($config[$type]['enabled'])) {
+		// Use controller order keys (same as merge output), not only canonical default_order — avoids false negatives for instance ids.
+		foreach (lf_homepage_controller_order() as $section_id) {
+			$row = $config[ $section_id ] ?? null;
+			if (!is_array($row)) {
+				continue;
+			}
+			if (!empty($row['enabled'])) {
 				$has_enabled = true;
 				break;
+			}
+		}
+		if (!$has_enabled) {
+			foreach (lf_homepage_controller_order() as $section_id) {
+				$row = $config[ $section_id ] ?? null;
+				if (!is_array($row)) {
+					continue;
+				}
+				foreach ($row as $k => $v) {
+					if ($k === 'enabled' || $k === 'variant') {
+						continue;
+					}
+					if (is_string($v) && trim($v) !== '') {
+						$has_enabled = true;
+						break 2;
+					}
+				}
 			}
 		}
 		if (!$has_enabled && !$manual && $wizard_done) {

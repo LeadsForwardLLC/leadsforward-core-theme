@@ -7213,6 +7213,8 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 				$config[$storage_key],
 				lf_sections_sanitize_settings($registry_type, $fields)
 			);
+			// lf_get_homepage_section_config() resets to generic defaults when no section has enabled=true.
+			$config[$storage_key]['enabled'] = true;
 		}
 		foreach ($config as $section_id => $section_settings) {
 			$reg_type = function_exists('lf_homepage_base_section_type')
