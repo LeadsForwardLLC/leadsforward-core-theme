@@ -818,6 +818,26 @@ function lf_ops_render_global_settings_page(): void {
 				</p>
 			</div>
 		<?php endif; ?>
+		<?php
+		$manifester_callback_trim = trim($manifester_callback);
+		$callback_placeholder_active = $manifester_callback_trim === '' || stripos($manifester_callback_trim, 'your-site.com') !== false;
+		?>
+		<?php if ($callback_placeholder_active) : ?>
+			<div class="notice notice-error">
+				<p>
+					<strong><?php esc_html_e('Callback URL (WordPress) is missing or still a placeholder.', 'leadsforward-core'); ?></strong>
+					<?php esc_html_e('Set it to your real site REST URL (example: https://theme.leadsforward.com/wp-json/leadsforward/v1/orchestrator). The gray placeholder text in the field is not a saved URL.', 'leadsforward-core'); ?>
+				</p>
+			</div>
+		<?php endif; ?>
+		<?php if ($manifester_auto_requeue) : ?>
+			<div class="notice notice-warning">
+				<p>
+					<strong><?php esc_html_e('Auto repair after apply is ON.', 'leadsforward-core'); ?></strong>
+					<?php esc_html_e('WordPress can start a second n8n run right after a successful callback when the content audit reports issues. Turn it off below (under Enable AI) unless you intentionally want that behavior.', 'leadsforward-core'); ?>
+				</p>
+			</div>
+		<?php endif; ?>
 		<style>
 			.lf-settings-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.25rem; margin: 1.25rem 0; }
 			.lf-settings-panel-header { display: flex; align-items: center; gap: 0.75rem; }
@@ -845,6 +865,13 @@ function lf_ops_render_global_settings_page(): void {
 								<td><label><input type="checkbox" name="lf_ai_studio_enabled" value="1" <?php checked($manifester_enabled); ?> /> <?php esc_html_e('Allow Manifester runs', 'leadsforward-core'); ?></label></td>
 							</tr>
 							<tr>
+								<th scope="row"><?php esc_html_e('Auto repair after apply', 'leadsforward-core'); ?></th>
+								<td>
+									<label><input type="checkbox" name="lf_ai_studio_auto_requeue" value="1" <?php checked($manifester_auto_requeue); ?> /> <?php esc_html_e('If the post-apply content audit finds issues, automatically queue a second n8n repair run', 'leadsforward-core'); ?></label>
+									<p class="description"><?php esc_html_e('Leave off unless you rely on automatic repairs. When on, a noisy audit can trigger a follow-up n8n run that overwrites the first callback.', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
 								<th scope="row"><label for="lf_ai_studio_webhook_global"><?php esc_html_e('Orchestrator Webhook URL', 'leadsforward-core'); ?></label></th>
 								<td><input type="url" class="large-text" name="lf_ai_studio_webhook" id="lf_ai_studio_webhook_global" value="<?php echo esc_attr($manifester_webhook); ?>" placeholder="https://n8n.example.com/webhook/..." required /></td>
 							</tr>
@@ -870,13 +897,6 @@ function lf_ops_render_global_settings_page(): void {
 								<td>
 									<input type="url" class="large-text" name="lf_ai_studio_callback_url" id="lf_ai_studio_callback_url_global" value="<?php echo esc_attr($manifester_callback); ?>" placeholder="https://your-site.com/wp-json/leadsforward/v1/orchestrator" />
 									<p class="description"><?php esc_html_e('Use this if n8n cannot reach localhost. For Docker: http://host.docker.internal:10008/wp-json/leadsforward/v1/orchestrator. Do not append any token query parameter.', 'leadsforward-core'); ?></p>
-								</td>
-							</tr>
-							<tr>
-								<th scope="row"><?php esc_html_e('Auto repair after apply', 'leadsforward-core'); ?></th>
-								<td>
-									<label><input type="checkbox" name="lf_ai_studio_auto_requeue" value="1" <?php checked($manifester_auto_requeue); ?> /> <?php esc_html_e('If the post-apply content audit finds issues, automatically queue a second n8n repair run', 'leadsforward-core'); ?></label>
-									<p class="description"><?php esc_html_e('Leave off unless you rely on automatic repairs. When on, audits with many “missing fields” often trigger a follow-up run minutes later; that second callback can overwrite content from the first.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
