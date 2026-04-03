@@ -353,6 +353,7 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
 	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
 	update_option('lf_ai_studio_callback_url', isset($_POST['lf_ai_studio_callback_url']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_callback_url'])) : '');
+	update_option('lf_ai_studio_auto_requeue', isset($_POST['lf_ai_studio_auto_requeue']) ? '1' : '0');
 	$auth_mode = isset($_POST['lf_ai_auth_mode']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_auth_mode'])) : 'compatibility';
 	update_option('lf_ai_auth_mode', $auth_mode === 'strict_hmac' ? 'strict_hmac' : 'compatibility');
 	$tolerance = isset($_POST['lf_ai_hmac_tolerance_seconds']) ? (int) $_POST['lf_ai_hmac_tolerance_seconds'] : 300;
@@ -728,6 +729,7 @@ function lf_ops_render_global_settings_page(): void {
 	$manifester_webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$manifester_secret = (string) get_option('lf_ai_studio_secret', '');
 	$manifester_callback = (string) get_option('lf_ai_studio_callback_url', '');
+	$manifester_auto_requeue = get_option('lf_ai_studio_auto_requeue', '0') === '1';
 	$manifester_auth_mode = (string) get_option('lf_ai_auth_mode', 'compatibility');
 	if (!in_array($manifester_auth_mode, ['compatibility', 'strict_hmac'], true)) {
 		$manifester_auth_mode = 'compatibility';
@@ -868,6 +870,13 @@ function lf_ops_render_global_settings_page(): void {
 								<td>
 									<input type="url" class="large-text" name="lf_ai_studio_callback_url" id="lf_ai_studio_callback_url_global" value="<?php echo esc_attr($manifester_callback); ?>" placeholder="https://your-site.com/wp-json/leadsforward/v1/orchestrator" />
 									<p class="description"><?php esc_html_e('Use this if n8n cannot reach localhost. For Docker: http://host.docker.internal:10008/wp-json/leadsforward/v1/orchestrator. Do not append any token query parameter.', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e('Auto repair after apply', 'leadsforward-core'); ?></th>
+								<td>
+									<label><input type="checkbox" name="lf_ai_studio_auto_requeue" value="1" <?php checked($manifester_auto_requeue); ?> /> <?php esc_html_e('If the post-apply content audit finds issues, automatically queue a second n8n repair run', 'leadsforward-core'); ?></label>
+									<p class="description"><?php esc_html_e('Leave off unless you rely on automatic repairs. When on, audits with many “missing fields” often trigger a follow-up run minutes later; that second callback can overwrite content from the first.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
