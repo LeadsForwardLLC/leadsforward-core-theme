@@ -388,10 +388,45 @@ function lf_get_homepage_section_config(): array {
 				}
 			}
 		}
+		// Third pass: raw option rows (or list/array fields). Without this, a site can look
+		// "empty" to the order-based checks while the DB still holds orchestrator output —
+		// then the block below overwrites lf_homepage_section_config with niche defaults on read.
+		if (!$has_enabled) {
+			foreach ($stored as $row) {
+				if (!is_array($row)) {
+					continue;
+				}
+				if (!empty($row['enabled'])) {
+					$has_enabled = true;
+					break;
+				}
+				foreach ($row as $k => $v) {
+					if ($k === 'enabled' || $k === 'variant') {
+						continue;
+					}
+					if (is_string($v) && trim($v) !== '') {
+						$has_enabled = true;
+						break 2;
+					}
+					if (is_array($v) && $v !== []) {
+						$has_enabled = true;
+						break 2;
+					}
+				}
+			}
+		}
 		if (!$has_enabled && !$manual && $wizard_done) {
 			$niche = get_option(LF_HOMEPAGE_NICHE_OPTION, '');
-			$config = lf_homepage_default_config($niche ?: null);
-			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+			$fresh = lf_homepage_default_config($niche ?: null);
+			// Never rewrite the option from a normal front-end hit — that could erase orchestrator
+			// content if enabled/content heuristics misfire. Admin / REST / CLI may persist the reset.
+			$may_persist_homepage_reset = is_admin()
+				|| (defined('REST_REQUEST') && REST_REQUEST)
+				|| (defined('WP_CLI') && WP_CLI);
+			if ($may_persist_homepage_reset) {
+				update_option(LF_HOMEPAGE_CONFIG_OPTION, $fresh, true);
+				$config = $fresh;
+			}
 		}
 		return $config;
 	}
