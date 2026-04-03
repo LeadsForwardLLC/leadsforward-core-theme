@@ -351,7 +351,7 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('options_lf_header_cta_url', isset($_POST['lf_header_cta_url']) ? esc_url_raw(wp_unslash($_POST['lf_header_cta_url'])) : '');
 	update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
 	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
-	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
+	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? trim(sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret']))) : '');
 	$callback_raw = isset($_POST['lf_ai_studio_callback_url']) ? trim(wp_unslash((string) $_POST['lf_ai_studio_callback_url'])) : '';
 	// Reject placeholder / garbage so WordPress falls back to rest_url() via lf_ai_studio_build_callback_url().
 	if ($callback_raw === '' || stripos($callback_raw, 'your-site.com') !== false) {

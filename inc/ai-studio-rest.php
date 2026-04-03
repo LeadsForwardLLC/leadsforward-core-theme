@@ -46,7 +46,7 @@ function lf_ai_studio_register_rest(): void {
 }
 
 function lf_ai_studio_rest_auth(\WP_REST_Request $request) {
-	$secret = (string) get_option('lf_ai_studio_secret', '');
+	$secret = trim((string) get_option('lf_ai_studio_secret', ''));
 	if ($secret === '') {
 		return new \WP_Error('lf_ai_auth_missing', 'Shared secret is not configured.', ['status' => 401]);
 	}

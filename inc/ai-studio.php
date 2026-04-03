@@ -260,7 +260,7 @@ function lf_ai_studio_handle_save(): void {
 	}
 	update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
 	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
-	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
+	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? trim(sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret']))) : '');
 	$auth_mode = isset($_POST['lf_ai_auth_mode']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_auth_mode'])) : 'compatibility';
 	update_option('lf_ai_auth_mode', $auth_mode === 'strict_hmac' ? 'strict_hmac' : 'compatibility');
 	$tolerance = isset($_POST['lf_ai_hmac_tolerance_seconds']) ? (int) $_POST['lf_ai_hmac_tolerance_seconds'] : 300;
@@ -337,7 +337,7 @@ function lf_ai_studio_handle_orchestrator_save(): void {
 
 	update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
 	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
-	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret'])) : '');
+	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? trim(sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret']))) : '');
 	$auth_mode = isset($_POST['lf_ai_auth_mode']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_auth_mode'])) : 'compatibility';
 	update_option('lf_ai_auth_mode', $auth_mode === 'strict_hmac' ? 'strict_hmac' : 'compatibility');
 	$tolerance = isset($_POST['lf_ai_hmac_tolerance_seconds']) ? (int) $_POST['lf_ai_hmac_tolerance_seconds'] : 300;
@@ -659,7 +659,7 @@ function lf_ai_studio_handle_regen_blog_posts(): void {
 		exit;
 	}
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
-	$secret = (string) get_option('lf_ai_studio_secret', '');
+	$secret = trim((string) get_option('lf_ai_studio_secret', ''));
 	if ($webhook === '' || $secret === '') {
 		wp_safe_redirect(add_query_arg('error', rawurlencode(__('Webhook URL and shared secret are required.', 'leadsforward-core')), admin_url('admin.php?page=lf-ops')));
 		exit;
@@ -1435,7 +1435,7 @@ function lf_ai_studio_render_page(): void {
 function lf_ai_studio_run_generation(): array {
 	$enabled = get_option('lf_ai_studio_enabled', '0') === '1';
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
-	$secret = (string) get_option('lf_ai_studio_secret', '');
+	$secret = trim((string) get_option('lf_ai_studio_secret', ''));
 	if (!$enabled) {
 		return ['error' => __('Website Manifester is disabled.', 'leadsforward-core')];
 	}
@@ -1456,7 +1456,7 @@ function lf_ai_studio_run_generation(): array {
 function lf_ai_studio_run_homepage_generation(): array {
 	$enabled = get_option('lf_ai_studio_enabled', '0') === '1';
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
-	$secret = (string) get_option('lf_ai_studio_secret', '');
+	$secret = trim((string) get_option('lf_ai_studio_secret', ''));
 	if (!$enabled) {
 		error_log('LF DEBUG: Regenerate Site blocked: AI Studio disabled.');
 		return ['error' => __('Website Manifester is disabled.', 'leadsforward-core')];
@@ -1488,7 +1488,7 @@ function lf_ai_studio_run_homepage_generation(): array {
 
 function lf_ai_studio_send_request(array $request, int $job_id): array {
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
-	$secret = (string) get_option('lf_ai_studio_secret', '');
+	$secret = trim((string) get_option('lf_ai_studio_secret', ''));
 	$callback_url = lf_ai_studio_build_callback_url();
 	$request_id = sanitize_text_field((string) ($request['request_id'] ?? ''));
 	if ($request_id === '') {
@@ -1539,6 +1539,11 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	$webhook_host = is_string($webhook_host) ? $webhook_host : '';
 	error_log('LF AI Studio webhook invoked: job=' . $job_id . ($webhook_host ? ' host=' . $webhook_host : ''));
 	error_log('LF DEBUG: About to POST full-site payload to orchestrator');
+	$outgoing_body = $request;
+	if ($secret !== '') {
+		// Same value as the Authorization header; lets n8n echo auth if the Webhook node omits inbound headers.
+		$outgoing_body['callback_authorization'] = 'Bearer ' . $secret;
+	}
 	$response = wp_remote_post($webhook, [
 		'method' => 'POST',
 		'timeout' => 20,
@@ -1547,7 +1552,7 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 			'Authorization' => 'Bearer ' . $secret,
 			'Content-Type' => 'application/json',
 		],
-		'body' => wp_json_encode($request),
+		'body' => wp_json_encode($outgoing_body),
 	]);
 	$status_code = is_wp_error($response) ? 0 : (int) wp_remote_retrieve_response_code($response);
 	error_log('LF DEBUG: Webhook call returned status=' . $status_code);
