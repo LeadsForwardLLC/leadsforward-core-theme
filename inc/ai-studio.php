@@ -7569,14 +7569,9 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 		}
 	}
 
-	if (!empty($errors)) {
-		return [
-			'success' => false,
-			'summary' => '',
-			'changes' => $changes,
-			'errors' => $errors,
-		];
-	}
+	// Do not abort persistence when some post_meta rows fail (missing post, wrong builder
+	// context, etc.). Previously any error here skipped homepage, FAQ, and service_meta writes —
+	// a single wrong ID on the callback site made the entire payload appear to "do nothing".
 	if (is_array($staged_homepage_config)) {
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $staged_homepage_config, true);
 	}
