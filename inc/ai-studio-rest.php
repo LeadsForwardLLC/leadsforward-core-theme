@@ -13,6 +13,7 @@ if (!defined('ABSPATH')) {
 }
 
 require_once __DIR__ . '/ai-studio-identity.php';
+require_once __DIR__ . '/ai-studio-orchestrator-utils.php';
 
 add_action('rest_api_init', 'lf_ai_studio_register_rest');
 
