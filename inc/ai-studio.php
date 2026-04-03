@@ -7622,7 +7622,7 @@ function lf_ai_studio_store_audit_report(array $report, int $job_id = 0): void {
 }
 
 function lf_ai_studio_maybe_requeue_from_audit(int $job_id, array $report): array {
-	$auto = get_option('lf_ai_studio_auto_requeue', '1') === '1';
+	$auto = get_option('lf_ai_studio_auto_requeue', '0') === '1';
 	if (!$auto || !$job_id) {
 		return [];
 	}
