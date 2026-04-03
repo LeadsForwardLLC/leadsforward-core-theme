@@ -18,9 +18,9 @@ alwaysApply: true
 ## What you do after making code changes
 
 1. Commit in the **primary** theme folder.
-2. If on **`main`**: `git push origin main`.
-3. If on a **feature branch**: open a PR to `main` and **squash-merge** (this repo disallows merge commits). `gh pr merge --squash` is correct.
-4. Optionally run `./scripts/ship-to-live.sh "your message"` from the theme root (requires `gh` CLI logged in); it commits if needed, pushes, merges PR with squash, and checks out updated `main`.
+2. **`main` is branch-protected** — never rely on a direct push to `main`. Use a PR and **squash-merge** (`gh pr merge --squash`). Merge commits are disallowed on this repo.
+3. Run **`./scripts/ship-to-live.sh "short description of change"`** from the theme root (needs `gh` logged in). It commits unstaged work if needed, pushes, opens or reuses a PR, squash-merges to `main`, and leaves you on updated `main`. If you were on `main` and push is blocked, the script creates a `chore/auto-ship-*` branch and ships through a PR.
+4. Pushing/merging to **`main`** starts the deploy Action; no separate deploy step in this repo.
 
 ## Git pull
 
