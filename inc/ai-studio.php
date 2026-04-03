@@ -158,6 +158,13 @@ function lf_ai_studio_assets(string $hook): void {
 	$airtable_settings = function_exists('lf_ai_studio_airtable_get_settings')
 		? lf_ai_studio_airtable_get_settings()
 		: ['enabled' => false];
+	$manifest_for_scope_js = function_exists('lf_ai_studio_get_manifest') ? lf_ai_studio_get_manifest() : [];
+	$scope_for_scope_js = function_exists('lf_ai_studio_get_generation_scope_snapshot_for_ui')
+		? lf_ai_studio_get_generation_scope_snapshot_for_ui(is_array($manifest_for_scope_js) ? $manifest_for_scope_js : [])
+		: [
+			'is_homepage_only' => false,
+			'service_posts_published' => 0,
+		];
 	wp_localize_script('lf-ai-studio-airtable', 'LFAirtableManifester', [
 		'ajaxUrl' => admin_url('admin-ajax.php'),
 		'nonce' => wp_create_nonce('lf_ai_airtable'),
@@ -165,12 +172,19 @@ function lf_ai_studio_assets(string $hook): void {
 		'imagesUploadNonce' => wp_create_nonce('lf_ai_studio_images_upload'),
 		'jobStatusNonce' => wp_create_nonce('lf_ai_studio_job_status'),
 		'enabled' => !empty($airtable_settings['enabled']),
+		'scope' => [
+			'isHomepageOnly' => !empty($scope_for_scope_js['is_homepage_only']),
+			'servicePostsPublished' => (int) ( $scope_for_scope_js['service_posts_published'] ?? 0 ),
+			'hasTargets' => !empty($scope_for_scope_js['enabled_labels']),
+		],
 		'strings' => [
 			'searchPlaceholder' => __('Search Airtable projects…', 'leadsforward-core'),
 			'noResults' => __('No projects found.', 'leadsforward-core'),
 			'notConfigured' => __('Airtable is not configured.', 'leadsforward-core'),
 			'selectPrompt' => __('Select a project to preview before generating.', 'leadsforward-core'),
 			'generating' => __('Generating from Airtable…', 'leadsforward-core'),
+			'confirmHomepageOnly' => __('Your scope is homepage-only, but this site has published service pages. Service pages will not be sent to the orchestrator. Continue?', 'leadsforward-core'),
+			'scopeNoTargets' => __('Enable at least one target under step 2 (Generate) and click Save Scope before running.', 'leadsforward-core'),
 		],
 		'researchStrings' => [
 			'uploading' => __('Uploading research…', 'leadsforward-core'),
@@ -401,7 +415,7 @@ function lf_ai_studio_handle_scope_save(): void {
 	update_option('lf_ai_gen_blog_posts', isset($_POST['lf_ai_gen_blog_posts']) ? '1' : '0');
 	update_option('lf_ai_gen_projects', isset($_POST['lf_ai_gen_projects']) ? '1' : '0');
 
-	wp_safe_redirect(admin_url('admin.php?page=lf-ops&saved=1'));
+	wp_safe_redirect(admin_url('admin.php?page=lf-ops&scope_saved=1'));
 	exit;
 }
 
@@ -861,6 +875,7 @@ function lf_ai_studio_render_page(): void {
 		return;
 	}
 	$saved = isset($_GET['saved']) && $_GET['saved'] === '1';
+	$scope_saved = isset($_GET['scope_saved']) && $_GET['scope_saved'] === '1';
 	$error = isset($_GET['error']) ? sanitize_text_field(wp_unslash((string) $_GET['error'])) : '';
 	$job_id = isset($_GET['job']) ? absint($_GET['job']) : 0;
 	$job_status = $job_id ? (string) get_post_meta($job_id, 'lf_ai_job_status', true) : '';
@@ -898,6 +913,7 @@ function lf_ai_studio_render_page(): void {
 	$gen_core_pages = get_option('lf_ai_gen_core_pages', '1') === '1';
 	$gen_blog_posts = get_option('lf_ai_gen_blog_posts', '1') === '1';
 	$gen_projects = get_option('lf_ai_gen_projects', '1') === '1';
+	$scope_snap = lf_ai_studio_get_generation_scope_snapshot_for_ui(is_array($manifest) ? $manifest : []);
 	$image_generation_limit = max(1, min(60, (int) get_option('lf_ai_image_generation_limit', 12)));
 	$vision_debug_job_id = $job_id > 0 ? $job_id : lf_ai_studio_latest_job_id_for_debug();
 	$vision_debug_payload = [];
@@ -933,8 +949,20 @@ function lf_ai_studio_render_page(): void {
 	<div class="wrap">
 		<h1><?php esc_html_e('Website Manifester', 'leadsforward-core'); ?></h1>
 		<p class="description"><?php esc_html_e('Deterministic, orchestrator-driven generation for full site content and structure.', 'leadsforward-core'); ?></p>
-		<?php if ($saved) : ?>
-			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Website Manifester settings saved.', 'leadsforward-core'); ?></p></div>
+		<?php if ($scope_saved) : ?>
+			<div class="notice notice-success is-dismissible">
+				<p>
+					<strong><?php esc_html_e('Generation scope saved.', 'leadsforward-core'); ?></strong>
+					<?php if (!empty($scope_snap['enabled_labels'])) : ?>
+						<?php esc_html_e('Next run:', 'leadsforward-core'); ?>
+						<?php echo esc_html(implode(', ', $scope_snap['enabled_labels'])); ?>
+					<?php else : ?>
+						<?php esc_html_e('No targets enabled — check at least one box under step 2 and save again.', 'leadsforward-core'); ?>
+					<?php endif; ?>
+				</p>
+			</div>
+		<?php elseif ($saved) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Settings saved.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
 		<?php if ($manifest_saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Manifest uploaded. Generation queued and running in the background.', 'leadsforward-core'); ?></p></div>
@@ -1031,15 +1059,34 @@ function lf_ai_studio_render_page(): void {
 									<input type="hidden" name="action" value="lf_ai_studio_scope_save" />
 									<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
 										<strong><?php esc_html_e('Generate:', 'leadsforward-core'); ?></strong>
-										<label><input type="checkbox" name="lf_ai_gen_homepage" value="1" <?php checked($gen_homepage); ?> /> <?php esc_html_e('Homepage', 'leadsforward-core'); ?></label>
-										<label><input type="checkbox" name="lf_ai_gen_services" value="1" <?php checked($gen_services); ?> /> <?php esc_html_e('Service pages', 'leadsforward-core'); ?></label>
-										<label><input type="checkbox" name="lf_ai_gen_service_areas" value="1" <?php checked($gen_service_areas); ?> /> <?php esc_html_e('Service area pages', 'leadsforward-core'); ?></label>
-										<label><input type="checkbox" name="lf_ai_gen_core_pages" value="1" <?php checked($gen_core_pages); ?> /> <?php esc_html_e('Core pages', 'leadsforward-core'); ?></label>
-										<label><input type="checkbox" name="lf_ai_gen_blog_posts" value="1" <?php checked($gen_blog_posts); ?> /> <?php esc_html_e('AI blog posts (3 now + 2 weekly)', 'leadsforward-core'); ?></label>
-										<label><input type="checkbox" name="lf_ai_gen_projects" value="1" <?php checked($gen_projects); ?> /> <?php esc_html_e('Projects', 'leadsforward-core'); ?></label>
+										<label><input type="checkbox" id="lf_ai_gen_homepage" name="lf_ai_gen_homepage" value="1" <?php checked($gen_homepage); ?> /> <?php esc_html_e('Homepage', 'leadsforward-core'); ?></label>
+										<label><input type="checkbox" id="lf_ai_gen_services" name="lf_ai_gen_services" value="1" <?php checked($gen_services); ?> /> <?php esc_html_e('Service pages', 'leadsforward-core'); ?></label>
+										<label><input type="checkbox" id="lf_ai_gen_service_areas" name="lf_ai_gen_service_areas" value="1" <?php checked($gen_service_areas); ?> /> <?php esc_html_e('Service area pages', 'leadsforward-core'); ?></label>
+										<label><input type="checkbox" id="lf_ai_gen_core_pages" name="lf_ai_gen_core_pages" value="1" <?php checked($gen_core_pages); ?> /> <?php esc_html_e('Core pages', 'leadsforward-core'); ?></label>
+										<label><input type="checkbox" id="lf_ai_gen_blog_posts" name="lf_ai_gen_blog_posts" value="1" <?php checked($gen_blog_posts); ?> /> <?php esc_html_e('AI blog posts (3 now + 2 weekly)', 'leadsforward-core'); ?></label>
+										<label><input type="checkbox" id="lf_ai_gen_projects" name="lf_ai_gen_projects" value="1" <?php checked($gen_projects); ?> /> <?php esc_html_e('Projects', 'leadsforward-core'); ?></label>
 										<button type="submit" class="button"><?php esc_html_e('Save Scope', 'leadsforward-core'); ?></button>
+										<button type="button" class="button" id="lf-ai-scope-select-all"><?php esc_html_e('Select all', 'leadsforward-core'); ?></button>
+										<button type="button" class="button" id="lf-ai-scope-homepage-services"><?php esc_html_e('Homepage + services', 'leadsforward-core'); ?></button>
 									</div>
-									<p class="description" style="margin-top:8px;"><?php esc_html_e('Defaults to everything. Manifest can override with generation_scope=homepage_only.', 'leadsforward-core'); ?></p>
+									<div class="notice notice-info inline" style="margin-top:10px;padding:8px 12px;">
+										<p style="margin:0 0 6px;"><strong><?php esc_html_e('Effective scope for the next run:', 'leadsforward-core'); ?></strong>
+										<?php
+										if (!empty($scope_snap['enabled_labels'])) {
+											echo esc_html(implode(', ', $scope_snap['enabled_labels']));
+										} else {
+											esc_html_e('Nothing selected — generation will fail until you enable at least one target.', 'leadsforward-core');
+										}
+										?>
+										</p>
+										<?php if ($scope_snap['is_homepage_only'] && $scope_snap['service_posts_published'] > 0) : ?>
+											<p style="margin:0;"><strong><?php esc_html_e('Heads up:', 'leadsforward-core'); ?></strong> <?php echo esc_html(sprintf(__('You have %d published service pages but “Service pages” is off — they will not be regenerated.', 'leadsforward-core'), (int) $scope_snap['service_posts_published'])); ?></p>
+										<?php endif; ?>
+										<?php if ($scope_snap['services_in_manifest'] > 0 && empty($scope_snap['scope']['services'])) : ?>
+											<p style="margin:0.5em 0 0;"><strong><?php esc_html_e('Heads up:', 'leadsforward-core'); ?></strong> <?php echo esc_html(sprintf(__('Your manifest lists %d services, but “Service pages” is unchecked — no service blueprints will be sent.', 'leadsforward-core'), (int) $scope_snap['services_in_manifest'])); ?></p>
+										<?php endif; ?>
+									</div>
+									<p class="description" style="margin-top:8px;"><?php esc_html_e('Unchecked boxes exclude those targets from the orchestrator payload. The Website Manifester and Airtable generate button use these checkboxes (not the manifest’s generation_scope string). Click Save Scope after changing.', 'leadsforward-core'); ?></p>
 								</form>
 								<?php if (!$airtable_ready) : ?>
 									<div class="notice notice-warning inline">
@@ -1177,6 +1224,16 @@ function lf_ai_studio_render_page(): void {
 					<div class="lf-manifester-step__content">
 						<h3><?php esc_html_e('Manifest your website', 'leadsforward-core'); ?></h3>
 						<p class="description"><?php esc_html_e('We will use the manifest file if one is selected, otherwise the selected Airtable project.', 'leadsforward-core'); ?></p>
+						<p class="description" style="margin-bottom:12px;">
+							<strong><?php esc_html_e('This run will include:', 'leadsforward-core'); ?></strong>
+							<?php
+							if (!empty($scope_snap['enabled_labels'])) {
+								echo esc_html(implode(', ', $scope_snap['enabled_labels']));
+							} else {
+								esc_html_e('No targets — fix step 2 first.', 'leadsforward-core');
+							}
+							?>
+						</p>
 						<button type="button" class="button button-primary button-hero" id="lf-manifester-generate" disabled>
 							<?php esc_html_e('Manifest Your Website', 'leadsforward-core'); ?>
 						</button>
@@ -1454,17 +1511,6 @@ function lf_ai_studio_run_generation(): array {
 }
 
 function lf_ai_studio_run_homepage_generation(): array {
-	$enabled = get_option('lf_ai_studio_enabled', '0') === '1';
-	$webhook = (string) get_option('lf_ai_studio_webhook', '');
-	$secret = trim((string) get_option('lf_ai_studio_secret', ''));
-	if (!$enabled) {
-		error_log('LF DEBUG: Regenerate Site blocked: AI Studio disabled.');
-		return ['error' => __('Website Manifester is disabled.', 'leadsforward-core')];
-	}
-	if ($webhook === '' || $secret === '') {
-		error_log('LF DEBUG: Regenerate Site blocked: missing webhook or secret.');
-		return ['error' => __('Webhook URL and shared secret are required.', 'leadsforward-core')];
-	}
 	$manifest = lf_ai_studio_get_manifest();
 	if (empty($manifest)) {
 		$keywords = lf_homepage_keywords();
@@ -1473,17 +1519,7 @@ function lf_ai_studio_run_homepage_generation(): array {
 			return ['error' => __('Homepage primary keyword is required.', 'leadsforward-core')];
 		}
 	}
-	$request = lf_ai_studio_build_full_site_payload(false);
-	if (!is_array($request)) {
-		error_log('LF DEBUG: Regenerate Site blocked: payload build returned non-array.');
-		return ['error' => __('Full site payload build failed.', 'leadsforward-core')];
-	}
-	if (isset($request['error'])) {
-		error_log('LF DEBUG: Regenerate Site blocked: ' . (string) $request['error']);
-		return ['error' => (string) $request['error']];
-	}
-	$job_id = lf_ai_studio_create_job($request);
-	return lf_ai_studio_send_request($request, $job_id);
+	return lf_ai_studio_run_generation();
 }
 
 function lf_ai_studio_send_request(array $request, int $job_id): array {
@@ -1535,6 +1571,17 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	$log_payload['research_present'] = !empty($research);
 	$log_payload['research_hash'] = !empty($research) ? lf_ai_studio_research_hash($research) : '';
 	error_log('LF AI Studio payload keys: ' . wp_json_encode($log_payload));
+	$scope_snap = lf_ai_studio_get_generation_scope_snapshot_for_ui(lf_ai_studio_get_manifest());
+	error_log(
+		'LF AI Studio generation scope: ' . wp_json_encode(
+			[
+				'enabled_keys' => $scope_snap['enabled_keys'],
+				'is_homepage_only' => $scope_snap['is_homepage_only'],
+				'service_posts_published' => $scope_snap['service_posts_published'],
+				'services_in_manifest' => $scope_snap['services_in_manifest'],
+			]
+		)
+	);
 	$webhook_host = wp_parse_url($webhook, PHP_URL_HOST);
 	$webhook_host = is_string($webhook_host) ? $webhook_host : '';
 	error_log('LF AI Studio webhook invoked: job=' . $job_id . ($webhook_host ? ' host=' . $webhook_host : ''));
@@ -4861,6 +4908,59 @@ function lf_ai_studio_get_generation_scope(array $manifest, bool $respect_manife
 		];
 	}
 	return $scope;
+}
+
+/**
+ * Human-readable snapshot for Manifester UI and logging (checkbox scope; manifest generation_scope is not applied here).
+ *
+ * @param array<string,mixed> $manifest
+ * @return array{scope:array<string,bool>,enabled_labels:string[],enabled_keys:string[],is_homepage_only:bool,services_in_manifest:int,service_posts_published:int,manifest_generation_scope:string}
+ */
+function lf_ai_studio_get_generation_scope_snapshot_for_ui(array $manifest): array {
+	$scope = lf_ai_studio_get_generation_scope($manifest, false);
+	$map = [
+		'homepage' => __('Homepage', 'leadsforward-core'),
+		'services' => __('Service pages', 'leadsforward-core'),
+		'service_areas' => __('Service area pages', 'leadsforward-core'),
+		'core_pages' => __('Core pages', 'leadsforward-core'),
+		'blog_posts' => __('AI blog posts', 'leadsforward-core'),
+		'projects' => __('Projects', 'leadsforward-core'),
+	];
+	$enabled_labels = [];
+	$enabled_keys = [];
+	foreach ($map as $key => $label) {
+		if (!empty($scope[ $key ])) {
+			$enabled_labels[] = $label;
+			$enabled_keys[] = $key;
+		}
+	}
+	$others_off = empty($scope['services']) && empty($scope['service_areas']) && empty($scope['core_pages']) && empty($scope['blog_posts']) && empty($scope['projects']);
+	$is_homepage_only = !empty($scope['homepage']) && $others_off;
+	$services_in_manifest = 0;
+	if (!empty($manifest['services']) && is_array($manifest['services'])) {
+		$services_in_manifest = count($manifest['services']);
+	}
+	$service_posts_published = count(
+		get_posts(
+			[
+				'post_type' => 'lf_service',
+				'post_status' => 'publish',
+				'posts_per_page' => -1,
+				'fields' => 'ids',
+				'suppress_filters' => true,
+			]
+		)
+	);
+	$manifest_generation_scope = isset($manifest['generation_scope']) ? (string) $manifest['generation_scope'] : '';
+	return [
+		'scope' => $scope,
+		'enabled_labels' => $enabled_labels,
+		'enabled_keys' => $enabled_keys,
+		'is_homepage_only' => $is_homepage_only,
+		'services_in_manifest' => $services_in_manifest,
+		'service_posts_published' => $service_posts_published,
+		'manifest_generation_scope' => $manifest_generation_scope,
+	];
 }
 
 function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $force_reseed_all = false): void {
