@@ -32,4 +32,19 @@ expect(
     'nested apply run_phase should force apply'
 );
 
+$counts = lf_ai_studio_orchestrator_build_apply_counts(
+    ['updates' => [['target' => 'service_meta', 'id' => 1]]],
+    [
+        'changes' => [
+            'homepage' => true,
+            'posts' => [1, 2],
+            'faqs' => [10],
+        ],
+    ]
+);
+expect($counts['homepage_updated'] === true, 'apply_counts homepage');
+expect($counts['posts_updated'] === 2, 'apply_counts posts');
+expect($counts['faqs_updated'] === 1, 'apply_counts faqs');
+expect($counts['service_meta_updated'] === 1, 'apply_counts service_meta');
+
 echo "PASS\n";

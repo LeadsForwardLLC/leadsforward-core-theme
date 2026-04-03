@@ -523,17 +523,43 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 	}
 	$job_id = isset($payload['job_id']) ? absint($payload['job_id']) : 0;
 	$request_id = sanitize_text_field((string) ($payload['request_id'] ?? ''));
+	$force_apply = function_exists('lf_ai_studio_orchestrator_force_apply_enabled')
+		? lf_ai_studio_orchestrator_force_apply_enabled($payload)
+		: false;
+	$dry_run = get_option('lf_ai_autonomy_dry_run', '0') === '1';
+	$diagnostics = [
+		'force_apply' => $force_apply,
+		'dry_run' => $dry_run,
+		'idempotent' => false,
+		'idempotent_would_have_been' => false,
+		'errors' => [],
+		'apply_counts' => [
+			'homepage_updated' => false,
+			'posts_updated' => 0,
+			'faqs_updated' => 0,
+			'service_meta_updated' => 0,
+		],
+	];
 	$payload_hash = lf_ai_studio_rest_payload_hash($payload);
 	$binding = lf_ai_studio_rest_validate_callback_binding($job_id, $request_id, $payload_hash);
 	if (empty($binding['ok'])) {
-		return new \WP_REST_Response(['error' => (string) ($binding['error'] ?? 'invalid_binding')], (int) ($binding['status'] ?? 400));
+		return new \WP_REST_Response(array_merge($diagnostics, [
+			'error' => (string) ($binding['error'] ?? 'invalid_binding'),
+		]), (int) ($binding['status'] ?? 400));
 	}
 	if (!empty($binding['idempotent'])) {
-		return new \WP_REST_Response([
-			'job_id' => $job_id,
-			'success' => true,
-			'idempotent' => true,
-		], 200);
+		if ($force_apply) {
+			$diagnostics['idempotent'] = false;
+			$diagnostics['idempotent_would_have_been'] = true;
+		} else {
+			$diagnostics['idempotent'] = true;
+			return new \WP_REST_Response(array_merge($diagnostics, [
+				'job_id' => $job_id,
+				'success' => true,
+				'idempotent' => true,
+				'errors' => [],
+			]), 200);
+		}
 	}
 	update_post_meta($job_id, 'lf_ai_job_status', 'running');
 	update_post_meta($job_id, 'lf_ai_job_response', $payload);
@@ -579,7 +605,8 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		if (function_exists('lf_ai_autonomy_mark_generation_failed')) {
 			lf_ai_autonomy_mark_generation_failed($job_id, 'business_identity_mismatch');
 		}
-		return new \WP_REST_Response($business_decision['response'] ?? [], 200);
+		$biz_resp = $business_decision['response'] ?? [];
+		return new \WP_REST_Response(array_merge($diagnostics, is_array($biz_resp) ? $biz_resp : []), 200);
 	}
 	if (defined('WP_DEBUG') && WP_DEBUG) {
 		error_log('LF ORCH DEBUG: business_expected ' . $log_trimmed($business_expected));
@@ -662,11 +689,11 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 			if (function_exists('lf_ai_autonomy_mark_generation_failed')) {
 				lf_ai_autonomy_mark_generation_failed($job_id, 'media_annotations_missing');
 			}
-			return new \WP_REST_Response([
+			return new \WP_REST_Response(array_merge($diagnostics, [
 				'error' => 'media_annotations_missing',
 				'messages' => [$missing_error],
 				'job_id' => $job_id,
-			], 400);
+			]), 400);
 		}
 	}
 	if (is_array($media_annotations) && !empty($media_annotations) && function_exists('lf_image_intelligence_apply_vision_annotations')) {
@@ -694,23 +721,30 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		if (function_exists('lf_ai_autonomy_mark_generation_failed')) {
 			lf_ai_autonomy_mark_generation_failed($job_id, 'validation_failed');
 		}
-		return new \WP_REST_Response(['error' => 'validation_failed', 'messages' => $errors, 'job_id' => $job_id], 400);
+		return new \WP_REST_Response(array_merge($diagnostics, [
+			'error' => 'validation_failed',
+			'messages' => $errors,
+			'job_id' => $job_id,
+		]), 400);
 	}
-	$dry_run = get_option('lf_ai_autonomy_dry_run', '0') === '1';
 	if (defined('WP_DEBUG') && WP_DEBUG && $dry_run) {
-		error_log('LF ORCH DEBUG: dry_run enabled; skipping apply for job ' . $job_id);
+		if ($force_apply) {
+			error_log('LF ORCH DEBUG: dry_run enabled but force_apply; continuing apply for job ' . $job_id);
+		} else {
+			error_log('LF ORCH DEBUG: dry_run enabled; skipping apply for job ' . $job_id);
+		}
 	}
-	if ($dry_run) {
+	if ($dry_run && !$force_apply) {
 		update_post_meta($job_id, 'lf_ai_job_status', 'done');
 		update_post_meta($job_id, 'lf_ai_job_summary', 'Dry-run validation succeeded; no writes committed.');
 		if (function_exists('lf_ai_autonomy_mark_generation_success')) {
 			lf_ai_autonomy_mark_generation_success($job_id, ['dry_run' => true, 'request_id' => $request_id]);
 		}
-		return new \WP_REST_Response([
+		return new \WP_REST_Response(array_merge($diagnostics, [
 			'job_id' => $job_id,
 			'success' => true,
 			'dry_run' => true,
-		], 200);
+		]), 200);
 	}
 
 	// Orchestrator failure callbacks (n8n): ok:false / success:false / error string with zero updates.
@@ -748,12 +782,13 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 			lf_ai_autonomy_mark_generation_failed($job_id, 'orchestrator_no_updates');
 		}
 
-		return new \WP_REST_Response([
+		return new \WP_REST_Response(array_merge($diagnostics, [
 			'job_id' => $job_id,
 			'success' => false,
 			'error' => [$failure_message],
+			'errors' => [$failure_message],
 			'acknowledged' => true,
-		], 200);
+		]), 200);
 	}
 
 	$apply_result = lf_apply_orchestrator_updates($apply_payload);
@@ -790,11 +825,18 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		}
 	}
 
-	return new \WP_REST_Response([
+	$diagnostics['apply_counts'] = function_exists('lf_ai_studio_orchestrator_build_apply_counts')
+		? lf_ai_studio_orchestrator_build_apply_counts($apply_payload, $apply_result)
+		: $diagnostics['apply_counts'];
+	$apply_errors = $apply_result['errors'] ?? [];
+	$diagnostics['errors'] = is_array($apply_errors) ? $apply_errors : [];
+
+	return new \WP_REST_Response(array_merge($diagnostics, [
 		'job_id' => $job_id,
-		'success' => $apply_result['success'],
-		'error' => $apply_result['errors'] ?? [],
-	], $apply_result['success'] ? 200 : 400);
+		'success' => (bool) $apply_result['success'],
+		'error' => $apply_errors,
+		'errors' => $apply_errors,
+	]), !empty($apply_result['success']) ? 200 : 400);
 }
 
 function lf_ai_studio_rest_candidate_score(array $target, array $candidate): int {
