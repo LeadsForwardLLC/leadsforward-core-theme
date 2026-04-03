@@ -18,10 +18,16 @@ if [[ -n "$(git status --porcelain)" ]]; then
   git commit -m "$MSG"
 fi
 
+# GitHub often protects main (no direct push). Use a PR branch automatically.
 if [[ "$BRANCH" == "main" ]]; then
-  git push origin main
-  echo "Done: pushed main. GitHub Actions will deploy to SiteGround."
-  exit 0
+  if git push origin main 2>/dev/null; then
+    echo "Done: pushed main. GitHub Actions will deploy to SiteGround."
+    exit 0
+  fi
+  AUTO="chore/auto-ship-$(date +%Y%m%d-%H%M%S)"
+  git checkout -b "$AUTO"
+  BRANCH="$AUTO"
+  git push -u origin "$BRANCH"
 fi
 
 git push -u origin "$BRANCH"
