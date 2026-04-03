@@ -579,6 +579,22 @@ function lf_homepage_merge_config_with_defaults(array $stored): array {
 		if (!is_array($row)) {
 			$row = [];
 		}
+		// Orchestrator may save under canonical keys (e.g. hero) while order uses instance ids (hero_1).
+		// Merge any stored rows that share the same base section type so the front always sees the copy.
+		if ($type !== '') {
+			$sibling_merge = [];
+			foreach ($stored as $sid => $srow) {
+				if (!is_string($sid) || !is_array($srow) || $sid === $section_id) {
+					continue;
+				}
+				if (lf_homepage_base_section_type($sid) === $type) {
+					$sibling_merge = array_merge($sibling_merge, $srow);
+				}
+			}
+			if ($sibling_merge !== []) {
+				$row = array_merge($sibling_merge, $row);
+			}
+		}
 		if ($type === 'hero') {
 			$row = lf_homepage_normalize_hero_cta_keys($row);
 		}
