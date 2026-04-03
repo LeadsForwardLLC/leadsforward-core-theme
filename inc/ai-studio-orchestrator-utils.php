@@ -38,9 +38,16 @@ if (!function_exists('lf_ai_studio_orchestrator_build_apply_counts')) {
                 }
             }
         }
+        $posts_unique = [];
+        if (is_array($posts)) {
+            foreach ($posts as $pid) {
+                $posts_unique[(int) $pid] = true;
+            }
+        }
+
         return [
             'homepage_updated' => !empty($changes['homepage']),
-            'posts_updated' => is_array($posts) ? count($posts) : 0,
+            'posts_updated' => count($posts_unique),
             'faqs_updated' => is_array($faqs) ? count($faqs) : 0,
             'service_meta_updated' => $service_n,
         ];

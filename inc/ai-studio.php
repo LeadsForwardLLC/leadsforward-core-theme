@@ -7450,6 +7450,15 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			if ($instance_id === '' || $field_key === '') {
 				continue;
 			}
+			// Manifest / LLM output uses "hero-1.field"; builder meta keys are "hero_1".
+			if (strpos($instance_id, '-') !== false) {
+				$alt_instance = str_replace('-', '_', $instance_id);
+				if (!isset($sections[$instance_id]) || !is_array($sections[$instance_id])) {
+					if (isset($sections[$alt_instance]) && is_array($sections[$alt_instance])) {
+						$instance_id = $alt_instance;
+					}
+				}
+			}
 			$section = $sections[$instance_id] ?? null;
 			if (!is_array($section)) {
 				foreach ($sections as $maybe_id => $maybe_section) {
