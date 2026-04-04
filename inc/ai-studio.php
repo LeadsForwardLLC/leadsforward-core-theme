@@ -7242,6 +7242,9 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 				if ($llm_registry_type === '') {
 					$llm_registry_type = $section_id;
 				}
+				
+				// DEBUG: Log what we're processing
+				error_log('LF ORCHESTRATOR DEBUG: Processing section_id=' . $section_id . ', field_key=' . $field_key . ', llm_registry_type=' . $llm_registry_type . ', storage_key=' . $storage_key);
 				if ($llm_registry_type === '' || $field_key === '') {
 					continue;
 				}
