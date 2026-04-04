@@ -16,6 +16,18 @@ if (!defined('ABSPATH')) {
 /** Option key for section config (keyed by section type). */
 const LF_HOMEPAGE_CONFIG_OPTION = 'lf_homepage_section_config';
 
+// Track last known content to detect overwrites
+function lf_homepage_track_content_change($new_value, $old_value, $option) {
+    if ($option === LF_HOMEPAGE_CONFIG_OPTION) {
+        $hero_headline = $new_value['hero']['hero_headline'] ?? 'MISSING';
+        $old_hero_headline = $old_value['hero']['hero_headline'] ?? 'MISSING';
+        error_log("LF CRITICAL TRACK: Database update detected! Old: '$old_hero_headline' -> New: '$hero_headline'");
+        error_log("LF CRITICAL TRACK: Call stack: " . json_encode(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5)));
+    }
+    return $new_value;
+}
+add_filter('pre_update_option_' . LF_HOMEPAGE_CONFIG_OPTION, 'lf_homepage_track_content_change', 10, 3);
+
 /** Option key for last applied niche (setup source of truth). */
 const LF_HOMEPAGE_NICHE_OPTION = 'lf_homepage_niche_slug';
 
