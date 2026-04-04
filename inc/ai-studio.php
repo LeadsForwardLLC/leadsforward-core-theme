@@ -7384,6 +7384,10 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			);
 			
 			// DEBUG: Log what the merged config looks like for this section
+			$content_fields = array_filter($config[$storage_key], function($key) {
+				return !in_array($key, ['enabled', 'variant', 'section_background', 'section_intent'], true);
+			}, ARRAY_FILTER_USE_KEY);
+			error_log('LF ORCHESTRATOR DEBUG: After merge, config[' . $storage_key . '] content fields: ' . json_encode(array_slice($content_fields, 0, 5, true)));
 			error_log('LF ORCHESTRATOR DEBUG: After merge, config[' . $storage_key . '] has sample data: ' . json_encode(array_slice($config[$storage_key], 0, 3, true)));
 			
 			// lf_get_homepage_section_config() resets to generic defaults when no section has enabled=true.
