@@ -359,6 +359,13 @@ function lf_get_homepage_section_config(): array {
 	if (is_array($stored)) {
 		$stored = wp_unslash($stored);
 	}
+	
+	// DEBUG: Log what we're reading from database
+	error_log('LF DEBUG: Reading homepage config from database. Stored keys: ' . json_encode(array_keys($stored ?? [])));
+	if (is_array($stored) && !empty($stored)) {
+		error_log('LF DEBUG: Sample stored data for hero: ' . json_encode(array_slice($stored['hero'] ?? [], 0, 5, true)));
+	}
+	
 	if ($normalized_once) {
 		$stored = get_option(LF_HOMEPAGE_CONFIG_OPTION, null);
 		if (is_array($stored)) {
@@ -381,6 +388,10 @@ function lf_get_homepage_section_config(): array {
 				break;
 			}
 		}
+		
+		// DEBUG: Log enabled detection
+		error_log('LF DEBUG: Homepage config enabled detection: has_enabled=' . ($has_enabled ? 'true' : 'false'));
+		
 		if (!$has_enabled) {
 			foreach (lf_homepage_controller_order() as $section_id) {
 				$row = $config[ $section_id ] ?? null;
@@ -398,6 +409,10 @@ function lf_get_homepage_section_config(): array {
 				}
 			}
 		}
+		
+		// DEBUG: Log content detection
+		error_log('LF DEBUG: Homepage config content detection: has_enabled=' . ($has_enabled ? 'true' : 'false'));
+		
 		// Third pass: raw option rows (or list/array fields). Without this, a site can look
 		// "empty" to the order-based checks while the DB still holds orchestrator output —
 		// then the block below overwrites lf_homepage_section_config with niche defaults on read.
@@ -425,7 +440,12 @@ function lf_get_homepage_section_config(): array {
 				}
 			}
 		}
+		
+		// DEBUG: Log final detection result
+		error_log('LF DEBUG: Homepage config final detection: has_enabled=' . ($has_enabled ? 'true' : 'false') . ', manual=' . ($manual ? 'true' : 'false') . ', wizard_done=' . ($wizard_done ? 'true' : 'false'));
+		
 		if (!$has_enabled && !$manual && $wizard_done) {
+			error_log('LF DEBUG: HOMEPAGE CONFIG RESET TRIGGERED - This will overwrite saved data!');
 			$niche = get_option(LF_HOMEPAGE_NICHE_OPTION, '');
 			$fresh = lf_homepage_default_config($niche ?: null);
 			// Never rewrite the option from a normal front-end hit — that could erase orchestrator
