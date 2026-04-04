@@ -62,6 +62,7 @@ function lf_homepage_legacy_order(): array {
 		'service_intro',
 		'benefits',
 		'service_details',
+		'service_details_alt',
 		'process',
 		'faq_accordion',
 		'trust_reviews',
@@ -245,6 +246,10 @@ function lf_homepage_default_section_config(string $section_type, string $niche_
 			return array_merge($base, [
 				'section_heading' => __('Areas We Serve', 'leadsforward-core'),
 				'section_intro'   => __('Find us on the map and explore the neighborhoods we serve every day.', 'leadsforward-core'),
+			]);
+		case 'service_details_alt':
+			return array_merge($base, [
+				'service_details_layout' => 'media_content',
 			]);
 		case 'cta':
 			return array_merge($base, [

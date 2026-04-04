@@ -704,6 +704,7 @@ function lf_sections_default_order(string $context): array {
 			'service_intro',
 			'benefits',
 			'service_details',
+			'service_details_alt',
 			'process',
 			'faq_accordion',
 			'trust_reviews',
