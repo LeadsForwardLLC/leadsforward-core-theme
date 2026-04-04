@@ -7622,7 +7622,15 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 	// context, etc.). Previously any error here skipped homepage, FAQ, and service_meta writes —
 	// a single wrong ID on the callback site made the entire payload appear to "do nothing".
 	if (is_array($staged_homepage_config)) {
+		// CRITICAL DEBUG: Log exactly what's being saved to database
+		error_log('LF CRITICAL DEBUG: About to save homepage config to database. Hero section data: ' . json_encode(array_slice($staged_homepage_config['hero'] ?? [], 0, 8, true)));
+		error_log('LF CRITICAL DEBUG: Trust bar section data: ' . json_encode(array_slice($staged_homepage_config['trust_bar'] ?? [], 0, 5, true)));
+		error_log('LF CRITICAL DEBUG: Total sections being saved: ' . count($staged_homepage_config));
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $staged_homepage_config, true);
+		
+		// CRITICAL DEBUG: Verify what was actually saved
+		$verify_saved = get_option(LF_HOMEPAGE_CONFIG_OPTION, null);
+		error_log('LF CRITICAL DEBUG: Verification - Hero section after save: ' . json_encode(array_slice($verify_saved['hero'] ?? [], 0, 8, true)));
 	}
 	if (!empty($staged_post_meta_updates)) {
 		foreach ($staged_post_meta_updates as $post_id => $pb_meta) {
