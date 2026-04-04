@@ -7260,6 +7260,13 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 							$debug_homepage_drop_samples['unknown_section'][] = (string) $section_id . ' (registry=' . $llm_registry_type . ')';
 						}
 					}
+					// Log production failures for homepage section drops
+					error_log(sprintf(
+						'LF ORCHESTRATOR: Dropped homepage section %s (storage_key=%s, registry_type=%s not found)',
+						$section_id,
+						$storage_key,
+						$llm_registry_type
+					));
 					// Ignore unknown/legacy homepage section ids instead of failing entire callback.
 					continue;
 				}
@@ -7271,6 +7278,13 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 							$debug_homepage_drop_samples['unknown_field'][] = $llm_registry_type . '.' . $field_key;
 						}
 					}
+					// Log production failures for homepage field drops
+					error_log(sprintf(
+						'LF ORCHESTRATOR: Dropped homepage field %s.%s (not in allowed fields for %s)',
+						$llm_registry_type,
+						$field_key,
+						$llm_registry_type
+					));
 					// Ignore unsupported homepage fields coming from older orchestrator prompts.
 					continue;
 				}
