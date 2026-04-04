@@ -642,9 +642,19 @@ function lf_homepage_merge_config_with_defaults(array $stored): array {
 				$out[$section_id][$key] = $value;
 			}
 		}
-		// DEBUG: Log that fix was applied
-		if ($section_id === 'hero' && !empty($row['hero_headline'])) {
-			error_log('LF CRITICAL FIX: Applied to hero section - hero_headline preserved: ' . $out[$section_id]['hero_headline']);
+		// DEBUG: Log that fix was applied to all sections
+		if (!empty($row)) {
+			$content_fields = [];
+			foreach ($row as $key => $value) {
+				if (is_string($value) && trim($value) !== '') {
+					$content_fields[] = $key;
+				} elseif (is_array($value) && !empty($value)) {
+					$content_fields[] = $key;
+				}
+			}
+			if (!empty($content_fields)) {
+				error_log('LF CRITICAL FIX: Applied to ' . $section_id . ' section - preserved fields: ' . implode(', ', $content_fields));
+			}
 		}
 	}
 	return $out;
