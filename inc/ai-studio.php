@@ -6682,29 +6682,28 @@ function lf_ai_studio_resolve_homepage_config_storage_key(string $llm_registry_t
 	if ($llm_registry_type === '' || !is_array($config)) {
 		return '';
 	}
+	
+	// Direct match first - this should handle most cases
 	if (array_key_exists($llm_registry_type, $config)) {
 		return $llm_registry_type;
 	}
-	$targets = lf_ai_studio_homepage_equiv_storage_types($llm_registry_type);
-	$order = function_exists('lf_homepage_controller_order') ? lf_homepage_controller_order() : [];
-	foreach ($order as $key) {
-		if (!is_string($key) || !array_key_exists($key, $config)) {
+	
+	// If no direct match, try to find any key with the same base type
+	foreach ($config as $key => $value) {
+		if (!is_string($key)) {
 			continue;
 		}
 		$base = function_exists('lf_homepage_base_section_type') ? lf_homepage_base_section_type($key) : $key;
-		if ($base !== '' && in_array($base, $targets, true)) {
+		if ($base === $llm_registry_type) {
 			return $key;
 		}
 	}
-	foreach ($config as $key => $_) {
-		if (!is_string($key) || !array_key_exists($key, $config)) {
-			continue;
-		}
-		$base = function_exists('lf_homepage_base_section_type') ? lf_homepage_base_section_type($key) : $key;
-		if ($base !== '' && in_array($base, $targets, true)) {
-			return $key;
-		}
+	
+	// Final fallback - return the original type if config is empty (fresh install)
+	if (empty($config)) {
+		return $llm_registry_type;
 	}
+	
 	return '';
 }
 
