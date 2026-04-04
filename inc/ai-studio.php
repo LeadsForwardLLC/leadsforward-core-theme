@@ -6688,6 +6688,12 @@ function lf_ai_studio_resolve_homepage_config_storage_key(string $llm_registry_t
 		return $llm_registry_type;
 	}
 	
+	// CRITICAL FIX: Always return the section type as storage key for fresh installs
+	// This ensures each section writes to its own location even when config is empty
+	if (empty($config)) {
+		return $llm_registry_type;
+	}
+	
 	// If no direct match, try to find any key with the same base type
 	foreach ($config as $key => $value) {
 		if (!is_string($key)) {
@@ -6699,12 +6705,8 @@ function lf_ai_studio_resolve_homepage_config_storage_key(string $llm_registry_t
 		}
 	}
 	
-	// Final fallback - return the original type if config is empty (fresh install)
-	if (empty($config)) {
-		return $llm_registry_type;
-	}
-	
-	return '';
+	// Final fallback - return the original type
+	return $llm_registry_type;
 }
 
 /**
@@ -7242,12 +7244,18 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 					$llm_registry_type = $section_id;
 				}
 				
-				// DEBUG: Log what we're processing
-				error_log('LF ORCHESTRATOR DEBUG: Processing section_id=' . $section_id . ', field_key=' . $field_key . ', llm_registry_type=' . $llm_registry_type . ', storage_key=' . $storage_key);
-				if ($llm_registry_type === '' || $field_key === '') {
-					continue;
-				}
 				$storage_key = lf_ai_studio_resolve_homepage_config_storage_key($llm_registry_type, $config);
+				if ($storage_key === '' || !isset($registry[$llm_registry_type])) {
+					$alt = lf_ai_studio_resolve_homepage_section_id_alias($section_id, $config);
+					if ($alt !== '' && isset($registry[$alt])) {
+						$llm_registry_type = $alt;
+						$storage_key = lf_ai_studio_resolve_homepage_config_storage_key($llm_registry_type, $config);
+					}
+				}
+				
+				// DEBUG: Log what we're processing
+				error_log('LF ORCHESTRATOR DEBUG: Processing section_id=' . $section_id . ', field_key=' . $field_key . ', llm_registry_type=' . $llm_registry_type . ', storage_key=' . $storage_key . ', value_preview=' . substr((string)$value, 0, 50));
+				
 				if ($storage_key === '' || !isset($registry[$llm_registry_type])) {
 					$alt = lf_ai_studio_resolve_homepage_section_id_alias($section_id, $config);
 					if ($alt !== '' && isset($registry[$alt])) {
@@ -7366,10 +7374,18 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 				$assigned_images
 			);
 			$fields = lf_ai_studio_enforce_section_quality($fields, $registry_type, $registry);
+			
+			// DEBUG: Log what we're about to merge
+			error_log('LF ORCHESTRATOR DEBUG: Merging storage_key=' . $storage_key . ' with ' . count($fields) . ' fields. Sample: ' . json_encode(array_slice($fields, 0, 2, true)));
+			
 			$config[$storage_key] = array_merge(
 				$config[$storage_key],
 				lf_sections_sanitize_settings($registry_type, $fields)
 			);
+			
+			// DEBUG: Log what the merged config looks like for this section
+			error_log('LF ORCHESTRATOR DEBUG: After merge, config[' . $storage_key . '] has sample data: ' . json_encode(array_slice($config[$storage_key], 0, 3, true)));
+			
 			// lf_get_homepage_section_config() resets to generic defaults when no section has enabled=true.
 			$config[$storage_key]['enabled'] = true;
 		}
@@ -7410,6 +7426,10 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			$staged_homepage_config = $config;
 			$changes['homepage'] = true;
 			$pages_updated++;
+			
+			// CRITICAL DEBUG: Log what we're about to save to database
+			error_log('LF ORCHESTRATOR DEBUG: About to save homepage config with sections: ' . json_encode(array_keys($config)));
+			error_log('LF ORCHESTRATOR DEBUG: Hero section data sample: ' . json_encode(array_slice($config['hero'] ?? [], 0, 5, true)));
 		}
 	}
 
