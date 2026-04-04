@@ -333,6 +333,32 @@ function lf_homepage_empty_config(): array {
  * @param array|null $wizard_data Optional setup payload (e.g. service_areas for city substitution).
  */
 function lf_homepage_apply_niche_config(string $niche_slug, ?array $wizard_data = null): void {
+	// PROTECTION: Check if we already have real content before overwriting
+	$existing = get_option(LF_HOMEPAGE_CONFIG_OPTION, []);
+	$has_real_content = false;
+	
+	if (is_array($existing)) {
+		foreach ($existing as $section_id => $section_data) {
+			if (is_array($section_data)) {
+				foreach ($section_data as $key => $value) {
+					if (in_array($key, ['hero_headline', 'hero_subheadline', 'section_heading', 'section_intro', 'trust_heading']) &&
+						is_string($value) && trim($value) !== '' && 
+						!str_contains($value, '[Your City]') && 
+						!str_contains($value, 'Your Business')) {
+						$has_real_content = true;
+						error_log('LF CRITICAL: lf_homepage_apply_niche_config BLOCKED - real content detected in ' . $section_id . '.' . $key);
+						break 2;
+					}
+				}
+			}
+		}
+	}
+	
+	if ($has_real_content) {
+		error_log('LF CRITICAL: lf_homepage_apply_niche_config skipped - preserving existing AI content');
+		return;
+	}
+	
 	$config = lf_homepage_default_config($niche_slug);
 	$city_placeholder = '[Your City]';
 	$first_area_name = '';
