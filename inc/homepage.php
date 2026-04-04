@@ -363,7 +363,13 @@ function lf_get_homepage_section_config(): array {
 	// DEBUG: Log what we're reading from database
 	error_log('LF DEBUG: Reading homepage config from database. Stored keys: ' . json_encode(array_keys($stored ?? [])));
 	if (is_array($stored) && !empty($stored)) {
-		error_log('LF DEBUG: Sample stored data for hero: ' . json_encode(array_slice($stored['hero'] ?? [], 0, 5, true)));
+		error_log('LF DEBUG: Sample stored data for hero: ' . json_encode(array_slice($stored['hero'] ?? [], 0, 8, true)));
+		// ALERT: Check if content disappeared
+		if (!empty($stored['hero']['hero_headline']) || !empty($stored['hero']['hero_subheadline'])) {
+			error_log('LF ALERT: HERO CONTENT DETECTED IN DATABASE - hero_headline: ' . ($stored['hero']['hero_headline'] ?? 'empty'));
+		} else {
+			error_log('LF ALERT: HERO CONTENT MISSING FROM DATABASE - This indicates data was wiped after save!');
+		}
 	}
 	
 	if ($normalized_once) {
