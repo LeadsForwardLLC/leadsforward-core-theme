@@ -403,6 +403,12 @@ function lf_sections_registry(): array {
 			'fields' => $service_details_fields,
 			'render' => 'lf_sections_render_service_details',
 		],
+		'service_details_alt' => [
+			'label' => __('Service Details (Alt)', 'leadsforward-core'),
+			'contexts' => ['homepage'],
+			'fields' => $service_details_fields_media,
+			'render' => 'lf_sections_render_service_details',
+		],
 		'content_image' => [
 			'label' => __('Service Details (Alt)', 'leadsforward-core'),
 		'contexts' => ['service_area', 'page'],
