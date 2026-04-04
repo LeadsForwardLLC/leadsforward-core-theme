@@ -4264,7 +4264,9 @@ function lf_ai_studio_llm_system_message(): string {
 		'CTA strategy: treat the homepage CTA section as the canonical global CTA copy. For each page, add exactly one contextual sentence in cta_subheadline_secondary. Never duplicate CTA sentences across pages.',
 		'CTA button labels: keep 2-5 words, max 32 characters, no trailing punctuation.',
 	'Service Details section: Use service_details_body for main overview (2-3 paragraphs max). Use service_details_micro_sections for specific service topics (one per line), each 15-25 words. Use service_details_checklist for process/assurance points (one per line), each 8-15 words.',
-	'Service pages: Always fill short_description field with 25-35 words summarizing the service. Include primary benefit and location context.',
+	'Process section: Format process_steps with separators for title/body pairs. Use "Step Title || Step description" format or "Step Title | Step description" for each step. This creates proper visual hierarchy.',
+	'Service pages: Always fill short_description field with 25-35 words summarizing service. Include primary benefit and location context.',
+	'Service page blueprints: short_description field is required and should be filled with compelling service summary.',
 	]);
 }
 
