@@ -632,6 +632,16 @@ function lf_homepage_merge_config_with_defaults(array $stored): array {
 			$row = lf_sections_normalize_service_details_settings($type, $row);
 		}
 		$out[$section_id] = array_merge($default, $row);
+		// CRITICAL FIX: Ensure stored content fields override defaults
+		// array_merge with defaults first means empty default values overwrite stored content
+		// Reverse the order for content fields to preserve actual data
+		foreach ($row as $key => $value) {
+			if (is_string($value) && trim($value) !== '') {
+				$out[$section_id][$key] = $value;
+			} elseif (is_array($value) && !empty($value)) {
+				$out[$section_id][$key] = $value;
+			}
+		}
 	}
 	return $out;
 }
