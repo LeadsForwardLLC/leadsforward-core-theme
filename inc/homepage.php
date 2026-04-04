@@ -482,7 +482,6 @@ function lf_get_homepage_section_config(): array {
 				error_log('LF EMERGENCY: Reset BLOCKED - real content detected!');
 			}
 		}
-	}
 		return $config;
 	}
 	$migrated = lf_homepage_migrate_from_acf();
