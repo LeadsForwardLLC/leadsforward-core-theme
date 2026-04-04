@@ -101,8 +101,18 @@ function lf_homepage_base_section_type(string $section_id): string {
 	if ($section_id === '') {
 		return '';
 	}
+	
+	// Handle both underscore (__ and _ ) and hyphen (-) separators for section IDs
+	// This fixes the critical bug where LLM outputs "hero-1" but storage expects "hero"
 	$parts = explode('__', $section_id, 2);
 	$base = sanitize_text_field((string) ($parts[0] ?? ''));
+	
+	// Also split on hyphens to handle LLM-generated IDs like "hero-1", "trust_bar-1"
+	if (strpos($base, '-') !== false) {
+		$hyphen_parts = explode('-', $base, 2);
+		$base = sanitize_text_field((string) ($hyphen_parts[0] ?? $base));
+	}
+	
 	if (preg_match('/^(.+)[_-]\d+$/', $base, $m) === 1) {
 		return sanitize_text_field((string) ($m[1] ?? $base));
 	}
