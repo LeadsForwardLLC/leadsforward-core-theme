@@ -6688,6 +6688,12 @@ function lf_ai_studio_resolve_homepage_config_storage_key(string $llm_registry_t
 		return $llm_registry_type;
 	}
 	
+	// CRITICAL FIX: Always return the section type as storage key for fresh installs
+	// This ensures each section writes to its own location even when config is empty
+	if (empty($config)) {
+		return $llm_registry_type;
+	}
+	
 	// If no direct match, try to find any key with the same base type
 	foreach ($config as $key => $value) {
 		if (!is_string($key)) {
@@ -6699,12 +6705,8 @@ function lf_ai_studio_resolve_homepage_config_storage_key(string $llm_registry_t
 		}
 	}
 	
-	// Final fallback - return the original type if config is empty (fresh install)
-	if (empty($config)) {
-		return $llm_registry_type;
-	}
-	
-	return '';
+	// Final fallback - return the original type
+	return $llm_registry_type;
 }
 
 /**
