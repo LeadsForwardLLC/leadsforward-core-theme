@@ -449,21 +449,40 @@ function lf_get_homepage_section_config(): array {
 		
 		// DEBUG: Log final detection result
 		error_log('LF DEBUG: Homepage config final detection: has_enabled=' . ($has_enabled ? 'true' : 'false') . ', manual=' . ($manual ? 'true' : 'false') . ', wizard_done=' . ($wizard_done ? 'true' : 'false'));
-		
 		if (!$has_enabled && !$manual && $wizard_done) {
 			error_log('LF DEBUG: HOMEPAGE CONFIG RESET TRIGGERED - This will overwrite saved data!');
-			$niche = get_option(LF_HOMEPAGE_NICHE_OPTION, '');
-			$fresh = lf_homepage_default_config($niche ?: null);
-			// Never rewrite the option from a normal front-end hit — that could erase orchestrator
-			// content if enabled/content heuristics misfire. Admin / REST / CLI may persist the reset.
-			$may_persist_homepage_reset = is_admin()
-				|| (defined('REST_REQUEST') && REST_REQUEST)
-				|| (defined('WP_CLI') && WP_CLI);
-			if ($may_persist_homepage_reset) {
-				update_option(LF_HOMEPAGE_CONFIG_OPTION, $fresh, true);
-				$config = $fresh;
+			// EMERGENCY PROTECTION: Check if we have actual content before allowing reset
+			$has_real_content = false;
+			foreach ($stored as $section_id => $section_data) {
+				if (is_array($section_data)) {
+					foreach ($section_data as $key => $value) {
+						if (in_array($key, ['hero_headline', 'hero_subheadline', 'section_heading', 'section_intro', 'trust_heading']) && 
+							is_string($value) && trim($value) !== '') {
+							$has_real_content = true;
+							error_log('LF EMERGENCY: Found real content in ' . $section_id . '.' . $key . ' - BLOCKING RESET!');
+							break 2;
+						}
+					}
+				}
+			}
+			if (!$has_real_content) {
+				$niche = get_option(LF_HOMEPAGE_NICHE_OPTION, '');
+				$fresh = lf_homepage_default_config($niche ?: null);
+				// Never rewrite the option from a normal front-end hit — that could erase orchestrator
+				// content if enabled/content heuristics misfire. Admin / REST / CLI may persist the reset.
+				$may_persist_homepage_reset = is_admin()
+					|| (defined('REST_REQUEST') && REST_REQUEST)
+					|| (defined('WP_CLI') && WP_CLI);
+				if ($may_persist_homepage_reset) {
+					error_log('LF EMERGENCY: Allowing reset - no real content found');
+					update_option(LF_HOMEPAGE_CONFIG_OPTION, $fresh, true);
+					$config = $fresh;
+				}
+			} else {
+				error_log('LF EMERGENCY: Reset BLOCKED - real content detected!');
 			}
 		}
+	}
 		return $config;
 	}
 	$migrated = lf_homepage_migrate_from_acf();
