@@ -4263,6 +4263,8 @@ function lf_ai_studio_llm_system_message(): string {
 		'FAQ strategy: create one global pool of 8-12 evergreen FAQs. Reuse across pages unless contextual variation is required. Homepage shows 5. Service pages show 4-6 relevant. Service area pages show 3-5 localized. Overview pages optionally 3-4.',
 		'CTA strategy: treat the homepage CTA section as the canonical global CTA copy. For each page, add exactly one contextual sentence in cta_subheadline_secondary. Never duplicate CTA sentences across pages.',
 		'CTA button labels: keep 2-5 words, max 32 characters, no trailing punctuation.',
+	'Service Details section: Use service_details_body for main overview (2-3 paragraphs max). Use service_details_micro_sections for specific service topics (one per line), each 15-25 words. Use service_details_checklist for process/assurance points (one per line), each 8-15 words.',
+	'Service pages: Always fill short_description field with 25-35 words summarizing the service. Include primary benefit and location context.',
 	]);
 }
 
