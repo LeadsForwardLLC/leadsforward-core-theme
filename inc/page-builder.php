@@ -117,6 +117,41 @@ function lf_pb_default_config(string $context): array {
 
 function lf_pb_get_post_config(int $post_id, string $context): array {
 	$default = lf_pb_default_config($context);
+	
+	// If this is the homepage, sync with homepage admin config
+	if ($context === 'homepage' && function_exists('lf_get_homepage_section_config')) {
+		$homepage_config = lf_get_homepage_section_config();
+		if (is_array($homepage_config) && !empty($homepage_config)) {
+			// Convert homepage config to page builder format
+			$sections_out = [];
+			$order_out = [];
+			
+			foreach ($homepage_config as $section_type => $section_config) {
+				if (!is_array($section_config) || empty($section_config['enabled'])) {
+					continue;
+				}
+				
+				$instance_id = lf_pb_instance_id($section_type, 1);
+				$sections_out[$instance_id] = [
+					'type' => $section_type,
+					'enabled' => true,
+					'deletable' => true,
+					'settings' => $section_config,
+				];
+				$order_out[] = $instance_id;
+			}
+			
+			return [
+				'order' => $order_out,
+				'sections' => $sections_out,
+				'seo' => [
+					'title' => get_the_title($post_id),
+					'description' => get_post_meta($post_id, '_yoast_wpseo_metadesc', true) ?: '',
+				],
+			];
+		}
+	}
+	
 	$stored = get_post_meta($post_id, LF_PB_META_KEY, true);
 	if (is_array($stored)) {
 		$stored = wp_unslash($stored);
@@ -973,6 +1008,26 @@ function lf_pb_handle_save(int $post_id, \WP_Post $post): void {
 		lf_pb_migrate_legacy_seo($post_id, $existing);
 	}
 	update_post_meta($post_id, LF_PB_META_KEY, ['order' => $order, 'sections' => $clean_sections]);
+	
+	// If this is the homepage, sync changes back to homepage config
+	if ($context === 'homepage' && function_exists('lf_homepage_merge_config_with_defaults')) {
+		$homepage_config = [];
+		foreach ($clean_sections as $instance_id => $section) {
+			$section_type = $section['type'];
+			$section_settings = $section['settings'];
+			$section_settings['enabled'] = $section['enabled'];
+			$homepage_config[$section_type] = $section_settings;
+		}
+		
+		// Merge with existing homepage config to preserve other settings
+		$existing_config = lf_get_homepage_section_config();
+		if (is_array($existing_config)) {
+			$homepage_config = array_merge($existing_config, $homepage_config);
+		}
+		
+		// Save to homepage config option
+		update_option('lf_homepage_section_config', $homepage_config);
+	}
 }
 
 function lf_pb_render_sections(\WP_Post $post): void {
