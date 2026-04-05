@@ -56,9 +56,13 @@ function lf_ai_build_system_prompt(string $context_type, $context_id, array $edi
 /**
  * Validate and filter AI response. Returns only allowed field_key => new_value. Rejects invalid/locked.
  */
-function lf_ai_validate_response(string $raw_response, $context_id): array {
-	$editable = lf_get_ai_editable_fields($context_id);
-	$allowed_keys = array_keys($editable);
+function lf_ai_validate_response(string $raw_response, $context_id, ?array $allowed_keys_override = null): array {
+	if ($allowed_keys_override !== null) {
+		$allowed_keys = array_values(array_filter(array_map('sanitize_text_field', $allowed_keys_override)));
+	} else {
+		$editable = lf_get_ai_editable_fields($context_id);
+		$allowed_keys = array_keys($editable);
+	}
 	$decoded = json_decode(trim($raw_response), true);
 	if (!is_array($decoded)) {
 		return [];

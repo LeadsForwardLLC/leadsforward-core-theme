@@ -287,39 +287,58 @@ function lf_ai_assistant_requested_edit_keys(string $prompt, $context_id): array
 	return $keys;
 }
 
-function lf_ai_assistant_section_allowed_keys(string $context_type, $context_id, string $selected_section_id, string $selected_section_type): array {
+function lf_ai_resolve_registry_section_type(string $context_type, $context_id, string $selected_section_id, string $selected_section_type): string {
 	$section_id = sanitize_text_field($selected_section_id);
 	$section_type = sanitize_text_field($selected_section_type);
-	if ($section_id === '' && $section_type === '') {
-		return [];
+	if ($section_type !== '') {
+		return $section_type;
 	}
-	$resolved_type = $section_type;
-	if ($resolved_type === '') {
-		$resolved_type = $section_id;
+	if ($section_id === '') {
+		return '';
 	}
 	if (($context_type === 'homepage' || $context_id === 'homepage') && function_exists('lf_get_homepage_section_config')) {
 		$config = lf_get_homepage_section_config();
-		if ($section_id !== '' && is_array($config[$section_id] ?? null)) {
-			$resolved_type = $section_id;
+		if (is_array($config[ $section_id ] ?? null)) {
+			$row = $config[ $section_id ];
+			$row_type = (string) ($row['section_type'] ?? $row['type'] ?? '');
+			if ($row_type !== '') {
+				return sanitize_text_field($row_type);
+			}
+		}
+		if (function_exists('lf_homepage_base_section_type')) {
+			return lf_homepage_base_section_type($section_id);
 		}
 	}
-	if ($resolved_type === '' && is_numeric($context_id) && defined('LF_PB_META_KEY') && function_exists('lf_pb_get_post_config') && function_exists('lf_ai_pb_context_for_post')) {
+	if (is_numeric($context_id) && defined('LF_PB_META_KEY') && function_exists('lf_pb_get_post_config') && function_exists('lf_ai_pb_context_for_post')) {
 		$post = get_post((int) $context_id);
 		if ($post instanceof \WP_Post) {
 			$pb_context = (string) lf_ai_pb_context_for_post($post);
 			if ($pb_context !== '') {
 				$config = lf_pb_get_post_config((int) $context_id, $pb_context);
 				$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
-				$row = is_array($sections[$section_id] ?? null) ? $sections[$section_id] : [];
-				$resolved_type = sanitize_text_field((string) ($row['type'] ?? $resolved_type));
+				$row = is_array($sections[ $section_id ] ?? null) ? $sections[ $section_id ] : [];
+				$t = sanitize_text_field((string) ($row['type'] ?? ''));
+				if ($t !== '') {
+					return $t;
+				}
 			}
 		}
 	}
+	return $section_id;
+}
+
+function lf_ai_assistant_section_allowed_keys(string $context_type, $context_id, string $selected_section_id, string $selected_section_type): array {
+	$section_id = sanitize_text_field($selected_section_id);
+	$section_type = sanitize_text_field($selected_section_type);
+	if ($section_id === '' && $section_type === '') {
+		return [];
+	}
+	$resolved_type = lf_ai_resolve_registry_section_type($context_type, $context_id, $section_id, $section_type);
 	if ($resolved_type === '' || !function_exists('lf_sections_registry')) {
 		return [];
 	}
 	$registry = lf_sections_registry();
-	$section_def = is_array($registry[$resolved_type] ?? null) ? $registry[$resolved_type] : [];
+	$section_def = is_array($registry[ $resolved_type ] ?? null) ? $registry[ $resolved_type ] : [];
 	$fields = is_array($section_def['fields'] ?? null) ? $section_def['fields'] : [];
 	$keys = [];
 	foreach ($fields as $field) {
@@ -742,7 +761,30 @@ function lf_ai_ajax_generate(): void {
 		]);
 	}
 	if ($assistant_mode === 'edit_existing') {
-		$result = lf_ai_generate_proposal($context_type_use, $context_id_use, $prompt);
+		$homepage_section_row_id = '';
+		$registry_section_type_for_labels = '';
+		$scoped_editable = null;
+		if ($context_type_use === 'homepage' && $selected_section_id !== '') {
+			$homepage_section_row_id = $selected_section_id;
+			$registry_section_type_for_labels = lf_ai_resolve_registry_section_type($context_type_use, $context_id_use, $selected_section_id, $selected_section_type);
+			$section_keys_all = lf_ai_assistant_section_allowed_keys($context_type_use, $context_id_use, $selected_section_id, $selected_section_type);
+			$copy_keys = [];
+			foreach ($section_keys_all as $sk) {
+				if (lf_is_field_ai_editable($sk)) {
+					$copy_keys[] = $sk;
+				}
+			}
+			if (empty($copy_keys)) {
+				wp_send_json_error(['message' => __('No editable fields were found for the selected section target.', 'leadsforward-core')]);
+			}
+			$scoped_editable = lf_ai_editable_labels_for_registry_keys($registry_section_type_for_labels, $copy_keys);
+			foreach ($copy_keys as $ck) {
+				if (!isset($scoped_editable[ $ck ])) {
+					$scoped_editable[ $ck ] = $ck;
+				}
+			}
+		}
+		$result = lf_ai_generate_proposal($context_type_use, $context_id_use, $prompt, $homepage_section_row_id, $scoped_editable);
 		if (!$result['success']) {
 			wp_send_json_error(['message' => $result['error']]);
 		}
@@ -760,7 +802,20 @@ function lf_ai_ajax_generate(): void {
 				wp_send_json_error(['message' => __('No editable fields were found for the selected section target.', 'leadsforward-core')]);
 			}
 		}
-		$current = lf_ai_get_current_values($context_type_use, $context_id_use, array_keys($result['proposed']));
+		$current = lf_ai_get_current_values($context_type_use, $context_id_use, array_keys($result['proposed']), $homepage_section_row_id);
+		$labels = array_intersect_key(lf_get_ai_editable_fields($context_id_use), $result['proposed']);
+		$missing = array_diff_key($result['proposed'], $labels);
+		if (!empty($missing)) {
+			$rt = $registry_section_type_for_labels !== '' ? $registry_section_type_for_labels : lf_ai_resolve_registry_section_type($context_type_use, $context_id_use, $selected_section_id, $selected_section_type);
+			if ($rt !== '') {
+				$labels = array_merge($labels, lf_ai_editable_labels_for_registry_keys($rt, array_keys($missing)));
+			}
+			foreach (array_keys($missing) as $mk) {
+				if (!isset($labels[ $mk ])) {
+					$labels[ $mk ] = $mk;
+				}
+			}
+		}
 		wp_send_json_success([
 			'mode' => $assistant_mode,
 			'assistant_cpt_type' => $assistant_cpt_type,
@@ -771,7 +826,8 @@ function lf_ai_ajax_generate(): void {
 			'target_label' => lf_ai_assistant_target_label_for_context($context_type_use, $context_id_use),
 			'proposed' => $result['proposed'],
 			'current'  => $current,
-			'labels'   => array_intersect_key(lf_get_ai_editable_fields($context_id_use), $result['proposed']),
+			'labels'   => $labels,
+			'homepage_section_row_id' => ($context_type_use === 'homepage' && $homepage_section_row_id !== '') ? $homepage_section_row_id : '',
 		]);
 	}
 	if ($assistant_mode === 'create_batch') {
@@ -2706,6 +2762,7 @@ function lf_ai_ajax_apply(): void {
 		$submitted_proposed = [];
 	}
 	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	$selected_section_id_apply = isset($_POST['selected_section_id']) ? sanitize_text_field(wp_unslash($_POST['selected_section_id'])) : '';
 	if ($assistant_mode === 'create_batch') {
 		if (!in_array($assistant_batch_type, lf_ai_assistant_batch_types(), true)) {
 			wp_send_json_error(['message' => __('Invalid batch type.', 'leadsforward-core')]);
@@ -2804,17 +2861,29 @@ function lf_ai_ajax_apply(): void {
 	} elseif (!empty($submitted_proposed)) {
 		// Fallback: allow apply from client payload if transient key was lost.
 		$editable = lf_get_ai_editable_fields($context_id_use);
+		$t_store = lf_ai_get_stored_proposal($context_type, $context_id_use);
+		$row_scope = is_array($t_store) ? (string) ($t_store['homepage_section_row_id'] ?? '') : '';
+		if ($row_scope === '' && $context_type === 'homepage' && $selected_section_id_apply !== '') {
+			$row_scope = $selected_section_id_apply;
+		}
 		foreach ($submitted_proposed as $key => $value) {
-			if (!is_string($key) || !lf_is_field_ai_editable($key) || !isset($editable[$key])) {
+			if (!is_string($key) || !lf_is_field_ai_editable($key)) {
 				continue;
 			}
-			$proposed[$key] = is_string($value) ? $value : (string) $value;
+			if ($context_type === 'homepage' && $row_scope !== '') {
+				$proposed[ $key ] = is_string($value) ? $value : (string) $value;
+				continue;
+			}
+			if (!isset($editable[ $key ])) {
+				continue;
+			}
+			$proposed[ $key ] = is_string($value) ? $value : (string) $value;
 		}
 	}
 	if (empty($proposed)) {
 		wp_send_json_error(['message' => __('No pending suggestions. Generate again.', 'leadsforward-core')]);
 	}
-	$result = lf_ai_apply_proposal($context_type, $context_id_use, $proposed, $prompt_snippet);
+	$result = lf_ai_apply_proposal($context_type, $context_id_use, $proposed, $prompt_snippet, $selected_section_id_apply);
 	if (!$result['success']) {
 		wp_send_json_error(['message' => __('Apply failed.', 'leadsforward-core')]);
 	}

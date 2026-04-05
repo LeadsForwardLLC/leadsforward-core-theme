@@ -764,6 +764,7 @@ function lf_ai_assistant_widget_js(): string {
 		var defaultConfirmYesText = String($confirmYes.text() || "");
 		var pendingConfirmAction = null;
 		var proposed = null;
+		var lastProposalHomepageSectionId = "";
 		var current = null;
 		var creationPayload = null;
 		var lastMode = "auto";
@@ -4579,6 +4580,7 @@ function lf_ai_assistant_widget_js(): string {
 			$diff.prop("hidden", true).empty();
 			setProposalEnabled(false);
 			proposed = null;
+			lastProposalHomepageSectionId = "";
 			current = null;
 			creationPayload = null;
 			var parsedInlineReplace = parseInlineReplacePrompt(prompt);
@@ -4674,6 +4676,7 @@ function lf_ai_assistant_widget_js(): string {
 					setProposalEnabled(false);
 				} else if (res && res.success && res.data && res.data.mode === "edit_existing" && res.data.proposed) {
 					proposed = res.data.proposed;
+					lastProposalHomepageSectionId = (res.data.homepage_section_row_id && String(res.data.homepage_section_row_id).trim()) ? String(res.data.homepage_section_row_id).trim() : "";
 					current = res.data.current || {};
 					labels = res.data.labels || labels;
 					renderDiff();
@@ -4744,7 +4747,8 @@ function lf_ai_assistant_widget_js(): string {
 				creation_payload: JSON.stringify(creationPayload || {}),
 				assistant_mode: lastMode,
 				assistant_cpt_type: activeAssistantCptType,
-				assistant_batch_type: activeAssistantBatchType
+				assistant_batch_type: activeAssistantBatchType,
+				selected_section_id: lastProposalHomepageSectionId
 			}).done(function(res){
 				if (res && res.success && res.data && res.data.reload) {
 					window.location.reload();
@@ -4787,6 +4791,7 @@ function lf_ai_assistant_widget_js(): string {
 		$btnReject.on("click", function(){
 			inlineQuickEdit = null;
 			proposed = null;
+			lastProposalHomepageSectionId = "";
 			current = null;
 			creationPayload = null;
 			$diff.prop("hidden", true).empty();
