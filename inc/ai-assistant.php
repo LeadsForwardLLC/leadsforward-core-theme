@@ -4889,54 +4889,54 @@ function lf_ai_assistant_widget_js(): string {
 					selectedSectionToggleVisibility();
 					return;
 				}
-				if (e.key === "Backspace" || e.key === "Delete") {
+				if (e.key === 'Backspace' || e.key === 'Delete') {
 					e.preventDefault();
 					selectedSectionDelete();
 					return;
 				}
 			}
-			if ((e.key === "Escape" || e.keyCode === 27) && !$confirm.prop("hidden")) {
+			if ((e.key === 'Escape' || e.keyCode === 27) && !$confirm.prop('hidden')) {
 				pendingConfirmAction = null;
 				$confirmText.text(defaultConfirmText);
 				$confirmYes.text(defaultConfirmYesText);
 				setConfirmOpen(false);
 			}
-			if ((e.key === "Escape" || e.keyCode === 27) && commandPaletteEl && !commandPaletteEl.hidden) {
+			if ((e.key === 'Escape' || e.keyCode === 27) && commandPaletteEl && !commandPaletteEl.hidden) {
 				toggleCommandPalette(false);
 			}
 		});
 
 		try {
 			var initial = window.localStorage.getItem(stateKey);
-			if (initial === "open") setAiOpen(true);
+			if (initial === 'open') setAiOpen(true);
 		} catch (e) {}
 		try {
 			var seoInitial = window.localStorage.getItem(seoStateKey);
-			if (seoInitial === "open") {
+			if (seoInitial === 'open') {
 				setSeoOpen(true);
 				setAiOpen(false);
 			}
 		} catch (e) {}
 		try {
-			railCollapsed = window.localStorage.getItem(railStateKey) === "collapsed";
+			railCollapsed = window.localStorage.getItem(railStateKey) === 'collapsed';
 		} catch (e) {}
 		try {
-			editingEnabled = window.localStorage.getItem(editorModeKey) !== "off";
+			editingEnabled = window.localStorage.getItem(editorModeKey) !== 'off';
 		} catch (e) {}
 		setEditorToggleUi();
 		updateLauncherOffsets();
 		try { window.setTimeout(updateLauncherOffsets, 180); } catch (e) {}
-		$prompt.attr("placeholder", (lfAiFloating.i18n && lfAiFloating.i18n.placeholder) ? lfAiFloating.i18n.placeholder : "Ask for specific edits...");
-		setStatus((lfAiFloating.i18n && lfAiFloating.i18n.statusReady) ? lfAiFloating.i18n.statusReady : "Ready.", false);
+		$prompt.attr('placeholder', (lfAiFloating.i18n && lfAiFloating.i18n.placeholder) ? lfAiFloating.i18n.placeholder : 'Ask for specific edits...');
+		setStatus((lfAiFloating.i18n && lfAiFloating.i18n.statusReady) ? lfAiFloating.i18n.statusReady : 'Ready.', false);
 		setConfirmOpen(false);
-		try { $mode.val("auto"); } catch (e) {}
+		try { $mode.val('auto'); } catch (e) {}
 		syncModeUi();
 		if (editingEnabled) {
 			buildEditorUi();
-			setStatus("Click to edit text/images, drag sections to reorder, reverse columns, hide/show, duplicate, or delete.", false);
+			setStatus('Click to edit text/images, drag sections to reorder, reverse columns, hide/show, duplicate, or delete.', false);
 		} else {
 			clearEditorUi();
-			setStatus("Live mode enabled. Toggle ✎ to edit.", false);
+			setStatus('Live mode enabled. Toggle ✎ to edit.', false);
 		}
 		renderSeoSnapshot();
 	})(jQuery);
