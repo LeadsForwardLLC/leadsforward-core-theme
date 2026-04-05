@@ -224,46 +224,6 @@ function lf_ai_inline_overrides_frontend_script(): void {
 		return;
 	}
 
-// AJAX handler for trust reviews layout switching
-add_action('wp_ajax_lf_ai_set_trust_layout', 'lf_ai_set_trust_layout_handler');
-add_action('wp_ajax_nopriv_lf_ai_set_trust_layout', 'lf_ai_set_trust_layout_handler');
-
-function lf_ai_set_trust_layout_handler(): void {
-	if (!current_user_can('edit_theme_options')) {
-		wp_die('Unauthorized');
-	}
-	
-	$nonce = $_POST['nonce'] ?? '';
-	if (!wp_verify_nonce($nonce, 'lf_ai_assistant')) {
-		wp_die('Invalid nonce');
-	}
-	
-	$context_type = sanitize_text_field($_POST['context_type'] ?? '');
-	$context_id = absint($_POST['context_id'] ?? 0);
-	$section_id = sanitize_text_field($_POST['section_id'] ?? '');
-	$layout = sanitize_text_field($_POST['layout'] ?? '');
-	
-	if (!in_array($layout, ['grid', 'slider'], true)) {
-		wp_die('Invalid layout');
-	}
-	
-	// Update the section config
-	if ($context_type === 'homepage' && function_exists('lf_get_homepage_section_config')) {
-		$config = lf_get_homepage_section_config();
-		if (isset($config['trust_reviews'])) {
-			$config['trust_reviews']['trust_layout'] = $layout;
-			update_option('lf_homepage_section_config', $config);
-			
-			wp_send_json_success([
-				'message' => "Layout changed to {$layout}",
-				'reload' => true
-			]);
-		}
-	}
-	
-	wp_send_json_error('Could not update layout');
-}
-
 	$text_json = wp_json_encode($text_payload);
 	$image_json = wp_json_encode($image_payload);
 	if (!is_string($text_json) || !is_string($image_json)) {
@@ -3329,11 +3289,12 @@ function lf_ai_assistant_widget_js(): string {
 			var block = wrap ? wrap.querySelector(".lf-block-trust-reviews") : null;
 			if (!block || !block.classList) return "slider";
 			if (block.classList.contains("lf-block-trust-reviews--slider")) return "slider";
+			if (block.classList.contains("lf-block-trust-reviews--masonry")) return "masonry";
 			if (block.classList.contains("lf-block-trust-reviews--grid")) return "grid";
 			return "grid";
 		}
 		function nextTrustLayout(current) {
-			var cycle = ["slider", "grid"];
+			var cycle = ["slider", "masonry", "grid"];
 			var idx = cycle.indexOf(String(current || "slider"));
 			if (idx < 0) idx = 0;
 			return cycle[(idx + 1) % cycle.length];
@@ -3745,7 +3706,7 @@ function lf_ai_assistant_widget_js(): string {
 					layoutBtn.type = "button";
 					layoutBtn.className = "lf-ai-section-btn";
 					layoutBtn.textContent = "Layout";
-					layoutBtn.setAttribute("title", "Cycle review layout (slider, grid)");
+					layoutBtn.setAttribute("title", "Cycle review layout: slider → masonry → grid");
 					layoutBtn.setAttribute("aria-label", "Cycle review layout");
 					layoutBtn.addEventListener("click", function(e){
 						e.preventDefault();

@@ -155,7 +155,7 @@ function lf_homepage_admin_save(): void {
 		if ($type === 'trust_reviews') {
 			$config[$type]['trust_heading'] = isset($_POST['lf_hp_reviews_heading']) ? sanitize_text_field($_POST['lf_hp_reviews_heading']) : '';
 			$layout = isset($_POST['lf_hp_reviews_layout']) ? sanitize_text_field($_POST['lf_hp_reviews_layout']) : 'grid';
-			$config[$type]['trust_layout'] = in_array($layout, ['grid', 'slider'], true) ? $layout : 'slider';
+			$config[$type]['trust_layout'] = in_array($layout, ['grid', 'slider', 'masonry'], true) ? $layout : 'slider';
 			$cols = isset($_POST['lf_hp_reviews_columns']) ? sanitize_text_field($_POST['lf_hp_reviews_columns']) : '3';
 			$config[$type]['trust_columns'] = in_array($cols, ['2', '3', '4'], true) ? $cols : '3';
 			$config[$type]['trust_max_items'] = isset($_POST['lf_hp_reviews_max']) ? absint($_POST['lf_hp_reviews_max']) : 6;
@@ -859,8 +859,9 @@ function lf_homepage_admin_render(): void {
 										<th scope="row"><label for="lf_hp_reviews_layout"><?php esc_html_e('Layout', 'leadsforward-core'); ?></label></th>
 										<td>
 											<select name="lf_hp_reviews_layout" id="lf_hp_reviews_layout" onchange="toggleReviewControls()">
-												<option value="grid" <?php selected(($sec['trust_layout'] ?? 'grid'), 'grid'); ?>><?php esc_html_e('Grid', 'leadsforward-core'); ?></option>
-												<option value="slider" <?php selected(($sec['trust_layout'] ?? ''), 'slider'); ?>><?php esc_html_e('Slider', 'leadsforward-core'); ?></option>
+												<option value="slider" <?php selected(($sec['trust_layout'] ?? 'slider'), 'slider'); ?>><?php esc_html_e('Slider', 'leadsforward-core'); ?></option>
+												<option value="masonry" <?php selected(($sec['trust_layout'] ?? ''), 'masonry'); ?>><?php esc_html_e('Masonry', 'leadsforward-core'); ?></option>
+												<option value="grid" <?php selected(($sec['trust_layout'] ?? ''), 'grid'); ?>><?php esc_html_e('Grid', 'leadsforward-core'); ?></option>
 											</select>
 										</td>
 									</tr>
@@ -894,14 +895,14 @@ function toggleReviewControls() {
 	const columnsRow = document.getElementById('reviews-columns-row');
 	const autoplayRow = document.getElementById('reviews-autoplay-row');
 	
-	// Show columns for Grid, hide for Slider
-	if (layout === 'grid') {
+	// Show columns for grid and masonry; hide for slider
+	if (layout === 'grid' || layout === 'masonry') {
 		columnsRow.style.display = '';
 	} else {
 		columnsRow.style.display = 'none';
 	}
-	
-	// Show autoplay for Slider, hide for Grid  
+
+	// Show autoplay for slider only
 	if (layout === 'slider') {
 		autoplayRow.style.display = '';
 	} else {

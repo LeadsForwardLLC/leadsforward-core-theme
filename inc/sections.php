@@ -537,8 +537,9 @@ function lf_sections_registry(): array {
 				['key' => 'trust_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('What Our Customers Say', 'leadsforward-core')],
 				// Layout
 				['key' => 'trust_layout', 'label' => __('Layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'slider', 'options' => [
-					'grid' => __('Grid', 'leadsforward-core'),
 					'slider' => __('Slider', 'leadsforward-core'),
+					'masonry' => __('Masonry', 'leadsforward-core'),
+					'grid' => __('Grid', 'leadsforward-core'),
 				]],
 				['key' => 'trust_columns', 'label' => __('Columns', 'leadsforward-core'), 'type' => 'select', 'default' => '3', 'options' => [
 					'2' => __('2 Columns', 'leadsforward-core'),

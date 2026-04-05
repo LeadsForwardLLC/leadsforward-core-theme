@@ -27,10 +27,6 @@ $heading = !empty($section['trust_heading']) ? $section['trust_heading'] : __('W
 $layout = $section['trust_layout'] ?? 'grid';
 $columns = isset($section['trust_columns']) ? (int) $section['trust_columns'] : 3;
 $columns = max(2, min(4, $columns));
-$is_homepage = function_exists('is_front_page') && is_front_page();
-if ($is_homepage && $layout === 'grid') {
-	$layout = 'slider';
-}
 $show_summary = (string) ($section['trust_show_summary'] ?? '1') !== '0';
 $show_stars = (string) ($section['trust_show_stars'] ?? '1') !== '0';
 $show_source = (string) ($section['trust_show_source'] ?? '1') !== '0';
