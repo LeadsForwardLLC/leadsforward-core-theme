@@ -133,6 +133,8 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 			'statusParsingDoc' => __('Reading document context...', 'leadsforward-core'),
 			'confirmRevert' => __('Revert the most recent AI change on this page? This cannot be undone.', 'leadsforward-core'),
 			'placeholder' => __('Ask for precise copy edits, SEO rewrites, CTA improvements, or schema-safe content upgrades...', 'leadsforward-core'),
+			'onboardingTip' => __('Click text or images to edit. Pick a section for AI changes. Press ⌘/Ctrl+K for commands.', 'leadsforward-core'),
+			'onboardingDismiss' => __('Got it', 'leadsforward-core'),
 		],
 	]);
 
@@ -291,13 +293,24 @@ function lf_ai_assistant_render_floating_widget(): void {
 				<div class="lf-ai-float__header-actions">
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-undo aria-label="<?php esc_attr_e('Undo last change', 'leadsforward-core'); ?>" title="<?php esc_attr_e('Undo last change (click repeatedly to step back)', 'leadsforward-core'); ?>">↶</button>
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-redo aria-label="<?php esc_attr_e('Redo last reverted change', 'leadsforward-core'); ?>" title="<?php esc_attr_e('Redo last reverted change (click repeatedly to step forward)', 'leadsforward-core'); ?>">↷</button>
-					<button type="button" class="lf-ai-float__icon" data-lf-ai-editor-toggle aria-label="<?php esc_attr_e('Toggle editor mode', 'leadsforward-core'); ?>" title="<?php esc_attr_e('Toggle editor mode on/off', 'leadsforward-core'); ?>">Ed</button>
+					<button type="button" class="lf-ai-float__icon" data-lf-ai-editor-toggle aria-label="<?php esc_attr_e('Toggle editor mode', 'leadsforward-core'); ?>" title="<?php esc_attr_e('Toggle editor mode on/off', 'leadsforward-core'); ?>">✎</button>
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-minimize aria-label="<?php esc_attr_e('Minimize', 'leadsforward-core'); ?>">−</button>
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-close aria-label="<?php esc_attr_e('Close', 'leadsforward-core'); ?>">×</button>
 				</div>
 			</div>
 			<div class="lf-ai-float__body">
+				<div class="lf-ai-float__tip" data-lf-ai-onboarding hidden>
+					<p class="lf-ai-float__tip-text" data-lf-ai-onboarding-text></p>
+					<button type="button" class="lf-ai-float__tip-dismiss" data-lf-ai-onboarding-dismiss><?php esc_html_e('Got it', 'leadsforward-core'); ?></button>
+				</div>
 				<div class="lf-ai-float__target" data-lf-ai-target><?php echo esc_html(sprintf(__('Target: %s (editable target)', 'leadsforward-core'), $target_label)); ?></div>
+				<div class="lf-ai-float__scope" data-lf-ai-section-scope hidden>
+					<span class="lf-ai-float__scope-kicker"><?php esc_html_e('AI will prioritize', 'leadsforward-core'); ?></span>
+					<span class="lf-ai-float__scope-value" data-lf-ai-section-scope-value></span>
+				</div>
+				<details class="lf-ai-float__advanced">
+					<summary class="lf-ai-float__advanced-summary"><?php esc_html_e('Mode, reference page & document', 'leadsforward-core'); ?></summary>
+					<div class="lf-ai-float__advanced-body">
 				<div class="lf-ai-float__mode">
 					<label>
 						<span><?php esc_html_e('Mode', 'leadsforward-core'); ?></span>
@@ -343,18 +356,20 @@ function lf_ai_assistant_render_floating_widget(): void {
 						<input type="text" data-lf-ai-target-ref placeholder="<?php esc_attr_e('e.g. contact page, /about-us, full URL', 'leadsforward-core'); ?>" />
 					</label>
 				</div>
-				<div class="lf-ai-float__presets">
-					<button type="button" class="button button-small" data-lf-ai-preset="<?php esc_attr_e('Tighten this page copy for higher conversions and local trust signals.', 'leadsforward-core'); ?>"><?php esc_html_e('Optimize Copy', 'leadsforward-core'); ?></button>
-					<button type="button" class="button button-small" data-lf-ai-preset="<?php esc_attr_e('Rewrite metadata and opening copy to better match transactional local intent.', 'leadsforward-core'); ?>"><?php esc_html_e('SERP Intent', 'leadsforward-core'); ?></button>
-					<button type="button" class="button button-small" data-lf-ai-preset="<?php esc_attr_e('Improve CTA language for urgency, clarity, and lead quality.', 'leadsforward-core'); ?>"><?php esc_html_e('Improve CTA', 'leadsforward-core'); ?></button>
-				</div>
-				<textarea class="lf-ai-float__prompt" rows="4" data-lf-ai-prompt placeholder="<?php esc_attr_e('Ask for specific edits...', 'leadsforward-core'); ?>"></textarea>
 				<div class="lf-ai-float__doc">
 					<input type="file" accept=".txt,.md,.csv,.json,.html,.htm,.rtf,.docx" data-lf-ai-doc-input hidden />
 					<button type="button" class="button button-small" data-lf-ai-doc-attach><?php esc_html_e('Attach Document Context', 'leadsforward-core'); ?></button>
 					<button type="button" class="button button-small" data-lf-ai-doc-clear hidden><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
 					<span class="lf-ai-float__doc-name" data-lf-ai-doc-name></span>
 				</div>
+					</div>
+				</details>
+				<div class="lf-ai-float__presets">
+					<button type="button" class="button button-small" data-lf-ai-preset="<?php esc_attr_e('Tighten this page copy for higher conversions and local trust signals.', 'leadsforward-core'); ?>"><?php esc_html_e('Optimize Copy', 'leadsforward-core'); ?></button>
+					<button type="button" class="button button-small" data-lf-ai-preset="<?php esc_attr_e('Rewrite metadata and opening copy to better match transactional local intent.', 'leadsforward-core'); ?>"><?php esc_html_e('SERP Intent', 'leadsforward-core'); ?></button>
+					<button type="button" class="button button-small" data-lf-ai-preset="<?php esc_attr_e('Improve CTA language for urgency, clarity, and lead quality.', 'leadsforward-core'); ?>"><?php esc_html_e('Improve CTA', 'leadsforward-core'); ?></button>
+				</div>
+				<textarea class="lf-ai-float__prompt" rows="4" data-lf-ai-prompt placeholder="<?php esc_attr_e('Ask for specific edits...', 'leadsforward-core'); ?>"></textarea>
 				<div class="lf-ai-float__actions">
 					<button type="button" class="button button-primary" data-lf-ai-generate><?php esc_html_e('Generate', 'leadsforward-core'); ?></button>
 					<button type="button" class="button" data-lf-ai-apply disabled><?php esc_html_e('Apply', 'leadsforward-core'); ?></button>
@@ -451,11 +466,24 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float__icon.is-active { background:#f5f0ff; border-color:#8348f9; color:#5b21b6; }
 		.lf-ai-float__body { padding:12px; display:flex; flex-direction:column; gap:10px; flex:1; min-height:0; overflow:auto; overflow-x:hidden; }
 		.lf-ai-float__body, .lf-ai-float__body * { box-sizing:border-box; }
-		.lf-ai-float .button { appearance:none; border:1px solid #8c8f94; border-radius:4px; background:#f6f7f7; color:#2c3338; min-height:30px; line-height:2.15384615; padding:0 10px; font-size:13px; cursor:pointer; text-decoration:none; }
-		.lf-ai-float .button:hover { background:#f0f0f1; border-color:#0a4b78; color:#0a4b78; }
-		.lf-ai-float .button.button-primary { background:#2271b1; border-color:#2271b1; color:#fff; }
-		.lf-ai-float .button.button-primary:hover { background:#135e96; border-color:#135e96; color:#fff; }
-		.lf-ai-float .button[disabled] { background:#f6f7f7; border-color:#dcdcde; color:#a7aaad; cursor:default; }
+		.lf-ai-float .lf-ai-float__body .button { appearance:none; border:1px solid #c4b5fd; border-radius:10px; background:#fff; color:#1e1b4b; min-height:34px; line-height:1.25; padding:0 12px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; }
+		.lf-ai-float .lf-ai-float__body .button:hover { background:#f5f3ff; border-color:#a78bfa; color:#4c1d95; }
+		.lf-ai-float .lf-ai-float__body .button.button-primary { background:linear-gradient(180deg,#7c3aed 0%,#6d28d9 100%); border-color:#5b21b6; color:#fff; }
+		.lf-ai-float .lf-ai-float__body .button.button-primary:hover { background:linear-gradient(180deg,#6d28d9 0%,#5b21b6 100%); border-color:#4c1d95; color:#fff; }
+		.lf-ai-float .lf-ai-float__body .button[disabled] { background:#f1f5f9; border-color:#e2e8f0; color:#94a3b8; cursor:default; }
+		.lf-ai-float__tip { display:flex; align-items:flex-start; gap:10px; padding:10px; border-radius:10px; border:1px solid #ddd6fe; background:linear-gradient(135deg,#faf5ff 0%,#f8fafc 100%); margin-bottom:2px; }
+		.lf-ai-float__tip[hidden] { display:none !important; }
+		.lf-ai-float__tip-text { margin:0; font-size:12px; line-height:1.45; color:#334155; flex:1; min-width:0; }
+		.lf-ai-float__tip-dismiss { flex-shrink:0; border:1px solid #c4b5fd; background:#fff; color:#5b21b6; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer; }
+		.lf-ai-float__tip-dismiss:hover { background:#f5f3ff; }
+		.lf-ai-float__scope { font-size:12px; line-height:1.4; color:#334155; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:8px 10px; display:flex; flex-direction:column; gap:2px; }
+		.lf-ai-float__scope[hidden] { display:none !important; }
+		.lf-ai-float__scope-kicker { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#166534; }
+		.lf-ai-float__scope-value { font-weight:600; color:#14532d; word-break:break-word; }
+		.lf-ai-float__advanced { border:1px solid #e9e1ff; border-radius:10px; background:#faf7ff; margin:2px 0 4px; }
+		.lf-ai-float__advanced-summary { cursor:pointer; font-size:12px; font-weight:700; color:#5b21b6; padding:9px 10px; list-style:none; user-select:none; }
+		.lf-ai-float__advanced-summary::-webkit-details-marker { display:none; }
+		.lf-ai-float__advanced-body { padding:0 10px 10px; display:flex; flex-direction:column; gap:10px; border-top:1px solid #ede9fe; }
 		.lf-ai-float__target { font-size:12px; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; }
 		.lf-ai-float__mode { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 		.lf-ai-float__mode label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:#475569; }
@@ -528,8 +556,11 @@ function lf_ai_assistant_widget_css(): string {
 		[data-lf-section-wrap="1"] { position:relative; cursor:grab; transition:outline-color .15s ease, box-shadow .15s ease; }
 		[data-lf-section-wrap="1"]:hover { outline:2px dashed rgba(131,72,249,.35); outline-offset:3px; }
 		[data-lf-section-wrap="1"].is-dragging { opacity:.55; outline:2px solid #8348f9 !important; outline-offset:3px; cursor:grabbing; }
-		.lf-ai-section-controls { position:absolute; top:8px; right:8px; display:flex; gap:6px; z-index:4; opacity:0; transition:opacity .15s ease; }
-		[data-lf-section-wrap="1"]:hover .lf-ai-section-controls, [data-lf-section-wrap="1"].lf-ai-section-is-hidden .lf-ai-section-controls { opacity:1; }
+		.lf-ai-section-controls { position:absolute; top:8px; right:8px; display:flex; flex-wrap:wrap; justify-content:flex-end; max-width:calc(100% - 16px); gap:6px; z-index:4; opacity:0.38; transition:opacity .15s ease; }
+		[data-lf-section-wrap="1"]:hover .lf-ai-section-controls, [data-lf-section-wrap="1"].lf-ai-section-is-hidden .lf-ai-section-controls, [data-lf-section-wrap="1"].lf-ai-section-active .lf-ai-section-controls { opacity:1; }
+		@media (hover: none), (pointer: coarse) {
+			.lf-ai-section-controls { opacity:1; }
+		}
 		.lf-ai-section-btn { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-width:28px; height:28px; padding:0 7px; font-size:12px; line-height:26px; cursor:pointer; }
 		.lf-ai-section-btn:hover { background:#f5f0ff; }
 		.lf-ai-section-btn--danger { border-color:#fecaca; color:#b91c1c; }
@@ -653,7 +684,21 @@ function lf_ai_assistant_widget_css(): string {
 			.lf-ai-float__toggle { width:100%; justify-content:center; }
 			.lf-ai-float__panel { width:100%; left:0; right:0; }
 			.lf-ai-float__mode { grid-template-columns:1fr; }
-			.lf-ai-rail { display:none; }
+			.lf-ai-rail {
+				left:10px;
+				right:10px;
+				top:auto;
+				bottom:calc(72px + env(safe-area-inset-bottom, 0px));
+				width:auto;
+				max-height:min(42vh, 340px);
+				padding-bottom:max(10px, env(safe-area-inset-bottom, 0px));
+			}
+			.lf-ai-rail.is-collapsed {
+				left:50%;
+				right:auto;
+				transform:translateX(-50%);
+				width:auto;
+			}
 		}
 	';
 }
@@ -694,6 +739,8 @@ function lf_ai_assistant_widget_js(): string {
 		var $docAttach = $root.find("[data-lf-ai-doc-attach]");
 		var $docClear = $root.find("[data-lf-ai-doc-clear]");
 		var $docName = $root.find("[data-lf-ai-doc-name]");
+		var $onboarding = $root.find("[data-lf-ai-onboarding]");
+		var $onboardingText = $root.find("[data-lf-ai-onboarding-text]");
 		var $seo = $seoRoot.find("[data-lf-ai-seo]");
 		var $seoScore = $seoRoot.find("[data-lf-ai-seo-score]");
 		var $seoPerfChip = $seoRoot.find("[data-lf-ai-seo-perf-chip]");
@@ -1352,6 +1399,7 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			faqPickerWrap = null;
 			faqPickerList = null;
+			refreshAiScopeBanner();
 		}
 		function closeIconPicker() {
 			if (!iconPickerEl) return;
@@ -1632,6 +1680,11 @@ function lf_ai_assistant_widget_js(): string {
 				renderSeoSnapshot();
 				return;
 			}
+			try {
+				if ($onboarding.length && !window.localStorage.getItem("lfAiOnboardingDismissed")) {
+					$onboarding.prop("hidden", false);
+				}
+			} catch (eOn) {}
 			buildEditorUi();
 			setStatus("Editor mode enabled.", false);
 			renderSeoSnapshot();
@@ -1827,9 +1880,25 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			return text.length > 42 ? (text.slice(0, 39) + "...") : text;
 		}
+		function refreshAiScopeBanner() {
+			var $scope = $root.find("[data-lf-ai-section-scope]");
+			var $scopeVal = $root.find("[data-lf-ai-section-scope-value]");
+			if (!$scope.length || !$scopeVal.length) return;
+			if (selectedSectionWrap && editingEnabled) {
+				var label = sectionLabelForWrap(selectedSectionWrap);
+				var sid = String(selectedSectionWrap.getAttribute("data-lf-section-id") || "");
+				var stype = String(selectedSectionWrap.getAttribute("data-lf-section-type") || "");
+				$scope.prop("hidden", false);
+				$scopeVal.text(label + " (" + (stype || sid) + ")");
+			} else {
+				$scope.prop("hidden", true);
+				$scopeVal.text("");
+			}
+		}
 		function setSelectedSection(wrap) {
 			if (!editingEnabled) {
 				selectedSectionWrap = null;
+				refreshAiScopeBanner();
 				return;
 			}
 			collectSectionWrappers().forEach(function(node){
@@ -1856,6 +1925,7 @@ function lf_ai_assistant_widget_js(): string {
 					}
 				} catch (e) {}
 			}
+			refreshAiScopeBanner();
 			refreshSectionRail();
 		}
 		function scrollToSectionWrap(wrap) {
@@ -3745,6 +3815,7 @@ function lf_ai_assistant_widget_js(): string {
 					dupBtn.className = "lf-ai-section-btn";
 					dupBtn.textContent = "Dup";
 					dupBtn.setAttribute("title", "Duplicate section");
+					dupBtn.setAttribute("aria-label", "Duplicate section");
 					dupBtn.addEventListener("click", function(e){
 						e.preventDefault();
 						e.stopPropagation();
@@ -3770,6 +3841,7 @@ function lf_ai_assistant_widget_js(): string {
 				deleteBtn.className = "lf-ai-section-btn lf-ai-section-btn--danger";
 				deleteBtn.textContent = "Del";
 				deleteBtn.setAttribute("title", "Delete section");
+				deleteBtn.setAttribute("aria-label", "Delete section");
 				deleteBtn.addEventListener("click", function(e){
 					e.preventDefault();
 					e.stopPropagation();
@@ -4471,6 +4543,13 @@ function lf_ai_assistant_widget_js(): string {
 		});
 		$mode.on("change", function(){
 			syncModeUi();
+			var m = modeValue();
+			if (m === "create_cpt" || m === "create_batch" || m === "create_page" || m === "create_blog_post") {
+				try {
+					var det = $root.find("details.lf-ai-float__advanced").get(0);
+					if (det) det.open = true;
+				} catch (err) {}
+			}
 		});
 		$docAttach.on("click", function(){
 			$docInput.trigger("click");
@@ -4885,6 +4964,19 @@ function lf_ai_assistant_widget_js(): string {
 		setConfirmOpen(false);
 		try { $mode.val("auto"); } catch (e) {}
 		syncModeUi();
+		if ($onboardingText.length && lfAiFloating.i18n && lfAiFloating.i18n.onboardingTip) {
+			$onboardingText.text(String(lfAiFloating.i18n.onboardingTip));
+		}
+		try {
+			var onboardKey = "lfAiOnboardingDismissed";
+			if ($onboarding.length && editingEnabled && !window.localStorage.getItem(onboardKey)) {
+				$onboarding.prop("hidden", false);
+			}
+		} catch (e0) {}
+		$root.on("click", "[data-lf-ai-onboarding-dismiss]", function(){
+			$onboarding.prop("hidden", true);
+			try { window.localStorage.setItem("lfAiOnboardingDismissed", "1"); } catch (e1) {}
+		});
 		if (editingEnabled) {
 			buildEditorUi();
 			setStatus("Click to edit text/images, drag sections to reorder, reverse columns, hide/show, duplicate, or delete.", false);
