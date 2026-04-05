@@ -36,11 +36,11 @@ $show_stars = (string) ($section['trust_show_stars'] ?? '1') !== '0';
 $show_source = (string) ($section['trust_show_source'] ?? '1') !== '0';
 $show_avatars = (string) ($section['trust_show_avatars'] ?? '1') !== '0';
 $show_quote_icon = (string) ($section['trust_show_quote_icon'] ?? '1') !== '0';
-$slider_autoplay = (string) ($section['trust_slider_autoplay'] ?? '0') !== '0';
+$slider_autoplay = (string) ($section['trust_slider_autoplay'] ?? '1') !== '0';
 $slider_autoplay_delay = (int) ($section['trust_slider_autoplay_delay'] ?? 5);
-$slider_show_dots = (string) ($section['trust_slider_show_dots'] ?? '1') !== '0';
-$slider_show_arrows = (string) ($section['trust_slider_show_arrows'] ?? '1') !== '0';
-$slider_items_per_slide = (int) ($section['trust_slider_items_per_slide'] ?? 3);
+$slider_show_dots = true; // Always show dots for cleaner UI
+$slider_show_arrows = true; // Always show arrows for cleaner UI
+$slider_items_per_slide = 3; // Fixed for consistent slider behavior
 $icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'trust_reviews', 'above', 'lf-heading-icon') : '';
 $icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'trust_reviews', 'left', 'lf-heading-icon') : '';
 $queried = get_queried_object();
