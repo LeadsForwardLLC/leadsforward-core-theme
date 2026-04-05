@@ -62,7 +62,7 @@ function lf_homepage_legacy_order(): array {
 		'service_intro',
 		'benefits',
 		'service_details',
-		'service_details_alt',
+		'service_details__2',
 		'process',
 		'faq_accordion',
 		'trust_reviews',
@@ -183,7 +183,11 @@ function lf_homepage_default_section_config(string $section_type, string $niche_
 		'enabled' => true,
 		'variant' => 'default',
 	];
-	$defaults = lf_sections_defaults_for($section_type, $niche_slug);
+	$registry_type = lf_homepage_base_section_type($section_type);
+	if ($registry_type === '') {
+		$registry_type = $section_type;
+	}
+	$defaults = lf_sections_defaults_for($registry_type, $niche_slug);
 	if (!empty($defaults)) {
 		$config = array_merge($base, $defaults);
 		if (in_array($section_type, ['content_image', 'image_content'], true)) {
@@ -246,10 +250,6 @@ function lf_homepage_default_section_config(string $section_type, string $niche_
 			return array_merge($base, [
 				'section_heading' => __('Areas We Serve', 'leadsforward-core'),
 				'section_intro'   => __('Find us on the map and explore the neighborhoods we serve every day.', 'leadsforward-core'),
-			]);
-		case 'service_details_alt':
-			return array_merge($base, [
-				'service_details_layout' => 'media_content',
 			]);
 		case 'cta':
 			return array_merge($base, [
@@ -678,7 +678,8 @@ function lf_homepage_merge_config_with_defaults(array $stored): array {
 		}
 		// Orchestrator may save under canonical keys (e.g. hero) while order uses instance ids (hero_1).
 		// Merge any stored rows that share the same base section type so the front always sees the copy.
-		if ($type !== '') {
+		// Skip for service_details: multiple homepage rows (e.g. service_details + service_details__2) must stay independent.
+		if ($type !== '' && $type !== 'service_details') {
 			$sibling_merge = [];
 			foreach ($stored as $sid => $srow) {
 				if (!is_string($sid) || !is_array($srow) || $sid === $section_id) {
@@ -699,6 +700,12 @@ function lf_homepage_merge_config_with_defaults(array $stored): array {
 			$row = lf_sections_normalize_service_details_settings($type, $row);
 		}
 		$out[$section_id] = array_merge($default, $row);
+		if ($section_id === 'service_details__2') {
+			$lay = trim((string) ($out[ $section_id ]['service_details_layout'] ?? ''));
+			if ($lay === '') {
+				$out[ $section_id ]['service_details_layout'] = 'media_content';
+			}
+		}
 		// CRITICAL FIX: Ensure stored content fields override defaults
 		// array_merge with defaults first means empty default values overwrite stored content
 		// Reverse the order for content fields to preserve actual data
@@ -764,6 +771,42 @@ function lf_homepage_normalize_hero_cta_keys(array $row): array {
  * @return array<string, array<string, mixed>>
  */
 function lf_homepage_upgrade_legacy_config(array $stored): array {
+	$persist_config = false;
+	// Rewrite order even if config row was already removed manually.
+	$ord0 = get_option(LF_HOMEPAGE_ORDER_OPTION, null);
+	if (is_array($ord0) && in_array('service_details_alt', $ord0, true)) {
+		$rew0 = [];
+		foreach ($ord0 as $oid) {
+			$rew0[] = (is_string($oid) && $oid === 'service_details_alt') ? 'service_details__2' : $oid;
+		}
+		update_option(LF_HOMEPAGE_ORDER_OPTION, lf_homepage_sanitize_order($rew0, false), true);
+	}
+	// service_details_alt → second service_details row (same fields; default reversed layout).
+	if (isset($stored['service_details_alt']) && is_array($stored['service_details_alt'])) {
+		if (!isset($stored['service_details__2']) || !is_array($stored['service_details__2'])) {
+			$alt_row = $stored['service_details_alt'];
+			$layout = trim((string) ($alt_row['service_details_layout'] ?? ''));
+			if ($layout === '') {
+				$alt_row['service_details_layout'] = 'media_content';
+			}
+			$stored['service_details__2'] = $alt_row;
+		}
+		unset($stored['service_details_alt']);
+		$persist_config = true;
+		$ord = get_option(LF_HOMEPAGE_ORDER_OPTION, null);
+		if (is_array($ord) && $ord !== []) {
+			$rewritten = [];
+			foreach ($ord as $oid) {
+				if (!is_string($oid)) {
+					continue;
+				}
+				$rewritten[] = $oid === 'service_details_alt' ? 'service_details__2' : $oid;
+			}
+			if ($rewritten !== $ord) {
+				update_option(LF_HOMEPAGE_ORDER_OPTION, lf_homepage_sanitize_order($rewritten, false), true);
+			}
+		}
+	}
 	if (!isset($stored['trust_bar']) && isset($stored['trust_reviews']) && is_array($stored['trust_reviews'])) {
 		$legacy = $stored['trust_reviews'];
 		$stored['trust_bar'] = [
@@ -793,6 +836,9 @@ function lf_homepage_upgrade_legacy_config(array $stored): array {
 			'section_heading' => $legacy['section_heading'] ?? '',
 			'section_intro' => $legacy['section_intro'] ?? '',
 		];
+	}
+	if ($persist_config) {
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $stored, true);
 	}
 	return $stored;
 }

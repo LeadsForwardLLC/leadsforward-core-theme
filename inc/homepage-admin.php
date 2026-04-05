@@ -66,6 +66,7 @@ function lf_homepage_admin_save(): void {
 	$icon_slugs = function_exists('lf_icon_options') ? array_keys(lf_icon_options()) : [];
 	$details_prefixes = [
 		'service_details' => 'lf_hp_details_',
+		'service_details__2' => 'lf_hp_details2_',
 		'content_image' => 'lf_hp_details_ci_',
 		'content_image_a' => 'lf_hp_details_a_',
 		'content_image_c' => 'lf_hp_details_c_',
@@ -74,6 +75,7 @@ function lf_homepage_admin_save(): void {
 	];
 	$details_layout_defaults = [
 		'service_details' => 'content_media',
+		'service_details__2' => 'media_content',
 		'content_image' => 'content_media',
 		'content_image_a' => 'content_media',
 		'content_image_c' => 'content_media',
@@ -82,6 +84,7 @@ function lf_homepage_admin_save(): void {
 	];
 	$details_media_defaults = [
 		'service_details' => 'video',
+		'service_details__2' => 'image',
 		'content_image' => 'image',
 		'content_image_a' => 'image',
 		'content_image_c' => 'image',
@@ -246,6 +249,7 @@ function lf_homepage_admin_section_labels(): array {
 		'image_content_b' => __('Service Details (B)', 'leadsforward-core'),
 		'content_image_c' => __('Service Details (C)', 'leadsforward-core'),
 		'service_details' => __('Service Details', 'leadsforward-core'),
+		'service_details__2' => __('Service Details (media left)', 'leadsforward-core'),
 		'content_image'  => __('Service Details (Alt)', 'leadsforward-core'),
 		'image_content'  => __('Service Details (Alt • Media Left)', 'leadsforward-core'),
 		'process'        => __('Process', 'leadsforward-core'),
@@ -519,6 +523,7 @@ function lf_homepage_admin_render(): void {
 	];
 	$details_prefixes = [
 		'service_details' => 'lf_hp_details_',
+		'service_details__2' => 'lf_hp_details2_',
 		'content_image' => 'lf_hp_details_ci_',
 		'content_image_a' => 'lf_hp_details_a_',
 		'content_image_c' => 'lf_hp_details_c_',
@@ -527,6 +532,7 @@ function lf_homepage_admin_render(): void {
 	];
 	$details_layout_defaults = [
 		'service_details' => 'content_media',
+		'service_details__2' => 'media_content',
 		'content_image' => 'content_media',
 		'content_image_a' => 'content_media',
 		'content_image_c' => 'content_media',
@@ -535,6 +541,7 @@ function lf_homepage_admin_render(): void {
 	];
 	$details_media_defaults = [
 		'service_details' => 'video',
+		'service_details__2' => 'image',
 		'content_image' => 'image',
 		'content_image_a' => 'image',
 		'content_image_c' => 'image',
