@@ -184,7 +184,7 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 					$text_normalized = str_replace( array( "\r\n", "\r" ), "\n", $text_raw );
 					$text_len        = function_exists( 'mb_strlen' ) ? mb_strlen( $text_raw ) : strlen( $text_raw );
 					$newline_count   = substr_count( $text_normalized, "\n" );
-					$expand_layouts  = array( 'grid', 'masonry' );
+					$expand_layouts  = array( 'grid', 'masonry', 'slider' );
 					$trust_text_expand_threshold = 100;
 					$show_toggle     = in_array( $layout, $expand_layouts, true )
 						&& ( $text_len > $trust_text_expand_threshold || $newline_count > 2 );
@@ -316,13 +316,13 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 <?php endif; ?>
 <?php
 static $lf_trust_reviews_grid_expand_script = false;
-if ( ! $lf_trust_reviews_grid_expand_script && ( $layout === 'grid' || $layout === 'masonry' ) && $review_total > 0 ) {
+if ( ! $lf_trust_reviews_grid_expand_script && ( $layout === 'grid' || $layout === 'masonry' || $layout === 'slider' ) && $review_total > 0 ) {
 	$lf_trust_reviews_grid_expand_script = true;
 	?>
 	<script>
 	(function () {
 		document.addEventListener('DOMContentLoaded', function () {
-			document.querySelectorAll('.lf-block-trust-reviews--grid .lf-block-trust-reviews__text-toggle, .lf-block-trust-reviews--masonry .lf-block-trust-reviews__text-toggle').forEach(function (btn) {
+			document.querySelectorAll('.lf-block-trust-reviews--grid .lf-block-trust-reviews__text-toggle, .lf-block-trust-reviews--masonry .lf-block-trust-reviews__text-toggle, .lf-block-trust-reviews--slider .lf-block-trust-reviews__text-toggle').forEach(function (btn) {
 				btn.addEventListener('click', function () {
 					var item = btn.closest('.lf-block-trust-reviews__item');
 					if (!item) return;
