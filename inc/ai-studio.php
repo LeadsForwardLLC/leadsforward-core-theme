@@ -12,6 +12,49 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+/**
+ * Log AI Studio / manifester lines to PHP's error log (e.g. wp-content/debug.log when WP_DEBUG_LOG is true).
+ *
+ * @param array<string, mixed> $context Optional small JSON context.
+ */
+function lf_ai_studio_error_log(string $message, string $level = 'ERROR', array $context = []): void {
+	$line = 'LF AI STUDIO [' . $level . ']: ' . $message;
+	if ($context !== []) {
+		$json = wp_json_encode($context, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+		if (is_string($json)) {
+			$line .= ' | ' . $json;
+		}
+	}
+	error_log($line);
+}
+
+/**
+ * Log one or many user-facing error strings (manifest validation, upload failures, etc.).
+ *
+ * @param string|array<int|string, mixed> $messages
+ */
+function lf_ai_studio_log_user_messages(string $channel, $messages, string $level = 'ERROR'): void {
+	if (!is_array($messages)) {
+		lf_ai_studio_error_log($channel . ': ' . (string) $messages, $level);
+		return;
+	}
+	foreach ($messages as $msg) {
+		$text = is_string($msg) ? $msg : (string) wp_json_encode($msg, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+		lf_ai_studio_error_log($channel . ': ' . $text, $level);
+	}
+}
+
+/**
+ * Log a failure and return the standard error payload for generation/payload builders.
+ *
+ * @param array<string, mixed> $extra Merged into return (e.g. job_id).
+ * @return array<string, mixed>
+ */
+function lf_ai_studio_fail_result(string $operation, string $error_message, array $extra = []): array {
+	lf_ai_studio_error_log($operation . ': ' . $error_message, 'ERROR', $extra);
+	return array_merge(['error' => $error_message], $extra);
+}
+
 const LF_AI_STUDIO_JOB_CPT = 'lf_ai_job';
 const LF_MANIFEST_SCHEMA_VERSION = '1.0';
 
@@ -202,15 +245,18 @@ function lf_ai_studio_assets(string $hook): void {
 
 function lf_ai_studio_job_status_ajax(): void {
 	if (!current_user_can('edit_theme_options')) {
+		lf_ai_studio_error_log('job_status_ajax: insufficient permissions', 'ERROR');
 		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
 	}
 	check_ajax_referer('lf_ai_studio_job_status', 'nonce');
 	$job_id = isset($_GET['job_id']) ? absint($_GET['job_id']) : (isset($_POST['job_id']) ? absint($_POST['job_id']) : 0);
 	if (!$job_id) {
+		lf_ai_studio_error_log('job_status_ajax: missing job_id', 'ERROR');
 		wp_send_json_error(['message' => __('Missing job ID.', 'leadsforward-core')], 400);
 	}
 	$job = get_post($job_id);
 	if (!$job instanceof \WP_Post || $job->post_type !== LF_AI_STUDIO_JOB_CPT) {
+		lf_ai_studio_error_log('job_status_ajax: invalid job', 'ERROR', ['job_id' => $job_id]);
 		wp_send_json_error(['message' => __('Invalid job.', 'leadsforward-core')], 404);
 	}
 	$status = (string) get_post_meta($job_id, 'lf_ai_job_status', true);
@@ -231,6 +277,7 @@ function lf_ai_studio_job_status_ajax(): void {
 		if ((time() - $heartbeat) > $timeout_seconds) {
 			$status = 'failed';
 			$error = __('Generation timed out while waiting for orchestrator callback. Check n8n execution logs and callback mapping.', 'leadsforward-core');
+			lf_ai_studio_error_log('job_status_ajax: callback timeout', 'ERROR', ['job_id' => $job_id, 'heartbeat_age_sec' => time() - $heartbeat]);
 			update_post_meta($job_id, 'lf_ai_job_status', $status);
 			update_post_meta($job_id, 'lf_ai_job_error', $error);
 			if (function_exists('lf_ai_autonomy_mark_generation_failed')) {
@@ -470,16 +517,20 @@ function lf_ai_studio_handle_image_settings_save(): void {
 
 function lf_ai_studio_handle_generate(): void {
 	if (!current_user_can('edit_theme_options')) {
+		lf_ai_studio_error_log('Regenerate Site blocked: insufficient permissions.', 'ERROR');
 		error_log('LF DEBUG: Regenerate Site blocked: insufficient permissions.');
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_ai_studio_generate', 'lf_ai_studio_generate_nonce');
 	lf_ai_studio_maybe_cleanup_templates();
+	lf_ai_studio_error_log('Regenerate Site: handle_generate starting run_homepage_generation', 'INFO');
 	$result = lf_ai_studio_run_homepage_generation();
 	$redirect = admin_url('admin.php?page=lf-ops');
 	if (!empty($result['error'])) {
+		lf_ai_studio_error_log('Regenerate Site failed (redirect): ' . (string) $result['error'], 'ERROR');
 		$redirect = add_query_arg('error', rawurlencode($result['error']), $redirect);
 	} else {
+		lf_ai_studio_error_log('Regenerate Site: job queued', 'INFO', ['job_id' => (int) ($result['job_id'] ?? 0)]);
 		$redirect = add_query_arg('job', (string) ($result['job_id'] ?? ''), $redirect);
 	}
 	wp_safe_redirect($redirect);
@@ -488,25 +539,31 @@ function lf_ai_studio_handle_generate(): void {
 
 function lf_ai_studio_handle_retry(): void {
 	if (!current_user_can('edit_theme_options')) {
+		lf_ai_studio_error_log('retry blocked: insufficient permissions', 'ERROR');
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_ai_studio_retry', 'lf_ai_studio_retry_nonce');
 	lf_ai_studio_maybe_cleanup_templates();
 	$job_id = isset($_GET['job_id']) ? absint($_GET['job_id']) : 0;
 	if (!$job_id) {
+		lf_ai_studio_error_log('retry failed: missing_job', 'ERROR');
 		wp_safe_redirect(admin_url('admin.php?page=lf-ops&error=missing_job'));
 		exit;
 	}
 	$request_payload = get_post_meta($job_id, 'lf_ai_job_request', true);
 	if (!is_array($request_payload)) {
+		lf_ai_studio_error_log('retry failed: missing_payload for job', 'ERROR', ['job_id' => $job_id]);
 		wp_safe_redirect(admin_url('admin.php?page=lf-ops&error=missing_payload'));
 		exit;
 	}
+	lf_ai_studio_error_log('retry: resending request', 'INFO', ['job_id' => $job_id]);
 	$result = lf_ai_studio_send_request($request_payload, $job_id);
 	$redirect = admin_url('admin.php?page=lf-ops');
 	if (!empty($result['error'])) {
+		lf_ai_studio_error_log('retry failed: ' . (string) $result['error'], 'ERROR', ['job_id' => $job_id]);
 		$redirect = add_query_arg('error', rawurlencode($result['error']), $redirect);
 	} else {
+		lf_ai_studio_error_log('retry: request sent', 'INFO', ['job_id' => $job_id]);
 		$redirect = add_query_arg('job', (string) $job_id, $redirect);
 	}
 	wp_safe_redirect($redirect);
@@ -515,25 +572,32 @@ function lf_ai_studio_handle_retry(): void {
 
 function lf_ai_studio_handle_manifest(): void {
 	if (!current_user_can('edit_theme_options')) {
+		lf_ai_studio_error_log('manifest upload blocked: insufficient permissions', 'ERROR');
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_ai_studio_manifest', 'lf_ai_studio_manifest_nonce');
 	lf_ai_studio_maybe_cleanup_templates();
 	$redirect = admin_url('admin.php?page=lf-ops');
 	if (empty($_FILES['lf_site_manifest']) || !is_array($_FILES['lf_site_manifest'])) {
-		update_option('lf_ai_studio_manifest_errors', [__('Manifest file is required.', 'leadsforward-core')], false);
+		$msg = __('Manifest file is required.', 'leadsforward-core');
+		lf_ai_studio_log_user_messages('manifest', [$msg]);
+		update_option('lf_ai_studio_manifest_errors', [$msg], false);
 		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
 		exit;
 	}
 	$file = $_FILES['lf_site_manifest'];
 	if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-		update_option('lf_ai_studio_manifest_errors', [__('Manifest upload failed.', 'leadsforward-core')], false);
+		$msg = __('Manifest upload failed.', 'leadsforward-core');
+		lf_ai_studio_log_user_messages('manifest', [$msg]);
+		update_option('lf_ai_studio_manifest_errors', [$msg], false);
 		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
 		exit;
 	}
 	$raw = file_get_contents((string) ($file['tmp_name'] ?? ''));
 	if (!is_string($raw) || trim($raw) === '') {
-		update_option('lf_ai_studio_manifest_errors', [__('Manifest file is empty.', 'leadsforward-core')], false);
+		$msg = __('Manifest file is empty.', 'leadsforward-core');
+		lf_ai_studio_log_user_messages('manifest', [$msg]);
+		update_option('lf_ai_studio_manifest_errors', [$msg], false);
 		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
 		exit;
 	}
@@ -542,6 +606,7 @@ function lf_ai_studio_handle_manifest(): void {
 	if (!is_array($decoded)) {
 		$reason = function_exists('json_last_error_msg') ? json_last_error_msg() : '';
 		$message = $reason ? sprintf(__('Manifest JSON is invalid: %s', 'leadsforward-core'), $reason) : __('Manifest JSON is invalid.', 'leadsforward-core');
+		lf_ai_studio_log_user_messages('manifest', [$message]);
 		error_log('LF MANIFEST: ' . $message);
 		update_option('lf_ai_studio_manifest_errors', [$message], false);
 		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
@@ -549,6 +614,7 @@ function lf_ai_studio_handle_manifest(): void {
 	}
 	$errors = lf_ai_studio_validate_manifest($decoded);
 	if (!empty($errors)) {
+		lf_ai_studio_log_user_messages('manifest validation', $errors);
 		error_log('LF MANIFEST: validation errors ' . print_r($errors, true));
 		update_option('lf_ai_studio_manifest_errors', $errors, false);
 		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
@@ -561,14 +627,18 @@ function lf_ai_studio_handle_manifest(): void {
 	}
 	delete_option('lf_ai_studio_manifest_errors');
 	lf_ai_studio_sync_manifest_posts($normalized);
+	lf_ai_studio_error_log('manifest: stored and synced posts; starting run_generation', 'INFO');
 	$result = lf_ai_studio_run_generation();
 	if (!empty($result['error'])) {
-		update_option('lf_ai_studio_manifest_errors', [sprintf(__('Generation failed: %s', 'leadsforward-core'), (string) $result['error'])], false);
+		$gen_msg = sprintf(__('Generation failed: %s', 'leadsforward-core'), (string) $result['error']);
+		lf_ai_studio_log_user_messages('manifest generation', [$gen_msg]);
+		update_option('lf_ai_studio_manifest_errors', [$gen_msg], false);
 		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
 		exit;
 	}
 	$redirect = add_query_arg('manifest', '1', $redirect);
 	if (!empty($result['job_id'])) {
+		lf_ai_studio_error_log('manifest: generation queued', 'INFO', ['job_id' => (int) $result['job_id']]);
 		$redirect = add_query_arg('job', (string) $result['job_id'], $redirect);
 	}
 	wp_safe_redirect($redirect);
@@ -630,41 +700,50 @@ function lf_ai_studio_parse_research_upload(array $file): array {
 
 function lf_ai_studio_handle_research(): void {
 	if (!current_user_can('edit_theme_options')) {
+		lf_ai_studio_error_log('research upload: insufficient permissions', 'ERROR');
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_ai_studio_research', 'lf_ai_studio_research_nonce');
 	$redirect = admin_url('admin.php?page=lf-ops');
 	if (empty($_FILES['lf_site_research']) || !is_array($_FILES['lf_site_research'])) {
+		lf_ai_studio_log_user_messages('research', [__('Research file is required.', 'leadsforward-core')]);
 		update_option('lf_ai_studio_research_errors', [__('Research file is required.', 'leadsforward-core')], false);
 		wp_safe_redirect(add_query_arg('research_error', '1', $redirect));
 		exit;
 	}
 	$result = lf_ai_studio_parse_research_upload($_FILES['lf_site_research']);
 	if (empty($result['ok'])) {
-		update_option('lf_ai_studio_research_errors', $result['errors'] ?? [__('Research file must be valid JSON.', 'leadsforward-core')], false);
+		$errs = $result['errors'] ?? [__('Research file must be valid JSON.', 'leadsforward-core')];
+		lf_ai_studio_log_user_messages('research validation', $errs);
+		update_option('lf_ai_studio_research_errors', $errs, false);
 		wp_safe_redirect(add_query_arg('research_error', '1', $redirect));
 		exit;
 	}
 	update_option('lf_site_research_document', $result['document'], false);
 	delete_option('lf_ai_studio_research_errors');
+	lf_ai_studio_error_log('research: document stored', 'INFO');
 	wp_safe_redirect(add_query_arg('research', '1', $redirect));
 	exit;
 }
 
 function lf_ai_studio_handle_research_ajax(): void {
 	if (!current_user_can('edit_theme_options')) {
+		lf_ai_studio_error_log('research_ajax: insufficient permissions', 'ERROR');
 		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
 	}
 	check_ajax_referer('lf_ai_studio_research_ajax', 'nonce');
 	if (empty($_FILES['lf_site_research']) || !is_array($_FILES['lf_site_research'])) {
+		lf_ai_studio_error_log('research_ajax: missing file', 'ERROR');
 		wp_send_json_error(['message' => __('Research file is required.', 'leadsforward-core')], 400);
 	}
 	$result = lf_ai_studio_parse_research_upload($_FILES['lf_site_research']);
 	if (empty($result['ok'])) {
+		lf_ai_studio_log_user_messages('research_ajax validation', $result['errors'] ?? []);
 		wp_send_json_error(['message' => __('Research validation failed.', 'leadsforward-core'), 'errors' => $result['errors'] ?? []], 422);
 	}
 	update_option('lf_site_research_document', $result['document'], false);
 	delete_option('lf_ai_studio_research_errors');
+	lf_ai_studio_error_log('research_ajax: document stored', 'INFO');
 	wp_send_json_success(['message' => __('Research uploaded successfully.', 'leadsforward-core')]);
 }
 
@@ -701,17 +780,20 @@ function lf_ai_studio_handle_run_audit(): void {
 
 function lf_ai_studio_handle_regen_blog_posts(): void {
 	if (!current_user_can('edit_theme_options')) {
+		lf_ai_studio_error_log('regen_blog_posts: insufficient permissions', 'ERROR');
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_ai_studio_regen_blog_posts', 'lf_ai_studio_regen_blog_posts_nonce');
 	$enabled = get_option('lf_ai_studio_enabled', '0') === '1';
 	if (!$enabled) {
+		lf_ai_studio_error_log('regen_blog_posts: manifester disabled', 'ERROR');
 		wp_safe_redirect(add_query_arg('error', rawurlencode(__('Website Manifester is disabled.', 'leadsforward-core')), admin_url('admin.php?page=lf-ops')));
 		exit;
 	}
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$secret = trim((string) get_option('lf_ai_studio_secret', ''));
 	if ($webhook === '' || $secret === '') {
+		lf_ai_studio_error_log('regen_blog_posts: missing webhook or secret', 'ERROR');
 		wp_safe_redirect(add_query_arg('error', rawurlencode(__('Webhook URL and shared secret are required.', 'leadsforward-core')), admin_url('admin.php?page=lf-ops')));
 		exit;
 	}
@@ -719,10 +801,17 @@ function lf_ai_studio_handle_regen_blog_posts(): void {
 	if (!is_array($request) || !empty($request['error'])) {
 		$message = is_array($request) ? (string) ($request['error'] ?? '') : '';
 		$message = $message !== '' ? $message : __('Blog payload build failed.', 'leadsforward-core');
+		lf_ai_studio_error_log('regen_blog_posts failed: ' . $message, 'ERROR');
 		wp_safe_redirect(add_query_arg('error', rawurlencode($message), admin_url('admin.php?page=lf-ops')));
 		exit;
 	}
 	$job_id = lf_ai_studio_create_job($request);
+	if (!$job_id) {
+		lf_ai_studio_error_log('regen_blog_posts: create_job failed', 'ERROR');
+		wp_safe_redirect(add_query_arg('error', rawurlencode(__('Could not create generation job.', 'leadsforward-core')), admin_url('admin.php?page=lf-ops')));
+		exit;
+	}
+	lf_ai_studio_error_log('regen_blog_posts: job queued', 'INFO', ['job_id' => $job_id]);
 	lf_ai_studio_send_request($request, $job_id);
 	$redirect = add_query_arg('job', (string) $job_id, admin_url('admin.php?page=lf-ops'));
 	wp_safe_redirect($redirect);
@@ -815,14 +904,17 @@ function lf_ai_studio_process_images_upload(array $files): array {
 
 function lf_ai_studio_handle_images_upload_ajax(): void {
 	if (!current_user_can('edit_theme_options')) {
+		lf_ai_studio_error_log('images_upload_ajax: insufficient permissions', 'ERROR');
 		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
 	}
 	check_ajax_referer('lf_ai_studio_images_upload', 'nonce');
 	if (empty($_FILES['lf_manifest_images']) || !is_array($_FILES['lf_manifest_images'])) {
+		lf_ai_studio_error_log('images_upload_ajax: no files submitted', 'ERROR');
 		wp_send_json_error(['message' => __('Please choose one or more images before uploading.', 'leadsforward-core')], 400);
 	}
 	$result = lf_ai_studio_process_images_upload($_FILES['lf_manifest_images']);
 	if ($result['uploaded_count'] === 0) {
+		lf_ai_studio_log_user_messages('images_upload_ajax: no successful uploads', $result['errors'] ?? []);
 		wp_send_json_error([
 			'message' => __('No images were uploaded.', 'leadsforward-core'),
 			'errors' => $result['errors'],
@@ -838,16 +930,19 @@ function lf_ai_studio_handle_images_upload_ajax(): void {
 
 function lf_ai_studio_handle_images_upload(): void {
 	if (!current_user_can('edit_theme_options')) {
+		lf_ai_studio_error_log('images_upload: insufficient permissions', 'ERROR');
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_ai_studio_images_upload', 'lf_ai_studio_images_upload_nonce');
 	if (empty($_FILES['lf_manifest_images']) || !is_array($_FILES['lf_manifest_images'])) {
+		lf_ai_studio_error_log('images_upload: no files submitted', 'ERROR');
 		wp_safe_redirect(add_query_arg('images_error', 'missing', admin_url('admin.php?page=lf-ops')));
 		exit;
 	}
 	$result = lf_ai_studio_process_images_upload($_FILES['lf_manifest_images']);
 	$redirect = add_query_arg('images_uploaded', (string) $result['uploaded_count'], admin_url('admin.php?page=lf-ops'));
 	if ($result['error_count'] > 0) {
+		lf_ai_studio_log_user_messages('images_upload partial failures', $result['errors'] ?? []);
 		$redirect = add_query_arg('images_errors', (string) $result['error_count'], $redirect);
 	}
 	wp_safe_redirect($redirect);
@@ -1531,17 +1626,17 @@ function lf_ai_studio_run_generation(): array {
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$secret = trim((string) get_option('lf_ai_studio_secret', ''));
 	if (!$enabled) {
-		return ['error' => __('Website Manifester is disabled.', 'leadsforward-core')];
+		return lf_ai_studio_fail_result('run_generation', __('Website Manifester is disabled.', 'leadsforward-core'));
 	}
 	if ($webhook === '' || $secret === '') {
-		return ['error' => __('Webhook URL and shared secret are required.', 'leadsforward-core')];
+		return lf_ai_studio_fail_result('run_generation', __('Webhook URL and shared secret are required.', 'leadsforward-core'));
 	}
 	$request = lf_ai_studio_build_full_site_payload(false);
 	if (!is_array($request)) {
-		return ['error' => __('Full site payload build failed.', 'leadsforward-core')];
+		return lf_ai_studio_fail_result('run_generation', __('Full site payload build failed.', 'leadsforward-core'));
 	}
 	if (!empty($request['error'])) {
-		return ['error' => (string) $request['error']];
+		return lf_ai_studio_fail_result('run_generation', (string) $request['error']);
 	}
 	$job_id = lf_ai_studio_create_job($request);
 	return lf_ai_studio_send_request($request, $job_id);
@@ -1553,7 +1648,7 @@ function lf_ai_studio_run_homepage_generation(): array {
 		$keywords = lf_homepage_keywords();
 		if (empty($keywords['primary'])) {
 			error_log('LF DEBUG: Regenerate Site blocked: missing primary keyword.');
-			return ['error' => __('Homepage primary keyword is required.', 'leadsforward-core')];
+			return lf_ai_studio_fail_result('run_homepage_generation', __('Homepage primary keyword is required.', 'leadsforward-core'));
 		}
 	}
 	return lf_ai_studio_run_generation();
@@ -1601,8 +1696,10 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	];
 	if (empty($request['blueprints']) || !is_array($request['blueprints'])) {
 		lf_ai_autonomy_mark_generation_failed($job_id, 'missing_blueprints');
+		$summary = __('No blueprints to send. Check generation scope and setup data.', 'leadsforward-core');
+		lf_ai_studio_error_log('send_request: missing blueprints', 'ERROR', ['job_id' => $job_id]);
 		error_log('LF DEBUG: Aborting orchestrator request: missing blueprints');
-		return ['success' => false, 'summary' => __('No blueprints to send. Check generation scope and setup data.', 'leadsforward-core')];
+		return ['success' => false, 'summary' => $summary];
 	}
 	$research = lf_ai_studio_get_research_document();
 	$log_payload['research_present'] = !empty($research);
@@ -1644,6 +1741,7 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
 		update_post_meta($job_id, 'lf_ai_job_error', $response->get_error_message());
 		lf_ai_autonomy_mark_generation_failed($job_id, 'webhook_request_failed');
+		lf_ai_studio_error_log('webhook WP_Error: ' . $response->get_error_message(), 'ERROR', ['job_id' => $job_id]);
 		error_log('LF DEBUG: Regenerate Site failed: WP error on webhook call: ' . $response->get_error_message());
 		return ['error' => $response->get_error_message(), 'job_id' => $job_id];
 	}
@@ -1654,6 +1752,8 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 		update_post_meta($job_id, 'lf_ai_job_error', 'http_' . $status);
 		update_post_meta($job_id, 'lf_ai_job_response', $body);
 		lf_ai_autonomy_mark_generation_failed($job_id, 'webhook_http_' . $status);
+		$body_preview = strlen($body) > 2000 ? substr($body, 0, 2000) . '…' : $body;
+		lf_ai_studio_error_log('webhook HTTP error', 'ERROR', ['job_id' => $job_id, 'http_status' => $status, 'body_preview' => $body_preview]);
 		error_log('LF DEBUG: Regenerate Site failed: HTTP ' . $status);
 		return ['error' => sprintf(__('Orchestrator returned HTTP %d: %s', 'leadsforward-core'), $status, (string) $body), 'job_id' => $job_id];
 	}
@@ -3159,7 +3259,7 @@ function lf_ai_studio_manifest_to_setup_data(array $manifest): array {
 	$same_as_string = $same_as ? implode("\n", $same_as) : '';
 	$niche_slug = lf_ai_studio_manifest_niche_slug($business);
 	if (is_wp_error($niche_slug)) {
-		return ['error' => $niche_slug->get_error_message()];
+		return lf_ai_studio_fail_result('manifest_to_setup_data', $niche_slug->get_error_message());
 	}
 	$services = $manifest['services'] ?? [];
 	$areas = $manifest['service_areas'] ?? [];
@@ -4397,7 +4497,8 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 		$manifest_errors = lf_ai_studio_validate_manifest($manifest);
 		if (!empty($manifest_errors)) {
 			update_option('lf_ai_studio_manifest_errors', $manifest_errors, false);
-			return ['error' => __('Manifest validation failed. Fix the uploaded manifest to continue.', 'leadsforward-core')];
+			lf_ai_studio_log_user_messages('build_homepage_blueprint manifest validation', $manifest_errors);
+			return lf_ai_studio_fail_result('build_homepage_blueprint', __('Manifest validation failed. Fix the uploaded manifest to continue.', 'leadsforward-core'));
 		}
 		$manifest = lf_ai_studio_normalize_manifest($manifest);
 		$entity = lf_ai_studio_manifest_business_entity($manifest, $entity);
@@ -4492,7 +4593,7 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 			}
 		}
 		if (empty($order) || empty($blueprint_sections)) {
-			return ['error' => __('Homepage blueprint could not be built. Check homepage configuration.', 'leadsforward-core')];
+			return lf_ai_studio_fail_result('build_homepage_blueprint', __('Homepage blueprint could not be built. Check homepage configuration.', 'leadsforward-core'));
 		}
 	}
 	$research_context = lf_ai_studio_build_research_context();
@@ -5278,7 +5379,8 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 		$manifest_errors = lf_ai_studio_validate_manifest($manifest);
 		if (!empty($manifest_errors)) {
 			update_option('lf_ai_studio_manifest_errors', $manifest_errors, false);
-			return ['error' => __('Manifest validation failed. Fix the uploaded manifest to continue.', 'leadsforward-core')];
+			lf_ai_studio_log_user_messages('build_full_site_payload manifest validation', $manifest_errors);
+			return lf_ai_studio_fail_result('build_full_site_payload', __('Manifest validation failed. Fix the uploaded manifest to continue.', 'leadsforward-core'));
 		}
 		$manifest = lf_ai_studio_normalize_manifest($manifest);
 		$scaffold = lf_ai_studio_scaffold_manifest($manifest);
@@ -5286,23 +5388,24 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 		if (empty($scaffold['success'])) {
 			$errors = $scaffold['errors'] ?? [];
 			if (is_array($errors) && !empty($errors)) {
-				return ['error' => 'Manifest scaffold failed: ' . print_r($errors, true)];
+				$detail = 'Manifest scaffold failed: ' . print_r($errors, true);
+				return lf_ai_studio_fail_result('build_full_site_payload', $detail);
 			}
 			$message = (string) ($scaffold['message'] ?? '');
 			if ($message !== '') {
-				return ['error' => 'Manifest scaffold failed: ' . $message];
+				return lf_ai_studio_fail_result('build_full_site_payload', 'Manifest scaffold failed: ' . $message);
 			}
-			return ['error' => __('Manifest scaffold failed. Fix manifest data and try again.', 'leadsforward-core')];
+			return lf_ai_studio_fail_result('build_full_site_payload', __('Manifest scaffold failed. Fix manifest data and try again.', 'leadsforward-core'));
 		}
 		lf_ai_studio_sync_manifest_posts($manifest);
 	}
 	lf_ai_studio_ensure_core_page_sections($manifest, true);
 	$homepage_payload = lf_ai_studio_build_homepage_blueprint();
 	if (!is_array($homepage_payload)) {
-		return ['error' => __('Full site payload build failed.', 'leadsforward-core')];
+		return lf_ai_studio_fail_result('build_full_site_payload', __('Full site payload build failed.', 'leadsforward-core'));
 	}
 	if (!empty($homepage_payload['error'])) {
-		return ['error' => (string) $homepage_payload['error']];
+		return lf_ai_studio_fail_result('build_full_site_payload', (string) $homepage_payload['error']);
 	}
 	$homepage_blueprint = $homepage_payload['blueprint'] ?? [];
 	if (!is_array($homepage_blueprint) || empty($homepage_blueprint)) {
@@ -5310,7 +5413,7 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 			$homepage_blueprint = lf_ai_studio_build_default_homepage_blueprint($manifest);
 		}
 		if (!is_array($homepage_blueprint) || empty($homepage_blueprint)) {
-			return ['error' => __('Homepage blueprint is missing.', 'leadsforward-core')];
+			return lf_ai_studio_fail_result('build_full_site_payload', __('Homepage blueprint is missing.', 'leadsforward-core'));
 		}
 	}
 
@@ -5464,7 +5567,7 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 		}
 	}
 	if (empty($blueprints)) {
-		return ['error' => __('Generation scope has no enabled targets.', 'leadsforward-core')];
+		return lf_ai_studio_fail_result('build_full_site_payload', __('Generation scope has no enabled targets.', 'leadsforward-core'));
 	}
 
 	$business_name = $use_manifest ? (string) ($manifest['business']['name'] ?? '') : (string) ($homepage_payload['business_name'] ?? '');
@@ -5517,10 +5620,10 @@ function lf_ai_studio_build_blog_payload(): array {
 	$manifest = lf_ai_studio_get_manifest();
 	$homepage_payload = lf_ai_studio_build_homepage_blueprint();
 	if (!is_array($homepage_payload)) {
-		return ['error' => __('Blog payload build failed.', 'leadsforward-core')];
+		return lf_ai_studio_fail_result('build_blog_payload', __('Blog payload build failed.', 'leadsforward-core'));
 	}
 	if (!empty($homepage_payload['error'])) {
-		return ['error' => (string) $homepage_payload['error']];
+		return lf_ai_studio_fail_result('build_blog_payload', (string) $homepage_payload['error']);
 	}
 	$blog_topics = lf_ai_studio_blog_post_topics($manifest, $homepage_payload);
 	$blog_posts = lf_ai_studio_ensure_blog_posts($blog_topics);
@@ -5537,7 +5640,7 @@ function lf_ai_studio_build_blog_payload(): array {
 		}
 	}
 	if (empty($blueprints)) {
-		return ['error' => __('No AI blog posts available to regenerate.', 'leadsforward-core')];
+		return lf_ai_studio_fail_result('build_blog_payload', __('No AI blog posts available to regenerate.', 'leadsforward-core'));
 	}
 	$base_request_id = (string) ($homepage_payload['request_id'] ?? '');
 	if ($base_request_id === '') {
@@ -8085,7 +8188,7 @@ function lf_ai_studio_build_repair_request(array $report, array $request): array
 		$request = lf_ai_studio_build_full_site_payload(false);
 	}
 	if (!is_array($request) || !empty($request['error'])) {
-		return ['error' => 'Unable to build repair request.'];
+		return lf_ai_studio_fail_result('build_repair_request', 'Unable to build repair request.');
 	}
 	$missing_post_ids = [];
 	$repair_focus = [];
@@ -8141,7 +8244,7 @@ function lf_ai_studio_build_repair_request(array $report, array $request): array
 		}
 	}
 	if (empty($filtered)) {
-		return ['error' => 'No repair targets found.'];
+		return lf_ai_studio_fail_result('build_repair_request', 'No repair targets found.');
 	}
 	$request['blueprints'] = $filtered;
 	$request['repair_only'] = true;
