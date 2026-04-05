@@ -17,6 +17,8 @@ $variant = $block['variant'] ?? 'default';
 $context = $block['context'] ?? [];
 $section = $context['section'] ?? [];
 $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'soft') : '';
+$surface = function_exists('lf_sections_block_surface_attrs') ? lf_sections_block_surface_attrs($section) : ['class' => $bg_class, 'style' => ''];
+$header_align = function_exists('lf_sections_sanitize_header_align') ? lf_sections_sanitize_header_align($section) : 'center';
 $max = 3;
 if (!empty($section['trust_max_items'])) {
 	$max = (int) $section['trust_max_items'];
@@ -107,15 +109,16 @@ $section_inline_style = sprintf(
 	'--lf-reviews-columns: %1$d; --lf-trust-slider-cols: %1$d;',
 	$columns
 );
-$section_classes = 'lf-block lf-block-trust-reviews ' . $bg_class . ' lf-block-trust-reviews--' . $variant;
+$section_classes = 'lf-block lf-block-trust-reviews ' . $surface['class'] . ' lf-block-trust-reviews--' . $variant;
 if ($is_slider) {
 	$section_classes .= ' lf-block-trust-reviews--slider';
 }
 $section_classes .= ' lf-block-trust-reviews--' . $layout;
+$full_section_style = trim($surface['style'] . ' ' . $section_inline_style);
 ?>
-<section class="<?php echo esc_attr(trim($section_classes)); ?>" id="<?php echo esc_attr($render_id); ?>" data-variant="<?php echo esc_attr($variant); ?>" style="<?php echo esc_attr( $section_inline_style ); ?>" data-sliderAutoplay="<?php echo esc_attr($slider_autoplay ? '1' : '0'); ?>" data-sliderDelay="<?php echo esc_attr((string) $slider_autoplay_delay); ?>" data-sliderItemsPerSlide="<?php echo esc_attr((string) $slider_items_per_slide); ?>">
+<section class="<?php echo esc_attr(trim($section_classes)); ?>" id="<?php echo esc_attr($render_id); ?>" data-variant="<?php echo esc_attr($variant); ?>" style="<?php echo esc_attr($full_section_style); ?>" data-sliderAutoplay="<?php echo esc_attr($slider_autoplay ? '1' : '0'); ?>" data-sliderDelay="<?php echo esc_attr((string) $slider_autoplay_delay); ?>" data-sliderItemsPerSlide="<?php echo esc_attr((string) $slider_items_per_slide); ?>">
 	<div class="lf-block-trust-reviews__inner">
-		<header class="lf-block-trust-reviews__header">
+		<header class="lf-block-trust-reviews__header lf-section__header lf-section__header--align-<?php echo esc_attr($header_align); ?>">
 			<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
 			<?php if ($icon_left) : ?>
 				<div class="lf-heading-row">

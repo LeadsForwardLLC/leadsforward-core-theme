@@ -582,6 +582,61 @@ function lf_ai_section_style_cycle_value(string $current, array $allowed): strin
 	return $next;
 }
 
+/**
+ * Apply a section style patch from the front-end editor (background presets, custom color, header align).
+ *
+ * @param array<string, mixed> $settings
+ * @param array{background_slug?:string,custom_background?:string,header_align?:string} $extra
+ * @return array{0: array<string, mixed>, 1: string} Updated settings and empty string, or original settings and error message.
+ */
+function lf_ai_mutate_section_style_settings(array $settings, string $patch, array $extra): array {
+	$bg_slugs = lf_ai_section_style_background_slugs();
+	$aligns = ['left', 'center', 'right'];
+	$slug = sanitize_key((string) ($extra['background_slug'] ?? ''));
+	$custom_raw = (string) ($extra['custom_background'] ?? '');
+	$h_align = sanitize_key((string) ($extra['header_align'] ?? ''));
+
+	if ($patch === 'cycle_background') {
+		$cur = (string) ($settings['section_background'] ?? 'light');
+		$settings['section_background'] = lf_ai_section_style_cycle_value($cur, $bg_slugs);
+		return [$settings, ''];
+	}
+	if ($patch === 'set_preset_bg') {
+		if (!in_array($slug, $bg_slugs, true)) {
+			return [$settings, __('That background preset is not allowed.', 'leadsforward-core')];
+		}
+		$settings['section_background'] = $slug;
+		$settings['section_background_custom'] = '';
+		return [$settings, ''];
+	}
+	if ($patch === 'set_custom_bg') {
+		$clean = function_exists('lf_sections_sanitize_custom_background') ? lf_sections_sanitize_custom_background($custom_raw) : '';
+		if ($clean === '') {
+			return [$settings, __('Enter a valid hex (#rgb or #rrggbb) or rgb/rgba color.', 'leadsforward-core')];
+		}
+		$settings['section_background_custom'] = $clean;
+		return [$settings, ''];
+	}
+	if ($patch === 'clear_custom_bg') {
+		$settings['section_background_custom'] = '';
+		return [$settings, ''];
+	}
+	if ($patch === 'set_header_align') {
+		if (!in_array($h_align, $aligns, true)) {
+			return [$settings, __('Choose left, center, or right alignment.', 'leadsforward-core')];
+		}
+		$settings['section_header_align'] = $h_align;
+		return [$settings, ''];
+	}
+	if ($patch === 'cycle_header_align') {
+		$cur = (string) ($settings['section_header_align'] ?? 'center');
+		$cur = in_array($cur, $aligns, true) ? $cur : 'center';
+		$settings['section_header_align'] = lf_ai_section_style_cycle_value($cur, $aligns);
+		return [$settings, ''];
+	}
+	return [$settings, __('Unknown style action.', 'leadsforward-core')];
+}
+
 function lf_ai_ajax_update_section_style(): void {
 	check_ajax_referer('lf_ai_editing', 'nonce');
 	if (!current_user_can(LF_AI_CAP)) {
@@ -595,8 +650,11 @@ function lf_ai_ajax_update_section_style(): void {
 		wp_send_json_error(['message' => __('Invalid section style payload.', 'leadsforward-core')]);
 	}
 	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
-	$bg_slugs = lf_ai_section_style_background_slugs();
-	$aligns = ['left', 'center', 'right'];
+	$style_extra = [
+		'background_slug' => isset($_POST['background_slug']) ? sanitize_key(wp_unslash((string) $_POST['background_slug'])) : '',
+		'custom_background' => isset($_POST['custom_background']) ? wp_unslash((string) $_POST['custom_background']) : '',
+		'header_align' => isset($_POST['header_align']) ? sanitize_key(wp_unslash((string) $_POST['header_align'])) : '',
+	];
 
 	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
 		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
@@ -613,20 +671,12 @@ function lf_ai_ajax_update_section_style(): void {
 			wp_send_json_error(['message' => __('That section was not found on the homepage.', 'leadsforward-core')]);
 		}
 		$old_row = $config[$resolved];
-		if ($patch === 'cycle_background') {
-			$cur = (string) ($config[$resolved]['section_background'] ?? 'light');
-			$config[$resolved]['section_background'] = lf_ai_section_style_cycle_value($cur, $bg_slugs);
-		} elseif ($patch === 'cycle_header_align') {
-			$base = function_exists('lf_homepage_base_section_type') ? (string) lf_homepage_base_section_type($resolved) : '';
-			if ($base !== 'service_intro') {
-				wp_send_json_error(['message' => __('Header alignment is only available for the Service Intro section.', 'leadsforward-core')]);
-			}
-			$cur = (string) ($config[$resolved]['section_header_align'] ?? 'center');
-			$cur = in_array($cur, $aligns, true) ? $cur : 'center';
-			$config[$resolved]['section_header_align'] = lf_ai_section_style_cycle_value($cur, $aligns);
-		} else {
-			wp_send_json_error(['message' => __('Unknown style action.', 'leadsforward-core')]);
+		$row_settings = is_array($config[$resolved]) ? $config[$resolved] : [];
+		[$row_settings, $err] = lf_ai_mutate_section_style_settings($row_settings, $patch, $style_extra);
+		if ($err !== '') {
+			wp_send_json_error(['message' => $err]);
 		}
+		$config[$resolved] = $row_settings;
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 		$new_row = is_array($config[$resolved] ?? null) ? $config[$resolved] : [];
 		$log_id = function_exists('lf_ai_log_action')
@@ -644,6 +694,7 @@ function lf_ai_ajax_update_section_style(): void {
 			'log_id' => $log_id,
 			'section_id' => $resolved,
 			'section_background' => (string) ($new_row['section_background'] ?? ''),
+			'section_background_custom' => (string) ($new_row['section_background_custom'] ?? ''),
 			'section_header_align' => (string) ($new_row['section_header_align'] ?? ''),
 		]);
 		return;
@@ -667,18 +718,9 @@ function lf_ai_ajax_update_section_style(): void {
 	$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
 	$section_type = sanitize_text_field((string) ($row['type'] ?? ''));
 	$old_settings = $settings;
-	if ($patch === 'cycle_background') {
-		$cur = (string) ($settings['section_background'] ?? 'light');
-		$settings['section_background'] = lf_ai_section_style_cycle_value($cur, $bg_slugs);
-	} elseif ($patch === 'cycle_header_align') {
-		if ($section_type !== 'service_intro') {
-			wp_send_json_error(['message' => __('Header alignment is only available for the Service Intro section.', 'leadsforward-core')]);
-		}
-		$cur = (string) ($settings['section_header_align'] ?? 'center');
-		$cur = in_array($cur, $aligns, true) ? $cur : 'center';
-		$settings['section_header_align'] = lf_ai_section_style_cycle_value($cur, $aligns);
-	} else {
-		wp_send_json_error(['message' => __('Unknown style action.', 'leadsforward-core')]);
+	[$settings, $err_pb] = lf_ai_mutate_section_style_settings($settings, $patch, $style_extra);
+	if ($err_pb !== '') {
+		wp_send_json_error(['message' => $err_pb]);
 	}
 	$config['sections'][$section_id]['settings'] = $settings;
 	update_post_meta($pid, LF_PB_META_KEY, $config);
@@ -697,6 +739,7 @@ function lf_ai_ajax_update_section_style(): void {
 		'log_id' => $log_id,
 		'section_id' => $section_id,
 		'section_background' => (string) ($settings['section_background'] ?? ''),
+		'section_background_custom' => (string) ($settings['section_background_custom'] ?? ''),
 		'section_header_align' => (string) ($settings['section_header_align'] ?? ''),
 	]);
 }
@@ -1880,7 +1923,8 @@ function lf_ai_allowed_line_fields_for_section_type(string $section_type): array
 	$map = [
 		'hero' => ['hero_proof_bullets'],
 		'trust_bar' => ['trust_badges'],
-		'benefits' => ['benefits_icon_overrides'],
+		'benefits' => ['benefits_icon_overrides', 'benefits_items'],
+		'service_intro' => ['service_intro_service_ids'],
 		'process' => ['process_steps'],
 		'faq_accordion' => ['faq_selected_ids'],
 		'service_details' => ['service_details_checklist'],

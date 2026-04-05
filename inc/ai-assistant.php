@@ -113,6 +113,19 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		}
 	}
 
+	$bg_palette = [];
+	if (function_exists('lf_sections_bg_options') && function_exists('lf_sections_bg_swatch_hex_map')) {
+		$hex_map = lf_sections_bg_swatch_hex_map();
+		foreach (lf_sections_bg_options() as $slug => $label) {
+			$slug_s = (string) $slug;
+			$bg_palette[] = [
+				'slug' => $slug_s,
+				'label' => (string) $label,
+				'hex' => (string) ($hex_map[$slug_s] ?? '#f8fafc'),
+			];
+		}
+	}
+
 	wp_localize_script('lf-ai-floating-assistant', 'lfAiFloating', [
 		'ajax_url' => admin_url('admin-ajax.php'),
 		'nonce'    => wp_create_nonce('lf_ai_editing'),
@@ -122,6 +135,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		'labels' => $editable,
 		'section_library' => lf_ai_assistant_section_library($context),
 		'icon_slugs' => function_exists('lf_icon_list') ? array_values(array_map('sanitize_text_field', lf_icon_list())) : [],
+		'bg_palette' => $bg_palette,
 		'homepage_enabled' => $homepage_enabled,
 		'i18n' => [
 			'statusReady' => __('Ready.', 'leadsforward-core'),
@@ -675,6 +689,30 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-faq-picker__add:hover { background:#f5f0ff; }
 		.lf-ai-faq-picker__add[disabled] { opacity:.5; cursor:default; background:#f8fafc; }
 		.lf-ai-faq-picker__empty { padding:10px; color:#64748b; font-size:12px; }
+		.lf-ai-section-bg-picker { position:fixed; inset:0; z-index:100005; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; padding:18px; }
+		.lf-ai-section-bg-picker[hidden] { display:none !important; }
+		.lf-ai-section-bg-picker__card { width:min(420px, calc(100vw - 30px)); max-height:82vh; overflow:auto; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); display:flex; flex-direction:column; gap:10px; padding:12px; }
+		.lf-ai-section-bg-picker__head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+		.lf-ai-section-bg-picker__title { font-size:13px; font-weight:700; color:#0f172a; }
+		.lf-ai-section-bg-picker__close { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:15px; line-height:1; }
+		.lf-ai-section-bg-picker__swatches { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
+		.lf-ai-section-bg-picker__swatch { border:1px solid #e2e8f0; border-radius:8px; background:#fff; padding:8px; cursor:pointer; display:flex; align-items:center; gap:8px; text-align:left; font-size:12px; color:#0f172a; }
+		.lf-ai-section-bg-picker__swatch:hover { border-color:#c4b5fd; background:#faf7ff; }
+		.lf-ai-section-bg-picker__swatch-color { width:28px; height:28px; border-radius:6px; border:1px solid rgba(15,23,42,.12); flex-shrink:0; }
+		.lf-ai-section-bg-picker__swatch-label { line-height:1.2; }
+		.lf-ai-section-bg-picker__custom { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+		.lf-ai-section-bg-picker__input { flex:1; min-width:140px; border:1px solid #d6c8fb; border-radius:8px; padding:8px 10px; font-size:13px; }
+		.lf-ai-section-bg-picker__apply { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:32px; padding:0 12px; font-size:12px; cursor:pointer; }
+		.lf-ai-section-bg-picker__clearcustom { border:1px solid #e2e8f0; background:#f8fafc; color:#475569; border-radius:8px; min-height:32px; padding:0 12px; font-size:12px; cursor:pointer; align-self:flex-start; }
+		.lf-ai-section-align-picker { position:fixed; inset:0; z-index:100005; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; padding:18px; }
+		.lf-ai-section-align-picker[hidden] { display:none !important; }
+		.lf-ai-section-align-picker__card { width:min(320px, calc(100vw - 30px)); background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); padding:12px; display:flex; flex-direction:column; gap:10px; }
+		.lf-ai-section-align-picker__head { font-size:13px; font-weight:700; color:#0f172a; }
+		.lf-ai-section-align-picker__row { display:flex; gap:8px; flex-wrap:wrap; }
+		.lf-ai-section-align-picker__btn { flex:1; min-width:72px; border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:34px; font-size:12px; font-weight:600; cursor:pointer; }
+		.lf-ai-section-align-picker__btn:hover { background:#f5f0ff; }
+		.lf-ai-section-align-picker__close { align-self:flex-end; border:1px solid #e2e8f0; background:#fff; color:#64748b; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:15px; line-height:1; }
+		.lf-ai-benefit-card-drag.is-dragging, .lf-ai-service-intro-card-drag.is-dragging { opacity:.65; outline:2px dashed rgba(131,72,249,.45); outline-offset:2px; }
 		.lf-ai-float__confirm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.4); z-index:5; padding:12px; pointer-events:auto; }
 		.lf-ai-float__confirm[hidden] { display:none !important; pointer-events:none !important; }
 		.lf-ai-float__confirm-card { width:100%; max-width:360px; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 10px 34px rgba(15,23,42,.28); padding:14px; }
@@ -803,6 +841,12 @@ function lf_ai_assistant_widget_js(): string {
 		var activeLibraryDragSectionType = "";
 		var activeProcessDragEl = null;
 		var activeFaqDragEl = null;
+		var activeBenefitDragEl = null;
+		var activeServiceIntroDragEl = null;
+		var sectionBgPickerEl = null;
+		var sectionBgPickerWrap = null;
+		var sectionAlignPickerEl = null;
+		var sectionAlignPickerWrap = null;
 		var railLibraryOpen = false;
 		var suppressInlineClickUntil = 0;
 		var iconSlugs = Array.isArray(lfAiFloating.icon_slugs) ? lfAiFloating.icon_slugs : [];
@@ -1666,6 +1710,8 @@ function lf_ai_assistant_widget_js(): string {
 			buildSectionColumnSwapTargets();
 			buildSectionMediaEditors();
 			buildFaqReorderControls();
+			buildBenefitsReorderControls();
+			buildServiceIntroReorderControls();
 			buildBenefitsIconEditors();
 			refreshSectionRail();
 			renderSeoSnapshot();
@@ -1715,7 +1761,7 @@ function lf_ai_assistant_widget_js(): string {
 			if (node.closest(".site-header, .site-footer, #masthead, #colophon")) return false;
 			if (node.closest("button, a, label, script, style, noscript")) return false;
 			// Managed lists/pills use dedicated controls; block generic inline editing for their rows.
-			if (node.closest(".lf-hero-chips,.lf-block-hero__card-list,.lf-trust-bar__badges,.lf-service-details__checklist,.lf-process,.lf-block-faq-accordion__list")) return false;
+			if (node.closest(".lf-hero-chips,.lf-block-hero__card-list,.lf-trust-bar__badges,.lf-service-details__checklist,.lf-process,.lf-block-faq-accordion__list,.lf-related-links")) return false;
 			// Reviews content is source-of-truth data; do not edit testimonial copy inline.
 			if (node.closest(".lf-block-trust-reviews__item,.lf-block-trust-reviews__summary")) return false;
 			var tag = node.tagName ? node.tagName.toLowerCase() : "";
@@ -1929,6 +1975,8 @@ function lf_ai_assistant_widget_js(): string {
 				buildProcessStepControls();
 				buildSectionMediaEditors();
 				buildFaqReorderControls();
+				buildBenefitsReorderControls();
+				buildServiceIntroReorderControls();
 				buildBenefitsIconEditors();
 				try {
 					var sid = String(selectedSectionWrap.getAttribute("data-lf-section-id") || "");
@@ -3369,6 +3417,125 @@ function lf_ai_assistant_widget_js(): string {
 				}
 			});
 		}
+		function benefitLinesFromGrid(grid) {
+			if (!grid) return [];
+			return Array.prototype.slice.call(grid.querySelectorAll(".lf-benefits__card")).map(function(card){
+				var raw = String(card.getAttribute("data-lf-benefit-line") || "").trim();
+				if (raw !== "") return raw;
+				var t = card.querySelector(".lf-benefits__title");
+				var b = card.querySelector(".lf-benefits__desc");
+				var titleText = t ? String(t.textContent || "").trim() : "";
+				var bodyText = b ? String(b.textContent || "").trim() : "";
+				return bodyText ? (titleText + " || " + bodyText) : titleText;
+			}).filter(function(v){ return v !== ""; });
+		}
+		function buildBenefitsReorderControls() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				if (String(wrap.getAttribute("data-lf-section-type") || "") !== "benefits") return;
+				var grid = wrap.querySelector(".lf-benefits");
+				if (!grid) return;
+				Array.prototype.slice.call(grid.querySelectorAll(".lf-benefits__card")).forEach(function(card){
+					card.removeAttribute("draggable");
+					card.classList.remove("lf-ai-benefit-card-drag", "is-dragging");
+					card.ondragstart = null;
+					card.ondragover = null;
+					card.ondrop = null;
+					card.ondragend = null;
+				});
+				Array.prototype.slice.call(grid.querySelectorAll(".lf-benefits__title,.lf-benefits__desc")).forEach(function(node){
+					node.removeAttribute("data-lf-inline-editable");
+					node.removeAttribute("data-lf-inline-selector");
+				});
+				Array.prototype.slice.call(grid.querySelectorAll(".lf-benefits__card")).forEach(function(card){
+					card.setAttribute("draggable", "true");
+					card.classList.add("lf-ai-benefit-card-drag", "lf-ai-inline-editor-ignore");
+					card.ondragstart = function(e){
+						activeBenefitDragEl = card;
+						card.classList.add("is-dragging");
+						if (e.dataTransfer) {
+							e.dataTransfer.effectAllowed = "move";
+							e.dataTransfer.setData("text/plain", "benefit");
+						}
+					};
+					card.ondragover = function(e){
+						if (!activeBenefitDragEl || activeBenefitDragEl === card) return;
+						e.preventDefault();
+					};
+					card.ondrop = function(e){
+						if (!activeBenefitDragEl || activeBenefitDragEl === card) return;
+						e.preventDefault();
+						var rect = card.getBoundingClientRect();
+						var after = e.clientY > (rect.top + rect.height / 2);
+						if (after) {
+							grid.insertBefore(activeBenefitDragEl, card.nextSibling);
+						} else {
+							grid.insertBefore(activeBenefitDragEl, card);
+						}
+						persistSectionLineItems(wrap, "benefits_items", benefitLinesFromGrid(grid), "Saving benefit order...");
+					};
+					card.ondragend = function(){
+						card.classList.remove("is-dragging");
+						activeBenefitDragEl = null;
+					};
+				});
+			});
+		}
+		function buildServiceIntroReorderControls() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				if (String(wrap.getAttribute("data-lf-section-type") || "") !== "service_intro") return;
+				var grid = wrap.querySelector(".lf-block-service-intro__grid");
+				if (!grid) return;
+				Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card")).forEach(function(card){
+					card.removeAttribute("draggable");
+					card.classList.remove("lf-ai-service-intro-card-drag", "is-dragging");
+					card.ondragstart = null;
+					card.ondragover = null;
+					card.ondrop = null;
+					card.ondragend = null;
+				});
+				Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card .lf-block-service-intro__card-title, .lf-block-service-intro__card .lf-block-service-intro__desc, .lf-block-service-intro__card .lf-block-service-intro__link")).forEach(function(node){
+					node.removeAttribute("data-lf-inline-editable");
+					node.removeAttribute("data-lf-inline-selector");
+				});
+				Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card")).forEach(function(card){
+					card.setAttribute("draggable", "true");
+					card.classList.add("lf-ai-service-intro-card-drag", "lf-ai-inline-editor-ignore");
+					card.ondragstart = function(e){
+						activeServiceIntroDragEl = card;
+						card.classList.add("is-dragging");
+						if (e.dataTransfer) {
+							e.dataTransfer.effectAllowed = "move";
+							e.dataTransfer.setData("text/plain", "service-intro");
+						}
+					};
+					card.ondragover = function(e){
+						if (!activeServiceIntroDragEl || activeServiceIntroDragEl === card) return;
+						e.preventDefault();
+					};
+					card.ondrop = function(e){
+						if (!activeServiceIntroDragEl || activeServiceIntroDragEl === card) return;
+						e.preventDefault();
+						var rect = card.getBoundingClientRect();
+						var after = e.clientY > (rect.top + rect.height / 2);
+						if (after) {
+							grid.insertBefore(activeServiceIntroDragEl, card.nextSibling);
+						} else {
+							grid.insertBefore(activeServiceIntroDragEl, card);
+						}
+						var ids = Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id]")).map(function(n){
+							return String(n.getAttribute("data-lf-service-id") || "").trim();
+						}).filter(function(v){ return v !== ""; });
+						persistSectionLineItems(wrap, "service_intro_service_ids", ids, "Saving service order...");
+					};
+					card.ondragend = function(){
+						card.classList.remove("is-dragging");
+						activeServiceIntroDragEl = null;
+					};
+				});
+			});
+		}
 		function trustLayoutFromWrap(wrap) {
 			var block = wrap ? wrap.querySelector(".lf-block-trust-reviews") : null;
 			if (!block || !block.classList) return "slider";
@@ -3733,6 +3900,8 @@ function lf_ai_assistant_widget_js(): string {
 					buildSectionColumnSwapTargets();
 					buildSectionMediaEditors();
 					buildFaqReorderControls();
+					buildBenefitsReorderControls();
+					buildServiceIntroReorderControls();
 					buildBenefitsIconEditors();
 					setSelectedSection(clone);
 					setStatus((res.data && res.data.message) ? res.data.message : "Section duplicated.", false);
@@ -3747,19 +3916,182 @@ function lf_ai_assistant_widget_js(): string {
 				try { window.alert(msg); } catch (e) {}
 			});
 		}
-		function persistSectionStylePatch(wrap, patch) {
+		function sectionSupportsHeaderAlign(wrap) {
+			if (!wrap) return false;
+			if (String(wrap.getAttribute("data-lf-section-type") || "") === "hero") return false;
+			return !!(wrap.querySelector(".lf-section__header, .lf-block-faq-accordion__header, .lf-block-trust-reviews__header, .lf-block-map-nap__header, .lf-block-service-intro__header, .lf-block-service-grid__header, .lf-block-service-areas__header, .lf-block-cta__content"));
+		}
+		function closeSectionBgPicker() {
+			if (sectionBgPickerEl) sectionBgPickerEl.hidden = true;
+			sectionBgPickerWrap = null;
+		}
+		function ensureSectionBgPicker() {
+			if (sectionBgPickerEl) return sectionBgPickerEl;
+			var root = document.createElement("div");
+			root.className = "lf-ai-section-bg-picker lf-ai-inline-editor-ignore";
+			root.hidden = true;
+			var card = document.createElement("div");
+			card.className = "lf-ai-section-bg-picker__card";
+			var head = document.createElement("div");
+			head.className = "lf-ai-section-bg-picker__head";
+			var title = document.createElement("span");
+			title.className = "lf-ai-section-bg-picker__title";
+			title.textContent = "Section background";
+			var closeHead = document.createElement("button");
+			closeHead.type = "button";
+			closeHead.className = "lf-ai-section-bg-picker__close";
+			closeHead.textContent = "×";
+			closeHead.setAttribute("aria-label", "Close");
+			closeHead.addEventListener("click", function(e){
+				e.preventDefault();
+				closeSectionBgPicker();
+			});
+			head.appendChild(title);
+			head.appendChild(closeHead);
+			var swatches = document.createElement("div");
+			swatches.className = "lf-ai-section-bg-picker__swatches";
+			var palette = Array.isArray(lfAiFloating.bg_palette) ? lfAiFloating.bg_palette : [];
+			palette.forEach(function(entry){
+				var slug = String(entry.slug || "");
+				if (!slug) return;
+				var btn = document.createElement("button");
+				btn.type = "button";
+				btn.className = "lf-ai-section-bg-picker__swatch";
+				var sw = document.createElement("span");
+				sw.className = "lf-ai-section-bg-picker__swatch-color";
+				sw.style.background = String(entry.hex || "#ccc");
+				var lab = document.createElement("span");
+				lab.className = "lf-ai-section-bg-picker__swatch-label";
+				lab.textContent = String(entry.label || slug);
+				btn.appendChild(sw);
+				btn.appendChild(lab);
+				btn.addEventListener("click", function(e){
+					e.preventDefault();
+					var w = sectionBgPickerWrap;
+					closeSectionBgPicker();
+					if (w) persistSectionStyle(w, "set_preset_bg", { background_slug: slug });
+				});
+				swatches.appendChild(btn);
+			});
+			var customRow = document.createElement("div");
+			customRow.className = "lf-ai-section-bg-picker__custom";
+			var inp = document.createElement("input");
+			inp.type = "text";
+			inp.className = "lf-ai-section-bg-picker__input";
+			inp.setAttribute("placeholder", "#hex or rgb(...)");
+			var applyCustom = document.createElement("button");
+			applyCustom.type = "button";
+			applyCustom.className = "lf-ai-section-bg-picker__apply";
+			applyCustom.textContent = "Apply custom";
+			applyCustom.addEventListener("click", function(e){
+				e.preventDefault();
+				var w = sectionBgPickerWrap;
+				var v = String(inp.value || "").trim();
+				closeSectionBgPicker();
+				if (w && v) persistSectionStyle(w, "set_custom_bg", { custom_background: v });
+			});
+			customRow.appendChild(inp);
+			customRow.appendChild(applyCustom);
+			var clearCustom = document.createElement("button");
+			clearCustom.type = "button";
+			clearCustom.className = "lf-ai-section-bg-picker__clearcustom";
+			clearCustom.textContent = "Clear custom color";
+			clearCustom.addEventListener("click", function(e){
+				e.preventDefault();
+				var w = sectionBgPickerWrap;
+				closeSectionBgPicker();
+				if (w) persistSectionStyle(w, "clear_custom_bg", {});
+			});
+			card.appendChild(head);
+			card.appendChild(swatches);
+			card.appendChild(customRow);
+			card.appendChild(clearCustom);
+			root.appendChild(card);
+			root.addEventListener("click", function(e){
+				if (e.target === root) closeSectionBgPicker();
+			});
+			document.body.appendChild(root);
+			sectionBgPickerEl = root;
+			return root;
+		}
+		function openSectionBgPicker(wrap) {
+			ensureSectionBgPicker();
+			sectionBgPickerWrap = wrap;
+			sectionBgPickerEl.hidden = false;
+		}
+		function closeSectionAlignPicker() {
+			if (sectionAlignPickerEl) sectionAlignPickerEl.hidden = true;
+			sectionAlignPickerWrap = null;
+		}
+		function ensureSectionAlignPicker() {
+			if (sectionAlignPickerEl) return sectionAlignPickerEl;
+			var root = document.createElement("div");
+			root.className = "lf-ai-section-align-picker lf-ai-inline-editor-ignore";
+			root.hidden = true;
+			var card = document.createElement("div");
+			card.className = "lf-ai-section-align-picker__card";
+			var head = document.createElement("div");
+			head.className = "lf-ai-section-align-picker__head";
+			head.textContent = "Header alignment";
+			var row = document.createElement("div");
+			row.className = "lf-ai-section-align-picker__row";
+			["left", "center", "right"].forEach(function(al){
+				var b = document.createElement("button");
+				b.type = "button";
+				b.className = "lf-ai-section-align-picker__btn";
+				b.textContent = al.charAt(0).toUpperCase() + al.slice(1);
+				b.addEventListener("click", function(e){
+					e.preventDefault();
+					var w = sectionAlignPickerWrap;
+					closeSectionAlignPicker();
+					if (w) persistSectionStyle(w, "set_header_align", { header_align: al });
+				});
+				row.appendChild(b);
+			});
+			var closeBtn = document.createElement("button");
+			closeBtn.type = "button";
+			closeBtn.className = "lf-ai-section-align-picker__close";
+			closeBtn.textContent = "×";
+			closeBtn.setAttribute("aria-label", "Close");
+			closeBtn.addEventListener("click", function(e){
+				e.preventDefault();
+				closeSectionAlignPicker();
+			});
+			card.appendChild(head);
+			card.appendChild(row);
+			card.appendChild(closeBtn);
+			root.appendChild(card);
+			root.addEventListener("click", function(e){
+				if (e.target === root) closeSectionAlignPicker();
+			});
+			document.body.appendChild(root);
+			sectionAlignPickerEl = root;
+			return root;
+		}
+		function openSectionAlignPicker(wrap) {
+			ensureSectionAlignPicker();
+			sectionAlignPickerWrap = wrap;
+			sectionAlignPickerEl.hidden = false;
+		}
+		function persistSectionStyle(wrap, patch, extra) {
 			if (!wrap || !patch) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			if (!sectionId) return;
 			setStatus("Updating section style...", false);
-			$.post(lfAiFloating.ajax_url, {
+			var payload = {
 				action: "lf_ai_update_section_style",
 				nonce: lfAiFloating.nonce,
 				context_type: activeContextType,
 				context_id: activeContextId,
 				section_id: sectionId,
 				patch: String(patch)
-			}).done(function(res){
+			};
+			if (extra && typeof extra === "object") {
+				if (extra.background_slug) payload.background_slug = String(extra.background_slug);
+				if (extra.custom_background) payload.custom_background = String(extra.custom_background);
+				if (extra.header_align) payload.header_align = String(extra.header_align);
+			}
+			$.post(lfAiFloating.ajax_url, payload).done(function(res){
 				if (res && res.success) {
 					setStatus((res.data && res.data.message) ? res.data.message : "Saved.", false);
 					if (res.data && res.data.reload) {
@@ -3772,6 +4104,9 @@ function lf_ai_assistant_widget_js(): string {
 				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Style update failed.";
 				setStatus(msg, true);
 			});
+		}
+		function persistSectionStylePatch(wrap, patch) {
+			persistSectionStyle(wrap, patch, null);
 		}
 		function moveSectionByStep(wrap, delta) {
 			if (!wrap || !delta) return;
@@ -3801,25 +4136,25 @@ function lf_ai_assistant_widget_js(): string {
 				bgBtn.type = "button";
 				bgBtn.className = "lf-ai-section-btn";
 				bgBtn.textContent = "BG";
-				bgBtn.setAttribute("title", "Cycle section background (light, soft, primary, dark…)");
-				bgBtn.setAttribute("aria-label", "Cycle section background");
+				bgBtn.setAttribute("title", "Choose section background (theme presets or custom color)");
+				bgBtn.setAttribute("aria-label", "Choose section background");
 				bgBtn.addEventListener("click", function(e){
 					e.preventDefault();
 					e.stopPropagation();
-					persistSectionStylePatch(wrap, "cycle_background");
+					openSectionBgPicker(wrap);
 				});
 				controls.appendChild(bgBtn);
-				if (sectionType === "service_intro") {
+				if (sectionSupportsHeaderAlign(wrap)) {
 					var alignBtn = document.createElement("button");
 					alignBtn.type = "button";
 					alignBtn.className = "lf-ai-section-btn";
 					alignBtn.textContent = "Align";
-					alignBtn.setAttribute("title", "Cycle header text alignment: left → center → right");
-					alignBtn.setAttribute("aria-label", "Cycle section header alignment");
+					alignBtn.setAttribute("title", "Set header and intro text alignment");
+					alignBtn.setAttribute("aria-label", "Set section header alignment");
 					alignBtn.addEventListener("click", function(e){
 						e.preventDefault();
 						e.stopPropagation();
-						persistSectionStylePatch(wrap, "cycle_header_align");
+						openSectionAlignPicker(wrap);
 					});
 					controls.appendChild(alignBtn);
 				}

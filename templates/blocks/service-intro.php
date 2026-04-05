@@ -21,6 +21,8 @@ $section = $context['section'] ?? [];
 $heading = !empty($section['section_heading']) ? $section['section_heading'] : __('Service options', 'leadsforward-core');
 $intro = !empty($section['section_intro']) ? $section['section_intro'] : '';
 $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'light') : '';
+$surface = function_exists('lf_sections_block_surface_attrs') ? lf_sections_block_surface_attrs($section) : ['class' => $bg_class, 'style' => ''];
+$section_surface_style = $surface['style'] !== '' ? ' style="' . esc_attr($surface['style']) . '"' : '';
 $icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'service_intro', 'above', 'lf-heading-icon') : '';
 $icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'service_intro', 'left', 'lf-heading-icon') : '';
 $card_icon = '';
@@ -37,18 +39,34 @@ if (!in_array($header_align, ['left', 'center', 'right'], true)) {
 	$header_align = 'center';
 }
 
-$query = new WP_Query([
+$order_ids_raw = trim((string) ($section['service_intro_service_ids'] ?? ''));
+$order_ids = [];
+if ($order_ids_raw !== '') {
+	foreach (preg_split('/[\s,]+/', $order_ids_raw) ?: [] as $pid) {
+		$pid = (int) $pid;
+		if ($pid > 0) {
+			$order_ids[] = $pid;
+		}
+	}
+}
+$query_args = [
 	'post_type'      => 'lf_service',
 	'posts_per_page' => $max_items,
-	'orderby'        => 'menu_order title',
-	'order'          => 'ASC',
 	'post_status'    => 'publish',
 	'no_found_rows'  => true,
-]);
+];
+if ($order_ids !== []) {
+	$query_args['post__in'] = $order_ids;
+	$query_args['orderby'] = 'post__in';
+} else {
+	$query_args['orderby'] = 'menu_order title';
+	$query_args['order'] = 'ASC';
+}
+$query = new WP_Query($query_args);
 ?>
-<section class="lf-block lf-block-service-intro <?php echo esc_attr($bg_class); ?> lf-block-service-intro--<?php echo esc_attr($variant); ?> lf-block-service-intro--cols-<?php echo esc_attr((string) $columns); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
+<section class="lf-block lf-block-service-intro <?php echo esc_attr($surface['class']); ?> lf-block-service-intro--<?php echo esc_attr($variant); ?> lf-block-service-intro--cols-<?php echo esc_attr((string) $columns); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>"<?php echo $section_surface_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- esc_attr in $section_surface_style ?>>
 	<div class="lf-block-service-intro__inner">
-		<header class="lf-block-service-intro__header lf-block-service-intro__header--align-<?php echo esc_attr($header_align); ?>">
+		<header class="lf-block-service-intro__header lf-block-service-intro__header--align-<?php echo esc_attr($header_align); ?> lf-section__header lf-section__header--align-<?php echo esc_attr($header_align); ?>">
 			<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
 			<?php if ($icon_left) : ?>
 				<div class="lf-heading-row">
@@ -86,7 +104,7 @@ $query = new WP_Query([
 						'decoding' => 'async',
 					]) : '';
 				?>
-					<article class="lf-block-service-intro__card lf-card lf-card--interactive">
+					<article class="lf-block-service-intro__card lf-card lf-card--interactive" data-lf-service-id="<?php echo esc_attr((string) get_the_ID()); ?>">
 						<div class="lf-block-service-intro__card-head">
 							<?php if ($card_icon) : ?><span class="lf-block-service-intro__icon"><?php echo $card_icon; ?></span><?php endif; ?>
 							<h3 class="lf-block-service-intro__card-title"><?php the_title(); ?></h3>
