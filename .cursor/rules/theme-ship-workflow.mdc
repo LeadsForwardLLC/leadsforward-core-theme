@@ -8,6 +8,7 @@ alwaysApply: true
 ## Mandatory for AI agents (every code change)
 
 - **Always** finish with: **branch → commit → push → PR → merge** (squash). Do not leave work only on disk and do not push directly to `main`.
+- **Never** end a session with uncommitted theme changes unless the user explicitly asked to stop before shipping.
 - After implementing a task, **run the ship flow yourself** (see below). Do not only tell the user to commit.
 - **Git root** is this theme directory (`leadsforward-core-theme` — contains `style.css`, `.git`). The WordPress site root above it is **not** the repo.
 
