@@ -4976,3 +4976,4 @@ function lf_ai_assistant_widget_fallback_js(): string {
 	})();';
 }
 // trigger deployment
+// Deployment trigger - working version
