@@ -131,8 +131,9 @@ function lf_homepage_admin_save(): void {
 			$config[$type]['hero_proof_title'] = isset($_POST['lf_hp_hero_proof_title']) ? sanitize_text_field($_POST['lf_hp_hero_proof_title']) : '';
 			$config[$type]['hero_proof_bullets'] = isset($_POST['lf_hp_hero_proof_bullets']) ? sanitize_textarea_field(wp_unslash($_POST['lf_hp_hero_proof_bullets'])) : '';
 			$hero_bg_mode = isset($_POST['lf_hp_hero_bg_mode']) ? sanitize_text_field($_POST['lf_hp_hero_bg_mode']) : 'image';
-			$config[$type]['hero_background_mode'] = in_array($hero_bg_mode, ['color', 'image'], true) ? $hero_bg_mode : 'image';
+			$config[$type]['hero_background_mode'] = in_array($hero_bg_mode, ['color', 'image', 'video'], true) ? $hero_bg_mode : 'image';
 			$config[$type]['hero_background_image_id'] = isset($_POST['lf_hp_hero_bg_image_id']) ? absint($_POST['lf_hp_hero_bg_image_id']) : 0;
+			$config[$type]['hero_background_video_id'] = isset($_POST['lf_hp_hero_bg_video_id']) ? absint($_POST['lf_hp_hero_bg_video_id']) : 0;
 			$eyebrow_enabled = isset($_POST['lf_hp_hero_eyebrow_enabled']) ? sanitize_text_field($_POST['lf_hp_hero_eyebrow_enabled']) : '1';
 			$config[$type]['hero_eyebrow_enabled'] = $eyebrow_enabled === '0' ? '0' : '1';
 			$config[$type]['hero_eyebrow_text'] = isset($_POST['lf_hp_hero_eyebrow_text']) ? sanitize_text_field($_POST['lf_hp_hero_eyebrow_text']) : '';
@@ -406,10 +407,12 @@ jQuery(function ($) {
 		if (mediaFrame) {
 			mediaFrame.off('select');
 		}
+		var libType = ($field.attr('data-lf-media-library') || 'image');
+		var isVideo = libType === 'video';
 		mediaFrame = wp.media({
-			title: 'Select image',
-			button: { text: 'Use image' },
-			library: { type: 'image' },
+			title: isVideo ? 'Select video' : 'Select image',
+			button: { text: isVideo ? 'Use video' : 'Use image' },
+			library: { type: isVideo ? 'video' : 'image' },
 			multiple: false
 		});
 		mediaFrame.on('select', function () {
@@ -417,9 +420,15 @@ jQuery(function ($) {
 			if (!attachment) return;
 			var data = attachment.toJSON();
 			$field.find('.lf-media-id').val(data.id || '');
-			var url = (data.sizes && data.sizes.thumbnail) ? data.sizes.thumbnail.url : data.url;
-			var html = url ? '<img src="' + url + '" alt="" />' : '';
-			$field.find('.lf-media-preview').html(html || '<div class="lf-media-preview__empty">No image selected</div>');
+			if (isVideo) {
+				var title = data.title || data.filename || 'Video selected';
+				var html = '<span class="description">' + String(title).replace(/</g, '') + '</span>';
+				$field.find('.lf-media-preview').html(html);
+			} else {
+				var url = (data.sizes && data.sizes.thumbnail) ? data.sizes.thumbnail.url : data.url;
+				var imgHtml = url ? '<img src="' + url + '" alt="" />' : '';
+				$field.find('.lf-media-preview').html(imgHtml || '<div class="lf-media-preview__empty">No image selected</div>');
+			}
 		});
 		mediaFrame.open();
 	}
@@ -432,7 +441,8 @@ jQuery(function ($) {
 	$(document).on('click', '.lf-media-remove', function () {
 		var $field = $(this).closest('.lf-media-field');
 		$field.find('.lf-media-id').val('');
-		$field.find('.lf-media-preview').html('<div class="lf-media-preview__empty">No image selected</div>');
+		var emptyLabel = ($field.attr('data-lf-media-library') === 'video') ? 'No video selected' : 'No image selected';
+		$field.find('.lf-media-preview').html('<div class="lf-media-preview__empty">' + emptyLabel + '</div>');
 	});
 
 
@@ -722,8 +732,14 @@ function lf_homepage_admin_render(): void {
 									<?php
 										$hero_bg_mode = $sec['hero_background_mode'] ?? 'image';
 										$hero_bg_image_id = isset($sec['hero_background_image_id']) ? (int) $sec['hero_background_image_id'] : 0;
+										$hero_bg_video_id = isset($sec['hero_background_video_id']) ? (int) $sec['hero_background_video_id'] : 0;
 										$hero_bg_thumb = $hero_bg_image_id ? wp_get_attachment_image_src($hero_bg_image_id, 'thumbnail') : null;
 										$hero_bg_html = $hero_bg_thumb ? '<img src="' . esc_url($hero_bg_thumb[0]) . '" alt="" />' : '';
+										$hero_video_title = '';
+										if ($hero_bg_video_id > 0) {
+											$vpost = get_post($hero_bg_video_id);
+											$hero_video_title = $vpost instanceof \WP_Post ? $vpost->post_title : '';
+										}
 									?>
 									<tr>
 										<th scope="row"><label for="lf_hp_hero_bg_mode"><?php esc_html_e('Hero background', 'leadsforward-core'); ?></label></th>
@@ -731,8 +747,9 @@ function lf_homepage_admin_render(): void {
 											<select name="lf_hp_hero_bg_mode" id="lf_hp_hero_bg_mode">
 												<option value="color" <?php selected($hero_bg_mode, 'color'); ?>><?php esc_html_e('Background color', 'leadsforward-core'); ?></option>
 												<option value="image" <?php selected($hero_bg_mode, 'image'); ?>><?php esc_html_e('Featured image overlay', 'leadsforward-core'); ?></option>
+												<option value="video" <?php selected($hero_bg_mode, 'video'); ?>><?php esc_html_e('Video background', 'leadsforward-core'); ?></option>
 											</select>
-											<p class="description" style="margin: 6px 0 0;"><?php esc_html_e('Uses the page featured image when enabled. Background color becomes the overlay color.', 'leadsforward-core'); ?></p>
+											<p class="description" style="margin: 6px 0 0;"><?php esc_html_e('Uses the page featured image when overlay mode is on and no custom image is set. Background presets tint the overlay.', 'leadsforward-core'); ?></p>
 										</td>
 									</tr>
 									<tr>
@@ -749,6 +766,28 @@ function lf_homepage_admin_render(): void {
 												<input type="hidden" class="lf-media-id" name="lf_hp_hero_bg_image_id" value="<?php echo esc_attr((string) $hero_bg_image_id); ?>" />
 											</div>
 											<p class="description" style="margin: 6px 0 0;"><?php esc_html_e('Default background image. Falls back to featured image if empty.', 'leadsforward-core'); ?></p>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><?php esc_html_e('Hero background video', 'leadsforward-core'); ?></th>
+										<td>
+											<div class="lf-media-field" data-lf-media-library="video">
+												<div class="lf-media-preview">
+													<?php
+													if ($hero_video_title !== '') {
+														echo '<span class="description">' . esc_html($hero_video_title) . '</span>';
+													} else {
+														echo '<div class="lf-media-preview__empty">' . esc_html__('No video selected', 'leadsforward-core') . '</div>';
+													}
+													?>
+												</div>
+												<div class="lf-media-actions">
+													<button type="button" class="button lf-media-upload"><?php esc_html_e('Select video', 'leadsforward-core'); ?></button>
+													<button type="button" class="button lf-media-remove"><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
+												</div>
+												<input type="hidden" class="lf-media-id" name="lf_hp_hero_bg_video_id" value="<?php echo esc_attr((string) $hero_bg_video_id); ?>" />
+											</div>
+											<p class="description" style="margin: 6px 0 0;"><?php esc_html_e('MP4 or WebM from the Media Library. Shown when background type is Video.', 'leadsforward-core'); ?></p>
 										</td>
 									</tr>
 									<tr>

@@ -126,6 +126,16 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		}
 	}
 
+	$hero_variants_ui = [];
+	if (function_exists('lf_sections_hero_variant_options')) {
+		foreach (lf_sections_hero_variant_options() as $vk => $vlabel) {
+			$hero_variants_ui[] = [
+				'value' => (string) $vk,
+				'label' => (string) $vlabel,
+			];
+		}
+	}
+
 	wp_localize_script('lf-ai-floating-assistant', 'lfAiFloating', [
 		'ajax_url' => admin_url('admin-ajax.php'),
 		'nonce'    => wp_create_nonce('lf_ai_editing'),
@@ -136,6 +146,12 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		'section_library' => lf_ai_assistant_section_library($context),
 		'icon_slugs' => function_exists('lf_icon_list') ? array_values(array_map('sanitize_text_field', lf_icon_list())) : [],
 		'bg_palette' => $bg_palette,
+		'hero_variants' => $hero_variants_ui,
+		'hero_bg_modes' => [
+			['value' => 'color', 'label' => __('Background color', 'leadsforward-core')],
+			['value' => 'image', 'label' => __('Featured image overlay', 'leadsforward-core')],
+			['value' => 'video', 'label' => __('Video background', 'leadsforward-core')],
+		],
 		'homepage_enabled' => $homepage_enabled,
 		'i18n' => [
 			'statusReady' => __('Ready.', 'leadsforward-core'),
@@ -704,6 +720,13 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-section-bg-picker__input { flex:1; min-width:140px; border:1px solid #d6c8fb; border-radius:8px; padding:8px 10px; font-size:13px; }
 		.lf-ai-section-bg-picker__apply { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:32px; padding:0 12px; font-size:12px; cursor:pointer; }
 		.lf-ai-section-bg-picker__clearcustom { border:1px solid #e2e8f0; background:#f8fafc; color:#475569; border-radius:8px; min-height:32px; padding:0 12px; font-size:12px; cursor:pointer; align-self:flex-start; }
+		.lf-ai-hero-settings .lf-ai-section-bg-picker__card { width:min(480px, calc(100vw - 30px)); gap:12px; }
+		.lf-ai-hero-settings__label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#64748b; margin:4px 0 0; }
+		.lf-ai-hero-settings__media { display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
+		.lf-ai-hero-settings__hint { font-size:12px; color:#475569; margin:0; line-height:1.35; }
+		.lf-ai-hero-settings__summary { font-size:12px; color:#0f172a; margin:0; }
+		.lf-ai-hero-settings__footer { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; margin-top:4px; }
+		.lf-ai-section-bg-picker__swatch.is-selected { outline:2px solid #8348f9; outline-offset:1px; }
 		.lf-ai-section-align-picker { position:fixed; inset:0; z-index:100005; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; padding:18px; }
 		.lf-ai-section-align-picker[hidden] { display:none !important; }
 		.lf-ai-section-align-picker__card { width:min(320px, calc(100vw - 30px)); background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); padding:12px; display:flex; flex-direction:column; gap:10px; }
@@ -847,6 +870,9 @@ function lf_ai_assistant_widget_js(): string {
 		var sectionBgPickerWrap = null;
 		var sectionAlignPickerEl = null;
 		var sectionAlignPickerWrap = null;
+		var heroSettingsPickerEl = null;
+		var heroSettingsPickerWrap = null;
+		var heroSettingsState = { variant: "default", mode: "image", imageId: 0, videoId: 0 };
 		var railLibraryOpen = false;
 		var suppressInlineClickUntil = 0;
 		var iconSlugs = Array.isArray(lfAiFloating.icon_slugs) ? lfAiFloating.icon_slugs : [];
@@ -1447,6 +1473,9 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			faqPickerWrap = null;
 			faqPickerList = null;
+			closeSectionBgPicker();
+			closeSectionAlignPicker();
+			closeHeroSettingsPicker();
 			refreshAiScopeBanner();
 		}
 		function closeIconPicker() {
@@ -1761,7 +1790,7 @@ function lf_ai_assistant_widget_js(): string {
 			if (node.closest(".site-header, .site-footer, #masthead, #colophon")) return false;
 			if (node.closest("button, a, label, script, style, noscript")) return false;
 			// Managed lists/pills use dedicated controls; block generic inline editing for their rows.
-			if (node.closest(".lf-hero-chips,.lf-block-hero__card-list,.lf-trust-bar__badges,.lf-service-details__checklist,.lf-process,.lf-block-faq-accordion__list,.lf-related-links")) return false;
+			if (node.closest(".lf-hero-chips,.lf-block-hero__card-list,.lf-trust-bar__badges,.lf-service-details__checklist,.lf-process,.lf-block-faq-accordion__list,.lf-related-links,.lf-cpt-driven-links")) return false;
 			// Reviews content is source-of-truth data; do not edit testimonial copy inline.
 			if (node.closest(".lf-block-trust-reviews__item,.lf-block-trust-reviews__summary")) return false;
 			var tag = node.tagName ? node.tagName.toLowerCase() : "";
@@ -4073,6 +4102,322 @@ function lf_ai_assistant_widget_js(): string {
 			sectionAlignPickerWrap = wrap;
 			sectionAlignPickerEl.hidden = false;
 		}
+		function closeHeroSettingsPicker() {
+			if (heroSettingsPickerEl) heroSettingsPickerEl.hidden = true;
+			heroSettingsPickerWrap = null;
+		}
+		function updateHeroSettingsMediaSummary() {
+			if (!heroSettingsPickerEl) return;
+			var imgEl = heroSettingsPickerEl.querySelector("[data-lf-hero-image-summary]");
+			var vidEl = heroSettingsPickerEl.querySelector("[data-lf-hero-video-summary]");
+			if (imgEl) {
+				imgEl.textContent = heroSettingsState.imageId > 0
+					? ("Image attachment ID: " + String(heroSettingsState.imageId))
+					: "No custom image (featured image can still show when overlay mode is on).";
+			}
+			if (vidEl) {
+				vidEl.textContent = heroSettingsState.videoId > 0
+					? ("Video attachment ID: " + String(heroSettingsState.videoId))
+					: "No video selected.";
+			}
+		}
+		function openHeroBackgroundImagePicker() {
+			if (!(window.wp && wp.media)) {
+				setStatus("Media Library is unavailable on this screen.", true);
+				return;
+			}
+			if (mediaFrame) mediaFrame.off("select");
+			mediaFrame = wp.media({
+				title: "Hero background image",
+				button: { text: "Use this image" },
+				library: { type: "image" },
+				multiple: false
+			});
+			mediaFrame.on("select", function(){
+				var sel = mediaFrame.state().get("selection");
+				var attachment = sel && sel.first ? sel.first().toJSON() : null;
+				if (attachment && attachment.id) {
+					heroSettingsState.imageId = parseInt(String(attachment.id), 10) || 0;
+					updateHeroSettingsMediaSummary();
+				}
+			});
+			mediaFrame.open();
+		}
+		function openHeroBackgroundVideoPicker() {
+			if (!(window.wp && wp.media)) {
+				setStatus("Media Library is unavailable on this screen.", true);
+				return;
+			}
+			if (mediaFrame) mediaFrame.off("select");
+			mediaFrame = wp.media({
+				title: "Hero background video",
+				button: { text: "Use this video" },
+				library: { type: "video" },
+				multiple: false
+			});
+			mediaFrame.on("select", function(){
+				var sel = mediaFrame.state().get("selection");
+				var attachment = sel && sel.first ? sel.first().toJSON() : null;
+				if (attachment && attachment.id) {
+					heroSettingsState.videoId = parseInt(String(attachment.id), 10) || 0;
+					updateHeroSettingsMediaSummary();
+				}
+			});
+			mediaFrame.open();
+		}
+		function renderHeroSettingsMediaRow() {
+			if (!heroSettingsPickerEl) return;
+			var mediaRow = heroSettingsPickerEl.querySelector("[data-lf-hero-media-row]");
+			if (!mediaRow) return;
+			mediaRow.innerHTML = "";
+			var mode = heroSettingsState.mode;
+			if (mode === "image") {
+				var hint = document.createElement("p");
+				hint.className = "lf-ai-hero-settings__hint";
+				hint.textContent = "Optional image overrides the page featured image for the overlay.";
+				var pick = document.createElement("button");
+				pick.type = "button";
+				pick.className = "lf-ai-section-bg-picker__apply";
+				pick.textContent = "Select background image…";
+				pick.addEventListener("click", function(e){
+					e.preventDefault();
+					openHeroBackgroundImagePicker();
+				});
+				var clear = document.createElement("button");
+				clear.type = "button";
+				clear.className = "lf-ai-section-bg-picker__clearcustom";
+				clear.textContent = "Clear image";
+				clear.addEventListener("click", function(e){
+					e.preventDefault();
+					heroSettingsState.imageId = 0;
+					updateHeroSettingsMediaSummary();
+				});
+				var sum = document.createElement("p");
+				sum.className = "lf-ai-hero-settings__summary";
+				sum.setAttribute("data-lf-hero-image-summary", "1");
+				mediaRow.appendChild(hint);
+				mediaRow.appendChild(pick);
+				mediaRow.appendChild(clear);
+				mediaRow.appendChild(sum);
+			} else if (mode === "video") {
+				var vhint = document.createElement("p");
+				vhint.className = "lf-ai-hero-settings__hint";
+				vhint.textContent = "Upload MP4 (or WebM) to the Media Library for best compatibility.";
+				var vp = document.createElement("button");
+				vp.type = "button";
+				vp.className = "lf-ai-section-bg-picker__apply";
+				vp.textContent = "Select background video…";
+				vp.addEventListener("click", function(e){
+					e.preventDefault();
+					openHeroBackgroundVideoPicker();
+				});
+				var vc = document.createElement("button");
+				vc.type = "button";
+				vc.className = "lf-ai-section-bg-picker__clearcustom";
+				vc.textContent = "Clear video";
+				vc.addEventListener("click", function(e){
+					e.preventDefault();
+					heroSettingsState.videoId = 0;
+					updateHeroSettingsMediaSummary();
+				});
+				var vsum = document.createElement("p");
+				vsum.className = "lf-ai-hero-settings__summary";
+				vsum.setAttribute("data-lf-hero-video-summary", "1");
+				mediaRow.appendChild(vhint);
+				mediaRow.appendChild(vp);
+				mediaRow.appendChild(vc);
+				mediaRow.appendChild(vsum);
+			} else {
+				var ch = document.createElement("p");
+				ch.className = "lf-ai-hero-settings__hint";
+				ch.textContent = "Uses section background color only (no photo or video layer).";
+				mediaRow.appendChild(ch);
+			}
+			updateHeroSettingsMediaSummary();
+		}
+		function refreshHeroSettingsPickerUi() {
+			if (!heroSettingsPickerEl) return;
+			var vRow = heroSettingsPickerEl.querySelector("[data-lf-hero-variant-row]");
+			var mRow = heroSettingsPickerEl.querySelector("[data-lf-hero-mode-row]");
+			if (vRow) {
+				vRow.innerHTML = "";
+				var vars = Array.isArray(lfAiFloating.hero_variants) ? lfAiFloating.hero_variants : [];
+				vars.forEach(function(entry){
+					var val = String(entry.value || "");
+					if (!val) return;
+					var btn = document.createElement("button");
+					btn.type = "button";
+					btn.className = "lf-ai-section-bg-picker__swatch";
+					if (heroSettingsState.variant === val) btn.classList.add("is-selected");
+					var dot = document.createElement("span");
+					dot.className = "lf-ai-section-bg-picker__swatch-color";
+					dot.style.background = "linear-gradient(135deg,#8348f9,#38bdf8)";
+					var lab = document.createElement("span");
+					lab.className = "lf-ai-section-bg-picker__swatch-label";
+					lab.textContent = String(entry.label || val);
+					btn.appendChild(dot);
+					btn.appendChild(lab);
+					btn.addEventListener("click", function(e){
+						e.preventDefault();
+						heroSettingsState.variant = val;
+						refreshHeroSettingsPickerUi();
+					});
+					vRow.appendChild(btn);
+				});
+			}
+			if (mRow) {
+				mRow.innerHTML = "";
+				var modes = Array.isArray(lfAiFloating.hero_bg_modes) ? lfAiFloating.hero_bg_modes : [];
+				modes.forEach(function(entry){
+					var val = String(entry.value || "");
+					if (!val) return;
+					var b = document.createElement("button");
+					b.type = "button";
+					b.className = "lf-ai-section-bg-picker__swatch";
+					if (heroSettingsState.mode === val) b.classList.add("is-selected");
+					var d = document.createElement("span");
+					d.className = "lf-ai-section-bg-picker__swatch-color";
+					d.style.background = val === "color" ? "#e2e8f0" : (val === "video" ? "#1e293b" : "#94a3b8");
+					var lb = document.createElement("span");
+					lb.className = "lf-ai-section-bg-picker__swatch-label";
+					lb.textContent = String(entry.label || val);
+					b.appendChild(d);
+					b.appendChild(lb);
+					b.addEventListener("click", function(e){
+						e.preventDefault();
+						heroSettingsState.mode = val;
+						refreshHeroSettingsPickerUi();
+					});
+					mRow.appendChild(b);
+				});
+			}
+			renderHeroSettingsMediaRow();
+		}
+		function ensureHeroSettingsPicker() {
+			if (heroSettingsPickerEl) return heroSettingsPickerEl;
+			var root = document.createElement("div");
+			root.className = "lf-ai-section-bg-picker lf-ai-hero-settings lf-ai-inline-editor-ignore";
+			root.hidden = true;
+			var card = document.createElement("div");
+			card.className = "lf-ai-section-bg-picker__card";
+			var head = document.createElement("div");
+			head.className = "lf-ai-section-bg-picker__head";
+			var title = document.createElement("span");
+			title.className = "lf-ai-section-bg-picker__title";
+			title.textContent = "Hero layout & background";
+			var closeHead = document.createElement("button");
+			closeHead.type = "button";
+			closeHead.className = "lf-ai-section-bg-picker__close";
+			closeHead.textContent = "×";
+			closeHead.setAttribute("aria-label", "Close");
+			closeHead.addEventListener("click", function(e){
+				e.preventDefault();
+				closeHeroSettingsPicker();
+			});
+			head.appendChild(title);
+			head.appendChild(closeHead);
+			var lv = document.createElement("p");
+			lv.className = "lf-ai-hero-settings__label";
+			lv.textContent = "Layout variant";
+			var vRow = document.createElement("div");
+			vRow.className = "lf-ai-section-bg-picker__swatches";
+			vRow.setAttribute("data-lf-hero-variant-row", "1");
+			var lm = document.createElement("p");
+			lm.className = "lf-ai-hero-settings__label";
+			lm.textContent = "Background type";
+			var mRow = document.createElement("div");
+			mRow.className = "lf-ai-section-bg-picker__swatches";
+			mRow.setAttribute("data-lf-hero-mode-row", "1");
+			var mediaRow = document.createElement("div");
+			mediaRow.className = "lf-ai-hero-settings__media";
+			mediaRow.setAttribute("data-lf-hero-media-row", "1");
+			var foot = document.createElement("div");
+			foot.className = "lf-ai-hero-settings__footer";
+			var applyBtn = document.createElement("button");
+			applyBtn.type = "button";
+			applyBtn.className = "lf-ai-section-bg-picker__apply";
+			applyBtn.textContent = "Apply";
+			applyBtn.addEventListener("click", function(e){
+				e.preventDefault();
+				persistHeroSettings();
+			});
+			var cancelBtn = document.createElement("button");
+			cancelBtn.type = "button";
+			cancelBtn.className = "lf-ai-section-bg-picker__clearcustom";
+			cancelBtn.textContent = "Cancel";
+			cancelBtn.addEventListener("click", function(e){
+				e.preventDefault();
+				closeHeroSettingsPicker();
+			});
+			foot.appendChild(cancelBtn);
+			foot.appendChild(applyBtn);
+			card.appendChild(head);
+			card.appendChild(lv);
+			card.appendChild(vRow);
+			card.appendChild(lm);
+			card.appendChild(mRow);
+			card.appendChild(mediaRow);
+			card.appendChild(foot);
+			root.appendChild(card);
+			root.addEventListener("click", function(e){
+				if (e.target === root) closeHeroSettingsPicker();
+			});
+			document.body.appendChild(root);
+			heroSettingsPickerEl = root;
+			return root;
+		}
+		function openHeroSettingsPicker(wrap) {
+			var heroEl = wrap && wrap.querySelector ? wrap.querySelector(".lf-block-hero") : null;
+			if (!heroEl) {
+				setStatus("Hero block not found in this section.", true);
+				return;
+			}
+			heroSettingsPickerWrap = wrap;
+			heroSettingsState.variant = String(heroEl.getAttribute("data-variant") || "default");
+			heroSettingsState.mode = String(heroEl.getAttribute("data-lf-hero-bg-mode") || "image");
+			if (["color", "image", "video"].indexOf(heroSettingsState.mode) < 0) {
+				heroSettingsState.mode = "image";
+			}
+			heroSettingsState.imageId = parseInt(String(heroEl.getAttribute("data-lf-hero-bg-image-id") || "0"), 10) || 0;
+			heroSettingsState.videoId = parseInt(String(heroEl.getAttribute("data-lf-hero-bg-video-id") || "0"), 10) || 0;
+			ensureHeroSettingsPicker();
+			refreshHeroSettingsPickerUi();
+			heroSettingsPickerEl.hidden = false;
+		}
+		function persistHeroSettings() {
+			var wrap = heroSettingsPickerWrap;
+			if (!wrap) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			if (!sectionId) {
+				setStatus("Missing section id for hero.", true);
+				return;
+			}
+			setStatus("Saving hero settings...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_update_hero_settings",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_id: sectionId,
+				hero_variant: heroSettingsState.variant,
+				hero_background_mode: heroSettingsState.mode,
+				hero_background_image_id: String(heroSettingsState.imageId),
+				hero_background_video_id: String(heroSettingsState.videoId)
+			}).done(function(res){
+				if (res && res.success) {
+					closeHeroSettingsPicker();
+					setStatus((res.data && res.data.message) ? res.data.message : "Saved.", false);
+					if (res.data && res.data.reload) {
+						window.location.reload();
+					}
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Hero settings save failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Hero settings save failed.";
+				setStatus(msg, true);
+			});
+		}
 		function persistSectionStyle(wrap, patch, extra) {
 			if (!wrap || !patch) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
@@ -4144,6 +4489,20 @@ function lf_ai_assistant_widget_js(): string {
 					openSectionBgPicker(wrap);
 				});
 				controls.appendChild(bgBtn);
+				if (sectionType === "hero") {
+					var heroBtn = document.createElement("button");
+					heroBtn.type = "button";
+					heroBtn.className = "lf-ai-section-btn";
+					heroBtn.textContent = "Hero";
+					heroBtn.setAttribute("title", "Hero layout variant and background (image, color, or video)");
+					heroBtn.setAttribute("aria-label", "Hero layout and background");
+					heroBtn.addEventListener("click", function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						openHeroSettingsPicker(wrap);
+					});
+					controls.appendChild(heroBtn);
+				}
 				if (sectionSupportsHeaderAlign(wrap)) {
 					var alignBtn = document.createElement("button");
 					alignBtn.type = "button";

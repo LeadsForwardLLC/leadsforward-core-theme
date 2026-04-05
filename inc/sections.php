@@ -333,8 +333,10 @@ function lf_sections_registry(): array {
 				['key' => 'hero_background_mode', 'label' => __('Hero background', 'leadsforward-core'), 'type' => 'select', 'default' => 'image', 'options' => [
 					'color' => __('Background color', 'leadsforward-core'),
 					'image' => __('Featured image overlay', 'leadsforward-core'),
+					'video' => __('Video background', 'leadsforward-core'),
 				]],
 				['key' => 'hero_background_image_id', 'label' => __('Hero background image', 'leadsforward-core'), 'type' => 'image', 'default' => 0],
+				['key' => 'hero_background_video_id', 'label' => __('Hero background video (MP4)', 'leadsforward-core'), 'type' => 'image', 'default' => 0],
 				['key' => 'variant', 'label' => __('Hero layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'default', 'options' => lf_sections_hero_variant_options()],
 				['key' => 'hero_headline', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_subheadline', 'label' => __('Subheadline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
@@ -1202,6 +1204,32 @@ function lf_sections_render_shell_close(): void {
 	<?php
 }
 
+/**
+ * Pass-through of hero-related keys from section settings into the hero block context.
+ *
+ * @param array<string, mixed> $settings
+ * @return array<string, mixed>
+ */
+function lf_sections_hero_block_section(array $settings): array {
+	$keys = [
+		'section_background', 'section_background_custom', 'section_intent',
+		'hero_background_mode', 'hero_background_image_id', 'hero_background_video_id',
+		'hero_headline', 'hero_subheadline', 'hero_proof_title', 'hero_proof_bullets',
+		'hero_supporting_text', 'hero_bullets', 'hero_trust_block', 'hero_guarantee_text',
+		'hero_eyebrow_enabled', 'hero_eyebrow_text', 'hero_media', 'hero_image_id',
+		'cta_primary_enabled', 'cta_secondary_enabled', 'cta_primary_override', 'cta_secondary_override',
+		'cta_primary_action', 'cta_primary_url', 'cta_secondary_action', 'cta_secondary_url',
+		'icon_enabled', 'icon_slug', 'icon_position', 'icon_size', 'icon_color',
+	];
+	$section = ['section_type' => 'hero'];
+	foreach ($keys as $key) {
+		if (array_key_exists($key, $settings)) {
+			$section[ $key ] = $settings[ $key ];
+		}
+	}
+	return $section;
+}
+
 function lf_sections_render_hero(string $context, array $settings, \WP_Post $post): void {
 	if (!function_exists('lf_render_block_template')) {
 		return;
@@ -1215,31 +1243,7 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 		$heading_tag = ($hero_rendered || !$can_use_h1) ? 'h2' : 'h1';
 		$hero_rendered = true;
 	}
-	$section = [
-		'section_type' => 'hero',
-		'hero_headline' => $settings['hero_headline'] ?? '',
-		'hero_subheadline' => $settings['hero_subheadline'] ?? '',
-		'section_background' => $settings['section_background'] ?? 'soft',
-		'hero_proof_title' => $settings['hero_proof_title'] ?? '',
-		'hero_proof_bullets' => $settings['hero_proof_bullets'] ?? '',
-		'hero_eyebrow_enabled' => $settings['hero_eyebrow_enabled'] ?? '1',
-		'hero_eyebrow_text' => $settings['hero_eyebrow_text'] ?? '',
-		'hero_media' => $settings['hero_media'] ?? 'none',
-		'hero_image_id' => $settings['hero_image_id'] ?? 0,
-		'cta_primary_override' => $settings['cta_primary_override'] ?? '',
-		'cta_secondary_override' => $settings['cta_secondary_override'] ?? '',
-		'cta_primary_action' => $settings['cta_primary_action'] ?? '',
-		'cta_primary_url' => $settings['cta_primary_url'] ?? '',
-		'cta_secondary_action' => $settings['cta_secondary_action'] ?? '',
-		'cta_secondary_url' => $settings['cta_secondary_url'] ?? '',
-		'cta_primary_enabled' => $settings['cta_primary_enabled'] ?? '1',
-		'cta_secondary_enabled' => $settings['cta_secondary_enabled'] ?? '1',
-		'icon_enabled' => $settings['icon_enabled'] ?? '0',
-		'icon_slug' => $settings['icon_slug'] ?? '',
-		'icon_position' => $settings['icon_position'] ?? 'left',
-		'icon_size' => $settings['icon_size'] ?? 'md',
-		'icon_color' => $settings['icon_color'] ?? 'primary',
-	];
+	$section = lf_sections_hero_block_section($settings);
 	$variant = $settings['variant'] ?? 'default';
 	$block = [
 		'id'         => 'lf-hero',
@@ -2270,7 +2274,7 @@ function lf_sections_render_nearby_areas(string $context, array $settings, \WP_P
 	}
 	lf_sections_render_shell_open('nearby-areas', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	?>
-	<ul class="lf-related-links" role="list">
+	<ul class="lf-related-links lf-cpt-driven-links" role="list">
 		<?php while ($query->have_posts()) : $query->the_post();
 			$label = function_exists('lf_internal_link_label') ? lf_internal_link_label('area', get_post(), $origin_id) : get_the_title();
 		?>

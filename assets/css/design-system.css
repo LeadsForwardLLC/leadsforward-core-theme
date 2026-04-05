@@ -2356,8 +2356,19 @@ button:focus-visible,
 	content: "";
 	position: absolute;
 	inset: 0;
+	z-index: 1;
 	background: var(--lf-hero-overlay-color);
 	opacity: var(--lf-hero-bg-overlay-opacity, 0);
+}
+
+.lf-block-hero__bg .lf-block-hero__video {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	z-index: 0;
+	pointer-events: none;
 }
 
 .lf-block-hero__inner {
@@ -2711,6 +2722,10 @@ button:focus-visible,
 
 .lf-block-hero.lf-block-hero--has-bg .lf-block-hero__bg {
 	background-image: var(--lf-hero-bg-image, none);
+	opacity: 1;
+}
+
+.lf-block-hero.lf-block-hero--has-video .lf-block-hero__bg {
 	opacity: 1;
 }
 
