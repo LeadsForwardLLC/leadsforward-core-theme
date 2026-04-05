@@ -2230,6 +2230,7 @@ function lf_sections_has_slider_in_homepage_config(array $config): bool {
 	$checks = [
 		['id' => 'project_gallery', 'key' => 'project_layout'],
 		['id' => 'blog_posts', 'key' => 'posts_layout'],
+		['id' => 'trust_reviews', 'key' => 'trust_layout'],
 	];
 	foreach ($checks as $check) {
 		$section = $config[$check['id']] ?? null;
