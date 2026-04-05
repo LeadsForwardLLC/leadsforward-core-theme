@@ -691,6 +691,41 @@ function lf_sections_registry(): array {
 			'render' => 'lf_sections_render_map_nap',
 		],
 	];
+	$header_align_field = [
+		'key' => 'section_header_align',
+		'label' => __('Header alignment', 'leadsforward-core'),
+		'type' => 'select',
+		'default' => 'center',
+		'options' => [
+			'left' => __('Left', 'leadsforward-core'),
+			'center' => __('Center', 'leadsforward-core'),
+			'right' => __('Right', 'leadsforward-core'),
+		],
+	];
+	foreach ($sections as $sid => $sec) {
+		$fields = $sec['fields'] ?? [];
+		$has_align = false;
+		foreach ($fields as $f) {
+			if (($f['key'] ?? '') === 'section_header_align') {
+				$has_align = true;
+				break;
+			}
+		}
+		if (!$has_align && $sid !== 'hero') {
+			$heading_like = false;
+			foreach ($fields as $f) {
+				$k = $f['key'] ?? '';
+				if (in_array($k, ['section_heading', 'section_intro', 'trust_heading', 'cta_headline'], true)) {
+					$heading_like = true;
+					break;
+				}
+			}
+			if ($heading_like) {
+				$fields[] = $header_align_field;
+			}
+		}
+		$sections[$sid]['fields'] = $fields;
+	}
 	foreach ($sections as $id => $section) {
 		$fields = $section['fields'] ?? [];
 		$sections[$id]['fields'] = array_merge($fields, $icon_fields);
@@ -1003,6 +1038,71 @@ function lf_resolve_cta(array $context = [], array $section_instance = [], array
 	];
 }
 
+/**
+ * Sanitize a custom section background for inline CSS (preset tokens are separate).
+ */
+function lf_sections_sanitize_custom_background(string $raw): string {
+	$raw = trim($raw);
+	if ($raw === '') {
+		return '';
+	}
+	if (preg_match('/^#([0-9a-f]{3}|[0-9a-f]{6})\z/i', $raw)) {
+		return strtolower($raw);
+	}
+	if (preg_match('/^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(\s*,\s*(0|1|0?\.\d+)\s*)?\)\s*$/i', $raw)) {
+		return $raw;
+	}
+	return '';
+}
+
+/**
+ * Approximate swatch hex for the section background picker UI (matches theme surfaces).
+ *
+ * @return array<string, string>
+ */
+function lf_sections_bg_swatch_hex_map(): array {
+	return [
+		'white' => '#ffffff',
+		'light' => '#f8fafc',
+		'soft' => '#f1f5f9',
+		'primary' => '#4f46e5',
+		'secondary' => '#0f766e',
+		'accent' => '#c026d3',
+		'dark' => '#0f172a',
+		'black' => '#020617',
+		'card' => '#ffffff',
+	];
+}
+
+/**
+ * @param array<string, mixed> $settings
+ */
+function lf_sections_sanitize_header_align(array $settings): string {
+	$a = sanitize_key((string) ($settings['section_header_align'] ?? 'center'));
+	return in_array($a, ['left', 'center', 'right'], true) ? $a : 'center';
+}
+
+/**
+ * Surface class + optional inline background for block-style sections.
+ *
+ * @param array<string, mixed> $section
+ * @return array{class:string, style:string}
+ */
+function lf_sections_block_surface_attrs(array $section): array {
+	$custom = lf_sections_sanitize_custom_background((string) ($section['section_background_custom'] ?? ''));
+	if ($custom !== '') {
+		return [
+			'class' => 'lf-block--custom-section-bg',
+			'style' => 'background-color:' . $custom . ';',
+		];
+	}
+	$slug = (string) ($section['section_background'] ?? 'light');
+	return [
+		'class' => lf_sections_bg_class($slug),
+		'style' => '',
+	];
+}
+
 function lf_sections_bg_class(?string $value): string {
 	switch ($value) {
 		case 'white':
@@ -1064,15 +1164,18 @@ function lf_sections_render_section(string $section_id, string $context, array $
 }
 
 function lf_sections_render_shell_open(string $id, string $title = '', string $intro = '', string $background = 'light', array $settings = []): void {
-	$bg_class = lf_sections_bg_class($background);
+	$custom_bg = lf_sections_sanitize_custom_background((string) ($settings['section_background_custom'] ?? ''));
+	$bg_class = $custom_bg !== '' ? 'lf-section--custom-section-bg' : lf_sections_bg_class($background);
+	$section_style = $custom_bg !== '' ? ' style="background-color:' . esc_attr($custom_bg) . ';"' : ''; // safe: esc_attr on color
+	$header_align = lf_sections_sanitize_header_align($settings);
 	$icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, $id, 'above', 'lf-heading-icon') : '';
 	$icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, $id, 'left', 'lf-heading-icon') : '';
 	$has_header = $title || $intro || $icon_above || $icon_left;
 	?>
-	<section class="lf-section lf-section--<?php echo esc_attr($id); ?> <?php echo esc_attr($bg_class); ?>">
+	<section class="lf-section lf-section--<?php echo esc_attr($id); ?> <?php echo esc_attr($bg_class); ?>"<?php echo $section_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built with esc_attr ?>>
 		<div class="lf-section__inner">
 			<?php if ($has_header) : ?>
-				<header class="lf-section__header">
+				<header class="lf-section__header lf-section__header--align-<?php echo esc_attr($header_align); ?>">
 					<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
 					<?php if ($title) : ?>
 						<?php if ($icon_left) : ?>
@@ -1221,7 +1324,8 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	$icon_size = $icon_data['size'] ?? 'md';
 	$icon_color = $icon_data['color'] ?? 'primary';
 	$parsed_items = [];
-	foreach ($items as $item) {
+	foreach ($items as $raw_item) {
+		$item = $raw_item;
 		$title_text = $item;
 		$body_text = '';
 		if (strpos($item, '||') !== false) {
@@ -1248,13 +1352,14 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 		$parsed_items[] = [
 			'title' => $title_text,
 			'body' => $body_text,
+			'source_line' => trim((string) $raw_item),
 		];
 	}
 	if (count($parsed_items) > 3) {
 		$parsed_items = array_slice($parsed_items, 0, 3);
 	}
 	while (count($parsed_items) < 3) {
-		$parsed_items[] = ['title' => '', 'body' => ''];
+		$parsed_items[] = ['title' => '', 'body' => '', 'source_line' => ''];
 	}
 	$used_icons = [];
 	lf_sections_render_shell_open('benefits', $title, $intro, $settings['section_background'] ?? 'light', $settings);
@@ -1269,7 +1374,13 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 			<?php endif; ?>
 			<?php $item['title'] = wp_trim_words($item['title'], $title_limit, ''); ?>
 			<?php $item['body'] = wp_trim_words($item['body'], $body_limit, ''); ?>
-			<div class="<?php echo esc_attr($card_class); ?>">
+			<?php
+			$line_attr = (string) ($item['source_line'] ?? '');
+			if ($line_attr === '' && ($item['title'] !== '' || $item['body'] !== '')) {
+				$line_attr = trim($item['title'] . ' || ' . $item['body']);
+			}
+			?>
+			<div class="<?php echo esc_attr($card_class); ?>" data-lf-benefit-line="<?php echo esc_attr($line_attr); ?>">
 				<?php if ($icon_enabled) : ?>
 					<?php $icon_slug = lf_sections_benefits_pick_icon_slug($item, $icon_overrides, $used_icons, $index); ?>
 					<?php if ($icon_slug !== '' && function_exists('lf_icon')) : ?>
@@ -1752,6 +1863,8 @@ function lf_sections_render_faq(string $context, array $settings, \WP_Post $post
 			'faq_max_items' => $settings['faq_max_items'] ?? '',
 			'faq_selected_ids' => $settings['faq_selected_ids'] ?? '',
 			'section_background' => $settings['section_background'] ?? 'light',
+			'section_background_custom' => $settings['section_background_custom'] ?? '',
+			'section_header_align' => $settings['section_header_align'] ?? 'center',
 			'icon_enabled' => $settings['icon_enabled'] ?? '0',
 			'icon_slug' => $settings['icon_slug'] ?? '',
 			'icon_position' => $settings['icon_position'] ?? 'left',
@@ -1780,6 +1893,8 @@ function lf_sections_render_cta_band(string $context, array $settings, \WP_Post 
 			'cta_secondary_action' => $settings['cta_secondary_action'] ?? '',
 			'cta_secondary_url' => $settings['cta_secondary_url'] ?? '',
 			'section_background' => $settings['section_background'] ?? 'dark',
+			'section_background_custom' => $settings['section_background_custom'] ?? '',
+			'section_header_align' => $settings['section_header_align'] ?? 'center',
 			'icon_enabled' => $settings['icon_enabled'] ?? '0',
 			'icon_slug' => $settings['icon_slug'] ?? '',
 			'icon_position' => $settings['icon_position'] ?? 'left',
@@ -1811,6 +1926,8 @@ function lf_sections_render_trust_reviews(string $context, array $settings, \WP_
 		'trust_show_avatars' => $settings['trust_show_avatars'] ?? '1',
 		'trust_show_quote_icon' => $settings['trust_show_quote_icon'] ?? '1',
 		'section_background' => $settings['section_background'] ?? 'soft',
+		'section_background_custom' => $settings['section_background_custom'] ?? '',
+		'section_header_align' => $settings['section_header_align'] ?? 'center',
 		'icon_enabled' => $settings['icon_enabled'] ?? '0',
 		'icon_slug' => $settings['icon_slug'] ?? '',
 		'icon_position' => $settings['icon_position'] ?? 'left',
@@ -1834,6 +1951,8 @@ function lf_sections_render_service_grid(string $context, array $settings, \WP_P
 		'section_heading' => $settings['section_heading'] ?? '',
 		'section_intro' => $settings['section_intro'] ?? '',
 		'section_background' => $settings['section_background'] ?? 'light',
+		'section_background_custom' => $settings['section_background_custom'] ?? '',
+		'section_header_align' => $settings['section_header_align'] ?? 'center',
 		'icon_enabled' => $settings['icon_enabled'] ?? '0',
 		'icon_slug' => $settings['icon_slug'] ?? '',
 		'icon_position' => $settings['icon_position'] ?? 'left',
@@ -1857,9 +1976,11 @@ function lf_sections_render_service_intro(string $context, array $settings, \WP_
 		'section_heading' => $settings['section_heading'] ?? '',
 		'section_intro' => $settings['section_intro'] ?? '',
 		'section_background' => $settings['section_background'] ?? 'light',
+		'section_background_custom' => $settings['section_background_custom'] ?? '',
 		'service_intro_columns' => $settings['service_intro_columns'] ?? '3',
 		'service_intro_max_items' => $settings['service_intro_max_items'] ?? '6',
 		'service_intro_show_images' => $settings['service_intro_show_images'] ?? '1',
+		'service_intro_service_ids' => $settings['service_intro_service_ids'] ?? '',
 		'section_header_align' => $settings['section_header_align'] ?? 'center',
 		'icon_enabled' => $settings['icon_enabled'] ?? '0',
 		'icon_slug' => $settings['icon_slug'] ?? '',
@@ -1890,6 +2011,8 @@ function lf_sections_render_service_areas(string $context, array $settings, \WP_
 		'filter_all_label' => $settings['filter_all_label'] ?? '',
 		'no_results_text' => $settings['no_results_text'] ?? '',
 		'section_background' => $settings['section_background'] ?? 'soft',
+		'section_background_custom' => $settings['section_background_custom'] ?? '',
+		'section_header_align' => $settings['section_header_align'] ?? 'center',
 		'icon_enabled' => $settings['icon_enabled'] ?? '0',
 		'icon_slug' => $settings['icon_slug'] ?? '',
 		'icon_position' => $settings['icon_position'] ?? 'left',
@@ -2039,7 +2162,9 @@ function lf_sections_render_related_links(string $context, array $settings, \WP_
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
 	$mode = $settings['related_links_mode'] ?? 'both';
-	$mode = 'services';
+	if (!in_array($mode, ['services', 'areas', 'both'], true)) {
+		$mode = 'both';
+	}
 	$links = [];
 	$max_links = 8;
 	$origin_id = $post->ID;
@@ -2164,10 +2289,12 @@ function lf_sections_render_nearby_areas(string $context, array $settings, \WP_P
 
 function lf_sections_render_map_nap(string $context, array $settings, \WP_Post $post): void {
 	if (function_exists('lf_render_block_template')) {
-		$section = [
-			'section_heading' => $settings['section_heading'] ?? '',
-			'section_intro'   => $settings['section_intro'] ?? '',
-			'section_background' => $settings['section_background'] ?? 'light',
+	$section = [
+		'section_heading' => $settings['section_heading'] ?? '',
+		'section_intro'   => $settings['section_intro'] ?? '',
+		'section_background' => $settings['section_background'] ?? 'light',
+		'section_background_custom' => $settings['section_background_custom'] ?? '',
+		'section_header_align' => $settings['section_header_align'] ?? 'center',
 			'icon_enabled' => $settings['icon_enabled'] ?? '0',
 			'icon_slug' => $settings['icon_slug'] ?? '',
 			'icon_position' => $settings['icon_position'] ?? 'left',

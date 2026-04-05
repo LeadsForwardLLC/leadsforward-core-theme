@@ -24,6 +24,9 @@ $filter_label = !empty($section['filter_label']) ? (string) $section['filter_lab
 $filter_all_label = !empty($section['filter_all_label']) ? (string) $section['filter_all_label'] : __('All areas', 'leadsforward-core');
 $no_results_text = !empty($section['no_results_text']) ? (string) $section['no_results_text'] : __('No service areas match your search yet. Clear filters to view all coverage.', 'leadsforward-core');
 $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'soft') : '';
+$surface = function_exists('lf_sections_block_surface_attrs') ? lf_sections_block_surface_attrs($section) : ['class' => $bg_class, 'style' => ''];
+$header_align = function_exists('lf_sections_sanitize_header_align') ? lf_sections_sanitize_header_align($section) : 'center';
+$section_surface_style = $surface['style'] !== '' ? ' style="' . esc_attr($surface['style']) . '"' : '';
 $icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'service_areas', 'above', 'lf-heading-icon') : '';
 $icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'service_areas', 'left', 'lf-heading-icon') : '';
 $card_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'service_areas', 'list', 'lf-block-service-areas__icon') : '';
@@ -110,9 +113,9 @@ $points_json = wp_json_encode(array_map(static function (array $area): array {
 	];
 }, $areas));
 ?>
-<section class="lf-block lf-block-service-areas <?php echo esc_attr($bg_class); ?> lf-block-service-areas--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($render_id); ?>" data-variant="<?php echo esc_attr($variant); ?>">
+<section class="lf-block lf-block-service-areas <?php echo esc_attr($surface['class']); ?> lf-block-service-areas--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($render_id); ?>" data-variant="<?php echo esc_attr($variant); ?>"<?php echo $section_surface_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<div class="lf-block-service-areas__inner">
-		<header class="lf-block-service-areas__header">
+		<header class="lf-block-service-areas__header lf-section__header lf-section__header--align-<?php echo esc_attr($header_align); ?>">
 			<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
 			<?php if ($icon_left) : ?>
 				<div class="lf-heading-row">
