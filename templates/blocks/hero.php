@@ -18,7 +18,8 @@ $context  = $block['context'] ?? [];
 $section  = $context['section'] ?? [];
 $variant  = $block['variant'] ?? 'default';
 $block_id = $block['id'] ?? '';
-$bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'soft') : '';
+$bg_fallback = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'soft') : '';
+$surface = function_exists('lf_sections_block_surface_attrs') ? lf_sections_block_surface_attrs($section) : ['class' => $bg_fallback, 'style' => ''];
 $heading_tag = $context['heading_tag'] ?? 'h1';
 
 $eyebrow_enabled = (string) (($section['hero_eyebrow_enabled'] ?? '1')) !== '0';
@@ -227,9 +228,14 @@ $show_cta_group = ($cta_text !== '' || $secondary_text !== '');
 $placeholder_id = function_exists('lf_get_placeholder_image_id') ? lf_get_placeholder_image_id() : 0;
 $placeholder_alt = $business_name ? $business_name : __('Trusted local service', 'leadsforward-core');
 $hero_bg_mode = (string) ($section['hero_background_mode'] ?? 'image');
+if (!in_array($hero_bg_mode, ['color', 'image', 'video'], true)) {
+	$hero_bg_mode = 'image';
+}
+$hero_bg_stored_image_id = isset($section['hero_background_image_id']) ? (int) $section['hero_background_image_id'] : 0;
+$hero_bg_stored_video_id = isset($section['hero_background_video_id']) ? (int) $section['hero_background_video_id'] : 0;
 $hero_bg_id = 0;
 if ($hero_bg_mode === 'image' && $variant !== 'c') {
-	$hero_bg_id = isset($section['hero_background_image_id']) ? (int) $section['hero_background_image_id'] : 0;
+	$hero_bg_id = $hero_bg_stored_image_id;
 	if ($hero_bg_id === 0) {
 		$hero_bg_id = (int) get_post_thumbnail_id(get_queried_object_id());
 	}
@@ -249,9 +255,36 @@ if ($hero_bg_url && $hero_bg_mode === 'image' && $variant !== 'c') {
 		$hero_bg_overlay
 	);
 }
+$hero_video_url = '';
+$hero_video_mime = 'video/mp4';
+if ($hero_bg_mode === 'video' && $variant !== 'c' && $hero_bg_stored_video_id > 0) {
+	$vurl = wp_get_attachment_url($hero_bg_stored_video_id);
+	$hero_video_url = is_string($vurl) ? $vurl : '';
+	$vm = get_post_mime_type($hero_bg_stored_video_id);
+	if (is_string($vm) && $vm !== '') {
+		$hero_video_mime = $vm;
+	}
+}
+$hero_video_class = ($hero_video_url !== '' && $hero_bg_mode === 'video' && $variant !== 'c') ? ' lf-block-hero--has-video' : '';
+$hero_video_overlay_css = '';
+if ($hero_video_url !== '' && $hero_bg_mode === 'video' && $variant !== 'c') {
+	$hero_video_overlay_css = sprintf('--lf-hero-bg-overlay-opacity: %s;', $variant === 'a' ? '0.45' : '0.55');
+}
+$hero_outer_class = trim('lf-block lf-block-hero ' . ($surface['class'] ?? '') . ' lf-block-hero--' . $variant . $hero_bg_class . $hero_video_class);
+$hero_combined_style = trim(
+	($surface['style'] ?? '')
+	. ($hero_bg_style !== '' ? ' ' . $hero_bg_style : '')
+	. ($hero_video_overlay_css !== '' ? ' ' . $hero_video_overlay_css : '')
+);
 ?>
-<section class="lf-block lf-block-hero <?php echo esc_attr($bg_class ?: 'lf-surface-soft'); ?> lf-block-hero--<?php echo esc_attr($variant); ?><?php echo esc_attr($hero_bg_class); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>"<?php echo $hero_bg_style !== '' ? ' style="' . esc_attr($hero_bg_style) . '"' : ''; ?>>
-	<div class="lf-block-hero__bg" aria-hidden="true"></div>
+<section class="<?php echo esc_attr($hero_outer_class); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" data-lf-hero-bg-mode="<?php echo esc_attr($hero_bg_mode); ?>" data-lf-hero-bg-image-id="<?php echo esc_attr((string) $hero_bg_stored_image_id); ?>" data-lf-hero-bg-video-id="<?php echo esc_attr((string) $hero_bg_stored_video_id); ?>"<?php echo $hero_combined_style !== '' ? ' style="' . esc_attr($hero_combined_style) . '"' : ''; ?>>
+	<div class="lf-block-hero__bg" aria-hidden="true">
+		<?php if ($hero_video_url !== '' && $hero_bg_mode === 'video' && $variant !== 'c') : ?>
+			<video class="lf-block-hero__video" autoplay muted loop playsinline>
+				<source src="<?php echo esc_url($hero_video_url); ?>" type="<?php echo esc_attr($hero_video_mime); ?>" />
+			</video>
+		<?php endif; ?>
+	</div>
 	<div class="lf-block-hero__inner">
 		<?php if ($variant === 'internal') : ?>
 			<div class="lf-hero-basic<?php echo $show_hero_image ? ' lf-hero-basic--media' : ''; ?>">

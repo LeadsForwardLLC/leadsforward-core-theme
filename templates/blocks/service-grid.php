@@ -52,7 +52,7 @@ $query = new WP_Query([
 			<?php endif; ?>
 		</header>
 		<?php if ($query->have_posts()) : ?>
-			<ul class="lf-block-service-grid__list" role="list">
+			<ul class="lf-block-service-grid__list lf-cpt-driven-links" role="list">
 				<?php $index = 0; ?>
 				<?php while ($query->have_posts()) : $query->the_post();
 					$index++;

@@ -154,7 +154,7 @@ $points_json = wp_json_encode(array_map(static function (array $area): array {
 				<div class="lf-block-service-areas__map" data-service-areas-map data-map-points="<?php echo esc_attr((string) $points_json); ?>"></div>
 			</div>
 
-			<ul class="lf-block-service-areas__list" role="list" data-service-areas-list>
+			<ul class="lf-block-service-areas__list lf-cpt-driven-links" role="list" data-service-areas-list>
 				<?php foreach ($areas as $index => $area) : ?>
 					<li class="lf-block-service-areas__item" data-title="<?php echo esc_attr((string) ($area['title'] ?? '')); ?>" data-state="<?php echo esc_attr((string) ($area['state'] ?? '')); ?>" data-point-index="<?php echo esc_attr((string) $index); ?>">
 						<a href="<?php echo esc_url((string) ($area['url'] ?? '')); ?>" class="lf-block-service-areas__link">

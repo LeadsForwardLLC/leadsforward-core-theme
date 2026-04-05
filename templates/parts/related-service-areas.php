@@ -33,7 +33,7 @@ if (empty($areas)) {
 $areas = array_slice($areas, 0, 8);
 $icon = isset($args['icon']) && is_string($args['icon']) ? $args['icon'] : '';
 ?>
-<ul class="lf-related-links" role="list" aria-label="<?php esc_attr_e('Related service areas', 'leadsforward-core'); ?>">
+<ul class="lf-related-links lf-cpt-driven-links" role="list" aria-label="<?php esc_attr_e('Related service areas', 'leadsforward-core'); ?>">
 	<?php
 	$origin_id = get_the_ID();
 	foreach ($areas as $area) :
