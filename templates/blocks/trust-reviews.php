@@ -102,14 +102,18 @@ if (!empty($all_review_ids)) {
 }
 $avg_rating = $ratings_count > 0 ? round($ratings_total / $ratings_count, 1) : 0;
 $is_slider = $layout === 'slider';
-$list_columns_style = sprintf( '--lf-reviews-columns: %d;', (int) $columns );
+$list_columns_style = sprintf( '--lf-reviews-columns: %d;', $columns );
+$section_inline_style = sprintf(
+	'--lf-reviews-columns: %1$d; --lf-trust-slider-cols: %1$d;',
+	$columns
+);
 $section_classes = 'lf-block lf-block-trust-reviews ' . $bg_class . ' lf-block-trust-reviews--' . $variant;
 if ($is_slider) {
 	$section_classes .= ' lf-block-trust-reviews--slider';
 }
 $section_classes .= ' lf-block-trust-reviews--' . $layout;
 ?>
-<section class="<?php echo esc_attr(trim($section_classes)); ?>" id="<?php echo esc_attr($render_id); ?>" data-variant="<?php echo esc_attr($variant); ?>" style="--lf-reviews-columns: <?php echo esc_attr((string) $columns); ?>;" data-sliderAutoplay="<?php echo esc_attr($slider_autoplay ? '1' : '0'); ?>" data-sliderDelay="<?php echo esc_attr((string) $slider_autoplay_delay); ?>" data-sliderItemsPerSlide="<?php echo esc_attr((string) $slider_items_per_slide); ?>">
+<section class="<?php echo esc_attr(trim($section_classes)); ?>" id="<?php echo esc_attr($render_id); ?>" data-variant="<?php echo esc_attr($variant); ?>" style="<?php echo esc_attr( $section_inline_style ); ?>" data-sliderAutoplay="<?php echo esc_attr($slider_autoplay ? '1' : '0'); ?>" data-sliderDelay="<?php echo esc_attr((string) $slider_autoplay_delay); ?>" data-sliderItemsPerSlide="<?php echo esc_attr((string) $slider_items_per_slide); ?>">
 	<div class="lf-block-trust-reviews__inner">
 		<header class="lf-block-trust-reviews__header">
 			<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
@@ -176,9 +180,14 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 						$parts = preg_split('/\s+/', trim((string) $name));
 						$initials = strtoupper(substr($parts[0] ?? '', 0, 1) . substr($parts[1] ?? '', 0, 1));
 					}
-					$text_raw     = is_string( $text ) ? $text : (string) $text;
-					$text_len     = function_exists( 'mb_strlen' ) ? mb_strlen( $text_raw ) : strlen( $text_raw );
-					$show_toggle  = ( $layout === 'grid' && $text_len > 220 );
+					$text_raw        = is_string( $text ) ? $text : (string) $text;
+					$text_normalized = str_replace( array( "\r\n", "\r" ), "\n", $text_raw );
+					$text_len        = function_exists( 'mb_strlen' ) ? mb_strlen( $text_raw ) : strlen( $text_raw );
+					$newline_count   = substr_count( $text_normalized, "\n" );
+					$expand_layouts  = array( 'grid', 'masonry' );
+					$trust_text_expand_threshold = 100;
+					$show_toggle     = in_array( $layout, $expand_layouts, true )
+						&& ( $text_len > $trust_text_expand_threshold || $newline_count > 2 );
 				?>
 				<li class="lf-block-trust-reviews__item<?php echo ($is_reviews_page && $review_index >= $display_limit) ? ' is-hidden' : ''; ?>" <?php echo $source ? 'data-source="' . esc_attr(sanitize_title((string) $source)) . '"' : ''; ?>>
 						<figure class="lf-block-trust-reviews__quote">
@@ -307,13 +316,13 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 <?php endif; ?>
 <?php
 static $lf_trust_reviews_grid_expand_script = false;
-if ( ! $lf_trust_reviews_grid_expand_script && $layout === 'grid' && $review_total > 0 ) {
+if ( ! $lf_trust_reviews_grid_expand_script && ( $layout === 'grid' || $layout === 'masonry' ) && $review_total > 0 ) {
 	$lf_trust_reviews_grid_expand_script = true;
 	?>
 	<script>
 	(function () {
 		document.addEventListener('DOMContentLoaded', function () {
-			document.querySelectorAll('.lf-block-trust-reviews--grid .lf-block-trust-reviews__text-toggle').forEach(function (btn) {
+			document.querySelectorAll('.lf-block-trust-reviews--grid .lf-block-trust-reviews__text-toggle, .lf-block-trust-reviews--masonry .lf-block-trust-reviews__text-toggle').forEach(function (btn) {
 				btn.addEventListener('click', function () {
 					var item = btn.closest('.lf-block-trust-reviews__item');
 					if (!item) return;
