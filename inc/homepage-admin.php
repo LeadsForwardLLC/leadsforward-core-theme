@@ -661,7 +661,7 @@ function lf_homepage_admin_render(): void {
 										<tr>
 											<th scope="row"><label for="lf_hp_icon_enabled_<?php echo esc_attr($type); ?>"><?php esc_html_e('Icon', 'leadsforward-core'); ?></label></th>
 											<td>
-												<select name="lf_hp_icon_enabled_<?php echo esc_attr($type); ?>" id="lf_hp_icon_enabled_<?php echo esc_attr($type); ?>">
+												<select name="lf_hp_icon_enabled_<?php echo esc_attr($type); ?>" id="lf_hp_icon_enabled_<?php echo esc_attr($type); ?>" onchange="toggleIconControls('<?php echo esc_attr($type); ?>')">
 													<?php foreach ($icon_enabled_options as $opt_key => $opt_label) : ?>
 														<option value="<?php echo esc_attr($opt_key); ?>" <?php selected($icon_enabled, $opt_key); ?>><?php echo esc_html($opt_label); ?></option>
 													<?php endforeach; ?>
@@ -673,7 +673,7 @@ function lf_homepage_admin_render(): void {
 												</select>
 											</td>
 										</tr>
-										<tr>
+										<tr id="icon-settings-<?php echo esc_attr($type); ?>">
 											<th scope="row"><label for="lf_hp_icon_position_<?php echo esc_attr($type); ?>"><?php esc_html_e('Icon position', 'leadsforward-core'); ?></label></th>
 											<td>
 												<select name="lf_hp_icon_position_<?php echo esc_attr($type); ?>" id="lf_hp_icon_position_<?php echo esc_attr($type); ?>">
@@ -683,7 +683,7 @@ function lf_homepage_admin_render(): void {
 												</select>
 											</td>
 										</tr>
-										<tr>
+										<tr id="icon-size-<?php echo esc_attr($type); ?>">
 											<th scope="row"><label for="lf_hp_icon_size_<?php echo esc_attr($type); ?>"><?php esc_html_e('Icon size', 'leadsforward-core'); ?></label></th>
 											<td>
 												<select name="lf_hp_icon_size_<?php echo esc_attr($type); ?>" id="lf_hp_icon_size_<?php echo esc_attr($type); ?>">
@@ -693,7 +693,7 @@ function lf_homepage_admin_render(): void {
 												</select>
 											</td>
 										</tr>
-										<tr>
+										<tr id="icon-color-<?php echo esc_attr($type); ?>">
 											<th scope="row"><label for="lf_hp_icon_color_<?php echo esc_attr($type); ?>"><?php esc_html_e('Icon color', 'leadsforward-core'); ?></label></th>
 											<td>
 												<select name="lf_hp_icon_color_<?php echo esc_attr($type); ?>" id="lf_hp_icon_color_<?php echo esc_attr($type); ?>">
@@ -909,9 +909,35 @@ function toggleReviewControls() {
 	}
 }
 
+function toggleIconControls(type) {
+	const iconEnabled = document.getElementById('lf_hp_icon_enabled_' + type).value;
+	const settingsRow = document.getElementById('icon-settings-' + type);
+	const sizeRow = document.getElementById('icon-size-' + type);
+	const colorRow = document.getElementById('icon-color-' + type);
+	
+	if (iconEnabled === '1') {
+		settingsRow.style.display = '';
+		sizeRow.style.display = '';
+		colorRow.style.display = '';
+	} else {
+		settingsRow.style.display = 'none';
+		sizeRow.style.display = 'none';
+		colorRow.style.display = 'none';
+	}
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
 	toggleReviewControls();
+	
+	// Initialize all icon controls
+	const iconTypes = ['hero', 'benefits', 'service_intro', 'trust_reviews', 'process', 'cta', 'trust_bar'];
+	iconTypes.forEach(type => {
+		const iconEnabled = document.getElementById('lf_hp_icon_enabled_' + type);
+		if (iconEnabled) {
+			toggleIconControls(type);
+		}
+	});
 });
 </script>
 									<?php if ($type === 'benefits') : ?>

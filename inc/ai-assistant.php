@@ -3286,14 +3286,13 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function trustLayoutFromWrap(wrap) {
 			var block = wrap ? wrap.querySelector(".lf-block-trust-reviews") : null;
-			if (!block || !block.classList) return "grid";
+			if (!block || !block.classList) return "slider";
 			if (block.classList.contains("lf-block-trust-reviews--slider")) return "slider";
-			if (block.classList.contains("lf-block-trust-reviews--masonry")) return "masonry";
 			return "grid";
 		}
 		function nextTrustLayout(current) {
-			var cycle = ["slider", "masonry", "grid"];
-			var idx = cycle.indexOf(String(current || "grid"));
+			var cycle = ["slider", "grid"];
+			var idx = cycle.indexOf(String(current || "slider"));
 			if (idx < 0) idx = 0;
 			return cycle[(idx + 1) % cycle.length];
 		}
@@ -3704,7 +3703,7 @@ function lf_ai_assistant_widget_js(): string {
 					layoutBtn.type = "button";
 					layoutBtn.className = "lf-ai-section-btn";
 					layoutBtn.textContent = "Layout";
-					layoutBtn.setAttribute("title", "Cycle review layout (slider, masonry, grid)");
+					layoutBtn.setAttribute("title", "Cycle review layout (slider, grid)");
 					layoutBtn.setAttribute("aria-label", "Cycle review layout");
 					layoutBtn.addEventListener("click", function(e){
 						e.preventDefault();
