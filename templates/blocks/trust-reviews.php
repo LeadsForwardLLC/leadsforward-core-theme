@@ -102,6 +102,7 @@ if (!empty($all_review_ids)) {
 }
 $avg_rating = $ratings_count > 0 ? round($ratings_total / $ratings_count, 1) : 0;
 $is_slider = $layout === 'slider';
+$list_columns_style = sprintf( '--lf-reviews-columns: %d;', (int) $columns );
 $section_classes = 'lf-block lf-block-trust-reviews ' . $bg_class . ' lf-block-trust-reviews--' . $variant;
 if ($is_slider) {
 	$section_classes .= ' lf-block-trust-reviews--slider';
@@ -147,9 +148,9 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 					<div class="lf-slider" data-lf-slider>
 						<div class="lf-slider__mask">
 							<div class="lf-slider__viewport" data-lf-slider-viewport>
-								<ul class="lf-block-trust-reviews__list lf-slider__track" role="list" data-lf-slider-track>
+								<ul class="lf-block-trust-reviews__list lf-slider__track" role="list" data-lf-slider-track style="<?php echo esc_attr( $list_columns_style ); ?>">
 				<?php else : ?>
-					<ul class="lf-block-trust-reviews__list" role="list">
+					<ul class="lf-block-trust-reviews__list" role="list" style="<?php echo esc_attr( $list_columns_style ); ?>">
 				<?php endif; ?>
 				<?php
 				$review_index = 0;
@@ -175,13 +176,31 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 						$parts = preg_split('/\s+/', trim((string) $name));
 						$initials = strtoupper(substr($parts[0] ?? '', 0, 1) . substr($parts[1] ?? '', 0, 1));
 					}
+					$text_raw     = is_string( $text ) ? $text : (string) $text;
+					$text_len     = function_exists( 'mb_strlen' ) ? mb_strlen( $text_raw ) : strlen( $text_raw );
+					$show_toggle  = ( $layout === 'grid' && $text_len > 220 );
 				?>
 				<li class="lf-block-trust-reviews__item<?php echo ($is_reviews_page && $review_index >= $display_limit) ? ' is-hidden' : ''; ?>" <?php echo $source ? 'data-source="' . esc_attr(sanitize_title((string) $source)) . '"' : ''; ?>>
 						<figure class="lf-block-trust-reviews__quote">
 							<?php if ($show_quote_icon) : ?>
 								<span class="lf-block-trust-reviews__quote-icon" aria-hidden="true">“</span>
 							<?php endif; ?>
-							<blockquote class="lf-block-trust-reviews__text"><?php echo esc_html($text); ?></blockquote>
+							<div class="lf-block-trust-reviews__body">
+								<blockquote class="lf-block-trust-reviews__text">
+									<span class="lf-block-trust-reviews__text-inner"><?php echo esc_html( $text_raw ); ?></span>
+								</blockquote>
+								<?php if ( $show_toggle ) : ?>
+									<button type="button" class="lf-block-trust-reviews__text-toggle" aria-expanded="false"
+										data-label-expand="<?php echo esc_attr__( 'Show more', 'leadsforward-core' ); ?>"
+										data-label-collapse="<?php echo esc_attr__( 'Show less', 'leadsforward-core' ); ?>"
+										data-aria-expand="<?php echo esc_attr__( 'Expand review text', 'leadsforward-core' ); ?>"
+										data-aria-collapse="<?php echo esc_attr__( 'Collapse review text', 'leadsforward-core' ); ?>"
+										aria-label="<?php esc_attr_e( 'Expand review text', 'leadsforward-core' ); ?>">
+										<svg class="lf-block-trust-reviews__toggle-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+										<span class="lf-block-trust-reviews__toggle-label"><?php esc_html_e( 'Show more', 'leadsforward-core' ); ?></span>
+									</button>
+								<?php endif; ?>
+							</div>
 						<figcaption class="lf-block-trust-reviews__cite">
 							<div class="lf-block-trust-reviews__identity">
 								<?php if ($show_avatars) : ?>
@@ -286,3 +305,33 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 		</script>
 	<?php endif; ?>
 <?php endif; ?>
+<?php
+static $lf_trust_reviews_grid_expand_script = false;
+if ( ! $lf_trust_reviews_grid_expand_script && $layout === 'grid' && $review_total > 0 ) {
+	$lf_trust_reviews_grid_expand_script = true;
+	?>
+	<script>
+	(function () {
+		document.addEventListener('DOMContentLoaded', function () {
+			document.querySelectorAll('.lf-block-trust-reviews--grid .lf-block-trust-reviews__text-toggle').forEach(function (btn) {
+				btn.addEventListener('click', function () {
+					var item = btn.closest('.lf-block-trust-reviews__item');
+					if (!item) return;
+					var expanded = item.classList.toggle('is-text-expanded');
+					btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+					var label = btn.querySelector('.lf-block-trust-reviews__toggle-label');
+					var ex = btn.getAttribute('data-label-expand') || 'Show more';
+					var cl = btn.getAttribute('data-label-collapse') || 'Show less';
+					if (label) label.textContent = expanded ? cl : ex;
+					var ax = btn.getAttribute('data-aria-expand') || 'Expand review text';
+					var ac = btn.getAttribute('data-aria-collapse') || 'Collapse review text';
+					btn.setAttribute('aria-label', expanded ? ac : ax);
+					btn.classList.toggle('is-expanded', expanded);
+				});
+			});
+		});
+	})();
+	</script>
+	<?php
+}
+?>

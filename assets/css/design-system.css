@@ -3718,22 +3718,31 @@ button:focus-visible,
 	margin-right: auto;
 }
 
+/* Masonry: column-fill auto avoids an empty trailing column when balance can't fill all columns */
 .lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
 	display: block;
-	column-count: var(--lf-reviews-columns, 3);
+	width: 100%;
 	column-gap: 1.5rem;
+	column-fill: auto;
 }
 
 .lf-block-trust-reviews--masonry .lf-block-trust-reviews__item {
 	break-inside: avoid;
-	margin-bottom: 1.5rem;
+	margin-bottom: 1.25rem;
 	width: 100%;
 	display: inline-block;
+	vertical-align: top;
 }
 
-@media (max-width: 64rem) {
+@media (min-width: 64rem) {
 	.lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
-		column-count: 2;
+		column-count: var(--lf-reviews-columns, 3);
+	}
+}
+
+@media (max-width: 63.99rem) {
+	.lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
+		column-count: min(2, var(--lf-reviews-columns, 3));
 	}
 }
 
@@ -3767,6 +3776,13 @@ button:focus-visible,
 	border-color: var(--lf-accent);
 }
 
+.lf-block-trust-reviews__body {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+	min-height: 0;
+}
+
 .lf-block-trust-reviews__text {
 	margin: 0 0 1.1rem;
 	padding-top: 0.2rem;
@@ -3775,6 +3791,91 @@ button:focus-visible,
 	color: #1e293b;
 	font-weight: 500;
 	flex-grow: 1;
+}
+
+.lf-block-trust-reviews__text-inner {
+	display: block;
+	word-break: break-word;
+}
+
+/* Grid: uniform card height per row, clamp long copy; expand control reveals full text */
+.lf-block-trust-reviews--grid .lf-block-trust-reviews__list {
+	align-items: stretch;
+	gap: 1.75rem;
+}
+
+.lf-block-trust-reviews--grid .lf-block-trust-reviews__item {
+	display: flex;
+	min-width: 0;
+}
+
+.lf-block-trust-reviews--grid .lf-block-trust-reviews__quote {
+	flex: 1 1 auto;
+	min-height: 0;
+	height: auto;
+}
+
+.lf-block-trust-reviews--grid .lf-block-trust-reviews__body {
+	flex: 1 1 auto;
+}
+
+.lf-block-trust-reviews--grid .lf-block-trust-reviews__text {
+	flex: 1 1 auto;
+	margin: 0 0 0.35rem;
+	min-height: 0;
+}
+
+.lf-block-trust-reviews--grid .lf-block-trust-reviews__text-inner {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 5;
+	overflow: hidden;
+}
+
+.lf-block-trust-reviews--grid .lf-block-trust-reviews__item.is-text-expanded .lf-block-trust-reviews__text-inner {
+	display: block;
+	-webkit-line-clamp: unset;
+	overflow: visible;
+}
+
+.lf-block-trust-reviews--grid .lf-block-trust-reviews__cite {
+	flex-shrink: 0;
+	margin-top: auto;
+}
+
+.lf-block-trust-reviews__text-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	margin: 0 0 0.5rem;
+	padding: 0.25rem 0.5rem 0.25rem 0;
+	border: 0;
+	background: transparent;
+	font-size: 0.85rem;
+	font-weight: 700;
+	color: var(--lf-primary);
+	cursor: pointer;
+	text-align: left;
+	align-self: flex-start;
+	border-radius: 0.35rem;
+}
+
+.lf-block-trust-reviews__text-toggle:hover {
+	text-decoration: underline;
+}
+
+.lf-block-trust-reviews__text-toggle:focus-visible {
+	outline: 2px solid var(--lf-primary);
+	outline-offset: 2px;
+}
+
+.lf-block-trust-reviews__toggle-chevron {
+	flex-shrink: 0;
+	transition: transform 0.2s ease;
+}
+
+.lf-block-trust-reviews__text-toggle.is-expanded .lf-block-trust-reviews__toggle-chevron {
+	transform: rotate(180deg);
 }
 
 .lf-block-trust-reviews__cite {
