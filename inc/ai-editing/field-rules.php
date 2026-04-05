@@ -66,6 +66,105 @@ function lf_ai_editable_field_keys(): array {
 }
 
 /**
+ * Field keys from section registry that are safe for AI copy (text / textarea / list only).
+ *
+ * @return array<string, true>
+ */
+function lf_ai_registry_copy_field_key_map(): array {
+	static $cache = null;
+	if ($cache !== null) {
+		return $cache;
+	}
+	$cache = [];
+	if (!function_exists('lf_sections_registry')) {
+		return $cache;
+	}
+	foreach (lf_sections_registry() as $def) {
+		if (!is_array($def)) {
+			continue;
+		}
+		foreach ($def['fields'] ?? [] as $field) {
+			if (!is_array($field)) {
+				continue;
+			}
+			$type = (string) ($field['type'] ?? '');
+			if (!in_array($type, ['text', 'textarea', 'list'], true)) {
+				continue;
+			}
+			$key = sanitize_text_field((string) ($field['key'] ?? ''));
+			if ($key === '' || $key === 'section_background') {
+				continue;
+			}
+			$cache[ $key ] = true;
+		}
+	}
+	return $cache;
+}
+
+/**
+ * Copy-safe field keys declared for a section type in the registry.
+ *
+ * @return string[]
+ */
+function lf_ai_registry_copy_field_keys_for_type(string $section_type): array {
+	$section_type = sanitize_text_field($section_type);
+	if ($section_type === '' || !function_exists('lf_sections_registry')) {
+		return [];
+	}
+	$registry = lf_sections_registry();
+	$def = $registry[ $section_type ] ?? null;
+	if (!is_array($def)) {
+		return [];
+	}
+	$out = [];
+	foreach ($def['fields'] ?? [] as $field) {
+		if (!is_array($field)) {
+			continue;
+		}
+		$type = (string) ($field['type'] ?? '');
+		if (!in_array($type, ['text', 'textarea', 'list'], true)) {
+			continue;
+		}
+		$key = sanitize_text_field((string) ($field['key'] ?? ''));
+		if ($key === '' || $key === 'section_background') {
+			continue;
+		}
+		$out[] = $key;
+	}
+	return array_values(array_unique($out));
+}
+
+/**
+ * Human labels for registry field keys (for prompts) scoped to one section type.
+ *
+ * @return array<string, string>
+ */
+function lf_ai_editable_labels_for_registry_keys(string $section_type, array $keys): array {
+	$section_type = sanitize_text_field($section_type);
+	$keys = array_values(array_filter(array_map('sanitize_text_field', $keys)));
+	if ($section_type === '' || empty($keys) || !function_exists('lf_sections_registry')) {
+		return [];
+	}
+	$registry = lf_sections_registry();
+	$def = $registry[ $section_type ] ?? null;
+	if (!is_array($def)) {
+		return [];
+	}
+	$labels = [];
+	foreach ($def['fields'] ?? [] as $field) {
+		if (!is_array($field)) {
+			continue;
+		}
+		$key = sanitize_text_field((string) ($field['key'] ?? ''));
+		if ($key === '' || !in_array($key, $keys, true)) {
+			continue;
+		}
+		$labels[ $key ] = sanitize_text_field((string) ($field['label'] ?? $key));
+	}
+	return $labels;
+}
+
+/**
  * Whether a field key may be edited by AI. Respects allow_ai_h1_edit filter.
  */
 function lf_is_field_ai_editable(string $field_key): bool {
@@ -74,7 +173,10 @@ function lf_is_field_ai_editable(string $field_key): bool {
 		return false;
 	}
 	$editable = array_flip(lf_ai_editable_field_keys());
-	return isset($editable[$field_key]);
+	if (isset($editable[ $field_key ])) {
+		return true;
+	}
+	return !empty(lf_ai_registry_copy_field_key_map()[ $field_key ]);
 }
 
 /**

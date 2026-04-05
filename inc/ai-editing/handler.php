@@ -200,9 +200,41 @@ function lf_ai_get_homepage_hero_row(): ?array {
 /**
  * Get current values for given field keys in context (for diff and rollback).
  */
-function lf_ai_get_current_values(string $context_type, $context_id, array $field_keys): array {
+function lf_ai_get_current_values(string $context_type, $context_id, array $field_keys, string $homepage_row_id = ''): array {
 	$out = [];
 	if ($context_type === 'homepage') {
+		$homepage_row_id = sanitize_text_field($homepage_row_id);
+		if ($homepage_row_id !== '' && function_exists('lf_get_homepage_section_config')) {
+			$config = lf_get_homepage_section_config();
+			$row = is_array($config[ $homepage_row_id ] ?? null) ? $config[ $homepage_row_id ] : null;
+			if (is_array($row)) {
+				$resolved_primary_cta = '';
+				if (function_exists('lf_resolve_cta')) {
+					$merged = array_merge(
+						['section_type' => (string) ($row['section_type'] ?? $row['type'] ?? '')],
+						$row
+					);
+					$cta = lf_resolve_cta(['homepage' => true, 'section' => $merged], $merged, []);
+					if (is_array($cta) && isset($cta['primary_text'])) {
+						$resolved_primary_cta = (string) $cta['primary_text'];
+					}
+				}
+				foreach ($field_keys as $key) {
+					if (in_array($key, ['hero_headline', 'hero_subheadline', 'cta_primary_override'], true)) {
+						$value = (string) ($row[ $key ] ?? '');
+						if ($key === 'cta_primary_override' && $value === '' && $resolved_primary_cta !== '') {
+							$value = $resolved_primary_cta;
+						}
+						$override = lf_ai_get_inline_dom_override_for_field($context_type, $context_id, (string) $key);
+						$out[ $key ] = $override !== '' ? $override : $value;
+					} else {
+						$raw = $row[ $key ] ?? '';
+						$out[ $key ] = is_array($raw) ? wp_json_encode($raw) : (string) $raw;
+					}
+				}
+				return $out;
+			}
+		}
 		$hero_row = lf_ai_get_homepage_hero_row();
 		$resolved_primary_cta = '';
 		if (function_exists('lf_resolve_cta') && is_array($hero_row)) {
@@ -246,8 +278,9 @@ function lf_ai_get_current_values(string $context_type, $context_id, array $fiel
  * Generate AI edit proposal. Returns [ 'success' => bool, 'proposed' => [], 'error' => '' ].
  * Proposed is filtered to editable keys only; stored in transient for review step.
  */
-function lf_ai_generate_proposal(string $context_type, $context_id, string $user_prompt): array {
-	$editable = lf_get_ai_editable_fields($context_id);
+function lf_ai_generate_proposal(string $context_type, $context_id, string $user_prompt, string $homepage_section_row_id = '', ?array $scoped_editable_fields = null): array {
+	$homepage_section_row_id = sanitize_text_field($homepage_section_row_id);
+	$editable = $scoped_editable_fields !== null ? $scoped_editable_fields : lf_get_ai_editable_fields($context_id);
 	if (empty($editable)) {
 		return ['success' => false, 'proposed' => [], 'error' => __('No editable fields for this context.', 'leadsforward-core')];
 	}
@@ -266,7 +299,8 @@ function lf_ai_generate_proposal(string $context_type, $context_id, string $user
 		$prompt = substr($prompt, 0, 800);
 	}
 	$system = lf_ai_build_system_prompt($context_type, $context_id, $editable);
-	$current = lf_ai_get_current_values($context_type, $context_id, array_keys($editable));
+	$row_for_read = ($context_type === 'homepage' && $homepage_section_row_id !== '') ? $homepage_section_row_id : '';
+	$current = lf_ai_get_current_values($context_type, $context_id, array_keys($editable), $row_for_read);
 	$user_message = $prompt . "\n\nCurrent values (for reference):\n" . wp_json_encode($current);
 
 	// AI providers hook into lf_ai_completion. The OpenAI provider is bundled; others may override.
@@ -282,67 +316,103 @@ function lf_ai_generate_proposal(string $context_type, $context_id, string $user
 		return ['success' => false, 'proposed' => [], 'error' => __('AI request failed. Check your OpenAI key, model access, and billing.', 'leadsforward-core')];
 	}
 
-	$proposed = lf_ai_validate_response($response, $context_id);
+	$proposed = lf_ai_validate_response($response, $context_id, array_keys($editable));
 	if (empty($proposed)) {
 		return ['success' => false, 'proposed' => [], 'error' => __('AI response was invalid or contained no allowed edits.', 'leadsforward-core')];
 	}
 
 	$transient_key = LF_AI_PROPOSED_TRANSIENT_PREFIX . get_current_user_id() . '_' . $context_type . '_' . (is_numeric($context_id) ? $context_id : 'opt');
-	set_transient($transient_key, ['proposed' => $proposed, 'context_type' => $context_type, 'context_id' => $context_id, 'current' => $current], 600);
+	set_transient($transient_key, [
+		'proposed' => $proposed,
+		'context_type' => $context_type,
+		'context_id' => $context_id,
+		'current' => $current,
+		'homepage_section_row_id' => ($context_type === 'homepage' && $homepage_section_row_id !== '') ? $homepage_section_row_id : '',
+	], 600);
 	return ['success' => true, 'proposed' => $proposed, 'error' => ''];
 }
 
 /**
  * Apply a proposed set of changes. Logs and clears transient. Returns [ 'success' => bool, 'log_id' => '' ].
  */
-function lf_ai_apply_proposal(string $context_type, $context_id, array $proposed, string $prompt_snippet = ''): array {
+function lf_ai_apply_proposal(string $context_type, $context_id, array $proposed, string $prompt_snippet = '', string $homepage_section_row_fallback = ''): array {
+	$stored = lf_ai_get_stored_proposal($context_type, $context_id);
+	$scoped_homepage_row = '';
+	if (is_array($stored) && !empty($stored['homepage_section_row_id'])) {
+		$scoped_homepage_row = sanitize_text_field((string) $stored['homepage_section_row_id']);
+	}
+	if ($scoped_homepage_row === '') {
+		$scoped_homepage_row = sanitize_text_field($homepage_section_row_fallback);
+	}
 	$editable = lf_get_ai_editable_fields($context_id);
 	$to_apply = [];
 	foreach ($proposed as $key => $value) {
-		if (lf_is_field_ai_editable($key) && isset($editable[$key])) {
-			$to_apply[$key] = $value;
+		if (!lf_is_field_ai_editable($key)) {
+			continue;
+		}
+		if ($context_type === 'homepage' && $scoped_homepage_row !== '') {
+			$to_apply[ $key ] = $value;
+		} elseif (isset($editable[ $key ])) {
+			$to_apply[ $key ] = $value;
 		}
 	}
 	if (empty($to_apply)) {
 		return ['success' => false, 'log_id' => ''];
 	}
-	$current = lf_ai_get_current_values($context_type, $context_id, array_keys($to_apply));
+	$current = lf_ai_get_current_values($context_type, $context_id, array_keys($to_apply), $scoped_homepage_row);
 	if ($context_type === 'homepage') {
 		$hero_keys = ['hero_headline', 'hero_subheadline', 'cta_primary_override'];
 		$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
-		$hero_section_key = '';
-		if (is_array($config['hero'] ?? null)) {
-			$hero_section_key = 'hero';
-		} elseif (is_array($config)) {
-			foreach ($config as $sid => $row) {
-				if (!is_string($sid) || !is_array($row)) {
+		if ($scoped_homepage_row !== '' && !is_array($config[ $scoped_homepage_row ] ?? null)) {
+			return ['success' => false, 'log_id' => ''];
+		}
+		$option_only_keys = ['lf_homepage_cta_primary', 'lf_homepage_cta_secondary'];
+		if ($scoped_homepage_row !== '' && is_array($config[ $scoped_homepage_row ] ?? null)) {
+			foreach ($to_apply as $key => $value) {
+				if (in_array($key, $option_only_keys, true) && function_exists('update_field')) {
+					update_field($key, $value, 'option');
 					continue;
 				}
-				$base = $sid;
-				if (function_exists('lf_homepage_base_section_type')) {
-					$base = lf_homepage_base_section_type($sid);
-				}
-				$row_type = (string) ($row['section_type'] ?? $row['type'] ?? '');
-				if ($base === 'hero' || $row_type === 'hero') {
-					$hero_section_key = $sid;
-					break;
+				$config[ $scoped_homepage_row ][ $key ] = $value;
+			}
+			if (defined('LF_HOMEPAGE_CONFIG_OPTION')) {
+				update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+			}
+		} else {
+			$hero_section_key = '';
+			if (is_array($config['hero'] ?? null)) {
+				$hero_section_key = 'hero';
+			} elseif (is_array($config)) {
+				foreach ($config as $sid => $row) {
+					if (!is_string($sid) || !is_array($row)) {
+						continue;
+					}
+					$base = $sid;
+					if (function_exists('lf_homepage_base_section_type')) {
+						$base = lf_homepage_base_section_type($sid);
+					}
+					$row_type = (string) ($row['section_type'] ?? $row['type'] ?? '');
+					if ($base === 'hero' || $row_type === 'hero') {
+						$hero_section_key = $sid;
+						break;
+					}
 				}
 			}
-		}
-		if ($hero_section_key !== '' && !empty($config[$hero_section_key]) && is_array($config[$hero_section_key])) {
-			foreach ($hero_keys as $hk) {
-				if (isset($to_apply[$hk])) {
-					$config[$hero_section_key][$hk] = $to_apply[$hk];
+			if ($hero_section_key !== '' && !empty($config[ $hero_section_key ]) && is_array($config[ $hero_section_key ])) {
+				foreach ($hero_keys as $hk) {
+					if (isset($to_apply[ $hk ])) {
+						$config[ $hero_section_key ][ $hk ] = $to_apply[ $hk ];
+					}
 				}
+				update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 			}
-			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
-		}
-		foreach ($to_apply as $key => $value) {
-			if (in_array($key, $hero_keys, true)) {
-				continue;
-			}
-			if (function_exists('update_field')) {
-				update_field($key, $value, 'option');
+			foreach ($to_apply as $key => $value) {
+				if (in_array($key, $hero_keys, true)) {
+					continue;
+				}
+				if (function_exists('update_field')) {
+					update_field($key, $value, 'option');
+				}
 			}
 		}
 	} else {
