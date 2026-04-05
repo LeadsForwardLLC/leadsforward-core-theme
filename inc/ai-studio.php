@@ -251,7 +251,6 @@ function lf_ai_studio_job_status_ajax(): void {
 	check_ajax_referer('lf_ai_studio_job_status', 'nonce');
 	$job_id = isset($_GET['job_id']) ? absint($_GET['job_id']) : (isset($_POST['job_id']) ? absint($_POST['job_id']) : 0);
 	if (!$job_id) {
-		lf_ai_studio_error_log('job_status_ajax: missing job_id', 'ERROR');
 		wp_send_json_error(['message' => __('Missing job ID.', 'leadsforward-core')], 400);
 	}
 	$job = get_post($job_id);
@@ -1129,6 +1128,9 @@ function lf_ai_studio_render_page(): void {
 		<?php if ($reset_error === 'ack') : ?>
 			<div class="notice notice-error"><p><?php esc_html_e('Please confirm you understand this will delete site content before resetting.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
+		<?php if ($reset_error === 'not_allowed') : ?>
+			<div class="notice notice-error"><p><?php esc_html_e('Site reset is only available in local/development environments or when LF_DEV_RESET_ENABLED is true in wp-config.', 'leadsforward-core'); ?></p></div>
+		<?php endif; ?>
 		<?php if ($job_id && $job_status) : ?>
 			<?php if (in_array($job_status, ['queued', 'running'], true)) : ?>
 				<div class="notice notice-info is-dismissible"><p><?php echo esc_html(sprintf(__('Generation job #%d is running. Refresh in a minute to see completion.', 'leadsforward-core'), $job_id)); ?></p></div>
@@ -1385,7 +1387,7 @@ function lf_ai_studio_render_page(): void {
 							}
 						}
 						?>
-						<div class="lf-manifester-progress" data-job-id="<?php echo esc_attr((string) $job_id); ?>" data-job-status="<?php echo esc_attr($job_status); ?>">
+						<div class="lf-manifester-progress" data-job-id="<?php echo $job_id > 0 ? esc_attr((string) $job_id) : ''; ?>" data-job-status="<?php echo esc_attr($job_status); ?>">
 							<div class="lf-manifester-progress__bar">
 								<span style="width: <?php echo esc_attr((string) $progress_percent); ?>%;"></span>
 							</div>
