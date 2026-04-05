@@ -373,7 +373,7 @@
   }
 
   function fetchJobStatus() {
-    if (!jobId || !cfg.jobStatusNonce || polling) return;
+    if (!jobId || jobId === '0' || !cfg.jobStatusNonce || polling) return;
     polling = true;
     var params = new URLSearchParams({
       action: 'lf_ai_studio_job_status',
