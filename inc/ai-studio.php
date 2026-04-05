@@ -1704,13 +1704,16 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 	$research = lf_ai_studio_get_research_document();
 	$log_payload['research_present'] = !empty($research);
 	$log_payload['research_hash'] = !empty($research) ? lf_ai_studio_research_hash($research) : '';
+	$gs_req = is_array($request['generation_scope'] ?? null) ? $request['generation_scope'] : [];
+	$log_payload['payload_scope_flags_true'] = array_keys(array_filter($gs_req));
 	error_log('LF AI Studio payload keys: ' . wp_json_encode($log_payload));
 	$scope_snap = lf_ai_studio_get_generation_scope_snapshot_for_ui(lf_ai_studio_get_manifest());
 	error_log(
 		'LF AI Studio generation scope: ' . wp_json_encode(
 			[
-				'enabled_keys' => $scope_snap['enabled_keys'],
-				'is_homepage_only' => $scope_snap['is_homepage_only'],
+				'checkbox_enabled_keys' => $scope_snap['enabled_keys'],
+				'checkbox_is_homepage_only' => $scope_snap['is_homepage_only'],
+				'payload_scope_flags_true' => $log_payload['payload_scope_flags_true'],
 				'service_posts_published' => $scope_snap['service_posts_published'],
 				'services_in_manifest' => $scope_snap['services_in_manifest'],
 			]
@@ -5418,6 +5421,14 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 	}
 
 	$scope = lf_ai_studio_get_generation_scope($manifest, $respect_manifest_scope);
+	// Manifest-listed services imply service-page blueprints unless manifest explicitly requests homepage-only.
+	if ($use_manifest && !empty($manifest['services']) && is_array($manifest['services'])) {
+		$manifest_gen_scope = isset($manifest['generation_scope']) ? (string) $manifest['generation_scope'] : '';
+		$manifest_homepage_only = $respect_manifest_scope && $manifest_gen_scope === 'homepage_only';
+		if (!$manifest_homepage_only) {
+			$scope['services'] = true;
+		}
+	}
 
 	$blueprints = [];
 	if ($scope['homepage']) {
@@ -6816,12 +6827,19 @@ function lf_ai_studio_homepage_equiv_storage_types(string $llm_registry_type): a
 
 /**
  * Resolve lf_homepage_section_config array key that should receive updates for this LLM section type.
+ *
+ * @param string $section_instance_id Full homepage section id (e.g. service_details__2). When present in $config,
+ *                                    it wins over the base type so duplicate section types do not overwrite each other.
  */
-function lf_ai_studio_resolve_homepage_config_storage_key(string $llm_registry_type, array $config): string {
+function lf_ai_studio_resolve_homepage_config_storage_key(string $llm_registry_type, array $config, string $section_instance_id = ''): string {
 	if ($llm_registry_type === '' || !is_array($config)) {
 		return '';
 	}
-	
+	$instance = trim($section_instance_id);
+	if ($instance !== '' && array_key_exists($instance, $config) && is_array($config[ $instance ])) {
+		return $instance;
+	}
+
 	// Direct match first - this should handle most cases
 	if (array_key_exists($llm_registry_type, $config)) {
 		return $llm_registry_type;
@@ -7383,12 +7401,12 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 					$llm_registry_type = $section_id;
 				}
 				
-				$storage_key = lf_ai_studio_resolve_homepage_config_storage_key($llm_registry_type, $config);
+				$storage_key = lf_ai_studio_resolve_homepage_config_storage_key($llm_registry_type, $config, $section_id);
 				if ($storage_key === '' || !isset($registry[$llm_registry_type])) {
 					$alt = lf_ai_studio_resolve_homepage_section_id_alias($section_id, $config);
 					if ($alt !== '' && isset($registry[$alt])) {
 						$llm_registry_type = $alt;
-						$storage_key = lf_ai_studio_resolve_homepage_config_storage_key($llm_registry_type, $config);
+						$storage_key = lf_ai_studio_resolve_homepage_config_storage_key($llm_registry_type, $config, $section_id);
 					}
 				}
 				
@@ -7399,7 +7417,7 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 					$alt = lf_ai_studio_resolve_homepage_section_id_alias($section_id, $config);
 					if ($alt !== '' && isset($registry[$alt])) {
 						$llm_registry_type = $alt;
-						$storage_key = lf_ai_studio_resolve_homepage_config_storage_key($llm_registry_type, $config);
+						$storage_key = lf_ai_studio_resolve_homepage_config_storage_key($llm_registry_type, $config, $section_id);
 					}
 				}
 				if ($storage_key === '' || !isset($registry[$llm_registry_type])) {
