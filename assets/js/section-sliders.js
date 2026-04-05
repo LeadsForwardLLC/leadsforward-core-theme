@@ -10,11 +10,23 @@
 		if (!track) return null;
 		const items = Array.from(track.children);
 		if (!items.length) return null;
+		
+		// Get items per slide from data attribute, fallback to calculated value
+		const itemsPerSlide = parseInt(root.dataset.sliderItemsPerSlide || '0', 10);
 		const styles = window.getComputedStyle(track);
 		const gap = parseFloat(styles.columnGap || styles.gap || 0);
 		const itemWidth = items[0].getBoundingClientRect().width;
 		const viewWidth = viewport ? viewport.clientWidth : track.clientWidth;
-		const perView = Math.max(1, Math.round((viewWidth + gap) / (itemWidth + gap)));
+		
+		let perView;
+		if (itemsPerSlide > 0) {
+			// Use configured items per slide
+			perView = itemsPerSlide;
+		} else {
+			// Fallback to calculated value based on width
+			perView = Math.max(1, Math.round((viewWidth + gap) / (itemWidth + gap)));
+		}
+		
 		const pageWidth = (itemWidth + (isNaN(gap) ? 0 : gap)) * perView;
 		const maxIndex = Math.max(0, Math.ceil(items.length / perView) - 1);
 		return { track, items, gap, perView, pageWidth, maxIndex };
