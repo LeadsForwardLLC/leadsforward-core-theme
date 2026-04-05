@@ -3736,6 +3736,8 @@ button:focus-visible,
 
 @media (min-width: 64rem) {
 	.lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
+		/* Fallback first: some engines drop column-count when var() is unsupported */
+		column-count: 3;
 		column-count: var(--lf-reviews-columns, 3);
 	}
 }
@@ -3743,7 +3745,7 @@ button:focus-visible,
 /* Tablet: cap at 2 columns; phone-only single column from 30rem down (not 40rem — was killing “desktop” layouts in many viewports) */
 @media (max-width: 63.99rem) and (min-width: 30.01rem) {
 	.lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
-		column-count: min(2, var(--lf-reviews-columns, 3));
+		column-count: 2;
 	}
 }
 
@@ -3819,14 +3821,20 @@ button:focus-visible,
 	}
 }
 
-/* Grid + masonry: shorter cards, clamp quote text; “Show more” when PHP outputs toggle */
+/* Grid + masonry + slider: shorter cards, clamp quote text; “Show more” when PHP outputs toggle */
 .lf-block-trust-reviews--grid .lf-block-trust-reviews__item {
 	display: flex;
 	min-width: 0;
 }
 
+.lf-block-trust-reviews--slider .lf-block-trust-reviews__item {
+	display: flex;
+	min-width: 0;
+}
+
 .lf-block-trust-reviews--grid .lf-block-trust-reviews__quote,
-.lf-block-trust-reviews--masonry .lf-block-trust-reviews__quote {
+.lf-block-trust-reviews--masonry .lf-block-trust-reviews__quote,
+.lf-block-trust-reviews--slider .lf-block-trust-reviews__quote {
 	flex: 1 1 auto;
 	min-height: 0;
 	height: auto;
@@ -3839,18 +3847,21 @@ button:focus-visible,
 	font-size: 3rem;
 }
 
-.lf-block-trust-reviews--grid .lf-block-trust-reviews__quote-icon {
+.lf-block-trust-reviews--grid .lf-block-trust-reviews__quote-icon,
+.lf-block-trust-reviews--slider .lf-block-trust-reviews__quote-icon {
 	top: 0.75rem;
 	left: 0.85rem;
 	font-size: 3rem;
 }
 
-.lf-block-trust-reviews--grid .lf-block-trust-reviews__body {
+.lf-block-trust-reviews--grid .lf-block-trust-reviews__body,
+.lf-block-trust-reviews--slider .lf-block-trust-reviews__body {
 	flex: 1 1 auto;
 }
 
 .lf-block-trust-reviews--grid .lf-block-trust-reviews__text,
-.lf-block-trust-reviews--masonry .lf-block-trust-reviews__text {
+.lf-block-trust-reviews--masonry .lf-block-trust-reviews__text,
+.lf-block-trust-reviews--slider .lf-block-trust-reviews__text {
 	flex: 1 1 auto;
 	margin: 0 0 0.35rem;
 	min-height: 0;
@@ -3858,18 +3869,32 @@ button:focus-visible,
 	line-height: 1.5;
 }
 
+/* Grid + slider: line-clamp (avoid -webkit-box inside CSS columns — breaks masonry column-count in WebKit) */
 .lf-block-trust-reviews--grid .lf-block-trust-reviews__text-inner,
-.lf-block-trust-reviews--masonry .lf-block-trust-reviews__text-inner {
+.lf-block-trust-reviews--slider .lf-block-trust-reviews__text-inner {
 	display: -webkit-box;
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 4;
 	overflow: hidden;
 }
 
+/* Masonry: block + max-height clamp (multicol-safe) */
+.lf-block-trust-reviews--masonry .lf-block-trust-reviews__text-inner {
+	display: block;
+	overflow: hidden;
+	max-height: calc(1.5em * 4);
+	word-break: break-word;
+}
+
 .lf-block-trust-reviews--grid .lf-block-trust-reviews__item.is-text-expanded .lf-block-trust-reviews__text-inner,
-.lf-block-trust-reviews--masonry .lf-block-trust-reviews__item.is-text-expanded .lf-block-trust-reviews__text-inner {
+.lf-block-trust-reviews--slider .lf-block-trust-reviews__item.is-text-expanded .lf-block-trust-reviews__text-inner {
 	display: block;
 	-webkit-line-clamp: unset;
+	overflow: visible;
+}
+
+.lf-block-trust-reviews--masonry .lf-block-trust-reviews__item.is-text-expanded .lf-block-trust-reviews__text-inner {
+	max-height: none;
 	overflow: visible;
 }
 
@@ -3922,7 +3947,8 @@ button:focus-visible,
 }
 
 .lf-block-trust-reviews--grid .lf-block-trust-reviews__cite,
-.lf-block-trust-reviews--masonry .lf-block-trust-reviews__cite {
+.lf-block-trust-reviews--masonry .lf-block-trust-reviews__cite,
+.lf-block-trust-reviews--slider .lf-block-trust-reviews__cite {
 	flex-shrink: 0;
 	margin-top: auto;
 	padding-top: 0.65rem;
@@ -4061,6 +4087,7 @@ button:focus-visible,
 .lf-block-trust-reviews--slider .lf-block-trust-reviews__list {
 	--lf-review-gap: 1.25rem;
 	display: flex;
+	align-items: flex-start;
 	gap: var(--lf-review-gap);
 	overflow: visible;
 	scroll-snap-type: none;
