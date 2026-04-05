@@ -164,6 +164,11 @@ function lf_homepage_admin_save(): void {
 			$config[$type]['trust_show_source'] = isset($_POST['lf_hp_reviews_source']) && $_POST['lf_hp_reviews_source'] === '0' ? '0' : '1';
 			$config[$type]['trust_show_avatars'] = isset($_POST['lf_hp_reviews_avatars']) && $_POST['lf_hp_reviews_avatars'] === '0' ? '0' : '1';
 			$config[$type]['trust_show_quote_icon'] = isset($_POST['lf_hp_reviews_quote']) && $_POST['lf_hp_reviews_quote'] === '0' ? '0' : '1';
+			$config[$type]['trust_slider_items_per_slide'] = isset($_POST['lf_hp_reviews_items_per_slide']) ? absint($_POST['lf_hp_reviews_items_per_slide']) : 3;
+			$config[$type]['trust_slider_autoplay'] = isset($_POST['lf_hp_reviews_autoplay']) && $_POST['lf_hp_reviews_autoplay'] === '0' ? '0' : '1';
+			$config[$type]['trust_slider_autoplay_delay'] = isset($_POST['lf_hp_reviews_autoplay_delay']) ? absint($_POST['lf_hp_reviews_autoplay_delay']) : 5;
+			$config[$type]['trust_slider_show_dots'] = isset($_POST['lf_hp_reviews_show_dots']) && $_POST['lf_hp_reviews_show_dots'] === '0' ? '0' : '1';
+			$config[$type]['trust_slider_show_arrows'] = isset($_POST['lf_hp_reviews_show_arrows']) && $_POST['lf_hp_reviews_show_arrows'] === '0' ? '0' : '1';
 		}
 		if ($type === 'benefits') {
 			$config[$type]['section_heading'] = isset($_POST['lf_hp_benefits_heading']) ? sanitize_text_field($_POST['lf_hp_benefits_heading']) : '';
@@ -925,6 +930,42 @@ function lf_homepage_admin_render(): void {
 											<select name="lf_hp_reviews_quote" id="lf_hp_reviews_quote">
 												<option value="1" <?php selected((string) ($sec['trust_show_quote_icon'] ?? '1'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
 												<option value="0" <?php selected((string) ($sec['trust_show_quote_icon'] ?? ''), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
+											</select>
+										</td>
+									</tr>
+									<!-- Slider Controls -->
+									<tr>
+										<th scope="row"><label for="lf_hp_reviews_items_per_slide"><?php esc_html_e('Reviews Per Slide (Slider)', 'leadsforward-core'); ?></label></th>
+										<td><input type="number" class="small-text" name="lf_hp_reviews_items_per_slide" id="lf_hp_reviews_items_per_slide" value="<?php echo esc_attr((string) ($sec['trust_slider_items_per_slide'] ?? '3')); ?>" min="1" max="6" /></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_reviews_autoplay"><?php esc_html_e('Auto-Play Slider', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_reviews_autoplay" id="lf_hp_reviews_autoplay">
+												<option value="1" <?php selected((string) ($sec['trust_slider_autoplay'] ?? '0'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
+												<option value="0" <?php selected((string) ($sec['trust_slider_autoplay'] ?? '0'), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
+											</select>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_reviews_autoplay_delay"><?php esc_html_e('Auto-Play Delay (seconds)', 'leadsforward-core'); ?></label></th>
+										<td><input type="number" class="small-text" name="lf_hp_reviews_autoplay_delay" id="lf_hp_reviews_autoplay_delay" value="<?php echo esc_attr((string) ($sec['trust_slider_autoplay_delay'] ?? '5')); ?>" min="1" max="30" /></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_reviews_show_dots"><?php esc_html_e('Show Slider Dots', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_reviews_show_dots" id="lf_hp_reviews_show_dots">
+												<option value="1" <?php selected((string) ($sec['trust_slider_show_dots'] ?? '1'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
+												<option value="0" <?php selected((string) ($sec['trust_slider_show_dots'] ?? '1'), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
+											</select>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_reviews_show_arrows"><?php esc_html_e('Show Slider Arrows', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_reviews_show_arrows" id="lf_hp_reviews_show_arrows">
+												<option value="1" <?php selected((string) ($sec['trust_slider_show_arrows'] ?? '1'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
+												<option value="0" <?php selected((string) ($sec['trust_slider_show_arrows'] ?? '1'), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
 											</select>
 										</td>
 									</tr>
