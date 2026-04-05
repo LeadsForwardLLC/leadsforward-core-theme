@@ -3718,42 +3718,8 @@ button:focus-visible,
 	margin-right: auto;
 }
 
-/* Masonry: column-fill auto avoids an empty trailing column when balance can't fill all columns */
-.lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
-	display: block;
-	width: 100%;
-	column-gap: 1.5rem;
-	column-fill: auto;
-}
-
-.lf-block-trust-reviews--masonry .lf-block-trust-reviews__item {
-	break-inside: avoid;
-	margin-bottom: 1.25rem;
-	width: 100%;
-	display: inline-block;
-	vertical-align: top;
-}
-
-@media (min-width: 64rem) {
-	.lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
-		/* Fallback first: some engines drop column-count when var() is unsupported */
-		column-count: 3;
-		column-count: var(--lf-reviews-columns, 3);
-	}
-}
-
-/* Tablet: cap at 2 columns; phone-only single column from 30rem down (not 40rem — was killing “desktop” layouts in many viewports) */
-@media (max-width: 63.99rem) and (min-width: 30.01rem) {
-	.lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
-		column-count: 2;
-	}
-}
-
-@media (max-width: 30rem) {
-	.lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
-		column-count: 1;
-	}
-}
+/* Masonry: same responsive tracks as grid (CSS multicol was collapsing to 1 column with nested flex/clamp).
+   align-items: start keeps natural card heights instead of stretching rows like the grid layout. */
 
 .lf-block-trust-reviews__quote {
 	margin: 0;
@@ -3801,28 +3767,39 @@ button:focus-visible,
 	word-break: break-word;
 }
 
-/* Grid: explicit column counts (higher specificity than generic .lf-block-trust-reviews__list rules) */
-.lf-block-trust-reviews--grid .lf-block-trust-reviews__list {
+/* Grid + masonry: explicit column counts (higher specificity than generic .lf-block-trust-reviews__list rules) */
+.lf-block-trust-reviews--grid .lf-block-trust-reviews__list,
+.lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
 	display: grid;
-	align-items: stretch;
 	gap: 1.5rem;
 	grid-template-columns: repeat(var(--lf-reviews-columns, 3), minmax(0, 1fr));
 }
 
+.lf-block-trust-reviews--grid .lf-block-trust-reviews__list {
+	align-items: stretch;
+}
+
+.lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
+	align-items: start;
+}
+
 @media (max-width: 63.99rem) {
-	.lf-block-trust-reviews--grid .lf-block-trust-reviews__list {
+	.lf-block-trust-reviews--grid .lf-block-trust-reviews__list,
+	.lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 }
 
 @media (max-width: 30rem) {
-	.lf-block-trust-reviews--grid .lf-block-trust-reviews__list {
+	.lf-block-trust-reviews--grid .lf-block-trust-reviews__list,
+	.lf-block-trust-reviews--masonry .lf-block-trust-reviews__list {
 		grid-template-columns: 1fr;
 	}
 }
 
 /* Grid + masonry + slider: shorter cards, clamp quote text; “Show more” when PHP outputs toggle */
-.lf-block-trust-reviews--grid .lf-block-trust-reviews__item {
+.lf-block-trust-reviews--grid .lf-block-trust-reviews__item,
+.lf-block-trust-reviews--masonry .lf-block-trust-reviews__item {
 	display: flex;
 	min-width: 0;
 }
@@ -3841,13 +3818,8 @@ button:focus-visible,
 	padding: 1rem 1rem 0.85rem 2.35rem;
 }
 
-.lf-block-trust-reviews--masonry .lf-block-trust-reviews__quote-icon {
-	top: 0.75rem;
-	left: 0.85rem;
-	font-size: 3rem;
-}
-
 .lf-block-trust-reviews--grid .lf-block-trust-reviews__quote-icon,
+.lf-block-trust-reviews--masonry .lf-block-trust-reviews__quote-icon,
 .lf-block-trust-reviews--slider .lf-block-trust-reviews__quote-icon {
 	top: 0.75rem;
 	left: 0.85rem;
@@ -3855,6 +3827,7 @@ button:focus-visible,
 }
 
 .lf-block-trust-reviews--grid .lf-block-trust-reviews__body,
+.lf-block-trust-reviews--masonry .lf-block-trust-reviews__body,
 .lf-block-trust-reviews--slider .lf-block-trust-reviews__body {
 	flex: 1 1 auto;
 }
@@ -3869,8 +3842,9 @@ button:focus-visible,
 	line-height: 1.5;
 }
 
-/* Grid + slider: line-clamp (avoid -webkit-box inside CSS columns — breaks masonry column-count in WebKit) */
+/* Grid + masonry + slider: line-clamp (masonry uses grid tracks, not CSS columns, so -webkit-box is safe) */
 .lf-block-trust-reviews--grid .lf-block-trust-reviews__text-inner,
+.lf-block-trust-reviews--masonry .lf-block-trust-reviews__text-inner,
 .lf-block-trust-reviews--slider .lf-block-trust-reviews__text-inner {
 	display: -webkit-box;
 	-webkit-box-orient: vertical;
@@ -3878,23 +3852,11 @@ button:focus-visible,
 	overflow: hidden;
 }
 
-/* Masonry: block + max-height clamp (multicol-safe) */
-.lf-block-trust-reviews--masonry .lf-block-trust-reviews__text-inner {
-	display: block;
-	overflow: hidden;
-	max-height: calc(1.5em * 4);
-	word-break: break-word;
-}
-
 .lf-block-trust-reviews--grid .lf-block-trust-reviews__item.is-text-expanded .lf-block-trust-reviews__text-inner,
+.lf-block-trust-reviews--masonry .lf-block-trust-reviews__item.is-text-expanded .lf-block-trust-reviews__text-inner,
 .lf-block-trust-reviews--slider .lf-block-trust-reviews__item.is-text-expanded .lf-block-trust-reviews__text-inner {
 	display: block;
 	-webkit-line-clamp: unset;
-	overflow: visible;
-}
-
-.lf-block-trust-reviews--masonry .lf-block-trust-reviews__item.is-text-expanded .lf-block-trust-reviews__text-inner {
-	max-height: none;
 	overflow: visible;
 }
 
