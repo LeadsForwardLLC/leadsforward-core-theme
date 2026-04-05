@@ -36,6 +36,11 @@ $show_stars = (string) ($section['trust_show_stars'] ?? '1') !== '0';
 $show_source = (string) ($section['trust_show_source'] ?? '1') !== '0';
 $show_avatars = (string) ($section['trust_show_avatars'] ?? '1') !== '0';
 $show_quote_icon = (string) ($section['trust_show_quote_icon'] ?? '1') !== '0';
+$slider_autoplay = (string) ($section['trust_slider_autoplay'] ?? '0') !== '0';
+$slider_autoplay_delay = (int) ($section['trust_slider_autoplay_delay'] ?? 5);
+$slider_show_dots = (string) ($section['trust_slider_show_dots'] ?? '1') !== '0';
+$slider_show_arrows = (string) ($section['trust_slider_show_arrows'] ?? '1') !== '0';
+$slider_items_per_slide = (int) ($section['trust_slider_items_per_slide'] ?? 3);
 $icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'trust_reviews', 'above', 'lf-heading-icon') : '';
 $icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'trust_reviews', 'left', 'lf-heading-icon') : '';
 $queried = get_queried_object();
@@ -107,7 +112,7 @@ if ($is_slider) {
 }
 $section_classes .= ' lf-block-trust-reviews--' . $layout;
 ?>
-<section class="<?php echo esc_attr(trim($section_classes)); ?>" id="<?php echo esc_attr($render_id); ?>" data-variant="<?php echo esc_attr($variant); ?>" style="--lf-reviews-columns: <?php echo esc_attr((string) $columns); ?>;">
+<section class="<?php echo esc_attr(trim($section_classes)); ?>" id="<?php echo esc_attr($render_id); ?>" data-variant="<?php echo esc_attr($variant); ?>" style="--lf-reviews-columns: <?php echo esc_attr((string) $columns); ?>;" data-slider-autoplay="<?php echo esc_attr($slider_autoplay ? '1' : '0'); ?>" data-slider-delay="<?php echo esc_attr((string) $slider_autoplay_delay); ?>" data-slider-items-per-slide="<?php echo esc_attr((string) $slider_items_per_slide); ?>">
 	<div class="lf-block-trust-reviews__inner">
 		<header class="lf-block-trust-reviews__header">
 			<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
@@ -224,11 +229,15 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 							</div>
 						</div>
 						<div class="lf-slider__footer">
-							<div class="lf-slider__dots" data-lf-slider-dots aria-label="<?php esc_attr_e('Review pages', 'leadsforward-core'); ?>"></div>
-							<div class="lf-slider__controls">
-								<button type="button" class="lf-slider__nav lf-block-trust-reviews__nav lf-block-trust-reviews__nav--prev" data-lf-slider-prev aria-label="<?php esc_attr_e('Previous reviews', 'leadsforward-core'); ?>">‹</button>
-								<button type="button" class="lf-slider__nav lf-block-trust-reviews__nav lf-block-trust-reviews__nav--next" data-lf-slider-next aria-label="<?php esc_attr_e('Next reviews', 'leadsforward-core'); ?>">›</button>
-							</div>
+							<?php if ($slider_show_dots) : ?>
+								<div class="lf-slider__dots" data-lf-slider-dots aria-label="<?php esc_attr_e('Review pages', 'leadsforward-core'); ?>"></div>
+							<?php endif; ?>
+							<?php if ($slider_show_arrows) : ?>
+								<div class="lf-slider__controls">
+									<button type="button" class="lf-slider__nav lf-block-trust-reviews__nav lf-block-trust-reviews__nav--prev" data-lf-slider-prev aria-label="<?php esc_attr_e('Previous reviews', 'leadsforward-core'); ?>">‹</button>
+									<button type="button" class="lf-slider__nav lf-block-trust-reviews__nav lf-block-trust-reviews__nav--next" data-lf-slider-next aria-label="<?php esc_attr_e('Next reviews', 'leadsforward-core'); ?>">›</button>
+								</div>
+							<?php endif; ?>
 						</div>
 					</div>
 				<?php endif; ?>
