@@ -1720,8 +1720,9 @@ function lf_ai_assistant_widget_js(): string {
 			if (node.closest(".lf-block-trust-reviews__item,.lf-block-trust-reviews__summary")) return false;
 			var tag = node.tagName ? node.tagName.toLowerCase() : "";
 			var isHeading = /^h[1-6]$/.test(tag);
-			// SEO safety: do not allow inline editing of entity/archive titles.
-			if (node.closest(".lf-blog-hero__title,.lf-post-card__title,.entry-title,[class*=\"project\"][class*=\"title\"],[class*=\"service\"][class*=\"title\"],[class*=\"blog\"][class*=\"title\"]")) return false;
+			// CPT / archive card titles (fixed); not section headings like lf-block-service-intro__title.
+			if (node.matches(".lf-block-service-intro__card-title,.lf-block-service-grid__card-title,.lf-block-service-areas__card-title")) return false;
+			if (node.closest(".lf-blog-hero__title,.lf-post-card__title,.entry-title")) return false;
 			if (isHeading) {
 				var entity = node.closest("article,.hentry,.type-post,.type-page,.type-lf_project,.type-lf_service,.type-lf_service_area,.type-lf_faq");
 				if (entity) {
@@ -3746,6 +3747,32 @@ function lf_ai_assistant_widget_js(): string {
 				try { window.alert(msg); } catch (e) {}
 			});
 		}
+		function persistSectionStylePatch(wrap, patch) {
+			if (!wrap || !patch) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			if (!sectionId) return;
+			setStatus("Updating section style...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_update_section_style",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_id: sectionId,
+				patch: String(patch)
+			}).done(function(res){
+				if (res && res.success) {
+					setStatus((res.data && res.data.message) ? res.data.message : "Saved.", false);
+					if (res.data && res.data.reload) {
+						window.location.reload();
+					}
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Style update failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Style update failed.";
+				setStatus(msg, true);
+			});
+		}
 		function moveSectionByStep(wrap, delta) {
 			if (!wrap || !delta) return;
 			var wraps = collectSectionWrappers();
@@ -3770,6 +3797,32 @@ function lf_ai_assistant_widget_js(): string {
 				var controls = document.createElement("div");
 				controls.className = "lf-ai-section-controls lf-ai-inline-editor-ignore";
 				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+				var bgBtn = document.createElement("button");
+				bgBtn.type = "button";
+				bgBtn.className = "lf-ai-section-btn";
+				bgBtn.textContent = "BG";
+				bgBtn.setAttribute("title", "Cycle section background (light, soft, primary, dark…)");
+				bgBtn.setAttribute("aria-label", "Cycle section background");
+				bgBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					persistSectionStylePatch(wrap, "cycle_background");
+				});
+				controls.appendChild(bgBtn);
+				if (sectionType === "service_intro") {
+					var alignBtn = document.createElement("button");
+					alignBtn.type = "button";
+					alignBtn.className = "lf-ai-section-btn";
+					alignBtn.textContent = "Align";
+					alignBtn.setAttribute("title", "Cycle header text alignment: left → center → right");
+					alignBtn.setAttribute("aria-label", "Cycle section header alignment");
+					alignBtn.addEventListener("click", function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						persistSectionStylePatch(wrap, "cycle_header_align");
+					});
+					controls.appendChild(alignBtn);
+				}
 				if (sectionSupportsColumnSwap(sectionType)) {
 					var swapBtn = document.createElement("button");
 					swapBtn.type = "button";
@@ -3802,7 +3855,7 @@ function lf_ai_assistant_widget_js(): string {
 				upBtn.type = "button";
 				upBtn.className = "lf-ai-section-btn";
 				upBtn.textContent = "↑";
-				upBtn.setAttribute("title", "Move section up");
+				upBtn.setAttribute("title", "Move this block up on the page (or drag the section / use the Structure panel)");
 				upBtn.setAttribute("aria-label", "Move section up");
 				upBtn.addEventListener("click", function(e){
 					e.preventDefault();
@@ -3814,7 +3867,7 @@ function lf_ai_assistant_widget_js(): string {
 				downBtn.type = "button";
 				downBtn.className = "lf-ai-section-btn";
 				downBtn.textContent = "↓";
-				downBtn.setAttribute("title", "Move section down");
+				downBtn.setAttribute("title", "Move this block down on the page (or drag the section / use the Structure panel)");
 				downBtn.setAttribute("aria-label", "Move section down");
 				downBtn.addEventListener("click", function(e){
 					e.preventDefault();

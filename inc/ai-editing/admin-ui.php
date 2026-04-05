@@ -559,6 +559,147 @@ add_action('wp_ajax_lf_ai_toggle_section_visibility', 'lf_ai_ajax_toggle_section
 add_action('wp_ajax_lf_ai_delete_section', 'lf_ai_ajax_delete_section');
 add_action('wp_ajax_lf_ai_duplicate_section', 'lf_ai_ajax_duplicate_section');
 add_action('wp_ajax_lf_ai_add_section', 'lf_ai_ajax_add_section');
+add_action('wp_ajax_lf_ai_update_section_style', 'lf_ai_ajax_update_section_style');
+
+/**
+ * @return list<string>
+ */
+function lf_ai_section_style_background_slugs(): array {
+	return function_exists('lf_sections_bg_options') ? array_keys(lf_sections_bg_options()) : ['light', 'soft', 'dark', 'white', 'card'];
+}
+
+/**
+ * @param list<string> $allowed
+ */
+function lf_ai_section_style_cycle_value(string $current, array $allowed): string {
+	if ($allowed === []) {
+		return $current;
+	}
+	$current = in_array($current, $allowed, true) ? $current : $allowed[0];
+	$idx = array_search($current, $allowed, true);
+	$idx = $idx === false ? 0 : (int) $idx;
+	$next = $allowed[($idx + 1) % count($allowed)];
+	return $next;
+}
+
+function lf_ai_ajax_update_section_style(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
+	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
+	$section_id = isset($_POST['section_id']) ? sanitize_text_field(wp_unslash($_POST['section_id'])) : '';
+	$patch = isset($_POST['patch']) ? sanitize_text_field(wp_unslash($_POST['patch'])) : '';
+	if ($context_type === '' || $context_id === '' || $section_id === '' || $patch === '') {
+		wp_send_json_error(['message' => __('Invalid section style payload.', 'leadsforward-core')]);
+	}
+	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	$bg_slugs = lf_ai_section_style_background_slugs();
+	$aligns = ['left', 'center', 'right'];
+
+	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+			wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
+		}
+		$config = lf_get_homepage_section_config();
+		if (!is_array($config)) {
+			wp_send_json_error(['message' => __('Homepage configuration is missing.', 'leadsforward-core')]);
+		}
+		$resolved = function_exists('lf_ai_homepage_resolve_section_id')
+			? lf_ai_homepage_resolve_section_id($section_id, '')
+			: $section_id;
+		if (!isset($config[$resolved]) || !is_array($config[$resolved])) {
+			wp_send_json_error(['message' => __('That section was not found on the homepage.', 'leadsforward-core')]);
+		}
+		$old_row = $config[$resolved];
+		if ($patch === 'cycle_background') {
+			$cur = (string) ($config[$resolved]['section_background'] ?? 'light');
+			$config[$resolved]['section_background'] = lf_ai_section_style_cycle_value($cur, $bg_slugs);
+		} elseif ($patch === 'cycle_header_align') {
+			$base = function_exists('lf_homepage_base_section_type') ? (string) lf_homepage_base_section_type($resolved) : '';
+			if ($base !== 'service_intro') {
+				wp_send_json_error(['message' => __('Header alignment is only available for the Service Intro section.', 'leadsforward-core')]);
+			}
+			$cur = (string) ($config[$resolved]['section_header_align'] ?? 'center');
+			$cur = in_array($cur, $aligns, true) ? $cur : 'center';
+			$config[$resolved]['section_header_align'] = lf_ai_section_style_cycle_value($cur, $aligns);
+		} else {
+			wp_send_json_error(['message' => __('Unknown style action.', 'leadsforward-core')]);
+		}
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		$new_row = is_array($config[$resolved] ?? null) ? $config[$resolved] : [];
+		$log_id = function_exists('lf_ai_log_action')
+			? lf_ai_log_action(
+				$context_type,
+				$context_id_use,
+				['__homepage_section_row::' . $resolved => $old_row],
+				['__homepage_section_row::' . $resolved => $new_row],
+				'Inline section style'
+			)
+			: '';
+		wp_send_json_success([
+			'message' => __('Section style updated.', 'leadsforward-core'),
+			'reload' => true,
+			'log_id' => $log_id,
+			'section_id' => $resolved,
+			'section_background' => (string) ($new_row['section_background'] ?? ''),
+			'section_header_align' => (string) ($new_row['section_header_align'] ?? ''),
+		]);
+		return;
+	}
+
+	$pid = (int) $context_id_use;
+	$post = get_post($pid);
+	if (!$post instanceof \WP_Post || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+		wp_send_json_error(['message' => __('Section settings are unavailable for this page.', 'leadsforward-core')]);
+	}
+	$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+	if ($pb_context === '') {
+		wp_send_json_error(['message' => __('This page does not support section styling here.', 'leadsforward-core')]);
+	}
+	$config = lf_pb_get_post_config($pid, $pb_context);
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	if (!isset($sections[$section_id]) || !is_array($sections[$section_id])) {
+		wp_send_json_error(['message' => __('That section was not found.', 'leadsforward-core')]);
+	}
+	$row = $sections[$section_id];
+	$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+	$section_type = sanitize_text_field((string) ($row['type'] ?? ''));
+	$old_settings = $settings;
+	if ($patch === 'cycle_background') {
+		$cur = (string) ($settings['section_background'] ?? 'light');
+		$settings['section_background'] = lf_ai_section_style_cycle_value($cur, $bg_slugs);
+	} elseif ($patch === 'cycle_header_align') {
+		if ($section_type !== 'service_intro') {
+			wp_send_json_error(['message' => __('Header alignment is only available for the Service Intro section.', 'leadsforward-core')]);
+		}
+		$cur = (string) ($settings['section_header_align'] ?? 'center');
+		$cur = in_array($cur, $aligns, true) ? $cur : 'center';
+		$settings['section_header_align'] = lf_ai_section_style_cycle_value($cur, $aligns);
+	} else {
+		wp_send_json_error(['message' => __('Unknown style action.', 'leadsforward-core')]);
+	}
+	$config['sections'][$section_id]['settings'] = $settings;
+	update_post_meta($pid, LF_PB_META_KEY, $config);
+	$log_id = function_exists('lf_ai_log_action')
+		? lf_ai_log_action(
+			$context_type,
+			$context_id_use,
+			['__pb_section_settings::' . $section_id => $old_settings],
+			['__pb_section_settings::' . $section_id => $settings],
+			'Inline section style'
+		)
+		: '';
+	wp_send_json_success([
+		'message' => __('Section style updated.', 'leadsforward-core'),
+		'reload' => true,
+		'log_id' => $log_id,
+		'section_id' => $section_id,
+		'section_background' => (string) ($settings['section_background'] ?? ''),
+		'section_header_align' => (string) ($settings['section_header_align'] ?? ''),
+	]);
+}
 
 function lf_ai_editing_meta_box(): void {
 	if (!current_user_can(LF_AI_CAP)) {
