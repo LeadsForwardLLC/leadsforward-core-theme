@@ -6947,6 +6947,14 @@ function lf_ai_studio_resolve_post_field_key(string $field_key, array $sections,
 	return $matches[0];
 }
 
+/**
+ * Whether a bare post_meta field key is the service card short blurb (not a page-builder section field).
+ * Orchestrator/n8n often sends these on target post_meta alongside hero-1.* fields.
+ */
+function lf_ai_studio_orchestrator_bare_service_short_desc_key(string $key): bool {
+	return in_array(trim($key), ['short_description', 'short_desc', 'lf_service_short_desc'], true);
+}
+
 function lf_ai_studio_prevalidate_orchestrator_updates(array $response, array $options = []): array {
 	$updates = $response['updates'] ?? [];
 	if (!is_array($updates)) {
@@ -7112,6 +7120,14 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response, array $o
 			$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
 			foreach ($fields as $key => $value) {
 				if (!is_string($key)) {
+					continue;
+				}
+				if ($post->post_type === 'lf_service' && lf_ai_studio_orchestrator_bare_service_short_desc_key($key)) {
+					$add_word_count(
+						'post:' . $post_id,
+						$post->post_title ?: sprintf(__('Post %d', 'leadsforward-core'), $post_id),
+						$value
+					);
 					continue;
 				}
 				$parts = explode('.', $key, 2);
@@ -7631,6 +7647,20 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 		$incoming_by_instance = [];
 		foreach ($incoming as $key => $value) {
 			if (!is_string($key)) {
+				continue;
+			}
+			if ($post->post_type === 'lf_service' && lf_ai_studio_orchestrator_bare_service_short_desc_key($key)) {
+				$raw = lf_ai_studio_normalize_value($value);
+				$short_desc = sanitize_textarea_field((string) $raw);
+				$short_desc = trim((string) lf_ai_studio_strip_llm_tokens_from_mixed_value($short_desc, $post_token_ctx, 'textarea'));
+				if ($short_desc !== '') {
+					if (function_exists('update_field')) {
+						update_field('lf_service_short_desc', $short_desc, $post_id);
+					} else {
+						update_post_meta($post_id, 'lf_service_short_desc', $short_desc);
+					}
+					$fields_updated++;
+				}
 				continue;
 			}
 			$parts = explode('.', $key, 2);
