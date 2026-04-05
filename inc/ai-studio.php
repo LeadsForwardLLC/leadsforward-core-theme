@@ -4258,12 +4258,13 @@ function lf_ai_studio_llm_system_message(): string {
 		'Blog post rules: when page_intent is blog_post, write a complete long-form article suitable for publication with substantial depth, practical guidance, and concrete homeowner takeaways.',
 		'If blog_post_type is provided in blueprint, shape the article to that format (pillar, how_to, cost, comparison, checklist, local_guide, faq_roundup) while preserving factual accuracy for business and location context.',
 		'Never reuse sentences across page types.',
-		'Minimum total content: every page must contain at least 1000 words of unique body copy across all text/richtext fields. Expand each section with depth; do not pad with fluff or repetition.',
+		'Minimum total content: every page must contain at least 1000 words of unique body copy across all text/richtext fields combined. Expand depth using FAQ, process, benefits, intros, and other sections; do not pad with fluff or repetition.',
+		'Exception — service_details_body: this field is intentionally short. Obey blueprint length_targets (typically max ~220 words, max 3 paragraphs) even if the page total is still climbing toward the sitewide minimum. Do not use service_details_body to "stuff" word count.',
 		'Never output machine tokens (PRIMARY_KEYWORD, BUSINESS_NAME, CITY_REGION, NICHE_TOKEN) or bracket placeholders like [Your City] in customer-facing fields—always substitute real business facts from the payload.',
 		'FAQ strategy: create one global pool of 8-12 evergreen FAQs. Reuse across pages unless contextual variation is required. Homepage shows 5. Service pages show 4-6 relevant. Service area pages show 3-5 localized. Overview pages optionally 3-4.',
 		'CTA strategy: treat the homepage CTA section as the canonical global CTA copy. For each page, add exactly one contextual sentence in cta_subheadline_secondary. Never duplicate CTA sentences across pages.',
 		'CTA button labels: keep 2-5 words, max 32 characters, no trailing punctuation.',
-	'Service Details section: Use service_details_body for main overview (2-3 paragraphs max). Use service_details_micro_sections for specific service topics (one per line), each 15-25 words. Use service_details_checklist for process/assurance points (one per line), each 8-15 words.',
+	'Service Details section: service_details_body is a tight overview only — max 3 short paragraphs, stay within blueprint body_words max; prefer 2 paragraphs when possible. Leave depth to process, FAQ, benefits, and other sections. Use service_details_micro_sections sparingly (0-3 lines) only when the blueprint includes that field; each line 15-25 words. Use service_details_checklist for process/assurance points (one per line), each 8-15 words.',
 	'Process section: Format process_steps with separators for title/body pairs. Use "Step Title || Step description" format or "Step Title | Step description" for each step. This creates proper visual hierarchy.',
 	'Service pages: Always fill short_description field with 25-35 words summarizing service. Include primary benefit and location context.',
 	'Service page blueprints: short_description field is required and should be filled with compelling service summary.',
@@ -4315,6 +4316,8 @@ function lf_ai_studio_faq_target_range(string $page): array {
 
 function lf_ai_studio_normalize_section_type(string $section_type): string {
 	switch ($section_type) {
+		case 'service_details_alt':
+			return 'service_details';
 		case 'content_image_a':
 		case 'content_image_c':
 			return 'content_image';
@@ -4344,7 +4347,11 @@ function lf_ai_studio_section_length_targets(string $section_type, string $page 
 		case 'process':
 			return ['min_items' => 4, 'item_words' => ['min' => 40, 'max' => 80]];
 		case 'service_details':
-			return ['body_words' => ['min' => 500, 'max' => 800]];
+			return [
+				'body_words' => ['min' => 80, 'max' => 220],
+				'body_paragraphs_max' => 3,
+				'intro_words' => ['max' => 55],
+			];
 		case 'content_image':
 		case 'image_content':
 			if ($page === 'homepage') {
@@ -4438,7 +4445,7 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 		if (!is_array($section) || empty($section['enabled'])) {
 			continue;
 		}
-		$schema = $registry[$section_id] ?? [];
+		$schema = lf_ai_studio_registry_schema_for_homepage_section($section_id, $registry);
 		$allowed = lf_ai_studio_homepage_allowed_fields($section_id, $schema);
 		$intent = (string) ($section['section_intent'] ?? '');
 		$purpose = (string) ($section['section_purpose'] ?? '');
@@ -4452,8 +4459,8 @@ function lf_ai_studio_build_homepage_blueprint(): array {
 	}
 	$blueprint_sections = [];
 	foreach ($order as $section_id) {
-		$schema = $registry[$section_id] ?? null;
-		if (!is_array($schema)) {
+		$schema = lf_ai_studio_registry_schema_for_homepage_section($section_id, $registry);
+		if ($schema === []) {
 			continue;
 		}
 		$section = $config[$section_id] ?? [];
@@ -4547,8 +4554,8 @@ function lf_ai_studio_build_default_homepage_blueprint(array $manifest = []): ar
 	$page_slug = $front_id ? (string) get_post_field('post_name', $front_id) : 'home';
 	$page_excerpt = $front_id ? (string) get_post_field('post_excerpt', $front_id) : '';
 	foreach ($order as $section_id) {
-		$schema = $registry[$section_id] ?? null;
-		if (!is_array($schema)) {
+		$schema = lf_ai_studio_registry_schema_for_homepage_section($section_id, $registry);
+		if ($schema === []) {
 			continue;
 		}
 		$section = $config[$section_id] ?? [];
@@ -4584,6 +4591,25 @@ function lf_ai_studio_build_default_homepage_blueprint(array $manifest = []): ar
 		'faq_target_count' => lf_ai_studio_homepage_faq_target_count($config),
 		'faq_target_range' => lf_ai_studio_faq_target_range('homepage'),
 	];
+}
+
+/**
+ * Resolve sections registry entry for a homepage row id (supports instance ids like service_details__2).
+ *
+ * @param array<string, array<string, mixed>> $registry
+ * @return array<string, mixed>
+ */
+function lf_ai_studio_registry_schema_for_homepage_section(string $section_id, array $registry): array {
+	if (isset($registry[ $section_id ]) && is_array($registry[ $section_id ])) {
+		return $registry[ $section_id ];
+	}
+	if (function_exists('lf_homepage_base_section_type')) {
+		$base = lf_homepage_base_section_type($section_id);
+		if ($base !== '' && $base !== $section_id && isset($registry[ $base ]) && is_array($registry[ $base ])) {
+			return $registry[ $base ];
+		}
+	}
+	return [];
 }
 
 function lf_ai_studio_homepage_allowed_field_keys(string $section_id, array $schema): array {
@@ -4687,6 +4713,12 @@ function lf_ai_studio_homepage_section_type(string $section_id): string {
 		case 'image_content_b':
 			return 'image_content';
 		default:
+			if (function_exists('lf_homepage_base_section_type')) {
+				$base = lf_homepage_base_section_type($section_id);
+				if ($base !== '' && $base !== $section_id) {
+					return $base;
+				}
+			}
 			return $section_id;
 	}
 }
