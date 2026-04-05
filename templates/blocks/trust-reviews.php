@@ -153,9 +153,10 @@ $section_classes .= ' lf-block-trust-reviews--' . $layout;
 				<?php
 				$review_index = 0;
 				while ($query->have_posts()) : $query->the_post();
-						$name = function_exists('get_field') ? get_field('lf_testimonial_reviewer_name') : '';
+						$name = function_exists('get_field') ? get_field('lf_testimonial_reviewer_name') : get_the_title();
 						$rating = function_exists('get_field') ? (int) get_field('lf_testimonial_rating') : 5;
-						$text = function_exists('get_field') ? get_field('lf_testimonial_review_text') : '';
+						$text = function_exists('get_field') ? get_field('lf_testimonial_review_text') : get_the_content();
+						if (!$text) $text = get_the_title();
 					$source = function_exists('get_field') ? get_field('lf_testimonial_source') : '';
 					$source_url = function_exists('get_field') ? get_field('lf_testimonial_source_url') : '';
 					$avatar_id = function_exists('get_field') ? (int) get_field('lf_testimonial_reviewer_avatar') : 0;
