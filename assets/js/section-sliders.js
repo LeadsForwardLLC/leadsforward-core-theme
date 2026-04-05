@@ -69,6 +69,39 @@
 		const current = parseInt(state.track.dataset.index || '0', 10);
 		setIndex(root, isNaN(current) ? 0 : current);
 		attachDrag(root);
+		
+		// Autoplay functionality
+		const autoplay = root.dataset.sliderAutoplay === '1';
+		const delay = parseInt(root.dataset.sliderDelay || '5', 10) * 1000;
+		let autoplayInterval;
+		
+		if (autoplay && delay > 0) {
+			const startAutoplay = () => {
+				autoplayInterval = setInterval(() => {
+					const currentIndex = parseInt(state.track.dataset.index || '0', 10);
+					const nextIndex = currentIndex >= state.maxIndex ? 0 : currentIndex + 1;
+					setIndex(root, nextIndex);
+				}, delay);
+			};
+			
+			const stopAutoplay = () => {
+				if (autoplayInterval) {
+					clearInterval(autoplayInterval);
+					autoplayInterval = null;
+				}
+			};
+			
+			// Start autoplay
+			startAutoplay();
+			
+			// Stop on hover
+			root.addEventListener('mouseenter', stopAutoplay);
+			root.addEventListener('mouseleave', startAutoplay);
+			
+			// Stop on touch
+			root.addEventListener('touchstart', stopAutoplay);
+			root.addEventListener('touchend', startAutoplay);
+		}
 	};
 
 	const attachDrag = (root) => {
