@@ -887,6 +887,16 @@ function lf_homepage_admin_render(): void {
 											</select>
 										</td>
 									</tr>
+									<!-- Slider Controls -->
+									<tr>
+										<th scope="row"><label for="lf_hp_reviews_autoplay"><?php esc_html_e('Auto-Play', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_reviews_autoplay" id="lf_hp_reviews_autoplay">
+												<option value="1" <?php selected((string) ($sec['trust_slider_autoplay'] ?? '1'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
+												<option value="0" <?php selected((string) ($sec['trust_slider_autoplay'] ?? '1'), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
+											</select>
+										</td>
+									</tr>
 									<?php endif; ?>
 <script>
 function toggleReviewControls() {
