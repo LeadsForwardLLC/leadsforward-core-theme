@@ -32,6 +32,10 @@ $columns = max(3, min(6, $columns));
 $max_items = (int) ($section['service_intro_max_items'] ?? 6);
 $max_items = $max_items > 0 ? $max_items : 6;
 $show_images = (string) ($section['service_intro_show_images'] ?? '1') !== '0';
+$header_align = sanitize_key((string) ($section['section_header_align'] ?? 'center'));
+if (!in_array($header_align, ['left', 'center', 'right'], true)) {
+	$header_align = 'center';
+}
 
 $query = new WP_Query([
 	'post_type'      => 'lf_service',
@@ -44,7 +48,7 @@ $query = new WP_Query([
 ?>
 <section class="lf-block lf-block-service-intro <?php echo esc_attr($bg_class); ?> lf-block-service-intro--<?php echo esc_attr($variant); ?> lf-block-service-intro--cols-<?php echo esc_attr((string) $columns); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>">
 	<div class="lf-block-service-intro__inner">
-		<header class="lf-block-service-intro__header">
+		<header class="lf-block-service-intro__header lf-block-service-intro__header--align-<?php echo esc_attr($header_align); ?>">
 			<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
 			<?php if ($icon_left) : ?>
 				<div class="lf-heading-row">
