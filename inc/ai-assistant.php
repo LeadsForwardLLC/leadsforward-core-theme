@@ -4939,7 +4939,7 @@ function lf_ai_assistant_widget_js(): string {
 			setStatus("Live mode enabled. Toggle ✎ to edit.", false);
 		}
 		renderSeoSnapshot();
-	})(jQuery);';
+	})(jQuery);
 }
 
 function lf_ai_assistant_widget_fallback_js(): string {
@@ -4981,5 +4981,5 @@ function lf_ai_assistant_widget_fallback_js(): string {
 				if (current === "open") setOpen(true);
 			} catch (e) {}
 		});
-	})();';
+		})();';
 }
