@@ -112,7 +112,7 @@ if ($is_slider) {
 }
 $section_classes .= ' lf-block-trust-reviews--' . $layout;
 ?>
-<section class="<?php echo esc_attr(trim($section_classes)); ?>" id="<?php echo esc_attr($render_id); ?>" data-variant="<?php echo esc_attr($variant); ?>" style="--lf-reviews-columns: <?php echo esc_attr((string) $columns); ?>;" data-slider-autoplay="<?php echo esc_attr($slider_autoplay ? '1' : '0'); ?>" data-slider-delay="<?php echo esc_attr((string) $slider_autoplay_delay); ?>" data-slider-items-per-slide="<?php echo esc_attr((string) $slider_items_per_slide); ?>">
+<section class="<?php echo esc_attr(trim($section_classes)); ?>" id="<?php echo esc_attr($render_id); ?>" data-variant="<?php echo esc_attr($variant); ?>" style="--lf-reviews-columns: <?php echo esc_attr((string) $columns); ?>;" data-sliderAutoplay="<?php echo esc_attr($slider_autoplay ? '1' : '0'); ?>" data-sliderDelay="<?php echo esc_attr((string) $slider_autoplay_delay); ?>" data-sliderItemsPerSlide="<?php echo esc_attr((string) $slider_items_per_slide); ?>">
 	<div class="lf-block-trust-reviews__inner">
 		<header class="lf-block-trust-reviews__header">
 			<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>

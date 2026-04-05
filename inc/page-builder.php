@@ -303,7 +303,7 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 					if (!$has_reviews) {
 						$settings = lf_sections_defaults_for('trust_reviews');
 						$settings['trust_heading'] = '';
-						$settings['trust_layout'] = 'masonry';
+						$settings['trust_layout'] = 'slider';
 						$settings['trust_max_items'] = -1;
 						$instance_index = 1;
 						$instance_id = lf_pb_instance_id('trust_reviews', $instance_index);

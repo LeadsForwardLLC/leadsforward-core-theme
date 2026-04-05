@@ -155,15 +155,10 @@ function lf_homepage_admin_save(): void {
 		if ($type === 'trust_reviews') {
 			$config[$type]['trust_heading'] = isset($_POST['lf_hp_reviews_heading']) ? sanitize_text_field($_POST['lf_hp_reviews_heading']) : '';
 			$layout = isset($_POST['lf_hp_reviews_layout']) ? sanitize_text_field($_POST['lf_hp_reviews_layout']) : 'grid';
-			$config[$type]['trust_layout'] = in_array($layout, ['grid', 'slider', 'masonry'], true) ? $layout : 'grid';
+			$config[$type]['trust_layout'] = in_array($layout, ['grid', 'slider'], true) ? $layout : 'slider';
 			$cols = isset($_POST['lf_hp_reviews_columns']) ? sanitize_text_field($_POST['lf_hp_reviews_columns']) : '3';
 			$config[$type]['trust_columns'] = in_array($cols, ['2', '3', '4'], true) ? $cols : '3';
 			$config[$type]['trust_max_items'] = isset($_POST['lf_hp_reviews_max']) ? absint($_POST['lf_hp_reviews_max']) : 6;
-			$config[$type]['trust_show_summary'] = isset($_POST['lf_hp_reviews_summary']) && $_POST['lf_hp_reviews_summary'] === '0' ? '0' : '1';
-			$config[$type]['trust_show_stars'] = isset($_POST['lf_hp_reviews_stars']) && $_POST['lf_hp_reviews_stars'] === '0' ? '0' : '1';
-			$config[$type]['trust_show_source'] = isset($_POST['lf_hp_reviews_source']) && $_POST['lf_hp_reviews_source'] === '0' ? '0' : '1';
-			$config[$type]['trust_show_avatars'] = isset($_POST['lf_hp_reviews_avatars']) && $_POST['lf_hp_reviews_avatars'] === '0' ? '0' : '1';
-			$config[$type]['trust_show_quote_icon'] = isset($_POST['lf_hp_reviews_quote']) && $_POST['lf_hp_reviews_quote'] === '0' ? '0' : '1';
 			$config[$type]['trust_slider_autoplay'] = isset($_POST['lf_hp_reviews_autoplay']) && $_POST['lf_hp_reviews_autoplay'] === '0' ? '0' : '1';
 		}
 		if ($type === 'benefits') {
@@ -863,14 +858,13 @@ function lf_homepage_admin_render(): void {
 									<tr>
 										<th scope="row"><label for="lf_hp_reviews_layout"><?php esc_html_e('Layout', 'leadsforward-core'); ?></label></th>
 										<td>
-											<select name="lf_hp_reviews_layout" id="lf_hp_reviews_layout">
+											<select name="lf_hp_reviews_layout" id="lf_hp_reviews_layout" onchange="toggleReviewControls()">
 												<option value="grid" <?php selected(($sec['trust_layout'] ?? 'grid'), 'grid'); ?>><?php esc_html_e('Grid', 'leadsforward-core'); ?></option>
 												<option value="slider" <?php selected(($sec['trust_layout'] ?? ''), 'slider'); ?>><?php esc_html_e('Slider', 'leadsforward-core'); ?></option>
-												<option value="masonry" <?php selected(($sec['trust_layout'] ?? ''), 'masonry'); ?>><?php esc_html_e('Masonry', 'leadsforward-core'); ?></option>
 											</select>
 										</td>
 									</tr>
-									<tr>
+									<tr id="reviews-columns-row">
 										<th scope="row"><label for="lf_hp_reviews_columns"><?php esc_html_e('Columns', 'leadsforward-core'); ?></label></th>
 										<td>
 											<select name="lf_hp_reviews_columns" id="lf_hp_reviews_columns">
@@ -881,56 +875,10 @@ function lf_homepage_admin_render(): void {
 										</td>
 									</tr>
 									<tr>
-										<th scope="row"><label for="lf_hp_reviews_max"><?php esc_html_e('Max items', 'leadsforward-core'); ?></label></th>
-										<td><input type="number" class="small-text" name="lf_hp_reviews_max" id="lf_hp_reviews_max" value="<?php echo esc_attr((string) ($sec['trust_max_items'] ?? '6')); ?>" min="1" /></td>
+										<th scope="row"><label for="lf_hp_reviews_max"><?php esc_html_e('Number of Reviews', 'leadsforward-core'); ?></label></th>
+										<td><input type="number" class="small-text" name="lf_hp_reviews_max" id="lf_hp_reviews_max" value="<?php echo esc_attr((string) ($sec['trust_max_items'] ?? '9')); ?>" min="1" max="30" /></td>
 									</tr>
-									<tr>
-										<th scope="row"><label for="lf_hp_reviews_summary"><?php esc_html_e('Show summary', 'leadsforward-core'); ?></label></th>
-										<td>
-											<select name="lf_hp_reviews_summary" id="lf_hp_reviews_summary">
-												<option value="1" <?php selected((string) ($sec['trust_show_summary'] ?? '1'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
-												<option value="0" <?php selected((string) ($sec['trust_show_summary'] ?? ''), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
-											</select>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row"><label for="lf_hp_reviews_stars"><?php esc_html_e('Show stars', 'leadsforward-core'); ?></label></th>
-										<td>
-											<select name="lf_hp_reviews_stars" id="lf_hp_reviews_stars">
-												<option value="1" <?php selected((string) ($sec['trust_show_stars'] ?? '1'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
-												<option value="0" <?php selected((string) ($sec['trust_show_stars'] ?? ''), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
-											</select>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row"><label for="lf_hp_reviews_source"><?php esc_html_e('Show review source', 'leadsforward-core'); ?></label></th>
-										<td>
-											<select name="lf_hp_reviews_source" id="lf_hp_reviews_source">
-												<option value="1" <?php selected((string) ($sec['trust_show_source'] ?? '1'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
-												<option value="0" <?php selected((string) ($sec['trust_show_source'] ?? ''), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
-											</select>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row"><label for="lf_hp_reviews_avatars"><?php esc_html_e('Show avatars', 'leadsforward-core'); ?></label></th>
-										<td>
-											<select name="lf_hp_reviews_avatars" id="lf_hp_reviews_avatars">
-												<option value="1" <?php selected((string) ($sec['trust_show_avatars'] ?? '1'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
-												<option value="0" <?php selected((string) ($sec['trust_show_avatars'] ?? ''), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
-											</select>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row"><label for="lf_hp_reviews_quote"><?php esc_html_e('Show quote icon', 'leadsforward-core'); ?></label></th>
-										<td>
-											<select name="lf_hp_reviews_quote" id="lf_hp_reviews_quote">
-												<option value="1" <?php selected((string) ($sec['trust_show_quote_icon'] ?? '1'), '1'); ?>><?php esc_html_e('On', 'leadsforward-core'); ?></option>
-												<option value="0" <?php selected((string) ($sec['trust_show_quote_icon'] ?? ''), '0'); ?>><?php esc_html_e('Off', 'leadsforward-core'); ?></option>
-											</select>
-										</td>
-									</tr>
-									<!-- Slider Controls -->
-									<tr>
+									<tr id="reviews-autoplay-row">
 										<th scope="row"><label for="lf_hp_reviews_autoplay"><?php esc_html_e('Auto-Play', 'leadsforward-core'); ?></label></th>
 										<td>
 											<select name="lf_hp_reviews_autoplay" id="lf_hp_reviews_autoplay">
@@ -940,6 +888,32 @@ function lf_homepage_admin_render(): void {
 										</td>
 									</tr>
 									<?php endif; ?>
+<script>
+function toggleReviewControls() {
+	const layout = document.getElementById('lf_hp_reviews_layout').value;
+	const columnsRow = document.getElementById('reviews-columns-row');
+	const autoplayRow = document.getElementById('reviews-autoplay-row');
+	
+	// Show columns for Grid, hide for Slider
+	if (layout === 'grid') {
+		columnsRow.style.display = '';
+	} else {
+		columnsRow.style.display = 'none';
+	}
+	
+	// Show autoplay for Slider, hide for Grid  
+	if (layout === 'slider') {
+		autoplayRow.style.display = '';
+	} else {
+		autoplayRow.style.display = 'none';
+	}
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+	toggleReviewControls();
+});
+</script>
 									<?php if ($type === 'benefits') : ?>
 									<tr>
 										<th scope="row"><label for="lf_hp_benefits_heading"><?php esc_html_e('Benefits heading', 'leadsforward-core'); ?></label></th>

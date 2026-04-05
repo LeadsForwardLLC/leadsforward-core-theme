@@ -12,7 +12,7 @@
 		if (!items.length) return null;
 		
 		// Get items per slide from data attribute, fallback to calculated value
-		const itemsPerSlide = parseInt(root.dataset.sliderItemsPerSlide || '0', 10);
+		const itemsPerSlide = parseInt(root.dataset.slideritemsperslide || '0', 10);
 		const styles = window.getComputedStyle(track);
 		const gap = parseFloat(styles.columnGap || styles.gap || 0);
 		const itemWidth = items[0].getBoundingClientRect().width;
@@ -83,8 +83,8 @@
 		attachDrag(root);
 		
 		// Autoplay functionality
-		const autoplay = root.dataset.sliderAutoplay === '1';
-		const delay = parseInt(root.dataset.sliderDelay || '5', 10) * 1000;
+		const autoplay = root.dataset.sliderautoplay === '1';
+		const delay = parseInt(root.dataset.sliderdelay || '5', 10) * 1000;
 		let autoplayInterval;
 		
 		if (autoplay && delay > 0) {
