@@ -4889,7 +4889,7 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			if ((e.key === "Escape" || e.keyCode === 27) && !$confirm.prop("hidden")) {
 				pendingConfirmAction = null;
-				$confirmText.text(defaultConfirmText;
+				$confirmText.text(defaultConfirmText);
 				$confirmYes.text(defaultConfirmYesText);
 				setConfirmOpen(false);
 			}
