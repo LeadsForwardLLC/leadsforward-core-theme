@@ -7708,6 +7708,8 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			$short_desc = '';
 			if (isset($fields['lf_service_short_desc'])) {
 				$short_desc = sanitize_textarea_field((string) $fields['lf_service_short_desc']);
+			} elseif (isset($fields['short_description'])) {
+				$short_desc = sanitize_textarea_field((string) $fields['short_description']);
 			} elseif (isset($fields['short_desc'])) {
 				$short_desc = sanitize_textarea_field((string) $fields['short_desc']);
 			}
