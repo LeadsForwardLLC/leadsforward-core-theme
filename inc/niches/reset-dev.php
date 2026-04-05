@@ -61,19 +61,22 @@ function lf_dev_reset_delete_all_terms(string $taxonomy): void {
 }
 
 /**
- * True only when WP_DEBUG, WP_ENV=local, or LF_DEV_RESET_ENABLED. Used for visibility and abort.
+ * True only on local/development environments or when LF_DEV_RESET_ENABLED is set.
+ *
+ * WP_DEBUG alone is not enough: staging/production sites often enable debug temporarily, which must
+ * not unlock destructive reset (clears homepage config, deletes content).
  */
 function lf_dev_reset_allowed(): bool {
-	if (defined('WP_DEBUG') && WP_DEBUG === true) {
-		return true;
-	}
-	if (defined('WP_ENV') && WP_ENV === 'local') {
-		return true;
-	}
 	if (defined('LF_DEV_RESET_ENABLED') && LF_DEV_RESET_ENABLED === true) {
-		return true;
+		return (bool) apply_filters('lf_dev_reset_allowed', true);
 	}
-	return false;
+	$env = function_exists('wp_get_environment_type') ? wp_get_environment_type() : '';
+	$allowed = in_array($env, ['local', 'development'], true);
+	if (!$allowed && defined('WP_ENV')) {
+		$wp_env = (string) WP_ENV;
+		$allowed = in_array($wp_env, ['local', 'development'], true);
+	}
+	return (bool) apply_filters('lf_dev_reset_allowed', $allowed);
 }
 
 add_action('admin_init', 'lf_dev_reset_handle_post', 5);
@@ -95,6 +98,11 @@ function lf_dev_reset_handle_post(): void {
 	}
 	check_admin_referer('lf_dev_reset', 'lf_dev_reset_nonce');
 
+	if (!lf_dev_reset_allowed()) {
+		wp_safe_redirect(admin_url('admin.php?page=lf-ops&reset_error=not_allowed'));
+		exit;
+	}
+
 	lf_dev_reset_run();
 	wp_safe_redirect(admin_url('admin.php?page=lf-ops&reset_done=1'));
 	exit;
@@ -113,6 +121,9 @@ function lf_dev_reset_render_page(): void {
  * Uses stored IDs when present; otherwise finds core pages by slug and all services/service areas.
  */
 function lf_dev_reset_run(): void {
+	if (!lf_dev_reset_allowed()) {
+		return;
+	}
 	$preserve_pages = [];
 	$privacy = get_page_by_path('privacy-policy', OBJECT, 'page');
 	if ($privacy instanceof \WP_Post) {
