@@ -223,6 +223,47 @@ function lf_ai_inline_overrides_frontend_script(): void {
 	if (empty($text_payload) && empty($image_payload)) {
 		return;
 	}
+
+// AJAX handler for trust reviews layout switching
+add_action('wp_ajax_lf_ai_set_trust_layout', 'lf_ai_set_trust_layout_handler');
+add_action('wp_ajax_nopriv_lf_ai_set_trust_layout', 'lf_ai_set_trust_layout_handler');
+
+function lf_ai_set_trust_layout_handler(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_die('Unauthorized');
+	}
+	
+	$nonce = $_POST['nonce'] ?? '';
+	if (!wp_verify_nonce($nonce, 'lf_ai_assistant')) {
+		wp_die('Invalid nonce');
+	}
+	
+	$context_type = sanitize_text_field($_POST['context_type'] ?? '');
+	$context_id = absint($_POST['context_id'] ?? 0);
+	$section_id = sanitize_text_field($_POST['section_id'] ?? '');
+	$layout = sanitize_text_field($_POST['layout'] ?? '');
+	
+	if (!in_array($layout, ['grid', 'slider'], true)) {
+		wp_die('Invalid layout');
+	}
+	
+	// Update the section config
+	if ($context_type === 'homepage' && function_exists('lf_get_homepage_section_config')) {
+		$config = lf_get_homepage_section_config();
+		if (isset($config['trust_reviews'])) {
+			$config['trust_reviews']['trust_layout'] = $layout;
+			update_option('lf_homepage_section_config', $config);
+			
+			wp_send_json_success([
+				'message' => "Layout changed to {$layout}",
+				'reload' => true
+			]);
+		}
+	}
+	
+	wp_send_json_error('Could not update layout');
+}
+
 	$text_json = wp_json_encode($text_payload);
 	$image_json = wp_json_encode($image_payload);
 	if (!is_string($text_json) || !is_string($image_json)) {
