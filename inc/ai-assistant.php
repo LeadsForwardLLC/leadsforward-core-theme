@@ -561,6 +561,8 @@ function lf_ai_assistant_widget_css(): string {
 		@media (hover: none), (pointer: coarse) {
 			.lf-ai-section-controls { opacity:1; }
 		}
+		/* Editor mode on: keep section chrome visible (hover-only opacity was easy to miss on desktop). */
+		.lf-ai-editor-on .lf-ai-section-controls { opacity:1; }
 		.lf-ai-section-btn { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-width:28px; height:28px; padding:0 7px; font-size:12px; line-height:26px; cursor:pointer; }
 		.lf-ai-section-btn:hover { background:#f5f0ff; }
 		.lf-ai-section-btn--danger { border-color:#fecaca; color:#b91c1c; }
@@ -1318,6 +1320,7 @@ function lf_ai_assistant_widget_js(): string {
 			$btnEditorToggle.attr("title", editingEnabled ? "Editor ON (click for live mode)" : "Live mode ON (click for editor)");
 		}
 		function clearEditorUi() {
+			try { document.documentElement.classList.remove("lf-ai-editor-on"); } catch (eCls) {}
 			saveInlineEdit();
 			cancelInlineEdit(false);
 			selectedSectionWrap = null;
@@ -1671,6 +1674,14 @@ function lf_ai_assistant_widget_js(): string {
 				setSelectedSection(firstWrap);
 			}
 		}
+		function editorSurfaceStatusMessage() {
+			var n = collectSectionWrappers().length;
+			if (n > 0) {
+				return "Editor on: use controls on each section (top-right). Drag sections to reorder, click text to edit, images to swap.";
+			}
+			var ctx = String(activeContextType || "");
+			return "Editor on, but this view has no LeadsForward section blocks (no data-lf-section-wrap). Open the front page or a page that uses the theme page builder for section controls; other templates only get inline text/image targets where available.";
+		}
 		function setEditorEnabled(enabled) {
 			editingEnabled = !!enabled;
 			setEditorToggleUi();
@@ -1681,13 +1692,14 @@ function lf_ai_assistant_widget_js(): string {
 				renderSeoSnapshot();
 				return;
 			}
+			try { document.documentElement.classList.add("lf-ai-editor-on"); } catch (eCls2) {}
 			try {
 				if ($onboarding.length && !window.localStorage.getItem("lfAiOnboardingDismissed")) {
 					$onboarding.prop("hidden", false);
 				}
 			} catch (eOn) {}
 			buildEditorUi();
-			setStatus("Editor mode enabled.", false);
+			setStatus(editorSurfaceStatusMessage(), false);
 			renderSeoSnapshot();
 		}
 		function isDragBlockedTarget(target) {
@@ -4983,11 +4995,12 @@ function lf_ai_assistant_widget_js(): string {
 			try { window.localStorage.setItem("lfAiOnboardingDismissed", "1"); } catch (e1) {}
 		});
 		if (editingEnabled) {
+			try { document.documentElement.classList.add("lf-ai-editor-on"); } catch (eCls3) {}
 			buildEditorUi();
-			setStatus("Click to edit text/images, drag sections to reorder, reverse columns, hide/show, duplicate, or delete.", false);
+			setStatus(editorSurfaceStatusMessage(), false);
 		} else {
 			clearEditorUi();
-			setStatus("Live mode enabled. Toggle ✎ to edit.", false);
+			setStatus("Live mode enabled. Toggle ✎ (editor) in the AI Assistant header to show section controls and inline editing.", false);
 		}
 		renderSeoSnapshot();
 	})(jQuery);';
