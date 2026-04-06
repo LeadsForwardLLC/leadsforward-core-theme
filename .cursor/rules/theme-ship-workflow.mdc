@@ -5,6 +5,16 @@ alwaysApply: true
 
 # LeadsForward theme — ship workflow
 
+## Non-negotiable for AI agents
+
+You **must** complete the full ship workflow **before** telling the user work is done, merged, or “shipped.” No exceptions unless the user explicitly says to stop before git.
+
+1. **Branch** (if not already on a feature branch) → **commit** → **push** → **open PR** → **squash-merge to `main`**.
+2. **Run it yourself** in the terminal. Do not instruct the user to commit, push, or merge.
+3. If `git status` is clean and you made **no** edits, say so — there is nothing to ship.
+
+Skipping git while claiming the task is finished is **incorrect**: unmerged local edits are not delivered work.
+
 ## Mandatory for AI agents (every code change)
 
 - **Always** finish with: **branch → commit → push → PR → merge** (squash). Do not leave work only on disk and do not push directly to `main`.
@@ -24,9 +34,9 @@ alwaysApply: true
 
 ## What you do after making code changes
 
-1. Commit in the **primary** theme folder.
-2. **`main` is branch-protected** — never rely on a direct push to `main`. Use a PR and **squash-merge** (`gh pr merge --squash`). Merge commits are disallowed on this repo.
-3. Run **`./scripts/ship-to-live.sh "short description of change"`** from the theme root (needs `gh` logged in). It commits unstaged work if needed, pushes, opens or reuses a PR, squash-merges to `main`, and leaves you on updated `main`. If you were on `main` and push is blocked, the script creates a `chore/auto-ship-*` branch and ships through a PR.
+1. Prefer **`./scripts/ship-to-live.sh "short description of change"`** from the theme root (needs `gh` logged in). It commits unstaged work if needed, pushes, opens or reuses a PR, squash-merges to `main`, and leaves you on updated `main`. If you were on `main` and push is blocked, the script creates a `chore/auto-ship-*` branch and ships through a PR.
+2. Or run the equivalent steps manually — same outcome: **PR + squash-merge**, not a direct push to `main` when protected.
+3. **`main` is branch-protected** — never rely on a direct push to `main` succeeding. Merge commits are disallowed on this repo.
 4. Pushing/merging to **`main`** starts the deploy Action; no separate deploy step in this repo.
 
 ## Git pull
