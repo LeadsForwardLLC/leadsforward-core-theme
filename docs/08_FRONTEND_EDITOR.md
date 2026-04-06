@@ -116,6 +116,8 @@ SEO is now decoupled from the AI assistant body and launched from its own floati
 
 Hero pills (`.lf-hero-chips`) use `hero_chip_bullets`; the proof card list (`.lf-block-hero__card-list`) uses `hero_proof_bullets`. They are saved independently (no cross-sync). The inline editor prefers `.lf-hero-split__proof .lf-block-hero__card-list` when present so the Authority Split column is targeted before other hero layouts that also contain a card list.
 
+Homepage inline saves (proof list, pills, trust strip, section line fields, etc.) force `context_type`/`context_id` = homepage when the section sits under `.site-main--homepage`, so edits still hit `lf_homepage_section_config` even if the assistant panel previously switched the active target to another post.
+
 - Both editors now normalize text-node structure before save to prevent duplicate text artifacts.
 - Saves are synchronized so pill edits update proof checklist DOM and vice versa before persistence.
 - A single canonical payload is persisted to backend settings, ensuring reliable reload behavior.

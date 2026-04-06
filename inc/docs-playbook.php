@@ -135,7 +135,7 @@ function lf_docs_render_playbook_sections(): void {
 				<p><?php esc_html_e('Open the static front page or any URL that renders LeadsForward section wrappers (Page Builder). If no sections are detected, the UI explains that you need a page with theme sections—use wp-admin Page Builder or Homepage Builder instead.', 'leadsforward-core'); ?></p>
 				<p><?php esc_html_e('Structural actions are logged for undo/redo. For legal/schema slug changes, new CPT posts, or manifest-scale generation, stay in wp-admin and the Manifester workflow.', 'leadsforward-core'); ?></p>
 				<h3><?php esc_html_e('Hero Authority Split: proof card list', 'leadsforward-core'); ?></h3>
-				<p><?php esc_html_e('The right-hand checklist uses hero_proof_bullets. If the list looks empty after a bad save, save again from the front-end editor or Homepage Builder—the theme falls back to default lines when storage is blank. Editing targets the split column list first so it does not attach to the wrong card in other hero layouts.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('The right-hand checklist uses hero_proof_bullets, stored in the homepage section option. Inline saves on the static front page always use the homepage target even if the assistant recently ran against another URL, so proof lines persist after refresh.', 'leadsforward-core'); ?></p>
 			</section>
 
 			<section id="services-areas" class="lf-docs__section">
