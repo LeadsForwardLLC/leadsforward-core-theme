@@ -1186,7 +1186,7 @@ function lf_ai_studio_render_page(): void {
 			<div class="notice notice-error"><p><?php esc_html_e('Please confirm you understand this will delete site content before resetting.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
 		<?php if ($reset_error === 'not_allowed') : ?>
-			<div class="notice notice-error"><p><?php esc_html_e('Site reset is only available in local/development environments or when LF_DEV_RESET_ENABLED is true in wp-config.', 'leadsforward-core'); ?></p></div>
+			<div class="notice notice-error"><p><?php esc_html_e('Site reset is blocked. Enable it in wp-config.php with LF_DEV_RESET_ENABLED (true, 1, or the string "true"), set WP_ENVIRONMENT_TYPE to local or development, or use a local site URL (localhost, .local, .test).', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
 		<?php if ($job_id && $job_status) : ?>
 			<?php if (in_array($job_status, ['queued', 'running'], true)) : ?>
