@@ -40,6 +40,50 @@ function lf_images_require_media_functions(): void {
 }
 
 /**
+ * Neutral title/alt label for the bundled placeholder image (no product branding; safe for SEO).
+ */
+function lf_placeholder_image_default_label(): string {
+	return __('Classic exterior home and landscaped front yard', 'leadsforward-core');
+}
+
+/**
+ * Replace legacy LeadsForward-branded title/caption/description on seeded placeholder attachments.
+ */
+function lf_maybe_fix_placeholder_attachment_seo_meta(): void {
+	if (!is_admin() || !current_user_can('upload_files')) {
+		return;
+	}
+	$id = (int) get_option(LF_PLACEHOLDER_IMAGE_OPTION, 0);
+	if ($id <= 0 || !get_post($id)) {
+		return;
+	}
+	if (!lf_is_placeholder_attachment_candidate($id)) {
+		return;
+	}
+	$title = (string) get_the_title($id);
+	$excerpt = (string) get_post_field('post_excerpt', $id);
+	$content = (string) get_post_field('post_content', $id);
+	$needs_fix = false;
+	foreach ([$title, $excerpt, $content] as $chunk) {
+		if ($chunk !== '' && (stripos($chunk, 'leadsforward') !== false || stripos($chunk, 'leadforward') !== false)) {
+			$needs_fix = true;
+			break;
+		}
+	}
+	if (!$needs_fix) {
+		return;
+	}
+	$label = lf_placeholder_image_default_label();
+	wp_update_post([
+		'ID' => $id,
+		'post_title' => $label,
+		'post_excerpt' => '',
+		'post_content' => '',
+	]);
+	update_post_meta($id, '_wp_attachment_image_alt', $label);
+}
+
+/**
  * Detect whether attachment looks like the theme placeholder asset.
  */
 function lf_is_placeholder_attachment_candidate(int $attachment_id): bool {
@@ -199,19 +243,21 @@ function lf_seed_placeholder_image(): int {
 		'name'     => LF_PLACEHOLDER_IMAGE_FILENAME,
 		'tmp_name' => $tmp,
 	];
-	$attachment_id = media_handle_sideload($file_array, 0, __('LeadsForward default placeholder image', 'leadsforward-core'));
+	// Pass null so WP does not use a branded description as the attachment title (see media_handle_sideload).
+	$attachment_id = media_handle_sideload($file_array, 0, null);
 	if (is_wp_error($attachment_id)) {
 		@unlink($tmp);
 		delete_transient(LF_PLACEHOLDER_IMAGE_SEED_LOCK);
 		return 0;
 	}
 
-	update_post_meta($attachment_id, '_wp_attachment_image_alt', __('Classic exterior home and landscaped front yard', 'leadsforward-core'));
+	$label = lf_placeholder_image_default_label();
+	update_post_meta($attachment_id, '_wp_attachment_image_alt', $label);
 	wp_update_post([
 		'ID' => (int) $attachment_id,
-		'post_title' => __('LeadsForward Placeholder', 'leadsforward-core'),
-		'post_excerpt' => __('LeadsForward default placeholder image for safe fallback content.', 'leadsforward-core'),
-		'post_content' => __('LeadsForward default placeholder image for safe fallback content.', 'leadsforward-core'),
+		'post_title' => $label,
+		'post_excerpt' => '',
+		'post_content' => '',
 	]);
 	$all_placeholders = lf_find_existing_placeholder_attachment_ids(true);
 	if (!in_array((int) $attachment_id, $all_placeholders, true)) {
@@ -239,3 +285,4 @@ function lf_get_placeholder_image_id(): int {
 
 add_action('after_switch_theme', 'lf_seed_placeholder_image');
 add_action('admin_init', 'lf_seed_placeholder_image');
+add_action('admin_init', 'lf_maybe_fix_placeholder_attachment_seo_meta', 20);
