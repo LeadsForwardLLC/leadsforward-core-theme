@@ -88,6 +88,15 @@ function lf_ops_register_menu(): void {
 		'lf-contact-form',
 		'lf_contact_form_render_admin'
 	);
+	// 4c. User testing feedback (internal).
+	add_submenu_page(
+		'lf-ops',
+		__('User testing', 'leadsforward-core'),
+		__('User testing', 'leadsforward-core'),
+		LF_OPS_CAP,
+		'lf-user-testing',
+		'lf_user_testing_render_page'
+	);
 	$has_acf_options = function_exists('acf_options_page_html');
 	// Remaining ACF option pages (only render if ACF options pages exist).
 	if ($has_acf_options) {
