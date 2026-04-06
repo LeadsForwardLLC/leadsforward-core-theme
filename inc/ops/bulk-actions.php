@@ -39,21 +39,14 @@ function lf_ops_bulk_handle(): void {
 	switch ($action) {
 		case 'design_preset':
 			$preset = isset($_POST['lf_ops_design_preset']) ? sanitize_text_field(wp_unslash($_POST['lf_ops_design_preset'])) : '';
-			$presets = function_exists('lf_design_presets') ? lf_design_presets() : [];
-			if (!empty($presets) && isset($presets[$preset])) {
-				$prev = [
-					'design_preset' => get_option('lf_global_design_preset', 'clean-precision'),
-					'variation_profile' => function_exists('get_field') ? get_field('variation_profile', 'option') : null,
-				];
-				update_option('lf_global_design_preset', $preset);
+			$prev = [
+				'design_preset' => get_option('lf_global_design_preset', 'clean-precision'),
+				'variation_profile' => function_exists('get_field') ? get_field('variation_profile', 'option') : null,
+			];
+			if (function_exists('lf_apply_global_design_preset') && lf_apply_global_design_preset($preset)) {
 				$profile = function_exists('lf_design_preset_to_variation_profile')
 					? lf_design_preset_to_variation_profile($preset)
 					: 'a';
-				if (function_exists('update_field')) {
-					update_field('variation_profile', $profile, 'option');
-				} else {
-					update_option('options_variation_profile', $profile);
-				}
 				lf_ops_audit_log('bulk_design_preset', ['design_preset' => $preset, 'variation_profile' => $profile], $prev);
 			}
 			break;
@@ -142,7 +135,7 @@ function lf_ops_bulk_render(): void {
 
 	echo '<div class="wrap"><h1>' . esc_html__('Bulk Actions', 'leadsforward-core') . '</h1>';
 	echo '<p>' . esc_html__('Apply site-wide changes with preview. No bulk delete or slug edits.', 'leadsforward-core') . '</p>';
-	echo '<p class="description">' . esc_html__('Design presets now sync Global Design + variation profile. You can also manage design in Global Settings.', 'leadsforward-core') . '</p>';
+	echo '<p class="description">' . esc_html__('Design presets sync Global Design + variation profile. You can also change the preset from the block editor (⋮ menu → LeadsForward design) or Global Settings.', 'leadsforward-core') . '</p>';
 	if ($done) {
 		echo '<div class="notice notice-success"><p>' . esc_html__('Action completed.', 'leadsforward-core') . '</p></div>';
 	}

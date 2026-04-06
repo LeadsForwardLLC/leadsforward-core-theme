@@ -17,19 +17,22 @@ function lf_ops_audit_render(): void {
 		return;
 	}
 	$log = lf_ops_get_audit_log();
-	echo '<div class="wrap"><h1>' . esc_html__('Audit Log', 'leadsforward-core') . '</h1>';
-	echo '<p>' . esc_html__('Recent bulk and config operations. Admin-visible only.', 'leadsforward-core') . '</p>';
+	echo '<div class="wrap"><h1>' . esc_html__('Activity log', 'leadsforward-core') . '</h1>';
+	echo '<p>' . esc_html__('History of bulk tools, config import, successful manifest generation queues, and design changes from the block editor. Visible to users who can manage theme options.', 'leadsforward-core') . '</p>';
 	if (empty($log)) {
-		echo '<p>' . esc_html__('No entries yet.', 'leadsforward-core') . '</p></div>';
+		echo '<div class="notice notice-info inline"><p>' . esc_html__('No activity recorded yet. Entries appear after you run bulk actions, import a backup, queue a manifest generation, or change the design preset from the editor.', 'leadsforward-core') . '</p></div></div>';
 		return;
 	}
 	echo '<table class="widefat striped fixed"><thead><tr><th>' . esc_html__('Time', 'leadsforward-core') . '</th><th>' . esc_html__('User', 'leadsforward-core') . '</th><th>' . esc_html__('Action', 'leadsforward-core') . '</th><th>' . esc_html__('Details', 'leadsforward-core') . '</th><th>' . esc_html__('Previous values', 'leadsforward-core') . '</th></tr></thead><tbody>';
 	$action_labels = [
-		'config_import'       => __('Config import', 'leadsforward-core'),
-		'bulk_variation_profile' => __('Variation profile', 'leadsforward-core'),
-		'bulk_cta_sitewide'   => __('CTA site-wide', 'leadsforward-core'),
-		'bulk_schema_toggles' => __('Schema toggles', 'leadsforward-core'),
-		'bulk_rebuild_linking' => __('Rebuild linking', 'leadsforward-core'),
+		'config_import'            => __('Config import', 'leadsforward-core'),
+		'bulk_design_preset'       => __('Design preset (bulk)', 'leadsforward-core'),
+		'editor_design_preset'     => __('Design preset (editor)', 'leadsforward-core'),
+		'bulk_variation_profile'   => __('Variation profile', 'leadsforward-core'),
+		'bulk_cta_sitewide'        => __('CTA site-wide', 'leadsforward-core'),
+		'bulk_schema_toggles'      => __('Schema toggles', 'leadsforward-core'),
+		'bulk_rebuild_linking'     => __('Rebuild linking', 'leadsforward-core'),
+		'manifest_generation_queued' => __('Manifest generation queued', 'leadsforward-core'),
 	];
 	foreach ($log as $entry) {
 		$time = isset($entry['time']) ? wp_date(get_option('date_format') . ' ' . get_option('time_format'), $entry['time']) : '';

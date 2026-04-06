@@ -61,6 +61,8 @@ lf_load_inc('ai-studio-wiring.php');
 lf_load_inc('ai-studio-rest.php');
 lf_load_inc('ai-studio-airtable.php');
 lf_load_inc('docs-page.php');
+lf_load_inc('docs-content.php');
+lf_load_inc('editor-design-preset.php');
 lf_load_inc('team-role.php');
 
 // Custom post types.

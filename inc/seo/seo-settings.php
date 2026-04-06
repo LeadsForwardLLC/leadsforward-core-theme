@@ -19,8 +19,8 @@ add_action('admin_enqueue_scripts', 'lf_seo_admin_assets');
 function lf_seo_register_menu(): void {
 	add_submenu_page(
 		'lf-ops',
-		__('SEO', 'leadsforward-core'),
-		__('SEO', 'leadsforward-core'),
+		__('SEO & Site Health', 'leadsforward-core'),
+		__('SEO & Site Health', 'leadsforward-core'),
 		'edit_theme_options',
 		'lf-seo',
 		'lf_seo_render_settings_page'
@@ -187,7 +187,7 @@ function lf_seo_handle_save(): void {
 	}
 
 	update_option('lf_seo_settings', $settings);
-	wp_safe_redirect(add_query_arg('saved', '1', admin_url('admin.php?page=lf-seo')));
+	wp_safe_redirect(add_query_arg(['saved' => '1', 'tab' => 'settings'], admin_url('admin.php?page=lf-seo')));
 	exit;
 }
 
@@ -247,14 +247,24 @@ function lf_seo_sanitize_scripts(string $value): string {
 }
 
 function lf_seo_render_settings_page(): void {
+	$tab = isset($_GET['tab']) ? sanitize_key((string) $_GET['tab']) : 'settings';
+	if (!in_array($tab, ['settings', 'health'], true)) {
+		$tab = 'settings';
+	}
 	$settings = lf_seo_get_settings();
 	$og_id = (int) ($settings['social']['default_og_image_id'] ?? 0);
 	$og_url = $og_id ? wp_get_attachment_image_url($og_id, 'medium') : '';
 	$org_type = (string) ($settings['schema']['organization_type'] ?? 'Organization');
 	$saved = isset($_GET['saved']) && $_GET['saved'] === '1';
+	$base = admin_url('admin.php?page=lf-seo');
 	?>
 	<div class="wrap">
-		<h1><?php esc_html_e('SEO', 'leadsforward-core'); ?></h1>
+		<h1><?php esc_html_e('SEO & Site Health', 'leadsforward-core'); ?></h1>
+		<h2 class="nav-tab-wrapper" style="margin-bottom:1rem;">
+			<a href="<?php echo esc_url(add_query_arg('tab', 'settings', $base)); ?>" class="nav-tab<?php echo $tab === 'settings' ? ' nav-tab-active' : ''; ?>"><?php esc_html_e('SEO settings', 'leadsforward-core'); ?></a>
+			<a href="<?php echo esc_url(add_query_arg('tab', 'health', $base)); ?>" class="nav-tab<?php echo $tab === 'health' ? ' nav-tab-active' : ''; ?>"><?php esc_html_e('Site health', 'leadsforward-core'); ?></a>
+		</h2>
+		<?php if ($tab === 'settings') : ?>
 		<?php if (function_exists('lf_admin_render_quality_summary_strip')) { lf_admin_render_quality_summary_strip('seo'); } ?>
 		<?php if ($saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('SEO settings saved.', 'leadsforward-core'); ?></p></div>
@@ -459,7 +469,6 @@ function lf_seo_render_settings_page(): void {
 
 			<?php submit_button(__('Save SEO Settings', 'leadsforward-core')); ?>
 		</form>
-	</div>
 	<script>
 		(function () {
 			function buildSeoPanels() {
@@ -548,5 +557,15 @@ function lf_seo_render_settings_page(): void {
 			}
 		})();
 	</script>
+		<?php else : ?>
+			<?php
+			if (function_exists('lf_health_render_embedded_ui')) {
+				lf_health_render_embedded_ui();
+			} else {
+				echo '<p>' . esc_html__('Site health is unavailable.', 'leadsforward-core') . '</p>';
+			}
+			?>
+		<?php endif; ?>
+	</div>
 	<?php
 }

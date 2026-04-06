@@ -266,14 +266,64 @@ function lf_image_intelligence_upload_context_defaults(): array {
 	];
 }
 
-function lf_image_intelligence_upload_base_slug(): string {
-	$context = lf_image_intelligence_upload_context_defaults();
+/**
+ * Richer context for manifest-step uploads using stored manifest when present.
+ *
+ * @return array{primary_keyword:string,city:string,niche:string,business_name:string,service_name:string}
+ */
+function lf_image_intelligence_manifest_upload_context(): array {
+	$base = lf_image_intelligence_upload_context_defaults();
+	$manifest = function_exists('lf_ai_studio_get_manifest') ? lf_ai_studio_get_manifest() : [];
+	if (!is_array($manifest) || $manifest === []) {
+		return $base;
+	}
+	$biz = is_array($manifest['business'] ?? null) ? $manifest['business'] : [];
+	$name = sanitize_text_field((string) ($biz['name'] ?? ''));
+	$niche = sanitize_text_field((string) ($biz['niche'] ?? ''));
+	$addr = is_array($biz['address'] ?? null) ? $biz['address'] : [];
+	$city = sanitize_text_field((string) ($biz['primary_city'] ?? ($addr['city'] ?? '')));
+	if ($city === '') {
+		$city = (string) ($base['city'] ?? '');
+	}
+	$hp = is_array($manifest['homepage'] ?? null) ? $manifest['homepage'] : [];
+	$primary = sanitize_text_field((string) ($hp['primary_keyword'] ?? ''));
+	if ($primary === '') {
+		$primary = (string) ($base['primary_keyword'] ?? '');
+	}
+	$first_service = '';
+	$services = $manifest['services'] ?? [];
+	if (is_array($services)) {
+		foreach ($services as $svc) {
+			if (!is_array($svc)) {
+				continue;
+			}
+			$t = sanitize_text_field((string) ($svc['name'] ?? ($svc['title'] ?? '')));
+			if ($t !== '') {
+				$first_service = $t;
+				break;
+			}
+		}
+	}
+	$business = $name !== '' ? $name : (string) ($base['business_name'] ?? '');
+	$niche_out = $niche !== '' ? $niche : (string) ($base['niche'] ?? '');
+	$service_name = $primary !== '' ? $primary : ($first_service !== '' ? $first_service : ($niche_out !== '' ? $niche_out : ($business !== '' ? $business : (string) ($base['service_name'] ?? ''))));
+
+	return [
+		'primary_keyword' => $primary,
+		'city' => $city,
+		'niche' => $niche_out,
+		'business_name' => $business,
+		'service_name' => $service_name,
+	];
+}
+
+function lf_image_intelligence_upload_base_slug_for_context(array $context): string {
 	$parts = array_filter([
 		(string) ($context['primary_keyword'] ?? ''),
 		(string) ($context['city'] ?? ''),
 		(string) ($context['niche'] ?? ''),
 	]);
-	if (empty($parts)) {
+	if ($parts === []) {
 		$parts = array_filter([
 			(string) ($context['business_name'] ?? ''),
 			(string) ($context['city'] ?? ''),
@@ -285,6 +335,10 @@ function lf_image_intelligence_upload_base_slug(): string {
 	return $slug !== '' ? $slug : 'local-service-image';
 }
 
+function lf_image_intelligence_upload_base_slug(): string {
+	return lf_image_intelligence_upload_base_slug_for_context(lf_image_intelligence_upload_context_defaults());
+}
+
 function lf_image_intelligence_next_upload_index(): int {
 	$current = (int) get_option('lf_image_upload_counter', 0);
 	$next = $current + 1;
@@ -292,12 +346,14 @@ function lf_image_intelligence_next_upload_index(): int {
 	return $next;
 }
 
-function lf_image_intelligence_generate_upload_filename(string $original_name): string {
+function lf_image_intelligence_generate_upload_filename(string $original_name, ?array $context_override = null): string {
 	$ext = strtolower((string) pathinfo($original_name, PATHINFO_EXTENSION));
 	if ($ext === '') {
 		$ext = 'jpg';
 	}
-	$base = lf_image_intelligence_upload_base_slug();
+	$base = is_array($context_override)
+		? lf_image_intelligence_upload_base_slug_for_context($context_override)
+		: lf_image_intelligence_upload_base_slug();
 	$index = lf_image_intelligence_next_upload_index();
 	return sprintf('%s-%03d.%s', $base, $index, $ext);
 }

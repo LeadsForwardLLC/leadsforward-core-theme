@@ -13,17 +13,25 @@ if (!defined('ABSPATH')) {
 }
 
 add_action('admin_init', 'lf_health_handle_prelaunch');
-add_action('admin_menu', 'lf_health_menu', 11);
+add_action('admin_menu', 'lf_health_register_legacy_redirect', 12);
 
-function lf_health_menu(): void {
+/**
+ * Old bookmarks to admin.php?page=lf-site-health still work (hidden submenu).
+ */
+function lf_health_register_legacy_redirect(): void {
 	add_submenu_page(
-		'lf-ops',
+		null,
 		__('Site Health', 'leadsforward-core'),
-		__('Site Health', 'leadsforward-core'),
+		'',
 		LF_HEALTH_CAP,
 		'lf-site-health',
-		'lf_health_render_page'
+		'lf_health_legacy_redirect'
 	);
+}
+
+function lf_health_legacy_redirect(): void {
+	wp_safe_redirect(admin_url('admin.php?page=lf-seo&tab=health'));
+	exit;
 }
 
 function lf_health_handle_prelaunch(): void {
@@ -59,18 +67,20 @@ function lf_health_handle_prelaunch(): void {
 		$blockers,
 		$warnings
 	);
-	wp_safe_redirect(admin_url('admin.php?page=lf-site-health&report=1'));
+	wp_safe_redirect(admin_url('admin.php?page=lf-seo&tab=health&report=1'));
 	exit;
 }
 
-function lf_health_render_page(): void {
+/**
+ * Site Health body for the SEO & Site Health admin screen (no outer .wrap).
+ */
+function lf_health_render_embedded_ui(): void {
 	if (!current_user_can(LF_HEALTH_CAP)) {
 		return;
 	}
 	$report = isset($_GET['report']) && $_GET['report'] === '1';
 	$last = lf_health_get_last_result();
 
-	echo '<div class="wrap"><h1>' . esc_html__('Site Health', 'leadsforward-core') . '</h1>';
 	if (function_exists('lf_admin_render_quality_summary_strip')) {
 		lf_admin_render_quality_summary_strip('health');
 	}
@@ -123,7 +133,6 @@ function lf_health_render_page(): void {
 		}
 		echo '</tbody></table>';
 	}
-	echo '</div>';
 }
 
 function lf_health_render_report(array $result): void {

@@ -435,6 +435,13 @@ function lf_ai_assistant_render_floating_widget(): void {
 				</div>
 			</div>
 			<div class="lf-ai-float__body">
+				<?php if (is_admin() && current_user_can('edit_theme_options')) : ?>
+					<p class="lf-ai-seo__admin-links" style="font-size:12px;margin:0 0 10px;line-height:1.45;color:#475569;">
+						<a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=settings')); ?>"><?php esc_html_e('SEO settings', 'leadsforward-core'); ?></a>
+						<span aria-hidden="true"> · </span>
+						<a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=health')); ?>"><?php esc_html_e('Site health & pre-launch', 'leadsforward-core'); ?></a>
+					</p>
+				<?php endif; ?>
 				<div class="lf-ai-seo" data-lf-ai-seo>
 					<div class="lf-ai-seo__score" data-lf-ai-seo-score><?php esc_html_e('Overall: --', 'leadsforward-core'); ?></div>
 					<div class="lf-ai-seo__perf-chip lf-ai-seo__perf-chip--pending" data-lf-ai-seo-perf-chip><?php esc_html_e('Perf --', 'leadsforward-core'); ?></div>

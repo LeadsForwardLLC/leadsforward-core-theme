@@ -1,8 +1,8 @@
 <?php
 /**
  * LeadsForward parent menu and submenu registration. Admin only.
- * Order: Website Manifester → Global Settings → Homepage → Quote Builder → Ops (bulk/audit/config).
- * Site Health is added by inc/site-health/dashboard.php at priority 11.
+ * Order: Website Manifester → Global Settings → … → SEO & Site Health (tabs) → Bulk Tools → Activity Log → Backup.
+ * Site Health UI is embedded in SEO settings (inc/seo/seo-settings.php); legacy lf-site-health URL redirects.
  *
  * @package LeadsForward_Core
  * @since 0.1.0
@@ -52,14 +52,14 @@ function lf_ops_register_menu(): void {
 		'lf-global',
 		'lf_ops_render_global_settings_page'
 	);
-	// 2b. Theme Docs (standalone docs route).
+	// 2b. Theme Docs (full KB in admin; optional front URL /theme-docs/).
 	add_submenu_page(
 		'lf-ops',
 		__('Theme Docs', 'leadsforward-core'),
 		__('Theme Docs', 'leadsforward-core'),
 		LF_OPS_CAP,
 		'lf-theme-docs',
-		'lf_ops_render_theme_docs_link'
+		'lf_ops_render_theme_docs_page'
 	);
 	// 3. Homepage (sections)
 	add_submenu_page(
@@ -108,8 +108,8 @@ function lf_ops_register_menu(): void {
 	);
 	add_submenu_page(
 		'lf-ops',
-		__('Activity Log', 'leadsforward-core'),
-		__('Activity Log', 'leadsforward-core'),
+		__('Activity log', 'leadsforward-core'),
+		__('Activity log', 'leadsforward-core'),
 		LF_OPS_CAP,
 		'lf-ops-audit',
 		'lf_ops_audit_render'
@@ -137,15 +137,36 @@ function lf_ops_render_acf_options_page(): void {
 	echo '<p>' . esc_html__('This page requires Advanced Custom Fields (ACF).', 'leadsforward-core') . '</p></div>';
 }
 
-function lf_ops_render_theme_docs_link(): void {
+function lf_ops_render_theme_docs_page(): void {
 	if (!current_user_can(LF_OPS_CAP)) {
 		return;
 	}
-	$slug = defined('LF_DOCS_SLUG') ? (string) LF_DOCS_SLUG : 'theme-docs';
-	$docs_url = home_url('/' . trim($slug, '/') . '/');
-	wp_safe_redirect($docs_url);
-	exit;
+	echo '<div class="wrap lf-docs-admin-wrap">';
+	echo '<h1>' . esc_html__('Theme documentation', 'leadsforward-core') . '</h1>';
+	if (function_exists('lf_docs_render_main_sections')) {
+		lf_docs_render_main_sections('admin');
+	} else {
+		echo '<p>' . esc_html__('Documentation content is unavailable.', 'leadsforward-core') . '</p>';
+	}
+	echo '</div>';
 }
+
+function lf_ops_theme_docs_admin_assets(string $hook): void {
+	if ($hook !== 'leadsforward_page_lf-theme-docs' || !current_user_can(LF_OPS_CAP)) {
+		return;
+	}
+	wp_enqueue_style(
+		'lf-docs-page',
+		LF_THEME_URI . '/assets/css/docs-page.css',
+		[],
+		LF_THEME_VERSION
+	);
+	wp_add_inline_style(
+		'lf-docs-page',
+		'.lf-docs-admin-wrap .lf-docs{max-width:1280px;margin-top:12px;} .lf-docs-admin-wrap .lf-docs__sidebar{top:72px;}'
+	);
+}
+add_action('admin_enqueue_scripts', 'lf_ops_theme_docs_admin_assets');
 
 function lf_ops_settings_assets(string $hook): void {
 	if (!current_user_can(LF_OPS_CAP)) {
@@ -194,7 +215,6 @@ function lf_ops_reorder_submenus(): void {
 		'lf-quote-builder',
 		'lf-contact-form',
 		'lf-seo',
-		'lf-site-health',
 		'lf-ops-bulk',
 		'lf-ops-audit',
 		'lf-ops-config',
@@ -262,8 +282,8 @@ function lf_admin_quality_snapshot(int $limit = 400): array {
 
 function lf_admin_render_quality_summary_strip(string $context = 'seo'): void {
 	$s = lf_admin_quality_snapshot();
-	$seo_url = admin_url('admin.php?page=lf-seo');
-	$health_url = admin_url('admin.php?page=lf-site-health');
+	$seo_url = admin_url('admin.php?page=lf-seo&tab=settings');
+	$health_url = admin_url('admin.php?page=lf-seo&tab=health');
 	$audit_time = $s['audit_time'] > 0 ? date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $s['audit_time']) : __('Never', 'leadsforward-core');
 	$health_time = $s['health_time'] > 0 ? date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $s['health_time']) : __('Never', 'leadsforward-core');
 	?>
@@ -271,8 +291,9 @@ function lf_admin_render_quality_summary_strip(string $context = 'seo'): void {
 		<div class="lf-admin-summary-strip__head">
 			<strong><?php esc_html_e('SEO + Site Health Snapshot', 'leadsforward-core'); ?></strong>
 			<div class="lf-admin-summary-strip__links">
-				<?php if ($context !== 'seo') : ?><a href="<?php echo esc_url($seo_url); ?>"><?php esc_html_e('Open SEO', 'leadsforward-core'); ?></a><?php endif; ?>
-				<?php if ($context !== 'health') : ?><a href="<?php echo esc_url($health_url); ?>"><?php esc_html_e('Open Site Health', 'leadsforward-core'); ?></a><?php endif; ?>
+				<a href="<?php echo esc_url($seo_url); ?>"><?php esc_html_e('SEO settings', 'leadsforward-core'); ?></a>
+				&nbsp;·&nbsp;
+				<a href="<?php echo esc_url($health_url); ?>"><?php esc_html_e('Site health', 'leadsforward-core'); ?></a>
 			</div>
 		</div>
 		<div class="lf-admin-summary-strip__grid">
@@ -784,7 +805,7 @@ function lf_ops_render_global_settings_page(): void {
 		? (string) ($seo_settings['scripts']['header'] ?? '')
 		: '';
 	$show_gtm_header_reminder = trim($seo_header_scripts) === '';
-	$seo_settings_url = admin_url('admin.php?page=lf-seo');
+	$seo_settings_url = admin_url('admin.php?page=lf-seo&tab=settings');
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></h1>
@@ -794,7 +815,7 @@ function lf_ops_render_global_settings_page(): void {
 					<?php
 					printf(
 						/* translators: %s: SEO settings admin URL. */
-						wp_kses_post(__('Reminder: add your Google Tag Manager script in <a href="%s">SEO → Header scripts</a>.', 'leadsforward-core')),
+						wp_kses_post(__('Reminder: add your Google Tag Manager script in <a href="%s">SEO & Site Health → Header scripts</a>.', 'leadsforward-core')),
 						esc_url($seo_settings_url)
 					);
 					?>
