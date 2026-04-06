@@ -2666,8 +2666,14 @@ function lf_ai_assistant_widget_js(): string {
 		function textFromNodeWithoutAiControls(node) {
 			if (!node) return "";
 			var clone = node.cloneNode(true);
-			Array.prototype.slice.call(clone.querySelectorAll("[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-list-remove=\"1\"],.lf-ai-inline-editor-ignore")).forEach(function(btn){
+			Array.prototype.slice.call(clone.querySelectorAll("[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-list-remove=\"1\"]")).forEach(function(btn){
 				if (btn && btn.parentNode) btn.parentNode.removeChild(btn);
+			});
+			// Hero proof lines use lf-ai-inline-editor-ignore on the visible text span so global inline
+			// edit skips them; that class must not be stripped here or persist sends empty items.
+			Array.prototype.slice.call(clone.querySelectorAll(".lf-ai-inline-editor-ignore")).forEach(function(el){
+				if (el && el.classList && el.classList.contains("lf-block-hero__card-item-text")) return;
+				if (el && el.parentNode) el.parentNode.removeChild(el);
 			});
 			return String(clone.textContent || "").replace(/\s+/g, " ").trim();
 		}
