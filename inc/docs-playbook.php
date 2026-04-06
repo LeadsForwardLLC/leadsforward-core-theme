@@ -27,6 +27,7 @@ function lf_docs_render_playbook_sections(): void {
 					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-global')); ?>"><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></a></li>
 					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-homepage-settings')); ?>"><?php esc_html_e('Homepage Builder', 'leadsforward-core'); ?></a></li>
 					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=settings')); ?>"><?php esc_html_e('SEO & Site Health (SEO tab)', 'leadsforward-core'); ?></a> — <a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=health')); ?>"><?php esc_html_e('Health tab', 'leadsforward-core'); ?></a></li>
+					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-user-testing')); ?>"><?php esc_html_e('User testing feedback', 'leadsforward-core'); ?></a> — <a href="<?php echo esc_url(admin_url('edit.php?post_type=lf_feedback')); ?>"><?php esc_html_e('All feedback (CPT)', 'leadsforward-core'); ?></a></li>
 					<li><a href="<?php echo esc_url(admin_url('edit.php?post_type=lf_process_step')); ?>"><?php esc_html_e('Process steps (CPT)', 'leadsforward-core'); ?></a></li>
 					<li><a href="<?php echo esc_url(admin_url('edit.php?post_type=lf_faq')); ?>"><?php esc_html_e('FAQs', 'leadsforward-core'); ?></a></li>
 				</ul>
@@ -146,8 +147,17 @@ function lf_docs_render_playbook_sections(): void {
 
 			<section id="projects-reviews" class="lf-docs__section">
 				<h2><?php esc_html_e('Projects, reviews, FAQs, process steps', 'leadsforward-core'); ?></h2>
-				<p><?php esc_html_e('Projects power gallery sections; testimonials feed trust blocks and review schema. FAQs can be generated and surfaced in accordion sections via faq_selected_ids. Process steps are reusable posts (Process steps in the admin menu): add IDs under process_selected_ids on the Process section, or keep using plain process_steps lines as a fallback.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('Projects power gallery sections; testimonials feed trust blocks and review schema. FAQs can be generated and surfaced in accordion sections via faq_selected_ids. Process steps are reusable posts (Process steps in the admin menu): you can select them per Process section using process_selected_ids; if empty, the theme can auto-pick steps by taxonomy (lf_process_group) using the service slug (or homepage-primary). Plain process_steps lines remain as a fallback.', 'leadsforward-core'); ?></p>
 				<p><?php esc_html_e('Sync reviews from Airtable when Global Settings lists the reviews table.', 'leadsforward-core'); ?></p>
+			</section>
+
+			<section id="user-testing" class="lf-docs__section">
+				<h2><?php esc_html_e('User testing feedback', 'leadsforward-core'); ?></h2>
+				<p><?php esc_html_e('Use LeadsForward → User testing to submit structured feedback tied to the current WordPress user. Each item is stored as a Feedback CPT record with a status (New, Approved, Rejected) and optional admin note.', 'leadsforward-core'); ?></p>
+				<ul>
+					<li><?php esc_html_e('Submit feedback: LeadsForward → User testing', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Moderate feedback: Feedback (CPT) list or open an item to set Approved/Rejected and add a note.', 'leadsforward-core'); ?></li>
+				</ul>
 			</section>
 
 			<section id="seo-health" class="lf-docs__section">

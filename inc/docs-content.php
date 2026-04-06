@@ -34,6 +34,7 @@ function lf_docs_render_main_sections(string $context = 'public'): void {
 				<a href="#frontend-editor"><?php esc_html_e('Front-end editor (live site)', 'leadsforward-core'); ?></a>
 				<a href="#services-areas"><?php esc_html_e('Services & areas', 'leadsforward-core'); ?></a>
 				<a href="#projects-reviews"><?php esc_html_e('Projects & reviews', 'leadsforward-core'); ?></a>
+				<a href="#user-testing"><?php esc_html_e('User testing feedback', 'leadsforward-core'); ?></a>
 				<a href="#seo-health"><?php esc_html_e('SEO & Site Health', 'leadsforward-core'); ?></a>
 				<a href="#ai-assistant"><?php esc_html_e('AI assistant', 'leadsforward-core'); ?></a>
 				<a href="#bulk-backup"><?php esc_html_e('Bulk tools & backup', 'leadsforward-core'); ?></a>

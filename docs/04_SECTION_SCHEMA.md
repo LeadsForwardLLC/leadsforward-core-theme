@@ -37,7 +37,12 @@ The schema is derived from:
 If a field or section changes, update the registry and keep this doc aligned.
 
 ## Notable Section Keys
-- **Process** (`process`): optional `process_selected_ids` (newline list of `lf_process_step` post IDs). When at least one ID resolves to a published step, those titles/bodies drive the section; otherwise `process_steps` (line-based) is used.
+- **Process** (`process`):
+  - `process_selected_ids` (newline list of `lf_process_step` post IDs) drives the section when at least one ID resolves.
+  - If `process_selected_ids` is empty, the renderer may auto-pick steps by taxonomy (`lf_process_group`) based on page context:
+    - Service pages: matches the service slug (e.g. `commercial-roofing`)
+    - Homepage: `homepage-primary`
+  - Fallback: `process_steps` (line-based) when no IDs resolve and no auto-pick matches.
 - **Hero**: `hero_proof_bullets` powers the Authority Split right-hand checklist; `hero_chip_bullets` is separate (left pills).
 - `service_areas` now supports map/filter UX copy keys for overview pages:
   - `map_heading`
