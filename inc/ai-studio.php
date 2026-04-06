@@ -7967,7 +7967,7 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 				if (defined('WP_DEBUG') && WP_DEBUG) {
 					error_log(sprintf('LF DEBUG: Dropped section "%s" on post %d (unregistered or missing type).', $instance_id, $post_id));
 				}
-				$errors[] = sprintf(__('Section "%s" is not registered for post %d.', 'leadsforward-core'), $instance_id, $post_id);
+				// Ignore unknown/legacy section ids instead of failing the entire callback.
 				continue;
 			}
 			$allowed = lf_ai_studio_homepage_allowed_field_keys($type, $registry[ $type ]);
@@ -7975,7 +7975,7 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 				if (defined('WP_DEBUG') && WP_DEBUG) {
 					error_log(sprintf('LF DEBUG: Dropped field "%s" on post %d (section %s).', $field_key, $post_id, $instance_id));
 				}
-				$errors[] = sprintf(__('Field "%s" is not allowed for section "%s".', 'leadsforward-core'), $field_key, $instance_id);
+				// Ignore unsupported fields coming from older orchestrator prompts.
 				continue;
 			}
 			if (!isset($incoming_by_instance[$instance_id])) {
