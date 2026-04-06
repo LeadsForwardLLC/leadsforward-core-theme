@@ -1523,12 +1523,13 @@ function lf_ai_toggle_section_layout_for_context(string $context_type, $context_
 		if (!isset($config[$section_id]) || !is_array($config[$section_id])) {
 			return ['error' => __('That section was not found on the homepage.', 'leadsforward-core')];
 		}
-		if (!in_array($section_id, $allowed_types, true)) {
+		$base_for_rules = function_exists('lf_homepage_base_section_type') ? lf_homepage_base_section_type($section_id) : $section_id;
+		if (!in_array($base_for_rules, $allowed_types, true)) {
 			return ['error' => __('This section does not support column reversal.', 'leadsforward-core')];
 		}
 		$row = $config[$section_id];
 		if (function_exists('lf_sections_normalize_service_details_settings')) {
-			$row = lf_sections_normalize_service_details_settings($section_id, $row);
+			$row = lf_sections_normalize_service_details_settings($base_for_rules, $row);
 		}
 		$old_layout = (string) ($row['service_details_layout'] ?? 'content_media');
 		if (!in_array($old_layout, ['content_media', 'media_content'], true)) {
@@ -1552,12 +1553,15 @@ function lf_ai_toggle_section_layout_for_context(string $context_type, $context_
 	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
 	$row = is_array($sections[$section_id] ?? null) ? $sections[$section_id] : [];
 	$section_type = (string) ($row['type'] ?? '');
-	if ($section_type === '' || !in_array($section_type, $allowed_types, true)) {
+	$normalized_for_swap = function_exists('lf_ai_studio_normalize_section_type')
+		? lf_ai_studio_normalize_section_type($section_type)
+		: $section_type;
+	if ($section_type === '' || !in_array($normalized_for_swap, $allowed_types, true)) {
 		return ['error' => __('This section does not support column reversal.', 'leadsforward-core')];
 	}
 	$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
 	if (function_exists('lf_sections_normalize_service_details_settings')) {
-		$settings = lf_sections_normalize_service_details_settings($section_type, $settings);
+		$settings = lf_sections_normalize_service_details_settings($normalized_for_swap, $settings);
 	}
 	$old_layout = (string) ($settings['service_details_layout'] ?? 'content_media');
 	if (!in_array($old_layout, ['content_media', 'media_content'], true)) {
