@@ -426,6 +426,9 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('lf_maps_api_key', isset($_POST['lf_maps_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_maps_api_key'])) : '');
 	update_option('options_lf_feedback_webhook_url', isset($_POST['lf_feedback_webhook_url']) ? esc_url_raw(wp_unslash((string) $_POST['lf_feedback_webhook_url'])) : '');
 	update_option('options_lf_feedback_webhook_secret', isset($_POST['lf_feedback_webhook_secret']) ? trim(sanitize_text_field(wp_unslash((string) $_POST['lf_feedback_webhook_secret']))) : '');
+	update_option('lf_tools_hide_admin_bar', isset($_POST['lf_tools_hide_admin_bar']) ? '1' : '0');
+	update_option('lf_tools_classic_editor', isset($_POST['lf_tools_classic_editor']) ? '1' : '0');
+	update_option('lf_tools_image_optimization', isset($_POST['lf_tools_image_optimization']) ? '1' : '0');
 	$design_preset = isset($_POST['lf_global_design_preset']) ? sanitize_text_field(wp_unslash($_POST['lf_global_design_preset'])) : 'clean-precision';
 	$design_presets = function_exists('lf_design_presets') ? lf_design_presets() : [];
 	if (empty($design_presets)) {
@@ -794,6 +797,9 @@ function lf_ops_render_global_settings_page(): void {
 	$openai_key_set = (string) get_option('lf_openai_api_key', '') !== '';
 	$feedback_webhook_url = (string) get_option('options_lf_feedback_webhook_url', '');
 	$feedback_webhook_secret = (string) get_option('options_lf_feedback_webhook_secret', '');
+	$tools_hide_admin_bar = get_option('lf_tools_hide_admin_bar', '0') === '1';
+	$tools_classic_editor = get_option('lf_tools_classic_editor', '0') === '1';
+	$tools_image_optimization = get_option('lf_tools_image_optimization', '1') === '1';
 	$airtable_settings = function_exists('lf_ai_studio_airtable_get_settings')
 		? lf_ai_studio_airtable_get_settings()
 		: [];
@@ -1047,6 +1053,24 @@ function lf_ops_render_global_settings_page(): void {
 								<td>
 									<input type="text" class="large-text" name="lf_feedback_webhook_secret" id="lf_feedback_webhook_secret" value="<?php echo esc_attr($feedback_webhook_secret); ?>" />
 									<p class="description"><?php esc_html_e('Sent as a Bearer token in the Authorization header.', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th colspan="2" style="padding-top: 16px;"><?php esc_html_e('Site tools (no plugin)', 'leadsforward-core'); ?></th>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e('Hide admin bar on frontend', 'leadsforward-core'); ?></th>
+								<td><label><input type="checkbox" name="lf_tools_hide_admin_bar" value="1" <?php checked($tools_hide_admin_bar); ?> /> <?php esc_html_e('Hide the WordPress admin bar on the public site.', 'leadsforward-core'); ?></label></td>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e('Enable classic editor', 'leadsforward-core'); ?></th>
+								<td><label><input type="checkbox" name="lf_tools_classic_editor" value="1" <?php checked($tools_classic_editor); ?> /> <?php esc_html_e('Disable the block editor for all post types (classic editor UI).', 'leadsforward-core'); ?></label></td>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e('Image compression/optimization', 'leadsforward-core'); ?></th>
+								<td>
+									<label><input type="checkbox" name="lf_tools_image_optimization" value="1" <?php checked($tools_image_optimization); ?> /> <?php esc_html_e('Optimize/compress images on upload (resize + quality).', 'leadsforward-core'); ?></label>
+									<p class="description"><?php esc_html_e('Recommended ON. Disabling stops automatic resize/quality compression for new uploads.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
