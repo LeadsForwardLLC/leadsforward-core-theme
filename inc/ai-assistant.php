@@ -849,6 +849,16 @@ function lf_ai_assistant_widget_js(): string {
 		var activeTargetLabel = String(lfAiFloating.target_label || "Homepage");
 		var labels = lfAiFloating.labels || {};
 		var homepageEnabledMap = (lfAiFloating.homepage_enabled && typeof lfAiFloating.homepage_enabled === "object") ? lfAiFloating.homepage_enabled : {};
+		/**
+		 * Inline saves must target the same store the front uses. The AI panel mutates activeContext* after
+		 * generate/apply; homepage sections live in lf_homepage_section_config, not the static front page post.
+		 */
+		function persistContextFromWrap(wrap) {
+			if (wrap && wrap.closest && wrap.closest(".site-main--homepage")) {
+				return { context_type: "homepage", context_id: "homepage" };
+			}
+			return { context_type: String(activeContextType || "homepage"), context_id: String(activeContextId || "homepage") };
+		}
 		var promptSnippet = "";
 		var docContext = "";
 		var docLabel = "";
@@ -2424,12 +2434,13 @@ function lf_ai_assistant_widget_js(): string {
 			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 			if (!sectionId || !sectionSupportsChecklistEditor(sectionType)) return;
 			var items = checklistItemsFromWrap(wrap);
+			var pc = persistContextFromWrap(wrap);
 			setStatus("Saving checklist...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_update_section_checklist",
 				nonce: lfAiFloating.nonce,
-				context_type: activeContextType,
-				context_id: activeContextId,
+				context_type: pc.context_type,
+				context_id: pc.context_id,
 				section_id: sectionId,
 				items: JSON.stringify(items)
 			}).done(function(res){
@@ -2632,12 +2643,13 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			if (!sectionId || baseType !== "hero") return;
 			var items = heroPillsFromWrap(wrap);
+			var pc = persistContextFromWrap(wrap);
 			setStatus("Saving hero pills...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_update_hero_pills",
 				nonce: lfAiFloating.nonce,
-				context_type: activeContextType,
-				context_id: activeContextId,
+				context_type: pc.context_type,
+				context_id: pc.context_id,
 				section_id: sectionId,
 				list_kind: "chips",
 				items: JSON.stringify(items)
@@ -2682,12 +2694,13 @@ function lf_ai_assistant_widget_js(): string {
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			if (!sectionId) return;
 			var lines = Array.isArray(items) ? items.map(function(v){ return String(v || "").trim(); }).filter(function(v){ return v !== ""; }) : [];
+			var pc = persistContextFromWrap(wrap);
 			setStatus(savingLabel || "Saving list...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_update_section_lines",
 				nonce: lfAiFloating.nonce,
-				context_type: activeContextType,
-				context_id: activeContextId,
+				context_type: pc.context_type,
+				context_id: pc.context_id,
 				section_id: sectionId,
 				field_key: String(fieldKey),
 				items: JSON.stringify(lines)
@@ -2710,14 +2723,22 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function persistHeroProofItems(wrap, list) {
 			if (!wrap || !list) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+			var baseType = baseSectionType(sectionType, sectionId);
+			if (!sectionId && baseType === "hero") {
+				sectionId = "hero";
+			}
+			if (!sectionId || baseType !== "hero") return;
 			var items = simpleListItemsFromContainer(list, "li");
+			var pc = persistContextFromWrap(wrap);
 			setStatus("Saving checklist...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_update_hero_pills",
 				nonce: lfAiFloating.nonce,
-				context_type: activeContextType,
-				context_id: activeContextId,
-				section_id: String(wrap.getAttribute("data-lf-section-id") || ""),
+				context_type: pc.context_type,
+				context_id: pc.context_id,
+				section_id: sectionId,
 				list_kind: "proof",
 				items: JSON.stringify(items)
 			}).done(function(res){
@@ -3028,12 +3049,13 @@ function lf_ai_assistant_widget_js(): string {
 				cb.checked = on;
 				cb.addEventListener("change", function(){
 					var next = cb.checked ? "1" : "0";
+					var pc = persistContextFromWrap(wrap);
 					setStatus("Saving trust strip setting...", false);
 					$.post(lfAiFloating.ajax_url, {
 						action: "lf_ai_update_hero_trust_strip",
 						nonce: lfAiFloating.nonce,
-						context_type: activeContextType,
-						context_id: activeContextId,
+						context_type: pc.context_type,
+						context_id: pc.context_id,
 						section_id: String(wrap.getAttribute("data-lf-section-id") || ""),
 						enabled: next
 					}).done(function(res){
