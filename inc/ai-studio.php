@@ -3365,7 +3365,7 @@ function lf_ai_studio_manifest_to_setup_data(array $manifest): array {
 		'business_geo' => ['lat' => '', 'lng' => ''],
 		'business_hours' => (string) ($business['hours'] ?? ''),
 		'business_category' => $category,
-		'business_short_description' => '',
+		'business_short_description' => (string) ($business['short_description'] ?? ''),
 		'business_gbp_url' => (string) ($business['gbp_url'] ?? ''),
 		'business_social_facebook' => (string) ($social['facebook'] ?? ''),
 		'business_social_instagram' => (string) ($social['instagram'] ?? ''),
@@ -3479,6 +3479,16 @@ function lf_ai_studio_apply_manifest_to_site_options(array $manifest, ?array $se
 		lf_update_business_info_value('lf_business_place_name', (string) ($data['business_place_name'] ?? ''));
 		lf_update_business_info_value('lf_business_place_address', (string) ($data['business_place_address'] ?? ''));
 		lf_update_business_info_value('lf_business_map_embed', (string) ($data['business_map_embed'] ?? ''));
+
+		// If no primary image is set yet, default to the uploaded logo.
+		// This keeps schema/OG image sensible without requiring manual selection.
+		$primary_image_id = function_exists('lf_get_business_info_value') ? (int) lf_get_business_info_value('lf_business_primary_image', 0) : 0;
+		if ($primary_image_id <= 0) {
+			$logo_id = function_exists('lf_get_global_option') ? (int) lf_get_global_option('lf_global_logo', 0) : (int) get_option('options_lf_global_logo', 0);
+			if ($logo_id > 0) {
+				lf_update_business_info_value('lf_business_primary_image', $logo_id);
+			}
+		}
 	}
 	if (function_exists('lf_update_global_option_value')) {
 		lf_update_global_option_value('lf_header_cta_label', '');
