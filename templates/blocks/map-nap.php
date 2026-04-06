@@ -29,6 +29,9 @@ $place_id = is_string($place_id) ? trim($place_id) : '';
 if (is_string($place_id) && stripos($place_id, 'place_id:') === 0) {
 	$place_id = trim(substr($place_id, strlen('place_id:')));
 }
+if ($place_id !== '' && (strlen($place_id) < 12 || preg_match('/\s/', $place_id) === 1)) {
+	$place_id = '';
+}
 $place_name = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_name', '') : '';
 $place_address = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_address', '') : '';
 $map_embed_override = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_map_embed', '') : '';
