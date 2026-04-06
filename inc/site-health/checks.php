@@ -62,7 +62,7 @@ function lf_health_check_required_plugins(): array {
 function lf_health_check_wizard_complete(): array {
 	$done = (bool) get_option('lf_setup_wizard_complete', false);
 	if ($done) {
-		return ['status' => lf_health_status_pass(), 'label' => __('Site setup', 'leadsforward-core'), 'message' => __('Marked complete.', 'leadsforward-core'), 'fix_link' => ''];
+		return ['status' => lf_health_status_pass(), 'label' => __('Initial setup', 'leadsforward-core'), 'message' => __('Manual setup wizard marked complete.', 'leadsforward-core'), 'fix_link' => ''];
 	}
 	$slugs = function_exists('lf_wizard_required_page_slugs') ? lf_wizard_required_page_slugs() : [];
 	$missing = 0;
@@ -76,15 +76,15 @@ function lf_health_check_wizard_complete(): array {
 	if ($missing === 0 && !empty($slugs)) {
 		return [
 			'status' => lf_health_status_warning(),
-			'label' => __('Site setup', 'leadsforward-core'),
-			'message' => __('The setup wizard is not marked complete, but core pages from the checklist exist. Open Site setup to confirm or mark the flow done.', 'leadsforward-core'),
+			'label' => __('Initial setup', 'leadsforward-core'),
+			'message' => __('The manual setup wizard is not marked complete, but core pages from the checklist exist. Open Manual setup to confirm or finish the flow. If you use Airtable, Website Manifester may have created pages without running the wizard.', 'leadsforward-core'),
 			'fix_link' => $fix,
 		];
 	}
 	return [
 		'status' => lf_health_status_fail(),
-		'label' => __('Site setup', 'leadsforward-core'),
-		'message' => __('Site setup is not complete or core pages are missing. Run the guided wizard.', 'leadsforward-core'),
+		'label' => __('Initial setup', 'leadsforward-core'),
+		'message' => __('Core pages are missing or the manual setup wizard was not completed. Use Website Manifester (Airtable recommended) or Manual setup (no Airtable).', 'leadsforward-core'),
 		'fix_link' => $fix,
 	];
 }

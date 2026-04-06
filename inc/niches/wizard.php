@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin site setup UI. One-time flow: niche → NAP → services/areas → profile → generate.
+ * Optional manual site setup (when not using Airtable). One-time flow: niche → NAP → services/areas → profile → generate.
  * Persists completion flag; never shows again after success.
  *
  * @package LeadsForward_Core
@@ -21,13 +21,13 @@ add_action('after_switch_theme', 'lf_wizard_on_activation');
 add_action('admin_menu', 'lf_wizard_register_admin_page', 11);
 
 /**
- * Register Site setup under LeadsForward so admin.php?page=lf-setup works (health “Fix” links, notices).
+ * Manual setup (no Airtable): admin.php?page=lf-setup — health “Fix” links and notices still use this slug.
  */
 function lf_wizard_register_admin_page(): void {
 	add_submenu_page(
 		'lf-ops',
-		__('Site setup', 'leadsforward-core'),
-		__('Site setup', 'leadsforward-core'),
+		__('Manual setup (no Airtable)', 'leadsforward-core'),
+		__('Manual setup (no Airtable)', 'leadsforward-core'),
 		'edit_theme_options',
 		'lf-setup',
 		'lf_wizard_render_page'
@@ -45,15 +45,21 @@ function lf_wizard_admin_notice(): void {
 	if (get_option('lf_setup_wizard_complete', false)) {
 		return;
 	}
+	if (function_exists('lf_ai_studio_manifest_exists') && lf_ai_studio_manifest_exists()) {
+		return;
+	}
 	$screen = get_current_screen();
-	// Hide notice on any LeadsForward admin page (Setup lives under LeadsForward menu)
+	// Hide notice on any LeadsForward admin page (Manifester + tools live under LeadsForward menu)
 	if ($screen && (strpos($screen->id, 'toplevel_page_lf-ops') !== false || strpos($screen->id, 'leadsforward_page_lf-') !== false)) {
 		return;
 	}
+	$manifester_url = admin_url('admin.php?page=lf-ops');
+	$manual_url = admin_url('admin.php?page=lf-setup');
 	echo '<div class="notice notice-info"><p>' . sprintf(
-		/* translators: %s: link to site setup */
-		esc_html__('LeadsForward: Complete your site setup in one go. %s', 'leadsforward-core'),
-		'<a href="' . esc_url(admin_url('admin.php?page=lf-setup')) . '">' . esc_html__('Run site setup', 'leadsforward-core') . '</a>'
+		/* translators: 1: link to Website Manifester (Airtable default), 2: link to manual setup */
+		esc_html__('LeadsForward: Start with %1$s (Airtable is the default). Only use %2$s if you are not using Airtable.', 'leadsforward-core'),
+		'<a href="' . esc_url($manifester_url) . '">' . esc_html__('Website Manifester', 'leadsforward-core') . '</a>',
+		'<a href="' . esc_url($manual_url) . '">' . esc_html__('manual setup', 'leadsforward-core') . '</a>'
 	) . '</p></div>';
 }
 
@@ -342,7 +348,7 @@ function lf_wizard_render_page(): void {
 	$legal_regen = isset($_GET['legal_regen']) ? sanitize_text_field($_GET['legal_regen']) : '';
 	$manifest_errors = get_option('lf_ai_studio_manifest_errors', []);
 	if ($complete && !isset($_GET['done'])) {
-		echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
+		echo '<div class="wrap"><h1>' . esc_html__('Manual site setup', 'leadsforward-core') . '</h1>';
 		if ($settings_saved) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Settings saved.', 'leadsforward-core') . '</p></div>';
 		}
@@ -365,7 +371,7 @@ function lf_wizard_render_page(): void {
 			echo '</ul></div>';
 		}
 		lf_wizard_render_setup_settings_panel();
-		echo '<p>' . esc_html__('Setup is already complete. Your site has the required pages, menus, and structure.', 'leadsforward-core') . '</p>';
+		echo '<p>' . esc_html__('Manual setup is already complete. Your site has the required pages, menus, and structure.', 'leadsforward-core') . '</p>';
 		echo '<p><a href="' . esc_url(admin_url('admin.php?page=lf-setup&reset=1')) . '" class="button">' . esc_html__('Show setup again', 'leadsforward-core') . '</a></p></div>';
 		return;
 	}
@@ -375,7 +381,7 @@ function lf_wizard_render_page(): void {
 		exit;
 	}
 	if (isset($_GET['done'])) {
-		echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
+		echo '<div class="wrap"><h1>' . esc_html__('Manual site setup', 'leadsforward-core') . '</h1>';
 		$ai_error = isset($_GET['ai_error']) ? sanitize_text_field($_GET['ai_error']) : '';
 		if ($settings_saved) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Settings saved.', 'leadsforward-core') . '</p></div>';
@@ -395,13 +401,13 @@ function lf_wizard_render_page(): void {
 			echo '<div class="notice notice-error"><p>' . esc_html($ai_error) . '</p></div>';
 		}
 		lf_wizard_render_setup_settings_panel();
-		echo '<p class="notice notice-success">' . esc_html__('Site setup complete. You can now customize Theme Options and edit pages.', 'leadsforward-core') . '</p>';
+		echo '<p class="notice notice-success">' . esc_html__('Manual setup complete. You can now customize Theme Options and edit pages.', 'leadsforward-core') . '</p>';
 		echo '<p><a href="' . esc_url(get_permalink(get_option('page_on_front'))) . '" class="button button-primary">' . esc_html__('View site', 'leadsforward-core') . '</a> ';
 		echo '<a href="' . esc_url(admin_url('admin.php?page=lf-global')) . '" class="button">' . esc_html__('Global Settings', 'leadsforward-core') . '</a></p></div>';
 		return;
 	}
 
-	echo '<div class="wrap"><h1>' . esc_html__('LeadsForward Setup', 'leadsforward-core') . '</h1>';
+	echo '<div class="wrap"><h1>' . esc_html__('Manual site setup', 'leadsforward-core') . '</h1>';
 	echo '<style>
 		.wrap > h1 { margin-bottom: 6px; }
 		.lf-setup-progress { display:flex; align-items:center; gap:12px; margin: 8px 0 16px; }
@@ -431,10 +437,10 @@ function lf_wizard_render_page(): void {
 		echo '<div class="notice notice-error"><p>' . esc_html__('You must type RESET exactly to confirm.', 'leadsforward-core') . '</p></div>';
 	}
 	echo '<div class="lf-setup-card lf-setup-card--top">';
-	echo '<h2 style="margin-top:0;">' . esc_html__('Website Manifester Setup', 'leadsforward-core') . '</h2>';
-	echo '<p class="description">' . esc_html__('Complete site setup to store business info and keywords. Website Manifester uses these inputs for regeneration.', 'leadsforward-core') . '</p>';
-	echo '<p><a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=lf-setup&step=' . $step)) . '#lf-site-setup">' . esc_html__('Continue site setup', 'leadsforward-core') . '</a> ';
-	echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=lf-ops')) . '">' . esc_html__('Open Website Manifester', 'leadsforward-core') . '</a></p>';
+	echo '<h2 style="margin-top:0;">' . esc_html__('Manual setup (no Airtable)', 'leadsforward-core') . '</h2>';
+	echo '<p class="description">' . esc_html__('This guided flow is for sites that do not load data from Airtable. Most teams use Website Manifester with Airtable instead.', 'leadsforward-core') . '</p>';
+	echo '<p><a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=lf-ops')) . '">' . esc_html__('Open Website Manifester (recommended)', 'leadsforward-core') . '</a> ';
+	echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=lf-setup&step=' . $step)) . '#lf-site-setup">' . esc_html__('Continue manual setup', 'leadsforward-core') . '</a></p>';
 	echo '</div>';
 	if ($errors) {
 		echo '<div class="notice notice-error"><p>' . esc_html($errors) . '</p></div>';

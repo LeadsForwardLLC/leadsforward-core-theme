@@ -1100,10 +1100,43 @@ function lf_ai_studio_render_page(): void {
 			];
 		}
 	}
+	$manifest_exists = function_exists('lf_ai_studio_manifest_exists') && lf_ai_studio_manifest_exists();
+	$manual_setup_url = admin_url('admin.php?page=lf-setup');
 	?>
 	<div class="wrap">
-		<h1><?php esc_html_e('Website Manifester', 'leadsforward-core'); ?></h1>
-		<p class="description"><?php esc_html_e('Deterministic, orchestrator-driven generation for full site content and structure.', 'leadsforward-core'); ?></p>
+		<h1 class="lf-manifester-page-title"><?php esc_html_e('Website Manifester', 'leadsforward-core'); ?></h1>
+		<p class="lf-manifester-lead description"><?php esc_html_e('Load your project from Airtable, generate content with your orchestrator, and publish a full local site from one place.', 'leadsforward-core'); ?></p>
+
+		<div class="lf-manifester-hero">
+			<div class="lf-manifester-hero__main">
+				<h2 class="lf-manifester-hero__title"><?php esc_html_e('Recommended: Airtable → generate', 'leadsforward-core'); ?></h2>
+				<ol class="lf-manifester-hero__steps">
+					<li><?php esc_html_e('Add orchestrator + Airtable credentials under Global Settings.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Choose what to generate (homepage, services, etc.) and pick your Airtable project below.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Upload images and logo if you want, then click “Manifest your website”.', 'leadsforward-core'); ?></li>
+				</ol>
+				<?php if ($manifest_exists) : ?>
+					<p class="lf-manifester-hero__status lf-manifester-hero__status--ok">
+						<?php esc_html_e('A manifest is stored on this site. You can regenerate or pick a different Airtable project anytime.', 'leadsforward-core'); ?>
+					</p>
+				<?php elseif ($airtable_ready) : ?>
+					<p class="lf-manifester-hero__status">
+						<?php esc_html_e('Airtable is connected — select a project in step 2 to build your manifest.', 'leadsforward-core'); ?>
+					</p>
+				<?php else : ?>
+					<p class="lf-manifester-hero__status lf-manifester-hero__status--warn">
+						<?php esc_html_e('Connect Airtable in Global Settings to use the default workflow.', 'leadsforward-core'); ?>
+					</p>
+				<?php endif; ?>
+			</div>
+			<div class="lf-manifester-hero__alt">
+				<h3 class="lf-manifester-hero__alt-title"><?php esc_html_e('Not using Airtable?', 'leadsforward-core'); ?></h3>
+				<p class="description"><?php esc_html_e('Use a guided manual setup (niche, NAP, services) or upload a JSON manifest file in step 2 instead.', 'leadsforward-core'); ?></p>
+				<p class="lf-manifester-hero__alt-actions">
+					<a class="button" href="<?php echo esc_url($manual_setup_url); ?>"><?php esc_html_e('Manual setup (no Airtable)', 'leadsforward-core'); ?></a>
+				</p>
+			</div>
+		</div>
 		<?php if ($scope_saved) : ?>
 			<div class="notice notice-success is-dismissible">
 				<p>
@@ -1188,8 +1221,8 @@ function lf_ai_studio_render_page(): void {
 			</div>
 		<?php endif; ?>
 		<div class="card lf-manifester-card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
-			<h2 style="margin-top:0;"><?php esc_html_e('Website Manifester', 'leadsforward-core'); ?></h2>
-			<p class="description"><?php esc_html_e('Follow the steps below to generate a full site with consistent branding and content.', 'leadsforward-core'); ?></p>
+			<h2 style="margin-top:0;"><?php esc_html_e('Steps', 'leadsforward-core'); ?></h2>
+			<p class="description"><?php esc_html_e('Work top to bottom. Airtable is the usual source for business data; manifest upload is an alternative.', 'leadsforward-core'); ?></p>
 			<?php $research_prompt_url = LF_THEME_URI . '/docs/06_AI_PROMPT_ENGINE.md'; ?>
 			<?php $global_settings_url = admin_url('admin.php?page=lf-global'); ?>
 			<?php $template_url = wp_nonce_url(admin_url('admin-post.php?action=lf_ai_studio_manifest_template'), 'lf_ai_studio_manifest_template', 'lf_ai_studio_manifest_template_nonce'); ?>
@@ -1198,17 +1231,17 @@ function lf_ai_studio_render_page(): void {
 				<div class="lf-manifester-step">
 					<div class="lf-manifester-step__badge">1</div>
 					<div class="lf-manifester-step__content">
-						<h3><?php esc_html_e('Connect your API settings', 'leadsforward-core'); ?></h3>
-						<p class="description"><?php esc_html_e('Add your Orchestrator + Airtable credentials in Global Settings before you generate.', 'leadsforward-core'); ?></p>
-						<a class="button" href="<?php echo esc_url($global_settings_url); ?>"><?php esc_html_e('Open Global Settings', 'leadsforward-core'); ?></a>
+						<h3><?php esc_html_e('Global Settings: orchestrator & Airtable', 'leadsforward-core'); ?></h3>
+						<p class="description"><?php esc_html_e('Add your n8n/orchestrator webhook, secret, and Airtable (PAT, base, table). Required for the default Airtable workflow.', 'leadsforward-core'); ?></p>
+						<a class="button button-primary" href="<?php echo esc_url($global_settings_url); ?>"><?php esc_html_e('Open Global Settings', 'leadsforward-core'); ?></a>
 					</div>
 				</div>
 
 				<div class="lf-manifester-step">
 					<div class="lf-manifester-step__badge">2</div>
 					<div class="lf-manifester-step__content">
-						<h3><?php esc_html_e('Select your Airtable project', 'leadsforward-core'); ?></h3>
-						<p class="description"><?php esc_html_e('Pick a project first. If you prefer a manifest file, upload it below as an alternate source.', 'leadsforward-core'); ?></p>
+						<h3><?php esc_html_e('Load site data: Airtable (default) or manifest file', 'leadsforward-core'); ?></h3>
+						<p class="description"><?php esc_html_e('Search and select an Airtable row to build the manifest and sync business info. Or upload a JSON manifest if you do not use Airtable.', 'leadsforward-core'); ?></p>
 						<div class="lf-manifester-source">
 							<div class="lf-manifester-panel" id="lf-airtable-picker">
 								<h4 style="margin-top:0;"><?php esc_html_e('Airtable Projects', 'leadsforward-core'); ?></h4>
@@ -1381,8 +1414,8 @@ function lf_ai_studio_render_page(): void {
 				<div class="lf-manifester-step lf-manifester-step--action">
 					<div class="lf-manifester-step__badge">6</div>
 					<div class="lf-manifester-step__content">
-						<h3><?php esc_html_e('Manifest your website', 'leadsforward-core'); ?></h3>
-						<p class="description"><?php esc_html_e('We will use the manifest file if one is selected, otherwise the selected Airtable project.', 'leadsforward-core'); ?></p>
+						<h3><?php esc_html_e('Run generation', 'leadsforward-core'); ?></h3>
+						<p class="description"><?php esc_html_e('Uses the manifest on this site (from your last Airtable selection or file upload). Pick a project in step 2 if you have not yet.', 'leadsforward-core'); ?></p>
 						<p class="description" style="margin-bottom:12px;">
 							<strong><?php esc_html_e('This run will include:', 'leadsforward-core'); ?></strong>
 							<?php
@@ -3370,17 +3403,21 @@ function lf_ai_studio_manifest_niche_slug(array $business) {
 	return new \WP_Error('invalid_niche_slug', 'Invalid niche slug in manifest.');
 }
 
-function lf_ai_studio_scaffold_manifest(array $manifest): array {
-	if (!function_exists('lf_run_setup')) {
-		return ['success' => false, 'message' => __('Setup runner not available.', 'leadsforward-core')];
+/**
+ * Persist manifest business/niche/homepage options (Site setup + Global Settings entity).
+ * Used by Airtable import and scaffold after lf_run_setup.
+ *
+ * @param array<string, mixed> $manifest Normalized manifest.
+ * @param array<string, mixed>|null $setup_data Precomputed lf_ai_studio_manifest_to_setup_data output, or null to compute.
+ */
+function lf_ai_studio_apply_manifest_to_site_options(array $manifest, ?array $setup_data = null): void {
+	$data = $setup_data;
+	if ($data === null) {
+		$data = lf_ai_studio_manifest_to_setup_data($manifest);
 	}
-	$data = lf_ai_studio_manifest_to_setup_data($manifest);
-	if (!empty($data['error'])) {
-		return ['success' => false, 'message' => (string) $data['error'], 'errors' => [(string) $data['error']]];
+	if (!is_array($data) || !empty($data['error'])) {
+		return;
 	}
-	$result = lf_run_setup($data);
-	lf_ai_studio_ensure_header_menu_more_children();
-	lf_ai_studio_ensure_header_menu_primary_pages();
 	$business = $manifest['business'] ?? [];
 	$address = is_array($business['address'] ?? null) ? $business['address'] : [];
 	$biz_name = (string) ($business['name'] ?? '');
@@ -3457,76 +3494,125 @@ function lf_ai_studio_scaffold_manifest(array $manifest): array {
 		update_option('lf_active_icon_pack', (string) $data['niche_slug'], true);
 	}
 	update_option('lf_homepage_city', (string) ($business['primary_city'] ?? $address_city), true);
+	$secondary_kw = $manifest['homepage']['secondary_keywords'] ?? [];
+	if (is_string($secondary_kw)) {
+		$secondary_kw = preg_split('/\r\n|\r|\n|,/', $secondary_kw);
+	}
+	if (!is_array($secondary_kw)) {
+		$secondary_kw = [];
+	}
 	update_option('lf_homepage_keywords', [
 		'primary' => (string) ($manifest['homepage']['primary_keyword'] ?? ''),
-		'secondary' => $manifest['homepage']['secondary_keywords'] ?? [],
+		'secondary' => $secondary_kw,
 	], true);
 	$home = get_page_by_path('home', OBJECT, 'page');
 	if ($home instanceof \WP_Post) {
 		update_option('show_on_front', 'page');
 		update_option('page_on_front', $home->ID);
 	}
+}
+
+/**
+ * Enable SEO keyword engine defaults and seed homepage primary keyword meta from manifest.
+ * Returns map/used state for lf_ai_studio_scaffold_manifest() keyword assignment; callers that
+ * use lf_seo_assign_keywords_from_manifest() instead may ignore the return value.
+ *
+ * @param array<string, mixed> $manifest Normalized manifest.
+ * @return array{map: array<string, mixed>, used: array<string, bool>, secondary_pool: array<int, string>, homepage_primary: string}|null
+ */
+function lf_ai_studio_apply_manifest_seo_baseline(array $manifest): ?array {
+	$seo_settings = function_exists('lf_seo_get_settings') ? lf_seo_get_settings() : get_option('lf_seo_settings', []);
+	if (!is_array($seo_settings)) {
+		$seo_settings = [];
+	}
+	$seo_settings = array_replace_recursive([
+		'general' => [],
+		'schema' => [],
+		'sitemap' => [],
+		'ai' => [],
+	], $seo_settings);
+	$seo_settings['general']['title_template'] = '{{page_title}} | {{primary_city}} | {{brand}}';
+	$seo_settings['schema']['enable_local_business'] = true;
+	$seo_settings['sitemap']['enable'] = true;
+	$seo_settings['ai']['enable_auto_keywords'] = true;
+	$seo_settings['ai']['enable_keyword_map'] = true;
+	$seo_settings['ai_keyword_engine'] = true;
+	update_option('lf_seo_settings', $seo_settings);
+
+	if (empty($seo_settings['ai_keyword_engine'])) {
+		return null;
+	}
+	$homepage_primary = sanitize_text_field((string) ($manifest['homepage']['primary_keyword'] ?? ''));
+	$secondary_raw = $manifest['homepage']['secondary_keywords'] ?? [];
+	if (is_string($secondary_raw)) {
+		$secondary_raw = preg_split('/\r\n|\r|\n|,/', $secondary_raw);
+	}
+	if (!is_array($secondary_raw)) {
+		$secondary_raw = [];
+	}
+	$secondary_pool = array_values(array_unique(array_filter(array_map('sanitize_text_field', $secondary_raw))));
+	if ($homepage_primary !== '') {
+		$secondary_pool = array_values(array_filter($secondary_pool, function ($keyword) use ($homepage_primary) {
+			return strcasecmp($keyword, $homepage_primary) !== 0;
+		}));
+	}
+
+	$map = [
+		'primary' => [],
+		'secondary' => [
+			'pool' => $secondary_pool,
+		],
+		'last_index' => [],
+	];
+	if ($homepage_primary !== '') {
+		$map['primary']['homepage'] = $homepage_primary;
+	}
+	$home = get_page_by_path('home', OBJECT, 'page');
+	$homepage_id = (int) get_option('page_on_front');
+	if (!$homepage_id) {
+		$homepage_id = $home instanceof \WP_Post ? (int) $home->ID : 0;
+	}
+	if ($homepage_id > 0 && $homepage_primary !== '') {
+		update_post_meta($homepage_id, '_lf_seo_primary_keyword', $homepage_primary);
+		if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+			lf_seo_maybe_populate_generated_meta($homepage_id, $homepage_primary, $secondary_pool);
+		}
+	}
+
+	$used = [];
+	if ($homepage_primary !== '') {
+		$used[strtolower($homepage_primary)] = true;
+	}
+
+	return [
+		'map' => $map,
+		'used' => $used,
+		'secondary_pool' => $secondary_pool,
+		'homepage_primary' => $homepage_primary,
+	];
+}
+
+function lf_ai_studio_scaffold_manifest(array $manifest): array {
+	if (!function_exists('lf_run_setup')) {
+		return ['success' => false, 'message' => __('Setup runner not available.', 'leadsforward-core')];
+	}
+	$data = lf_ai_studio_manifest_to_setup_data($manifest);
+	if (!empty($data['error'])) {
+		return ['success' => false, 'message' => (string) $data['error'], 'errors' => [(string) $data['error']]];
+	}
+	$result = lf_run_setup($data);
+	lf_ai_studio_ensure_header_menu_more_children();
+	lf_ai_studio_ensure_header_menu_primary_pages();
+	lf_ai_studio_apply_manifest_to_site_options($manifest, $data);
+	$home = get_page_by_path('home', OBJECT, 'page');
 	$scaffold_success = is_array($result) && !empty($result['success']);
 	if ($scaffold_success) {
-		$seo_settings = function_exists('lf_seo_get_settings') ? lf_seo_get_settings() : get_option('lf_seo_settings', []);
-		if (!is_array($seo_settings)) {
-			$seo_settings = [];
-		}
-		$seo_settings = array_replace_recursive([
-			'general' => [],
-			'schema' => [],
-			'sitemap' => [],
-			'ai' => [],
-		], $seo_settings);
-		$seo_settings['general']['title_template'] = '{{page_title}} | {{primary_city}} | {{brand}}';
-		$seo_settings['schema']['enable_local_business'] = true;
-		$seo_settings['sitemap']['enable'] = true;
-		$seo_settings['ai']['enable_auto_keywords'] = true;
-		$seo_settings['ai']['enable_keyword_map'] = true;
-		$seo_settings['ai_keyword_engine'] = true;
-		update_option('lf_seo_settings', $seo_settings);
-
-		if (!empty($seo_settings['ai_keyword_engine'])) {
-			$homepage_primary = sanitize_text_field((string) ($manifest['homepage']['primary_keyword'] ?? ''));
-			$secondary_raw = $manifest['homepage']['secondary_keywords'] ?? [];
-			if (is_string($secondary_raw)) {
-				$secondary_raw = preg_split('/\r\n|\r|\n|,/', $secondary_raw);
-			}
-			if (!is_array($secondary_raw)) {
-				$secondary_raw = [];
-			}
-			$secondary_pool = array_values(array_unique(array_filter(array_map('sanitize_text_field', $secondary_raw))));
-			if ($homepage_primary !== '') {
-				$secondary_pool = array_values(array_filter($secondary_pool, function ($keyword) use ($homepage_primary) {
-					return strcasecmp($keyword, $homepage_primary) !== 0;
-				}));
-			}
-
-			$map = [
-				'primary' => [],
-				'secondary' => [
-					'pool' => $secondary_pool,
-				],
-				'last_index' => [],
-			];
-			if ($homepage_primary !== '') {
-				$map['primary']['homepage'] = $homepage_primary;
-			}
-			$homepage_id = (int) get_option('page_on_front');
-			if (!$homepage_id) {
-				$homepage_id = $home instanceof \WP_Post ? (int) $home->ID : 0;
-			}
-			if ($homepage_id > 0 && $homepage_primary !== '') {
-				update_post_meta($homepage_id, '_lf_seo_primary_keyword', $homepage_primary);
-				if (function_exists('lf_seo_maybe_populate_generated_meta')) {
-					lf_seo_maybe_populate_generated_meta($homepage_id, $homepage_primary, $secondary_pool);
-				}
-			}
-
-			$used = [];
-			if ($homepage_primary !== '') {
-				$used[strtolower($homepage_primary)] = true;
-			}
+		$kw_state = lf_ai_studio_apply_manifest_seo_baseline($manifest);
+		if ($kw_state !== null) {
+			$map = $kw_state['map'];
+			$used = $kw_state['used'];
+			$secondary_pool = $kw_state['secondary_pool'];
+			$homepage_primary = $kw_state['homepage_primary'];
 
 			$services = get_posts([
 				'post_type' => 'lf_service',
