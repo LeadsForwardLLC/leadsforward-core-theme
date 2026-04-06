@@ -1486,13 +1486,13 @@ button:focus-visible,
 }
 
 .site-header__logo-img {
-	height: 52px;
+	height: 64px;
 	width: auto;
 	display: block;
 }
 
 .site-header--scrolled .site-header__logo-img {
-	height: 44px;
+	height: 54px;
 }
 
 .site-header__logo-text {
