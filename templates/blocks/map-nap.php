@@ -141,6 +141,11 @@ if (is_string($map_embed_override) && $map_embed_override !== '') {
 	$map_embed_url = 'https://www.google.com/maps/embed/v1/place?key=' . rawurlencode($maps_api_key) . '&q=place_id:' . rawurlencode($place_id);
 } elseif (is_string($place_id) && $place_id !== '') {
 	$map_embed_url = 'https://www.google.com/maps?q=place_id:' . rawurlencode($place_id) . '&output=embed';
+} elseif (is_string($address) && trim($address) !== '' && $maps_api_key !== '') {
+	// Fallback when place_id is missing or invalid: embed by address so the map still works.
+	$map_embed_url = 'https://www.google.com/maps/embed/v1/place?key=' . rawurlencode($maps_api_key) . '&q=' . rawurlencode(trim((string) $address));
+} elseif (is_string($address) && trim($address) !== '') {
+	$map_embed_url = 'https://www.google.com/maps?q=' . rawurlencode(trim((string) $address)) . '&output=embed';
 }
 
 $areas_query = new WP_Query([
