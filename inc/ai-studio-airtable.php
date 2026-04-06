@@ -24,6 +24,7 @@ add_action('switch_theme', 'lf_ai_studio_airtable_clear_reviews_sync');
 function lf_ai_studio_airtable_default_field_map(): array {
 	return [
 		'project' => 'Project',
+		'project_type' => 'Project Type',
 		'phone' => 'Phone Number',
 		'email' => 'Client Email',
 		'street' => 'Street Address',
@@ -40,17 +41,26 @@ function lf_ai_studio_airtable_default_field_map(): array {
 		'secondary_keywords_focus' => 'KW-Focus',
 		'service_areas_list' => 'Service Areas',
 		'services_list' => 'Services List',
+		'services_raw' => 'Services',
 		'services_json' => 'Services JSON',
 		'service_areas_json' => 'Service Areas JSON',
 		'manifest_json' => 'Manifest JSON',
 		'website_url' => 'Website URL',
+		'root_domain' => 'Root Domain',
 		'business_category' => 'Business Category',
 		'business_hours' => 'Hours',
+		'business_short_description' => 'Short description',
 		'google_name' => 'Google Name',
 		'google_account' => 'Google Account',
+		'google_account_name' => 'Google Account Name',
 		'gmails' => 'Gmails',
+		'gbp_url' => 'Google Business Profile URL',
+		'place_id' => 'Place ID',
 		'gbp_cid_primary' => 'GMB CID Primary',
 		'gbp_cid' => 'GMB CID',
+		'logo_url' => 'Logo URL',
+		'google_drive_folder' => 'Google Drive Folder',
+		'competitors' => 'Competitors',
 		'facebook' => 'Facebook',
 		'x' => 'X',
 		'instagram' => 'Instagram',
@@ -61,6 +71,11 @@ function lf_ai_studio_airtable_default_field_map(): array {
 		'yelp' => 'Yelp',
 		'bing' => 'Bing',
 		'foundation_year' => 'Foundation Year',
+		'ga_universal_id' => 'GA Universal ID',
+		'ga4_account_id' => 'GA4 Account ID',
+		'analytics_measurement_id' => 'Analytics Measurement ID',
+		'gsc_account_user' => 'GSC Account User',
+		'bing_account' => 'Bing',
 	];
 }
 
@@ -1063,13 +1078,19 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	$service_areas = lf_ai_studio_airtable_json_array_field($fields, $map['service_areas_json'] ?? '', 'Service Areas JSON', $errors);
 	$service_area_list = lf_ai_studio_airtable_string_field($fields, $map['service_areas_list'] ?? '');
 	$services_list = lf_ai_studio_airtable_string_field($fields, $map['services_list'] ?? '');
+	$services_raw = lf_ai_studio_airtable_string_field($fields, $map['services_raw'] ?? '');
 
 	$website_url = lf_ai_studio_airtable_string_field($fields, $map['website_url'] ?? '');
+	$root_domain = lf_ai_studio_airtable_string_field($fields, $map['root_domain'] ?? '');
 	$business_category = lf_ai_studio_airtable_string_field($fields, $map['business_category'] ?? '');
 	$business_hours = lf_ai_studio_airtable_string_field($fields, $map['business_hours'] ?? '');
+	$business_short_description = lf_ai_studio_airtable_string_field($fields, $map['business_short_description'] ?? '');
 	$google_name = lf_ai_studio_airtable_string_field($fields, $map['google_name'] ?? '');
+	$gbp_url = lf_ai_studio_airtable_string_field($fields, $map['gbp_url'] ?? '');
+	$place_id = lf_ai_studio_airtable_string_field($fields, $map['place_id'] ?? '');
 	$gbp_cid_primary = lf_ai_studio_airtable_string_field($fields, $map['gbp_cid_primary'] ?? '');
 	$gbp_cid = lf_ai_studio_airtable_string_field($fields, $map['gbp_cid'] ?? '');
+	$logo_url = lf_ai_studio_airtable_string_field($fields, $map['logo_url'] ?? '');
 	$facebook = lf_ai_studio_airtable_string_field($fields, $map['facebook'] ?? '');
 	$x_url = lf_ai_studio_airtable_string_field($fields, $map['x'] ?? '');
 	$instagram = lf_ai_studio_airtable_string_field($fields, $map['instagram'] ?? '');
@@ -1122,6 +1143,9 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	if ((empty($services) || $has_only_generic) && $services_list !== '') {
 		$services = lf_ai_studio_airtable_build_services_from_list($services_list, $primary_city, $state, $business_name, $niche);
 	}
+	if ((empty($services) || $has_only_generic) && $services_raw !== '') {
+		$services = lf_ai_studio_airtable_build_services_from_list($services_raw, $primary_city, $state, $business_name, $niche);
+	}
 	if (empty($services)) {
 		$niche_slug_guess = lf_ai_studio_airtable_resolve_niche_slug($niche, $niche_slug);
 		$services = lf_ai_studio_airtable_build_services_from_niche($niche_slug_guess, $primary_city, $state, $business_name);
@@ -1168,11 +1192,18 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 			'site_style' => $site_style !== '' ? $site_style : 'premium',
 			'variation_seed' => $variation_seed,
 			'website_url' => $website_url,
+			'root_domain' => $root_domain,
 			'hours' => $business_hours,
 			'category' => $business_category,
+			'short_description' => $business_short_description,
 			'place_name' => $google_name,
-			'place_id' => $gbp_cid_primary !== '' ? $gbp_cid_primary : $gbp_cid,
+			// IMPORTANT: Place ID is not the same as a GBP CID. Only populate place_id when Airtable provides a real Place ID.
+			'place_id' => $place_id,
+			'gbp_cid_primary' => $gbp_cid_primary,
+			'gbp_cid' => $gbp_cid,
+			'gbp_url' => $gbp_url,
 			'founding_year' => $foundation_year,
+			'logo_url' => $logo_url,
 			'social' => [
 				'facebook' => $facebook,
 				'instagram' => $instagram,
