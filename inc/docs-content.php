@@ -21,6 +21,9 @@ function lf_docs_render_main_sections(string $context = 'public'): void {
 		<aside class="lf-docs__sidebar" aria-label="<?php esc_attr_e('Documentation navigation', 'leadsforward-core'); ?>">
 			<h2 class="lf-docs__title"><?php esc_html_e('Knowledge base', 'leadsforward-core'); ?></h2>
 			<nav class="lf-docs__nav">
+				<?php if ($is_admin && current_user_can('edit_theme_options')) : ?>
+					<a href="#admin-shortcuts"><?php esc_html_e('Admin quick links', 'leadsforward-core'); ?></a>
+				<?php endif; ?>
 				<a href="#getting-started"><?php esc_html_e('Playbook overview', 'leadsforward-core'); ?></a>
 				<a href="#roadmap"><?php esc_html_e('Order of work', 'leadsforward-core'); ?></a>
 				<a href="#admin-map"><?php esc_html_e('Admin map', 'leadsforward-core'); ?></a>

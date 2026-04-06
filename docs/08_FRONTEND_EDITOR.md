@@ -114,7 +114,7 @@ SEO is now decoupled from the AI assistant body and launched from its own floati
 
 ## Hero Lists Persistence Guardrails
 
-Hero pills (`.lf-hero-chips`) use `hero_chip_bullets`; the proof card list (`.lf-block-hero__card-list`) uses `hero_proof_bullets`. They are saved independently (no cross-sync).
+Hero pills (`.lf-hero-chips`) use `hero_chip_bullets`; the proof card list (`.lf-block-hero__card-list`) uses `hero_proof_bullets`. They are saved independently (no cross-sync). The inline editor prefers `.lf-hero-split__proof .lf-block-hero__card-list` when present so the Authority Split column is targeted before other hero layouts that also contain a card list.
 
 - Both editors now normalize text-node structure before save to prevent duplicate text artifacts.
 - Saves are synchronized so pill edits update proof checklist DOM and vice versa before persistence.

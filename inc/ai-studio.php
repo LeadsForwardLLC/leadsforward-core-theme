@@ -4395,7 +4395,7 @@ function lf_ai_studio_llm_system_message(): string {
 		'CTA strategy: treat the homepage CTA section as the canonical global CTA copy. For each page, add exactly one contextual sentence in cta_subheadline_secondary. Never duplicate CTA sentences across pages.',
 		'CTA button labels: keep 2-5 words, max 32 characters, no trailing punctuation.',
 	'Service Details section: service_details_body is a tight overview only — max 3 short paragraphs, stay within blueprint body_words max; prefer 2 paragraphs when possible. Leave depth to process, FAQ, benefits, and other sections. Use service_details_micro_sections sparingly (0-3 lines) only when the blueprint includes that field; each line 15-25 words. Use service_details_checklist for process/assurance points (one per line), each 8-15 words.',
-	'Process section: Format process_steps with separators for title/body pairs. Use "Step Title || Step description" format or "Step Title | Step description" for each step. This creates proper visual hierarchy.',
+	'Process section: You may create or update reusable lf_process_step posts (title = step headline, editor = step body). Homepage and Page Builder process sections accept process_selected_ids (one numeric post ID per line); when any resolve to published lf_process_step posts, they override process_steps. Otherwise format process_steps with separators: "Step Title || Step description" or "Step Title | Step description" per line.',
 	'Service pages: Always fill short_description field with 25-35 words summarizing service. Include primary benefit and location context.',
 	'Service page blueprints: short_description field is required and should be filled with compelling service summary.',
 	]);
@@ -6404,6 +6404,9 @@ function lf_ai_studio_enforce_section_quality(array $settings, string $section_t
 					$value = lf_ai_studio_default_process_steps();
 				}
 			}
+			if ($field_key === 'process_selected_ids') {
+				$value = lf_ai_studio_normalize_process_selected_ids_value($value);
+			}
 		}
 		if ($section_type === 'faq_accordion' && $field_key === 'faq_selected_ids') {
 			$value = lf_ai_studio_normalize_faq_selected_ids_value($value);
@@ -6542,6 +6545,41 @@ function lf_ai_studio_normalize_faq_selected_ids_value($value): string {
 	}
 	$ids = array_values(array_unique(array_filter(array_map('absint', $ids))));
 	return !empty($ids) ? implode("\n", $ids) : '';
+}
+
+/**
+ * Normalize process step ID list (newline or comma separated) to published lf_process_step IDs only.
+ *
+ * @param mixed $value
+ */
+function lf_ai_studio_normalize_process_selected_ids_value($value): string {
+	$tokens = [];
+	if (is_array($value)) {
+		$tokens = $value;
+	} else {
+		$tokens = preg_split('/[\r\n,]+/', (string) $value) ?: [];
+	}
+	$tokens = is_array($tokens) ? $tokens : [];
+	$ids = [];
+	foreach ($tokens as $token) {
+		$text = trim((string) $token);
+		if ($text === '') {
+			continue;
+		}
+		$numeric = absint($text);
+		if ($numeric <= 0) {
+			continue;
+		}
+		$post = get_post($numeric);
+		if ($post instanceof \WP_Post && $post->post_type === 'lf_process_step' && $post->post_status === 'publish') {
+			$ids[] = $numeric;
+		}
+	}
+	$ids = array_values(array_unique($ids));
+	if (count($ids) > 12) {
+		$ids = array_slice($ids, 0, 12);
+	}
+	return $ids !== [] ? implode("\n", $ids) : '';
 }
 
 function lf_ai_studio_normalize_value($value) {

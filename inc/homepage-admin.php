@@ -212,6 +212,7 @@ function lf_homepage_admin_save(): void {
 		if ($type === 'process') {
 			$config[$type]['section_heading'] = isset($_POST['lf_hp_process_heading']) ? sanitize_text_field($_POST['lf_hp_process_heading']) : '';
 			$config[$type]['section_intro'] = isset($_POST['lf_hp_process_intro']) ? sanitize_textarea_field($_POST['lf_hp_process_intro']) : '';
+			$config[$type]['process_selected_ids'] = isset($_POST['lf_hp_process_selected_ids']) ? sanitize_textarea_field(wp_unslash($_POST['lf_hp_process_selected_ids'])) : '';
 			$config[$type]['process_steps'] = isset($_POST['lf_hp_process_steps']) ? sanitize_textarea_field($_POST['lf_hp_process_steps']) : '';
 		}
 		if ($type === 'related_links') {
@@ -1143,7 +1144,14 @@ document.addEventListener('DOMContentLoaded', function() {
 										<td><textarea class="large-text" name="lf_hp_process_intro" id="lf_hp_process_intro" rows="2"><?php echo esc_textarea($sec['section_intro'] ?? ''); ?></textarea></td>
 									</tr>
 									<tr>
-										<th scope="row"><label for="lf_hp_process_steps"><?php esc_html_e('Process steps (one per line)', 'leadsforward-core'); ?></label></th>
+										<th scope="row"><label for="lf_hp_process_selected_ids"><?php esc_html_e('Process step post IDs (optional)', 'leadsforward-core'); ?></label></th>
+										<td>
+											<textarea class="large-text" name="lf_hp_process_selected_ids" id="lf_hp_process_selected_ids" rows="3"><?php echo esc_textarea($sec['process_selected_ids'] ?? ''); ?></textarea>
+											<p class="description"><?php esc_html_e('One WordPress post ID per line for published items under Process steps (CPT). When at least one valid ID is set, these override the plain-text steps below.', 'leadsforward-core'); ?></p>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_process_steps"><?php esc_html_e('Process steps (one per line, fallback)', 'leadsforward-core'); ?></label></th>
 										<td><textarea class="large-text" name="lf_hp_process_steps" id="lf_hp_process_steps" rows="3"><?php echo esc_textarea($sec['process_steps'] ?? ''); ?></textarea></td>
 									</tr>
 									<?php endif; ?>

@@ -1813,7 +1813,7 @@ function lf_ai_assistant_widget_js(): string {
 			if (node.matches(".lf-block-service-intro__card-title,.lf-block-service-grid__card-title,.lf-block-service-areas__card-title")) return false;
 			if (node.closest(".lf-blog-hero__title,.lf-post-card__title,.entry-title")) return false;
 			if (isHeading) {
-				var entity = node.closest("article,.hentry,.type-post,.type-page,.type-lf_project,.type-lf_service,.type-lf_service_area,.type-lf_faq");
+				var entity = node.closest("article,.hentry,.type-post,.type-page,.type-lf_project,.type-lf_service,.type-lf_service_area,.type-lf_faq,.type-lf_process_step");
 				if (entity) {
 					var lockedTitle = entity.querySelector(".entry-title,h1.entry-title,h1.page-title,h1.post-title,h1.wp-block-post-title,[data-lf-seo-title=\"1\"]");
 					if (lockedTitle && lockedTitle === node) return false;
@@ -2954,7 +2954,9 @@ function lf_ai_assistant_widget_js(): string {
 				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-list-remove=\"1\"]")).forEach(function(node){
 					if (node && node.parentNode) node.parentNode.removeChild(node);
 				});
-				var list = wrap.querySelector(".lf-block-hero__card .lf-block-hero__card-list");
+				var list = wrap.querySelector(".lf-hero-split__proof .lf-block-hero__card-list")
+					|| wrap.querySelector(".lf-hero-visual__media .lf-block-hero__card-list")
+					|| wrap.querySelector(".lf-block-hero__card .lf-block-hero__card-list");
 				if (!list) return;
 				Array.prototype.slice.call(list.querySelectorAll("li")).forEach(function(node){
 					node.removeAttribute("data-lf-inline-editable");

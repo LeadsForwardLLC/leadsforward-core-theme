@@ -475,8 +475,8 @@ function lf_wizard_render_page(): void {
 		echo '<div class="lf-setup-card">';
 		echo '<h2 class="lf-setup-step-title">' . esc_html__('Homepage & AI content', 'leadsforward-core') . '</h2>';
 		echo '<p class="lf-setup-help">' . esc_html__('These inputs are sent to Website Manifester to generate your homepage copy.', 'leadsforward-core') . '</p>';
-		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup')) . '">';
-		echo '<input type="hidden" name="page" value="lf-ops" />';
+		echo '<form method="get" action="' . esc_url(admin_url('admin.php')) . '">';
+		echo '<input type="hidden" name="page" value="lf-setup" />';
 		echo '<input type="hidden" name="step" value="2" />';
 		echo '<table class="form-table"><tr><th scope="row">' . esc_html__('Industry', 'leadsforward-core') . '</th><td><select name="niche" required>';
 		foreach ($wizard_niche_registry as $slug => $n) {
