@@ -416,6 +416,11 @@ function lf_image_intelligence_editor_quality(int $quality, string $mime_type): 
 }
 
 function lf_image_intelligence_optimize_uploaded_image(array $metadata, int $attachment_id): array {
+	// Global toggle: allow disabling optimization without a plugin.
+	$enabled = get_option('lf_tools_image_optimization', '1');
+	if (!($enabled === '1' || $enabled === 1 || $enabled === true)) {
+		return $metadata;
+	}
 	$attachment_id = (int) $attachment_id;
 	if ($attachment_id <= 0) {
 		return $metadata;
