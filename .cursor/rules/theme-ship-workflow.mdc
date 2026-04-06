@@ -5,6 +5,12 @@ alwaysApply: true
 
 # LeadsForward theme — ship workflow
 
+## Every session with code changes (no exceptions)
+
+If you edited files in this theme, you **always** run the full ship path in the same session: **branch → commit → push → PR → squash-merge to `main`**, using the terminal yourself. Do not skip because the user did not repeat the instruction. Do not tell the user to do git for you.
+
+Before saying “done,” “merged,” “on GitHub,” or “deployed,” confirm with `git log` / `gh pr view` / GitHub that **`main` contains the change** (or the PR is merged). Assertions without evidence are wrong.
+
 ## Non-negotiable for AI agents
 
 You **must** complete the full ship workflow **before** telling the user work is done, merged, or “shipped.” No exceptions unless the user explicitly says to stop before git.
