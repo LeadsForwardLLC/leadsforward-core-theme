@@ -50,6 +50,26 @@ function lf_design_preset_to_variation_profile(string $preset): string {
 }
 
 /**
+ * Apply global design preset + ACF variation profile. Returns false if preset slug is unknown.
+ */
+function lf_apply_global_design_preset(string $preset): bool {
+	$presets = function_exists('lf_design_presets') ? lf_design_presets() : [];
+	if ($presets === [] || !isset($presets[ $preset ])) {
+		return false;
+	}
+	update_option('lf_global_design_preset', $preset);
+	$profile = function_exists('lf_design_preset_to_variation_profile')
+		? lf_design_preset_to_variation_profile($preset)
+		: 'a';
+	if (function_exists('update_field')) {
+		update_field('variation_profile', $profile, 'option');
+	} else {
+		update_option('options_variation_profile', $profile);
+	}
+	return true;
+}
+
+/**
  * Option keys we allow in export/import. Explicit allowlist; no URLs, slugs, post IDs, user data.
  */
 function lf_ops_exportable_option_keys(): array {

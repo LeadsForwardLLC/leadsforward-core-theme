@@ -635,6 +635,19 @@ function lf_ai_studio_handle_manifest(): void {
 		wp_safe_redirect(add_query_arg('manifest_error', '1', $redirect));
 		exit;
 	}
+	if (function_exists('lf_ops_audit_log') && current_user_can('edit_theme_options')) {
+		$scope_log = function_exists('lf_ai_studio_get_generation_scope')
+			? lf_ai_studio_get_generation_scope($normalized, false)
+			: [];
+		lf_ops_audit_log(
+			'manifest_generation_queued',
+			[
+				'job_id' => (int) ($result['job_id'] ?? 0),
+				'scope' => $scope_log,
+			],
+			[]
+		);
+	}
 	$redirect = add_query_arg('manifest', '1', $redirect);
 	if (!empty($result['job_id'])) {
 		lf_ai_studio_error_log('manifest: generation queued', 'INFO', ['job_id' => (int) $result['job_id']]);
@@ -853,6 +866,10 @@ function lf_ai_studio_process_images_upload(array $files): array {
 	require_once ABSPATH . 'wp-admin/includes/image.php';
 	require_once ABSPATH . 'wp-admin/includes/media.php';
 
+	$upload_ctx = function_exists('lf_image_intelligence_manifest_upload_context')
+		? lf_image_intelligence_manifest_upload_context()
+		: (function_exists('lf_image_intelligence_upload_context_defaults') ? lf_image_intelligence_upload_context_defaults() : []);
+
 	$uploaded = [];
 	$errors = [];
 	$count = is_array($files['name'] ?? null) ? count($files['name']) : 0;
@@ -869,7 +886,9 @@ function lf_ai_studio_process_images_upload(array $files): array {
 			'size' => (int) ($files['size'][$i] ?? 0),
 		];
 		if (function_exists('lf_image_intelligence_generate_upload_filename')) {
-			$file['name'] = lf_image_intelligence_generate_upload_filename($name);
+			$file['name'] = is_array($upload_ctx) && $upload_ctx !== []
+				? lf_image_intelligence_generate_upload_filename($name, $upload_ctx)
+				: lf_image_intelligence_generate_upload_filename($name);
 		}
 		$attachment_id = media_handle_sideload($file, 0);
 		if (is_wp_error($attachment_id)) {
@@ -879,8 +898,13 @@ function lf_ai_studio_process_images_upload(array $files): array {
 		if (function_exists('lf_image_intelligence_finalize_uploaded_attachment')) {
 			lf_image_intelligence_finalize_uploaded_attachment((int) $attachment_id);
 		}
-		if (function_exists('lf_image_intelligence_maybe_set_alt_text') && function_exists('lf_image_intelligence_upload_context_defaults')) {
-			lf_image_intelligence_maybe_set_alt_text((int) $attachment_id, lf_image_intelligence_upload_context_defaults());
+		if (function_exists('lf_image_intelligence_maybe_set_alt_text')) {
+			$alt_ctx = is_array($upload_ctx) && $upload_ctx !== []
+				? $upload_ctx
+				: (function_exists('lf_image_intelligence_upload_context_defaults') ? lf_image_intelligence_upload_context_defaults() : []);
+			if ($alt_ctx !== []) {
+				lf_image_intelligence_maybe_set_alt_text((int) $attachment_id, $alt_ctx);
+			}
 		}
 		$uploaded[] = [
 			'id' => (int) $attachment_id,
@@ -1221,6 +1245,7 @@ function lf_ai_studio_render_page(): void {
 										<?php endif; ?>
 									</div>
 									<p class="description" style="margin-top:8px;"><?php esc_html_e('Unchecked boxes exclude those targets from the orchestrator payload. The Website Manifester and Airtable generate button use these checkboxes (not the manifest’s generation_scope string). Click Save Scope after changing.', 'leadsforward-core'); ?></p>
+									<p class="description" style="margin-top:4px;"><?php esc_html_e('Selecting every target is recommended: one job keeps internal links, keywords, and tone consistent. AI blog posts adds five article blueprints—three publish immediately and two are scheduled weekly; your n8n workflow must still generate body content via the normal callback.', 'leadsforward-core'); ?></p>
 								</form>
 								<?php if (!$airtable_ready) : ?>
 									<div class="notice notice-warning inline">
