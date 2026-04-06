@@ -168,10 +168,40 @@ function lf_feedback_save_post(int $post_id, \WP_Post $post): void {
 	if (!current_user_can('edit_post', $post_id)) {
 		return;
 	}
+	$prev_status = lf_feedback_get_status($post_id);
 	$status = isset($_POST['lf_feedback_status']) ? sanitize_key((string) wp_unslash($_POST['lf_feedback_status'])) : 'new';
 	$note = isset($_POST['lf_feedback_admin_note']) ? (string) wp_unslash($_POST['lf_feedback_admin_note']) : '';
 	$note = wp_kses_post($note);
 	lf_feedback_set_status($post_id, $status, $note);
+
+	$next_status = lf_feedback_get_status($post_id);
+	if ($next_status !== $prev_status && in_array($next_status, ['approved', 'rejected'], true)) {
+		$webhook = trim((string) get_option('options_lf_feedback_webhook_url', ''));
+		if ($webhook !== '') {
+			$payload = [
+				'event' => 'lf_feedback_status_changed',
+				'post_id' => $post_id,
+				'status_from' => $prev_status,
+				'status_to' => $next_status,
+				'admin_note' => $note,
+				'summary' => (string) get_the_title($post_id),
+				'page_url' => (string) get_post_meta($post_id, 'lf_feedback_page_url', true),
+				'submitted_user_id' => (int) get_post_meta($post_id, 'lf_feedback_user_id', true),
+				'edit_url' => (string) get_edit_post_link($post_id, 'raw'),
+				'time' => current_time('mysql'),
+			];
+			$headers = ['Content-Type' => 'application/json'];
+			$secret = trim((string) get_option('options_lf_feedback_webhook_secret', ''));
+			if ($secret !== '') {
+				$headers['Authorization'] = 'Bearer ' . $secret;
+			}
+			wp_remote_post($webhook, [
+				'timeout' => 8,
+				'headers' => $headers,
+				'body' => wp_json_encode($payload),
+			]);
+		}
+	}
 }
 add_action('save_post', 'lf_feedback_save_post', 10, 2);
 

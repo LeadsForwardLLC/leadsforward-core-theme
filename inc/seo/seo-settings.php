@@ -15,6 +15,7 @@ if (!defined('ABSPATH')) {
 add_action('admin_menu', 'lf_seo_register_menu', 40);
 add_action('admin_init', 'lf_seo_handle_save');
 add_action('admin_enqueue_scripts', 'lf_seo_admin_assets');
+add_action('admin_post_lf_seo_export_keyword_map', 'lf_seo_handle_export_keyword_map');
 
 function lf_seo_register_menu(): void {
 	add_submenu_page(
@@ -248,7 +249,7 @@ function lf_seo_sanitize_scripts(string $value): string {
 
 function lf_seo_render_settings_page(): void {
 	$tab = isset($_GET['tab']) ? sanitize_key((string) $_GET['tab']) : 'settings';
-	if (!in_array($tab, ['settings', 'health'], true)) {
+	if (!in_array($tab, ['settings', 'keywords', 'health'], true)) {
 		$tab = 'settings';
 	}
 	$settings = lf_seo_get_settings();
@@ -262,6 +263,7 @@ function lf_seo_render_settings_page(): void {
 		<h1><?php esc_html_e('SEO & Site Health', 'leadsforward-core'); ?></h1>
 		<h2 class="nav-tab-wrapper" style="margin-bottom:1rem;">
 			<a href="<?php echo esc_url(add_query_arg('tab', 'settings', $base)); ?>" class="nav-tab<?php echo $tab === 'settings' ? ' nav-tab-active' : ''; ?>"><?php esc_html_e('SEO settings', 'leadsforward-core'); ?></a>
+			<a href="<?php echo esc_url(add_query_arg('tab', 'keywords', $base)); ?>" class="nav-tab<?php echo $tab === 'keywords' ? ' nav-tab-active' : ''; ?>"><?php esc_html_e('Keywords', 'leadsforward-core'); ?></a>
 			<a href="<?php echo esc_url(add_query_arg('tab', 'health', $base)); ?>" class="nav-tab<?php echo $tab === 'health' ? ' nav-tab-active' : ''; ?>"><?php esc_html_e('Site health', 'leadsforward-core'); ?></a>
 		</h2>
 		<?php if ($tab === 'settings') : ?>
@@ -557,6 +559,9 @@ function lf_seo_render_settings_page(): void {
 			}
 		})();
 	</script>
+		<?php elseif ($tab === 'keywords') : ?>
+			<?php if (function_exists('lf_admin_render_quality_summary_strip')) { lf_admin_render_quality_summary_strip('seo'); } ?>
+			<?php lf_seo_render_keywords_tab(); ?>
 		<?php else : ?>
 			<?php
 			if (function_exists('lf_health_render_embedded_ui')) {
@@ -566,6 +571,156 @@ function lf_seo_render_settings_page(): void {
 			}
 			?>
 		<?php endif; ?>
+	</div>
+	<?php
+}
+
+function lf_seo_handle_export_keyword_map(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
+	}
+	check_admin_referer('lf_seo_export_keyword_map', 'lf_seo_export_nonce');
+	$map = function_exists('lf_seo_get_keyword_map') ? lf_seo_get_keyword_map() : (array) get_option('lf_keyword_map', []);
+	$rows = [];
+	$rows[] = ['target', 'post_id', 'post_type', 'slug', 'title', 'primary_keyword'];
+	foreach (($map['primary'] ?? []) as $key => $keyword) {
+		$key = (string) $key;
+		$keyword = trim((string) $keyword);
+		if ($keyword === '') {
+			continue;
+		}
+		if ($key === 'homepage') {
+			$rows[] = ['homepage', '', '', '', 'Homepage', $keyword];
+			continue;
+		}
+		if (strpos($key, 'post:') === 0) {
+			$post_id = absint(substr($key, 5));
+			$post = $post_id ? get_post($post_id) : null;
+			if ($post instanceof \WP_Post) {
+				$rows[] = [
+					'post',
+					(string) $post_id,
+					(string) $post->post_type,
+					(string) $post->post_name,
+					(string) $post->post_title,
+					$keyword,
+				];
+			}
+		}
+	}
+	nocache_headers();
+	header('Content-Type: text/csv; charset=utf-8');
+	header('Content-Disposition: attachment; filename=lf-keyword-map.csv');
+	$out = fopen('php://output', 'w');
+	if ($out) {
+		foreach ($rows as $row) {
+			fputcsv($out, $row);
+		}
+		fclose($out);
+	}
+	exit;
+}
+
+function lf_seo_render_keywords_tab(): void {
+	$map = function_exists('lf_seo_get_keyword_map') ? lf_seo_get_keyword_map() : (array) get_option('lf_keyword_map', []);
+	$primary = is_array($map['primary'] ?? null) ? $map['primary'] : [];
+
+	$manifest = get_option('lf_site_manifest', []);
+	$home_primary = is_array($manifest) ? trim((string) ($manifest['homepage']['primary_keyword'] ?? '')) : '';
+	$home_secondary = is_array($manifest) ? ($manifest['homepage']['secondary_keywords'] ?? []) : [];
+	if (is_string($home_secondary)) {
+		$home_secondary = preg_split('/\r\n|\r|\n|,/', $home_secondary);
+	}
+	$home_secondary = is_array($home_secondary) ? array_values(array_unique(array_filter(array_map('sanitize_text_field', $home_secondary)))) : [];
+
+	// Build duplicate report.
+	$counts = [];
+	foreach ($primary as $k => $kw) {
+		$kw = strtolower(trim((string) $kw));
+		if ($kw === '') {
+			continue;
+		}
+		$counts[$kw] = ($counts[$kw] ?? 0) + 1;
+	}
+
+	$post_types = ['lf_service', 'lf_service_area', 'page', 'post'];
+	$items = get_posts([
+		'post_type' => $post_types,
+		'post_status' => 'publish',
+		'posts_per_page' => 300,
+		'orderby' => 'post_type menu_order title',
+		'order' => 'ASC',
+		'no_found_rows' => true,
+	]);
+
+	$missing = 0;
+	$dupes = 0;
+	foreach ($items as $p) {
+		$kw = trim((string) get_post_meta((int) $p->ID, '_lf_seo_primary_keyword', true));
+		if ($kw === '') {
+			$missing++;
+			continue;
+		}
+		if (($counts[strtolower($kw)] ?? 0) > 1) {
+			$dupes++;
+		}
+	}
+	?>
+	<div class="card" style="max-width: 1100px;">
+		<h2 style="margin-top:0;"><?php esc_html_e('Keyword assignments', 'leadsforward-core'); ?></h2>
+		<p class="description"><?php esc_html_e('Primary keywords are stored per URL in post meta and (optionally) mirrored into lf_keyword_map. Secondary keywords typically come from the manifest and help meta generation and content guidance.', 'leadsforward-core'); ?></p>
+		<ul style="margin:0 0 1rem;">
+			<li><?php echo esc_html(sprintf(__('Missing primary keywords: %d', 'leadsforward-core'), (int) $missing)); ?></li>
+			<li><?php echo esc_html(sprintf(__('Duplicate primary keywords (counted by lf_keyword_map): %d', 'leadsforward-core'), (int) $dupes)); ?></li>
+		</ul>
+		<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin: 0 0 1rem;">
+			<?php wp_nonce_field('lf_seo_export_keyword_map', 'lf_seo_export_nonce'); ?>
+			<input type="hidden" name="action" value="lf_seo_export_keyword_map" />
+			<button type="submit" class="button"><?php esc_html_e('Export keyword map (CSV)', 'leadsforward-core'); ?></button>
+		</form>
+	</div>
+
+	<div class="card" style="max-width: 1100px;">
+		<h2 style="margin-top:0;"><?php esc_html_e('Homepage keywords (manifest)', 'leadsforward-core'); ?></h2>
+		<p><strong><?php esc_html_e('Primary', 'leadsforward-core'); ?></strong>: <?php echo esc_html($home_primary ?: __('(not set)', 'leadsforward-core')); ?></p>
+		<p><strong><?php esc_html_e('Secondary', 'leadsforward-core'); ?></strong>: <?php echo esc_html($home_secondary ? implode(', ', array_slice($home_secondary, 0, 12)) : __('(not set)', 'leadsforward-core')); ?></p>
+	</div>
+
+	<div class="card" style="max-width: 1100px;">
+		<h2 style="margin-top:0;"><?php esc_html_e('URLs', 'leadsforward-core'); ?></h2>
+		<table class="widefat striped">
+			<thead>
+				<tr>
+					<th><?php esc_html_e('Type', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Title', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Primary keyword', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Secondary keywords', 'leadsforward-core'); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ($items as $p) : ?>
+					<?php
+					$pk = trim((string) get_post_meta((int) $p->ID, '_lf_seo_primary_keyword', true));
+					$sk_raw = (string) get_post_meta((int) $p->ID, '_lf_seo_secondary_keywords', true);
+					$sk = $sk_raw !== '' ? preg_split('/\r\n|\r|\n|,/', $sk_raw) : [];
+					$sk = is_array($sk) ? array_values(array_unique(array_filter(array_map('sanitize_text_field', $sk)))) : [];
+					$is_dup = $pk !== '' && (($counts[strtolower($pk)] ?? 0) > 1);
+					?>
+					<tr>
+						<td><?php echo esc_html(strtoupper((string) $p->post_type)); ?></td>
+						<td><a href="<?php echo esc_url(get_edit_post_link((int) $p->ID) ?: ''); ?>"><?php echo esc_html((string) $p->post_title); ?></a></td>
+						<td>
+							<?php if ($pk === '') : ?>
+								<span style="color:#b91c1c;font-weight:700;"><?php esc_html_e('(missing)', 'leadsforward-core'); ?></span>
+							<?php else : ?>
+								<span style="<?php echo $is_dup ? 'color:#b45309;font-weight:700;' : ''; ?>"><?php echo esc_html($pk); ?></span>
+							<?php endif; ?>
+						</td>
+						<td><?php echo esc_html($sk ? implode(', ', array_slice($sk, 0, 6)) : ''); ?></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
 	</div>
 	<?php
 }
