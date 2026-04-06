@@ -7104,6 +7104,88 @@ function lf_ai_studio_orchestrator_bare_service_short_desc_key(string $key): boo
 	return in_array(trim($key), ['short_description', 'short_desc', 'lf_service_short_desc'], true);
 }
 
+/**
+ * Orchestrator/n8n often uses the page-builder context slug ("service", "service_area") as if it were a
+ * section instance id. Real ids look like hero-1, service_details-1. Map alias + field_key to a real instance.
+ */
+function lf_ai_studio_resolve_pb_context_alias_instance_id(
+	string $instance_id,
+	string $field_key,
+	string $post_type,
+	array $sections,
+	array $order,
+	array $registry
+): string {
+	$instance_id = trim($instance_id);
+	$field_key = trim($field_key);
+	if ($field_key === '') {
+		return $instance_id;
+	}
+	if (isset($sections[ $instance_id ]) && is_array($sections[ $instance_id ])) {
+		return $instance_id;
+	}
+	$expected = $post_type === 'lf_service' ? 'service' : ($post_type === 'lf_service_area' ? 'service_area' : '');
+	if ($expected === '' || strtolower($instance_id) !== $expected) {
+		return $instance_id;
+	}
+	$walk_order = $order !== [] ? $order : array_keys($sections);
+	$first_of_type = static function (string $want_type) use ($sections, $walk_order): string {
+		foreach ($walk_order as $oid) {
+			$sec = $sections[ $oid ] ?? null;
+			if (is_array($sec) && (string) ($sec['type'] ?? '') === $want_type) {
+				return (string) $oid;
+			}
+		}
+		return '';
+	};
+	$accepts = static function (string $type, string $fk) use ($registry): bool {
+		if ($type === '' || ! isset($registry[ $type ])) {
+			return false;
+		}
+		$allowed = lf_ai_studio_homepage_allowed_field_keys($type, $registry[ $type ]);
+		return in_array($fk, $allowed, true);
+	};
+	$route = [
+		'hero_'     => 'hero',
+		'trust_'    => 'trust_bar',
+		'service_details' => 'service_details',
+		'faq_'      => 'faq_accordion',
+		'process_'  => 'process',
+		'benefits_' => 'benefits',
+		'cta_'      => 'cta',
+		'related_links_' => 'related_links',
+	];
+	foreach ($route as $prefix => $stype) {
+		if (strpos($field_key, $prefix) === 0) {
+			$id = $first_of_type($stype);
+			if ($id !== '' && $accepts($stype, $field_key)) {
+				return $id;
+			}
+			break;
+		}
+	}
+	if ($post_type === 'lf_service_area') {
+		$area_priority = ['hero', 'content_image', 'services_offered_here', 'nearby_areas', 'faq_accordion', 'cta'];
+		foreach ($area_priority as $stype) {
+			$id = $first_of_type($stype);
+			if ($id !== '' && $accepts($stype, $field_key)) {
+				return $id;
+			}
+		}
+	}
+	foreach ($walk_order as $oid) {
+		$sec = $sections[ $oid ] ?? null;
+		if (! is_array($sec)) {
+			continue;
+		}
+		$t = (string) ($sec['type'] ?? '');
+		if ($accepts($t, $field_key)) {
+			return (string) $oid;
+		}
+	}
+	return $instance_id;
+}
+
 function lf_ai_studio_prevalidate_orchestrator_updates(array $response, array $options = []): array {
 	$updates = $response['updates'] ?? [];
 	if (!is_array($updates)) {
@@ -7267,6 +7349,7 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response, array $o
 			}
 			$config = lf_pb_get_post_config($post_id, $context);
 			$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+			$pb_order = is_array($config['order'] ?? null) ? $config['order'] : [];
 			foreach ($fields as $key => $value) {
 				if (!is_string($key)) {
 					continue;
@@ -7292,6 +7375,22 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response, array $o
 					$instance_id = trim($parts[0]);
 					$field_key = trim($parts[1]);
 				}
+				if (strpos($instance_id, '-') !== false) {
+					$alt_instance = str_replace('-', '_', $instance_id);
+					if (! isset($sections[ $instance_id ]) || ! is_array($sections[ $instance_id ])) {
+						if (isset($sections[ $alt_instance ]) && is_array($sections[ $alt_instance ])) {
+							$instance_id = $alt_instance;
+						}
+					}
+				}
+				$instance_id = lf_ai_studio_resolve_pb_context_alias_instance_id(
+					$instance_id,
+					$field_key,
+					(string) $post->post_type,
+					$sections,
+					$pb_order,
+					$registry
+				);
 				$section = $sections[$instance_id] ?? null;
 				if (!is_array($section)) {
 					foreach ($sections as $maybe_id => $maybe_section) {
@@ -7837,6 +7936,14 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 					}
 				}
 			}
+			$instance_id = lf_ai_studio_resolve_pb_context_alias_instance_id(
+				$instance_id,
+				$field_key,
+				(string) $post->post_type,
+				$sections,
+				$order,
+				$registry
+			);
 			$section = $sections[$instance_id] ?? null;
 			if (!is_array($section)) {
 				foreach ($sections as $maybe_id => $maybe_section) {
