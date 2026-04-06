@@ -61,20 +61,50 @@ function lf_dev_reset_delete_all_terms(string $taxonomy): void {
 }
 
 /**
+ * Whether the site URL looks like a dev machine (Local WP, .test, etc.).
+ */
+function lf_dev_reset_site_url_looks_local(): bool {
+	$host = wp_parse_url((string) home_url(), PHP_URL_HOST);
+	if (!is_string($host) || $host === '') {
+		return false;
+	}
+	$host = strtolower($host);
+	if ($host === 'localhost' || $host === '127.0.0.1' || $host === '::1') {
+		return true;
+	}
+	foreach (['.local', '.test', '.localhost'] as $suffix) {
+		if (strlen($host) > strlen($suffix) && substr($host, -strlen($suffix)) === $suffix) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
  * True only on local/development environments or when LF_DEV_RESET_ENABLED is set.
  *
  * WP_DEBUG alone is not enough: staging/production sites often enable debug temporarily, which must
  * not unlock destructive reset (clears homepage config, deletes content).
+ *
+ * LF_DEV_RESET_ENABLED accepts boolean true, 1, or strings "1"/"true"/"yes"/"on" (wp-config often
+ * uses 1 by mistake; strict === true would incorrectly block reset).
  */
 function lf_dev_reset_allowed(): bool {
-	if (defined('LF_DEV_RESET_ENABLED') && LF_DEV_RESET_ENABLED === true) {
-		return (bool) apply_filters('lf_dev_reset_allowed', true);
+	if (defined('LF_DEV_RESET_ENABLED')) {
+		$raw = LF_DEV_RESET_ENABLED;
+		if (filter_var($raw, FILTER_VALIDATE_BOOLEAN)) {
+			return (bool) apply_filters('lf_dev_reset_allowed', true);
+		}
+		return (bool) apply_filters('lf_dev_reset_allowed', false);
 	}
 	$env = function_exists('wp_get_environment_type') ? wp_get_environment_type() : '';
 	$allowed = in_array($env, ['local', 'development'], true);
 	if (!$allowed && defined('WP_ENV')) {
-		$wp_env = (string) WP_ENV;
+		$wp_env = strtolower((string) WP_ENV);
 		$allowed = in_array($wp_env, ['local', 'development'], true);
+	}
+	if (!$allowed) {
+		$allowed = lf_dev_reset_site_url_looks_local();
 	}
 	return (bool) apply_filters('lf_dev_reset_allowed', $allowed);
 }
