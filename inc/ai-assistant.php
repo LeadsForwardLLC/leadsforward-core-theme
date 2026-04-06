@@ -3154,6 +3154,184 @@ function lf_ai_assistant_widget_js(): string {
 				return processStepValueFromLi(li);
 			}).filter(function(v){ return v !== ""; });
 		}
+		function processIdsFromList(list) {
+			if (!list) return [];
+			return Array.prototype.slice.call(list.querySelectorAll(".lf-process__step[data-lf-process-id]")).map(function(node){
+				return parseInt(String(node.getAttribute("data-lf-process-id") || "0"), 10);
+			}).filter(function(id){ return id > 0; });
+		}
+		var processPickerEl = null;
+		var processPickerSearchEl = null;
+		var processPickerListEl = null;
+		var processLibraryCache = null;
+		var processPickerWrap = null;
+		var processPickerList = null;
+		function loadProcessLibrary(done) {
+			if (Array.isArray(processLibraryCache)) {
+				if (typeof done === "function") done(processLibraryCache);
+				return;
+			}
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_process_step_library",
+				nonce: lfAiFloating.nonce
+			}).done(function(res){
+				processLibraryCache = (res && res.success && res.data && Array.isArray(res.data.items)) ? res.data.items : [];
+				if (typeof done === "function") done(processLibraryCache);
+			}).fail(function(){
+				processLibraryCache = [];
+				setStatus("Process step library unavailable right now.", true);
+				if (typeof done === "function") done(processLibraryCache);
+			});
+		}
+		function ensureProcessPicker() {
+			if (processPickerEl) return processPickerEl;
+			processPickerEl = document.createElement("div");
+			processPickerEl.className = "lf-ai-faq-picker lf-ai-process-picker lf-ai-inline-editor-ignore";
+			processPickerEl.hidden = true;
+			processPickerEl.innerHTML = "<div class=\"lf-ai-faq-picker__card\"><div class=\"lf-ai-faq-picker__head\"><div class=\"lf-ai-faq-picker__title\">Select Process Steps from library</div><button type=\"button\" class=\"lf-ai-faq-picker__close\" data-lf-ai-process-picker-close aria-label=\"Close Process picker\">×</button></div><input type=\"text\" class=\"lf-ai-faq-picker__search\" data-lf-ai-process-picker-search placeholder=\"Search process steps...\" /><div class=\"lf-ai-faq-picker__list\" data-lf-ai-process-picker-list></div></div>";
+			processPickerSearchEl = processPickerEl.querySelector("[data-lf-ai-process-picker-search]");
+			processPickerListEl = processPickerEl.querySelector("[data-lf-ai-process-picker-list]");
+			var closeBtn = processPickerEl.querySelector("[data-lf-ai-process-picker-close]");
+			if (closeBtn) {
+				closeBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					closeProcessPicker();
+				});
+			}
+			if (processPickerSearchEl) {
+				processPickerSearchEl.addEventListener("input", function(){
+					renderProcessPickerList(processPickerSearchEl.value);
+				});
+			}
+			processPickerEl.addEventListener("click", function(e){
+				if (e.target === processPickerEl) closeProcessPicker();
+			});
+			document.body.appendChild(processPickerEl);
+			return processPickerEl;
+		}
+		function closeProcessPicker() {
+			if (!processPickerEl) return;
+			processPickerEl.hidden = true;
+			processPickerWrap = null;
+			processPickerList = null;
+			try { if (processPickerSearchEl) processPickerSearchEl.value = ""; } catch (e) {}
+		}
+		function addProcessItemToList(list, row) {
+			if (!list || !row) return;
+			var id = parseInt(String(row.id || "0"), 10);
+			if (!id) return;
+			var exists = list.querySelector(".lf-process__step[data-lf-process-id=\"" + id + "\"]");
+			if (exists) return;
+			var li = document.createElement("li");
+			li.className = "lf-process__step";
+			li.setAttribute("data-lf-process-id", String(id));
+			var title = document.createElement("span");
+			title.className = "lf-process__step-title";
+			title.textContent = String(row.title || "Step");
+			li.appendChild(title);
+			var bodyText = String(row.body || "").replace(/\s+/g, " ").trim();
+			if (bodyText) {
+				var body = document.createElement("span");
+				body.className = "lf-process__step-body";
+				body.textContent = bodyText;
+				li.appendChild(body);
+			}
+			list.appendChild(li);
+			buildProcessStepControls();
+			persistProcessSelection(list, "Saving selected process steps...");
+		}
+		function persistProcessSelection(list, savingLabel) {
+			if (!list) return;
+			var wrap = list.closest("[data-lf-section-wrap=\"1\"]");
+			if (!wrap) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+			if (!sectionId || sectionType !== "process") return;
+			var ids = processIdsFromList(list);
+			setStatus(savingLabel || "Saving selected process steps...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_update_section_lines",
+				nonce: lfAiFloating.nonce,
+				context_type: activeContextType,
+				context_id: activeContextId,
+				section_id: sectionId,
+				field_key: "process_selected_ids",
+				items: JSON.stringify(ids.map(function(id){ return String(id); }))
+			}).done(function(res){
+				if (res && res.success) {
+					setStatus((res.data && res.data.message) ? res.data.message : "Selected process steps saved.", false);
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Process selection save failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Process selection save failed.";
+				setStatus(msg, true);
+			});
+		}
+		function renderProcessPickerList(query) {
+			if (!processPickerListEl) return;
+			var rows = Array.isArray(processLibraryCache) ? processLibraryCache : [];
+			var q = String(query || "").trim().toLowerCase();
+			var selectedMap = {};
+			if (processPickerList) {
+				processIdsFromList(processPickerList).forEach(function(id){
+					selectedMap[String(id)] = true;
+				});
+			}
+			processPickerListEl.innerHTML = "";
+			var filtered = rows.filter(function(row){
+				var text = (String(row.title || "") + " " + String(row.body || "") + " " + String((row.groups || []).join(" ") || "")).toLowerCase();
+				return !q || text.indexOf(q) !== -1;
+			});
+			if (!filtered.length) {
+				var empty = document.createElement("div");
+				empty.className = "lf-ai-faq-picker__empty";
+				empty.textContent = "No process steps match this search.";
+				processPickerListEl.appendChild(empty);
+				return;
+			}
+			filtered.forEach(function(row){
+				var item = document.createElement("div");
+				item.className = "lf-ai-faq-picker__item";
+				var meta = document.createElement("div");
+				meta.className = "lf-ai-faq-picker__meta";
+				var title = document.createElement("b");
+				title.textContent = String(row.title || "Step");
+				var preview = document.createElement("small");
+				var previewText = String(row.body || "").replace(/\s+/g, " ").trim();
+				preview.textContent = previewText.length > 140 ? (previewText.slice(0, 137) + "...") : previewText;
+				meta.appendChild(title);
+				meta.appendChild(preview);
+				var addBtn = document.createElement("button");
+				addBtn.type = "button";
+				addBtn.className = "lf-ai-faq-picker__add lf-ai-inline-editor-ignore";
+				var selected = !!selectedMap[String(row.id || "")];
+				addBtn.textContent = selected ? "Added" : "Add";
+				addBtn.disabled = selected;
+				addBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					if (!processPickerList) return;
+					addProcessItemToList(processPickerList, row);
+					renderProcessPickerList(processPickerSearchEl ? processPickerSearchEl.value : "");
+				});
+				item.appendChild(meta);
+				item.appendChild(addBtn);
+				processPickerListEl.appendChild(item);
+			});
+		}
+		function openProcessPicker(wrap, list) {
+			if (!wrap || !list) return;
+			ensureProcessPicker();
+			processPickerWrap = wrap;
+			processPickerList = list;
+			processPickerEl.hidden = false;
+			if (processPickerSearchEl) processPickerSearchEl.value = "";
+			loadProcessLibrary(function(){
+				renderProcessPickerList("");
+				try { if (processPickerSearchEl) processPickerSearchEl.focus(); } catch (e) {}
+			});
+		}
 		function processPromptEditStep(li, wrap, list) {
 			if (!li || !wrap || !list) return;
 			var current = processStepValueFromLi(li);
@@ -3228,7 +3406,11 @@ function lf_ai_assistant_widget_js(): string {
 						} else {
 							li.parentNode.insertBefore(activeProcessDragEl, li);
 						}
-						persistSectionLineItems(wrap, "process_steps", processValuesFromList(list), "Saving process steps...");
+						if (processIdsFromList(list).length) {
+							persistProcessSelection(list, "Saving selected process steps...");
+						} else {
+							persistSectionLineItems(wrap, "process_steps", processValuesFromList(list), "Saving process steps...");
+						}
 					};
 					li.ondragend = function(){
 						li.classList.remove("is-dragging");
@@ -3236,12 +3418,20 @@ function lf_ai_assistant_widget_js(): string {
 					};
 					li.appendChild(createGenericRemoveButton(function(){
 						if (li && li.parentNode) li.parentNode.removeChild(li);
-						persistSectionLineItems(wrap, "process_steps", processValuesFromList(list), "Saving process steps...");
+						if (processIdsFromList(list).length) {
+							persistProcessSelection(list, "Saving selected process steps...");
+						} else {
+							persistSectionLineItems(wrap, "process_steps", processValuesFromList(list), "Saving process steps...");
+						}
 					}));
 					li.setAttribute("title", "Double-click to edit step text");
 					li.ondblclick = function(e){
 						var target = e && e.target && e.target.nodeType === 1 ? e.target : null;
 						if (target && target.closest && target.closest("[data-lf-ai-list-remove=\"1\"]")) {
+							return;
+						}
+						if (li.getAttribute("data-lf-process-id")) {
+							// Library-driven items should be edited in the Process Steps CPT.
 							return;
 						}
 						e.preventDefault();
@@ -3270,6 +3460,16 @@ function lf_ai_assistant_widget_js(): string {
 					processPromptEditStep(li, wrap, list);
 				});
 				controls.appendChild(addBtn);
+				var pickBtn = document.createElement("button");
+				pickBtn.type = "button";
+				pickBtn.className = "lf-ai-faq-add lf-ai-inline-editor-ignore";
+				pickBtn.textContent = "+ Select Process Steps";
+				pickBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					openProcessPicker(wrap, list);
+				});
+				controls.appendChild(pickBtn);
 				if (list.parentNode) {
 					list.parentNode.insertBefore(controls, list.nextSibling);
 				}
