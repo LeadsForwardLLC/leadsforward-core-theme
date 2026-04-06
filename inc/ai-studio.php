@@ -8009,9 +8009,14 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 				$post_image_context,
 				$assigned_images
 			);
+			// IMPORTANT: sanitize only the provided keys.
+			// lf_sections_sanitize_settings() fills missing fields with defaults; merging the full
+			// sanitized array would overwrite real content with default empty strings.
+			$sanitized_fields = lf_sections_sanitize_settings($type, $fields);
+			$sanitized_fields = array_intersect_key($sanitized_fields, $fields);
 			$sections[$instance_id]['settings'] = array_merge(
 				$section['settings'] ?? [],
-				lf_sections_sanitize_settings($type, $fields)
+				$sanitized_fields
 			);
 		}
 		foreach ($order as $instance_id) {
@@ -8094,7 +8099,7 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			if (!$post_after instanceof \WP_Post) {
 				continue;
 			}
-			if (!in_array($post_after->post_type, ['post', 'lf_project'], true)) {
+			if (!in_array($post_after->post_type, ['post', 'lf_project', 'lf_service'], true)) {
 				continue;
 			}
 			$sections = is_array($pb_meta['sections'] ?? null) ? $pb_meta['sections'] : [];
@@ -8102,6 +8107,18 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			$derived = lf_ai_studio_extract_primary_post_content($sections, $order);
 			$content = trim((string) ($derived['content'] ?? ''));
 			$excerpt = trim((string) ($derived['excerpt'] ?? ''));
+			if ($post_after->post_type === 'lf_service') {
+				// Services render via Page Builder; keep content intact but ensure excerpt is populated for SEO.
+				if ($excerpt !== '') {
+					wp_update_post(
+						[
+							'ID'           => (int) $post_id,
+							'post_excerpt' => $excerpt,
+						]
+					);
+				}
+				continue;
+			}
 			if ($content !== '') {
 				wp_update_post(
 					[
