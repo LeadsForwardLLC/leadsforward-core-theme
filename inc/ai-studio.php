@@ -7835,7 +7835,12 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			);
 			if (!empty($injected)) {
 				$injected = lf_ai_studio_enforce_section_quality($injected, $reg_type, $registry);
-				$config[$section_id] = array_merge($existing, lf_sections_sanitize_settings($reg_type, $injected));
+				// IMPORTANT: sanitize *only the injected keys*.
+				// lf_sections_sanitize_settings() fills missing fields with defaults; if we merged the full
+				// sanitized array here we'd overwrite real content with default empty strings.
+				$sanitized_injected = lf_sections_sanitize_settings($reg_type, $injected);
+				$sanitized_injected = array_intersect_key($sanitized_injected, $injected);
+				$config[$section_id] = array_merge($existing, $sanitized_injected);
 			}
 		}
 		foreach ($config as $section_id => $section_settings) {
@@ -7846,7 +7851,10 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 				continue;
 			}
 			$normalized_settings = lf_ai_studio_enforce_section_quality($section_settings, $reg_type, $registry);
-			$config[$section_id] = array_merge($section_settings, lf_sections_sanitize_settings($reg_type, $normalized_settings));
+			// Same rule: sanitize only provided keys so defaults don't clobber existing values.
+			$sanitized_normalized = lf_sections_sanitize_settings($reg_type, $normalized_settings);
+			$sanitized_normalized = array_intersect_key($sanitized_normalized, $normalized_settings);
+			$config[$section_id] = array_merge($section_settings, $sanitized_normalized);
 		}
 		$config = lf_ai_studio_deduplicate_headings($config, $registry, false);
 		if ($config !== $homepage_config) {
