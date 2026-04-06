@@ -341,7 +341,9 @@ function lf_sections_registry(): array {
 				['key' => 'hero_headline', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_subheadline', 'label' => __('Subheadline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_proof_title', 'label' => __('Proof card title', 'leadsforward-core'), 'type' => 'text', 'default' => __('Why homeowners choose us', 'leadsforward-core')],
-				['key' => 'hero_proof_bullets', 'label' => __('Proof card bullets (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Fast response and clear pricing' . "\n" . 'Licensed, insured, and local' . "\n" . 'Clean work backed by warranty', 'leadsforward-core')],
+				['key' => 'hero_chip_bullets', 'label' => __('Hero pills (one per line, left column)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
+				['key' => 'hero_proof_bullets', 'label' => __('Proof card bullets (one per line, right card)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Fast response and clear pricing' . "\n" . 'Licensed, insured, and local' . "\n" . 'Clean work backed by warranty', 'leadsforward-core')],
+				['key' => 'hero_trust_strip_enabled', 'label' => __('Show homeowner trust row under CTAs', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
 				// Added for density expansion – vNext
 				['key' => 'hero_supporting_text', 'label' => __('Supporting text', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				// Added for density expansion – vNext
@@ -1214,7 +1216,7 @@ function lf_sections_hero_block_section(array $settings): array {
 	$keys = [
 		'section_background', 'section_background_custom', 'section_intent',
 		'hero_background_mode', 'hero_background_image_id', 'hero_background_video_id',
-		'hero_headline', 'hero_subheadline', 'hero_proof_title', 'hero_proof_bullets',
+		'hero_headline', 'hero_subheadline', 'hero_proof_title', 'hero_chip_bullets', 'hero_proof_bullets', 'hero_trust_strip_enabled',
 		'hero_supporting_text', 'hero_bullets', 'hero_trust_block', 'hero_guarantee_text',
 		'hero_eyebrow_enabled', 'hero_eyebrow_text', 'hero_media', 'hero_image_id',
 		'cta_primary_enabled', 'cta_secondary_enabled', 'cta_primary_override', 'cta_secondary_override',

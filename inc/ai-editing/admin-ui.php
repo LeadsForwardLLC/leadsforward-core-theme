@@ -549,6 +549,7 @@ add_action('wp_ajax_lf_ai_reorder_sections', 'lf_ai_ajax_reorder_sections');
 add_action('wp_ajax_lf_ai_toggle_section_columns', 'lf_ai_ajax_toggle_section_columns');
 add_action('wp_ajax_lf_ai_update_section_checklist', 'lf_ai_ajax_update_section_checklist');
 add_action('wp_ajax_lf_ai_update_hero_pills', 'lf_ai_ajax_update_hero_pills');
+add_action('wp_ajax_lf_ai_update_hero_trust_strip', 'lf_ai_ajax_update_hero_trust_strip');
 add_action('wp_ajax_lf_ai_update_section_cta', 'lf_ai_ajax_update_section_cta');
 add_action('wp_ajax_lf_ai_update_section_media', 'lf_ai_ajax_update_section_media');
 add_action('wp_ajax_lf_ai_update_section_lines', 'lf_ai_ajax_update_section_lines');
@@ -1744,6 +1745,11 @@ function lf_ai_ajax_update_hero_pills(): void {
 	if ($context_type === '' || $context_id === '' || $section_id === '' || !is_array($items_decoded)) {
 		wp_send_json_error(['message' => __('Invalid hero pills payload.', 'leadsforward-core')]);
 	}
+	$list_kind = isset($_POST['list_kind']) ? sanitize_key(wp_unslash((string) $_POST['list_kind'])) : 'chips';
+	if (!in_array($list_kind, ['chips', 'proof'], true)) {
+		$list_kind = 'chips';
+	}
+	$field_key = $list_kind === 'proof' ? 'hero_proof_bullets' : 'hero_chip_bullets';
 	$items = [];
 	foreach ($items_decoded as $item) {
 		$value = trim(sanitize_text_field((string) $item));
@@ -1775,20 +1781,21 @@ function lf_ai_ajax_update_hero_pills(): void {
 		if (empty($old_row)) {
 			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
 		}
-		$config[$resolved_section_id]['hero_proof_bullets'] = $value;
+		$config[$resolved_section_id][ $field_key ] = $value;
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 		$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
+		$log_label = $list_kind === 'proof' ? 'Inline hero proof card edit' : 'Inline hero pills edit';
 		$log_id = function_exists('lf_ai_log_action')
 			? lf_ai_log_action(
 				$context_type,
 				$context_id_use,
 				['__homepage_section_row::' . $resolved_section_id => $old_row],
 				['__homepage_section_row::' . $resolved_section_id => $new_row],
-				'Inline hero pills edit'
+				$log_label
 			)
 			: '';
 		wp_send_json_success([
-			'message' => __('Hero pills updated.', 'leadsforward-core'),
+			'message' => $list_kind === 'proof' ? __('Proof card updated.', 'leadsforward-core') : __('Hero pills updated.', 'leadsforward-core'),
 			'items' => $items,
 			'log_id' => $log_id,
 		]);
@@ -1812,7 +1819,93 @@ function lf_ai_ajax_update_hero_pills(): void {
 		wp_send_json_error(['message' => __('This section does not support hero pills editing.', 'leadsforward-core')]);
 	}
 	$settings = is_array($old_row['settings'] ?? null) ? $old_row['settings'] : [];
-	$settings['hero_proof_bullets'] = $value;
+	$settings[ $field_key ] = $value;
+	$config['sections'][$section_id]['settings'] = $settings;
+	update_post_meta($pid, LF_PB_META_KEY, $config);
+	$new_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+	$log_label = $list_kind === 'proof' ? 'Inline hero proof card edit' : 'Inline hero pills edit';
+	$log_id = function_exists('lf_ai_log_action')
+		? lf_ai_log_action(
+			$context_type,
+			$context_id_use,
+			['__section_record::' . $section_id => $old_row],
+			['__section_record::' . $section_id => $new_row],
+			$log_label
+		)
+		: '';
+	wp_send_json_success([
+		'message' => $list_kind === 'proof' ? __('Proof card updated.', 'leadsforward-core') : __('Hero pills updated.', 'leadsforward-core'),
+		'items' => $items,
+		'log_id' => $log_id,
+	]);
+}
+
+function lf_ai_ajax_update_hero_trust_strip(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
+	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
+	$section_id = isset($_POST['section_id']) ? sanitize_text_field(wp_unslash($_POST['section_id'])) : '';
+	$enabled_raw = isset($_POST['enabled']) ? sanitize_text_field(wp_unslash((string) $_POST['enabled'])) : '1';
+	$enabled = $enabled_raw === '0' ? '0' : '1';
+	if ($context_type === '' || $context_id === '' || $section_id === '') {
+		wp_send_json_error(['message' => __('Invalid trust strip payload.', 'leadsforward-core')]);
+	}
+	$context_id_use = $context_id === 'homepage' ? 'homepage' : (int) $context_id;
+	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+			wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
+		}
+		$section_type = $section_id;
+		if (function_exists('lf_homepage_base_section_type')) {
+			$section_type = lf_homepage_base_section_type($section_id);
+		}
+		if ($section_type !== 'hero') {
+			wp_send_json_error(['message' => __('This section is not the homepage hero.', 'leadsforward-core')]);
+		}
+		$config = lf_get_homepage_section_config();
+		$resolved = lf_ai_homepage_resolve_section_id($section_id, 'hero');
+		$old_row = is_array($config[$resolved] ?? null) ? $config[$resolved] : [];
+		if (empty($old_row)) {
+			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+		}
+		$config[$resolved]['hero_trust_strip_enabled'] = $enabled;
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		$new_row = $config[$resolved];
+		$log_id = function_exists('lf_ai_log_action')
+			? lf_ai_log_action(
+				$context_type,
+				$context_id_use,
+				['__homepage_section_row::' . $resolved => $old_row],
+				['__homepage_section_row::' . $resolved => $new_row],
+				'Hero trust strip toggle'
+			)
+			: '';
+		wp_send_json_success([
+			'message' => __('Trust strip setting saved.', 'leadsforward-core'),
+			'enabled' => $enabled,
+			'log_id' => $log_id,
+		]);
+		return;
+	}
+	$pid = (int) $context_id_use;
+	$post = get_post($pid);
+	if (!$post instanceof \WP_Post || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+		wp_send_json_error(['message' => __('Section settings are unavailable for this page.', 'leadsforward-core')]);
+	}
+	$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+	if ($pb_context === '') {
+		wp_send_json_error(['message' => __('This page does not support hero settings here.', 'leadsforward-core')]);
+	}
+	$config = lf_pb_get_post_config($pid, $pb_context);
+	$old_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+	if (empty($old_row) || sanitize_text_field((string) ($old_row['type'] ?? '')) !== 'hero') {
+		wp_send_json_error(['message' => __('That section is not a hero block.', 'leadsforward-core')]);
+	}
+	$settings = is_array($old_row['settings'] ?? null) ? $old_row['settings'] : [];
+	$settings['hero_trust_strip_enabled'] = $enabled;
 	$config['sections'][$section_id]['settings'] = $settings;
 	update_post_meta($pid, LF_PB_META_KEY, $config);
 	$new_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
@@ -1822,12 +1915,12 @@ function lf_ai_ajax_update_hero_pills(): void {
 			$context_id_use,
 			['__section_record::' . $section_id => $old_row],
 			['__section_record::' . $section_id => $new_row],
-			'Inline hero pills edit'
+			'Hero trust strip toggle'
 		)
 		: '';
 	wp_send_json_success([
-		'message' => __('Hero pills updated.', 'leadsforward-core'),
-		'items' => $items,
+		'message' => __('Trust strip setting saved.', 'leadsforward-core'),
+		'enabled' => $enabled,
 		'log_id' => $log_id,
 	]);
 }
@@ -2057,7 +2150,7 @@ function lf_ai_ajax_update_section_media(): void {
 function lf_ai_allowed_line_fields_for_section_type(string $section_type): array {
 	$type = sanitize_text_field($section_type);
 	$map = [
-		'hero' => ['hero_proof_bullets'],
+		'hero' => ['hero_proof_bullets', 'hero_chip_bullets'],
 		'trust_bar' => ['trust_badges'],
 		'benefits' => ['benefits_icon_overrides', 'benefits_items'],
 		'service_intro' => ['service_intro_service_ids'],
