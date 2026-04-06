@@ -137,6 +137,17 @@ FAQ sections now support curated, per-section FAQ selection instead of only glob
 - The section stores selected FAQ IDs in `faq_selected_ids` (line list) through section settings.
 - If no explicit selection exists, theme-side auto-selection chooses best-fit FAQs using section/page intent overlap.
 
+## Process Steps Selection (Library + Auto-pick)
+
+Process sections support curated, per-section Process Step selection (like FAQs), backed by the `lf_process_step` CPT.
+
+- Frontend editor can open a Process Steps picker and add steps from the library into the section.
+- Editors can remove and reorder selected steps directly in the section; selection persists per page/section.
+- The section stores selected Process Step post IDs in `process_selected_ids` (line list) through section settings.
+- If no explicit selection exists, the renderer can auto-pick steps by taxonomy (`lf_process_group`) using page context:
+  - Service pages match the service slug term
+  - Homepage uses the `homepage-primary` term
+
 ## Persistence + Safety
 
 The frontend editor persists through AJAX endpoints and logs all structural operations:

@@ -52,6 +52,12 @@ The image pipeline uses these core functions:
 - `lf_image_intelligence_maybe_set_alt_text()`:
   - Generates ALT only when missing
   - Format: `{Service Name} in {City} by {Business Name}`
+- Attachment metadata:
+  - When images are imported/assigned by the AI/orchestrator, the theme also upgrades missing/generic media metadata:
+    - Attachment title
+    - Caption
+    - Description
+  - This helps keep the Media Library SEO-complete without manual cleanup.
 
 No randomness is used. Tie-breaks are stable based on filename sorting and `variation_seed`.
 
@@ -70,6 +76,8 @@ The theme now auto-processes uploaded images so users can upload files without m
 4. **ALT text auto-fill**
    - If ALT is empty, theme generates keyword-aware ALT.
    - Existing ALT is preserved unless it is clearly generic/placeholder.
+5. **Media metadata upgrades**
+   - For AI-imported/assigned images, the theme upgrades empty/generic title/caption/description using page context.
 5. **Placeholder suppression**
    - Assets flagged as placeholder (filename/title/caption markers like `placeholder`) are excluded from deterministic matching.
    - Placeholder image IDs are treated as replaceable so uploaded real images take priority during assignment.
