@@ -62,6 +62,7 @@ lf_load_inc('ai-studio-rest.php');
 lf_load_inc('ai-studio-airtable.php');
 lf_load_inc('docs-page.php');
 lf_load_inc('docs-content.php');
+lf_load_inc('docs-playbook.php');
 lf_load_inc('editor-design-preset.php');
 lf_load_inc('team-role.php');
 

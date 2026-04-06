@@ -169,6 +169,152 @@ function lf_seo_collect_scoring_text(int $post_id): string {
 	return trim(implode("\n", $chunks));
 }
 
+/**
+ * Raw HTML-ish strings from post content + Page Builder fields (for link / image checks).
+ */
+function lf_seo_collect_scoring_html(int $post_id): string {
+	$post = get_post($post_id);
+	if (!$post instanceof \WP_Post) {
+		return '';
+	}
+	$parts = [(string) $post->post_content];
+	$key = defined('LF_PB_META_KEY') ? LF_PB_META_KEY : 'lf_pb_config';
+	$config = get_post_meta($post_id, $key, true);
+	if (!is_array($config)) {
+		return implode("\n", $parts);
+	}
+	$sections = $config['sections'] ?? [];
+	if (!is_array($sections)) {
+		return implode("\n", $parts);
+	}
+	foreach ($sections as $section) {
+		$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+		foreach ($settings as $value) {
+			if (is_string($value) && $value !== '') {
+				$parts[] = $value;
+			}
+		}
+	}
+	return implode("\n", $parts);
+}
+
+function lf_seo_count_internal_links_in_html(string $html, string $home_host): int {
+	$html = is_string($html) ? $html : '';
+	$home_host = strtolower(trim($home_host));
+	if ($html === '' || $home_host === '' || !preg_match_all('/<a\s[^>]*href=["\']([^"\']+)["\']/i', $html, $m)) {
+		return 0;
+	}
+	$n = 0;
+	foreach ($m[1] as $url) {
+		$url = trim((string) $url);
+		if ($url === '' || strpos($url, '#') === 0 || stripos($url, 'mailto:') === 0 || stripos($url, 'tel:') === 0) {
+			continue;
+		}
+		$h = wp_parse_url($url, PHP_URL_HOST);
+		$h = is_string($h) ? strtolower($h) : '';
+		if ($h !== '' && $h === $home_host) {
+			$n++;
+			continue;
+		}
+		if ($h === '' && preg_match('#^/(?!/)#', $url)) {
+			$n++;
+		}
+	}
+	return $n;
+}
+
+/**
+ * @return list<array{ok:bool,label:string,detail:string}>
+ */
+function lf_seo_get_onpage_checklist_rows(int $post_id): array {
+	$post = get_post($post_id);
+	if (!$post instanceof \WP_Post) {
+		return [];
+	}
+	$rows = [];
+	$text = lf_seo_collect_scoring_text($post_id);
+	$plain = wp_strip_all_tags($text);
+	$primary = trim((string) get_post_meta($post_id, '_lf_seo_primary_keyword', true));
+	$title = trim((string) get_post_meta($post_id, '_lf_seo_meta_title', true));
+	$description = trim((string) get_post_meta($post_id, '_lf_seo_meta_description', true));
+	$tl = function_exists('mb_strlen') ? mb_strlen($title) : strlen($title);
+	$dl = function_exists('mb_strlen') ? mb_strlen($description) : strlen($description);
+	$fallback_title = get_the_title($post);
+	$eff_title = $title !== '' ? $title : (string) $fallback_title;
+	$etl = function_exists('mb_strlen') ? mb_strlen($eff_title) : strlen($eff_title);
+
+	$rows[] = [
+		'ok' => $primary !== '',
+		'label' => __('Primary keyword', 'leadsforward-core'),
+		'detail' => $primary !== '' ? $primary : __('Set a target keyword in this box.', 'leadsforward-core'),
+	];
+	$rows[] = [
+		'ok' => $etl >= 30 && $etl <= 65,
+		'label' => __('Title length (SEO)', 'leadsforward-core'),
+		'detail' => sprintf(
+			/* translators: 1: current length, 2: guideline */
+			__('Effective title is %1$d characters (aim for ~30–60).', 'leadsforward-core'),
+			(int) $etl
+		),
+	];
+	$rows[] = [
+		'ok' => $description === '' || ($dl >= 110 && $dl <= 170),
+		'label' => __('Meta description length', 'leadsforward-core'),
+		'detail' => $description === ''
+			? __('Optional; if set, aim for ~120–160 characters.', 'leadsforward-core')
+			: sprintf(__('Current: %d characters.', 'leadsforward-core'), (int) $dl),
+	];
+	$first_chunk = strtolower(function_exists('mb_substr') ? mb_substr($plain, 0, 280) : substr($plain, 0, 280));
+	$rows[] = [
+		'ok' => $primary === '' || $first_chunk === '' || strpos($first_chunk, strtolower($primary)) !== false,
+		'label' => __('Keyword in opening content', 'leadsforward-core'),
+		'detail' => __('Primary keyword should appear naturally in the first screen of readable text.', 'leadsforward-core'),
+	];
+	$host = (string) wp_parse_url(home_url('/'), PHP_URL_HOST);
+	$html = lf_seo_collect_scoring_html($post_id);
+	$int_n = lf_seo_count_internal_links_in_html($html, $host);
+	$rows[] = [
+		'ok' => $int_n > 0,
+		'label' => __('Internal links', 'leadsforward-core'),
+		'detail' => $int_n > 0
+			? sprintf(
+				/* translators: %d: link count */
+				_n('%d internal link detected in content/Page Builder HTML.', '%d internal links detected in content/Page Builder HTML.', $int_n, 'leadsforward-core'),
+				$int_n
+			)
+			: __('Add at least one link to a related service, area, or core page.', 'leadsforward-core'),
+	];
+	$img_missing_alt = 0;
+	if ($html !== '' && preg_match_all('/<img\b[^>]*>/i', $html, $im)) {
+		foreach ($im[0] as $tag) {
+			if (!preg_match('/\balt\s*=\s*["\'][^"\']+["\']/i', $tag) && !preg_match('/\balt\s*=\s*[^\s>]+/i', $tag)) {
+				$img_missing_alt++;
+			}
+		}
+	}
+	$rows[] = [
+		'ok' => $img_missing_alt === 0,
+		'label' => __('Image alt text', 'leadsforward-core'),
+		'detail' => $img_missing_alt === 0
+			? __('No <img> tags without an alt attribute found in stored HTML fields.', 'leadsforward-core')
+			: sprintf(
+				/* translators: %d: count */
+				__('About %d image(s) may be missing alt attributes in Page Builder / content HTML—fix in the editor.', 'leadsforward-core'),
+				$img_missing_alt
+			),
+	];
+	$needs_thumb = in_array($post->post_type, ['post', 'lf_service'], true);
+	$rows[] = [
+		'ok' => !$needs_thumb || has_post_thumbnail($post_id),
+		'label' => __('Featured image', 'leadsforward-core'),
+		'detail' => $needs_thumb
+			? (has_post_thumbnail($post_id) ? __('Set for social previews and SERP richness.', 'leadsforward-core') : __('Set a featured image for this post type.', 'leadsforward-core'))
+			: __('Not required for this post type.', 'leadsforward-core'),
+	];
+
+	return $rows;
+}
+
 function lf_seo_calculate_content_quality(int $post_id): array {
 	if (function_exists('lf_seo_get_setting') && !lf_seo_get_setting('ai.enable_quality_scorer', true)) {
 		return ['score' => 0, 'grade' => 'F', 'signals' => []];
@@ -183,36 +329,55 @@ function lf_seo_calculate_content_quality(int $post_id): array {
 	$title = trim((string) get_post_meta($post_id, '_lf_seo_meta_title', true));
 	$description = trim((string) get_post_meta($post_id, '_lf_seo_meta_description', true));
 	$intent = lf_seo_detect_serp_intent($post_id, $primary);
-	$internal_links = preg_match_all('/<a\s[^>]*href=/i', (string) $post->post_content);
+	$home_host = (string) wp_parse_url(home_url('/'), PHP_URL_HOST);
+	$html_blob = lf_seo_collect_scoring_html($post_id);
+	$internal_pb = lf_seo_count_internal_links_in_html($html_blob, $home_host);
+	$internal_raw = (int) preg_match_all('/<a\s[^>]*href=/i', (string) $post->post_content);
+	$internal_total = max($internal_pb, $internal_raw);
 
 	$score = 0;
 	$signals = [];
 	$min_words = $post->post_type === 'post' ? 450 : 180;
 	if ($word_count >= $min_words) {
-		$score += 25;
+		$score += 27;
 		$signals[] = 'word_count_ok';
 	}
 	if ($primary !== '' && stripos($text, $primary) !== false) {
-		$score += 20;
+		$score += 18;
 		$signals[] = 'primary_keyword_present';
 	}
 	$title_strong = $title !== '' && (!function_exists('lf_seo_meta_text_needs_upgrade') || !lf_seo_meta_text_needs_upgrade($title, 'title'));
 	if ($title_strong) {
-		$score += 20;
+		$score += 16;
 		$signals[] = 'meta_title_strong';
+	}
+	$tlen = function_exists('mb_strlen') ? mb_strlen($title) : strlen($title);
+	if ($title !== '' && $tlen >= 30 && $tlen <= 62) {
+		$score += 6;
+		$signals[] = 'meta_title_length_band';
 	}
 	$description_strong = $description !== '' && (!function_exists('lf_seo_meta_text_needs_upgrade') || !lf_seo_meta_text_needs_upgrade($description, 'description'));
 	if ($description_strong) {
-		$score += 20;
+		$score += 14;
 		$signals[] = 'meta_description_strong';
 	}
-	if ((int) $internal_links > 0) {
+	$dlen = function_exists('mb_strlen') ? mb_strlen($description) : strlen($description);
+	if ($description !== '' && $dlen >= 120 && $dlen <= 165) {
+		$score += 4;
+		$signals[] = 'meta_description_length_band';
+	}
+	if ($internal_total > 0) {
 		$score += 10;
 		$signals[] = 'internal_links_present';
 	}
 	if ($intent !== '') {
 		$score += 5;
 		$signals[] = 'intent_assigned';
+	}
+	$needs_thumb = in_array($post->post_type, ['post', 'lf_service'], true);
+	if ($needs_thumb && has_post_thumbnail($post_id)) {
+		$score += 5;
+		$signals[] = 'featured_image_set';
 	}
 	$score = max(0, min(100, $score));
 	$grade = 'F';

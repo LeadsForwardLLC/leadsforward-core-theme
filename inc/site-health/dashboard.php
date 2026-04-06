@@ -102,13 +102,19 @@ function lf_health_render_embedded_ui(): void {
 	}
 	echo '</ul>';
 
-	// Pre-launch button
-	echo '<h2>' . esc_html__('Pre-Launch Check', 'leadsforward-core') . '</h2>';
-	echo '<form method="post" action="">';
+	// Pre-launch button (explicit admin.php target so POST works from every screen)
+	echo '<h2>' . esc_html__('Pre-launch automated check', 'leadsforward-core') . '</h2>';
+	echo '<form method="post" action="' . esc_url(admin_url('admin.php')) . '">';
+	echo '<input type="hidden" name="page" value="lf-seo" />';
+	echo '<input type="hidden" name="tab" value="health" />';
 	wp_nonce_field('lf_health_prelaunch', 'lf_health_prelaunch_nonce');
-	echo '<p><input type="submit" name="lf_health_prelaunch" class="button button-primary" value="' . esc_attr__('Run Pre-Launch Check', 'leadsforward-core') . '" /></p>';
+	echo '<p><input type="submit" name="lf_health_prelaunch" class="button button-primary" value="' . esc_attr__('Run pre-launch check', 'leadsforward-core') . '" /></p>';
 	echo '</form>';
-	echo '<p class="description">' . esc_html__('Runs all validations (SEO, performance, internal links). Nothing deploys automatically.', 'leadsforward-core') . '</p>';
+	echo '<p class="description">' . esc_html__('Runs dashboard, SEO, on-page score scan, performance hints, and internal link checks. Results appear below and update “Last site health run” in the snapshot. Nothing deploys automatically.', 'leadsforward-core') . '</p>';
+
+	if (function_exists('lf_health_render_manual_qa_checklist')) {
+		lf_health_render_manual_qa_checklist();
+	}
 
 	// Report (after run or from last result)
 	if ($report && $last !== null) {
@@ -160,12 +166,13 @@ function lf_health_render_report(array $result): void {
 		$by_cat[$cat][] = $c;
 	}
 	$labels = [
-		'dashboard'   => __('Dashboard', 'leadsforward-core'),
+		'dashboard'   => __('Dashboard & integrations', 'leadsforward-core'),
 		'seo'         => __('SEO integrity', 'leadsforward-core'),
+		'onpage'      => __('On-page SEO depth', 'leadsforward-core'),
 		'performance' => __('Performance', 'leadsforward-core'),
 		'links'       => __('Internal links', 'leadsforward-core'),
 	];
-	foreach (['dashboard', 'seo', 'performance', 'links'] as $cat) {
+	foreach (['dashboard', 'seo', 'onpage', 'performance', 'links'] as $cat) {
 		if (empty($by_cat[$cat])) {
 			continue;
 		}
@@ -184,4 +191,35 @@ function lf_health_render_report(array $result): void {
 		}
 		echo '</ul>';
 	}
+}
+
+/**
+ * Human checklist for launch (not scored by automation). Print / work through before go-live.
+ */
+function lf_health_render_manual_qa_checklist(): void {
+	$docs = admin_url('admin.php?page=lf-theme-docs');
+	$seo = admin_url('admin.php?page=lf-seo&tab=settings');
+	echo '<div class="lf-health-qa-checklist" style="max-width:920px;margin:24px 0;padding:16px 20px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;">';
+	echo '<h2 style="margin-top:0;">' . esc_html__('Focused pre-launch QA checklist', 'leadsforward-core') . '</h2>';
+	echo '<p class="description">' . esc_html__('Work through this list after the automated check passes or when you are close to launch. Check items off in your own tracker.', 'leadsforward-core') . '</p>';
+	echo '<ol style="margin:12px 0 0 1.25rem;line-height:1.65;">';
+	$items = [
+		__('Homepage: one clear H1, hero CTA works (quote / phone / form as configured), trust section shows real reviews.', 'leadsforward-core'),
+		__('Contact: form delivers to the right inbox; phone click-to-call; address/map match Google Business Profile.', 'leadsforward-core'),
+		__('Every money page (services, service areas, key landing pages) has a unique meta title (≈30–60 chars) and meta description (≈120–160 chars) in the SEO meta box.', 'leadsforward-core'),
+		__('Primary keyword set per page; at least one contextual internal link to a related service or area in body or Page Builder content.', 'leadsforward-core'),
+		__('Images: no decorative-only alts; team and project photos describe what they show; logo marked appropriately.', 'leadsforward-core'),
+		__('Legal: Privacy Policy and Terms match your business; footer links resolve.', 'leadsforward-core'),
+		__('404 page branded; sitemap.xml loads; robots / noindex only where intended (archives, search if configured).', 'leadsforward-core'),
+		__('Mobile: tap targets, sticky header/CTA, and Core Web Vitals spot-check on 3G throttling.', 'leadsforward-core'),
+		__('Analytics: GTM or gtag fires on key templates (use Tag Assistant or network filter).', 'leadsforward-core'),
+		__('Staging vs production: correct domain in schema, canonicals, and Search Console property.', 'leadsforward-core'),
+	];
+	foreach ($items as $text) {
+		echo '<li>' . esc_html($text) . '</li>';
+	}
+	echo '</ol>';
+	echo '<p style="margin:16px 0 0;"><a class="button" href="' . esc_url($docs) . '">' . esc_html__('Open Theme Docs', 'leadsforward-core') . '</a> ';
+	echo '<a class="button" href="' . esc_url($seo) . '">' . esc_html__('SEO settings', 'leadsforward-core') . '</a></p>';
+	echo '</div>';
 }
