@@ -92,6 +92,20 @@ function lf_seo_render_meta_box(\WP_Post $post): void {
 					}
 					?>
 				</p>
+				<?php if (function_exists('lf_seo_get_onpage_checklist_rows')) : ?>
+					<div class="lf-seo-onpage-checklist" style="margin-top:12px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+						<strong style="display:block;margin-bottom:8px;"><?php esc_html_e('On-page depth checklist', 'leadsforward-core'); ?></strong>
+						<ul style="margin:0;padding-left:1.1rem;line-height:1.55;">
+							<?php foreach (lf_seo_get_onpage_checklist_rows((int) $post->ID) as $row) : ?>
+								<li>
+									<span style="color:<?php echo !empty($row['ok']) ? '#15803d' : '#b45309'; ?>;font-weight:600;"><?php echo !empty($row['ok']) ? '✓' : '○'; ?></span>
+									<?php echo esc_html((string) ($row['label'] ?? '')); ?> —
+									<span class="description"><?php echo esc_html((string) ($row['detail'] ?? '')); ?></span>
+								</li>
+							<?php endforeach; ?>
+						</ul>
+					</div>
+				<?php endif; ?>
 			</td>
 		</tr>
 		<tr>

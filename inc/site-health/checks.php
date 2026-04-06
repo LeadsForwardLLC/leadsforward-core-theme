@@ -19,6 +19,20 @@ function lf_health_required_plugins(): array {
 	return apply_filters('lf_health_required_plugins', ['advanced-custom-fields/acf.php', 'advanced-custom-fields-pro/acf.php']);
 }
 
+/**
+ * URL for an ACF options submenu; falls back to Global Settings if ACF is inactive.
+ */
+function lf_health_fix_url_acf_option_page(string $page_slug): string {
+	if (function_exists('get_field')) {
+		return admin_url('admin.php?page=' . sanitize_key($page_slug));
+	}
+	return admin_url('admin.php?page=lf-global');
+}
+
+function lf_health_seo_settings_url(): string {
+	return admin_url('admin.php?page=lf-seo&tab=settings');
+}
+
 function lf_health_check_theme_active(): array {
 	$theme = wp_get_theme();
 	$name = $theme->get('Name');
@@ -47,21 +61,44 @@ function lf_health_check_required_plugins(): array {
 
 function lf_health_check_wizard_complete(): array {
 	$done = (bool) get_option('lf_setup_wizard_complete', false);
-	if (!$done) {
-		return ['status' => lf_health_status_fail(), 'label' => __('Site setup', 'leadsforward-core'), 'message' => __('Site setup not completed.', 'leadsforward-core'), 'fix_link' => admin_url('admin.php?page=lf-setup')];
+	if ($done) {
+		return ['status' => lf_health_status_pass(), 'label' => __('Site setup', 'leadsforward-core'), 'message' => __('Marked complete.', 'leadsforward-core'), 'fix_link' => ''];
 	}
-	return ['status' => lf_health_status_pass(), 'label' => __('Site setup', 'leadsforward-core'), 'message' => __('Completed.', 'leadsforward-core'), 'fix_link' => ''];
+	$slugs = function_exists('lf_wizard_required_page_slugs') ? lf_wizard_required_page_slugs() : [];
+	$missing = 0;
+	foreach ($slugs as $slug) {
+		$page = get_page_by_path((string) $slug);
+		if (!$page instanceof \WP_Post) {
+			$missing++;
+		}
+	}
+	$fix = admin_url('admin.php?page=lf-setup');
+	if ($missing === 0 && !empty($slugs)) {
+		return [
+			'status' => lf_health_status_warning(),
+			'label' => __('Site setup', 'leadsforward-core'),
+			'message' => __('The setup wizard is not marked complete, but core pages from the checklist exist. Open Site setup to confirm or mark the flow done.', 'leadsforward-core'),
+			'fix_link' => $fix,
+		];
+	}
+	return [
+		'status' => lf_health_status_fail(),
+		'label' => __('Site setup', 'leadsforward-core'),
+		'message' => __('Site setup is not complete or core pages are missing. Run the guided wizard.', 'leadsforward-core'),
+		'fix_link' => $fix,
+	];
 }
 
 function lf_health_check_variation_profile(): array {
 	$profile = function_exists('get_field') ? get_field('variation_profile', 'option') : null;
+	$fix = lf_health_fix_url_acf_option_page('lf-variation');
 	if ($profile === null || $profile === '') {
-		return ['status' => lf_health_status_warning(), 'label' => __('Variation profile', 'leadsforward-core'), 'message' => __('Not set. Default will be used.', 'leadsforward-core'), 'fix_link' => admin_url('admin.php?page=lf-variation')];
+		return ['status' => lf_health_status_warning(), 'label' => __('Variation profile', 'leadsforward-core'), 'message' => __('Not set. A default profile is used until you choose one under Variation (or Global / design preset).', 'leadsforward-core'), 'fix_link' => $fix];
 	}
 	if (!in_array($profile, ['a', 'b', 'c', 'd', 'e'], true)) {
-		return ['status' => lf_health_status_warning(), 'label' => __('Variation profile', 'leadsforward-core'), 'message' => __('Invalid value.', 'leadsforward-core'), 'fix_link' => admin_url('admin.php?page=lf-variation')];
+		return ['status' => lf_health_status_warning(), 'label' => __('Variation profile', 'leadsforward-core'), 'message' => __('Invalid value.', 'leadsforward-core'), 'fix_link' => $fix];
 	}
-	return ['status' => lf_health_status_pass(), 'label' => __('Variation profile', 'leadsforward-core'), 'message' => $profile, 'fix_link' => ''];
+	return ['status' => lf_health_status_pass(), 'label' => __('Variation profile', 'leadsforward-core'), 'message' => (string) $profile, 'fix_link' => ''];
 }
 
 function lf_health_check_business_info(): array {
@@ -100,13 +137,14 @@ function lf_health_check_nap_complete(): array {
 
 function lf_health_check_core_pages_exist(): array {
 	$required = function_exists('lf_wizard_required_page_slugs') ? lf_wizard_required_page_slugs() : [
+		'home',
 		'about-us',
-		'contact-us',
-		'services',
+		'our-services',
 		'service-areas',
 		'reviews',
 		'blog',
 		'sitemap',
+		'contact',
 		'privacy-policy',
 		'terms-of-service',
 		'thank-you',
@@ -184,7 +222,7 @@ function lf_health_check_schema_present(): array {
 		}
 	}
 	if ($on === 0) {
-		return ['status' => lf_health_status_warning(), 'label' => __('Required schema', 'leadsforward-core'), 'message' => __('LocalBusiness/Organization schema toggles are off.', 'leadsforward-core'), 'fix_link' => admin_url('admin.php?page=lf-schema')];
+		return ['status' => lf_health_status_warning(), 'label' => __('Required schema', 'leadsforward-core'), 'message' => __('LocalBusiness/Organization schema toggles are off.', 'leadsforward-core'), 'fix_link' => lf_health_fix_url_acf_option_page('lf-schema')];
 	}
 	return ['status' => lf_health_status_pass(), 'label' => __('Required schema', 'leadsforward-core'), 'message' => __('Schema toggles set.', 'leadsforward-core'), 'fix_link' => ''];
 }
@@ -238,20 +276,12 @@ function lf_health_check_jquery(): array {
 }
 
 function lf_health_check_theme_script_count(): array {
-	$count = 0;
-	if (function_exists('wp_scripts') && wp_scripts() instanceof \WP_Scripts) {
-		$done = wp_scripts()->done;
-		$registered = wp_scripts()->registered;
-		foreach ($registered as $handle => $dep) {
-			if (strpos($handle, 'lf_') === 0 || strpos($handle, 'leadsforward') !== false) {
-				$count++;
-			}
-		}
-	}
-	if ($count > 5) {
-		return ['status' => lf_health_status_warning(), 'label' => __('Theme script count', 'leadsforward-core'), 'message' => sprintf(__('%d theme-related scripts registered. Review payload.', 'leadsforward-core'), $count), 'fix_link' => ''];
-	}
-	return ['status' => lf_health_status_pass(), 'label' => __('Theme script count', 'leadsforward-core'), 'message' => __('Within guardrail.', 'leadsforward-core'), 'fix_link' => ''];
+	return [
+		'status' => lf_health_status_pass(),
+		'label' => __('Script weight (manual)', 'leadsforward-core'),
+		'message' => __('Use DevTools → Network on homepage, a service page, and contact to confirm total JS weight and third-party calls.', 'leadsforward-core'),
+		'fix_link' => '',
+	];
 }
 
 function lf_health_check_lazy_load(): array {
@@ -313,6 +343,109 @@ function lf_health_check_orphaned_services(): array {
 	return ['status' => lf_health_status_pass(), 'label' => __('Orphaned services/areas', 'leadsforward-core'), 'message' => __('None detected.', 'leadsforward-core'), 'fix_link' => ''];
 }
 
+function lf_health_check_header_analytics(): array {
+	$settings = function_exists('lf_seo_get_settings') ? lf_seo_get_settings() : [];
+	$header = trim((string) ($settings['scripts']['header'] ?? ''));
+	$fix = lf_health_seo_settings_url();
+	if ($header === '') {
+		return [
+			'status' => lf_health_status_warning(),
+			'label' => __('Header analytics (GTM / tags)', 'leadsforward-core'),
+			'message' => __('Nothing is in SEO & Site Health → SEO settings → Scripts → Header scripts. Add Google Tag Manager or your measurement snippet.', 'leadsforward-core'),
+			'fix_link' => $fix,
+		];
+	}
+	$has_gtm = (bool) preg_match('/googletagmanager\.com|GTM-[A-Z0-9]+/i', $header);
+	$has_ga = (bool) preg_match('/google-analytics\.com|googletagmanager\.com\/gtag\/js|gtag\s*\(/i', $header);
+	if (!$has_gtm && !$has_ga) {
+		return [
+			'status' => lf_health_status_warning(),
+			'label' => __('Header analytics (GTM / tags)', 'leadsforward-core'),
+			'message' => __('Header scripts exist, but no typical GTM/gtag pattern was detected. Confirm the snippet is correct (or dismiss if you use another stack).', 'leadsforward-core'),
+			'fix_link' => $fix,
+		];
+	}
+	return [
+		'status' => lf_health_status_pass(),
+		'label' => __('Header analytics (GTM / tags)', 'leadsforward-core'),
+		'message' => $has_gtm ? __('GTM or container ID pattern found in header scripts.', 'leadsforward-core') : __('Analytics-related pattern found in header scripts.', 'leadsforward-core'),
+		'fix_link' => '',
+	];
+}
+
+function lf_health_check_manifester_config(): array {
+	$enabled = get_option('lf_ai_studio_enabled', '0') === '1';
+	$webhook = trim((string) get_option('lf_ai_studio_webhook', ''));
+	$secret = trim((string) get_option('lf_ai_studio_secret', ''));
+	$fix = admin_url('admin.php?page=lf-global');
+	if (!$enabled) {
+		return [
+			'status' => lf_health_status_warning(),
+			'label' => __('Website Manifester (AI)', 'leadsforward-core'),
+			'message' => __('Manifester is disabled. Turn it on in Global Settings when you use orchestrated generation.', 'leadsforward-core'),
+			'fix_link' => $fix,
+		];
+	}
+	if ($webhook === '' || $secret === '') {
+		return [
+			'status' => lf_health_status_fail(),
+			'label' => __('Website Manifester (AI)', 'leadsforward-core'),
+			'message' => __('Webhook URL or shared secret is missing; queued generation will fail.', 'leadsforward-core'),
+			'fix_link' => $fix,
+		];
+	}
+	return [
+		'status' => lf_health_status_pass(),
+		'label' => __('Website Manifester (AI)', 'leadsforward-core'),
+		'message' => __('Webhook and secret are configured.', 'leadsforward-core'),
+		'fix_link' => '',
+	];
+}
+
+function lf_health_check_low_onpage_scores(): array {
+	$query = new \WP_Query([
+		'post_type'           => ['page', 'post', 'lf_service', 'lf_service_area'],
+		'post_status'         => 'publish',
+		'posts_per_page'      => 1,
+		'fields'              => 'ids',
+		'no_found_rows'       => false,
+		'ignore_sticky_posts' => true,
+		'meta_query'          => [
+			[
+				'key'     => '_lf_seo_quality_score',
+				'value'   => 60,
+				'type'    => 'NUMERIC',
+				'compare' => '<',
+			],
+		],
+	]);
+	$low = (int) $query->found_posts;
+	wp_reset_postdata();
+	if ($low > 0) {
+		return [
+			'status' => lf_health_status_warning(),
+			'label' => __('On-page SEO scores', 'leadsforward-core'),
+			'message' => sprintf(
+				/* translators: %d: number of posts */
+				_n(
+					'%d published entry has an SEO quality score under 60. Edit it and use the SEO meta box checklist.',
+					'%d published entries have an SEO quality score under 60. Edit them and use the SEO meta box checklist.',
+					$low,
+					'leadsforward-core'
+				),
+				$low
+			),
+			'fix_link' => admin_url('edit.php?post_type=page'),
+		];
+	}
+	return [
+		'status' => lf_health_status_pass(),
+		'label' => __('On-page SEO scores', 'leadsforward-core'),
+		'message' => __('No published entries scored under 60. Re-save important pages if scores are still empty.', 'leadsforward-core'),
+		'fix_link' => '',
+	];
+}
+
 /**
  * All dashboard (quick) checks.
  */
@@ -323,6 +456,8 @@ function lf_health_dashboard_checks(): array {
 		lf_health_check_wizard_complete(),
 		lf_health_check_variation_profile(),
 		lf_health_check_business_info(),
+		lf_health_check_header_analytics(),
+		lf_health_check_manifester_config(),
 	];
 }
 
@@ -342,6 +477,9 @@ function lf_health_prelaunch_checks(): array {
 			lf_health_check_noindex_money_pages(),
 			lf_health_check_canonicals(),
 			lf_health_check_single_h1(),
+		],
+		'onpage' => [
+			lf_health_check_low_onpage_scores(),
 		],
 		'performance' => [
 			lf_health_check_jquery(),

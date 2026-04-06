@@ -18,6 +18,21 @@ add_action('admin_init', 'lf_wizard_handle_setup_settings');
 add_action('admin_init', 'lf_wizard_handle_regen_legal');
 add_action('admin_notices', 'lf_wizard_admin_notice');
 add_action('after_switch_theme', 'lf_wizard_on_activation');
+add_action('admin_menu', 'lf_wizard_register_admin_page', 11);
+
+/**
+ * Register Site setup under LeadsForward so admin.php?page=lf-setup works (health “Fix” links, notices).
+ */
+function lf_wizard_register_admin_page(): void {
+	add_submenu_page(
+		'lf-ops',
+		__('Site setup', 'leadsforward-core'),
+		__('Site setup', 'leadsforward-core'),
+		'edit_theme_options',
+		'lf-setup',
+		'lf_wizard_render_page'
+	);
+}
 
 function lf_wizard_on_activation(): void {
 	// Do not reset completion on re-activation. Only first install has no option.

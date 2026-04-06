@@ -210,6 +210,7 @@ function lf_ops_reorder_submenus(): void {
 	$preferred_order = [
 		'lf-ops',
 		'lf-global',
+		'lf-setup',
 		'lf-theme-docs',
 		'lf-homepage-settings',
 		'lf-quote-builder',
