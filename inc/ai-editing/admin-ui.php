@@ -1776,12 +1776,12 @@ function lf_ai_ajax_update_hero_pills(): void {
 			wp_send_json_error(['message' => __('This section does not support hero pills editing.', 'leadsforward-core')]);
 		}
 		$config = lf_get_homepage_section_config();
-		$resolved_section_id = lf_ai_homepage_resolve_section_id($section_id, 'hero');
+		$resolved_section_id = lf_ai_homepage_resolve_section_id($section_id, $section_type);
 		$old_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 		if (empty($old_row)) {
 			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
 		}
-		$config[$resolved_section_id][ $field_key ] = $value;
+		$config[ $resolved_section_id ][ $field_key ] = $value;
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 		$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 		$log_label = $list_kind === 'proof' ? 'Inline hero proof card edit' : 'Inline hero pills edit';
@@ -1866,7 +1866,7 @@ function lf_ai_ajax_update_hero_trust_strip(): void {
 			wp_send_json_error(['message' => __('This section is not the homepage hero.', 'leadsforward-core')]);
 		}
 		$config = lf_get_homepage_section_config();
-		$resolved = lf_ai_homepage_resolve_section_id($section_id, 'hero');
+		$resolved = lf_ai_homepage_resolve_section_id($section_id, $section_type);
 		$old_row = is_array($config[$resolved] ?? null) ? $config[$resolved] : [];
 		if (empty($old_row)) {
 			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
