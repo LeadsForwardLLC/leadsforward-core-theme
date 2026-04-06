@@ -101,6 +101,91 @@
   border-radius: 14px;
 }
 
+.lf-manifester-page-title {
+  margin-bottom: 6px;
+}
+
+.lf-manifester-lead {
+  max-width: 52rem;
+  margin-top: 0;
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+.lf-manifester-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  gap: 20px;
+  align-items: start;
+  max-width: 980px;
+  margin: 8px 0 20px;
+  padding: 18px 20px;
+  border: 1px solid #c7d2fe;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+@media (max-width: 782px) {
+  .lf-manifester-hero {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lf-manifester-hero__title {
+  margin: 0 0 10px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #1e1b4b;
+}
+
+.lf-manifester-hero__steps {
+  margin: 0 0 12px;
+  padding-left: 1.25rem;
+  color: #334155;
+  line-height: 1.55;
+}
+
+.lf-manifester-hero__steps li {
+  margin-bottom: 6px;
+}
+
+.lf-manifester-hero__status {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #475569;
+}
+
+.lf-manifester-hero__status--ok {
+  color: #047857;
+}
+
+.lf-manifester-hero__status--warn {
+  color: #b45309;
+}
+
+.lf-manifester-hero__alt {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px dashed #94a3b8;
+  background: #fff;
+}
+
+.lf-manifester-hero__alt-title {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.lf-manifester-hero__alt .description {
+  margin-bottom: 10px;
+}
+
+.lf-manifester-hero__alt-actions {
+  margin: 0;
+}
+
 .lf-manifester-steps {
   display: flex;
   flex-direction: column;

@@ -1,7 +1,7 @@
 <?php
 /**
  * LeadsForward parent menu and submenu registration. Admin only.
- * Order: Website Manifester → Global Settings → … → SEO & Site Health (tabs) → Bulk Tools → Activity Log → Backup.
+ * Order: Website Manifester → Global Settings → … → SEO & Site Health (tabs) → Manual setup (optional) → Bulk Tools → Activity Log → Backup.
  * Site Health UI is embedded in SEO settings (inc/seo/seo-settings.php); legacy lf-site-health URL redirects.
  *
  * @package LeadsForward_Core
@@ -210,12 +210,12 @@ function lf_ops_reorder_submenus(): void {
 	$preferred_order = [
 		'lf-ops',
 		'lf-global',
-		'lf-setup',
 		'lf-theme-docs',
 		'lf-homepage-settings',
 		'lf-quote-builder',
 		'lf-contact-form',
 		'lf-seo',
+		'lf-setup',
 		'lf-ops-bulk',
 		'lf-ops-audit',
 		'lf-ops-config',

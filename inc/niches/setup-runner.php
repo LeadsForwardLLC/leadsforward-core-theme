@@ -323,7 +323,7 @@ function lf_run_setup(array $data): array {
 	];
 	$blueprints = [
 		'success' => $success,
-		'message' => $success ? __('Site setup complete.', 'leadsforward-core') : __('Setup finished with some errors.', 'leadsforward-core'),
+		'message' => $success ? __('Manual setup complete.', 'leadsforward-core') : __('Setup finished with some errors.', 'leadsforward-core'),
 		'created' => $log['created'],
 		'ids'     => $ids,
 		'errors'  => $log['errors'],

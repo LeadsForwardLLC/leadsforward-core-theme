@@ -337,6 +337,15 @@ function lf_ai_studio_airtable_generate_from_record_id(string $record_id, string
 	update_option('lf_site_manifest', $normalized, false);
 	delete_option('lf_ai_studio_manifest_errors');
 	lf_ai_studio_sync_manifest_posts($normalized);
+	if (function_exists('lf_ai_studio_apply_manifest_to_site_options')) {
+		lf_ai_studio_apply_manifest_to_site_options($normalized);
+	}
+	if (function_exists('lf_ai_studio_apply_manifest_seo_baseline')) {
+		lf_ai_studio_apply_manifest_seo_baseline($normalized);
+	}
+	if (function_exists('lf_seo_assign_keywords_from_manifest')) {
+		lf_seo_assign_keywords_from_manifest($normalized);
+	}
 	$review_result = lf_ai_studio_airtable_import_reviews($record, $settings);
 	if (!empty($review_result['error'])) {
 		error_log('LF Airtable Reviews: ' . (string) $review_result['error']);
