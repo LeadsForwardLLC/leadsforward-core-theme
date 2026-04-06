@@ -424,6 +424,8 @@ function lf_ops_handle_global_settings_save(): void {
 	update_option('lf_ai_airtable_reviews_table', isset($_POST['lf_ai_airtable_reviews_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_table'])) : '');
 	update_option('lf_ai_airtable_reviews_view', isset($_POST['lf_ai_airtable_reviews_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_view'])) : '');
 	update_option('lf_maps_api_key', isset($_POST['lf_maps_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_maps_api_key'])) : '');
+	update_option('options_lf_feedback_webhook_url', isset($_POST['lf_feedback_webhook_url']) ? esc_url_raw(wp_unslash((string) $_POST['lf_feedback_webhook_url'])) : '');
+	update_option('options_lf_feedback_webhook_secret', isset($_POST['lf_feedback_webhook_secret']) ? trim(sanitize_text_field(wp_unslash((string) $_POST['lf_feedback_webhook_secret']))) : '');
 	$design_preset = isset($_POST['lf_global_design_preset']) ? sanitize_text_field(wp_unslash($_POST['lf_global_design_preset'])) : 'clean-precision';
 	$design_presets = function_exists('lf_design_presets') ? lf_design_presets() : [];
 	if (empty($design_presets)) {
@@ -790,6 +792,8 @@ function lf_ops_render_global_settings_page(): void {
 	$autonomy_last_baseline_job = (int) get_option('lf_ai_autonomy_last_baseline_job_id', 0);
 	$autonomy_last_health_check = (int) get_option('lf_ai_autonomy_last_health_check', 0);
 	$openai_key_set = (string) get_option('lf_openai_api_key', '') !== '';
+	$feedback_webhook_url = (string) get_option('options_lf_feedback_webhook_url', '');
+	$feedback_webhook_secret = (string) get_option('options_lf_feedback_webhook_secret', '');
 	$airtable_settings = function_exists('lf_ai_studio_airtable_get_settings')
 		? lf_ai_studio_airtable_get_settings()
 		: [];
@@ -1029,6 +1033,20 @@ function lf_ops_render_global_settings_page(): void {
 										<?php esc_html_e('Clear saved key', 'leadsforward-core'); ?>
 									</label>
 									<p class="description"><?php esc_html_e('Used by the floating AI Assistant for guarded copy edits only.', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_feedback_webhook_url"><?php esc_html_e('Feedback webhook URL', 'leadsforward-core'); ?></label></th>
+								<td>
+									<input type="url" class="large-text" name="lf_feedback_webhook_url" id="lf_feedback_webhook_url" value="<?php echo esc_attr($feedback_webhook_url); ?>" placeholder="https://n8n.example.com/webhook/feedback-status" />
+									<p class="description"><?php esc_html_e('When feedback is Approved/Rejected, WordPress POSTs a JSON payload here so n8n can route to Slack/email/etc.', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_feedback_webhook_secret"><?php esc_html_e('Feedback webhook secret (optional)', 'leadsforward-core'); ?></label></th>
+								<td>
+									<input type="text" class="large-text" name="lf_feedback_webhook_secret" id="lf_feedback_webhook_secret" value="<?php echo esc_attr($feedback_webhook_secret); ?>" />
+									<p class="description"><?php esc_html_e('Sent as a Bearer token in the Authorization header.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
