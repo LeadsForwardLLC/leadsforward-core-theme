@@ -557,9 +557,18 @@ function lf_ops_handle_global_settings_save(): void {
 		$founding_year = isset($_POST['lf_business_founding_year']) ? sanitize_text_field(wp_unslash($_POST['lf_business_founding_year'])) : '';
 		$license_number = isset($_POST['lf_business_license_number']) ? sanitize_text_field(wp_unslash($_POST['lf_business_license_number'])) : '';
 		$insurance_statement = isset($_POST['lf_business_insurance_statement']) ? sanitize_textarea_field(wp_unslash($_POST['lf_business_insurance_statement'])) : '';
-		$place_id = isset($_POST['lf_business_place_id']) ? sanitize_text_field(wp_unslash($_POST['lf_business_place_id'])) : '';
-		$place_name = isset($_POST['lf_business_place_name']) ? sanitize_text_field(wp_unslash($_POST['lf_business_place_name'])) : '';
-		$place_address = isset($_POST['lf_business_place_address']) ? sanitize_text_field(wp_unslash($_POST['lf_business_place_address'])) : '';
+		$place_id = isset($_POST['lf_business_place_id']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_business_place_id'])) : '';
+		$place_id = trim($place_id);
+		if (stripos($place_id, 'place_id:') === 0) {
+			$place_id = trim(substr($place_id, strlen('place_id:')));
+		}
+		// Guard against bad autofill / placeholder values ("1", short names, etc.).
+		// Google Place IDs are typically long and contain no spaces.
+		if ($place_id !== '' && (strlen($place_id) < 12 || preg_match('/\s/', $place_id) === 1)) {
+			$place_id = '';
+		}
+		$place_name = isset($_POST['lf_business_place_name']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_business_place_name'])) : '';
+		$place_address = isset($_POST['lf_business_place_address']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_business_place_address'])) : '';
 		$allowed_embed = [
 			'iframe' => [
 				'src' => true,
@@ -756,6 +765,13 @@ function lf_ops_render_global_settings_page(): void {
 	$place_name = function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_place_name', '') : '';
 	$place_address = function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_place_address', '') : '';
 	$map_embed = function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_map_embed', '') : '';
+	$place_id = trim($place_id);
+	if (stripos($place_id, 'place_id:') === 0) {
+		$place_id = trim(substr($place_id, strlen('place_id:')));
+	}
+	if ($place_id !== '' && (strlen($place_id) < 12 || preg_match('/\s/', $place_id) === 1)) {
+		$place_id = '';
+	}
 	$get_brand = function (string $key, string $default): string {
 		if (function_exists('lf_branding_get_value')) {
 			return lf_branding_get_value($key, $default);
@@ -1324,7 +1340,7 @@ function lf_ops_render_global_settings_page(): void {
 						<tr>
 							<th scope="row"><label for="lf_business_place_search"><?php esc_html_e('Search business on Google Maps', 'leadsforward-core'); ?></label></th>
 							<td>
-								<input type="text" class="large-text" id="lf_business_place_search" placeholder="<?php esc_attr_e('Start typing your business name...', 'leadsforward-core'); ?>" value="<?php echo esc_attr($place_name); ?>" />
+								<input type="text" class="large-text" id="lf_business_place_search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="<?php esc_attr_e('Start typing your business name...', 'leadsforward-core'); ?>" value="<?php echo esc_attr($place_name !== '' ? $place_name : $entity_name); ?>" />
 								<input type="hidden" name="lf_business_place_id" id="lf_business_place_id" value="<?php echo esc_attr($place_id); ?>" />
 								<input type="hidden" name="lf_business_place_name" id="lf_business_place_name" value="<?php echo esc_attr($place_name); ?>" />
 								<input type="hidden" name="lf_business_place_address" id="lf_business_place_address" value="<?php echo esc_attr($place_address); ?>" />
