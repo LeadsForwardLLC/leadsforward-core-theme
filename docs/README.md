@@ -16,6 +16,12 @@ Use this page as the starting point for architecture, operations, and troublesho
 - `08_FRONTEND_EDITOR.md` - sidepanel/assistant editing behavior and controls.
 - `07_ICON_SYSTEM.md` - icon picker and icon taxonomy usage.
 
+## Theme CPTs (quick reference)
+- **`lf_faq`** — FAQ accordion selections (`faq_selected_ids`).
+- **`lf_process_step`** — reusable process steps; homepage/Page Builder process section can reference IDs in `process_selected_ids` (see `inc/sections.php` and `04_SECTION_SCHEMA.md`).
+
+The in-dashboard **LeadsForward → Theme Docs** playbook is the most up-to-date operator guide for admin URLs and workflows; repo markdown here is for developers and orchestration.
+
 ## Image Intelligence
 - `SOP_IMAGE_INTELLIGENCE_WORKFLOW.md` - operational SOP for image upload/matching/assignment.
 - `N8N_VISION_STEP_SPEC.md` - optional n8n vision annotation contract.

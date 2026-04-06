@@ -37,6 +37,8 @@ The schema is derived from:
 If a field or section changes, update the registry and keep this doc aligned.
 
 ## Notable Section Keys
+- **Process** (`process`): optional `process_selected_ids` (newline list of `lf_process_step` post IDs). When at least one ID resolves to a published step, those titles/bodies drive the section; otherwise `process_steps` (line-based) is used.
+- **Hero**: `hero_proof_bullets` powers the Authority Split right-hand checklist; `hero_chip_bullets` is separate (left pills).
 - `service_areas` now supports map/filter UX copy keys for overview pages:
   - `map_heading`
   - `map_intro`

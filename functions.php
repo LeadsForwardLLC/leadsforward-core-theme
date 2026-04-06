@@ -72,6 +72,7 @@ lf_load_inc('cpt/service-areas.php');
 lf_load_inc('cpt/projects.php');
 lf_load_inc('cpt/testimonials.php');
 lf_load_inc('cpt/faqs.php');
+lf_load_inc('cpt/process-steps.php');
 
 // ACF options + field groups (load only when ACF present; guardrails handle fallback).
 lf_load_inc('acf/options-business.php');

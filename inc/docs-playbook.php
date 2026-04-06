@@ -15,7 +15,23 @@ if (!defined('ABSPATH')) {
  * Detailed documentation sections (IDs must match sidebar anchors in docs-content.php).
  */
 function lf_docs_render_playbook_sections(): void {
+	$can_ops = function_exists('current_user_can') && current_user_can('edit_theme_options');
 	?>
+			<?php if ($can_ops) : ?>
+			<section id="admin-shortcuts" class="lf-docs__section">
+				<h2><?php esc_html_e('Quick links (wp-admin)', 'leadsforward-core'); ?></h2>
+				<p><?php esc_html_e('Open common screens directly (requires permission to manage theme options):', 'leadsforward-core'); ?></p>
+				<ul>
+					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-ops')); ?>"><?php esc_html_e('Website Manifester', 'leadsforward-core'); ?></a></li>
+					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-setup')); ?>"><?php esc_html_e('Site setup wizard', 'leadsforward-core'); ?></a></li>
+					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-global')); ?>"><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></a></li>
+					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-homepage-settings')); ?>"><?php esc_html_e('Homepage Builder', 'leadsforward-core'); ?></a></li>
+					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=settings')); ?>"><?php esc_html_e('SEO & Site Health (SEO tab)', 'leadsforward-core'); ?></a> — <a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=health')); ?>"><?php esc_html_e('Health tab', 'leadsforward-core'); ?></a></li>
+					<li><a href="<?php echo esc_url(admin_url('edit.php?post_type=lf_process_step')); ?>"><?php esc_html_e('Process steps (CPT)', 'leadsforward-core'); ?></a></li>
+					<li><a href="<?php echo esc_url(admin_url('edit.php?post_type=lf_faq')); ?>"><?php esc_html_e('FAQs', 'leadsforward-core'); ?></a></li>
+				</ul>
+			</section>
+			<?php endif; ?>
 			<section id="getting-started" class="lf-docs__section">
 				<h1><?php esc_html_e('LeadsForward playbook: build a site start to finish', 'leadsforward-core'); ?></h1>
 				<p><?php esc_html_e('This guide mirrors how production sites are launched: install → setup wizard → global + AI wiring → manifest generation → tune homepage and templates → polish SEO → verify in Site Health → go live.', 'leadsforward-core'); ?></p>
@@ -45,10 +61,11 @@ function lf_docs_render_playbook_sections(): void {
 
 			<section id="admin-map" class="lf-docs__section">
 				<h2><?php esc_html_e('Admin map (where everything lives)', 'leadsforward-core'); ?></h2>
+				<p><?php esc_html_e('Site setup and Website Manifester work together: the wizard captures niche, NAP-style business fields, and inputs the orchestrator can use. Manifester runs generation from manifest/Airtable and applies content. If much of your truth lives in Airtable, you can lean on Manifester after Global Settings—still run Site setup at least once so niche and baseline options are stored.', 'leadsforward-core'); ?></p>
 				<ul>
 					<li><strong>Website Manifester</strong> — <?php esc_html_e('Orchestrator scope, Airtable, manifest upload, research, images, generate.', 'leadsforward-core'); ?></li>
 					<li><strong>Global Settings</strong> — <?php esc_html_e('Business entity, phones, map, APIs, manifester enable, reviews sync.', 'leadsforward-core'); ?></li>
-					<li><strong>Site setup</strong> — <?php esc_html_e('First-time wizard; can be reopened from the wizard screen if you reset.', 'leadsforward-core'); ?></li>
+					<li><strong>Site setup</strong> — <?php esc_html_e('First-time wizard (5 steps); stores niche and business/homepage-related inputs. Reopen anytime from LeadsForward → Site setup. Step 1 “Next” must stay on Site setup (step 2)—if you land on Manifester, update the theme.', 'leadsforward-core'); ?></li>
 					<li><strong>Homepage Builder</strong> — <?php esc_html_e('Section order/on-off for the front page.', 'leadsforward-core'); ?></li>
 					<li><strong>Quote Builder / Contact Form</strong> — <?php esc_html_e('Lead capture configuration.', 'leadsforward-core'); ?></li>
 					<li><strong>SEO & Site Health</strong> — <?php esc_html_e('Tab: SEO settings. Tab: Site health (status, GTM check, manifester check, pre-launch run, QA checklist).', 'leadsforward-core'); ?></li>
@@ -117,6 +134,8 @@ function lf_docs_render_playbook_sections(): void {
 				<h3><?php esc_html_e('Where it works best', 'leadsforward-core'); ?></h3>
 				<p><?php esc_html_e('Open the static front page or any URL that renders LeadsForward section wrappers (Page Builder). If no sections are detected, the UI explains that you need a page with theme sections—use wp-admin Page Builder or Homepage Builder instead.', 'leadsforward-core'); ?></p>
 				<p><?php esc_html_e('Structural actions are logged for undo/redo. For legal/schema slug changes, new CPT posts, or manifest-scale generation, stay in wp-admin and the Manifester workflow.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Hero Authority Split: proof card list', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('The right-hand checklist uses hero_proof_bullets. If the list looks empty after a bad save, save again from the front-end editor or Homepage Builder—the theme falls back to default lines when storage is blank. Editing targets the split column list first so it does not attach to the wrong card in other hero layouts.', 'leadsforward-core'); ?></p>
 			</section>
 
 			<section id="services-areas" class="lf-docs__section">
@@ -126,8 +145,9 @@ function lf_docs_render_playbook_sections(): void {
 			</section>
 
 			<section id="projects-reviews" class="lf-docs__section">
-				<h2><?php esc_html_e('Projects, reviews, FAQs', 'leadsforward-core'); ?></h2>
-				<p><?php esc_html_e('Projects power gallery sections; testimonials feed trust blocks and review schema. FAQs can be generated and surfaced in accordion sections. Sync reviews from Airtable when Global Settings lists the reviews table.', 'leadsforward-core'); ?></p>
+				<h2><?php esc_html_e('Projects, reviews, FAQs, process steps', 'leadsforward-core'); ?></h2>
+				<p><?php esc_html_e('Projects power gallery sections; testimonials feed trust blocks and review schema. FAQs can be generated and surfaced in accordion sections via faq_selected_ids. Process steps are reusable posts (Process steps in the admin menu): add IDs under process_selected_ids on the Process section, or keep using plain process_steps lines as a fallback.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('Sync reviews from Airtable when Global Settings lists the reviews table.', 'leadsforward-core'); ?></p>
 			</section>
 
 			<section id="seo-health" class="lf-docs__section">

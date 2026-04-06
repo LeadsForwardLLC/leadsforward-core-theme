@@ -2154,7 +2154,7 @@ function lf_ai_allowed_line_fields_for_section_type(string $section_type): array
 		'trust_bar' => ['trust_badges'],
 		'benefits' => ['benefits_icon_overrides', 'benefits_items'],
 		'service_intro' => ['service_intro_service_ids'],
-		'process' => ['process_steps'],
+		'process' => ['process_steps', 'process_selected_ids'],
 		'faq_accordion' => ['faq_selected_ids'],
 		'service_details' => ['service_details_checklist'],
 		'content_image' => ['service_details_checklist'],

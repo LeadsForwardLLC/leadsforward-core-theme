@@ -203,9 +203,9 @@ $proof_items = function_exists('lf_sections_parse_lines')
 	? lf_sections_parse_lines((string) $proof_bullets_raw)
 	: preg_split('/\r\n|\r|\n/', (string) $proof_bullets_raw);
 $proof_items = array_values(array_filter(array_map('trim', is_array($proof_items) ? $proof_items : [])));
-// Only fall back to defaults when hero_proof_bullets was never stored (legacy). If the key exists
-// (even empty), respect the saved list so front-end edits persist.
-if (empty($proof_items) && !array_key_exists('hero_proof_bullets', $section)) {
+// Empty stored lines (including legacy "" after a bad save) should not blank the Authority Split card;
+// fall back to defaults. Non-empty lists always win.
+if ($proof_items === []) {
 	$proof_items = $proof_default_items;
 }
 // Left pills (`hero_chip_bullets`) are separate from proof card lines (`hero_proof_bullets`).

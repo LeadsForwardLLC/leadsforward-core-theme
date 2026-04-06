@@ -470,7 +470,8 @@ function lf_sections_registry(): array {
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Simple, clear steps from first call to completion.', 'leadsforward-core')],
 				// Added for density expansion – vNext
 				['key' => 'section_intro_secondary', 'label' => __('Secondary intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
-				['key' => 'process_steps', 'label' => __('Steps (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Tell us what you need' . "\n" . 'Get a fast, clear estimate' . "\n" . 'Schedule and complete the work', 'leadsforward-core')],
+				['key' => 'process_selected_ids', 'label' => __('Selected process step IDs (one post ID per line, optional)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
+				['key' => 'process_steps', 'label' => __('Steps (one per line, fallback if IDs empty)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Tell us what you need' . "\n" . 'Get a fast, clear estimate' . "\n" . 'Schedule and complete the work', 'leadsforward-core')],
 				['key' => 'process_expectations', 'label' => __('Expectations text', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 			],
 			'render' => 'lf_sections_render_process',
@@ -931,6 +932,40 @@ function lf_sections_parse_lines($value): array {
 	}
 	$lines = array_filter(array_map('trim', explode("\n", (string) $value)));
 	return array_values(array_map('sanitize_text_field', $lines));
+}
+
+/**
+ * Resolve process section lines: published lf_process_step posts (process_selected_ids) override line-based process_steps.
+ *
+ * @param array<string, mixed> $settings
+ * @return string[]
+ */
+function lf_sections_process_step_lines_for_render(array $settings): array {
+	$ids_raw = trim((string) ($settings['process_selected_ids'] ?? ''));
+	if ($ids_raw !== '') {
+		$lines = [];
+		foreach (preg_split('/\r\n|\r|\n/', $ids_raw) as $line) {
+			$id = absint(trim($line));
+			if ($id <= 0) {
+				continue;
+			}
+			$post = get_post($id);
+			if (!$post instanceof \WP_Post || $post->post_type !== 'lf_process_step' || $post->post_status !== 'publish') {
+				continue;
+			}
+			$title = get_the_title($post);
+			if ($title === '') {
+				continue;
+			}
+			$body = wp_strip_all_tags((string) get_post_field('post_content', $post));
+			$body = preg_replace('/\s+/', ' ', trim($body));
+			$lines[] = $body !== '' ? ($title . ' || ' . $body) : $title;
+		}
+		if ($lines !== []) {
+			return $lines;
+		}
+	}
+	return lf_sections_parse_lines((string) ($settings['process_steps'] ?? ''));
 }
 
 /**
@@ -1789,7 +1824,7 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
 	$intro_secondary = $settings['section_intro_secondary'] ?? '';
-	$steps = lf_sections_parse_lines((string) ($settings['process_steps'] ?? ''));
+	$steps = lf_sections_process_step_lines_for_render($settings);
 	$expectations = trim((string) ($settings['process_expectations'] ?? ''));
 	$process_class = 'lf-process';
 	$intro_text = $intro_secondary !== '' ? trim($intro . "\n\n" . $intro_secondary) : $intro;
