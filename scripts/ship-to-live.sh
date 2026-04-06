@@ -42,6 +42,7 @@ gh pr merge "$PR" --squash --delete-branch=false
 
 git fetch origin main
 git checkout main
-git pull origin main --ff-only
+# Squash merge rewrites history; ff-only pull fails if we had the same changes as a local commit on main.
+git reset --hard origin/main
 
 echo "Done: PR #$PR merged to main. GitHub Actions will deploy to SiteGround."
