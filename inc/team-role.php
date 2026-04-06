@@ -13,6 +13,7 @@ if (!defined('ABSPATH')) {
 }
 
 const LF_TEAM_EDITOR_ROLE = 'lf_team_editor';
+const LF_TESTER_ROLE = 'lf_tester';
 
 add_action('after_switch_theme', 'lf_team_role_register');
 add_action('init', 'lf_team_role_register');
@@ -28,15 +29,30 @@ function lf_team_role_register(): void {
 		if (!$existing->has_cap('edit_theme_options')) {
 			$existing->add_cap('edit_theme_options');
 		}
+	} else {
+		$editor = get_role('editor');
+		if ($editor instanceof \WP_Role) {
+			$caps = $editor->capabilities;
+			$caps['edit_theme_options'] = true;
+			add_role(LF_TEAM_EDITOR_ROLE, __('LeadsForward Team Editor', 'leadsforward-core'), $caps);
+		}
+	}
+
+	// Tester role: same idea as editor, but explicitly named for QA/testing.
+	$tester = get_role(LF_TESTER_ROLE);
+	if ($tester instanceof \WP_Role) {
+		if (!$tester->has_cap('edit_theme_options')) {
+			$tester->add_cap('edit_theme_options');
+		}
 		return;
 	}
-	$editor = get_role('editor');
-	if (!$editor instanceof \WP_Role) {
+	$base = get_role('editor');
+	if (!$base instanceof \WP_Role) {
 		return;
 	}
-	$caps = $editor->capabilities;
+	$caps = $base->capabilities;
 	$caps['edit_theme_options'] = true;
-	add_role(LF_TEAM_EDITOR_ROLE, __('LeadsForward Team Editor', 'leadsforward-core'), $caps);
+	add_role(LF_TESTER_ROLE, __('LeadsForward Tester', 'leadsforward-core'), $caps);
 }
 
 /**
@@ -70,7 +86,6 @@ function lf_team_role_limit_admin_menus(): void {
 		remove_menu_page($slug);
 	}
 	$hide_leadsforward = [
-		'lf-global',
 		'lf-ops-config',
 		'lf-ops-bulk',
 		'lf-ops-audit',
@@ -92,7 +107,6 @@ function lf_team_role_block_sensitive_pages(): void {
 		return;
 	}
 	$blocked_pages = [
-		'lf-global',
 		'lf-ops-config',
 		'lf-ops-bulk',
 		'lf-ops-audit',

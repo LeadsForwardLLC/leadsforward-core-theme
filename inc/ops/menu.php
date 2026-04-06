@@ -48,7 +48,7 @@ function lf_ops_register_menu(): void {
 		'lf-ops',
 		__('Global Settings', 'leadsforward-core'),
 		__('Global Settings', 'leadsforward-core'),
-		'manage_options',
+		LF_OPS_CAP,
 		'lf-global',
 		'lf_ops_render_global_settings_page'
 	);
@@ -132,6 +132,10 @@ function lf_ops_register_menu(): void {
 		'lf-ops-config',
 		'lf_ops_config_render'
 	);
+}
+
+function lf_ops_user_can_manage_sensitive_settings(): bool {
+	return current_user_can('manage_options');
 }
 
 function lf_ops_render_acf_options_page(): void {
@@ -360,12 +364,13 @@ function lf_ops_handle_global_settings_save(): void {
 	if (!isset($_POST['lf_global_settings_nonce'])) {
 		return;
 	}
-	if (!current_user_can('manage_options')) {
+	if (!current_user_can(LF_OPS_CAP)) {
 		return;
 	}
 	if (!wp_verify_nonce($_POST['lf_global_settings_nonce'], 'lf_global_settings')) {
 		return;
 	}
+	$can_sensitive = lf_ops_user_can_manage_sensitive_settings();
 	$prev_logo_id = (int) lf_get_global_option('lf_global_logo', 0);
 	$logo_id = isset($_POST['lf_global_logo']) ? (int) $_POST['lf_global_logo'] : 0;
 	update_option('options_lf_global_logo', $logo_id);
@@ -380,52 +385,56 @@ function lf_ops_handle_global_settings_save(): void {
 	}
 	update_option('options_lf_header_cta_label', isset($_POST['lf_header_cta_label']) ? sanitize_text_field(wp_unslash($_POST['lf_header_cta_label'])) : '');
 	update_option('options_lf_header_cta_url', isset($_POST['lf_header_cta_url']) ? esc_url_raw(wp_unslash($_POST['lf_header_cta_url'])) : '');
-	update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
-	update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
-	update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? trim(sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret']))) : '');
-	$callback_raw = isset($_POST['lf_ai_studio_callback_url']) ? trim(wp_unslash((string) $_POST['lf_ai_studio_callback_url'])) : '';
-	// Reject placeholder / garbage so WordPress falls back to rest_url() via lf_ai_studio_build_callback_url().
-	if ($callback_raw === '' || stripos($callback_raw, 'your-site.com') !== false) {
-		update_option('lf_ai_studio_callback_url', '');
-	} else {
-		update_option('lf_ai_studio_callback_url', esc_url_raw($callback_raw));
+	// Sensitive settings (API keys, webhooks, orchestrator + Airtable credentials).
+	// Limited LeadsForward users can view the page, but cannot change these values.
+	if ($can_sensitive) {
+		update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
+		update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
+		update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? trim(sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret']))) : '');
+		$callback_raw = isset($_POST['lf_ai_studio_callback_url']) ? trim(wp_unslash((string) $_POST['lf_ai_studio_callback_url'])) : '';
+		// Reject placeholder / garbage so WordPress falls back to rest_url() via lf_ai_studio_build_callback_url().
+		if ($callback_raw === '' || stripos($callback_raw, 'your-site.com') !== false) {
+			update_option('lf_ai_studio_callback_url', '');
+		} else {
+			update_option('lf_ai_studio_callback_url', esc_url_raw($callback_raw));
+		}
+		update_option('lf_ai_studio_auto_requeue', isset($_POST['lf_ai_studio_auto_requeue']) ? '1' : '0');
+		update_option('lf_ai_studio_repair_interior_only', isset($_POST['lf_ai_studio_repair_interior_only']) ? '1' : '0');
+		$auth_mode = isset($_POST['lf_ai_auth_mode']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_auth_mode'])) : 'compatibility';
+		update_option('lf_ai_auth_mode', $auth_mode === 'strict_hmac' ? 'strict_hmac' : 'compatibility');
+		$tolerance = isset($_POST['lf_ai_hmac_tolerance_seconds']) ? (int) $_POST['lf_ai_hmac_tolerance_seconds'] : 300;
+		update_option('lf_ai_hmac_tolerance_seconds', max(60, min(1800, $tolerance)));
+		$autonomy_requested = isset($_POST['lf_ai_autonomy_enabled']);
+		if (function_exists('lf_ai_autonomy_set_enabled_from_request')) {
+			update_option('lf_ai_autonomy_enabled', lf_ai_autonomy_set_enabled_from_request($autonomy_requested));
+		} else {
+			update_option('lf_ai_autonomy_enabled', $autonomy_requested ? '1' : '0');
+		}
+		update_option('lf_ai_autonomy_dry_run', isset($_POST['lf_ai_autonomy_dry_run']) ? '1' : '0');
+		$max_retries = isset($_POST['lf_ai_autonomy_max_retries']) ? (int) $_POST['lf_ai_autonomy_max_retries'] : 3;
+		update_option('lf_ai_autonomy_max_retries', max(1, min(10, $max_retries)));
+		$cooldown = isset($_POST['lf_ai_autonomy_cooldown_seconds']) ? (int) $_POST['lf_ai_autonomy_cooldown_seconds'] : 900;
+		update_option('lf_ai_autonomy_cooldown_seconds', max(60, min(86400, $cooldown)));
+		$circuit_threshold = isset($_POST['lf_ai_autonomy_circuit_threshold']) ? (int) $_POST['lf_ai_autonomy_circuit_threshold'] : 3;
+		update_option('lf_ai_autonomy_circuit_threshold', max(1, min(20, $circuit_threshold)));
+		$openai_key_clear = !empty($_POST['lf_openai_api_key_clear']);
+		$openai_key_input = isset($_POST['lf_openai_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_openai_api_key'])) : '';
+		if ($openai_key_clear) {
+			delete_option('lf_openai_api_key');
+		} elseif ($openai_key_input !== '') {
+			update_option('lf_openai_api_key', $openai_key_input);
+		}
+		update_option('lf_ai_airtable_enabled', isset($_POST['lf_ai_airtable_enabled']) ? '1' : '0');
+		update_option('lf_ai_airtable_pat', isset($_POST['lf_ai_airtable_pat']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_pat'])) : '');
+		update_option('lf_ai_airtable_base', isset($_POST['lf_ai_airtable_base']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_base'])) : '');
+		update_option('lf_ai_airtable_table', isset($_POST['lf_ai_airtable_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_table'])) : '');
+		update_option('lf_ai_airtable_view', isset($_POST['lf_ai_airtable_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_view'])) : '');
+		update_option('lf_ai_airtable_reviews_table', isset($_POST['lf_ai_airtable_reviews_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_table'])) : '');
+		update_option('lf_ai_airtable_reviews_view', isset($_POST['lf_ai_airtable_reviews_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_view'])) : '');
+		update_option('lf_maps_api_key', isset($_POST['lf_maps_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_maps_api_key'])) : '');
+		update_option('options_lf_feedback_webhook_url', isset($_POST['lf_feedback_webhook_url']) ? esc_url_raw(wp_unslash((string) $_POST['lf_feedback_webhook_url'])) : '');
+		update_option('options_lf_feedback_webhook_secret', isset($_POST['lf_feedback_webhook_secret']) ? trim(sanitize_text_field(wp_unslash((string) $_POST['lf_feedback_webhook_secret']))) : '');
 	}
-	update_option('lf_ai_studio_auto_requeue', isset($_POST['lf_ai_studio_auto_requeue']) ? '1' : '0');
-	update_option('lf_ai_studio_repair_interior_only', isset($_POST['lf_ai_studio_repair_interior_only']) ? '1' : '0');
-	$auth_mode = isset($_POST['lf_ai_auth_mode']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_auth_mode'])) : 'compatibility';
-	update_option('lf_ai_auth_mode', $auth_mode === 'strict_hmac' ? 'strict_hmac' : 'compatibility');
-	$tolerance = isset($_POST['lf_ai_hmac_tolerance_seconds']) ? (int) $_POST['lf_ai_hmac_tolerance_seconds'] : 300;
-	update_option('lf_ai_hmac_tolerance_seconds', max(60, min(1800, $tolerance)));
-	$autonomy_requested = isset($_POST['lf_ai_autonomy_enabled']);
-	if (function_exists('lf_ai_autonomy_set_enabled_from_request')) {
-		update_option('lf_ai_autonomy_enabled', lf_ai_autonomy_set_enabled_from_request($autonomy_requested));
-	} else {
-		update_option('lf_ai_autonomy_enabled', $autonomy_requested ? '1' : '0');
-	}
-	update_option('lf_ai_autonomy_dry_run', isset($_POST['lf_ai_autonomy_dry_run']) ? '1' : '0');
-	$max_retries = isset($_POST['lf_ai_autonomy_max_retries']) ? (int) $_POST['lf_ai_autonomy_max_retries'] : 3;
-	update_option('lf_ai_autonomy_max_retries', max(1, min(10, $max_retries)));
-	$cooldown = isset($_POST['lf_ai_autonomy_cooldown_seconds']) ? (int) $_POST['lf_ai_autonomy_cooldown_seconds'] : 900;
-	update_option('lf_ai_autonomy_cooldown_seconds', max(60, min(86400, $cooldown)));
-	$circuit_threshold = isset($_POST['lf_ai_autonomy_circuit_threshold']) ? (int) $_POST['lf_ai_autonomy_circuit_threshold'] : 3;
-	update_option('lf_ai_autonomy_circuit_threshold', max(1, min(20, $circuit_threshold)));
-	$openai_key_clear = !empty($_POST['lf_openai_api_key_clear']);
-	$openai_key_input = isset($_POST['lf_openai_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_openai_api_key'])) : '';
-	if ($openai_key_clear) {
-		delete_option('lf_openai_api_key');
-	} elseif ($openai_key_input !== '') {
-		update_option('lf_openai_api_key', $openai_key_input);
-	}
-	update_option('lf_ai_airtable_enabled', isset($_POST['lf_ai_airtable_enabled']) ? '1' : '0');
-	update_option('lf_ai_airtable_pat', isset($_POST['lf_ai_airtable_pat']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_pat'])) : '');
-	update_option('lf_ai_airtable_base', isset($_POST['lf_ai_airtable_base']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_base'])) : '');
-	update_option('lf_ai_airtable_table', isset($_POST['lf_ai_airtable_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_table'])) : '');
-	update_option('lf_ai_airtable_view', isset($_POST['lf_ai_airtable_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_view'])) : '');
-	update_option('lf_ai_airtable_reviews_table', isset($_POST['lf_ai_airtable_reviews_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_table'])) : '');
-	update_option('lf_ai_airtable_reviews_view', isset($_POST['lf_ai_airtable_reviews_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_view'])) : '');
-	update_option('lf_maps_api_key', isset($_POST['lf_maps_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_maps_api_key'])) : '');
-	update_option('options_lf_feedback_webhook_url', isset($_POST['lf_feedback_webhook_url']) ? esc_url_raw(wp_unslash((string) $_POST['lf_feedback_webhook_url'])) : '');
-	update_option('options_lf_feedback_webhook_secret', isset($_POST['lf_feedback_webhook_secret']) ? trim(sanitize_text_field(wp_unslash((string) $_POST['lf_feedback_webhook_secret']))) : '');
 	update_option('lf_tools_hide_admin_bar', isset($_POST['lf_tools_hide_admin_bar']) ? '1' : '0');
 	update_option('lf_tools_classic_editor', isset($_POST['lf_tools_classic_editor']) ? '1' : '0');
 	update_option('lf_tools_image_optimization', isset($_POST['lf_tools_image_optimization']) ? '1' : '0');
@@ -497,29 +506,31 @@ function lf_ops_handle_global_settings_save(): void {
 		$niche_slug = $default_niche;
 	}
 	update_option('lf_homepage_niche_slug', $niche_slug);
-	$field_defaults = function_exists('lf_ai_studio_airtable_default_field_map') ? lf_ai_studio_airtable_default_field_map() : [];
-	$field_input = isset($_POST['lf_ai_airtable_field_map']) && is_array($_POST['lf_ai_airtable_field_map'])
-		? $_POST['lf_ai_airtable_field_map']
-		: [];
-	$sanitized_map = [];
-	foreach ($field_defaults as $key => $label) {
-		$value = isset($field_input[$key]) ? sanitize_text_field(wp_unslash((string) $field_input[$key])) : '';
-		$sanitized_map[$key] = $value !== '' ? $value : $label;
-	}
-	if (!empty($sanitized_map)) {
-		update_option('lf_ai_airtable_field_map', $sanitized_map);
-	}
-	$review_defaults = function_exists('lf_ai_studio_airtable_reviews_default_field_map') ? lf_ai_studio_airtable_reviews_default_field_map() : [];
-	$review_input = isset($_POST['lf_ai_airtable_reviews_field_map']) && is_array($_POST['lf_ai_airtable_reviews_field_map'])
-		? $_POST['lf_ai_airtable_reviews_field_map']
-		: [];
-	$review_map = [];
-	foreach ($review_defaults as $key => $label) {
-		$value = isset($review_input[$key]) ? sanitize_text_field(wp_unslash((string) $review_input[$key])) : '';
-		$review_map[$key] = $value !== '' ? $value : $label;
-	}
-	if (!empty($review_map)) {
-		update_option('lf_ai_airtable_reviews_field_map', $review_map);
+	if ($can_sensitive) {
+		$field_defaults = function_exists('lf_ai_studio_airtable_default_field_map') ? lf_ai_studio_airtable_default_field_map() : [];
+		$field_input = isset($_POST['lf_ai_airtable_field_map']) && is_array($_POST['lf_ai_airtable_field_map'])
+			? $_POST['lf_ai_airtable_field_map']
+			: [];
+		$sanitized_map = [];
+		foreach ($field_defaults as $key => $label) {
+			$value = isset($field_input[$key]) ? sanitize_text_field(wp_unslash((string) $field_input[$key])) : '';
+			$sanitized_map[$key] = $value !== '' ? $value : $label;
+		}
+		if (!empty($sanitized_map)) {
+			update_option('lf_ai_airtable_field_map', $sanitized_map);
+		}
+		$review_defaults = function_exists('lf_ai_studio_airtable_reviews_default_field_map') ? lf_ai_studio_airtable_reviews_default_field_map() : [];
+		$review_input = isset($_POST['lf_ai_airtable_reviews_field_map']) && is_array($_POST['lf_ai_airtable_reviews_field_map'])
+			? $_POST['lf_ai_airtable_reviews_field_map']
+			: [];
+		$review_map = [];
+		foreach ($review_defaults as $key => $label) {
+			$value = isset($review_input[$key]) ? sanitize_text_field(wp_unslash((string) $review_input[$key])) : '';
+			$review_map[$key] = $value !== '' ? $value : $label;
+		}
+		if (!empty($review_map)) {
+			update_option('lf_ai_airtable_reviews_field_map', $review_map);
+		}
 	}
 	if (function_exists('lf_update_business_info_value')) {
 		$display_name = isset($_POST['lf_business_name']) ? sanitize_text_field(wp_unslash($_POST['lf_business_name'])) : '';
@@ -657,9 +668,10 @@ function lf_ops_handle_global_settings_save(): void {
 }
 
 function lf_ops_render_global_settings_page(): void {
-	if (!current_user_can('manage_options')) {
+	if (!current_user_can(LF_OPS_CAP)) {
 		return;
 	}
+	$can_sensitive = lf_ops_user_can_manage_sensitive_settings();
 	$logo_id = (int) lf_get_global_option('lf_global_logo', 0);
 	$logo_url = $logo_id ? wp_get_attachment_image_url($logo_id, 'medium') : '';
 	$cta_label = (string) lf_get_global_option('lf_header_cta_label', '');
@@ -845,6 +857,11 @@ function lf_ops_render_global_settings_page(): void {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></h1>
+		<?php if (!$can_sensitive) : ?>
+			<div class="notice notice-info">
+				<p><strong><?php esc_html_e('Limited access.', 'leadsforward-core'); ?></strong> <?php esc_html_e('Sensitive settings (API keys, webhooks, Airtable credentials) are hidden and cannot be changed from this account.', 'leadsforward-core'); ?></p>
+			</div>
+		<?php endif; ?>
 		<?php if ($show_gtm_header_reminder) : ?>
 			<div class="notice notice-warning">
 				<p>
@@ -926,7 +943,7 @@ function lf_ops_render_global_settings_page(): void {
 			.lf-settings-fields--collapsed { display: none; }
 			.lf-settings-panel--collapsed .lf-settings-toggle { background: #0f172a; color: #fff; border-color: #0f172a; }
 		</style>
-		<form method="post" data-maps-key="<?php echo esc_attr($maps_api_key); ?>">
+		<form method="post" data-maps-key="<?php echo esc_attr($can_sensitive ? $maps_api_key : ''); ?>">
 			<?php wp_nonce_field('lf_global_settings', 'lf_global_settings_nonce'); ?>
 			<div class="lf-settings-panel" data-section="manifester_settings">
 				<div class="lf-settings-panel-header">
@@ -959,11 +976,11 @@ function lf_ops_render_global_settings_page(): void {
 							</tr>
 							<tr>
 								<th scope="row"><label for="lf_ai_studio_webhook_global"><?php esc_html_e('Orchestrator Webhook URL', 'leadsforward-core'); ?></label></th>
-								<td><input type="url" class="large-text" name="lf_ai_studio_webhook" id="lf_ai_studio_webhook_global" value="<?php echo esc_attr($manifester_webhook); ?>" placeholder="https://n8n.example.com/webhook/..." required /></td>
+								<td><input type="url" class="large-text" name="lf_ai_studio_webhook" id="lf_ai_studio_webhook_global" value="<?php echo esc_attr($can_sensitive ? $manifester_webhook : ''); ?>" placeholder="<?php echo esc_attr($can_sensitive ? 'https://n8n.example.com/webhook/...' : __('Admins only', 'leadsforward-core')); ?>" <?php disabled(!$can_sensitive); ?> required /></td>
 							</tr>
 							<tr>
 								<th scope="row"><label for="lf_ai_studio_secret_global"><?php esc_html_e('Orchestrator Shared Secret', 'leadsforward-core'); ?></label></th>
-								<td><input type="text" class="large-text" name="lf_ai_studio_secret" id="lf_ai_studio_secret_global" value="<?php echo esc_attr($manifester_secret); ?>" required /></td>
+								<td><input type="text" class="large-text" name="lf_ai_studio_secret" id="lf_ai_studio_secret_global" value="<?php echo esc_attr($can_sensitive ? $manifester_secret : ''); ?>" placeholder="<?php echo esc_attr($can_sensitive ? '' : __('Admins only', 'leadsforward-core')); ?>" <?php disabled(!$can_sensitive); ?> required /></td>
 							</tr>
 							<tr>
 								<th scope="row"><label for="lf_ai_auth_mode"><?php esc_html_e('Auth mode', 'leadsforward-core'); ?></label></th>
@@ -981,7 +998,7 @@ function lf_ops_render_global_settings_page(): void {
 							<tr>
 								<th scope="row"><label for="lf_ai_studio_callback_url_global"><?php esc_html_e('Callback URL (WordPress)', 'leadsforward-core'); ?></label></th>
 								<td>
-									<input type="url" class="large-text" name="lf_ai_studio_callback_url" id="lf_ai_studio_callback_url_global" value="<?php echo esc_attr($manifester_callback); ?>" placeholder="https://your-site.com/wp-json/leadsforward/v1/orchestrator" />
+									<input type="url" class="large-text" name="lf_ai_studio_callback_url" id="lf_ai_studio_callback_url_global" value="<?php echo esc_attr($can_sensitive ? $manifester_callback : ''); ?>" placeholder="<?php echo esc_attr($can_sensitive ? 'https://your-site.com/wp-json/leadsforward/v1/orchestrator' : __('Admins only', 'leadsforward-core')); ?>" <?php disabled(!$can_sensitive); ?> />
 									<p class="description"><?php esc_html_e('Use this if n8n cannot reach localhost. For Docker: http://host.docker.internal:10008/wp-json/leadsforward/v1/orchestrator. Do not append any token query parameter.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
@@ -1038,9 +1055,9 @@ function lf_ops_render_global_settings_page(): void {
 							<tr>
 								<th scope="row"><label for="lf_maps_api_key"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></label></th>
 								<td>
-									<input type="password" class="large-text" name="lf_maps_api_key" id="lf_maps_api_key" value="<?php echo esc_attr($maps_api_key); ?>" autocomplete="new-password" />
+									<input type="password" class="large-text" name="lf_maps_api_key" id="lf_maps_api_key" value="<?php echo esc_attr($can_sensitive ? $maps_api_key : ''); ?>" autocomplete="new-password" <?php disabled(!$can_sensitive); ?> />
 									<label style="display:inline-block;margin-top:6px;">
-										<input type="checkbox" id="lf-maps-key-toggle-global" />
+										<input type="checkbox" id="lf-maps-key-toggle-global" <?php disabled(!$can_sensitive); ?> />
 										<?php esc_html_e('Show key', 'leadsforward-core'); ?>
 									</label>
 									<p class="description"><?php esc_html_e('Used for business place search and map embeds in Business Entity settings.', 'leadsforward-core'); ?></p>
@@ -1049,13 +1066,13 @@ function lf_ops_render_global_settings_page(): void {
 							<tr>
 								<th scope="row"><label for="lf_openai_api_key_global"><?php esc_html_e('OpenAI API key (AI Assistant)', 'leadsforward-core'); ?></label></th>
 								<td>
-									<input type="password" class="large-text" name="lf_openai_api_key" id="lf_openai_api_key_global" value="" autocomplete="new-password" placeholder="<?php echo $openai_key_set ? esc_attr__('Saved (hidden)', 'leadsforward-core') : esc_attr__('sk-...', 'leadsforward-core'); ?>" />
+									<input type="password" class="large-text" name="lf_openai_api_key" id="lf_openai_api_key_global" value="" autocomplete="new-password" placeholder="<?php echo esc_attr($can_sensitive ? ($openai_key_set ? __('Saved (hidden)', 'leadsforward-core') : __('sk-...', 'leadsforward-core')) : __('Admins only', 'leadsforward-core')); ?>" <?php disabled(!$can_sensitive); ?> />
 									<label style="display:inline-block;margin-top:6px;">
-										<input type="checkbox" id="lf-openai-token-toggle-global" />
+										<input type="checkbox" id="lf-openai-token-toggle-global" <?php disabled(!$can_sensitive); ?> />
 										<?php esc_html_e('Show key', 'leadsforward-core'); ?>
 									</label>
 									<label style="display:inline-block;margin-top:6px;margin-left:10px;">
-										<input type="checkbox" name="lf_openai_api_key_clear" value="1" />
+										<input type="checkbox" name="lf_openai_api_key_clear" value="1" <?php disabled(!$can_sensitive); ?> />
 										<?php esc_html_e('Clear saved key', 'leadsforward-core'); ?>
 									</label>
 									<p class="description"><?php esc_html_e('Used by the floating AI Assistant for guarded copy edits only.', 'leadsforward-core'); ?></p>
@@ -1064,14 +1081,14 @@ function lf_ops_render_global_settings_page(): void {
 							<tr>
 								<th scope="row"><label for="lf_feedback_webhook_url"><?php esc_html_e('Feedback webhook URL', 'leadsforward-core'); ?></label></th>
 								<td>
-									<input type="url" class="large-text" name="lf_feedback_webhook_url" id="lf_feedback_webhook_url" value="<?php echo esc_attr($feedback_webhook_url); ?>" placeholder="https://n8n.example.com/webhook/feedback-status" />
+									<input type="url" class="large-text" name="lf_feedback_webhook_url" id="lf_feedback_webhook_url" value="<?php echo esc_attr($can_sensitive ? $feedback_webhook_url : ''); ?>" placeholder="<?php echo esc_attr($can_sensitive ? 'https://n8n.example.com/webhook/feedback-status' : __('Admins only', 'leadsforward-core')); ?>" <?php disabled(!$can_sensitive); ?> />
 									<p class="description"><?php esc_html_e('When feedback is Approved/Rejected, WordPress POSTs a JSON payload here so n8n can route to Slack/email/etc.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
 								<th scope="row"><label for="lf_feedback_webhook_secret"><?php esc_html_e('Feedback webhook secret (optional)', 'leadsforward-core'); ?></label></th>
 								<td>
-									<input type="text" class="large-text" name="lf_feedback_webhook_secret" id="lf_feedback_webhook_secret" value="<?php echo esc_attr($feedback_webhook_secret); ?>" />
+									<input type="text" class="large-text" name="lf_feedback_webhook_secret" id="lf_feedback_webhook_secret" value="<?php echo esc_attr($can_sensitive ? $feedback_webhook_secret : ''); ?>" placeholder="<?php echo esc_attr($can_sensitive ? '' : __('Admins only', 'leadsforward-core')); ?>" <?php disabled(!$can_sensitive); ?> />
 									<p class="description"><?php esc_html_e('Sent as a Bearer token in the Authorization header.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
@@ -1098,14 +1115,14 @@ function lf_ops_render_global_settings_page(): void {
 							</tr>
 							<tr>
 								<th scope="row"><?php esc_html_e('Enable Airtable', 'leadsforward-core'); ?></th>
-								<td><label><input type="checkbox" name="lf_ai_airtable_enabled" value="1" <?php checked(!empty($airtable_settings['enabled'])); ?> /> <?php esc_html_e('Allow Airtable project imports', 'leadsforward-core'); ?></label></td>
+								<td><label><input type="checkbox" name="lf_ai_airtable_enabled" value="1" <?php checked(!empty($airtable_settings['enabled'])); ?> <?php disabled(!$can_sensitive); ?> /> <?php esc_html_e('Allow Airtable project imports', 'leadsforward-core'); ?></label></td>
 							</tr>
 							<tr>
 								<th scope="row"><label for="lf_ai_airtable_pat_global"><?php esc_html_e('Airtable Personal Access Token', 'leadsforward-core'); ?></label></th>
 								<td>
 									<input type="password" class="large-text" name="lf_ai_airtable_pat" id="lf_ai_airtable_pat_global" value="<?php echo esc_attr((string) ($airtable_settings['pat'] ?? '')); ?>" autocomplete="new-password" />
 									<label style="display:inline-block;margin-top:6px;">
-										<input type="checkbox" id="lf-airtable-token-toggle-global" />
+										<input type="checkbox" id="lf-airtable-token-toggle-global" <?php disabled(!$can_sensitive); ?> />
 										<?php esc_html_e('Show token', 'leadsforward-core'); ?>
 									</label>
 									<p class="description"><?php esc_html_e('Required scopes: data.records:read and schema.bases:read.', 'leadsforward-core'); ?></p>
@@ -1113,16 +1130,16 @@ function lf_ops_render_global_settings_page(): void {
 							</tr>
 							<tr>
 								<th scope="row"><label for="lf_ai_airtable_base_global"><?php esc_html_e('Airtable Base ID', 'leadsforward-core'); ?></label></th>
-								<td><input type="text" class="regular-text" name="lf_ai_airtable_base" id="lf_ai_airtable_base_global" value="<?php echo esc_attr((string) ($airtable_settings['base_id'] ?? '')); ?>" /></td>
+								<td><input type="text" class="regular-text" name="lf_ai_airtable_base" id="lf_ai_airtable_base_global" value="<?php echo esc_attr((string) ($airtable_settings['base_id'] ?? '')); ?>" <?php disabled(!$can_sensitive); ?> /></td>
 							</tr>
 							<tr>
 								<th scope="row"><label for="lf_ai_airtable_table_global"><?php esc_html_e('Table (left sidebar)', 'leadsforward-core'); ?></label></th>
-								<td><input type="text" class="regular-text" name="lf_ai_airtable_table" id="lf_ai_airtable_table_global" value="<?php echo esc_attr((string) ($airtable_settings['table'] ?? 'Business Info')); ?>" /></td>
+								<td><input type="text" class="regular-text" name="lf_ai_airtable_table" id="lf_ai_airtable_table_global" value="<?php echo esc_attr((string) ($airtable_settings['table'] ?? 'Business Info')); ?>" <?php disabled(!$can_sensitive); ?> /></td>
 							</tr>
 							<tr>
 								<th scope="row"><label for="lf_ai_airtable_view_global"><?php esc_html_e('View (top dropdown)', 'leadsforward-core'); ?></label></th>
 								<td>
-									<input type="text" class="regular-text" name="lf_ai_airtable_view" id="lf_ai_airtable_view_global" value="<?php echo esc_attr((string) ($airtable_settings['view'] ?? 'Global Sync View (ACTIVE)')); ?>" />
+									<input type="text" class="regular-text" name="lf_ai_airtable_view" id="lf_ai_airtable_view_global" value="<?php echo esc_attr((string) ($airtable_settings['view'] ?? 'Global Sync View (ACTIVE)')); ?>" <?php disabled(!$can_sensitive); ?> />
 									<p class="description"><?php esc_html_e('Optional. Leave blank to use the table default.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
@@ -1137,7 +1154,7 @@ function lf_ops_render_global_settings_page(): void {
 												?>
 												<label>
 													<span><?php echo esc_html($label); ?></span>
-													<input type="text" name="lf_ai_airtable_field_map[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($value); ?>" />
+													<input type="text" name="lf_ai_airtable_field_map[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($value); ?>" <?php disabled(!$can_sensitive); ?> />
 												</label>
 											<?php endforeach; ?>
 										</div>
@@ -1150,14 +1167,14 @@ function lf_ops_render_global_settings_page(): void {
 							<tr>
 								<th scope="row"><label for="lf_ai_airtable_reviews_table"><?php esc_html_e('Reviews table', 'leadsforward-core'); ?></label></th>
 								<td>
-									<input type="text" class="regular-text" name="lf_ai_airtable_reviews_table" id="lf_ai_airtable_reviews_table" value="<?php echo esc_attr((string) ($airtable_reviews['table'] ?? 'Reviews')); ?>" />
+									<input type="text" class="regular-text" name="lf_ai_airtable_reviews_table" id="lf_ai_airtable_reviews_table" value="<?php echo esc_attr((string) ($airtable_reviews['table'] ?? 'Reviews')); ?>" <?php disabled(!$can_sensitive); ?> />
 									<p class="description"><?php esc_html_e('Optional. Leave blank to skip review imports.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
 								<th scope="row"><label for="lf_ai_airtable_reviews_view"><?php esc_html_e('Reviews view', 'leadsforward-core'); ?></label></th>
 								<td>
-									<input type="text" class="regular-text" name="lf_ai_airtable_reviews_view" id="lf_ai_airtable_reviews_view" value="<?php echo esc_attr((string) ($airtable_reviews['view'] ?? '')); ?>" />
+									<input type="text" class="regular-text" name="lf_ai_airtable_reviews_view" id="lf_ai_airtable_reviews_view" value="<?php echo esc_attr((string) ($airtable_reviews['view'] ?? '')); ?>" <?php disabled(!$can_sensitive); ?> />
 									<p class="description"><?php esc_html_e('Optional. Airtable view name only (not a field/column). Leave blank to use the table default.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
@@ -1172,7 +1189,7 @@ function lf_ops_render_global_settings_page(): void {
 												?>
 												<label>
 													<span><?php echo esc_html($label); ?></span>
-													<input type="text" name="lf_ai_airtable_reviews_field_map[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($value); ?>" />
+													<input type="text" name="lf_ai_airtable_reviews_field_map[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($value); ?>" <?php disabled(!$can_sensitive); ?> />
 												</label>
 											<?php endforeach; ?>
 										</div>
