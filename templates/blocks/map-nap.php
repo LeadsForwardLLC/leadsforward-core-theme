@@ -25,6 +25,10 @@ $phone    = $entity['phone_display'] ?? (function_exists('lf_get_option') ? lf_g
 $email    = $entity['email'] ?? (function_exists('lf_get_option') ? lf_get_option('lf_business_email', 'option') : '');
 $address  = $entity['address'] ?? (function_exists('lf_get_option') ? lf_get_option('lf_business_address', 'option') : '');
 $place_id = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_id', '') : '';
+$place_id = is_string($place_id) ? trim($place_id) : '';
+if (is_string($place_id) && stripos($place_id, 'place_id:') === 0) {
+	$place_id = trim(substr($place_id, strlen('place_id:')));
+}
 $place_name = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_name', '') : '';
 $place_address = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_address', '') : '';
 $map_embed_override = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_map_embed', '') : '';
@@ -123,7 +127,8 @@ $map_subtitle = is_string($map_subtitle) ? $map_subtitle : '';
 $map_view_url = '';
 $map_directions_url = '';
 if (is_string($place_id) && $place_id !== '') {
-	$map_view_url = 'https://www.google.com/maps/search/?api=1&query=Google&query_place_id=' . rawurlencode($place_id);
+	$query = $map_title !== '' ? $map_title : ($place_name !== '' ? $place_name : __('Business', 'leadsforward-core'));
+	$map_view_url = 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($query) . '&query_place_id=' . rawurlencode($place_id);
 	$map_directions_url = 'https://www.google.com/maps/dir/?api=1&destination=place_id:' . rawurlencode($place_id);
 } elseif (is_string($address) && $address !== '') {
 	$map_view_url = 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($address);
@@ -131,7 +136,7 @@ if (is_string($place_id) && $place_id !== '') {
 }
 $map_embed_url = '';
 if (is_string($map_embed_override) && $map_embed_override !== '') {
-	$map_embed_url = '';
+	$map_embed_url = trim((string) $map_embed_override);
 } elseif (is_string($place_id) && $place_id !== '' && $maps_api_key !== '') {
 	$map_embed_url = 'https://www.google.com/maps/embed/v1/place?key=' . rawurlencode($maps_api_key) . '&q=place_id:' . rawurlencode($place_id);
 } elseif (is_string($place_id) && $place_id !== '') {

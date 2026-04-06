@@ -1022,7 +1022,11 @@ function lf_ops_render_global_settings_page(): void {
 							<tr>
 								<th scope="row"><label for="lf_maps_api_key"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></label></th>
 								<td>
-									<input type="text" class="large-text" name="lf_maps_api_key" id="lf_maps_api_key" value="<?php echo esc_attr($maps_api_key); ?>" />
+									<input type="password" class="large-text" name="lf_maps_api_key" id="lf_maps_api_key" value="<?php echo esc_attr($maps_api_key); ?>" autocomplete="new-password" />
+									<label style="display:inline-block;margin-top:6px;">
+										<input type="checkbox" id="lf-maps-key-toggle-global" />
+										<?php esc_html_e('Show key', 'leadsforward-core'); ?>
+									</label>
 									<p class="description"><?php esc_html_e('Used for business place search and map embeds in Business Entity settings.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
@@ -1196,6 +1200,8 @@ function lf_ops_render_global_settings_page(): void {
 							var input = document.getElementById('lf_ai_airtable_pat_global');
 							var openaiToggle = document.getElementById('lf-openai-token-toggle-global');
 							var openaiInput = document.getElementById('lf_openai_api_key_global');
+							var mapsToggle = document.getElementById('lf-maps-key-toggle-global');
+							var mapsInput = document.getElementById('lf_maps_api_key');
 							if (!toggle || !input) {
 								// Continue to optional OpenAI toggle below.
 							} else {
@@ -1206,6 +1212,11 @@ function lf_ops_render_global_settings_page(): void {
 							if (openaiToggle && openaiInput) {
 								openaiToggle.addEventListener('change', function() {
 									openaiInput.type = openaiToggle.checked ? 'text' : 'password';
+								});
+							}
+							if (mapsToggle && mapsInput) {
+								mapsToggle.addEventListener('change', function() {
+									mapsInput.type = mapsToggle.checked ? 'text' : 'password';
 								});
 							}
 						})();
