@@ -8213,6 +8213,9 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			$context_for_alt = is_array($assignment['context'] ?? null) ? $assignment['context'] : [];
 			if ($image_id > 0) {
 				lf_image_intelligence_maybe_set_alt_text($image_id, $context_for_alt);
+				if (function_exists('lf_image_intelligence_maybe_set_media_metadata')) {
+					lf_image_intelligence_maybe_set_media_metadata($image_id, $context_for_alt);
+				}
 			}
 		}
 	}
