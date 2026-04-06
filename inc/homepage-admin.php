@@ -129,7 +129,15 @@ function lf_homepage_admin_save(): void {
 			$config[$type]['hero_headline'] = isset($_POST['lf_hp_hero_headline']) ? sanitize_text_field($_POST['lf_hp_hero_headline']) : '';
 			$config[$type]['hero_subheadline'] = isset($_POST['lf_hp_hero_subheadline']) ? sanitize_text_field($_POST['lf_hp_hero_subheadline']) : '';
 			$config[$type]['hero_proof_title'] = isset($_POST['lf_hp_hero_proof_title']) ? sanitize_text_field($_POST['lf_hp_hero_proof_title']) : '';
+			$chip_post = isset($_POST['lf_hp_hero_chip_bullets']) ? sanitize_textarea_field(wp_unslash($_POST['lf_hp_hero_chip_bullets'])) : '';
+			if (trim($chip_post) === '' && !array_key_exists('hero_chip_bullets', $config[$type] ?? [])) {
+				unset($config[$type]['hero_chip_bullets']);
+			} else {
+				$config[$type]['hero_chip_bullets'] = $chip_post;
+			}
 			$config[$type]['hero_proof_bullets'] = isset($_POST['lf_hp_hero_proof_bullets']) ? sanitize_textarea_field(wp_unslash($_POST['lf_hp_hero_proof_bullets'])) : '';
+			$hero_trust_strip = isset($_POST['lf_hp_hero_trust_strip_enabled']) ? sanitize_text_field($_POST['lf_hp_hero_trust_strip_enabled']) : '1';
+			$config[$type]['hero_trust_strip_enabled'] = $hero_trust_strip === '0' ? '0' : '1';
 			$hero_bg_mode = isset($_POST['lf_hp_hero_bg_mode']) ? sanitize_text_field($_POST['lf_hp_hero_bg_mode']) : 'image';
 			$config[$type]['hero_background_mode'] = in_array($hero_bg_mode, ['color', 'image', 'video'], true) ? $hero_bg_mode : 'image';
 			$config[$type]['hero_background_image_id'] = isset($_POST['lf_hp_hero_bg_image_id']) ? absint($_POST['lf_hp_hero_bg_image_id']) : 0;
@@ -803,8 +811,26 @@ function lf_homepage_admin_render(): void {
 										<td><input type="text" class="large-text" name="lf_hp_hero_proof_title" id="lf_hp_hero_proof_title" value="<?php echo esc_attr($sec['hero_proof_title'] ?? ''); ?>" /></td>
 									</tr>
 									<tr>
-										<th scope="row"><label for="lf_hp_hero_proof_bullets"><?php esc_html_e('Proof card bullets (one per line)', 'leadsforward-core'); ?></label></th>
+										<th scope="row"><label for="lf_hp_hero_chip_bullets"><?php esc_html_e('Hero pills (left column, one per line)', 'leadsforward-core'); ?></label></th>
+										<td>
+											<textarea class="large-text" name="lf_hp_hero_chip_bullets" id="lf_hp_hero_chip_bullets" rows="3"><?php echo esc_textarea($sec['hero_chip_bullets'] ?? ''); ?></textarea>
+											<p class="description"><?php esc_html_e('Separate from the proof card. Leave blank to keep mirroring the proof card (until you add a line here). Clear all lines to show no pills.', 'leadsforward-core'); ?></p>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_hero_proof_bullets"><?php esc_html_e('Proof card bullets (right card, one per line)', 'leadsforward-core'); ?></label></th>
 										<td><textarea class="large-text" name="lf_hp_hero_proof_bullets" id="lf_hp_hero_proof_bullets" rows="3"><?php echo esc_textarea($sec['hero_proof_bullets'] ?? ''); ?></textarea></td>
+									</tr>
+									<tr>
+										<th scope="row"><label for="lf_hp_hero_trust_strip_enabled"><?php esc_html_e('Homeowner trust row under CTAs', 'leadsforward-core'); ?></label></th>
+										<td>
+											<select name="lf_hp_hero_trust_strip_enabled" id="lf_hp_hero_trust_strip_enabled">
+												<?php foreach ($cta_enabled_options as $opt_key => $opt_label) : ?>
+													<option value="<?php echo esc_attr($opt_key); ?>" <?php selected((string) ($sec['hero_trust_strip_enabled'] ?? '1'), $opt_key); ?>><?php echo esc_html($opt_label); ?></option>
+												<?php endforeach; ?>
+											</select>
+											<p class="description"><?php esc_html_e('Shows stars and “Trusted by X homeowners” when published reviews exist.', 'leadsforward-core'); ?></p>
+										</td>
 									</tr>
 									<tr>
 										<th scope="row"><label for="lf_hp_hero_eyebrow_enabled"><?php esc_html_e('Trust badge enabled', 'leadsforward-core'); ?></label></th>

@@ -612,6 +612,7 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-checklist-remove { border:1px solid #e2e8f0; background:#fff; color:#64748b; border-radius:6px; min-width:20px; height:20px; padding:0 5px; font-size:11px; line-height:18px; margin-left:8px; cursor:pointer; vertical-align:middle; }
 		.lf-ai-checklist-remove:hover { border-color:#fecaca; color:#b91c1c; background:#fff5f5; }
 		.lf-ai-hero-pills-controls { margin-top:8px; display:flex; gap:8px; align-items:center; }
+		.lf-ai-hero-trust-strip-controls { margin-top:10px; padding:8px 10px; border-radius:8px; background:rgba(131,72,249,.08); border:1px solid rgba(131,72,249,.25); font-size:13px; }
 		.lf-ai-hero-pill-add { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:28px; padding:0 10px; font-size:12px; cursor:pointer; }
 		.lf-ai-hero-pill-add:hover { background:#f5f0ff; }
 		.lf-ai-hero-pill-remove { border:1px solid rgba(255,255,255,.65); background:rgba(255,255,255,.2); color:inherit; border-radius:999px; min-width:18px; height:18px; padding:0 5px; font-size:11px; line-height:16px; margin-left:8px; cursor:pointer; vertical-align:middle; }
@@ -1420,7 +1421,7 @@ function lf_ai_assistant_widget_js(): string {
 				node.removeAttribute("data-lf-inline-image");
 				node.removeAttribute("data-lf-inline-image-selector");
 			});
-			Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-controls,[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
+			Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-controls,[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
 				if (node && node.parentNode) node.parentNode.removeChild(node);
 			});
 			Array.prototype.slice.call(document.querySelectorAll(".lf-service-details__text")).forEach(function(node){
@@ -1740,6 +1741,7 @@ function lf_ai_assistant_widget_js(): string {
 			buildSectionButtonEditors();
 			buildHeroPillsControls();
 			buildHeroProofChecklistControls();
+			buildHeroTrustStripControls();
 			buildTrustBadgePillsControls();
 			buildChecklistControls();
 			buildProcessStepControls();
@@ -2006,6 +2008,7 @@ function lf_ai_assistant_widget_js(): string {
 				// Self-heal list/pill controls in case a row lost its remove button.
 				buildHeroPillsControls();
 				buildHeroProofChecklistControls();
+				buildHeroTrustStripControls();
 				buildTrustBadgePillsControls();
 				buildChecklistControls();
 				buildProcessStepControls();
@@ -2623,7 +2626,6 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			if (!sectionId || baseType !== "hero") return;
 			var items = heroPillsFromWrap(wrap);
-			syncHeroListsFromItems(wrap, items, "chips");
 			setStatus("Saving hero pills...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_update_hero_pills",
@@ -2631,15 +2633,16 @@ function lf_ai_assistant_widget_js(): string {
 				context_type: activeContextType,
 				context_id: activeContextId,
 				section_id: sectionId,
+				list_kind: "chips",
 				items: JSON.stringify(items)
 			}).done(function(res){
 				if (res && res.success) {
 					setStatus((res.data && res.data.message) ? res.data.message : "Hero pills saved.", false);
 				} else {
-					persistSectionLineItems(wrap, "hero_proof_bullets", items, "Saving checklist...");
+					persistSectionLineItems(wrap, "hero_chip_bullets", items, "Saving pills...");
 				}
 			}).fail(function(xhr){
-				persistSectionLineItems(wrap, "hero_proof_bullets", items, "Saving checklist...");
+				persistSectionLineItems(wrap, "hero_chip_bullets", items, "Saving pills...");
 			});
 		}
 		function textFromNodeWithoutAiControls(node) {
@@ -2699,43 +2702,9 @@ function lf_ai_assistant_widget_js(): string {
 				return textFromNodeWithoutAiControls(node);
 			}).filter(function(text){ return text !== ""; });
 		}
-		function syncHeroListsFromItems(wrap, items, source) {
-			if (!wrap) return;
-			var normalizedItems = Array.isArray(items)
-				? items.map(function(v){ return String(v || "").replace(/\s+/g, " ").trim(); }).filter(function(v){ return v !== ""; })
-				: [];
-			var chipsList = wrap.querySelector(".lf-hero-chips");
-			var proofList = wrap.querySelector(".lf-block-hero__card-list");
-			if (source !== "chips" && chipsList) {
-				chipsList.innerHTML = "";
-				normalizedItems.forEach(function(item){
-					var chip = document.createElement("li");
-					chip.className = "lf-hero-chip";
-					var textNode = document.createElement("span");
-					textNode.setAttribute("data-lf-hero-pill-text", "1");
-					textNode.textContent = item;
-					chip.appendChild(textNode);
-					chipsList.appendChild(chip);
-				});
-			}
-			if (source !== "proof" && proofList) {
-				proofList.innerHTML = "";
-				normalizedItems.forEach(function(item){
-					var li = document.createElement("li");
-					var textNode = document.createElement("span");
-					textNode.className = "lf-block-hero__card-item-text";
-					textNode.textContent = item;
-					li.appendChild(textNode);
-					proofList.appendChild(li);
-				});
-			}
-			buildHeroPillsControls();
-			buildHeroProofChecklistControls();
-		}
 		function persistHeroProofItems(wrap, list) {
 			if (!wrap || !list) return;
 			var items = simpleListItemsFromContainer(list, "li");
-			syncHeroListsFromItems(wrap, items, "proof");
 			setStatus("Saving checklist...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_update_hero_pills",
@@ -2743,6 +2712,7 @@ function lf_ai_assistant_widget_js(): string {
 				context_type: activeContextType,
 				context_id: activeContextId,
 				section_id: String(wrap.getAttribute("data-lf-section-id") || ""),
+				list_kind: "proof",
 				items: JSON.stringify(items)
 			}).done(function(res){
 				if (res && res.success) {
@@ -3024,6 +2994,60 @@ function lf_ai_assistant_widget_js(): string {
 				if (list.parentNode) {
 					list.parentNode.appendChild(controls);
 				}
+			});
+		}
+		function buildHeroTrustStripControls() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+				var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+				if (baseSectionType(sectionType, sectionId) !== "hero") return;
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-hero-trust-strip-controls=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				var heroRoot = wrap.querySelector(".lf-block-hero");
+				if (!heroRoot) return;
+				var trustHost = wrap.querySelector(".lf-hero-stack__trust, .lf-hero-form__trust, .lf-hero-visual__trust, .lf-hero-split__trust");
+				if (!trustHost) return;
+				var controls = document.createElement("div");
+				controls.className = "lf-ai-hero-trust-strip-controls lf-ai-inline-editor-ignore";
+				controls.setAttribute("data-lf-ai-hero-trust-strip-controls", "1");
+				var on = String(heroRoot.getAttribute("data-lf-hero-trust-strip-setting") || "1") === "1";
+				var label = document.createElement("label");
+				label.style.cssText = "display:flex;align-items:center;gap:8px;cursor:pointer;margin:0;";
+				var cb = document.createElement("input");
+				cb.type = "checkbox";
+				cb.checked = on;
+				cb.addEventListener("change", function(){
+					var next = cb.checked ? "1" : "0";
+					setStatus("Saving trust strip setting...", false);
+					$.post(lfAiFloating.ajax_url, {
+						action: "lf_ai_update_hero_trust_strip",
+						nonce: lfAiFloating.nonce,
+						context_type: activeContextType,
+						context_id: activeContextId,
+						section_id: String(wrap.getAttribute("data-lf-section-id") || ""),
+						enabled: next
+					}).done(function(res){
+						if (res && res.success) {
+							heroRoot.setAttribute("data-lf-hero-trust-strip-setting", next);
+							setStatus((res.data && res.data.message) ? res.data.message : "Saved.", false);
+							window.location.reload();
+						} else {
+							cb.checked = !cb.checked;
+							setStatus((res && res.data && res.data.message) ? res.data.message : "Save failed.", true);
+						}
+					}).fail(function(){
+						cb.checked = !cb.checked;
+						setStatus("Save failed.", true);
+					});
+				});
+				label.appendChild(cb);
+				var span = document.createElement("span");
+				span.textContent = "Show homeowner trust row under CTAs (requires published reviews when on)";
+				label.appendChild(span);
+				controls.appendChild(label);
+				trustHost.appendChild(controls);
 			});
 		}
 		function buildTrustBadgePillsControls() {
@@ -3930,6 +3954,7 @@ function lf_ai_assistant_widget_js(): string {
 					buildSectionButtonEditors();
 					buildHeroPillsControls();
 					buildHeroProofChecklistControls();
+					buildHeroTrustStripControls();
 					buildTrustBadgePillsControls();
 					buildChecklistControls();
 					buildProcessStepControls();

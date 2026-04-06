@@ -2819,7 +2819,7 @@ function lf_ai_studio_build_list_candidate(string $field_key, string $type, \WP_
 		return implode("\n", $sets[$variant]);
 	}
 
-	if ($field_key === 'trust_badges' || $field_key === 'hero_proof_bullets' || $field_key === 'cta_bullets') {
+	if ($field_key === 'trust_badges' || $field_key === 'hero_proof_bullets' || $field_key === 'hero_chip_bullets' || $field_key === 'cta_bullets') {
 		$sets = [
 			['Licensed and insured', 'Clear scope and pricing', 'Consistent communication'],
 			['Local crews', 'Clean job sites', 'On-time scheduling'],
@@ -6078,7 +6078,7 @@ function lf_ai_studio_clean_text_field_value(string $text): string {
 }
 
 function lf_ai_studio_maybe_limit_pill_text(string $line, string $field_key): string {
-	if (!in_array($field_key, ['trust_badges', 'hero_proof_bullets'], true)) {
+	if (!in_array($field_key, ['trust_badges', 'hero_proof_bullets', 'hero_chip_bullets'], true)) {
 		return trim($line);
 	}
 	$line = trim((string) preg_replace('/\s+/u', ' ', $line));
@@ -6395,7 +6395,7 @@ function lf_ai_studio_enforce_section_quality(array $settings, string $section_t
 			}
 		}
 		if ($field_type === 'list' && is_string($value)) {
-			if (in_array($field_key, ['trust_badges', 'hero_proof_bullets', 'cta_bullets'], true)) {
+			if (in_array($field_key, ['trust_badges', 'hero_proof_bullets', 'hero_chip_bullets', 'cta_bullets'], true)) {
 				$value = lf_ai_studio_limit_list_items($value, 4);
 			}
 			if ($field_key === 'process_steps') {

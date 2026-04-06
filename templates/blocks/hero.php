@@ -133,7 +133,8 @@ if (post_type_exists('lf_testimonial')) {
 	}
 	$review_rating = $ratings_count > 0 ? round($ratings_total / $ratings_count, 1) : 5.0;
 }
-$show_trust_strip = $review_count > 0;
+$hero_trust_strip_enabled = (string) ($section['hero_trust_strip_enabled'] ?? '1') !== '0';
+$show_trust_strip = $hero_trust_strip_enabled && $review_count > 0;
 $homeowner_count = $review_count > 0 ? $review_count : 200;
 $homeowner_display = number_format_i18n($homeowner_count);
 $homeowner_label = sprintf(__('Trusted by %s homeowners', 'leadsforward-core'), $homeowner_display);
@@ -203,7 +204,17 @@ $proof_items = array_values(array_filter(array_map('trim', is_array($proof_items
 if (empty($proof_items)) {
 	$proof_items = $proof_default_items;
 }
-$chip_items = $proof_items;
+// Left pills (`hero_chip_bullets`) are separate from proof card lines (`hero_proof_bullets`).
+// If `hero_chip_bullets` was never saved, mirror proof items for backward compatibility.
+if (array_key_exists('hero_chip_bullets', $section)) {
+	$chip_raw = (string) ($section['hero_chip_bullets'] ?? '');
+	$chip_items = function_exists('lf_sections_parse_lines')
+		? lf_sections_parse_lines($chip_raw)
+		: preg_split('/\r\n|\r|\n/', $chip_raw);
+	$chip_items = array_values(array_filter(array_map('trim', is_array($chip_items) ? $chip_items : [])));
+} else {
+	$chip_items = $proof_items;
+}
 $show_hero_chips = $variant !== 'internal' && !empty($chip_items);
 $hero_chips_html = '';
 if ($show_hero_chips) {
@@ -277,7 +288,7 @@ $hero_combined_style = trim(
 	. ($hero_video_overlay_css !== '' ? ' ' . $hero_video_overlay_css : '')
 );
 ?>
-<section class="<?php echo esc_attr($hero_outer_class); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" data-lf-hero-bg-mode="<?php echo esc_attr($hero_bg_mode); ?>" data-lf-hero-bg-image-id="<?php echo esc_attr((string) $hero_bg_stored_image_id); ?>" data-lf-hero-bg-video-id="<?php echo esc_attr((string) $hero_bg_stored_video_id); ?>"<?php echo $hero_combined_style !== '' ? ' style="' . esc_attr($hero_combined_style) . '"' : ''; ?>>
+<section class="<?php echo esc_attr($hero_outer_class); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" data-lf-hero-bg-mode="<?php echo esc_attr($hero_bg_mode); ?>" data-lf-hero-bg-image-id="<?php echo esc_attr((string) $hero_bg_stored_image_id); ?>" data-lf-hero-bg-video-id="<?php echo esc_attr((string) $hero_bg_stored_video_id); ?>" data-lf-hero-trust-strip-setting="<?php echo esc_attr($hero_trust_strip_enabled ? '1' : '0'); ?>"<?php echo $hero_combined_style !== '' ? ' style="' . esc_attr($hero_combined_style) . '"' : ''; ?>>
 	<div class="lf-block-hero__bg" aria-hidden="true">
 		<?php if ($hero_video_url !== '' && $hero_bg_mode === 'video' && $variant !== 'c') : ?>
 			<video class="lf-block-hero__video" autoplay muted loop playsinline>
