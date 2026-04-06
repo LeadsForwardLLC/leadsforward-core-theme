@@ -12,6 +12,30 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+function lf_register_taxonomy_process_groups(): void {
+	$labels = [
+		'name'              => _x('Process groups', 'taxonomy general name', 'leadsforward-core'),
+		'singular_name'     => _x('Process group', 'taxonomy singular name', 'leadsforward-core'),
+		'search_items'      => __('Search process groups', 'leadsforward-core'),
+		'all_items'         => __('All process groups', 'leadsforward-core'),
+		'edit_item'         => __('Edit process group', 'leadsforward-core'),
+		'update_item'       => __('Update process group', 'leadsforward-core'),
+		'add_new_item'      => __('Add new process group', 'leadsforward-core'),
+		'new_item_name'     => __('New process group name', 'leadsforward-core'),
+		'menu_name'         => __('Process groups', 'leadsforward-core'),
+	];
+	register_taxonomy('lf_process_group', ['lf_process_step'], [
+		'hierarchical'      => false,
+		'labels'            => $labels,
+		'show_ui'           => true,
+		'show_admin_column' => true,
+		'show_in_rest'      => true,
+		'public'            => false,
+		'rewrite'           => false,
+	]);
+}
+add_action('init', 'lf_register_taxonomy_process_groups');
+
 function lf_register_cpt_process_steps(): void {
 	$labels = [
 		'name'               => _x('Process steps', 'post type general name', 'leadsforward-core'),

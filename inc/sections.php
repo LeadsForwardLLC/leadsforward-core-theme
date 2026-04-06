@@ -935,37 +935,131 @@ function lf_sections_parse_lines($value): array {
 }
 
 /**
- * Resolve process section lines: published lf_process_step posts (process_selected_ids) override line-based process_steps.
+ * Resolve process section steps:
+ * - If any published lf_process_step posts resolve from process_selected_ids, those drive the section.
+ * - Otherwise, if process_selected_ids is empty, try taxonomy auto-pick (lf_process_group) for service pages/homepage.
+ * - Otherwise, fall back to line-based process_steps.
  *
  * @param array<string, mixed> $settings
- * @return string[]
+ * @return array<int, array{id:int,title:string,body:string}>
  */
-function lf_sections_process_step_lines_for_render(array $settings): array {
+function lf_sections_process_steps_for_render(array $settings, ?\WP_Post $post = null): array {
 	$ids_raw = trim((string) ($settings['process_selected_ids'] ?? ''));
 	if ($ids_raw !== '') {
-		$lines = [];
+		$steps = [];
 		foreach (preg_split('/\r\n|\r|\n/', $ids_raw) as $line) {
 			$id = absint(trim($line));
 			if ($id <= 0) {
 				continue;
 			}
-			$post = get_post($id);
-			if (!$post instanceof \WP_Post || $post->post_type !== 'lf_process_step' || $post->post_status !== 'publish') {
+			$step_post = get_post($id);
+			if (!$step_post instanceof \WP_Post || $step_post->post_type !== 'lf_process_step' || $step_post->post_status !== 'publish') {
 				continue;
 			}
-			$title = get_the_title($post);
+			$title = (string) get_the_title($step_post);
+			$title = trim($title);
 			if ($title === '') {
 				continue;
 			}
-			$body = wp_strip_all_tags((string) get_post_field('post_content', $post));
-			$body = preg_replace('/\s+/', ' ', trim($body));
-			$lines[] = $body !== '' ? ($title . ' || ' . $body) : $title;
+			$body = wp_strip_all_tags((string) get_post_field('post_content', $step_post));
+			$body = preg_replace('/\s+/', ' ', trim((string) $body));
+			$steps[] = [
+				'id' => (int) $id,
+				'title' => $title,
+				'body' => (string) $body,
+			];
 		}
-		if ($lines !== []) {
-			return $lines;
+		if ($steps !== []) {
+			return $steps;
 		}
 	}
-	return lf_sections_parse_lines((string) ($settings['process_steps'] ?? ''));
+
+	// Taxonomy auto-pick: only when no manual IDs provided.
+	if ($ids_raw === '' && taxonomy_exists('lf_process_group')) {
+		$term_slug = '';
+		if ($post instanceof \WP_Post && $post->post_type === 'lf_service') {
+			$term_slug = (string) $post->post_name;
+		} elseif (is_front_page()) {
+			$term_slug = 'homepage-primary';
+		}
+		$term_slug = sanitize_title($term_slug);
+		if ($term_slug !== '' && term_exists($term_slug, 'lf_process_group')) {
+			$q = new \WP_Query([
+				'post_type' => 'lf_process_step',
+				'post_status' => 'publish',
+				'posts_per_page' => 8,
+				'orderby' => 'menu_order title',
+				'order' => 'ASC',
+				'no_found_rows' => true,
+				'tax_query' => [
+					[
+						'taxonomy' => 'lf_process_group',
+						'field' => 'slug',
+						'terms' => [$term_slug],
+					],
+				],
+			]);
+			$steps = [];
+			while ($q->have_posts()) {
+				$q->the_post();
+				$id = (int) get_the_ID();
+				$title = trim((string) get_the_title());
+				if ($title === '') {
+					continue;
+				}
+				$body = wp_strip_all_tags((string) get_post_field('post_content', $id));
+				$body = preg_replace('/\s+/', ' ', trim((string) $body));
+				$steps[] = [
+					'id' => $id,
+					'title' => $title,
+					'body' => (string) $body,
+				];
+			}
+			wp_reset_postdata();
+			if ($steps !== []) {
+				return $steps;
+			}
+		}
+	}
+
+	// Fallback: parse plain lines.
+	$lines = lf_sections_parse_lines((string) ($settings['process_steps'] ?? ''));
+	$steps = [];
+	foreach ($lines as $line) {
+		$line = trim((string) $line);
+		if ($line === '') {
+			continue;
+		}
+		$title = $line;
+		$body = '';
+		if (strpos($line, '||') !== false) {
+			$parts = array_map('trim', explode('||', $line, 2));
+			$title = (string) ($parts[0] ?? $line);
+			$body = (string) ($parts[1] ?? '');
+		} elseif (strpos($line, '|') !== false) {
+			$parts = array_map('trim', explode('|', $line, 2));
+			$title = (string) ($parts[0] ?? $line);
+			$body = (string) ($parts[1] ?? '');
+		} elseif (strpos($line, ' - ') !== false) {
+			$parts = array_map('trim', explode(' - ', $line, 2));
+			$title = (string) ($parts[0] ?? $line);
+			$body = (string) ($parts[1] ?? '');
+		} elseif (strpos($line, ' — ') !== false) {
+			$parts = array_map('trim', explode(' — ', $line, 2));
+			$title = (string) ($parts[0] ?? $line);
+			$body = (string) ($parts[1] ?? '');
+		} elseif (strpos($line, ':') !== false) {
+			$parts = array_map('trim', explode(':', $line, 2));
+			$title = (string) ($parts[0] ?? $line);
+			$body = (string) ($parts[1] ?? '');
+		}
+		$steps[] = [
+			'id' => 0,
+			'title' => $title,
+			'body' => $body,
+		];
+	}
+	return $steps;
 }
 
 /**
@@ -1824,7 +1918,7 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
 	$intro_secondary = $settings['section_intro_secondary'] ?? '';
-	$steps = lf_sections_process_step_lines_for_render($settings);
+	$steps = lf_sections_process_steps_for_render($settings, $post);
 	$expectations = trim((string) ($settings['process_expectations'] ?? ''));
 	$process_class = 'lf-process';
 	$intro_text = $intro_secondary !== '' ? trim($intro . "\n\n" . $intro_secondary) : $intro;
@@ -1852,34 +1946,11 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 	<ol class="<?php echo esc_attr($process_class); ?>">
 		<?php foreach ($steps as $step) : ?>
 			<?php
-			$step = trim((string) $step);
-			$step_title = $step;
-			$step_body = '';
-			if (strpos($step, '||') !== false) {
-				$parts = array_map('trim', explode('||', $step, 2));
-				$step_title = $parts[0] ?? $step;
-				$step_body = $parts[1] ?? '';
-			} elseif (strpos($step, '|') !== false) {
-				$parts = array_map('trim', explode('|', $step, 2));
-				$step_title = $parts[0] ?? $step;
-				$step_body = $parts[1] ?? '';
-			} elseif (strpos($step, ' - ') !== false) {
-				$parts = array_map('trim', explode(' - ', $step, 2));
-				$step_title = $parts[0] ?? $step;
-				$step_body = $parts[1] ?? '';
-			} elseif (strpos($step, ' — ') !== false) {
-				$parts = array_map('trim', explode(' — ', $step, 2));
-				$step_title = $parts[0] ?? $step;
-				$step_body = $parts[1] ?? '';
-			} elseif (strpos($step, ':') !== false) {
-				$parts = array_map('trim', explode(':', $step, 2));
-				$step_title = $parts[0] ?? $step;
-				$step_body = $parts[1] ?? '';
-			}
-			$step_title = wp_trim_words($step_title, 6, '');
-			$step_body = wp_trim_words($step_body, 18, '');
+			$step_id = isset($step['id']) ? (int) $step['id'] : 0;
+			$step_title = wp_trim_words((string) ($step['title'] ?? ''), 6, '');
+			$step_body = wp_trim_words((string) ($step['body'] ?? ''), 18, '');
 			?>
-			<li class="lf-process__step">
+			<li class="lf-process__step" <?php echo $step_id > 0 ? 'data-lf-process-id="' . esc_attr((string) $step_id) . '"' : ''; ?>>
 				<?php if ($step_body !== '') : ?>
 					<span class="lf-process__step-title"><?php echo esc_html($step_title); ?></span>
 					<span class="lf-process__step-body"><?php echo esc_html($step_body); ?></span>

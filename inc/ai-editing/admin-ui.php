@@ -567,6 +567,7 @@ add_action('wp_ajax_lf_ai_update_section_cta', 'lf_ai_ajax_update_section_cta');
 add_action('wp_ajax_lf_ai_update_section_media', 'lf_ai_ajax_update_section_media');
 add_action('wp_ajax_lf_ai_update_section_lines', 'lf_ai_ajax_update_section_lines');
 add_action('wp_ajax_lf_ai_faq_library', 'lf_ai_ajax_faq_library');
+add_action('wp_ajax_lf_ai_process_step_library', 'lf_ai_ajax_process_step_library');
 add_action('wp_ajax_lf_ai_reorder_faq_items', 'lf_ai_ajax_reorder_faq_items');
 add_action('wp_ajax_lf_ai_set_trust_layout', 'lf_ai_ajax_set_trust_layout');
 add_action('wp_ajax_lf_ai_toggle_section_visibility', 'lf_ai_ajax_toggle_section_visibility');
@@ -2217,6 +2218,55 @@ function lf_ai_ajax_faq_library(): void {
 			'id' => $faq_id,
 			'question' => $question,
 			'answer' => wp_strip_all_tags($answer),
+		];
+	}
+	wp_reset_postdata();
+	wp_send_json_success([
+		'items' => $rows,
+	]);
+}
+
+function lf_ai_ajax_process_step_library(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$search = isset($_POST['search']) ? sanitize_text_field(wp_unslash($_POST['search'])) : '';
+	$query_args = [
+		'post_type' => 'lf_process_step',
+		'post_status' => 'publish',
+		'posts_per_page' => 250,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+		'no_found_rows' => true,
+	];
+	if ($search !== '') {
+		$query_args['s'] = $search;
+	}
+	$query = new WP_Query($query_args);
+	$rows = [];
+	while ($query->have_posts()) {
+		$query->the_post();
+		$id = (int) get_the_ID();
+		$title = (string) get_the_title($id);
+		$body = trim((string) get_post_field('post_content', $id));
+		$body_plain = wp_strip_all_tags($body);
+		$groups = [];
+		if (taxonomy_exists('lf_process_group')) {
+			$terms = get_the_terms($id, 'lf_process_group');
+			if (is_array($terms)) {
+				foreach ($terms as $term) {
+					if ($term instanceof \WP_Term) {
+						$groups[] = (string) $term->slug;
+					}
+				}
+			}
+		}
+		$rows[] = [
+			'id' => $id,
+			'title' => $title,
+			'body' => $body_plain,
+			'groups' => $groups,
 		];
 	}
 	wp_reset_postdata();
