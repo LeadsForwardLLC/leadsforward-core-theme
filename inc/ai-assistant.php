@@ -613,6 +613,8 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-checklist-remove:hover { border-color:#fecaca; color:#b91c1c; background:#fff5f5; }
 		.lf-ai-hero-pills-controls { margin-top:8px; display:flex; gap:8px; align-items:center; }
 		.lf-ai-hero-trust-strip-controls { margin-top:10px; padding:8px 10px; border-radius:8px; background:rgba(131,72,249,.08); border:1px solid rgba(131,72,249,.25); font-size:13px; }
+		.lf-ai-benefit-editable { cursor:text; border-radius:6px; transition:box-shadow .15s ease; }
+		.lf-ai-editor-on .lf-ai-benefit-editable:hover { box-shadow:0 0 0 1px rgba(131,72,249,.45); }
 		.lf-ai-hero-pill-add { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:28px; padding:0 10px; font-size:12px; cursor:pointer; }
 		.lf-ai-hero-pill-add:hover { background:#f5f0ff; }
 		.lf-ai-hero-pill-remove { border:1px solid rgba(255,255,255,.65); background:rgba(255,255,255,.2); color:inherit; border-radius:999px; min-width:18px; height:18px; padding:0 5px; font-size:11px; line-height:16px; margin-left:8px; cursor:pointer; vertical-align:middle; }
@@ -1749,6 +1751,7 @@ function lf_ai_assistant_widget_js(): string {
 			buildSectionMediaEditors();
 			buildFaqReorderControls();
 			buildBenefitsReorderControls();
+			buildBenefitsTextEditors();
 			buildServiceIntroReorderControls();
 			buildBenefitsIconEditors();
 			refreshSectionRail();
@@ -1800,6 +1803,8 @@ function lf_ai_assistant_widget_js(): string {
 			if (node.closest("button, a, label, script, style, noscript")) return false;
 			// Managed lists/pills use dedicated controls; block generic inline editing for their rows.
 			if (node.closest(".lf-hero-chips,.lf-block-hero__card-list,.lf-trust-bar__badges,.lf-service-details__checklist,.lf-process,.lf-block-faq-accordion__list,.lf-related-links,.lf-cpt-driven-links")) return false;
+			// Map + NAP: service area names are global CPT permalinks — not editable inline.
+			if (node.closest(".lf-block-map-nap__areas-list,.lf-block-map-nap__areas-item,.lf-block-map-nap__areas-link")) return false;
 			// Reviews content is source-of-truth data; do not edit testimonial copy inline.
 			if (node.closest(".lf-block-trust-reviews__item,.lf-block-trust-reviews__summary")) return false;
 			var tag = node.tagName ? node.tagName.toLowerCase() : "";
@@ -2015,6 +2020,7 @@ function lf_ai_assistant_widget_js(): string {
 				buildSectionMediaEditors();
 				buildFaqReorderControls();
 				buildBenefitsReorderControls();
+				buildBenefitsTextEditors();
 				buildServiceIntroReorderControls();
 				buildBenefitsIconEditors();
 				try {
@@ -2948,7 +2954,7 @@ function lf_ai_assistant_widget_js(): string {
 				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-list-remove=\"1\"]")).forEach(function(node){
 					if (node && node.parentNode) node.parentNode.removeChild(node);
 				});
-				var list = wrap.querySelector(".lf-block-hero__card-list");
+				var list = wrap.querySelector(".lf-block-hero__card .lf-block-hero__card-list");
 				if (!list) return;
 				Array.prototype.slice.call(list.querySelectorAll("li")).forEach(function(node){
 					node.removeAttribute("data-lf-inline-editable");
@@ -3484,8 +3490,8 @@ function lf_ai_assistant_widget_js(): string {
 				if (raw !== "") return raw;
 				var t = card.querySelector(".lf-benefits__title");
 				var b = card.querySelector(".lf-benefits__desc");
-				var titleText = t ? String(t.textContent || "").trim() : "";
-				var bodyText = b ? String(b.textContent || "").trim() : "";
+				var titleText = t ? String(t.textContent || "").replace(/\s+/g, " ").trim() : "";
+				var bodyText = b ? String(b.textContent || "").replace(/\s+/g, " ").trim() : "";
 				return bodyText ? (titleText + " || " + bodyText) : titleText;
 			}).filter(function(v){ return v !== ""; });
 		}
@@ -3502,10 +3508,6 @@ function lf_ai_assistant_widget_js(): string {
 					card.ondragover = null;
 					card.ondrop = null;
 					card.ondragend = null;
-				});
-				Array.prototype.slice.call(grid.querySelectorAll(".lf-benefits__title,.lf-benefits__desc")).forEach(function(node){
-					node.removeAttribute("data-lf-inline-editable");
-					node.removeAttribute("data-lf-inline-selector");
 				});
 				Array.prototype.slice.call(grid.querySelectorAll(".lf-benefits__card")).forEach(function(card){
 					card.setAttribute("draggable", "true");
@@ -3538,6 +3540,89 @@ function lf_ai_assistant_widget_js(): string {
 						card.classList.remove("is-dragging");
 						activeBenefitDragEl = null;
 					};
+				});
+			});
+		}
+		function buildBenefitsTextEditors() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				if (String(wrap.getAttribute("data-lf-section-type") || "") !== "benefits") return;
+				var grid = wrap.querySelector(".lf-benefits");
+				if (!grid) return;
+				function persistGrid() {
+					Array.prototype.slice.call(grid.querySelectorAll(".lf-benefits__card")).forEach(function(card){
+						var t = card.querySelector(".lf-benefits__title");
+						var b = card.querySelector(".lf-benefits__desc");
+						var titleText = t ? String(t.textContent || "").replace(/\s+/g, " ").trim() : "";
+						var bodyText = b ? String(b.textContent || "").replace(/\s+/g, " ").trim() : "";
+						var line = bodyText ? (titleText + " || " + bodyText) : titleText;
+						card.setAttribute("data-lf-benefit-line", line);
+					});
+					persistSectionLineItems(wrap, "benefits_items", benefitLinesFromGrid(grid), "Saving benefits...");
+				}
+				Array.prototype.slice.call(grid.querySelectorAll(".lf-benefits__card")).forEach(function(card){
+					var title = card.querySelector(".lf-benefits__title");
+					var desc = card.querySelector(".lf-benefits__desc");
+					if (!title || !desc) return;
+					if (title.getAttribute("data-lf-benefits-editor-bound") === "1") return;
+					title.setAttribute("data-lf-benefits-editor-bound", "1");
+					desc.setAttribute("data-lf-benefits-editor-bound", "1");
+					title.classList.add("lf-ai-benefit-editable");
+					desc.classList.add("lf-ai-benefit-editable");
+					title.setAttribute("title", "Click to edit headline");
+					desc.setAttribute("title", "Click to edit description");
+					title.addEventListener("mousedown", function(e){ e.stopPropagation(); });
+					desc.addEventListener("mousedown", function(e){ e.stopPropagation(); });
+					title.addEventListener("click", function(e){
+						if (!editingEnabled) return;
+						e.preventDefault();
+						e.stopPropagation();
+						if (String(title.getAttribute("data-lf-ai-editing") || "") === "1") return;
+						title.setAttribute("data-lf-ai-editing", "1");
+						title.setAttribute("contenteditable", "true");
+						try { title.focus(); } catch (err) {}
+					});
+					desc.addEventListener("click", function(e){
+						if (!editingEnabled) return;
+						e.preventDefault();
+						e.stopPropagation();
+						if (String(desc.getAttribute("data-lf-ai-editing") || "") === "1") return;
+						desc.setAttribute("data-lf-ai-editing", "1");
+						desc.setAttribute("contenteditable", "true");
+						try { desc.focus(); } catch (err2) {}
+					});
+					function finishTitle() {
+						title.removeAttribute("contenteditable");
+						title.removeAttribute("data-lf-ai-editing");
+						persistGrid();
+					}
+					function finishDesc() {
+						desc.removeAttribute("contenteditable");
+						desc.removeAttribute("data-lf-ai-editing");
+						persistGrid();
+					}
+					title.addEventListener("blur", finishTitle);
+					desc.addEventListener("blur", finishDesc);
+					title.addEventListener("keydown", function(e){
+						var k = String((e && e.key) || "");
+						if (k === "Enter") {
+							e.preventDefault();
+							finishTitle();
+						}
+						if (k === "Escape") {
+							e.preventDefault();
+							title.removeAttribute("contenteditable");
+							title.removeAttribute("data-lf-ai-editing");
+						}
+					});
+					desc.addEventListener("keydown", function(e){
+						var k = String((e && e.key) || "");
+						if (k === "Escape") {
+							e.preventDefault();
+							desc.removeAttribute("contenteditable");
+							desc.removeAttribute("data-lf-ai-editing");
+						}
+					});
 				});
 			});
 		}
@@ -3962,6 +4047,7 @@ function lf_ai_assistant_widget_js(): string {
 					buildSectionMediaEditors();
 					buildFaqReorderControls();
 					buildBenefitsReorderControls();
+					buildBenefitsTextEditors();
 					buildServiceIntroReorderControls();
 					buildBenefitsIconEditors();
 					setSelectedSection(clone);

@@ -144,26 +144,28 @@ if ($review_rating <= 0) {
 $trust_strip_html = '';
 $reviews_display = number_format_i18n($review_count);
 $rating_display = number_format_i18n($review_rating, 1);
-ob_start();
-?>
-<div class="lf-hero-trust">
-	<span class="lf-hero-trust__icon" aria-hidden="true">
-		<img src="<?php echo esc_url(LF_THEME_URI . '/assets/images/customers.png'); ?>" alt="<?php esc_attr_e('Customers', 'leadsforward-core'); ?>" width="50" height="50" loading="lazy" decoding="async" />
-	</span>
-	<span class="lf-hero-trust__badge">
-		<span class="lf-block-hero__stars" aria-hidden="true">
-			<?php for ($i = 0; $i < 5; $i++) : ?>
-				<svg class="lf-block-hero__star" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-			<?php endfor; ?>
+if ($show_trust_strip) {
+	ob_start();
+	?>
+	<div class="lf-hero-trust">
+		<span class="lf-hero-trust__icon" aria-hidden="true">
+			<img src="<?php echo esc_url(LF_THEME_URI . '/assets/images/customers.png'); ?>" alt="<?php esc_attr_e('Customers', 'leadsforward-core'); ?>" width="50" height="50" loading="lazy" decoding="async" />
 		</span>
-		<span class="lf-hero-trust__rating"><?php echo esc_html($rating_display); ?></span>
-	</span>
-	<span class="lf-hero-trust__stat lf-hero-trust__stat--emphasis">
-		<span class="lf-hero-trust__label-only"><?php echo esc_html($homeowner_label); ?></span>
-	</span>
-</div>
-<?php
-$trust_strip_html = (string) ob_get_clean();
+		<span class="lf-hero-trust__badge">
+			<span class="lf-block-hero__stars" aria-hidden="true">
+				<?php for ($i = 0; $i < 5; $i++) : ?>
+					<svg class="lf-block-hero__star" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+				<?php endfor; ?>
+			</span>
+			<span class="lf-hero-trust__rating"><?php echo esc_html($rating_display); ?></span>
+		</span>
+		<span class="lf-hero-trust__stat lf-hero-trust__stat--emphasis">
+			<span class="lf-hero-trust__label-only"><?php echo esc_html($homeowner_label); ?></span>
+		</span>
+	</div>
+	<?php
+	$trust_strip_html = (string) ob_get_clean();
+}
 // Services list removed from hero card.
 $latest_testimonial = null;
 $latest_testimonial_text = '';
@@ -201,7 +203,9 @@ $proof_items = function_exists('lf_sections_parse_lines')
 	? lf_sections_parse_lines((string) $proof_bullets_raw)
 	: preg_split('/\r\n|\r|\n/', (string) $proof_bullets_raw);
 $proof_items = array_values(array_filter(array_map('trim', is_array($proof_items) ? $proof_items : [])));
-if (empty($proof_items)) {
+// Only fall back to defaults when hero_proof_bullets was never stored (legacy). If the key exists
+// (even empty), respect the saved list so front-end edits persist.
+if (empty($proof_items) && !array_key_exists('hero_proof_bullets', $section)) {
 	$proof_items = $proof_default_items;
 }
 // Left pills (`hero_chip_bullets`) are separate from proof card lines (`hero_proof_bullets`).
