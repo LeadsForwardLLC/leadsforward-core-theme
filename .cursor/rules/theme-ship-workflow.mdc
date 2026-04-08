@@ -1,50 +1,41 @@
 ---
-description: How to edit, ship, and deploy the LeadsForward core theme without worktrees or branch confusion
+description: Mandatory ship workflow — every code change ends on main via PR merge (no exceptions)
 alwaysApply: true
 ---
 
-# LeadsForward theme — ship workflow
+# LeadsForward core theme — ship to `main` (mandatory)
 
-## Every session with code changes (no exceptions)
+## Non-negotiable
 
-If you edited files in this theme, you **always** run the full ship path in the same session: **branch → commit → push → PR → squash-merge to `main`**, using the terminal yourself. Do not skip because the user did not repeat the instruction. Do not tell the user to do git for you.
+If you **change any file** in this theme repo, you **must** complete the full path to **`main`** in the **same session**: **commit → push → PR → squash-merge**. The user should **never** have to ask for git, PR, or merge. **Unmerged local work is not “done.”**
 
-Before saying “done,” “merged,” “on GitHub,” or “deployed,” confirm with `git log` / `gh pr view` / GitHub that **`main` contains the change** (or the PR is merged). Assertions without evidence are wrong.
+**Best path (use first):** from theme root run **`./scripts/ship-to-live.sh "short description"`** (requires `gh` CLI authenticated). It handles branch, commit, push, PR, and squash-merge when `main` is protected.
 
-## Non-negotiable for AI agents
+**Manual path (same outcome):** feature branch → `git add` / `git commit` → `git push -u origin <branch>` → `gh pr create` → `gh pr merge --squash --delete-branch` → verify `origin/main` has the merge commit.
 
-You **must** complete the full ship workflow **before** telling the user work is done, merged, or “shipped.” No exceptions unless the user explicitly says to stop before git.
+## Before you say “done,” “shipped,” “merged,” or “complete”
 
-1. **Branch** (if not already on a feature branch) → **commit** → **push** → **open PR** → **squash-merge to `main`**.
-2. **Run it yourself** in the terminal. Do not instruct the user to commit, push, or merge.
-3. If `git status` is clean and you made **no** edits, say so — there is nothing to ship.
+1. `git status` is clean (or you explicitly left no theme edits).
+2. **`main` on GitHub contains the change** — verify with `git fetch origin main && git log -1 origin/main` or `gh pr view` **merged**, not “I pushed a branch.”
 
-Skipping git while claiming the task is finished is **incorrect**: unmerged local edits are not delivered work.
+Assertions without terminal evidence are wrong.
 
-## Mandatory for AI agents (every code change)
+## When `gh pr merge` fails (e.g. “not mergeable”)
 
-- **Always** finish with: **branch → commit → push → PR → merge** (squash). Do not leave work only on disk and do not push directly to `main`.
-- **Never** end a session with uncommitted theme changes unless the user explicitly asked to stop before shipping.
-- After implementing a task, **run the ship flow yourself** (see below). Do not only tell the user to commit.
-- **Git root** is this theme directory (`leadsforward-core-theme` — contains `style.css`, `.git`). The WordPress site root above it is **not** the repo.
+Do **not** stop. This often happens after a **squash merge** left duplicate history on your feature branch.
 
-## Where to work
+1. `git fetch origin main`
+2. `git checkout <your-branch>` and **`git reset --hard origin/main`**, then **`git cherry-pick <only your new commit(s)>`** *or* interactive rebase onto `origin/main`.
+3. **`git push --force-with-lease`** to the PR branch, then **`gh pr merge`** again.
 
-- Use **only** the primary theme directory: `wp-content/themes/leadsforward-core-theme` (the path that contains `style.css` and `functions.php`).
-- **Do not** use `.worktrees/` for routine work. Do not create new git worktrees unless the user explicitly asks.
+Do not ask the user to resolve this unless authentication or permissions block you.
 
-## How “live” happens
+## Repo facts
 
-- Pushing to **`main`** on `LeadsForwardLLC/leadsforward-core-theme` triggers **GitHub Actions** (`.github/workflows/deploy-staging.yml`), which **rsyncs the theme to SiteGround** (staging path in secrets).
-- There is no separate manual deploy step in this repo beyond **merge to `main`**.
+- **Git root:** this directory (`leadsforward-core-theme`, has `style.css`, `.git`). The WordPress `app/public` parent is **not** the repo.
+- **`main` is protected** — merge via PR (squash), not direct push when rules apply.
+- **Merge to `main`** triggers deploy (GitHub Actions → SiteGround staging). Shipping = merged `main`.
 
-## What you do after making code changes
+## Exceptions
 
-1. Prefer **`./scripts/ship-to-live.sh "short description of change"`** from the theme root (needs `gh` logged in). It commits unstaged work if needed, pushes, opens or reuses a PR, squash-merges to `main`, and leaves you on updated `main`. If you were on `main` and push is blocked, the script creates a `chore/auto-ship-*` branch and ships through a PR.
-2. Or run the equivalent steps manually — same outcome: **PR + squash-merge**, not a direct push to `main` when protected.
-3. **`main` is branch-protected** — never rely on a direct push to `main` succeeding. Merge commits are disallowed on this repo.
-4. Pushing/merging to **`main`** starts the deploy Action; no separate deploy step in this repo.
-
-## Git pull
-
-- Prefer `git pull origin main --ff-only` on `main` to avoid merge/rebase prompts.
+Only if the user **explicitly** says not to commit, not to push, or to leave work local. Otherwise: **always ship.**
