@@ -456,6 +456,7 @@ function lf_ai_assistant_render_floating_widget(): void {
 				<input type="checkbox" data-lf-ai-inline-link-newtab />
 				<span><?php esc_html_e('Open in new tab', 'leadsforward-core'); ?></span>
 			</label>
+			<button type="button" class="lf-ai-inline-link__unlink" data-lf-ai-inline-link-unlink hidden><?php esc_html_e('Remove link', 'leadsforward-core'); ?></button>
 			<button type="button" class="lf-ai-inline-link__apply" data-lf-ai-inline-link-apply><?php esc_html_e('Apply link', 'leadsforward-core'); ?></button>
 		</div>
 	</div>
@@ -834,6 +835,9 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-inline-link__row-url { font-size:10px; color:#64748b; line-height:1.35; word-break:break-all; margin-top:2px; }
 		.lf-ai-inline-link__newtab { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:#475569; cursor:pointer; user-select:none; margin:0; }
 		.lf-ai-inline-link__newtab input { width:auto; margin:0; cursor:pointer; }
+		.lf-ai-inline-link__unlink { align-self:stretch; border:1px solid #e2e8f0; border-radius:10px; padding:8px 14px; font-weight:600; font-size:13px; cursor:pointer; background:#fff; color:#b91c1c; }
+		.lf-ai-inline-link__unlink:hover { background:#fef2f2; border-color:#fecaca; }
+		.lf-ai-inline-link__unlink[hidden] { display:none !important; }
 		.lf-ai-inline-link__apply { align-self:flex-end; border:0; border-radius:10px; padding:8px 14px; font-weight:700; font-size:13px; cursor:pointer; background:linear-gradient(180deg,#7c3aed 0%,#6d28d9 100%); color:#fff; }
 		.lf-ai-inline-link__apply:hover { background:linear-gradient(180deg,#6d28d9 0%,#5b21b6 100%); }
 		.lf-ai-inline-link__empty { font-size:12px; color:#64748b; margin:0; padding:6px; }
@@ -1433,6 +1437,7 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		var lfInlineLinkSavedRange = null;
 		var lfInlineLinkSavedHost = null;
+		var lfInlineLinkSavedAnchor = null;
 		var lfInlineLinkCache = null;
 		var lfInlineLinkCacheLoading = false;
 		var lfInlineLinkSelTimer = null;
@@ -1447,6 +1452,21 @@ function lf_ai_assistant_widget_js(): string {
 			$linkRoot.find("[data-lf-ai-inline-link-backdrop]").prop("hidden", true);
 			lfInlineLinkSavedRange = null;
 			lfInlineLinkSavedHost = null;
+			lfInlineLinkSavedAnchor = null;
+		}
+		function lfClosestAnchorWithinHost(node, host) {
+			if (!node || !host) return null;
+			var el = node.nodeType === 3 ? node.parentElement : node;
+			while (el && el !== host) {
+				if (el.nodeType === 1 && el.tagName && String(el.tagName).toLowerCase() === "a") {
+					var href = el.getAttribute ? el.getAttribute("href") : "";
+					if (href && String(href).trim() !== "") {
+						return el;
+					}
+				}
+				el = el.parentElement;
+			}
+			return null;
 		}
 		function lfManagedContentEditableHost() {
 			var ae = document.activeElement;
@@ -1598,8 +1618,7 @@ function lf_ai_assistant_widget_js(): string {
 				return;
 			}
 			var sel = window.getSelection();
-			if (!sel.rangeCount || sel.isCollapsed) {
-				setStatus("Select text, then add an internal link.", true);
+			if (!sel.rangeCount) {
 				return;
 			}
 			var range = sel.getRangeAt(0);
@@ -1611,13 +1630,27 @@ function lf_ai_assistant_widget_js(): string {
 			} catch (errO) {
 				return;
 			}
+			var aStart = lfClosestAnchorWithinHost(range.startContainer, host);
+			var aEnd = lfClosestAnchorWithinHost(range.endContainer, host);
+			lfInlineLinkSavedAnchor = (aStart && aStart === aEnd) ? aStart : null;
+			if (range.collapsed && !lfInlineLinkSavedAnchor) {
+				setStatus("Select text, then add an internal link.", true);
+				return;
+			}
 			lfInlineLinkSavedRange = range.cloneRange();
 			lfInlineLinkSavedHost = host;
 			lfFetchInternalLinkTargets(function(){
 				$linkRoot.find("[data-lf-ai-inline-link-search]").val("");
 				lfRenderInternalLinkList("");
-				$linkRoot.find("[data-lf-ai-inline-link-url]").val("");
-				$linkRoot.find("[data-lf-ai-inline-link-newtab]").prop("checked", false);
+				if (lfInlineLinkSavedAnchor) {
+					$linkRoot.find("[data-lf-ai-inline-link-url]").val(String(lfInlineLinkSavedAnchor.getAttribute("href") || "").trim());
+					$linkRoot.find("[data-lf-ai-inline-link-newtab]").prop("checked", String(lfInlineLinkSavedAnchor.getAttribute("target") || "").toLowerCase() === "_blank");
+					$linkRoot.find("[data-lf-ai-inline-link-unlink]").prop("hidden", false);
+				} else {
+					$linkRoot.find("[data-lf-ai-inline-link-url]").val("");
+					$linkRoot.find("[data-lf-ai-inline-link-newtab]").prop("checked", false);
+					$linkRoot.find("[data-lf-ai-inline-link-unlink]").prop("hidden", true);
+				}
 				$linkRoot.find("[data-lf-ai-inline-link-panel]").prop("hidden", false);
 				$linkRoot.find("[data-lf-ai-inline-link-backdrop]").prop("hidden", false);
 				lfHideInlineLinkToolbar();
@@ -1634,9 +1667,30 @@ function lf_ai_assistant_widget_js(): string {
 		function lfInsertLinkIntoSavedRange(url, newTab) {
 			var href = lfNormalizeInternalLinkUrl(url);
 			if (!href) return false;
-			var range = lfInlineLinkSavedRange;
 			var host = lfInlineLinkSavedHost || inlineActiveEl || lfManagedContentEditableHost();
-			if (!range || range.collapsed || !host) {
+			if (!host) {
+				setStatus("Select text in the editor, then open Internal link again.", true);
+				return false;
+			}
+			var anchorUpdate = lfInlineLinkSavedAnchor;
+			if (anchorUpdate && host.contains(anchorUpdate)) {
+				try {
+					anchorUpdate.setAttribute("href", href);
+					if (newTab) {
+						anchorUpdate.setAttribute("target", "_blank");
+						anchorUpdate.setAttribute("rel", "noopener noreferrer");
+					} else {
+						anchorUpdate.removeAttribute("target");
+						anchorUpdate.removeAttribute("rel");
+					}
+				} catch (errA) {
+					setStatus("Could not update link.", true);
+					return false;
+				}
+				return true;
+			}
+			var range = lfInlineLinkSavedRange;
+			if (!range || range.collapsed) {
 				setStatus("Select text in the editor, then open Internal link again.", true);
 				return false;
 			}
@@ -1701,18 +1755,45 @@ function lf_ai_assistant_widget_js(): string {
 				return;
 			}
 			var newTab = !!$linkRoot.find("[data-lf-ai-inline-link-newtab]").prop("checked");
+			var wasEditingAnchor = !!lfInlineLinkSavedAnchor;
 			if (!lfInsertLinkIntoSavedRange(url, newTab)) {
 				return;
 			}
 			lfHideInlineLinkPanel();
-			setStatus("Link inserted. Click away or press ⌘/Ctrl+Enter to save.", false);
+			setStatus(wasEditingAnchor ? "Link updated. Save when done editing." : "Link inserted. Click away or press ⌘/Ctrl+Enter to save.", false);
+		}
+		function lfRemoveLinkFromUi() {
+			if (!$linkRoot.length) return;
+			var host = lfInlineLinkSavedHost || inlineActiveEl || lfManagedContentEditableHost();
+			var anchor = lfInlineLinkSavedAnchor;
+			if (!anchor || !host || !host.contains(anchor)) {
+				setStatus("Could not remove link. Click into the linked text and try again.", true);
+				return;
+			}
+			try {
+				host.focus();
+				var parent = anchor.parentNode;
+				if (!parent) {
+					setStatus("Could not remove link.", true);
+					return;
+				}
+				while (anchor.firstChild) {
+					parent.insertBefore(anchor.firstChild, anchor);
+				}
+				parent.removeChild(anchor);
+			} catch (errU) {
+				setStatus("Could not remove link.", true);
+				return;
+			}
+			lfHideInlineLinkPanel();
+			setStatus("Link removed. Save when done editing.", false);
 		}
 		function lfInitInlineLinkUi() {
 			if (!$linkRoot.length) return;
 			$linkRoot.find("[data-lf-ai-inline-link-toolbar]").on("mousedown", function(e){
 				e.preventDefault();
 			});
-			$linkRoot.on("mousedown", "[data-lf-ai-inline-link-apply], [data-lf-ai-inline-link-pick], [data-lf-ai-inline-link-close]", function(e){
+			$linkRoot.on("mousedown", "[data-lf-ai-inline-link-apply], [data-lf-ai-inline-link-pick], [data-lf-ai-inline-link-close], [data-lf-ai-inline-link-unlink]", function(e){
 				e.preventDefault();
 			});
 			$linkRoot.find("[data-lf-ai-inline-link-open]").on("click", function(e){
@@ -1727,11 +1808,17 @@ function lf_ai_assistant_widget_js(): string {
 				e.preventDefault();
 				lfApplyInternalLinkFromUi();
 			});
+			$linkRoot.find("[data-lf-ai-inline-link-unlink]").on("click", function(e){
+				e.preventDefault();
+				lfRemoveLinkFromUi();
+			});
 			$linkRoot.on("click", "[data-lf-ai-inline-link-pick]", function(e){
 				e.preventDefault();
 				var u = $(this).attr("data-lf-ai-inline-link-pick") || "";
 				$linkRoot.find("[data-lf-ai-inline-link-url]").val(u);
-				lfApplyInternalLinkFromUi();
+				try {
+					$linkRoot.find("[data-lf-ai-inline-link-url]").trigger("focus");
+				} catch (errFoc) {}
 			});
 			$linkRoot.find("[data-lf-ai-inline-link-search]").on("input", function(){
 				lfRenderInternalLinkList($(this).val() || "");
