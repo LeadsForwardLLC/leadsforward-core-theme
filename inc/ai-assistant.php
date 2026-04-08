@@ -827,6 +827,7 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-inline-link__row { display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:left; width:100%; padding:8px 10px; border:0; border-radius:8px; background:#fff; cursor:pointer; font-size:12px; color:#0f172a; }
 		.lf-ai-inline-link__row:hover { background:#f5f3ff; }
 		.lf-ai-inline-link__row small { font-size:10px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
+		.lf-ai-inline-link__row-url { font-size:10px; color:#64748b; line-height:1.35; word-break:break-all; margin-top:2px; }
 		.lf-ai-inline-link__apply { align-self:flex-end; border:0; border-radius:10px; padding:8px 14px; font-weight:700; font-size:13px; cursor:pointer; background:linear-gradient(180deg,#7c3aed 0%,#6d28d9 100%); color:#fff; }
 		.lf-ai-inline-link__apply:hover { background:linear-gradient(180deg,#6d28d9 0%,#5b21b6 100%); }
 		.lf-ai-inline-link__empty { font-size:12px; color:#64748b; margin:0; padding:6px; }
@@ -1493,17 +1494,28 @@ function lf_ai_assistant_widget_js(): string {
 				if (typeof done === "function") done([]);
 			});
 		}
-		function lfRankInternalLinkItems(snippet, items) {
-			var q = String(snippet || "").toLowerCase().replace(/\s+/g, " ").trim();
-			var words = q.split(" ").filter(function(w){ return w.length > 2; });
+		function lfRankInternalLinkItems(snippet, items, searchQuery) {
+			var qSel = String(snippet || "").toLowerCase().replace(/\s+/g, " ").trim();
+			var qSearch = String(searchQuery || "").toLowerCase().replace(/\s+/g, " ").trim();
+			var words = qSel.split(" ").filter(function(w){ return w.length > 2; });
 			var scored = items.map(function(it){
 				var title = String(it.title || "").toLowerCase();
+				var u = String(it.url || "").toLowerCase();
 				var s = 0;
 				var i;
 				for (i = 0; i < words.length; i++) {
 					if (title.indexOf(words[i]) !== -1) s += 4;
 				}
-				if (q.length > 2 && title.indexOf(q) !== -1) s += 18;
+				if (qSel.length > 2 && title.indexOf(qSel) !== -1) s += 18;
+				if (qSearch) {
+					if (title.indexOf(qSearch) !== -1) s += 25;
+					if (u.indexOf(qSearch) !== -1) s += 15;
+					var st = qSearch.split(" ").filter(Boolean);
+					for (i = 0; i < st.length; i++) {
+						if (title.indexOf(st[i]) !== -1) s += 6;
+						if (u.indexOf(st[i]) !== -1) s += 4;
+					}
+				}
 				return { item: it, score: s };
 			});
 			scored.sort(function(a, b){ return b.score - a.score; });
@@ -1512,11 +1524,23 @@ function lf_ai_assistant_widget_js(): string {
 		function lfRenderInternalLinkList(query) {
 			var $list = $linkRoot.find("[data-lf-ai-inline-link-list]");
 			if (!$list.length) return;
-			var items = lfInlineLinkCache || [];
+			var items = (lfInlineLinkCache || []).filter(function(it){
+				return String(it.type || "") !== "lf_faq";
+			});
 			var q = String(query || "").toLowerCase().trim();
 			if (q) {
+				var tokens = q.split(/\s+/).filter(function(t){ return t.length > 0; });
 				items = items.filter(function(it){
-					return String(it.title || "").toLowerCase().indexOf(q) !== -1 || String(it.url || "").toLowerCase().indexOf(q) !== -1;
+					var hay = (String(it.title || "") + " " + String(it.url || "")).toLowerCase();
+					var ok = true;
+					var ti;
+					for (ti = 0; ti < tokens.length; ti++) {
+						if (hay.indexOf(tokens[ti]) === -1) {
+							ok = false;
+							break;
+						}
+					}
+					return ok;
 				});
 			}
 			var snippet = "";
@@ -1527,22 +1551,24 @@ function lf_ai_assistant_widget_js(): string {
 					snippet = "";
 				}
 			}
-			items = lfRankInternalLinkItems(snippet, items);
-			var max = 14;
-			var html = "";
+			items = lfRankInternalLinkItems(snippet, items, q);
+			var max = 40;
+			$list.empty();
 			var j;
 			for (j = 0; j < items.length && j < max; j++) {
 				var it = items[j];
 				var typeLabel = String(it.type || "").replace(/_/g, " ");
-				html += "<button type=\"button\" class=\"lf-ai-inline-link__row\" data-lf-ai-inline-link-pick=\"" + escapeHtml(String(it.url || "")) + "\">"
-					+ "<span>" + escapeHtml(String(it.title || "")) + "</span>"
-					+ "<small>" + escapeHtml(typeLabel) + "</small>"
-					+ "</button>";
+				var urlDisp = String(it.url || "");
+				var $btn = $("<button type=\"button\" class=\"lf-ai-inline-link__row\"></button>");
+				$btn.attr("data-lf-ai-inline-link-pick", urlDisp);
+				$btn.append($("<span></span>").text(String(it.title || "")));
+				$btn.append($("<small></small>").text(typeLabel));
+				$btn.append($("<span class=\"lf-ai-inline-link__row-url\"></span>").text(urlDisp));
+				$list.append($btn);
 			}
-			if (!html) {
-				html = "<p class=\"lf-ai-inline-link__empty\">No matches yet. Paste a URL below.</p>";
+			if (!$list.children().length) {
+				$list.append($("<p class=\"lf-ai-inline-link__empty\"></p>").text("No matches. Try different words or paste a URL below."));
 			}
-			$list.html(html);
 		}
 		function lfOpenInternalLinkPanel() {
 			if (!$linkRoot.length || !inlineActiveEl) return;
@@ -1562,12 +1588,74 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			lfInlineLinkSavedRange = range.cloneRange();
 			lfFetchInternalLinkTargets(function(){
-				lfRenderInternalLinkList($linkRoot.find("[data-lf-ai-inline-link-search]").val() || "");
+				$linkRoot.find("[data-lf-ai-inline-link-search]").val("");
+				lfRenderInternalLinkList("");
 				$linkRoot.find("[data-lf-ai-inline-link-url]").val("");
 				$linkRoot.find("[data-lf-ai-inline-link-panel]").prop("hidden", false);
 				$linkRoot.find("[data-lf-ai-inline-link-backdrop]").prop("hidden", false);
 				lfHideInlineLinkToolbar();
 			});
+		}
+		function lfNormalizeInternalLinkUrl(url) {
+			var u = String(url || "").trim();
+			if (!u) return "";
+			if (!/^https?:\/\//i.test(u) && u.indexOf("/") !== 0) {
+				u = "/" + u.replace(/^\/+/, "");
+			}
+			return u;
+		}
+		function lfInsertLinkIntoSavedRange(url) {
+			var href = lfNormalizeInternalLinkUrl(url);
+			if (!href) return false;
+			var range = lfInlineLinkSavedRange;
+			if (!range || range.collapsed || !inlineActiveEl) {
+				setStatus("Select text in the editor, then open Internal link again.", true);
+				return false;
+			}
+			var boundary = range.commonAncestorContainer;
+			var wrapEl = boundary.nodeType === 3 ? boundary.parentNode : boundary;
+			try {
+				if (!inlineActiveEl.contains(wrapEl)) {
+					setStatus("Selection is no longer in the edited text. Close the dialog and try again.", true);
+					return false;
+				}
+			} catch (errC) {
+				return false;
+			}
+			inlineActiveEl.focus();
+			var frag;
+			var linkEl = document.createElement("a");
+			linkEl.setAttribute("href", href);
+			try {
+				var sameOrigin = true;
+				try {
+					var abs = new URL(href, window.location.href);
+					sameOrigin = abs.origin === window.location.origin;
+				} catch (eO) {
+					sameOrigin = true;
+				}
+				if (!sameOrigin) {
+					linkEl.setAttribute("target", "_blank");
+					linkEl.setAttribute("rel", "noopener noreferrer");
+				}
+				frag = range.extractContents();
+				while (frag.firstChild) {
+					linkEl.appendChild(frag.firstChild);
+				}
+				range.insertNode(linkEl);
+			} catch (errIns) {
+				try {
+					inlineActiveEl.focus();
+					var sel = window.getSelection();
+					sel.removeAllRanges();
+					sel.addRange(lfInlineLinkSavedRange);
+					document.execCommand("createLink", false, href);
+				} catch (errEx) {
+					setStatus("Could not add link at this selection. Try a shorter selection.", true);
+					return false;
+				}
+			}
+			return true;
 		}
 		function lfApplyInternalLinkFromUi() {
 			if (!$linkRoot.length || !inlineActiveEl) return;
@@ -1576,20 +1664,9 @@ function lf_ai_assistant_widget_js(): string {
 				setStatus("Choose a suggestion or enter a URL.", true);
 				return;
 			}
-			if (!/^https?:\/\//i.test(url) && url.indexOf("/") !== 0) {
-				url = "/" + url.replace(/^\/+/, "");
+			if (!lfInsertLinkIntoSavedRange(url)) {
+				return;
 			}
-			inlineActiveEl.focus();
-			var sel = window.getSelection();
-			sel.removeAllRanges();
-			if (lfInlineLinkSavedRange) {
-				try {
-					sel.addRange(lfInlineLinkSavedRange);
-				} catch (errA) {}
-			}
-			try {
-				document.execCommand("createLink", false, url);
-			} catch (errC) {}
 			lfInlineLinkSavedRange = null;
 			lfHideInlineLinkPanel();
 			setStatus("Link inserted. Click away or press ⌘/Ctrl+Enter to save.", false);
@@ -1597,6 +1674,9 @@ function lf_ai_assistant_widget_js(): string {
 		function lfInitInlineLinkUi() {
 			if (!$linkRoot.length) return;
 			$linkRoot.find("[data-lf-ai-inline-link-toolbar]").on("mousedown", function(e){
+				e.preventDefault();
+			});
+			$linkRoot.on("mousedown", "[data-lf-ai-inline-link-apply], [data-lf-ai-inline-link-pick], [data-lf-ai-inline-link-close]", function(e){
 				e.preventDefault();
 			});
 			$linkRoot.find("[data-lf-ai-inline-link-open]").on("click", function(e){

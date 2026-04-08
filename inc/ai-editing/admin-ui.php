@@ -1505,7 +1505,7 @@ function lf_ai_ajax_internal_link_targets(): void {
 		'url' => home_url('/'),
 		'type' => 'home',
 	]);
-	$post_types = ['lf_service', 'lf_service_area', 'lf_faq'];
+	$post_types = ['lf_service', 'lf_service_area'];
 	foreach ($post_types as $pt) {
 		if (!post_type_exists($pt)) {
 			continue;
