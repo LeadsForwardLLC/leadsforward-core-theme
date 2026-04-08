@@ -228,7 +228,12 @@ function lf_ai_inline_overrides_frontend_script(): void {
 	$text_payload = [];
 	foreach ((array) $text_overrides as $selector => $value) {
 		$selector_clean = sanitize_text_field((string) $selector);
-		$text_clean = sanitize_textarea_field((string) $value);
+		$value_raw     = (string) $value;
+		if ( function_exists( 'lf_ai_is_inline_dom_html_string' ) && lf_ai_is_inline_dom_html_string( $value_raw ) ) {
+			$text_clean = function_exists( 'lf_ai_sanitize_inline_dom_html' ) ? lf_ai_sanitize_inline_dom_html( $value_raw ) : '';
+		} else {
+			$text_clean = sanitize_textarea_field( $value_raw );
+		}
 		if ($selector_clean === '' || $text_clean === '') {
 			continue;
 		}
@@ -271,7 +276,12 @@ function lf_ai_inline_overrides_frontend_script(): void {
 				try {
 					var node = document.querySelector(selector);
 					if (node) {
-						node.textContent = String(textMap[selector] || "");
+						var raw = String(textMap[selector] || "");
+						if (/<[a-z][\s\S]*>/i.test(raw)) {
+							node.innerHTML = raw;
+						} else {
+							node.textContent = raw;
+						}
 					}
 				} catch (e) {}
 			});
@@ -418,6 +428,31 @@ function lf_ai_assistant_render_floating_widget(): void {
 					</div>
 				</div>
 			</div>
+		</div>
+	</div>
+	<div class="lf-ai-inline-link" data-lf-ai-inline-link-root>
+		<div class="lf-ai-inline-link__toolbar" data-lf-ai-inline-link-toolbar hidden>
+			<div class="lf-ai-inline-link__toolbar-inner">
+				<button type="button" class="lf-ai-inline-link__open" data-lf-ai-inline-link-open><?php esc_html_e('Internal link', 'leadsforward-core'); ?></button>
+			</div>
+		</div>
+		<div class="lf-ai-inline-link__backdrop" data-lf-ai-inline-link-backdrop hidden></div>
+		<div class="lf-ai-inline-link__panel" data-lf-ai-inline-link-panel hidden role="dialog" aria-modal="true" aria-labelledby="lf-ai-inline-link-title">
+			<div class="lf-ai-inline-link__panel-head">
+				<strong id="lf-ai-inline-link-title"><?php esc_html_e('Link to a page', 'leadsforward-core'); ?></strong>
+				<button type="button" class="lf-ai-inline-link__x" data-lf-ai-inline-link-close aria-label="<?php esc_attr_e('Close', 'leadsforward-core'); ?>">×</button>
+			</div>
+			<p class="lf-ai-inline-link__hint"><?php esc_html_e('Suggestions are ranked by the text you selected. You can also paste any internal URL.', 'leadsforward-core'); ?></p>
+			<label class="lf-ai-inline-link__label">
+				<span><?php esc_html_e('Search', 'leadsforward-core'); ?></span>
+				<input type="search" class="lf-ai-inline-link__search" data-lf-ai-inline-link-search autocomplete="off" />
+			</label>
+			<div class="lf-ai-inline-link__list" data-lf-ai-inline-link-list></div>
+			<label class="lf-ai-inline-link__label">
+				<span><?php esc_html_e('URL', 'leadsforward-core'); ?></span>
+				<input type="url" class="lf-ai-inline-link__url" data-lf-ai-inline-link-url placeholder="https://" />
+			</label>
+			<button type="button" class="lf-ai-inline-link__apply" data-lf-ai-inline-link-apply><?php esc_html_e('Apply link', 'leadsforward-core'); ?></button>
 		</div>
 	</div>
 	<div class="lf-ai-float lf-ai-float--seo" data-lf-ai-seo-float>
@@ -773,6 +808,30 @@ function lf_ai_assistant_widget_css(): string {
 				width:auto;
 			}
 		}
+		.lf-ai-inline-link__toolbar { position:fixed; z-index:100002; }
+		.lf-ai-inline-link__toolbar[hidden] { display:none !important; }
+		.lf-ai-inline-link__toolbar-inner { display:flex; gap:6px; align-items:center; padding:6px 10px; border-radius:10px; background:#1e1b4b; color:#fff; box-shadow:0 8px 24px rgba(15,23,42,.35); font-size:12px; font-weight:600; }
+		.lf-ai-inline-link__open { border:0; border-radius:8px; background:#8348f9; color:#fff; font:inherit; font-weight:700; padding:6px 10px; cursor:pointer; }
+		.lf-ai-inline-link__open:hover { background:#6d28d9; }
+		.lf-ai-inline-link__backdrop { position:fixed; inset:0; z-index:100003; background:rgba(15,23,42,.45); }
+		.lf-ai-inline-link__backdrop[hidden] { display:none !important; }
+		.lf-ai-inline-link__panel { position:fixed; z-index:100004; left:50%; top:50%; transform:translate(-50%,-50%); width:min(400px,calc(100vw - 32px)); max-height:min(72vh,520px); overflow:auto; background:#fff; border:1px solid #dbe3ef; border-radius:14px; box-shadow:0 18px 55px rgba(15,23,42,.28); padding:14px; display:flex; flex-direction:column; gap:10px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
+		.lf-ai-inline-link__panel[hidden] { display:none !important; }
+		.lf-ai-inline-link__panel-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+		.lf-ai-inline-link__panel-head strong { font-size:14px; color:#0f172a; }
+		.lf-ai-inline-link__x { border:1px solid #e2e8f0; background:#fff; width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:18px; line-height:1; color:#475569; }
+		.lf-ai-inline-link__hint { margin:0; font-size:12px; color:#64748b; line-height:1.45; }
+		.lf-ai-inline-link__label { display:flex; flex-direction:column; gap:4px; font-size:11px; font-weight:600; color:#475569; }
+		.lf-ai-inline-link__label input { border:1px solid #d6c8fb; border-radius:8px; padding:8px 10px; font-size:13px; width:100%; box-sizing:border-box; }
+		.lf-ai-inline-link__list { display:flex; flex-direction:column; gap:4px; max-height:220px; overflow:auto; border:1px solid #e2e8f0; border-radius:10px; padding:6px; background:#f8fafc; }
+		.lf-ai-inline-link__row { display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:left; width:100%; padding:8px 10px; border:0; border-radius:8px; background:#fff; cursor:pointer; font-size:12px; color:#0f172a; }
+		.lf-ai-inline-link__row:hover { background:#f5f3ff; }
+		.lf-ai-inline-link__row small { font-size:10px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
+		.lf-ai-inline-link__apply { align-self:flex-end; border:0; border-radius:10px; padding:8px 14px; font-weight:700; font-size:13px; cursor:pointer; background:linear-gradient(180deg,#7c3aed 0%,#6d28d9 100%); color:#fff; }
+		.lf-ai-inline-link__apply:hover { background:linear-gradient(180deg,#6d28d9 0%,#5b21b6 100%); }
+		.lf-ai-inline-link__empty { font-size:12px; color:#64748b; margin:0; padding:6px; }
+		.lf-ai-inline-link { pointer-events:none; }
+		.lf-ai-inline-link__toolbar, .lf-ai-inline-link__panel, .lf-ai-inline-link__backdrop { pointer-events:auto; }
 	';
 }
 
@@ -782,6 +841,7 @@ function lf_ai_assistant_widget_js(): string {
 		var stateKey = "lfAiFloatState";
 		var seoStateKey = "lfAiSeoFloatState";
 		var $root = $("[data-lf-ai-float]");
+		var $linkRoot = $("[data-lf-ai-inline-link-root]");
 		var $seoRoot = $("[data-lf-ai-seo-float]");
 		if (!$root.length || typeof lfAiFloating === "undefined") return;
 		$root.attr("data-lf-ai-js-init", "1");
@@ -865,6 +925,7 @@ function lf_ai_assistant_widget_js(): string {
 		var inlineQuickEdit = null;
 		var inlineActiveEl = null;
 		var inlineOriginalText = "";
+		var inlineOriginalHtml = "";
 		var inlineIsSaving = false;
 		var activeDragSection = null;
 		var activeColumnDrag = null;
@@ -1363,6 +1424,217 @@ function lf_ai_assistant_widget_js(): string {
 			$status.text(msg || "");
 			$status.toggleClass("is-error", !!isError);
 		}
+		var lfInlineLinkSavedRange = null;
+		var lfInlineLinkCache = null;
+		var lfInlineLinkCacheLoading = false;
+		var lfInlineLinkSelTimer = null;
+		function lfHideInlineLinkToolbar() {
+			if ($linkRoot.length) {
+				$linkRoot.find("[data-lf-ai-inline-link-toolbar]").prop("hidden", true);
+			}
+		}
+		function lfHideInlineLinkPanel() {
+			if (!$linkRoot.length) return;
+			$linkRoot.find("[data-lf-ai-inline-link-panel]").prop("hidden", true);
+			$linkRoot.find("[data-lf-ai-inline-link-backdrop]").prop("hidden", true);
+			lfInlineLinkSavedRange = null;
+		}
+		function lfPositionInlineLinkToolbar() {
+			if (!$linkRoot.length || !inlineActiveEl) return;
+			var sel = window.getSelection();
+			if (!sel.rangeCount || sel.isCollapsed) {
+				lfHideInlineLinkToolbar();
+				return;
+			}
+			var range = sel.getRangeAt(0);
+			try {
+				if (!inlineActiveEl.contains(range.commonAncestorContainer)) {
+					lfHideInlineLinkToolbar();
+					return;
+				}
+			} catch (errRange) {
+				lfHideInlineLinkToolbar();
+				return;
+			}
+			var t = String(sel.toString() || "").trim();
+			if (t.length < 2) {
+				lfHideInlineLinkToolbar();
+				return;
+			}
+			var rect = range.getBoundingClientRect();
+			if (rect.width === 0 && rect.height === 0) {
+				lfHideInlineLinkToolbar();
+				return;
+			}
+			var $tb = $linkRoot.find("[data-lf-ai-inline-link-toolbar]");
+			var top = rect.bottom + 6;
+			var left = rect.left;
+			$tb.css({ position: "fixed", top: top + "px", left: Math.max(8, left) + "px" });
+			$tb.prop("hidden", false);
+		}
+		function lfFetchInternalLinkTargets(done) {
+			if (lfInlineLinkCache) {
+				if (typeof done === "function") done(lfInlineLinkCache);
+				return;
+			}
+			if (lfInlineLinkCacheLoading) return;
+			lfInlineLinkCacheLoading = true;
+			$.post(lfAiFloating.ajax_url, { action: "lf_ai_internal_link_targets", nonce: lfAiFloating.nonce }).done(function(res){
+				lfInlineLinkCacheLoading = false;
+				if (res && res.success && res.data && Array.isArray(res.data.items)) {
+					lfInlineLinkCache = res.data.items;
+				} else {
+					lfInlineLinkCache = [];
+				}
+				if (typeof done === "function") done(lfInlineLinkCache);
+			}).fail(function(){
+				lfInlineLinkCacheLoading = false;
+				lfInlineLinkCache = [];
+				if (typeof done === "function") done([]);
+			});
+		}
+		function lfRankInternalLinkItems(snippet, items) {
+			var q = String(snippet || "").toLowerCase().replace(/\s+/g, " ").trim();
+			var words = q.split(" ").filter(function(w){ return w.length > 2; });
+			var scored = items.map(function(it){
+				var title = String(it.title || "").toLowerCase();
+				var s = 0;
+				var i;
+				for (i = 0; i < words.length; i++) {
+					if (title.indexOf(words[i]) !== -1) s += 4;
+				}
+				if (q.length > 2 && title.indexOf(q) !== -1) s += 18;
+				return { item: it, score: s };
+			});
+			scored.sort(function(a, b){ return b.score - a.score; });
+			return scored.map(function(x){ return x.item; });
+		}
+		function lfRenderInternalLinkList(query) {
+			var $list = $linkRoot.find("[data-lf-ai-inline-link-list]");
+			if (!$list.length) return;
+			var items = lfInlineLinkCache || [];
+			var q = String(query || "").toLowerCase().trim();
+			if (q) {
+				items = items.filter(function(it){
+					return String(it.title || "").toLowerCase().indexOf(q) !== -1 || String(it.url || "").toLowerCase().indexOf(q) !== -1;
+				});
+			}
+			var snippet = "";
+			if (lfInlineLinkSavedRange) {
+				try {
+					snippet = lfInlineLinkSavedRange.toString();
+				} catch (eSn) {
+					snippet = "";
+				}
+			}
+			items = lfRankInternalLinkItems(snippet, items);
+			var max = 14;
+			var html = "";
+			var j;
+			for (j = 0; j < items.length && j < max; j++) {
+				var it = items[j];
+				var typeLabel = String(it.type || "").replace(/_/g, " ");
+				html += "<button type=\"button\" class=\"lf-ai-inline-link__row\" data-lf-ai-inline-link-pick=\"" + escapeHtml(String(it.url || "")) + "\">"
+					+ "<span>" + escapeHtml(String(it.title || "")) + "</span>"
+					+ "<small>" + escapeHtml(typeLabel) + "</small>"
+					+ "</button>";
+			}
+			if (!html) {
+				html = "<p class=\"lf-ai-inline-link__empty\">No matches yet. Paste a URL below.</p>";
+			}
+			$list.html(html);
+		}
+		function lfOpenInternalLinkPanel() {
+			if (!$linkRoot.length || !inlineActiveEl) return;
+			var sel = window.getSelection();
+			if (!sel.rangeCount || sel.isCollapsed) {
+				setStatus("Select text, then add an internal link.", true);
+				return;
+			}
+			var range = sel.getRangeAt(0);
+			try {
+				if (!inlineActiveEl.contains(range.commonAncestorContainer)) {
+					setStatus("Selection must be inside the text you are editing.", true);
+					return;
+				}
+			} catch (errO) {
+				return;
+			}
+			lfInlineLinkSavedRange = range.cloneRange();
+			lfFetchInternalLinkTargets(function(){
+				lfRenderInternalLinkList($linkRoot.find("[data-lf-ai-inline-link-search]").val() || "");
+				$linkRoot.find("[data-lf-ai-inline-link-url]").val("");
+				$linkRoot.find("[data-lf-ai-inline-link-panel]").prop("hidden", false);
+				$linkRoot.find("[data-lf-ai-inline-link-backdrop]").prop("hidden", false);
+				lfHideInlineLinkToolbar();
+			});
+		}
+		function lfApplyInternalLinkFromUi() {
+			if (!$linkRoot.length || !inlineActiveEl) return;
+			var url = String($linkRoot.find("[data-lf-ai-inline-link-url]").val() || "").trim();
+			if (!url) {
+				setStatus("Choose a suggestion or enter a URL.", true);
+				return;
+			}
+			if (!/^https?:\/\//i.test(url) && url.indexOf("/") !== 0) {
+				url = "/" + url.replace(/^\/+/, "");
+			}
+			inlineActiveEl.focus();
+			var sel = window.getSelection();
+			sel.removeAllRanges();
+			if (lfInlineLinkSavedRange) {
+				try {
+					sel.addRange(lfInlineLinkSavedRange);
+				} catch (errA) {}
+			}
+			try {
+				document.execCommand("createLink", false, url);
+			} catch (errC) {}
+			lfInlineLinkSavedRange = null;
+			lfHideInlineLinkPanel();
+			setStatus("Link inserted. Click away or press ⌘/Ctrl+Enter to save.", false);
+		}
+		function lfInitInlineLinkUi() {
+			if (!$linkRoot.length) return;
+			$linkRoot.find("[data-lf-ai-inline-link-toolbar]").on("mousedown", function(e){
+				e.preventDefault();
+			});
+			$linkRoot.find("[data-lf-ai-inline-link-open]").on("click", function(e){
+				e.preventDefault();
+				lfOpenInternalLinkPanel();
+			});
+			$linkRoot.find("[data-lf-ai-inline-link-close], [data-lf-ai-inline-link-backdrop]").on("click", function(e){
+				e.preventDefault();
+				lfHideInlineLinkPanel();
+			});
+			$linkRoot.find("[data-lf-ai-inline-link-apply]").on("click", function(e){
+				e.preventDefault();
+				lfApplyInternalLinkFromUi();
+			});
+			$linkRoot.on("click", "[data-lf-ai-inline-link-pick]", function(e){
+				e.preventDefault();
+				var u = $(this).attr("data-lf-ai-inline-link-pick") || "";
+				$linkRoot.find("[data-lf-ai-inline-link-url]").val(u);
+				lfApplyInternalLinkFromUi();
+			});
+			$linkRoot.find("[data-lf-ai-inline-link-search]").on("input", function(){
+				lfRenderInternalLinkList($(this).val() || "");
+			});
+		}
+		lfInitInlineLinkUi();
+		document.addEventListener("selectionchange", function(){
+			clearTimeout(lfInlineLinkSelTimer);
+			lfInlineLinkSelTimer = setTimeout(function(){
+				if (!inlineActiveEl) {
+					lfHideInlineLinkToolbar();
+					return;
+				}
+				if ($linkRoot.length && !$linkRoot.find("[data-lf-ai-inline-link-panel]").prop("hidden")) {
+					return;
+				}
+				lfPositionInlineLinkToolbar();
+			}, 90);
+		});
 		function updateLauncherOffsets() {
 			if (!$seoRoot.length || !$toggle.length) return;
 			var narrow = false;
@@ -1385,6 +1657,8 @@ function lf_ai_assistant_widget_js(): string {
 				try { window.localStorage.setItem(seoStateKey, "closed"); } catch (e) {}
 			}
 			if (!open) {
+				lfHideInlineLinkToolbar();
+				lfHideInlineLinkPanel();
 				saveInlineEdit();
 			}
 			try { window.localStorage.setItem(stateKey, open ? "open" : "closed"); } catch (e) {}
@@ -1397,6 +1671,8 @@ function lf_ai_assistant_widget_js(): string {
 				setConfirmOpen(false);
 				$panel.prop("hidden", true);
 				$toggle.attr("aria-expanded", "false");
+				lfHideInlineLinkToolbar();
+				lfHideInlineLinkPanel();
 				saveInlineEdit();
 				try { window.localStorage.setItem(stateKey, "closed"); } catch (e) {}
 				renderSeoSnapshot();
@@ -1411,6 +1687,8 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function clearEditorUi() {
 			try { document.documentElement.classList.remove("lf-ai-editor-on"); } catch (eCls) {}
+			lfHideInlineLinkToolbar();
+			lfHideInlineLinkPanel();
 			saveInlineEdit();
 			cancelInlineEdit(false);
 			selectedSectionWrap = null;
@@ -5146,6 +5424,7 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			inlineActiveEl = el;
 			inlineOriginalText = String(el.textContent || "").trim();
+			inlineOriginalHtml = String(el.innerHTML || "").trim();
 			el.setAttribute("data-lf-inline-active", "1");
 			el.setAttribute("contenteditable", "true");
 			el.setAttribute("spellcheck", "true");
@@ -5163,13 +5442,14 @@ function lf_ai_assistant_widget_js(): string {
 			if (!inlineActiveEl) {
 				return;
 			}
-			inlineActiveEl.textContent = inlineOriginalText;
+			inlineActiveEl.innerHTML = inlineOriginalHtml;
 			inlineActiveEl.removeAttribute("contenteditable");
 			inlineActiveEl.removeAttribute("spellcheck");
 			inlineActiveEl.removeAttribute("data-lf-inline-active");
 			inlineActiveEl.removeAttribute("data-lf-inline-saving");
 			inlineActiveEl = null;
 			inlineOriginalText = "";
+			inlineOriginalHtml = "";
 			if (showStatus !== false) {
 				setStatus("Inline edit cancelled.", false);
 			}
@@ -5182,36 +5462,43 @@ function lf_ai_assistant_widget_js(): string {
 			var el = inlineActiveEl;
 			var selector = String(el.getAttribute("data-lf-inline-selector") || "");
 			var fieldKey = String(el.getAttribute("data-lf-inline-field-key") || "");
-			var value = String(el.textContent || "").trim();
+			var newText = String(el.textContent || "").trim();
+			var newHtml = String(el.innerHTML || "").trim();
+			var origHtml = String(inlineOriginalHtml || "").trim();
+			var textChanged = (newText !== inlineOriginalText);
+			var htmlChanged = (newHtml !== origHtml);
 			if (!selector && !fieldKey) {
 				setStatus("Invalid inline target.", true);
 				if (typeof done === "function") done();
 				return;
 			}
-			if (value === "") {
+			if (newText === "") {
 				setStatus("Text cannot be empty.", true);
 				if (typeof done === "function") done();
 				return;
 			}
-			if (value === inlineOriginalText) {
+			if (!textChanged && !htmlChanged) {
 				el.removeAttribute("contenteditable");
 				el.removeAttribute("spellcheck");
 				el.removeAttribute("data-lf-inline-active");
 				el.removeAttribute("data-lf-inline-saving");
 				inlineActiveEl = null;
 				inlineOriginalText = "";
+				inlineOriginalHtml = "";
 				if (typeof done === "function") done();
 				return;
 			}
 			inlineIsSaving = true;
 			el.setAttribute("data-lf-inline-saving", "1");
 			setStatus("Saving inline edit...", false);
+			var useHtml = /<[a-z]/i.test(newHtml);
 			var payload = {
 				action: "lf_ai_inline_save",
 				nonce: lfAiFloating.nonce,
 				context_type: activeContextType,
 				context_id: activeContextId,
-				value: value
+				value: useHtml ? newHtml : newText,
+				value_format: useHtml ? "html" : "text"
 			};
 			if (fieldKey) {
 				payload.field_key = fieldKey;
@@ -5227,6 +5514,7 @@ function lf_ai_assistant_widget_js(): string {
 					if (inlineActiveEl === el) {
 						inlineActiveEl = null;
 						inlineOriginalText = "";
+						inlineOriginalHtml = "";
 					}
 					setStatus("Saved. Use the ↶ icon to undo (repeat to go back further).", false);
 				} else {
@@ -5997,6 +6285,11 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			if (inlineActiveEl) {
 				if (e.key === "Escape" || e.keyCode === 27) {
+					if ($linkRoot.length && !$linkRoot.find("[data-lf-ai-inline-link-panel]").prop("hidden")) {
+						e.preventDefault();
+						lfHideInlineLinkPanel();
+						return;
+					}
 					e.preventDefault();
 					cancelInlineEdit(true);
 					return;
@@ -6004,6 +6297,11 @@ function lf_ai_assistant_widget_js(): string {
 				if ((e.ctrlKey || e.metaKey) && (e.key === "Enter" || e.keyCode === 13)) {
 					e.preventDefault();
 					saveInlineEdit();
+					return;
+				}
+				if ((e.ctrlKey || e.metaKey) && keyLower === "l") {
+					e.preventDefault();
+					lfOpenInternalLinkPanel();
 					return;
 				}
 			}

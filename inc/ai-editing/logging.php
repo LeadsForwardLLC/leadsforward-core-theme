@@ -100,6 +100,40 @@ function lf_ai_get_log_entry(string $id): ?array {
 }
 
 /**
+ * Allowed inline HTML for frontend DOM overrides (links and minimal emphasis).
+ *
+ * @return array<string, array<string, bool>>
+ */
+function lf_ai_inline_link_allowed_kses(): array {
+	return [
+		'a'      => [
+			'href'   => true,
+			'title'  => true,
+			'target' => true,
+			'rel'    => true,
+			'class'  => true,
+		],
+		'br'     => [],
+		'strong' => [],
+		'em'     => [],
+		'b'      => [],
+		'i'      => [],
+	];
+}
+
+function lf_ai_sanitize_inline_dom_html( string $html ): string {
+	return trim( wp_kses( $html, lf_ai_inline_link_allowed_kses() ) );
+}
+
+function lf_ai_is_inline_dom_html_string( string $value ): bool {
+	$value = trim( $value );
+	if ( $value === '' ) {
+		return false;
+	}
+	return (bool) preg_match( '/<[a-z][^>]*>/i', $value );
+}
+
+/**
  * Get persisted inline DOM text overrides for a context.
  */
 function lf_ai_get_inline_dom_overrides(string $context_type, $context_id): array {
@@ -124,7 +158,12 @@ function lf_ai_set_inline_dom_overrides(string $context_type, $context_id, array
 		if ($selector_clean === '') {
 			continue;
 		}
-		$value_clean = sanitize_textarea_field((string) $value);
+		$value_raw = (string) $value;
+		if ( lf_ai_is_inline_dom_html_string( $value_raw ) ) {
+			$value_clean = lf_ai_sanitize_inline_dom_html( $value_raw );
+		} else {
+			$value_clean = trim( sanitize_textarea_field( $value_raw ) );
+		}
 		if ($value_clean === '') {
 			continue;
 		}

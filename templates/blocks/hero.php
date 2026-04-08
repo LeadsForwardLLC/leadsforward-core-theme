@@ -75,6 +75,13 @@ if ($subheading === '' && empty($context['homepage'])) {
 	}
 }
 
+$subheading_html = '';
+if ($subheading !== '') {
+	$subheading_html = function_exists('lf_ai_inline_link_allowed_kses')
+		? wp_kses((string) $subheading, lf_ai_inline_link_allowed_kses())
+		: esc_html((string) $subheading);
+}
+
 if ($business_name !== '') {
 	$heading = str_replace(['[Your Business]', '[Your Business Name]', '{business_name}'], $business_name, $heading);
 }
@@ -314,7 +321,7 @@ $hero_combined_style = trim(
 						<<?php echo esc_html($heading_tag); ?> class="lf-hero-basic__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
 					<?php endif; ?>
 					<?php if ($subheading !== '') : ?>
-						<p class="lf-hero-basic__subtitle"><?php echo esc_html($subheading); ?></p>
+						<p class="lf-hero-basic__subtitle"><?php echo $subheading_html; ?></p>
 					<?php endif; ?>
 					<?php if ($show_cta_group) : ?>
 						<div class="lf-hero-basic__actions">
@@ -362,7 +369,7 @@ $hero_combined_style = trim(
 					<<?php echo esc_html($heading_tag); ?> class="lf-hero-stack__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
 				<?php endif; ?>
 				<?php if ($subheading !== '') : ?>
-					<p class="lf-hero-stack__subtitle"><?php echo esc_html($subheading); ?></p>
+					<p class="lf-hero-stack__subtitle"><?php echo $subheading_html; ?></p>
 				<?php endif; ?>
 				<?php if ($hero_chips_html !== '') : ?>
 					<div class="lf-hero-stack__chips"><?php echo $hero_chips_html; ?></div>
@@ -409,7 +416,7 @@ $hero_combined_style = trim(
 						<<?php echo esc_html($heading_tag); ?> class="lf-hero-form__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
 					<?php endif; ?>
 					<?php if ($subheading !== '') : ?>
-						<p class="lf-hero-form__subtitle"><?php echo esc_html($subheading); ?></p>
+						<p class="lf-hero-form__subtitle"><?php echo $subheading_html; ?></p>
 					<?php endif; ?>
 					<?php if ($hero_chips_html !== '') : ?>
 						<div class="lf-hero-form__chips"><?php echo $hero_chips_html; ?></div>
@@ -453,7 +460,7 @@ $hero_combined_style = trim(
 						<<?php echo esc_html($heading_tag); ?> class="lf-hero-visual__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
 					<?php endif; ?>
 					<?php if ($subheading !== '') : ?>
-						<p class="lf-hero-visual__subtitle"><?php echo esc_html($subheading); ?></p>
+						<p class="lf-hero-visual__subtitle"><?php echo $subheading_html; ?></p>
 					<?php endif; ?>
 					<?php if ($hero_chips_html !== '') : ?>
 						<div class="lf-hero-visual__chips"><?php echo $hero_chips_html; ?></div>
@@ -534,7 +541,7 @@ $hero_combined_style = trim(
 						<<?php echo esc_html($heading_tag); ?> class="lf-hero-split__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
 					<?php endif; ?>
 					<?php if ($subheading !== '') : ?>
-						<p class="lf-hero-split__subtitle"><?php echo esc_html($subheading); ?></p>
+						<p class="lf-hero-split__subtitle"><?php echo $subheading_html; ?></p>
 					<?php endif; ?>
 					<?php if ($hero_chips_html !== '') : ?>
 						<div class="lf-hero-split__chips"><?php echo $hero_chips_html; ?></div>

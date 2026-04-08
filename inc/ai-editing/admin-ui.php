@@ -555,6 +555,7 @@ add_action('wp_ajax_lf_ai_rollback_latest', 'lf_ai_ajax_rollback_latest');
 add_action('wp_ajax_lf_ai_redo_latest', 'lf_ai_ajax_redo_latest');
 add_action('wp_ajax_lf_ai_extract_context_doc', 'lf_ai_ajax_extract_context_doc');
 add_action('wp_ajax_lf_ai_inline_save', 'lf_ai_ajax_inline_save');
+add_action('wp_ajax_lf_ai_internal_link_targets', 'lf_ai_ajax_internal_link_targets');
 add_action('wp_ajax_lf_ai_inline_rewrite', 'lf_ai_ajax_inline_rewrite');
 add_action('wp_ajax_lf_ai_inline_image_save', 'lf_ai_ajax_inline_image_save');
 add_action('wp_ajax_lf_ai_seo_snapshot', 'lf_ai_ajax_seo_snapshot');
@@ -1406,13 +1407,22 @@ function lf_ai_ajax_inline_save(): void {
 	$field_key = isset($_POST['field_key']) ? sanitize_text_field(wp_unslash($_POST['field_key'])) : '';
 	$selector = isset($_POST['selector']) ? sanitize_text_field(wp_unslash($_POST['selector'])) : '';
 	$value_raw = isset($_POST['value']) ? (string) wp_unslash($_POST['value']) : '';
-	$value = trim(sanitize_textarea_field($value_raw));
+	$value_format = isset($_POST['value_format']) ? sanitize_text_field(wp_unslash($_POST['value_format'])) : 'text';
+	if ($value_format === 'html' && function_exists('lf_ai_sanitize_inline_dom_html')) {
+		$value = lf_ai_sanitize_inline_dom_html($value_raw);
+	} else {
+		$value = trim(sanitize_textarea_field($value_raw));
+	}
 	if ($context_type === '' || $context_id === '') {
 		wp_send_json_error(['message' => __('Invalid request payload.', 'leadsforward-core')]);
 	}
 	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
-	if (strlen($value) > 4000) {
+	$plain_len = function_exists('mb_strlen') ? mb_strlen(wp_strip_all_tags($value)) : strlen(wp_strip_all_tags($value));
+	if ($plain_len > 4000) {
 		wp_send_json_error(['message' => __('Text is too long for inline editing.', 'leadsforward-core')]);
+	}
+	if (trim(wp_strip_all_tags($value)) === '') {
+		wp_send_json_error(['message' => __('Text cannot be empty.', 'leadsforward-core')]);
 	}
 
 	// New site-wide inline text path: selector-based DOM text overrides.
@@ -1463,6 +1473,86 @@ function lf_ai_ajax_inline_save(): void {
 		'value' => $value,
 		'log_id' => (string) ($result['log_id'] ?? ''),
 	]);
+}
+
+function lf_ai_ajax_internal_link_targets(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$items = [];
+	$seen_urls = [];
+	$push = static function (array $row) use (&$items, &$seen_urls): void {
+		$url = isset($row['url']) ? esc_url_raw((string) $row['url']) : '';
+		if ($url === '') {
+			return;
+		}
+		$key = strtolower($url);
+		if (isset($seen_urls[$key])) {
+			return;
+		}
+		$seen_urls[$key] = true;
+		$items[] = [
+			'id' => (int) ($row['id'] ?? 0),
+			'title' => sanitize_text_field((string) ($row['title'] ?? '')),
+			'url' => $url,
+			'type' => sanitize_key((string) ($row['type'] ?? 'page')),
+		];
+	};
+	$push([
+		'id' => 0,
+		'title' => get_bloginfo('name') ?: __('Home', 'leadsforward-core'),
+		'url' => home_url('/'),
+		'type' => 'home',
+	]);
+	$post_types = ['lf_service', 'lf_service_area', 'lf_faq'];
+	foreach ($post_types as $pt) {
+		if (!post_type_exists($pt)) {
+			continue;
+		}
+		$q = get_posts([
+			'post_type' => $pt,
+			'post_status' => 'publish',
+			'posts_per_page' => 400,
+			'orderby' => 'title',
+			'order' => 'ASC',
+			'no_found_rows' => true,
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
+		]);
+		foreach ($q as $p) {
+			if (!$p instanceof \WP_Post) {
+				continue;
+			}
+			$push([
+				'id' => (int) $p->ID,
+				'title' => get_the_title($p),
+				'url' => get_permalink($p),
+				'type' => $pt,
+			]);
+		}
+	}
+	$pages = get_posts([
+		'post_type' => 'page',
+		'post_status' => 'publish',
+		'posts_per_page' => 200,
+		'orderby' => 'title',
+		'order' => 'ASC',
+		'no_found_rows' => true,
+		'update_post_meta_cache' => false,
+	]);
+	foreach ($pages as $p) {
+		if (!$p instanceof \WP_Post) {
+			continue;
+		}
+		$push([
+			'id' => (int) $p->ID,
+			'title' => get_the_title($p),
+			'url' => get_permalink($p),
+			'type' => 'page',
+		]);
+	}
+	wp_send_json_success(['items' => $items]);
 }
 
 function lf_ai_ajax_inline_rewrite(): void {
