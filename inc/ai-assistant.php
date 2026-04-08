@@ -5076,7 +5076,17 @@ function lf_ai_assistant_widget_js(): string {
 				wrap.setAttribute("draggable", "true");
 				wrap.ondragstart = function(e){
 					if (isDragBlockedTarget(e.target)) {
-						e.preventDefault();
+						// Allow nested draggable controls (e.g. column swap drag handles) to work.
+						// Only cancel when the blocked target is not itself part of another draggable UI.
+						var nestedDraggable = null;
+						try {
+							nestedDraggable = e && e.target && e.target.closest ? e.target.closest("[draggable=true]") : null;
+						} catch (err) {
+							nestedDraggable = null;
+						}
+						if (!nestedDraggable || nestedDraggable === wrap) {
+							e.preventDefault();
+						}
 						return;
 					}
 					if (activeColumnDrag) {
