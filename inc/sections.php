@@ -1482,8 +1482,18 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 		}
 		$title_text = trim($title_text);
 		$body_text = trim($body_text);
-		$title_text = wp_trim_words($title_text, $title_limit, '');
-		$body_text = wp_trim_words($body_text, $body_limit, '');
+		$trim_unless_html = static function ( string $text, int $limit ): string {
+			$text = trim( $text );
+			if ( $text === '' ) {
+				return '';
+			}
+			if ( preg_match( '/<[a-z][^>]*>/i', $text ) ) {
+				return $text;
+			}
+			return wp_trim_words( $text, $limit, '' );
+		};
+		$title_text = $trim_unless_html( $title_text, $title_limit );
+		$body_text  = $trim_unless_html( $body_text, $body_limit );
 		$parsed_items[] = [
 			'title' => $title_text,
 			'body' => $body_text,
@@ -1507,8 +1517,20 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 			<?php if ($item['body'] === '') : ?>
 				<?php $item['body'] = lf_sections_benefits_supporting_text($item['title'], $index, $default_items); ?>
 			<?php endif; ?>
-			<?php $item['title'] = wp_trim_words($item['title'], $title_limit, ''); ?>
-			<?php $item['body'] = wp_trim_words($item['body'], $body_limit, ''); ?>
+			<?php
+			$trim_unless_html2 = static function ( string $text, int $limit ): string {
+				$text = trim( $text );
+				if ( $text === '' ) {
+					return '';
+				}
+				if ( preg_match( '/<[a-z][^>]*>/i', $text ) ) {
+					return $text;
+				}
+				return wp_trim_words( $text, $limit, '' );
+			};
+			$item['title'] = $trim_unless_html2( (string) $item['title'], $title_limit );
+			$item['body']  = $trim_unless_html2( (string) $item['body'], $body_limit );
+			?>
 			<?php
 			$line_attr = (string) ($item['source_line'] ?? '');
 			if ($line_attr === '' && ($item['title'] !== '' || $item['body'] !== '')) {
@@ -1525,8 +1547,8 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 						</span>
 					<?php endif; ?>
 				<?php endif; ?>
-				<h3 class="lf-benefits__title"><?php echo esc_html($item['title']); ?></h3>
-				<p class="lf-benefits__desc"><?php echo esc_html($item['body']); ?></p>
+				<h3 class="lf-benefits__title"><?php echo wp_kses( (string) $item['title'], function_exists( 'lf_ai_inline_link_allowed_kses' ) ? lf_ai_inline_link_allowed_kses() : [] ); ?></h3>
+				<p class="lf-benefits__desc"><?php echo wp_kses( (string) $item['body'], function_exists( 'lf_ai_inline_link_allowed_kses' ) ? lf_ai_inline_link_allowed_kses() : [] ); ?></p>
 			</div>
 		<?php endforeach; ?>
 	</div>
@@ -1719,7 +1741,7 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 				<ul class="<?php echo esc_attr($checklist_class); ?>" role="list">
 					<?php foreach ($checklist as $item) : ?>
 						<li>
-							<span class="lf-service-details__text"><?php echo esc_html($item); ?></span>
+							<span class="lf-service-details__text"><?php echo wp_kses( (string) $item, function_exists( 'lf_ai_inline_link_allowed_kses' ) ? lf_ai_inline_link_allowed_kses() : [] ); ?></span>
 						</li>
 					<?php endforeach; ?>
 				</ul>

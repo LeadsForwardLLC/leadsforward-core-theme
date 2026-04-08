@@ -507,7 +507,7 @@ $hero_combined_style = trim(
 								<div class="lf-block-hero__card-title"><?php echo esc_html($proof_title ?: $proof_default_title); ?></div>
 								<ul class="lf-block-hero__card-list" role="list">
 									<?php foreach ($proof_items as $item) : ?>
-										<li><?php echo esc_html($item); ?></li>
+										<li><span class="lf-block-hero__card-item-text"><?php echo wp_kses( (string) $item, function_exists( 'lf_ai_inline_link_allowed_kses' ) ? lf_ai_inline_link_allowed_kses() : [] ); ?></span></li>
 									<?php endforeach; ?>
 								</ul>
 							</div>
@@ -577,7 +577,7 @@ $hero_combined_style = trim(
 						<div class="lf-block-hero__card-title"><?php echo esc_html($proof_title ?: $proof_default_title); ?></div>
 						<ul class="lf-block-hero__card-list" role="list">
 							<?php foreach ($proof_items as $item) : ?>
-								<li><?php echo esc_html($item); ?></li>
+								<li><span class="lf-block-hero__card-item-text"><?php echo wp_kses( (string) $item, function_exists( 'lf_ai_inline_link_allowed_kses' ) ? lf_ai_inline_link_allowed_kses() : [] ); ?></span></li>
 							<?php endforeach; ?>
 						</ul>
 					</div>

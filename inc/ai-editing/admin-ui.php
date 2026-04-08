@@ -1753,7 +1753,8 @@ function lf_ai_ajax_update_section_checklist(): void {
 	}
 	$items = [];
 	foreach ($items_decoded as $item) {
-		$value = trim(sanitize_textarea_field((string) $item));
+		$raw = (string) $item;
+		$value = function_exists('lf_ai_sanitize_inline_dom_html') ? lf_ai_sanitize_inline_dom_html($raw) : trim(sanitize_textarea_field($raw));
 		if ($value === '') {
 			continue;
 		}
@@ -1860,7 +1861,8 @@ function lf_ai_ajax_update_hero_pills(): void {
 	$field_key = $list_kind === 'proof' ? 'hero_proof_bullets' : 'hero_chip_bullets';
 	$items = [];
 	foreach ($items_decoded as $item) {
-		$value = trim(sanitize_text_field((string) $item));
+		$raw = (string) $item;
+		$value = function_exists('lf_ai_sanitize_inline_dom_html') ? lf_ai_sanitize_inline_dom_html($raw) : trim(sanitize_text_field($raw));
 		if ($value === '') {
 			continue;
 		}
@@ -2381,7 +2383,14 @@ function lf_ai_ajax_update_section_lines(): void {
 	}
 	$items = [];
 	foreach ($items_decoded as $item) {
-		$value = trim(sanitize_text_field((string) $item));
+		$raw = (string) $item;
+		if ($field_key === 'benefits_items' && function_exists('lf_ai_sanitize_benefits_items_line')) {
+			$value = lf_ai_sanitize_benefits_items_line($raw);
+		} elseif (in_array($field_key, ['hero_proof_bullets', 'hero_chip_bullets', 'trust_badges'], true) && function_exists('lf_ai_sanitize_inline_dom_html')) {
+			$value = lf_ai_sanitize_inline_dom_html($raw);
+		} else {
+			$value = trim(sanitize_text_field($raw));
+		}
 		if ($value === '') {
 			continue;
 		}
