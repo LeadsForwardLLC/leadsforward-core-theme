@@ -452,6 +452,10 @@ function lf_ai_assistant_render_floating_widget(): void {
 				<span><?php esc_html_e('URL', 'leadsforward-core'); ?></span>
 				<input type="url" class="lf-ai-inline-link__url" data-lf-ai-inline-link-url placeholder="https://" />
 			</label>
+			<label class="lf-ai-inline-link__newtab">
+				<input type="checkbox" data-lf-ai-inline-link-newtab />
+				<span><?php esc_html_e('Open in new tab', 'leadsforward-core'); ?></span>
+			</label>
 			<button type="button" class="lf-ai-inline-link__apply" data-lf-ai-inline-link-apply><?php esc_html_e('Apply link', 'leadsforward-core'); ?></button>
 		</div>
 	</div>
@@ -828,6 +832,8 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-inline-link__row:hover { background:#f5f3ff; }
 		.lf-ai-inline-link__row small { font-size:10px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
 		.lf-ai-inline-link__row-url { font-size:10px; color:#64748b; line-height:1.35; word-break:break-all; margin-top:2px; }
+		.lf-ai-inline-link__newtab { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:#475569; cursor:pointer; user-select:none; margin:0; }
+		.lf-ai-inline-link__newtab input { width:auto; margin:0; cursor:pointer; }
 		.lf-ai-inline-link__apply { align-self:flex-end; border:0; border-radius:10px; padding:8px 14px; font-weight:700; font-size:13px; cursor:pointer; background:linear-gradient(180deg,#7c3aed 0%,#6d28d9 100%); color:#fff; }
 		.lf-ai-inline-link__apply:hover { background:linear-gradient(180deg,#6d28d9 0%,#5b21b6 100%); }
 		.lf-ai-inline-link__empty { font-size:12px; color:#64748b; margin:0; padding:6px; }
@@ -971,7 +977,7 @@ function lf_ai_assistant_widget_js(): string {
 		var faqPickerWrap = null;
 		var faqPickerList = null;
 		var faqLibraryCache = null;
-		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption,#primary h1,#primary h2,#primary h3,#primary h4,#primary h5,#primary h6,#primary p,#primary li,#primary blockquote,#primary figcaption,.site-main h1,.site-main h2,.site-main h3,.site-main h4,.site-main h5,.site-main h6,.site-main p,.site-main li,.site-main blockquote,.site-main figcaption,.site-content h1,.site-content h2,.site-content h3,.site-content h4,.site-content h5,.site-content h6,.site-content p,.site-content li,.site-content blockquote,.site-content figcaption,article h1,article h2,article h3,article h4,article h5,article h6,article p,article li,article blockquote,article figcaption";
+		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption,main .lf-block-hero__card-item-text,main .lf-service-details__text,#primary h1,#primary h2,#primary h3,#primary h4,#primary h5,#primary h6,#primary p,#primary li,#primary blockquote,#primary figcaption,#primary .lf-block-hero__card-item-text,#primary .lf-service-details__text,.site-main h1,.site-main h2,.site-main h3,.site-main h4,.site-main h5,.site-main h6,.site-main p,.site-main li,.site-main blockquote,.site-main figcaption,.site-main .lf-block-hero__card-item-text,.site-main .lf-service-details__text,.site-content h1,.site-content h2,.site-content h3,.site-content h4,.site-content h5,.site-content h6,.site-content p,.site-content li,.site-content blockquote,.site-content figcaption,.site-content .lf-block-hero__card-item-text,.site-content .lf-service-details__text,article h1,article h2,article h3,article h4,article h5,article h6,article p,article li,article blockquote,article figcaption,article .lf-block-hero__card-item-text,article .lf-service-details__text";
 		var inlineImageCandidateSelector = "main img,#primary img,.site-main img,.site-content img,article img";
 		var mediaFrame = null;
 		var launcherGapPx = 8;
@@ -1426,6 +1432,7 @@ function lf_ai_assistant_widget_js(): string {
 			$status.toggleClass("is-error", !!isError);
 		}
 		var lfInlineLinkSavedRange = null;
+		var lfInlineLinkSavedHost = null;
 		var lfInlineLinkCache = null;
 		var lfInlineLinkCacheLoading = false;
 		var lfInlineLinkSelTimer = null;
@@ -1439,9 +1446,22 @@ function lf_ai_assistant_widget_js(): string {
 			$linkRoot.find("[data-lf-ai-inline-link-panel]").prop("hidden", true);
 			$linkRoot.find("[data-lf-ai-inline-link-backdrop]").prop("hidden", true);
 			lfInlineLinkSavedRange = null;
+			lfInlineLinkSavedHost = null;
+		}
+		function lfManagedContentEditableHost() {
+			var ae = document.activeElement;
+			if (!ae || !ae.isContentEditable) return null;
+			if (ae.matches(".lf-benefits__title, .lf-benefits__desc, .lf-service-details__text, .lf-block-hero__card-item-text")) {
+				return ae;
+			}
+			return null;
+		}
+		function lfAnyInlineLinkHostEl() {
+			return inlineActiveEl || lfManagedContentEditableHost();
 		}
 		function lfPositionInlineLinkToolbar() {
-			if (!$linkRoot.length || !inlineActiveEl) return;
+			var host = lfAnyInlineLinkHostEl();
+			if (!$linkRoot.length || !host) return;
 			var sel = window.getSelection();
 			if (!sel.rangeCount || sel.isCollapsed) {
 				lfHideInlineLinkToolbar();
@@ -1449,7 +1469,7 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			var range = sel.getRangeAt(0);
 			try {
-				if (!inlineActiveEl.contains(range.commonAncestorContainer)) {
+				if (!host.contains(range.commonAncestorContainer)) {
 					lfHideInlineLinkToolbar();
 					return;
 				}
@@ -1571,7 +1591,12 @@ function lf_ai_assistant_widget_js(): string {
 			}
 		}
 		function lfOpenInternalLinkPanel() {
-			if (!$linkRoot.length || !inlineActiveEl) return;
+			if (!$linkRoot.length) return;
+			var host = lfAnyInlineLinkHostEl();
+			if (!host) {
+				setStatus("Click into a headline, benefit, or checklist line to edit, then add a link.", true);
+				return;
+			}
 			var sel = window.getSelection();
 			if (!sel.rangeCount || sel.isCollapsed) {
 				setStatus("Select text, then add an internal link.", true);
@@ -1579,7 +1604,7 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			var range = sel.getRangeAt(0);
 			try {
-				if (!inlineActiveEl.contains(range.commonAncestorContainer)) {
+				if (!host.contains(range.commonAncestorContainer)) {
 					setStatus("Selection must be inside the text you are editing.", true);
 					return;
 				}
@@ -1587,10 +1612,12 @@ function lf_ai_assistant_widget_js(): string {
 				return;
 			}
 			lfInlineLinkSavedRange = range.cloneRange();
+			lfInlineLinkSavedHost = host;
 			lfFetchInternalLinkTargets(function(){
 				$linkRoot.find("[data-lf-ai-inline-link-search]").val("");
 				lfRenderInternalLinkList("");
 				$linkRoot.find("[data-lf-ai-inline-link-url]").val("");
+				$linkRoot.find("[data-lf-ai-inline-link-newtab]").prop("checked", false);
 				$linkRoot.find("[data-lf-ai-inline-link-panel]").prop("hidden", false);
 				$linkRoot.find("[data-lf-ai-inline-link-backdrop]").prop("hidden", false);
 				lfHideInlineLinkToolbar();
@@ -1604,40 +1631,36 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			return u;
 		}
-		function lfInsertLinkIntoSavedRange(url) {
+		function lfInsertLinkIntoSavedRange(url, newTab) {
 			var href = lfNormalizeInternalLinkUrl(url);
 			if (!href) return false;
 			var range = lfInlineLinkSavedRange;
-			if (!range || range.collapsed || !inlineActiveEl) {
+			var host = lfInlineLinkSavedHost || inlineActiveEl || lfManagedContentEditableHost();
+			if (!range || range.collapsed || !host) {
 				setStatus("Select text in the editor, then open Internal link again.", true);
 				return false;
 			}
 			var boundary = range.commonAncestorContainer;
 			var wrapEl = boundary.nodeType === 3 ? boundary.parentNode : boundary;
 			try {
-				if (!inlineActiveEl.contains(wrapEl)) {
+				if (!host.contains(wrapEl)) {
 					setStatus("Selection is no longer in the edited text. Close the dialog and try again.", true);
 					return false;
 				}
 			} catch (errC) {
 				return false;
 			}
-			inlineActiveEl.focus();
+			try {
+				host.focus();
+			} catch (errF) {}
 			var frag;
 			var linkEl = document.createElement("a");
 			linkEl.setAttribute("href", href);
+			if (newTab) {
+				linkEl.setAttribute("target", "_blank");
+				linkEl.setAttribute("rel", "noopener noreferrer");
+			}
 			try {
-				var sameOrigin = true;
-				try {
-					var abs = new URL(href, window.location.href);
-					sameOrigin = abs.origin === window.location.origin;
-				} catch (eO) {
-					sameOrigin = true;
-				}
-				if (!sameOrigin) {
-					linkEl.setAttribute("target", "_blank");
-					linkEl.setAttribute("rel", "noopener noreferrer");
-				}
 				frag = range.extractContents();
 				while (frag.firstChild) {
 					linkEl.appendChild(frag.firstChild);
@@ -1645,11 +1668,24 @@ function lf_ai_assistant_widget_js(): string {
 				range.insertNode(linkEl);
 			} catch (errIns) {
 				try {
-					inlineActiveEl.focus();
+					host.focus();
 					var sel = window.getSelection();
 					sel.removeAllRanges();
 					sel.addRange(lfInlineLinkSavedRange);
 					document.execCommand("createLink", false, href);
+					if (newTab && sel.rangeCount) {
+						var r = sel.getRangeAt(0);
+						var c = r.commonAncestorContainer;
+						var el = c.nodeType === 3 ? c.parentElement : c;
+						while (el && el !== host) {
+							if (el.tagName && String(el.tagName).toLowerCase() === "a") {
+								el.setAttribute("target", "_blank");
+								el.setAttribute("rel", "noopener noreferrer");
+								break;
+							}
+							el = el.parentElement;
+						}
+					}
 				} catch (errEx) {
 					setStatus("Could not add link at this selection. Try a shorter selection.", true);
 					return false;
@@ -1658,16 +1694,16 @@ function lf_ai_assistant_widget_js(): string {
 			return true;
 		}
 		function lfApplyInternalLinkFromUi() {
-			if (!$linkRoot.length || !inlineActiveEl) return;
+			if (!$linkRoot.length) return;
 			var url = String($linkRoot.find("[data-lf-ai-inline-link-url]").val() || "").trim();
 			if (!url) {
 				setStatus("Choose a suggestion or enter a URL.", true);
 				return;
 			}
-			if (!lfInsertLinkIntoSavedRange(url)) {
+			var newTab = !!$linkRoot.find("[data-lf-ai-inline-link-newtab]").prop("checked");
+			if (!lfInsertLinkIntoSavedRange(url, newTab)) {
 				return;
 			}
-			lfInlineLinkSavedRange = null;
 			lfHideInlineLinkPanel();
 			setStatus("Link inserted. Click away or press ⌘/Ctrl+Enter to save.", false);
 		}
@@ -1705,7 +1741,7 @@ function lf_ai_assistant_widget_js(): string {
 		document.addEventListener("selectionchange", function(){
 			clearTimeout(lfInlineLinkSelTimer);
 			lfInlineLinkSelTimer = setTimeout(function(){
-				if (!inlineActiveEl) {
+				if (!lfAnyInlineLinkHostEl()) {
 					lfHideInlineLinkToolbar();
 					return;
 				}
@@ -2169,8 +2205,10 @@ function lf_ai_assistant_widget_js(): string {
 			if (node.closest("nav, footer, [aria-hidden=\"true\"]")) return false;
 			if (node.closest(".site-header, .site-footer, #masthead, #colophon")) return false;
 			if (node.closest("button, a, label, script, style, noscript")) return false;
-			// Managed lists/pills use dedicated controls; block generic inline editing for their rows.
-			if (node.closest(".lf-hero-chips,.lf-block-hero__card-list,.lf-trust-bar__badges,.lf-service-details__checklist,.lf-process,.lf-block-faq-accordion__list,.lf-related-links,.lf-cpt-driven-links")) return false;
+			// Managed lists/pills use dedicated controls; block generic inline on containers except linkable text spans.
+			if (node.closest(".lf-hero-chips,.lf-trust-bar__badges,.lf-process,.lf-block-faq-accordion__list,.lf-related-links,.lf-cpt-driven-links")) return false;
+			if (node.closest(".lf-block-hero__card-list") && !node.classList.contains("lf-block-hero__card-item-text")) return false;
+			if (node.closest(".lf-service-details__checklist") && !node.classList.contains("lf-service-details__text")) return false;
 			// Map + NAP: service area names are global CPT permalinks — not editable inline.
 			if (node.closest(".lf-block-map-nap__areas-list,.lf-block-map-nap__areas-item,.lf-block-map-nap__areas-link")) return false;
 			// Reviews content is source-of-truth data; do not edit testimonial copy inline.
@@ -2782,9 +2820,9 @@ function lf_ai_assistant_widget_js(): string {
 			if (!list) return [];
 			return Array.prototype.slice.call(list.querySelectorAll("li")).map(function(li){
 				var textNode = li.querySelector(".lf-service-details__text");
-				var raw = textNode ? String(textNode.textContent || "") : String(li.textContent || "");
-				return raw.trim();
-			}).filter(function(value){ return value !== ""; });
+				var raw = textNode ? innerHtmlFromEditableNode(textNode) : String(li.textContent || "").trim();
+				return raw;
+			}).filter(function(value){ return lfPlainFromHtml(value) !== ""; });
 		}
 		function persistSectionChecklist(wrap) {
 			if (!wrap) return;
@@ -2835,29 +2873,30 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			function finishChecklistTextEdit(textNode, li, wrap, commit) {
 				if (!textNode) return;
-				var original = String(textNode.getAttribute("data-lf-ai-original-text") || "").trim();
-				var next = String(textNode.textContent || "").replace(/\s+/g, " ").trim();
+				var originalHtml = String(textNode.getAttribute("data-lf-ai-original-html") || "");
+				var nextHtml = innerHtmlFromEditableNode(textNode);
+				var nextPlain = lfPlainFromHtml(nextHtml);
 				textNode.removeAttribute("contenteditable");
 				textNode.removeAttribute("spellcheck");
 				textNode.removeAttribute("data-lf-ai-editing");
-				textNode.removeAttribute("data-lf-ai-original-text");
+				textNode.removeAttribute("data-lf-ai-original-html");
 				if (!commit) {
-					textNode.textContent = original || next || "Checklist item";
+					textNode.innerHTML = originalHtml || nextHtml || "Checklist item";
 					return;
 				}
-				if (next === "") {
-					textNode.textContent = original || "Checklist item";
+				if (nextPlain === "") {
+					textNode.innerHTML = originalHtml || "Checklist item";
 					return;
 				}
-				textNode.textContent = next;
-				if (next !== original) {
+				textNode.innerHTML = nextHtml;
+				if (nextHtml !== originalHtml) {
 					persistSectionChecklist(wrap);
 				}
 			}
 			function startChecklistTextEdit(textNode, li, wrap) {
 				if (!textNode) return;
 				if (String(textNode.getAttribute("data-lf-ai-editing") || "0") === "1") return;
-				textNode.setAttribute("data-lf-ai-original-text", String(textNode.textContent || "").trim());
+				textNode.setAttribute("data-lf-ai-original-html", innerHtmlFromEditableNode(textNode));
 				textNode.setAttribute("data-lf-ai-editing", "1");
 				textNode.setAttribute("contenteditable", "true");
 				textNode.setAttribute("spellcheck", "true");
@@ -3030,10 +3069,27 @@ function lf_ai_assistant_widget_js(): string {
 			// Hero proof lines use lf-ai-inline-editor-ignore on the visible text span so global inline
 			// edit skips them; that class must not be stripped here or persist sends empty items.
 			Array.prototype.slice.call(clone.querySelectorAll(".lf-ai-inline-editor-ignore")).forEach(function(el){
-				if (el && el.classList && el.classList.contains("lf-block-hero__card-item-text")) return;
+				if (el && el.classList && (el.classList.contains("lf-block-hero__card-item-text") || el.classList.contains("lf-service-details__text"))) return;
 				if (el && el.parentNode) el.parentNode.removeChild(el);
 			});
 			return String(clone.textContent || "").replace(/\s+/g, " ").trim();
+		}
+		function lfPlainFromHtml(html) {
+			var d = document.createElement("div");
+			d.innerHTML = String(html || "");
+			return String(d.textContent || "").replace(/\s+/g, " ").trim();
+		}
+		function innerHtmlFromEditableNode(node) {
+			if (!node) return "";
+			var clone = node.cloneNode(true);
+			Array.prototype.slice.call(clone.querySelectorAll("[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-list-remove=\"1\"]")).forEach(function(btn){
+				if (btn && btn.parentNode) btn.parentNode.removeChild(btn);
+			});
+			Array.prototype.slice.call(clone.querySelectorAll(".lf-ai-inline-editor-ignore")).forEach(function(el){
+				if (el && el.classList && (el.classList.contains("lf-block-hero__card-item-text") || el.classList.contains("lf-service-details__text"))) return;
+				if (el && el.parentNode) el.parentNode.removeChild(el);
+			});
+			return String(clone.innerHTML || "").trim();
 		}
 		function ensureManagedListItemTextNode(li, selector, className) {
 			if (!li) return null;
@@ -3043,12 +3099,26 @@ function lf_ai_assistant_widget_js(): string {
 				textNode = document.createElement("span");
 				textNode.className = className;
 				li.insertBefore(textNode, li.firstChild || null);
+				textNode.textContent = normalized || "";
+			} else {
+				var hasMarkup = false;
+				try {
+					var kids = textNode.childNodes || [];
+					for (var j = 0; j < kids.length; j++) {
+						if (kids[j].nodeType === 1) {
+							hasMarkup = true;
+							break;
+						}
+					}
+				} catch (e1) {}
+				if (!hasMarkup && !/<[a-z][\s\S]*>/i.test(String(textNode.innerHTML || ""))) {
+					textNode.textContent = normalized || String(textNode.textContent || "").trim();
+				}
 			}
-			textNode.textContent = normalized || String(textNode.textContent || "").trim();
 			Array.prototype.slice.call(li.childNodes || []).forEach(function(child){
 				if (!child || child === textNode) return;
 				if (child.nodeType === 3 && String(child.textContent || "").trim() !== "") {
-					try { li.removeChild(child); } catch (e) {}
+					try { li.removeChild(child); } catch (e2) {}
 				}
 			});
 			return textNode;
@@ -3085,6 +3155,13 @@ function lf_ai_assistant_widget_js(): string {
 				return textFromNodeWithoutAiControls(node);
 			}).filter(function(text){ return text !== ""; });
 		}
+		function heroProofHtmlItemsFromList(list) {
+			if (!list) return [];
+			return Array.prototype.slice.call(list.querySelectorAll("li")).map(function(li){
+				var span = li.querySelector(".lf-block-hero__card-item-text");
+				return span ? innerHtmlFromEditableNode(span) : "";
+			}).filter(function(h){ return lfPlainFromHtml(h) !== ""; });
+		}
 		function persistHeroProofItems(wrap, list) {
 			if (!wrap || !list) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
@@ -3094,7 +3171,7 @@ function lf_ai_assistant_widget_js(): string {
 				sectionId = "hero";
 			}
 			if (!sectionId || baseType !== "hero") return;
-			var items = simpleListItemsFromContainer(list, "li");
+			var items = heroProofHtmlItemsFromList(list);
 			var pc = persistContextFromWrap(wrap);
 			setStatus("Saving checklist...", false);
 			$.post(lfAiFloating.ajax_url, {
@@ -3269,29 +3346,30 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			function finishHeroProofTextEdit(textNode, wrap, list, commit) {
 				if (!textNode || !wrap || !list) return;
-				var original = String(textNode.getAttribute("data-lf-ai-original-text") || "").trim();
-				var next = String(textNode.textContent || "").replace(/\s+/g, " ").trim();
+				var originalHtml = String(textNode.getAttribute("data-lf-ai-original-html") || "");
+				var nextHtml = innerHtmlFromEditableNode(textNode);
+				var nextPlain = lfPlainFromHtml(nextHtml);
 				textNode.removeAttribute("contenteditable");
 				textNode.removeAttribute("spellcheck");
 				textNode.removeAttribute("data-lf-ai-editing");
-				textNode.removeAttribute("data-lf-ai-original-text");
+				textNode.removeAttribute("data-lf-ai-original-html");
 				if (!commit) {
-					textNode.textContent = original || next || "New item";
+					textNode.innerHTML = originalHtml || nextHtml || "New item";
 					return;
 				}
-				if (next === "") {
-					textNode.textContent = original || "New item";
+				if (nextPlain === "") {
+					textNode.innerHTML = originalHtml || "New item";
 					return;
 				}
-				textNode.textContent = next;
-				if (next !== original) {
+				textNode.innerHTML = nextHtml;
+				if (nextHtml !== originalHtml) {
 					persistHeroProofItems(wrap, list);
 				}
 			}
 			function startHeroProofTextEdit(textNode) {
 				if (!textNode) return;
 				if (String(textNode.getAttribute("data-lf-ai-editing") || "0") === "1") return;
-				textNode.setAttribute("data-lf-ai-original-text", String(textNode.textContent || "").trim());
+				textNode.setAttribute("data-lf-ai-original-html", innerHtmlFromEditableNode(textNode));
 				textNode.setAttribute("data-lf-ai-editing", "1");
 				textNode.setAttribute("contenteditable", "true");
 				textNode.setAttribute("spellcheck", "true");
@@ -4078,10 +4156,11 @@ function lf_ai_assistant_widget_js(): string {
 				if (raw !== "") return raw;
 				var t = card.querySelector(".lf-benefits__title");
 				var b = card.querySelector(".lf-benefits__desc");
-				var titleText = t ? String(t.textContent || "").replace(/\s+/g, " ").trim() : "";
-				var bodyText = b ? String(b.textContent || "").replace(/\s+/g, " ").trim() : "";
-				return bodyText ? (titleText + " || " + bodyText) : titleText;
-			}).filter(function(v){ return v !== ""; });
+				var titleHtml = t ? innerHtmlFromEditableNode(t) : "";
+				var bodyHtml = b ? innerHtmlFromEditableNode(b) : "";
+				if (!lfPlainFromHtml(bodyHtml)) return titleHtml;
+				return titleHtml + " || " + bodyHtml;
+			}).filter(function(v){ return lfPlainFromHtml(v) !== ""; });
 		}
 		function buildBenefitsReorderControls() {
 			collectSectionWrappers().forEach(function(wrap){
@@ -4141,9 +4220,9 @@ function lf_ai_assistant_widget_js(): string {
 					Array.prototype.slice.call(grid.querySelectorAll(".lf-benefits__card")).forEach(function(card){
 						var t = card.querySelector(".lf-benefits__title");
 						var b = card.querySelector(".lf-benefits__desc");
-						var titleText = t ? String(t.textContent || "").replace(/\s+/g, " ").trim() : "";
-						var bodyText = b ? String(b.textContent || "").replace(/\s+/g, " ").trim() : "";
-						var line = bodyText ? (titleText + " || " + bodyText) : titleText;
+						var titleHtml = t ? innerHtmlFromEditableNode(t) : "";
+						var bodyHtml = b ? innerHtmlFromEditableNode(b) : "";
+						var line = lfPlainFromHtml(bodyHtml) ? (titleHtml + " || " + bodyHtml) : titleHtml;
 						card.setAttribute("data-lf-benefit-line", line);
 					});
 					persistSectionLineItems(wrap, "benefits_items", benefitLinesFromGrid(grid), "Saving benefits...");
@@ -4153,6 +4232,10 @@ function lf_ai_assistant_widget_js(): string {
 					var desc = card.querySelector(".lf-benefits__desc");
 					if (!title || !desc) return;
 					if (title.getAttribute("data-lf-benefits-editor-bound") === "1") return;
+					title.removeAttribute("data-lf-inline-editable");
+					title.removeAttribute("data-lf-inline-selector");
+					desc.removeAttribute("data-lf-inline-editable");
+					desc.removeAttribute("data-lf-inline-selector");
 					title.setAttribute("data-lf-benefits-editor-bound", "1");
 					desc.setAttribute("data-lf-benefits-editor-bound", "1");
 					title.classList.add("lf-ai-benefit-editable");
@@ -4166,6 +4249,7 @@ function lf_ai_assistant_widget_js(): string {
 						e.preventDefault();
 						e.stopPropagation();
 						if (String(title.getAttribute("data-lf-ai-editing") || "") === "1") return;
+						title.setAttribute("data-lf-ai-original-html", innerHtmlFromEditableNode(title));
 						title.setAttribute("data-lf-ai-editing", "1");
 						title.setAttribute("contenteditable", "true");
 						try { title.focus(); } catch (err) {}
@@ -4175,6 +4259,7 @@ function lf_ai_assistant_widget_js(): string {
 						e.preventDefault();
 						e.stopPropagation();
 						if (String(desc.getAttribute("data-lf-ai-editing") || "") === "1") return;
+						desc.setAttribute("data-lf-ai-original-html", innerHtmlFromEditableNode(desc));
 						desc.setAttribute("data-lf-ai-editing", "1");
 						desc.setAttribute("contenteditable", "true");
 						try { desc.focus(); } catch (err2) {}
@@ -4182,11 +4267,13 @@ function lf_ai_assistant_widget_js(): string {
 					function finishTitle() {
 						title.removeAttribute("contenteditable");
 						title.removeAttribute("data-lf-ai-editing");
+						title.removeAttribute("data-lf-ai-original-html");
 						persistGrid();
 					}
 					function finishDesc() {
 						desc.removeAttribute("contenteditable");
 						desc.removeAttribute("data-lf-ai-editing");
+						desc.removeAttribute("data-lf-ai-original-html");
 						persistGrid();
 					}
 					title.addEventListener("blur", finishTitle);
@@ -4199,16 +4286,26 @@ function lf_ai_assistant_widget_js(): string {
 						}
 						if (k === "Escape") {
 							e.preventDefault();
+							var oh = title.getAttribute("data-lf-ai-original-html");
 							title.removeAttribute("contenteditable");
 							title.removeAttribute("data-lf-ai-editing");
+							if (title.hasAttribute("data-lf-ai-original-html")) {
+								title.innerHTML = oh || "";
+							}
+							title.removeAttribute("data-lf-ai-original-html");
 						}
 					});
 					desc.addEventListener("keydown", function(e){
 						var k = String((e && e.key) || "");
 						if (k === "Escape") {
 							e.preventDefault();
+							var ohd = desc.getAttribute("data-lf-ai-original-html");
 							desc.removeAttribute("contenteditable");
 							desc.removeAttribute("data-lf-ai-editing");
+							if (desc.hasAttribute("data-lf-ai-original-html")) {
+								desc.innerHTML = ohd || "";
+							}
+							desc.removeAttribute("data-lf-ai-original-html");
 						}
 					});
 				});
@@ -4599,6 +4696,34 @@ function lf_ai_assistant_widget_js(): string {
 				try { window.alert(msg); } catch (e) {}
 			});
 		}
+		function stripClonedSectionEditorArtifacts(root) {
+			if (!root || !root.querySelectorAll) return;
+			Array.prototype.slice.call(root.querySelectorAll(".lf-ai-section-controls,[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
+				if (node && node.parentNode) node.parentNode.removeChild(node);
+			});
+			Array.prototype.slice.call(root.querySelectorAll("[data-lf-benefits-editor-bound]")).forEach(function(node){
+				node.removeAttribute("data-lf-benefits-editor-bound");
+			});
+			Array.prototype.slice.call(root.querySelectorAll("[data-lf-inline-editable],[data-lf-inline-selector],[data-lf-inline-image],[data-lf-inline-image-selector]")).forEach(function(node){
+				node.removeAttribute("data-lf-inline-editable");
+				node.removeAttribute("data-lf-inline-selector");
+				node.removeAttribute("data-lf-inline-image");
+				node.removeAttribute("data-lf-inline-image-selector");
+				node.removeAttribute("data-lf-inline-field-key");
+			});
+			Array.prototype.slice.call(root.querySelectorAll("[data-lf-inline-active],[data-lf-inline-saving]")).forEach(function(node){
+				node.removeAttribute("data-lf-inline-active");
+				node.removeAttribute("data-lf-inline-saving");
+			});
+			Array.prototype.slice.call(root.querySelectorAll(".lf-service-details__text,.lf-block-hero__card-item-text,.lf-benefits__title,.lf-benefits__desc")).forEach(function(node){
+				if (!node) return;
+				node.removeAttribute("contenteditable");
+				node.removeAttribute("spellcheck");
+				node.removeAttribute("data-lf-ai-editing");
+				node.removeAttribute("data-lf-ai-original-text");
+				node.removeAttribute("data-lf-ai-original-html");
+			});
+		}
 		function persistSectionDuplicate(wrap) {
 			if (!wrap) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
@@ -4617,12 +4742,15 @@ function lf_ai_assistant_widget_js(): string {
 				}
 				if (res && res.success && res.data && res.data.new_section_id) {
 					var clone = wrap.cloneNode(true);
+					stripClonedSectionEditorArtifacts(clone);
 					clone.classList.remove("is-dragging", "lf-ai-section-active");
 					clone.setAttribute("data-lf-section-id", String(res.data.new_section_id));
 					clone.removeAttribute("data-lf-section-visible");
 					homepageEnabledMap[String(res.data.new_section_id)] = true;
 					wrap.parentNode.insertBefore(clone, wrap.nextSibling);
 					buildSectionTargets();
+					buildInlineTargets();
+					buildInlineImageTargets();
 					buildSectionControls();
 					buildSectionButtonEditors();
 					buildHeroPillsControls();

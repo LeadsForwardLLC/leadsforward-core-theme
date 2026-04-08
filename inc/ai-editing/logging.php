@@ -134,6 +134,23 @@ function lf_ai_is_inline_dom_html_string( string $value ): bool {
 }
 
 /**
+ * Sanitize one benefits_items line (optional "title || body" with link-safe HTML).
+ */
+function lf_ai_sanitize_benefits_items_line( string $line ): string {
+	$line = trim( $line );
+	if ( $line === '' ) {
+		return '';
+	}
+	if ( str_contains( $line, ' || ' ) ) {
+		$parts = explode( ' || ', $line, 2 );
+		$t     = lf_ai_sanitize_inline_dom_html( (string) ( $parts[0] ?? '' ) );
+		$b     = lf_ai_sanitize_inline_dom_html( (string) ( $parts[1] ?? '' ) );
+		return $b !== '' ? $t . ' || ' . $b : $t;
+	}
+	return lf_ai_sanitize_inline_dom_html( $line );
+}
+
+/**
  * Get persisted inline DOM text overrides for a context.
  */
 function lf_ai_get_inline_dom_overrides(string $context_type, $context_id): array {
