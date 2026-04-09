@@ -23,6 +23,14 @@ $cta_surface_style = $surface['style'] !== '' ? ' style="' . esc_attr($surface['
 $headline = !empty($section['cta_headline']) ? $section['cta_headline'] : '';
 $subheadline = !empty($section['cta_subheadline']) ? $section['cta_subheadline'] : '';
 $supporting = !empty($section['cta_subheadline_secondary']) ? $section['cta_subheadline_secondary'] : '';
+$trust_strip_enabled = (string) ($section['cta_trust_strip_enabled'] ?? '0') !== '0';
+$trust_rating = isset($section['cta_trust_rating']) ? (float) $section['cta_trust_rating'] : 0.0;
+$trust_count = isset($section['cta_trust_review_count']) ? (int) $section['cta_trust_review_count'] : 0;
+$trust_badges = [];
+if (!empty($section['cta_trust_badges'])) {
+	$trust_badges = preg_split('/[\r\n]+/', (string) $section['cta_trust_badges']);
+	$trust_badges = array_values(array_filter(array_map('trim', is_array($trust_badges) ? $trust_badges : [])));
+}
 $icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'cta', 'above', 'lf-heading-icon') : '';
 $icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'cta', 'left', 'lf-heading-icon') : '';
 $eyebrow = '';
@@ -86,6 +94,26 @@ $show_form = ($cta_type === 'form' && $ghl_embed) || ($cta_type !== 'call' && $g
 			<?php endif; ?>
 			<?php if ($supporting !== '') : ?>
 				<p class="lf-block-cta__support"><?php echo esc_html($supporting); ?></p>
+			<?php endif; ?>
+			<?php if ($trust_strip_enabled && ($trust_rating > 0 || $trust_count > 0 || !empty($trust_badges))) : ?>
+				<div class="lf-block-cta__trust" role="note" aria-label="<?php esc_attr_e('Trust and credibility', 'leadsforward-core'); ?>">
+					<div class="lf-block-cta__trust-summary">
+						<span class="lf-block-cta__trust-stars" aria-hidden="true">
+							<?php for ($i = 0; $i < 5; $i++) : ?>
+								<svg class="lf-block-cta__trust-star" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+							<?php endfor; ?>
+						</span>
+						<?php if ($trust_rating > 0) : ?><span class="lf-block-cta__trust-score"><?php echo esc_html(number_format($trust_rating, 1)); ?></span><?php endif; ?>
+						<?php if ($trust_count > 0) : ?><span class="lf-block-cta__trust-count"><?php echo esc_html(sprintf(_n('%d review', '%d reviews', $trust_count, 'leadsforward-core'), $trust_count)); ?></span><?php endif; ?>
+					</div>
+					<?php if (!empty($trust_badges)) : ?>
+						<div class="lf-block-cta__trust-badges">
+							<?php foreach ($trust_badges as $badge) : ?>
+								<span class="lf-block-cta__trust-badge"><?php echo esc_html($badge); ?></span>
+							<?php endforeach; ?>
+						</div>
+					<?php endif; ?>
+				</div>
 			<?php endif; ?>
 			<?php if ($primary || $secondary) : ?>
 				<div class="lf-block-cta__buttons">

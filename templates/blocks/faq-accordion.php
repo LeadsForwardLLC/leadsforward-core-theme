@@ -23,6 +23,14 @@ $heading  = !empty($section['section_heading']) ? $section['section_heading'] : 
 $intro    = !empty($section['section_intro']) ? $section['section_intro'] : '';
 $icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'faq_accordion', 'above', 'lf-heading-icon') : '';
 $icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'faq_accordion', 'left', 'lf-heading-icon') : '';
+$columns = 1;
+if (isset($section['faq_columns'])) {
+	$columns = (int) $section['faq_columns'];
+} elseif (isset($block['attributes']['columns'])) {
+	$columns = (int) $block['attributes']['columns'];
+}
+$columns = ($columns >= 2) ? 2 : 1;
+$schema_enabled = (string) ($section['faq_schema_enabled'] ?? ($block['attributes']['schema'] ?? '1')) !== '0';
 $max_items = isset($section['faq_max_items']) ? (int) $section['faq_max_items'] : -1;
 if ($max_items === 0) {
 	$max_items = -1;
@@ -136,9 +144,11 @@ $has_faq_posts = $query->have_posts();
 				<p class="lf-block-faq-accordion__intro"><?php echo esc_html($intro); ?></p>
 			<?php endif; ?>
 		</header>
-		<div class="lf-block-faq-accordion__list" role="list">
+		<div class="lf-block-faq-accordion__list lf-block-faq-accordion__list--cols-<?php echo esc_attr((string) $columns); ?>" role="list">
 			<?php if ($has_faq_posts) : ?>
-				<?php while ($query->have_posts()) : $query->the_post();
+				<?php
+				$schema_items = [];
+				while ($query->have_posts()) : $query->the_post();
 					$q = function_exists('get_field') ? get_field('lf_faq_question') : '';
 					$a = function_exists('get_field') ? get_field('lf_faq_answer') : '';
 					if (!is_string($q)) {
@@ -161,6 +171,16 @@ $has_faq_posts = $query->have_posts();
 					if ($a !== '') {
 						$a = wpautop($a);
 					}
+					if ($schema_enabled && $q !== '' && $a !== '') {
+						$schema_items[] = [
+							'@type' => 'Question',
+							'name' => wp_strip_all_tags((string) $q),
+							'acceptedAnswer' => [
+								'@type' => 'Answer',
+								'text' => wp_strip_all_tags((string) $a),
+							],
+						];
+					}
 				?>
 					<details class="lf-block-faq-accordion__item" data-lf-faq-id="<?php echo esc_attr((string) get_the_ID()); ?>">
 						<summary class="lf-block-faq-accordion__question"><?php echo esc_html($q); ?></summary>
@@ -170,6 +190,20 @@ $has_faq_posts = $query->have_posts();
 				<?php wp_reset_postdata(); ?>
 			<?php endif; ?>
 		</div>
+		<?php if ($schema_enabled && !empty($schema_items)) : ?>
+			<script type="application/ld+json">
+				<?php
+				echo wp_json_encode(
+					[
+						'@context' => 'https://schema.org',
+						'@type' => 'FAQPage',
+						'mainEntity' => $schema_items,
+					],
+					JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+				);
+				?>
+			</script>
+		<?php endif; ?>
 		<?php if (!$has_faq_posts) : ?>
 			<p class="lf-block-faq-accordion__empty"><?php esc_html_e('No FAQs selected yet. Use editor controls to pick from your FAQ library.', 'leadsforward-core'); ?></p>
 		<?php endif; ?>
