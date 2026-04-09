@@ -8461,7 +8461,13 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			$link_result = lf_ai_studio_orchestrate_internal_links_for_settings($filled_settings, $type, $registry, $post);
 			$final_settings = is_array($link_result['settings'] ?? null) ? $link_result['settings'] : $filled_settings;
 			$final_settings = lf_ai_studio_enforce_section_quality($final_settings, $type, $registry);
-			$sections[$instance_id]['settings'] = lf_sections_sanitize_settings($type, $final_settings);
+			// IMPORTANT: lf_sections_sanitize_settings() fills missing keys with defaults. If any upstream
+			// transform (image injection/linking/quality enforcement) returns a partial settings array, a full
+			// sanitize would re-introduce default empty strings and clobber real AI content. Only sanitize the
+			// keys we actually have and merge onto existing settings.
+			$sanitized_final = lf_sections_sanitize_settings($type, $final_settings);
+			$sanitized_final = array_intersect_key($sanitized_final, $final_settings);
+			$sections[$instance_id]['settings'] = array_merge($merged_settings, $sanitized_final);
 		}
 		$staged_post_meta_updates[$post_id] = [
 			'order' => $order,
