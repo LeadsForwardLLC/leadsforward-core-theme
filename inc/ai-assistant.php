@@ -4735,19 +4735,30 @@ function lf_ai_assistant_widget_js(): string {
 			if (!wrap) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			if (!sectionId) return;
+			var ctx = persistContextFromWrap(wrap);
 			setStatus(visible ? "Showing section..." : "Hiding section...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_toggle_section_visibility",
 				nonce: lfAiFloating.nonce,
-				context_type: activeContextType,
-				context_id: activeContextId,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
 				section_id: sectionId,
 				visible: visible ? "1" : "0"
 			}).done(function(res){
 				if (res && res.success) {
-					applySectionVisibilityUi(wrap, !!(res.data && res.data.visible));
+					var nowVisible = !!(res.data && res.data.visible);
+					applySectionVisibilityUi(wrap, nowVisible);
 					setStatus((res.data && res.data.message) ? res.data.message : "Section visibility updated.", false);
 					refreshSectionRail();
+					// If we just restored a hidden section, reload to re-render its actual content.
+					// Hidden sections render as placeholders on refresh, so toggling "Show" must rehydrate markup.
+					if (nowVisible) {
+						var isPlaceholder = wrap.classList && wrap.classList.contains("lf-inline-section-wrap--hidden");
+						var hasRealMarkup = !!(wrap.querySelector && (wrap.querySelector(".lf-section") || wrap.querySelector(".lf-block")));
+						if (isPlaceholder || !hasRealMarkup) {
+							window.location.reload();
+						}
+					}
 				} else {
 					setStatus((res && res.data && res.data.message) ? res.data.message : "Section visibility update failed.", true);
 				}
