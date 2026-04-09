@@ -438,6 +438,11 @@ function lf_ai_studio_rest_apply(\WP_REST_Request $request): \WP_REST_Response {
 		}
 	}
 	if (!is_array($payload)) {
+		if (function_exists('lf_ai_studio_error_log')) {
+			lf_ai_studio_error_log('orchestrator: invalid_json payload', 'ERROR');
+		} else {
+			error_log('LF AI STUDIO [ERROR]: orchestrator: invalid_json payload');
+		}
 		return new \WP_REST_Response(['error' => 'invalid_json'], 400);
 	}
 	if (isset($payload['payload']) && is_string($payload['payload'])) {
@@ -543,6 +548,14 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 	$payload_hash = lf_ai_studio_rest_payload_hash($payload);
 	$binding = lf_ai_studio_rest_validate_callback_binding($job_id, $request_id, $payload_hash);
 	if (empty($binding['ok'])) {
+		if (function_exists('lf_ai_studio_error_log')) {
+			lf_ai_studio_error_log('orchestrator: invalid_binding', 'ERROR', [
+				'job_id' => $job_id,
+				'request_id' => $request_id,
+				'error' => (string) ($binding['error'] ?? 'invalid_binding'),
+				'status' => (int) ($binding['status'] ?? 400),
+			]);
+		}
 		return new \WP_REST_Response(array_merge($diagnostics, [
 			'error' => (string) ($binding['error'] ?? 'invalid_binding'),
 		]), (int) ($binding['status'] ?? 400));
@@ -716,6 +729,13 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		? lf_ai_studio_validate_payload($apply_payload)
 		: [];
 	if (!empty($errors)) {
+		if (function_exists('lf_ai_studio_error_log')) {
+			lf_ai_studio_error_log('orchestrator: validation_failed', 'ERROR', [
+				'job_id' => $job_id,
+				'request_id' => $request_id,
+				'errors' => array_values($errors),
+			]);
+		}
 		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
 		update_post_meta($job_id, 'lf_ai_job_error', implode('; ', $errors));
 		if (function_exists('lf_ai_autonomy_mark_generation_failed')) {
@@ -757,6 +777,14 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 				$scope_pack['scope'],
 				$scope_pack['filtered_from']
 			);
+			if (function_exists('lf_ai_studio_error_log')) {
+				lf_ai_studio_error_log('orchestrator: apply_scope_empty', 'ERROR', [
+					'job_id' => $job_id,
+					'request_id' => $request_id,
+					'apply_scope' => (string) ($scope_pack['scope'] ?? ''),
+					'filtered_from' => (int) ($scope_pack['filtered_from'] ?? 0),
+				]);
+			}
 			update_post_meta($job_id, 'lf_ai_job_status', 'failed');
 			update_post_meta($job_id, 'lf_ai_job_error', $scope_err);
 			if (function_exists('lf_ai_autonomy_mark_generation_failed')) {
@@ -816,6 +844,13 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 			? implode('; ', $failure_parts)
 			: __('Orchestrator returned no updates.', 'leadsforward-core');
 
+		if (function_exists('lf_ai_studio_error_log')) {
+			lf_ai_studio_error_log('orchestrator: no_updates_reported_failure', 'ERROR', [
+				'job_id' => $job_id,
+				'request_id' => $request_id,
+				'message' => $failure_message,
+			]);
+		}
 		update_post_meta($job_id, 'lf_ai_job_status', 'failed');
 		update_post_meta($job_id, 'lf_ai_job_error', $failure_message);
 		update_post_meta($job_id, 'lf_ai_job_summary', __('No updates applied (orchestrator reported failure).', 'leadsforward-core'));
@@ -834,6 +869,14 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 	}
 
 	$apply_result = lf_apply_orchestrator_updates($apply_payload, ['force_apply' => $force_apply]);
+	if (function_exists('lf_ai_studio_error_log')) {
+		lf_ai_studio_error_log('orchestrator: apply_result', !empty($apply_result['success']) ? 'INFO' : 'ERROR', [
+			'job_id' => $job_id,
+			'request_id' => $request_id,
+			'success' => !empty($apply_result['success']),
+			'error_count' => is_array($apply_result['errors'] ?? null) ? count($apply_result['errors']) : 0,
+		]);
+	}
 	update_post_meta($job_id, 'lf_ai_job_status', $apply_result['success'] ? 'done' : 'failed');
 	update_post_meta($job_id, 'lf_ai_job_summary', $apply_result['summary'] ?? '');
 	update_post_meta($job_id, 'lf_ai_job_changes', $apply_result['changes'] ?? []);
@@ -871,6 +914,15 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 				$gate_errors[] = sprintf(__('Content audit: %d cross-page uniqueness duplicates detected.', 'leadsforward-core'), $uniq_dupes);
 			}
 			if (!empty($gate_errors)) {
+				if (function_exists('lf_ai_studio_error_log')) {
+					lf_ai_studio_error_log('orchestrator: post_apply_gate_failed', 'ERROR', [
+						'job_id' => $job_id,
+						'request_id' => $request_id,
+						'missing_fields' => $missing_fields,
+						'uniqueness_duplicates' => $uniq_dupes,
+						'errors' => $gate_errors,
+					]);
+				}
 				update_post_meta($job_id, 'lf_ai_job_status', 'failed');
 				update_post_meta($job_id, 'lf_ai_job_error', implode('; ', $gate_errors));
 				if (function_exists('lf_ai_autonomy_mark_generation_failed')) {
