@@ -531,8 +531,6 @@ function lf_sections_registry(): array {
 				['key' => 'cta_headline', 'label' => __('CTA headline', 'leadsforward-core'), 'type' => 'text', 'default' => __('Get a fast, no-obligation estimate', 'leadsforward-core')],
 				['key' => 'cta_subheadline', 'label' => __('Supporting text (optional)', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				// Added for density expansion – vNext
-				['key' => 'cta_subheadline_secondary', 'label' => __('Secondary supporting text', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
-				// Added for density expansion – vNext
 				['key' => 'cta_bullets', 'label' => __('CTA bullets (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 				// Added for density expansion – vNext
 				['key' => 'cta_trust_block', 'label' => __('Trust / credibility block', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
@@ -881,7 +879,8 @@ function lf_sections_default_order(string $context): array {
 			'trust_bar',
 			'content_image',
 			'benefits',
-			'services_offered_here',
+			'content_image',
+			'image_content',
 			'process',
 			'related_links',
 			'nearby_areas',
@@ -2234,7 +2233,6 @@ function lf_sections_render_cta_band(string $context, array $settings, \WP_Post 
 		$section = [
 			'cta_headline' => $settings['cta_headline'] ?? '',
 			'cta_subheadline' => $settings['cta_subheadline'] ?? '',
-			'cta_subheadline_secondary' => $settings['cta_subheadline_secondary'] ?? '',
 			'cta_primary_override' => $settings['cta_primary_override'] ?? '',
 			'cta_secondary_override' => $settings['cta_secondary_override'] ?? '',
 			'cta_primary_action' => $settings['cta_primary_action'] ?? '',

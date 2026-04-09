@@ -22,7 +22,6 @@ $header_align = function_exists('lf_sections_sanitize_header_align') ? lf_sectio
 $cta_surface_style = $surface['style'] !== '' ? ' style="' . esc_attr($surface['style']) . '"' : '';
 $headline = !empty($section['cta_headline']) ? $section['cta_headline'] : '';
 $subheadline = !empty($section['cta_subheadline']) ? $section['cta_subheadline'] : '';
-$supporting = !empty($section['cta_subheadline_secondary']) ? $section['cta_subheadline_secondary'] : '';
 $trust_strip_enabled = (string) ($section['cta_trust_strip_enabled'] ?? '0') !== '0';
 $trust_rating = isset($section['cta_trust_rating']) ? (float) $section['cta_trust_rating'] : 0.0;
 $trust_count = isset($section['cta_trust_review_count']) ? (int) $section['cta_trust_review_count'] : 0;
@@ -91,9 +90,6 @@ $show_form = ($cta_type === 'form' && $ghl_embed) || ($cta_type !== 'call' && $g
 			<?php endif; ?>
 			<?php if ($subheadline !== '') : ?>
 				<p class="lf-block-cta__subheadline"><?php echo esc_html($subheadline); ?></p>
-			<?php endif; ?>
-			<?php if ($supporting !== '') : ?>
-				<p class="lf-block-cta__support"><?php echo esc_html($supporting); ?></p>
 			<?php endif; ?>
 			<?php if ($trust_strip_enabled && ($trust_rating > 0 || $trust_count > 0 || !empty($trust_badges))) : ?>
 				<div class="lf-block-cta__trust" role="note" aria-label="<?php esc_attr_e('Trust and credibility', 'leadsforward-core'); ?>">

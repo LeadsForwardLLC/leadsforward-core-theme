@@ -481,7 +481,7 @@ function lf_ai_studio_rest_apply(\WP_REST_Request $request): \WP_REST_Response {
 		update_post_meta($job_id, 'lf_ai_job_error', $apply['error']);
 	}
 	if (!empty($apply['success']) && function_exists('lf_ai_studio_run_content_audit')) {
-		$report = lf_ai_studio_run_content_audit('rest_apply');
+		$report = lf_ai_studio_run_content_audit('rest_apply', is_array($payload) ? $payload : []);
 		lf_ai_studio_store_audit_report($report, $job_id);
 		lf_ai_studio_maybe_requeue_from_audit($job_id, $report);
 	}
@@ -898,7 +898,7 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 			}
 		}
 		if (function_exists('lf_ai_studio_run_content_audit')) {
-			$report = lf_ai_studio_run_content_audit('orchestrator');
+			$report = lf_ai_studio_run_content_audit('orchestrator', is_array($request) ? $request : []);
 			if (!empty($quality_warnings)) {
 				$report['quality_warnings'] = $quality_warnings;
 			}

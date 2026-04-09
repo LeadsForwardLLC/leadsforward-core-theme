@@ -8790,8 +8790,35 @@ function lf_ai_studio_apply_faq_updates(array $payload): array {
 	return array_values(array_unique(array_map('intval', $changed)));
 }
 
-function lf_ai_studio_run_content_audit(string $source = ''): array {
-	$report = lf_ai_studio_audit_site_content();
+function lf_ai_studio_run_content_audit(string $source = '', array $request = []): array {
+	$opts = [];
+	if (!empty($request['blueprints']) && is_array($request['blueprints'])) {
+		$post_ids = [];
+		$include_homepage = false;
+		foreach ($request['blueprints'] as $bp) {
+			if (!is_array($bp)) {
+				continue;
+			}
+			$page = (string) ($bp['page'] ?? '');
+			if ($page === 'homepage') {
+				$include_homepage = true;
+			}
+			$post_id = isset($bp['post_id']) ? absint($bp['post_id']) : 0;
+			if ($post_id > 0) {
+				$post_ids[] = $post_id;
+			}
+		}
+		$post_ids = array_values(array_unique(array_filter($post_ids)));
+		// When an orchestrator request specifies explicit blueprints, audit ONLY those targets.
+		if ($include_homepage || !empty($post_ids)) {
+			$opts = [
+				'scoped' => true,
+				'include_homepage' => $include_homepage,
+				'post_ids' => $post_ids,
+			];
+		}
+	}
+	$report = lf_ai_studio_audit_site_content($opts);
 	if ($source !== '') {
 		$report['source'] = $source;
 	}
@@ -8986,7 +9013,7 @@ function lf_ai_studio_build_repair_request(array $report, array $request): array
 	return $request;
 }
 
-function lf_ai_studio_audit_site_content(): array {
+function lf_ai_studio_audit_site_content(array $opts = []): array {
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
 	$uniqueness_occurrences = [];
@@ -9009,7 +9036,13 @@ function lf_ai_studio_audit_site_content(): array {
 	];
 	$cta_signatures = [];
 
-	if (function_exists('lf_get_homepage_section_config')) {
+	$scoped = !empty($opts['scoped']);
+	$include_homepage = array_key_exists('include_homepage', $opts) ? !empty($opts['include_homepage']) : true;
+	$post_ids = isset($opts['post_ids']) && is_array($opts['post_ids'])
+		? array_values(array_unique(array_filter(array_map('absint', $opts['post_ids']))))
+		: [];
+
+	if ($include_homepage && function_exists('lf_get_homepage_section_config')) {
 		$config = lf_get_homepage_section_config();
 		$order = function_exists('lf_homepage_controller_order') ? lf_homepage_controller_order() : array_keys($config);
 		$homepage_issues = [];
@@ -9068,6 +9101,18 @@ function lf_ai_studio_audit_site_content(): array {
 		];
 	}
 
+	// Scoped audits are used for the orchestrator post-apply gate and should only evaluate the explicit request targets.
+	if ($scoped) {
+		foreach ($post_ids as $post_id) {
+			$post = get_post($post_id);
+			if ($post instanceof \WP_Post) {
+				$report['pages'][] = lf_ai_studio_audit_post($post, $registry, $niche_slug, $cta_signatures, $uniqueness_occurrences);
+			}
+		}
+		// Skip "required wizard pages" and global service/service-area sweeps when scoped.
+		goto lf_ai_studio_audit_finalize;
+	}
+
 	$required_slugs = function_exists('lf_wizard_required_page_slugs') ? lf_wizard_required_page_slugs() : [];
 	foreach ($required_slugs as $slug) {
 		if ($slug === 'home') {
@@ -9113,6 +9158,7 @@ function lf_ai_studio_audit_site_content(): array {
 		}
 	}
 
+	lf_ai_studio_audit_finalize:
 	foreach ($uniqueness_occurrences as $norm => $rows) {
 		if (!is_array($rows) || count($rows) < 2) {
 			continue;
