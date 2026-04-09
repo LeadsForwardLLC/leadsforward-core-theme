@@ -4697,12 +4697,13 @@ function lf_ai_assistant_widget_js(): string {
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 			if (!sectionId || !sectionSupportsColumnSwap(sectionType)) return;
+			var ctx = persistContextFromWrap(wrap);
 			setStatus("Reversing section columns...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_toggle_section_columns",
 				nonce: lfAiFloating.nonce,
-				context_type: activeContextType,
-				context_id: activeContextId,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
 				section_id: sectionId
 			}).done(function(res){
 				if (res && res.success && res.data) {
@@ -4771,12 +4772,13 @@ function lf_ai_assistant_widget_js(): string {
 			if (!wrap) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			if (!sectionId) return;
+			var ctx = persistContextFromWrap(wrap);
 			setStatus("Deleting section...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_delete_section",
 				nonce: lfAiFloating.nonce,
-				context_type: activeContextType,
-				context_id: activeContextId,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
 				section_id: sectionId
 			}).done(function(res){
 				if (res && res.success) {
@@ -4833,12 +4835,13 @@ function lf_ai_assistant_widget_js(): string {
 			if (!wrap) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			if (!sectionId) return;
+			var ctx = persistContextFromWrap(wrap);
 			setStatus("Duplicating section...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_duplicate_section",
 				nonce: lfAiFloating.nonce,
-				context_type: activeContextType,
-				context_id: activeContextId,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
 				section_id: sectionId
 			}).done(function(res){
 				if (res && res.success && res.data && res.data.reload) {
@@ -5178,6 +5181,12 @@ function lf_ai_assistant_widget_js(): string {
 			if (!heroSettingsPickerEl) return;
 			var vRow = heroSettingsPickerEl.querySelector("[data-lf-hero-variant-row]");
 			var mRow = heroSettingsPickerEl.querySelector("[data-lf-hero-mode-row]");
+			var modesAllowedForVariant = function(variant) {
+				var v = String(variant || "default");
+				// Visual Proof (c) is designed as a color-only hero.
+				if (v === "c") return ["color"];
+				return ["color", "image", "video"];
+			};
 			if (vRow) {
 				vRow.innerHTML = "";
 				var vars = Array.isArray(lfAiFloating.hero_variants) ? lfAiFloating.hero_variants : [];
@@ -5199,6 +5208,10 @@ function lf_ai_assistant_widget_js(): string {
 					btn.addEventListener("click", function(e){
 						e.preventDefault();
 						heroSettingsState.variant = val;
+						var allowed = modesAllowedForVariant(val);
+						if (allowed.indexOf(String(heroSettingsState.mode || "")) < 0) {
+							heroSettingsState.mode = allowed[0] || "color";
+						}
 						refreshHeroSettingsPickerUi();
 					});
 					vRow.appendChild(btn);
@@ -5206,10 +5219,18 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			if (mRow) {
 				mRow.innerHTML = "";
+				var allowed = modesAllowedForVariant(heroSettingsState.variant);
+				// Hide the "Background type" label + row when only one option is allowed.
+				var hideModeRow = allowed.length <= 1;
+				mRow.style.display = hideModeRow ? "none" : "";
+				if (mRow.previousElementSibling && mRow.previousElementSibling.classList && mRow.previousElementSibling.classList.contains("lf-ai-hero-settings__label")) {
+					mRow.previousElementSibling.style.display = hideModeRow ? "none" : "";
+				}
 				var modes = Array.isArray(lfAiFloating.hero_bg_modes) ? lfAiFloating.hero_bg_modes : [];
 				modes.forEach(function(entry){
 					var val = String(entry.value || "");
 					if (!val) return;
+					if (allowed.indexOf(val) < 0) return;
 					var b = document.createElement("button");
 					b.type = "button";
 					b.className = "lf-ai-section-bg-picker__swatch";
