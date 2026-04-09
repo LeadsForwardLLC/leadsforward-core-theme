@@ -2701,28 +2701,41 @@ function lf_ai_ajax_delete_section(): void {
 	}
 	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
 	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
-		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+		if (
+			!defined('LF_HOMEPAGE_CONFIG_OPTION') ||
+			!defined('LF_HOMEPAGE_ORDER_OPTION') ||
+			!function_exists('lf_get_homepage_section_config') ||
+			!function_exists('lf_homepage_controller_order') ||
+			!function_exists('lf_homepage_sanitize_order')
+		) {
 			wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
 		}
 		$config = lf_get_homepage_section_config();
 		if (!is_array($config[$section_id] ?? null)) {
 			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
 		}
-		$old_enabled = !empty($config[$section_id]['enabled']);
-		$config[$section_id]['enabled'] = false;
+		$old_row = is_array($config[$section_id]) ? $config[$section_id] : [];
+		$old_order = lf_homepage_controller_order();
+		unset($config[$section_id]);
+		$new_order = array_values(array_filter($old_order, static function ($id) use ($section_id): bool {
+			return (string) $id !== (string) $section_id;
+		}));
+		$new_order = lf_homepage_sanitize_order($new_order, true);
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		update_option(LF_HOMEPAGE_ORDER_OPTION, $new_order, true);
 		$log_id = function_exists('lf_ai_log_action')
 			? lf_ai_log_action(
 				$context_type,
 				$context_id_use,
-				['__section_enabled::' . $section_id => $old_enabled],
-				['__section_enabled::' . $section_id => false],
-				'Inline section delete (soft)'
+				['__homepage_section_row::' . $section_id => $old_row, '__section_order' => $old_order],
+				['__homepage_section_row::' . $section_id => [], '__section_order' => $new_order],
+				'Inline section delete'
 			)
 			: '';
 		wp_send_json_success([
-			'message' => __('Section deleted. Use undo to restore.', 'leadsforward-core'),
-			'soft_delete' => true,
+			'message' => __('Section deleted.', 'leadsforward-core'),
+			'deleted' => true,
+			'reload' => true,
 			'log_id' => $log_id,
 		]);
 	}
