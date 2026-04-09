@@ -701,6 +701,13 @@ button:focus-visible,
 	gap: var(--lf-space-section) !important;
 }
 
+/* Force a 3-up benefits grid on desktop widths to avoid accidental stacking from narrow containers. */
+@media (min-width: 64rem) {
+	.lf-section--benefits .lf-benefits {
+		grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+	}
+}
+
 @media (min-width: 48rem) {
 	.lf-benefits {
 		grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

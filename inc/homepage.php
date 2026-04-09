@@ -908,10 +908,11 @@ function lf_get_homepage_sections(): array {
 	$order = lf_homepage_controller_order();
 	$out = [];
 	$index = 0;
+	$include_hidden = current_user_can('edit_theme_options');
 	foreach ($order as $section_id) {
 		$type = lf_homepage_base_section_type((string) $section_id);
 		$sec = $config[$section_id] ?? null;
-		if (!is_array($sec) || empty($sec['enabled'])) {
+		if (!is_array($sec) || (empty($sec['enabled']) && !$include_hidden)) {
 			continue;
 		}
 		$out[] = array_merge(
@@ -958,6 +959,18 @@ function lf_render_homepage_section(array $section, int $index): void {
 	if (!$post instanceof \WP_Post) {
 		return;
 	}
+	$enabled = !empty($section['enabled']);
+	if (!$enabled) {
+		// Keep a placeholder wrapper for front-end editors so hidden sections can be restored.
+		if (current_user_can('edit_theme_options')) {
+			echo '<div class="lf-inline-section-wrap lf-inline-section-wrap--hidden" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-visible="0">';
+			echo '<div class="lf-ai-hidden-section-placeholder" aria-label="' . esc_attr__('Hidden section', 'leadsforward-core') . '">';
+			echo esc_html__('Hidden section:', 'leadsforward-core') . ' ' . esc_html((string) $type);
+			echo '</div>';
+			echo '</div>';
+		}
+		return;
+	}
 	if (current_user_can('manage_options') && defined('WP_DEBUG') && WP_DEBUG) {
 		$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 		$allowed = (isset($registry[$type]) && function_exists('lf_ai_studio_homepage_allowed_field_keys'))
@@ -985,7 +998,7 @@ function lf_render_homepage_section(array $section, int $index): void {
 			implode(', ', $rendered)
 		));
 	}
-	echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '">';
+	echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-visible="1">';
 	lf_sections_render_section($type, 'homepage', $section, $post);
 	echo '</div>';
 }

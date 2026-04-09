@@ -609,6 +609,7 @@ function lf_ai_section_style_cycle_value(string $current, array $allowed): strin
 function lf_ai_mutate_section_style_settings(array $settings, string $patch, array $extra): array {
 	$bg_slugs = lf_ai_section_style_background_slugs();
 	$aligns = ['left', 'center', 'right'];
+	$benefits_layouts = ['cards', 'cards_points', 'split'];
 	$slug = sanitize_key((string) ($extra['background_slug'] ?? ''));
 	$custom_raw = (string) ($extra['custom_background'] ?? '');
 	$h_align = sanitize_key((string) ($extra['header_align'] ?? ''));
@@ -649,6 +650,12 @@ function lf_ai_mutate_section_style_settings(array $settings, string $patch, arr
 		$cur = (string) ($settings['section_header_align'] ?? 'center');
 		$cur = in_array($cur, $aligns, true) ? $cur : 'center';
 		$settings['section_header_align'] = lf_ai_section_style_cycle_value($cur, $aligns);
+		return [$settings, ''];
+	}
+	if ($patch === 'cycle_benefits_layout') {
+		$cur = (string) ($settings['benefits_layout'] ?? 'cards');
+		$cur = in_array($cur, $benefits_layouts, true) ? $cur : 'cards';
+		$settings['benefits_layout'] = lf_ai_section_style_cycle_value($cur, $benefits_layouts);
 		return [$settings, ''];
 	}
 	return [$settings, __('Unknown style action.', 'leadsforward-core')];
