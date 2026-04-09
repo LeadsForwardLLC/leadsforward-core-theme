@@ -496,7 +496,7 @@ function lf_pb_cleanup_templates_once(): void {
 	$updated = 0;
 	$page_templates = [
 		'about-us' => ['hero', 'content_image', 'benefits', 'cta'],
-		'why-choose-us' => ['hero', 'benefits', 'content_image', 'faq_accordion', 'cta'],
+		'why-choose-us' => ['hero', 'benefits', 'content_image', 'image_content', 'faq_accordion', 'cta'],
 		'our-services' => ['hero', 'service_intro', 'content_image', 'faq_accordion', 'cta'],
 		'service-areas' => ['hero', 'service_areas', 'faq_accordion', 'cta'],
 		'reviews' => ['hero', 'trust_reviews', 'cta'],

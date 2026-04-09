@@ -853,7 +853,7 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'why-choose-us' => [
-			'order' => ['hero', 'benefits', 'content_image', 'faq_accordion', 'cta'],
+			'order' => ['hero', 'benefits', 'content_image', 'image_content', 'faq_accordion', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Why choose ' . $business,
@@ -868,6 +868,11 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'section_heading' => 'A better experience from start to finish',
 					'section_intro' => 'The details that reduce disruption and keep quality high.',
 					'section_body' => 'We plan the scope up front, protect your property, and keep you informed throughout the job. Expect clear scheduling, clean daily work areas, and a final walkthrough that answers every question before we wrap.',
+				],
+				'image_content' => [
+					'section_heading' => 'Protection-first job sites',
+					'section_intro' => 'Respectful crews, careful staging, and daily cleanup.\u00a0',
+					'section_body' => 'From tarps and landscaping protection to debris control and magnet sweeps, we treat your property like it\u2019s our own. You\u2019ll know what\u2019s happening each day\u2014and what\u2019s next\u2014so the project stays smooth and predictable.',
 				],
 				'faq_accordion' => [
 					'section_heading' => 'Why choose us FAQs',
