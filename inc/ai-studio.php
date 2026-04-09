@@ -73,6 +73,7 @@ add_action('admin_post_lf_ai_studio_run_audit', 'lf_ai_studio_handle_run_audit')
 add_action('admin_post_lf_ai_studio_regen_blog_posts', 'lf_ai_studio_handle_regen_blog_posts');
 add_action('admin_post_lf_ai_studio_save_logo', 'lf_ai_studio_handle_save_logo');
 add_action('wp_ajax_lf_ai_studio_save_logo', 'lf_ai_studio_handle_save_logo_ajax');
+add_action('wp_ajax_lf_ai_studio_logo_set', 'lf_ai_studio_handle_save_logo_ajax');
 add_action('admin_post_lf_ai_studio_images_upload', 'lf_ai_studio_handle_images_upload');
 add_action('wp_ajax_lf_ai_studio_images_upload', 'lf_ai_studio_handle_images_upload_ajax');
 add_action('wp_ajax_lf_ai_studio_job_status', 'lf_ai_studio_job_status_ajax');
@@ -922,7 +923,8 @@ function lf_ai_studio_handle_save_logo_ajax(): void {
 		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
 	}
 	// Prefer standard ajax nonce param name to avoid host/WAF oddities.
-	$nonce_ok = check_ajax_referer('lf_ai_studio_save_logo_ajax', 'nonce', false);
+	$nonce_ok = check_ajax_referer('lf_ai_studio_logo_set', 'nonce', false)
+		|| check_ajax_referer('lf_ai_studio_save_logo_ajax', 'nonce', false);
 	if (!$nonce_ok) {
 		if (function_exists('lf_ai_studio_error_log')) {
 			lf_ai_studio_error_log('save_logo_ajax: nonce_failed', 'ERROR', [
@@ -1076,6 +1078,10 @@ function lf_ai_studio_handle_images_upload_ajax(): void {
 			'errors' => $result['errors'],
 		], 422);
 	}
+	$user_id = get_current_user_id();
+	if ($user_id > 0) {
+		update_user_meta($user_id, 'lf_ai_studio_recent_uploads', $result['uploaded']);
+	}
 	wp_send_json_success([
 		'uploaded' => $result['uploaded'],
 		'uploaded_count' => $result['uploaded_count'],
@@ -1096,6 +1102,10 @@ function lf_ai_studio_handle_images_upload(): void {
 		exit;
 	}
 	$result = lf_ai_studio_process_images_upload($_FILES['lf_manifest_images']);
+	$user_id = get_current_user_id();
+	if ($user_id > 0) {
+		update_user_meta($user_id, 'lf_ai_studio_recent_uploads', $result['uploaded']);
+	}
 	$redirect = add_query_arg('images_uploaded', (string) $result['uploaded_count'], admin_url('admin.php?page=lf-ops'));
 	if ($result['error_count'] > 0) {
 		lf_ai_studio_log_user_messages('images_upload partial failures', $result['errors'] ?? []);
@@ -1610,6 +1620,42 @@ function lf_ai_studio_render_page(): void {
 							</div>
 						</form>
 						<div id="lf-manifester-images-preview" class="lf-manifester-images-preview"></div>
+						<?php
+						$recent_uploads = [];
+						$user_id = get_current_user_id();
+						if ($user_id > 0) {
+							$raw = get_user_meta($user_id, 'lf_ai_studio_recent_uploads', true);
+							if (is_array($raw)) {
+								$recent_uploads = $raw;
+							}
+						}
+						if (!empty($recent_uploads)) :
+							?>
+							<script>
+								(function(){
+									var wrap = document.getElementById('lf-manifester-images-preview');
+									if (!wrap) return;
+									var rows = <?php echo wp_json_encode($recent_uploads, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?> || [];
+									if (!rows || !rows.length) return;
+									wrap.textContent = '';
+									rows.forEach(function(item, index){
+										if (!item) return;
+										var card = document.createElement('div');
+										card.className = 'lf-manifester-image-card is-uploaded';
+										card.setAttribute('data-index', String(index));
+										var img = document.createElement('img');
+										img.alt = item && item.name ? String(item.name) : '';
+										img.src = item && item.url ? String(item.url) : '';
+										var meta = document.createElement('div');
+										meta.className = 'lf-manifester-image-meta';
+										meta.textContent = item && item.name ? String(item.name) : 'Image';
+										card.appendChild(img);
+										card.appendChild(meta);
+										wrap.appendChild(card);
+									});
+								})();
+							</script>
+						<?php endif; ?>
 						<div id="lf-manifester-images-status" class="lf-manifester-status" role="status" aria-live="polite"></div>
 						<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:10px;">
 							<?php wp_nonce_field('lf_ai_studio_image_settings_save', 'lf_ai_studio_image_settings_nonce'); ?>
@@ -1636,8 +1682,8 @@ function lf_ai_studio_render_page(): void {
 						<p class="description"><?php esc_html_e('Your logo sets the brand colors automatically, but you can skip it.', 'leadsforward-core'); ?></p>
 						<div class="lf-manifester-logo">
 							<form id="lf-manifester-logo-form" method="post" action="<?php echo esc_url(admin_url('admin-ajax.php')); ?>">
-								<input type="hidden" name="nonce" value="<?php echo esc_attr(wp_create_nonce('lf_ai_studio_save_logo_ajax')); ?>" />
-								<input type="hidden" name="action" value="lf_ai_studio_save_logo" />
+								<input type="hidden" name="nonce" value="<?php echo esc_attr(wp_create_nonce('lf_ai_studio_logo_set')); ?>" />
+								<input type="hidden" name="action" value="lf_ai_studio_logo_set" />
 								<div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;">
 									<div>
 										<img id="lf-manifester-logo-preview" src="<?php echo esc_url($logo_url); ?>" style="max-height:60px;<?php echo $logo_url ? '' : 'display:none;'; ?>" alt="" />
@@ -1875,14 +1921,17 @@ function lf_ai_studio_render_page(): void {
 					var nonceEl = form.querySelector('input[name="nonce"]');
 					var logoEl = form.querySelector('input[name="lf_global_logo"]');
 					var body = new URLSearchParams({
-						action: actionEl ? String(actionEl.value || '') : 'lf_ai_studio_save_logo',
+						action: actionEl ? String(actionEl.value || '') : 'lf_ai_studio_logo_set',
 						nonce: nonceEl ? String(nonceEl.value || '') : '',
 						lf_global_logo: logoEl ? String(logoEl.value || '') : ''
 					});
 					fetch(form.action, {
 						method: 'POST',
 						credentials: 'same-origin',
-						headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+						headers: {
+							'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+							'X-Requested-With': 'XMLHttpRequest'
+						},
 						body: body.toString()
 					}).then(function(res){
 						return res.text().then(function(text){
@@ -1893,17 +1942,21 @@ function lf_ai_studio_render_page(): void {
 					}).then(function(result){
 						var payload = result ? result.payload : null;
 						if (!payload || !payload.success) {
+							var raw = (result && typeof result.text === 'string') ? result.text.trim() : '';
+							var snippet = raw ? raw.slice(0, 240) : '';
 							var msg = (payload && payload.data && payload.data.message)
 								? payload.data.message
-								: (result && typeof result.text === 'string' && (result.text.trim() === '-1' || result.text.trim() === '0'))
+								: (raw === '-1' || raw === '0')
 									? 'Logo save failed (session/security). Refresh and try again.'
-									: 'Logo save failed.';
+									: snippet
+										? ('Logo save failed. Server said: ' + snippet)
+										: 'Logo save failed.';
 							setStatus(msg, 'error');
 							return;
 						}
 						setStatus((payload.data && payload.data.message) ? payload.data.message : 'Logo saved.', 'success');
 					}).catch(function(){
-						setStatus('Logo save failed.', 'error');
+						setStatus('Logo save failed (network error).', 'error');
 					});
 				}
 				if (selectBtn) {
