@@ -2356,9 +2356,9 @@ button:focus-visible,
 	position: absolute;
 	inset: 0;
 	background-image: var(--lf-hero-bg-image, none), var(--lf-hero-bg-gradient);
-	background-size: var(--lf-hero-bg-size, cover);
+	background-size: cover !important;
 	background-position: center;
-	background-repeat: var(--lf-hero-bg-repeat, no-repeat);
+	background-repeat: no-repeat !important;
 	opacity: 0.9;
 	z-index: 0;
 }
