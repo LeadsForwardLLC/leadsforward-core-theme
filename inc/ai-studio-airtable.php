@@ -14,6 +14,7 @@ if (!defined('ABSPATH')) {
 
 add_action('wp_ajax_lf_ai_airtable_search', 'lf_ai_studio_airtable_search');
 add_action('wp_ajax_lf_ai_airtable_generate', 'lf_ai_studio_airtable_generate');
+add_action('wp_ajax_lf_ai_airtable_preview_manifest', 'lf_ai_studio_airtable_preview_manifest');
 add_action('init', 'lf_ai_studio_airtable_schedule_reviews_sync');
 add_action('init', 'lf_ai_studio_airtable_schedule_generation_jobs');
 add_action('lf_ai_airtable_reviews_sync', 'lf_ai_studio_airtable_run_reviews_sync');
@@ -315,6 +316,68 @@ function lf_ai_studio_airtable_generate(): void {
 	wp_send_json_success([
 		'job_id' => $run['job_id'] ?? 0,
 		'redirect' => $redirect,
+	]);
+}
+
+function lf_ai_studio_airtable_preview_manifest(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
+	}
+	check_ajax_referer('lf_ai_airtable', 'nonce');
+
+	$record_id = isset($_POST['record_id']) ? sanitize_text_field(wp_unslash((string) $_POST['record_id'])) : '';
+	if ($record_id === '') {
+		wp_send_json_error(['message' => __('Missing Airtable record ID.', 'leadsforward-core')], 400);
+	}
+	$record_result = lf_ai_studio_airtable_fetch_record($record_id);
+	if (!empty($record_result['error'])) {
+		wp_send_json_error(['message' => (string) $record_result['error']], 400);
+	}
+	$record = is_array($record_result['record'] ?? null) ? $record_result['record'] : [];
+	$settings = lf_ai_studio_airtable_get_settings();
+	$build = lf_ai_studio_airtable_record_to_manifest($record, $settings);
+	$errors = is_array($build['errors'] ?? null) ? $build['errors'] : [];
+	if (!empty($errors)) {
+		wp_send_json_error([
+			'message' => __('Manifest preview failed.', 'leadsforward-core'),
+			'errors' => array_values(array_filter(array_map('strval', $errors))),
+		], 400);
+	}
+	$manifest = is_array($build['manifest'] ?? null) ? $build['manifest'] : [];
+	if (function_exists('lf_ai_studio_normalize_manifest')) {
+		$manifest = lf_ai_studio_normalize_manifest($manifest);
+	}
+	$services = is_array($manifest['services'] ?? null) ? $manifest['services'] : [];
+	$areas = is_array($manifest['service_areas'] ?? null) ? $manifest['service_areas'] : [];
+	$service_rows = [];
+	foreach ($services as $svc) {
+		if (!is_array($svc)) {
+			continue;
+		}
+		$slug = sanitize_title((string) ($svc['slug'] ?? ''));
+		$title = sanitize_text_field((string) ($svc['title'] ?? $svc['name'] ?? $slug));
+		if ($slug === '') {
+			continue;
+		}
+		$service_rows[] = ['slug' => $slug, 'title' => $title !== '' ? $title : $slug];
+	}
+	$area_rows = [];
+	foreach ($areas as $area) {
+		if (!is_array($area)) {
+			continue;
+		}
+		$slug = sanitize_title((string) ($area['slug'] ?? ''));
+		$city = sanitize_text_field((string) ($area['city'] ?? ''));
+		$state = sanitize_text_field((string) ($area['state'] ?? ''));
+		if ($slug === '') {
+			continue;
+		}
+		$label = trim($city . ($state !== '' ? (', ' . $state) : ''));
+		$area_rows[] = ['slug' => $slug, 'label' => $label !== '' ? $label : $slug];
+	}
+	wp_send_json_success([
+		'services' => $service_rows,
+		'service_areas' => $area_rows,
 	]);
 }
 

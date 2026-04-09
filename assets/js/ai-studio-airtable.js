@@ -129,6 +129,7 @@
         storeSelection(record);
         updatePrimaryState();
         updatePreview(record);
+        fetchScopePreviewForRecord(record);
         var buttons = resultsEl.querySelectorAll('.lf-airtable-result');
         buttons.forEach(function (btn) {
           btn.classList.toggle('is-active', btn === button);
@@ -137,10 +138,57 @@
       if (stored && stored.id && stored.id === record.id) {
         selectedRecord = record;
         updatePreview(record);
+        fetchScopePreviewForRecord(record);
         button.classList.add('is-active');
       }
       resultsEl.appendChild(button);
     });
+  }
+
+  function populateMultiSelect(selectEl, rows, labelKey) {
+    if (!selectEl) return;
+    var prev = {};
+    Array.prototype.slice.call(selectEl.options || []).forEach(function (opt) {
+      if (opt && opt.selected) prev[String(opt.value || '')] = true;
+    });
+    selectEl.innerHTML = '';
+    (rows || []).forEach(function (row) {
+      if (!row) return;
+      var value = String(row.slug || '');
+      var label = String(row[labelKey] || row.title || row.label || value);
+      if (!value) return;
+      var opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label;
+      if (prev[value]) opt.selected = true;
+      selectEl.appendChild(opt);
+    });
+    selectEl.disabled = (selectEl.options.length === 0);
+  }
+
+  function fetchScopePreviewForRecord(record) {
+    if (!record || !record.id || !cfg || !cfg.ajaxUrl || !cfg.nonce) return;
+    var svcSelect = document.getElementById('lf-ai-scope-service-slugs');
+    var areaSelect = document.getElementById('lf-ai-scope-area-slugs');
+    if (!svcSelect && !areaSelect) return;
+    var body = new URLSearchParams({
+      action: 'lf_ai_airtable_preview_manifest',
+      nonce: cfg.nonce,
+      record_id: record.id
+    });
+    fetch(cfg.ajaxUrl, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+      body: body.toString()
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (payload) {
+        if (!payload || !payload.success || !payload.data) return;
+        populateMultiSelect(svcSelect, payload.data.services || [], 'title');
+        populateMultiSelect(areaSelect, payload.data.service_areas || [], 'label');
+      })
+      .catch(function () {});
   }
 
   function hasManifestFile() {

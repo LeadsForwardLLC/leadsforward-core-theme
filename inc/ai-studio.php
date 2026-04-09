@@ -1371,7 +1371,7 @@ function lf_ai_studio_render_page(): void {
 														<?php endforeach; ?>
 													</select>
 												<?php else : ?>
-													<select name="lf_ai_scope_service_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
+													<select id="lf-ai-scope-service-slugs" name="lf_ai_scope_service_slugs[]" multiple size="8" style="width:100%;max-width:420px;" <?php echo empty($selected_service_slugs) ? 'disabled' : ''; ?>>
 														<?php foreach ($selected_service_slugs as $slug => $label) : ?>
 															<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_service_slugs, true)); ?>>
 																<?php echo esc_html((string) $label); ?>
@@ -1379,7 +1379,7 @@ function lf_ai_studio_render_page(): void {
 														<?php endforeach; ?>
 													</select>
 													<p class="description" style="margin-top:6px;">
-														<?php esc_html_e('No service posts exist yet — showing manifest services instead. Upload/select your project first so services appear here.', 'leadsforward-core'); ?>
+														<?php esc_html_e('No service posts exist yet — options load from the selected Airtable project/manifest.', 'leadsforward-core'); ?>
 													</p>
 												<?php endif; ?>
 											</div>
@@ -1399,7 +1399,7 @@ function lf_ai_studio_render_page(): void {
 														<?php endforeach; ?>
 													</select>
 												<?php else : ?>
-													<select name="lf_ai_scope_service_area_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
+													<select id="lf-ai-scope-area-slugs" name="lf_ai_scope_service_area_slugs[]" multiple size="8" style="width:100%;max-width:420px;" <?php echo empty($selected_area_slugs) ? 'disabled' : ''; ?>>
 														<?php foreach ($selected_area_slugs as $slug => $label) : ?>
 															<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_area_slugs, true)); ?>>
 																<?php echo esc_html((string) $label); ?>
@@ -1407,7 +1407,7 @@ function lf_ai_studio_render_page(): void {
 														<?php endforeach; ?>
 													</select>
 													<p class="description" style="margin-top:6px;">
-														<?php esc_html_e('No service area posts exist yet — showing manifest service areas instead. Upload/select your project first so areas appear here.', 'leadsforward-core'); ?>
+														<?php esc_html_e('No service area posts exist yet — options load from the selected Airtable project/manifest.', 'leadsforward-core'); ?>
 													</p>
 												<?php endif; ?>
 											</div>
