@@ -496,6 +496,30 @@ function lf_ai_studio_handle_scope_save(): void {
 	update_option('lf_ai_gen_core_pages', isset($_POST['lf_ai_gen_core_pages']) ? '1' : '0');
 	update_option('lf_ai_gen_blog_posts', isset($_POST['lf_ai_gen_blog_posts']) ? '1' : '0');
 	update_option('lf_ai_gen_projects', isset($_POST['lf_ai_gen_projects']) ? '1' : '0');
+
+	$service_ids = [];
+	if (isset($_POST['lf_ai_scope_service_ids']) && is_array($_POST['lf_ai_scope_service_ids'])) {
+		foreach ($_POST['lf_ai_scope_service_ids'] as $raw) {
+			$id = absint($raw);
+			if ($id > 0) {
+				$service_ids[] = $id;
+			}
+		}
+	}
+	$service_ids = array_values(array_unique($service_ids));
+	update_option('lf_ai_scope_service_ids', $service_ids, false);
+
+	$area_ids = [];
+	if (isset($_POST['lf_ai_scope_service_area_ids']) && is_array($_POST['lf_ai_scope_service_area_ids'])) {
+		foreach ($_POST['lf_ai_scope_service_area_ids'] as $raw) {
+			$id = absint($raw);
+			if ($id > 0) {
+				$area_ids[] = $id;
+			}
+		}
+	}
+	$area_ids = array_values(array_unique($area_ids));
+	update_option('lf_ai_scope_service_area_ids', $area_ids, false);
 	lf_ai_studio_sync_legacy_blueprint_scope_from_gen_flags();
 
 	wp_safe_redirect(admin_url('admin.php?page=lf-ops&scope_saved=1'));
@@ -1068,6 +1092,24 @@ function lf_ai_studio_render_page(): void {
 	$gen_core_pages = get_option('lf_ai_gen_core_pages', '1') === '1';
 	$gen_blog_posts = get_option('lf_ai_gen_blog_posts', '1') === '1';
 	$gen_projects = get_option('lf_ai_gen_projects', '1') === '1';
+	$selected_service_ids = get_option('lf_ai_scope_service_ids', []);
+	$selected_area_ids = get_option('lf_ai_scope_service_area_ids', []);
+	$selected_service_ids = is_array($selected_service_ids) ? array_values(array_filter(array_map('absint', $selected_service_ids))) : [];
+	$selected_area_ids = is_array($selected_area_ids) ? array_values(array_filter(array_map('absint', $selected_area_ids))) : [];
+	$services_for_picker = get_posts([
+		'post_type' => 'lf_service',
+		'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
+		'posts_per_page' => 500,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+	]);
+	$areas_for_picker = get_posts([
+		'post_type' => 'lf_service_area',
+		'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
+		'posts_per_page' => 500,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+	]);
 	$scope_snap = lf_ai_studio_get_generation_scope_snapshot_for_ui(is_array($manifest) ? $manifest : []);
 	$image_generation_limit = max(1, min(60, (int) get_option('lf_ai_image_generation_limit', 12)));
 	$vision_debug_job_id = $job_id > 0 ? $job_id : lf_ai_studio_latest_job_id_for_debug();
@@ -1256,6 +1298,39 @@ function lf_ai_studio_render_page(): void {
 										<label><input type="checkbox" id="lf_ai_gen_core_pages" name="lf_ai_gen_core_pages" value="1" <?php checked($gen_core_pages); ?> /> <?php esc_html_e('Core pages', 'leadsforward-core'); ?></label>
 										<label><input type="checkbox" id="lf_ai_gen_blog_posts" name="lf_ai_gen_blog_posts" value="1" <?php checked($gen_blog_posts); ?> /> <?php esc_html_e('AI blog posts (3 now + 2 weekly)', 'leadsforward-core'); ?></label>
 										<label><input type="checkbox" id="lf_ai_gen_projects" name="lf_ai_gen_projects" value="1" <?php checked($gen_projects); ?> /> <?php esc_html_e('Projects', 'leadsforward-core'); ?></label>
+										<div style="flex-basis:100%;"></div>
+										<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;">
+											<div style="min-width:320px;max-width:420px;">
+												<strong><?php esc_html_e('Smoke test: Services (optional)', 'leadsforward-core'); ?></strong>
+												<p class="description" style="margin:4px 0 8px;">
+													<?php esc_html_e('Select specific services to include when “Service pages” is enabled. Leave empty to include all published services.', 'leadsforward-core'); ?>
+												</p>
+												<select name="lf_ai_scope_service_ids[]" multiple size="8" style="width:100%;max-width:420px;">
+													<?php foreach ($services_for_picker as $svc) : ?>
+														<?php if (!$svc instanceof \WP_Post) { continue; } ?>
+														<option value="<?php echo esc_attr((string) $svc->ID); ?>" <?php selected(in_array((int) $svc->ID, $selected_service_ids, true)); ?>>
+															<?php echo esc_html($svc->post_title); ?>
+															<?php echo $svc->post_status !== 'publish' ? esc_html(' (' . $svc->post_status . ')') : ''; ?>
+														</option>
+													<?php endforeach; ?>
+												</select>
+											</div>
+											<div style="min-width:320px;max-width:420px;">
+												<strong><?php esc_html_e('Smoke test: Service Areas (optional)', 'leadsforward-core'); ?></strong>
+												<p class="description" style="margin:4px 0 8px;">
+													<?php esc_html_e('Select specific service areas to include when “Service area pages” is enabled. Leave empty to include all published service areas.', 'leadsforward-core'); ?>
+												</p>
+												<select name="lf_ai_scope_service_area_ids[]" multiple size="8" style="width:100%;max-width:420px;">
+													<?php foreach ($areas_for_picker as $area) : ?>
+														<?php if (!$area instanceof \WP_Post) { continue; } ?>
+														<option value="<?php echo esc_attr((string) $area->ID); ?>" <?php selected(in_array((int) $area->ID, $selected_area_ids, true)); ?>>
+															<?php echo esc_html($area->post_title); ?>
+															<?php echo $area->post_status !== 'publish' ? esc_html(' (' . $area->post_status . ')') : ''; ?>
+														</option>
+													<?php endforeach; ?>
+												</select>
+											</div>
+										</div>
 										<button type="submit" class="button"><?php esc_html_e('Save Scope', 'leadsforward-core'); ?></button>
 										<button type="button" class="button" id="lf-ai-scope-select-all"><?php esc_html_e('Select all', 'leadsforward-core'); ?></button>
 										<button type="button" class="button" id="lf-ai-scope-homepage-services"><?php esc_html_e('Homepage + services', 'leadsforward-core'); ?></button>
@@ -5264,6 +5339,10 @@ function lf_ai_studio_get_generation_scope_snapshot_for_ui(array $manifest): arr
 			]
 		)
 	);
+	$selected_services = get_option('lf_ai_scope_service_ids', []);
+	$selected_areas = get_option('lf_ai_scope_service_area_ids', []);
+	$selected_services = is_array($selected_services) ? array_values(array_filter(array_map('absint', $selected_services))) : [];
+	$selected_areas = is_array($selected_areas) ? array_values(array_filter(array_map('absint', $selected_areas))) : [];
 	$manifest_generation_scope = isset($manifest['generation_scope']) ? (string) $manifest['generation_scope'] : '';
 	return [
 		'scope' => $scope,
@@ -5272,6 +5351,8 @@ function lf_ai_studio_get_generation_scope_snapshot_for_ui(array $manifest): arr
 		'is_homepage_only' => $is_homepage_only,
 		'services_in_manifest' => $services_in_manifest,
 		'service_posts_published' => $service_posts_published,
+		'selected_service_ids' => $selected_services,
+		'selected_service_area_ids' => $selected_areas,
 		'manifest_generation_scope' => $manifest_generation_scope,
 	];
 }
@@ -5582,10 +5663,13 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 	$area_keyword_map = $use_manifest ? lf_ai_studio_manifest_keyword_map($manifest, 'service_areas') : [];
 
 	if ($scope['services']) {
+		$service_ids = get_option('lf_ai_scope_service_ids', []);
+		$service_ids = is_array($service_ids) ? array_values(array_filter(array_map('absint', $service_ids))) : [];
 		$services = get_posts([
 			'post_type' => 'lf_service',
 			'post_status' => 'publish',
 			'posts_per_page' => 200,
+			'post__in' => !empty($service_ids) ? $service_ids : [],
 			'orderby' => 'menu_order title',
 			'order' => 'ASC',
 		]);
@@ -5610,10 +5694,13 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 	}
 
 	if ($scope['service_areas']) {
+		$area_ids = get_option('lf_ai_scope_service_area_ids', []);
+		$area_ids = is_array($area_ids) ? array_values(array_filter(array_map('absint', $area_ids))) : [];
 		$areas = get_posts([
 			'post_type' => 'lf_service_area',
 			'post_status' => 'publish',
 			'posts_per_page' => 200,
+			'post__in' => !empty($area_ids) ? $area_ids : [],
 			'orderby' => 'menu_order title',
 			'order' => 'ASC',
 		]);
