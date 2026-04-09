@@ -5637,6 +5637,7 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 			'contact' => ['page' => 'contact', 'intent' => 'contact', 'keyword' => ''],
 			'reviews' => ['page' => 'reviews', 'intent' => 'reviews', 'keyword' => ''],
 			'blog' => ['page' => 'blog', 'intent' => 'blog', 'keyword' => ''],
+			'why-choose-us' => ['page' => 'why_choose_us', 'intent' => 'why_choose_us', 'keyword' => ''],
 			'sitemap' => ['page' => 'sitemap', 'intent' => 'sitemap', 'keyword' => ''],
 			'thank-you' => ['page' => 'thank_you', 'intent' => 'thank_you', 'keyword' => ''],
 			'privacy-policy' => ['page' => 'privacy_policy', 'intent' => 'privacy_policy', 'keyword' => ''],

@@ -20,6 +20,7 @@ function lf_wizard_required_page_slugs(): array {
 	return [
 		'home',
 		'about-us',
+		'why-choose-us',
 		'our-services',
 		'service-areas',
 		'reviews',
@@ -39,6 +40,7 @@ function lf_wizard_default_page_titles(): array {
 	return [
 		'home'              => __('Home', 'leadsforward-core'),
 		'about-us'          => __('About Us', 'leadsforward-core'),
+		'why-choose-us'     => __('Why Choose Us', 'leadsforward-core'),
 		'our-services'      => __('Services', 'leadsforward-core'),
 		'service-areas' => __('Service Areas', 'leadsforward-core'),
 		'reviews'           => __('Reviews', 'leadsforward-core'),
