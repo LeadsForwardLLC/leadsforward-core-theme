@@ -13,6 +13,7 @@ if (!defined('ABSPATH')) {
 }
 
 if (function_exists('lf_load_inc')) {
+	lf_load_inc('seo/internal-link-map.php');
 	lf_load_inc('seo/seo-settings.php');
 	lf_load_inc('seo/seo-meta-box.php');
 	lf_load_inc('seo/seo-quality.php');
