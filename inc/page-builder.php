@@ -1041,11 +1041,23 @@ function lf_pb_render_sections(\WP_Post $post): void {
 	$sections = $config['sections'] ?? [];
 	foreach ($order as $section_id) {
 		$sec_cfg = $sections[$section_id] ?? null;
-		if (!$sec_cfg || empty($sec_cfg['enabled'])) {
+		if (!$sec_cfg) {
 			continue;
 		}
+		$enabled = !empty($sec_cfg['enabled']);
 		$type = $sec_cfg['type'] ?? '';
 		if ($type === '') {
+			continue;
+		}
+		// If a section is hidden, keep a placeholder wrapper for front-end editors so it can be restored.
+		if (!$enabled) {
+			if (current_user_can('edit_theme_options')) {
+				echo '<div class="lf-inline-section-wrap lf-inline-section-wrap--hidden" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-visible="0">';
+				echo '<div class="lf-ai-hidden-section-placeholder" aria-label="' . esc_attr__('Hidden section', 'leadsforward-core') . '">';
+				echo esc_html__('Hidden section:', 'leadsforward-core') . ' ' . esc_html((string) ($type ?: $section_id));
+				echo '</div>';
+				echo '</div>';
+			}
 			continue;
 		}
 		if ($context === 'page' && $post->post_name === 'our-services' && $type === 'content_centered') {
@@ -1086,7 +1098,7 @@ function lf_pb_render_sections(\WP_Post $post): void {
 				implode(', ', $rendered)
 			));
 		}
-		echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '">';
+		echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-visible="1">';
 		lf_sections_render_section($type, $context, $sec_cfg['settings'] ?? [], $post);
 		echo '</div>';
 	}

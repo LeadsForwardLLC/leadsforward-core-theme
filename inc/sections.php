@@ -429,7 +429,7 @@ function lf_sections_registry(): array {
 		],
 		'content_image_a' => [
 			'label' => __('Content + Media (A)', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area', 'page', 'post'],
+			'contexts' => ['homepage'],
 			'fields' => $media_fields_a,
 			'render' => 'lf_sections_render_content_image',
 		],
@@ -441,13 +441,13 @@ function lf_sections_registry(): array {
 		],
 		'image_content_b' => [
 			'label' => __('Media + Content (B)', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area', 'page', 'post'],
+			'contexts' => ['homepage'],
 			'fields' => $media_fields_b,
 			'render' => 'lf_sections_render_image_content',
 		],
 		'content_image_c' => [
 			'label' => __('Content + Media (C)', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area', 'page', 'post'],
+			'contexts' => ['homepage'],
 			'fields' => $media_fields_c,
 			'render' => 'lf_sections_render_content_image',
 		],
@@ -851,6 +851,7 @@ function lf_sections_default_order(string $context): array {
 		return [
 			'hero',
 			'trust_bar',
+			'logo_strip',
 			'service_intro',
 			'benefits',
 			'service_details',
@@ -1627,9 +1628,11 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	$used_icons = [];
 	lf_sections_render_shell_open('benefits', $title, $intro_text, $settings['section_background'] ?? 'light', $settings);
 	?>
-	<div class="lf-benefits lf-benefits--<?php echo esc_attr($layout); ?>">
-		<div class="lf-benefits__grid">
-			<?php foreach ($parsed_items as $index => $item) : ?>
+	<div
+		class="lf-benefits lf-benefits--<?php echo esc_attr($layout); ?>"
+		style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--lf-space-section);"
+	>
+		<?php foreach ($parsed_items as $index => $item) : ?>
 				<?php if ($item['title'] === '' && isset($default_items[$index]['title'])) : ?>
 					<?php $item['title'] = (string) $default_items[$index]['title']; ?>
 				<?php endif; ?>
@@ -1656,7 +1659,7 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 					$line_attr = trim($item['title'] . ' || ' . $item['body']);
 				}
 				?>
-				<div class="<?php echo esc_attr($card_class); ?>" data-lf-benefit-line="<?php echo esc_attr($line_attr); ?>">
+			<div class="<?php echo esc_attr($card_class); ?>" data-lf-benefit-line="<?php echo esc_attr($line_attr); ?>">
 					<?php if ($icon_enabled) : ?>
 						<?php $icon_slug = lf_sections_benefits_pick_icon_slug($item, $icon_overrides, $used_icons, $index); ?>
 						<?php if ($icon_slug !== '' && function_exists('lf_icon')) : ?>
@@ -1668,9 +1671,8 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 					<?php endif; ?>
 					<h3 class="lf-benefits__title"><?php echo wp_kses( (string) $item['title'], function_exists( 'lf_ai_inline_link_allowed_kses' ) ? lf_ai_inline_link_allowed_kses() : [] ); ?></h3>
 					<p class="lf-benefits__desc"><?php echo wp_kses( (string) $item['body'], function_exists( 'lf_ai_inline_link_allowed_kses' ) ? lf_ai_inline_link_allowed_kses() : [] ); ?></p>
-				</div>
-			<?php endforeach; ?>
-		</div>
+			</div>
+		<?php endforeach; ?>
 		<?php if ($layout !== 'cards' && !empty($supporting_points)) : ?>
 			<ul class="lf-benefits__points" role="list">
 				<?php foreach ($supporting_points as $pt) : ?>

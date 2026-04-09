@@ -66,6 +66,10 @@ function lf_ai_assistant_section_library(array $context): array {
 		if ($sid === '') {
 			continue;
 		}
+		// Hide legacy homepage-only media variants from the library UI.
+		if (in_array($sid, ['content_image_a', 'content_image_c', 'image_content_b'], true)) {
+			continue;
+		}
 		$label = sanitize_text_field((string) ($row['label'] ?? $sid));
 		$rows[] = ['id' => $sid, 'label' => $label];
 	}
@@ -915,8 +919,10 @@ function lf_ai_assistant_widget_js(): string {
 		var activeAssistantCptType = String($cptType.val() || "lf_service");
 		var activeAssistantBatchType = String($batchType.val() || "post");
 		var activeAssistantBatchCount = 5;
-		var activeContextType = String(lfAiFloating.context_type || "homepage");
-		var activeContextId = String(lfAiFloating.context_id || "homepage");
+		var pageContextType = String(lfAiFloating.context_type || "homepage");
+		var pageContextId = String(lfAiFloating.context_id || "homepage");
+		var activeContextType = pageContextType;
+		var activeContextId = pageContextId;
 		var activeTargetLabel = String(lfAiFloating.target_label || "Homepage");
 		var labels = lfAiFloating.labels || {};
 		var homepageEnabledMap = (lfAiFloating.homepage_enabled && typeof lfAiFloating.homepage_enabled === "object") ? lfAiFloating.homepage_enabled : {};
@@ -928,7 +934,8 @@ function lf_ai_assistant_widget_js(): string {
 			if (wrap && wrap.closest && wrap.closest(".site-main--homepage")) {
 				return { context_type: "homepage", context_id: "homepage" };
 			}
-			return { context_type: String(activeContextType || "homepage"), context_id: String(activeContextId || "homepage") };
+			// Use the page immutable context, not the assistant active target (which can drift).
+			return { context_type: String(pageContextType || "homepage"), context_id: String(pageContextId || "homepage") };
 		}
 		var promptSnippet = "";
 		var docContext = "";
@@ -2591,8 +2598,8 @@ function lf_ai_assistant_widget_js(): string {
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_add_section",
 				nonce: lfAiFloating.nonce,
-				context_type: activeContextType,
-				context_id: activeContextId,
+				context_type: pageContextType,
+				context_id: pageContextId,
 				section_type: type,
 				after_section_id: String(afterSectionId || (selectedSectionWrap ? String(selectedSectionWrap.getAttribute("data-lf-section-id") || "") : ""))
 			}).done(function(res){
@@ -5313,12 +5320,13 @@ function lf_ai_assistant_widget_js(): string {
 				setStatus("Missing section id for hero.", true);
 				return;
 			}
+			var ctx = persistContextFromWrap(wrap);
 			setStatus("Saving hero settings...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_update_hero_settings",
 				nonce: lfAiFloating.nonce,
-				context_type: activeContextType,
-				context_id: activeContextId,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
 				section_id: sectionId,
 				hero_variant: heroSettingsState.variant,
 				hero_background_mode: heroSettingsState.mode,
@@ -5343,12 +5351,13 @@ function lf_ai_assistant_widget_js(): string {
 			if (!wrap || !patch) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			if (!sectionId) return;
+			var ctx = persistContextFromWrap(wrap);
 			setStatus("Updating section style...", false);
 			var payload = {
 				action: "lf_ai_update_section_style",
 				nonce: lfAiFloating.nonce,
-				context_type: activeContextType,
-				context_id: activeContextId,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
 				section_id: sectionId,
 				patch: String(patch)
 			};
@@ -5394,22 +5403,46 @@ function lf_ai_assistant_widget_js(): string {
 		function buildSectionControls() {
 			collectSectionWrappers().forEach(function(wrap){
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
-				if (wrap.querySelector(".lf-ai-section-controls")) return;
-				var controls = document.createElement("div");
-				controls.className = "lf-ai-section-controls lf-ai-inline-editor-ignore";
+				var controls = wrap.querySelector(".lf-ai-section-controls");
+				if (!controls) {
+					controls = document.createElement("div");
+					controls.className = "lf-ai-section-controls lf-ai-inline-editor-ignore";
+					wrap.appendChild(controls);
+				}
 				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
-				var bgBtn = document.createElement("button");
-				bgBtn.type = "button";
-				bgBtn.className = "lf-ai-section-btn";
-				bgBtn.textContent = "BG";
-				bgBtn.setAttribute("title", "Choose section background (theme presets or custom color)");
-				bgBtn.setAttribute("aria-label", "Choose section background");
-				bgBtn.addEventListener("click", function(e){
-					e.preventDefault();
-					e.stopPropagation();
+				var ensureBtn = function(text, title, ariaLabel, onClick) {
+					if (!controls) return null;
+					var btns = controls.querySelectorAll("button");
+					for (var i = 0; i < btns.length; i++) {
+						if (String(btns[i].textContent || "").trim() === text) return btns[i];
+					}
+					var btn = document.createElement("button");
+					btn.type = "button";
+					btn.className = "lf-ai-section-btn";
+					btn.textContent = text;
+					if (title) btn.setAttribute("title", title);
+					if (ariaLabel) btn.setAttribute("aria-label", ariaLabel);
+					btn.addEventListener("click", function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						try { onClick(); } catch (err) {}
+					});
+					controls.appendChild(btn);
+					return btn;
+				};
+				ensureBtn("BG", "Choose section background (theme presets or custom color)", "Choose section background", function(){
 					openSectionBgPicker(wrap);
 				});
-				controls.appendChild(bgBtn);
+				if (sectionType === "benefits") {
+					ensureBtn("Layout", "Cycle benefits layout: cards → cards + points → split", "Cycle benefits layout", function(){
+						persistSectionStyle(wrap, "cycle_benefits_layout", {});
+					});
+				}
+				if (sectionType === "trust_reviews") {
+					ensureBtn("Layout", "Cycle review layout: slider → masonry → grid", "Cycle review layout", function(){
+						persistTrustLayout(wrap);
+					});
+				}
 				if (sectionType === "hero") {
 					var heroBtn = document.createElement("button");
 					heroBtn.type = "button";
@@ -5453,10 +5486,12 @@ function lf_ai_assistant_widget_js(): string {
 					controls.appendChild(swapBtn);
 				}
 				if (sectionType === "trust_reviews") {
+					if (!controls.querySelector("button.lf-ai-section-btn[data-lf-ai-layout=\"trust\"]")) {
 					var layoutBtn = document.createElement("button");
 					layoutBtn.type = "button";
 					layoutBtn.className = "lf-ai-section-btn";
 					layoutBtn.textContent = "Layout";
+					layoutBtn.setAttribute("data-lf-ai-layout", "trust");
 					layoutBtn.setAttribute("title", "Cycle review layout: slider → masonry → grid");
 					layoutBtn.setAttribute("aria-label", "Cycle review layout");
 					layoutBtn.addEventListener("click", function(e){
@@ -5465,6 +5500,24 @@ function lf_ai_assistant_widget_js(): string {
 						persistTrustLayout(wrap);
 					});
 					controls.appendChild(layoutBtn);
+					}
+				}
+				if (sectionType === "benefits") {
+					if (!controls.querySelector("button.lf-ai-section-btn[data-lf-ai-layout=\"benefits\"]")) {
+					var benefitsLayoutBtn = document.createElement("button");
+					benefitsLayoutBtn.type = "button";
+					benefitsLayoutBtn.className = "lf-ai-section-btn";
+					benefitsLayoutBtn.textContent = "Layout";
+					benefitsLayoutBtn.setAttribute("data-lf-ai-layout", "benefits");
+					benefitsLayoutBtn.setAttribute("title", "Cycle benefits layout: cards → cards + points → split");
+					benefitsLayoutBtn.setAttribute("aria-label", "Cycle benefits layout");
+					benefitsLayoutBtn.addEventListener("click", function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						persistSectionStyle(wrap, "cycle_benefits_layout", {});
+					});
+					controls.appendChild(benefitsLayoutBtn);
+					}
 				}
 				var upBtn = document.createElement("button");
 				upBtn.type = "button";
@@ -5537,7 +5590,10 @@ function lf_ai_assistant_widget_js(): string {
 					}
 				});
 				controls.appendChild(deleteBtn);
-				wrap.appendChild(controls);
+				// If controls existed already, we only ensure missing buttons above.
+				if (!wrap.querySelector(".lf-ai-section-controls")) {
+					wrap.appendChild(controls);
+				}
 				applySectionVisibilityUi(wrap, String(wrap.getAttribute("data-lf-section-visible") || "1") !== "0");
 			});
 		}
@@ -5616,12 +5672,13 @@ function lf_ai_assistant_widget_js(): string {
 			if (!ids.length) {
 				return;
 			}
+			var ctx = persistContextFromWrap(collectSectionWrappers()[0]);
 			setStatus((lfAiFloating.i18n && lfAiFloating.i18n.statusReordering) ? lfAiFloating.i18n.statusReordering : "Saving section order...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_reorder_sections",
 				nonce: lfAiFloating.nonce,
-				context_type: activeContextType,
-				context_id: activeContextId,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
 				ordered_ids: JSON.stringify(ids)
 			}).done(function(res){
 				if (res && res.success) {
