@@ -550,7 +550,7 @@ function lf_pb_cleanup_templates_once(): void {
 		'no_found_rows' => true,
 	]);
 	foreach ($area_ids as $area_id) {
-		if (lf_pb_cleanup_post_config((int) $area_id, 'service_area', ['hero', 'trust_bar', 'content_image', 'benefits', 'services_offered_here', 'process', 'related_links', 'nearby_areas', 'faq_accordion', 'cta'])) {
+		if (lf_pb_cleanup_post_config((int) $area_id, 'service_area', ['hero', 'trust_bar', 'content_image', 'benefits', 'content_image', 'image_content', 'process', 'related_links', 'nearby_areas', 'faq_accordion', 'cta'])) {
 			$updated++;
 		}
 	}
