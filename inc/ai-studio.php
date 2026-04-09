@@ -916,16 +916,36 @@ function lf_ai_studio_handle_save_logo(): void {
 
 function lf_ai_studio_handle_save_logo_ajax(): void {
 	if (!current_user_can('edit_theme_options')) {
+		if (function_exists('lf_ai_studio_error_log')) {
+			lf_ai_studio_error_log('save_logo_ajax: insufficient permissions', 'ERROR');
+		}
 		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
 	}
 	$nonce = isset($_POST['lf_ai_studio_logo_nonce']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_studio_logo_nonce'])) : '';
 	if (!wp_verify_nonce($nonce, 'lf_ai_studio_save_logo')) {
+		if (function_exists('lf_ai_studio_error_log')) {
+			lf_ai_studio_error_log('save_logo_ajax: nonce_failed', 'ERROR', [
+				'has_nonce' => $nonce !== '',
+			]);
+		}
 		wp_send_json_error(['message' => __('Security check failed. Please refresh and try again.', 'leadsforward-core')], 403);
 	}
 	$prev_logo_id = function_exists('lf_get_global_option')
 		? (int) lf_get_global_option('lf_global_logo', 0)
 		: (int) get_option('options_lf_global_logo', 0);
 	$logo_id = isset($_POST['lf_global_logo']) ? (int) $_POST['lf_global_logo'] : 0;
+	if ($logo_id > 0) {
+		$post = get_post($logo_id);
+		if (!$post instanceof \WP_Post || $post->post_type !== 'attachment') {
+			if (function_exists('lf_ai_studio_error_log')) {
+				lf_ai_studio_error_log('save_logo_ajax: invalid_attachment', 'ERROR', [
+					'logo_id' => $logo_id,
+					'post_type' => $post instanceof \WP_Post ? $post->post_type : 'missing',
+				]);
+			}
+			wp_send_json_error(['message' => __('Selected logo is not a valid media attachment.', 'leadsforward-core')], 422);
+		}
+	}
 	if (function_exists('lf_update_global_option_value')) {
 		lf_update_global_option_value('lf_global_logo', (string) $logo_id);
 	} else {
@@ -946,6 +966,11 @@ function lf_ai_studio_handle_save_logo_ajax(): void {
 	// Set site icon (favicon) from logo when possible.
 	if ($logo_id > 0 && function_exists('wp_attachment_is_image') && wp_attachment_is_image($logo_id)) {
 		update_option('site_icon', $logo_id, false);
+	}
+	if (function_exists('lf_ai_studio_error_log')) {
+		lf_ai_studio_error_log('save_logo_ajax: saved', 'INFO', [
+			'logo_id' => $logo_id,
+		]);
 	}
 	$url = $logo_id ? wp_get_attachment_image_url($logo_id, 'medium') : '';
 	wp_send_json_success([
