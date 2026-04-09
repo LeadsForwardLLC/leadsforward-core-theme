@@ -5826,11 +5826,13 @@ function lf_ai_assistant_widget_js(): string {
 			el.setAttribute("data-lf-inline-saving", "1");
 			setStatus("Saving inline edit...", false);
 			var useHtml = /<[a-z]/i.test(newHtml);
+			var wrap = el && el.closest ? el.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]") : null;
+			var ctx = persistContextFromWrap(wrap);
 			var payload = {
 				action: "lf_ai_inline_save",
 				nonce: lfAiFloating.nonce,
-				context_type: activeContextType,
-				context_id: activeContextId,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
 				value: useHtml ? newHtml : newText,
 				value_format: useHtml ? "html" : "text"
 			};
