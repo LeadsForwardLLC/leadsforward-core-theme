@@ -5333,6 +5333,9 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			var ctx = persistContextFromWrap(wrap);
 			setStatus("Saving hero settings...", false);
+			var mode = String(heroSettingsState.mode || "image");
+			var imageIdToSend = (mode === "image") ? (parseInt(String(heroSettingsState.imageId || "0"), 10) || 0) : 0;
+			var videoIdToSend = (mode === "video") ? (parseInt(String(heroSettingsState.videoId || "0"), 10) || 0) : 0;
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_update_hero_settings",
 				nonce: lfAiFloating.nonce,
@@ -5340,9 +5343,9 @@ function lf_ai_assistant_widget_js(): string {
 				context_id: ctx.context_id,
 				section_id: sectionId,
 				hero_variant: heroSettingsState.variant,
-				hero_background_mode: heroSettingsState.mode,
-				hero_background_image_id: String(heroSettingsState.imageId),
-				hero_background_video_id: String(heroSettingsState.videoId)
+				hero_background_mode: mode,
+				hero_background_image_id: String(imageIdToSend),
+				hero_background_video_id: String(videoIdToSend)
 			}).done(function(res){
 				if (res && res.success) {
 					closeHeroSettingsPicker();
