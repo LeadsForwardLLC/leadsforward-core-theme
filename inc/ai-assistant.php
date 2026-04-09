@@ -5473,11 +5473,6 @@ function lf_ai_assistant_widget_js(): string {
 				ensureBtn("BG", "Choose section background (theme presets or custom color)", "Choose section background", function(){
 					openSectionBgPicker(wrap);
 				});
-				if (sectionType === "benefits") {
-					ensureBtn("Layout", "Cycle benefits layout: cards → cards + points → split", "Cycle benefits layout", function(){
-						persistSectionStyle(wrap, "cycle_benefits_layout", {});
-					});
-				}
 				if (sectionType === "trust_reviews") {
 					ensureBtn("Layout", "Cycle review layout: slider → masonry → grid", "Cycle review layout", function(){
 						persistTrustLayout(wrap);
