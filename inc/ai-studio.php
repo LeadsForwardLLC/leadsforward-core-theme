@@ -8451,10 +8451,11 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 				$post_image_context,
 				$assigned_images
 			);
-			$merged_settings = array_merge(
-				$current_settings,
-				lf_sections_sanitize_settings($type, $injected)
-			);
+			// IMPORTANT: do not merge full sanitized defaults, or we will overwrite real content with default empty strings.
+			// Only apply the keys that were actually injected.
+			$sanitized_injected = lf_sections_sanitize_settings($type, $injected);
+			$sanitized_injected = array_intersect_key($sanitized_injected, $injected);
+			$merged_settings = array_merge($current_settings, $sanitized_injected);
 			$section_registry = isset($registry[$type]) && is_array($registry[$type]) ? $registry[$type] : [];
 			$filled_settings = lf_ai_studio_fill_generic_section_copy($merged_settings, $post, $type, $section_registry);
 			$link_result = lf_ai_studio_orchestrate_internal_links_for_settings($filled_settings, $type, $registry, $post);
