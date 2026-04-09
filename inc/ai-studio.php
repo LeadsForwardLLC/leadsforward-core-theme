@@ -1870,11 +1870,19 @@ function lf_ai_studio_render_page(): void {
 				function saveLogoAsync() {
 					if (!form) return;
 					setStatus('Saving logo…', 'info');
-					var fd = new FormData(form);
+					var actionEl = form.querySelector('input[name="action"]');
+					var nonceEl = form.querySelector('input[name="lf_ai_studio_logo_nonce"]');
+					var logoEl = form.querySelector('input[name="lf_global_logo"]');
+					var body = new URLSearchParams({
+						action: actionEl ? String(actionEl.value || '') : 'lf_ai_studio_save_logo',
+						lf_ai_studio_logo_nonce: nonceEl ? String(nonceEl.value || '') : '',
+						lf_global_logo: logoEl ? String(logoEl.value || '') : ''
+					});
 					fetch(form.action, {
 						method: 'POST',
 						credentials: 'same-origin',
-						body: fd
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+						body: body.toString()
 					}).then(function(res){
 						return res.text().then(function(text){
 							var payload = null;
@@ -1886,8 +1894,8 @@ function lf_ai_studio_render_page(): void {
 						if (!payload || !payload.success) {
 							var msg = (payload && payload.data && payload.data.message)
 								? payload.data.message
-								: (result && typeof result.text === 'string' && result.text.trim() === '-1')
-									? 'Security check failed. Refresh and try again.'
+								: (result && typeof result.text === 'string' && (result.text.trim() === '-1' || result.text.trim() === '0'))
+									? 'Logo save failed (session/security). Refresh and try again.'
 									: 'Logo save failed.';
 							setStatus(msg, 'error');
 							return;
