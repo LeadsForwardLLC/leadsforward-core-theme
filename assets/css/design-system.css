@@ -1493,13 +1493,13 @@ button:focus-visible,
 }
 
 .site-header__logo-img {
-	height: 64px;
+	height: 76px;
 	width: auto;
 	display: block;
 }
 
 .site-header--scrolled .site-header__logo-img {
-	height: 54px;
+	height: 62px;
 }
 
 .site-header__logo-text {
