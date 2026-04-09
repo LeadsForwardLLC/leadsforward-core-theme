@@ -72,6 +72,7 @@ add_action('wp_ajax_lf_ai_studio_research_upload', 'lf_ai_studio_handle_research
 add_action('admin_post_lf_ai_studio_run_audit', 'lf_ai_studio_handle_run_audit');
 add_action('admin_post_lf_ai_studio_regen_blog_posts', 'lf_ai_studio_handle_regen_blog_posts');
 add_action('admin_post_lf_ai_studio_save_logo', 'lf_ai_studio_handle_save_logo');
+add_action('wp_ajax_lf_ai_studio_save_logo', 'lf_ai_studio_handle_save_logo_ajax');
 add_action('admin_post_lf_ai_studio_images_upload', 'lf_ai_studio_handle_images_upload');
 add_action('wp_ajax_lf_ai_studio_images_upload', 'lf_ai_studio_handle_images_upload_ajax');
 add_action('wp_ajax_lf_ai_studio_job_status', 'lf_ai_studio_job_status_ajax');
@@ -909,6 +910,40 @@ function lf_ai_studio_handle_save_logo(): void {
 	exit;
 }
 
+function lf_ai_studio_handle_save_logo_ajax(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
+	}
+	check_ajax_referer('lf_ai_studio_save_logo', 'lf_ai_studio_logo_nonce');
+	$prev_logo_id = function_exists('lf_get_global_option')
+		? (int) lf_get_global_option('lf_global_logo', 0)
+		: (int) get_option('options_lf_global_logo', 0);
+	$logo_id = isset($_POST['lf_global_logo']) ? (int) $_POST['lf_global_logo'] : 0;
+	if (function_exists('lf_update_global_option_value')) {
+		lf_update_global_option_value('lf_global_logo', (string) $logo_id);
+	} else {
+		update_option('options_lf_global_logo', $logo_id);
+	}
+	if ($logo_id > 0 && $logo_id !== $prev_logo_id && function_exists('lf_branding_auto_from_logo')) {
+		lf_branding_auto_from_logo($logo_id);
+	}
+	if ($prev_logo_id > 0 && $prev_logo_id !== $logo_id) {
+		update_post_meta($prev_logo_id, '_lf_skip_auto_distribution', '0');
+	}
+	if ($logo_id > 0) {
+		update_post_meta($logo_id, '_lf_skip_auto_distribution', '1');
+	}
+	if (function_exists('lf_invalidate_media_index_cache')) {
+		lf_invalidate_media_index_cache();
+	}
+	$url = $logo_id ? wp_get_attachment_image_url($logo_id, 'medium') : '';
+	wp_send_json_success([
+		'message' => __('Logo saved.', 'leadsforward-core'),
+		'logo_id' => $logo_id,
+		'logo_url' => $url ?: '',
+	]);
+}
+
 function lf_ai_studio_process_images_upload(array $files): array {
 	require_once ABSPATH . 'wp-admin/includes/file.php';
 	require_once ABSPATH . 'wp-admin/includes/image.php';
@@ -1550,7 +1585,7 @@ function lf_ai_studio_render_page(): void {
 						<h3><?php esc_html_e('Upload your logo (optional)', 'leadsforward-core'); ?></h3>
 						<p class="description"><?php esc_html_e('Your logo sets the brand colors automatically, but you can skip it.', 'leadsforward-core'); ?></p>
 						<div class="lf-manifester-logo">
-							<form id="lf-manifester-logo-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+							<form id="lf-manifester-logo-form" method="post" action="<?php echo esc_url(admin_url('admin-ajax.php')); ?>">
 								<?php wp_nonce_field('lf_ai_studio_save_logo', 'lf_ai_studio_logo_nonce'); ?>
 								<input type="hidden" name="action" value="lf_ai_studio_save_logo" />
 								<div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;">
@@ -1563,6 +1598,7 @@ function lf_ai_studio_render_page(): void {
 								</div>
 								<p class="description" style="margin-top:6px;"><?php esc_html_e('Selecting a logo immediately applies your palette.', 'leadsforward-core'); ?></p>
 							</form>
+							<div id="lf-manifester-logo-status" class="lf-manifester-status" role="status" aria-live="polite" style="margin-top:8px;"></div>
 						</div>
 					</div>
 				</div>
@@ -1776,6 +1812,31 @@ function lf_ai_studio_render_page(): void {
 				var input = document.getElementById('lf_manifester_logo');
 				var preview = document.getElementById('lf-manifester-logo-preview');
 				var frame;
+				function setStatus(text, type) {
+					var el = document.getElementById('lf-manifester-logo-status');
+					if (!el) return;
+					el.className = 'lf-manifester-status' + (type ? (' is-' + type) : '');
+					el.textContent = text || '';
+				}
+				function saveLogoAsync() {
+					if (!form) return;
+					setStatus('Saving logo…', 'info');
+					var fd = new FormData(form);
+					fetch(form.action, {
+						method: 'POST',
+						credentials: 'same-origin',
+						body: fd
+					}).then(function(res){ return res.json(); }).then(function(payload){
+						if (!payload || !payload.success) {
+							var msg = payload && payload.data && payload.data.message ? payload.data.message : 'Logo save failed.';
+							setStatus(msg, 'error');
+							return;
+						}
+						setStatus('Logo saved.', 'success');
+					}).catch(function(){
+						setStatus('Logo save failed.', 'error');
+					});
+				}
 				if (selectBtn) {
 					selectBtn.addEventListener('click', function (e) {
 						e.preventDefault();
@@ -1785,7 +1846,7 @@ function lf_ai_studio_render_page(): void {
 							var attachment = frame.state().get('selection').first().toJSON();
 							if (input) input.value = attachment.id;
 							if (preview) { preview.src = attachment.url; preview.style.display = 'block'; }
-							if (form) { form.submit(); }
+							saveLogoAsync();
 						});
 						frame.open();
 					});
@@ -1795,7 +1856,7 @@ function lf_ai_studio_render_page(): void {
 						e.preventDefault();
 						if (input) input.value = '';
 						if (preview) { preview.src = ''; preview.style.display = 'none'; }
-						if (form) { form.submit(); }
+						saveLogoAsync();
 					});
 				}
 			})();
