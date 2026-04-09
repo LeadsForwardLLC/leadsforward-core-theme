@@ -1014,15 +1014,28 @@ function lf_ai_studio_process_images_upload(array $files): array {
 			$errors[] = sprintf('%s: %s', $name, $attachment_id->get_error_message());
 			continue;
 		}
+		// Mark as Manifester upload so the theme can enforce strong metadata even when filenames are weak.
+		update_post_meta((int) $attachment_id, '_lf_manifester_upload', '1');
+		if (is_array($upload_ctx) && $upload_ctx !== []) {
+			update_post_meta((int) $attachment_id, '_lf_manifester_upload_context', wp_json_encode($upload_ctx));
+		}
 		if (function_exists('lf_image_intelligence_finalize_uploaded_attachment')) {
 			lf_image_intelligence_finalize_uploaded_attachment((int) $attachment_id);
 		}
-		if (function_exists('lf_image_intelligence_maybe_set_alt_text')) {
-			$alt_ctx = is_array($upload_ctx) && $upload_ctx !== []
+		// Enforce metadata from context right away (ALT/title/caption/description) even if filenames are junk.
+		if (function_exists('lf_image_intelligence_enforce_manifest_media_metadata')) {
+			$ctx = is_array($upload_ctx) && $upload_ctx !== []
 				? $upload_ctx
 				: (function_exists('lf_image_intelligence_upload_context_defaults') ? lf_image_intelligence_upload_context_defaults() : []);
-			if ($alt_ctx !== []) {
-				lf_image_intelligence_maybe_set_alt_text((int) $attachment_id, $alt_ctx);
+			if (is_array($ctx) && $ctx !== []) {
+				lf_image_intelligence_enforce_manifest_media_metadata((int) $attachment_id, $ctx);
+			}
+		} elseif (function_exists('lf_image_intelligence_maybe_set_media_metadata')) {
+			$ctx = is_array($upload_ctx) && $upload_ctx !== []
+				? $upload_ctx
+				: (function_exists('lf_image_intelligence_upload_context_defaults') ? lf_image_intelligence_upload_context_defaults() : []);
+			if (is_array($ctx) && $ctx !== []) {
+				lf_image_intelligence_maybe_set_media_metadata((int) $attachment_id, $ctx);
 			}
 		}
 		$uploaded[] = [

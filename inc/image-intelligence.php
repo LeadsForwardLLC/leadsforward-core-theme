@@ -1156,6 +1156,62 @@ function lf_image_intelligence_maybe_set_media_metadata(int $attachment_id, arra
 	}
 }
 
+/**
+ * Manifester uploads should never ship with generic media metadata.
+ * This force-sets ALT/title/caption/description using context, with a keyword-first fallback.
+ */
+function lf_image_intelligence_enforce_manifest_media_metadata(int $attachment_id, array $context): void {
+	$attachment_id = (int) $attachment_id;
+	if ($attachment_id <= 0) {
+		return;
+	}
+	$mime = (string) get_post_mime_type($attachment_id);
+	if (strpos($mime, 'image/') !== 0) {
+		return;
+	}
+	$attachment = get_post($attachment_id);
+	if (!$attachment instanceof \WP_Post) {
+		return;
+	}
+
+	$context = is_array($context) ? $context : [];
+	$meta = lf_image_intelligence_build_media_metadata_from_context($context);
+
+	// Always set a strong ALT for manifester images (keywords/city/business context).
+	$alt_existing = trim((string) get_post_meta($attachment_id, '_wp_attachment_image_alt', true));
+	$alt = $alt_existing;
+	if ($alt === '' || lf_image_intelligence_media_text_needs_upgrade($alt)) {
+		$city = trim((string) ($context['city'] ?? ''));
+		$topic = trim((string) ($context['service_name'] ?? ($context['primary_keyword'] ?? '')));
+		$business = trim((string) ($context['business_name'] ?? ''));
+		if ($topic === '') {
+			$topic = $business !== '' ? $business : __('Local service', 'leadsforward-core');
+		}
+		$alt = $city !== '' ? ($topic . ' in ' . $city) : $topic;
+		$alt = lf_image_intelligence_clean_media_text($alt);
+		update_post_meta($attachment_id, '_wp_attachment_image_alt', sanitize_text_field($alt));
+	}
+
+	$next = ['ID' => $attachment_id];
+	$changed = false;
+	if (!empty($meta['title'])) {
+		$next['post_title'] = (string) $meta['title'];
+		$next['post_name'] = sanitize_title((string) $meta['title']);
+		$changed = true;
+	}
+	if (!empty($meta['caption'])) {
+		$next['post_excerpt'] = (string) $meta['caption'];
+		$changed = true;
+	}
+	if (!empty($meta['description'])) {
+		$next['post_content'] = (string) $meta['description'];
+		$changed = true;
+	}
+	if ($changed) {
+		wp_update_post($next);
+	}
+}
+
 function lf_image_intelligence_finalize_uploaded_attachment(int $attachment_id): void {
 	$attachment_id = (int) $attachment_id;
 	if ($attachment_id <= 0) {
@@ -1204,6 +1260,14 @@ function lf_image_intelligence_finalize_uploaded_attachment(int $attachment_id):
 	}
 	lf_image_intelligence_maybe_set_alt_text($attachment_id, lf_image_intelligence_upload_context_defaults());
 	lf_image_intelligence_store_image_profile($attachment_id);
+
+	// If this came from the Manifester, enforce stronger metadata immediately.
+	if ((string) get_post_meta($attachment_id, '_lf_manifester_upload', true) === '1') {
+		$ctx = lf_image_intelligence_manifest_upload_context();
+		if (is_array($ctx) && $ctx !== []) {
+			lf_image_intelligence_enforce_manifest_media_metadata($attachment_id, $ctx);
+		}
+	}
 }
 
 function lf_image_intelligence_resolve_annotation_attachment_id(array $row): int {
