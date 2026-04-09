@@ -8264,8 +8264,30 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 		}
 	}
 
+	$post_updates_grouped = [];
 	foreach ($post_updates as $update) {
 		$post_id = absint($update['id'] ?? 0);
+		if ($post_id <= 0) {
+			continue;
+		}
+		$incoming_fields = $update['fields'] ?? $update['data'] ?? [];
+		if (!is_array($incoming_fields)) {
+			continue;
+		}
+		if (!isset($post_updates_grouped[$post_id])) {
+			$post_updates_grouped[$post_id] = [];
+		}
+		foreach ($incoming_fields as $incoming_key => $incoming_value) {
+			if (!is_string($incoming_key) || $incoming_key === '') {
+				continue;
+			}
+			// Callback payloads often split one post across multiple update objects.
+			// Merge field chunks first so we don't clobber earlier sections with later rows.
+			$post_updates_grouped[$post_id][$incoming_key] = $incoming_value;
+		}
+	}
+
+	foreach ($post_updates_grouped as $post_id => $incoming) {
 		$post = $post_id ? get_post($post_id) : null;
 		if (!$post instanceof \WP_Post) {
 			$errors[] = sprintf(__('Post update for id %d not found.', 'leadsforward-core'), $post_id);
@@ -8279,10 +8301,6 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 		$config = lf_pb_get_post_config($post_id, $context);
 		$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
 		$order = is_array($config['order'] ?? null) ? $config['order'] : [];
-		$incoming = $update['fields'] ?? $update['data'] ?? [];
-		if (!is_array($incoming)) {
-			continue;
-		}
 		$post_image_context = function_exists('lf_image_intelligence_build_context_for_post')
 			? lf_image_intelligence_build_context_for_post($post)
 			: [];
