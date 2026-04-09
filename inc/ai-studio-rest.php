@@ -981,12 +981,14 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 	$apply_errors = $apply_result['errors'] ?? [];
 	$diagnostics['errors'] = is_array($apply_errors) ? $apply_errors : [];
 
+	// Always return 200 so orchestrator callbacks don't hard-fail workflow runners (n8n, etc).
+	// The job is still marked failed in post meta when gating fails.
 	return new \WP_REST_Response(array_merge($diagnostics, [
 		'job_id' => $job_id,
 		'success' => (bool) $apply_result['success'],
 		'error' => $apply_errors,
 		'errors' => $apply_errors,
-	]), !empty($apply_result['success']) ? 200 : 400);
+	]), 200);
 }
 
 function lf_ai_studio_rest_candidate_score(array $target, array $candidate): int {
