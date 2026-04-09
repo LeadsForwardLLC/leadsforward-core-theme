@@ -860,8 +860,29 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 				$report['quality_warnings'] = $quality_warnings;
 			}
 			lf_ai_studio_store_audit_report($report, $job_id);
-			if (function_exists('lf_ai_autonomy_mark_generation_success')) {
-				lf_ai_autonomy_mark_generation_success($job_id, $report);
+			$gate_errors = [];
+			$summary = is_array($report['summary'] ?? null) ? $report['summary'] : [];
+			$missing_fields = (int) ($summary['missing_fields'] ?? 0);
+			$uniq_dupes = (int) ($summary['uniqueness_duplicates'] ?? 0);
+			if ($missing_fields > 0) {
+				$gate_errors[] = sprintf(__('Content audit: %d missing/default fields detected.', 'leadsforward-core'), $missing_fields);
+			}
+			if ($uniq_dupes > 0) {
+				$gate_errors[] = sprintf(__('Content audit: %d cross-page uniqueness duplicates detected.', 'leadsforward-core'), $uniq_dupes);
+			}
+			if (!empty($gate_errors)) {
+				update_post_meta($job_id, 'lf_ai_job_status', 'failed');
+				update_post_meta($job_id, 'lf_ai_job_error', implode('; ', $gate_errors));
+				if (function_exists('lf_ai_autonomy_mark_generation_failed')) {
+					lf_ai_autonomy_mark_generation_failed($job_id, 'post_apply_gate_failed');
+				}
+				$apply_result['success'] = false;
+				$apply_result['errors'] = array_merge((array) ($apply_result['errors'] ?? []), $gate_errors);
+				$apply_result['summary'] = __('Applied updates, but post-apply validation failed.', 'leadsforward-core');
+			} else {
+				if (function_exists('lf_ai_autonomy_mark_generation_success')) {
+					lf_ai_autonomy_mark_generation_success($job_id, $report);
+				}
 			}
 			lf_ai_studio_maybe_requeue_from_audit($job_id, $report);
 		}

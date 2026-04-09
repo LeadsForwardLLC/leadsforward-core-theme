@@ -2754,6 +2754,19 @@ function lf_ai_studio_should_enforce_uniqueness_on_field(string $field_key, stri
 	if ($field_key === 'faq_selected_ids') {
 		return false;
 	}
+	// Approved allowlist: CTA copy, trust elements, FAQs, and Process Steps may repeat across pages.
+	if (strpos($field_key, 'cta_') === 0) {
+		return false;
+	}
+	if (strpos($field_key, 'trust_') === 0) {
+		return false;
+	}
+	if (strpos($field_key, 'faq_') === 0) {
+		return false;
+	}
+	if ($field_key === 'process_selected_ids' || $field_key === 'process_steps') {
+		return false;
+	}
 	if (in_array($field_type, ['text', 'textarea', 'richtext', 'wysiwyg', 'list'], true)) {
 		$deny = [
 			'url', 'link', 'target', 'slug', 'id', 'image', 'icon', 'color', 'background',
@@ -8604,6 +8617,7 @@ function lf_ai_studio_build_repair_request(array $report, array $request): array
 function lf_ai_studio_audit_site_content(): array {
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
 	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
+	$uniqueness_occurrences = [];
 	$report = [
 		'timestamp' => time(),
 		'summary' => [
@@ -8611,12 +8625,14 @@ function lf_ai_studio_audit_site_content(): array {
 			'pages_with_issues' => 0,
 			'cta_total' => 0,
 			'cta_unique' => 0,
+			'uniqueness_duplicates' => 0,
 			'internal_links_total' => 0,
 			'pages_with_internal_links' => 0,
 			'seo_quality_avg' => 0,
 		],
 		'pages' => [],
 		'cta_duplicates' => [],
+		'uniqueness_duplicates' => [],
 		'quality_warnings' => array_values(array_filter((array) get_option('lf_ai_studio_quality_warnings', []))),
 	];
 	$cta_signatures = [];
@@ -8639,6 +8655,26 @@ function lf_ai_studio_audit_site_content(): array {
 			$section_issues = lf_ai_studio_audit_section_settings($settings, $defaults, $section_id, $section_id, $allowed_keys);
 			if (!empty($section_issues)) {
 				$homepage_issues = array_merge($homepage_issues, $section_issues);
+			}
+			foreach ($allowed_keys as $field_key) {
+				$field_type = lf_ai_studio_registry_field_type($registry, $section_id, $field_key);
+				if (!lf_ai_studio_should_enforce_uniqueness_on_field($field_key, $field_type)) {
+					continue;
+				}
+				$raw = $settings[$field_key] ?? '';
+				$text = lf_ai_studio_audit_normalize_text($raw);
+				if ($text === '' || strlen($text) < 25) {
+					continue;
+				}
+				$norm = lf_ai_studio_normalize_for_uniqueness($text);
+				if ($norm === '') {
+					continue;
+				}
+				$uniqueness_occurrences[$norm][] = [
+					'page' => ['id' => (int) get_option('page_on_front'), 'slug' => 'home', 'title' => __('Homepage', 'leadsforward-core')],
+					'section' => (string) $section_id,
+					'field' => (string) $field_key,
+				];
 			}
 			if ($section_id === 'cta') {
 				$signature = lf_ai_studio_cta_signature($settings);
@@ -8676,7 +8712,7 @@ function lf_ai_studio_audit_site_content(): array {
 			];
 			continue;
 		}
-		$report['pages'][] = lf_ai_studio_audit_post($page, $registry, $niche_slug, $cta_signatures);
+		$report['pages'][] = lf_ai_studio_audit_post($page, $registry, $niche_slug, $cta_signatures, $uniqueness_occurrences);
 	}
 
 	$services = get_posts([
@@ -8688,7 +8724,7 @@ function lf_ai_studio_audit_site_content(): array {
 	]);
 	foreach ($services as $service) {
 		if ($service instanceof \WP_Post) {
-			$report['pages'][] = lf_ai_studio_audit_post($service, $registry, $niche_slug, $cta_signatures);
+			$report['pages'][] = lf_ai_studio_audit_post($service, $registry, $niche_slug, $cta_signatures, $uniqueness_occurrences);
 		}
 	}
 
@@ -8701,9 +8737,20 @@ function lf_ai_studio_audit_site_content(): array {
 	]);
 	foreach ($areas as $area) {
 		if ($area instanceof \WP_Post) {
-			$report['pages'][] = lf_ai_studio_audit_post($area, $registry, $niche_slug, $cta_signatures);
+			$report['pages'][] = lf_ai_studio_audit_post($area, $registry, $niche_slug, $cta_signatures, $uniqueness_occurrences);
 		}
 	}
+
+	foreach ($uniqueness_occurrences as $norm => $rows) {
+		if (!is_array($rows) || count($rows) < 2) {
+			continue;
+		}
+		$report['uniqueness_duplicates'][] = [
+			'signature' => (string) $norm,
+			'occurrences' => array_values($rows),
+		];
+	}
+	$report['summary']['uniqueness_duplicates'] = count($report['uniqueness_duplicates']);
 
 	$missing_fields = 0;
 	$pages_with_issues = 0;
@@ -8754,7 +8801,7 @@ function lf_ai_studio_audit_site_content(): array {
 	return $report;
 }
 
-function lf_ai_studio_audit_post(\WP_Post $post, array $registry, string $niche_slug, array &$cta_signatures): array {
+function lf_ai_studio_audit_post(\WP_Post $post, array $registry, string $niche_slug, array &$cta_signatures, array &$uniqueness_occurrences = []): array {
 	$context = function_exists('lf_pb_get_context_for_post') ? lf_pb_get_context_for_post($post) : '';
 	$config = ($context !== '' && function_exists('lf_pb_get_post_config')) ? lf_pb_get_post_config($post->ID, $context) : [];
 	$order = is_array($config['order'] ?? null) ? $config['order'] : [];
@@ -8775,6 +8822,26 @@ function lf_ai_studio_audit_post(\WP_Post $post, array $registry, string $niche_
 		$section_issues = lf_ai_studio_audit_section_settings($settings, $defaults, $type, $instance_id, $allowed_keys);
 		if (!empty($section_issues)) {
 			$issues = array_merge($issues, $section_issues);
+		}
+		foreach ($allowed_keys as $field_key) {
+			$field_type = lf_ai_studio_registry_field_type($registry, $type, $field_key);
+			if (!lf_ai_studio_should_enforce_uniqueness_on_field($field_key, $field_type)) {
+				continue;
+			}
+			$raw = $settings[$field_key] ?? '';
+			$text = lf_ai_studio_audit_normalize_text($raw);
+			if ($text === '' || strlen($text) < 25) {
+				continue;
+			}
+			$norm = lf_ai_studio_normalize_for_uniqueness($text);
+			if ($norm === '') {
+				continue;
+			}
+			$uniqueness_occurrences[$norm][] = [
+				'page' => ['id' => (int) $post->ID, 'slug' => (string) $post->post_name, 'title' => (string) $post->post_title],
+				'section' => (string) $instance_id,
+				'field' => (string) $field_key,
+			];
 		}
 		if ($type === 'cta') {
 			$signature = lf_ai_studio_cta_signature($settings);

@@ -3778,12 +3778,15 @@ function lf_ai_assistant_widget_js(): string {
 			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 			if (!sectionId || sectionType !== "process") return;
 			var ids = processIdsFromList(list);
+			var ctx = (typeof persistContextFromWrap === "function")
+				? persistContextFromWrap(wrap)
+				: { context_type: activeContextType, context_id: activeContextId };
 			setStatus(savingLabel || "Saving selected process steps...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_update_section_lines",
 				nonce: lfAiFloating.nonce,
-				context_type: activeContextType,
-				context_id: activeContextId,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
 				section_id: sectionId,
 				field_key: "process_selected_ids",
 				items: JSON.stringify(ids.map(function(id){ return String(id); }))
@@ -4019,12 +4022,15 @@ function lf_ai_assistant_widget_js(): string {
 			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 			if (!sectionId || sectionType !== "faq_accordion") return;
 			var ids = faqIdsFromList(list);
+			var ctx = (typeof persistContextFromWrap === "function")
+				? persistContextFromWrap(wrap)
+				: { context_type: activeContextType, context_id: activeContextId };
 			setStatus(savingLabel || "Saving selected FAQs...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_update_section_lines",
 				nonce: lfAiFloating.nonce,
-				context_type: activeContextType,
-				context_id: activeContextId,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
 				section_id: sectionId,
 				field_key: "faq_selected_ids",
 				items: JSON.stringify(ids.map(function(id){ return String(id); }))
