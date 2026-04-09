@@ -878,8 +878,12 @@ function lf_sections_default_order(string $context): array {
 	if ($context === 'service_area') {
 		return [
 			'hero',
+			'trust_bar',
 			'content_image',
+			'benefits',
 			'services_offered_here',
+			'process',
+			'related_links',
 			'nearby_areas',
 			'faq_accordion',
 			'cta',
@@ -1081,6 +1085,23 @@ function lf_sections_process_steps_for_render(array $settings, ?\WP_Post $post =
 		$term_slug = '';
 		if ($post instanceof \WP_Post && $post->post_type === 'lf_service') {
 			$term_slug = (string) $post->post_name;
+		} elseif ($post instanceof \WP_Post && $post->post_type === 'lf_service_area') {
+			$service_slug = '';
+			if (function_exists('get_field')) {
+				$services = get_field('lf_service_area_services', $post->ID);
+				if (is_array($services) && !empty($services[0])) {
+					$first = $services[0];
+					if ($first instanceof \WP_Post) {
+						$service_slug = (string) $first->post_name;
+					} elseif (is_numeric($first)) {
+						$first_post = get_post((int) $first);
+						if ($first_post instanceof \WP_Post) {
+							$service_slug = (string) $first_post->post_name;
+						}
+					}
+				}
+			}
+			$term_slug = $service_slug;
 		} elseif (is_front_page()) {
 			$term_slug = 'homepage-primary';
 		}
