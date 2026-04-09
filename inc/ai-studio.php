@@ -8388,6 +8388,23 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 				$normalized_value = lf_ai_studio_normalize_faq_selected_ids_value($normalized_value);
 			}
 			$incoming_by_instance[$instance_id][$field_key] = $normalized_value;
+			if (defined('WP_DEBUG') && WP_DEBUG && current_user_can('manage_options')) {
+				$raw_preview = is_scalar($value) ? (string) $value : '';
+				$raw_preview = sanitize_text_field($raw_preview);
+				$norm_preview = is_scalar($normalized_value) ? (string) $normalized_value : '';
+				$norm_preview = sanitize_text_field($norm_preview);
+				if (trim($raw_preview) !== '' && trim($norm_preview) === '') {
+					error_log(sprintf(
+						'LF DEBUG: Normalized post field to empty post=%d section=%s type=%s key=%s field_type=%s raw="%s"',
+						$post_id,
+						$instance_id,
+						$type,
+						$field_key,
+						$field_type,
+						substr($raw_preview, 0, 120)
+					));
+				}
+			}
 			$fields_updated++;
 		}
 		foreach ($incoming_by_instance as $instance_id => $fields) {

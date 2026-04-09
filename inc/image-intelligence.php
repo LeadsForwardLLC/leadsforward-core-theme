@@ -1482,6 +1482,41 @@ function lf_image_intelligence_empty_image_value($value): bool {
 	return false;
 }
 
+/**
+ * Enforce strong image metadata for an attachment using context.
+ *
+ * This is used when the theme assigns images into section slots. We prefer the
+ * stronger manifester-aware metadata enforcement when available.
+ *
+ * @param array<string,mixed> $context
+ */
+function lf_image_intelligence_enforce_assigned_image_metadata(int $attachment_id, array $context, string $slot = '', string $section_type = '', string $field_key = ''): void {
+	if ($attachment_id <= 0) {
+		return;
+	}
+	$ctx = $context;
+	if ($slot !== '') {
+		$ctx['slot'] = $slot;
+	}
+	if ($section_type !== '') {
+		$ctx['section_type'] = $section_type;
+	}
+	if ($field_key !== '') {
+		$ctx['field_key'] = $field_key;
+	}
+	if (function_exists('lf_image_intelligence_enforce_manifest_media_metadata')) {
+		lf_image_intelligence_enforce_manifest_media_metadata($attachment_id, $ctx);
+		return;
+	}
+	if (function_exists('lf_image_intelligence_maybe_set_media_metadata')) {
+		lf_image_intelligence_maybe_set_media_metadata($attachment_id, $ctx);
+		return;
+	}
+	if (function_exists('lf_image_intelligence_maybe_set_alt_text')) {
+		lf_image_intelligence_maybe_set_alt_text($attachment_id, $ctx);
+	}
+}
+
 function lf_image_intelligence_assign_images_to_post_sections(\WP_Post $post, array $matches, array $context): int {
 	if (!function_exists('lf_pb_get_context_for_post') || !function_exists('lf_pb_get_post_config')) {
 		return 0;
@@ -1521,7 +1556,7 @@ function lf_image_intelligence_assign_images_to_post_sections(\WP_Post $post, ar
 				continue;
 			}
 			$settings[$field_key] = $image_id;
-			lf_image_intelligence_maybe_set_alt_text($image_id, $context);
+			lf_image_intelligence_enforce_assigned_image_metadata($image_id, $context, $slot, $type, $field_key);
 			$assigned++;
 			$changed = true;
 		}
@@ -1568,7 +1603,7 @@ function lf_image_intelligence_assign_images_to_homepage_sections(array $matches
 				continue;
 			}
 			$config[$section_id][$field_key] = $image_id;
-			lf_image_intelligence_maybe_set_alt_text($image_id, $context);
+			lf_image_intelligence_enforce_assigned_image_metadata($image_id, $context, $slot, $section_id, $field_key);
 			$assigned++;
 			$changed = true;
 		}
