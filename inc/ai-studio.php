@@ -921,11 +921,12 @@ function lf_ai_studio_handle_save_logo_ajax(): void {
 		}
 		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
 	}
-	$nonce = isset($_POST['lf_ai_studio_logo_nonce']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_studio_logo_nonce'])) : '';
-	if (!wp_verify_nonce($nonce, 'lf_ai_studio_save_logo')) {
+	// Prefer standard ajax nonce param name to avoid host/WAF oddities.
+	$nonce_ok = check_ajax_referer('lf_ai_studio_save_logo_ajax', 'nonce', false);
+	if (!$nonce_ok) {
 		if (function_exists('lf_ai_studio_error_log')) {
 			lf_ai_studio_error_log('save_logo_ajax: nonce_failed', 'ERROR', [
-				'has_nonce' => $nonce !== '',
+				'has_nonce' => isset($_POST['nonce']),
 			]);
 		}
 		wp_send_json_error(['message' => __('Security check failed. Please refresh and try again.', 'leadsforward-core')], 403);
@@ -1635,7 +1636,7 @@ function lf_ai_studio_render_page(): void {
 						<p class="description"><?php esc_html_e('Your logo sets the brand colors automatically, but you can skip it.', 'leadsforward-core'); ?></p>
 						<div class="lf-manifester-logo">
 							<form id="lf-manifester-logo-form" method="post" action="<?php echo esc_url(admin_url('admin-ajax.php')); ?>">
-								<?php wp_nonce_field('lf_ai_studio_save_logo', 'lf_ai_studio_logo_nonce'); ?>
+								<input type="hidden" name="nonce" value="<?php echo esc_attr(wp_create_nonce('lf_ai_studio_save_logo_ajax')); ?>" />
 								<input type="hidden" name="action" value="lf_ai_studio_save_logo" />
 								<div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;">
 									<div>
@@ -1871,11 +1872,11 @@ function lf_ai_studio_render_page(): void {
 					if (!form) return;
 					setStatus('Saving logo…', 'info');
 					var actionEl = form.querySelector('input[name="action"]');
-					var nonceEl = form.querySelector('input[name="lf_ai_studio_logo_nonce"]');
+					var nonceEl = form.querySelector('input[name="nonce"]');
 					var logoEl = form.querySelector('input[name="lf_global_logo"]');
 					var body = new URLSearchParams({
 						action: actionEl ? String(actionEl.value || '') : 'lf_ai_studio_save_logo',
-						lf_ai_studio_logo_nonce: nonceEl ? String(nonceEl.value || '') : '',
+						nonce: nonceEl ? String(nonceEl.value || '') : '',
 						lf_global_logo: logoEl ? String(logoEl.value || '') : ''
 					});
 					fetch(form.action, {
