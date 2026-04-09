@@ -5501,40 +5501,6 @@ function lf_ai_assistant_widget_js(): string {
 					});
 					controls.appendChild(swapBtn);
 				}
-				if (sectionType === "trust_reviews") {
-					if (!controls.querySelector("button.lf-ai-section-btn[data-lf-ai-layout=\"trust\"]")) {
-					var layoutBtn = document.createElement("button");
-					layoutBtn.type = "button";
-					layoutBtn.className = "lf-ai-section-btn";
-					layoutBtn.textContent = "Layout";
-					layoutBtn.setAttribute("data-lf-ai-layout", "trust");
-					layoutBtn.setAttribute("title", "Cycle review layout: slider → masonry → grid");
-					layoutBtn.setAttribute("aria-label", "Cycle review layout");
-					layoutBtn.addEventListener("click", function(e){
-						e.preventDefault();
-						e.stopPropagation();
-						persistTrustLayout(wrap);
-					});
-					controls.appendChild(layoutBtn);
-					}
-				}
-				if (sectionType === "benefits") {
-					if (!controls.querySelector("button.lf-ai-section-btn[data-lf-ai-layout=\"benefits\"]")) {
-					var benefitsLayoutBtn = document.createElement("button");
-					benefitsLayoutBtn.type = "button";
-					benefitsLayoutBtn.className = "lf-ai-section-btn";
-					benefitsLayoutBtn.textContent = "Layout";
-					benefitsLayoutBtn.setAttribute("data-lf-ai-layout", "benefits");
-					benefitsLayoutBtn.setAttribute("title", "Cycle benefits layout: cards → cards + points → split");
-					benefitsLayoutBtn.setAttribute("aria-label", "Cycle benefits layout");
-					benefitsLayoutBtn.addEventListener("click", function(e){
-						e.preventDefault();
-						e.stopPropagation();
-						persistSectionStyle(wrap, "cycle_benefits_layout", {});
-					});
-					controls.appendChild(benefitsLayoutBtn);
-					}
-				}
 				var upBtn = document.createElement("button");
 				upBtn.type = "button";
 				upBtn.className = "lf-ai-section-btn";
