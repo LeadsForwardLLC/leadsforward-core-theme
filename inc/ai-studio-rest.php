@@ -898,7 +898,42 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 			}
 		}
 		if (function_exists('lf_ai_studio_run_content_audit')) {
-			$report = lf_ai_studio_run_content_audit('orchestrator', is_array($request) ? $request : []);
+			// Gate audits should evaluate only what this callback actually changed.
+			// This prevents smoke tests (e.g. homepage + 1 service + 1 area) from failing due to unrelated pages
+			// that may be present in the request blueprint list.
+			$audit_request = is_array($request) ? $request : [];
+			$audit_post_ids = [];
+			$audit_include_homepage = false;
+			if (!empty($apply_payload['updates']) && is_array($apply_payload['updates'])) {
+				foreach ($apply_payload['updates'] as $u) {
+					if (!is_array($u)) {
+						continue;
+					}
+					$target = (string) ($u['target'] ?? '');
+					$id = (string) ($u['id'] ?? '');
+					if ($target === 'options' && $id === 'homepage') {
+						$audit_include_homepage = true;
+						continue;
+					}
+					if ($target === 'post_meta') {
+						$post_id = absint($id);
+						if ($post_id > 0) {
+							$audit_post_ids[] = $post_id;
+						}
+					}
+				}
+			}
+			$audit_post_ids = array_values(array_unique(array_filter($audit_post_ids)));
+			if ($audit_include_homepage || !empty($audit_post_ids)) {
+				$audit_request['blueprints'] = [];
+				if ($audit_include_homepage) {
+					$audit_request['blueprints'][] = ['page' => 'homepage'];
+				}
+				foreach ($audit_post_ids as $pid) {
+					$audit_request['blueprints'][] = ['post_id' => (int) $pid];
+				}
+			}
+			$report = lf_ai_studio_run_content_audit('orchestrator', $audit_request);
 			if (!empty($quality_warnings)) {
 				$report['quality_warnings'] = $quality_warnings;
 			}
