@@ -771,6 +771,7 @@ function lf_wizard_build_sitemap_body(array $created_pages): string {
 	};
 	$add_page('home', __('Home', 'leadsforward-core'));
 	$add_page('about-us', __('About Us', 'leadsforward-core'));
+	$add_page('why-choose-us', __('Why Choose Us', 'leadsforward-core'));
 	$add_page('our-services', __('Services', 'leadsforward-core'));
 	$add_page('service-areas', __('Service Areas', 'leadsforward-core'));
 	$add_page('reviews', __('Reviews', 'leadsforward-core'));
@@ -849,6 +850,37 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			'seo' => [
 				'title' => $business ? 'About ' . $business . ($city ? ' | ' . $city : '') : 'About Us',
 				'description' => 'Learn about our team, process, and what makes us the trusted local choice' . $city_line . '.',
+			],
+		],
+		'why-choose-us' => [
+			'order' => ['hero', 'benefits', 'content_image', 'faq_accordion', 'cta'],
+			'overrides' => [
+				'hero' => [
+					'hero_headline' => 'Why choose ' . $business,
+					'hero_subheadline' => 'Clear communication, quality work, and a clean job site — done right from the first visit to the final walkthrough.',
+				],
+				'benefits' => [
+					'section_heading' => 'What makes us the easy choice',
+					'section_intro' => 'A process built for consistency, transparency, and results.',
+					'benefits_items' => 'System-based installations' . "\n" . 'Refined project management' . "\n" . 'Premium material selection',
+				],
+				'content_image' => [
+					'section_heading' => 'A better experience from start to finish',
+					'section_intro' => 'The details that reduce disruption and keep quality high.',
+					'section_body' => 'We plan the scope up front, protect your property, and keep you informed throughout the job. Expect clear scheduling, clean daily work areas, and a final walkthrough that answers every question before we wrap.',
+				],
+				'faq_accordion' => [
+					'section_heading' => 'Why choose us FAQs',
+					'section_intro' => 'Quick answers about how we work and what to expect.',
+				],
+				'cta' => [
+					'cta_headline' => $cta_headline,
+					'cta_subheadline' => 'Request a free estimate and get a clear plan.',
+				],
+			],
+			'seo' => [
+				'title' => $business ? 'Why Choose Us | ' . $business : 'Why Choose Us',
+				'description' => 'See what makes our team the trusted local choice' . $city_line . ' — clear scopes, quality work, and reliable communication.',
 			],
 		],
 		'our-services' => [
@@ -1184,6 +1216,7 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	$log = ['created' => [], 'errors' => []];
 	$home_id = $created_pages['home'] ?? null;
 	$about_id = $created_pages['about-us'] ?? null;
+	$why_choose_id = $created_pages['why-choose-us'] ?? null;
 	$contact_id = $created_pages['contact'] ?? null;
 	$reviews_id = $created_pages['reviews'] ?? null;
 	$blog_id = $created_pages['blog'] ?? null;
@@ -1326,6 +1359,7 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 
 	$more_children = [];
 	if ($about_id) $more_children[] = ['type' => 'page', 'object_id' => $about_id];
+	if ($why_choose_id) $more_children[] = ['type' => 'page', 'object_id' => $why_choose_id];
 	if ($blog_id) $more_children[] = ['type' => 'page', 'object_id' => $blog_id];
 	$project_archive = get_post_type_archive_link('lf_project');
 	if ($project_archive) $more_children[] = ['type' => 'custom', 'url' => $project_archive, 'title' => __('Projects', 'leadsforward-core')];

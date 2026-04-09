@@ -23,7 +23,7 @@ $required = [
 	'homepage'      => ['homepage'],
 	'services'      => ['service', 'services_overview'],
 	'service_areas' => ['service_area', 'service_areas_overview'],
-	'core_pages'    => ['about', 'contact', 'reviews', 'blog', 'sitemap', 'privacy_policy', 'terms_of_service', 'thank_you'],
+	'core_pages'    => ['about', 'contact', 'reviews', 'blog', 'why_choose_us', 'sitemap', 'privacy_policy', 'terms_of_service', 'thank_you'],
 	'blog_posts'    => ['post'],
 	'projects'      => ['project'],
 ];
