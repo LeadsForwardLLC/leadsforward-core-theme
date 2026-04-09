@@ -905,6 +905,10 @@ function lf_ai_studio_handle_save_logo(): void {
 	if (function_exists('lf_invalidate_media_index_cache')) {
 		lf_invalidate_media_index_cache();
 	}
+	// Set site icon (favicon) from logo when possible.
+	if ($logo_id > 0 && function_exists('wp_attachment_is_image') && wp_attachment_is_image($logo_id)) {
+		update_option('site_icon', $logo_id, false);
+	}
 	$redirect = add_query_arg('logo', '1', admin_url('admin.php?page=lf-ops'));
 	wp_safe_redirect($redirect);
 	exit;
@@ -914,7 +918,10 @@ function lf_ai_studio_handle_save_logo_ajax(): void {
 	if (!current_user_can('edit_theme_options')) {
 		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
 	}
-	check_ajax_referer('lf_ai_studio_save_logo', 'lf_ai_studio_logo_nonce');
+	$nonce = isset($_POST['lf_ai_studio_logo_nonce']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_studio_logo_nonce'])) : '';
+	if (!wp_verify_nonce($nonce, 'lf_ai_studio_save_logo')) {
+		wp_send_json_error(['message' => __('Security check failed. Please refresh and try again.', 'leadsforward-core')], 403);
+	}
 	$prev_logo_id = function_exists('lf_get_global_option')
 		? (int) lf_get_global_option('lf_global_logo', 0)
 		: (int) get_option('options_lf_global_logo', 0);
@@ -935,6 +942,10 @@ function lf_ai_studio_handle_save_logo_ajax(): void {
 	}
 	if (function_exists('lf_invalidate_media_index_cache')) {
 		lf_invalidate_media_index_cache();
+	}
+	// Set site icon (favicon) from logo when possible.
+	if ($logo_id > 0 && function_exists('wp_attachment_is_image') && wp_attachment_is_image($logo_id)) {
+		update_option('site_icon', $logo_id, false);
 	}
 	$url = $logo_id ? wp_get_attachment_image_url($logo_id, 'medium') : '';
 	wp_send_json_success([
@@ -1826,13 +1837,24 @@ function lf_ai_studio_render_page(): void {
 						method: 'POST',
 						credentials: 'same-origin',
 						body: fd
-					}).then(function(res){ return res.json(); }).then(function(payload){
+					}).then(function(res){
+						return res.text().then(function(text){
+							var payload = null;
+							try { payload = JSON.parse(text); } catch (e) {}
+							return { ok: res.ok, payload: payload, text: text };
+						});
+					}).then(function(result){
+						var payload = result ? result.payload : null;
 						if (!payload || !payload.success) {
-							var msg = payload && payload.data && payload.data.message ? payload.data.message : 'Logo save failed.';
+							var msg = (payload && payload.data && payload.data.message)
+								? payload.data.message
+								: (result && typeof result.text === 'string' && result.text.trim() === '-1')
+									? 'Security check failed. Refresh and try again.'
+									: 'Logo save failed.';
 							setStatus(msg, 'error');
 							return;
 						}
-						setStatus('Logo saved.', 'success');
+						setStatus((payload.data && payload.data.message) ? payload.data.message : 'Logo saved.', 'success');
 					}).catch(function(){
 						setStatus('Logo save failed.', 'error');
 					});
