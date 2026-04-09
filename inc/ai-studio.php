@@ -1681,7 +1681,7 @@ function lf_ai_studio_render_page(): void {
 						<h3><?php esc_html_e('Upload your logo (optional)', 'leadsforward-core'); ?></h3>
 						<p class="description"><?php esc_html_e('Your logo sets the brand colors automatically, but you can skip it.', 'leadsforward-core'); ?></p>
 						<div class="lf-manifester-logo">
-							<form id="lf-manifester-logo-form" method="post" action="<?php echo esc_url(admin_url('admin-ajax.php')); ?>">
+							<form id="lf-manifester-logo-form" method="post" action="<?php echo esc_url(admin_url('admin-ajax.php', 'relative')); ?>">
 								<input type="hidden" name="nonce" value="<?php echo esc_attr(wp_create_nonce('lf_ai_studio_logo_set')); ?>" />
 								<input type="hidden" name="action" value="lf_ai_studio_logo_set" />
 								<div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;">
@@ -1925,7 +1925,11 @@ function lf_ai_studio_render_page(): void {
 						nonce: nonceEl ? String(nonceEl.value || '') : '',
 						lf_global_logo: logoEl ? String(logoEl.value || '') : ''
 					});
-					fetch(form.action, {
+					var url = (form && form.getAttribute && form.getAttribute('action')) ? String(form.getAttribute('action') || '') : '';
+					if (!url) {
+						url = (typeof window.ajaxurl === 'string' && window.ajaxurl) ? window.ajaxurl : '/wp-admin/admin-ajax.php';
+					}
+					fetch(url, {
 						method: 'POST',
 						credentials: 'same-origin',
 						headers: {
@@ -1937,7 +1941,7 @@ function lf_ai_studio_render_page(): void {
 						return res.text().then(function(text){
 							var payload = null;
 							try { payload = JSON.parse(text); } catch (e) {}
-							return { ok: res.ok, payload: payload, text: text };
+							return { ok: res.ok, payload: payload, text: text, url: url, status: res.status };
 						});
 					}).then(function(result){
 						var payload = result ? result.payload : null;
@@ -1951,6 +1955,9 @@ function lf_ai_studio_render_page(): void {
 									: snippet
 										? ('Logo save failed. Server said: ' + snippet)
 										: 'Logo save failed.';
+							if (result && result.url) {
+								msg += ' (AJAX URL: ' + String(result.url) + ', HTTP ' + String(result.status || '') + ')';
+							}
 							setStatus(msg, 'error');
 							return;
 						}
