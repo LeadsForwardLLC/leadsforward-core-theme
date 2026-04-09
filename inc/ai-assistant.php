@@ -5351,11 +5351,16 @@ function lf_ai_assistant_widget_js(): string {
 						window.location.reload();
 					}
 				} else {
-					setStatus((res && res.data && res.data.message) ? res.data.message : "Hero settings save failed.", true);
+					var msg = (res && res.data && res.data.message) ? res.data.message : "Hero settings save failed.";
+					setStatus(msg, true);
+					try { window.alert(msg); } catch (e) {}
 				}
 			}).fail(function(xhr){
-				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Hero settings save failed.";
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message)
+					? xhr.responseJSON.data.message
+					: ("Hero settings save failed. (" + String(xhr.status || "") + ")");
 				setStatus(msg, true);
+				try { window.alert(msg); } catch (e) {}
 			});
 		}
 		function persistSectionStyle(wrap, patch, extra) {
