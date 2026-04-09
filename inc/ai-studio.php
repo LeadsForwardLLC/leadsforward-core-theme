@@ -520,6 +520,30 @@ function lf_ai_studio_handle_scope_save(): void {
 	}
 	$area_ids = array_values(array_unique($area_ids));
 	update_option('lf_ai_scope_service_area_ids', $area_ids, false);
+
+	$service_slugs = [];
+	if (isset($_POST['lf_ai_scope_service_slugs']) && is_array($_POST['lf_ai_scope_service_slugs'])) {
+		foreach ($_POST['lf_ai_scope_service_slugs'] as $raw) {
+			$slug = sanitize_title((string) $raw);
+			if ($slug !== '') {
+				$service_slugs[] = $slug;
+			}
+		}
+	}
+	$service_slugs = array_values(array_unique($service_slugs));
+	update_option('lf_ai_scope_service_slugs', $service_slugs, false);
+
+	$area_slugs = [];
+	if (isset($_POST['lf_ai_scope_service_area_slugs']) && is_array($_POST['lf_ai_scope_service_area_slugs'])) {
+		foreach ($_POST['lf_ai_scope_service_area_slugs'] as $raw) {
+			$slug = sanitize_title((string) $raw);
+			if ($slug !== '') {
+				$area_slugs[] = $slug;
+			}
+		}
+	}
+	$area_slugs = array_values(array_unique($area_slugs));
+	update_option('lf_ai_scope_service_area_slugs', $area_slugs, false);
 	lf_ai_studio_sync_legacy_blueprint_scope_from_gen_flags();
 
 	wp_safe_redirect(admin_url('admin.php?page=lf-ops&scope_saved=1'));
@@ -1096,6 +1120,37 @@ function lf_ai_studio_render_page(): void {
 	$selected_area_ids = get_option('lf_ai_scope_service_area_ids', []);
 	$selected_service_ids = is_array($selected_service_ids) ? array_values(array_filter(array_map('absint', $selected_service_ids))) : [];
 	$selected_area_ids = is_array($selected_area_ids) ? array_values(array_filter(array_map('absint', $selected_area_ids))) : [];
+	$selected_service_slugs = [];
+	$selected_area_slugs = [];
+	$manifest_for_picker = function_exists('lf_ai_studio_get_manifest') ? lf_ai_studio_get_manifest() : [];
+	if (is_array($manifest_for_picker)) {
+		$manifest_services = is_array($manifest_for_picker['services'] ?? null) ? $manifest_for_picker['services'] : [];
+		foreach ($manifest_services as $row) {
+			if (!is_array($row)) {
+				continue;
+			}
+			$slug = sanitize_title((string) ($row['slug'] ?? ''));
+			if ($slug !== '') {
+				$selected_service_slugs[$slug] = (string) ($row['title'] ?? $slug);
+			}
+		}
+		$manifest_areas = is_array($manifest_for_picker['service_areas'] ?? null) ? $manifest_for_picker['service_areas'] : [];
+		foreach ($manifest_areas as $row) {
+			if (!is_array($row)) {
+				continue;
+			}
+			$slug = sanitize_title((string) ($row['slug'] ?? ''));
+			if ($slug !== '') {
+				$label = (string) ($row['city'] ?? $slug);
+				$state = (string) ($row['state'] ?? '');
+				$selected_area_slugs[$slug] = trim($label . ($state !== '' ? (', ' . $state) : ''));
+			}
+		}
+	}
+	$stored_service_slugs = get_option('lf_ai_scope_service_slugs', []);
+	$stored_area_slugs = get_option('lf_ai_scope_service_area_slugs', []);
+	$stored_service_slugs = is_array($stored_service_slugs) ? array_values(array_filter(array_map('sanitize_title', $stored_service_slugs))) : [];
+	$stored_area_slugs = is_array($stored_area_slugs) ? array_values(array_filter(array_map('sanitize_title', $stored_area_slugs))) : [];
 	$services_for_picker = get_posts([
 		'post_type' => 'lf_service',
 		'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
@@ -1305,30 +1360,56 @@ function lf_ai_studio_render_page(): void {
 												<p class="description" style="margin:4px 0 8px;">
 													<?php esc_html_e('Select specific services to include when “Service pages” is enabled. Leave empty to include all published services.', 'leadsforward-core'); ?>
 												</p>
-												<select name="lf_ai_scope_service_ids[]" multiple size="8" style="width:100%;max-width:420px;">
-													<?php foreach ($services_for_picker as $svc) : ?>
-														<?php if (!$svc instanceof \WP_Post) { continue; } ?>
-														<option value="<?php echo esc_attr((string) $svc->ID); ?>" <?php selected(in_array((int) $svc->ID, $selected_service_ids, true)); ?>>
-															<?php echo esc_html($svc->post_title); ?>
-															<?php echo $svc->post_status !== 'publish' ? esc_html(' (' . $svc->post_status . ')') : ''; ?>
-														</option>
-													<?php endforeach; ?>
-												</select>
+												<?php if (!empty($services_for_picker)) : ?>
+													<select name="lf_ai_scope_service_ids[]" multiple size="8" style="width:100%;max-width:420px;">
+														<?php foreach ($services_for_picker as $svc) : ?>
+															<?php if (!$svc instanceof \WP_Post) { continue; } ?>
+															<option value="<?php echo esc_attr((string) $svc->ID); ?>" <?php selected(in_array((int) $svc->ID, $selected_service_ids, true)); ?>>
+																<?php echo esc_html($svc->post_title); ?>
+																<?php echo $svc->post_status !== 'publish' ? esc_html(' (' . $svc->post_status . ')') : ''; ?>
+															</option>
+														<?php endforeach; ?>
+													</select>
+												<?php else : ?>
+													<select name="lf_ai_scope_service_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
+														<?php foreach ($selected_service_slugs as $slug => $label) : ?>
+															<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_service_slugs, true)); ?>>
+																<?php echo esc_html((string) $label); ?>
+															</option>
+														<?php endforeach; ?>
+													</select>
+													<p class="description" style="margin-top:6px;">
+														<?php esc_html_e('No service posts exist yet — showing manifest services instead. Upload/select your project first so services appear here.', 'leadsforward-core'); ?>
+													</p>
+												<?php endif; ?>
 											</div>
 											<div style="min-width:320px;max-width:420px;">
 												<strong><?php esc_html_e('Smoke test: Service Areas (optional)', 'leadsforward-core'); ?></strong>
 												<p class="description" style="margin:4px 0 8px;">
 													<?php esc_html_e('Select specific service areas to include when “Service area pages” is enabled. Leave empty to include all published service areas.', 'leadsforward-core'); ?>
 												</p>
-												<select name="lf_ai_scope_service_area_ids[]" multiple size="8" style="width:100%;max-width:420px;">
-													<?php foreach ($areas_for_picker as $area) : ?>
-														<?php if (!$area instanceof \WP_Post) { continue; } ?>
-														<option value="<?php echo esc_attr((string) $area->ID); ?>" <?php selected(in_array((int) $area->ID, $selected_area_ids, true)); ?>>
-															<?php echo esc_html($area->post_title); ?>
-															<?php echo $area->post_status !== 'publish' ? esc_html(' (' . $area->post_status . ')') : ''; ?>
-														</option>
-													<?php endforeach; ?>
-												</select>
+												<?php if (!empty($areas_for_picker)) : ?>
+													<select name="lf_ai_scope_service_area_ids[]" multiple size="8" style="width:100%;max-width:420px;">
+														<?php foreach ($areas_for_picker as $area) : ?>
+															<?php if (!$area instanceof \WP_Post) { continue; } ?>
+															<option value="<?php echo esc_attr((string) $area->ID); ?>" <?php selected(in_array((int) $area->ID, $selected_area_ids, true)); ?>>
+																<?php echo esc_html($area->post_title); ?>
+																<?php echo $area->post_status !== 'publish' ? esc_html(' (' . $area->post_status . ')') : ''; ?>
+															</option>
+														<?php endforeach; ?>
+													</select>
+												<?php else : ?>
+													<select name="lf_ai_scope_service_area_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
+														<?php foreach ($selected_area_slugs as $slug => $label) : ?>
+															<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_area_slugs, true)); ?>>
+																<?php echo esc_html((string) $label); ?>
+															</option>
+														<?php endforeach; ?>
+													</select>
+													<p class="description" style="margin-top:6px;">
+														<?php esc_html_e('No service area posts exist yet — showing manifest service areas instead. Upload/select your project first so areas appear here.', 'leadsforward-core'); ?>
+													</p>
+												<?php endif; ?>
 											</div>
 										</div>
 										<button type="submit" class="button"><?php esc_html_e('Save Scope', 'leadsforward-core'); ?></button>
@@ -5665,16 +5746,23 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 	if ($scope['services']) {
 		$service_ids = get_option('lf_ai_scope_service_ids', []);
 		$service_ids = is_array($service_ids) ? array_values(array_filter(array_map('absint', $service_ids))) : [];
+		$service_slugs = get_option('lf_ai_scope_service_slugs', []);
+		$service_slugs = is_array($service_slugs) ? array_values(array_filter(array_map('sanitize_title', $service_slugs))) : [];
 		$services = get_posts([
 			'post_type' => 'lf_service',
 			'post_status' => 'publish',
 			'posts_per_page' => 200,
-			'post__in' => !empty($service_ids) ? $service_ids : [],
 			'orderby' => 'menu_order title',
 			'order' => 'ASC',
 		]);
 		foreach ($services as $service) {
 			if (!$service instanceof \WP_Post) {
+				continue;
+			}
+			if (!empty($service_ids) && !in_array((int) $service->ID, $service_ids, true)) {
+				continue;
+			}
+			if (!empty($service_slugs) && !in_array((string) $service->post_name, $service_slugs, true)) {
 				continue;
 			}
 			if ($use_manifest && !isset($service_keyword_map[$service->post_name])) {
@@ -5696,16 +5784,23 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 	if ($scope['service_areas']) {
 		$area_ids = get_option('lf_ai_scope_service_area_ids', []);
 		$area_ids = is_array($area_ids) ? array_values(array_filter(array_map('absint', $area_ids))) : [];
+		$area_slugs = get_option('lf_ai_scope_service_area_slugs', []);
+		$area_slugs = is_array($area_slugs) ? array_values(array_filter(array_map('sanitize_title', $area_slugs))) : [];
 		$areas = get_posts([
 			'post_type' => 'lf_service_area',
 			'post_status' => 'publish',
 			'posts_per_page' => 200,
-			'post__in' => !empty($area_ids) ? $area_ids : [],
 			'orderby' => 'menu_order title',
 			'order' => 'ASC',
 		]);
 		foreach ($areas as $area) {
 			if (!$area instanceof \WP_Post) {
+				continue;
+			}
+			if (!empty($area_ids) && !in_array((int) $area->ID, $area_ids, true)) {
+				continue;
+			}
+			if (!empty($area_slugs) && !in_array((string) $area->post_name, $area_slugs, true)) {
 				continue;
 			}
 			if ($use_manifest && !isset($area_keyword_map[$area->post_name])) {
