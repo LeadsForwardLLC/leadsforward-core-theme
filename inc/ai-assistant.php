@@ -1780,6 +1780,14 @@ function lf_ai_assistant_widget_js(): string {
 					setStatus(wasEditingAnchor ? "Link updated and saved." : "Link inserted and saved.", false);
 					return;
 				}
+				if (managedWrap && String(managedWrap.getAttribute("data-lf-section-type") || "") === "benefits" && saveHost.closest(".lf-benefits__card")) {
+					var benefitsGrid = managedWrap.querySelector(".lf-benefits");
+					if (benefitsGrid) {
+						persistSectionLineItems(managedWrap, "benefits_items", benefitLinesFromGrid(benefitsGrid), "Saving benefits...");
+						setStatus(wasEditingAnchor ? "Link updated and saved." : "Link inserted and saved.", false);
+						return;
+					}
+				}
 				persistInlineNodeNow(saveHost, wasEditingAnchor ? "Link updated and saved." : "Link inserted and saved.");
 				return;
 			}
@@ -1792,6 +1800,18 @@ function lf_ai_assistant_widget_js(): string {
 					persistSectionChecklist(fallbackWrap, fallbackTextHost);
 					setStatus(wasEditingAnchor ? "Link updated and saved." : "Link inserted and saved.", false);
 					return;
+				}
+				var fallbackBenefitsHost = savedAnchorBeforeClose.closest(".lf-benefits__title,.lf-benefits__desc");
+				var fallbackBenefitsWrap = fallbackBenefitsHost && fallbackBenefitsHost.closest
+					? fallbackBenefitsHost.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]")
+					: null;
+				if (fallbackBenefitsWrap && String(fallbackBenefitsWrap.getAttribute("data-lf-section-type") || "") === "benefits") {
+					var fallbackGrid = fallbackBenefitsWrap.querySelector(".lf-benefits");
+					if (fallbackGrid) {
+						persistSectionLineItems(fallbackBenefitsWrap, "benefits_items", benefitLinesFromGrid(fallbackGrid), "Saving benefits...");
+						setStatus(wasEditingAnchor ? "Link updated and saved." : "Link inserted and saved.", false);
+						return;
+					}
 				}
 			}
 			setStatus(wasEditingAnchor ? "Link updated. Save when done editing." : "Link inserted. Click away or press ⌘/Ctrl+Enter to save.", false);
@@ -1833,6 +1853,14 @@ function lf_ai_assistant_widget_js(): string {
 					setStatus("Link removed and saved.", false);
 					return;
 				}
+				if (managedWrap && String(managedWrap.getAttribute("data-lf-section-type") || "") === "benefits" && saveHost.closest(".lf-benefits__card")) {
+					var benefitsGrid = managedWrap.querySelector(".lf-benefits");
+					if (benefitsGrid) {
+						persistSectionLineItems(managedWrap, "benefits_items", benefitLinesFromGrid(benefitsGrid), "Saving benefits...");
+						setStatus("Link removed and saved.", false);
+						return;
+					}
+				}
 				persistInlineNodeNow(saveHost, "Link removed and saved.");
 				return;
 			}
@@ -1845,6 +1873,18 @@ function lf_ai_assistant_widget_js(): string {
 					persistSectionChecklist(fallbackWrap, fallbackTextHost);
 					setStatus("Link removed and saved.", false);
 					return;
+				}
+				var fallbackBenefitsHost = savedAnchorBeforeClose.closest(".lf-benefits__title,.lf-benefits__desc");
+				var fallbackBenefitsWrap = fallbackBenefitsHost && fallbackBenefitsHost.closest
+					? fallbackBenefitsHost.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]")
+					: null;
+				if (fallbackBenefitsWrap && String(fallbackBenefitsWrap.getAttribute("data-lf-section-type") || "") === "benefits") {
+					var fallbackGrid = fallbackBenefitsWrap.querySelector(".lf-benefits");
+					if (fallbackGrid) {
+						persistSectionLineItems(fallbackBenefitsWrap, "benefits_items", benefitLinesFromGrid(fallbackGrid), "Saving benefits...");
+						setStatus("Link removed and saved.", false);
+						return;
+					}
 				}
 			}
 			setStatus("Link removed. Save when done editing.", false);
