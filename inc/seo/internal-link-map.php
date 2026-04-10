@@ -18,7 +18,7 @@ add_action('admin_menu', 'lf_internal_link_map_register_menu', 45);
 
 function lf_internal_link_map_register_menu(): void {
 	add_submenu_page(
-		'lf-ops',
+		null,
 		__('Internal Link Map', 'leadsforward-core'),
 		__('Internal Link Map', 'leadsforward-core'),
 		'edit_theme_options',
@@ -280,6 +280,8 @@ function lf_internal_link_map_render_embedded_ui(): void {
 	$type_filter = isset($_GET['post_type']) ? sanitize_key((string) $_GET['post_type']) : '';
 	$q = isset($_GET['s']) ? sanitize_text_field((string) $_GET['s']) : '';
 	$focus_id = isset($_GET['link_page_id']) ? absint($_GET['link_page_id']) : 0;
+	$sort = isset($_GET['sort']) ? sanitize_key((string) $_GET['sort']) : 'issues';
+	$issues_only = isset($_GET['issues_only']) && $_GET['issues_only'] === '1';
 	$scan = lf_internal_link_map_scan();
 	$outbound_internal = is_array($scan['internal_outbound'] ?? null) ? $scan['internal_outbound'] : [];
 	$outbound_external = is_array($scan['external_outbound'] ?? null) ? $scan['external_outbound'] : [];
@@ -330,16 +332,37 @@ function lf_internal_link_map_render_embedded_ui(): void {
 			'out_external' => $out_external,
 			'in' => $in_count,
 			'broken' => $broken_count,
+			'issues' => ($in_count === 0 || $out_internal === 0 || $broken_count > 0) ? 1 : 0,
 		];
 	}
 
-	usort($rows, static function (array $a, array $b): int {
-		$ao = (int) ($a['in'] ?? 0) === 0 ? 0 : 1;
-		$bo = (int) ($b['in'] ?? 0) === 0 ? 0 : 1;
-		if ($ao !== $bo) return $ao <=> $bo;
-		$ab = (int) ($b['broken'] ?? 0) <=> (int) ($a['broken'] ?? 0);
-		if ($ab !== 0) return $ab;
-		return strcmp((string) ($a['title'] ?? ''), (string) ($b['title'] ?? ''));
+	if ($issues_only) {
+		$rows = array_values(array_filter($rows, static fn(array $r): bool => (int) ($r['issues'] ?? 0) === 1));
+	}
+
+	usort($rows, static function (array $a, array $b) use ($sort): int {
+		switch ($sort) {
+			case 'title':
+				return strcmp((string) ($a['title'] ?? ''), (string) ($b['title'] ?? ''));
+			case 'internal_out_desc':
+				return ((int) ($b['out_internal'] ?? 0) <=> (int) ($a['out_internal'] ?? 0));
+			case 'external_out_desc':
+				return ((int) ($b['out_external'] ?? 0) <=> (int) ($a['out_external'] ?? 0));
+			case 'inbound_desc':
+				return ((int) ($b['in'] ?? 0) <=> (int) ($a['in'] ?? 0));
+			case 'broken_desc':
+				return ((int) ($b['broken'] ?? 0) <=> (int) ($a['broken'] ?? 0));
+			case 'issues':
+			default:
+				$ai = (int) ($a['issues'] ?? 0);
+				$bi = (int) ($b['issues'] ?? 0);
+				if ($ai !== $bi) {
+					return $bi <=> $ai;
+				}
+				$ab = (int) ($b['broken'] ?? 0) <=> (int) ($a['broken'] ?? 0);
+				if ($ab !== 0) return $ab;
+				return strcmp((string) ($a['title'] ?? ''), (string) ($b['title'] ?? ''));
+		}
 	});
 
 	$orphans = array_filter($rows, static fn($r) => (int) ($r['in'] ?? 0) === 0);
@@ -372,6 +395,22 @@ function lf_internal_link_map_render_embedded_ui(): void {
 	}
 	echo '</select>';
 	echo '&nbsp;';
+	echo '<select name="sort">';
+	$sort_options = [
+		'issues' => __('Most issues first', 'leadsforward-core'),
+		'inbound_desc' => __('Highest inbound', 'leadsforward-core'),
+		'internal_out_desc' => __('Highest internal outbound', 'leadsforward-core'),
+		'external_out_desc' => __('Highest external outbound', 'leadsforward-core'),
+		'broken_desc' => __('Most broken links', 'leadsforward-core'),
+		'title' => __('A-Z title', 'leadsforward-core'),
+	];
+	foreach ($sort_options as $sort_value => $sort_label) {
+		echo '<option value="' . esc_attr($sort_value) . '"' . selected($sort, $sort_value, false) . '>' . esc_html((string) $sort_label) . '</option>';
+	}
+	echo '</select>';
+	echo '&nbsp;';
+	echo '<label style="display:inline-flex;align-items:center;gap:4px;"><input type="checkbox" name="issues_only" value="1"' . checked($issues_only, true, false) . ' /> ' . esc_html__('Issues only', 'leadsforward-core') . '</label>';
+	echo '&nbsp;';
 	submit_button(__('Filter', 'leadsforward-core'), 'secondary', '', false);
 	echo '</form>';
 
@@ -396,7 +435,7 @@ function lf_internal_link_map_render_embedded_ui(): void {
 		$edit = get_edit_post_link($pid, '');
 		$view = get_permalink($pid);
 		$detail_url = add_query_arg(
-			array_merge($base_args, ['post_type' => $type_filter, 's' => $q, 'link_page_id' => $pid]),
+			array_merge($base_args, ['post_type' => $type_filter, 's' => $q, 'sort' => $sort, 'issues_only' => $issues_only ? '1' : '0', 'link_page_id' => $pid]),
 			admin_url('admin.php')
 		);
 
@@ -494,6 +533,37 @@ function lf_internal_link_map_render_embedded_ui(): void {
 				}
 			} else {
 				echo '<li>' . esc_html__('No broken internal URLs found.', 'leadsforward-core') . '</li>';
+			}
+			echo '</ul></div>';
+
+			echo '<div class="card"><h4 style="margin-top:0;">' . esc_html__('Suggested Internal Link Targets', 'leadsforward-core') . '</h4><ul style="margin-left:1rem;">';
+			$existing_targets = [];
+			$focus_targets = $outbound_internal[$focus_id] ?? [];
+			if (is_array($focus_targets)) {
+				foreach (array_keys($focus_targets) as $k) {
+					$existing_targets[(int) $k] = true;
+				}
+			}
+			$candidates = [];
+			foreach ($rows as $candidate) {
+				$cid = (int) ($candidate['id'] ?? 0);
+				if ($cid <= 0 || $cid === $focus_id) continue;
+				if (($candidate['type'] ?? '') !== $focus_post->post_type) continue;
+				if (isset($existing_targets[$cid])) continue;
+				$candidates[] = $candidate;
+			}
+			usort($candidates, static fn(array $a, array $b): int => ((int) ($b['in'] ?? 0)) <=> ((int) ($a['in'] ?? 0)));
+			$shown = 0;
+			foreach ($candidates as $candidate) {
+				if ($shown >= 5) break;
+				$cid = (int) ($candidate['id'] ?? 0);
+				$ct = (string) ($candidate['title'] ?? ('#' . $cid));
+				$cin = (int) ($candidate['in'] ?? 0);
+				echo '<li>' . esc_html($ct) . ' (' . esc_html(sprintf(__('Inbound %d', 'leadsforward-core'), $cin)) . ')</li>';
+				$shown++;
+			}
+			if ($shown === 0) {
+				echo '<li>' . esc_html__('No obvious same-type opportunities right now.', 'leadsforward-core') . '</li>';
 			}
 			echo '</ul></div>';
 			echo '</div>';
