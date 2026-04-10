@@ -5691,7 +5691,8 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 			: (!is_array($existing_config) || empty($existing_config));
 		$force_reseed = $force_reseed_all;
 		if ($slug === 'about-us') {
-			$force_reseed = $force_reseed || !lf_ai_studio_config_has_section_types($existing_config, ['content_image', 'image_content_b', 'benefits', 'process']);
+			// About should be content-dense (similar to Why Choose Us), but does not require a Process section.
+			$force_reseed = $force_reseed || !lf_ai_studio_config_has_section_types($existing_config, ['content_image', 'image_content', 'benefits', 'faq_accordion']);
 		}
 		if ($slug === 'our-services') {
 			$has_new = lf_ai_studio_config_has_section_types($existing_config, ['service_intro', 'faq_accordion', 'cta']);
@@ -7140,6 +7141,186 @@ function lf_ai_studio_normalize_process_selected_ids_value($value): string {
 	return $ids !== [] ? implode("\n", $ids) : '';
 }
 
+function lf_ai_studio_process_group_slug_for_post(\WP_Post $post): string {
+	if ($post->post_type === 'lf_service') {
+		$slug = trim((string) ($post->post_name ?? ''));
+		return $slug !== '' ? $slug : 'homepage-primary';
+	}
+	if ($post->post_type === 'lf_service_area') {
+		$service_ids = get_post_meta((int) $post->ID, 'lf_service_area_services', true);
+		$service_ids = is_array($service_ids) ? array_values(array_filter(array_map('absint', $service_ids))) : [];
+		if (!empty($service_ids)) {
+			$service_post = get_post((int) $service_ids[0]);
+			if ($service_post instanceof \WP_Post) {
+				$slug = trim((string) ($service_post->post_name ?? ''));
+				if ($slug !== '') {
+					return $slug;
+				}
+			}
+		}
+		return 'homepage-primary';
+	}
+	return 'homepage-primary';
+}
+
+/**
+ * Parse AI-generated process step lines into structured entries.
+ *
+ * Accepts:
+ * - Step Title || Step description
+ * - Step Title | Step description
+ * - Step Title (no description)
+ *
+ * @return array<int,array{title:string,body:string}>
+ */
+function lf_ai_studio_parse_process_step_lines(string $raw): array {
+	$lines = preg_split('/\r\n|\r|\n/', (string) $raw) ?: [];
+	$out = [];
+	foreach ($lines as $line) {
+		$line = trim((string) $line);
+		if ($line === '') {
+			continue;
+		}
+		$title = $line;
+		$body = '';
+		if (strpos($line, '||') !== false) {
+			$parts = explode('||', $line, 2);
+			$title = trim((string) ($parts[0] ?? ''));
+			$body = trim((string) ($parts[1] ?? ''));
+		} elseif (strpos($line, '|') !== false) {
+			$parts = explode('|', $line, 2);
+			$title = trim((string) ($parts[0] ?? ''));
+			$body = trim((string) ($parts[1] ?? ''));
+		}
+		$title = trim((string) preg_replace('/\s+/', ' ', $title));
+		if ($title === '') {
+			continue;
+		}
+		$out[] = [
+			'title' => $title,
+			'body' => $body,
+		];
+		if (count($out) >= 12) {
+			break;
+		}
+	}
+	return $out;
+}
+
+function lf_ai_studio_ensure_process_group_term(string $slug): int {
+	$slug = sanitize_title($slug);
+	if ($slug === '' || !taxonomy_exists('lf_process_group')) {
+		return 0;
+	}
+	$existing = term_exists($slug, 'lf_process_group');
+	if (is_array($existing) && !empty($existing['term_id'])) {
+		return (int) $existing['term_id'];
+	}
+	if (is_int($existing) && $existing > 0) {
+		return $existing;
+	}
+	$created = wp_insert_term(ucwords(str_replace('-', ' ', $slug)), 'lf_process_group', ['slug' => $slug]);
+	if (is_wp_error($created)) {
+		return 0;
+	}
+	return (int) ($created['term_id'] ?? 0);
+}
+
+/**
+ * Create/update lf_process_step posts from parsed lines and attach to lf_process_group term.
+ * Guardrails: do not overwrite non-empty content; only fill empty bodies.
+ *
+ * @param array<int,array{title:string,body:string}> $steps
+ * @return int[] Ordered post IDs
+ */
+function lf_ai_studio_upsert_process_steps(array $steps, string $group_slug): array {
+	if (empty($steps) || !post_type_exists('lf_process_step')) {
+		return [];
+	}
+	$group_slug = sanitize_title($group_slug !== '' ? $group_slug : 'homepage-primary');
+	$term_id = lf_ai_studio_ensure_process_group_term($group_slug);
+
+	$existing_ids = [];
+	if ($term_id > 0) {
+		$existing_ids = get_posts([
+			'post_type' => 'lf_process_step',
+			'post_status' => ['publish', 'draft', 'pending', 'private'],
+			'posts_per_page' => 200,
+			'fields' => 'ids',
+			'no_found_rows' => true,
+			'tax_query' => [
+				[
+					'taxonomy' => 'lf_process_group',
+					'field' => 'term_id',
+					'terms' => [$term_id],
+				],
+			],
+		]);
+	}
+	$title_map = [];
+	foreach ($existing_ids as $eid) {
+		$eid = absint($eid);
+		if ($eid <= 0) {
+			continue;
+		}
+		$t = trim((string) get_the_title($eid));
+		if ($t === '') {
+			continue;
+		}
+		$title_map[strtolower($t)] = $eid;
+	}
+
+	$out_ids = [];
+	foreach ($steps as $i => $row) {
+		$title = trim((string) ($row['title'] ?? ''));
+		$body = trim((string) ($row['body'] ?? ''));
+		if ($title === '') {
+			continue;
+		}
+		$key = strtolower($title);
+		$existing_id = !empty($title_map[$key]) ? absint($title_map[$key]) : 0;
+		if ($existing_id > 0) {
+			// Only fill empty content to avoid clobbering manual edits.
+			$current_content = trim((string) get_post_field('post_content', $existing_id));
+			if ($current_content === '' && $body !== '') {
+				wp_update_post([
+					'ID' => $existing_id,
+					'post_content' => $body,
+				]);
+			}
+			wp_update_post([
+				'ID' => $existing_id,
+				'menu_order' => max(0, (int) $i),
+			]);
+			if ($term_id > 0) {
+				wp_set_object_terms($existing_id, [$term_id], 'lf_process_group', false);
+			}
+			$out_ids[] = $existing_id;
+			continue;
+		}
+
+		$new_id = wp_insert_post([
+			'post_type' => 'lf_process_step',
+			'post_status' => 'publish',
+			'post_title' => $title,
+			'post_content' => $body,
+			'menu_order' => max(0, (int) $i),
+		], true);
+		if (is_wp_error($new_id)) {
+			continue;
+		}
+		$new_id = absint($new_id);
+		if ($new_id <= 0) {
+			continue;
+		}
+		if ($term_id > 0) {
+			wp_set_object_terms($new_id, [$term_id], 'lf_process_group', false);
+		}
+		$out_ids[] = $new_id;
+	}
+	return array_values(array_filter(array_map('absint', $out_ids)));
+}
+
 function lf_ai_studio_normalize_value($value) {
 	if (is_array($value)) {
 		foreach ($value as $key => $item) {
@@ -8545,6 +8726,29 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 				'applied_instances' => $applied_instances,
 				'applied_keys_preview' => $applied_preview,
 			]));
+		}
+
+		// If AI provided inline process steps, convert them into reusable CPT posts (like FAQs)
+		// and write process_selected_ids so the Process section can reference the library.
+		foreach ($incoming_by_instance as $iid => $fields) {
+			$section = $sections[$iid] ?? null;
+			if (!is_array($section) || (string) ($section['type'] ?? '') !== 'process' || !is_array($fields)) {
+				continue;
+			}
+			$has_selected = trim((string) ($fields['process_selected_ids'] ?? '')) !== '';
+			$raw_steps = trim((string) ($fields['process_steps'] ?? ''));
+			if ($has_selected || $raw_steps === '') {
+				continue;
+			}
+			$parsed = lf_ai_studio_parse_process_step_lines($raw_steps);
+			if (empty($parsed)) {
+				continue;
+			}
+			$group_slug = lf_ai_studio_process_group_slug_for_post($post);
+			$ids = lf_ai_studio_upsert_process_steps($parsed, $group_slug);
+			if (!empty($ids)) {
+				$incoming_by_instance[$iid]['process_selected_ids'] = implode("\n", $ids);
+			}
 		}
 
 		foreach ($incoming_by_instance as $instance_id => $fields) {

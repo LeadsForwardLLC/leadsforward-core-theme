@@ -826,7 +826,7 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 
 	return [
 		'about-us' => [
-			'order' => ['hero', 'content_image', 'benefits', 'cta'],
+			'order' => ['hero', 'content_image', 'benefits', 'image_content', 'faq_accordion', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'About ' . $business,
@@ -841,6 +841,15 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'section_heading' => 'Why homeowners choose us',
 					'section_intro' => 'Clear communication, honest pricing, and consistent results.',
 					'benefits_items' => 'Licensed and insured professionals' . "\n" . 'Upfront pricing before work starts' . "\n" . 'Respectful, clean crews',
+				],
+				'image_content' => [
+					'section_heading' => 'How we work',
+					'section_intro' => 'A straightforward process built to protect your property and deliver consistent results.',
+					'section_body' => 'From the first inspection to the final walkthrough, we follow a clear, documented process so you always know what’s happening next. Expect careful staging, clean daily work areas, and communication that keeps surprises to a minimum.',
+				],
+				'faq_accordion' => [
+					'section_heading' => 'About us FAQs',
+					'section_intro' => 'Quick answers about our team, process, and what to expect.',
 				],
 				'cta' => [
 					'cta_headline' => $cta_headline,
