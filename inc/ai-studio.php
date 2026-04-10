@@ -5902,7 +5902,9 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 		}
 		lf_ai_studio_sync_manifest_posts($manifest);
 	}
-	lf_ai_studio_ensure_core_page_sections($manifest, true);
+	// Avoid forced reseed during normal generation runs; it can overwrite post PB config.
+	// Core pages/sections are ensured during scaffold and/or separate admin audit workflows.
+	lf_ai_studio_ensure_core_page_sections($manifest, false);
 	$homepage_payload = lf_ai_studio_build_homepage_blueprint();
 	if (!is_array($homepage_payload)) {
 		return lf_ai_studio_fail_result('build_full_site_payload', __('Full site payload build failed.', 'leadsforward-core'));
@@ -5950,35 +5952,66 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 		$service_ids = is_array($service_ids) ? array_values(array_filter(array_map('absint', $service_ids))) : [];
 		$service_slugs = get_option('lf_ai_scope_service_slugs', []);
 		$service_slugs = is_array($service_slugs) ? array_values(array_filter(array_map('sanitize_title', $service_slugs))) : [];
-		$services = get_posts([
-			'post_type' => 'lf_service',
-			'post_status' => 'publish',
-			'posts_per_page' => 200,
-			'orderby' => 'menu_order title',
-			'order' => 'ASC',
-		]);
-		foreach ($services as $service) {
-			if (!$service instanceof \WP_Post) {
-				continue;
+		if ($use_manifest) {
+			$services = isset($manifest['services']) && is_array($manifest['services']) ? $manifest['services'] : [];
+			foreach ($services as $item) {
+				$normalized = lf_ai_studio_normalize_service_item($item);
+				$slug = $normalized['slug'];
+				if ($slug === '') {
+					continue;
+				}
+				$service = get_page_by_path($slug, OBJECT, 'lf_service');
+				if (!$service instanceof \WP_Post) {
+					continue;
+				}
+				if (!empty($service_ids) && !in_array((int) $service->ID, $service_ids, true)) {
+					continue;
+				}
+				if (!empty($service_slugs) && !in_array((string) $service->post_name, $service_slugs, true)) {
+					continue;
+				}
+				$keyword = (string) ($normalized['primary_keyword'] ?? '');
+				if ($keyword === '') {
+					$keyword = $service_keyword_map[$slug] ?? '';
+				}
+				if ($keyword === '') {
+					$keyword = $overview_keyword !== ''
+						? trim($service->post_title . ' ' . $overview_keyword)
+						: (string) $service->post_title;
+				}
+				$blueprint = lf_ai_studio_build_post_blueprint($service, 'service', 'service_detail', $keyword);
+				if (!empty($blueprint)) {
+					$blueprints[] = $blueprint;
+				}
 			}
-			if (!empty($service_ids) && !in_array((int) $service->ID, $service_ids, true)) {
-				continue;
-			}
-			if (!empty($service_slugs) && !in_array((string) $service->post_name, $service_slugs, true)) {
-				continue;
-			}
-			if ($use_manifest && !isset($service_keyword_map[$service->post_name])) {
-				continue;
-			}
-			$keyword = $service_keyword_map[$service->post_name] ?? '';
-			if ($keyword === '') {
-				$keyword = $overview_keyword !== ''
-					? trim($service->post_title . ' ' . $overview_keyword)
-					: (string) $service->post_title;
-			}
-			$blueprint = lf_ai_studio_build_post_blueprint($service, 'service', 'service_detail', $keyword);
-			if (!empty($blueprint)) {
-				$blueprints[] = $blueprint;
+		} else {
+			$services = get_posts([
+				'post_type' => 'lf_service',
+				'post_status' => 'publish',
+				'posts_per_page' => 200,
+				'orderby' => 'menu_order title',
+				'order' => 'ASC',
+			]);
+			foreach ($services as $service) {
+				if (!$service instanceof \WP_Post) {
+					continue;
+				}
+				if (!empty($service_ids) && !in_array((int) $service->ID, $service_ids, true)) {
+					continue;
+				}
+				if (!empty($service_slugs) && !in_array((string) $service->post_name, $service_slugs, true)) {
+					continue;
+				}
+				$keyword = $service_keyword_map[$service->post_name] ?? '';
+				if ($keyword === '') {
+					$keyword = $overview_keyword !== ''
+						? trim($service->post_title . ' ' . $overview_keyword)
+						: (string) $service->post_title;
+				}
+				$blueprint = lf_ai_studio_build_post_blueprint($service, 'service', 'service_detail', $keyword);
+				if (!empty($blueprint)) {
+					$blueprints[] = $blueprint;
+				}
 			}
 		}
 	}
@@ -5988,35 +6021,66 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 		$area_ids = is_array($area_ids) ? array_values(array_filter(array_map('absint', $area_ids))) : [];
 		$area_slugs = get_option('lf_ai_scope_service_area_slugs', []);
 		$area_slugs = is_array($area_slugs) ? array_values(array_filter(array_map('sanitize_title', $area_slugs))) : [];
-		$areas = get_posts([
-			'post_type' => 'lf_service_area',
-			'post_status' => 'publish',
-			'posts_per_page' => 200,
-			'orderby' => 'menu_order title',
-			'order' => 'ASC',
-		]);
-		foreach ($areas as $area) {
-			if (!$area instanceof \WP_Post) {
-				continue;
+		if ($use_manifest) {
+			$areas = isset($manifest['service_areas']) && is_array($manifest['service_areas']) ? $manifest['service_areas'] : [];
+			foreach ($areas as $item) {
+				$normalized = lf_ai_studio_normalize_area_item($item);
+				$slug = $normalized['slug'];
+				if ($slug === '') {
+					continue;
+				}
+				$area = get_page_by_path($slug, OBJECT, 'lf_service_area');
+				if (!$area instanceof \WP_Post) {
+					continue;
+				}
+				if (!empty($area_ids) && !in_array((int) $area->ID, $area_ids, true)) {
+					continue;
+				}
+				if (!empty($area_slugs) && !in_array((string) $area->post_name, $area_slugs, true)) {
+					continue;
+				}
+				$keyword = (string) ($normalized['primary_keyword'] ?? '');
+				if ($keyword === '') {
+					$keyword = $area_keyword_map[$slug] ?? '';
+				}
+				if ($keyword === '') {
+					$keyword = $overview_keyword !== ''
+						? trim($overview_keyword . ' ' . $area->post_title)
+						: (string) $area->post_title;
+				}
+				$blueprint = lf_ai_studio_build_post_blueprint($area, 'service_area', 'service_area_detail', $keyword);
+				if (!empty($blueprint)) {
+					$blueprints[] = $blueprint;
+				}
 			}
-			if (!empty($area_ids) && !in_array((int) $area->ID, $area_ids, true)) {
-				continue;
-			}
-			if (!empty($area_slugs) && !in_array((string) $area->post_name, $area_slugs, true)) {
-				continue;
-			}
-			if ($use_manifest && !isset($area_keyword_map[$area->post_name])) {
-				continue;
-			}
-			$keyword = $area_keyword_map[$area->post_name] ?? '';
-			if ($keyword === '') {
-				$keyword = $overview_keyword !== ''
-					? trim($overview_keyword . ' ' . $area->post_title)
-					: (string) $area->post_title;
-			}
-			$blueprint = lf_ai_studio_build_post_blueprint($area, 'service_area', 'service_area_detail', $keyword);
-			if (!empty($blueprint)) {
-				$blueprints[] = $blueprint;
+		} else {
+			$areas = get_posts([
+				'post_type' => 'lf_service_area',
+				'post_status' => 'publish',
+				'posts_per_page' => 200,
+				'orderby' => 'menu_order title',
+				'order' => 'ASC',
+			]);
+			foreach ($areas as $area) {
+				if (!$area instanceof \WP_Post) {
+					continue;
+				}
+				if (!empty($area_ids) && !in_array((int) $area->ID, $area_ids, true)) {
+					continue;
+				}
+				if (!empty($area_slugs) && !in_array((string) $area->post_name, $area_slugs, true)) {
+					continue;
+				}
+				$keyword = $area_keyword_map[$area->post_name] ?? '';
+				if ($keyword === '') {
+					$keyword = $overview_keyword !== ''
+						? trim($overview_keyword . ' ' . $area->post_title)
+						: (string) $area->post_title;
+				}
+				$blueprint = lf_ai_studio_build_post_blueprint($area, 'service_area', 'service_area_detail', $keyword);
+				if (!empty($blueprint)) {
+					$blueprints[] = $blueprint;
+				}
 			}
 		}
 	}
