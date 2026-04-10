@@ -2208,11 +2208,12 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 			<?php
 			$step_id = isset($step['id']) ? (int) $step['id'] : 0;
 			$step_title = wp_trim_words((string) ($step['title'] ?? ''), 6, '');
-			$step_body = wp_trim_words((string) ($step['body'] ?? ''), 18, '');
+			// Keep descriptions short so they don't get visually cut off in the UI.
+			$step_body = wp_trim_words((string) ($step['body'] ?? ''), 12, '');
 			?>
 			<li class="lf-process__step" <?php echo $step_id > 0 ? 'data-lf-process-id="' . esc_attr((string) $step_id) . '"' : ''; ?>>
 				<?php if ($step_body !== '') : ?>
-					<span class="lf-process__step-title"><?php echo esc_html($step_title); ?></span>
+					<span class="lf-process__step-title"><strong><?php echo esc_html(rtrim($step_title, ':')); ?>:</strong></span>
 					<span class="lf-process__step-body"><?php echo esc_html($step_body); ?></span>
 				<?php else : ?>
 					<span class="lf-process__text"><?php echo esc_html($step_title); ?></span>
