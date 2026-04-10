@@ -949,6 +949,32 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 				$gate_errors[] = sprintf(__('Content audit: %d cross-page uniqueness duplicates detected.', 'leadsforward-core'), $uniq_dupes);
 			}
 			if (!empty($gate_errors)) {
+				// Include a small sample of issues to speed debugging (scoped audits are usually small).
+				$issue_samples = [];
+				$pages = is_array($report['pages'] ?? null) ? $report['pages'] : [];
+				foreach ($pages as $page) {
+					if (!is_array($page)) {
+						continue;
+					}
+					$pid = isset($page['id']) ? absint($page['id']) : 0;
+					$slug = (string) ($page['slug'] ?? '');
+					$issues = is_array($page['issues'] ?? null) ? $page['issues'] : [];
+					foreach ($issues as $issue) {
+						if (!is_array($issue)) {
+							continue;
+						}
+						$issue_samples[] = [
+							'id' => $pid,
+							'slug' => $slug,
+							'section' => (string) ($issue['section'] ?? ''),
+							'field' => (string) ($issue['field'] ?? ''),
+							'reason' => (string) ($issue['reason'] ?? ''),
+						];
+						if (count($issue_samples) >= 12) {
+							break 2;
+						}
+					}
+				}
 				if (function_exists('lf_ai_studio_error_log')) {
 					lf_ai_studio_error_log('orchestrator: post_apply_gate_failed', 'ERROR', [
 						'job_id' => $job_id,
@@ -956,6 +982,7 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 						'missing_fields' => $missing_fields,
 						'uniqueness_duplicates' => $uniq_dupes,
 						'errors' => $gate_errors,
+						'issue_samples' => $issue_samples,
 					]);
 				}
 				update_post_meta($job_id, 'lf_ai_job_status', 'failed');
