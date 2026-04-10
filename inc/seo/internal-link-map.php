@@ -419,7 +419,9 @@ function lf_internal_link_map_render_embedded_ui(): void {
 	echo '<th>' . esc_html__('Page', 'leadsforward-core') . '</th>';
 	echo '<th>' . esc_html__('Type', 'leadsforward-core') . '</th>';
 	echo '<th>' . esc_html__('Internal outbound', 'leadsforward-core') . '</th>';
+	echo '<th>' . esc_html__('Internal targets (sample)', 'leadsforward-core') . '</th>';
 	echo '<th>' . esc_html__('External outbound', 'leadsforward-core') . '</th>';
+	echo '<th>' . esc_html__('External URLs (sample)', 'leadsforward-core') . '</th>';
 	echo '<th>' . esc_html__('Inbound', 'leadsforward-core') . '</th>';
 	echo '<th>' . esc_html__('Broken internal', 'leadsforward-core') . '</th>';
 	echo '</tr></thead><tbody>';
@@ -438,6 +440,38 @@ function lf_internal_link_map_render_embedded_ui(): void {
 			array_merge($base_args, ['post_type' => $type_filter, 's' => $q, 'sort' => $sort, 'issues_only' => $issues_only ? '1' : '0', 'link_page_id' => $pid]),
 			admin_url('admin.php')
 		);
+		$internal_targets_preview = [];
+		$src_targets = $outbound_internal[$pid] ?? [];
+		if (is_array($src_targets) && !empty($src_targets)) {
+			arsort($src_targets);
+			foreach ($src_targets as $tid => $count) {
+				$target_id = (int) $tid;
+				$target_title = $target_id === $home_post_id ? __('Homepage', 'leadsforward-core') : (string) get_the_title($target_id);
+				$target_url = get_permalink($target_id);
+				if ($target_title === '') {
+					$target_title = '#' . $target_id;
+				}
+				$internal_targets_preview[] = [
+					'title' => $target_title,
+					'url' => is_string($target_url) ? $target_url : '',
+					'count' => (int) $count,
+				];
+				if (count($internal_targets_preview) >= 3) {
+					break;
+				}
+			}
+		}
+		$external_urls_preview = [];
+		$src_external = $outbound_external[$pid] ?? [];
+		if (is_array($src_external) && !empty($src_external)) {
+			arsort($src_external);
+			foreach ($src_external as $external_url => $count) {
+				$external_urls_preview[] = ['url' => (string) $external_url, 'count' => (int) $count];
+				if (count($external_urls_preview) >= 2) {
+					break;
+				}
+			}
+		}
 
 		echo '<tr>';
 		echo '<td>';
@@ -449,13 +483,46 @@ function lf_internal_link_map_render_embedded_ui(): void {
 		echo '</td>';
 		echo '<td>' . esc_html($type) . '</td>';
 		echo '<td>' . esc_html((string) $out_internal) . '</td>';
+		echo '<td>';
+		if (!empty($internal_targets_preview)) {
+			echo '<ul style="margin:0 0 0 1rem;">';
+			foreach ($internal_targets_preview as $sample) {
+				$sample_url = (string) ($sample['url'] ?? '');
+				$sample_title = (string) ($sample['title'] ?? '');
+				$sample_count = (int) ($sample['count'] ?? 0);
+				echo '<li>';
+				if ($sample_url !== '') {
+					echo '<a href="' . esc_url($sample_url) . '" target="_blank" rel="noopener noreferrer">' . esc_html($sample_title) . '</a>';
+				} else {
+					echo esc_html($sample_title);
+				}
+				echo ' (' . esc_html((string) $sample_count) . ')</li>';
+			}
+			echo '</ul>';
+		} else {
+			echo '<span class="description">' . esc_html__('None', 'leadsforward-core') . '</span>';
+		}
+		echo '</td>';
 		echo '<td>' . esc_html((string) $out_external) . '</td>';
+		echo '<td>';
+		if (!empty($external_urls_preview)) {
+			echo '<ul style="margin:0 0 0 1rem;">';
+			foreach ($external_urls_preview as $sample) {
+				$sample_url = (string) ($sample['url'] ?? '');
+				$sample_count = (int) ($sample['count'] ?? 0);
+				echo '<li><a href="' . esc_url($sample_url) . '" target="_blank" rel="noopener noreferrer">' . esc_html($sample_url) . '</a> (' . esc_html((string) $sample_count) . ')</li>';
+			}
+			echo '</ul>';
+		} else {
+			echo '<span class="description">' . esc_html__('None', 'leadsforward-core') . '</span>';
+		}
+		echo '</td>';
 		echo '<td>' . esc_html((string) $in) . ($is_orphan ? ' <span class="dashicons dashicons-warning" title="' . esc_attr__('Orphan', 'leadsforward-core') . '"></span>' : '') . '</td>';
 		echo '<td>' . esc_html((string) $br) . '</td>';
 		echo '</tr>';
 	}
 	if ($rows === []) {
-		echo '<tr><td colspan="6">' . esc_html__('No pages found for the current filters.', 'leadsforward-core') . '</td></tr>';
+		echo '<tr><td colspan="8">' . esc_html__('No pages found for the current filters.', 'leadsforward-core') . '</td></tr>';
 	}
 	echo '</tbody></table>';
 
@@ -494,7 +561,14 @@ function lf_internal_link_map_render_embedded_ui(): void {
 				foreach ($targets as $tid => $count) {
 					$t = (int) $tid;
 					$t_title = $t === $home_post_id ? __('Homepage', 'leadsforward-core') : (string) get_the_title($t);
-					echo '<li>' . esc_html($t_title) . ' (' . esc_html((string) $count) . ')</li>';
+					$t_url = get_permalink($t);
+					echo '<li>';
+					if (is_string($t_url) && $t_url !== '') {
+						echo '<a href="' . esc_url($t_url) . '" target="_blank" rel="noopener noreferrer">' . esc_html($t_title) . '</a>';
+					} else {
+						echo esc_html($t_title);
+					}
+					echo ' (' . esc_html((string) $count) . ')</li>';
 				}
 			} else {
 				echo '<li>' . esc_html__('No internal outbound links found.', 'leadsforward-core') . '</li>';
