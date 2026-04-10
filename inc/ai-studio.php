@@ -5721,6 +5721,13 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 			if (!$service_post instanceof \WP_Post) {
 				continue;
 			}
+			$existing_config = get_post_meta((int) $service_post->ID, LF_PB_META_KEY, true);
+			$is_minimal = function_exists('lf_wizard_is_minimal_pb_config')
+				? lf_wizard_is_minimal_pb_config($existing_config)
+				: (!is_array($existing_config) || empty($existing_config));
+			if (!$is_minimal) {
+				continue;
+			}
 			// Preserve frontend editor overrides during reseed.
 			lf_wizard_seed_pb_config((int) $service_post->ID, 'service', $data, is_array($niche) ? $niche : [], (int) $index, ['service' => (string) $service_post->post_title]);
 		}
@@ -5734,6 +5741,13 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 		]);
 		foreach (array_values($area_posts) as $index => $area_post) {
 			if (!$area_post instanceof \WP_Post) {
+				continue;
+			}
+			$existing_config = get_post_meta((int) $area_post->ID, LF_PB_META_KEY, true);
+			$is_minimal = function_exists('lf_wizard_is_minimal_pb_config')
+				? lf_wizard_is_minimal_pb_config($existing_config)
+				: (!is_array($existing_config) || empty($existing_config));
+			if (!$is_minimal) {
 				continue;
 			}
 			// Preserve frontend editor overrides during reseed.
