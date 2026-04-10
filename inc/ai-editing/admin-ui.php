@@ -2527,6 +2527,8 @@ function lf_ai_ajax_update_section_lines(): void {
 		$raw = (string) $item;
 		if ($field_key === 'benefits_items' && function_exists('lf_ai_sanitize_benefits_items_line')) {
 			$value = lf_ai_sanitize_benefits_items_line($raw);
+		} elseif (in_array($field_key, ['service_details_checklist', 'service_details_checklist_secondary'], true) && function_exists('lf_ai_sanitize_inline_dom_html')) {
+			$value = lf_ai_sanitize_inline_dom_html($raw);
 		} elseif (in_array($field_key, ['hero_proof_bullets', 'hero_chip_bullets', 'trust_badges'], true) && function_exists('lf_ai_sanitize_inline_dom_html')) {
 			$value = lf_ai_sanitize_inline_dom_html($raw);
 		} else {
