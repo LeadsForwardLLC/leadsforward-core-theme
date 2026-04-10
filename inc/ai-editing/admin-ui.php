@@ -1568,6 +1568,103 @@ function lf_ai_ajax_inline_save(): void {
 
 	// New site-wide inline text path: selector-based DOM text overrides.
 	if ($selector !== '') {
+		// Hard fallback: if a checklist item is saved through selector path,
+		// persist the actual service_details checklist row directly.
+		if (
+			$section_id !== ''
+			&& strpos($selector, 'lf-service-details__checklist') !== false
+			&& strpos($selector, 'lf-service-details__text') !== false
+		) {
+			$field_for_selector = strpos($selector, 'lf-service-details__checklist--secondary') !== false
+				? 'service_details_checklist_secondary'
+				: 'service_details_checklist';
+			$item_index = 1;
+			if (preg_match('/li:nth-(?:child|of-type)\((\d+)\)/', $selector, $m) && !empty($m[1])) {
+				$item_index = max(1, (int) $m[1]);
+			}
+			$value_line = function_exists('lf_ai_sanitize_inline_dom_html')
+				? lf_ai_sanitize_inline_dom_html($value)
+				: trim(sanitize_textarea_field($value));
+			error_log('LF CHECKLIST FALLBACK: selector_path start section=' . $section_id . ' field=' . $field_for_selector . ' idx=' . $item_index . ' has_link=' . (strpos($value_line, '<a ') !== false ? 'yes' : 'no'));
+
+			if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+				if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+					wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
+				}
+				$config = lf_get_homepage_section_config();
+				$resolved_section_id = function_exists('lf_ai_homepage_resolve_section_id')
+					? lf_ai_homepage_resolve_section_id($section_id, 'service_details')
+					: $section_id;
+				$row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
+				if (empty($row)) {
+					wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+				}
+				$current_lines = preg_split('/\r\n|\r|\n/', (string) ($row[$field_for_selector] ?? ''));
+				$current_lines = is_array($current_lines) ? $current_lines : [];
+				$target_idx = $item_index - 1;
+				while (count($current_lines) <= $target_idx) {
+					$current_lines[] = '';
+				}
+				$current_lines[$target_idx] = $value_line;
+				$clean_lines = [];
+				foreach ($current_lines as $line) {
+					$line_s = function_exists('lf_ai_sanitize_inline_dom_html') ? lf_ai_sanitize_inline_dom_html((string) $line) : trim(sanitize_textarea_field((string) $line));
+					if ($line_s !== '') {
+						$clean_lines[] = $line_s;
+					}
+				}
+				$config[$resolved_section_id][$field_for_selector] = implode("\n", $clean_lines);
+				update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+				error_log('LF CHECKLIST FALLBACK: homepage persisted section=' . $resolved_section_id . ' field=' . $field_for_selector . ' has_link=' . (strpos((string) $config[$resolved_section_id][$field_for_selector], '<a ') !== false ? 'yes' : 'no'));
+				wp_send_json_success([
+					'message' => __('Inline edit saved.', 'leadsforward-core'),
+					'section_id' => $resolved_section_id,
+					'field_key' => $field_for_selector,
+					'value' => $value_line,
+				]);
+			}
+
+			$pid = (int) $context_id_use;
+			$post = get_post($pid);
+			if (!$post instanceof \WP_Post || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+				wp_send_json_error(['message' => __('Section settings are unavailable for this target.', 'leadsforward-core')]);
+			}
+			$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+			if ($pb_context === '') {
+				wp_send_json_error(['message' => __('This target does not support section editing.', 'leadsforward-core')]);
+			}
+			$config = lf_pb_get_post_config($pid, $pb_context);
+			$row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+			if (empty($row)) {
+				wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+			}
+			$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+			$current_lines = preg_split('/\r\n|\r|\n/', (string) ($settings[$field_for_selector] ?? ''));
+			$current_lines = is_array($current_lines) ? $current_lines : [];
+			$target_idx = $item_index - 1;
+			while (count($current_lines) <= $target_idx) {
+				$current_lines[] = '';
+			}
+			$current_lines[$target_idx] = $value_line;
+			$clean_lines = [];
+			foreach ($current_lines as $line) {
+				$line_s = function_exists('lf_ai_sanitize_inline_dom_html') ? lf_ai_sanitize_inline_dom_html((string) $line) : trim(sanitize_textarea_field((string) $line));
+				if ($line_s !== '') {
+					$clean_lines[] = $line_s;
+				}
+			}
+			$settings[$field_for_selector] = implode("\n", $clean_lines);
+			$config['sections'][$section_id]['settings'] = $settings;
+			update_post_meta($pid, LF_PB_META_KEY, $config);
+			error_log('LF CHECKLIST FALLBACK: post persisted section=' . $section_id . ' field=' . $field_for_selector . ' has_link=' . (strpos((string) $settings[$field_for_selector], '<a ') !== false ? 'yes' : 'no'));
+			wp_send_json_success([
+				'message' => __('Inline edit saved.', 'leadsforward-core'),
+				'section_id' => $section_id,
+				'field_key' => $field_for_selector,
+				'value' => $value_line,
+			]);
+		}
+
 		if (!function_exists('lf_ai_get_inline_dom_overrides') || !function_exists('lf_ai_set_inline_dom_overrides')) {
 			wp_send_json_error(['message' => __('Inline override storage is unavailable.', 'leadsforward-core')]);
 		}
