@@ -4495,12 +4495,30 @@ function lf_ai_assistant_widget_js(): string {
 						title.removeAttribute("contenteditable");
 						title.removeAttribute("data-lf-ai-editing");
 						title.removeAttribute("data-lf-ai-original-html");
+						var panelOpen = false;
+						try {
+							panelOpen = !!($linkRoot && $linkRoot.length && !$linkRoot.find("[data-lf-ai-inline-link-panel]").prop("hidden"));
+						} catch (ePanel) {
+							panelOpen = false;
+						}
+						if (panelOpen) {
+							return;
+						}
 						persistGrid();
 					}
 					function finishDesc() {
 						desc.removeAttribute("contenteditable");
 						desc.removeAttribute("data-lf-ai-editing");
 						desc.removeAttribute("data-lf-ai-original-html");
+						var panelOpen = false;
+						try {
+							panelOpen = !!($linkRoot && $linkRoot.length && !$linkRoot.find("[data-lf-ai-inline-link-panel]").prop("hidden"));
+						} catch (ePanel2) {
+							panelOpen = false;
+						}
+						if (panelOpen) {
+							return;
+						}
 						persistGrid();
 					}
 					title.addEventListener("blur", finishTitle);
