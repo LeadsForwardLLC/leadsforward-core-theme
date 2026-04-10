@@ -1014,6 +1014,7 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 				$html_list_keys = [
 					'service_details_checklist',
 					'service_details_checklist_secondary',
+					'benefits_items',
 					'hero_chip_bullets',
 					'hero_proof_bullets',
 					'trust_badges',
