@@ -15,6 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 add_action('admin_menu', 'lf_internal_link_map_register_menu', 45);
+add_action('admin_post_lf_internal_link_map_apply_suggestion', 'lf_internal_link_map_apply_suggestion_action');
 
 function lf_internal_link_map_register_menu(): void {
 	add_submenu_page(
@@ -352,9 +353,175 @@ function lf_internal_link_map_scan(): array {
 	];
 }
 
+function lf_internal_link_map_pick_target_id(int $source_id, array $internal_outbound): int {
+	$source = get_post($source_id);
+	if (!$source instanceof \WP_Post) {
+		return 0;
+	}
+	$supported = lf_internal_link_map_supported_post_types();
+	$source_type = (string) $source->post_type;
+	$linked = [];
+	foreach (array_keys((array) ($internal_outbound[$source_id] ?? [])) as $tid) {
+		$linked[(int) $tid] = true;
+	}
+	$rows = get_posts([
+		'post_type' => $supported,
+		'post_status' => 'publish',
+		'posts_per_page' => 500,
+		'orderby' => 'date',
+		'order' => 'DESC',
+		'fields' => 'ids',
+	]);
+	if (!is_array($rows) || $rows === []) {
+		return 0;
+	}
+	$inbound_counts = [];
+	foreach ($internal_outbound as $src => $targets) {
+		foreach ((array) $targets as $tid => $count) {
+			$inbound_counts[(int) $tid] = (int) (($inbound_counts[(int) $tid] ?? 0) + 1);
+		}
+	}
+	$candidates = [];
+	foreach ($rows as $id_raw) {
+		$cid = (int) $id_raw;
+		if ($cid <= 0 || $cid === $source_id || isset($linked[$cid])) {
+			continue;
+		}
+		$ctype = (string) get_post_type($cid);
+		if (!in_array($ctype, $supported, true)) {
+			continue;
+		}
+		$is_money = in_array($ctype, ['lf_service', 'lf_service_area'], true);
+		$score = 0;
+		if ($ctype === $source_type) $score += 35;
+		if ($is_money) $score += 20;
+		$score += (int) (($inbound_counts[$cid] ?? 0) * 3);
+		$candidates[] = ['id' => $cid, 'score' => $score];
+	}
+	if ($candidates === []) {
+		return 0;
+	}
+	usort($candidates, static fn(array $a, array $b): int => ((int) ($b['score'] ?? 0)) <=> ((int) ($a['score'] ?? 0)));
+	return (int) ($candidates[0]['id'] ?? 0);
+}
+
+/**
+ * @return array{content:string,inserted:bool,reason:string}
+ */
+function lf_internal_link_map_insert_suggested_link(string $content, string $target_url, string $target_title): array {
+	$content = (string) $content;
+	$target_url = trim($target_url);
+	$target_title = trim(wp_strip_all_tags($target_title));
+	if ($content === '') {
+		return ['content' => $content, 'inserted' => false, 'reason' => 'empty_content'];
+	}
+	if ($target_url === '' || $target_title === '') {
+		return ['content' => $content, 'inserted' => false, 'reason' => 'missing_target'];
+	}
+	if (stripos($content, $target_url) !== false) {
+		return ['content' => $content, 'inserted' => false, 'reason' => 'already_linked'];
+	}
+
+	$link_html = '<a href="' . esc_url($target_url) . '">' . esc_html($target_title) . '</a>';
+	$inserted = false;
+	$updated = preg_replace_callback('/<p\b[^>]*>(.*?)<\/p>/is', static function(array $m) use ($link_html, &$inserted): string {
+		$inner = (string) ($m[1] ?? '');
+		if ($inserted) return (string) $m[0];
+		if (stripos($inner, '<a ') !== false) return (string) $m[0];
+		$plain = trim(wp_strip_all_tags($inner));
+		if ($plain === '' || strlen($plain) < 35) return (string) $m[0];
+		$inserted = true;
+		return '<p>' . $inner . ' ' . sprintf(__('See also: %s.', 'leadsforward-core'), $link_html) . '</p>';
+	}, $content, 1);
+	if (is_string($updated) && $updated !== '' && $inserted) {
+		return ['content' => $updated, 'inserted' => true, 'reason' => 'ok'];
+	}
+
+	$appended = $content . "\n\n" . '<p>' . sprintf(__('Related page: %s.', 'leadsforward-core'), $link_html) . '</p>';
+	return ['content' => $appended, 'inserted' => true, 'reason' => 'ok_append'];
+}
+
+function lf_internal_link_map_apply_suggestion_action(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_die(esc_html__('You do not have permission to do that.', 'leadsforward-core'));
+	}
+	check_admin_referer('lf_internal_link_apply_suggestion');
+	$source_id = isset($_POST['source_id']) ? absint($_POST['source_id']) : 0;
+	$return_to = isset($_POST['return_to']) ? esc_url_raw((string) $_POST['return_to']) : admin_url('admin.php?page=lf-seo&tab=links');
+	if ($source_id <= 0) {
+		wp_safe_redirect(add_query_arg(['ilm_notice' => 'invalid_source'], $return_to));
+		exit;
+	}
+	$source = get_post($source_id);
+	if (!$source instanceof \WP_Post || $source->post_status !== 'publish') {
+		wp_safe_redirect(add_query_arg(['ilm_notice' => 'invalid_source'], $return_to));
+		exit;
+	}
+	$scan = lf_internal_link_map_scan();
+	$internal_outbound = (array) ($scan['internal_outbound'] ?? []);
+	$target_id = lf_internal_link_map_pick_target_id($source_id, $internal_outbound);
+	if ($target_id <= 0) {
+		wp_safe_redirect(add_query_arg(['ilm_notice' => 'no_target'], $return_to));
+		exit;
+	}
+	$target_url = get_permalink($target_id);
+	$target_title = (string) get_the_title($target_id);
+	if (!is_string($target_url) || $target_url === '' || $target_title === '') {
+		wp_safe_redirect(add_query_arg(['ilm_notice' => 'no_target'], $return_to));
+		exit;
+	}
+	$current_content = (string) $source->post_content;
+	$insert = lf_internal_link_map_insert_suggested_link($current_content, $target_url, $target_title);
+	if (!(bool) ($insert['inserted'] ?? false)) {
+		wp_safe_redirect(add_query_arg(['ilm_notice' => (string) ($insert['reason'] ?? 'not_inserted')], $return_to));
+		exit;
+	}
+	$updated_content = (string) ($insert['content'] ?? '');
+	$result = wp_update_post([
+		'ID' => $source_id,
+		'post_content' => $updated_content,
+	], true);
+	if (is_wp_error($result)) {
+		wp_safe_redirect(add_query_arg(['ilm_notice' => 'save_failed'], $return_to));
+		exit;
+	}
+	wp_safe_redirect(add_query_arg([
+		'ilm_notice' => 'applied',
+		'ilm_source' => $source_id,
+		'ilm_target' => $target_id,
+	], $return_to));
+	exit;
+}
+
 function lf_internal_link_map_render_embedded_ui(): void {
 	if (!current_user_can('edit_theme_options')) {
 		return;
+	}
+	$notice = isset($_GET['ilm_notice']) ? sanitize_key((string) $_GET['ilm_notice']) : '';
+	if ($notice !== '') {
+		$msg = '';
+		$class = 'notice-info';
+		if ($notice === 'applied') {
+			$src = isset($_GET['ilm_source']) ? absint($_GET['ilm_source']) : 0;
+			$tid = isset($_GET['ilm_target']) ? absint($_GET['ilm_target']) : 0;
+			$src_title = $src > 0 ? (string) get_the_title($src) : '';
+			$target_title = $tid > 0 ? (string) get_the_title($tid) : '';
+			$msg = sprintf(__('Applied one suggested internal link on "%1$s" pointing to "%2$s".', 'leadsforward-core'), $src_title !== '' ? $src_title : ('#' . $src), $target_title !== '' ? $target_title : ('#' . $tid));
+			$class = 'notice-success';
+		} elseif ($notice === 'already_linked') {
+			$msg = __('No change made: this target URL already exists in the page content.', 'leadsforward-core');
+		} elseif ($notice === 'empty_content') {
+			$msg = __('No change made: source page has empty content. Use inline editing/page builder to add link manually.', 'leadsforward-core');
+		} elseif ($notice === 'no_target') {
+			$msg = __('No eligible suggested target found for this page right now.', 'leadsforward-core');
+		} elseif ($notice === 'save_failed') {
+			$msg = __('Could not save the post while applying suggestion.', 'leadsforward-core');
+			$class = 'notice-error';
+		} else {
+			$msg = __('Could not apply suggestion for this row.', 'leadsforward-core');
+			$class = 'notice-warning';
+		}
+		echo '<div class="notice ' . esc_attr($class) . ' is-dismissible"><p>' . esc_html($msg) . '</p></div>';
 	}
 	$type_filter = isset($_GET['post_type']) ? sanitize_key((string) $_GET['post_type']) : '';
 	$q = isset($_GET['s']) ? sanitize_text_field((string) $_GET['s']) : '';
@@ -580,7 +747,7 @@ function lf_internal_link_map_render_embedded_ui(): void {
 	usort($opportunities, static fn(array $a, array $b): int => ((int) ($b['priority'] ?? 0)) <=> ((int) ($a['priority'] ?? 0)));
 	echo '<h3 style="margin-top:20px;">' . esc_html__('Priority Opportunity Queue', 'leadsforward-core') . '</h3>';
 	echo '<p class="description">' . esc_html__('Most valuable link fixes first, weighted toward contractor revenue pages and lead-flow gaps.', 'leadsforward-core') . '</p>';
-	echo '<table class="widefat striped"><thead><tr><th>' . esc_html__('Priority', 'leadsforward-core') . '</th><th>' . esc_html__('Page', 'leadsforward-core') . '</th><th>' . esc_html__('Why it matters', 'leadsforward-core') . '</th><th>' . esc_html__('Recommended next action', 'leadsforward-core') . '</th></tr></thead><tbody>';
+	echo '<table class="widefat striped"><thead><tr><th>' . esc_html__('Priority', 'leadsforward-core') . '</th><th>' . esc_html__('Page', 'leadsforward-core') . '</th><th>' . esc_html__('Why it matters', 'leadsforward-core') . '</th><th>' . esc_html__('Recommended next action', 'leadsforward-core') . '</th><th>' . esc_html__('Quick apply', 'leadsforward-core') . '</th></tr></thead><tbody>';
 	$opp_limit = min(15, count($opportunities));
 	for ($i = 0; $i < $opp_limit; $i++) {
 		$opp = $opportunities[$i];
@@ -599,10 +766,19 @@ function lf_internal_link_map_render_embedded_ui(): void {
 		echo '</td>';
 		echo '<td>' . esc_html($reasons_text) . '</td>';
 		echo '<td>' . esc_html($actions_text) . '</td>';
+		echo '<td>';
+		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+		wp_nonce_field('lf_internal_link_apply_suggestion');
+		echo '<input type="hidden" name="action" value="lf_internal_link_map_apply_suggestion" />';
+		echo '<input type="hidden" name="source_id" value="' . esc_attr((string) ((int) ($opp['id'] ?? 0))) . '" />';
+		echo '<input type="hidden" name="return_to" value="' . esc_url(add_query_arg($_GET, admin_url('admin.php?page=lf-seo&tab=links'))) . '" />';
+		submit_button(__('Apply 1 suggestion', 'leadsforward-core'), 'secondary small', '', false);
+		echo '</form>';
+		echo '</td>';
 		echo '</tr>';
 	}
 	if ($opp_limit === 0) {
-		echo '<tr><td colspan="4">' . esc_html__('No high-priority opportunities found with current data.', 'leadsforward-core') . '</td></tr>';
+		echo '<tr><td colspan="5">' . esc_html__('No high-priority opportunities found with current data.', 'leadsforward-core') . '</td></tr>';
 	}
 	echo '</tbody></table>';
 
