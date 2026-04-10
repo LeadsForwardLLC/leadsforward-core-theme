@@ -248,7 +248,8 @@ function lf_internal_link_map_collect_homepage_html_blobs(): array {
  *   broken: array<int, list<string>>,
  *   internal_anchor_samples: array<int, array<int, list<string>>>,
  *   weak_internal_anchor_counts: array<int, int>,
- *   weak_internal_anchor_samples: array<int, list<string>>
+ *   weak_internal_anchor_samples: array<int, list<string>>,
+ *   weak_internal_anchor_pairs: array<int, array<int, list<string>>>
  * }
  */
 function lf_internal_link_map_scan(): array {
@@ -261,6 +262,7 @@ function lf_internal_link_map_scan(): array {
 	$internal_anchor_samples = [];
 	$weak_internal_anchor_counts = [];
 	$weak_internal_anchor_samples = [];
+	$weak_internal_anchor_pairs = [];
 
 	$post_types = lf_internal_link_map_supported_post_types();
 	$ids = get_posts([
@@ -296,6 +298,11 @@ function lf_internal_link_map_scan(): array {
 						if ($anchor !== '') {
 							$weak_internal_anchor_samples[$pid] ??= [];
 							$weak_internal_anchor_samples[$pid][] = $anchor;
+						}
+						if ($target_id > 0 && $anchor !== '') {
+							$weak_internal_anchor_pairs[$pid] ??= [];
+							$weak_internal_anchor_pairs[$pid][$target_id] ??= [];
+							$weak_internal_anchor_pairs[$pid][$target_id][] = $anchor;
 						}
 					}
 				} elseif (lf_internal_link_map_is_external_href($href, $site_host)) {
@@ -334,6 +341,11 @@ function lf_internal_link_map_scan(): array {
 							$weak_internal_anchor_samples[$home_post_id] ??= [];
 							$weak_internal_anchor_samples[$home_post_id][] = $anchor;
 						}
+						if ($target_id > 0 && $anchor !== '') {
+							$weak_internal_anchor_pairs[$home_post_id] ??= [];
+							$weak_internal_anchor_pairs[$home_post_id][$target_id] ??= [];
+							$weak_internal_anchor_pairs[$home_post_id][$target_id][] = $anchor;
+						}
 					}
 				} elseif (lf_internal_link_map_is_external_href($href, $site_host)) {
 					$norm = lf_internal_link_map_normalize_href($href, $site_base);
@@ -357,6 +369,12 @@ function lf_internal_link_map_scan(): array {
 		$deduped = array_values(array_unique(array_filter(array_map(static fn($a): string => trim((string) $a), (array) $anchors))));
 		$weak_internal_anchor_samples[$src] = array_slice($deduped, 0, 12);
 	}
+	foreach ($weak_internal_anchor_pairs as $src => $targets) {
+		foreach ((array) $targets as $tid => $anchors) {
+			$deduped = array_values(array_unique(array_filter(array_map(static fn($a): string => trim((string) $a), (array) $anchors))));
+			$weak_internal_anchor_pairs[$src][(int) $tid] = array_slice($deduped, 0, 8);
+		}
+	}
 
 	return [
 		'internal_outbound' => $internal_outbound,
@@ -365,6 +383,7 @@ function lf_internal_link_map_scan(): array {
 		'internal_anchor_samples' => $internal_anchor_samples,
 		'weak_internal_anchor_counts' => $weak_internal_anchor_counts,
 		'weak_internal_anchor_samples' => $weak_internal_anchor_samples,
+		'weak_internal_anchor_pairs' => $weak_internal_anchor_pairs,
 	];
 }
 
@@ -552,6 +571,7 @@ function lf_internal_link_map_render_embedded_ui(): void {
 	$internal_anchor_samples = is_array($scan['internal_anchor_samples'] ?? null) ? $scan['internal_anchor_samples'] : [];
 	$weak_internal_anchor_counts = is_array($scan['weak_internal_anchor_counts'] ?? null) ? $scan['weak_internal_anchor_counts'] : [];
 	$weak_internal_anchor_samples = is_array($scan['weak_internal_anchor_samples'] ?? null) ? $scan['weak_internal_anchor_samples'] : [];
+	$weak_internal_anchor_pairs = is_array($scan['weak_internal_anchor_pairs'] ?? null) ? $scan['weak_internal_anchor_pairs'] : [];
 	$inbound_counts = [];
 	$inbound_sources = [];
 	foreach ($outbound_internal as $src => $targets) {
@@ -705,8 +725,8 @@ function lf_internal_link_map_render_embedded_ui(): void {
 	foreach ($quick_labels as $quick_key => $quick_label) {
 		$is_active = ($quick_key === '' && $quick_filter === '') || ($quick_key !== '' && $quick_filter === $quick_key);
 		$tip = '';
-		if ($quick_key === 'orphans') $tip = __('Orphan = 0 inbound internal links (nothing links to this page).', 'leadsforward-core');
-		if ($quick_key === 'no_internal_out') $tip = __('No internal out = 0 internal links going to other pages (a dead-end page).', 'leadsforward-core');
+		if ($quick_key === 'orphans') $tip = __('Orphan (0 inbound) = nothing links to this page. Add inbound links from related pages and navigation.', 'leadsforward-core');
+		if ($quick_key === 'no_internal_out') $tip = __('Dead-end (0 internal out) = this page links to no other pages. Add 2–3 relevant internal links.', 'leadsforward-core');
 		if ($quick_key === 'broken_internal') $tip = __('Broken internal = links that look internal but don’t resolve to a real page.', 'leadsforward-core');
 		if ($quick_key === 'weak_anchors') $tip = __('Weak anchors = generic link text (“click here”, “learn more”). Replace with service + location intent.', 'leadsforward-core');
 		if ($quick_key === 'money_pages') $tip = __('Money pages = core revenue page types (services + service areas).', 'leadsforward-core');
@@ -1021,13 +1041,13 @@ function lf_internal_link_map_render_embedded_ui(): void {
 			}
 		}
 		$row_broken = $broken[$pid] ?? [];
-		$row_weak_samples = array_slice((array) ($weak_internal_anchor_samples[$pid] ?? []), 0, 3);
+		$row_weak_pairs = (array) ($weak_internal_anchor_pairs[$pid] ?? []);
 		$issue_labels = [];
 		if ($is_orphan) {
-			$issue_labels[] = __('Orphan', 'leadsforward-core');
+			$issue_labels[] = __('Orphan (0 inbound)', 'leadsforward-core');
 		}
 		if ($out_internal === 0) {
-			$issue_labels[] = __('No internal outbound', 'leadsforward-core');
+			$issue_labels[] = __('Dead-end (0 internal out)', 'leadsforward-core');
 		}
 		if ($br > 0) {
 			$issue_labels[] = __('Broken internal URLs', 'leadsforward-core');
@@ -1096,15 +1116,31 @@ function lf_internal_link_map_render_embedded_ui(): void {
 		echo '<td>' . esc_html((string) $in) . ($is_orphan ? ' <span class="dashicons dashicons-warning" title="' . esc_attr__('Orphan = 0 inbound internal links (nothing links to this page). Add links from related pages and navigation.', 'leadsforward-core') . '"></span>' : '') . '</td>';
 		echo '<td>';
 		echo esc_html((string) $weak_anchor_count);
-		if (!empty($row_weak_samples)) {
+		if (!empty($row_weak_pairs)) {
 			echo '<div class="description" style="margin-top:4px;">';
-			foreach ($row_weak_samples as $ws) {
-				$w = (string) $ws;
-				if ($w === '') continue;
-				echo '<div style="display:flex;gap:6px;align-items:center;margin-top:2px;">';
-				echo '<code style="font-size:11px;">' . esc_html($w) . '</code>';
-				echo '<a href="#" data-lf-copy-text="' . esc_attr($w) . '">' . esc_html__('Copy', 'leadsforward-core') . '</a>';
-				echo '</div>';
+			$shown_pairs = 0;
+			foreach ($row_weak_pairs as $tid => $anchors) {
+				$target_id = (int) $tid;
+				$t_title = $target_id === $home_post_id ? __('Homepage', 'leadsforward-core') : (string) get_the_title($target_id);
+				$t_url = get_permalink($target_id);
+				foreach (array_slice((array) $anchors, 0, 2) as $ws) {
+					$w = (string) $ws;
+					if ($w === '') continue;
+					echo '<div style="display:flex;gap:6px;align-items:center;margin-top:2px;flex-wrap:wrap;">';
+					echo '<code style="font-size:11px;">' . esc_html($w) . '</code>';
+					echo '<span class="description">→</span>';
+					if (is_string($t_url) && $t_url !== '') {
+						echo '<a href="' . esc_url($t_url) . '" target="_blank" rel="noopener noreferrer">' . esc_html($t_title !== '' ? $t_title : ('#' . $target_id)) . '</a>';
+					} else {
+						echo '<span>' . esc_html($t_title !== '' ? $t_title : ('#' . $target_id)) . '</span>';
+					}
+					echo '<a href="#" data-lf-copy-text="' . esc_attr($w) . '">' . esc_html__('Copy', 'leadsforward-core') . '</a>';
+					echo '</div>';
+					$shown_pairs++;
+					if ($shown_pairs >= 3) {
+						break 2;
+					}
+				}
 			}
 			echo '</div>';
 		}
@@ -1295,14 +1331,30 @@ function lf_internal_link_map_render_embedded_ui(): void {
 			echo '</ul></div>';
 
 			echo '<div class="card"><h4 style="margin-top:0;">' . esc_html__('Weak Anchor Samples (copy + search)', 'leadsforward-core') . '</h4>';
-			$focus_weak_samples = array_slice((array) ($weak_internal_anchor_samples[$focus_id] ?? []), 0, 10);
-			if (!empty($focus_weak_samples)) {
+			$focus_weak_pairs = (array) ($weak_internal_anchor_pairs[$focus_id] ?? []);
+			if (!empty($focus_weak_pairs)) {
 				echo '<p class="description" style="margin-top:-6px;">' . esc_html__('Copy one phrase and search it in the frontend editor to find exactly where to replace the anchor text.', 'leadsforward-core') . '</p>';
 				echo '<ul style="margin-left:1rem;">';
-				foreach ($focus_weak_samples as $ws) {
-					$w = (string) $ws;
-					if ($w === '') continue;
-					echo '<li><code style="font-size:12px;">' . esc_html($w) . '</code> <a href="#" data-lf-copy-text="' . esc_attr($w) . '">' . esc_html__('Copy', 'leadsforward-core') . '</a></li>';
+				$pair_count = 0;
+				foreach ($focus_weak_pairs as $tid => $anchors) {
+					$target_id = (int) $tid;
+					$t_title = $target_id === $home_post_id ? __('Homepage', 'leadsforward-core') : (string) get_the_title($target_id);
+					$t_url = get_permalink($target_id);
+					foreach ((array) $anchors as $ws) {
+						$w = (string) $ws;
+						if ($w === '') continue;
+						echo '<li><code style="font-size:12px;">' . esc_html($w) . '</code> <span class="description">→</span> ';
+						if (is_string($t_url) && $t_url !== '') {
+							echo '<a href="' . esc_url($t_url) . '" target="_blank" rel="noopener noreferrer">' . esc_html($t_title !== '' ? $t_title : ('#' . $target_id)) . '</a>';
+						} else {
+							echo esc_html($t_title !== '' ? $t_title : ('#' . $target_id));
+						}
+						echo ' <a href="#" data-lf-copy-text="' . esc_attr($w) . '">' . esc_html__('Copy', 'leadsforward-core') . '</a></li>';
+						$pair_count++;
+						if ($pair_count >= 12) {
+							break 2;
+						}
+					}
 				}
 				echo '</ul>';
 			} else {
