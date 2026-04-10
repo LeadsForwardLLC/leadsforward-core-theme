@@ -1627,7 +1627,13 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	$icon_color = $icon_data['color'] ?? 'primary';
 	$parsed_items = [];
 	foreach ($items as $raw_item) {
-		$item = $raw_item;
+		$item = (string) $raw_item;
+		if (strpos($item, '&lt;') !== false || strpos($item, '&#60;') !== false) {
+			$item = html_entity_decode($item, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+		}
+		if (function_exists('lf_ai_sanitize_benefits_items_line')) {
+			$item = lf_ai_sanitize_benefits_items_line($item);
+		}
 		$title_text = $item;
 		$body_text = '';
 		if (strpos($item, '||') !== false) {

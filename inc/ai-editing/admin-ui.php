@@ -2658,6 +2658,9 @@ function lf_ai_ajax_update_section_lines(): void {
 	foreach ($items_decoded as $item) {
 		$raw = (string) $item;
 		if ($field_key === 'benefits_items' && function_exists('lf_ai_sanitize_benefits_items_line')) {
+			if (strpos($raw, '&lt;') !== false || strpos($raw, '&#60;') !== false) {
+				$raw = html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+			}
 			$value = lf_ai_sanitize_benefits_items_line($raw);
 		} elseif (in_array($field_key, ['service_details_checklist', 'service_details_checklist_secondary'], true) && function_exists('lf_ai_sanitize_inline_dom_html')) {
 			$value = lf_ai_sanitize_inline_dom_html($raw);
@@ -2675,6 +2678,9 @@ function lf_ai_ajax_update_section_lines(): void {
 		$items = array_slice($items, 0, 40);
 	}
 	$value = implode("\n", $items);
+	if (defined('WP_DEBUG') && WP_DEBUG && $field_key === 'benefits_items') {
+		error_log('LF BENEFITS SAVE: items=' . count($items) . ' has_link=' . (strpos($value, '<a ') !== false ? 'yes' : 'no'));
+	}
 	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
 	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
 		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
