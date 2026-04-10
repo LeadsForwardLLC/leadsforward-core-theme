@@ -1413,6 +1413,7 @@ function lf_ai_ajax_inline_save(): void {
 	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
 	$field_key = isset($_POST['field_key']) ? sanitize_text_field(wp_unslash($_POST['field_key'])) : '';
 	$selector = isset($_POST['selector']) ? sanitize_text_field(wp_unslash($_POST['selector'])) : '';
+	$selector = trim($selector);
 	$value_raw = isset($_POST['value']) ? (string) wp_unslash($_POST['value']) : '';
 	$value_format = isset($_POST['value_format']) ? sanitize_text_field(wp_unslash($_POST['value_format'])) : 'text';
 	if ($value_format === 'html' && function_exists('lf_ai_sanitize_inline_dom_html')) {
@@ -1425,6 +1426,50 @@ function lf_ai_ajax_inline_save(): void {
 	}
 	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
 	$section_id = isset($_POST['section_id']) ? sanitize_text_field(wp_unslash($_POST['section_id'])) : '';
+	$log_enabled = defined('WP_DEBUG') && WP_DEBUG;
+	$log_event = static function (string $stage, array $data = []) use ($log_enabled): void {
+		if (!$log_enabled) {
+			return;
+		}
+		error_log('LF INLINE SAVE: ' . $stage . ' | ' . wp_json_encode($data));
+	};
+	$clear_selector_overrides = static function (string $ctx_type, $ctx_id, string $sel) use ($log_event): void {
+		if ($sel === '' || !function_exists('lf_ai_get_inline_dom_overrides') || !function_exists('lf_ai_set_inline_dom_overrides')) {
+			return;
+		}
+		$map = lf_ai_get_inline_dom_overrides($ctx_type, $ctx_id);
+		if (!is_array($map) || empty($map)) {
+			return;
+		}
+		$changed = false;
+		if (isset($map[$sel])) {
+			unset($map[$sel]);
+			$changed = true;
+		}
+		$prefix = $sel . ' > ';
+		foreach (array_keys($map) as $key) {
+			if (!is_string($key)) {
+				continue;
+			}
+			if (strpos($key, $prefix) === 0) {
+				unset($map[$key]);
+				$changed = true;
+			}
+		}
+		if ($changed) {
+			lf_ai_set_inline_dom_overrides($ctx_type, $ctx_id, $map);
+			$log_event('cleared_selector_overrides', ['selector' => $sel, 'context_type' => $ctx_type, 'context_id' => $ctx_id]);
+		}
+	};
+	$log_event('received', [
+		'context_type' => $context_type,
+		'context_id' => $context_id_use,
+		'field_key' => $field_key,
+		'section_id' => $section_id,
+		'selector' => $selector,
+		'value_format' => $value_format,
+		'plain_len' => (int) (function_exists('mb_strlen') ? mb_strlen(wp_strip_all_tags($value)) : strlen(wp_strip_all_tags($value))),
+	]);
 	$plain_len = function_exists('mb_strlen') ? mb_strlen(wp_strip_all_tags($value)) : strlen(wp_strip_all_tags($value));
 	if ($plain_len > 4000) {
 		wp_send_json_error(['message' => __('Text is too long for inline editing.', 'leadsforward-core')]);
@@ -1436,6 +1481,12 @@ function lf_ai_ajax_inline_save(): void {
 	// Direct section-field persistence for service_details body edits.
 	// This avoids fragile selector-only overrides for rich text with links.
 	if ($field_key === 'service_details_body' && $section_id !== '') {
+		$log_event('direct_service_details_path', [
+			'context_type' => $context_type,
+			'context_id' => $context_id_use,
+			'section_id' => $section_id,
+			'is_homepage' => ($context_type === 'homepage' || $context_id_use === 'homepage') ? 1 : 0,
+		]);
 		if ($context_type === 'homepage' || $context_id_use === 'homepage') {
 			if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
 				wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
@@ -1453,6 +1504,7 @@ function lf_ai_ajax_inline_save(): void {
 			}
 			$config[$resolved_section_id]['service_details_body'] = $value;
 			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+			$clear_selector_overrides($context_type, $context_id_use, $selector);
 			$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 			$log_id = function_exists('lf_ai_log_action')
 				? lf_ai_log_action(
@@ -1494,6 +1546,7 @@ function lf_ai_ajax_inline_save(): void {
 		}
 		$config['sections'][$section_id]['settings'] = $settings;
 		update_post_meta($pid, LF_PB_META_KEY, $config);
+		$clear_selector_overrides($context_type, $context_id_use, $selector);
 		$new_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
 		$log_id = function_exists('lf_ai_log_action')
 			? lf_ai_log_action(
