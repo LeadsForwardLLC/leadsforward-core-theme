@@ -1007,7 +1007,11 @@ function lf_ai_studio_process_images_upload(array $files): array {
 			'error' => (int) ($files['error'][$i] ?? UPLOAD_ERR_NO_FILE),
 			'size' => (int) ($files['size'][$i] ?? 0),
 		];
-		if (function_exists('lf_image_intelligence_generate_upload_filename')) {
+		if (function_exists('lf_image_intelligence_resolve_upload_filename')) {
+			$file['name'] = is_array($upload_ctx) && $upload_ctx !== []
+				? lf_image_intelligence_resolve_upload_filename($name, $upload_ctx)
+				: lf_image_intelligence_resolve_upload_filename($name, null);
+		} elseif (function_exists('lf_image_intelligence_generate_upload_filename')) {
 			$file['name'] = is_array($upload_ctx) && $upload_ctx !== []
 				? lf_image_intelligence_generate_upload_filename($name, $upload_ctx)
 				: lf_image_intelligence_generate_upload_filename($name);

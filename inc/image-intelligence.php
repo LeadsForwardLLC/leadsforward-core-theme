@@ -181,6 +181,80 @@ function lf_image_intelligence_normalize_filename(string $filename): string {
 }
 
 /**
+ * Whether an incoming filename already looks intentional for SEO (do not replace with a generic niche slug).
+ *
+ * @param array<string, string> $context primary_keyword, city, niche, business_name, service_name, etc.
+ */
+function lf_image_intelligence_should_preserve_original_upload_basename(string $original_name, array $context = []): bool {
+	$base = pathinfo($original_name, PATHINFO_FILENAME);
+	$base = trim((string) $base);
+	if ($base === '') {
+		return false;
+	}
+	$norm = lf_image_intelligence_normalize_filename($original_name);
+	if ($norm === '' || $norm === 'image') {
+		return false;
+	}
+	// Camera / export noise and WordPress placeholders.
+	if (preg_match('/^(img|image|dsc|dscn|dscf|mvi|mov|pic|pict|photo|screenshot|screen[-_]?shot|wp[-_]?image|export|untitled|snapshot|scan)[-_]?\d*$/i', $norm) === 1) {
+		return false;
+	}
+	if (preg_match('/^img[-_]?\d+$/i', $norm) === 1 || preg_match('/^photo[-_]?\d+$/i', $norm) === 1) {
+		return false;
+	}
+	// UUID / hash-like tokens.
+	if (preg_match('/^[a-f0-9\-]{24,}$/', $norm) === 1) {
+		return false;
+	}
+	// Too little signal.
+	if (strlen($norm) < 8) {
+		return false;
+	}
+	if (preg_match('/^[0-9\-]+$/', $norm) === 1) {
+		return false;
+	}
+	$segments = array_values(array_filter(explode('-', $norm), static function ($s) {
+		return strlen((string) $s) >= 2;
+	}));
+	if (count($segments) >= 2) {
+		return true;
+	}
+	if (strlen($norm) >= 12 && preg_match('/[a-z]/', $norm) === 1) {
+		return true;
+	}
+	foreach (['primary_keyword', 'city', 'niche', 'business_name', 'service_name'] as $key) {
+		$chunk = trim((string) ($context[$key] ?? ''));
+		if ($chunk === '') {
+			continue;
+		}
+		$slug = sanitize_title($chunk);
+		if ($slug !== '' && strlen($slug) >= 4 && strpos($norm, $slug) !== false) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Keep keyword-rich original names; otherwise generate a contextual slug (Manifester + media library uploads).
+ *
+ * @param array<string, string>|null $context_override Manifest / site context; null uses homepage defaults only.
+ */
+function lf_image_intelligence_resolve_upload_filename(string $original_name, ?array $context_override = null): string {
+	$original_name = (string) $original_name;
+	if ($original_name === '') {
+		return lf_image_intelligence_generate_upload_filename($original_name, $context_override);
+	}
+	$ctx = is_array($context_override) && $context_override !== []
+		? $context_override
+		: lf_image_intelligence_upload_context_defaults();
+	if (lf_image_intelligence_should_preserve_original_upload_basename($original_name, $ctx)) {
+		return sanitize_file_name($original_name);
+	}
+	return lf_image_intelligence_generate_upload_filename($original_name, $context_override);
+}
+
+/**
  * @return int[]
  */
 function lf_image_intelligence_get_logo_ids(): array {
@@ -404,7 +478,7 @@ function lf_image_intelligence_upload_prefilter(array $file): array {
 	if (strpos($mime, 'image/') !== 0) {
 		return $file;
 	}
-	$file['name'] = lf_image_intelligence_generate_upload_filename($name);
+	$file['name'] = lf_image_intelligence_resolve_upload_filename($name, null);
 	return $file;
 }
 
@@ -1177,10 +1251,9 @@ function lf_image_intelligence_enforce_manifest_media_metadata(int $attachment_i
 	$context = is_array($context) ? $context : [];
 	$meta = lf_image_intelligence_build_media_metadata_from_context($context);
 
-	// Always set a strong ALT for manifester images (keywords/city/business context).
+	// ALT: only fill when empty or clearly generic (do not replace intentional alt text).
 	$alt_existing = trim((string) get_post_meta($attachment_id, '_wp_attachment_image_alt', true));
-	$alt = $alt_existing;
-	if ($alt === '' || lf_image_intelligence_media_text_needs_upgrade($alt)) {
+	if ($alt_existing === '' || lf_image_intelligence_media_text_needs_upgrade($alt_existing)) {
 		$city = trim((string) ($context['city'] ?? ''));
 		$topic = trim((string) ($context['service_name'] ?? ($context['primary_keyword'] ?? '')));
 		$business = trim((string) ($context['business_name'] ?? ''));
@@ -1192,18 +1265,22 @@ function lf_image_intelligence_enforce_manifest_media_metadata(int $attachment_i
 		update_post_meta($attachment_id, '_wp_attachment_image_alt', sanitize_text_field($alt));
 	}
 
+	// Title / caption / description: upgrade-only so good filenames and manual work survive the Manifester.
 	$next = ['ID' => $attachment_id];
 	$changed = false;
-	if (!empty($meta['title'])) {
+	$current_title = (string) ($attachment->post_title ?? '');
+	if (lf_image_intelligence_media_text_needs_upgrade($current_title) && ($meta['title'] ?? '') !== '') {
 		$next['post_title'] = (string) $meta['title'];
 		$next['post_name'] = sanitize_title((string) $meta['title']);
 		$changed = true;
 	}
-	if (!empty($meta['caption'])) {
+	$current_caption = (string) ($attachment->post_excerpt ?? '');
+	if (lf_image_intelligence_media_text_needs_upgrade($current_caption) && ($meta['caption'] ?? '') !== '') {
 		$next['post_excerpt'] = (string) $meta['caption'];
 		$changed = true;
 	}
-	if (!empty($meta['description'])) {
+	$current_desc = (string) ($attachment->post_content ?? '');
+	if (lf_image_intelligence_media_text_needs_upgrade($current_desc) && ($meta['description'] ?? '') !== '') {
 		$next['post_content'] = (string) $meta['description'];
 		$changed = true;
 	}

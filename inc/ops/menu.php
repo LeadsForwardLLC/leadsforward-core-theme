@@ -432,6 +432,22 @@ function lf_ops_handle_global_settings_save(): void {
 		update_option('lf_ai_airtable_reviews_table', isset($_POST['lf_ai_airtable_reviews_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_table'])) : '');
 		update_option('lf_ai_airtable_reviews_view', isset($_POST['lf_ai_airtable_reviews_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_view'])) : '');
 		update_option('lf_maps_api_key', isset($_POST['lf_maps_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_maps_api_key'])) : '');
+		$lf_maps_iframe_allowed = function_exists('lf_wizard_allowed_map_embed') ? lf_wizard_allowed_map_embed() : [
+			'iframe' => [
+				'src' => true,
+				'width' => true,
+				'height' => true,
+				'style' => true,
+				'loading' => true,
+				'referrerpolicy' => true,
+				'allowfullscreen' => true,
+				'title' => true,
+			],
+		];
+		update_option(
+			'lf_maps_iframe_embed',
+			isset($_POST['lf_maps_iframe_embed']) ? wp_kses(wp_unslash($_POST['lf_maps_iframe_embed']), $lf_maps_iframe_allowed) : ''
+		);
 		update_option('options_lf_feedback_webhook_url', isset($_POST['lf_feedback_webhook_url']) ? esc_url_raw(wp_unslash((string) $_POST['lf_feedback_webhook_url'])) : '');
 		update_option('options_lf_feedback_webhook_secret', isset($_POST['lf_feedback_webhook_secret']) ? trim(sanitize_text_field(wp_unslash((string) $_POST['lf_feedback_webhook_secret']))) : '');
 	}
@@ -728,6 +744,7 @@ function lf_ops_render_global_settings_page(): void {
 	$entity_insurance = (string) ($entity['insurance_statement'] ?? '');
 	$maps_api_key = get_option('lf_maps_api_key', '');
 	$maps_api_key = is_string($maps_api_key) ? $maps_api_key : '';
+	$maps_iframe_embed = (string) get_option('lf_maps_iframe_embed', '');
 	$default_niche = function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair';
 	$homepage_niche_slug = (string) get_option('lf_homepage_niche_slug', $default_niche);
 	$design_preset = (string) get_option('lf_global_design_preset', 'clean-precision');
@@ -1060,7 +1077,14 @@ function lf_ops_render_global_settings_page(): void {
 										<input type="checkbox" id="lf-maps-key-toggle-global" <?php disabled(!$can_sensitive); ?> />
 										<?php esc_html_e('Show key', 'leadsforward-core'); ?>
 									</label>
-									<p class="description"><?php esc_html_e('Used for business place search and map embeds in Business Entity settings.', 'leadsforward-core'); ?></p>
+									<p class="description"><?php esc_html_e('Used for business place search and optional Embed API map URLs. Not required if you use a pasted iframe below or on LeadsForward → Homepage → Business Info.', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_maps_iframe_embed"><?php esc_html_e('Map iframe embed (site-wide fallback)', 'leadsforward-core'); ?></label></th>
+								<td>
+									<textarea class="large-text code" name="lf_maps_iframe_embed" id="lf_maps_iframe_embed" rows="4" <?php disabled(!$can_sensitive); ?>><?php echo esc_textarea($can_sensitive ? $maps_iframe_embed : ''); ?></textarea>
+									<p class="description"><?php esc_html_e('Optional. Paste a Google Maps (or other) iframe embed here to show the Map + NAP block without relying on the JavaScript Maps API or domain key restrictions. If the Homepage Business Info field “Map embed override” is set, that value wins for this site.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
