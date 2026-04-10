@@ -1926,6 +1926,7 @@ function lf_ai_assistant_widget_js(): string {
 				node.removeAttribute("data-lf-inline-editable");
 				node.removeAttribute("data-lf-inline-selector");
 				node.removeAttribute("data-lf-inline-source-selector");
+				node.removeAttribute("data-lf-inline-section-id");
 				node.removeAttribute("data-lf-inline-field-key");
 			});
 			Array.prototype.slice.call(document.querySelectorAll("[data-lf-inline-image=\"1\"],[data-lf-inline-image-selector]")).forEach(function(node){
@@ -2393,8 +2394,17 @@ function lf_ai_assistant_widget_js(): string {
 				} else {
 					node.removeAttribute("data-lf-inline-source-selector");
 				}
+				var sectionWrap = node.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]");
+				var sectionId = sectionWrap ? String(sectionWrap.getAttribute("data-lf-section-id") || "") : "";
+				if (sectionId) {
+					node.setAttribute("data-lf-inline-section-id", sectionId);
+				} else {
+					node.removeAttribute("data-lf-inline-section-id");
+				}
 				var cls = String(node.className || "");
-				if (/\blf-hero-split__subtitle\b/.test(cls) || /\blf-hero-basic__subtitle\b/.test(cls)) {
+				if (serviceBody) {
+					node.setAttribute("data-lf-inline-field-key", "service_details_body");
+				} else if (/\blf-hero-split__subtitle\b/.test(cls) || /\blf-hero-basic__subtitle\b/.test(cls)) {
 					node.setAttribute("data-lf-inline-field-key", "hero_subheadline");
 				} else {
 					node.removeAttribute("data-lf-inline-field-key");
@@ -5845,6 +5855,7 @@ function lf_ai_assistant_widget_js(): string {
 			var el = inlineActiveEl;
 			var selector = String(el.getAttribute("data-lf-inline-selector") || "");
 			var fieldKey = String(el.getAttribute("data-lf-inline-field-key") || "");
+			var sectionId = String(el.getAttribute("data-lf-inline-section-id") || "");
 			var sourceSelector = String(el.getAttribute("data-lf-inline-source-selector") || "");
 			var sourceNode = null;
 			if (sourceSelector) {
@@ -5900,6 +5911,9 @@ function lf_ai_assistant_widget_js(): string {
 			} else {
 				payload.selector = selector;
 			}
+			if (sectionId) {
+				payload.section_id = sectionId;
+			}
 			$.post(lfAiFloating.ajax_url, payload).done(function(res){
 				if (res && res.success) {
 					el.removeAttribute("contenteditable");
@@ -5932,6 +5946,7 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			var selector = String(el.getAttribute("data-lf-inline-selector") || "");
 			var fieldKey = String(el.getAttribute("data-lf-inline-field-key") || "");
+			var sectionId = String(el.getAttribute("data-lf-inline-section-id") || "");
 			var sourceSelector = String(el.getAttribute("data-lf-inline-source-selector") || "");
 			if (!selector && !fieldKey) {
 				if (typeof done === "function") done(false);
@@ -5971,6 +5986,9 @@ function lf_ai_assistant_widget_js(): string {
 				payload.field_key = fieldKey;
 			} else {
 				payload.selector = selector;
+			}
+			if (sectionId) {
+				payload.section_id = sectionId;
 			}
 			setStatus("Saving inline edit...", false);
 			$.post(lfAiFloating.ajax_url, payload).done(function(res){
