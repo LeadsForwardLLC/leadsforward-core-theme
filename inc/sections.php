@@ -1010,7 +1010,28 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 					}
 					$raw = implode("\n", $lines);
 				}
-				$out[$key] = sanitize_textarea_field(wp_unslash((string) $raw));
+				$raw_list = wp_unslash((string) $raw);
+				$html_list_keys = [
+					'service_details_checklist',
+					'service_details_checklist_secondary',
+					'hero_chip_bullets',
+					'hero_proof_bullets',
+					'trust_badges',
+				];
+				if (in_array($key, $html_list_keys, true) && function_exists('lf_ai_sanitize_inline_dom_html')) {
+					$html_lines = preg_split('/\r\n|\r|\n/', $raw_list);
+					$html_lines = is_array($html_lines) ? $html_lines : [];
+					$clean = [];
+					foreach ($html_lines as $line) {
+						$line_clean = lf_ai_sanitize_inline_dom_html((string) $line);
+						if (trim(wp_strip_all_tags($line_clean)) !== '') {
+							$clean[] = $line_clean;
+						}
+					}
+					$out[$key] = implode("\n", $clean);
+				} else {
+					$out[$key] = sanitize_textarea_field($raw_list);
+				}
 				break;
 			default:
 				$out[$key] = sanitize_text_field(wp_unslash((string) $raw));
@@ -1036,7 +1057,12 @@ function lf_sections_parse_lines($value): array {
 		$value = implode("\n", $lines);
 	}
 	$lines = array_filter(array_map('trim', explode("\n", (string) $value)));
-	return array_values(array_map('sanitize_text_field', $lines));
+	return array_values(array_map(static function (string $line): string {
+		if (function_exists('lf_ai_is_inline_dom_html_string') && lf_ai_is_inline_dom_html_string($line) && function_exists('lf_ai_sanitize_inline_dom_html')) {
+			return lf_ai_sanitize_inline_dom_html($line);
+		}
+		return sanitize_text_field($line);
+	}, $lines));
 }
 
 /**
