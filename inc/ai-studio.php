@@ -9563,6 +9563,19 @@ function lf_ai_studio_audit_post(\WP_Post $post, array $registry, string $niche_
 function lf_ai_studio_audit_section_settings(array $settings, array $defaults, string $section_type, string $instance_id, array $allowed_keys): array {
 	$issues = [];
 	$registry = function_exists('lf_sections_registry') ? lf_sections_registry() : [];
+
+	// Process sections can be powered by either selected process step posts or inline AI steps.
+	// If inline steps exist, do not require process_selected_ids.
+	if ($section_type === 'process') {
+		$steps_type = lf_ai_studio_registry_field_type($registry, $section_type, 'process_steps');
+		$has_inline_steps = !lf_ai_studio_audit_value_empty($settings['process_steps'] ?? '', $steps_type);
+		if ($has_inline_steps) {
+			$allowed_keys = array_values(array_filter($allowed_keys, static function ($k) {
+				return $k !== 'process_selected_ids';
+			}));
+		}
+	}
+
 	foreach ($allowed_keys as $field_key) {
 		$field_type = lf_ai_studio_registry_field_type($registry, $section_type, $field_key);
 		$raw = $settings[$field_key] ?? '';
