@@ -1768,6 +1768,9 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			lfHideInlineLinkPanel();
 			var saveHost = inlineActiveEl || lfInlineLinkSavedHost || lfManagedContentEditableHost();
+			if (!saveHost && lfInlineLinkSavedAnchor && lfInlineLinkSavedAnchor.closest) {
+				saveHost = lfInlineLinkSavedAnchor.closest(".lf-service-details__text,[data-lf-inline-editable=\"1\"]");
+			}
 			if (saveHost) {
 				var managedWrap = saveHost.closest ? saveHost.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]") : null;
 				if (managedWrap && saveHost.closest(".lf-service-details__checklist")) {
@@ -1777,6 +1780,17 @@ function lf_ai_assistant_widget_js(): string {
 				}
 				persistInlineNodeNow(saveHost, wasEditingAnchor ? "Link updated and saved." : "Link inserted and saved.");
 				return;
+			}
+			if (lfInlineLinkSavedAnchor && lfInlineLinkSavedAnchor.closest) {
+				var fallbackTextHost = lfInlineLinkSavedAnchor.closest(".lf-service-details__text");
+				var fallbackWrap = fallbackTextHost && fallbackTextHost.closest
+					? fallbackTextHost.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]")
+					: null;
+				if (fallbackWrap) {
+					persistSectionChecklist(fallbackWrap, fallbackTextHost);
+					setStatus(wasEditingAnchor ? "Link updated and saved." : "Link inserted and saved.", false);
+					return;
+				}
 			}
 			setStatus(wasEditingAnchor ? "Link updated. Save when done editing." : "Link inserted. Click away or press ⌘/Ctrl+Enter to save.", false);
 		}
@@ -1805,6 +1819,9 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			lfHideInlineLinkPanel();
 			var saveHost = inlineActiveEl || lfInlineLinkSavedHost || lfManagedContentEditableHost();
+			if (!saveHost && lfInlineLinkSavedAnchor && lfInlineLinkSavedAnchor.closest) {
+				saveHost = lfInlineLinkSavedAnchor.closest(".lf-service-details__text,[data-lf-inline-editable=\"1\"]");
+			}
 			if (saveHost) {
 				var managedWrap = saveHost.closest ? saveHost.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]") : null;
 				if (managedWrap && saveHost.closest(".lf-service-details__checklist")) {
@@ -1814,6 +1831,17 @@ function lf_ai_assistant_widget_js(): string {
 				}
 				persistInlineNodeNow(saveHost, "Link removed and saved.");
 				return;
+			}
+			if (lfInlineLinkSavedAnchor && lfInlineLinkSavedAnchor.closest) {
+				var fallbackTextHost = lfInlineLinkSavedAnchor.closest(".lf-service-details__text");
+				var fallbackWrap = fallbackTextHost && fallbackTextHost.closest
+					? fallbackTextHost.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]")
+					: null;
+				if (fallbackWrap) {
+					persistSectionChecklist(fallbackWrap, fallbackTextHost);
+					setStatus("Link removed and saved.", false);
+					return;
+				}
 			}
 			setStatus("Link removed. Save when done editing.", false);
 		}
