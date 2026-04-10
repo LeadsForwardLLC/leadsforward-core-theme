@@ -1767,6 +1767,11 @@ function lf_ai_assistant_widget_js(): string {
 				return;
 			}
 			lfHideInlineLinkPanel();
+			if (inlineActiveEl) {
+				saveInlineEdit();
+				setStatus(wasEditingAnchor ? "Link updated and saved." : "Link inserted and saved.", false);
+				return;
+			}
 			setStatus(wasEditingAnchor ? "Link updated. Save when done editing." : "Link inserted. Click away or press ⌘/Ctrl+Enter to save.", false);
 		}
 		function lfRemoveLinkFromUi() {
@@ -1793,6 +1798,11 @@ function lf_ai_assistant_widget_js(): string {
 				return;
 			}
 			lfHideInlineLinkPanel();
+			if (inlineActiveEl) {
+				saveInlineEdit();
+				setStatus("Link removed and saved.", false);
+				return;
+			}
 			setStatus("Link removed. Save when done editing.", false);
 		}
 		function lfInitInlineLinkUi() {
