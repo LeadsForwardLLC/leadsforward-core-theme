@@ -35,6 +35,12 @@ if ($place_id !== '' && (strlen($place_id) < 12 || preg_match('/\s/', $place_id)
 $place_name = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_name', '') : '';
 $place_address = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_address', '') : '';
 $map_embed_override = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_map_embed', '') : '';
+$map_embed_override = is_string($map_embed_override) ? trim($map_embed_override) : '';
+$global_map_iframe = (string) get_option('lf_maps_iframe_embed', '');
+$global_map_iframe = trim($global_map_iframe);
+if ($map_embed_override === '' && $global_map_iframe !== '') {
+	$map_embed_override = $global_map_iframe;
+}
 $maps_api_key = get_option('lf_maps_api_key', '');
 $maps_api_key = is_string($maps_api_key) ? $maps_api_key : '';
 $heading = !empty($section['section_heading']) ? $section['section_heading'] : __('Areas We Serve', 'leadsforward-core');
