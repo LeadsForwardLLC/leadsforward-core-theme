@@ -1067,10 +1067,6 @@ function lf_ops_render_global_settings_page(): void {
 								<th scope="row"><label for="lf_openai_api_key_global"><?php esc_html_e('OpenAI API key (AI Assistant)', 'leadsforward-core'); ?></label></th>
 								<td>
 									<input type="password" class="large-text" name="lf_openai_api_key" id="lf_openai_api_key_global" value="" autocomplete="new-password" placeholder="<?php echo esc_attr($can_sensitive ? ($openai_key_set ? __('Saved (hidden)', 'leadsforward-core') : __('sk-...', 'leadsforward-core')) : __('Admins only', 'leadsforward-core')); ?>" <?php disabled(!$can_sensitive); ?> />
-									<label style="display:inline-block;margin-top:6px;">
-										<input type="checkbox" id="lf-openai-token-toggle-global" <?php disabled(!$can_sensitive); ?> />
-										<?php esc_html_e('Show key', 'leadsforward-core'); ?>
-									</label>
 									<label style="display:inline-block;margin-top:6px;margin-left:10px;">
 										<input type="checkbox" name="lf_openai_api_key_clear" value="1" <?php disabled(!$can_sensitive); ?> />
 										<?php esc_html_e('Clear saved key', 'leadsforward-core'); ?>
@@ -1231,8 +1227,6 @@ function lf_ops_render_global_settings_page(): void {
 						(function() {
 							var toggle = document.getElementById('lf-airtable-token-toggle-global');
 							var input = document.getElementById('lf_ai_airtable_pat_global');
-							var openaiToggle = document.getElementById('lf-openai-token-toggle-global');
-							var openaiInput = document.getElementById('lf_openai_api_key_global');
 							var mapsToggle = document.getElementById('lf-maps-key-toggle-global');
 							var mapsInput = document.getElementById('lf_maps_api_key');
 							if (!toggle || !input) {
@@ -1240,11 +1234,6 @@ function lf_ops_render_global_settings_page(): void {
 							} else {
 								toggle.addEventListener('change', function() {
 									input.type = toggle.checked ? 'text' : 'password';
-								});
-							}
-							if (openaiToggle && openaiInput) {
-								openaiToggle.addEventListener('change', function() {
-									openaiInput.type = openaiToggle.checked ? 'text' : 'password';
 								});
 							}
 							if (mapsToggle && mapsInput) {
