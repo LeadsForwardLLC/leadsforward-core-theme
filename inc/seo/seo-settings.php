@@ -249,7 +249,7 @@ function lf_seo_sanitize_scripts(string $value): string {
 
 function lf_seo_render_settings_page(): void {
 	$tab = isset($_GET['tab']) ? sanitize_key((string) $_GET['tab']) : 'settings';
-	if (!in_array($tab, ['settings', 'keywords', 'health'], true)) {
+	if (!in_array($tab, ['settings', 'keywords', 'health', 'links'], true)) {
 		$tab = 'settings';
 	}
 	$settings = lf_seo_get_settings();
@@ -265,6 +265,7 @@ function lf_seo_render_settings_page(): void {
 			<a href="<?php echo esc_url(add_query_arg('tab', 'settings', $base)); ?>" class="nav-tab<?php echo $tab === 'settings' ? ' nav-tab-active' : ''; ?>"><?php esc_html_e('SEO settings', 'leadsforward-core'); ?></a>
 			<a href="<?php echo esc_url(add_query_arg('tab', 'keywords', $base)); ?>" class="nav-tab<?php echo $tab === 'keywords' ? ' nav-tab-active' : ''; ?>"><?php esc_html_e('Keywords', 'leadsforward-core'); ?></a>
 			<a href="<?php echo esc_url(add_query_arg('tab', 'health', $base)); ?>" class="nav-tab<?php echo $tab === 'health' ? ' nav-tab-active' : ''; ?>"><?php esc_html_e('Site health', 'leadsforward-core'); ?></a>
+			<a href="<?php echo esc_url(add_query_arg('tab', 'links', $base)); ?>" class="nav-tab<?php echo $tab === 'links' ? ' nav-tab-active' : ''; ?>"><?php esc_html_e('Link map', 'leadsforward-core'); ?></a>
 		</h2>
 		<?php if ($tab === 'settings') : ?>
 		<?php if (function_exists('lf_admin_render_quality_summary_strip')) { lf_admin_render_quality_summary_strip('seo'); } ?>
@@ -562,12 +563,20 @@ function lf_seo_render_settings_page(): void {
 		<?php elseif ($tab === 'keywords') : ?>
 			<?php if (function_exists('lf_admin_render_quality_summary_strip')) { lf_admin_render_quality_summary_strip('seo'); } ?>
 			<?php lf_seo_render_keywords_tab(); ?>
-		<?php else : ?>
+		<?php elseif ($tab === 'health') : ?>
 			<?php
 			if (function_exists('lf_health_render_embedded_ui')) {
 				lf_health_render_embedded_ui();
 			} else {
 				echo '<p>' . esc_html__('Site health is unavailable.', 'leadsforward-core') . '</p>';
+			}
+			?>
+		<?php else : ?>
+			<?php
+			if (function_exists('lf_internal_link_map_render_embedded_ui')) {
+				lf_internal_link_map_render_embedded_ui();
+			} else {
+				echo '<p>' . esc_html__('Internal link map is unavailable.', 'leadsforward-core') . '</p>';
 			}
 			?>
 		<?php endif; ?>
