@@ -8312,11 +8312,22 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			'primary_keyword' => $post_pk !== '' ? $post_pk : $homepage_token_ctx['primary_keyword'],
 			'niche' => $homepage_token_ctx['niche'],
 		];
+		$debug_post_apply = [
+			'post_id' => (int) $post_id,
+			'post_type' => (string) $post->post_type,
+			'context' => (string) $context,
+			'incoming_keys' => 0,
+			'dropped_unresolved' => 0,
+			'dropped_unknown_section' => 0,
+			'dropped_unknown_field' => 0,
+			'applied_by_instance' => [],
+		];
 		$incoming_by_instance = [];
 		foreach ($incoming as $key => $value) {
 			if (!is_string($key)) {
 				continue;
 			}
+			$debug_post_apply['incoming_keys']++;
 			if ($post->post_type === 'lf_service' && lf_ai_studio_orchestrator_bare_service_short_desc_key($key)) {
 				$raw = lf_ai_studio_normalize_value($value);
 				$short_desc = sanitize_textarea_field((string) $raw);
@@ -8335,6 +8346,7 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			if (count($parts) !== 2) {
 				$resolved = lf_ai_studio_resolve_post_field_key(trim((string) $key), $sections, $registry);
 				if (!is_array($resolved)) {
+					$debug_post_apply['dropped_unresolved']++;
 					$errors[] = sprintf(__('Post field "%s" must use section.field notation.', 'leadsforward-core'), (string) $key);
 					continue;
 				}
@@ -8376,6 +8388,7 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			}
 			$type = is_array($section) ? (string) ($section['type'] ?? '') : '';
 			if ($type === '' || !isset($registry[ $type ])) {
+				$debug_post_apply['dropped_unknown_section']++;
 				if (defined('WP_DEBUG') && WP_DEBUG) {
 					error_log(sprintf('LF DEBUG: Dropped section "%s" on post %d (unregistered or missing type).', $instance_id, $post_id));
 				}
@@ -8384,6 +8397,7 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			}
 			$allowed = lf_ai_studio_homepage_allowed_field_keys($type, $registry[ $type ]);
 			if (!in_array($field_key, $allowed, true)) {
+				$debug_post_apply['dropped_unknown_field']++;
 				if (defined('WP_DEBUG') && WP_DEBUG) {
 					error_log(sprintf('LF DEBUG: Dropped field "%s" on post %d (section %s).', $field_key, $post_id, $instance_id));
 				}
@@ -8392,6 +8406,12 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			}
 			if (!isset($incoming_by_instance[$instance_id])) {
 				$incoming_by_instance[$instance_id] = [];
+			}
+			if (!isset($debug_post_apply['applied_by_instance'][$instance_id])) {
+				$debug_post_apply['applied_by_instance'][$instance_id] = [];
+			}
+			if (!in_array($field_key, $debug_post_apply['applied_by_instance'][$instance_id], true)) {
+				$debug_post_apply['applied_by_instance'][$instance_id][] = $field_key;
 			}
 			$normalized_value = lf_ai_studio_normalize_value($value);
 			$field_type = lf_ai_studio_registry_field_type($registry, $type, $field_key);
@@ -8423,6 +8443,32 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			}
 			$fields_updated++;
 		}
+
+		if (defined('WP_DEBUG') && WP_DEBUG) {
+			$applied_instances = array_keys((array) $debug_post_apply['applied_by_instance']);
+			$applied_preview = [];
+			foreach ($applied_instances as $iid) {
+				$k = (array) ($debug_post_apply['applied_by_instance'][$iid] ?? []);
+				if (!empty($k)) {
+					$applied_preview[$iid] = array_slice($k, 0, 18);
+				}
+				if (count($applied_preview) >= 8) {
+					break;
+				}
+			}
+			error_log('LF ORCH DEBUG: post_apply_summary ' . wp_json_encode([
+				'post_id' => $debug_post_apply['post_id'],
+				'post_type' => $debug_post_apply['post_type'],
+				'context' => $debug_post_apply['context'],
+				'incoming_keys' => $debug_post_apply['incoming_keys'],
+				'dropped_unresolved' => $debug_post_apply['dropped_unresolved'],
+				'dropped_unknown_section' => $debug_post_apply['dropped_unknown_section'],
+				'dropped_unknown_field' => $debug_post_apply['dropped_unknown_field'],
+				'applied_instances' => $applied_instances,
+				'applied_keys_preview' => $applied_preview,
+			]));
+		}
+
 		foreach ($incoming_by_instance as $instance_id => $fields) {
 			$section = $sections[$instance_id] ?? null;
 			if (!is_array($section)) {
