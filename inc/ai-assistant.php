@@ -1925,6 +1925,7 @@ function lf_ai_assistant_widget_js(): string {
 			Array.prototype.slice.call(document.querySelectorAll("[data-lf-inline-editable=\"1\"],[data-lf-inline-selector]")).forEach(function(node){
 				node.removeAttribute("data-lf-inline-editable");
 				node.removeAttribute("data-lf-inline-selector");
+				node.removeAttribute("data-lf-inline-source-selector");
 				node.removeAttribute("data-lf-inline-field-key");
 			});
 			Array.prototype.slice.call(document.querySelectorAll("[data-lf-inline-image=\"1\"],[data-lf-inline-image-selector]")).forEach(function(node){
@@ -2377,8 +2378,21 @@ function lf_ai_assistant_widget_js(): string {
 				if (!inlineNodeEligible(node)) return;
 				var selector = buildInlineSelector(node);
 				if (!selector) return;
+				var sourceSelector = "";
+				var serviceBody = node.closest(".lf-service-details__body");
+				if (serviceBody) {
+					sourceSelector = buildInlineSelector(serviceBody);
+					if (sourceSelector) {
+						selector = sourceSelector;
+					}
+				}
 				node.setAttribute("data-lf-inline-editable", "1");
 				node.setAttribute("data-lf-inline-selector", selector);
+				if (sourceSelector) {
+					node.setAttribute("data-lf-inline-source-selector", sourceSelector);
+				} else {
+					node.removeAttribute("data-lf-inline-source-selector");
+				}
 				var cls = String(node.className || "");
 				if (/\blf-hero-split__subtitle\b/.test(cls) || /\blf-hero-basic__subtitle\b/.test(cls)) {
 					node.setAttribute("data-lf-inline-field-key", "hero_subheadline");
@@ -5831,8 +5845,18 @@ function lf_ai_assistant_widget_js(): string {
 			var el = inlineActiveEl;
 			var selector = String(el.getAttribute("data-lf-inline-selector") || "");
 			var fieldKey = String(el.getAttribute("data-lf-inline-field-key") || "");
-			var newText = String(el.textContent || "").trim();
-			var newHtml = String(el.innerHTML || "").trim();
+			var sourceSelector = String(el.getAttribute("data-lf-inline-source-selector") || "");
+			var sourceNode = null;
+			if (sourceSelector) {
+				try {
+					sourceNode = document.querySelector(sourceSelector);
+				} catch (errQ) {
+					sourceNode = null;
+				}
+			}
+			var valueNode = sourceNode || el;
+			var newText = String(valueNode.textContent || "").trim();
+			var newHtml = String(valueNode.innerHTML || "").trim();
 			var origHtml = String(inlineOriginalHtml || "").trim();
 			var textChanged = (newText !== inlineOriginalText);
 			var htmlChanged = (newHtml !== origHtml);
@@ -5908,12 +5932,25 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			var selector = String(el.getAttribute("data-lf-inline-selector") || "");
 			var fieldKey = String(el.getAttribute("data-lf-inline-field-key") || "");
+			var sourceSelector = String(el.getAttribute("data-lf-inline-source-selector") || "");
 			if (!selector && !fieldKey) {
 				if (typeof done === "function") done(false);
 				return;
 			}
-			var valueText = String(el.textContent || "").trim();
-			var valueHtml = String(el.innerHTML || "").trim();
+			var sourceNode = null;
+			if (sourceSelector) {
+				try {
+					sourceNode = document.querySelector(sourceSelector);
+				} catch (errQ) {
+					sourceNode = null;
+				}
+			}
+			var valueNode = sourceNode || el;
+			if (sourceSelector && sourceNode) {
+				selector = sourceSelector;
+			}
+			var valueText = String(valueNode.textContent || "").trim();
+			var valueHtml = String(valueNode.innerHTML || "").trim();
 			if (valueText === "") {
 				setStatus("Text cannot be empty.", true);
 				if (typeof done === "function") done(false);
