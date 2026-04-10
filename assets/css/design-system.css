@@ -4374,6 +4374,12 @@ button:focus-visible,
 	margin: 0 0 1rem;
 }
 
+@media (min-width: 521px) {
+	.lf-block-cta__buttons {
+		flex-wrap: nowrap;
+	}
+}
+
 .lf-block-cta__secondary-link {
 	display: inline-flex;
 	white-space: nowrap;
