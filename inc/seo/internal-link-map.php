@@ -361,6 +361,7 @@ function lf_internal_link_map_render_embedded_ui(): void {
 	$focus_id = isset($_GET['link_page_id']) ? absint($_GET['link_page_id']) : 0;
 	$sort = isset($_GET['sort']) ? sanitize_key((string) $_GET['sort']) : 'issues';
 	$issues_only = isset($_GET['issues_only']) && $_GET['issues_only'] === '1';
+	$quick_filter = isset($_GET['quick']) ? sanitize_key((string) $_GET['quick']) : '';
 	$scan = lf_internal_link_map_scan();
 	$outbound_internal = is_array($scan['internal_outbound'] ?? null) ? $scan['internal_outbound'] : [];
 	$outbound_external = is_array($scan['external_outbound'] ?? null) ? $scan['external_outbound'] : [];
@@ -443,6 +444,24 @@ function lf_internal_link_map_render_embedded_ui(): void {
 	if ($issues_only) {
 		$rows = array_values(array_filter($rows, static fn(array $r): bool => (int) ($r['issues'] ?? 0) === 1));
 	}
+	if ($quick_filter !== '') {
+		$rows = array_values(array_filter($rows, static function (array $r) use ($quick_filter): bool {
+			switch ($quick_filter) {
+				case 'orphans':
+					return (int) ($r['in'] ?? 0) === 0;
+				case 'no_out':
+					return (int) ($r['out_internal'] ?? 0) === 0;
+				case 'broken':
+					return (int) ($r['broken'] ?? 0) > 0;
+				case 'weak':
+					return (int) ($r['weak_anchors'] ?? 0) > 0;
+				case 'money':
+					return (int) ($r['is_money_page'] ?? 0) === 1;
+				default:
+					return true;
+			}
+		}));
+	}
 
 	usort($rows, static function (array $a, array $b) use ($sort): int {
 		switch ($sort) {
@@ -479,6 +498,14 @@ function lf_internal_link_map_render_embedded_ui(): void {
 	if ($base_page === 'lf-seo') {
 		$base_args['tab'] = 'links';
 	}
+	$quick_labels = [
+		'' => __('All pages', 'leadsforward-core'),
+		'orphans' => __('Orphans', 'leadsforward-core'),
+		'no_out' => __('No internal out', 'leadsforward-core'),
+		'broken' => __('Broken internal', 'leadsforward-core'),
+		'weak' => __('Weak anchors', 'leadsforward-core'),
+		'money' => __('Money pages', 'leadsforward-core'),
+	];
 
 	echo '<h2>' . esc_html__('Internal Link Map', 'leadsforward-core') . '</h2>';
 	echo '<p>' . esc_html__('This workspace combines inventory, diagnostics, and lead-generation link strategy in one place.', 'leadsforward-core') . '</p>';
@@ -489,6 +516,19 @@ function lf_internal_link_map_render_embedded_ui(): void {
 	echo '<div class="notice notice-success" style="margin:0;padding:8px 10px;"><strong>' . esc_html__('Internal links (unique):', 'leadsforward-core') . '</strong> ' . esc_html((string) $total_internal_edges) . '</div>';
 	echo '<div class="notice notice-info" style="margin:0;padding:8px 10px;"><strong>' . esc_html__('External links (unique):', 'leadsforward-core') . '</strong> ' . esc_html((string) $total_external_edges) . '</div>';
 	echo '<div class="notice notice-warning" style="margin:0;padding:8px 10px;"><strong>' . esc_html__('Weak internal anchors:', 'leadsforward-core') . '</strong> ' . esc_html((string) $total_weak_anchors) . '</div>';
+	echo '</div>';
+	echo '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px;">';
+	foreach ($quick_labels as $quick_key => $quick_label) {
+		$is_active = ($quick_key === '' && $quick_filter === '') || ($quick_key !== '' && $quick_filter === $quick_key);
+		$quick_url = add_query_arg(array_merge($base_args, [
+			'quick' => $quick_key,
+			'post_type' => $type_filter,
+			's' => $q,
+			'sort' => $sort,
+			'issues_only' => $issues_only ? '1' : '0',
+		]), admin_url('admin.php'));
+		echo '<a class="button' . ($is_active ? ' button-primary' : '') . '" href="' . esc_url($quick_url) . '">' . esc_html((string) $quick_label) . '</a>';
+	}
 	echo '</div>';
 
 	$opportunities = [];
@@ -664,6 +704,7 @@ function lf_internal_link_map_render_embedded_ui(): void {
 	echo '</select>';
 	echo '&nbsp;';
 	echo '<label style="display:inline-flex;align-items:center;gap:4px;"><input type="checkbox" name="issues_only" value="1"' . checked($issues_only, true, false) . ' /> ' . esc_html__('Issues only', 'leadsforward-core') . '</label>';
+	echo '<input type="hidden" name="quick" value="' . esc_attr($quick_filter) . '" />';
 	echo '&nbsp;';
 	submit_button(__('Filter', 'leadsforward-core'), 'secondary', '', false);
 	echo '</form>';
@@ -696,7 +737,7 @@ function lf_internal_link_map_render_embedded_ui(): void {
 		$edit = get_edit_post_link($pid, '');
 		$view = get_permalink($pid);
 		$detail_url = add_query_arg(
-			array_merge($base_args, ['post_type' => $type_filter, 's' => $q, 'sort' => $sort, 'issues_only' => $issues_only ? '1' : '0', 'link_page_id' => $pid]),
+			array_merge($base_args, ['post_type' => $type_filter, 's' => $q, 'sort' => $sort, 'issues_only' => $issues_only ? '1' : '0', 'quick' => $quick_filter, 'link_page_id' => $pid]),
 			admin_url('admin.php')
 		);
 		$internal_targets_preview = [];
