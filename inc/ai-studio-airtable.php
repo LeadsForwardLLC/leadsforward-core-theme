@@ -27,7 +27,8 @@ function lf_ai_studio_airtable_default_field_map(): array {
 		'project' => 'Project',
 		'project_type' => 'Project Type',
 		'phone' => 'Phone Number',
-		'email' => 'Client Email',
+		// Global site contact email should use the business/domain email, not client contact.
+		'email' => 'Domain Email',
 		'street' => 'Street Address',
 		'city' => 'City',
 		'state' => 'State',
