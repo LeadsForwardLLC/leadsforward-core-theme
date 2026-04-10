@@ -3465,10 +3465,8 @@ function lf_ai_studio_fill_site_content_without_ai(): array {
 			$type = (string) ($section['type'] ?? '');
 			$section_registry = ($type !== '' && isset($registry[$type]) && is_array($registry[$type])) ? $registry[$type] : [];
 			$filled = lf_ai_studio_fill_generic_section_copy($settings, $post, $type, $section_registry);
-			$link_result = lf_ai_studio_orchestrate_internal_links_for_settings($filled, $type, $registry, $post);
-			$linked = is_array($link_result['settings'] ?? null) ? $link_result['settings'] : $filled;
-			if ($linked !== $settings) {
-				$sections[$instance_id]['settings'] = lf_sections_sanitize_settings($type, $linked);
+			if ($filled !== $settings) {
+				$sections[$instance_id]['settings'] = lf_sections_sanitize_settings($type, $filled);
 				$updated['post_sections']++;
 				$changed = true;
 			}
@@ -8657,7 +8655,13 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			}
 		}
 	}
-	lf_ai_studio_fill_site_content_without_ai();
+	/**
+	 * Safety default: do not run global fallback filling after orchestrator apply.
+	 * Running a full-site write pass here can re-save merged defaults over freshly generated page-builder content.
+	 */
+	if ((bool) apply_filters('lf_ai_studio_run_global_fallback_after_orchestrator_apply', false)) {
+		lf_ai_studio_fill_site_content_without_ai();
+	}
 	lf_ai_studio_autofill_empty_faq_accordion_picks();
 	if (function_exists('lf_seo_refresh_metadata_for_generated_content')) {
 		lf_seo_refresh_metadata_for_generated_content();

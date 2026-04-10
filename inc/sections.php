@@ -1412,6 +1412,7 @@ function lf_sections_render_section(string $section_id, string $context, array $
 		return;
 	}
 	$settings = lf_sections_normalize_service_details_settings($section_id, $settings);
+	$settings['_section_instance_id'] = $section_id;
 	$callback = $section['render'] ?? '';
 	if (is_callable($callback)) {
 		call_user_func($callback, $context, $settings, $post);
@@ -1806,6 +1807,10 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 	$layout = (string) ($settings['service_details_layout'] ?? 'content_media');
 	if (!in_array($layout, ['content_media', 'media_content'], true)) {
 		$layout = 'content_media';
+	}
+	$instance_id = (string) ($settings['_section_instance_id'] ?? '');
+	if ($context === 'homepage' && $instance_id === 'service_details__2') {
+		$layout = 'media_content';
 	}
 	$media_embed = trim((string) ($settings['service_details_media_embed'] ?? ''));
 	$media_video_url = trim((string) ($settings['service_details_media_video_url'] ?? ''));
@@ -2262,6 +2267,82 @@ function lf_sections_render_cta_band(string $context, array $settings, \WP_Post 
 	}
 }
 
+function lf_sections_logo_strip_resolve_logo_token(string $token): int {
+	$token = trim($token);
+	if ($token === '') {
+		return 0;
+	}
+	if (ctype_digit($token)) {
+		$id = (int) $token;
+		return $id > 0 ? $id : 0;
+	}
+	if (filter_var($token, FILTER_VALIDATE_URL) && function_exists('attachment_url_to_postid')) {
+		$from_url = (int) attachment_url_to_postid($token);
+		if ($from_url > 0) {
+			return $from_url;
+		}
+	}
+	$slug = sanitize_title($token);
+	if ($slug !== '') {
+		$slug_match = get_posts([
+			'post_type' => 'attachment',
+			'name' => $slug,
+			'post_status' => 'inherit',
+			'post_mime_type' => 'image',
+			'posts_per_page' => 1,
+			'fields' => 'ids',
+			'no_found_rows' => true,
+		]);
+		if (!empty($slug_match[0])) {
+			return (int) $slug_match[0];
+		}
+	}
+	$title_match = get_posts([
+		'post_type' => 'attachment',
+		'post_status' => 'inherit',
+		'post_mime_type' => 'image',
+		's' => $token,
+		'posts_per_page' => 1,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	]);
+	if (!empty($title_match[0])) {
+		return (int) $title_match[0];
+	}
+	return 0;
+}
+
+function lf_sections_logo_strip_resolve_logo_ids(string $raw, int $max = 10): array {
+	$max = max(3, min(24, $max));
+	$tokens = preg_split('/[\r\n,]+/', $raw);
+	$tokens = is_array($tokens) ? $tokens : [];
+	$ids = [];
+	foreach ($tokens as $token) {
+		$resolved = lf_sections_logo_strip_resolve_logo_token((string) $token);
+		if ($resolved > 0) {
+			$ids[] = $resolved;
+		}
+	}
+	$ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+	if (count($ids) > $max) {
+		$ids = array_slice($ids, 0, $max);
+	}
+	if (!empty($ids)) {
+		return $ids;
+	}
+	$fallback = get_posts([
+		'post_type' => 'attachment',
+		'post_status' => 'inherit',
+		'post_mime_type' => 'image',
+		'posts_per_page' => $max,
+		'fields' => 'ids',
+		'orderby' => 'date',
+		'order' => 'DESC',
+		'no_found_rows' => true,
+	]);
+	return array_values(array_filter(array_map('intval', is_array($fallback) ? $fallback : [])));
+}
+
 function lf_sections_render_trust_reviews(string $context, array $settings, \WP_Post $post): void {
 	if (!function_exists('lf_render_block_template')) {
 		return;
@@ -2323,11 +2404,13 @@ function lf_sections_render_logo_strip(string $context, array $settings, \WP_Pos
 	if (!function_exists('lf_render_block_template')) {
 		return;
 	}
+	$max = isset($settings['logo_strip_max']) ? (int) $settings['logo_strip_max'] : 10;
+	$logo_ids = lf_sections_logo_strip_resolve_logo_ids((string) ($settings['logo_strip_logos'] ?? ''), $max);
 	$section = [
 		'section_heading' => $settings['section_heading'] ?? '',
 		'section_intro' => $settings['section_intro'] ?? '',
-		'logo_strip_logos' => $settings['logo_strip_logos'] ?? '',
-		'logo_strip_max' => $settings['logo_strip_max'] ?? '10',
+		'logo_strip_logos' => implode("\n", $logo_ids),
+		'logo_strip_max' => (string) $max,
 		'section_background' => $settings['section_background'] ?? 'light',
 		'section_background_custom' => $settings['section_background_custom'] ?? '',
 		'section_header_align' => $settings['section_header_align'] ?? 'center',
