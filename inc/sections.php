@@ -1733,9 +1733,6 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 				<?php endforeach; ?>
 			</ul>
 		<?php endif; ?>
-		<?php if ($trust_block !== '') : ?>
-			<p class="lf-benefits__trust"><?php echo esc_html($trust_block); ?></p>
-		<?php endif; ?>
 		<?php if ($cta_text !== '') : ?>
 			<div class="lf-benefits__actions">
 				<?php if ($cta_action === 'link' && $cta_url !== '') : ?>
