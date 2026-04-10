@@ -237,7 +237,7 @@ function lf_sections_registry(): array {
 		['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'service_summary'],
 		['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Service Details', 'leadsforward-core')],
 		['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Everything you need to know before scheduling.', 'leadsforward-core')],
-		['key' => 'service_details_body', 'label' => __('Body copy', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+		['key' => 'service_details_body', 'label' => __('Body copy', 'leadsforward-core'), 'type' => 'richtext', 'default' => ''],
 		['key' => 'service_details_layout', 'label' => __('Layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'content_media', 'options' => [
 			'content_media' => __('Content left / Media right', 'leadsforward-core'),
 			'media_content' => __('Media left / Content right', 'leadsforward-core'),
