@@ -1769,6 +1769,14 @@ function lf_ai_assistant_widget_js(): string {
 			lfHideInlineLinkPanel();
 			var saveHost = inlineActiveEl || lfInlineLinkSavedHost || lfManagedContentEditableHost();
 			if (saveHost) {
+				if (!saveHost.getAttribute("data-lf-inline-selector") && !saveHost.getAttribute("data-lf-inline-field-key")) {
+					var managedWrap = saveHost.closest ? saveHost.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]") : null;
+					if (managedWrap && saveHost.closest(".lf-service-details__checklist")) {
+						persistSectionChecklist(managedWrap);
+						setStatus(wasEditingAnchor ? "Link updated and saved." : "Link inserted and saved.", false);
+						return;
+					}
+				}
 				persistInlineNodeNow(saveHost, wasEditingAnchor ? "Link updated and saved." : "Link inserted and saved.");
 				return;
 			}
@@ -1800,6 +1808,14 @@ function lf_ai_assistant_widget_js(): string {
 			lfHideInlineLinkPanel();
 			var saveHost = inlineActiveEl || lfInlineLinkSavedHost || lfManagedContentEditableHost();
 			if (saveHost) {
+				if (!saveHost.getAttribute("data-lf-inline-selector") && !saveHost.getAttribute("data-lf-inline-field-key")) {
+					var managedWrap = saveHost.closest ? saveHost.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]") : null;
+					if (managedWrap && saveHost.closest(".lf-service-details__checklist")) {
+						persistSectionChecklist(managedWrap);
+						setStatus("Link removed and saved.", false);
+						return;
+					}
+				}
 				persistInlineNodeNow(saveHost, "Link removed and saved.");
 				return;
 			}
