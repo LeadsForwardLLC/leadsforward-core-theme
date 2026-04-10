@@ -1772,7 +1772,7 @@ function lf_ai_assistant_widget_js(): string {
 				if (!saveHost.getAttribute("data-lf-inline-selector") && !saveHost.getAttribute("data-lf-inline-field-key")) {
 					var managedWrap = saveHost.closest ? saveHost.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]") : null;
 					if (managedWrap && saveHost.closest(".lf-service-details__checklist")) {
-						persistSectionChecklist(managedWrap);
+						persistSectionChecklist(managedWrap, saveHost);
 						setStatus(wasEditingAnchor ? "Link updated and saved." : "Link inserted and saved.", false);
 						return;
 					}
@@ -1811,7 +1811,7 @@ function lf_ai_assistant_widget_js(): string {
 				if (!saveHost.getAttribute("data-lf-inline-selector") && !saveHost.getAttribute("data-lf-inline-field-key")) {
 					var managedWrap = saveHost.closest ? saveHost.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]") : null;
 					if (managedWrap && saveHost.closest(".lf-service-details__checklist")) {
-						persistSectionChecklist(managedWrap);
+						persistSectionChecklist(managedWrap, saveHost);
 						setStatus("Link removed and saved.", false);
 						return;
 					}
@@ -2959,8 +2959,8 @@ function lf_ai_assistant_widget_js(): string {
 			var type = String(sectionType || "");
 			return ["service_details", "content_image", "content_image_a", "image_content", "image_content_b", "content_image_c"].indexOf(type) !== -1;
 		}
-		function checklistItemsFromWrap(wrap) {
-			var list = wrap ? wrap.querySelector(".lf-service-details__checklist") : null;
+		function checklistItemsFromWrap(wrap, listEl) {
+			var list = listEl || (wrap ? wrap.querySelector(".lf-service-details__checklist") : null);
 			if (!list) return [];
 			return Array.prototype.slice.call(list.querySelectorAll("li")).map(function(li){
 				var textNode = li.querySelector(".lf-service-details__text");
@@ -2968,12 +2968,20 @@ function lf_ai_assistant_widget_js(): string {
 				return raw;
 			}).filter(function(value){ return lfPlainFromHtml(value) !== ""; });
 		}
-		function persistSectionChecklist(wrap) {
+		function checklistFieldKeyFromList(listEl) {
+			if (!listEl || !listEl.classList) return "service_details_checklist";
+			return listEl.classList.contains("lf-service-details__checklist--secondary")
+				? "service_details_checklist_secondary"
+				: "service_details_checklist";
+		}
+		function persistSectionChecklist(wrap, sourceNode) {
 			if (!wrap) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 			if (!sectionId || !sectionSupportsChecklistEditor(sectionType)) return;
-			var items = checklistItemsFromWrap(wrap);
+			var sourceList = sourceNode && sourceNode.closest ? sourceNode.closest("ul.lf-service-details__checklist") : null;
+			var items = checklistItemsFromWrap(wrap, sourceList);
+			var fieldKey = checklistFieldKeyFromList(sourceList);
 			var pc = persistContextFromWrap(wrap);
 			setStatus("Saving checklist...", false);
 			$.post(lfAiFloating.ajax_url, {
@@ -2982,6 +2990,7 @@ function lf_ai_assistant_widget_js(): string {
 				context_type: pc.context_type,
 				context_id: pc.context_id,
 				section_id: sectionId,
+				field_key: fieldKey,
 				items: JSON.stringify(items)
 			}).done(function(res){
 				if (res && res.success) {
@@ -3034,7 +3043,7 @@ function lf_ai_assistant_widget_js(): string {
 				}
 				textNode.innerHTML = nextHtml;
 				if (nextHtml !== originalHtml) {
-					persistSectionChecklist(wrap);
+					persistSectionChecklist(wrap, textNode);
 				}
 			}
 			function startChecklistTextEdit(textNode, li, wrap) {
@@ -3116,7 +3125,7 @@ function lf_ai_assistant_widget_js(): string {
 						if (li && li.parentNode) {
 							li.parentNode.removeChild(li);
 						}
-						persistSectionChecklist(wrap);
+						persistSectionChecklist(wrap, li);
 					});
 					li.appendChild(removeBtn);
 					bindChecklistItemEditor(li, wrap);
@@ -3148,12 +3157,12 @@ function lf_ai_assistant_widget_js(): string {
 						if (li && li.parentNode) {
 							li.parentNode.removeChild(li);
 						}
-						persistSectionChecklist(wrap);
+						persistSectionChecklist(wrap, li);
 					});
 					li.appendChild(removeBtn);
 					list.appendChild(li);
 					bindChecklistItemEditor(li, wrap);
-					persistSectionChecklist(wrap);
+					persistSectionChecklist(wrap, li);
 					startChecklistTextEdit(textNode, li, wrap);
 				});
 				controls.appendChild(addBtn);

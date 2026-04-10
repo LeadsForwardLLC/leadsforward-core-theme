@@ -1887,6 +1887,10 @@ function lf_ai_ajax_update_section_checklist(): void {
 	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
 	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
 	$section_id = isset($_POST['section_id']) ? sanitize_text_field(wp_unslash($_POST['section_id'])) : '';
+	$field_key = isset($_POST['field_key']) ? sanitize_key(wp_unslash((string) $_POST['field_key'])) : 'service_details_checklist';
+	if (!in_array($field_key, ['service_details_checklist', 'service_details_checklist_secondary'], true)) {
+		$field_key = 'service_details_checklist';
+	}
 	$items_raw = isset($_POST['items']) ? wp_unslash((string) $_POST['items']) : '[]';
 	$items_decoded = json_decode($items_raw, true);
 	if ($context_type === '' || $context_id === '' || $section_id === '' || !is_array($items_decoded)) {
@@ -1908,6 +1912,28 @@ function lf_ai_ajax_update_section_checklist(): void {
 	$value = implode("\n", $items);
 	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
 	$allowed_types = lf_ai_reversible_section_types();
+	error_log('LF CHECKLIST SAVE: start context=' . $context_type . ' context_id=' . $context_id_use . ' section=' . $section_id . ' field=' . $field_key . ' items=' . count($items) . ' has_link=' . (strpos($value, '<a ') !== false ? 'yes' : 'no'));
+	$clear_checklist_selector_overrides = static function (string $ctx_type, $ctx_id): int {
+		if (!function_exists('lf_ai_get_inline_dom_overrides') || !function_exists('lf_ai_set_inline_dom_overrides')) {
+			return 0;
+		}
+		$overrides = lf_ai_get_inline_dom_overrides($ctx_type, $ctx_id);
+		if (!is_array($overrides) || empty($overrides)) {
+			return 0;
+		}
+		$removed = 0;
+		foreach (array_keys($overrides) as $selector) {
+			$selector_s = (string) $selector;
+			if (strpos($selector_s, 'lf-service-details__checklist') !== false || strpos($selector_s, 'lf-service-details__text') !== false) {
+				unset($overrides[$selector]);
+				$removed++;
+			}
+		}
+		if ($removed > 0) {
+			lf_ai_set_inline_dom_overrides($ctx_type, $ctx_id, $overrides);
+		}
+		return $removed;
+	};
 	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
 		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
 			wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
@@ -1925,9 +1951,12 @@ function lf_ai_ajax_update_section_checklist(): void {
 		if (empty($old_row)) {
 			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
 		}
-		$config[$resolved_section_id]['service_details_checklist'] = $value;
+		$config[$resolved_section_id][$field_key] = $value;
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		$removed_overrides = $clear_checklist_selector_overrides($context_type, $context_id_use);
 		$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
+		$stored_value = (string) ($new_row[$field_key] ?? '');
+		error_log('LF CHECKLIST SAVE: homepage persisted section=' . $resolved_section_id . ' field=' . $field_key . ' has_link=' . (strpos($stored_value, '<a ') !== false ? 'yes' : 'no') . ' cleared_overrides=' . $removed_overrides);
 		$log_id = function_exists('lf_ai_log_action')
 			? lf_ai_log_action(
 				$context_type,
@@ -1940,6 +1969,7 @@ function lf_ai_ajax_update_section_checklist(): void {
 		wp_send_json_success([
 			'message' => __('Checklist updated.', 'leadsforward-core'),
 			'items' => $items,
+			'field_key' => $field_key,
 			'log_id' => $log_id,
 		]);
 	}
@@ -1962,10 +1992,14 @@ function lf_ai_ajax_update_section_checklist(): void {
 		wp_send_json_error(['message' => __('This section does not support checklist editing.', 'leadsforward-core')]);
 	}
 	$settings = is_array($old_row['settings'] ?? null) ? $old_row['settings'] : [];
-	$settings['service_details_checklist'] = $value;
+	$settings[$field_key] = $value;
 	$config['sections'][$section_id]['settings'] = $settings;
 	update_post_meta($pid, LF_PB_META_KEY, $config);
+	$removed_overrides = $clear_checklist_selector_overrides($context_type, $context_id_use);
 	$new_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+	$new_settings = is_array($new_row['settings'] ?? null) ? $new_row['settings'] : [];
+	$stored_value = (string) ($new_settings[$field_key] ?? '');
+	error_log('LF CHECKLIST SAVE: post persisted section=' . $section_id . ' field=' . $field_key . ' has_link=' . (strpos($stored_value, '<a ') !== false ? 'yes' : 'no') . ' cleared_overrides=' . $removed_overrides);
 	$log_id = function_exists('lf_ai_log_action')
 		? lf_ai_log_action(
 			$context_type,
@@ -1978,6 +2012,7 @@ function lf_ai_ajax_update_section_checklist(): void {
 	wp_send_json_success([
 		'message' => __('Checklist updated.', 'leadsforward-core'),
 		'items' => $items,
+		'field_key' => $field_key,
 		'log_id' => $log_id,
 	]);
 }
