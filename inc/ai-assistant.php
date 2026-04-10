@@ -4379,14 +4379,16 @@ function lf_ai_assistant_widget_js(): string {
 		function benefitLinesFromGrid(grid) {
 			if (!grid) return [];
 			return Array.prototype.slice.call(grid.querySelectorAll(".lf-benefits__card")).map(function(card){
-				var raw = String(card.getAttribute("data-lf-benefit-line") || "").trim();
-				if (raw !== "") return raw;
 				var t = card.querySelector(".lf-benefits__title");
 				var b = card.querySelector(".lf-benefits__desc");
 				var titleHtml = t ? innerHtmlFromEditableNode(t) : "";
 				var bodyHtml = b ? innerHtmlFromEditableNode(b) : "";
-				if (!lfPlainFromHtml(bodyHtml)) return titleHtml;
-				return titleHtml + " || " + bodyHtml;
+				if (lfPlainFromHtml(titleHtml) || lfPlainFromHtml(bodyHtml)) {
+					if (!lfPlainFromHtml(bodyHtml)) return titleHtml;
+					return titleHtml + " || " + bodyHtml;
+				}
+				var raw = String(card.getAttribute("data-lf-benefit-line") || "").trim();
+				return raw;
 			}).filter(function(v){ return lfPlainFromHtml(v) !== ""; });
 		}
 		function buildBenefitsReorderControls() {
