@@ -849,7 +849,6 @@ function lf_sections_default_order(string $context): array {
 		return [
 			'hero',
 			'trust_bar',
-			'logo_strip',
 			'service_intro',
 			'benefits',
 			'service_details',
