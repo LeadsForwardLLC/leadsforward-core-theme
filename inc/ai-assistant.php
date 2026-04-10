@@ -1766,10 +1766,12 @@ function lf_ai_assistant_widget_js(): string {
 			if (!lfInsertLinkIntoSavedRange(url, newTab)) {
 				return;
 			}
+			var savedHostBeforeClose = lfInlineLinkSavedHost;
+			var savedAnchorBeforeClose = lfInlineLinkSavedAnchor;
 			lfHideInlineLinkPanel();
-			var saveHost = inlineActiveEl || lfInlineLinkSavedHost || lfManagedContentEditableHost();
-			if (!saveHost && lfInlineLinkSavedAnchor && lfInlineLinkSavedAnchor.closest) {
-				saveHost = lfInlineLinkSavedAnchor.closest(".lf-service-details__text,[data-lf-inline-editable=\"1\"]");
+			var saveHost = inlineActiveEl || savedHostBeforeClose || lfManagedContentEditableHost();
+			if (!saveHost && savedAnchorBeforeClose && savedAnchorBeforeClose.closest) {
+				saveHost = savedAnchorBeforeClose.closest(".lf-service-details__text,[data-lf-inline-editable=\"1\"]");
 			}
 			if (saveHost) {
 				var managedWrap = saveHost.closest ? saveHost.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]") : null;
@@ -1781,8 +1783,8 @@ function lf_ai_assistant_widget_js(): string {
 				persistInlineNodeNow(saveHost, wasEditingAnchor ? "Link updated and saved." : "Link inserted and saved.");
 				return;
 			}
-			if (lfInlineLinkSavedAnchor && lfInlineLinkSavedAnchor.closest) {
-				var fallbackTextHost = lfInlineLinkSavedAnchor.closest(".lf-service-details__text");
+			if (savedAnchorBeforeClose && savedAnchorBeforeClose.closest) {
+				var fallbackTextHost = savedAnchorBeforeClose.closest(".lf-service-details__text");
 				var fallbackWrap = fallbackTextHost && fallbackTextHost.closest
 					? fallbackTextHost.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]")
 					: null;
@@ -1817,10 +1819,12 @@ function lf_ai_assistant_widget_js(): string {
 				setStatus("Could not remove link.", true);
 				return;
 			}
+			var savedHostBeforeClose = lfInlineLinkSavedHost;
+			var savedAnchorBeforeClose = lfInlineLinkSavedAnchor;
 			lfHideInlineLinkPanel();
-			var saveHost = inlineActiveEl || lfInlineLinkSavedHost || lfManagedContentEditableHost();
-			if (!saveHost && lfInlineLinkSavedAnchor && lfInlineLinkSavedAnchor.closest) {
-				saveHost = lfInlineLinkSavedAnchor.closest(".lf-service-details__text,[data-lf-inline-editable=\"1\"]");
+			var saveHost = inlineActiveEl || savedHostBeforeClose || lfManagedContentEditableHost();
+			if (!saveHost && savedAnchorBeforeClose && savedAnchorBeforeClose.closest) {
+				saveHost = savedAnchorBeforeClose.closest(".lf-service-details__text,[data-lf-inline-editable=\"1\"]");
 			}
 			if (saveHost) {
 				var managedWrap = saveHost.closest ? saveHost.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]") : null;
@@ -1832,8 +1836,8 @@ function lf_ai_assistant_widget_js(): string {
 				persistInlineNodeNow(saveHost, "Link removed and saved.");
 				return;
 			}
-			if (lfInlineLinkSavedAnchor && lfInlineLinkSavedAnchor.closest) {
-				var fallbackTextHost = lfInlineLinkSavedAnchor.closest(".lf-service-details__text");
+			if (savedAnchorBeforeClose && savedAnchorBeforeClose.closest) {
+				var fallbackTextHost = savedAnchorBeforeClose.closest(".lf-service-details__text");
 				var fallbackWrap = fallbackTextHost && fallbackTextHost.closest
 					? fallbackTextHost.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]")
 					: null;
