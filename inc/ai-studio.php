@@ -8655,7 +8655,7 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 		foreach ($staged_post_meta_updates as $post_id => $pb_meta) {
 			update_post_meta((int) $post_id, LF_PB_META_KEY, $pb_meta);
 		}
-		if (defined('WP_DEBUG') && WP_DEBUG && current_user_can('manage_options')) {
+		if (defined('WP_DEBUG') && WP_DEBUG) {
 			// Verify a sample post meta save actually persisted non-empty fields.
 			foreach (array_slice(array_keys($staged_post_meta_updates), 0, 3) as $pid) {
 				$pid = (int) $pid;
@@ -8663,13 +8663,25 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 				$saved_sections = is_array($saved['sections'] ?? null) ? $saved['sections'] : [];
 				$hero = $saved_sections['hero-1']['settings'] ?? null;
 				if (is_array($hero)) {
-					$keys = ['hero_chip_bullets','hero_supporting_text','hero_bullets','hero_trust_block','cta_primary_override','cta_secondary_override'];
+					$keys = [
+						'hero_headline',
+						'hero_subheadline',
+						'hero_chip_bullets',
+						'hero_proof_bullets',
+						'hero_supporting_text',
+						'hero_bullets',
+						'hero_trust_block',
+						'cta_primary_override',
+						'cta_secondary_override',
+					];
 					$preview = [];
 					foreach ($keys as $k) {
 						$v = $hero[$k] ?? '';
-						$preview[$k] = is_string($v) ? substr(trim($v), 0, 80) : $v;
+						$preview[$k] = is_string($v) ? substr(trim($v), 0, 120) : $v;
 					}
 					error_log('LF ORCH DEBUG: post_meta_verify hero-1 post=' . $pid . ' ' . wp_json_encode($preview));
+				} else {
+					error_log('LF ORCH DEBUG: post_meta_verify missing_hero post=' . $pid);
 				}
 			}
 		}
