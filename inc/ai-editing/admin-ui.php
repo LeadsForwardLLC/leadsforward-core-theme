@@ -1424,12 +1424,93 @@ function lf_ai_ajax_inline_save(): void {
 		wp_send_json_error(['message' => __('Invalid request payload.', 'leadsforward-core')]);
 	}
 	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
+	$section_id = isset($_POST['section_id']) ? sanitize_text_field(wp_unslash($_POST['section_id'])) : '';
 	$plain_len = function_exists('mb_strlen') ? mb_strlen(wp_strip_all_tags($value)) : strlen(wp_strip_all_tags($value));
 	if ($plain_len > 4000) {
 		wp_send_json_error(['message' => __('Text is too long for inline editing.', 'leadsforward-core')]);
 	}
 	if (trim(wp_strip_all_tags($value)) === '') {
 		wp_send_json_error(['message' => __('Text cannot be empty.', 'leadsforward-core')]);
+	}
+
+	// Direct section-field persistence for service_details body edits.
+	// This avoids fragile selector-only overrides for rich text with links.
+	if ($field_key === 'service_details_body' && $section_id !== '') {
+		if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+			if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+				wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
+			}
+			$config = lf_get_homepage_section_config();
+			if (!is_array($config)) {
+				wp_send_json_error(['message' => __('Homepage configuration is missing.', 'leadsforward-core')]);
+			}
+			$resolved_section_id = function_exists('lf_ai_homepage_resolve_section_id')
+				? lf_ai_homepage_resolve_section_id($section_id, 'service_details')
+				: $section_id;
+			$old_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
+			if (empty($old_row)) {
+				wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+			}
+			$config[$resolved_section_id]['service_details_body'] = $value;
+			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+			$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
+			$log_id = function_exists('lf_ai_log_action')
+				? lf_ai_log_action(
+					$context_type,
+					$context_id_use,
+					['__homepage_section_row::' . $resolved_section_id => $old_row],
+					['__homepage_section_row::' . $resolved_section_id => $new_row],
+					'Inline service details body edit'
+				)
+				: '';
+			wp_send_json_success([
+				'message' => __('Inline edit saved.', 'leadsforward-core'),
+				'field_key' => $field_key,
+				'section_id' => $resolved_section_id,
+				'value' => $value,
+				'log_id' => $log_id,
+			]);
+		}
+
+		$pid = (int) $context_id_use;
+		$post = get_post($pid);
+		if (!$post instanceof \WP_Post || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+			wp_send_json_error(['message' => __('Section settings are unavailable for this target.', 'leadsforward-core')]);
+		}
+		$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+		if ($pb_context === '') {
+			wp_send_json_error(['message' => __('This target does not support section editing.', 'leadsforward-core')]);
+		}
+		$config = lf_pb_get_post_config($pid, $pb_context);
+		$old_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+		if (empty($old_row)) {
+			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+		}
+		$settings = is_array($old_row['settings'] ?? null) ? $old_row['settings'] : [];
+		$settings['service_details_body'] = $value;
+		$section_type = sanitize_text_field((string) ($old_row['type'] ?? 'service_details'));
+		if (function_exists('lf_sections_sanitize_settings')) {
+			$settings = lf_sections_sanitize_settings($section_type, $settings);
+		}
+		$config['sections'][$section_id]['settings'] = $settings;
+		update_post_meta($pid, LF_PB_META_KEY, $config);
+		$new_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+		$log_id = function_exists('lf_ai_log_action')
+			? lf_ai_log_action(
+				$context_type,
+				$context_id_use,
+				['__section_record::' . $section_id => $old_row],
+				['__section_record::' . $section_id => $new_row],
+				'Inline service details body edit'
+			)
+			: '';
+		wp_send_json_success([
+			'message' => __('Inline edit saved.', 'leadsforward-core'),
+			'field_key' => $field_key,
+			'section_id' => $section_id,
+			'value' => $value,
+			'log_id' => $log_id,
+		]);
 	}
 
 	// New site-wide inline text path: selector-based DOM text overrides.
