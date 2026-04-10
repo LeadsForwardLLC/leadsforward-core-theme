@@ -8448,6 +8448,37 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 				$sanitized_fields
 			);
 		}
+		if (defined('WP_DEBUG') && WP_DEBUG && current_user_can('manage_options')) {
+			$samples = [];
+			foreach ($incoming_by_instance as $iid => $fields) {
+				if (!is_array($fields) || empty($fields)) {
+					continue;
+				}
+				$non_empty = [];
+				foreach ($fields as $k => $v) {
+					if (is_array($v)) {
+						if (!empty($v)) {
+							$non_empty[] = (string) $k;
+						}
+					} elseif (is_string($v)) {
+						if (trim($v) !== '') {
+							$non_empty[] = (string) $k;
+						}
+					} elseif ($v !== null && $v !== '') {
+						$non_empty[] = (string) $k;
+					}
+				}
+				if (!empty($non_empty)) {
+					$samples[$iid] = array_slice($non_empty, 0, 12);
+				}
+				if (count($samples) >= 6) {
+					break;
+				}
+			}
+			if (!empty($samples)) {
+				error_log('LF ORCH DEBUG: post_incoming_non_empty post=' . (int) $post_id . ' ' . wp_json_encode($samples));
+			}
+		}
 		foreach ($order as $instance_id) {
 			$section = $sections[$instance_id] ?? null;
 			if (!is_array($section) || empty($section['enabled'])) {
@@ -8484,6 +8515,54 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			$sanitized_final = lf_sections_sanitize_settings($type, $final_settings);
 			$sanitized_final = array_intersect_key($sanitized_final, $final_settings);
 			$sections[$instance_id]['settings'] = array_merge($merged_settings, $sanitized_final);
+		}
+		if (defined('WP_DEBUG') && WP_DEBUG && current_user_can('manage_options')) {
+			// Snapshot a few key sections after all transforms, before persistence.
+			$probe_ids = array_values(array_filter([
+				'hero-1',
+				'trust_bar-1',
+				'content_image-1',
+				'service_details-1',
+				'benefits-1',
+				'cta-1',
+			], static function ($v): bool {
+				return is_string($v) && $v !== '';
+			}));
+			$probe = [];
+			foreach ($probe_ids as $iid) {
+				$row = $sections[$iid] ?? null;
+				if (!is_array($row)) {
+					continue;
+				}
+				$type = (string) ($row['type'] ?? '');
+				$st = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+				if ($type === '' || empty($st)) {
+					continue;
+				}
+				$allowed = isset($registry[$type]) ? lf_ai_studio_homepage_allowed_field_keys($type, $registry[$type]) : [];
+				$rendered = [];
+				foreach ($allowed as $k) {
+					$v = $st[$k] ?? null;
+					if (is_array($v)) {
+						if (!empty($v)) {
+							$rendered[] = $k;
+						}
+					} elseif (is_string($v)) {
+						if (trim($v) !== '') {
+							$rendered[] = $k;
+						}
+					} elseif ($v !== null && $v !== '') {
+						$rendered[] = $k;
+					}
+				}
+				$probe[$iid] = [
+					'type' => $type,
+					'rendered' => $rendered,
+				];
+			}
+			if (!empty($probe)) {
+				error_log('LF ORCH DEBUG: post_sections_rendered_pre_save post=' . (int) $post_id . ' ' . wp_json_encode($probe));
+			}
 		}
 		$staged_post_meta_updates[$post_id] = [
 			'order' => $order,
@@ -8529,6 +8608,24 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 	if (!empty($staged_post_meta_updates)) {
 		foreach ($staged_post_meta_updates as $post_id => $pb_meta) {
 			update_post_meta((int) $post_id, LF_PB_META_KEY, $pb_meta);
+		}
+		if (defined('WP_DEBUG') && WP_DEBUG && current_user_can('manage_options')) {
+			// Verify a sample post meta save actually persisted non-empty fields.
+			foreach (array_slice(array_keys($staged_post_meta_updates), 0, 3) as $pid) {
+				$pid = (int) $pid;
+				$saved = get_post_meta($pid, LF_PB_META_KEY, true);
+				$saved_sections = is_array($saved['sections'] ?? null) ? $saved['sections'] : [];
+				$hero = $saved_sections['hero-1']['settings'] ?? null;
+				if (is_array($hero)) {
+					$keys = ['hero_chip_bullets','hero_supporting_text','hero_bullets','hero_trust_block','cta_primary_override','cta_secondary_override'];
+					$preview = [];
+					foreach ($keys as $k) {
+						$v = $hero[$k] ?? '';
+						$preview[$k] = is_string($v) ? substr(trim($v), 0, 80) : $v;
+					}
+					error_log('LF ORCH DEBUG: post_meta_verify hero-1 post=' . $pid . ' ' . wp_json_encode($preview));
+				}
+			}
 		}
 		foreach ($staged_post_meta_updates as $post_id => $pb_meta) {
 			$post_after = get_post((int) $post_id);
