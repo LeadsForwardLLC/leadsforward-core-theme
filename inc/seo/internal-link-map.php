@@ -705,7 +705,7 @@ function lf_internal_link_map_render_embedded_ui(): void {
 	$quick_labels = [
 		'' => __('All pages', 'leadsforward-core'),
 		'orphans' => __('Orphans', 'leadsforward-core'),
-		'no_out' => __('No internal out', 'leadsforward-core'),
+		'no_out' => __('Dead-ends', 'leadsforward-core'),
 		'broken' => __('Broken internal', 'leadsforward-core'),
 		'weak' => __('Weak anchors', 'leadsforward-core'),
 		'money' => __('Money pages', 'leadsforward-core'),
@@ -714,6 +714,16 @@ function lf_internal_link_map_render_embedded_ui(): void {
 	echo '<h2>' . esc_html__('Internal Link Map', 'leadsforward-core') . '</h2>';
 	echo '<p>' . esc_html__('This workspace combines inventory, diagnostics, and lead-generation link strategy in one place.', 'leadsforward-core') . '</p>';
 	echo '<p class="description" style="margin-top:-4px;">' . esc_html__('Use "View links" on any row to inspect the full link profile. Focus first on low Lead-flow score pages and money pages.', 'leadsforward-core') . '</p>';
+	echo '<div class="card" style="max-width:980px;margin:10px 0 14px;">';
+	echo '<h3 style="margin-top:0;">' . esc_html__('Legend (what these mean)', 'leadsforward-core') . '</h3>';
+	echo '<ul style="margin:0 0 0 1.2rem;">';
+	echo '<li><strong>' . esc_html__('Orphan (0 inbound):', 'leadsforward-core') . '</strong> ' . esc_html__('Nothing links to this page. Add internal links from related pages, navigation, and hub pages.', 'leadsforward-core') . '</li>';
+	echo '<li><strong>' . esc_html__('Dead-end (0 internal out):', 'leadsforward-core') . '</strong> ' . esc_html__('This page links to no other pages on your site. Add 2–3 relevant internal links to guide users and pass topical relevance.', 'leadsforward-core') . '</li>';
+	echo '<li><strong>' . esc_html__('Weak anchors:', 'leadsforward-core') . '</strong> ' . esc_html__('The clickable words are generic (“click here”, “learn more”). Replace with intent-rich anchors (service + location / next-step).', 'leadsforward-core') . '</li>';
+	echo '<li><strong>' . esc_html__('Broken internal:', 'leadsforward-core') . '</strong> ' . esc_html__('Internal-looking URLs that don’t resolve to a real page. Fix these first to prevent dead ends and wasted crawl.', 'leadsforward-core') . '</li>';
+	echo '</ul>';
+	echo '<p class="description" style="margin:10px 0 0;">' . esc_html__('Workflow: pick a filter → open Details → copy weak anchor text → update anchors in the frontend editor.', 'leadsforward-core') . '</p>';
+	echo '</div>';
 	echo '<div style="display:flex;gap:12px;flex-wrap:wrap;margin:12px 0 18px;">';
 	echo '<div class="notice notice-info" style="margin:0;padding:8px 10px;"><strong>' . esc_html__('Pages scanned:', 'leadsforward-core') . '</strong> ' . esc_html((string) count($rows)) . '</div>';
 	echo '<div class="notice notice-warning" style="margin:0;padding:8px 10px;"><strong>' . esc_html__('Orphans:', 'leadsforward-core') . '</strong> ' . esc_html((string) count($orphans)) . '</div>';
@@ -726,10 +736,10 @@ function lf_internal_link_map_render_embedded_ui(): void {
 		$is_active = ($quick_key === '' && $quick_filter === '') || ($quick_key !== '' && $quick_filter === $quick_key);
 		$tip = '';
 		if ($quick_key === 'orphans') $tip = __('Orphan (0 inbound) = nothing links to this page. Add inbound links from related pages and navigation.', 'leadsforward-core');
-		if ($quick_key === 'no_internal_out') $tip = __('Dead-end (0 internal out) = this page links to no other pages. Add 2–3 relevant internal links.', 'leadsforward-core');
-		if ($quick_key === 'broken_internal') $tip = __('Broken internal = links that look internal but don’t resolve to a real page.', 'leadsforward-core');
-		if ($quick_key === 'weak_anchors') $tip = __('Weak anchors = generic link text (“click here”, “learn more”). Replace with service + location intent.', 'leadsforward-core');
-		if ($quick_key === 'money_pages') $tip = __('Money pages = core revenue page types (services + service areas).', 'leadsforward-core');
+		if ($quick_key === 'no_out') $tip = __('Dead-end (0 internal out) = this page links to no other pages. Add 2–3 relevant internal links.', 'leadsforward-core');
+		if ($quick_key === 'broken') $tip = __('Broken internal = links that look internal but don’t resolve to a real page.', 'leadsforward-core');
+		if ($quick_key === 'weak') $tip = __('Weak anchors = generic link text (“click here”, “learn more”). Replace with service + location intent.', 'leadsforward-core');
+		if ($quick_key === 'money') $tip = __('Money pages = core revenue page types (services + service areas).', 'leadsforward-core');
 		$quick_url = add_query_arg(array_merge($base_args, [
 			'quick' => $quick_key,
 			'post_type' => $type_filter,
