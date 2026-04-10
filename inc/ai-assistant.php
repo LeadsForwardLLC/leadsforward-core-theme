@@ -1767,9 +1767,9 @@ function lf_ai_assistant_widget_js(): string {
 				return;
 			}
 			lfHideInlineLinkPanel();
-			if (inlineActiveEl) {
-				saveInlineEdit();
-				setStatus(wasEditingAnchor ? "Link updated and saved." : "Link inserted and saved.", false);
+			var saveHost = inlineActiveEl || lfInlineLinkSavedHost || lfManagedContentEditableHost();
+			if (saveHost) {
+				persistInlineNodeNow(saveHost, wasEditingAnchor ? "Link updated and saved." : "Link inserted and saved.");
 				return;
 			}
 			setStatus(wasEditingAnchor ? "Link updated. Save when done editing." : "Link inserted. Click away or press ⌘/Ctrl+Enter to save.", false);
@@ -1798,9 +1798,9 @@ function lf_ai_assistant_widget_js(): string {
 				return;
 			}
 			lfHideInlineLinkPanel();
-			if (inlineActiveEl) {
-				saveInlineEdit();
-				setStatus("Link removed and saved.", false);
+			var saveHost = inlineActiveEl || lfInlineLinkSavedHost || lfManagedContentEditableHost();
+			if (saveHost) {
+				persistInlineNodeNow(saveHost, "Link removed and saved.");
 				return;
 			}
 			setStatus("Link removed. Save when done editing.", false);
@@ -5899,6 +5899,55 @@ function lf_ai_assistant_widget_js(): string {
 			}).always(function(){
 				inlineIsSaving = false;
 				if (typeof done === "function") done();
+			});
+		}
+		function persistInlineNodeNow(el, successMessage, done) {
+			if (!el) {
+				if (typeof done === "function") done(false);
+				return;
+			}
+			var selector = String(el.getAttribute("data-lf-inline-selector") || "");
+			var fieldKey = String(el.getAttribute("data-lf-inline-field-key") || "");
+			if (!selector && !fieldKey) {
+				if (typeof done === "function") done(false);
+				return;
+			}
+			var valueText = String(el.textContent || "").trim();
+			var valueHtml = String(el.innerHTML || "").trim();
+			if (valueText === "") {
+				setStatus("Text cannot be empty.", true);
+				if (typeof done === "function") done(false);
+				return;
+			}
+			var useHtml = /<[a-z]/i.test(valueHtml);
+			var wrap = el && el.closest ? el.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]") : null;
+			var ctx = persistContextFromWrap(wrap);
+			var payload = {
+				action: "lf_ai_inline_save",
+				nonce: lfAiFloating.nonce,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
+				value: useHtml ? valueHtml : valueText,
+				value_format: useHtml ? "html" : "text"
+			};
+			if (fieldKey) {
+				payload.field_key = fieldKey;
+			} else {
+				payload.selector = selector;
+			}
+			setStatus("Saving inline edit...", false);
+			$.post(lfAiFloating.ajax_url, payload).done(function(res){
+				if (res && res.success) {
+					setStatus(successMessage || "Saved.", false);
+					if (typeof done === "function") done(true);
+					return;
+				}
+				setStatus((res && res.data && res.data.message) ? res.data.message : "Inline save failed.", true);
+				if (typeof done === "function") done(false);
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Inline save failed.";
+				setStatus(msg, true);
+				if (typeof done === "function") done(false);
 			});
 		}
 		function renderDiff() {
