@@ -1080,6 +1080,41 @@ function lf_ai_studio_rest_pick_best_candidate(array $target, array $candidates,
 	return 0;
 }
 
+function lf_ai_studio_rest_find_media_candidate_row(array $candidates, int $attachment_id): ?array {
+	foreach ($candidates as $candidate) {
+		if (!is_array($candidate)) {
+			continue;
+		}
+		if ((int) ($candidate['attachment_id'] ?? 0) === $attachment_id) {
+			return $candidate;
+		}
+	}
+	return null;
+}
+
+/**
+ * Business/geo context from the stored orchestrator request (no full manifest on the job).
+ *
+ * @return array{business:string,city:string,state:string,niche:string,primary:string}
+ */
+function lf_ai_studio_rest_stored_request_geo_context(array $stored_request): array {
+	$entity = is_array($stored_request['business_entity'] ?? null) ? $stored_request['business_entity'] : [];
+	$parts = is_array($entity['address_parts'] ?? null) ? $entity['address_parts'] : [];
+	$city = trim((string) ($stored_request['city_region'] ?? ($parts['city'] ?? '')));
+	$state = trim((string) ($parts['state'] ?? ''));
+	$business = trim((string) ($stored_request['business_name'] ?? ($entity['name'] ?? '')));
+	$niche = trim((string) ($stored_request['niche'] ?? ($entity['niche'] ?? '')));
+	$kw = is_array($stored_request['keywords'] ?? null) ? $stored_request['keywords'] : [];
+	$primary = trim((string) ($kw['primary'] ?? ''));
+	return [
+		'business' => sanitize_text_field($business),
+		'city' => sanitize_text_field($city),
+		'state' => sanitize_text_field($state),
+		'niche' => sanitize_text_field($niche),
+		'primary' => sanitize_text_field($primary),
+	];
+}
+
 function lf_ai_studio_rest_build_fallback_media_annotations(array $stored_request): array {
 	$plan = is_array($stored_request['image_generation'] ?? null) ? $stored_request['image_generation'] : [];
 	$targets = is_array($plan['targets'] ?? null) ? $plan['targets'] : [];
@@ -1087,6 +1122,7 @@ function lf_ai_studio_rest_build_fallback_media_annotations(array $stored_reques
 	if (empty($targets) || empty($candidates)) {
 		return [];
 	}
+	$geo = lf_ai_studio_rest_stored_request_geo_context($stored_request);
 	$used_ids = [];
 	$out = [];
 	foreach ($targets as $target) {
@@ -1098,27 +1134,50 @@ function lf_ai_studio_rest_build_fallback_media_annotations(array $stored_reques
 			continue;
 		}
 		$used_ids[$attachment_id] = true;
-		$section_type = sanitize_text_field((string) ($target['section_type'] ?? 'section'));
-		$slot = sanitize_text_field((string) ($target['slot'] ?? 'image'));
-		$context = is_array($target['context'] ?? null) ? $target['context'] : [];
-		$city = sanitize_text_field((string) ($context['city'] ?? ''));
-		$niche = sanitize_text_field((string) ($context['niche'] ?? ''));
-		$base_desc = trim($section_type . ' ' . $slot);
-		if ($city !== '') {
-			$base_desc .= ' in ' . $city;
+		$candidate = lf_ai_studio_rest_find_media_candidate_row($candidates, $attachment_id);
+		$tctx = is_array($target['context'] ?? null) ? $target['context'] : [];
+		$city = sanitize_text_field((string) ($tctx['city'] ?? $geo['city']));
+		$state = sanitize_text_field((string) ($geo['state'] ?? ''));
+		$label = '';
+		if (is_array($candidate) && function_exists('lf_image_intelligence_humanize_upload_stem')) {
+			$from_file = lf_image_intelligence_humanize_upload_stem((string) ($candidate['filename'] ?? ''));
+			if (strlen($from_file) >= 4) {
+				$label = $from_file;
+			}
+			$ct = trim((string) ($candidate['title'] ?? ''));
+			if (
+				($label === '' || strlen($label) < 6)
+				&& $ct !== ''
+				&& function_exists('lf_image_intelligence_media_text_needs_upgrade')
+				&& !lf_image_intelligence_media_text_needs_upgrade($ct)
+			) {
+				$label = function_exists('lf_image_intelligence_clean_media_text')
+					? lf_image_intelligence_clean_media_text($ct)
+					: $ct;
+			}
 		}
-		if ($niche !== '') {
-			$base_desc .= ' for ' . $niche;
+		if ($label === '') {
+			$label = $geo['primary'] !== '' ? $geo['primary'] : ($geo['niche'] !== '' ? $geo['niche'] : ($geo['business'] !== '' ? $geo['business'] : __('Local service project', 'leadsforward-core')));
 		}
-		$base_desc = trim($base_desc);
+		$headline = function_exists('lf_image_intelligence_format_image_headline')
+			? lf_image_intelligence_format_image_headline($label, $city, $state)
+			: $label;
+		if ($headline === '') {
+			$headline = $label;
+		}
+		$keyword_for_desc = $geo['primary'] !== '' ? $geo['primary'] : $geo['niche'];
+		$description = function_exists('lf_image_intelligence_build_image_seo_description')
+			? lf_image_intelligence_build_image_seo_description($label, $city, $state, $geo['business'], $keyword_for_desc)
+			: $headline;
+		$slug_base = sanitize_title($label . ($city !== '' ? '-' . $city : ''));
 		$out[] = [
 			'attachment_id' => $attachment_id,
-			'title' => ucwords(str_replace(['_', '-'], ' ', $section_type . ' ' . $slot)),
-			'alt_text' => $base_desc,
-			'caption' => $base_desc,
-			'description' => 'Photo reference used for ' . $base_desc . '.',
-			'keywords' => array_values(array_filter([$section_type, $slot, $city, $niche])),
-			'recommended_filename' => sanitize_title($section_type . '-' . $slot . ($city !== '' ? '-' . $city : '')) . '.jpg',
+			'title' => $headline,
+			'alt_text' => $headline,
+			'caption' => '',
+			'description' => $description,
+			'keywords' => array_values(array_filter([$label, $city, $state, $geo['niche'], $geo['primary']])),
+			'recommended_filename' => ($slug_base !== '' ? $slug_base : 'project-image') . '.jpg',
 		];
 	}
 	return $out;
