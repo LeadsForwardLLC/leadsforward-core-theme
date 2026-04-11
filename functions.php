@@ -88,6 +88,7 @@ lf_load_inc('acf/field-group-service-area.php');
 lf_load_inc('acf/field-group-project.php');
 lf_load_inc('acf/field-group-testimonial.php');
 lf_load_inc('acf/field-group-faq.php');
+lf_load_inc('acf/field-group-process-step.php');
 
 // Project gallery helpers.
 lf_load_inc('projects.php');

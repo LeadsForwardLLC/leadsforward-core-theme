@@ -145,6 +145,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		'nonce'    => wp_create_nonce('lf_ai_editing'),
 		'context_type' => (string) ($context['type'] ?? 'homepage'),
 		'context_id' => (string) ($context['id'] ?? 'homepage'),
+		'process_library_filter' => lf_ai_assistant_process_library_filter_context($context),
 		'target_label' => $target_label,
 		'labels' => $editable,
 		'section_library' => lf_ai_assistant_section_library($context),
@@ -215,6 +216,56 @@ function lf_ai_assistant_widget_context(): array {
 		}
 	}
 	return ['type' => 'homepage', 'id' => 'homepage'];
+}
+
+/**
+ * When editing a service (or area with a linked service), limit the process-step picker to relevant steps.
+ *
+ * @return array{active:bool, service_id:int, service_slug:string, service_label:string}
+ */
+function lf_ai_assistant_process_library_filter_context(array $context): array {
+	$out = [
+		'active'         => false,
+		'service_id'     => 0,
+		'service_slug'   => '',
+		'service_label'  => '',
+	];
+	$type = (string) ($context['type'] ?? '');
+	$id = absint($context['id'] ?? 0);
+	if ($type === 'lf_service' && $id > 0) {
+		$p = get_post($id);
+		if ($p instanceof \WP_Post && $p->post_type === 'lf_service') {
+			$out['active'] = true;
+			$out['service_id'] = $id;
+			$out['service_slug'] = (string) $p->post_name;
+			$out['service_label'] = (string) $p->post_title;
+		}
+		return $out;
+	}
+	if ($type === 'lf_service_area' && $id > 0 && function_exists('get_field')) {
+		$area = get_post($id);
+		if (!$area instanceof \WP_Post || $area->post_type !== 'lf_service_area') {
+			return $out;
+		}
+		$services = get_field('lf_service_area_services', $id);
+		if (!is_array($services) || $services === []) {
+			return $out;
+		}
+		$first = $services[0];
+		$svc = null;
+		if ($first instanceof \WP_Post) {
+			$svc = $first;
+		} elseif (is_numeric($first)) {
+			$svc = get_post((int) $first);
+		}
+		if ($svc instanceof \WP_Post && $svc->post_type === 'lf_service') {
+			$out['active'] = true;
+			$out['service_id'] = (int) $svc->ID;
+			$out['service_slug'] = (string) $svc->post_name;
+			$out['service_label'] = (string) $svc->post_title;
+		}
+	}
+	return $out;
 }
 
 function lf_ai_inline_overrides_frontend_script(): void {
@@ -3797,12 +3848,17 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function processStepValueFromLi(li) {
 			if (!li) return "";
+			var heading = li.querySelector(".lf-process__step-heading");
 			var title = li.querySelector(".lf-process__step-title");
 			var body = li.querySelector(".lf-process__step-body");
-			if (title) {
-				var titleText = String(title.textContent || "").trim();
-				var bodyText = body ? String(body.textContent || "").trim() : "";
+			if (title && body) {
+				var titleText = heading ? String(heading.textContent || "").trim() : String(title.textContent || "").trim();
+				var bodyText = String(body.textContent || "").trim();
 				return bodyText ? (titleText + " || " + bodyText) : titleText;
+			}
+			if (title && !body) {
+				var tOnly = heading ? String(heading.textContent || "").trim() : String(title.textContent || "").trim();
+				if (tOnly) return tOnly;
 			}
 			var plain = li.querySelector(".lf-process__text");
 			return plain ? String(plain.textContent || "").trim() : textFromNodeWithoutAiControls(li);
@@ -3822,24 +3878,34 @@ function lf_ai_assistant_widget_js(): string {
 		var processPickerEl = null;
 		var processPickerSearchEl = null;
 		var processPickerListEl = null;
-		var processLibraryCache = null;
+		var processLibraryRows = [];
+		var processLibraryCacheStore = {};
 		var processPickerWrap = null;
 		var processPickerList = null;
-		function loadProcessLibrary(done) {
-			if (Array.isArray(processLibraryCache)) {
-				if (typeof done === "function") done(processLibraryCache);
+		function loadProcessLibrary(done, forceShowAll) {
+			var filter = (lfAiFloating.process_library_filter && lfAiFloating.process_library_filter.active) ? lfAiFloating.process_library_filter : null;
+			var fid = (forceShowAll || !filter) ? 0 : (parseInt(String(filter.service_id || "0"), 10) || 0);
+			var fslug = (forceShowAll || !filter) ? "" : String(filter.service_slug || "");
+			var ckey = forceShowAll ? "all" : ("s" + fid);
+			if (processLibraryCacheStore[ckey]) {
+				processLibraryRows = processLibraryCacheStore[ckey];
+				if (typeof done === "function") done(processLibraryRows);
 				return;
 			}
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_process_step_library",
-				nonce: lfAiFloating.nonce
+				nonce: lfAiFloating.nonce,
+				filter_service_id: forceShowAll ? 0 : fid,
+				filter_service_slug: forceShowAll ? "" : fslug
 			}).done(function(res){
-				processLibraryCache = (res && res.success && res.data && Array.isArray(res.data.items)) ? res.data.items : [];
-				if (typeof done === "function") done(processLibraryCache);
+				var items = (res && res.success && res.data && Array.isArray(res.data.items)) ? res.data.items : [];
+				processLibraryCacheStore[ckey] = items;
+				processLibraryRows = items;
+				if (typeof done === "function") done(processLibraryRows);
 			}).fail(function(){
-				processLibraryCache = [];
+				processLibraryRows = [];
 				setStatus("Process step library unavailable right now.", true);
-				if (typeof done === "function") done(processLibraryCache);
+				if (typeof done === "function") done(processLibraryRows);
 			});
 		}
 		function ensureProcessPicker() {
@@ -3847,7 +3913,7 @@ function lf_ai_assistant_widget_js(): string {
 			processPickerEl = document.createElement("div");
 			processPickerEl.className = "lf-ai-faq-picker lf-ai-process-picker lf-ai-inline-editor-ignore";
 			processPickerEl.hidden = true;
-			processPickerEl.innerHTML = "<div class=\"lf-ai-faq-picker__card\"><div class=\"lf-ai-faq-picker__head\"><div class=\"lf-ai-faq-picker__title\">Select Process Steps from library</div><button type=\"button\" class=\"lf-ai-faq-picker__close\" data-lf-ai-process-picker-close aria-label=\"Close Process picker\">×</button></div><input type=\"text\" class=\"lf-ai-faq-picker__search\" data-lf-ai-process-picker-search placeholder=\"Search process steps...\" /><div class=\"lf-ai-faq-picker__list\" data-lf-ai-process-picker-list></div></div>";
+			processPickerEl.innerHTML = "<div class=\"lf-ai-faq-picker__card\"><div class=\"lf-ai-faq-picker__head\"><div class=\"lf-ai-faq-picker__title\">Select Process Steps from library</div><button type=\"button\" class=\"lf-ai-faq-picker__close\" data-lf-ai-process-picker-close aria-label=\"Close Process picker\">×</button></div><input type=\"text\" class=\"lf-ai-faq-picker__search\" data-lf-ai-process-picker-search placeholder=\"Search process steps...\" /><p class=\"lf-ai-process-picker__filter\" data-lf-ai-process-filter-wrap style=\"display:none;margin:8px 0 0;font-size:12px;line-height:1.45;color:#50575e;\"><span data-lf-ai-process-filter-label></span> <button type=\"button\" class=\"button button-small\" data-lf-ai-process-show-all>Show all steps</button></p><div class=\"lf-ai-faq-picker__list\" data-lf-ai-process-picker-list></div></div>";
 			processPickerSearchEl = processPickerEl.querySelector("[data-lf-ai-process-picker-search]");
 			processPickerListEl = processPickerEl.querySelector("[data-lf-ai-process-picker-list]");
 			var closeBtn = processPickerEl.querySelector("[data-lf-ai-process-picker-close]");
@@ -3855,6 +3921,17 @@ function lf_ai_assistant_widget_js(): string {
 				closeBtn.addEventListener("click", function(e){
 					e.preventDefault();
 					closeProcessPicker();
+				});
+			}
+			var showAllBtn = processPickerEl.querySelector("[data-lf-ai-process-show-all]");
+			if (showAllBtn) {
+				showAllBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					loadProcessLibrary(function(){
+						renderProcessPickerList(processPickerSearchEl ? processPickerSearchEl.value : "");
+						var fw = processPickerEl.querySelector("[data-lf-ai-process-filter-wrap]");
+						if (fw) fw.style.display = "none";
+					}, true);
 				});
 			}
 			if (processPickerSearchEl) {
@@ -3884,17 +3961,23 @@ function lf_ai_assistant_widget_js(): string {
 			var li = document.createElement("li");
 			li.className = "lf-process__step";
 			li.setAttribute("data-lf-process-id", String(id));
+			var main = document.createElement("div");
+			main.className = "lf-process__step-main";
 			var title = document.createElement("span");
 			title.className = "lf-process__step-title";
-			title.textContent = String(row.title || "Step");
-			li.appendChild(title);
+			var strongEl = document.createElement("strong");
+			strongEl.className = "lf-process__step-heading";
+			strongEl.textContent = String(row.title || "Step");
+			title.appendChild(strongEl);
+			main.appendChild(title);
 			var bodyText = String(row.body || "").replace(/\s+/g, " ").trim();
 			if (bodyText) {
 				var body = document.createElement("span");
 				body.className = "lf-process__step-body";
 				body.textContent = bodyText;
-				li.appendChild(body);
+				main.appendChild(body);
 			}
+			li.appendChild(main);
 			list.appendChild(li);
 			buildProcessStepControls();
 			persistProcessSelection(list, "Saving selected process steps...");
@@ -3932,7 +4015,7 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function renderProcessPickerList(query) {
 			if (!processPickerListEl) return;
-			var rows = Array.isArray(processLibraryCache) ? processLibraryCache : [];
+			var rows = Array.isArray(processLibraryRows) ? processLibraryRows : [];
 			var q = String(query || "").trim().toLowerCase();
 			var selectedMap = {};
 			if (processPickerList) {
@@ -3942,13 +4025,20 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			processPickerListEl.innerHTML = "";
 			var filtered = rows.filter(function(row){
-				var text = (String(row.title || "") + " " + String(row.body || "") + " " + String((row.groups || []).join(" ") || "")).toLowerCase();
+				var sidPart = Array.isArray(row.service_ids) ? row.service_ids.join(" ") : "";
+				var text = (String(row.title || "") + " " + String(row.body || "") + " " + String((row.groups || []).join(" ") || "") + " " + sidPart).toLowerCase();
 				return !q || text.indexOf(q) !== -1;
 			});
 			if (!filtered.length) {
 				var empty = document.createElement("div");
 				empty.className = "lf-ai-faq-picker__empty";
-				empty.textContent = "No process steps match this search.";
+				var noRows = !rows.length;
+				var svcFilter = lfAiFloating.process_library_filter && lfAiFloating.process_library_filter.active;
+				if (svcFilter && noRows) {
+					empty.textContent = "No process steps are linked to this service yet. Click “Show all steps” or assign services under Process step → Assigned services.";
+				} else {
+					empty.textContent = "No process steps match this search.";
+				}
 				processPickerListEl.appendChild(empty);
 				return;
 			}
@@ -3990,6 +4080,14 @@ function lf_ai_assistant_widget_js(): string {
 			processPickerEl.hidden = false;
 			if (processPickerSearchEl) processPickerSearchEl.value = "";
 			loadProcessLibrary(function(){
+				var fw = processPickerEl.querySelector("[data-lf-ai-process-filter-wrap]");
+				var fl = processPickerEl.querySelector("[data-lf-ai-process-filter-label]");
+				if (fw && lfAiFloating.process_library_filter && lfAiFloating.process_library_filter.active) {
+					fw.style.display = "";
+					if (fl) fl.textContent = "Showing steps for " + String(lfAiFloating.process_library_filter.service_label || "this service") + ".";
+				} else if (fw) {
+					fw.style.display = "none";
+				}
 				renderProcessPickerList("");
 				try { if (processPickerSearchEl) processPickerSearchEl.focus(); } catch (e) {}
 			});
@@ -4005,27 +4103,39 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			if (!next) return;
 			var removeBtn = li.querySelector("[data-lf-ai-list-remove=\"1\"]");
-			Array.prototype.slice.call(li.querySelectorAll(".lf-process__step-title,.lf-process__step-body,.lf-process__text")).forEach(function(node){
+			Array.prototype.slice.call(li.querySelectorAll(".lf-process__step-main,.lf-process__step-title,.lf-process__step-body,.lf-process__text")).forEach(function(node){
 				if (node && node.parentNode) node.parentNode.removeChild(node);
 			});
 			var parts = next.split("||");
 			if (parts.length > 1) {
+				var main = document.createElement("div");
+				main.className = "lf-process__step-main";
 				var title = document.createElement("span");
 				title.className = "lf-process__step-title";
-				title.textContent = String(parts[0] || "").trim();
-				li.insertBefore(title, removeBtn || null);
+				var h = document.createElement("strong");
+				h.className = "lf-process__step-heading";
+				h.textContent = String(parts[0] || "").trim();
+				title.appendChild(h);
+				main.appendChild(title);
 				var bodyText = String(parts.slice(1).join("||") || "").trim();
 				if (bodyText) {
 					var body = document.createElement("span");
 					body.className = "lf-process__step-body";
 					body.textContent = bodyText;
-					li.insertBefore(body, removeBtn || null);
+					main.appendChild(body);
 				}
+				li.insertBefore(main, removeBtn || null);
 			} else {
+				var main2 = document.createElement("div");
+				main2.className = "lf-process__step-main";
 				var plain = document.createElement("span");
 				plain.className = "lf-process__text";
-				plain.textContent = next;
-				li.insertBefore(plain, removeBtn || null);
+				var h2 = document.createElement("strong");
+				h2.className = "lf-process__step-heading";
+				h2.textContent = next;
+				plain.appendChild(h2);
+				main2.appendChild(plain);
+				li.insertBefore(main2, removeBtn || null);
 			}
 			persistSectionLineItems(wrap, "process_steps", processValuesFromList(list), "Saving process steps...");
 		}
@@ -4039,7 +4149,7 @@ function lf_ai_assistant_widget_js(): string {
 				});
 				var list = wrap.querySelector(".lf-process");
 				if (!list) return;
-				Array.prototype.slice.call(list.querySelectorAll(".lf-process__step,.lf-process__step-title,.lf-process__step-body,.lf-process__text")).forEach(function(node){
+				Array.prototype.slice.call(list.querySelectorAll(".lf-process__step,.lf-process__step-main,.lf-process__step-title,.lf-process__step-body,.lf-process__text,.lf-process__step-heading")).forEach(function(node){
 					node.removeAttribute("data-lf-inline-editable");
 					node.removeAttribute("data-lf-inline-selector");
 				});
@@ -4113,10 +4223,16 @@ function lf_ai_assistant_widget_js(): string {
 					e.stopPropagation();
 					var li = document.createElement("li");
 					li.className = "lf-process__step";
+					var mainNew = document.createElement("div");
+					mainNew.className = "lf-process__step-main";
 					var text = document.createElement("span");
 					text.className = "lf-process__text";
-					text.textContent = "New step";
-					li.appendChild(text);
+					var hn = document.createElement("strong");
+					hn.className = "lf-process__step-heading";
+					hn.textContent = "New step";
+					text.appendChild(hn);
+					mainNew.appendChild(text);
+					li.appendChild(mainNew);
 					list.appendChild(li);
 					buildProcessStepControls();
 					processPromptEditStep(li, wrap, list);
