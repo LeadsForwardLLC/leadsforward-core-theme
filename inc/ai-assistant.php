@@ -6212,7 +6212,7 @@ function lf_ai_assistant_widget_js(): string {
 			$btnReject.prop("disabled", !enabled);
 		}
 		function modeValue() {
-			return String($mode.val() || "edit_existing");
+			return String($mode.val() || "auto");
 		}
 		function cptTypeValue() {
 			return String($cptType.val() || "lf_service");

@@ -233,6 +233,35 @@ function lf_ai_assistant_infer_mode_from_prompt(string $prompt): array {
 	return ['mode' => 'edit_existing', 'cpt_type' => '', 'batch_type' => 'post', 'batch_count' => $count];
 }
 
+/**
+ * True when the user clearly wants a new post/CPT despite the assistant Mode being "Edit Current Page".
+ */
+function lf_ai_assistant_prompt_should_force_creation_flow(string $prompt): bool {
+	$l = strtolower(trim($prompt));
+	if ($l === '') {
+		return false;
+	}
+	if (!preg_match('/\b(create|add|generate|make|build)\b/', $l)) {
+		return false;
+	}
+	if (preg_match('/\bnew\s+/', $l)) {
+		return true;
+	}
+	if (preg_match('/\b(landing\s+page|service\s+page|blog\s+post)\b/', $l)) {
+		return true;
+	}
+	if (preg_match('/\b(create|add|generate|make|build)\s+(me\s+|us\s+)?(a\s+|an\s+)(faq|project|testimonial)\b/', $l)) {
+		return true;
+	}
+	if (preg_match('/\b(create|add|generate|make|build)\s+(me\s+|us\s+)?(a\s+|an\s+)service\b/', $l)) {
+		return true;
+	}
+	if (preg_match('/\b(create|add|generate|make|build)\s+(a\s+|an\s+)page\b/', $l)) {
+		return true;
+	}
+	return false;
+}
+
 function lf_ai_assistant_requested_edit_keys(string $prompt, $context_id): array {
 	$prompt_lower = strtolower($prompt);
 	$editable = lf_get_ai_editable_fields($context_id);
@@ -404,7 +433,7 @@ function lf_ai_assistant_parse_secondary_keywords($value): array {
 function lf_ai_assistant_build_creation_prompt(string $mode, string $post_type, string $context_type, string $prompt): string {
 	$base = "You are a WordPress content builder for a local business site.\n";
 	$base .= "Return ONLY one JSON object. No markdown. No explanation.\n";
-	$base .= "Context type: {$context_type}. Target post_type: {$post_type}.\n";
+	$base .= "Context type: {$context_type}. Target post_type: {$post_type} (use this exact post_type in your mental model; for services it is the Services CPT lf_service).\n";
 	$base .= "Create HIGH quality, concrete local-business copy. Avoid generic placeholders.\n";
 	$schema = "JSON schema:\n";
 	$schema .= "{\n";
@@ -1156,6 +1185,15 @@ function lf_ai_ajax_generate(): void {
 	}
 	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
 	$context_type_use = $context_type;
+	if ($assistant_mode === 'edit_existing' && lf_ai_assistant_prompt_should_force_creation_flow($prompt)) {
+		$forced = lf_ai_assistant_infer_mode_from_prompt($prompt);
+		if (in_array($forced['mode'] ?? '', ['create_cpt', 'create_page', 'create_blog_post', 'create_batch'], true)) {
+			$assistant_mode = (string) $forced['mode'];
+			$assistant_cpt_type = (string) ($forced['cpt_type'] ?? '');
+			$assistant_batch_type = (string) ($forced['batch_type'] ?? 'post');
+			$assistant_batch_count = (int) ($forced['batch_count'] ?? $assistant_batch_count);
+		}
+	}
 	$auto_inference = ['mode' => 'edit_existing', 'cpt_type' => '', 'batch_type' => 'post', 'batch_count' => $assistant_batch_count];
 	if ($assistant_mode === 'auto') {
 		$auto_inference = lf_ai_assistant_infer_mode_from_prompt($prompt);

@@ -16,7 +16,130 @@ if (!defined('ABSPATH')) {
 const LF_AI_PROPOSED_TRANSIENT_PREFIX = 'lf_ai_proposed_';
 
 /**
- * Decode JSON from an LLM response: trim, strip BOM, fenced markdown blocks, then first balanced object/array.
+ * Normalize common LLM JSON quirks before json_decode.
+ */
+function lf_ai_json_apply_model_response_repairs(string $chunk): string {
+	$chunk = str_replace(
+		["\xE2\x80\x9C", "\xE2\x80\x9D", "\xE2\x80\x98", "\xE2\x80\x99"],
+		['"', '"', "'", "'"],
+		$chunk
+	);
+	return $chunk;
+}
+
+/**
+ * json_decode with UTF-8 substitution when available.
+ *
+ * @return array<string, mixed>|null
+ */
+function lf_ai_json_decode_assoc(string $chunk): ?array {
+	$chunk = trim($chunk);
+	if ($chunk === '') {
+		return null;
+	}
+	$flags = 0;
+	if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+		$flags |= JSON_INVALID_UTF8_SUBSTITUTE;
+	}
+	$decoded = json_decode($chunk, true, 512, $flags);
+	return is_array($decoded) ? $decoded : null;
+}
+
+/**
+ * Decode JSON; repair trailing commas (common in LLM output) and retry.
+ *
+ * @return array<string, mixed>|null
+ */
+function lf_ai_json_decode_lenient(string $chunk): ?array {
+	$chunk = lf_ai_json_apply_model_response_repairs(trim($chunk));
+	if ($chunk === '') {
+		return null;
+	}
+	$chunk = preg_replace('/([}\]])\s*,\s*$/', '$1', $chunk);
+	if (!is_string($chunk)) {
+		return null;
+	}
+	$decoded = lf_ai_json_decode_assoc($chunk);
+	if ($decoded !== null) {
+		return $decoded;
+	}
+	for ($pass = 0; $pass < 6; $pass++) {
+		$next = preg_replace('/,\s*([\]}])/', '$1', $chunk);
+		if (!is_string($next) || $next === $chunk) {
+			break;
+		}
+		$chunk = $next;
+		$decoded = lf_ai_json_decode_assoc($chunk);
+		if ($decoded !== null) {
+			return $decoded;
+		}
+	}
+	return null;
+}
+
+/**
+ * Extract a balanced {...} or [...] fragment starting at $start (must point at $open).
+ */
+function lf_ai_extract_balanced_json_fragment(string $s, int $start, string $open, string $close): ?string {
+	$len = strlen($s);
+	if ($start < 0 || $start >= $len || ($s[ $start ] ?? '') !== $open) {
+		return null;
+	}
+	$depth = 0;
+	$in_str = false;
+	$esc = false;
+	for ($i = $start; $i < $len; $i++) {
+		$ch = $s[ $i ];
+		if ($in_str) {
+			if ($esc) {
+				$esc = false;
+			} elseif ($ch === '\\') {
+				$esc = true;
+			} elseif ($ch === '"') {
+				$in_str = false;
+			}
+			continue;
+		}
+		if ($ch === '"') {
+			$in_str = true;
+			continue;
+		}
+		if ($ch === $open) {
+			$depth++;
+		} elseif ($ch === $close) {
+			$depth--;
+			if ($depth === 0) {
+				return substr($s, $start, $i - $start + 1);
+			}
+		}
+	}
+	return null;
+}
+
+/**
+ * Whether decoded JSON looks like assistant creation / batch payload (skip prose "{}" snippets).
+ */
+function lf_ai_decoded_json_looks_like_assistant_payload(array $d): bool {
+	if ($d === []) {
+		return false;
+	}
+	if (isset($d['title']) && is_string($d['title']) && trim($d['title']) !== '') {
+		return true;
+	}
+	if (isset($d['items']) && is_array($d['items'])) {
+		return true;
+	}
+	if (isset($d['page_builder']) && is_array($d['page_builder']) && $d['page_builder'] !== []) {
+		return true;
+	}
+	if (isset($d['content']) && is_string($d['content']) && strlen(trim(wp_strip_all_tags($d['content']))) >= 20) {
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Decode JSON from an LLM response: trim, strip BOM, fenced markdown blocks, lenient decode, scan all {...} candidates.
  *
  * @return array<string, mixed>|null
  */
@@ -31,91 +154,51 @@ function lf_ai_decode_model_json_response(string $raw): ?array {
 	if (preg_match('/```(?:json|javascript|js|[a-z]+)?\s*\R?([\s\S]*?)\R?```/i', $s, $m)) {
 		$s = trim($m[1]);
 	}
-	$decode = static function (string $chunk): ?array {
-		$chunk = trim($chunk);
-		if ($chunk === '') {
-			return null;
-		}
-		$decoded = json_decode($chunk, true);
-		return is_array($decoded) ? $decoded : null;
-	};
-	$decoded = $decode($s);
-	if ($decoded !== null) {
+	$decoded = lf_ai_json_decode_lenient($s);
+	if ($decoded !== null && lf_ai_decoded_json_looks_like_assistant_payload($decoded)) {
 		return $decoded;
 	}
-	$start = strpos($s, '{');
-	if ($start !== false) {
-		$depth = 0;
-		$len = strlen($s);
-		$in_str = false;
-		$esc = false;
-		for ($i = $start; $i < $len; $i++) {
-			$ch = $s[ $i ];
-			if ($in_str) {
-				if ($esc) {
-					$esc = false;
-				} elseif ($ch === '\\') {
-					$esc = true;
-				} elseif ($ch === '"') {
-					$in_str = false;
-				}
-				continue;
-			}
-			if ($ch === '"') {
-				$in_str = true;
-				continue;
-			}
-			if ($ch === '{') {
-				$depth++;
-			} elseif ($ch === '}') {
-				$depth--;
-				if ($depth === 0) {
-					$slice = substr($s, $start, $i - $start + 1);
-					$decoded = $decode($slice);
-					if ($decoded !== null) {
-						return $decoded;
-					}
-					break;
-				}
-			}
+	if ($decoded !== null && $decoded !== []) {
+		return $decoded;
+	}
+	$candidates = [];
+	$pos = 0;
+	while (($pos = strpos($s, '{', $pos)) !== false) {
+		$frag = lf_ai_extract_balanced_json_fragment($s, $pos, '{', '}');
+		if ($frag !== null && strlen($frag) > 1) {
+			$candidates[] = $frag;
+		}
+		$pos++;
+	}
+	usort($candidates, static function (string $a, string $b): int {
+		return strlen($b) <=> strlen($a);
+	});
+	$best = null;
+	$best_score = -1;
+	foreach ($candidates as $frag) {
+		$try = lf_ai_json_decode_lenient($frag);
+		if ($try === null || $try === []) {
+			continue;
+		}
+		$score = lf_ai_decoded_json_looks_like_assistant_payload($try) ? 1000 + strlen($frag) : strlen($frag);
+		if ($score > $best_score) {
+			$best_score = $score;
+			$best = $try;
 		}
 	}
-	$start = strpos($s, '[');
-	if ($start !== false) {
-		$depth = 0;
-		$len = strlen($s);
-		$in_str = false;
-		$esc = false;
-		for ($i = $start; $i < $len; $i++) {
-			$ch = $s[ $i ];
-			if ($in_str) {
-				if ($esc) {
-					$esc = false;
-				} elseif ($ch === '\\') {
-					$esc = true;
-				} elseif ($ch === '"') {
-					$in_str = false;
-				}
-				continue;
-			}
-			if ($ch === '"') {
-				$in_str = true;
-				continue;
-			}
-			if ($ch === '[') {
-				$depth++;
-			} elseif ($ch === ']') {
-				$depth--;
-				if ($depth === 0) {
-					$slice = substr($s, $start, $i - $start + 1);
-					$decoded = $decode($slice);
-					if ($decoded !== null) {
-						return $decoded;
-					}
-					break;
-				}
+	if ($best !== null) {
+		return $best;
+	}
+	$pos = 0;
+	while (($pos = strpos($s, '[', $pos)) !== false) {
+		$frag = lf_ai_extract_balanced_json_fragment($s, $pos, '[', ']');
+		if ($frag !== null && strlen($frag) > 1) {
+			$try = lf_ai_json_decode_lenient($frag);
+			if ($try !== null && $try !== []) {
+				return $try;
 			}
 		}
+		$pos++;
 	}
 	return null;
 }
