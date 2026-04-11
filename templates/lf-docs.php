@@ -74,7 +74,7 @@ get_header();
 			</section>
 			<section id="manifester" class="lf-docs__section">
 				<h2><?php esc_html_e('Manifester', 'leadsforward-core'); ?></h2>
-				<p><?php esc_html_e('Open LeadsForward → Website Manifester. Airtable is the default way to load project data; pick a project, confirm scope, then generate. You can upload a manifest JSON instead if you do not use Airtable. For sites with no Airtable, use Manual setup (no Airtable) under LeadsForward.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('Open LeadsForward → Manifest Website. Airtable is the default way to load project data; pick a project, confirm scope, then generate. You can upload a manifest JSON instead if you do not use Airtable. For sites with no Airtable, use the Manual setup (no Airtable) button on that screen.', 'leadsforward-core'); ?></p>
 			</section>
 			<section id="troubleshooting" class="lf-docs__section">
 				<h2><?php esc_html_e('Troubleshooting', 'leadsforward-core'); ?></h2>

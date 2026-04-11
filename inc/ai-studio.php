@@ -58,6 +58,17 @@ function lf_ai_studio_fail_result(string $operation, string $error_message, arra
 const LF_AI_STUDIO_JOB_CPT = 'lf_ai_job';
 const LF_MANIFEST_SCHEMA_VERSION = '1.0';
 
+/**
+ * Admin URL for Manifest Website (see LF_MANIFEST_ADMIN_SLUG).
+ *
+ * @param array<string, scalar|null> $args Query arguments for add_query_arg().
+ */
+function lf_ai_studio_manifest_admin_url(array $args = []): string {
+	$slug = defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest';
+	$url = admin_url('admin.php?page=' . $slug);
+	return $args === [] ? $url : add_query_arg($args, $url);
+}
+
 add_action('init', 'lf_ai_studio_register_cpt');
 add_action('admin_post_lf_ai_studio_save', 'lf_ai_studio_handle_save');
 add_action('admin_post_lf_ai_studio_orchestrator_save', 'lf_ai_studio_handle_orchestrator_save');
@@ -132,7 +143,7 @@ function lf_ai_autonomy_set_enabled_from_request(bool $requested): string {
 		return '0';
 	}
 	if (!lf_ai_autonomy_can_enable()) {
-		update_option('lf_ai_autonomy_enable_error', 'Autonomous mode is not eligible yet. Run the Website Manifester successfully first.', false);
+		update_option('lf_ai_autonomy_enable_error', 'Autonomous mode is not eligible yet. Run Manifest Website successfully first.', false);
 		return '0';
 	}
 	update_option('lf_ai_autonomy_enabled_at', time(), false);
@@ -183,7 +194,8 @@ function lf_ai_studio_assets(string $hook): void {
 	if (!current_user_can('edit_theme_options')) {
 		return;
 	}
-	if (!in_array($hook, ['toplevel_page_lf-ops', 'leadsforward_page_lf-ops'], true)) {
+	$manifest_hook = 'leadsforward_page_' . (defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest');
+	if ($hook !== $manifest_hook) {
 		return;
 	}
 	wp_enqueue_media();
@@ -387,7 +399,7 @@ function lf_ai_studio_handle_save(): void {
 	if (!empty($review_map)) {
 		update_option('lf_ai_airtable_reviews_field_map', $review_map);
 	}
-	wp_safe_redirect(admin_url('admin.php?page=lf-ops&saved=1'));
+	wp_safe_redirect(lf_ai_studio_manifest_admin_url(['saved' => '1']));
 	exit;
 }
 
@@ -548,7 +560,7 @@ function lf_ai_studio_handle_scope_save(): void {
 	update_option('lf_ai_scope_service_area_slugs', $area_slugs, false);
 	lf_ai_studio_sync_legacy_blueprint_scope_from_gen_flags();
 
-	wp_safe_redirect(admin_url('admin.php?page=lf-ops&scope_saved=1'));
+	wp_safe_redirect(lf_ai_studio_manifest_admin_url(['scope_saved' => '1']));
 	exit;
 }
 
@@ -560,7 +572,7 @@ function lf_ai_studio_handle_image_settings_save(): void {
 	$image_generation_limit = isset($_POST['lf_ai_image_generation_limit']) ? absint($_POST['lf_ai_image_generation_limit']) : 12;
 	$image_generation_limit = max(1, min(60, $image_generation_limit));
 	update_option('lf_ai_image_generation_limit', (string) $image_generation_limit, false);
-	wp_safe_redirect(admin_url('admin.php?page=lf-ops&saved=1'));
+	wp_safe_redirect(lf_ai_studio_manifest_admin_url(['saved' => '1']));
 	exit;
 }
 
@@ -574,7 +586,7 @@ function lf_ai_studio_handle_generate(): void {
 	lf_ai_studio_maybe_cleanup_templates();
 	lf_ai_studio_error_log('Regenerate Site: handle_generate starting run_homepage_generation', 'INFO');
 	$result = lf_ai_studio_run_homepage_generation();
-	$redirect = admin_url('admin.php?page=lf-ops');
+	$redirect = lf_ai_studio_manifest_admin_url();
 	if (!empty($result['error'])) {
 		lf_ai_studio_error_log('Regenerate Site failed (redirect): ' . (string) $result['error'], 'ERROR');
 		$redirect = add_query_arg('error', rawurlencode($result['error']), $redirect);
@@ -596,18 +608,18 @@ function lf_ai_studio_handle_retry(): void {
 	$job_id = isset($_GET['job_id']) ? absint($_GET['job_id']) : 0;
 	if (!$job_id) {
 		lf_ai_studio_error_log('retry failed: missing_job', 'ERROR');
-		wp_safe_redirect(admin_url('admin.php?page=lf-ops&error=missing_job'));
+		wp_safe_redirect(lf_ai_studio_manifest_admin_url(['error' => 'missing_job']));
 		exit;
 	}
 	$request_payload = get_post_meta($job_id, 'lf_ai_job_request', true);
 	if (!is_array($request_payload)) {
 		lf_ai_studio_error_log('retry failed: missing_payload for job', 'ERROR', ['job_id' => $job_id]);
-		wp_safe_redirect(admin_url('admin.php?page=lf-ops&error=missing_payload'));
+		wp_safe_redirect(lf_ai_studio_manifest_admin_url(['error' => 'missing_payload']));
 		exit;
 	}
 	lf_ai_studio_error_log('retry: resending request', 'INFO', ['job_id' => $job_id]);
 	$result = lf_ai_studio_send_request($request_payload, $job_id);
-	$redirect = admin_url('admin.php?page=lf-ops');
+	$redirect = lf_ai_studio_manifest_admin_url();
 	if (!empty($result['error'])) {
 		lf_ai_studio_error_log('retry failed: ' . (string) $result['error'], 'ERROR', ['job_id' => $job_id]);
 		$redirect = add_query_arg('error', rawurlencode($result['error']), $redirect);
@@ -626,7 +638,7 @@ function lf_ai_studio_handle_manifest(): void {
 	}
 	check_admin_referer('lf_ai_studio_manifest', 'lf_ai_studio_manifest_nonce');
 	lf_ai_studio_maybe_cleanup_templates();
-	$redirect = admin_url('admin.php?page=lf-ops');
+	$redirect = lf_ai_studio_manifest_admin_url();
 	if (empty($_FILES['lf_site_manifest']) || !is_array($_FILES['lf_site_manifest'])) {
 		$msg = __('Manifest file is required.', 'leadsforward-core');
 		lf_ai_studio_log_user_messages('manifest', [$msg]);
@@ -766,7 +778,7 @@ function lf_ai_studio_handle_research(): void {
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_ai_studio_research', 'lf_ai_studio_research_nonce');
-	$redirect = admin_url('admin.php?page=lf-ops');
+	$redirect = lf_ai_studio_manifest_admin_url();
 	if (empty($_FILES['lf_site_research']) || !is_array($_FILES['lf_site_research'])) {
 		lf_ai_studio_log_user_messages('research', [__('Research file is required.', 'leadsforward-core')]);
 		update_option('lf_ai_studio_research_errors', [__('Research file is required.', 'leadsforward-core')], false);
@@ -818,7 +830,7 @@ function lf_ai_studio_handle_run_audit(): void {
 	lf_ai_studio_ensure_core_page_sections($manifest, true);
 	$report = lf_ai_studio_run_content_audit('manual');
 	lf_ai_studio_store_audit_report($report, 0);
-	$redirect = add_query_arg('audit', '1', admin_url('admin.php?page=lf-ops'));
+	$redirect = lf_ai_studio_manifest_admin_url(['audit' => '1']);
 	$has_issues = false;
 	foreach ((array) ($report['pages'] ?? []) as $page) {
 		if (!empty($page['issues'])) {
@@ -846,17 +858,17 @@ function lf_ai_studio_handle_regen_blog_posts(): void {
 		wp_die(__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_ai_studio_regen_blog_posts', 'lf_ai_studio_regen_blog_posts_nonce');
-	$enabled = get_option('lf_ai_studio_enabled', '0') === '1';
+	$enabled = get_option('lf_ai_studio_enabled', '1') === '1';
 	if (!$enabled) {
 		lf_ai_studio_error_log('regen_blog_posts: manifester disabled', 'ERROR');
-		wp_safe_redirect(add_query_arg('error', rawurlencode(__('Website Manifester is disabled.', 'leadsforward-core')), admin_url('admin.php?page=lf-ops')));
+		wp_safe_redirect(lf_ai_studio_manifest_admin_url(['error' => __('Manifest Website is disabled.', 'leadsforward-core')]));
 		exit;
 	}
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$secret = trim((string) get_option('lf_ai_studio_secret', ''));
 	if ($webhook === '' || $secret === '') {
 		lf_ai_studio_error_log('regen_blog_posts: missing webhook or secret', 'ERROR');
-		wp_safe_redirect(add_query_arg('error', rawurlencode(__('Webhook URL and shared secret are required.', 'leadsforward-core')), admin_url('admin.php?page=lf-ops')));
+		wp_safe_redirect(lf_ai_studio_manifest_admin_url(['error' => __('Webhook URL and shared secret are required.', 'leadsforward-core')]));
 		exit;
 	}
 	$request = lf_ai_studio_build_blog_payload();
@@ -864,18 +876,18 @@ function lf_ai_studio_handle_regen_blog_posts(): void {
 		$message = is_array($request) ? (string) ($request['error'] ?? '') : '';
 		$message = $message !== '' ? $message : __('Blog payload build failed.', 'leadsforward-core');
 		lf_ai_studio_error_log('regen_blog_posts failed: ' . $message, 'ERROR');
-		wp_safe_redirect(add_query_arg('error', rawurlencode($message), admin_url('admin.php?page=lf-ops')));
+		wp_safe_redirect(lf_ai_studio_manifest_admin_url(['error' => $message]));
 		exit;
 	}
 	$job_id = lf_ai_studio_create_job($request);
 	if (!$job_id) {
 		lf_ai_studio_error_log('regen_blog_posts: create_job failed', 'ERROR');
-		wp_safe_redirect(add_query_arg('error', rawurlencode(__('Could not create generation job.', 'leadsforward-core')), admin_url('admin.php?page=lf-ops')));
+		wp_safe_redirect(lf_ai_studio_manifest_admin_url(['error' => __('Could not create generation job.', 'leadsforward-core')]));
 		exit;
 	}
 	lf_ai_studio_error_log('regen_blog_posts: job queued', 'INFO', ['job_id' => $job_id]);
 	lf_ai_studio_send_request($request, $job_id);
-	$redirect = add_query_arg('job', (string) $job_id, admin_url('admin.php?page=lf-ops'));
+	$redirect = lf_ai_studio_manifest_admin_url(['job' => (string) $job_id]);
 	wp_safe_redirect($redirect);
 	exit;
 }
@@ -910,7 +922,7 @@ function lf_ai_studio_handle_save_logo(): void {
 	if ($logo_id > 0 && function_exists('wp_attachment_is_image') && wp_attachment_is_image($logo_id)) {
 		update_option('site_icon', $logo_id, false);
 	}
-	$redirect = add_query_arg('logo', '1', admin_url('admin.php?page=lf-ops'));
+	$redirect = lf_ai_studio_manifest_admin_url(['logo' => '1']);
 	wp_safe_redirect($redirect);
 	exit;
 }
@@ -1102,7 +1114,7 @@ function lf_ai_studio_handle_images_upload(): void {
 	check_admin_referer('lf_ai_studio_images_upload', 'lf_ai_studio_images_upload_nonce');
 	if (empty($_FILES['lf_manifest_images']) || !is_array($_FILES['lf_manifest_images'])) {
 		lf_ai_studio_error_log('images_upload: no files submitted', 'ERROR');
-		wp_safe_redirect(add_query_arg('images_error', 'missing', admin_url('admin.php?page=lf-ops')));
+		wp_safe_redirect(lf_ai_studio_manifest_admin_url(['images_error' => 'missing']));
 		exit;
 	}
 	$result = lf_ai_studio_process_images_upload($_FILES['lf_manifest_images']);
@@ -1110,7 +1122,7 @@ function lf_ai_studio_handle_images_upload(): void {
 	if ($user_id > 0) {
 		update_user_meta($user_id, 'lf_ai_studio_recent_uploads', $result['uploaded']);
 	}
-	$redirect = add_query_arg('images_uploaded', (string) $result['uploaded_count'], admin_url('admin.php?page=lf-ops'));
+	$redirect = lf_ai_studio_manifest_admin_url(['images_uploaded' => (string) $result['uploaded_count']]);
 	if ($result['error_count'] > 0) {
 		lf_ai_studio_log_user_messages('images_upload partial failures', $result['errors'] ?? []);
 		$redirect = add_query_arg('images_errors', (string) $result['error_count'], $redirect);
@@ -1300,7 +1312,7 @@ function lf_ai_studio_render_page(): void {
 	$manual_setup_url = admin_url('admin.php?page=lf-setup');
 	?>
 	<div class="wrap">
-		<h1 class="lf-manifester-page-title"><?php esc_html_e('Website Manifester', 'leadsforward-core'); ?></h1>
+		<h1 class="lf-manifester-page-title"><?php esc_html_e('Manifest Website', 'leadsforward-core'); ?></h1>
 		<p class="lf-manifester-lead description"><?php esc_html_e('Load your project from Airtable, generate content with your orchestrator, and publish a full local site from one place.', 'leadsforward-core'); ?></p>
 
 		<div class="lf-manifester-hero">
@@ -1532,7 +1544,7 @@ function lf_ai_studio_render_page(): void {
 											<p style="margin:0.5em 0 0;"><strong><?php esc_html_e('Heads up:', 'leadsforward-core'); ?></strong> <?php echo esc_html(sprintf(__('Your manifest lists %d services, but “Service pages” is unchecked — no service blueprints will be sent.', 'leadsforward-core'), (int) $scope_snap['services_in_manifest'])); ?></p>
 										<?php endif; ?>
 									</div>
-									<p class="description" style="margin-top:8px;"><?php esc_html_e('Unchecked boxes exclude those targets from the orchestrator payload. The Website Manifester and Airtable generate button use these checkboxes (not the manifest’s generation_scope string). Click Save Scope after changing.', 'leadsforward-core'); ?></p>
+									<p class="description" style="margin-top:8px;"><?php esc_html_e('Unchecked boxes exclude those targets from the orchestrator payload. Manifest Website and the Airtable generate button use these checkboxes (not the manifest’s generation_scope string). Click Save Scope after changing.', 'leadsforward-core'); ?></p>
 									<p class="description" style="margin-top:4px;"><?php esc_html_e('Selecting every target is recommended: one job keeps internal links, keywords, and tone consistent. AI blog posts adds five article blueprints—three publish immediately and two are scheduled weekly; your n8n workflow must still generate body content via the normal callback.', 'leadsforward-core'); ?></p>
 								</form>
 								<?php if (!$airtable_ready) : ?>
@@ -2032,11 +2044,11 @@ function lf_ai_studio_render_page(): void {
 }
 
 function lf_ai_studio_run_generation(): array {
-	$enabled = get_option('lf_ai_studio_enabled', '0') === '1';
+	$enabled = get_option('lf_ai_studio_enabled', '1') === '1';
 	$webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$secret = trim((string) get_option('lf_ai_studio_secret', ''));
 	if (!$enabled) {
-		return lf_ai_studio_fail_result('run_generation', __('Website Manifester is disabled.', 'leadsforward-core'));
+		return lf_ai_studio_fail_result('run_generation', __('Manifest Website is disabled.', 'leadsforward-core'));
 	}
 	if ($webhook === '' || $secret === '') {
 		return lf_ai_studio_fail_result('run_generation', __('Webhook URL and shared secret are required.', 'leadsforward-core'));

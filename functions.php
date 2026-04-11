@@ -18,6 +18,8 @@ if (!defined('ABSPATH')) {
 define('LF_THEME_VERSION', '0.1.1');
 define('LF_THEME_DIR', get_template_directory());
 define('LF_THEME_URI', get_template_directory_uri());
+/** Admin page slug for LeadsForward → Manifest Website (orchestrator UI). */
+define('LF_MANIFEST_ADMIN_SLUG', 'lf-manifest');
 
 /**
  * Load a single inc file by relative path from inc/.
@@ -73,7 +75,6 @@ lf_load_inc('cpt/projects.php');
 lf_load_inc('cpt/testimonials.php');
 lf_load_inc('cpt/faqs.php');
 lf_load_inc('cpt/process-steps.php');
-lf_load_inc('cpt/feedback.php');
 
 // ACF options + field groups (load only when ACF present; guardrails handle fallback).
 lf_load_inc('acf/options-business.php');
@@ -103,7 +104,6 @@ lf_load_inc('global-settings.php');
 lf_load_inc('site-tools.php');
 lf_load_inc('quote-builder.php');
 lf_load_inc('contact-form.php');
-lf_load_inc('user-testing.php');
 lf_load_inc('sections.php');
 lf_load_inc('page-builder.php');
 

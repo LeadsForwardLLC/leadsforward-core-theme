@@ -19,8 +19,6 @@ Use this page as the starting point for architecture, operations, and troublesho
 ## Theme CPTs (quick reference)
 - **`lf_faq`** — FAQ accordion selections (`faq_selected_ids`).
 - **`lf_process_step`** — reusable process steps; homepage/Page Builder process section can reference IDs in `process_selected_ids` (see `inc/sections.php` and `04_SECTION_SCHEMA.md`).
-- **`lf_feedback`** — internal user-testing feedback log (LeadsForward → User testing).
-
 The in-dashboard **LeadsForward → Theme Docs** playbook is the most up-to-date operator guide for admin URLs and workflows; repo markdown here is for developers and orchestration.
 
 ## Image Intelligence

@@ -77,14 +77,14 @@ function lf_health_check_wizard_complete(): array {
 		return [
 			'status' => lf_health_status_warning(),
 			'label' => __('Initial setup', 'leadsforward-core'),
-			'message' => __('The manual setup wizard is not marked complete, but core pages from the checklist exist. Open Manual setup to confirm or finish the flow. If you use Airtable, Website Manifester may have created pages without running the wizard.', 'leadsforward-core'),
+			'message' => __('The manual setup wizard is not marked complete, but core pages from the checklist exist. Open Manual setup to confirm or finish the flow. If you use Airtable, Manifest Website may have created pages without running the wizard.', 'leadsforward-core'),
 			'fix_link' => $fix,
 		];
 	}
 	return [
 		'status' => lf_health_status_fail(),
 		'label' => __('Initial setup', 'leadsforward-core'),
-		'message' => __('Core pages are missing or the manual setup wizard was not completed. Use Website Manifester (Airtable recommended) or Manual setup (no Airtable).', 'leadsforward-core'),
+		'message' => __('Core pages are missing or the manual setup wizard was not completed. Use Manifest Website (Airtable recommended) or Manual setup (no Airtable).', 'leadsforward-core'),
 		'fix_link' => $fix,
 	];
 }
@@ -374,14 +374,14 @@ function lf_health_check_header_analytics(): array {
 }
 
 function lf_health_check_manifester_config(): array {
-	$enabled = get_option('lf_ai_studio_enabled', '0') === '1';
+	$enabled = get_option('lf_ai_studio_enabled', '1') === '1';
 	$webhook = trim((string) get_option('lf_ai_studio_webhook', ''));
 	$secret = trim((string) get_option('lf_ai_studio_secret', ''));
 	$fix = admin_url('admin.php?page=lf-global');
 	if (!$enabled) {
 		return [
 			'status' => lf_health_status_warning(),
-			'label' => __('Website Manifester (AI)', 'leadsforward-core'),
+			'label' => __('Manifest Website (AI)', 'leadsforward-core'),
 			'message' => __('Manifester is disabled. Turn it on in Global Settings when you use orchestrated generation.', 'leadsforward-core'),
 			'fix_link' => $fix,
 		];
@@ -389,14 +389,14 @@ function lf_health_check_manifester_config(): array {
 	if ($webhook === '' || $secret === '') {
 		return [
 			'status' => lf_health_status_fail(),
-			'label' => __('Website Manifester (AI)', 'leadsforward-core'),
+			'label' => __('Manifest Website (AI)', 'leadsforward-core'),
 			'message' => __('Webhook URL or shared secret is missing; queued generation will fail.', 'leadsforward-core'),
 			'fix_link' => $fix,
 		];
 	}
 	return [
 		'status' => lf_health_status_pass(),
-		'label' => __('Website Manifester (AI)', 'leadsforward-core'),
+		'label' => __('Manifest Website (AI)', 'leadsforward-core'),
 		'message' => __('Webhook and secret are configured.', 'leadsforward-core'),
 		'fix_link' => '',
 	];

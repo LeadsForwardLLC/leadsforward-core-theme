@@ -20,8 +20,8 @@ add_action('admin_post_lf_seo_export_keyword_map', 'lf_seo_handle_export_keyword
 function lf_seo_register_menu(): void {
 	add_submenu_page(
 		'lf-ops',
-		__('SEO & Site Health', 'leadsforward-core'),
-		__('SEO & Site Health', 'leadsforward-core'),
+		__('SEO & Performance', 'leadsforward-core'),
+		__('SEO & Performance', 'leadsforward-core'),
 		'edit_theme_options',
 		'lf-seo',
 		'lf_seo_render_settings_page'
@@ -260,7 +260,7 @@ function lf_seo_render_settings_page(): void {
 	$base = admin_url('admin.php?page=lf-seo');
 	?>
 	<div class="wrap">
-		<h1><?php esc_html_e('SEO & Site Health', 'leadsforward-core'); ?></h1>
+		<h1><?php esc_html_e('SEO & Performance', 'leadsforward-core'); ?></h1>
 		<h2 class="nav-tab-wrapper" style="margin-bottom:1rem;">
 			<a href="<?php echo esc_url(add_query_arg('tab', 'settings', $base)); ?>" class="nav-tab<?php echo $tab === 'settings' ? ' nav-tab-active' : ''; ?>"><?php esc_html_e('SEO settings', 'leadsforward-core'); ?></a>
 			<a href="<?php echo esc_url(add_query_arg('tab', 'keywords', $base)); ?>" class="nav-tab<?php echo $tab === 'keywords' ? ' nav-tab-active' : ''; ?>"><?php esc_html_e('Keywords', 'leadsforward-core'); ?></a>
