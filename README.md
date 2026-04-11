@@ -1,6 +1,6 @@
 # LeadsForward Core Theme
 
-Ultra-lightweight, SEO-first WordPress theme for local lead-gen sites. Built to scale across thousands of sites. No page builder; infrastructure and conversion-focused homepage only.
+Ultra-lightweight, SEO-first WordPress theme for local lead-gen sites. Built to scale across thousands of sites. Uses a **theme-native Page Builder** (Section Library + shared section registry) alongside the block editor where each post type needs it—not a third-party page builder plugin.
 
 - **Version:** 0.1.0  
 - **Text domain:** `leadsforward-core`  
@@ -26,7 +26,7 @@ LeadsForward Core provides:
 - **Project Gallery:** Projects CPT with before/after toggles, archive filters, and single templates
 - **Legal pages:** Fixed Privacy Policy + Terms templates with dynamic business info
 - **Duplicate:** One-click duplicate action for any post type in admin lists
-- **AI Assistant (bounded):** Safe edit mode plus draft creation modes (single and batch for Pages/CPT/Blog), with optional uploaded document context (text/docx) and rollback support for recent created drafts
+- **AI Assistant (bounded):** Safe edit mode plus draft creation modes (single and batch for Pages/CPT/Blog). New drafts for Page Builder post types save copy into **`page_builder` section slots** (not the main editor). Optional document context (text/docx), rollback for recent actions, and **Edit with AI** meta box on posts
 - **AI Studio:** Orchestrator-driven site content generation plus post-gen QA audit + one-pass auto-repair, with hourly Airtable review sync
 - **Server-rendered blocks:** Hero, Trust/Reviews, CTA, FAQ Accordion, Map+NAP
 - **SEO engine:** Global SEO settings, per-page meta, canonical/noindex/robots, OG/Twitter, XML sitemap, keyword assignment, JSON-LD, script injections
@@ -50,6 +50,8 @@ Core system documentation (read in order):
 - `docs/05_THEME_INTEGRATION.md`
 - `docs/06_AI_PROMPT_ENGINE.md`
 - `docs/07_ICON_SYSTEM.md`
+- `docs/08_FRONTEND_EDITOR.md`
+- `docs/09_PAGE_BUILDER_MAPS_NAV_AI.md` — Page Builder storage, map embed vs Maps API, header menu assist, AI creation `page_builder` contract
 
 ---
 
