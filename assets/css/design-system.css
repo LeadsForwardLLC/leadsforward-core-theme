@@ -220,6 +220,8 @@
 /* Homepage: premium heading font + tight tracking */
 .site-main--homepage .lf-block-hero__title,
 .site-main--homepage .lf-block-service-grid__title,
+.site-main--homepage .lf-block-packages__title,
+.site-main--homepage .lf-block-pricing__title,
 .site-main--homepage .lf-block-service-areas__title,
 .site-main--homepage .lf-block-trust-reviews__title,
 .site-main--homepage .lf-block-faq-accordion__title,
@@ -232,6 +234,8 @@
 .site-main .lf-section__title,
 .site-main .lf-block-hero__title,
 .site-main .lf-block-service-grid__title,
+.site-main .lf-block-packages__title,
+.site-main .lf-block-pricing__title,
 .site-main .lf-block-service-areas__title,
 .site-main .lf-block-trust-reviews__title,
 .site-main .lf-block-faq-accordion__title,
@@ -384,6 +388,8 @@ button:focus-visible,
 
 .lf-block-hero__inner,
 .lf-block-service-grid__inner,
+.lf-block-packages__inner,
+.lf-block-pricing__inner,
 .lf-block-service-intro__inner,
 .lf-block-service-areas__inner,
 .lf-block-trust-reviews__inner,
@@ -1308,23 +1314,35 @@ button:focus-visible,
 
 .lf-process {
 	list-style: none;
-	margin: 0;
+	margin: 0 auto;
 	padding: 0;
 	display: grid;
-	gap: 0.75rem;
+	gap: 1rem;
 	counter-reset: lf-process;
+	max-width: 44rem;
+}
+
+.lf-section--process .lf-process {
+	margin-top: 0.25rem;
 }
 
 .lf-process__step {
 	counter-increment: lf-process;
-	background: var(--lf-surface-white);
+	background: var(--lf-card-bg);
 	border: var(--lf-card-border);
-	border-radius: var(--lf-card-radius);
-	padding: 0.85rem 1rem;
-	box-shadow: var(--lf-card-shadow);
+	border-radius: calc(var(--lf-card-radius) + 0.1rem);
+	padding: 1.1rem 1.25rem 1.1rem 1.15rem;
+	box-shadow: 0 6px 18px rgba(15, 23, 42, 0.07);
 	display: flex;
 	align-items: flex-start;
-	gap: 0.5rem;
+	gap: 1rem;
+	transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.lf-process__step:hover {
+	box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+	border-color: rgba(37, 99, 235, 0.2);
+	transform: translateY(-1px);
 }
 
 .lf-process--icon .lf-process__step::before {
@@ -1332,7 +1350,7 @@ button:focus-visible,
 }
 
 .lf-process--icon .lf-process__step {
-	padding-left: 1rem;
+	padding-left: 1.25rem;
 }
 
 .lf-process__icon {
@@ -1345,11 +1363,21 @@ button:focus-visible,
 
 .lf-process__step::before {
 	content: counter(lf-process, decimal-leading-zero);
-	display: inline-block;
-	min-width: 2rem;
-	color: var(--lf-accent);
-	font-weight: var(--lf-fw-semibold);
-	margin-right: 0.5rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	min-width: 2.65rem;
+	height: 2.65rem;
+	margin-top: 0.05rem;
+	border-radius: 50%;
+	font-size: 0.82rem;
+	font-weight: 800;
+	letter-spacing: 0.02em;
+	color: var(--lf-primary);
+	background: linear-gradient(145deg, rgba(37, 99, 235, 0.14), rgba(37, 99, 235, 0.06));
+	border: 1px solid rgba(37, 99, 235, 0.22);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .lf-process__step-main {
@@ -1393,14 +1421,50 @@ button:focus-visible,
 }
 
 .lf-process__expectations {
-	margin: 1.25rem 0 0;
-	padding: 0.6rem 0.9rem;
-	border-radius: 0.65rem;
+	margin: 1.5rem auto 0;
+	padding: 1rem 1.2rem;
+	border-radius: var(--lf-card-radius);
 	background: var(--lf-surface-soft);
-	border: 1px solid rgba(15,23,42,0.08);
+	border: 1px solid rgba(15, 23, 42, 0.08);
 	color: var(--lf-text-primary);
 	font-weight: 400;
-	max-width: 100%;
+	font-size: 0.98rem;
+	line-height: 1.55;
+	max-width: 44rem;
+	box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.lf-section--process.lf-surface-dark .lf-process__step,
+.lf-section--process.lf-surface-black .lf-process__step {
+	background: rgba(255, 255, 255, 0.05);
+	border-color: rgba(255, 255, 255, 0.12);
+	box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+.lf-section--process.lf-surface-dark .lf-process__step::before,
+.lf-section--process.lf-surface-black .lf-process__step::before {
+	background: linear-gradient(145deg, rgba(96, 165, 250, 0.2), rgba(59, 130, 246, 0.08));
+	border-color: rgba(147, 197, 253, 0.35);
+	color: #e2e8f0;
+}
+
+.lf-section--process.lf-surface-dark .lf-process__step-heading,
+.lf-section--process.lf-surface-black .lf-process__step-heading {
+	color: var(--lf-text-inverse);
+}
+
+.lf-section--process.lf-surface-dark .lf-process__step-body,
+.lf-section--process.lf-surface-black .lf-process__step-body,
+.lf-section--process.lf-surface-dark .lf-process__text,
+.lf-section--process.lf-surface-black .lf-process__text {
+	color: rgba(248, 250, 252, 0.88);
+}
+
+.lf-section--process.lf-surface-dark .lf-process__expectations,
+.lf-section--process.lf-surface-black .lf-process__expectations {
+	background: rgba(255, 255, 255, 0.06);
+	border-color: rgba(255, 255, 255, 0.1);
+	color: rgba(248, 250, 252, 0.92);
 }
 
 .lf-related-links {
@@ -3597,6 +3661,399 @@ button:focus-visible,
 }
 
 /* -------------------------------------------------------------------------
+   Block: Packages / Comparison — tier cards aligned with benefits + services
+   ------------------------------------------------------------------------- */
+.lf-block-packages.lf-surface-light {
+	background: var(--lf-surface-light);
+}
+
+.lf-block-packages__inner {
+	padding: var(--lf-section-padding-lg) var(--lf-section-padding-x);
+	max-width: var(--lf-container-wide);
+	margin-left: auto;
+	margin-right: auto;
+	box-sizing: border-box;
+	width: 100%;
+}
+
+.lf-block-packages__header {
+	margin-bottom: 2.25rem;
+	max-width: 40rem;
+}
+
+.lf-block-packages__header.lf-section__header--align-left {
+	margin-left: 0;
+	margin-right: auto;
+	text-align: left;
+}
+
+.lf-block-packages__header.lf-section__header--align-center {
+	margin-left: auto;
+	margin-right: auto;
+	text-align: center;
+}
+
+.lf-block-packages__header.lf-section__header--align-right {
+	margin-left: auto;
+	margin-right: 0;
+	text-align: right;
+}
+
+.lf-block-packages__title {
+	margin: 0 0 0.75rem;
+	font-size: clamp(1.85rem, 4vw, 2.25rem);
+	font-weight: 800;
+	line-height: 1.15;
+	letter-spacing: -0.03em;
+	color: var(--lf-text-primary);
+}
+
+.lf-block-packages__intro {
+	margin: 0;
+	font-size: 1.125rem;
+	line-height: 1.6;
+	color: var(--lf-text-muted);
+}
+
+.lf-block-packages__grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: var(--lf-space-section);
+	align-items: stretch;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+@media (min-width: 48rem) {
+	.lf-block-packages__grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (min-width: 64rem) {
+	.lf-block-packages__grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 1.5rem;
+	}
+}
+
+.lf-block-packages__card {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0.65rem;
+	padding: var(--lf-card-padding-lg);
+	background: var(--lf-card-bg);
+	border: var(--lf-card-border);
+	border-radius: var(--lf-card-radius);
+	box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+	transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+	text-align: left;
+	overflow: hidden;
+}
+
+.lf-block-packages__card::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 4px;
+	background: linear-gradient(90deg, var(--lf-primary), var(--lf-secondary, #0ea5e9));
+	opacity: 0.35;
+	pointer-events: none;
+}
+
+.lf-block-packages__card:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+	border-color: rgba(37, 99, 235, 0.22);
+}
+
+.lf-block-packages__card.is-highlight {
+	border-color: rgba(37, 99, 235, 0.45);
+	box-shadow: 0 10px 32px rgba(37, 99, 235, 0.18);
+}
+
+.lf-block-packages__card.is-highlight::before {
+	opacity: 1;
+	height: 5px;
+}
+
+.lf-block-packages__badge {
+	align-self: flex-start;
+	display: inline-flex;
+	align-items: center;
+	padding: 0.2rem 0.65rem;
+	border-radius: var(--lf-pill-radius);
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	background: var(--lf-pill-accent-bg);
+	border: var(--lf-pill-accent-border);
+	color: var(--lf-pill-accent-color);
+	margin-bottom: 0.15rem;
+}
+
+.lf-block-packages__name {
+	margin: 0;
+	font-size: 1.2rem;
+	font-weight: 700;
+	line-height: 1.25;
+	color: var(--lf-text-primary);
+}
+
+.lf-block-packages__bestfor {
+	margin: 0;
+	font-size: 0.92rem;
+	line-height: 1.5;
+	color: var(--lf-text-muted);
+}
+
+.lf-block-packages__bullets {
+	list-style: none;
+	margin: 0.35rem 0 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.lf-block-packages__bullet {
+	position: relative;
+	margin: 0;
+	padding-left: 1.35rem;
+	font-size: 0.94rem;
+	line-height: 1.5;
+	color: var(--lf-text-muted);
+}
+
+.lf-block-packages__bullet::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0.55em;
+	width: 0.4rem;
+	height: 0.4rem;
+	border-radius: 50%;
+	background: var(--lf-primary);
+	box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
+.lf-block-packages.lf-surface-dark .lf-block-packages__title,
+.lf-block-packages.lf-surface-black .lf-block-packages__title,
+.lf-block-packages.lf-surface-dark .lf-block-packages__name,
+.lf-block-packages.lf-surface-black .lf-block-packages__name {
+	color: var(--lf-text-inverse);
+}
+
+.lf-block-packages.lf-surface-dark .lf-block-packages__intro,
+.lf-block-packages.lf-surface-dark .lf-block-packages__bestfor,
+.lf-block-packages.lf-surface-dark .lf-block-packages__bullet,
+.lf-block-packages.lf-surface-black .lf-block-packages__intro,
+.lf-block-packages.lf-surface-black .lf-block-packages__bestfor,
+.lf-block-packages.lf-surface-black .lf-block-packages__bullet {
+	color: rgba(248, 250, 252, 0.88);
+}
+
+.lf-block-packages.lf-surface-dark .lf-block-packages__card,
+.lf-block-packages.lf-surface-black .lf-block-packages__card {
+	background: rgba(255, 255, 255, 0.05);
+	border-color: rgba(255, 255, 255, 0.12);
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.lf-block-packages.lf-surface-dark .lf-block-packages__card:hover,
+.lf-block-packages.lf-surface-black .lf-block-packages__card:hover {
+	border-color: rgba(96, 165, 250, 0.45);
+}
+
+/* -------------------------------------------------------------------------
+   Block: Pricing & financing — factors list + financing callout
+   ------------------------------------------------------------------------- */
+.lf-block-pricing.lf-surface-light {
+	background: var(--lf-surface-light);
+}
+
+.lf-block-pricing__inner {
+	padding: var(--lf-section-padding-lg) var(--lf-section-padding-x);
+	max-width: var(--lf-container-wide);
+	margin-left: auto;
+	margin-right: auto;
+	box-sizing: border-box;
+	width: 100%;
+}
+
+.lf-block-pricing__header {
+	margin-bottom: 2rem;
+	max-width: 40rem;
+}
+
+.lf-block-pricing__header.lf-section__header--align-left {
+	margin-left: 0;
+	margin-right: auto;
+	text-align: left;
+}
+
+.lf-block-pricing__header.lf-section__header--align-center {
+	margin-left: auto;
+	margin-right: auto;
+	text-align: center;
+}
+
+.lf-block-pricing__header.lf-section__header--align-right {
+	margin-left: auto;
+	margin-right: 0;
+	text-align: right;
+}
+
+.lf-block-pricing__title {
+	margin: 0 0 0.75rem;
+	font-size: clamp(1.85rem, 4vw, 2.25rem);
+	font-weight: 800;
+	line-height: 1.15;
+	letter-spacing: -0.03em;
+	color: var(--lf-text-primary);
+}
+
+.lf-block-pricing__intro {
+	margin: 0;
+	font-size: 1.125rem;
+	line-height: 1.6;
+	color: var(--lf-text-muted);
+}
+
+.lf-block-pricing__factors {
+	list-style: none;
+	margin: 0 auto var(--lf-space-section);
+	padding: var(--lf-card-padding-lg);
+	max-width: 42rem;
+	background: var(--lf-card-bg);
+	border: var(--lf-card-border);
+	border-radius: var(--lf-card-radius);
+	box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+	display: grid;
+	gap: 0.75rem;
+	box-sizing: border-box;
+}
+
+.lf-block-pricing__inner:has(.lf-section__header--align-left) .lf-block-pricing__factors {
+	margin-left: 0;
+	margin-right: auto;
+}
+
+.lf-block-pricing__inner:has(.lf-section__header--align-right) .lf-block-pricing__factors {
+	margin-left: auto;
+	margin-right: 0;
+}
+
+.lf-block-pricing__factor {
+	position: relative;
+	margin: 0;
+	padding-left: 1.65rem;
+	font-size: 1.02rem;
+	line-height: 1.5;
+	color: var(--lf-text-primary);
+}
+
+.lf-block-pricing__factor::before {
+	content: "\2713";
+	position: absolute;
+	left: 0;
+	top: 0.1em;
+	font-size: 0.95rem;
+	font-weight: 800;
+	color: var(--lf-primary);
+	line-height: 1;
+}
+
+.lf-block-pricing__financing {
+	margin: 0 auto var(--lf-space-section);
+	padding: 1.2rem 1.4rem;
+	max-width: 42rem;
+	border-radius: var(--lf-card-radius);
+	background: linear-gradient(125deg, rgba(37, 99, 235, 0.09) 0%, rgba(14, 165, 233, 0.07) 50%, rgba(249, 115, 22, 0.06) 100%);
+	border: 1px solid rgba(37, 99, 235, 0.2);
+	box-shadow: 0 4px 18px rgba(37, 99, 235, 0.08);
+	box-sizing: border-box;
+}
+
+.lf-block-pricing__inner:has(.lf-section__header--align-left) .lf-block-pricing__financing {
+	margin-left: 0;
+	margin-right: auto;
+}
+
+.lf-block-pricing__inner:has(.lf-section__header--align-right) .lf-block-pricing__financing {
+	margin-left: auto;
+	margin-right: 0;
+}
+
+.lf-block-pricing__financing-label {
+	display: block;
+	margin: 0 0 0.4rem;
+	font-size: 0.8rem;
+	font-weight: 800;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--lf-primary);
+}
+
+.lf-block-pricing__financing-text {
+	margin: 0;
+	font-size: 1rem;
+	line-height: 1.55;
+	color: var(--lf-text-primary);
+}
+
+.lf-block-pricing__actions {
+	display: flex;
+	justify-content: center;
+	flex-wrap: wrap;
+	gap: 0.85rem;
+	margin-top: 0.25rem;
+}
+
+.lf-block-pricing__inner:has(.lf-section__header--align-left) .lf-block-pricing__actions {
+	justify-content: flex-start;
+}
+
+.lf-block-pricing__inner:has(.lf-section__header--align-right) .lf-block-pricing__actions {
+	justify-content: flex-end;
+}
+
+.lf-block-pricing.lf-surface-dark .lf-block-pricing__title,
+.lf-block-pricing.lf-surface-black .lf-block-pricing__title {
+	color: var(--lf-text-inverse);
+}
+
+.lf-block-pricing.lf-surface-dark .lf-block-pricing__intro,
+.lf-block-pricing.lf-surface-black .lf-block-pricing__intro {
+	color: rgba(248, 250, 252, 0.88);
+}
+
+.lf-block-pricing.lf-surface-dark .lf-block-pricing__factors,
+.lf-block-pricing.lf-surface-black .lf-block-pricing__factors {
+	background: rgba(255, 255, 255, 0.05);
+	border-color: rgba(255, 255, 255, 0.12);
+}
+
+.lf-block-pricing.lf-surface-dark .lf-block-pricing__factor,
+.lf-block-pricing.lf-surface-black .lf-block-pricing__factor,
+.lf-block-pricing.lf-surface-dark .lf-block-pricing__financing-text,
+.lf-block-pricing.lf-surface-black .lf-block-pricing__financing-text {
+	color: rgba(248, 250, 252, 0.95);
+}
+
+.lf-block-pricing.lf-surface-dark .lf-block-pricing__financing,
+.lf-block-pricing.lf-surface-black .lf-block-pricing__financing {
+	background: linear-gradient(125deg, rgba(59, 130, 246, 0.15), rgba(14, 165, 233, 0.1));
+	border-color: rgba(147, 197, 253, 0.25);
+}
+
+/* -------------------------------------------------------------------------
    Block: Service Intro Boxes — hero-adjacent service overview
    ------------------------------------------------------------------------- */
 .lf-block-service-intro__inner {
@@ -5743,6 +6200,8 @@ html {
 	/* Section inners: consistent horizontal padding */
 	.lf-block-hero__inner,
 	.lf-block-service-grid__inner,
+	.lf-block-packages__inner,
+	.lf-block-pricing__inner,
 	.lf-block-service-areas__inner,
 	.lf-block-trust-reviews__inner,
 	.lf-block-faq-accordion__inner,
