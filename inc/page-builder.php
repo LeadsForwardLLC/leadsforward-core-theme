@@ -1201,6 +1201,10 @@ function lf_ai_assistant_apply_creation_page_builder(int $post_id, string $post_
 	if ($post_id === 0 || !is_array($page_builder)) {
 		return false;
 	}
+	if (function_exists('lf_ai_creation_interpolate_recursive')) {
+		$interp = lf_ai_creation_interpolate_recursive($page_builder);
+		$page_builder = is_array($interp) ? $interp : $page_builder;
+	}
 	$context = lf_ai_pb_context_from_post_type($post_type);
 	if ($context === '' || !function_exists('lf_pb_default_config') || !function_exists('lf_sections_sanitize_settings')) {
 		return false;
@@ -1235,6 +1239,49 @@ function lf_ai_assistant_apply_creation_page_builder(int $post_id, string $post_
 		}
 		$base = is_array($row['settings'] ?? null) ? $row['settings'] : [];
 		$sections[ $instance_id ]['settings'] = lf_sections_sanitize_settings($t, array_merge($base, $patch));
+		$changed = true;
+	}
+	if (!$changed) {
+		return false;
+	}
+	update_post_meta($post_id, LF_PB_META_KEY, ['order' => $order, 'sections' => $sections]);
+	return true;
+}
+
+/**
+ * New lf_service drafts: drop inline process_steps so the theme uses Process Step CPT + lf_process_group.
+ */
+function lf_pb_service_use_cpt_process_steps(int $post_id): bool {
+	$post_id = max(0, $post_id);
+	if ($post_id === 0) {
+		return false;
+	}
+	$post = get_post($post_id);
+	if (!$post instanceof \WP_Post || $post->post_type !== 'lf_service') {
+		return false;
+	}
+	$raw = get_post_meta($post_id, LF_PB_META_KEY, true);
+	if (!is_array($raw)) {
+		return false;
+	}
+	$order = is_array($raw['order'] ?? null) ? $raw['order'] : [];
+	$sections = is_array($raw['sections'] ?? null) ? $raw['sections'] : [];
+	if ($order === [] || $sections === []) {
+		return false;
+	}
+	$changed = false;
+	foreach ($order as $instance_id) {
+		$row = $sections[ $instance_id ] ?? null;
+		if (!is_array($row) || ($row['type'] ?? '') !== 'process') {
+			continue;
+		}
+		$base = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+		$base['process_steps'] = '';
+		$base['process_selected_ids'] = '';
+		if (!function_exists('lf_sections_sanitize_settings')) {
+			continue;
+		}
+		$sections[ $instance_id ]['settings'] = lf_sections_sanitize_settings('process', $base);
 		$changed = true;
 	}
 	if (!$changed) {

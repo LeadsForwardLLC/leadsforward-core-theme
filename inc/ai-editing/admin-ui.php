@@ -433,6 +433,52 @@ function lf_ai_assistant_parse_secondary_keywords($value): array {
 	return array_slice($list, 0, 8);
 }
 
+/**
+ * Replace common model placeholders with the real business display name from global settings.
+ */
+function lf_ai_interpolate_creation_string(string $text): string {
+	if ($text === '' || !function_exists('lf_business_entity_get')) {
+		return $text;
+	}
+	$entity = lf_business_entity_get();
+	$name = trim((string) ($entity['name'] ?? ''));
+	if ($name === '') {
+		return $text;
+	}
+	$text = (string) preg_replace('/\[(?:your\s+)?business\s+name\]/i', $name, $text);
+	$text = (string) preg_replace('/\[(?:your\s+)?company\s+name\]/i', $name, $text);
+	$text = (string) preg_replace('/\{+\s*business_name\s*\}+/i', $name, $text);
+	$text = (string) preg_replace('/\{+\s*company_name\s*\}+/i', $name, $text);
+	return $text;
+}
+
+/**
+ * @param mixed $node
+ * @return mixed
+ */
+function lf_ai_creation_interpolate_recursive($node) {
+	if (is_string($node)) {
+		return lf_ai_interpolate_creation_string($node);
+	}
+	if (is_array($node)) {
+		$out = [];
+		foreach ($node as $k => $v) {
+			$out[ $k ] = lf_ai_creation_interpolate_recursive($v);
+		}
+		return $out;
+	}
+	return $node;
+}
+
+/**
+ * @param array<string, mixed> $payload
+ * @return array<string, mixed>
+ */
+function lf_ai_assistant_payload_interpolate_placeholders(array $payload): array {
+	$out = lf_ai_creation_interpolate_recursive($payload);
+	return is_array($out) ? $out : $payload;
+}
+
 function lf_ai_assistant_build_creation_prompt(string $mode, string $post_type, string $context_type, string $prompt): string {
 	$base = "You are a WordPress content builder for a local business site.\n";
 	$base .= "Return ONLY one JSON object. No markdown. No explanation.\n";
@@ -478,6 +524,15 @@ function lf_ai_assistant_build_creation_prompt(string $mode, string $post_type, 
 	$rules .= "- If mode is create_blog_post, write as a full blog draft.\n";
 	$rules .= "- If mode is create_cpt and post_type is lf_faq, include question and answer.\n";
 	$rules .= "- If mode is create_cpt and post_type is lf_service_area, include city and state when possible.\n";
+	if ($post_type === 'lf_service') {
+		$biz = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
+		$biz_name = trim((string) ($biz['name'] ?? ''));
+		if ($biz_name !== '') {
+			$rules .= '- Business name to use in all copy (never use bracket placeholders): ' . wp_json_encode($biz_name, JSON_UNESCAPED_UNICODE) . ".\n";
+		}
+		$rules .= "- lf_service: For page_builder, omit the \"process\" slot entirely or use {}. Process steps are loaded from the Process Step CPT + lf_process_group taxonomy for this service — do NOT fill process_steps or process_selected_ids.\n";
+		$rules .= "- lf_service: benefits_items lines must be \"Title || short body\" with NO leading bullets (•), dashes, or numbers before the title.\n";
+	}
 	return $base . $schema . $rules . "\nUser request:\n" . $prompt;
 }
 
@@ -566,7 +621,8 @@ function lf_ai_assistant_normalize_creation_decoded(array $decoded): array {
 	if ($pb !== []) {
 		$decoded['page_builder'] = $pb;
 	}
-	return $decoded;
+	$interpolated = lf_ai_creation_interpolate_recursive($decoded);
+	return is_array($interpolated) ? $interpolated : $decoded;
 }
 
 function lf_ai_assistant_validate_creation_payload(array $decoded, string $mode, string $cpt_type): array {
@@ -659,6 +715,7 @@ function lf_ai_assistant_batch_preview(array $payloads): array {
 }
 
 function lf_ai_assistant_create_post_from_payload(array $payload): array {
+	$payload = lf_ai_assistant_payload_interpolate_placeholders($payload);
 	$postarr = [
 		'post_type' => (string) ($payload['post_type'] ?? ''),
 		'post_status' => 'draft',
@@ -714,6 +771,9 @@ function lf_ai_assistant_create_post_from_payload(array $payload): array {
 				]
 			);
 		}
+	}
+	if ($post_type === 'lf_service' && function_exists('lf_pb_service_use_cpt_process_steps')) {
+		lf_pb_service_use_cpt_process_steps($post_id);
 	}
 	if (function_exists('lf_seo_maybe_populate_generated_meta')) {
 		lf_seo_maybe_populate_generated_meta($post_id);
