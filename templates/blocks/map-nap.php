@@ -128,6 +128,7 @@ $map_title = $name ?: $place_name;
 $map_title = is_string($map_title) ? $map_title : '';
 $map_subtitle = $address ?: $place_address;
 $map_subtitle = is_string($map_subtitle) ? $map_subtitle : '';
+$gbp_url = isset($entity['gbp_url']) ? trim((string) $entity['gbp_url']) : '';
 $map_view_url = '';
 $map_directions_url = '';
 if (is_string($place_id) && $place_id !== '') {
@@ -253,20 +254,11 @@ $areas_query = new WP_Query([
 							<?php endif; ?>
 						</div>
 					<?php elseif (is_string($map_embed_override) && $map_embed_override !== '') : ?>
-						<div class="lf-block-map-nap__map">
+						<div class="lf-block-map-nap__map lf-block-map-nap__map--custom-embed">
 							<?php
-							$allowed_embed = [
-								'iframe' => [
-									'src' => true,
-									'width' => true,
-									'height' => true,
-									'style' => true,
-									'loading' => true,
-									'referrerpolicy' => true,
-									'allowfullscreen' => true,
-									'title' => true,
-								],
-							];
+							$allowed_embed = function_exists('lf_map_embed_allowed_iframe_kses')
+								? lf_map_embed_allowed_iframe_kses()
+								: ['iframe' => ['src' => true]];
 							echo wp_kses($map_embed_override, $allowed_embed);
 							?>
 						</div>
@@ -292,7 +284,7 @@ $areas_query = new WP_Query([
 							?>
 						</p>
 					<?php endif; ?>
-					<?php if (!$is_contact_layout && ($map_title || $map_view_url)) : ?>
+					<?php if (!$is_contact_layout && ($map_title || $map_subtitle || $map_view_url || $gbp_url || ($avg_rating > 0 && $ratings_count > 0))) : ?>
 						<div class="lf-block-map-nap__map-meta">
 							<div>
 								<?php if ($map_title) : ?>
@@ -301,14 +293,32 @@ $areas_query = new WP_Query([
 								<?php if ($map_subtitle) : ?>
 									<p class="lf-block-map-nap__map-subtitle"><?php echo esc_html($map_subtitle); ?></p>
 								<?php endif; ?>
+								<?php if ($avg_rating > 0 && $ratings_count > 0) : ?>
+									<p class="lf-block-map-nap__map-rating">
+										<?php
+										printf(
+											/* translators: 1: average rating (e.g. 4.8), 2: number of reviews */
+											esc_html__('★ %1$s average from %2$d reviews published on this site', 'leadsforward-core'),
+											esc_html((string) $avg_rating),
+											(int) $ratings_count
+										);
+										?>
+									</p>
+								<?php endif; ?>
+								<?php if ($gbp_url !== '') : ?>
+									<p class="lf-block-map-nap__map-gbp-note"><?php esc_html_e('The Google Maps embed does not include the full Business Profile (stars and reviews). Use the button below to open your profile on Google.', 'leadsforward-core'); ?></p>
+								<?php endif; ?>
 							</div>
-							<?php if ($map_view_url || $map_directions_url) : ?>
+							<?php if ($map_view_url || $map_directions_url || $gbp_url !== '') : ?>
 								<div class="lf-block-map-nap__map-actions">
+									<?php if ($gbp_url !== '') : ?>
+										<a class="lf-block-map-nap__map-link lf-block-map-nap__map-link--primary" href="<?php echo esc_url($gbp_url); ?>" target="_blank" rel="noopener"><?php esc_html_e('Read reviews on Google', 'leadsforward-core'); ?></a>
+									<?php endif; ?>
 									<?php if ($map_view_url) : ?>
 										<a class="lf-block-map-nap__map-link" href="<?php echo esc_url($map_view_url); ?>" target="_blank" rel="noopener"><?php esc_html_e('View on Google Maps', 'leadsforward-core'); ?></a>
 									<?php endif; ?>
 									<?php if ($map_directions_url) : ?>
-										<a class="lf-block-map-nap__map-link lf-block-map-nap__map-link--primary" href="<?php echo esc_url($map_directions_url); ?>" target="_blank" rel="noopener"><?php esc_html_e('Get directions', 'leadsforward-core'); ?></a>
+										<a class="lf-block-map-nap__map-link<?php echo $gbp_url === '' ? ' lf-block-map-nap__map-link--primary' : ''; ?>" href="<?php echo esc_url($map_directions_url); ?>" target="_blank" rel="noopener"><?php esc_html_e('Get directions', 'leadsforward-core'); ?></a>
 									<?php endif; ?>
 								</div>
 							<?php endif; ?>
