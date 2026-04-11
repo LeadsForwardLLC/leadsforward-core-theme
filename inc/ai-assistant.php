@@ -863,6 +863,8 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-section-align-picker__card { width:min(320px, calc(100vw - 30px)); background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); padding:12px; display:flex; flex-direction:column; gap:10px; }
 		.lf-ai-section-align-picker__head { font-size:13px; font-weight:700; color:#0f172a; }
 		.lf-ai-section-align-picker__row { display:flex; gap:8px; flex-wrap:wrap; }
+		/* .row uses display:flex which beats the UA [hidden] rule — force-hide benefits-only rows. */
+		.lf-ai-section-align-picker__card [hidden] { display:none !important; }
 		.lf-ai-section-align-picker__btn { flex:1; min-width:72px; border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:34px; font-size:12px; font-weight:600; cursor:pointer; }
 		.lf-ai-section-align-picker__btn:hover { background:#f5f0ff; }
 		.lf-ai-section-align-picker__close { align-self:flex-end; border:1px solid #e2e8f0; background:#fff; color:#64748b; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:15px; line-height:1; }
