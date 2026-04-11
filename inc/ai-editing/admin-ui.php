@@ -1325,7 +1325,10 @@ function lf_ai_ajax_generate(): void {
 		if (!is_string($response) || trim($response) === '') {
 			wp_send_json_error(['message' => __('AI response was empty.', 'leadsforward-core')]);
 		}
-		$decoded = json_decode(trim($response), true);
+		$decoded = lf_ai_decode_model_json_response($response);
+		if (!is_array($decoded)) {
+			wp_send_json_error(['message' => __('AI response was invalid JSON.', 'leadsforward-core')]);
+		}
 		$items = is_array($decoded['items'] ?? null) ? $decoded['items'] : [];
 		if (empty($items)) {
 			wp_send_json_error(['message' => __('AI returned no batch items.', 'leadsforward-core')]);
@@ -1370,7 +1373,7 @@ function lf_ai_ajax_generate(): void {
 	if (!is_string($response) || trim($response) === '') {
 		wp_send_json_error(['message' => __('AI response was empty.', 'leadsforward-core')]);
 	}
-	$decoded = json_decode(trim($response), true);
+	$decoded = lf_ai_decode_model_json_response($response);
 	if (!is_array($decoded)) {
 		wp_send_json_error(['message' => __('AI response was invalid JSON.', 'leadsforward-core')]);
 	}

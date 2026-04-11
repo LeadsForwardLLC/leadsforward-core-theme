@@ -63,7 +63,7 @@ function lf_ai_validate_response(string $raw_response, $context_id, ?array $allo
 		$editable = lf_get_ai_editable_fields($context_id);
 		$allowed_keys = array_keys($editable);
 	}
-	$decoded = json_decode(trim($raw_response), true);
+	$decoded = lf_ai_decode_model_json_response($raw_response);
 	if (!is_array($decoded)) {
 		return [];
 	}
