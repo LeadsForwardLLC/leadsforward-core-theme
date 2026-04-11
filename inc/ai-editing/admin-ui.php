@@ -846,7 +846,7 @@ function lf_ai_section_style_cycle_value(string $current, array $allowed): strin
  * Apply a section style patch from the front-end editor (background presets, custom color, header align).
  *
  * @param array<string, mixed> $settings
- * @param array{background_slug?:string,custom_background?:string,header_align?:string} $extra
+ * @param array{background_slug?:string,custom_background?:string,header_align?:string,benefits_cta_align?:string} $extra
  * @return array{0: array<string, mixed>, 1: string} Updated settings and empty string, or original settings and error message.
  */
 function lf_ai_mutate_section_style_settings(array $settings, string $patch, array $extra): array {
@@ -856,6 +856,7 @@ function lf_ai_mutate_section_style_settings(array $settings, string $patch, arr
 	$slug = sanitize_key((string) ($extra['background_slug'] ?? ''));
 	$custom_raw = (string) ($extra['custom_background'] ?? '');
 	$h_align = sanitize_key((string) ($extra['header_align'] ?? ''));
+	$benefits_cta_align = sanitize_key((string) ($extra['benefits_cta_align'] ?? ''));
 
 	if ($patch === 'cycle_background') {
 		$cur = (string) ($settings['section_background'] ?? 'light');
@@ -901,6 +902,13 @@ function lf_ai_mutate_section_style_settings(array $settings, string $patch, arr
 		$settings['benefits_layout'] = lf_ai_section_style_cycle_value($cur, $benefits_layouts);
 		return [$settings, ''];
 	}
+	if ($patch === 'set_benefits_cta_align') {
+		if (!in_array($benefits_cta_align, $aligns, true)) {
+			return [$settings, __('Choose left, center, or right for the button row.', 'leadsforward-core')];
+		}
+		$settings['benefits_cta_align'] = $benefits_cta_align;
+		return [$settings, ''];
+	}
 	return [$settings, __('Unknown style action.', 'leadsforward-core')];
 }
 
@@ -921,6 +929,7 @@ function lf_ai_ajax_update_section_style(): void {
 		'background_slug' => isset($_POST['background_slug']) ? sanitize_key(wp_unslash((string) $_POST['background_slug'])) : '',
 		'custom_background' => isset($_POST['custom_background']) ? wp_unslash((string) $_POST['custom_background']) : '',
 		'header_align' => isset($_POST['header_align']) ? sanitize_key(wp_unslash((string) $_POST['header_align'])) : '',
+		'benefits_cta_align' => isset($_POST['benefits_cta_align']) ? sanitize_key(wp_unslash((string) $_POST['benefits_cta_align'])) : '',
 	];
 
 	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
@@ -936,6 +945,9 @@ function lf_ai_ajax_update_section_style(): void {
 			: $section_id;
 		if (!isset($config[$resolved]) || !is_array($config[$resolved])) {
 			wp_send_json_error(['message' => __('That section was not found on the homepage.', 'leadsforward-core')]);
+		}
+		if ($patch === 'set_benefits_cta_align' && function_exists('lf_homepage_base_section_type') && lf_homepage_base_section_type((string) $resolved) !== 'benefits') {
+			wp_send_json_error(['message' => __('Button alignment applies to benefits sections only.', 'leadsforward-core')]);
 		}
 		$old_row = $config[$resolved];
 		$row_settings = is_array($config[$resolved]) ? $config[$resolved] : [];
@@ -984,6 +996,9 @@ function lf_ai_ajax_update_section_style(): void {
 	$row = $sections[$section_id];
 	$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
 	$section_type = sanitize_text_field((string) ($row['type'] ?? ''));
+	if ($patch === 'set_benefits_cta_align' && $section_type !== 'benefits') {
+		wp_send_json_error(['message' => __('Button alignment applies to benefits sections only.', 'leadsforward-core')]);
+	}
 	$old_settings = $settings;
 	[$settings, $err_pb] = lf_ai_mutate_section_style_settings($settings, $patch, $style_extra);
 	if ($err_pb !== '') {
@@ -2620,13 +2635,103 @@ function lf_ai_ajax_update_section_cta(): void {
 	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
 	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
 	$section_id = isset($_POST['section_id']) ? sanitize_text_field(wp_unslash($_POST['section_id'])) : '';
+	$cta_target = isset($_POST['cta_target']) ? sanitize_key(wp_unslash((string) $_POST['cta_target'])) : 'hero';
 	$slot = isset($_POST['slot']) ? sanitize_text_field(wp_unslash($_POST['slot'])) : 'primary';
 	$text = isset($_POST['text']) ? sanitize_text_field(wp_unslash($_POST['text'])) : '';
 	$cta_action = isset($_POST['cta_action']) ? sanitize_text_field(wp_unslash($_POST['cta_action'])) : '';
 	$url = isset($_POST['url']) ? esc_url_raw((string) wp_unslash($_POST['url'])) : '';
+	$benefits_cta_align = isset($_POST['benefits_cta_align']) ? sanitize_key(wp_unslash((string) $_POST['benefits_cta_align'])) : 'center';
+	if (!in_array($benefits_cta_align, ['left', 'center', 'right'], true)) {
+		$benefits_cta_align = 'center';
+	}
 	if ($context_type === '' || $context_id === '' || $section_id === '') {
 		wp_send_json_error(['message' => __('Invalid CTA update payload.', 'leadsforward-core')]);
 	}
+	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
+
+	if ($cta_target === 'benefits') {
+		if (!in_array($cta_action, ['quote', 'link'], true)) {
+			$cta_action = 'quote';
+		}
+		if ($cta_action !== 'link') {
+			$url = '';
+		}
+		$text = trim($text);
+		if ($text !== '' && $cta_action === 'link' && $url === '') {
+			wp_send_json_error(['message' => __('Link URL is required when action is Link.', 'leadsforward-core')]);
+		}
+		if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+			if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config') || !function_exists('lf_homepage_base_section_type')) {
+				wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
+			}
+			$config = lf_get_homepage_section_config();
+			$resolved_section_id = lf_ai_homepage_resolve_section_id($section_id);
+			$old_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
+			if (empty($old_row)) {
+				wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+			}
+			if (lf_homepage_base_section_type((string) $resolved_section_id) !== 'benefits') {
+				wp_send_json_error(['message' => __('This control applies to benefits sections only.', 'leadsforward-core')]);
+			}
+			$config[$resolved_section_id]['benefits_cta_text'] = $text;
+			$config[$resolved_section_id]['benefits_cta_action'] = $text === '' ? 'quote' : $cta_action;
+			$config[$resolved_section_id]['benefits_cta_url'] = $text === '' ? '' : $url;
+			$config[$resolved_section_id]['benefits_cta_align'] = $benefits_cta_align;
+			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+			$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
+			$log_id = function_exists('lf_ai_log_action')
+				? lf_ai_log_action(
+					$context_type,
+					$context_id_use,
+					['__homepage_section_row::' . $resolved_section_id => $old_row],
+					['__homepage_section_row::' . $resolved_section_id => $new_row],
+					'Inline benefits CTA edit'
+				)
+				: '';
+			wp_send_json_success([
+				'message' => $text === '' ? __('Button removed.', 'leadsforward-core') : __('Button updated.', 'leadsforward-core'),
+				'reload' => true,
+				'log_id' => $log_id,
+			]);
+		}
+		$pid = (int) $context_id_use;
+		$post = get_post($pid);
+		if (!$post instanceof \WP_Post || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+			wp_send_json_error(['message' => __('Section settings are unavailable for this target.', 'leadsforward-core')]);
+		}
+		$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+		if ($pb_context === '') {
+			wp_send_json_error(['message' => __('This target does not support button editing.', 'leadsforward-core')]);
+		}
+		$config = lf_pb_get_post_config($pid, $pb_context);
+		$old_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+		if (empty($old_row) || (string) ($old_row['type'] ?? '') !== 'benefits') {
+			wp_send_json_error(['message' => __('This control applies to benefits sections only.', 'leadsforward-core')]);
+		}
+		$settings = is_array($old_row['settings'] ?? null) ? $old_row['settings'] : [];
+		$settings['benefits_cta_text'] = $text;
+		$settings['benefits_cta_action'] = $text === '' ? 'quote' : $cta_action;
+		$settings['benefits_cta_url'] = $text === '' ? '' : $url;
+		$settings['benefits_cta_align'] = $benefits_cta_align;
+		$config['sections'][$section_id]['settings'] = $settings;
+		update_post_meta($pid, LF_PB_META_KEY, $config);
+		$new_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+		$log_id = function_exists('lf_ai_log_action')
+			? lf_ai_log_action(
+				$context_type,
+				$context_id_use,
+				['__section_record::' . $section_id => $old_row],
+				['__section_record::' . $section_id => $new_row],
+				'Inline benefits CTA edit'
+			)
+			: '';
+		wp_send_json_success([
+			'message' => $text === '' ? __('Button removed.', 'leadsforward-core') : __('Button updated.', 'leadsforward-core'),
+			'reload' => true,
+			'log_id' => $log_id,
+		]);
+	}
+
 	$slot = $slot === 'secondary' ? 'secondary' : 'primary';
 	if (!in_array($cta_action, ['quote', 'call', 'link'], true)) {
 		$cta_action = 'quote';
@@ -2641,7 +2746,6 @@ function lf_ai_ajax_update_section_cta(): void {
 	$override_key = $slot === 'secondary' ? 'cta_secondary_override' : 'cta_primary_override';
 	$action_key = $slot === 'secondary' ? 'cta_secondary_action' : 'cta_primary_action';
 	$url_key = $slot === 'secondary' ? 'cta_secondary_url' : 'cta_primary_url';
-	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
 	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
 		if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
 			wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
@@ -3531,6 +3635,7 @@ function lf_ai_ajax_add_section(): void {
 	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
 	$section_type = isset($_POST['section_type']) ? sanitize_text_field(wp_unslash($_POST['section_type'])) : '';
 	$after_section_id = isset($_POST['after_section_id']) ? sanitize_text_field(wp_unslash($_POST['after_section_id'])) : '';
+	$before_section_id = isset($_POST['before_section_id']) ? sanitize_text_field(wp_unslash($_POST['before_section_id'])) : '';
 	if ($context_type === '' || $context_id === '' || $section_type === '') {
 		wp_send_json_error(['message' => __('Invalid add-section payload.', 'leadsforward-core')]);
 	}
@@ -3573,7 +3678,12 @@ function lf_ai_ajax_add_section(): void {
 			if ($cta_idx !== false) {
 				$insert_at = (int) $cta_idx;
 			}
-			if ($after_section_id !== '') {
+			if ($before_section_id !== '') {
+				$before_idx = array_search($before_section_id, $order, true);
+				if ($before_idx !== false) {
+					$insert_at = (int) $before_idx;
+				}
+			} elseif ($after_section_id !== '') {
 				$after_idx = array_search($after_section_id, $order, true);
 				if ($after_idx !== false) {
 					$insert_at = (int) $after_idx + 1;
@@ -3650,8 +3760,12 @@ function lf_ai_ajax_add_section(): void {
 	$new_order = [];
 	$inserted = false;
 	foreach ($order as $id) {
+		if (!$inserted && $before_section_id !== '' && (string) $id === $before_section_id) {
+			$new_order[] = $new_id;
+			$inserted = true;
+		}
 		$new_order[] = (string) $id;
-		if (!$inserted && $after_section_id !== '' && (string) $id === $after_section_id) {
+		if (!$inserted && $before_section_id === '' && $after_section_id !== '' && (string) $id === $after_section_id) {
 			$new_order[] = $new_id;
 			$inserted = true;
 		}
