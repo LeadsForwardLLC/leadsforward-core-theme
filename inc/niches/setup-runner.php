@@ -702,6 +702,8 @@ function lf_wizard_seed_pb_config(int $post_id, string $context, array $data, ar
 		],
 		'trust_bar' => [
 			'trust_heading' => lf_wizard_fill_template(lf_wizard_pick($trust_headings, $index), $vars),
+			'section_background' => 'dark',
+			'trust_bar_layout' => 'brand_band',
 		],
 		'benefits' => [
 			'section_heading' => lf_wizard_fill_template(lf_wizard_pick($templates['benefits_heading'] ?? [], $index), $vars),

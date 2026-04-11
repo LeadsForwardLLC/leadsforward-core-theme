@@ -132,6 +132,8 @@ function lf_sections_registry(): array {
 	$bg_soft['default'] = 'soft';
 	$bg_dark = $bg_field;
 	$bg_dark['default'] = 'dark';
+	$trust_bar_bg = $bg_field;
+	$trust_bar_bg['default'] = 'dark';
 	$media_fields = [
 		$bg_field,
 		['key' => 'section_heading', 'label' => __('Section title', 'leadsforward-core'), 'type' => 'text', 'default' => __('Designed for busy homeowners', 'leadsforward-core')],
@@ -374,7 +376,14 @@ function lf_sections_registry(): array {
 			'label' => __('Trust Bar', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => [
-				$bg_field,
+				$trust_bar_bg,
+				['key' => 'trust_bar_layout', 'label' => __('Layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'brand_band', 'options' => [
+					'brand_band'    => __('Brand band (full-width strip)', 'leadsforward-core'),
+					'split'         => __('Split (heading left, proof right)', 'leadsforward-core'),
+					'grid'          => __('Grid badges', 'leadsforward-core'),
+					'minimal_strip' => __('Minimal strip', 'leadsforward-core'),
+					'classic'       => __('Classic centered pill', 'leadsforward-core'),
+				]],
 				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'authority'],
 				['key' => 'trust_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Trusted by local homeowners', 'leadsforward-core')],
 				['key' => 'trust_badges', 'label' => __('Badges (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Licensed & Insured' . "\n" . '5-Star Rated' . "\n" . 'Fast Response', 'leadsforward-core')],
@@ -1445,7 +1454,7 @@ function lf_sections_render_section(string $section_id, string $context, array $
 	}
 }
 
-function lf_sections_render_shell_open(string $id, string $title = '', string $intro = '', string $background = 'light', array $settings = []): void {
+function lf_sections_render_shell_open(string $id, string $title = '', string $intro = '', string $background = 'light', array $settings = [], string $extra_section_classes = ''): void {
 	$custom_bg = lf_sections_sanitize_custom_background((string) ($settings['section_background_custom'] ?? ''));
 	$bg_class = $custom_bg !== '' ? 'lf-section--custom-section-bg' : lf_sections_bg_class($background);
 	$section_style = $custom_bg !== '' ? ' style="background-color:' . esc_attr($custom_bg) . ';"' : ''; // safe: esc_attr on color
@@ -1453,8 +1462,10 @@ function lf_sections_render_shell_open(string $id, string $title = '', string $i
 	$icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, $id, 'above', 'lf-heading-icon') : '';
 	$icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, $id, 'left', 'lf-heading-icon') : '';
 	$has_header = $title || $intro || $icon_above || $icon_left;
+	$extra_classes = trim(preg_replace('/\s+/', ' ', $extra_section_classes));
+	$extra_for_class = $extra_classes !== '' ? ' ' . esc_attr($extra_classes) : '';
 	?>
-	<section class="lf-section lf-section--<?php echo esc_attr($id); ?> <?php echo esc_attr($bg_class); ?>"<?php echo $section_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built with esc_attr ?>>
+	<section class="lf-section lf-section--<?php echo esc_attr($id); ?> <?php echo esc_attr($bg_class); ?><?php echo $extra_for_class; ?>"<?php echo $section_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built with esc_attr ?>>
 		<div class="lf-section__inner">
 			<?php if ($has_header) : ?>
 				<header class="lf-section__header lf-section__header--align-<?php echo esc_attr($header_align); ?>">
@@ -1569,25 +1580,34 @@ function lf_sections_render_trust_bar(string $context, array $settings, \WP_Post
 	}
 	$title = $settings['trust_heading'] ?? '';
 	$badge_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'trust_bar', 'list', 'lf-trust-bar__badge-icon') : '';
-	lf_sections_render_shell_open('trust-bar', $title, '', $settings['section_background'] ?? 'light', $settings);
+	$layout = sanitize_key((string) ($settings['trust_bar_layout'] ?? 'brand_band'));
+	$layout_allowed = ['brand_band', 'split', 'grid', 'minimal_strip', 'classic'];
+	if (!in_array($layout, $layout_allowed, true)) {
+		$layout = 'brand_band';
+	}
+	$bg = (string) ($settings['section_background'] ?? 'dark');
+	$shell_extra = 'lf-trust-bar-section lf-trust-bar-section--layout-' . $layout;
+	lf_sections_render_shell_open('trust-bar', $title, '', $bg, $settings, $shell_extra);
 	?>
-	<div class="lf-trust-bar">
-		<div class="lf-trust-bar__rating">
-			<span class="lf-trust-bar__stars" aria-hidden="true">
-				<?php for ($i = 0; $i < 5; $i++) : ?>
-					<svg class="lf-trust-bar__star" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-				<?php endfor; ?>
-			</span>
-			<?php if ($rating) : ?><span class="lf-trust-bar__score"><?php echo esc_html(number_format($rating, 1)); ?></span><?php endif; ?>
-			<?php if ($count) : ?><span class="lf-trust-bar__count"><?php echo esc_html(sprintf(_n('%d review', '%d reviews', $count, 'leadsforward-core'), $count)); ?></span><?php endif; ?>
-		</div>
-		<div class="lf-trust-bar__badges">
-			<?php foreach ($badges as $badge) : ?>
-				<span class="lf-trust-bar__badge">
-					<?php if ($badge_icon) : ?><span class="lf-trust-bar__badge-icon"><?php echo $badge_icon; ?></span><?php endif; ?>
-					<?php echo esc_html($badge); ?>
+	<div class="lf-trust-bar lf-trust-bar--layout-<?php echo esc_attr($layout); ?>">
+		<div class="lf-trust-bar__panel">
+			<div class="lf-trust-bar__rating">
+				<span class="lf-trust-bar__stars" aria-hidden="true">
+					<?php for ($i = 0; $i < 5; $i++) : ?>
+						<svg class="lf-trust-bar__star" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+					<?php endfor; ?>
 				</span>
-			<?php endforeach; ?>
+				<?php if ($rating) : ?><span class="lf-trust-bar__score"><?php echo esc_html(number_format($rating, 1)); ?></span><?php endif; ?>
+				<?php if ($count) : ?><span class="lf-trust-bar__count"><?php echo esc_html(sprintf(_n('%d review', '%d reviews', $count, 'leadsforward-core'), $count)); ?></span><?php endif; ?>
+			</div>
+			<div class="lf-trust-bar__badges">
+				<?php foreach ($badges as $badge) : ?>
+					<span class="lf-trust-bar__badge">
+						<?php if ($badge_icon) : ?><span class="lf-trust-bar__badge-icon"><?php echo $badge_icon; ?></span><?php endif; ?>
+						<?php echo esc_html($badge); ?>
+					</span>
+				<?php endforeach; ?>
+			</div>
 		</div>
 	</div>
 	<?php
