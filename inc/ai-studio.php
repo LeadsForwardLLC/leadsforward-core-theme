@@ -2162,9 +2162,11 @@ function lf_ai_studio_send_request(array $request, int $job_id): array {
 		// Same value as the Authorization header; lets n8n echo auth if the Webhook node omits inbound headers.
 		$outgoing_body['callback_authorization'] = 'Bearer ' . $secret;
 	}
+	$webhook_timeout = (int) apply_filters('lf_ai_studio_webhook_request_timeout', 90);
+	$webhook_timeout = max(15, min(300, $webhook_timeout));
 	$response = wp_remote_post($webhook, [
 		'method' => 'POST',
-		'timeout' => 20,
+		'timeout' => $webhook_timeout,
 		'blocking' => true,
 		'headers' => [
 			'Authorization' => 'Bearer ' . $secret,
@@ -6317,72 +6319,177 @@ function lf_ai_studio_build_blog_payload(): array {
 	return $payload;
 }
 
-function lf_ai_studio_internal_links_catalog(): array {
-	$links = [];
-	$add = function (string $type, string $label, string $url) use (&$links): void {
-		$url = trim($url);
-		$label = trim($label);
-		if ($url === '' || $label === '') {
-			return;
+/**
+ * Tokenize for internal-link relevance (lowercased, de-noised).
+ *
+ * @return list<string>
+ */
+function lf_ai_studio_internal_link_tokenize(string $text): array {
+	$text = strtolower($text);
+	$chunks = preg_split('/[^a-z0-9]+/', $text, -1, PREG_SPLIT_NO_EMPTY);
+	if (!is_array($chunks)) {
+		return [];
+	}
+	$stop = ['the', 'and', 'for', 'you', 'our', 'your', 'with', 'from', 'that', 'this', 'near', 'best', 'top', 'are', 'was', 'has', 'get', 'all', 'any'];
+	$out = [];
+	foreach ($chunks as $c) {
+		$c = (string) $c;
+		if (strlen($c) < 3 || in_array($c, $stop, true)) {
+			continue;
 		}
-		$links[] = [
-			'type' => $type,
-			'label' => $label,
-			'url' => $url,
-		];
-	};
+		$out[] = $c;
+	}
+	return array_values(array_unique($out));
+}
 
-	$add('page', __('Home', 'leadsforward-core'), home_url('/'));
+/**
+ * @return list<string>
+ */
+function lf_ai_studio_internal_link_tokens_for_post(\WP_Post $post): array {
+	$s = $post->post_title . ' ' . $post->post_name;
+	$pk = trim((string) get_post_meta($post->ID, '_lf_seo_primary_keyword', true));
+	if ($pk !== '') {
+		$s .= ' ' . $pk;
+	}
+	return lf_ai_studio_internal_link_tokenize($s);
+}
+
+/**
+ * @param list<string> $a
+ * @param list<string> $b
+ */
+function lf_ai_studio_internal_link_overlap_count(array $a, array $b): int {
+	if ($a === [] || $b === []) {
+		return 0;
+	}
+	$set = array_flip($a);
+	$n = 0;
+	foreach ($b as $t) {
+		if (isset($set[$t])) {
+			$n++;
+		}
+	}
+	return $n;
+}
+
+/**
+ * @return list<int>
+ */
+function lf_ai_studio_internal_link_area_service_ids(int $area_id): array {
+	if ($area_id <= 0 || !function_exists('get_field')) {
+		return [];
+	}
+	$raw = get_field('lf_service_area_services', $area_id);
+	if (is_numeric($raw)) {
+		$raw = [(int) $raw];
+	}
+	if (!is_array($raw)) {
+		return [];
+	}
+	$out = [];
+	foreach ($raw as $item) {
+		if (is_object($item) && isset($item->ID)) {
+			$out[] = (int) $item->ID;
+		} elseif (is_numeric($item)) {
+			$out[] = (int) $item;
+		}
+	}
+	return array_values(array_filter(array_unique($out)));
+}
+
+function lf_ai_studio_internal_links_catalog(): array {
+	$max_services = (int) apply_filters('lf_ai_studio_internal_links_catalog_max_services', 150);
+	$max_areas = (int) apply_filters('lf_ai_studio_internal_links_catalog_max_areas', 150);
+	$max_posts = (int) apply_filters('lf_ai_studio_internal_links_catalog_max_posts', 24);
+	$max_services = max(8, min(300, $max_services));
+	$max_areas = max(8, min(300, $max_areas));
+	$max_posts = max(4, min(60, $max_posts));
+
+	$links = [];
+	$home_url = home_url('/');
+	if ($home_url !== '') {
+		$links[] = [
+			'type' => 'home',
+			'label' => __('Home', 'leadsforward-core'),
+			'url' => $home_url,
+			'post_id' => 0,
+			'post_type' => 'home',
+		];
+	}
 	foreach (['about-us', 'our-services', 'service-areas', 'reviews', 'blog', 'contact'] as $slug) {
 		$page = get_page_by_path($slug);
 		if ($page instanceof \WP_Post) {
-			$add('page', get_the_title($page), get_permalink($page));
+			$links[] = [
+				'type' => 'page',
+				'label' => get_the_title($page),
+				'url' => (string) get_permalink($page),
+				'post_id' => (int) $page->ID,
+				'post_type' => 'page',
+			];
 		}
 	}
 
 	$services = get_posts([
 		'post_type'      => 'lf_service',
 		'post_status'    => 'publish',
-		'posts_per_page' => 8,
+		'posts_per_page' => $max_services,
 		'orderby'        => 'menu_order title',
 		'order'          => 'ASC',
 		'no_found_rows'  => true,
 	]);
 	foreach ($services as $service) {
 		if ($service instanceof \WP_Post) {
-			$add('service', $service->post_title, get_permalink($service));
+			$links[] = [
+				'type' => 'service',
+				'label' => $service->post_title,
+				'url' => (string) get_permalink($service),
+				'post_id' => (int) $service->ID,
+				'post_type' => 'lf_service',
+			];
 		}
 	}
 
 	$areas = get_posts([
 		'post_type'      => 'lf_service_area',
 		'post_status'    => 'publish',
-		'posts_per_page' => 8,
+		'posts_per_page' => $max_areas,
 		'orderby'        => 'menu_order title',
 		'order'          => 'ASC',
 		'no_found_rows'  => true,
 	]);
 	foreach ($areas as $area) {
 		if ($area instanceof \WP_Post) {
-			$add('service_area', $area->post_title, get_permalink($area));
+			$links[] = [
+				'type' => 'service_area',
+				'label' => $area->post_title,
+				'url' => (string) get_permalink($area),
+				'post_id' => (int) $area->ID,
+				'post_type' => 'lf_service_area',
+			];
 		}
 	}
 
 	$posts = get_posts([
 		'post_type'      => 'post',
 		'post_status'    => 'publish',
-		'posts_per_page' => 4,
+		'posts_per_page' => $max_posts,
 		'orderby'        => 'date',
 		'order'          => 'DESC',
 		'no_found_rows'  => true,
 	]);
 	foreach ($posts as $post) {
 		if ($post instanceof \WP_Post) {
-			$add('post', $post->post_title, get_permalink($post));
+			$links[] = [
+				'type' => 'post',
+				'label' => $post->post_title,
+				'url' => (string) get_permalink($post),
+				'post_id' => (int) $post->ID,
+				'post_type' => 'post',
+			];
 		}
 	}
 
-	return $links;
+	return apply_filters('lf_ai_studio_internal_links_catalog', $links);
 }
 
 function lf_ai_studio_registry_richtext_keys(string $section_type, array $registry): array {
@@ -6404,7 +6511,13 @@ function lf_ai_studio_registry_richtext_keys(string $section_type, array $regist
 
 function lf_ai_studio_pick_internal_link(array $catalog, \WP_Post $post, string $section_type, string $field_key): array {
 	$self_url = (string) get_permalink($post);
-	$candidates = [];
+	$source_type = (string) $post->post_type;
+	$source_tokens = lf_ai_studio_internal_link_tokens_for_post($post);
+	$area_service_ids = $source_type === 'lf_service_area'
+		? lf_ai_studio_internal_link_area_service_ids((int) $post->ID)
+		: [];
+
+	$scored = [];
 	foreach ($catalog as $entry) {
 		if (!is_array($entry)) {
 			continue;
@@ -6414,14 +6527,87 @@ function lf_ai_studio_pick_internal_link(array $catalog, \WP_Post $post, string 
 		if ($url === '' || $label === '' || $url === $self_url) {
 			continue;
 		}
-		$candidates[] = ['url' => $url, 'label' => $label];
+		$candidate_id = (int) ($entry['post_id'] ?? 0);
+		$candidate_pt = (string) ($entry['post_type'] ?? '');
+		if ($candidate_pt === '') {
+			$candidate_pt = (string) ($entry['type'] ?? '');
+		}
+
+		$target_tokens = [];
+		if ($candidate_id > 0) {
+			$tp = get_post($candidate_id);
+			if ($tp instanceof \WP_Post) {
+				$target_tokens = lf_ai_studio_internal_link_tokens_for_post($tp);
+			}
+		}
+		if ($target_tokens === []) {
+			$target_tokens = lf_ai_studio_internal_link_tokenize($label);
+		}
+
+		$overlap = lf_ai_studio_internal_link_overlap_count($source_tokens, $target_tokens);
+		$score = 8 + ($overlap * 24);
+
+		if ($candidate_pt === 'lf_service' && $source_type === 'lf_service' && $overlap > 0) {
+			$score += 28;
+		}
+		if ($candidate_pt === 'lf_service_area' && $source_type === 'lf_service_area' && $overlap > 0) {
+			$score += 22;
+		}
+		if ($source_type === 'lf_service' && $candidate_pt === 'lf_service_area' && $candidate_id > 0) {
+			$linked = lf_ai_studio_internal_link_area_service_ids($candidate_id);
+			if (in_array((int) $post->ID, $linked, true)) {
+				$score += 95;
+			}
+		}
+		if ($source_type === 'lf_service_area' && $candidate_pt === 'lf_service' && $candidate_id > 0 && $area_service_ids !== []) {
+			if (in_array($candidate_id, $area_service_ids, true)) {
+				$score += 95;
+			}
+		}
+		if (in_array($candidate_pt, ['lf_service', 'lf_service_area'], true)) {
+			$score += 18;
+		}
+		if ($candidate_pt === 'page' || $candidate_pt === 'home') {
+			$score += 6;
+		}
+		if ($candidate_pt === 'post' && $overlap === 0 && in_array($source_type, ['lf_service', 'lf_service_area'], true)) {
+			$score -= 25;
+		}
+
+		$scored[] = [
+			'score' => $score,
+			'url' => $url,
+			'label' => $label,
+		];
 	}
-	if (empty($candidates)) {
+	if ($scored === []) {
 		return [];
 	}
-	$seed = crc32($post->ID . '|' . $section_type . '|' . $field_key);
-	$index = (int) (abs($seed) % count($candidates));
-	return $candidates[$index] ?? [];
+	usort(
+		$scored,
+		static function (array $a, array $b): int {
+			$cmp = (int) ((int) ($b['score'] ?? 0) <=> (int) ($a['score'] ?? 0));
+			if ($cmp !== 0) {
+				return $cmp;
+			}
+			return strcmp((string) ($a['url'] ?? ''), (string) ($b['url'] ?? ''));
+		}
+	);
+	$top = (int) ($scored[0]['score'] ?? 0);
+	$tied = array_values(
+		array_filter(
+			$scored,
+			static function (array $row) use ($top): bool {
+				return (int) ($row['score'] ?? 0) === $top;
+			}
+		)
+	);
+	$seed = crc32((string) $post->ID . '|' . $section_type . '|' . $field_key);
+	$pick = $tied[(int) (abs($seed) % count($tied))] ?? $scored[0];
+	return [
+		'url' => (string) ($pick['url'] ?? ''),
+		'label' => (string) ($pick['label'] ?? ''),
+	];
 }
 
 function lf_ai_studio_inject_internal_link_markup(string $value, array $target): string {
@@ -8249,7 +8435,6 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 	$post_updates = [];
 	$faq_updates = [];
 	$service_meta_updates = [];
-	$service_posts_for_short_desc = [];
 	$blog_posts_for_title = [];
 	$assigned_images = [];
 	$staged_homepage_config = null;
@@ -8952,9 +9137,6 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 				'context' => $post_image_context,
 			];
 		}
-		if ($post->post_type === 'lf_service') {
-			$service_posts_for_short_desc[] = $post_id;
-		}
 		if ($post->post_type === 'post') {
 			$blog_posts_for_title[] = $post_id;
 		}
@@ -9103,18 +9285,7 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			}
 		}
 	}
-	if (!empty($service_posts_for_short_desc)) {
-		foreach (array_unique($service_posts_for_short_desc) as $service_id) {
-			$short_desc = lf_ai_studio_build_service_short_desc($service_id);
-			if ($short_desc !== '') {
-				if (function_exists('update_field')) {
-					update_field('lf_service_short_desc', $short_desc, $service_id);
-				} else {
-					update_post_meta($service_id, 'lf_service_short_desc', $short_desc);
-				}
-			}
-		}
-	}
+	lf_ai_studio_backfill_empty_service_short_descriptions();
 	if (!empty($blog_posts_for_title)) {
 		foreach (array_unique($blog_posts_for_title) as $post_id) {
 			lf_ai_studio_backfill_post_title_excerpt($post_id);
@@ -9962,6 +10133,7 @@ function lf_ai_studio_build_service_short_desc(int $post_id): string {
 	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
 	$preferred_keys = [
 		'hero_subheadline',
+		'hero_headline',
 		'hero_supporting_text',
 		'section_intro',
 		'supporting_text',
@@ -9998,7 +10170,66 @@ function lf_ai_studio_build_service_short_desc(int $post_id): string {
 			}
 		}
 	}
+	foreach ($order as $instance_id) {
+		$section = $sections[$instance_id] ?? null;
+		if (!is_array($section) || empty($section['enabled'])) {
+			continue;
+		}
+		$type = (string) ($section['type'] ?? '');
+		if ($type === '') {
+			continue;
+		}
+		$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+		foreach ($preferred_keys as $key) {
+			if (!array_key_exists($key, $settings)) {
+				continue;
+			}
+			$value = $settings[$key];
+			if (lf_ai_studio_audit_value_empty($value, 'text')) {
+				continue;
+			}
+			$text = lf_ai_studio_audit_normalize_text($value);
+			if (strlen($text) >= 25) {
+				return wp_trim_words($text, 28);
+			}
+		}
+	}
 	return '';
+}
+
+/**
+ * Fill empty lf_service_short_desc from Page Builder copy (runs after manifester/orchestrator apply).
+ */
+function lf_ai_studio_backfill_empty_service_short_descriptions(): void {
+	$limit = (int) apply_filters('lf_ai_studio_service_short_desc_backfill_limit', 500);
+	$limit = max(1, min(2000, $limit));
+	$ids = get_posts(
+		[
+			'post_type'      => 'lf_service',
+			'post_status'    => 'publish',
+			'posts_per_page' => $limit,
+			'orderby'        => 'menu_order title',
+			'order'          => 'ASC',
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+		]
+	);
+	foreach ($ids as $sid) {
+		$sid = (int) $sid;
+		$cur = function_exists('get_field') ? (string) get_field('lf_service_short_desc', $sid) : (string) get_post_meta($sid, 'lf_service_short_desc', true);
+		if (trim($cur) !== '') {
+			continue;
+		}
+		$built = lf_ai_studio_build_service_short_desc($sid);
+		if ($built === '') {
+			continue;
+		}
+		if (function_exists('update_field')) {
+			update_field('lf_service_short_desc', $built, $sid);
+		} else {
+			update_post_meta($sid, 'lf_service_short_desc', $built);
+		}
+	}
 }
 
 function lf_ai_studio_cta_signature(array $settings): string {

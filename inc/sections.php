@@ -1233,6 +1233,66 @@ function lf_sections_process_steps_for_render(array $settings, ?\WP_Post $post =
 }
 
 /**
+ * When secondary CTA text clearly means "go to a page" but action stayed on call/tel, map to an internal URL.
+ *
+ * @param array<string, mixed> $resolved Keys as lf_resolve_cta return shape.
+ * @return array<string, mixed>
+ */
+function lf_sections_resolve_secondary_cta_browse_intent(array $resolved): array {
+	$action = (string) ($resolved['secondary_action'] ?? '');
+	$url = trim((string) ($resolved['secondary_url'] ?? ''));
+	$label = trim((string) ($resolved['secondary_text'] ?? ''));
+	if ($label === '' || $action !== 'call' || $url !== '') {
+		return $resolved;
+	}
+	$lower = strtolower($label);
+	$slug = '';
+	if (preg_match('/\b(view|see|explore|browse|visit|check)\b.*\b(service|services)\b/u', $lower)) {
+		$slug = 'our-services';
+	} elseif (preg_match('/\b(service|coverage)\s+areas?\b|\bareas?\s+we\s+serve\b|\bservice\s+areas?\b/u', $lower)) {
+		$slug = 'service-areas';
+	} elseif (preg_match('/\babout(\s+us)?\b/u', $lower)) {
+		$slug = 'about-us';
+	} elseif (preg_match('/\b(blog|articles?|insights?|resources?)\b/u', $lower)) {
+		$posts_page = (int) get_option('page_for_posts');
+		if ($posts_page > 0) {
+			$permalink = get_permalink($posts_page);
+			if (is_string($permalink) && $permalink !== '') {
+				$resolved['secondary_action'] = 'link';
+				$resolved['secondary_url'] = $permalink;
+			}
+			return $resolved;
+		}
+		$slug = 'blog';
+	} elseif (preg_match('/\b(reviews?|testimonials?)\b/u', $lower)) {
+		$slug = 'reviews';
+	} elseif (preg_match('/\bcontact\b/u', $lower)) {
+		$slug = 'contact';
+	}
+	if ($slug === '') {
+		return $resolved;
+	}
+	$page = get_page_by_path($slug);
+	if (!$page instanceof \WP_Post) {
+		if ($slug === 'blog') {
+			$archive = get_post_type_archive_link('post');
+			if (is_string($archive) && $archive !== '') {
+				$resolved['secondary_action'] = 'link';
+				$resolved['secondary_url'] = $archive;
+			}
+		}
+		return $resolved;
+	}
+	$permalink = get_permalink($page);
+	if (!is_string($permalink) || $permalink === '') {
+		return $resolved;
+	}
+	$resolved['secondary_action'] = 'link';
+	$resolved['secondary_url'] = $permalink;
+	return $resolved;
+}
+
+/**
  * Canonical CTA resolver: section > homepage > global. Returns normalized CTA payload.
  *
  * @param array $context          Context flags (e.g. ['homepage' => true, 'section' => [...]]).
@@ -1328,6 +1388,8 @@ function lf_resolve_cta(array $context = [], array $section_instance = [], array
 	if ($resolved['primary_action'] === 'call') {
 		$resolved['primary_type'] = 'call';
 	}
+
+	$resolved = lf_sections_resolve_secondary_cta_browse_intent($resolved);
 
 	return [
 		'primary_text'     => is_string($resolved['primary_text']) ? $resolved['primary_text'] : '',
