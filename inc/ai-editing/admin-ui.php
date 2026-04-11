@@ -1186,6 +1186,34 @@ function lf_ai_ajax_generate(): void {
 			'snapshot' => is_array($qa_answer['snapshot'] ?? null) ? $qa_answer['snapshot'] : [],
 		]);
 	}
+	if ($assistant_mode === 'edit_existing' && is_numeric($context_id_use)) {
+		$expand_pb_flag = !empty($_POST['expand_pb_sections']);
+		$post_for_expand = get_post((int) $context_id_use);
+		if ($post_for_expand instanceof \WP_Post && function_exists('lf_ai_pb_context_for_post') && function_exists('lf_ai_assistant_prompt_requests_pb_expand') && function_exists('lf_ai_generate_pb_page_builder_patch')) {
+			$pb_ctx_expand = lf_ai_pb_context_for_post($post_for_expand);
+			if ($pb_ctx_expand !== '' && lf_ai_assistant_prompt_requests_pb_expand($prompt, $expand_pb_flag)) {
+				$pb_gen = lf_ai_generate_pb_page_builder_patch((int) $context_id_use, $prompt);
+				if ($pb_gen['success']) {
+					$tkey = lf_ai_pb_patch_transient_key(get_current_user_id(), (int) $context_id_use);
+					set_transient($tkey, ['patch' => $pb_gen['patch']], 600);
+					wp_send_json_success([
+						'mode' => 'edit_existing',
+						'assistant_cpt_type' => $assistant_cpt_type,
+						'assistant_batch_type' => $assistant_batch_type,
+						'assistant_batch_count' => $assistant_batch_count,
+						'context_type' => $context_type_use,
+						'context_id' => (string) $context_id_use,
+						'target_label' => lf_ai_assistant_target_label_for_context($context_type_use, $context_id_use),
+						'pb_patch_pending' => true,
+						'pb_patch_preview' => (string) ($pb_gen['preview'] ?? ''),
+					]);
+				}
+				if ((string) ($pb_gen['error_code'] ?? '') !== 'no_pb_sections') {
+					wp_send_json_error(['message' => (string) ($pb_gen['error'] ?? __('Could not generate multi-section updates.', 'leadsforward-core'))]);
+				}
+			}
+		}
+	}
 	if ($assistant_mode === 'edit_existing') {
 		$homepage_section_row_id = '';
 		$registry_section_type_for_labels = '';
@@ -3741,6 +3769,19 @@ function lf_ai_ajax_apply(): void {
 	}
 	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
 	$selected_section_id_apply = isset($_POST['selected_section_id']) ? sanitize_text_field(wp_unslash($_POST['selected_section_id'])) : '';
+	if ($assistant_mode === 'edit_existing' && !empty($_POST['apply_pb_patch']) && is_numeric($context_id_use) && function_exists('lf_ai_pb_patch_transient_key') && function_exists('lf_ai_apply_logged_pb_patch')) {
+		$tkey = lf_ai_pb_patch_transient_key(get_current_user_id(), (int) $context_id_use);
+		$data = get_transient($tkey);
+		if (!is_array($data) || empty($data['patch']) || !is_array($data['patch'])) {
+			wp_send_json_error(['message' => __('Section update expired or missing. Generate again.', 'leadsforward-core')]);
+		}
+		$r = lf_ai_apply_logged_pb_patch((string) $context_type, (string) $context_id_use, $data['patch'], $prompt_snippet);
+		delete_transient($tkey);
+		if (empty($r['success'])) {
+			wp_send_json_error(['message' => (string) ($r['message'] ?? __('Apply failed.', 'leadsforward-core'))]);
+		}
+		wp_send_json_success(['reload' => true, 'log_id' => (string) ($r['log_id'] ?? '')]);
+	}
 	if ($assistant_mode === 'create_batch') {
 		if (!in_array($assistant_batch_type, lf_ai_assistant_batch_types(), true)) {
 			wp_send_json_error(['message' => __('Invalid batch type.', 'leadsforward-core')]);

@@ -409,9 +409,9 @@ function lf_ai_assistant_render_floating_widget(): void {
 					</div>
 				</details>
 				<div class="lf-ai-float__presets">
-					<button type="button" class="button button-small" data-lf-ai-preset="<?php esc_attr_e('Tighten this page copy for higher conversions and local trust signals.', 'leadsforward-core'); ?>"><?php esc_html_e('Optimize Copy', 'leadsforward-core'); ?></button>
-					<button type="button" class="button button-small" data-lf-ai-preset="<?php esc_attr_e('Rewrite metadata and opening copy to better match transactional local intent.', 'leadsforward-core'); ?>"><?php esc_html_e('SERP Intent', 'leadsforward-core'); ?></button>
-					<button type="button" class="button button-small" data-lf-ai-preset="<?php esc_attr_e('Improve CTA language for urgency, clarity, and lead quality.', 'leadsforward-core'); ?>"><?php esc_html_e('Improve CTA', 'leadsforward-core'); ?></button>
+					<button type="button" class="button button-small" data-lf-ai-expand-pb="1" data-lf-ai-preset="<?php esc_attr_e('Tighten this page copy for higher conversions and local trust signals.', 'leadsforward-core'); ?>"><?php esc_html_e('Optimize Copy', 'leadsforward-core'); ?></button>
+					<button type="button" class="button button-small" data-lf-ai-expand-pb="1" data-lf-ai-preset="<?php esc_attr_e('Rewrite metadata and opening copy to better match transactional local intent.', 'leadsforward-core'); ?>"><?php esc_html_e('SERP Intent', 'leadsforward-core'); ?></button>
+					<button type="button" class="button button-small" data-lf-ai-expand-pb="1" data-lf-ai-preset="<?php esc_attr_e('Improve CTA language for urgency, clarity, and lead quality.', 'leadsforward-core'); ?>"><?php esc_html_e('Improve CTA', 'leadsforward-core'); ?></button>
 				</div>
 				<textarea class="lf-ai-float__prompt" rows="4" data-lf-ai-prompt placeholder="<?php esc_attr_e('Ask for specific edits...', 'leadsforward-core'); ?>"></textarea>
 				<div class="lf-ai-float__actions">
@@ -912,6 +912,8 @@ function lf_ai_assistant_widget_js(): string {
 		var defaultConfirmYesText = String($confirmYes.text() || "");
 		var pendingConfirmAction = null;
 		var proposed = null;
+		var pbPatchPending = false;
+		var expandPbNextGenerate = false;
 		var lastProposalHomepageSectionId = "";
 		var current = null;
 		var creationPayload = null;
@@ -6497,7 +6499,9 @@ function lf_ai_assistant_widget_js(): string {
 			setEditorEnabled(!editingEnabled);
 		});
 		$root.find("[data-lf-ai-preset]").on("click", function(){
-			$prompt.val($(this).attr("data-lf-ai-preset") || "").trigger("focus");
+			var el = this;
+			expandPbNextGenerate = !!(el && el.getAttribute && el.getAttribute("data-lf-ai-expand-pb") === "1");
+			$prompt.val($(el).attr("data-lf-ai-preset") || "").trigger("focus");
 		});
 		$seoRefresh.on("click", function(e){
 			e.preventDefault();
@@ -6573,6 +6577,7 @@ function lf_ai_assistant_widget_js(): string {
 			$diff.prop("hidden", true).empty();
 			setProposalEnabled(false);
 			proposed = null;
+			pbPatchPending = false;
 			lastProposalHomepageSectionId = "";
 			current = null;
 			creationPayload = null;
@@ -6628,6 +6633,8 @@ function lf_ai_assistant_widget_js(): string {
 			activeAssistantCptType = cptTypeValue();
 			activeAssistantBatchType = batchTypeValue();
 			activeAssistantBatchCount = batchCountValue();
+			var postExpandPb = expandPbNextGenerate;
+			expandPbNextGenerate = false;
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_generate",
 				nonce: lfAiFloating.nonce,
@@ -6642,7 +6649,8 @@ function lf_ai_assistant_widget_js(): string {
 				assistant_batch_count: activeAssistantBatchCount,
 				target_reference: String($targetRef.val() || "").trim(),
 				selected_section_id: selectedSectionWrap ? String(selectedSectionWrap.getAttribute("data-lf-section-id") || "") : "",
-				selected_section_type: selectedSectionWrap ? String(selectedSectionWrap.getAttribute("data-lf-section-type") || "") : ""
+				selected_section_type: selectedSectionWrap ? String(selectedSectionWrap.getAttribute("data-lf-section-type") || "") : "",
+				expand_pb_sections: postExpandPb ? "1" : ""
 			}).done(function(res){
 				if (res && res.success && res.data) {
 					if (res.data.context_type) activeContextType = String(res.data.context_type);
@@ -6667,7 +6675,16 @@ function lf_ai_assistant_widget_js(): string {
 					renderQaAnswer(res.data.answer, res.data.snapshot || {});
 					setStatus("Answer ready. Ask follow-up questions anytime.", false);
 					setProposalEnabled(false);
+				} else if (res && res.success && res.data && res.data.mode === "edit_existing" && res.data.pb_patch_pending) {
+					pbPatchPending = true;
+					proposed = null;
+					current = null;
+					var prevPb = String(res.data.pb_patch_preview || "").trim();
+					$diff.html("<div class=\"lf-ai-float__row\"><div class=\"lf-ai-float__field\">Page Builder (multi-section)</div><div><pre style=\"white-space:pre-wrap;margin:0;font-size:12px;max-height:14em;overflow:auto;\">" + escapeHtml(prevPb || "Updates ready for multiple sections. Apply to save to the Page Builder.") + "</pre></div></div>").prop("hidden", false);
+					setStatus("Multi-section Page Builder updates ready. Review the preview, then apply to save.", false);
+					setProposalEnabled(true);
 				} else if (res && res.success && res.data && res.data.mode === "edit_existing" && res.data.proposed) {
+					pbPatchPending = false;
 					proposed = res.data.proposed;
 					lastProposalHomepageSectionId = (res.data.homepage_section_row_id && String(res.data.homepage_section_row_id).trim()) ? String(res.data.homepage_section_row_id).trim() : "";
 					current = res.data.current || {};
@@ -6712,6 +6729,33 @@ function lf_ai_assistant_widget_js(): string {
 						setStatus((res.data && res.data.message) ? res.data.message : "Change applied.", false);
 						inlineQuickEdit = null;
 						setProposalEnabled(false);
+					} else {
+						setStatus((res && res.data && res.data.message) ? res.data.message : "Apply failed.", true);
+					}
+				}).fail(function(xhr){
+					var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Apply failed.";
+					setStatus(msg, true);
+				});
+				return;
+			}
+			if (lastMode === "edit_existing" && pbPatchPending) {
+				setStatus(lfAiFloating.i18n && lfAiFloating.i18n.statusApplying ? lfAiFloating.i18n.statusApplying : "Applying...", false);
+				$.post(lfAiFloating.ajax_url, {
+					action: "lf_ai_apply",
+					nonce: lfAiFloating.nonce,
+					context_type: activeContextType,
+					context_id: activeContextId,
+					prompt_snippet: promptSnippet,
+					proposed: JSON.stringify({}),
+					creation_payload: JSON.stringify({}),
+					assistant_mode: lastMode,
+					assistant_cpt_type: activeAssistantCptType,
+					assistant_batch_type: activeAssistantBatchType,
+					selected_section_id: lastProposalHomepageSectionId,
+					apply_pb_patch: "1"
+				}).done(function(res){
+					if (res && res.success && res.data && res.data.reload) {
+						window.location.reload();
 					} else {
 						setStatus((res && res.data && res.data.message) ? res.data.message : "Apply failed.", true);
 					}
@@ -6784,6 +6828,7 @@ function lf_ai_assistant_widget_js(): string {
 		$btnReject.on("click", function(){
 			inlineQuickEdit = null;
 			proposed = null;
+			pbPatchPending = false;
 			lastProposalHomepageSectionId = "";
 			current = null;
 			creationPayload = null;

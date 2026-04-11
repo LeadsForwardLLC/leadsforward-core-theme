@@ -1471,11 +1471,10 @@ function lf_pb_try_add_post_to_header_menu(\WP_Post $post): bool {
 	return !is_wp_error($new_id) && $new_id > 0;
 }
 
-function lf_pb_render_header_menu_checkbox(): void {
-	global $post;
-	if (!$post instanceof \WP_Post) {
-		return;
-	}
+/**
+ * Markup for “add to header menu” (classic Publish box + block editor side meta box).
+ */
+function lf_pb_render_add_to_header_menu_markup(\WP_Post $post): void {
 	if (!in_array($post->post_type, lf_pb_menu_assist_post_types(), true)) {
 		return;
 	}
@@ -1483,13 +1482,16 @@ function lf_pb_render_header_menu_checkbox(): void {
 		return;
 	}
 	if (!current_user_can('edit_theme_options')) {
+		echo '<p class="description">' . esc_html__('You need permission to manage menus to use this option.', 'leadsforward-core') . '</p>';
 		return;
 	}
 	$menu_id = lf_pb_header_menu_term_id();
 	if ($menu_id <= 0) {
+		echo '<p class="description">' . esc_html__('Assign a menu to the “Header Menu” location under Appearance → Menus, then save this post again to see the checkbox.', 'leadsforward-core') . '</p>';
 		return;
 	}
 	if (lf_pb_nav_post_already_in_menu($menu_id, $post)) {
+		echo '<p class="description">' . esc_html__('This item is already in the menu assigned to Header Menu.', 'leadsforward-core') . '</p>';
 		return;
 	}
 	[$parent_id, $strategy] = lf_pb_nav_smart_parent_for_post($post);
@@ -1516,6 +1518,29 @@ function lf_pb_render_header_menu_checkbox(): void {
 		echo '</p>';
 	}
 	echo '</div>';
+}
+
+function lf_pb_render_header_menu_checkbox(): void {
+	global $post;
+	if (!$post instanceof \WP_Post) {
+		return;
+	}
+	lf_pb_render_add_to_header_menu_markup($post);
+}
+
+function lf_pb_register_header_menu_metabox(): void {
+	foreach (lf_pb_menu_assist_post_types() as $pt) {
+		add_meta_box(
+			'lf_pb_header_menu_add',
+			__('Header menu', 'leadsforward-core'),
+			static function (\WP_Post $post): void {
+				lf_pb_render_add_to_header_menu_markup($post);
+			},
+			$pt,
+			'side',
+			'default'
+		);
+	}
 }
 
 function lf_pb_save_header_menu_checkbox(int $post_id, \WP_Post $post): void {
@@ -1553,6 +1578,7 @@ function lf_pb_admin_nav_notice(): void {
 	echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html($msg) . '</p></div>';
 }
 
+add_action('add_meta_boxes', 'lf_pb_register_header_menu_metabox', 20);
 add_action('post_submitbox_misc_actions', 'lf_pb_render_header_menu_checkbox', 11);
 add_action('save_post', 'lf_pb_save_header_menu_checkbox', 55, 2);
 add_action('admin_notices', 'lf_pb_admin_nav_notice');
