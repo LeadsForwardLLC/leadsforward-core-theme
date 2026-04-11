@@ -206,8 +206,8 @@ function lf_image_intelligence_should_preserve_original_upload_basename(string $
 	if (preg_match('/^[a-f0-9\-]{24,}$/', $norm) === 1) {
 		return false;
 	}
-	// Too little signal.
-	if (strlen($norm) < 8) {
+	// Too little signal (allow slightly shorter intentional slugs).
+	if (strlen($norm) < 6) {
 		return false;
 	}
 	if (preg_match('/^[0-9\-]+$/', $norm) === 1) {
@@ -233,6 +233,37 @@ function lf_image_intelligence_should_preserve_original_upload_basename(string $
 		}
 	}
 	return false;
+}
+
+/**
+ * Second-chance preservation for Website Manifester batch uploads when strict heuristics would rename to a niche slug.
+ *
+ * Callers should only use this on the Manifester upload path so generic camera filenames still get contextual names.
+ */
+function lf_image_intelligence_manifest_lenient_preserve_filename(string $original_name): bool {
+	if ($original_name === '') {
+		return false;
+	}
+	if (lf_image_intelligence_should_preserve_original_upload_basename($original_name, [])) {
+		return true;
+	}
+	$norm = lf_image_intelligence_normalize_filename($original_name);
+	if ($norm === '' || $norm === 'image' || strlen($norm) < 5) {
+		return false;
+	}
+	if (preg_match('/^(img|image|dsc|dscn|dscf|mvi|mov|pic|pict|photo|screenshot|screen[-_]?shot|wp[-_]?image|export|untitled|snapshot|scan)[-_]?\d*$/i', $norm) === 1) {
+		return false;
+	}
+	if (preg_match('/^img[-_]?\d+$/i', $norm) === 1 || preg_match('/^photo[-_]?\d+$/i', $norm) === 1) {
+		return false;
+	}
+	if (preg_match('/^[a-f0-9\-]{24,}$/', $norm) === 1) {
+		return false;
+	}
+	if (preg_match('/^[0-9\-]+$/', $norm) === 1) {
+		return false;
+	}
+	return preg_match('/[a-z]/', $norm) === 1;
 }
 
 /**
@@ -1249,6 +1280,7 @@ function lf_image_intelligence_enforce_manifest_media_metadata(int $attachment_i
 	}
 
 	$context = is_array($context) ? $context : [];
+	$preserved_original = (string) get_post_meta($attachment_id, '_lf_manifester_preserved_original', true) === '1';
 	$meta = lf_image_intelligence_build_media_metadata_from_context($context);
 
 	// ALT: only fill when empty or clearly generic (do not replace intentional alt text).
@@ -1263,6 +1295,11 @@ function lf_image_intelligence_enforce_manifest_media_metadata(int $attachment_i
 		$alt = $city !== '' ? ($topic . ' in ' . $city) : $topic;
 		$alt = lf_image_intelligence_clean_media_text($alt);
 		update_post_meta($attachment_id, '_wp_attachment_image_alt', sanitize_text_field($alt));
+	}
+
+	if ($preserved_original) {
+		// Do not replace title/slug/caption/description with niche-keyword templates when the operator kept a deliberate filename.
+		return;
 	}
 
 	// Title / caption / description: upgrade-only so good filenames and manual work survive the Manifester.

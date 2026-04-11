@@ -154,7 +154,7 @@ function lf_ai_studio_airtable_get_settings(): array {
 	}
 
 	return [
-		'enabled' => get_option('lf_ai_airtable_enabled', '0') === '1',
+		'enabled' => get_option('lf_ai_airtable_enabled', '1') === '1',
 		'pat' => (string) get_option('lf_ai_airtable_pat', ''),
 		'base_id' => (string) get_option('lf_ai_airtable_base', ''),
 		'table' => $table !== '' ? $table : 'Business Info',

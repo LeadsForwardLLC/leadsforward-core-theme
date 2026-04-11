@@ -1056,11 +1056,7 @@ function lf_ops_render_global_settings_page(): void {
 								<th scope="row"><label for="lf_maps_api_key"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></label></th>
 								<td>
 									<input type="password" class="large-text" name="lf_maps_api_key" id="lf_maps_api_key" value="<?php echo esc_attr($can_sensitive ? $maps_api_key : ''); ?>" autocomplete="new-password" <?php disabled(!$can_sensitive); ?> />
-									<label style="display:inline-block;margin-top:6px;">
-										<input type="checkbox" id="lf-maps-key-toggle-global" <?php disabled(!$can_sensitive); ?> />
-										<?php esc_html_e('Show key', 'leadsforward-core'); ?>
-									</label>
-									<p class="description"><?php esc_html_e('Used for business place search in Global Settings and optional Embed API map URLs. Paste a map iframe under Global Settings → Business Entity → Map embed if you want to avoid API domain restrictions.', 'leadsforward-core'); ?></p>
+									<p class="description"><?php esc_html_e('Used for business place search in Global Settings and optional Embed API map URLs. Paste a map iframe under Global Settings → Business Entity → Map embed if you want to avoid API domain restrictions. Re-enter the key here to replace it; saved keys are not shown.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
@@ -1102,12 +1098,8 @@ function lf_ops_render_global_settings_page(): void {
 							<tr>
 								<th scope="row"><label for="lf_ai_airtable_pat_global"><?php esc_html_e('Airtable Personal Access Token', 'leadsforward-core'); ?></label></th>
 								<td>
-									<input type="password" class="large-text" name="lf_ai_airtable_pat" id="lf_ai_airtable_pat_global" value="<?php echo esc_attr((string) ($airtable_settings['pat'] ?? '')); ?>" autocomplete="new-password" />
-									<label style="display:inline-block;margin-top:6px;">
-										<input type="checkbox" id="lf-airtable-token-toggle-global" <?php disabled(!$can_sensitive); ?> />
-										<?php esc_html_e('Show token', 'leadsforward-core'); ?>
-									</label>
-									<p class="description"><?php esc_html_e('Required scopes: data.records:read and schema.bases:read.', 'leadsforward-core'); ?></p>
+									<input type="password" class="large-text" name="lf_ai_airtable_pat" id="lf_ai_airtable_pat_global" value="<?php echo esc_attr((string) ($airtable_settings['pat'] ?? '')); ?>" autocomplete="new-password" <?php disabled(!$can_sensitive); ?> />
+									<p class="description"><?php esc_html_e('Required scopes: data.records:read and schema.bases:read. Re-enter the token to replace it; saved tokens are not shown.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
@@ -1209,26 +1201,6 @@ function lf_ops_render_global_settings_page(): void {
 							</tr>
 					</table>
 					<p><button type="submit" class="button button-primary"><?php esc_html_e('Save Settings', 'leadsforward-core'); ?></button></p>
-					<script>
-						(function() {
-							var toggle = document.getElementById('lf-airtable-token-toggle-global');
-							var input = document.getElementById('lf_ai_airtable_pat_global');
-							var mapsToggle = document.getElementById('lf-maps-key-toggle-global');
-							var mapsInput = document.getElementById('lf_maps_api_key');
-							if (!toggle || !input) {
-								// Continue to optional OpenAI toggle below.
-							} else {
-								toggle.addEventListener('change', function() {
-									input.type = toggle.checked ? 'text' : 'password';
-								});
-							}
-							if (mapsToggle && mapsInput) {
-								mapsToggle.addEventListener('change', function() {
-									mapsInput.type = mapsToggle.checked ? 'text' : 'password';
-								});
-							}
-						})();
-					</script>
 				</div>
 			</div>
 			<div class="lf-settings-panel" data-section="business_entity">

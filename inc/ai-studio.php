@@ -1019,10 +1019,19 @@ function lf_ai_studio_process_images_upload(array $files): array {
 			'error' => (int) ($files['error'][$i] ?? UPLOAD_ERR_NO_FILE),
 			'size' => (int) ($files['size'][$i] ?? 0),
 		];
+		$sanitized_original = sanitize_file_name($name);
 		if (function_exists('lf_image_intelligence_resolve_upload_filename')) {
 			$file['name'] = is_array($upload_ctx) && $upload_ctx !== []
 				? lf_image_intelligence_resolve_upload_filename($name, $upload_ctx)
 				: lf_image_intelligence_resolve_upload_filename($name, null);
+			if (
+				$sanitized_original !== ''
+				&& $file['name'] !== $sanitized_original
+				&& function_exists('lf_image_intelligence_manifest_lenient_preserve_filename')
+				&& lf_image_intelligence_manifest_lenient_preserve_filename($name)
+			) {
+				$file['name'] = $sanitized_original;
+			}
 		} elseif (function_exists('lf_image_intelligence_generate_upload_filename')) {
 			$file['name'] = is_array($upload_ctx) && $upload_ctx !== []
 				? lf_image_intelligence_generate_upload_filename($name, $upload_ctx)
@@ -1035,6 +1044,9 @@ function lf_ai_studio_process_images_upload(array $files): array {
 		}
 		// Mark as Manifester upload so the theme can enforce strong metadata even when filenames are weak.
 		update_post_meta((int) $attachment_id, '_lf_manifester_upload', '1');
+		if ($sanitized_original !== '' && (string) $file['name'] === $sanitized_original) {
+			update_post_meta((int) $attachment_id, '_lf_manifester_preserved_original', '1');
+		}
 		if (is_array($upload_ctx) && $upload_ctx !== []) {
 			update_post_meta((int) $attachment_id, '_lf_manifester_upload_context', wp_json_encode($upload_ctx));
 		}
