@@ -53,12 +53,13 @@ function lf_wizard_admin_notice(): void {
 	if ($screen && (strpos($screen->id, 'toplevel_page_lf-ops') !== false || strpos($screen->id, 'leadsforward_page_lf-') !== false)) {
 		return;
 	}
-	$manifester_url = admin_url('admin.php?page=lf-ops');
+	$manifest_slug = defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest';
+	$manifester_url = admin_url('admin.php?page=' . $manifest_slug);
 	$manual_url = admin_url('admin.php?page=lf-setup');
 	echo '<div class="notice notice-info"><p>' . sprintf(
-		/* translators: 1: link to Website Manifester (Airtable default), 2: link to manual setup */
+		/* translators: 1: link to Manifest Website (Airtable default), 2: link to manual setup */
 		esc_html__('LeadsForward: Start with %1$s (Airtable is the default). Only use %2$s if you are not using Airtable.', 'leadsforward-core'),
-		'<a href="' . esc_url($manifester_url) . '">' . esc_html__('Website Manifester', 'leadsforward-core') . '</a>',
+		'<a href="' . esc_url($manifester_url) . '">' . esc_html__('Manifest Website', 'leadsforward-core') . '</a>',
 		'<a href="' . esc_url($manual_url) . '">' . esc_html__('manual setup', 'leadsforward-core') . '</a>'
 	) . '</p></div>';
 }
@@ -174,7 +175,7 @@ function lf_wizard_handle_post(): void {
 		}
 		if (!empty($errors)) {
 			$redirect = add_query_arg([
-				'page' => 'lf-ops',
+				'page' => 'lf-setup',
 				'step' => 4,
 				'errors' => 1,
 				'msg' => implode(' ', $errors),
@@ -438,8 +439,9 @@ function lf_wizard_render_page(): void {
 	}
 	echo '<div class="lf-setup-card lf-setup-card--top">';
 	echo '<h2 style="margin-top:0;">' . esc_html__('Manual setup (no Airtable)', 'leadsforward-core') . '</h2>';
-	echo '<p class="description">' . esc_html__('This guided flow is for sites that do not load data from Airtable. Most teams use Website Manifester with Airtable instead.', 'leadsforward-core') . '</p>';
-	echo '<p><a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=lf-ops')) . '">' . esc_html__('Open Website Manifester (recommended)', 'leadsforward-core') . '</a> ';
+	echo '<p class="description">' . esc_html__('This guided flow is for sites that do not load data from Airtable. Most teams use Manifest Website with Airtable instead.', 'leadsforward-core') . '</p>';
+	$manifest_slug = defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest';
+	echo '<p><a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=' . $manifest_slug)) . '">' . esc_html__('Open Manifest Website (recommended)', 'leadsforward-core') . '</a> ';
 	echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=lf-setup&step=' . $step)) . '#lf-site-setup">' . esc_html__('Continue manual setup', 'leadsforward-core') . '</a></p>';
 	echo '</div>';
 	if ($errors) {
@@ -480,7 +482,7 @@ function lf_wizard_render_page(): void {
 		echo '<p class="lf-setup-help">' . esc_html__('These locations power Service Area pages and the map section.', 'leadsforward-core') . '</p>';
 		echo '<div class="lf-setup-card">';
 		echo '<h2 class="lf-setup-step-title">' . esc_html__('Homepage & AI content', 'leadsforward-core') . '</h2>';
-		echo '<p class="lf-setup-help">' . esc_html__('These inputs are sent to Website Manifester to generate your homepage copy.', 'leadsforward-core') . '</p>';
+		echo '<p class="lf-setup-help">' . esc_html__('These inputs are sent to Manifest Website to generate your homepage copy.', 'leadsforward-core') . '</p>';
 		echo '<form method="get" action="' . esc_url(admin_url('admin.php')) . '">';
 		echo '<input type="hidden" name="page" value="lf-setup" />';
 		echo '<input type="hidden" name="step" value="2" />';
@@ -558,7 +560,7 @@ function lf_wizard_render_page(): void {
 		echo '<h2 class="lf-setup-step-title">' . esc_html__('Business details', 'leadsforward-core') . '</h2>';
 		echo '<p class="lf-setup-help">' . esc_html__('Used for schema, contact info, and map display. You can edit later in Global Settings.', 'leadsforward-core') . '</p>';
 		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup')) . '" data-maps-key="' . esc_attr($maps_api_key) . '">';
-		echo '<input type="hidden" name="page" value="lf-ops" />';
+		echo '<input type="hidden" name="page" value="lf-setup" />';
 		echo '<input type="hidden" name="step" value="3" />';
 		echo '<input type="hidden" name="niche" value="' . esc_attr($niche) . '" />';
 		echo '<p class="description">' . esc_html__('Used for schema, footer, and Map + NAP. Replace with your real business info—these show the recommended format.', 'leadsforward-core') . '</p>';
@@ -603,7 +605,7 @@ function lf_wizard_render_page(): void {
 		echo '<p class="description" id="lf_place_selected">' . ($place_name !== '' ? esc_html(sprintf(__('Selected: %1$s (%2$s)', 'leadsforward-core'), $place_name, $place_address)) : esc_html__('No place selected yet.', 'leadsforward-core')) . '</p>';
 		echo '<p class="description" id="lf_maps_status" style="color:#b45309;"></p>';
 		echo '</td></tr>';
-		echo '<tr><th scope="row"><label for="lf_business_map_embed">' . esc_html__('Map embed override (optional)', 'leadsforward-core') . '</label></th><td><textarea class="large-text" name="lf_business_map_embed" id="lf_business_map_embed" rows="3">' . esc_textarea($map_embed) . '</textarea><p class="description">' . esc_html__('Paste a custom iframe embed if you prefer. If empty, the selected Google Maps place will be used.', 'leadsforward-core') . '</p></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_business_map_embed">' . esc_html__('Map iframe embed (optional)', 'leadsforward-core') . '</label></th><td><textarea class="large-text" name="lf_business_map_embed" id="lf_business_map_embed" rows="3">' . esc_textarea($map_embed) . '</textarea><p class="description">' . esc_html__('Paste a Google Maps iframe if you prefer not to rely on the Maps API. If empty, the selected Google Maps place will be used.', 'leadsforward-core') . '</p></td></tr>';
 		echo '</table>';
 
 		echo '<details style="margin-top:12px;">';
@@ -633,7 +635,7 @@ function lf_wizard_render_page(): void {
 		$n = lf_get_niche($niche);
 		$services_list = $n ? implode(', ', $n['services']) : '';
 		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup')) . '">';
-		echo '<input type="hidden" name="page" value="lf-ops" />';
+		echo '<input type="hidden" name="page" value="lf-setup" />';
 		echo '<input type="hidden" name="step" value="4" />';
 		echo '<input type="hidden" name="niche" value="' . esc_attr($niche) . '" />';
 		$allowed_embed = lf_wizard_allowed_map_embed();
@@ -710,7 +712,7 @@ function lf_wizard_render_page(): void {
 		$n = lf_get_niche($niche);
 		$rec = $n['variation_profile'] ?? 'a';
 		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup')) . '">';
-		echo '<input type="hidden" name="page" value="lf-ops" />';
+		echo '<input type="hidden" name="page" value="lf-setup" />';
 		echo '<input type="hidden" name="step" value="5" />';
 		echo '<input type="hidden" name="niche" value="' . esc_attr($niche) . '" />';
 		$allowed_embed = lf_wizard_allowed_map_embed();
@@ -797,7 +799,7 @@ function lf_wizard_render_page(): void {
 		echo '</select></td></tr>';
 		$keyword_attr = $manifest_active ? ' readonly disabled' : '';
 		echo '<tr><th scope="row"><label for="lf_homepage_keyword_primary">' . esc_html__('Primary homepage keyword (SEO)', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_homepage_keyword_primary" name="lf_homepage_keyword_primary" class="large-text" value="' . esc_attr($keyword_primary) . '" required placeholder="' . esc_attr__('e.g. Roofing contractor Sarasota', 'leadsforward-core') . '"' . $keyword_attr . ' /></td></tr>';
-		echo '<tr><th scope="row"><label for="lf_homepage_keyword_secondary">' . esc_html__('Secondary homepage keywords (optional)', 'leadsforward-core') . '</label></th><td><textarea id="lf_homepage_keyword_secondary" name="lf_homepage_keyword_secondary" rows="3" class="large-text" placeholder="' . esc_attr__('One per line', 'leadsforward-core') . '"' . $keyword_attr . '>' . esc_textarea($keyword_secondary) . '</textarea><p class="description">' . esc_html__('These keywords are stored for Website Manifester regeneration.', 'leadsforward-core') . '</p></td></tr>';
+		echo '<tr><th scope="row"><label for="lf_homepage_keyword_secondary">' . esc_html__('Secondary homepage keywords (optional)', 'leadsforward-core') . '</label></th><td><textarea id="lf_homepage_keyword_secondary" name="lf_homepage_keyword_secondary" rows="3" class="large-text" placeholder="' . esc_attr__('One per line', 'leadsforward-core') . '"' . $keyword_attr . '>' . esc_textarea($keyword_secondary) . '</textarea><p class="description">' . esc_html__('These keywords are stored for Manifest Website regeneration.', 'leadsforward-core') . '</p></td></tr>';
 		echo '<tr><th scope="row">' . esc_html__('Generate site now', 'leadsforward-core') . '</th><td><label><input type="checkbox" name="lf_homepage_generate_now" value="1"' . checked($generate_now, true, false) . ' /> ' . esc_html__('Generate site content after setup completes', 'leadsforward-core') . '</label><p class="description">' . esc_html__('Runs AI generation immediately after the setup completes.', 'leadsforward-core') . '</p></td></tr>';
 		echo '</table>';
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Next', 'leadsforward-core') . '" /></p></form>';
@@ -902,7 +904,7 @@ function lf_wizard_render_page(): void {
 		</style>';
 		echo '<script>
 		(function(){
-			var trigger = document.querySelector("form[action*=\\"lf-ops\\"] input[name=\\"lf_wizard_generate\\"]");
+			var trigger = document.querySelector("form[action*=\\"lf-setup\\"] input[name=\\"lf_wizard_generate\\"]");
 			var form = trigger ? trigger.form : null;
 			if(!form){return;}
 			var overlay = document.getElementById("lf-setup-loading");

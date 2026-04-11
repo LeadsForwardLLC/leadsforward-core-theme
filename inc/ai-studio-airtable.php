@@ -310,7 +310,9 @@ function lf_ai_studio_airtable_generate(): void {
 		], 400);
 	}
 
-	$redirect = admin_url('admin.php?page=lf-ops&manifest=1');
+	$redirect = function_exists('lf_ai_studio_manifest_admin_url')
+		? lf_ai_studio_manifest_admin_url(['manifest' => '1'])
+		: admin_url('admin.php?page=lf-manifest&manifest=1');
 	if (!empty($run['job_id'])) {
 		$redirect = add_query_arg('job', (string) $run['job_id'], $redirect);
 	}

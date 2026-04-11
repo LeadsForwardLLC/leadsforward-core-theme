@@ -1,7 +1,7 @@
 <?php
 /**
  * LeadsForward parent menu and submenu registration. Admin only.
- * Order: Website Manifester → Global Settings → … → SEO & Site Health (tabs) → Manual setup (optional) → Bulk Tools → Activity Log → Backup.
+ * Order: Global Settings → Manifest Website → … → SEO & Performance (tabs) → Bulk Tools → Backup → Theme Documentation. Manual setup is URL-only (Manifester button).
  * Site Health UI is embedded in SEO settings (inc/seo/seo-settings.php); legacy lf-site-health URL redirects.
  *
  * @package LeadsForward_Core
@@ -16,6 +16,7 @@ if (!defined('ABSPATH')) {
 
 add_action('admin_menu', 'lf_ops_register_menu', 10);
 add_action('admin_menu', 'lf_ops_remove_theme_options_menu', 999);
+add_action('admin_menu', 'lf_ops_hide_leadsforward_submenus', 999);
 add_action('admin_menu', 'lf_ops_reorder_submenus', 1000);
 add_action('admin_init', 'lf_ops_handle_global_settings_save');
 add_action('admin_enqueue_scripts', 'lf_ops_settings_assets');
@@ -23,54 +24,33 @@ add_action('admin_enqueue_scripts', 'lf_ops_brand_admin_assets');
 add_action('admin_post_lf_reviews_sync', 'lf_ops_handle_reviews_sync');
 
 function lf_ops_register_menu(): void {
-	// Parent: slug lf-ops so first submenu with same slug (Manifester) is the default — no redirect, avoids "headers already sent"
+	// Parent opens Global Settings (first submenu duplicates this slug).
 	add_menu_page(
 		__('LeadsForward', 'leadsforward-core'),
 		__('LeadsForward', 'leadsforward-core'),
 		LF_OPS_CAP,
 		'lf-ops',
-		'lf_ai_studio_render_page',
+		'lf_ops_render_global_settings_page',
 		'dashicons-admin-generic',
 		59
 	);
-
-	// 1. Website Manifester — same slug as parent so clicking "LeadsForward" shows this.
-	add_submenu_page(
-		'lf-ops',
-		__('Website Manifester', 'leadsforward-core'),
-		__('Website Manifester', 'leadsforward-core'),
-		'edit_theme_options',
-		'lf-ops',
-		'lf_ai_studio_render_page'
-	);
-	// 2. Global Settings (includes Branding).
 	add_submenu_page(
 		'lf-ops',
 		__('Global Settings', 'leadsforward-core'),
 		__('Global Settings', 'leadsforward-core'),
 		LF_OPS_CAP,
-		'lf-global',
+		'lf-ops',
 		'lf_ops_render_global_settings_page'
 	);
-	// 2b. Theme Docs (full KB in admin; optional front URL /theme-docs/).
+	$manifest_slug = defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest';
 	add_submenu_page(
 		'lf-ops',
-		__('Theme Docs', 'leadsforward-core'),
-		__('Theme Docs', 'leadsforward-core'),
-		LF_OPS_CAP,
-		'lf-theme-docs',
-		'lf_ops_render_theme_docs_page'
+		__('Manifest Website', 'leadsforward-core'),
+		__('Manifest Website', 'leadsforward-core'),
+		'edit_theme_options',
+		$manifest_slug,
+		'lf_ai_studio_render_page'
 	);
-	// 3. Homepage (sections)
-	add_submenu_page(
-		'lf-ops',
-		__('Homepage Builder', 'leadsforward-core'),
-		__('Homepage Builder', 'leadsforward-core'),
-		LF_OPS_CAP,
-		'lf-homepage-settings',
-		'lf_homepage_admin_render'
-	);
-	// 4. Quote Builder
 	add_submenu_page(
 		'lf-ops',
 		__('Quote Builder', 'leadsforward-core'),
@@ -79,7 +59,6 @@ function lf_ops_register_menu(): void {
 		'lf-quote-builder',
 		'lf_quote_builder_render_admin'
 	);
-	// 4b. Contact Form
 	add_submenu_page(
 		'lf-ops',
 		__('Contact Form', 'leadsforward-core'),
@@ -88,17 +67,16 @@ function lf_ops_register_menu(): void {
 		'lf-contact-form',
 		'lf_contact_form_render_admin'
 	);
-	// 4c. User testing feedback (internal).
+	// Homepage section order: no menu link; open via direct URL or deep links from health checks.
 	add_submenu_page(
 		'lf-ops',
-		__('User testing', 'leadsforward-core'),
-		__('User testing', 'leadsforward-core'),
+		__('Homepage sections', 'leadsforward-core'),
+		'',
 		LF_OPS_CAP,
-		'lf-user-testing',
-		'lf_user_testing_render_page'
+		'lf-homepage-settings',
+		'lf_homepage_admin_render'
 	);
 	$has_acf_options = function_exists('acf_options_page_html');
-	// Remaining ACF option pages (only render if ACF options pages exist).
 	if ($has_acf_options) {
 		add_submenu_page('lf-ops', __('CTAs', 'leadsforward-core'), __('CTAs', 'leadsforward-core'), LF_OPS_CAP, 'lf-ctas', 'lf_ops_render_acf_options_page');
 		add_submenu_page('lf-ops', __('Schema', 'leadsforward-core'), __('Schema', 'leadsforward-core'), LF_OPS_CAP, 'lf-schema', 'lf_ops_render_acf_options_page');
@@ -106,7 +84,6 @@ function lf_ops_register_menu(): void {
 		add_submenu_page('lf-ops', __('Homepage Options', 'leadsforward-core'), __('Homepage Options', 'leadsforward-core'), LF_OPS_CAP, 'lf-homepage', 'lf_ops_render_acf_options_page');
 		add_submenu_page('lf-ops', __('Business Info', 'leadsforward-core'), __('Business Info', 'leadsforward-core'), LF_OPS_CAP, 'lf-business-info', 'lf_ops_render_acf_options_page');
 	}
-	// Ops utilities.
 	add_submenu_page(
 		'lf-ops',
 		__('Bulk Tools', 'leadsforward-core'),
@@ -117,21 +94,38 @@ function lf_ops_register_menu(): void {
 	);
 	add_submenu_page(
 		'lf-ops',
-		__('Activity log', 'leadsforward-core'),
-		__('Activity log', 'leadsforward-core'),
-		LF_OPS_CAP,
-		'lf-ops-audit',
-		'lf_ops_audit_render'
-	);
-	// Config (Export + Import) — keep at the bottom.
-	add_submenu_page(
-		'lf-ops',
 		__('Backup & Restore', 'leadsforward-core'),
 		__('Backup & Restore', 'leadsforward-core'),
 		LF_OPS_CAP,
 		'lf-ops-config',
 		'lf_ops_config_render'
 	);
+	add_submenu_page(
+		'lf-ops',
+		__('Theme Documentation', 'leadsforward-core'),
+		__('Theme Documentation', 'leadsforward-core'),
+		LF_OPS_CAP,
+		'lf-theme-docs',
+		'lf_ops_render_theme_docs_page'
+	);
+	// Legacy/bookmark slug: same screen as Global Settings (hidden from menu).
+	add_submenu_page(
+		'lf-ops',
+		__('Global Settings', 'leadsforward-core'),
+		'',
+		LF_OPS_CAP,
+		'lf-global',
+		'lf_ops_render_global_settings_page'
+	);
+}
+
+/**
+ * Remove menu entries that stay reachable via direct URL or Manifester only.
+ */
+function lf_ops_hide_leadsforward_submenus(): void {
+	remove_submenu_page('lf-ops', 'lf-homepage-settings');
+	remove_submenu_page('lf-ops', 'lf-setup');
+	remove_submenu_page('lf-ops', 'lf-global');
 }
 
 function lf_ops_user_can_manage_sensitive_settings(): bool {
@@ -155,7 +149,7 @@ function lf_ops_render_theme_docs_page(): void {
 		return;
 	}
 	echo '<div class="wrap lf-docs-admin-wrap">';
-	echo '<h1>' . esc_html__('Theme documentation', 'leadsforward-core') . '</h1>';
+	echo '<h1>' . esc_html__('Theme Documentation', 'leadsforward-core') . '</h1>';
 	if (function_exists('lf_docs_render_main_sections')) {
 		lf_docs_render_main_sections('admin');
 	} else {
@@ -185,7 +179,7 @@ function lf_ops_settings_assets(string $hook): void {
 	if (!current_user_can(LF_OPS_CAP)) {
 		return;
 	}
-	if (!in_array($hook, ['leadsforward_page_lf-global'], true)) {
+	if (!in_array($hook, ['toplevel_page_lf-ops', 'leadsforward_page_lf-global'], true)) {
 		return;
 	}
 	wp_enqueue_media();
@@ -220,18 +214,16 @@ function lf_ops_reorder_submenus(): void {
 	if (!isset($submenu['lf-ops']) || !is_array($submenu['lf-ops'])) {
 		return;
 	}
+	$manifest_slug = defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest';
 	$preferred_order = [
 		'lf-ops',
-		'lf-global',
-		'lf-theme-docs',
-		'lf-homepage-settings',
+		$manifest_slug,
 		'lf-quote-builder',
 		'lf-contact-form',
 		'lf-seo',
-		'lf-setup',
 		'lf-ops-bulk',
-		'lf-ops-audit',
 		'lf-ops-config',
+		'lf-theme-docs',
 	];
 	$rank = array_flip($preferred_order);
 	$items = $submenu['lf-ops'];
@@ -303,11 +295,11 @@ function lf_admin_render_quality_summary_strip(string $context = 'seo'): void {
 	?>
 	<div class="lf-admin-summary-strip">
 		<div class="lf-admin-summary-strip__head">
-			<strong><?php esc_html_e('SEO + Site Health Snapshot', 'leadsforward-core'); ?></strong>
+			<strong><?php esc_html_e('SEO & Performance snapshot', 'leadsforward-core'); ?></strong>
 			<div class="lf-admin-summary-strip__links">
 				<a href="<?php echo esc_url($seo_url); ?>"><?php esc_html_e('SEO settings', 'leadsforward-core'); ?></a>
 				&nbsp;·&nbsp;
-				<a href="<?php echo esc_url($health_url); ?>"><?php esc_html_e('Site health', 'leadsforward-core'); ?></a>
+				<a href="<?php echo esc_url($health_url); ?>"><?php esc_html_e('Site health checks', 'leadsforward-core'); ?></a>
 			</div>
 		</div>
 		<div class="lf-admin-summary-strip__grid">
@@ -432,24 +424,6 @@ function lf_ops_handle_global_settings_save(): void {
 		update_option('lf_ai_airtable_reviews_table', isset($_POST['lf_ai_airtable_reviews_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_table'])) : '');
 		update_option('lf_ai_airtable_reviews_view', isset($_POST['lf_ai_airtable_reviews_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_view'])) : '');
 		update_option('lf_maps_api_key', isset($_POST['lf_maps_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_maps_api_key'])) : '');
-		$lf_maps_iframe_allowed = function_exists('lf_wizard_allowed_map_embed') ? lf_wizard_allowed_map_embed() : [
-			'iframe' => [
-				'src' => true,
-				'width' => true,
-				'height' => true,
-				'style' => true,
-				'loading' => true,
-				'referrerpolicy' => true,
-				'allowfullscreen' => true,
-				'title' => true,
-			],
-		];
-		update_option(
-			'lf_maps_iframe_embed',
-			isset($_POST['lf_maps_iframe_embed']) ? wp_kses(wp_unslash($_POST['lf_maps_iframe_embed']), $lf_maps_iframe_allowed) : ''
-		);
-		update_option('options_lf_feedback_webhook_url', isset($_POST['lf_feedback_webhook_url']) ? esc_url_raw(wp_unslash((string) $_POST['lf_feedback_webhook_url'])) : '');
-		update_option('options_lf_feedback_webhook_secret', isset($_POST['lf_feedback_webhook_secret']) ? trim(sanitize_text_field(wp_unslash((string) $_POST['lf_feedback_webhook_secret']))) : '');
 	}
 	update_option('lf_tools_hide_admin_bar', isset($_POST['lf_tools_hide_admin_bar']) ? '1' : '0');
 	update_option('lf_tools_classic_editor', isset($_POST['lf_tools_classic_editor']) ? '1' : '0');
@@ -744,7 +718,6 @@ function lf_ops_render_global_settings_page(): void {
 	$entity_insurance = (string) ($entity['insurance_statement'] ?? '');
 	$maps_api_key = get_option('lf_maps_api_key', '');
 	$maps_api_key = is_string($maps_api_key) ? $maps_api_key : '';
-	$maps_iframe_embed = (string) get_option('lf_maps_iframe_embed', '');
 	$default_niche = function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair';
 	$homepage_niche_slug = (string) get_option('lf_homepage_niche_slug', $default_niche);
 	$design_preset = (string) get_option('lf_global_design_preset', 'clean-precision');
@@ -813,7 +786,7 @@ function lf_ops_render_global_settings_page(): void {
 	if ($autonomy_enable_error !== '') {
 		delete_option('lf_ai_autonomy_enable_error');
 	}
-	$manifester_enabled = get_option('lf_ai_studio_enabled', '0') === '1';
+	$manifester_enabled = get_option('lf_ai_studio_enabled', '1') === '1';
 	$manifester_webhook = (string) get_option('lf_ai_studio_webhook', '');
 	$manifester_secret = (string) get_option('lf_ai_studio_secret', '');
 	$manifester_callback = (string) get_option('lf_ai_studio_callback_url', '');
@@ -840,8 +813,6 @@ function lf_ops_render_global_settings_page(): void {
 	$autonomy_last_baseline_job = (int) get_option('lf_ai_autonomy_last_baseline_job_id', 0);
 	$autonomy_last_health_check = (int) get_option('lf_ai_autonomy_last_health_check', 0);
 	$openai_key_set = (string) get_option('lf_openai_api_key', '') !== '';
-	$feedback_webhook_url = (string) get_option('options_lf_feedback_webhook_url', '');
-	$feedback_webhook_secret = (string) get_option('options_lf_feedback_webhook_secret', '');
 	$tools_hide_admin_bar = get_option('lf_tools_hide_admin_bar', '0') === '1';
 	$tools_classic_editor = get_option('lf_tools_classic_editor', '0') === '1';
 	$tools_image_optimization = get_option('lf_tools_image_optimization', '1') === '1';
@@ -964,7 +935,7 @@ function lf_ops_render_global_settings_page(): void {
 			<?php wp_nonce_field('lf_global_settings', 'lf_global_settings_nonce'); ?>
 			<div class="lf-settings-panel" data-section="manifester_settings">
 				<div class="lf-settings-panel-header">
-					<h2><?php esc_html_e('Website Manifester Settings', 'leadsforward-core'); ?></h2>
+					<h2><?php esc_html_e('Manifest Website settings', 'leadsforward-core'); ?></h2>
 					<button type="button" class="lf-settings-toggle" data-target="manifester_settings" aria-expanded="true">
 						<span class="lf-settings-toggle-icon">▾</span>
 						<span class="lf-settings-toggle-label"><?php esc_html_e('Collapse', 'leadsforward-core'); ?></span>
@@ -1035,7 +1006,7 @@ function lf_ops_render_global_settings_page(): void {
 										} elseif ($autonomy_paused) {
 											echo esc_html(sprintf(__('Status: Paused (%s).', 'leadsforward-core'), $autonomy_pause_reason !== '' ? $autonomy_pause_reason : __('cooldown or circuit break', 'leadsforward-core')));
 										} else {
-											esc_html_e('Status: Not eligible yet. Run Website Manifester successfully to unlock.', 'leadsforward-core');
+											esc_html_e('Status: Not eligible yet. Run Manifest Website successfully to unlock.', 'leadsforward-core');
 										}
 										?>
 									</p>
@@ -1077,14 +1048,7 @@ function lf_ops_render_global_settings_page(): void {
 										<input type="checkbox" id="lf-maps-key-toggle-global" <?php disabled(!$can_sensitive); ?> />
 										<?php esc_html_e('Show key', 'leadsforward-core'); ?>
 									</label>
-									<p class="description"><?php esc_html_e('Used for business place search and optional Embed API map URLs. Not required if you use a pasted iframe below or on LeadsForward → Homepage → Business Info.', 'leadsforward-core'); ?></p>
-								</td>
-							</tr>
-							<tr>
-								<th scope="row"><label for="lf_maps_iframe_embed"><?php esc_html_e('Map iframe embed (site-wide fallback)', 'leadsforward-core'); ?></label></th>
-								<td>
-									<textarea class="large-text code" name="lf_maps_iframe_embed" id="lf_maps_iframe_embed" rows="4" <?php disabled(!$can_sensitive); ?>><?php echo esc_textarea($can_sensitive ? $maps_iframe_embed : ''); ?></textarea>
-									<p class="description"><?php esc_html_e('Optional. Paste a Google Maps (or other) iframe embed here to show the Map + NAP block without relying on the JavaScript Maps API or domain key restrictions. If the Homepage Business Info field “Map embed override” is set, that value wins for this site.', 'leadsforward-core'); ?></p>
+									<p class="description"><?php esc_html_e('Used for business place search in Global Settings and optional Embed API map URLs. Paste a map iframe under Global Settings → Business Entity → Map embed if you want to avoid API domain restrictions.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
@@ -1096,20 +1060,6 @@ function lf_ops_render_global_settings_page(): void {
 										<?php esc_html_e('Clear saved key', 'leadsforward-core'); ?>
 									</label>
 									<p class="description"><?php esc_html_e('Used by the floating AI Assistant for guarded copy edits only.', 'leadsforward-core'); ?></p>
-								</td>
-							</tr>
-							<tr>
-								<th scope="row"><label for="lf_feedback_webhook_url"><?php esc_html_e('Feedback webhook URL', 'leadsforward-core'); ?></label></th>
-								<td>
-									<input type="url" class="large-text" name="lf_feedback_webhook_url" id="lf_feedback_webhook_url" value="<?php echo esc_attr($can_sensitive ? $feedback_webhook_url : ''); ?>" placeholder="<?php echo esc_attr($can_sensitive ? 'https://n8n.example.com/webhook/feedback-status' : __('Admins only', 'leadsforward-core')); ?>" <?php disabled(!$can_sensitive); ?> />
-									<p class="description"><?php esc_html_e('When feedback is Approved/Rejected, WordPress POSTs a JSON payload here so n8n can route to Slack/email/etc.', 'leadsforward-core'); ?></p>
-								</td>
-							</tr>
-							<tr>
-								<th scope="row"><label for="lf_feedback_webhook_secret"><?php esc_html_e('Feedback webhook secret (optional)', 'leadsforward-core'); ?></label></th>
-								<td>
-									<input type="text" class="large-text" name="lf_feedback_webhook_secret" id="lf_feedback_webhook_secret" value="<?php echo esc_attr($can_sensitive ? $feedback_webhook_secret : ''); ?>" placeholder="<?php echo esc_attr($can_sensitive ? '' : __('Admins only', 'leadsforward-core')); ?>" <?php disabled(!$can_sensitive); ?> />
-									<p class="description"><?php esc_html_e('Sent as a Bearer token in the Authorization header.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
@@ -1291,7 +1241,7 @@ function lf_ops_render_global_settings_page(): void {
 									<button type="button" class="button" id="lf-global-logo-select"><?php esc_html_e('Select Logo', 'leadsforward-core'); ?></button>
 									<button type="button" class="button" id="lf-global-logo-clear"><?php esc_html_e('Remove', 'leadsforward-core'); ?></button>
 								</div>
-								<p class="description"><?php esc_html_e('Logo appears in the site header. Set the header button below, or leave blank to use defaults from Homepage Builder.', 'leadsforward-core'); ?></p>
+								<p class="description"><?php esc_html_e('Logo appears in the site header. Set the header button below, or leave blank to use theme defaults.', 'leadsforward-core'); ?></p>
 							</td>
 						</tr>
 						<tr>
@@ -1380,11 +1330,11 @@ function lf_ops_render_global_settings_page(): void {
 								<p class="description" id="lf_maps_status" style="color:#b45309;"></p>
 							</td>
 						</tr>
-						<tr>
-							<th scope="row"><label for="lf_business_map_embed"><?php esc_html_e('Map embed override (optional)', 'leadsforward-core'); ?></label></th>
+						<tr id="lf-business-map-embed">
+							<th scope="row"><label for="lf_business_map_embed"><?php esc_html_e('Map iframe embed (optional)', 'leadsforward-core'); ?></label></th>
 							<td>
 								<textarea class="large-text" name="lf_business_map_embed" id="lf_business_map_embed" rows="3"><?php echo esc_textarea($map_embed); ?></textarea>
-								<p class="description"><?php esc_html_e('Paste a custom iframe embed if you prefer. If empty, the selected Google Maps place will be used.', 'leadsforward-core'); ?></p>
+								<p class="description"><?php esc_html_e('Paste a Google Maps iframe embed to show Map + NAP without relying on the JavaScript Maps API or domain key restrictions. If empty, the theme uses your selected place or address.', 'leadsforward-core'); ?></p>
 							</td>
 						</tr>
 						<tr>
@@ -1757,7 +1707,7 @@ function lf_ops_render_global_settings_page(): void {
 				}
 				if (!key) {
 					if (status) {
-						status.textContent = 'Add your Google Maps API key in LeadsForward -> Global Settings -> Website Manifester Settings to enable search.';
+						status.textContent = 'Add your Google Maps API key in LeadsForward -> Global Settings to enable search.';
 					}
 					return;
 				}
@@ -1793,7 +1743,7 @@ function lf_ops_render_global_settings_page(): void {
 				key = key.trim();
 				if (!key) {
 					if (selected) {
-						selected.textContent = 'Add your Google Maps API key in LeadsForward -> Global Settings -> Website Manifester Settings to enable search.';
+						selected.textContent = 'Add your Google Maps API key in LeadsForward -> Global Settings to enable search.';
 					}
 					if (status) {
 						status.textContent = '';

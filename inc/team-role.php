@@ -88,7 +88,6 @@ function lf_team_role_limit_admin_menus(): void {
 	$hide_leadsforward = [
 		'lf-ops-config',
 		'lf-ops-bulk',
-		'lf-ops-audit',
 	];
 	foreach ($hide_leadsforward as $slug) {
 		remove_submenu_page('lf-ops', $slug);
@@ -109,7 +108,6 @@ function lf_team_role_block_sensitive_pages(): void {
 	$blocked_pages = [
 		'lf-ops-config',
 		'lf-ops-bulk',
-		'lf-ops-audit',
 	];
 	if (!in_array($page, $blocked_pages, true)) {
 		return;

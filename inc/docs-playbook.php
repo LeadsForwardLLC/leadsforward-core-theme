@@ -22,12 +22,14 @@ function lf_docs_render_playbook_sections(): void {
 				<h2><?php esc_html_e('Quick links (wp-admin)', 'leadsforward-core'); ?></h2>
 				<p><?php esc_html_e('Open common screens directly (requires permission to manage theme options):', 'leadsforward-core'); ?></p>
 				<ul>
-					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-ops')); ?>"><?php esc_html_e('Website Manifester', 'leadsforward-core'); ?></a></li>
-					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-setup')); ?>"><?php esc_html_e('Manual setup (no Airtable)', 'leadsforward-core'); ?></a></li>
-					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-global')); ?>"><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></a></li>
-					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-homepage-settings')); ?>"><?php esc_html_e('Homepage Builder', 'leadsforward-core'); ?></a></li>
-					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=settings')); ?>"><?php esc_html_e('SEO & Site Health (SEO tab)', 'leadsforward-core'); ?></a> — <a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=health')); ?>"><?php esc_html_e('Health tab', 'leadsforward-core'); ?></a></li>
-					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-user-testing')); ?>"><?php esc_html_e('User testing feedback', 'leadsforward-core'); ?></a> — <a href="<?php echo esc_url(admin_url('edit.php?post_type=lf_feedback')); ?>"><?php esc_html_e('All feedback (CPT)', 'leadsforward-core'); ?></a></li>
+					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-ops')); ?>"><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></a></li>
+					<?php
+					$m_slug = defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest';
+					?>
+					<li><a href="<?php echo esc_url(admin_url('admin.php?page=' . $m_slug)); ?>"><?php esc_html_e('Manifest Website', 'leadsforward-core'); ?></a></li>
+					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-setup')); ?>"><?php esc_html_e('Manual setup (no Airtable)', 'leadsforward-core'); ?></a> — <?php esc_html_e('not in the sidebar; use the button on Manifest Website.', 'leadsforward-core'); ?></li>
+					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-homepage-settings')); ?>"><?php esc_html_e('Homepage sections (hidden menu URL)', 'leadsforward-core'); ?></a> — <?php esc_html_e('prefer editing the static front page under Pages.', 'leadsforward-core'); ?></li>
+					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=settings')); ?>"><?php esc_html_e('SEO & Performance (SEO tab)', 'leadsforward-core'); ?></a> — <a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=health')); ?>"><?php esc_html_e('Site health tab', 'leadsforward-core'); ?></a></li>
 					<li><a href="<?php echo esc_url(admin_url('edit.php?post_type=lf_process_step')); ?>"><?php esc_html_e('Process steps (CPT)', 'leadsforward-core'); ?></a></li>
 					<li><a href="<?php echo esc_url(admin_url('edit.php?post_type=lf_faq')); ?>"><?php esc_html_e('FAQs', 'leadsforward-core'); ?></a></li>
 				</ul>
@@ -35,7 +37,7 @@ function lf_docs_render_playbook_sections(): void {
 			<?php endif; ?>
 			<section id="getting-started" class="lf-docs__section">
 				<h1><?php esc_html_e('LeadsForward playbook: build a site start to finish', 'leadsforward-core'); ?></h1>
-				<p><?php esc_html_e('This guide mirrors how production sites are launched: install → Global Settings + Website Manifester (Airtable is the default source for site data) → generation → tune homepage and templates → polish SEO → verify in Site Health → go live. Use Manual setup (no Airtable) only when you are not loading the project from Airtable.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('This guide mirrors how production sites are launched: install → Global Settings + Manifest Website (Airtable is the default source for site data) → generation → tune homepage and templates → polish SEO → verify in Site Health → go live. Use Manual setup (no Airtable) only when you are not loading the project from Airtable; open it from the button on Manifest Website (it is not in the sidebar).', 'leadsforward-core'); ?></p>
 				<p><strong><?php esc_html_e('WordPress basics you need:', 'leadsforward-core'); ?></strong> <?php esc_html_e('Pages vs posts; Appearance → Menus; Settings → Reading (static front page); Settings → Permalinks (Post name); users with Administrator or a role that includes “edit theme options” for LeadsForward screens.', 'leadsforward-core'); ?></p>
 				<h2><?php esc_html_e('Before you publish: core WordPress setup', 'leadsforward-core'); ?></h2>
 				<ol>
@@ -51,33 +53,33 @@ function lf_docs_render_playbook_sections(): void {
 				<h2><?php esc_html_e('Recommended order of work', 'leadsforward-core'); ?></h2>
 				<ol>
 					<li><?php esc_html_e('Install and activate Advanced Custom Fields (ACF) or ACF Pro.', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('Open Global Settings: logo, branding colors if needed, OpenAI key (for assistant), Airtable credentials, and Website Manifester webhook/secret.', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('Use Website Manifester: choose scope checkboxes, pick an Airtable project (recommended) or upload a manifest JSON, add images/logo, then run generation. Generating from Airtable stores the manifest and syncs business/niche/homepage options into WordPress.', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('Optional — only if you do not use Airtable: run LeadsForward → Manual setup (no Airtable) through all five steps (niche, areas, homepage inputs, business NAP, generate).', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('Tune LeadsForward → Homepage Builder and edit core pages via Page Builder meta boxes.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Open Global Settings: logo, branding colors if needed, OpenAI key (for assistant), Airtable credentials, and Manifest Website webhook/secret.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Use Manifest Website: choose scope checkboxes, pick an Airtable project (recommended) or upload a manifest JSON, add images/logo, then run generation. Generating from Airtable stores the manifest and syncs business/niche/homepage options into WordPress.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Optional — only if you do not use Airtable: from Manifest Website, open Manual setup (no Airtable) and complete all five steps (niche, areas, homepage inputs, business NAP, generate).', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Tune homepage section order via the hidden admin URL (or Page Builder patterns) and edit core pages via Page Builder meta boxes; the static front page also lives under Pages.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Edit services/areas/projects in the block editor; use the LeadsForward design sidebar for global preset when needed.', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('Configure LeadsForward → SEO & Site Health (meta templates, header scripts for GTM, sitemap). Run Pre-launch check and the manual QA checklist.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Configure LeadsForward → SEO & Performance (meta templates, header scripts for GTM, sitemap). Run Pre-launch check and the manual QA checklist.', 'leadsforward-core'); ?></li>
 				</ol>
 			</section>
 
 			<section id="admin-map" class="lf-docs__section">
 				<h2><?php esc_html_e('Admin map (where everything lives)', 'leadsforward-core'); ?></h2>
-				<p><?php esc_html_e('Website Manifester is the primary place to load site truth: pick an Airtable project (default) or upload a manifest file, then generate. That flow updates the stored manifest and syncs niche, business entity, and homepage keywords into WordPress. Manual setup (no Airtable) is an alternative five-step wizard when you are not using Airtable—use one path or the other for initial baseline data, not both.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('Manifest Website is the primary place to load site truth: pick an Airtable project (default) or upload a manifest file, then generate. That flow updates the stored manifest and syncs niche, business entity, and homepage keywords into WordPress. Manual setup (no Airtable) is an alternative five-step wizard when you are not using Airtable—use one path or the other for initial baseline data, not both. Manual setup is only linked from Manifest Website (not the sidebar).', 'leadsforward-core'); ?></p>
 				<ul>
-					<li><strong>Website Manifester</strong> — <?php esc_html_e('Orchestrator scope, Airtable project picker (default), manifest file upload, research, images, generate.', 'leadsforward-core'); ?></li>
-					<li><strong>Global Settings</strong> — <?php esc_html_e('Business entity, phones, map, APIs, manifester enable, reviews sync.', 'leadsforward-core'); ?></li>
-					<li><strong>Manual setup (no Airtable)</strong> — <?php esc_html_e('Optional five-step wizard; stores niche and business/homepage-related inputs when you are not loading from Airtable. Reopen anytime from LeadsForward → Manual setup (no Airtable).', 'leadsforward-core'); ?></li>
-					<li><strong>Homepage Builder</strong> — <?php esc_html_e('Section order/on-off for the front page.', 'leadsforward-core'); ?></li>
+					<li><strong>Manifest Website</strong> — <?php esc_html_e('Orchestrator scope, Airtable project picker (default), manifest file upload, research, images, generate.', 'leadsforward-core'); ?></li>
+					<li><strong>Global Settings</strong> — <?php esc_html_e('Business entity, phones, map iframe, APIs, manifester enable, reviews sync.', 'leadsforward-core'); ?></li>
+					<li><strong>Manual setup (no Airtable)</strong> — <?php esc_html_e('Optional five-step wizard; open from Manifest Website.', 'leadsforward-core'); ?></li>
+					<li><strong>Homepage sections</strong> — <?php esc_html_e('Section order for the static front page (direct URL only); prefer editing the Home page under Pages when possible.', 'leadsforward-core'); ?></li>
 					<li><strong>Quote Builder / Contact Form</strong> — <?php esc_html_e('Lead capture configuration.', 'leadsforward-core'); ?></li>
-					<li><strong>SEO & Site Health</strong> — <?php esc_html_e('Tab: SEO settings. Tab: Site health (status, GTM check, manifester check, pre-launch run, QA checklist).', 'leadsforward-core'); ?></li>
-					<li><strong>Bulk Tools / Activity log / Backup & Restore</strong> — <?php esc_html_e('Batch preset, CTAs, schema toggles, linking rebuild; audit trail; config export/import.', 'leadsforward-core'); ?></li>
+					<li><strong>SEO & Performance</strong> — <?php esc_html_e('Tab: SEO settings. Tab: Site health (status, GTM check, manifester check, pre-launch run, QA checklist).', 'leadsforward-core'); ?></li>
+					<li><strong>Bulk Tools / Backup & Restore</strong> — <?php esc_html_e('Batch preset, CTAs, schema toggles, linking rebuild; config export/import.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('ACF submenus (CTAs, Schema, Variation, etc.) when ACF options pages are active.', 'leadsforward-core'); ?></li>
 				</ul>
 			</section>
 
 			<section id="manifester" class="lf-docs__section">
-				<h2><?php esc_html_e('Website Manifester (deep dive)', 'leadsforward-core'); ?></h2>
-				<p><?php esc_html_e('The Manifester screen explains the recommended flow: connect orchestrator + Airtable in Global Settings, select scope, pick an Airtable project (or upload JSON), then generate. Scope checkboxes are saved independently of the manifest JSON’s generation_scope string—what you check is what the theme sends. A full-site run is recommended so services, areas, blog placeholders, and core pages share one keyword and internal-link graph.', 'leadsforward-core'); ?></p>
+				<h2><?php esc_html_e('Manifest Website (deep dive)', 'leadsforward-core'); ?></h2>
+				<p><?php esc_html_e('This screen explains the recommended flow: connect orchestrator + Airtable in Global Settings, select scope, pick an Airtable project (or upload JSON), then generate. Scope checkboxes are saved independently of the manifest JSON’s generation_scope string—what you check is what the theme sends. A full-site run is recommended so services, areas, blog placeholders, and core pages share one keyword and internal-link graph.', 'leadsforward-core'); ?></p>
 				<h3><?php esc_html_e('Prerequisites', 'leadsforward-core'); ?></h3>
 				<ul>
 					<li><?php esc_html_e('Manifester enabled, webhook URL, and shared secret match your n8n (or other) orchestrator.', 'leadsforward-core'); ?></li>
@@ -96,8 +98,8 @@ function lf_docs_render_playbook_sections(): void {
 			</section>
 
 			<section id="homepage-builder" class="lf-docs__section">
-				<h2><?php esc_html_e('Homepage Builder', 'leadsforward-core'); ?></h2>
-				<p><?php esc_html_e('Controls which sections appear on the static front page and in what order. Service grid, reviews, map, FAQs, and CTAs all read from here plus their underlying content (services, testimonials, NAP).', 'leadsforward-core'); ?></p>
+				<h2><?php esc_html_e('Homepage sections', 'leadsforward-core'); ?></h2>
+				<p><?php esc_html_e('Controls which sections appear on the static front page and in what order. Service grid, reviews, map, FAQs, and CTAs all read from here plus their underlying content (services, testimonials, NAP). The menu link was removed to reduce clutter; use Pages → Home or the direct admin URL documented in quick links.', 'leadsforward-core'); ?></p>
 				<p><?php esc_html_e('After changing order, view the homepage on the front end and in the block editor (if you edit the front page block template) to confirm layout.', 'leadsforward-core'); ?></p>
 			</section>
 
@@ -110,7 +112,7 @@ function lf_docs_render_playbook_sections(): void {
 				<h3><?php esc_html_e('SEO meta box', 'leadsforward-core'); ?></h3>
 				<p><?php esc_html_e('Each page/post/service/area has an SEO box: primary keyword, meta title/description, intent, and an on-page depth checklist (lengths, internal links, images, featured image). Save to refresh the quality score.', 'leadsforward-core'); ?></p>
 				<h3><?php esc_html_e('Why the main block editor is sometimes hidden', 'leadsforward-core'); ?></h3>
-				<p><?php esc_html_e('Core template pages that use only the Page Builder (no “content” section) hide the big block canvas on purpose—you edit those URLs in the Page Builder meta box. The home page is driven by Homepage Builder; wp-admin shows a notice pointing you there. Posts, services, and areas typically keep the block editor for narrative body copy plus Page Builder sections where configured.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('Core template pages that use only the Page Builder (no “content” section) hide the big block canvas on purpose—you edit those URLs in the Page Builder meta box. The home page section order is configured in the homepage sections screen (direct URL); wp-admin may show a notice pointing you there. Posts, services, and areas typically keep the block editor for narrative body copy plus Page Builder sections where configured.', 'leadsforward-core'); ?></p>
 			</section>
 
 			<section id="frontend-editor" class="lf-docs__section">
@@ -133,7 +135,7 @@ function lf_docs_render_playbook_sections(): void {
 					<li><?php esc_html_e('Shortcut help: Shift+? or F1.', 'leadsforward-core'); ?></li>
 				</ul>
 				<h3><?php esc_html_e('Where it works best', 'leadsforward-core'); ?></h3>
-				<p><?php esc_html_e('Open the static front page or any URL that renders LeadsForward section wrappers (Page Builder). If no sections are detected, the UI explains that you need a page with theme sections—use wp-admin Page Builder or Homepage Builder instead.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('Open the static front page or any URL that renders LeadsForward section wrappers (Page Builder). If no sections are detected, the UI explains that you need a page with theme sections—use wp-admin Page Builder or the homepage sections screen instead.', 'leadsforward-core'); ?></p>
 				<p><?php esc_html_e('Structural actions are logged for undo/redo. For legal/schema slug changes, new CPT posts, or manifest-scale generation, stay in wp-admin and the Manifester workflow.', 'leadsforward-core'); ?></p>
 				<h3><?php esc_html_e('Hero Authority Split: proof card list', 'leadsforward-core'); ?></h3>
 				<p><?php esc_html_e('The right-hand checklist uses hero_proof_bullets, stored in the homepage section option. Inline saves on the static front page always use the homepage target even if the assistant recently ran against another URL, so proof lines persist after refresh.', 'leadsforward-core'); ?></p>
@@ -151,17 +153,8 @@ function lf_docs_render_playbook_sections(): void {
 				<p><?php esc_html_e('Sync reviews from Airtable when Global Settings lists the reviews table.', 'leadsforward-core'); ?></p>
 			</section>
 
-			<section id="user-testing" class="lf-docs__section">
-				<h2><?php esc_html_e('User testing feedback', 'leadsforward-core'); ?></h2>
-				<p><?php esc_html_e('Use LeadsForward → User testing to submit structured feedback tied to the current WordPress user. Each item is stored as a Feedback CPT record with a status (New, Approved, Rejected) and optional admin note.', 'leadsforward-core'); ?></p>
-				<ul>
-					<li><?php esc_html_e('Submit feedback: LeadsForward → User testing', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('Moderate feedback: Feedback (CPT) list or open an item to set Approved/Rejected and add a note.', 'leadsforward-core'); ?></li>
-				</ul>
-			</section>
-
 			<section id="seo-health" class="lf-docs__section">
-				<h2><?php esc_html_e('SEO, Site Health, launch', 'leadsforward-core'); ?></h2>
+				<h2><?php esc_html_e('SEO, performance, and launch', 'leadsforward-core'); ?></h2>
 				<p><?php esc_html_e('SEO settings: title/description templates, SERP intent templates, indexing rules, default OG image, schema toggles (also under ACF Schema), XML sitemap switches.', 'leadsforward-core'); ?></p>
 				<p><?php esc_html_e('Site health tab: live status (theme, ACF, setup flag, variation, NAP, GTM header snippet, manifester config), automated pre-launch report, QA audit trail, and the printable focused QA checklist for humans.', 'leadsforward-core'); ?></p>
 				<p><?php esc_html_e('While editing, the floating SEO Health panel summarizes the same quality concepts; links open full SEO settings and Site health.', 'leadsforward-core'); ?></p>
@@ -173,8 +166,8 @@ function lf_docs_render_playbook_sections(): void {
 			</section>
 
 			<section id="bulk-backup" class="lf-docs__section">
-				<h2><?php esc_html_e('Bulk tools, activity log, backup', 'leadsforward-core'); ?></h2>
-				<p><?php esc_html_e('Bulk Tools: design preset (also in block editor), global CTA strings, schema booleans, service–area rebuild. Activity log records bulk actions, imports, manifest queues, and editor preset saves. Backup exports whitelisted options only.', 'leadsforward-core'); ?></p>
+				<h2><?php esc_html_e('Bulk tools and backup', 'leadsforward-core'); ?></h2>
+				<p><?php esc_html_e('Bulk Tools: design preset (also in block editor), global CTA strings, schema booleans, service–area rebuild. Backup exports whitelisted options only.', 'leadsforward-core'); ?></p>
 			</section>
 
 			<section id="troubleshooting" class="lf-docs__section">

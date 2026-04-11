@@ -36,11 +36,6 @@ $place_name = function_exists('lf_get_business_info_value') ? lf_get_business_in
 $place_address = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_address', '') : '';
 $map_embed_override = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_map_embed', '') : '';
 $map_embed_override = is_string($map_embed_override) ? trim($map_embed_override) : '';
-$global_map_iframe = (string) get_option('lf_maps_iframe_embed', '');
-$global_map_iframe = trim($global_map_iframe);
-if ($map_embed_override === '' && $global_map_iframe !== '') {
-	$map_embed_override = $global_map_iframe;
-}
 $maps_api_key = get_option('lf_maps_api_key', '');
 $maps_api_key = is_string($maps_api_key) ? $maps_api_key : '';
 $heading = !empty($section['section_heading']) ? $section['section_heading'] : __('Areas We Serve', 'leadsforward-core');
@@ -286,8 +281,8 @@ $areas_query = new WP_Query([
 								echo wp_kses(
 									sprintf(
 										/* translators: %s: link to Business Info on Homepage settings */
-										__('Add your Google Maps API key and select a place in <strong>Business Info</strong> on <a href="%s">LeadsForward → Homepage</a> to show the map.', 'leadsforward-core'),
-										esc_url(admin_url('admin.php?page=lf-homepage-settings#lf-business-info'))
+										__('Add your Google Maps API key and select a place (or paste a map iframe) in <strong>Global Settings → Business Entity</strong> on <a href="%s">LeadsForward → Global Settings</a> to show the map.', 'leadsforward-core'),
+										esc_url(admin_url('admin.php?page=lf-global#lf-business-map-embed'))
 									),
 									['a' => ['href' => true], 'strong' => []]
 								);

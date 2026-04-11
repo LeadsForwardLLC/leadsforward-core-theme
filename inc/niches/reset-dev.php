@@ -119,22 +119,22 @@ function lf_dev_reset_handle_post(): void {
 		return;
 	}
 	if (!isset($_POST['lf_dev_reset_ack']) || $_POST['lf_dev_reset_ack'] !== '1') {
-		wp_safe_redirect(admin_url('admin.php?page=lf-ops&reset_error=ack'));
+		wp_safe_redirect(admin_url('admin.php?page=lf-manifest&reset_error=ack'));
 		exit;
 	}
 	if (!isset($_POST['lf_dev_reset_confirm']) || trim($_POST['lf_dev_reset_confirm']) !== 'RESET') {
-		wp_safe_redirect(admin_url('admin.php?page=lf-ops&reset_error=confirm'));
+		wp_safe_redirect(admin_url('admin.php?page=lf-manifest&reset_error=confirm'));
 		exit;
 	}
 	check_admin_referer('lf_dev_reset', 'lf_dev_reset_nonce');
 
 	if (!lf_dev_reset_allowed()) {
-		wp_safe_redirect(admin_url('admin.php?page=lf-ops&reset_error=not_allowed'));
+		wp_safe_redirect(admin_url('admin.php?page=lf-manifest&reset_error=not_allowed'));
 		exit;
 	}
 
 	lf_dev_reset_run();
-	wp_safe_redirect(admin_url('admin.php?page=lf-ops&reset_done=1'));
+	wp_safe_redirect(admin_url('admin.php?page=lf-manifest&reset_done=1'));
 	exit;
 }
 
@@ -142,7 +142,7 @@ function lf_dev_reset_render_page(): void {
 	if (!lf_dev_reset_allowed() || !current_user_can('manage_options')) {
 		return;
 	}
-	wp_safe_redirect(admin_url('admin.php?page=lf-ops'));
+	wp_safe_redirect(admin_url('admin.php?page=lf-manifest'));
 	exit;
 }
 
