@@ -2901,6 +2901,17 @@ function lf_ai_ajax_process_step_library(): void {
 		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
 	}
 	$search = isset($_POST['search']) ? sanitize_text_field(wp_unslash($_POST['search'])) : '';
+	$filter_service_id = isset($_POST['filter_service_id']) ? absint($_POST['filter_service_id']) : 0;
+	$filter_slug = isset($_POST['filter_service_slug']) ? sanitize_title(wp_unslash((string) $_POST['filter_service_slug'])) : '';
+	if ($filter_service_id > 0) {
+		$sp = get_post($filter_service_id);
+		if (!$sp instanceof \WP_Post || $sp->post_type !== 'lf_service') {
+			$filter_service_id = 0;
+			$filter_slug = '';
+		} elseif ($filter_slug === '') {
+			$filter_slug = (string) $sp->post_name;
+		}
+	}
 	$query_args = [
 		'post_type' => 'lf_process_step',
 		'post_status' => 'publish',
@@ -2931,11 +2942,22 @@ function lf_ai_ajax_process_step_library(): void {
 				}
 			}
 		}
+		$service_ids = function_exists('lf_process_step_parse_service_ids_csv_meta')
+			? lf_process_step_parse_service_ids_csv_meta((string) get_post_meta($id, '_lf_process_step_service_ids_csv', true))
+			: [];
+		if ($filter_service_id > 0) {
+			$in_rel = in_array($filter_service_id, $service_ids, true);
+			$in_tax = $filter_slug !== '' && in_array($filter_slug, $groups, true);
+			if (!$in_rel && !$in_tax) {
+				continue;
+			}
+		}
 		$rows[] = [
 			'id' => $id,
 			'title' => $title,
 			'body' => $body_plain,
 			'groups' => $groups,
+			'service_ids' => $service_ids,
 		];
 	}
 	wp_reset_postdata();

@@ -161,7 +161,7 @@ function lf_docs_render_playbook_sections(): void {
 
 			<section id="projects-reviews" class="lf-docs__section">
 				<h2><?php esc_html_e('Projects, reviews, FAQs, process steps', 'leadsforward-core'); ?></h2>
-				<p><?php esc_html_e('Projects power gallery sections; testimonials feed trust blocks and review schema. FAQs can be generated and surfaced in accordion sections via faq_selected_ids. Process steps are reusable posts (Process steps in the admin menu): you can select them per Process section using process_selected_ids; if empty, the theme can auto-pick steps by taxonomy (lf_process_group) using the service slug (or homepage-primary). Plain process_steps lines remain as a fallback.', 'leadsforward-core'); ?></p>
+					<p><?php esc_html_e('Projects power gallery sections; testimonials feed trust blocks and review schema. FAQs can be generated and surfaced in accordion sections via faq_selected_ids. Process steps are reusable posts: use Assigned services on each step for organization and auto-loading on service pages, plus Process context terms (e.g. homepage-primary) when needed. You can still pin steps with process_selected_ids; plain process_steps lines remain a fallback.', 'leadsforward-core'); ?></p>
 				<p><?php esc_html_e('Sync reviews from Airtable when Global Settings lists the reviews table.', 'leadsforward-core'); ?></p>
 			</section>
 

@@ -499,7 +499,7 @@ function lf_sections_registry(): array {
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Simple, clear steps from first call to completion.', 'leadsforward-core')],
 				// Added for density expansion – vNext
 				['key' => 'section_intro_secondary', 'label' => __('Secondary intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
-				['key' => 'process_selected_ids', 'label' => __('Selected process step IDs (one post ID per line, optional)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
+				['key' => 'process_selected_ids', 'label' => __('Selected process step IDs (one per line). Leave empty to auto-load by Assigned services or Process context.', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 				['key' => 'process_steps', 'label' => __('Steps (one per line, fallback if IDs empty)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Tell us what you need' . "\n" . 'Get a fast, clear estimate' . "\n" . 'Schedule and complete the work', 'leadsforward-core')],
 				['key' => 'process_expectations', 'label' => __('Expectations text', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 			],
@@ -1087,9 +1087,78 @@ function lf_sections_strip_inline_process_step_prefix(string $title): string {
 }
 
 /**
+ * Auto-resolve process steps from taxonomy context and/or “Assigned services” (post meta CSV).
+ *
+ * @return list<\WP_Post>
+ */
+function lf_sections_query_process_steps_auto(string $term_slug, int $service_post_id = 0): array {
+	$seen = [];
+	$list = [];
+	$args_base = [
+		'post_type'      => 'lf_process_step',
+		'post_status'    => 'publish',
+		'posts_per_page' => 16,
+		'orderby'        => 'menu_order title',
+		'order'          => 'ASC',
+		'no_found_rows'  => true,
+	];
+	if ($term_slug !== '' && taxonomy_exists('lf_process_group') && term_exists($term_slug, 'lf_process_group')) {
+		$q = new \WP_Query(array_merge($args_base, [
+			'tax_query' => [
+				[
+					'taxonomy' => 'lf_process_group',
+					'field'    => 'slug',
+					'terms'    => [$term_slug],
+				],
+			],
+		]));
+		while ($q->have_posts()) {
+			$q->the_post();
+			$id = (int) get_the_ID();
+			if (isset($seen[$id])) {
+				continue;
+			}
+			$seen[$id] = true;
+			$p = get_post($id);
+			if ($p instanceof \WP_Post) {
+				$list[] = $p;
+			}
+		}
+		wp_reset_postdata();
+	}
+	if ($service_post_id > 0) {
+		$q2 = new \WP_Query(array_merge($args_base, [
+			'meta_query' => [
+				[
+					'key'     => '_lf_process_step_service_ids_csv',
+					'value'   => '%,' . $service_post_id . ',%',
+					'compare' => 'LIKE',
+				],
+			],
+		]));
+		while ($q2->have_posts()) {
+			$q2->the_post();
+			$id = (int) get_the_ID();
+			if (isset($seen[$id])) {
+				continue;
+			}
+			$seen[$id] = true;
+			$p = get_post($id);
+			if ($p instanceof \WP_Post) {
+				$list[] = $p;
+			}
+		}
+		wp_reset_postdata();
+	}
+	$max = (int) apply_filters('lf_process_section_auto_max_steps', 8);
+	$max = max(4, min(24, $max));
+	return array_slice($list, 0, $max);
+}
+
+/**
  * Resolve process section steps:
  * - If any published lf_process_step posts resolve from process_selected_ids, those drive the section.
- * - Otherwise, if process_selected_ids is empty, try taxonomy auto-pick (lf_process_group) for service pages/homepage.
+ * - Otherwise, if process_selected_ids is empty, try taxonomy + assigned-services meta (lf_process_group + ACF) for service pages/homepage.
  * - Otherwise, fall back to line-based process_steps.
  *
  * @param array<string, mixed> $settings
@@ -1126,11 +1195,13 @@ function lf_sections_process_steps_for_render(array $settings, ?\WP_Post $post =
 		}
 	}
 
-	// Taxonomy auto-pick: only when no manual IDs provided.
-	if ($ids_raw === '' && taxonomy_exists('lf_process_group')) {
+	// Auto-pick: taxonomy context + steps assigned to this service (ACF / meta CSV).
+	if ($ids_raw === '') {
 		$term_slug = '';
+		$service_post_id = 0;
 		if ($post instanceof \WP_Post && $post->post_type === 'lf_service') {
 			$term_slug = (string) $post->post_name;
+			$service_post_id = (int) $post->ID;
 		} elseif ($post instanceof \WP_Post && $post->post_type === 'lf_service_area') {
 			$service_slug = '';
 			if (function_exists('get_field')) {
@@ -1139,10 +1210,12 @@ function lf_sections_process_steps_for_render(array $settings, ?\WP_Post $post =
 					$first = $services[0];
 					if ($first instanceof \WP_Post) {
 						$service_slug = (string) $first->post_name;
+						$service_post_id = (int) $first->ID;
 					} elseif (is_numeric($first)) {
 						$first_post = get_post((int) $first);
 						if ($first_post instanceof \WP_Post) {
 							$service_slug = (string) $first_post->post_name;
+							$service_post_id = (int) $first_post->ID;
 						}
 					}
 				}
@@ -1152,41 +1225,30 @@ function lf_sections_process_steps_for_render(array $settings, ?\WP_Post $post =
 			$term_slug = 'homepage-primary';
 		}
 		$term_slug = sanitize_title($term_slug);
-		if ($term_slug !== '' && term_exists($term_slug, 'lf_process_group')) {
-			$q = new \WP_Query([
-				'post_type' => 'lf_process_step',
-				'post_status' => 'publish',
-				'posts_per_page' => 8,
-				'orderby' => 'menu_order title',
-				'order' => 'ASC',
-				'no_found_rows' => true,
-				'tax_query' => [
-					[
-						'taxonomy' => 'lf_process_group',
-						'field' => 'slug',
-						'terms' => [$term_slug],
-					],
-				],
-			]);
-			$steps = [];
-			while ($q->have_posts()) {
-				$q->the_post();
-				$id = (int) get_the_ID();
-				$title = trim((string) get_the_title());
-				if ($title === '') {
-					continue;
+		if ($term_slug !== '' || $service_post_id > 0) {
+			$auto_posts = lf_sections_query_process_steps_auto($term_slug, $service_post_id);
+			if ($auto_posts !== []) {
+				$steps = [];
+				foreach ($auto_posts as $step_post) {
+					if (!$step_post instanceof \WP_Post) {
+						continue;
+					}
+					$id = (int) $step_post->ID;
+					$title = trim((string) get_the_title($step_post));
+					if ($title === '') {
+						continue;
+					}
+					$body = wp_strip_all_tags((string) get_post_field('post_content', $id));
+					$body = preg_replace('/\s+/', ' ', trim((string) $body));
+					$steps[] = [
+						'id'    => $id,
+						'title' => $title,
+						'body'  => (string) $body,
+					];
 				}
-				$body = wp_strip_all_tags((string) get_post_field('post_content', $id));
-				$body = preg_replace('/\s+/', ' ', trim((string) $body));
-				$steps[] = [
-					'id' => $id,
-					'title' => $title,
-					'body' => (string) $body,
-				];
-			}
-			wp_reset_postdata();
-			if ($steps !== []) {
-				return $steps;
+				if ($steps !== []) {
+					return $steps;
+				}
 			}
 		}
 	}
@@ -2305,17 +2367,28 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 		<?php foreach ($steps as $step) : ?>
 			<?php
 			$step_id = isset($step['id']) ? (int) $step['id'] : 0;
-			$step_title = wp_trim_words((string) ($step['title'] ?? ''), 6, '');
-			// Keep descriptions short so they don't get visually cut off in the UI.
-			$step_body = wp_trim_words((string) ($step['body'] ?? ''), 12, '');
+			$step_title = (string) ($step['title'] ?? '');
+			$step_body = (string) ($step['body'] ?? '');
+			$max_title = (int) apply_filters('lf_process_step_title_max_words', 0);
+			$max_body = (int) apply_filters('lf_process_step_body_max_words', 0);
+			if ($max_title > 0) {
+				$step_title = wp_trim_words($step_title, $max_title, '');
+			}
+			if ($max_body > 0) {
+				$step_body = wp_trim_words($step_body, $max_body, '');
+			}
+			$step_title = rtrim(trim($step_title), ':');
+			$step_body = trim($step_body);
 			?>
 			<li class="lf-process__step" <?php echo $step_id > 0 ? 'data-lf-process-id="' . esc_attr((string) $step_id) . '"' : ''; ?>>
-				<?php if ($step_body !== '') : ?>
-					<span class="lf-process__step-title"><strong><?php echo esc_html(rtrim($step_title, ':')); ?>:</strong></span>
-					<span class="lf-process__step-body"><?php echo esc_html($step_body); ?></span>
-				<?php else : ?>
-					<span class="lf-process__text"><?php echo esc_html($step_title); ?></span>
-				<?php endif; ?>
+				<div class="lf-process__step-main">
+					<?php if ($step_body !== '') : ?>
+						<span class="lf-process__step-title"><strong class="lf-process__step-heading"><?php echo esc_html($step_title); ?></strong></span>
+						<span class="lf-process__step-body"><?php echo esc_html($step_body); ?></span>
+					<?php else : ?>
+						<span class="lf-process__text"><strong class="lf-process__step-heading"><?php echo esc_html($step_title); ?></strong></span>
+					<?php endif; ?>
+				</div>
 			</li>
 		<?php endforeach; ?>
 	</ol>

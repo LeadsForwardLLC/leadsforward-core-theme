@@ -1276,7 +1276,7 @@ button:focus-visible,
 	padding: 0.85rem 1rem;
 	box-shadow: var(--lf-card-shadow);
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	gap: 0.5rem;
 }
 
@@ -1305,18 +1305,44 @@ button:focus-visible,
 	margin-right: 0.5rem;
 }
 
+.lf-process__step-main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.35rem;
+}
+
 .lf-process__step-title {
 	display: block;
-	font-weight: 700;
+	margin: 0;
+	font-weight: inherit;
+	color: inherit;
+	line-height: 1.35;
+}
+
+.lf-process__step-heading {
+	font-weight: var(--lf-fw-bold, 700);
 	color: var(--lf-text-primary);
-	margin-bottom: 0.2rem;
+}
+
+.lf-process__text {
+	display: block;
+	color: var(--lf-text-primary);
+	line-height: 1.45;
+}
+
+.lf-process__text .lf-process__step-heading {
+	font-weight: var(--lf-fw-bold, 700);
 }
 
 .lf-process__step-body {
 	display: block;
+	font-weight: 400;
 	color: var(--lf-text-muted);
 	font-size: 0.95rem;
-	line-height: 1.5;
+	line-height: 1.55;
 }
 
 .lf-process__expectations {
