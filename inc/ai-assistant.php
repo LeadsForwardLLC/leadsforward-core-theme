@@ -729,6 +729,9 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-checklist-add:hover { background:#f5f0ff; }
 		.lf-ai-checklist-remove { border:1px solid #e2e8f0; background:#fff; color:#64748b; border-radius:6px; min-width:20px; height:20px; padding:0 5px; font-size:11px; line-height:18px; margin-left:8px; cursor:pointer; vertical-align:middle; }
 		.lf-ai-checklist-remove:hover { border-color:#fecaca; color:#b91c1c; background:#fff5f5; }
+		.lf-ai-benefit-remove { position:absolute; top:6px; right:6px; z-index:3; margin:0 !important; min-width:26px !important; height:26px !important; line-height:24px !important; border-radius:999px !important; }
+		.lf-ai-benefits-grid-actions { margin-top:10px; display:flex; justify-content:center; width:100%; }
+		.lf-ai-editor-on .lf-block-service-intro__card { position:relative; }
 		.lf-ai-hero-pills-controls { margin-top:8px; display:flex; gap:8px; align-items:center; }
 		.lf-ai-hero-trust-strip-controls { margin-top:10px; padding:8px 10px; border-radius:8px; background:rgba(131,72,249,.08); border:1px solid rgba(131,72,249,.25); font-size:13px; }
 		.lf-ai-benefit-editable { cursor:text; border-radius:6px; transition:box-shadow .15s ease; }
@@ -1020,7 +1023,18 @@ function lf_ai_assistant_widget_js(): string {
 		var inlineActiveEl = null;
 		var inlineOriginalText = "";
 		var inlineOriginalHtml = "";
+		var inlineBodyEditSourceEl = null;
+		var inlineOriginalBodyHtml = "";
+		var inlineOriginalBodyText = "";
 		var inlineIsSaving = false;
+		var sectionGridPickerEl = null;
+		var sectionGridPickerWrap = null;
+		var sectionGridPickerPatch = "";
+		var serviceLibraryCache = null;
+		var servicePickerEl = null;
+		var servicePickerSearchEl = null;
+		var servicePickerListEl = null;
+		var servicePickerWrap = null;
 		var activeDragSection = null;
 		var activeColumnDrag = null;
 		var selectedSectionWrap = null;
@@ -1069,7 +1083,7 @@ function lf_ai_assistant_widget_js(): string {
 		var faqPickerWrap = null;
 		var faqPickerList = null;
 		var faqLibraryCache = null;
-		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption,main .lf-block-hero__card-item-text,main .lf-service-details__text,#primary h1,#primary h2,#primary h3,#primary h4,#primary h5,#primary h6,#primary p,#primary li,#primary blockquote,#primary figcaption,#primary .lf-block-hero__card-item-text,#primary .lf-service-details__text,.site-main h1,.site-main h2,.site-main h3,.site-main h4,.site-main h5,.site-main h6,.site-main p,.site-main li,.site-main blockquote,.site-main figcaption,.site-main .lf-block-hero__card-item-text,.site-main .lf-service-details__text,.site-content h1,.site-content h2,.site-content h3,.site-content h4,.site-content h5,.site-content h6,.site-content p,.site-content li,.site-content blockquote,.site-content figcaption,.site-content .lf-block-hero__card-item-text,.site-content .lf-service-details__text,article h1,article h2,article h3,article h4,article h5,article h6,article p,article li,article blockquote,article figcaption,article .lf-block-hero__card-item-text,article .lf-service-details__text";
+		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption,main .lf-block-hero__card-item-text,main .lf-service-details__text,main .lf-service-details__micro-text,#primary h1,#primary h2,#primary h3,#primary h4,#primary h5,#primary h6,#primary p,#primary li,#primary blockquote,#primary figcaption,#primary .lf-block-hero__card-item-text,#primary .lf-service-details__text,#primary .lf-service-details__micro-text,.site-main h1,.site-main h2,.site-main h3,.site-main h4,.site-main h5,.site-main h6,.site-main p,.site-main li,.site-main blockquote,.site-main figcaption,.site-main .lf-block-hero__card-item-text,.site-main .lf-service-details__text,.site-main .lf-service-details__micro-text,.site-content h1,.site-content h2,.site-content h3,.site-content h4,.site-content h5,.site-content h6,.site-content p,.site-content li,.site-content blockquote,.site-content figcaption,.site-content .lf-block-hero__card-item-text,.site-content .lf-service-details__text,.site-content .lf-service-details__micro-text,article h1,article h2,article h3,article h4,article h5,article h6,article p,article li,article blockquote,article figcaption,article .lf-block-hero__card-item-text,article .lf-service-details__text,article .lf-service-details__micro-text";
 		var inlineImageCandidateSelector = "main img,#primary img,.site-main img,.site-content img,article img";
 		var mediaFrame = null;
 		var launcherGapPx = 8;
@@ -2098,7 +2112,7 @@ function lf_ai_assistant_widget_js(): string {
 				node.removeAttribute("data-lf-inline-image");
 				node.removeAttribute("data-lf-inline-image-selector");
 			});
-			Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
+			Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,.lf-ai-benefits-grid-actions,[data-lf-ai-benefits-grid-actions=\"1\"],[data-lf-ai-service-intro-actions=\"1\"],[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-micro-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-micro-remove=\"1\"],[data-lf-ai-benefit-remove=\"1\"],[data-lf-ai-service-intro-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
 				if (node && node.parentNode) node.parentNode.removeChild(node);
 			});
 			Array.prototype.slice.call(document.querySelectorAll(".lf-service-details__text")).forEach(function(node){
@@ -2162,6 +2176,8 @@ function lf_ai_assistant_widget_js(): string {
 			closeSectionAlignPicker();
 			closeBenefitsCtaPicker();
 			closeSectionInsertPicker();
+			closeSectionGridPicker();
+			closeServicePicker();
 			closeHeroSettingsPicker();
 			refreshAiScopeBanner();
 		}
@@ -2424,6 +2440,7 @@ function lf_ai_assistant_widget_js(): string {
 			buildHeroTrustStripControls();
 			buildTrustBadgePillsControls();
 			buildChecklistControls();
+			buildServiceDetailsMicroControls();
 			buildProcessStepControls();
 			buildSectionColumnSwapTargets();
 			buildSectionMediaEditors();
@@ -2431,6 +2448,8 @@ function lf_ai_assistant_widget_js(): string {
 			buildBenefitsReorderControls();
 			buildBenefitsTextEditors();
 			buildServiceIntroReorderControls();
+			buildServiceIntroCardEditors();
+			buildBenefitsGridChrome();
 			buildBenefitsIconEditors();
 			refreshSectionRail();
 			renderSeoSnapshot();
@@ -2483,6 +2502,7 @@ function lf_ai_assistant_widget_js(): string {
 			if (node.closest(".lf-hero-chips,.lf-trust-bar__badges,.lf-process,.lf-block-faq-accordion__list,.lf-related-links,.lf-cpt-driven-links")) return false;
 			if (node.closest(".lf-block-hero__card-list") && !node.classList.contains("lf-block-hero__card-item-text")) return false;
 			if (node.closest(".lf-service-details__checklist") && !node.classList.contains("lf-service-details__text")) return false;
+			if (node.closest(".lf-service-details__micro")) return false;
 			// Map + NAP: service area names are global CPT permalinks — not editable inline.
 			if (node.closest(".lf-block-map-nap__areas-list,.lf-block-map-nap__areas-item,.lf-block-map-nap__areas-link")) return false;
 			// Reviews content is source-of-truth data; do not edit testimonial copy inline.
@@ -2714,6 +2734,9 @@ function lf_ai_assistant_widget_js(): string {
 				selectedSectionWrap.classList.add("lf-ai-section-active");
 				// Self-heal insert chrome if the DOM was rebuilt without a full editor refresh.
 				buildSectionInsertZones();
+				buildServiceDetailsMicroControls();
+				buildServiceIntroCardEditors();
+				buildBenefitsGridChrome();
 				// Self-heal list/pill controls in case a row lost its remove button.
 				buildHeroPillsControls();
 				buildHeroProofChecklistControls();
@@ -3261,72 +3284,202 @@ function lf_ai_assistant_widget_js(): string {
 				if (!sectionSupportsChecklistEditor(sectionType)) return;
 				var content = wrap.querySelector(".lf-service-details__content");
 				if (!content) return;
-				var list = wrap.querySelector(".lf-service-details__checklist");
-				if (!list) {
-					list = document.createElement("ul");
-					list.className = "lf-service-details__checklist";
-					list.setAttribute("role", "list");
-					content.appendChild(list);
+				var host = content.querySelector(".lf-service-details__checklists");
+				if (!host) {
+					host = document.createElement("div");
+					host.className = "lf-service-details__checklists";
+					var microEl = content.querySelector("[data-lf-service-details-micro=\"1\"]");
+					var proofEl = content.querySelector(".lf-service-details__proof");
+					if (microEl && microEl.parentNode === content) {
+						content.insertBefore(host, microEl);
+					} else if (proofEl) {
+						content.insertBefore(host, proofEl);
+					} else {
+						content.appendChild(host);
+					}
 				}
-				Array.prototype.slice.call(list.querySelectorAll("li")).forEach(function(li){
-					var textNode = checklistTextNodeFromLi(li);
-					Array.prototype.slice.call(li.querySelectorAll("[data-lf-ai-checklist-remove=\"1\"]")).forEach(function(node){
-						if (node && node.parentNode) node.parentNode.removeChild(node);
+				var listEls = Array.prototype.slice.call(host.querySelectorAll("ul.lf-service-details__checklist"));
+				if (!listEls.length) {
+					var newList = document.createElement("ul");
+					newList.className = "lf-service-details__checklist";
+					newList.setAttribute("role", "list");
+					host.appendChild(newList);
+					listEls = Array.prototype.slice.call(host.querySelectorAll("ul.lf-service-details__checklist"));
+				}
+				function wireChecklistList(list) {
+					Array.prototype.slice.call(list.querySelectorAll("li")).forEach(function(li){
+						var textNode = checklistTextNodeFromLi(li);
+						Array.prototype.slice.call(li.querySelectorAll("[data-lf-ai-checklist-remove=\"1\"]")).forEach(function(node){
+							if (node && node.parentNode) node.parentNode.removeChild(node);
+						});
+						var removeBtn = document.createElement("button");
+						removeBtn.type = "button";
+						removeBtn.className = "lf-ai-checklist-remove lf-ai-inline-editor-ignore";
+						removeBtn.setAttribute("data-lf-ai-checklist-remove", "1");
+						removeBtn.textContent = "x";
+						removeBtn.setAttribute("title", "Remove checklist item");
+						removeBtn.addEventListener("click", function(e){
+							e.preventDefault();
+							e.stopPropagation();
+							if (li && li.parentNode) {
+								li.parentNode.removeChild(li);
+							}
+							persistSectionChecklist(wrap, li);
+						});
+						li.appendChild(removeBtn);
+						bindChecklistItemEditor(li, wrap);
 					});
-					var removeBtn = document.createElement("button");
-					removeBtn.type = "button";
-					removeBtn.className = "lf-ai-checklist-remove lf-ai-inline-editor-ignore";
-					removeBtn.setAttribute("data-lf-ai-checklist-remove", "1");
-					removeBtn.textContent = "x";
-					removeBtn.setAttribute("title", "Remove checklist item");
-					removeBtn.addEventListener("click", function(e){
+					var controls = document.createElement("div");
+					controls.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
+					controls.setAttribute("data-lf-ai-checklist-controls", "1");
+					var addBtn = document.createElement("button");
+					addBtn.type = "button";
+					addBtn.className = "lf-ai-checklist-add lf-ai-inline-editor-ignore";
+					addBtn.textContent = "+ Add item";
+					addBtn.addEventListener("click", function(e){
 						e.preventDefault();
 						e.stopPropagation();
-						if (li && li.parentNode) {
-							li.parentNode.removeChild(li);
-						}
+						var li = document.createElement("li");
+						var textNode = document.createElement("span");
+						textNode.className = "lf-service-details__text";
+						textNode.textContent = "New checklist item";
+						li.appendChild(textNode);
+						var removeBtn2 = document.createElement("button");
+						removeBtn2.type = "button";
+						removeBtn2.className = "lf-ai-checklist-remove lf-ai-inline-editor-ignore";
+						removeBtn2.setAttribute("data-lf-ai-checklist-remove", "1");
+						removeBtn2.textContent = "x";
+						removeBtn2.setAttribute("title", "Remove checklist item");
+						removeBtn2.addEventListener("click", function(ev){
+							ev.preventDefault();
+							ev.stopPropagation();
+							if (li && li.parentNode) {
+								li.parentNode.removeChild(li);
+							}
+							persistSectionChecklist(wrap, li);
+						});
+						li.appendChild(removeBtn2);
+						list.appendChild(li);
+						bindChecklistItemEditor(li, wrap);
 						persistSectionChecklist(wrap, li);
+						startChecklistTextEdit(textNode, li, wrap);
 					});
-					li.appendChild(removeBtn);
-					bindChecklistItemEditor(li, wrap);
+					controls.appendChild(addBtn);
+					host.insertBefore(controls, list.nextSibling);
+				}
+				listEls.forEach(wireChecklistList);
+			});
+		}
+		function microLinesFromWrap(microRoot) {
+			if (!microRoot) return [];
+			return Array.prototype.slice.call(microRoot.querySelectorAll(".lf-service-details__micro-text")).map(function(span){
+				return innerHtmlFromEditableNode(span);
+			}).filter(function(v){ return lfPlainFromHtml(v) !== ""; });
+		}
+		function buildServiceDetailsMicroControls() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+				if (!sectionSupportsChecklistEditor(sectionType)) return;
+				var content = wrap.querySelector(".lf-service-details__content");
+				if (!content) return;
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-micro-controls=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
 				});
-				var controls = document.createElement("div");
-				controls.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
-				controls.setAttribute("data-lf-ai-checklist-controls", "1");
-				var addBtn = document.createElement("button");
-				addBtn.type = "button";
-				addBtn.className = "lf-ai-checklist-add lf-ai-inline-editor-ignore";
-				addBtn.textContent = "+ Add item";
-				addBtn.addEventListener("click", function(e){
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-micro-remove=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				var microRoot = content.querySelector("[data-lf-service-details-micro=\"1\"]");
+				if (!microRoot) {
+					microRoot = document.createElement("div");
+					microRoot.className = "lf-service-details__micro lf-prose";
+					microRoot.setAttribute("data-lf-service-details-micro", "1");
+					var proofM = content.querySelector(".lf-service-details__proof");
+					if (proofM) {
+						content.insertBefore(microRoot, proofM);
+					} else {
+						content.appendChild(microRoot);
+					}
+				}
+				Array.prototype.slice.call(microRoot.querySelectorAll(".lf-service-details__micro-line")).forEach(function(pLine){
+					var span = pLine.querySelector(".lf-service-details__micro-text");
+					if (!span) {
+						span = document.createElement("span");
+						span.className = "lf-service-details__micro-text";
+						span.textContent = String(pLine.textContent || "").trim() || "Line";
+						pLine.innerHTML = "";
+						pLine.appendChild(span);
+					}
+					Array.prototype.slice.call(pLine.querySelectorAll("[data-lf-ai-micro-remove=\"1\"]")).forEach(function(n){
+						if (n && n.parentNode) n.parentNode.removeChild(n);
+					});
+					var rb = document.createElement("button");
+					rb.type = "button";
+					rb.className = "lf-ai-checklist-remove lf-ai-inline-editor-ignore";
+					rb.setAttribute("data-lf-ai-micro-remove", "1");
+					rb.textContent = "x";
+					rb.setAttribute("title", "Remove line");
+					rb.addEventListener("click", function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						if (pLine.parentNode) {
+							pLine.parentNode.removeChild(pLine);
+						}
+						persistSectionLineItems(wrap, "service_details_micro_sections", microLinesFromWrap(microRoot), "Saving supporting lines...");
+					});
+					pLine.appendChild(rb);
+					span.classList.add("lf-ai-inline-editor-ignore");
+					span.setAttribute("title", "Click to edit line");
+					span.onmousedown = function(e){ if (e) e.stopPropagation(); };
+					span.onclick = function(e){
+						if (!editingEnabled) return;
+						if (e) {
+							e.preventDefault();
+							e.stopPropagation();
+						}
+						if (String(span.getAttribute("data-lf-ai-editing") || "") === "1") return;
+						span.setAttribute("data-lf-ai-original-html", innerHtmlFromEditableNode(span));
+						span.setAttribute("data-lf-ai-editing", "1");
+						span.setAttribute("contenteditable", "true");
+						try { span.focus(); } catch (errM) {}
+					};
+					span.onblur = function(){
+						var oh = String(span.getAttribute("data-lf-ai-original-html") || "");
+						var nh = innerHtmlFromEditableNode(span);
+						span.removeAttribute("contenteditable");
+						span.removeAttribute("data-lf-ai-editing");
+						span.removeAttribute("data-lf-ai-original-html");
+						if (lfPlainFromHtml(nh) === "") {
+							span.innerHTML = oh || "Line";
+							return;
+						}
+						if (nh !== oh) {
+							persistSectionLineItems(wrap, "service_details_micro_sections", microLinesFromWrap(microRoot), "Saving supporting lines...");
+						}
+					};
+				});
+				var ctrl = document.createElement("div");
+				ctrl.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
+				ctrl.setAttribute("data-lf-ai-micro-controls", "1");
+				var addB = document.createElement("button");
+				addB.type = "button";
+				addB.className = "lf-ai-checklist-add lf-ai-inline-editor-ignore";
+				addB.textContent = "+ Add supporting line";
+				addB.addEventListener("click", function(e){
 					e.preventDefault();
 					e.stopPropagation();
-					var li = document.createElement("li");
-					var textNode = document.createElement("span");
-					textNode.className = "lf-service-details__text";
-					textNode.textContent = "New checklist item";
-					li.appendChild(textNode);
-					var removeBtn = document.createElement("button");
-					removeBtn.type = "button";
-					removeBtn.className = "lf-ai-checklist-remove lf-ai-inline-editor-ignore";
-					removeBtn.setAttribute("data-lf-ai-checklist-remove", "1");
-					removeBtn.textContent = "x";
-					removeBtn.setAttribute("title", "Remove checklist item");
-					removeBtn.addEventListener("click", function(ev){
-						ev.preventDefault();
-						ev.stopPropagation();
-						if (li && li.parentNode) {
-							li.parentNode.removeChild(li);
-						}
-						persistSectionChecklist(wrap, li);
-					});
-					li.appendChild(removeBtn);
-					list.appendChild(li);
-					bindChecklistItemEditor(li, wrap);
-					persistSectionChecklist(wrap, li);
-					startChecklistTextEdit(textNode, li, wrap);
+					var pLine = document.createElement("p");
+					pLine.className = "lf-service-details__micro-line";
+					var spanNew = document.createElement("span");
+					spanNew.className = "lf-service-details__micro-text";
+					spanNew.textContent = "New supporting line";
+					pLine.appendChild(spanNew);
+					microRoot.appendChild(pLine);
+					buildServiceDetailsMicroControls();
+					persistSectionLineItems(wrap, "service_details_micro_sections", microLinesFromWrap(microRoot), "Saving supporting lines...");
 				});
-				controls.appendChild(addBtn);
-				content.appendChild(controls);
+				ctrl.appendChild(addB);
+				content.insertBefore(ctrl, microRoot.nextSibling);
 			});
 		}
 		function heroPillsFromWrap(wrap) {
@@ -4729,11 +4882,35 @@ function lf_ai_assistant_widget_js(): string {
 					card.ondrop = null;
 					card.ondragend = null;
 				});
-				Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card .lf-block-service-intro__card-title, .lf-block-service-intro__card .lf-block-service-intro__desc, .lf-block-service-intro__card .lf-block-service-intro__link")).forEach(function(node){
+				Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card .lf-block-service-intro__card-title, .lf-block-service-intro__card .lf-block-service-intro__link")).forEach(function(node){
 					node.removeAttribute("data-lf-inline-editable");
 					node.removeAttribute("data-lf-inline-selector");
 				});
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-service-intro-actions=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-service-intro-remove=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
 				Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card")).forEach(function(card){
+					var rm = document.createElement("button");
+					rm.type = "button";
+					rm.className = "lf-ai-checklist-remove lf-ai-inline-editor-ignore";
+					rm.setAttribute("data-lf-ai-service-intro-remove", "1");
+					rm.textContent = "x";
+					rm.setAttribute("title", "Remove from this section");
+					rm.addEventListener("click", function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						if (card && card.parentNode) {
+							card.parentNode.removeChild(card);
+						}
+						var ids = Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id]")).map(function(n){
+							return String(n.getAttribute("data-lf-service-id") || "").trim();
+						}).filter(function(v){ return v !== ""; });
+						persistSectionLineItems(wrap, "service_intro_service_ids", ids, "Saving services...");
+					});
+					card.insertBefore(rm, card.firstChild);
 					card.setAttribute("draggable", "true");
 					card.classList.add("lf-ai-service-intro-card-drag", "lf-ai-inline-editor-ignore");
 					card.ondragstart = function(e){
@@ -4768,6 +4945,320 @@ function lf_ai_assistant_widget_js(): string {
 						activeServiceIntroDragEl = null;
 					};
 				});
+				var introBar = document.createElement("div");
+				introBar.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
+				introBar.setAttribute("data-lf-ai-service-intro-actions", "1");
+				var addIntro = document.createElement("button");
+				addIntro.type = "button";
+				addIntro.className = "lf-ai-checklist-add lf-ai-inline-editor-ignore";
+				addIntro.textContent = "+ Add service";
+				addIntro.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					openServicePickerForIntro(wrap, grid);
+				});
+				introBar.appendChild(addIntro);
+				if (grid.nextSibling) {
+					grid.parentNode.insertBefore(introBar, grid.nextSibling);
+				} else {
+					grid.parentNode.appendChild(introBar);
+				}
+			});
+		}
+		function buildServiceIntroCardEditors() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				if (String(wrap.getAttribute("data-lf-section-type") || "") !== "service_intro") return;
+				Array.prototype.slice.call(wrap.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id] .lf-block-service-intro__desc")).forEach(function(desc){
+					var card = desc.closest(".lf-block-service-intro__card");
+					var sid = card ? String(card.getAttribute("data-lf-service-id") || "").trim() : "";
+					if (!sid) return;
+					desc.setAttribute("data-lf-inline-editable", "1");
+					desc.setAttribute("data-lf-inline-field-key", "lf_service_short_desc");
+					desc.setAttribute("data-lf-service-post-id", sid);
+					try {
+						desc.setAttribute("data-lf-inline-selector", buildInlineSelector(desc));
+					} catch (eSel) {}
+					var sw = desc.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]");
+					if (sw) {
+						desc.setAttribute("data-lf-inline-section-id", String(sw.getAttribute("data-lf-section-id") || ""));
+					}
+					desc.setAttribute("title", "Click to edit card description");
+				});
+			});
+		}
+		function closeServicePicker() {
+			if (servicePickerEl) servicePickerEl.hidden = true;
+			servicePickerWrap = null;
+			try { if (servicePickerSearchEl) servicePickerSearchEl.value = ""; } catch (eSp) {}
+		}
+		function loadServiceLibrary(done) {
+			if (Array.isArray(serviceLibraryCache)) {
+				if (typeof done === "function") done(serviceLibraryCache);
+				return;
+			}
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_service_library",
+				nonce: lfAiFloating.nonce
+			}).done(function(res){
+				serviceLibraryCache = (res && res.success && res.data && Array.isArray(res.data.items)) ? res.data.items : [];
+				if (typeof done === "function") done(serviceLibraryCache);
+			}).fail(function(){
+				serviceLibraryCache = [];
+				setStatus("Service library unavailable.", true);
+				if (typeof done === "function") done(serviceLibraryCache);
+			});
+		}
+		function ensureServicePicker() {
+			if (servicePickerEl) return servicePickerEl;
+			servicePickerEl = document.createElement("div");
+			servicePickerEl.className = "lf-ai-faq-picker lf-ai-inline-editor-ignore";
+			servicePickerEl.hidden = true;
+			servicePickerEl.innerHTML = "<div class=\"lf-ai-faq-picker__card\"><div class=\"lf-ai-faq-picker__head\"><div class=\"lf-ai-faq-picker__title\">Add a service card</div><button type=\"button\" class=\"lf-ai-faq-picker__close\" data-lf-ai-service-picker-close aria-label=\"Close\">×</button></div><input type=\"text\" class=\"lf-ai-faq-picker__search\" data-lf-ai-service-picker-search placeholder=\"Search services...\" /><div class=\"lf-ai-faq-picker__list\" data-lf-ai-service-picker-list></div></div>";
+			servicePickerSearchEl = servicePickerEl.querySelector("[data-lf-ai-service-picker-search]");
+			servicePickerListEl = servicePickerEl.querySelector("[data-lf-ai-service-picker-list]");
+			var cbtn = servicePickerEl.querySelector("[data-lf-ai-service-picker-close]");
+			if (cbtn) {
+				cbtn.addEventListener("click", function(e){
+					e.preventDefault();
+					closeServicePicker();
+				});
+			}
+			if (servicePickerSearchEl) {
+				servicePickerSearchEl.addEventListener("input", function(){
+					renderServicePickerList(servicePickerSearchEl.value);
+				});
+			}
+			servicePickerEl.addEventListener("click", function(e){
+				if (e.target === servicePickerEl) closeServicePicker();
+			});
+			document.body.appendChild(servicePickerEl);
+			return servicePickerEl;
+		}
+		function renderServicePickerList(query) {
+			if (!servicePickerListEl) return;
+			var rows = Array.isArray(serviceLibraryCache) ? serviceLibraryCache : [];
+			var q = String(query || "").trim().toLowerCase();
+			var onGrid = servicePickerWrap ? servicePickerWrap.grid : null;
+			var existing = {};
+			if (onGrid) {
+				Array.prototype.slice.call(onGrid.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id]")).forEach(function(c){
+					existing[String(c.getAttribute("data-lf-service-id") || "")] = true;
+				});
+			}
+			servicePickerListEl.innerHTML = "";
+			var filtered = rows.filter(function(row){
+				var t = String(row.title || "").toLowerCase();
+				return !q || t.indexOf(q) !== -1;
+			});
+			if (!filtered.length) {
+				var em = document.createElement("div");
+				em.className = "lf-ai-faq-picker__empty";
+				em.textContent = "No services match.";
+				servicePickerListEl.appendChild(em);
+				return;
+			}
+			filtered.forEach(function(row){
+				var sid = String(row.id || "");
+				var item = document.createElement("div");
+				item.className = "lf-ai-faq-picker__item";
+				var meta = document.createElement("div");
+				meta.className = "lf-ai-faq-picker__meta";
+				var title = document.createElement("b");
+				title.textContent = String(row.title || "Service");
+				meta.appendChild(title);
+				var addBtn = document.createElement("button");
+				addBtn.type = "button";
+				addBtn.className = "lf-ai-faq-picker__add lf-ai-inline-editor-ignore";
+				var already = !!existing[sid];
+				addBtn.textContent = already ? "Added" : "Add";
+				addBtn.disabled = already;
+				addBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					if (!servicePickerWrap || !servicePickerWrap.wrap || !servicePickerWrap.grid) return;
+					if (already) return;
+					appendServiceIntroCardFromRow(servicePickerWrap.grid, row);
+					closeServicePicker();
+					buildServiceIntroReorderControls();
+					buildServiceIntroCardEditors();
+					var ids = Array.prototype.slice.call(servicePickerWrap.grid.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id]")).map(function(n){
+						return String(n.getAttribute("data-lf-service-id") || "").trim();
+					}).filter(function(v){ return v !== ""; });
+					persistSectionLineItems(servicePickerWrap.wrap, "service_intro_service_ids", ids, "Saving services...");
+				});
+				item.appendChild(meta);
+				item.appendChild(addBtn);
+				servicePickerListEl.appendChild(item);
+			});
+		}
+		function appendServiceIntroCardFromRow(grid, row) {
+			if (!grid || !row) return;
+			var sid = String(row.id || "");
+			if (!sid) return;
+			var art = document.createElement("article");
+			art.className = "lf-block-service-intro__card lf-card lf-card--interactive";
+			art.setAttribute("data-lf-service-id", sid);
+			var head = document.createElement("div");
+			head.className = "lf-block-service-intro__card-head";
+			var h3 = document.createElement("h3");
+			h3.className = "lf-block-service-intro__card-title";
+			h3.textContent = String(row.title || "Service");
+			head.appendChild(h3);
+			var desc = document.createElement("p");
+			desc.className = "lf-block-service-intro__desc";
+			desc.textContent = "Short overview — click to edit.";
+			var link = document.createElement("a");
+			link.className = "lf-block-service-intro__link";
+			link.href = String(row.permalink || "#");
+			link.textContent = "Learn more →";
+			art.appendChild(head);
+			art.appendChild(desc);
+			art.appendChild(link);
+			grid.appendChild(art);
+		}
+		function openServicePickerForIntro(wrap, grid) {
+			ensureServicePicker();
+			servicePickerWrap = { wrap: wrap, grid: grid };
+			loadServiceLibrary(function(){
+				renderServicePickerList("");
+				if (servicePickerEl) servicePickerEl.hidden = false;
+				try { if (servicePickerSearchEl) servicePickerSearchEl.focus(); } catch (eF) {}
+			});
+		}
+		function closeSectionGridPicker() {
+			if (sectionGridPickerEl) sectionGridPickerEl.hidden = true;
+			sectionGridPickerWrap = null;
+			sectionGridPickerPatch = "";
+		}
+		function openSectionGridPicker(wrap) {
+			if (!wrap) return;
+			var st = String(wrap.getAttribute("data-lf-section-type") || "");
+			var patch = st === "benefits" ? "set_benefits_grid_columns" : "set_service_intro_grid_columns";
+			if (st !== "benefits" && st !== "service_intro") return;
+			if (!sectionGridPickerEl) {
+				sectionGridPickerEl = document.createElement("div");
+				sectionGridPickerEl.className = "lf-ai-benefits-cta-picker lf-ai-inline-editor-ignore";
+				sectionGridPickerEl.hidden = true;
+				var card = document.createElement("div");
+				card.className = "lf-ai-benefits-cta-picker__card";
+				var head = document.createElement("div");
+				head.className = "lf-ai-section-bg-picker__head";
+				head.innerHTML = "<span class=\"lf-ai-section-bg-picker__title\">Columns</span>";
+				var sub = document.createElement("p");
+				sub.style.margin = "0";
+				sub.style.fontSize = "12px";
+				sub.style.color = "#64748b";
+				sub.textContent = "Desktop grid width (2, 3, or 4 columns).";
+				var row = document.createElement("div");
+				row.className = "lf-ai-benefits-cta-picker__row";
+				row.setAttribute("data-lf-grid-cols-row", "1");
+				[2, 3, 4].forEach(function(n){
+					var b = document.createElement("button");
+					b.type = "button";
+					b.className = "lf-ai-benefits-cta-picker__btn";
+					b.textContent = String(n);
+					b.setAttribute("data-lf-grid-cols", String(n));
+					b.addEventListener("click", function(e){
+						e.preventDefault();
+						var w = sectionGridPickerWrap;
+						var p = sectionGridPickerPatch;
+						closeSectionGridPicker();
+						if (w && p) {
+							persistSectionStyle(w, p, { grid_columns: String(n) });
+						}
+					});
+					row.appendChild(b);
+				});
+				var cx = document.createElement("button");
+				cx.type = "button";
+				cx.className = "lf-ai-benefits-cta-picker__btn";
+				cx.textContent = "Cancel";
+				cx.addEventListener("click", function(e){
+					e.preventDefault();
+					closeSectionGridPicker();
+				});
+				card.appendChild(head);
+				card.appendChild(sub);
+				card.appendChild(row);
+				card.appendChild(cx);
+				sectionGridPickerEl.appendChild(card);
+				sectionGridPickerEl.addEventListener("click", function(e){
+					if (e.target === sectionGridPickerEl) closeSectionGridPicker();
+				});
+				document.body.appendChild(sectionGridPickerEl);
+			}
+			sectionGridPickerWrap = wrap;
+			sectionGridPickerPatch = patch;
+			sectionGridPickerEl.hidden = false;
+		}
+		function buildBenefitsGridChrome() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				if (String(wrap.getAttribute("data-lf-section-type") || "") !== "benefits") return;
+				var grid = wrap.querySelector(".lf-benefits");
+				if (!grid) return;
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-benefits-grid-actions=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				Array.prototype.slice.call(grid.querySelectorAll("[data-lf-ai-benefit-remove=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				Array.prototype.slice.call(grid.querySelectorAll(".lf-benefits__card")).forEach(function(card){
+					var btn = document.createElement("button");
+					btn.type = "button";
+					btn.className = "lf-ai-benefit-remove lf-ai-inline-editor-ignore";
+					btn.setAttribute("data-lf-ai-benefit-remove", "1");
+					btn.textContent = "×";
+					btn.setAttribute("title", "Remove card");
+					btn.addEventListener("click", function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						if (card && card.parentNode) {
+							card.parentNode.removeChild(card);
+						}
+						persistSectionLineItems(wrap, "benefits_items", benefitLinesFromGrid(grid), "Saving benefits...");
+					});
+					card.insertBefore(btn, card.firstChild);
+				});
+				var bar = document.createElement("div");
+				bar.className = "lf-ai-benefits-grid-actions lf-ai-inline-editor-ignore";
+				bar.setAttribute("data-lf-ai-benefits-grid-actions", "1");
+				var addC = document.createElement("button");
+				addC.type = "button";
+				addC.className = "lf-ai-checklist-add lf-ai-inline-editor-ignore";
+				addC.textContent = "+ Add benefit card";
+				addC.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					var c = document.createElement("div");
+					c.className = "lf-benefits__card";
+					c.setAttribute("data-lf-benefit-line", "New headline || New supporting text");
+					var ht = document.createElement("h3");
+					ht.className = "lf-benefits__title";
+					ht.textContent = "New headline";
+					var bd = document.createElement("p");
+					bd.className = "lf-benefits__desc";
+					bd.textContent = "New supporting text";
+					c.appendChild(ht);
+					c.appendChild(bd);
+					var act = grid.querySelector(".lf-benefits__actions");
+					var pts = grid.querySelector(".lf-benefits__points");
+					if (act) {
+						grid.insertBefore(c, act);
+					} else if (pts) {
+						grid.insertBefore(c, pts);
+					} else {
+						grid.appendChild(c);
+					}
+					buildBenefitsReorderControls();
+					buildBenefitsTextEditors();
+					buildBenefitsIconEditors();
+					buildBenefitsGridChrome();
+					persistSectionLineItems(wrap, "benefits_items", benefitLinesFromGrid(grid), "Saving benefits...");
+				});
+				bar.appendChild(addC);
+				grid.parentNode.insertBefore(bar, grid.nextSibling);
 			});
 		}
 		function trustLayoutFromWrap(wrap) {
@@ -5119,7 +5610,7 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function stripClonedSectionEditorArtifacts(root) {
 			if (!root || !root.querySelectorAll) return;
-			Array.prototype.slice.call(root.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
+			Array.prototype.slice.call(root.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,.lf-ai-benefits-grid-actions,[data-lf-ai-benefits-grid-actions=\"1\"],[data-lf-ai-service-intro-actions=\"1\"],[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-micro-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-micro-remove=\"1\"],[data-lf-ai-benefit-remove=\"1\"],[data-lf-ai-service-intro-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
 				if (node && node.parentNode) node.parentNode.removeChild(node);
 			});
 			Array.prototype.slice.call(root.querySelectorAll("[data-lf-benefits-editor-bound]")).forEach(function(node){
@@ -5181,6 +5672,7 @@ function lf_ai_assistant_widget_js(): string {
 					buildHeroTrustStripControls();
 					buildTrustBadgePillsControls();
 					buildChecklistControls();
+					buildServiceDetailsMicroControls();
 					buildProcessStepControls();
 					buildSectionColumnSwapTargets();
 					buildSectionMediaEditors();
@@ -5188,6 +5680,8 @@ function lf_ai_assistant_widget_js(): string {
 					buildBenefitsReorderControls();
 					buildBenefitsTextEditors();
 					buildServiceIntroReorderControls();
+					buildServiceIntroCardEditors();
+					buildBenefitsGridChrome();
 					buildBenefitsIconEditors();
 					setSelectedSection(clone);
 					setStatus((res.data && res.data.message) ? res.data.message : "Section duplicated.", false);
@@ -6058,6 +6552,7 @@ function lf_ai_assistant_widget_js(): string {
 				if (extra.custom_background) payload.custom_background = String(extra.custom_background);
 				if (extra.header_align) payload.header_align = String(extra.header_align);
 				if (extra.benefits_cta_align) payload.benefits_cta_align = String(extra.benefits_cta_align);
+				if (extra.grid_columns) payload.grid_columns = String(extra.grid_columns);
 			}
 			$.post(lfAiFloating.ajax_url, payload).done(function(res){
 				if (res && res.success) {
@@ -6160,8 +6655,16 @@ function lf_ai_assistant_widget_js(): string {
 					controls.appendChild(alignBtn);
 				}
 				if (sectionType === "benefits") {
+					ensureBtn("Grid", "Card columns: 2, 3, or 4 on desktop", "Set benefit columns", function(){
+						openSectionGridPicker(wrap);
+					});
 					ensureBtn("CTA", "Add or edit the optional benefits button", "Benefits button", function(){
 						openBenefitsCtaPicker(wrap, null);
+					});
+				}
+				if (sectionType === "service_intro") {
+					ensureBtn("Grid", "Service cards per row: 2, 3, or 4 on desktop", "Set service grid columns", function(){
+						openSectionGridPicker(wrap);
 					});
 				}
 				if (sectionSupportsColumnSwap(sectionType)) {
@@ -6434,8 +6937,30 @@ function lf_ai_assistant_widget_js(): string {
 				return;
 			}
 			inlineActiveEl = el;
-			inlineOriginalText = String(el.textContent || "").trim();
-			inlineOriginalHtml = String(el.innerHTML || "").trim();
+			inlineBodyEditSourceEl = null;
+			inlineOriginalBodyHtml = "";
+			inlineOriginalBodyText = "";
+			var fkInline = String(el.getAttribute("data-lf-inline-field-key") || "");
+			var srcSel = String(el.getAttribute("data-lf-inline-source-selector") || "");
+			if (fkInline === "service_details_body" && srcSel) {
+				try {
+					inlineBodyEditSourceEl = document.querySelector(srcSel);
+				} catch (errSrc) {
+					inlineBodyEditSourceEl = null;
+				}
+				if (inlineBodyEditSourceEl) {
+					inlineOriginalBodyHtml = String(inlineBodyEditSourceEl.innerHTML || "").trim();
+					inlineOriginalBodyText = String(inlineBodyEditSourceEl.textContent || "").trim();
+					inlineOriginalText = inlineOriginalBodyText;
+					inlineOriginalHtml = inlineOriginalBodyHtml;
+				} else {
+					inlineOriginalText = String(el.textContent || "").trim();
+					inlineOriginalHtml = String(el.innerHTML || "").trim();
+				}
+			} else {
+				inlineOriginalText = String(el.textContent || "").trim();
+				inlineOriginalHtml = String(el.innerHTML || "").trim();
+			}
 			el.setAttribute("data-lf-inline-active", "1");
 			el.setAttribute("contenteditable", "true");
 			el.setAttribute("spellcheck", "true");
@@ -6453,7 +6978,11 @@ function lf_ai_assistant_widget_js(): string {
 			if (!inlineActiveEl) {
 				return;
 			}
-			inlineActiveEl.innerHTML = inlineOriginalHtml;
+			if (inlineBodyEditSourceEl && inlineActiveEl && inlineBodyEditSourceEl.contains && inlineBodyEditSourceEl.contains(inlineActiveEl)) {
+				inlineBodyEditSourceEl.innerHTML = inlineOriginalBodyHtml;
+			} else {
+				inlineActiveEl.innerHTML = inlineOriginalHtml;
+			}
 			inlineActiveEl.removeAttribute("contenteditable");
 			inlineActiveEl.removeAttribute("spellcheck");
 			inlineActiveEl.removeAttribute("data-lf-inline-active");
@@ -6461,6 +6990,9 @@ function lf_ai_assistant_widget_js(): string {
 			inlineActiveEl = null;
 			inlineOriginalText = "";
 			inlineOriginalHtml = "";
+			inlineBodyEditSourceEl = null;
+			inlineOriginalBodyHtml = "";
+			inlineOriginalBodyText = "";
 			if (showStatus !== false) {
 				setStatus("Inline edit cancelled.", false);
 			}
@@ -6486,8 +7018,10 @@ function lf_ai_assistant_widget_js(): string {
 			var valueNode = sourceNode || el;
 			var newText = String(valueNode.textContent || "").trim();
 			var newHtml = String(valueNode.innerHTML || "").trim();
-			var origHtml = String(inlineOriginalHtml || "").trim();
-			var textChanged = (newText !== inlineOriginalText);
+			var compareText = inlineBodyEditSourceEl ? inlineOriginalBodyText : String(inlineOriginalText || "");
+			var compareHtml = inlineBodyEditSourceEl ? inlineOriginalBodyHtml : String(inlineOriginalHtml || "");
+			var origHtml = String(compareHtml || "").trim();
+			var textChanged = (newText !== compareText);
 			var htmlChanged = (newHtml !== origHtml);
 			if (!selector && !fieldKey) {
 				setStatus("Invalid inline target.", true);
@@ -6507,6 +7041,9 @@ function lf_ai_assistant_widget_js(): string {
 				inlineActiveEl = null;
 				inlineOriginalText = "";
 				inlineOriginalHtml = "";
+				inlineBodyEditSourceEl = null;
+				inlineOriginalBodyHtml = "";
+				inlineOriginalBodyText = "";
 				if (typeof done === "function") done();
 				return;
 			}
@@ -6532,6 +7069,10 @@ function lf_ai_assistant_widget_js(): string {
 			if (sectionId) {
 				payload.section_id = sectionId;
 			}
+			var svcPostId = String(el.getAttribute("data-lf-service-post-id") || "");
+			if (fieldKey === "lf_service_short_desc" && svcPostId) {
+				payload.service_post_id = svcPostId;
+			}
 			$.post(lfAiFloating.ajax_url, payload).done(function(res){
 				if (res && res.success) {
 					el.removeAttribute("contenteditable");
@@ -6542,6 +7083,9 @@ function lf_ai_assistant_widget_js(): string {
 						inlineActiveEl = null;
 						inlineOriginalText = "";
 						inlineOriginalHtml = "";
+						inlineBodyEditSourceEl = null;
+						inlineOriginalBodyHtml = "";
+						inlineOriginalBodyText = "";
 					}
 					setStatus("Saved. Use the ↶ icon to undo (repeat to go back further).", false);
 				} else {

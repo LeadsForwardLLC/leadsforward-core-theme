@@ -30,7 +30,7 @@ if (!empty($section['icon_enabled']) && !empty($section['icon_slug']) && functio
 	$card_icon = lf_section_icon_markup($section, 'service_intro', 'list', 'lf-block-service-intro__icon');
 }
 $columns = (int) ($section['service_intro_columns'] ?? 3);
-$columns = max(3, min(6, $columns));
+$columns = max(2, min(6, $columns));
 $max_items = (int) ($section['service_intro_max_items'] ?? 6);
 $max_items = $max_items > 0 ? $max_items : 6;
 $show_images = (string) ($section['service_intro_show_images'] ?? '1') !== '0';

@@ -182,7 +182,7 @@ function lf_homepage_admin_save(): void {
 			$config[$type]['section_heading'] = isset($_POST['lf_hp_service_intro_heading']) ? sanitize_text_field($_POST['lf_hp_service_intro_heading']) : '';
 			$config[$type]['section_intro'] = isset($_POST['lf_hp_service_intro_intro']) ? sanitize_textarea_field($_POST['lf_hp_service_intro_intro']) : '';
 			$cols = isset($_POST['lf_hp_service_intro_columns']) ? sanitize_text_field($_POST['lf_hp_service_intro_columns']) : '3';
-			$config[$type]['service_intro_columns'] = in_array($cols, ['3', '4', '5', '6'], true) ? $cols : '3';
+			$config[$type]['service_intro_columns'] = in_array($cols, ['2', '3', '4', '5', '6'], true) ? $cols : '3';
 			$config[$type]['service_intro_max_items'] = isset($_POST['lf_hp_service_intro_max']) ? absint($_POST['lf_hp_service_intro_max']) : 6;
 			$show_images = isset($_POST['lf_hp_service_intro_images']) ? sanitize_text_field($_POST['lf_hp_service_intro_images']) : '1';
 			$config[$type]['service_intro_show_images'] = $show_images === '0' ? '0' : '1';
@@ -1041,6 +1041,7 @@ document.addEventListener('DOMContentLoaded', function() {
 										<th scope="row"><label for="lf_hp_service_intro_columns"><?php esc_html_e('Columns', 'leadsforward-core'); ?></label></th>
 										<td>
 											<select name="lf_hp_service_intro_columns" id="lf_hp_service_intro_columns">
+												<option value="2" <?php selected(($sec['service_intro_columns'] ?? ''), '2'); ?>><?php esc_html_e('2 columns', 'leadsforward-core'); ?></option>
 												<option value="3" <?php selected(($sec['service_intro_columns'] ?? '3'), '3'); ?>><?php esc_html_e('3 columns', 'leadsforward-core'); ?></option>
 												<option value="4" <?php selected(($sec['service_intro_columns'] ?? ''), '4'); ?>><?php esc_html_e('4 columns', 'leadsforward-core'); ?></option>
 												<option value="5" <?php selected(($sec['service_intro_columns'] ?? ''), '5'); ?>><?php esc_html_e('5 columns', 'leadsforward-core'); ?></option>
