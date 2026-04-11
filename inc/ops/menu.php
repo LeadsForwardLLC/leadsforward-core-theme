@@ -924,7 +924,7 @@ function lf_ops_render_global_settings_page(): void {
 			.lf-global-manifest-advanced > summary::before { content: '▸ '; display: inline-block; transition: transform 0.15s ease; }
 			.lf-global-manifest-advanced[open] > summary::before { transform: rotate(90deg); }
 		</style>
-		<form method="post" data-maps-key="<?php echo esc_attr($can_sensitive ? $maps_api_key : ''); ?>">
+		<form method="post">
 			<?php wp_nonce_field('lf_global_settings', 'lf_global_settings_nonce'); ?>
 			<div class="lf-settings-panel" data-section="manifester_settings">
 				<div class="lf-settings-panel-header">
@@ -1045,7 +1045,7 @@ function lf_ops_render_global_settings_page(): void {
 								<th scope="row"><label for="lf_maps_api_key"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></label></th>
 								<td>
 									<input type="password" class="large-text" name="lf_maps_api_key" id="lf_maps_api_key" value="<?php echo esc_attr($can_sensitive ? $maps_api_key : ''); ?>" autocomplete="new-password" <?php disabled(!$can_sensitive); ?> />
-									<p class="description"><?php esc_html_e('Used for business place search in Global Settings and optional Embed API map URLs. Paste a map iframe under Global Settings → Business Entity → Map embed if you want to avoid API domain restrictions. Re-enter the key here to replace it; saved keys are not shown.', 'leadsforward-core'); ?></p>
+									<p class="description"><?php esc_html_e('Optional. Only used for legacy Embed API map URLs when no iframe is set. The normal map is a pasted iframe under Global Settings → Business Entity → Map iframe embed and does not require this key. Re-enter the key here to replace it; saved keys are not shown.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
@@ -1290,24 +1290,14 @@ function lf_ops_render_global_settings_page(): void {
 								</div>
 							</td>
 						</tr>
-						<tr>
-							<th scope="row"><label for="lf_business_place_search"><?php esc_html_e('Search business on Google Maps', 'leadsforward-core'); ?></label></th>
+						<tr id="lf-business-map-embed">
+							<th scope="row"><label for="lf_business_map_embed"><?php esc_html_e('Map iframe embed', 'leadsforward-core'); ?></label></th>
 							<td>
-								<input type="text" class="large-text" id="lf_business_place_search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="<?php esc_attr_e('Start typing your business name...', 'leadsforward-core'); ?>" value="<?php echo esc_attr($place_name !== '' ? $place_name : $entity_name); ?>" />
 								<input type="hidden" name="lf_business_place_id" id="lf_business_place_id" value="<?php echo esc_attr($place_id); ?>" />
 								<input type="hidden" name="lf_business_place_name" id="lf_business_place_name" value="<?php echo esc_attr($place_name); ?>" />
 								<input type="hidden" name="lf_business_place_address" id="lf_business_place_address" value="<?php echo esc_attr($place_address); ?>" />
-								<p class="description" id="lf_place_selected">
-									<?php echo $place_name !== '' ? esc_html(sprintf(__('Selected: %1$s (%2$s)', 'leadsforward-core'), $place_name, $place_address)) : esc_html__('No place selected yet.', 'leadsforward-core'); ?>
-								</p>
-								<p class="description" id="lf_maps_status" style="color:#b45309;"></p>
-							</td>
-						</tr>
-						<tr id="lf-business-map-embed">
-							<th scope="row"><label for="lf_business_map_embed"><?php esc_html_e('Map iframe embed (optional)', 'leadsforward-core'); ?></label></th>
-							<td>
 								<textarea class="large-text" name="lf_business_map_embed" id="lf_business_map_embed" rows="3"><?php echo esc_textarea($map_embed); ?></textarea>
-								<p class="description"><?php esc_html_e('Paste the iframe from Google Maps → Share → Embed a map. Standard embeds show the map and basic place info only; Google does not include the full Business Profile (star rating and reviews) inside third-party iframes. Add your Google Business Profile URL in the field above so the map section can link visitors to read Google reviews. The name and address under the map come from Global Settings (NAP), not from the iframe.', 'leadsforward-core'); ?></p>
+								<p class="description"><?php esc_html_e('Paste the iframe from Google Maps → Share → Embed a map. This is how the front-end map is shown; the Maps JavaScript and Places APIs are not used for the map, so no API key is required for the embed itself. Standard embeds show the map and basic place info only; Google does not include the full Business Profile (star rating and reviews) inside third-party iframes. Add your Google Business Profile URL below so the map section can link visitors to read Google reviews. The name and address under the map come from Global Settings (NAP), not from the iframe.', 'leadsforward-core'); ?></p>
 							</td>
 						</tr>
 						<tr>
@@ -1672,94 +1662,6 @@ function lf_ops_render_global_settings_page(): void {
 					if (imagePreview) { imagePreview.src = ''; imagePreview.style.display = 'none'; }
 				});
 			}
-			function loadPlacesApi(key, callback) {
-				var status = document.getElementById('lf_maps_status');
-				if (window.google && window.google.maps && window.google.maps.places) {
-					callback();
-					return;
-				}
-				if (!key) {
-					if (status) {
-						status.textContent = 'Add your Google Maps API key in LeadsForward -> Global Settings to enable search.';
-					}
-					return;
-				}
-				var scriptId = 'lf-maps-places';
-				if (document.getElementById(scriptId)) {
-					return;
-				}
-				var script = document.createElement('script');
-				script.id = scriptId;
-				script.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&libraries=places';
-				script.async = true;
-				script.onerror = function () {
-					if (status) {
-						status.textContent = 'Failed to load Google Maps. Check API key restrictions and billing.';
-					}
-				};
-				script.onload = callback;
-				document.head.appendChild(script);
-			}
-
-			function initPlacesSearch() {
-				var input = document.getElementById('lf_business_place_search');
-				var placeId = document.getElementById('lf_business_place_id');
-				var placeName = document.getElementById('lf_business_place_name');
-				var placeAddress = document.getElementById('lf_business_place_address');
-				var selected = document.getElementById('lf_place_selected');
-				var status = document.getElementById('lf_maps_status');
-				if (!input) {
-					return;
-				}
-				var form = input.closest('form');
-				var key = form ? (form.getAttribute('data-maps-key') || '') : '';
-				key = key.trim();
-				if (!key) {
-					if (selected) {
-						selected.textContent = 'Add your Google Maps API key in LeadsForward -> Global Settings to enable search.';
-					}
-					if (status) {
-						status.textContent = '';
-					}
-					return;
-				}
-				if (status) {
-					status.textContent = 'Loading Google Maps...';
-				}
-				window.gm_authFailure = function () {
-					if (status) {
-						status.textContent = 'Google Maps auth failed. Check key restrictions and billing.';
-					}
-				};
-				loadPlacesApi(key, function () {
-					if (!window.google || !google.maps || !google.maps.places) {
-						if (status) {
-							status.textContent = 'Google Maps loaded without Places library. Check API settings.';
-						}
-						return;
-					}
-					if (status) {
-						status.textContent = '';
-					}
-					var ac = new google.maps.places.Autocomplete(input, {
-						fields: ['place_id', 'name', 'formatted_address']
-					});
-					ac.addListener('place_changed', function () {
-						var place = ac.getPlace();
-						if (!place || !place.place_id) {
-							return;
-						}
-						if (placeId) placeId.value = place.place_id || '';
-						if (placeName) placeName.value = place.name || '';
-						if (placeAddress) placeAddress.value = place.formatted_address || '';
-						if (selected) {
-							selected.textContent = 'Selected: ' + (place.name || '') + (place.formatted_address ? ' (' + place.formatted_address + ')' : '');
-						}
-					});
-				});
-			}
-
-			initPlacesSearch();
 		})();
 		jQuery(function ($) {
 			if ($.fn.wpColorPicker) {

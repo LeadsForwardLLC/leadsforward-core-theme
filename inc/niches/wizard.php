@@ -550,7 +550,7 @@ function lf_wizard_render_page(): void {
 		echo '<div class="lf-setup-card">';
 		echo '<h2 class="lf-setup-step-title">' . esc_html__('Business details', 'leadsforward-core') . '</h2>';
 		echo '<p class="lf-setup-help">' . esc_html__('Used for schema, contact info, and map display. You can edit later in Global Settings.', 'leadsforward-core') . '</p>';
-		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup')) . '" data-maps-key="' . esc_attr($maps_api_key) . '">';
+		echo '<form method="get" action="' . esc_url(admin_url('admin.php?page=lf-setup')) . '">';
 		echo '<input type="hidden" name="page" value="lf-setup" />';
 		echo '<input type="hidden" name="step" value="3" />';
 		echo '<input type="hidden" name="niche" value="' . esc_attr($niche) . '" />';
@@ -585,18 +585,16 @@ function lf_wizard_render_page(): void {
 		if ($maps_api_key) {
 			echo '<p class="description">' . esc_html__('Key is set in LeadsForward -> Global Settings.', 'leadsforward-core') . '</p>';
 		} else {
-			echo '<p class="description">' . esc_html__('Add your Google Maps API key in LeadsForward -> Global Settings to enable place search + embeds.', 'leadsforward-core') . '</p>';
+			echo '<p class="description">' . esc_html__('Optional. If needed, add a key in LeadsForward -> Global Settings. The site map normally uses a pasted iframe only; a key is not required for the embed.', 'leadsforward-core') . '</p>';
 		}
 		echo '</td></tr>';
-		echo '<tr><th scope="row"><label for="lf_business_place_search">' . esc_html__('Search business on Google Maps', 'leadsforward-core') . '</label></th><td>';
-		echo '<input type="text" class="large-text" id="lf_business_place_search" placeholder="' . esc_attr__('Start typing your business name...', 'leadsforward-core') . '" value="' . esc_attr($place_name) . '" />';
+		echo '<tr><th scope="row"><label for="lf_business_map_embed">' . esc_html__('Map iframe embed', 'leadsforward-core') . '</label></th><td>';
 		echo '<input type="hidden" name="lf_business_place_id" id="lf_business_place_id" value="' . esc_attr($place_id) . '" />';
 		echo '<input type="hidden" name="lf_business_place_name" id="lf_business_place_name" value="' . esc_attr($place_name) . '" />';
 		echo '<input type="hidden" name="lf_business_place_address" id="lf_business_place_address" value="' . esc_attr($place_address) . '" />';
-		echo '<p class="description" id="lf_place_selected">' . ($place_name !== '' ? esc_html(sprintf(__('Selected: %1$s (%2$s)', 'leadsforward-core'), $place_name, $place_address)) : esc_html__('No place selected yet.', 'leadsforward-core')) . '</p>';
-		echo '<p class="description" id="lf_maps_status" style="color:#b45309;"></p>';
+		echo '<textarea class="large-text" name="lf_business_map_embed" id="lf_business_map_embed" rows="3">' . esc_textarea($map_embed) . '</textarea>';
+		echo '<p class="description">' . esc_html__('Paste the iframe from Google Maps → Share → Embed a map. This is how the front-end map is shown; the Maps JavaScript and Places APIs are not used for the map. Add your Google Business Profile URL under Advanced business details below so the map section can link visitors to reviews.', 'leadsforward-core') . '</p>';
 		echo '</td></tr>';
-		echo '<tr><th scope="row"><label for="lf_business_map_embed">' . esc_html__('Map iframe embed (optional)', 'leadsforward-core') . '</label></th><td><textarea class="large-text" name="lf_business_map_embed" id="lf_business_map_embed" rows="3">' . esc_textarea($map_embed) . '</textarea><p class="description">' . esc_html__('Paste a Google Maps iframe if you prefer not to rely on the Maps API. If empty, the selected Google Maps place will be used.', 'leadsforward-core') . '</p></td></tr>';
 		echo '</table>';
 
 		echo '<details style="margin-top:12px;">';
@@ -620,7 +618,6 @@ function lf_wizard_render_page(): void {
 		echo '</details>';
 
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr__('Next', 'leadsforward-core') . '" /></p></form>';
-		echo '<script>(function(){function loadPlacesApi(key, callback){var status=document.getElementById("lf_maps_status");if(window.google&&window.google.maps&&window.google.maps.places){callback();return;}if(!key){if(status){status.textContent="Add your Google Maps API key in LeadsForward -> Global Settings to enable search.";}return;}var scriptId="lf-maps-places";if(document.getElementById(scriptId)){return;}var script=document.createElement("script");script.id=scriptId;script.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(key)+"&libraries=places";script.async=true;script.onerror=function(){if(status){status.textContent="Failed to load Google Maps. Check API key restrictions and billing.";}};script.onload=callback;document.head.appendChild(script);}function initPlacesSearch(){var input=document.getElementById("lf_business_place_search");var placeId=document.getElementById("lf_business_place_id");var placeName=document.getElementById("lf_business_place_name");var placeAddress=document.getElementById("lf_business_place_address");var selected=document.getElementById("lf_place_selected");var status=document.getElementById("lf_maps_status");if(!input){return;}var form=input.closest("form");var key=form?(form.getAttribute("data-maps-key")||""):"";key=key.trim();if(!key){if(selected){selected.textContent="Add your Google Maps API key in LeadsForward -> Global Settings to enable search.";}if(status){status.textContent="";}return;}if(status){status.textContent="Loading Google Maps...";}window.gm_authFailure=function(){if(status){status.textContent="Google Maps auth failed. Check key restrictions and billing.";}};loadPlacesApi(key,function(){if(!window.google||!google.maps||!google.maps.places){if(status){status.textContent="Google Maps loaded without Places library. Check API settings.";}return;}if(status){status.textContent="";}var ac=new google.maps.places.Autocomplete(input,{fields:["place_id","name","formatted_address"]});ac.addListener("place_changed",function(){var place=ac.getPlace();if(!place||!place.place_id){return;}if(placeId)placeId.value=place.place_id||"";if(placeName)placeName.value=place.name||"";if(placeAddress)placeAddress.value=place.formatted_address||"";if(selected){selected.textContent="Selected: "+(place.name||"")+(place.formatted_address?" ("+place.formatted_address+")":"");}});});}initPlacesSearch();})();</script>';
 	} elseif ($step === 3) {
 		$niche = $niche ?: $default_niche;
 		$n = lf_get_niche($niche);
