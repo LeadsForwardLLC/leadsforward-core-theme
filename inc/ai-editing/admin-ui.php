@@ -215,6 +215,9 @@ function lf_ai_assistant_infer_mode_from_prompt(string $prompt): array {
 	if (strpos($lower, 'service area') !== false) {
 		return ['mode' => 'create_cpt', 'cpt_type' => 'lf_service_area', 'batch_type' => 'post', 'batch_count' => $count];
 	}
+	if (preg_match('/\bservices?\s+page\b/', $lower) === 1) {
+		return ['mode' => 'create_cpt', 'cpt_type' => 'lf_service', 'batch_type' => 'post', 'batch_count' => $count];
+	}
 	if (strpos($lower, 'service') !== false) {
 		return ['mode' => 'create_cpt', 'cpt_type' => 'lf_service', 'batch_type' => 'post', 'batch_count' => $count];
 	}
@@ -247,7 +250,7 @@ function lf_ai_assistant_prompt_should_force_creation_flow(string $prompt): bool
 	if (preg_match('/\bnew\s+/', $l)) {
 		return true;
 	}
-	if (preg_match('/\b(landing\s+page|service\s+page|blog\s+post)\b/', $l)) {
+	if (preg_match('/\b(landing\s+page|services?\s+page|blog\s+post)\b/', $l)) {
 		return true;
 	}
 	if (preg_match('/\b(create|add|generate|make|build)\s+(me\s+|us\s+)?(a\s+|an\s+)(faq|project|testimonial)\b/', $l)) {
@@ -471,6 +474,7 @@ function lf_ai_assistant_build_creation_prompt(string $mode, string $post_type, 
 		$rules .= "- Provide strong content body, not bullet fragments.\n";
 	}
 	$rules .= "- Do not include HTML wrappers like <html> or markdown fences.\n";
+	$rules .= "- You may put hero_headline, hero_subheadline, service_details_body, section_heading, or section_intro at the top level of the JSON OR under page_builder.hero / page_builder.service_details — both shapes are accepted.\n";
 	$rules .= "- If mode is create_blog_post, write as a full blog draft.\n";
 	$rules .= "- If mode is create_cpt and post_type is lf_faq, include question and answer.\n";
 	$rules .= "- If mode is create_cpt and post_type is lf_service_area, include city and state when possible.\n";
@@ -501,7 +505,72 @@ function lf_ai_assistant_build_batch_prompt(string $batch_type, int $count, stri
 	return $base . "\nUser request:\n" . $prompt;
 }
 
+/**
+ * Fix common model mistakes: wrong title key, flat hero/service fields, stringified page_builder, body aliases.
+ *
+ * @param array<string, mixed> $decoded
+ * @return array<string, mixed>
+ */
+function lf_ai_assistant_normalize_creation_decoded(array $decoded): array {
+	if (!empty($decoded['page_builder']) && is_string($decoded['page_builder'])) {
+		$inner = json_decode($decoded['page_builder'], true);
+		if (is_array($inner)) {
+			$decoded['page_builder'] = $inner;
+		}
+	}
+	$title = trim((string) ($decoded['title'] ?? ''));
+	if ($title === '') {
+		foreach (['post_title', 'page_title', 'name', 'headline', 'service_title', 'service_name'] as $alt) {
+			$v = isset($decoded[ $alt ]) ? trim((string) $decoded[ $alt ]) : '';
+			if ($v !== '') {
+				$decoded['title'] = $v;
+				break;
+			}
+		}
+	}
+	$content = trim((string) ($decoded['content'] ?? ''));
+	if ($content === '') {
+		foreach (['body', 'description', 'main_content', 'copy', 'html'] as $alt) {
+			$v = isset($decoded[ $alt ]) ? trim((string) $decoded[ $alt ]) : '';
+			if ($v !== '') {
+				$decoded['content'] = $v;
+				break;
+			}
+		}
+	}
+	$pb = isset($decoded['page_builder']) && is_array($decoded['page_builder']) ? $decoded['page_builder'] : [];
+	$promote = [
+		'hero'            => ['hero_headline', 'hero_subheadline', 'cta_primary_override'],
+		'service_details' => ['service_details_body', 'section_heading', 'section_intro'],
+	];
+	foreach ($promote as $slot => $field_keys) {
+		$slot_patch = is_array($pb[ $slot ] ?? null) ? $pb[ $slot ] : [];
+		foreach ($field_keys as $fk) {
+			if (!isset($decoded[ $fk ])) {
+				continue;
+			}
+			$val = $decoded[ $fk ];
+			$val_s = is_string($val) ? trim($val) : ( is_scalar($val) ? trim((string) $val) : '' );
+			if ($val_s === '') {
+				continue;
+			}
+			$existing = isset($slot_patch[ $fk ]) ? trim((string) $slot_patch[ $fk ]) : '';
+			if ($existing === '') {
+				$slot_patch[ $fk ] = is_string($val) ? $val : $val_s;
+			}
+		}
+		if ($slot_patch !== []) {
+			$pb[ $slot ] = array_merge(is_array($pb[ $slot ] ?? null) ? $pb[ $slot ] : [], $slot_patch);
+		}
+	}
+	if ($pb !== []) {
+		$decoded['page_builder'] = $pb;
+	}
+	return $decoded;
+}
+
 function lf_ai_assistant_validate_creation_payload(array $decoded, string $mode, string $cpt_type): array {
+	$decoded = lf_ai_assistant_normalize_creation_decoded($decoded);
 	$post_type = lf_ai_assistant_creation_post_type($mode, $cpt_type);
 	if ($post_type === '') {
 		return [];
@@ -516,11 +585,13 @@ function lf_ai_assistant_validate_creation_payload(array $decoded, string $mode,
 		? lf_ai_pb_nested_copy_length($page_builder)
 		: 0;
 	$content_len = strlen(wp_strip_all_tags($content));
+	$excerpt_len = strlen(wp_strip_all_tags((string) ($decoded['excerpt'] ?? '')));
 	if ($title === '') {
 		return [];
 	}
 	if ($pb_ctx !== '') {
-		if ($pb_len < 60 && $content_len < 40) {
+		$fill_score = $pb_len + $content_len + $excerpt_len + strlen($title);
+		if ($pb_len < 35 && $content_len < 25 && $fill_score < 50) {
 			return [];
 		}
 	} elseif ($content === '' || $content_len < 40) {
