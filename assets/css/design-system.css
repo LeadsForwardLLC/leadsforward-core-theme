@@ -3834,6 +3834,20 @@ button:focus-visible,
 	font-size: 0.9rem;
 }
 
+.lf-block-service-areas__map--embed {
+	height: auto;
+	min-height: 280px;
+	background: transparent;
+}
+
+.lf-block-service-areas__map--embed iframe {
+	display: block;
+	width: 100%;
+	min-height: 280px;
+	border: 0;
+	border-radius: 0.65rem;
+}
+
 .lf-block-service-areas__list {
 	display: grid;
 	grid-template-columns: 1fr;
