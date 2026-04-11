@@ -135,6 +135,39 @@ function lf_ai_registry_copy_field_keys_for_type(string $section_type): array {
 }
 
 /**
+ * Section field keys the AI may fill when creating Page Builder defaults (text + rich copy).
+ *
+ * @return string[]
+ */
+function lf_ai_pb_writable_field_keys_for_type(string $section_type): array {
+	$section_type = sanitize_text_field($section_type);
+	if ($section_type === '' || !function_exists('lf_sections_registry')) {
+		return [];
+	}
+	$registry = lf_sections_registry();
+	$def = $registry[ $section_type ] ?? null;
+	if (!is_array($def)) {
+		return [];
+	}
+	$out = [];
+	foreach ($def['fields'] ?? [] as $field) {
+		if (!is_array($field)) {
+			continue;
+		}
+		$type = (string) ($field['type'] ?? '');
+		if (!in_array($type, ['text', 'textarea', 'list', 'richtext'], true)) {
+			continue;
+		}
+		$key = sanitize_text_field((string) ($field['key'] ?? ''));
+		if ($key === '' || $key === 'section_background') {
+			continue;
+		}
+		$out[] = $key;
+	}
+	return array_values(array_unique($out));
+}
+
+/**
  * Human labels for registry field keys (for prompts) scoped to one section type.
  *
  * @return array<string, string>

@@ -411,7 +411,18 @@ function lf_ai_assistant_build_creation_prompt(string $mode, string $post_type, 
 	$schema .= "  \"title\": \"string (required)\",\n";
 	$schema .= "  \"slug\": \"string optional\",\n";
 	$schema .= "  \"excerpt\": \"string optional\",\n";
-	$schema .= "  \"content\": \"string (required, >= 120 chars)\",\n";
+	$pb_ctx = function_exists('lf_ai_pb_context_from_post_type') ? lf_ai_pb_context_from_post_type($post_type) : '';
+	$rules_pre = '';
+	if ($pb_ctx !== '') {
+		$slots = function_exists('lf_ai_pb_default_section_keys_for_context') ? lf_ai_pb_default_section_keys_for_context($pb_ctx) : [];
+		$slot_list = $slots !== [] ? implode(', ', $slots) : '(see theme defaults)';
+		$schema .= "  \"page_builder\": { \"hero\": { \"hero_headline\": \"...\" }, \"service_details\": { \"service_details_body\": \"<p>...</p>\", \"section_intro\": \"...\" } },\n";
+		$schema .= "  \"content\": \"string optional if page_builder has >= 60 chars of visible copy total; otherwise required min 40 chars for fallback mapping\",\n";
+		$rules_pre = "- page_builder keys MUST match these default section slots (any order): {$slot_list}.\n";
+		$rules_pre .= "- Each slot value is an object with only copy fields for that section (e.g. hero_headline, section_heading, section_intro; service pages use service_details_body for main HTML; generic content sections use section_body; benefits_items as newline bullets). Use empty object {} to keep defaults.\n";
+	} else {
+		$schema .= "  \"content\": \"string (required, >= 120 chars)\",\n";
+	}
 	$schema .= "  \"primary_keyword\": \"string optional\",\n";
 	$schema .= "  \"secondary_keywords\": [\"string\", \"...\"] optional,\n";
 	$schema .= "  \"question\": \"string optional (FAQ only)\",\n";
@@ -420,9 +431,16 @@ function lf_ai_assistant_build_creation_prompt(string $mode, string $post_type, 
 	$schema .= "  \"state\": \"string optional (service area only)\"\n";
 	$schema .= "}\n";
 	$rules = "Rules:\n";
+	$rules .= $rules_pre;
 	$rules .= "- status is always draft; do not include status.\n";
 	$rules .= "- Keep title under 70 chars.\n";
-	$rules .= "- Provide strong content body, not bullet fragments.\n";
+	if ($pb_ctx !== '') {
+		$rules .= "- This post type uses the theme Page Builder (Section Library), NOT the main editor body for layout. Put almost all copy in page_builder by section slot.\n";
+		$rules .= "- Use {} for a section slot to keep theme defaults. Populate hero, main detail section, benefits, process steps text, FAQ, and CTA copy where those slots exist.\n";
+		$rules .= "- Do not rely on post_content for the front-end; it may be cleared after save.\n";
+	} else {
+		$rules .= "- Provide strong content body, not bullet fragments.\n";
+	}
 	$rules .= "- Do not include HTML wrappers like <html> or markdown fences.\n";
 	$rules .= "- If mode is create_blog_post, write as a full blog draft.\n";
 	$rules .= "- If mode is create_cpt and post_type is lf_faq, include question and answer.\n";
@@ -439,13 +457,18 @@ function lf_ai_assistant_build_batch_prompt(string $batch_type, int $count, stri
 	$base = "You are a WordPress content builder for a local business site.\n";
 	$base .= "Return ONLY one JSON object. No markdown. No explanation.\n";
 	$base .= "Context type: {$context_type}. Batch post_type: {$post_type}. Requested count: {$count}.\n";
+	$pb_note = '';
+	if (function_exists('lf_ai_pb_context_from_post_type') && lf_ai_pb_context_from_post_type($post_type) !== '') {
+		$pb_note = ' Each item may include \"page_builder\" (same rules as single create) for Section Library copy; if omitted, \"content\" must be long enough for fallback.';
+	}
 	$base .= "Output schema:\n";
-	$base .= "{ \"items\": [ { \"title\": \"string\", \"slug\": \"string optional\", \"excerpt\": \"string optional\", \"content\": \"string\", \"primary_keyword\": \"string optional\", \"secondary_keywords\": [\"string\"], \"question\": \"string optional\", \"answer\": \"string optional\", \"city\": \"string optional\", \"state\": \"string optional\" } ] }\n";
+	$base .= "{ \"items\": [ { \"title\": \"string\", \"slug\": \"string optional\", \"excerpt\": \"string optional\", \"content\": \"string\", \"page_builder\": { } optional, \"primary_keyword\": \"string optional\", \"secondary_keywords\": [\"string\"], \"question\": \"string optional\", \"answer\": \"string optional\", \"city\": \"string optional\", \"state\": \"string optional\" } ] }\n";
 	$base .= "Rules:\n";
 	$base .= "- Return exactly {$count} useful items.\n";
 	$base .= "- Avoid duplicates in titles and slugs.\n";
 	$base .= "- Each item must be substantial and unique.\n";
 	$base .= "- Status is always draft, do not include status field.\n";
+	$base .= $pb_note . "\n";
 	return $base . "\nUser request:\n" . $prompt;
 }
 
@@ -457,7 +480,21 @@ function lf_ai_assistant_validate_creation_payload(array $decoded, string $mode,
 	$title = sanitize_text_field((string) ($decoded['title'] ?? ''));
 	$content = wp_kses_post((string) ($decoded['content'] ?? ''));
 	$content = trim($content);
-	if ($title === '' || $content === '' || strlen(wp_strip_all_tags($content)) < 40) {
+	$page_builder_raw = $decoded['page_builder'] ?? null;
+	$page_builder = is_array($page_builder_raw) ? $page_builder_raw : [];
+	$pb_ctx = function_exists('lf_ai_pb_context_from_post_type') ? lf_ai_pb_context_from_post_type($post_type) : '';
+	$pb_len = ($page_builder !== [] && function_exists('lf_ai_pb_nested_copy_length'))
+		? lf_ai_pb_nested_copy_length($page_builder)
+		: 0;
+	$content_len = strlen(wp_strip_all_tags($content));
+	if ($title === '') {
+		return [];
+	}
+	if ($pb_ctx !== '') {
+		if ($pb_len < 60 && $content_len < 40) {
+			return [];
+		}
+	} elseif ($content === '' || $content_len < 40) {
 		return [];
 	}
 	$payload = [
@@ -466,6 +503,7 @@ function lf_ai_assistant_validate_creation_payload(array $decoded, string $mode,
 		'slug' => sanitize_title((string) ($decoded['slug'] ?? '')),
 		'excerpt' => sanitize_textarea_field((string) ($decoded['excerpt'] ?? '')),
 		'content' => $content,
+		'page_builder' => $page_builder,
 		'primary_keyword' => sanitize_text_field((string) ($decoded['primary_keyword'] ?? '')),
 		'secondary_keywords' => lf_ai_assistant_parse_secondary_keywords($decoded['secondary_keywords'] ?? []),
 		'question' => sanitize_text_field((string) ($decoded['question'] ?? '')),
@@ -494,6 +532,9 @@ function lf_ai_assistant_creation_preview(array $payload): array {
 	}
 	if (!empty($payload['secondary_keywords']) && is_array($payload['secondary_keywords'])) {
 		$notes[] = sprintf(__('Secondary keywords: %s', 'leadsforward-core'), implode(', ', $payload['secondary_keywords']));
+	}
+	if (!empty($payload['page_builder']) && is_array($payload['page_builder'])) {
+		$notes[] = __('Copy will be saved to Page Builder sections.', 'leadsforward-core');
 	}
 	if (($payload['post_type'] ?? '') === 'lf_service_area' && (!empty($payload['city']) || !empty($payload['state']))) {
 		$notes[] = sprintf(__('Area: %s %s', 'leadsforward-core'), (string) ($payload['city'] ?? ''), (string) ($payload['state'] ?? ''));
@@ -552,6 +593,26 @@ function lf_ai_assistant_create_post_from_payload(array $payload): array {
 	if ($post_type === 'lf_service_area') {
 		if (function_exists('update_field') && !empty($payload['state'])) {
 			update_field('lf_service_area_state', (string) $payload['state'], $post_id);
+		}
+	}
+	$pb_ctx = function_exists('lf_ai_pb_context_from_post_type') ? lf_ai_pb_context_from_post_type($post_type) : '';
+	if ($pb_ctx !== '') {
+		$pb = isset($payload['page_builder']) && is_array($payload['page_builder']) ? $payload['page_builder'] : [];
+		$body_html = (string) ($payload['content'] ?? '');
+		$applied = false;
+		if ($pb !== [] && function_exists('lf_ai_assistant_apply_creation_page_builder')) {
+			$applied = lf_ai_assistant_apply_creation_page_builder($post_id, $post_type, $pb);
+		}
+		if (!$applied && $body_html !== '' && function_exists('lf_ai_pb_apply_fallback_content')) {
+			$applied = lf_ai_pb_apply_fallback_content($post_id, $post_type, (string) ($payload['title'] ?? ''), $body_html);
+		}
+		if ($applied) {
+			wp_update_post(
+				[
+					'ID' => $post_id,
+					'post_content' => '',
+				]
+			);
 		}
 	}
 	if (function_exists('lf_seo_maybe_populate_generated_meta')) {

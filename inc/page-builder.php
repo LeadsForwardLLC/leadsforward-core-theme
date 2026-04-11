@@ -1105,3 +1105,455 @@ function lf_pb_render_sections(\WP_Post $post): void {
 	}
 }
 
+/**
+ * Page Builder context slug for a post type (used when no WP_Post exists yet).
+ */
+function lf_ai_pb_context_from_post_type(string $post_type): string {
+	switch ($post_type) {
+		case 'lf_service':
+			return 'service';
+		case 'lf_service_area':
+			return 'service_area';
+		case 'lf_project':
+			return 'post';
+		case 'page':
+			return 'page';
+		case 'post':
+			return 'post';
+		default:
+			return '';
+	}
+}
+
+/**
+ * Ordered Page Builder section keys for the default template (hero, trust_bar, …; duplicates use type__2).
+ *
+ * @return string[]
+ */
+function lf_ai_pb_default_section_keys_for_context(string $context): array {
+	if ($context === '' || !function_exists('lf_pb_default_config')) {
+		return [];
+	}
+	$config = lf_pb_default_config($context);
+	$order = is_array($config['order'] ?? null) ? $config['order'] : [];
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	$counts = [];
+	$keys = [];
+	foreach ($order as $instance_id) {
+		$row = $sections[ $instance_id ] ?? null;
+		if (!is_array($row)) {
+			continue;
+		}
+		$t = sanitize_text_field((string) ($row['type'] ?? ''));
+		if ($t === '') {
+			continue;
+		}
+		$counts[ $t ] = ($counts[ $t ] ?? 0) + 1;
+		$n = (int) $counts[ $t ];
+		$keys[] = $n === 1 ? $t : $t . '__' . $n;
+	}
+	return $keys;
+}
+
+/**
+ * @param mixed $data
+ */
+function lf_ai_pb_nested_copy_length($data): int {
+	if (!is_array($data)) {
+		return strlen(wp_strip_all_tags((string) $data));
+	}
+	$sum = 0;
+	foreach ($data as $v) {
+		$sum += lf_ai_pb_nested_copy_length($v);
+	}
+	return $sum;
+}
+
+/**
+ * @param mixed $raw
+ */
+function lf_ai_pb_filter_section_patch(string $section_type, $raw): array {
+	if (!is_array($raw)) {
+		return [];
+	}
+	if (!function_exists('lf_ai_pb_writable_field_keys_for_type')) {
+		return [];
+	}
+	$allowed = array_flip(lf_ai_pb_writable_field_keys_for_type($section_type));
+	$out = [];
+	foreach ($raw as $k => $v) {
+		$key = sanitize_text_field((string) $k);
+		if ($key === '' || !isset($allowed[ $key ])) {
+			continue;
+		}
+		$out[ $key ] = $v;
+	}
+	return $out;
+}
+
+/**
+ * Merge AI creation output into default Page Builder config and save lf_pb_config.
+ *
+ * @param mixed $page_builder Decoded JSON object: keys like hero, trust_bar, service_details__2.
+ */
+function lf_ai_assistant_apply_creation_page_builder(int $post_id, string $post_type, $page_builder): bool {
+	$post_id = max(0, $post_id);
+	if ($post_id === 0 || !is_array($page_builder)) {
+		return false;
+	}
+	$context = lf_ai_pb_context_from_post_type($post_type);
+	if ($context === '' || !function_exists('lf_pb_default_config') || !function_exists('lf_sections_sanitize_settings')) {
+		return false;
+	}
+	$config = lf_pb_default_config($context);
+	$order = is_array($config['order'] ?? null) ? $config['order'] : [];
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	if ($order === [] || $sections === []) {
+		return false;
+	}
+	$counts = [];
+	$changed = false;
+	foreach ($order as $instance_id) {
+		$row = $sections[ $instance_id ] ?? null;
+		if (!is_array($row)) {
+			continue;
+		}
+		$t = sanitize_text_field((string) ($row['type'] ?? ''));
+		if ($t === '') {
+			continue;
+		}
+		$counts[ $t ] = ($counts[ $t ] ?? 0) + 1;
+		$n = (int) $counts[ $t ];
+		$order_key = $n === 1 ? $t : $t . '__' . $n;
+		$patch_raw = $page_builder[ $order_key ] ?? null;
+		if ($patch_raw === null && $n === 1) {
+			$patch_raw = $page_builder[ $t ] ?? null;
+		}
+		$patch = lf_ai_pb_filter_section_patch($t, $patch_raw);
+		if ($patch === []) {
+			continue;
+		}
+		$base = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+		$sections[ $instance_id ]['settings'] = lf_sections_sanitize_settings($t, array_merge($base, $patch));
+		$changed = true;
+	}
+	if (!$changed) {
+		return false;
+	}
+	update_post_meta($post_id, LF_PB_META_KEY, ['order' => $order, 'sections' => $sections]);
+	return true;
+}
+
+/**
+ * When the model returns legacy HTML "content" only, map it into default Page Builder sections.
+ */
+function lf_ai_pb_apply_fallback_content(int $post_id, string $post_type, string $title, string $content_html): bool {
+	$post_id = max(0, $post_id);
+	if ($post_id === 0) {
+		return false;
+	}
+	$content_html = trim($content_html);
+	if ($content_html === '' || !function_exists('lf_pb_default_config') || !function_exists('lf_sections_sanitize_settings')) {
+		return false;
+	}
+	$context = lf_ai_pb_context_from_post_type($post_type);
+	if ($context === '') {
+		return false;
+	}
+	$config = lf_pb_default_config($context);
+	$order = is_array($config['order'] ?? null) ? $config['order'] : [];
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	if ($order === [] || $sections === []) {
+		return false;
+	}
+	$title = sanitize_text_field($title);
+	$did = false;
+	foreach ($order as $instance_id) {
+		$row = $sections[ $instance_id ] ?? null;
+		if (!is_array($row)) {
+			continue;
+		}
+		$t = sanitize_text_field((string) ($row['type'] ?? ''));
+		if ($t === 'hero' && $title !== '' && function_exists('lf_ai_pb_writable_field_keys_for_type')) {
+			$keys = lf_ai_pb_writable_field_keys_for_type('hero');
+			if (in_array('hero_headline', $keys, true)) {
+				$base = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+				$patch = ['hero_headline' => $title];
+				if (in_array('hero_subheadline', $keys, true) && strlen(wp_strip_all_tags($content_html)) > 20) {
+					$patch['hero_subheadline'] = wp_trim_words(wp_strip_all_tags($content_html), 28, '…');
+				}
+				$sections[ $instance_id ]['settings'] = lf_sections_sanitize_settings('hero', array_merge($base, $patch));
+				$did = true;
+			}
+		}
+	}
+	foreach ($order as $instance_id) {
+		$row = $sections[ $instance_id ] ?? null;
+		if (!is_array($row)) {
+			continue;
+		}
+		$t = sanitize_text_field((string) ($row['type'] ?? ''));
+		if ($t === '' || !function_exists('lf_ai_pb_writable_field_keys_for_type')) {
+			continue;
+		}
+		$keys = lf_ai_pb_writable_field_keys_for_type($t);
+		$base = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+		$body_key = null;
+		if (in_array('section_body', $keys, true)) {
+			$body_key = 'section_body';
+		} elseif (in_array('service_details_body', $keys, true)) {
+			$body_key = 'service_details_body';
+		}
+		if ($body_key !== null) {
+			$sections[ $instance_id ]['settings'] = lf_sections_sanitize_settings($t, array_merge($base, [ $body_key => $content_html ]));
+			$did = true;
+			break;
+		}
+		if (in_array('supporting_text', $keys, true)) {
+			$sections[ $instance_id ]['settings'] = lf_sections_sanitize_settings($t, array_merge($base, ['supporting_text' => $content_html]));
+			$did = true;
+			break;
+		}
+	}
+	if (!$did) {
+		return false;
+	}
+	update_post_meta($post_id, LF_PB_META_KEY, ['order' => $order, 'sections' => $sections]);
+	return true;
+}
+
+/**
+ * Post types that use the Section Library / lf_pb_config.
+ *
+ * @return string[]
+ */
+function lf_pb_menu_assist_post_types(): array {
+	return ['lf_service', 'lf_service_area', 'lf_project', 'page', 'post'];
+}
+
+/**
+ * @return array{0: int, 1: string} Parent nav_menu_item db ID (0 = top-level) and human-readable strategy label.
+ */
+function lf_pb_nav_smart_parent_for_post(\WP_Post $post): array {
+	$menu_id = lf_pb_header_menu_term_id();
+	if ($menu_id <= 0) {
+		return [0, ''];
+	}
+	if ($post->post_type === 'lf_service') {
+		$pid = lf_pb_nav_find_item_id_by_class($menu_id, 'lf-menu-services-parent');
+		return [$pid, 'services'];
+	}
+	if ($post->post_type === 'lf_service_area') {
+		$pid = lf_pb_nav_find_item_id_by_class($menu_id, 'lf-menu-areas-parent');
+		return [$pid, 'areas'];
+	}
+	if ($post->post_type === 'page' && (int) $post->post_parent > 0) {
+		$pid = lf_pb_nav_find_item_for_object($menu_id, (int) $post->post_parent, 'page');
+		if ($pid > 0) {
+			return [$pid, 'page_parent'];
+		}
+	}
+	if ($post->post_type === 'post') {
+		$posts_page = (int) get_option('page_for_posts', 0);
+		if ($posts_page > 0) {
+			$pid = lf_pb_nav_find_item_for_object($menu_id, $posts_page, 'page');
+			if ($pid > 0) {
+				return [$pid, 'blog_index'];
+			}
+		}
+	}
+	return [0, 'top'];
+}
+
+function lf_pb_header_menu_term_id(): int {
+	$locations = get_nav_menu_locations();
+	$mid = isset($locations['header_menu']) ? (int) $locations['header_menu'] : 0;
+	return $mid > 0 ? $mid : 0;
+}
+
+function lf_pb_nav_find_item_id_by_class(int $menu_id, string $class): int {
+	$class = sanitize_text_field($class);
+	if ($class === '') {
+		return 0;
+	}
+	$items = wp_get_nav_menu_items($menu_id);
+	if (!is_array($items)) {
+		return 0;
+	}
+	foreach ($items as $item) {
+		if (!$item instanceof \WP_Post) {
+			continue;
+		}
+		$classes = $item->classes ?? [];
+		if (is_array($classes) && in_array($class, $classes, true)) {
+			return (int) $item->ID;
+		}
+	}
+	return 0;
+}
+
+function lf_pb_nav_find_item_for_object(int $menu_id, int $object_id, string $object_type): int {
+	$object_id = max(0, $object_id);
+	if ($object_id === 0) {
+		return 0;
+	}
+	$items = wp_get_nav_menu_items($menu_id);
+	if (!is_array($items)) {
+		return 0;
+	}
+	foreach ($items as $item) {
+		if (!$item instanceof \WP_Post) {
+			continue;
+		}
+		if ((int) $item->object_id === $object_id && $item->object === $object_type) {
+			return (int) $item->ID;
+		}
+	}
+	return 0;
+}
+
+function lf_pb_nav_post_already_in_menu(int $menu_id, \WP_Post $post): bool {
+	return lf_pb_nav_find_item_for_object($menu_id, (int) $post->ID, $post->post_type) > 0;
+}
+
+function lf_pb_nav_next_menu_order_under_parent(int $menu_id, int $parent_db_id): int {
+	$max = 0;
+	$items = wp_get_nav_menu_items($menu_id);
+	if (!is_array($items)) {
+		return 1;
+	}
+	foreach ($items as $item) {
+		if (!$item instanceof \WP_Post) {
+			continue;
+		}
+		if ((int) $item->menu_item_parent === $parent_db_id) {
+			$max = max($max, (int) $item->menu_order);
+		}
+	}
+	return $max + 1;
+}
+
+/**
+ * Add a post to the header menu if missing. Requires edit_theme_options.
+ */
+function lf_pb_try_add_post_to_header_menu(\WP_Post $post): bool {
+	if (!current_user_can('edit_theme_options')) {
+		return false;
+	}
+	$menu_id = lf_pb_header_menu_term_id();
+	if ($menu_id <= 0) {
+		set_transient(
+			'lf_pb_nav_notice_' . get_current_user_id(),
+			__('No menu is assigned to the Header Menu location. Assign one under Appearance → Menus.', 'leadsforward-core'),
+			45
+		);
+		return false;
+	}
+	if (lf_pb_nav_post_already_in_menu($menu_id, $post)) {
+		return true;
+	}
+	[$parent_db_id] = lf_pb_nav_smart_parent_for_post($post);
+	$parent_db_id = max(0, $parent_db_id);
+	$position = lf_pb_nav_next_menu_order_under_parent($menu_id, $parent_db_id);
+	$new_id = wp_update_nav_menu_item(
+		$menu_id,
+		0,
+		[
+			'menu-item-title'     => $post->post_title,
+			'menu-item-object-id' => (int) $post->ID,
+			'menu-item-object'    => $post->post_type,
+			'menu-item-type'      => 'post_type',
+			'menu-item-status'    => 'publish',
+			'menu-item-parent-id' => $parent_db_id,
+			'menu-item-position'  => $position,
+		]
+	);
+	return !is_wp_error($new_id) && $new_id > 0;
+}
+
+function lf_pb_render_header_menu_checkbox(): void {
+	global $post;
+	if (!$post instanceof \WP_Post) {
+		return;
+	}
+	if (!in_array($post->post_type, lf_pb_menu_assist_post_types(), true)) {
+		return;
+	}
+	if ($post->post_type === 'page' && $post->post_name === 'home') {
+		return;
+	}
+	if (!current_user_can('edit_theme_options')) {
+		return;
+	}
+	$menu_id = lf_pb_header_menu_term_id();
+	if ($menu_id <= 0) {
+		return;
+	}
+	if (lf_pb_nav_post_already_in_menu($menu_id, $post)) {
+		return;
+	}
+	[$parent_id, $strategy] = lf_pb_nav_smart_parent_for_post($post);
+	$hint = '';
+	if ($strategy === 'services') {
+		$hint = __('Places the link under the Services group in the header menu.', 'leadsforward-core');
+	} elseif ($strategy === 'areas') {
+		$hint = __('Places the link under the Service Areas group in the header menu.', 'leadsforward-core');
+	} elseif ($strategy === 'blog_index') {
+		$hint = __('Places the link under the blog index item.', 'leadsforward-core');
+	} elseif ($strategy === 'page_parent') {
+		$hint = __('Places the link under the parent page’s menu item, if that page is already in the menu.', 'leadsforward-core');
+	}
+	wp_nonce_field('lf_pb_nav_menu', 'lf_pb_nav_menu_nonce');
+	echo '<div class="misc-pub-section lf-pb-add-to-menu"><label><input type="checkbox" name="lf_pb_add_to_header_menu" value="1" /> ';
+	echo esc_html__('Add to header menu on save', 'leadsforward-core');
+	echo '</label>';
+	if ($hint !== '') {
+		echo '<p class="description" style="margin:4px 0 0;">' . esc_html($hint) . '</p>';
+	}
+	if ($parent_id === 0 && in_array($post->post_type, ['lf_service', 'lf_service_area'], true)) {
+		echo '<p class="description" style="margin:4px 0 0;">';
+		echo esc_html__('If the Services or Areas dropdown is missing from the menu, add it from the setup wizard or Menus, then use this again.', 'leadsforward-core');
+		echo '</p>';
+	}
+	echo '</div>';
+}
+
+function lf_pb_save_header_menu_checkbox(int $post_id, \WP_Post $post): void {
+	if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
+		return;
+	}
+	if (!isset($_POST['lf_pb_nav_menu_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash((string) $_POST['lf_pb_nav_menu_nonce'])), 'lf_pb_nav_menu')) {
+		return;
+	}
+	if (empty($_POST['lf_pb_add_to_header_menu'])) {
+		return;
+	}
+	if (!in_array($post->post_type, lf_pb_menu_assist_post_types(), true)) {
+		return;
+	}
+	if (!current_user_can('edit_post', $post_id) || !current_user_can('edit_theme_options')) {
+		return;
+	}
+	lf_pb_try_add_post_to_header_menu($post);
+}
+
+function lf_pb_admin_nav_notice(): void {
+	if (!is_admin()) {
+		return;
+	}
+	$uid = get_current_user_id();
+	if ($uid <= 0) {
+		return;
+	}
+	$msg = get_transient('lf_pb_nav_notice_' . $uid);
+	if (!is_string($msg) || $msg === '') {
+		return;
+	}
+	delete_transient('lf_pb_nav_notice_' . $uid);
+	echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html($msg) . '</p></div>';
+}
+
+add_action('post_submitbox_misc_actions', 'lf_pb_render_header_menu_checkbox', 11);
+add_action('save_post', 'lf_pb_save_header_menu_checkbox', 55, 2);
+add_action('admin_notices', 'lf_pb_admin_nav_notice');
+
