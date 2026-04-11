@@ -16,6 +16,111 @@ if (!defined('ABSPATH')) {
 const LF_AI_PROPOSED_TRANSIENT_PREFIX = 'lf_ai_proposed_';
 
 /**
+ * Decode JSON from an LLM response: trim, strip BOM, fenced markdown blocks, then first balanced object/array.
+ *
+ * @return array<string, mixed>|null
+ */
+function lf_ai_decode_model_json_response(string $raw): ?array {
+	$s = trim($raw);
+	if ($s === '') {
+		return null;
+	}
+	if (str_starts_with($s, "\xEF\xBB\xBF")) {
+		$s = trim(substr($s, 3));
+	}
+	if (preg_match('/```(?:json|javascript|js|[a-z]+)?\s*\R?([\s\S]*?)\R?```/i', $s, $m)) {
+		$s = trim($m[1]);
+	}
+	$decode = static function (string $chunk): ?array {
+		$chunk = trim($chunk);
+		if ($chunk === '') {
+			return null;
+		}
+		$decoded = json_decode($chunk, true);
+		return is_array($decoded) ? $decoded : null;
+	};
+	$decoded = $decode($s);
+	if ($decoded !== null) {
+		return $decoded;
+	}
+	$start = strpos($s, '{');
+	if ($start !== false) {
+		$depth = 0;
+		$len = strlen($s);
+		$in_str = false;
+		$esc = false;
+		for ($i = $start; $i < $len; $i++) {
+			$ch = $s[ $i ];
+			if ($in_str) {
+				if ($esc) {
+					$esc = false;
+				} elseif ($ch === '\\') {
+					$esc = true;
+				} elseif ($ch === '"') {
+					$in_str = false;
+				}
+				continue;
+			}
+			if ($ch === '"') {
+				$in_str = true;
+				continue;
+			}
+			if ($ch === '{') {
+				$depth++;
+			} elseif ($ch === '}') {
+				$depth--;
+				if ($depth === 0) {
+					$slice = substr($s, $start, $i - $start + 1);
+					$decoded = $decode($slice);
+					if ($decoded !== null) {
+						return $decoded;
+					}
+					break;
+				}
+			}
+		}
+	}
+	$start = strpos($s, '[');
+	if ($start !== false) {
+		$depth = 0;
+		$len = strlen($s);
+		$in_str = false;
+		$esc = false;
+		for ($i = $start; $i < $len; $i++) {
+			$ch = $s[ $i ];
+			if ($in_str) {
+				if ($esc) {
+					$esc = false;
+				} elseif ($ch === '\\') {
+					$esc = true;
+				} elseif ($ch === '"') {
+					$in_str = false;
+				}
+				continue;
+			}
+			if ($ch === '"') {
+				$in_str = true;
+				continue;
+			}
+			if ($ch === '[') {
+				$depth++;
+			} elseif ($ch === ']') {
+				$depth--;
+				if ($depth === 0) {
+					$slice = substr($s, $start, $i - $start + 1);
+					$decoded = $decode($slice);
+					if ($decoded !== null) {
+						return $decoded;
+					}
+					break;
+				}
+			}
+		}
+	}
+	return null;
+}
+
+/**
  * Map known editable fields to frontend inline selector targets.
  *
  * @return string[]
@@ -248,7 +353,7 @@ function lf_ai_generate_pb_page_builder_patch(int $post_id, string $user_prompt)
 	if (!is_string($response) || trim($response) === '') {
 		return ['success' => false, 'error' => __('AI response was empty.', 'leadsforward-core')];
 	}
-	$decoded = json_decode(trim($response), true);
+	$decoded = lf_ai_decode_model_json_response($response);
 	if (!is_array($decoded)) {
 		return ['success' => false, 'error' => __('AI did not return valid JSON.', 'leadsforward-core')];
 	}
