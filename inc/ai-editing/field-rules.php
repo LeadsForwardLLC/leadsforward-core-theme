@@ -165,6 +165,15 @@ function lf_ai_editable_labels_for_registry_keys(string $section_type, array $ke
 }
 
 /**
+ * Homepage hero row keys (stored on the hero section in section config, not on map/FAQ rows).
+ *
+ * @return string[]
+ */
+function lf_ai_homepage_hero_row_field_keys(): array {
+	return ['hero_headline', 'hero_subheadline', 'cta_primary_override'];
+}
+
+/**
  * Whether a field key may be edited by AI. Respects allow_ai_h1_edit filter.
  */
 function lf_is_field_ai_editable(string $field_key): bool {
