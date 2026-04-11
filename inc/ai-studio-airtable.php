@@ -1073,16 +1073,15 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	$business_name = lf_ai_studio_airtable_string_field($fields, $map['project'] ?? '');
 	$legal_name = $business_name;
 	$phone = lf_ai_studio_airtable_string_field($fields, $map['phone'] ?? '');
-	$email = lf_ai_studio_airtable_string_field($fields, $map['email'] ?? '');
+	// Public site / schema email: mapped column only (default "Domain Email"). Do not fall back to Google Account or Gmails — those are often personal client inboxes.
+	$domain_email_only = lf_ai_studio_airtable_string_field($fields, $map['email'] ?? '');
+	$email = $domain_email_only;
 	if ($email === '') {
-		$email = lf_ai_studio_airtable_first_email(
-			lf_ai_studio_airtable_string_field($fields, $map['google_account'] ?? '')
-		);
-	}
-	if ($email === '') {
-		$email = lf_ai_studio_airtable_first_email(
-			lf_ai_studio_airtable_string_field($fields, $map['gmails'] ?? '')
-		);
+		$domain_seed = sanitize_title($business_name !== '' ? $business_name : 'lead');
+		if ($domain_seed === '') {
+			$domain_seed = 'lead';
+		}
+		$email = $domain_seed . '@example.com';
 	}
 	$street = lf_ai_studio_airtable_string_field($fields, $map['street'] ?? '');
 	$city = lf_ai_studio_airtable_string_field($fields, $map['city'] ?? '');
@@ -1128,13 +1127,6 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	}
 	if ($phone === '') {
 		$phone = '(000) 000-0000';
-	}
-	if ($email === '') {
-		$domain_seed = sanitize_title($business_name !== '' ? $business_name : 'lead');
-		if ($domain_seed === '') {
-			$domain_seed = 'lead';
-		}
-		$email = $domain_seed . '@example.com';
 	}
 	if ($primary_keyword === '') {
 		$primary_keyword = trim(sprintf('%s %s %s', $niche, $primary_city, $state));
@@ -1245,6 +1237,7 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 			'name' => $business_name,
 			'legal_name' => $legal_name,
 			'phone' => $phone,
+			'domain_email' => $domain_email_only,
 			'email' => $email,
 			'address' => [
 				'street' => $street,
