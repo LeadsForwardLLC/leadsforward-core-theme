@@ -2631,6 +2631,9 @@ function lf_ai_studio_is_generic_copy(string $value): bool {
 			return true;
 		}
 	}
+	if (strpos($needle, 'this page focuses on this topic') !== false) {
+		return true;
+	}
 	$token_markers = ['primary_keyword', 'business_name', 'city_region'];
 	foreach ($token_markers as $tok) {
 		if (strpos($needle, $tok) !== false) {
@@ -2654,7 +2657,8 @@ function lf_ai_studio_fallback_copy_for_field(string $field_key, \WP_Post $post,
 	if ($title === '') {
 		$title = __('Our team', 'leadsforward-core');
 	}
-	$focus = $keyword !== '' ? $keyword : $title;
+	$topic = $post->post_type === 'lf_service_area' ? lf_ai_studio_topic_label_for_post($post) : $title;
+	$focus = $keyword !== '' ? $keyword : $topic;
 	$location_suffix = $city !== '' ? sprintf(__(' in %s', 'leadsforward-core'), $city) : '';
 	if ($field_type === 'list') {
 		$items = [
@@ -2766,6 +2770,53 @@ function lf_ai_studio_service_label_for_post(\WP_Post $post): string {
 	return __('local services', 'leadsforward-core');
 }
 
+/**
+ * Label for “what we offer” in generated copy. On service area pages the post title is the town;
+ * use linked services, primary keyword, or niche instead of the city name alone.
+ */
+function lf_ai_studio_topic_label_for_post(\WP_Post $post): string {
+	if ($post->post_type === 'lf_service_area') {
+		foreach (lf_ai_studio_internal_link_area_service_ids((int) $post->ID) as $sid) {
+			$t = get_the_title($sid);
+			if (is_string($t) && trim($t) !== '') {
+				return trim($t);
+			}
+		}
+		$kw = trim((string) get_option('lf_primary_keyword', ''));
+		if ($kw !== '') {
+			return $kw;
+		}
+		$niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
+		$niche = function_exists('lf_get_niche') ? lf_get_niche($niche_slug) : null;
+		$niche_name = is_array($niche) ? trim((string) ($niche['name'] ?? '')) : '';
+		if ($niche_name !== '') {
+			return $niche_name;
+		}
+		return __('local services', 'leadsforward-core');
+	}
+	return lf_ai_studio_service_label_for_post($post);
+}
+
+/**
+ * Strip common LLM suffixes accidentally pasted into headings (e.g. “— This page focuses on this topic”).
+ */
+function lf_ai_studio_strip_llm_heading_boilerplate(string $text): string {
+	if ($text === '') {
+		return $text;
+	}
+	$out = preg_replace(
+		'/\s*[\x{2014}\x{2013}\-]\s*this\s+page\s+focuses\s+on\s+this\s+topic(?:\s*\(\d+\))?\s*$/iu',
+		'',
+		$text
+	);
+	return trim(is_string($out) ? $out : $text);
+}
+
+function lf_ai_studio_is_boilerplate_section_intent(string $intent): bool {
+	$intent = strtolower(trim($intent));
+	return $intent === '' || strpos($intent, 'this page focuses on this topic') !== false || strpos($intent, 'focuses on this topic') !== false;
+}
+
 function lf_ai_studio_is_generic_heading_value(string $value, \WP_Post $post): bool {
 	$plain = strtolower(preg_replace('/\s+/', ' ', trim($value)));
 	if ($plain === '') {
@@ -2786,23 +2837,38 @@ function lf_ai_studio_is_generic_heading_value(string $value, \WP_Post $post): b
 }
 
 function lf_ai_studio_build_section_heading_candidate(string $type, array $section, \WP_Post $post, array $registry): string {
-	$service = lf_ai_studio_service_label_for_post($post);
+	$service = lf_ai_studio_topic_label_for_post($post);
 	$business = trim((string) get_option('lf_business_name', get_bloginfo('name')));
 	$city = lf_ai_studio_location_label_for_post($post);
-	$intent = trim((string) ($section['settings']['section_intent'] ?? ''));
+	$intent = lf_ai_studio_strip_llm_heading_boilerplate(trim((string) ($section['settings']['section_intent'] ?? '')));
 	$label = ($type !== '' && isset($registry[$type]['label'])) ? (string) $registry[$type]['label'] : '';
 	$variant = lf_ai_studio_pick_variant_index($post->ID . '|' . $type, 3);
 
-	if ($intent !== '') {
+	if ($intent !== '' && !lf_ai_studio_is_boilerplate_section_intent($intent)) {
 		$candidate = $intent;
 		if ($service !== '' && stripos($candidate, $service) === false && $type !== 'hero') {
 			$candidate = $candidate . ' for ' . $service;
+		}
+		if ($post->post_type === 'lf_service_area' && $city !== '' && stripos($candidate, $city) === false && $type !== 'hero') {
+			$candidate = trim($candidate . ' — ' . $city);
 		}
 		return $candidate;
 	}
 
 	switch ($type) {
 		case 'benefits':
+			if ($post->post_type === 'lf_service_area' && $city !== '') {
+				$templates = [
+					__('Why homeowners choose our %1$s in %2$s', 'leadsforward-core'),
+					__('Benefits of choosing our %1$s team in %2$s', 'leadsforward-core'),
+					__('The %1$s advantage for %2$s properties', 'leadsforward-core'),
+				];
+				return sprintf(
+					$templates[$variant],
+					$service !== '' ? $service : __('services', 'leadsforward-core'),
+					$city
+				);
+			}
 			$templates = [
 				__('Why homeowners choose our %s', 'leadsforward-core'),
 				__('Benefits of our %s', 'leadsforward-core'),
@@ -2817,6 +2883,18 @@ function lf_ai_studio_build_section_heading_candidate(string $type, array $secti
 			];
 			return sprintf($templates[$variant], $service !== '' ? $service : __('this service', 'leadsforward-core'));
 		case 'process':
+			if ($post->post_type === 'lf_service_area' && $city !== '') {
+				$templates = [
+					__('Our %1$s process in %2$s', 'leadsforward-core'),
+					__('How %1$s projects work for %2$s homeowners', 'leadsforward-core'),
+					__('Step-by-step %1$s service in %2$s', 'leadsforward-core'),
+				];
+				return sprintf(
+					$templates[$variant],
+					$service !== '' ? $service : __('projects', 'leadsforward-core'),
+					$city
+				);
+			}
 			$templates = [
 				__('Our %s process', 'leadsforward-core'),
 				__('How %s projects work', 'leadsforward-core'),
@@ -2824,6 +2902,18 @@ function lf_ai_studio_build_section_heading_candidate(string $type, array $secti
 			];
 			return sprintf($templates[$variant], $service !== '' ? $service : __('projects', 'leadsforward-core'));
 		case 'faq_accordion':
+			if ($post->post_type === 'lf_service_area' && $city !== '') {
+				$templates = [
+					__('Common questions about %1$s in %2$s', 'leadsforward-core'),
+					__('%1$s questions homeowners ask in %2$s', 'leadsforward-core'),
+					__('FAQ: %1$s service in %2$s', 'leadsforward-core'),
+				];
+				return sprintf(
+					$templates[$variant],
+					$service !== '' ? $service : __('our services', 'leadsforward-core'),
+					$city
+				);
+			}
 			$templates = [
 				__('Questions about %s', 'leadsforward-core'),
 				__('%s FAQs', 'leadsforward-core'),
@@ -2976,7 +3066,7 @@ function lf_ai_studio_enforce_unique_headings_for_post_sections(array $sections,
 }
 
 function lf_ai_studio_build_section_intro_candidate(string $type, \WP_Post $post): string {
-	$service = lf_ai_studio_service_label_for_post($post);
+	$service = lf_ai_studio_topic_label_for_post($post);
 	$business = trim((string) get_option('lf_business_name', get_bloginfo('name')));
 	$city = lf_ai_studio_location_label_for_post($post);
 	$variant = lf_ai_studio_pick_variant_index($post->ID . '|' . $type . '|intro', 3);
@@ -3035,7 +3125,7 @@ function lf_ai_studio_build_section_intro_candidate(string $type, \WP_Post $post
 }
 
 function lf_ai_studio_build_cta_copy_candidate(\WP_Post $post): array {
-	$service = lf_ai_studio_service_label_for_post($post);
+	$service = lf_ai_studio_topic_label_for_post($post);
 	$city = lf_ai_studio_location_label_for_post($post);
 	$variant = lf_ai_studio_pick_variant_index($post->ID . '|cta', 3);
 	$location = $city !== '' ? ' in ' . $city : '';
@@ -3161,7 +3251,7 @@ function lf_ai_studio_should_enforce_uniqueness_on_field(string $field_key, stri
 }
 
 function lf_ai_studio_build_section_body_candidate(string $type, \WP_Post $post): string {
-	$service = lf_ai_studio_service_label_for_post($post);
+	$service = lf_ai_studio_topic_label_for_post($post);
 	$business = trim((string) get_option('lf_business_name', get_bloginfo('name')));
 	$city = lf_ai_studio_location_label_for_post($post);
 	$location = $city !== '' ? ' in ' . $city : '';
@@ -3191,7 +3281,7 @@ function lf_ai_studio_build_section_body_candidate(string $type, \WP_Post $post)
 }
 
 function lf_ai_studio_build_list_candidate(string $field_key, string $type, \WP_Post $post): string {
-	$service = lf_ai_studio_service_label_for_post($post);
+	$service = lf_ai_studio_topic_label_for_post($post);
 	$city = lf_ai_studio_location_label_for_post($post);
 	$location = $city !== '' ? ' in ' . $city : '';
 	$variant = lf_ai_studio_pick_variant_index($post->ID . '|' . $type . '|' . $field_key, 3);
@@ -3272,7 +3362,7 @@ function lf_ai_studio_build_unique_field_value(string $field_key, string $field_
 		return lf_ai_studio_build_list_candidate($field_key, $section_type, $post);
 	}
 	if ($field_key === 'image_alt') {
-		$service = lf_ai_studio_service_label_for_post($post);
+		$service = lf_ai_studio_topic_label_for_post($post);
 		$city = lf_ai_studio_location_label_for_post($post);
 		return $city !== '' ? sprintf(__('%1$s project in %2$s', 'leadsforward-core'), $service, $city) : sprintf(__('%s project', 'leadsforward-core'), $service);
 	}
@@ -6610,9 +6700,72 @@ function lf_ai_studio_pick_internal_link(array $catalog, \WP_Post $post, string 
 	];
 }
 
+/**
+ * Wrap the first occurrence of $label in visible text with a link. Does not append keywords;
+ * only links when the phrase already appears outside of existing anchors.
+ */
+function lf_ai_studio_html_wrap_first_label_in_link(string $html, string $label, string $url): ?string {
+	$label = trim($label);
+	$url = trim($url);
+	if ($html === '' || $label === '' || $url === '') {
+		return null;
+	}
+	$parts = preg_split('/(<\/?a\b[^>]*>|<[^>]+>)/i', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+	if (!is_array($parts) || $parts === []) {
+		return null;
+	}
+	$words = preg_split('/\s+/u', $label, -1, PREG_SPLIT_NO_EMPTY);
+	if ($words === []) {
+		return null;
+	}
+	$quoted = [];
+	foreach ($words as $w) {
+		$quoted[] = preg_quote((string) $w, '/');
+	}
+	$pattern = '/' . implode('\s+', $quoted) . '/iu';
+	$out = '';
+	$in_anchor = 0;
+	$done = false;
+	foreach ($parts as $part) {
+		if ($part === '') {
+			continue;
+		}
+		if (preg_match('/^<\/?a\b/i', $part)) {
+			if (stripos($part, '</a') === 0) {
+				$in_anchor = max(0, $in_anchor - 1);
+			} else {
+				$in_anchor++;
+			}
+			$out .= $part;
+			continue;
+		}
+		if (isset($part[0]) && $part[0] === '<') {
+			$out .= $part;
+			continue;
+		}
+		if (!$done && $in_anchor === 0) {
+			$new = preg_replace_callback(
+				$pattern,
+				static function (array $m) use ($url): string {
+					return '<a href="' . esc_url($url) . '">' . esc_html($m[0]) . '</a>';
+				},
+				$part,
+				1
+			);
+			if (is_string($new) && $new !== $part) {
+				$out .= $new;
+				$done = true;
+				continue;
+			}
+		}
+		$out .= $part;
+	}
+	return $done ? $out : null;
+}
+
 function lf_ai_studio_inject_internal_link_markup(string $value, array $target): string {
 	$clean = trim($value);
-	if ($clean === '' || stripos($clean, '<a ') !== false) {
+	if ($clean === '') {
 		return $value;
 	}
 	$url = trim((string) ($target['url'] ?? ''));
@@ -6620,11 +6773,8 @@ function lf_ai_studio_inject_internal_link_markup(string $value, array $target):
 	if ($url === '' || $label === '') {
 		return $value;
 	}
-	$link = '<a href="' . esc_url($url) . '">' . esc_html($label) . '</a>';
-	if (stripos($clean, '</p>') !== false) {
-		return preg_replace('/<\/p>\s*$/i', ' ' . $link . '</p>', $clean, 1) ?: ($clean . ' ' . $link);
-	}
-	return wp_kses_post($clean . ' ' . $link);
+	$wrapped = lf_ai_studio_html_wrap_first_label_in_link($clean, $label, $url);
+	return $wrapped !== null ? wp_kses_post($wrapped) : $value;
 }
 
 function lf_ai_studio_orchestrate_internal_links_for_settings(array $settings, string $section_type, array $registry, \WP_Post $post): array {
@@ -7166,6 +7316,7 @@ function lf_ai_studio_enforce_section_quality(array $settings, string $section_t
 		}
 		$value = lf_ai_studio_clean_value_for_field($value, $field_type, $field_key);
 		if (is_string($value)) {
+			$value = lf_ai_studio_strip_llm_heading_boilerplate($value);
 			if (strpos($field_key, 'headline') !== false || strpos($field_key, 'heading') !== false) {
 				$value = lf_ai_studio_maybe_title_case_heading($value);
 			}

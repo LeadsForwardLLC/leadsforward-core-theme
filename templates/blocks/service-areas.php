@@ -20,7 +20,7 @@ $intro   = !empty($section['section_intro']) ? $section['section_intro'] : '';
 $map_heading = !empty($section['map_heading']) ? (string) $section['map_heading'] : __('Service area map', 'leadsforward-core');
 $map_intro = !empty($section['map_intro']) ? (string) $section['map_intro'] : __('Map pins show the areas currently covered by our team.', 'leadsforward-core');
 $search_placeholder = !empty($section['search_placeholder']) ? (string) $section['search_placeholder'] : __('Search city or neighborhood', 'leadsforward-core');
-$filter_label = !empty($section['filter_label']) ? (string) $section['filter_label'] : __('Filter by state', 'leadsforward-core');
+$filter_label = !empty($section['filter_label']) ? (string) $section['filter_label'] : __('Filter by service area', 'leadsforward-core');
 $filter_all_label = !empty($section['filter_all_label']) ? (string) $section['filter_all_label'] : __('All areas', 'leadsforward-core');
 $no_results_text = !empty($section['no_results_text']) ? (string) $section['no_results_text'] : __('No service areas match your search yet. Clear filters to view all coverage.', 'leadsforward-core');
 $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'soft') : '';
@@ -53,7 +53,6 @@ $business_lat = isset($business_geo['lat']) ? (float) $business_geo['lat'] : 0.0
 $business_lng = isset($business_geo['lng']) ? (float) $business_geo['lng'] : 0.0;
 $has_business_geo = $business_lat !== 0.0 && $business_lng !== 0.0;
 $areas = [];
-$state_values = [];
 if ($query->have_posts()) {
 	while ($query->have_posts()) {
 		$query->the_post();
@@ -68,9 +67,6 @@ if ($query->have_posts()) {
 			$area_state = (string) get_post_meta($area_id, 'lf_service_area_state', true);
 		}
 		$area_state = strtoupper(trim($area_state));
-		if ($area_state !== '') {
-			$state_values[$area_state] = true;
-		}
 		$geo = function_exists('get_field') ? get_field('lf_service_area_geo', $area_id) : null;
 		$lat = 0.0;
 		$lng = 0.0;
@@ -88,6 +84,7 @@ if ($query->have_posts()) {
 			$lng = $business_lng + ($distance * sin($angle));
 		}
 		$areas[] = [
+			'id' => $area_id,
 			'title' => wp_strip_all_tags($area_title),
 			'url' => esc_url_raw($area_url),
 			'state' => $area_state,
@@ -99,8 +96,18 @@ if ($query->have_posts()) {
 	}
 	wp_reset_postdata();
 }
-$state_options = array_keys($state_values);
-sort($state_options);
+$area_filter_options = $areas;
+usort(
+	$area_filter_options,
+	static function (array $a, array $b): int {
+		return strcasecmp((string) ($a['title'] ?? ''), (string) ($b['title'] ?? ''));
+	}
+);
+$map_embed_html = '';
+if (function_exists('lf_get_business_info_value')) {
+	$map_embed_html = trim((string) lf_get_business_info_value('lf_business_map_embed', ''));
+}
+$use_embed_map = $map_embed_html !== '';
 $points_json = wp_json_encode(array_map(static function (array $area): array {
 	return [
 		'title' => (string) ($area['title'] ?? ''),
@@ -139,8 +146,15 @@ $points_json = wp_json_encode(array_map(static function (array $area): array {
 					<label for="<?php echo esc_attr(($block_id ?: 'service-areas') . '-filter'); ?>" class="lf-block-service-areas__control-label"><?php echo esc_html($filter_label); ?></label>
 					<select id="<?php echo esc_attr(($block_id ?: 'service-areas') . '-filter'); ?>" class="lf-block-service-areas__filter" data-service-areas-filter>
 						<option value=""><?php echo esc_html($filter_all_label); ?></option>
-						<?php foreach ($state_options as $state) : ?>
-							<option value="<?php echo esc_attr($state); ?>"><?php echo esc_html($state); ?></option>
+						<?php foreach ($area_filter_options as $opt) : ?>
+							<?php
+							$fid = isset($opt['id']) ? (int) $opt['id'] : 0;
+							$ftitle = isset($opt['title']) ? (string) $opt['title'] : '';
+							if ($fid <= 0 || $ftitle === '') {
+								continue;
+							}
+							?>
+							<option value="<?php echo esc_attr((string) $fid); ?>"><?php echo esc_html($ftitle); ?></option>
 						<?php endforeach; ?>
 					</select>
 				</div>
@@ -151,12 +165,24 @@ $points_json = wp_json_encode(array_map(static function (array $area): array {
 				<?php if ($map_intro !== '') : ?>
 					<p class="lf-block-service-areas__map-intro"><?php echo esc_html($map_intro); ?></p>
 				<?php endif; ?>
-				<div class="lf-block-service-areas__map" data-service-areas-map data-map-points="<?php echo esc_attr((string) $points_json); ?>"></div>
+				<?php if ($use_embed_map) : ?>
+					<div class="lf-block-service-areas__map lf-block-service-areas__map--embed">
+						<?php
+						$allowed_iframe = function_exists('lf_map_embed_allowed_iframe_kses')
+							? lf_map_embed_allowed_iframe_kses()
+							: ['iframe' => ['src' => true, 'width' => true, 'height' => true]];
+						// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- iframe HTML from Global Settings, passed through wp_kses.
+						echo wp_kses($map_embed_html, $allowed_iframe);
+						?>
+					</div>
+				<?php else : ?>
+					<div class="lf-block-service-areas__map" data-service-areas-map data-map-points="<?php echo esc_attr((string) $points_json); ?>"></div>
+				<?php endif; ?>
 			</div>
 
 			<ul class="lf-block-service-areas__list lf-cpt-driven-links" role="list" data-service-areas-list>
 				<?php foreach ($areas as $index => $area) : ?>
-					<li class="lf-block-service-areas__item" data-title="<?php echo esc_attr((string) ($area['title'] ?? '')); ?>" data-state="<?php echo esc_attr((string) ($area['state'] ?? '')); ?>" data-point-index="<?php echo esc_attr((string) $index); ?>">
+					<li class="lf-block-service-areas__item" data-title="<?php echo esc_attr((string) ($area['title'] ?? '')); ?>" data-area-id="<?php echo esc_attr((string) (int) ($area['id'] ?? 0)); ?>" data-point-index="<?php echo esc_attr((string) $index); ?>">
 						<a href="<?php echo esc_url((string) ($area['url'] ?? '')); ?>" class="lf-block-service-areas__link">
 							<?php if ($card_icon) : ?><span class="lf-block-service-areas__icon"><?php echo $card_icon; ?></span><?php endif; ?>
 							<span class="lf-block-service-areas__card-title"><?php echo esc_html((string) ($area['title'] ?? '')); ?></span>
@@ -181,12 +207,15 @@ $points_json = wp_json_encode(array_map(static function (array $area): array {
 			var list = root.querySelector('[data-service-areas-list]');
 			var emptyState = root.querySelector('[data-service-areas-empty]');
 			var mapEl = root.querySelector('[data-service-areas-map]');
+			var useLeafletMap = !!(mapEl && mapEl.hasAttribute('data-map-points'));
 			var items = list ? Array.prototype.slice.call(list.querySelectorAll('.lf-block-service-areas__item')) : [];
 			var points = [];
-			try {
-				points = JSON.parse(mapEl && mapEl.getAttribute('data-map-points') ? mapEl.getAttribute('data-map-points') : '[]');
-			} catch (e) {
-				points = [];
+			if (useLeafletMap) {
+				try {
+					points = JSON.parse(mapEl.getAttribute('data-map-points') ? mapEl.getAttribute('data-map-points') : '[]');
+				} catch (e) {
+					points = [];
+				}
 			}
 			var map = null;
 			var markerLayer = null;
@@ -222,15 +251,15 @@ $points_json = wp_json_encode(array_map(static function (array $area): array {
 
 			function visibleIndexes() {
 				var query = searchInput ? String(searchInput.value || '').toLowerCase().trim() : '';
-				var state = filterSelect ? String(filterSelect.value || '').toLowerCase().trim() : '';
+				var areaId = filterSelect ? String(filterSelect.value || '').trim() : '';
 				var visible = [];
 				var shown = 0;
 				items.forEach(function (item, idx) {
 					var title = String(item.getAttribute('data-title') || '').toLowerCase();
-					var itemState = String(item.getAttribute('data-state') || '').toLowerCase();
+					var itemId = String(item.getAttribute('data-area-id') || '').trim();
 					var matchesQuery = !query || title.indexOf(query) !== -1;
-					var matchesState = !state || itemState === state;
-					var show = matchesQuery && matchesState;
+					var matchesArea = !areaId || itemId === areaId;
+					var show = matchesQuery && matchesArea;
 					item.hidden = !show;
 					if (show) {
 						visible.push(idx);
@@ -295,7 +324,9 @@ $points_json = wp_json_encode(array_map(static function (array $area): array {
 			if (searchInput) searchInput.addEventListener('input', onFilterChange);
 			if (filterSelect) filterSelect.addEventListener('change', onFilterChange);
 			visibleIndexes();
-			loadLeaflet(renderMap);
+			if (useLeafletMap) {
+				loadLeaflet(renderMap);
+			}
 		})();
 	</script>
 <?php endif; ?>
