@@ -811,6 +811,7 @@ add_action('wp_ajax_lf_ai_update_section_cta', 'lf_ai_ajax_update_section_cta');
 add_action('wp_ajax_lf_ai_update_section_media', 'lf_ai_ajax_update_section_media');
 add_action('wp_ajax_lf_ai_update_section_lines', 'lf_ai_ajax_update_section_lines');
 add_action('wp_ajax_lf_ai_faq_library', 'lf_ai_ajax_faq_library');
+add_action('wp_ajax_lf_ai_service_library', 'lf_ai_ajax_service_library');
 add_action('wp_ajax_lf_ai_process_step_library', 'lf_ai_ajax_process_step_library');
 add_action('wp_ajax_lf_ai_reorder_faq_items', 'lf_ai_ajax_reorder_faq_items');
 add_action('wp_ajax_lf_ai_set_trust_layout', 'lf_ai_ajax_set_trust_layout');
@@ -846,7 +847,7 @@ function lf_ai_section_style_cycle_value(string $current, array $allowed): strin
  * Apply a section style patch from the front-end editor (background presets, custom color, header align).
  *
  * @param array<string, mixed> $settings
- * @param array{background_slug?:string,custom_background?:string,header_align?:string,benefits_cta_align?:string} $extra
+ * @param array{background_slug?:string,custom_background?:string,header_align?:string,benefits_cta_align?:string,grid_columns?:string} $extra
  * @return array{0: array<string, mixed>, 1: string} Updated settings and empty string, or original settings and error message.
  */
 function lf_ai_mutate_section_style_settings(array $settings, string $patch, array $extra): array {
@@ -857,6 +858,7 @@ function lf_ai_mutate_section_style_settings(array $settings, string $patch, arr
 	$custom_raw = (string) ($extra['custom_background'] ?? '');
 	$h_align = sanitize_key((string) ($extra['header_align'] ?? ''));
 	$benefits_cta_align = sanitize_key((string) ($extra['benefits_cta_align'] ?? ''));
+	$grid_columns = sanitize_key((string) ($extra['grid_columns'] ?? ''));
 
 	if ($patch === 'cycle_background') {
 		$cur = (string) ($settings['section_background'] ?? 'light');
@@ -909,6 +911,20 @@ function lf_ai_mutate_section_style_settings(array $settings, string $patch, arr
 		$settings['benefits_cta_align'] = $benefits_cta_align;
 		return [$settings, ''];
 	}
+	if ($patch === 'set_benefits_grid_columns') {
+		if (!in_array($grid_columns, ['2', '3', '4'], true)) {
+			return [$settings, __('Choose 2, 3, or 4 columns.', 'leadsforward-core')];
+		}
+		$settings['benefits_grid_columns'] = $grid_columns;
+		return [$settings, ''];
+	}
+	if ($patch === 'set_service_intro_grid_columns') {
+		if (!in_array($grid_columns, ['2', '3', '4'], true)) {
+			return [$settings, __('Choose 2, 3, or 4 columns.', 'leadsforward-core')];
+		}
+		$settings['service_intro_columns'] = $grid_columns;
+		return [$settings, ''];
+	}
 	return [$settings, __('Unknown style action.', 'leadsforward-core')];
 }
 
@@ -930,6 +946,7 @@ function lf_ai_ajax_update_section_style(): void {
 		'custom_background' => isset($_POST['custom_background']) ? wp_unslash((string) $_POST['custom_background']) : '',
 		'header_align' => isset($_POST['header_align']) ? sanitize_key(wp_unslash((string) $_POST['header_align'])) : '',
 		'benefits_cta_align' => isset($_POST['benefits_cta_align']) ? sanitize_key(wp_unslash((string) $_POST['benefits_cta_align'])) : '',
+		'grid_columns' => isset($_POST['grid_columns']) ? sanitize_key(wp_unslash((string) $_POST['grid_columns'])) : '',
 	];
 
 	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
@@ -948,6 +965,12 @@ function lf_ai_ajax_update_section_style(): void {
 		}
 		if ($patch === 'set_benefits_cta_align' && function_exists('lf_homepage_base_section_type') && lf_homepage_base_section_type((string) $resolved) !== 'benefits') {
 			wp_send_json_error(['message' => __('Button alignment applies to benefits sections only.', 'leadsforward-core')]);
+		}
+		if ($patch === 'set_benefits_grid_columns' && function_exists('lf_homepage_base_section_type') && lf_homepage_base_section_type((string) $resolved) !== 'benefits') {
+			wp_send_json_error(['message' => __('Column count applies to benefits sections only.', 'leadsforward-core')]);
+		}
+		if ($patch === 'set_service_intro_grid_columns' && function_exists('lf_homepage_base_section_type') && lf_homepage_base_section_type((string) $resolved) !== 'service_intro') {
+			wp_send_json_error(['message' => __('Column count applies to service overview sections only.', 'leadsforward-core')]);
 		}
 		$old_row = $config[$resolved];
 		$row_settings = is_array($config[$resolved]) ? $config[$resolved] : [];
@@ -998,6 +1021,12 @@ function lf_ai_ajax_update_section_style(): void {
 	$section_type = sanitize_text_field((string) ($row['type'] ?? ''));
 	if ($patch === 'set_benefits_cta_align' && $section_type !== 'benefits') {
 		wp_send_json_error(['message' => __('Button alignment applies to benefits sections only.', 'leadsforward-core')]);
+	}
+	if ($patch === 'set_benefits_grid_columns' && $section_type !== 'benefits') {
+		wp_send_json_error(['message' => __('Column count applies to benefits sections only.', 'leadsforward-core')]);
+	}
+	if ($patch === 'set_service_intro_grid_columns' && $section_type !== 'service_intro') {
+		wp_send_json_error(['message' => __('Column count applies to service overview sections only.', 'leadsforward-core')]);
 	}
 	$old_settings = $settings;
 	[$settings, $err_pb] = lf_ai_mutate_section_style_settings($settings, $patch, $style_extra);
@@ -1795,6 +1824,45 @@ function lf_ai_ajax_inline_save(): void {
 	}
 	if (trim(wp_strip_all_tags($value)) === '') {
 		wp_send_json_error(['message' => __('Text cannot be empty.', 'leadsforward-core')]);
+	}
+
+	// Service intro cards: short description lives on the lf_service CPT (ACF).
+	if ($field_key === 'lf_service_short_desc') {
+		$service_post_id = isset($_POST['service_post_id']) ? absint($_POST['service_post_id']) : 0;
+		if ($service_post_id <= 0) {
+			wp_send_json_error(['message' => __('Invalid service reference.', 'leadsforward-core')]);
+		}
+		$svc = get_post($service_post_id);
+		if (!$svc instanceof \WP_Post || $svc->post_type !== 'lf_service') {
+			wp_send_json_error(['message' => __('That service could not be found.', 'leadsforward-core')]);
+		}
+		if (!current_user_can('edit_post', $service_post_id)) {
+			wp_send_json_error(['message' => __('You cannot edit this service.', 'leadsforward-core')]);
+		}
+		$plain = trim(wp_strip_all_tags($value));
+		if ($plain === '') {
+			wp_send_json_error(['message' => __('Text cannot be empty.', 'leadsforward-core')]);
+		}
+		if (function_exists('update_field')) {
+			update_field('lf_service_short_desc', $plain, $service_post_id);
+		} else {
+			update_post_meta($service_post_id, 'lf_service_short_desc', $plain);
+		}
+		$log_id = function_exists('lf_ai_log_action')
+			? lf_ai_log_action(
+				$context_type,
+				$context_id_use,
+				['lf_service_short_desc::' . $service_post_id => ''],
+				['lf_service_short_desc::' . $service_post_id => $plain],
+				'Inline service short description'
+			)
+			: '';
+		wp_send_json_success([
+			'message' => __('Card description saved.', 'leadsforward-core'),
+			'field_key' => $field_key,
+			'service_post_id' => $service_post_id,
+			'log_id' => $log_id,
+		]);
 	}
 
 	// Direct section-field persistence for service_details body edits.
@@ -2947,12 +3015,12 @@ function lf_ai_allowed_line_fields_for_section_type(string $section_type): array
 		'service_intro' => ['service_intro_service_ids'],
 		'process' => ['process_steps', 'process_selected_ids'],
 		'faq_accordion' => ['faq_selected_ids'],
-		'service_details' => ['service_details_checklist'],
-		'content_image' => ['service_details_checklist'],
-		'content_image_a' => ['service_details_checklist'],
-		'image_content' => ['service_details_checklist'],
-		'image_content_b' => ['service_details_checklist'],
-		'content_image_c' => ['service_details_checklist'],
+		'service_details' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_micro_sections'],
+		'content_image' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_micro_sections'],
+		'content_image_a' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_micro_sections'],
+		'image_content' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_micro_sections'],
+		'image_content_b' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_micro_sections'],
+		'content_image_c' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_micro_sections'],
 	];
 	return $map[$type] ?? [];
 }
@@ -2991,6 +3059,40 @@ function lf_ai_ajax_faq_library(): void {
 			'id' => $faq_id,
 			'question' => $question,
 			'answer' => wp_strip_all_tags($answer),
+		];
+	}
+	wp_reset_postdata();
+	wp_send_json_success([
+		'items' => $rows,
+	]);
+}
+
+function lf_ai_ajax_service_library(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$search = isset($_POST['search']) ? sanitize_text_field(wp_unslash((string) $_POST['search'])) : '';
+	$query_args = [
+		'post_type'      => 'lf_service',
+		'post_status'    => 'publish',
+		'posts_per_page' => 200,
+		'orderby'        => 'menu_order title',
+		'order'          => 'ASC',
+		'no_found_rows'  => true,
+	];
+	if ($search !== '') {
+		$query_args['s'] = $search;
+	}
+	$q = new \WP_Query($query_args);
+	$rows = [];
+	while ($q->have_posts()) {
+		$q->the_post();
+		$sid = (int) get_the_ID();
+		$rows[] = [
+			'id'        => $sid,
+			'title'     => (string) get_the_title(),
+			'permalink' => (string) get_permalink($sid),
 		];
 	}
 	wp_reset_postdata();
@@ -3094,6 +3196,8 @@ function lf_ai_ajax_update_section_lines(): void {
 			$value = lf_ai_sanitize_benefits_items_line($raw);
 		} elseif (in_array($field_key, ['service_details_checklist', 'service_details_checklist_secondary'], true) && function_exists('lf_ai_sanitize_inline_dom_html')) {
 			$value = lf_ai_sanitize_inline_dom_html($raw);
+		} elseif ($field_key === 'service_details_micro_sections' && function_exists('lf_ai_sanitize_inline_dom_html')) {
+			$value = lf_ai_sanitize_inline_dom_html($raw);
 		} elseif (in_array($field_key, ['hero_proof_bullets', 'hero_chip_bullets', 'trust_badges'], true) && function_exists('lf_ai_sanitize_inline_dom_html')) {
 			$value = lf_ai_sanitize_inline_dom_html($raw);
 		} else {
@@ -3131,6 +3235,13 @@ function lf_ai_ajax_update_section_lines(): void {
 			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
 		}
 		$config[$resolved_section_id][$field_key] = $value;
+		if ($field_key === 'service_intro_service_ids' && $section_type === 'service_intro') {
+			$n = count($items);
+			$cur_max = isset($config[$resolved_section_id]['service_intro_max_items']) ? (int) $config[$resolved_section_id]['service_intro_max_items'] : 6;
+			if ($n > $cur_max) {
+				$config[$resolved_section_id]['service_intro_max_items'] = min(24, $n);
+			}
+		}
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 		$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 		$log_id = function_exists('lf_ai_log_action')
@@ -3169,6 +3280,13 @@ function lf_ai_ajax_update_section_lines(): void {
 	}
 	$settings = is_array($old_row['settings'] ?? null) ? $old_row['settings'] : [];
 	$settings[$field_key] = $value;
+	if ($field_key === 'service_intro_service_ids' && $section_type === 'service_intro') {
+		$n = count($items);
+		$cur_max = isset($settings['service_intro_max_items']) ? (int) $settings['service_intro_max_items'] : 6;
+		if ($n > $cur_max) {
+			$settings['service_intro_max_items'] = min(24, $n);
+		}
+	}
 	$config['sections'][$section_id]['settings'] = $settings;
 	update_post_meta($pid, LF_PB_META_KEY, $config);
 	$new_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];

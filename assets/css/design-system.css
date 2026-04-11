@@ -913,9 +913,18 @@ button:focus-visible,
 	gap: var(--lf-space-section) !important;
 }
 
-/* Force a 3-up benefits grid on desktop widths to avoid accidental stacking from narrow containers. */
+/* Desktop column count (editor-controlled via lf-benefits--cols-N). */
 @media (min-width: 64rem) {
-	.lf-section--benefits .lf-benefits {
+	.lf-benefits.lf-benefits--cols-2 {
+		grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+	}
+	.lf-benefits.lf-benefits--cols-3 {
+		grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+	}
+	.lf-benefits.lf-benefits--cols-4 {
+		grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+	}
+	.lf-section--benefits .lf-benefits:not([class*="lf-benefits--cols-"]) {
 		grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
 	}
 }
@@ -1172,6 +1181,24 @@ button:focus-visible,
 	color: var(--lf-accent);
 	font-weight: var(--lf-fw-semibold);
 	margin-right: 0.5rem;
+}
+
+.lf-service-details__checklists {
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.lf-service-details__micro {
+	margin-top: 1rem;
+	font-size: 0.95rem;
+	line-height: 1.55;
+	color: var(--lf-text-muted);
+	max-width: 42rem;
+}
+
+.lf-service-details__micro-line {
+	margin: 0.35rem 0;
 }
 
 /* -------------------------------------------------------------------------
@@ -3631,6 +3658,10 @@ button:focus-visible,
 	display: grid;
 	gap: 1.5rem;
 	grid-template-columns: 1fr;
+}
+
+.lf-block-service-intro--cols-2 .lf-block-service-intro__grid {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .lf-block-service-intro--cols-3 .lf-block-service-intro__grid {

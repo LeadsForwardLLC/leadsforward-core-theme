@@ -426,6 +426,11 @@ function lf_sections_registry(): array {
 					'center' => __('Center', 'leadsforward-core'),
 					'right' => __('Right', 'leadsforward-core'),
 				]],
+				['key' => 'benefits_grid_columns', 'label' => __('Card columns (desktop)', 'leadsforward-core'), 'type' => 'select', 'default' => '3', 'options' => [
+					'2' => __('2 columns', 'leadsforward-core'),
+					'3' => __('3 columns', 'leadsforward-core'),
+					'4' => __('4 columns', 'leadsforward-core'),
+				]],
 			],
 			'render' => 'lf_sections_render_benefits',
 		],
@@ -601,6 +606,7 @@ function lf_sections_registry(): array {
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Service options built for homeowners', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Explore our core services with clear scopes and upfront expectations.', 'leadsforward-core')],
 				['key' => 'service_intro_columns', 'label' => __('Columns', 'leadsforward-core'), 'type' => 'select', 'default' => '3', 'options' => [
+					'2' => __('2 columns', 'leadsforward-core'),
 					'3' => __('3 columns', 'leadsforward-core'),
 					'4' => __('4 columns', 'leadsforward-core'),
 					'5' => __('5 columns', 'leadsforward-core'),
@@ -1783,6 +1789,10 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	if (!in_array($cta_align, ['left', 'center', 'right'], true)) {
 		$cta_align = 'center';
 	}
+	$grid_cols = (string) ($settings['benefits_grid_columns'] ?? '3');
+	if (!in_array($grid_cols, ['2', '3', '4'], true)) {
+		$grid_cols = '3';
+	}
 	if ($cta_action === 'link' && $cta_url === '') {
 		$cta_action = 'quote';
 	}
@@ -1851,8 +1861,7 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	lf_sections_render_shell_open('benefits', $title, $intro_text, $settings['section_background'] ?? 'light', $settings);
 	?>
 	<div
-		class="lf-benefits lf-benefits--<?php echo esc_attr($layout); ?>"
-		style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--lf-space-section);"
+		class="lf-benefits lf-benefits--<?php echo esc_attr($layout); ?> lf-benefits--cols-<?php echo esc_attr($grid_cols); ?>"
 	>
 		<?php foreach ($parsed_items as $index => $item) : ?>
 				<?php if ($item['title'] === '' && isset($default_items[$index]['title'])) : ?>
@@ -1995,6 +2004,7 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 	}
 	$checklist = lf_sections_parse_lines((string) ($settings['service_details_checklist'] ?? ''));
 	$checklist_secondary = lf_sections_parse_lines((string) ($settings['service_details_checklist_secondary'] ?? ''));
+	$micro_sections = lf_sections_parse_lines((string) ($settings['service_details_micro_sections'] ?? ''));
 	$proof_label = trim((string) ($settings['service_details_proof_label'] ?? ''));
 	$proof_badges = lf_sections_parse_lines((string) ($settings['service_details_proof_badges'] ?? ''));
 	$checklist_class = 'lf-service-details__checklist';
@@ -2122,6 +2132,21 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 							<?php endforeach; ?>
 						</ul>
 					<?php endif; ?>
+				</div>
+			<?php endif; ?>
+			<?php if (!empty($micro_sections)) : ?>
+				<div class="lf-service-details__micro lf-prose" data-lf-service-details-micro="1">
+					<?php foreach ($micro_sections as $micro_line) : ?>
+						<?php
+						$micro_line = trim((string) $micro_line);
+						if ($micro_line === '') {
+							continue;
+						}
+						?>
+						<p class="lf-service-details__micro-line">
+							<span class="lf-service-details__micro-text"><?php echo wp_kses($micro_line, function_exists('lf_ai_inline_link_allowed_kses') ? lf_ai_inline_link_allowed_kses() : []); ?></span>
+						</p>
+					<?php endforeach; ?>
 				</div>
 			<?php endif; ?>
 			<?php if (!empty($proof_badges)) : ?>
