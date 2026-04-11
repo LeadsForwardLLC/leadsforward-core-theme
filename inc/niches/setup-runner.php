@@ -212,18 +212,9 @@ function lf_run_setup(array $data): array {
 			$place_name = (string) ($data['business_place_name'] ?? '');
 			$place_address = (string) ($data['business_place_address'] ?? '');
 			$map_embed = (string) ($data['business_map_embed'] ?? '');
-			$allowed_embed = [
-				'iframe' => [
-					'src' => true,
-					'width' => true,
-					'height' => true,
-					'style' => true,
-					'loading' => true,
-					'referrerpolicy' => true,
-					'allowfullscreen' => true,
-					'title' => true,
-				],
-			];
+			$allowed_embed = function_exists('lf_map_embed_allowed_iframe_kses')
+				? lf_map_embed_allowed_iframe_kses()
+				: ['iframe' => ['src' => true, 'width' => true, 'height' => true]];
 			$map_embed = $map_embed !== '' ? wp_kses($map_embed, $allowed_embed) : '';
 
 			lf_update_business_info_value('lf_business_name', $biz_name);

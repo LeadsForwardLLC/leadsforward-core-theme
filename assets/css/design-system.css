@@ -4915,6 +4915,18 @@ button:focus-visible,
 	min-height: 16rem;
 }
 
+/* Pasted Google embeds are often ~450px tall; 16:9 can clip the place card UI. */
+.lf-block-map-nap__map--custom-embed {
+	aspect-ratio: auto;
+	min-height: min(28rem, 90vh);
+}
+
+.lf-block-map-nap__map--custom-embed iframe {
+	height: 28rem;
+	min-height: 28rem;
+	max-height: 80vh;
+}
+
 .lf-block-map-nap__map-meta {
 	display: flex;
 	flex-direction: column;
@@ -4934,6 +4946,20 @@ button:focus-visible,
 	margin: 0;
 	color: var(--lf-text-muted);
 	font-size: 0.95rem;
+}
+
+.lf-block-map-nap__map-rating {
+	margin: 0.35rem 0 0;
+	font-size: 0.9rem;
+	font-weight: 600;
+	color: var(--lf-text-primary);
+}
+
+.lf-block-map-nap__map-gbp-note {
+	margin: 0.5rem 0 0;
+	font-size: 0.82rem;
+	line-height: 1.45;
+	color: var(--lf-text-muted);
 }
 
 .lf-block-map-nap__map-actions {

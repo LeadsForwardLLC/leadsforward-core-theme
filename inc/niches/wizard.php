@@ -327,18 +327,9 @@ function lf_wizard_sanitize_areas($input): array {
 }
 
 function lf_wizard_allowed_map_embed(): array {
-	return [
-		'iframe' => [
-			'src' => true,
-			'width' => true,
-			'height' => true,
-			'style' => true,
-			'loading' => true,
-			'referrerpolicy' => true,
-			'allowfullscreen' => true,
-			'title' => true,
-		],
-	];
+	return function_exists('lf_map_embed_allowed_iframe_kses')
+		? lf_map_embed_allowed_iframe_kses()
+		: ['iframe' => ['src' => true]];
 }
 
 function lf_wizard_render_page(): void {

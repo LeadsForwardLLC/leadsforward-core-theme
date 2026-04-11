@@ -571,18 +571,9 @@ function lf_ops_handle_global_settings_save(): void {
 		}
 		$place_name = isset($_POST['lf_business_place_name']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_business_place_name'])) : '';
 		$place_address = isset($_POST['lf_business_place_address']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_business_place_address'])) : '';
-		$allowed_embed = [
-			'iframe' => [
-				'src' => true,
-				'width' => true,
-				'height' => true,
-				'style' => true,
-				'loading' => true,
-				'referrerpolicy' => true,
-				'allowfullscreen' => true,
-				'title' => true,
-			],
-		];
+		$allowed_embed = function_exists('lf_map_embed_allowed_iframe_kses')
+			? lf_map_embed_allowed_iframe_kses()
+			: ['iframe' => ['src' => true, 'width' => true, 'height' => true]];
 		$map_embed = isset($_POST['lf_business_map_embed']) ? wp_kses(wp_unslash($_POST['lf_business_map_embed']), $allowed_embed) : '';
 
 		lf_update_business_info_value('lf_business_name', $display_name);
@@ -1316,7 +1307,7 @@ function lf_ops_render_global_settings_page(): void {
 							<th scope="row"><label for="lf_business_map_embed"><?php esc_html_e('Map iframe embed (optional)', 'leadsforward-core'); ?></label></th>
 							<td>
 								<textarea class="large-text" name="lf_business_map_embed" id="lf_business_map_embed" rows="3"><?php echo esc_textarea($map_embed); ?></textarea>
-								<p class="description"><?php esc_html_e('Paste a Google Maps iframe embed to show Map + NAP without relying on the JavaScript Maps API or domain key restrictions. If empty, the theme uses your selected place or address.', 'leadsforward-core'); ?></p>
+								<p class="description"><?php esc_html_e('Paste the iframe from Google Maps → Share → Embed a map. Standard embeds show the map and basic place info only; Google does not include the full Business Profile (star rating and reviews) inside third-party iframes. Add your Google Business Profile URL in the field above so the map section can link visitors to read Google reviews. The name and address under the map come from Global Settings (NAP), not from the iframe.', 'leadsforward-core'); ?></p>
 							</td>
 						</tr>
 						<tr>

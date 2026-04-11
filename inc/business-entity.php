@@ -12,6 +12,31 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+/**
+ * Allowed HTML for pasted Google Maps (and similar) iframe embeds.
+ *
+ * @return array<string, array<string, bool>>
+ */
+function lf_map_embed_allowed_iframe_kses(): array {
+	return [
+		'iframe' => [
+			'src' => true,
+			'width' => true,
+			'height' => true,
+			'style' => true,
+			'loading' => true,
+			'referrerpolicy' => true,
+			'allowfullscreen' => true,
+			'title' => true,
+			'allow' => true,
+			'class' => true,
+			'id' => true,
+			'name' => true,
+			'frameborder' => true,
+		],
+	];
+}
+
 function lf_business_entity_parse_list($raw): array {
 	if (is_array($raw)) {
 		$items = $raw;
