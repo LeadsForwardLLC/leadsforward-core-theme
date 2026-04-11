@@ -20,4 +20,5 @@ if (function_exists('lf_load_inc')) {
 	lf_load_inc('seo/seo-keyword-engine.php');
 	lf_load_inc('seo/seo-render.php');
 	lf_load_inc('seo/seo-sitemap.php');
+	lf_load_inc('seo/seo-wp-core-sitemap.php');
 }

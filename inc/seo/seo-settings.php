@@ -419,6 +419,12 @@ function lf_seo_render_settings_page(): void {
 					<th scope="row"><?php esc_html_e('Include Posts', 'leadsforward-core'); ?></th>
 					<td><label><input type="checkbox" name="lf_seo_sitemap_include_posts" value="1" <?php checked(!empty($settings['sitemap']['include_posts'])); ?> /> <?php esc_html_e('Include blog posts.', 'leadsforward-core'); ?></label></td>
 				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e('WordPress core sitemap', 'leadsforward-core'); ?></th>
+					<td>
+						<p class="description"><?php esc_html_e('WordPress also serves /wp-sitemap.xml. FAQ and process-step posts are omitted there by default (they are meant to appear inside accordions and process sections, not as standalone indexed URLs). Projects and other public types follow WordPress defaults unless customized via the lf_seo_wp_sitemaps_excluded_post_types filter.', 'leadsforward-core'); ?></p>
+					</td>
+				</tr>
 			</table>
 
 			<h2><?php esc_html_e('AI SEO Engine', 'leadsforward-core'); ?></h2>
