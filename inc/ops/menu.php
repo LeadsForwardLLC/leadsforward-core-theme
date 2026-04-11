@@ -125,7 +125,8 @@ function lf_ops_register_menu(): void {
 function lf_ops_hide_leadsforward_submenus(): void {
 	remove_submenu_page('lf-ops', 'lf-homepage-settings');
 	remove_submenu_page('lf-ops', 'lf-setup');
-	remove_submenu_page('lf-ops', 'lf-global');
+	// Do NOT remove lf-global: WordPress authorizes admin.php?page=… via the submenu list.
+	// Removing it makes bookmark/redirect URLs like page=lf-global fail with "not allowed" after save.
 }
 
 function lf_ops_user_can_manage_sensitive_settings(): bool {
@@ -328,14 +329,14 @@ function lf_ops_handle_reviews_sync(): void {
 		: [];
 	$reviews_table = trim((string) (($settings['reviews']['table'] ?? '') ?: ''));
 	if (empty($settings['enabled']) || $reviews_table === '') {
-		wp_safe_redirect(admin_url('admin.php?page=lf-global&reviews_sync=error&reviews_error=disabled'));
+		wp_safe_redirect(admin_url('admin.php?page=lf-ops&reviews_sync=error&reviews_error=disabled'));
 		exit;
 	}
 	$project_name = function_exists('lf_ai_studio_airtable_get_project_name_for_reviews')
 		? lf_ai_studio_airtable_get_project_name_for_reviews($settings)
 		: '';
 	if ($project_name === '') {
-		wp_safe_redirect(admin_url('admin.php?page=lf-global&reviews_sync=error&reviews_error=project'));
+		wp_safe_redirect(admin_url('admin.php?page=lf-ops&reviews_sync=error&reviews_error=project'));
 		exit;
 	}
 	$result = function_exists('lf_ai_studio_airtable_import_reviews_by_project')
@@ -343,12 +344,12 @@ function lf_ops_handle_reviews_sync(): void {
 		: ['error' => __('Reviews import is unavailable.', 'leadsforward-core')];
 	if (!empty($result['error'])) {
 		$error = rawurlencode((string) $result['error']);
-		wp_safe_redirect(admin_url('admin.php?page=lf-global&reviews_sync=error&reviews_error=' . $error));
+		wp_safe_redirect(admin_url('admin.php?page=lf-ops&reviews_sync=error&reviews_error=' . $error));
 		exit;
 	}
 	update_option('lf_ai_airtable_reviews_last_sync', time(), false);
 	update_option('lf_ai_airtable_reviews_last_imported', (int) ($result['imported'] ?? 0), false);
-	wp_safe_redirect(admin_url('admin.php?page=lf-global&reviews_sync=1&reviews_imported=' . (int) ($result['imported'] ?? 0)));
+	wp_safe_redirect(admin_url('admin.php?page=lf-ops&reviews_sync=1&reviews_imported=' . (int) ($result['imported'] ?? 0)));
 	exit;
 }
 
@@ -650,7 +651,7 @@ function lf_ops_handle_global_settings_save(): void {
 	if ($logo_id > 0 && $logo_id !== $prev_logo_id && function_exists('lf_branding_auto_from_logo')) {
 		lf_branding_auto_from_logo($logo_id);
 	}
-	wp_safe_redirect(admin_url('admin.php?page=lf-global&saved=1'));
+	wp_safe_redirect(admin_url('admin.php?page=lf-ops&saved=1'));
 	exit;
 }
 

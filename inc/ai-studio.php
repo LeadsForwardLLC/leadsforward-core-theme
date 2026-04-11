@@ -458,7 +458,7 @@ function lf_ai_studio_handle_orchestrator_save(): void {
 		update_option('lf_ai_airtable_reviews_field_map', $review_map);
 	}
 
-	wp_safe_redirect(admin_url('admin.php?page=lf-global&saved=1'));
+	wp_safe_redirect(admin_url('admin.php?page=lf-ops&saved=1'));
 	exit;
 }
 
