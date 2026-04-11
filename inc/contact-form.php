@@ -41,7 +41,7 @@ function lf_contact_form_default_config(): array {
 				'key' => 'phone',
 				'label' => __('Phone', 'leadsforward-core'),
 				'type' => 'tel',
-				'required' => false,
+				'required' => true,
 				'placeholder' => __('(555) 123-4567', 'leadsforward-core'),
 			],
 			[
@@ -75,7 +75,7 @@ function lf_contact_form_available_field_templates(): array {
 			'key' => 'phone',
 			'label' => __('Phone', 'leadsforward-core'),
 			'type' => 'tel',
-			'required' => false,
+			'required' => true,
 			'placeholder' => __('(555) 123-4567', 'leadsforward-core'),
 		],
 		[
