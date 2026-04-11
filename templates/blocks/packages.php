@@ -51,6 +51,9 @@ foreach ($cards_raw as $row) {
 		<div class="lf-block-packages__grid">
 			<?php foreach ($cards as $card) : ?>
 				<article class="lf-block-packages__card<?php echo !empty($card['highlight']) ? ' is-highlight' : ''; ?>">
+					<?php if (!empty($card['highlight'])) : ?>
+						<span class="lf-block-packages__badge"><?php esc_html_e('Recommended', 'leadsforward-core'); ?></span>
+					<?php endif; ?>
 					<h3 class="lf-block-packages__name"><?php echo esc_html($card['name']); ?></h3>
 					<?php if (!empty($card['best_for'])) : ?><p class="lf-block-packages__bestfor"><?php echo esc_html($card['best_for']); ?></p><?php endif; ?>
 					<?php if (!empty($card['bullets'])) : ?>
