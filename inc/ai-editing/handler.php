@@ -94,7 +94,7 @@ function lf_ai_pb_context_for_post(\WP_Post $post): string {
 	if ($post->post_type === 'page') {
 		return 'page';
 	}
-	if ($post->post_type === 'post') {
+	if ($post->post_type === 'post' || $post->post_type === 'lf_project') {
 		return 'post';
 	}
 	if ($post->post_type === 'lf_service') {
@@ -104,6 +104,260 @@ function lf_ai_pb_context_for_post(\WP_Post $post): string {
 		return 'service_area';
 	}
 	return '';
+}
+
+/**
+ * Transient key for a pending multi-section Page Builder patch (full-page AI edit).
+ */
+function lf_ai_pb_patch_transient_key(int $user_id, int $post_id): string {
+	return 'lf_ai_pb_patch_' . $user_id . '_' . $post_id;
+}
+
+/**
+ * Whether the user asked to rewrite copy across Page Builder sections (not hero-only).
+ */
+function lf_ai_assistant_prompt_requests_pb_expand(string $prompt, bool $force_via_post_flag): bool {
+	if ($force_via_post_flag) {
+		return true;
+	}
+	$p = strtolower($prompt);
+	$needles = [
+		'full page',
+		'entire page',
+		'all sections',
+		'page builder',
+		'below the hero',
+		'body copy',
+		'main content',
+		'content section',
+		'flesh out',
+		'complete the page',
+		'throughout the page',
+		'rewrite the page',
+		'tighten this page',
+		'this page copy',
+		'opening copy',
+		'every section',
+		'optimize copy',
+		'optimize the copy',
+		'serp intent',
+		'metadata and opening',
+	];
+	foreach ($needles as $n) {
+		if (strpos($p, $n) !== false) {
+			return true;
+		}
+	}
+	if (strpos($p, 'improve cta') !== false || strpos($p, 'cta language') !== false) {
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Truncate long setting values for the LLM context payload.
+ *
+ * @param array<string, mixed> $settings
+ * @return array<string, mixed>
+ */
+function lf_ai_pb_truncate_settings_for_prompt(array $settings, int $max_each = 320): array {
+	$out = [];
+	foreach ($settings as $k => $v) {
+		$key = (string) $k;
+		if (!is_string($v)) {
+			$out[ $key ] = $v;
+			continue;
+		}
+		$s = $v;
+		if (strlen($s) > $max_each) {
+			$s = substr($s, 0, $max_each) . '…';
+		}
+		$out[ $key ] = $s;
+	}
+	return $out;
+}
+
+/**
+ * Ask the model for a page_builder_patch keyed by section instance id (hero-1, content-1, …).
+ *
+ * @return array{success:bool, patch?: array<string, array<string, mixed>>, preview?: string, error?: string, error_code?: string}
+ */
+function lf_ai_generate_pb_page_builder_patch(int $post_id, string $user_prompt): array {
+	$post_id = max(0, $post_id);
+	if ($post_id === 0 || !function_exists('lf_pb_get_post_config') || !function_exists('lf_ai_pb_filter_section_patch')) {
+		return ['success' => false, 'error' => __('Page Builder is not available for this post.', 'leadsforward-core')];
+	}
+	$post = get_post($post_id);
+	if (!$post instanceof \WP_Post) {
+		return ['success' => false, 'error' => __('Invalid post.', 'leadsforward-core')];
+	}
+	$ctx = lf_ai_pb_context_for_post($post);
+	if ($ctx === '') {
+		return ['success' => false, 'error' => __('This post type does not use Page Builder.', 'leadsforward-core')];
+	}
+	$config = lf_pb_get_post_config($post_id, $ctx);
+	$order = is_array($config['order'] ?? null) ? $config['order'] : [];
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	if ($order === [] || $sections === []) {
+		return ['success' => false, 'error' => __('No sections found to edit.', 'leadsforward-core'), 'error_code' => 'no_pb_sections'];
+	}
+	$rl_key = 'lf_ai_rl_' . get_current_user_id();
+	if (get_transient($rl_key)) {
+		return ['success' => false, 'error' => __('Please wait a few seconds before generating again.', 'leadsforward-core')];
+	}
+	set_transient($rl_key, true, 5);
+	$instances = [];
+	$brief = [];
+	foreach ($order as $instance_id) {
+		$row = $sections[ $instance_id ] ?? null;
+		if (!is_array($row) || empty($row['enabled'])) {
+			continue;
+		}
+		$type = sanitize_text_field((string) ($row['type'] ?? ''));
+		if ($type === '') {
+			continue;
+		}
+		$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+		$instances[] = $instance_id . ' (' . $type . ')';
+		$brief[ $instance_id ] = [
+			'type' => $type,
+			'settings' => lf_ai_pb_truncate_settings_for_prompt($settings),
+		];
+	}
+	if ($instances === []) {
+		return ['success' => false, 'error' => __('No enabled Page Builder sections to edit.', 'leadsforward-core'), 'error_code' => 'no_pb_sections'];
+	}
+	$prompt = trim($user_prompt);
+	if (strlen($prompt) > 2000) {
+		$prompt = substr($prompt, 0, 2000);
+	}
+	$system = "You are a conversion copywriter for a local service website.\n";
+	$system .= "Return ONLY valid JSON (no markdown). Schema:\n";
+	$system .= "{\"page_builder_patch\": {\"INSTANCE_ID\": {\"copy_field_key\": \"value\", ...}, ...}}\n";
+	$system .= "Rules:\n";
+	$system .= "- Use ONLY these instance IDs: " . implode(', ', $instances) . "\n";
+	$system .= "- For each instance, only include keys that are plain-text, textarea, list (newline-separated), or HTML richtext fields for that section type.\n";
+	$system .= "- Omit instances you do not change, or use {}.\n";
+	$system .= "- Service detail sections use service_details_body for main HTML; generic content sections use section_body.\n";
+	$system .= "- Write substantial, specific copy for every section you touch; do not leave body fields empty if the user asked to improve the page.\n";
+	$user_message = $prompt . "\n\nCurrent section data (JSON):\n" . wp_json_encode($brief);
+	$response = apply_filters('lf_ai_completion', '', $system, $user_message, 'page', (string) $post_id);
+	if (is_wp_error($response)) {
+		return ['success' => false, 'error' => $response->get_error_message()];
+	}
+	if (!is_string($response) || trim($response) === '') {
+		return ['success' => false, 'error' => __('AI response was empty.', 'leadsforward-core')];
+	}
+	$decoded = json_decode(trim($response), true);
+	if (!is_array($decoded)) {
+		return ['success' => false, 'error' => __('AI did not return valid JSON.', 'leadsforward-core')];
+	}
+	$raw_patch = $decoded['page_builder_patch'] ?? null;
+	if (!is_array($raw_patch)) {
+		return ['success' => false, 'error' => __('AI JSON missing page_builder_patch.', 'leadsforward-core')];
+	}
+	$validated = [];
+	$preview_lines = [];
+	foreach ($raw_patch as $iid_raw => $patch_raw) {
+		$iid = sanitize_text_field((string) $iid_raw);
+		if ($iid === '' || !isset($sections[ $iid ]) || !is_array($sections[ $iid ])) {
+			continue;
+		}
+		$type = sanitize_text_field((string) ($sections[ $iid ]['type'] ?? ''));
+		if ($type === '' || !is_array($patch_raw)) {
+			continue;
+		}
+		$patch = lf_ai_pb_filter_section_patch($type, $patch_raw);
+		if ($patch === []) {
+			continue;
+		}
+		$validated[ $iid ] = $patch;
+		foreach ($patch as $pk => $pv) {
+			$pv_s = is_string($pv) ? wp_strip_all_tags($pv) : wp_json_encode($pv);
+			if (strlen($pv_s) > 120) {
+				$pv_s = substr($pv_s, 0, 117) . '…';
+			}
+			$preview_lines[] = $iid . '.' . (string) $pk . ': ' . $pv_s;
+		}
+	}
+	if ($validated === []) {
+		return ['success' => false, 'error' => __('AI returned no usable section fields.', 'leadsforward-core')];
+	}
+	return [
+		'success' => true,
+		'patch' => $validated,
+		'preview' => implode("\n", $preview_lines),
+	];
+}
+
+/**
+ * Apply a validated page_builder_patch and log for rollback (uses __section_record:: keys).
+ *
+ * @param array<string, array<string, mixed>> $patch_by_instance
+ * @return array{success: bool, log_id?: string, message?: string}
+ */
+function lf_ai_apply_logged_pb_patch(string $context_type, string $context_id, array $patch_by_instance, string $prompt_snippet = ''): array {
+	$pid = (int) $context_id;
+	if ($pid <= 0 || $patch_by_instance === []) {
+		return ['success' => false, 'message' => __('Nothing to apply.', 'leadsforward-core')];
+	}
+	$post = get_post($pid);
+	if (!$post instanceof \WP_Post) {
+		return ['success' => false, 'message' => __('Invalid post.', 'leadsforward-core')];
+	}
+	$ctx = lf_ai_pb_context_for_post($post);
+	if ($ctx === '' || !function_exists('lf_pb_get_post_config') || !function_exists('lf_sections_sanitize_settings')) {
+		return ['success' => false, 'message' => __('Page Builder unavailable.', 'leadsforward-core')];
+	}
+	$config = lf_pb_get_post_config($pid, $ctx);
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	$old_changes = [];
+	$new_changes = [];
+	foreach ($patch_by_instance as $iid => $patch) {
+		if (!is_array($patch) || !isset($sections[ $iid ]) || !is_array($sections[ $iid ])) {
+			continue;
+		}
+		$row = $sections[ $iid ];
+		$type = sanitize_text_field((string) ($row['type'] ?? ''));
+		if ($type === '') {
+			continue;
+		}
+		$filtered = lf_ai_pb_filter_section_patch($type, $patch);
+		if ($filtered === []) {
+			continue;
+		}
+		$base = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+		$new_settings = lf_sections_sanitize_settings($type, array_merge($base, $filtered));
+		$new_row = [
+			'type' => $type,
+			'enabled' => !empty($row['enabled']),
+			'deletable' => !empty($row['deletable']),
+			'settings' => $new_settings,
+		];
+		$old_changes['__section_record::' . $iid] = $row;
+		$new_changes['__section_record::' . $iid] = $new_row;
+	}
+	if ($new_changes === []) {
+		return ['success' => false, 'message' => __('No matching sections to update.', 'leadsforward-core')];
+	}
+	$log_id = lf_ai_log_action($context_type, $context_id, $old_changes, $new_changes, $prompt_snippet);
+	lf_ai_apply_changes_to_context($context_type, $context_id, $new_changes);
+	$hero_updates = [];
+	foreach ($patch_by_instance as $iid => $patch) {
+		if (!is_array($patch)) {
+			continue;
+		}
+		if (isset($patch['hero_headline'])) {
+			$hero_updates['hero_headline'] = (string) $patch['hero_headline'];
+		}
+		if (isset($patch['hero_subheadline'])) {
+			$hero_updates['hero_subheadline'] = (string) $patch['hero_subheadline'];
+		}
+	}
+	if ($hero_updates !== []) {
+		lf_ai_sync_inline_dom_overrides_for_fields($context_type, $context_id, $hero_updates);
+	}
+	return ['success' => true, 'log_id' => $log_id];
 }
 
 function lf_ai_get_pb_hero_settings_for_post(int $post_id): array {
