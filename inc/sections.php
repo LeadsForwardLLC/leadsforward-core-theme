@@ -421,6 +421,11 @@ function lf_sections_registry(): array {
 					'link'  => __('Link', 'leadsforward-core'),
 				]],
 				['key' => 'benefits_cta_url', 'label' => __('CTA button URL (if action=Link)', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
+				['key' => 'benefits_cta_align', 'label' => __('CTA button alignment', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
+					'left' => __('Left', 'leadsforward-core'),
+					'center' => __('Center', 'leadsforward-core'),
+					'right' => __('Right', 'leadsforward-core'),
+				]],
 			],
 			'render' => 'lf_sections_render_benefits',
 		],
@@ -1774,6 +1779,10 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 		$cta_action = 'quote';
 	}
 	$cta_url = trim((string) ($settings['benefits_cta_url'] ?? ''));
+	$cta_align = (string) ($settings['benefits_cta_align'] ?? 'center');
+	if (!in_array($cta_align, ['left', 'center', 'right'], true)) {
+		$cta_align = 'center';
+	}
 	if ($cta_action === 'link' && $cta_url === '') {
 		$cta_action = 'quote';
 	}
@@ -1894,7 +1903,7 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 			</ul>
 		<?php endif; ?>
 		<?php if ($cta_text !== '') : ?>
-			<div class="lf-benefits__actions">
+			<div class="lf-benefits__actions lf-benefits__actions--align-<?php echo esc_attr($cta_align); ?>">
 				<?php if ($cta_action === 'link' && $cta_url !== '') : ?>
 					<a class="lf-btn lf-btn--primary" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($cta_text); ?></a>
 				<?php else : ?>

@@ -699,8 +699,31 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-section-btn:hover { background:#f5f0ff; }
 		.lf-ai-section-btn--danger { border-color:#fecaca; color:#b91c1c; }
 		[data-lf-section-wrap="1"].lf-ai-section-is-hidden { min-height:56px; background:rgba(131,72,249,.06); outline:2px dashed rgba(131,72,249,.35); outline-offset:3px; }
-		[data-lf-section-wrap="1"].lf-ai-section-is-hidden > :not(.lf-ai-section-controls) { display:none !important; }
+		[data-lf-section-wrap="1"].lf-ai-section-is-hidden > :not(.lf-ai-section-controls):not(.lf-ai-section-insert) { display:none !important; }
 		[data-lf-section-wrap="1"].lf-ai-section-active { outline:2px solid #8348f9 !important; outline-offset:3px; box-shadow:0 0 0 4px rgba(131,72,249,.12); }
+		.lf-ai-section-insert { position:absolute; inset:0; z-index:5; pointer-events:none; }
+		.lf-ai-section-insert__zone { position:absolute; left:0; right:0; height:36px; display:flex; align-items:center; justify-content:center; pointer-events:auto; opacity:0; transition:opacity .15s ease; }
+		.lf-ai-section-insert__zone--top { top:0; transform:translateY(-40%); }
+		.lf-ai-section-insert__zone--bottom { bottom:0; transform:translateY(40%); }
+		.lf-ai-section-insert__zone:hover { opacity:1; }
+		.lf-ai-section-insert__btn { width:34px; height:34px; border-radius:999px; border:1px solid #d6c8fb; background:#fff; color:#6a33e8; font-size:20px; line-height:1; cursor:pointer; box-shadow:0 2px 12px rgba(15,23,42,.12); padding:0; }
+		.lf-ai-section-insert__btn:hover { background:#f5f0ff; }
+		.lf-ai-section-align-picker__subhead { margin-top:4px; font-size:12px; font-weight:600; color:#64748b; }
+		.lf-ai-benefits-cta-picker { position:fixed; inset:0; z-index:100006; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; padding:18px; }
+		.lf-ai-benefits-cta-picker[hidden] { display:none !important; }
+		.lf-ai-benefits-cta-picker__card { width:min(400px, calc(100vw - 30px)); background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); padding:14px; display:flex; flex-direction:column; gap:10px; }
+		.lf-ai-benefits-cta-picker__label { font-size:12px; font-weight:600; color:#334155; }
+		.lf-ai-benefits-cta-picker__input { width:100%; border:1px solid #d6c8fb; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box; }
+		.lf-ai-benefits-cta-picker__row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+		.lf-ai-benefits-cta-picker__btn { flex:1; min-width:72px; border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:34px; font-size:12px; font-weight:600; cursor:pointer; }
+		.lf-ai-benefits-cta-picker__btn:hover { background:#f5f0ff; }
+		.lf-ai-benefits-cta-picker__btn.is-active { outline:2px solid #8348f9; }
+		.lf-ai-section-insert-picker { position:fixed; inset:0; z-index:100006; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; padding:18px; }
+		.lf-ai-section-insert-picker[hidden] { display:none !important; }
+		.lf-ai-section-insert-picker__card { width:min(420px, calc(100vw - 30px)); max-height:80vh; overflow:auto; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); padding:12px; display:flex; flex-direction:column; gap:8px; }
+		.lf-ai-section-insert-picker__head { font-size:14px; font-weight:700; color:#0f172a; }
+		.lf-ai-section-insert-picker__item { display:block; width:100%; text-align:left; border:1px solid #e2e8f0; background:#f8fafc; border-radius:8px; padding:8px 10px; font-size:12px; cursor:pointer; color:#0f172a; }
+		.lf-ai-section-insert-picker__item:hover { border-color:#c4b5fd; background:#faf7ff; }
 		.lf-ai-checklist-controls { margin-top:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 		.lf-ai-checklist-add { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:28px; padding:0 10px; font-size:12px; cursor:pointer; }
 		.lf-ai-checklist-add:hover { background:#f5f0ff; }
@@ -1022,6 +1045,11 @@ function lf_ai_assistant_widget_js(): string {
 		var sectionBgPickerWrap = null;
 		var sectionAlignPickerEl = null;
 		var sectionAlignPickerWrap = null;
+		var sectionInsertPickerEl = null;
+		var sectionInsertAfterId = "";
+		var sectionInsertBeforeId = "";
+		var benefitsCtaPickerEl = null;
+		var benefitsCtaPickerWrap = null;
 		var heroSettingsPickerEl = null;
 		var heroSettingsPickerWrap = null;
 		var heroSettingsState = { variant: "default", mode: "image", imageId: 0, videoId: 0 };
@@ -2070,7 +2098,7 @@ function lf_ai_assistant_widget_js(): string {
 				node.removeAttribute("data-lf-inline-image");
 				node.removeAttribute("data-lf-inline-image-selector");
 			});
-			Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-controls,[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
+			Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
 				if (node && node.parentNode) node.parentNode.removeChild(node);
 			});
 			Array.prototype.slice.call(document.querySelectorAll(".lf-service-details__text")).forEach(function(node){
@@ -2132,6 +2160,8 @@ function lf_ai_assistant_widget_js(): string {
 			faqPickerList = null;
 			closeSectionBgPicker();
 			closeSectionAlignPicker();
+			closeBenefitsCtaPicker();
+			closeSectionInsertPicker();
 			closeHeroSettingsPicker();
 			refreshAiScopeBanner();
 		}
@@ -2387,6 +2417,7 @@ function lf_ai_assistant_widget_js(): string {
 			buildInlineImageTargets();
 			buildSectionTargets();
 			buildSectionControls();
+			buildSectionInsertZones();
 			buildSectionButtonEditors();
 			buildHeroPillsControls();
 			buildHeroProofChecklistControls();
@@ -2681,6 +2712,8 @@ function lf_ai_assistant_widget_js(): string {
 			selectedSectionWrap = wrap || null;
 			if (selectedSectionWrap) {
 				selectedSectionWrap.classList.add("lf-ai-section-active");
+				// Self-heal insert chrome if the DOM was rebuilt without a full editor refresh.
+				buildSectionInsertZones();
 				// Self-heal list/pill controls in case a row lost its remove button.
 				buildHeroPillsControls();
 				buildHeroProofChecklistControls();
@@ -2762,17 +2795,23 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			return sectionRailEl;
 		}
-		function addSectionFromLibrary(sectionType, afterSectionId) {
+		function addSectionFromLibrary(sectionType, afterSectionId, beforeSectionId) {
 			var type = String(sectionType || "");
 			if (!type) return;
 			setStatus("Adding section...", false);
+			var afterId = String(afterSectionId || "");
+			var beforeId = String(beforeSectionId || "");
+			if (!afterId && !beforeId && selectedSectionWrap) {
+				afterId = String(selectedSectionWrap.getAttribute("data-lf-section-id") || "");
+			}
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_add_section",
 				nonce: lfAiFloating.nonce,
 				context_type: pageContextType,
 				context_id: pageContextId,
 				section_type: type,
-				after_section_id: String(afterSectionId || (selectedSectionWrap ? String(selectedSectionWrap.getAttribute("data-lf-section-id") || "") : ""))
+				after_section_id: afterId,
+				before_section_id: beforeId
 			}).done(function(res){
 				if (res && res.success && res.data && res.data.reload) {
 					window.location.reload();
@@ -4874,6 +4913,10 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function openCtaButtonEditor(wrap, node) {
 			if (!wrap || !node) return;
+			if (node.closest && node.closest(".lf-benefits__actions")) {
+				openBenefitsCtaPicker(wrap, node);
+				return;
+			}
 			var currentText = String(node.textContent || "").trim();
 			var slot = ctaSlotForButton(node);
 			var currentAction = ctaActionForButton(node);
@@ -5076,7 +5119,7 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function stripClonedSectionEditorArtifacts(root) {
 			if (!root || !root.querySelectorAll) return;
-			Array.prototype.slice.call(root.querySelectorAll(".lf-ai-section-controls,[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
+			Array.prototype.slice.call(root.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
 				if (node && node.parentNode) node.parentNode.removeChild(node);
 			});
 			Array.prototype.slice.call(root.querySelectorAll("[data-lf-benefits-editor-bound]")).forEach(function(node){
@@ -5131,6 +5174,7 @@ function lf_ai_assistant_widget_js(): string {
 					buildInlineTargets();
 					buildInlineImageTargets();
 					buildSectionControls();
+					buildSectionInsertZones();
 					buildSectionButtonEditors();
 					buildHeroPillsControls();
 					buildHeroProofChecklistControls();
@@ -5290,6 +5334,26 @@ function lf_ai_assistant_widget_js(): string {
 				});
 				row.appendChild(b);
 			});
+			var ctaHead = document.createElement("div");
+			ctaHead.className = "lf-ai-section-align-picker__subhead";
+			ctaHead.setAttribute("data-lf-benefits-cta-align-head", "1");
+			ctaHead.textContent = "Benefits button row";
+			var ctaRow = document.createElement("div");
+			ctaRow.className = "lf-ai-section-align-picker__row";
+			ctaRow.setAttribute("data-lf-benefits-cta-align-row", "1");
+			["left", "center", "right"].forEach(function(al){
+				var cb = document.createElement("button");
+				cb.type = "button";
+				cb.className = "lf-ai-section-align-picker__btn";
+				cb.textContent = al.charAt(0).toUpperCase() + al.slice(1);
+				cb.addEventListener("click", function(e){
+					e.preventDefault();
+					var w = sectionAlignPickerWrap;
+					closeSectionAlignPicker();
+					if (w) persistSectionStyle(w, "set_benefits_cta_align", { benefits_cta_align: al });
+				});
+				ctaRow.appendChild(cb);
+			});
 			var closeBtn = document.createElement("button");
 			closeBtn.type = "button";
 			closeBtn.className = "lf-ai-section-align-picker__close";
@@ -5301,6 +5365,8 @@ function lf_ai_assistant_widget_js(): string {
 			});
 			card.appendChild(head);
 			card.appendChild(row);
+			card.appendChild(ctaHead);
+			card.appendChild(ctaRow);
 			card.appendChild(closeBtn);
 			root.appendChild(card);
 			root.addEventListener("click", function(e){
@@ -5314,6 +5380,321 @@ function lf_ai_assistant_widget_js(): string {
 			ensureSectionAlignPicker();
 			sectionAlignPickerWrap = wrap;
 			sectionAlignPickerEl.hidden = false;
+			var isBen = wrap && String(wrap.getAttribute("data-lf-section-type") || "") === "benefits";
+			var ctaHead = sectionAlignPickerEl.querySelector("[data-lf-benefits-cta-align-head]");
+			var ctaRow = sectionAlignPickerEl.querySelector("[data-lf-benefits-cta-align-row]");
+			if (ctaHead) ctaHead.hidden = !isBen;
+			if (ctaRow) ctaRow.hidden = !isBen;
+		}
+		function closeBenefitsCtaPicker() {
+			if (benefitsCtaPickerEl) benefitsCtaPickerEl.hidden = true;
+			benefitsCtaPickerWrap = null;
+		}
+		function closeSectionInsertPicker() {
+			if (sectionInsertPickerEl) sectionInsertPickerEl.hidden = true;
+			sectionInsertAfterId = "";
+			sectionInsertBeforeId = "";
+		}
+		function ensureBenefitsCtaPicker() {
+			if (benefitsCtaPickerEl) return benefitsCtaPickerEl;
+			var root = document.createElement("div");
+			root.className = "lf-ai-benefits-cta-picker lf-ai-inline-editor-ignore";
+			root.hidden = true;
+			var card = document.createElement("div");
+			card.className = "lf-ai-benefits-cta-picker__card";
+			var title = document.createElement("div");
+			title.className = "lf-ai-section-bg-picker__head";
+			title.style.marginBottom = "0";
+			title.innerHTML = "<span class=\"lf-ai-section-bg-picker__title\">Benefits button</span>";
+			var textLab = document.createElement("label");
+			textLab.className = "lf-ai-benefits-cta-picker__label";
+			textLab.textContent = "Button text (leave empty to remove)";
+			var textInp = document.createElement("input");
+			textInp.type = "text";
+			textInp.className = "lf-ai-benefits-cta-picker__input";
+			textInp.setAttribute("data-lf-benefits-cta-text", "1");
+			textLab.appendChild(textInp);
+			var actLab = document.createElement("label");
+			actLab.className = "lf-ai-benefits-cta-picker__label";
+			actLab.textContent = "Action";
+			var actSel = document.createElement("select");
+			actSel.className = "lf-ai-benefits-cta-picker__input";
+			actSel.setAttribute("data-lf-benefits-cta-action", "1");
+			[["quote", "Open quote"], ["link", "Link"]].forEach(function(opt){
+				var o = document.createElement("option");
+				o.value = opt[0];
+				o.textContent = opt[1];
+				actSel.appendChild(o);
+			});
+			actLab.appendChild(actSel);
+			var urlLab = document.createElement("label");
+			urlLab.className = "lf-ai-benefits-cta-picker__label";
+			urlLab.textContent = "URL (if Link)";
+			var urlInp = document.createElement("input");
+			urlInp.type = "url";
+			urlInp.className = "lf-ai-benefits-cta-picker__input";
+			urlInp.setAttribute("data-lf-benefits-cta-url", "1");
+			urlInp.setAttribute("placeholder", "https://");
+			urlLab.appendChild(urlInp);
+			var alignLab = document.createElement("div");
+			alignLab.className = "lf-ai-benefits-cta-picker__label";
+			alignLab.textContent = "Alignment";
+			var alignRow = document.createElement("div");
+			alignRow.className = "lf-ai-benefits-cta-picker__row";
+			var alignState = { value: "center" };
+			["left", "center", "right"].forEach(function(al){
+				var ab = document.createElement("button");
+				ab.type = "button";
+				ab.className = "lf-ai-benefits-cta-picker__btn";
+				ab.textContent = al.charAt(0).toUpperCase() + al.slice(1);
+				ab.setAttribute("data-lf-benefits-cta-align-btn", al);
+				ab.addEventListener("click", function(e){
+					e.preventDefault();
+					alignState.value = al;
+					Array.prototype.slice.call(alignRow.querySelectorAll("[data-lf-benefits-cta-align-btn]")).forEach(function(x){
+						x.classList.toggle("is-active", String(x.getAttribute("data-lf-benefits-cta-align-btn") || "") === al);
+					});
+				});
+				alignRow.appendChild(ab);
+			});
+			var btnRow = document.createElement("div");
+			btnRow.className = "lf-ai-benefits-cta-picker__row";
+			var removeBtn = document.createElement("button");
+			removeBtn.type = "button";
+			removeBtn.className = "lf-ai-benefits-cta-picker__btn";
+			removeBtn.textContent = "Remove button";
+			removeBtn.addEventListener("click", function(e){
+				e.preventDefault();
+				var w = benefitsCtaPickerWrap;
+				closeBenefitsCtaPicker();
+				if (w) persistBenefitsSectionCta(w, "", "quote", "", "center");
+			});
+			var saveBtn = document.createElement("button");
+			saveBtn.type = "button";
+			saveBtn.className = "lf-ai-benefits-cta-picker__btn";
+			saveBtn.textContent = "Save";
+			saveBtn.addEventListener("click", function(e){
+				e.preventDefault();
+				var w = benefitsCtaPickerWrap;
+				var t = String(textInp.value || "").trim();
+				var act = String(actSel.value || "quote");
+				var u = String(urlInp.value || "").trim();
+				closeBenefitsCtaPicker();
+				if (w) persistBenefitsSectionCta(w, t, act, u, alignState.value);
+			});
+			var cancelBtn = document.createElement("button");
+			cancelBtn.type = "button";
+			cancelBtn.className = "lf-ai-benefits-cta-picker__btn";
+			cancelBtn.style.borderColor = "#e2e8f0";
+			cancelBtn.style.color = "#64748b";
+			cancelBtn.textContent = "Cancel";
+			cancelBtn.addEventListener("click", function(e){
+				e.preventDefault();
+				closeBenefitsCtaPicker();
+			});
+			btnRow.appendChild(removeBtn);
+			btnRow.appendChild(cancelBtn);
+			btnRow.appendChild(saveBtn);
+			card.appendChild(title);
+			card.appendChild(textLab);
+			card.appendChild(actLab);
+			card.appendChild(urlLab);
+			card.appendChild(alignLab);
+			card.appendChild(alignRow);
+			card.appendChild(btnRow);
+			root.appendChild(card);
+			root.addEventListener("click", function(e){
+				if (e.target === root) closeBenefitsCtaPicker();
+			});
+			root.__lfAlignState = alignState;
+			root.__lfAlignRow = alignRow;
+			document.body.appendChild(root);
+			benefitsCtaPickerEl = root;
+			return root;
+		}
+		function openBenefitsCtaPicker(wrap, buttonNode) {
+			ensureBenefitsCtaPicker();
+			benefitsCtaPickerWrap = wrap;
+			var textInp = benefitsCtaPickerEl.querySelector("[data-lf-benefits-cta-text]");
+			var actSel = benefitsCtaPickerEl.querySelector("[data-lf-benefits-cta-action]");
+			var urlInp = benefitsCtaPickerEl.querySelector("[data-lf-benefits-cta-url]");
+			var actionsEl = wrap ? wrap.querySelector(".lf-benefits__actions") : null;
+			var btn = buttonNode || (actionsEl ? actionsEl.querySelector("a.lf-btn,button.lf-btn") : null);
+			var curText = btn ? String(btn.textContent || "").trim() : "";
+			var curAct = "quote";
+			var curUrl = "";
+			if (btn) {
+				if (btn.tagName && btn.tagName.toLowerCase() === "a") {
+					curAct = "link";
+					curUrl = String(btn.getAttribute("href") || "").trim();
+				} else if (btn.getAttribute("data-lf-quote-trigger") === "1") {
+					curAct = "quote";
+				}
+			}
+			var curAlign = "center";
+			if (actionsEl && actionsEl.className) {
+				var m = String(actionsEl.className || "").match(/\blf-benefits__actions--align-(left|center|right)\b/);
+				if (m && m[1]) curAlign = m[1];
+			}
+			if (textInp) textInp.value = curText;
+			if (actSel) actSel.value = curAct === "link" ? "link" : "quote";
+			if (urlInp) urlInp.value = curUrl;
+			var alignRow = benefitsCtaPickerEl.__lfAlignRow;
+			var alignState = benefitsCtaPickerEl.__lfAlignState;
+			if (alignState) alignState.value = curAlign;
+			if (alignRow) {
+				Array.prototype.slice.call(alignRow.querySelectorAll("[data-lf-benefits-cta-align-btn]")).forEach(function(x){
+					var al = String(x.getAttribute("data-lf-benefits-cta-align-btn") || "");
+					x.classList.toggle("is-active", al === curAlign);
+				});
+			}
+			benefitsCtaPickerEl.hidden = false;
+		}
+		function persistBenefitsSectionCta(wrap, text, action, url, align) {
+			if (!wrap) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			if (!sectionId) return;
+			var ctx = persistContextFromWrap(wrap);
+			setStatus("Saving button...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_update_section_cta",
+				nonce: lfAiFloating.nonce,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
+				section_id: sectionId,
+				cta_target: "benefits",
+				text: String(text || ""),
+				cta_action: String(action || "quote"),
+				url: String(url || ""),
+				benefits_cta_align: String(align || "center")
+			}).done(function(res){
+				if (res && res.success) {
+					setStatus((res.data && res.data.message) ? res.data.message : "Saved.", false);
+					if (res.data && res.data.reload) window.location.reload();
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Save failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Save failed.";
+				setStatus(msg, true);
+			});
+		}
+		function ensureSectionInsertPicker() {
+			if (sectionInsertPickerEl) return sectionInsertPickerEl;
+			var root = document.createElement("div");
+			root.className = "lf-ai-section-insert-picker lf-ai-inline-editor-ignore";
+			root.hidden = true;
+			var card = document.createElement("div");
+			card.className = "lf-ai-section-insert-picker__card";
+			var head = document.createElement("div");
+			head.className = "lf-ai-section-insert-picker__head";
+			head.textContent = "Add section";
+			var hint = document.createElement("p");
+			hint.style.margin = "0";
+			hint.style.fontSize = "12px";
+			hint.style.color = "#64748b";
+			hint.setAttribute("data-lf-section-insert-hint", "1");
+			hint.textContent = "Choose a section type.";
+			var list = document.createElement("div");
+			list.setAttribute("data-lf-section-insert-list", "1");
+			var closeBtn = document.createElement("button");
+			closeBtn.type = "button";
+			closeBtn.className = "lf-ai-benefits-cta-picker__btn";
+			closeBtn.style.marginTop = "6px";
+			closeBtn.textContent = "Cancel";
+			closeBtn.addEventListener("click", function(e){
+				e.preventDefault();
+				closeSectionInsertPicker();
+			});
+			card.appendChild(head);
+			card.appendChild(hint);
+			card.appendChild(list);
+			card.appendChild(closeBtn);
+			root.appendChild(card);
+			root.addEventListener("click", function(e){
+				if (e.target === root) closeSectionInsertPicker();
+			});
+			document.body.appendChild(root);
+			sectionInsertPickerEl = root;
+			return root;
+		}
+		function openSectionInsertPicker(afterId, beforeId) {
+			ensureSectionInsertPicker();
+			sectionInsertAfterId = String(afterId || "");
+			sectionInsertBeforeId = String(beforeId || "");
+			var hint = sectionInsertPickerEl.querySelector("[data-lf-section-insert-hint]");
+			if (hint) {
+				if (sectionInsertBeforeId) {
+					hint.textContent = "Inserts above the hovered section.";
+				} else {
+					hint.textContent = "Inserts below the hovered section.";
+				}
+			}
+			var list = sectionInsertPickerEl.querySelector("[data-lf-section-insert-list]");
+			if (list) {
+				list.innerHTML = "";
+				var rows = Array.isArray(lfAiFloating.section_library) ? lfAiFloating.section_library : [];
+				rows.forEach(function(row){
+					var id = String(row && row.id ? row.id : "");
+					var label = String(row && row.label ? row.label : id);
+					if (!id) return;
+					var b = document.createElement("button");
+					b.type = "button";
+					b.className = "lf-ai-section-insert-picker__item";
+					b.textContent = label + " (" + id + ")";
+					b.addEventListener("click", function(e){
+						e.preventDefault();
+						var aid = sectionInsertAfterId;
+						var bid = sectionInsertBeforeId;
+						closeSectionInsertPicker();
+						addSectionFromLibrary(id, aid, bid);
+					});
+					list.appendChild(b);
+				});
+			}
+			sectionInsertPickerEl.hidden = false;
+		}
+		function buildSectionInsertZones() {
+			if (!editingEnabled) return;
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				if (wrap.querySelector(".lf-ai-section-insert")) return;
+				var shell = document.createElement("div");
+				shell.className = "lf-ai-section-insert lf-ai-inline-editor-ignore";
+				var topZ = document.createElement("div");
+				topZ.className = "lf-ai-section-insert__zone lf-ai-section-insert__zone--top";
+				var topBtn = document.createElement("button");
+				topBtn.type = "button";
+				topBtn.className = "lf-ai-section-insert__btn";
+				topBtn.textContent = "+";
+				topBtn.setAttribute("aria-label", "Add section above");
+				topBtn.setAttribute("title", "Add section above");
+				topBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					var sid = String(wrap.getAttribute("data-lf-section-id") || "");
+					openSectionInsertPicker("", sid);
+				});
+				topZ.appendChild(topBtn);
+				var botZ = document.createElement("div");
+				botZ.className = "lf-ai-section-insert__zone lf-ai-section-insert__zone--bottom";
+				var botBtn = document.createElement("button");
+				botBtn.type = "button";
+				botBtn.className = "lf-ai-section-insert__btn";
+				botBtn.textContent = "+";
+				botBtn.setAttribute("aria-label", "Add section below");
+				botBtn.setAttribute("title", "Add section below");
+				botBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					var sid = String(wrap.getAttribute("data-lf-section-id") || "");
+					openSectionInsertPicker(sid, "");
+				});
+				botZ.appendChild(botBtn);
+				shell.appendChild(topZ);
+				shell.appendChild(botZ);
+				wrap.appendChild(shell);
+			});
 		}
 		function closeHeroSettingsPicker() {
 			if (heroSettingsPickerEl) heroSettingsPickerEl.hidden = true;
@@ -5676,6 +6057,7 @@ function lf_ai_assistant_widget_js(): string {
 				if (extra.background_slug) payload.background_slug = String(extra.background_slug);
 				if (extra.custom_background) payload.custom_background = String(extra.custom_background);
 				if (extra.header_align) payload.header_align = String(extra.header_align);
+				if (extra.benefits_cta_align) payload.benefits_cta_align = String(extra.benefits_cta_align);
 			}
 			$.post(lfAiFloating.ajax_url, payload).done(function(res){
 				if (res && res.success) {
@@ -5768,7 +6150,7 @@ function lf_ai_assistant_widget_js(): string {
 					alignBtn.type = "button";
 					alignBtn.className = "lf-ai-section-btn";
 					alignBtn.textContent = "Align";
-					alignBtn.setAttribute("title", "Set header and intro text alignment");
+					alignBtn.setAttribute("title", "Header alignment; for benefits sections, also button row alignment");
 					alignBtn.setAttribute("aria-label", "Set section header alignment");
 					alignBtn.addEventListener("click", function(e){
 						e.preventDefault();
@@ -5776,6 +6158,11 @@ function lf_ai_assistant_widget_js(): string {
 						openSectionAlignPicker(wrap);
 					});
 					controls.appendChild(alignBtn);
+				}
+				if (sectionType === "benefits") {
+					ensureBtn("CTA", "Add or edit the optional benefits button", "Benefits button", function(){
+						openBenefitsCtaPicker(wrap, null);
+					});
 				}
 				if (sectionSupportsColumnSwap(sectionType)) {
 					var swapBtn = document.createElement("button");
@@ -5972,7 +6359,7 @@ function lf_ai_assistant_widget_js(): string {
 					if (!t) return;
 					// Do not reselect/rebuild when clicking inline editor controls.
 					if (isDragBlockedTarget(t)) return;
-					if ((t.closest && t.closest(".lf-ai-section-controls")) || (t.closest && t.closest(".lf-ai-float"))) return;
+					if ((t.closest && t.closest(".lf-ai-section-controls")) || (t.closest && t.closest(".lf-ai-section-insert")) || (t.closest && t.closest(".lf-ai-float"))) return;
 					setSelectedSection(wrap);
 				};
 				wrap.setAttribute("draggable", "true");
