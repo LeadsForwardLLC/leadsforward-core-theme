@@ -14,6 +14,7 @@ Use this page as the starting point for architecture, operations, and troublesho
 
 ## Frontend / UX
 - `08_FRONTEND_EDITOR.md` - sidepanel/assistant editing behavior and controls.
+- `09_PAGE_BUILDER_MAPS_NAV_AI.md` - Page Builder meta (`lf_pb_config`), map iframe vs optional Maps API key, header menu “add on save”, AI creation `page_builder` JSON contract.
 - `07_ICON_SYSTEM.md` - icon picker and icon taxonomy usage.
 
 ## Theme CPTs (quick reference)

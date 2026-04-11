@@ -1,6 +1,8 @@
 # AI Prompt Engine
 
-This system uses one LLM call per blueprint (per page). The model must return strict JSON updates and never invent fields outside the schema.
+This document describes the **orchestrator / n8n** blueprint path: one LLM call per blueprint (per page), strict JSON updates, and `allowed_field_keys` per section.
+
+**Different flow:** the **in-dashboard AI Assistant** draft-creation prompts (`lf_ai_assistant_build_creation_prompt` in `inc/ai-editing/admin-ui.php`) use a separate JSON shape for Page Builder post types, including a top-level `page_builder` object keyed by default section slots. See **`09_PAGE_BUILDER_MAPS_NAV_AI.md`** for that contract.
 
 ## Prompt Assembly (High Level)
 ```

@@ -164,3 +164,7 @@ Undo/redo is powered by change keys in the logging layer, including:
 - `__section_layout::<section_id>`
 - `__section_enabled::<section_id>`
 - `__section_record::<section_id>`
+
+## Related documentation
+
+- **`09_PAGE_BUILDER_MAPS_NAV_AI.md`** — How `lf_pb_config` is stored, map iframe settings, header menu “add on save,” and how the **dashboard AI assistant** creates drafts with a `page_builder` JSON object (separate from orchestrator blueprints in `06_AI_PROMPT_ENGINE.md`).

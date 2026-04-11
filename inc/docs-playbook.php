@@ -57,7 +57,7 @@ function lf_docs_render_playbook_sections(): void {
 					<li><?php esc_html_e('Use Manifest Website: choose scope checkboxes, pick an Airtable project (recommended) or upload a manifest JSON, add images/logo, then run generation. Generating from Airtable stores the manifest and syncs business/niche/homepage options into WordPress.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Optional — only if you do not use Airtable: from Manifest Website, open Manual setup (no Airtable) and complete all five steps (niche, areas, homepage inputs, business NAP, generate).', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Tune homepage section order via the hidden admin URL (or Page Builder patterns) and edit core pages via Page Builder meta boxes; the static front page also lives under Pages.', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('Edit services/areas/projects in the block editor; use the LeadsForward design sidebar for global preset when needed.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Edit services and service areas primarily in the Page Builder meta box (Section Library). Posts, projects, and many pages use Page Builder sections too; use the block editor only where the theme still exposes a body field. Use the LeadsForward design sidebar (block editor ⋮ menu) for the global preset when needed.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Configure LeadsForward → SEO & Performance (meta templates, header scripts for GTM, sitemap). Run Pre-launch check and the manual QA checklist.', 'leadsforward-core'); ?></li>
 				</ol>
 			</section>
@@ -67,7 +67,7 @@ function lf_docs_render_playbook_sections(): void {
 				<p><?php esc_html_e('Manifest Website is the primary place to load site truth: pick an Airtable project (default) or upload a manifest file, then generate. That flow updates the stored manifest and syncs niche, business entity, and homepage keywords into WordPress. Manual setup (no Airtable) is an alternative five-step wizard when you are not using Airtable—use one path or the other for initial baseline data, not both. Manual setup is only linked from Manifest Website (not the sidebar).', 'leadsforward-core'); ?></p>
 				<ul>
 					<li><strong>Manifest Website</strong> — <?php esc_html_e('Orchestrator scope, Airtable project picker (default), manifest file upload, research, images, generate.', 'leadsforward-core'); ?></li>
-					<li><strong>Global Settings</strong> — <?php esc_html_e('Business entity, phones, map iframe, APIs, manifester enable, reviews sync.', 'leadsforward-core'); ?></li>
+					<li><strong>Global Settings</strong> — <?php esc_html_e('Business entity (NAP), phones, email, Google Business Profile URL, map iframe embed, optional Maps API key (legacy only), OpenAI key, Airtable, manifester, reviews sync.', 'leadsforward-core'); ?></li>
 					<li><strong>Manual setup (no Airtable)</strong> — <?php esc_html_e('Optional five-step wizard; open from Manifest Website.', 'leadsforward-core'); ?></li>
 					<li><strong>Homepage sections</strong> — <?php esc_html_e('Section order for the static front page (direct URL only); prefer editing the Home page under Pages when possible.', 'leadsforward-core'); ?></li>
 					<li><strong>Quote Builder / Contact Form</strong> — <?php esc_html_e('Lead capture configuration.', 'leadsforward-core'); ?></li>
@@ -93,7 +93,15 @@ function lf_docs_render_playbook_sections(): void {
 
 			<section id="global-settings" class="lf-docs__section">
 				<h2><?php esc_html_e('Global settings & integrations', 'leadsforward-core'); ?></h2>
-				<p><?php esc_html_e('This is the operational hub: legal business data feeds schema, map, and footer; webhook/secret power generation; Airtable PAT/base/table IDs power project pickers and optional review import.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('This is the operational hub: legal business data feeds schema, footer, and Map + NAP text; webhook/secret power generation; Airtable PAT/base/table IDs power project pickers and optional review import.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Business entity & map', 'leadsforward-core'); ?></h3>
+				<ul>
+					<li><?php esc_html_e('Address (NAP): use the structured fields. The name and address shown under the map come from here—not from the iframe.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Google Business Profile URL: add the public profile link so sections can send visitors to read Google reviews (iframes do not show full profile widgets).', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Map iframe embed: paste Share → Embed a map from Google Maps. This is the normal way to show the map; the Maps JavaScript and Places APIs are not required for the embed.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Google Maps API key (sensitive settings): optional. Only used for legacy embed fallbacks when no iframe is set. Prefer the iframe so you do not depend on API billing or domain restrictions for the visible map.', 'leadsforward-core'); ?></li>
+				</ul>
+				<h3><?php esc_html_e('Analytics & tags', 'leadsforward-core'); ?></h3>
 				<p><?php esc_html_e('Google Tag Manager: paste the full GTM snippet (or gtag) into SEO & Site Health → SEO settings → Header scripts—not only in a plugin—so Site Health can detect it.', 'leadsforward-core'); ?></p>
 			</section>
 
@@ -104,15 +112,19 @@ function lf_docs_render_playbook_sections(): void {
 			</section>
 
 			<section id="page-builder" class="lf-docs__section">
-				<h2><?php esc_html_e('Page Builder & block editor', 'leadsforward-core'); ?></h2>
-				<p><?php esc_html_e('For services, service areas, and most core pages, structured content lives in the Page Builder meta box: sections with fields (headlines, rich text, images). The theme renders these server-side for consistent HTML and SEO.', 'leadsforward-core'); ?></p>
-				<h3><?php esc_html_e('Block editor (posts, pages, CPTs)', 'leadsforward-core'); ?></h3>
-				<p><?php esc_html_e('Use the block editor normally for body content. Open the top-right Options (⋮) → LeadsForward design to change the global design preset (requires edit theme options).', 'leadsforward-core'); ?></p>
-				<p><?php esc_html_e('Site Editor (full site editing): if your host setup uses it, template changes are separate from Page Builder fields—prefer Page Builder for LeadsForward section content unless your team standardized on FSE patterns.', 'leadsforward-core'); ?></p>
+				<h2><?php esc_html_e('Page Builder (Section Library) & editor', 'leadsforward-core'); ?></h2>
+				<p><?php esc_html_e('For services, service areas, standard pages, blog posts, and projects, the live layout and copy for theme sections live in the Page Builder meta box: drag to reorder, use Section Library → Add to insert rows (duplicates allowed). Each row has type-specific fields (hero, service details, benefits, FAQ, CTA, etc.). Output is server-rendered for consistent HTML and SEO.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('What visitors actually see', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('The front end uses these sections—not the WordPress “main content” field—when Page Builder is active for that post type. After AI creates a draft with section copy, the main editor may be empty on purpose.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Block editor', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('Use the block editor when it is visible for auxiliary content or legacy flows. Open Options (⋮) → LeadsForward design to change the global design preset (requires edit theme options).', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('Site Editor (FSE): template changes are separate from Page Builder fields—prefer Page Builder for LeadsForward section copy unless your team standardized on FSE patterns.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Add to header menu on save', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('In the Publish box, if you can manage menus (edit theme options) and a menu is assigned to the Header Menu location, you may see “Add to header menu on save.” Checking it adds this post to that menu once, in a smart place: services under the Services dropdown parent, service areas under Areas, blog posts under the Posts page item when that page is already in the menu, child pages under their parent’s menu item when possible—otherwise top level. If the dropdown parents are missing, add them under Appearance → Menus (wizard-built sites include special menu classes for Services and Areas).', 'leadsforward-core'); ?></p>
 				<h3><?php esc_html_e('SEO meta box', 'leadsforward-core'); ?></h3>
 				<p><?php esc_html_e('Each page/post/service/area has an SEO box: primary keyword, meta title/description, intent, and an on-page depth checklist (lengths, internal links, images, featured image). Save to refresh the quality score.', 'leadsforward-core'); ?></p>
-				<h3><?php esc_html_e('Why the main block editor is sometimes hidden', 'leadsforward-core'); ?></h3>
-				<p><?php esc_html_e('Core template pages that use only the Page Builder (no “content” section) hide the big block canvas on purpose—you edit those URLs in the Page Builder meta box. The home page section order is configured in the homepage sections screen (direct URL); wp-admin may show a notice pointing you there. Posts, services, and areas typically keep the block editor for narrative body copy plus Page Builder sections where configured.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Why the main editor is sometimes hidden or empty', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('Some templates hide the large block canvas so editors use Page Builder only. The static front page section order is configured via the homepage sections screen (direct URL) or the Home page’s Page Builder where applicable. If you expected text in the main editor after AI created a page, open Page Builder—the copy was saved into sections.', 'leadsforward-core'); ?></p>
 			</section>
 
 			<section id="frontend-editor" class="lf-docs__section">
@@ -162,7 +174,29 @@ function lf_docs_render_playbook_sections(): void {
 
 			<section id="ai-assistant" class="lf-docs__section">
 				<h2><?php esc_html_e('AI assistant', 'leadsforward-core'); ?></h2>
-				<p><?php esc_html_e('The floating assistant proposes copy edits in context. It does not replace the orchestrator for full-page generation. Keep API keys in Global Settings restricted to trusted roles.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('Two layers: (1) Manifest Website / n8n for full-site generation, (2) the in-dashboard assistant for targeted edits and draft creation. Store the OpenAI key in Global Settings; restrict who can manage theme options.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Floating assistant', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('On the front end (and in admin where enabled), proposes bounded copy and layout changes. Pair it with the front-end editor for inline saves, section reorder, and SEO Health. It does not change URLs, slugs, or schema by policy.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Edit with AI (post screen)', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('Meta box with a prompt field: suggest edits in plain English. Same guardrails as the floater for conversion copy and allowed fields.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Creating new pages, services, posts, or CPT drafts', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('When you ask for a new service page, blog post, etc., the assistant returns structured JSON. For types that use Page Builder, the model should fill a page_builder object: one key per default section slot (hero, service_details, benefits, …) with copy fields inside each. The theme merges that into lf_pb_config and clears the main editor when successful. If the model only returns a long content string, the theme maps it into the first appropriate body field (e.g. service_details_body) as a fallback. See repo doc docs/09_PAGE_BUILDER_MAPS_NAV_AI.md for the exact contract.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Rollback', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('Recent AI-applied changes can be rolled back from the assistant / AI editing UI where exposed; full-site runs are tracked via AI Studio jobs.', 'leadsforward-core'); ?></p>
+			</section>
+
+			<section id="developer-reference" class="lf-docs__section">
+				<h2><?php esc_html_e('Developer documentation (theme repository)', 'leadsforward-core'); ?></h2>
+				<p><?php esc_html_e('This playbook is the operator guide. For architecture, n8n contracts, manifest schema, section registry details, and the Page Builder / maps / menu / AI creation reference, use the Markdown files in the theme’s docs/ folder (same copy shipped with the theme ZIP or Git clone).', 'leadsforward-core'); ?></p>
+				<ul>
+					<li><code>docs/README.md</code> — <?php esc_html_e('index of all topics', 'leadsforward-core'); ?></li>
+					<li><code>docs/01_SYSTEM_OVERVIEW.md</code> — <?php esc_html_e('orchestrator phases, template defaults, storage keys', 'leadsforward-core'); ?></li>
+					<li><code>docs/04_SECTION_SCHEMA.md</code> — <?php esc_html_e('section types and fields', 'leadsforward-core'); ?></li>
+					<li><code>docs/05_THEME_INTEGRATION.md</code> — <?php esc_html_e('WordPress apply path, identity guard, SEO', 'leadsforward-core'); ?></li>
+					<li><code>docs/06_AI_PROMPT_ENGINE.md</code> — <?php esc_html_e('orchestrator LLM blueprint rules', 'leadsforward-core'); ?></li>
+					<li><code>docs/08_FRONTEND_EDITOR.md</code> — <?php esc_html_e('inline editing and assistant UI', 'leadsforward-core'); ?></li>
+					<li><code>docs/09_PAGE_BUILDER_MAPS_NAV_AI.md</code> — <?php esc_html_e('lf_pb_config, map iframe, header menu checkbox, AI page_builder JSON', 'leadsforward-core'); ?></li>
+				</ul>
 			</section>
 
 			<section id="bulk-backup" class="lf-docs__section">
@@ -177,6 +211,9 @@ function lf_docs_render_playbook_sections(): void {
 					<li><?php esc_html_e('Pre-launch never updates: run “Run pre-launch check” on the Site health tab; confirm you are not blocked by a security plugin on admin-post.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('GTM always warns: add the snippet to SEO header scripts or ignore if you load tags exclusively elsewhere (plugin).', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Scores stuck at zero: update the page once so the SEO scorer runs on save.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('AI created a service but the main editor is empty: open Page Builder—the copy is in sections. Retry the prompt asking for page_builder section fields if a section stayed default.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Map missing on contact/home: paste the iframe under Global Settings → Business entity; confirm the Map + NAP section is enabled on that template.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('“Add to header menu” missing or service link lands top-level: assign a menu to Header Menu; you need edit theme options; if already in menu the checkbox hides. For Services/Areas submenus, the parent items need the wizard menu classes—fix under Appearance → Menus.', 'leadsforward-core'); ?></li>
 				</ul>
 			</section>
 	<?php

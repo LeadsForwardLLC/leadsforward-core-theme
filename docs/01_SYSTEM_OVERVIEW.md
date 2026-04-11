@@ -43,7 +43,7 @@ Expected behavior:
 - **Services overview (our-services):** hero → service_intro → content_image → faq_accordion → cta.
 - **Service areas overview:** hero → service_areas → faq_accordion → cta.
 - **Service pages:** hero → trust_bar → service_details → benefits → process → faq_accordion → cta.
-- **Service area pages:** hero → content_image → services_offered_here → nearby_areas → faq_accordion → cta.
+- **Service area pages:** hero → trust_bar → content_image → benefits → content_image → image_content → process → related_links → nearby_areas → faq_accordion → cta.
 - **Core pages:** about-us (hero → content_image → benefits → cta); contact (hero → map_nap → cta); reviews (hero → trust_reviews → cta); blog (hero → blog_posts → cta); sitemap (hero → sitemap_links); privacy/terms/thank-you (hero → content).
 
 ## Storage
@@ -53,3 +53,7 @@ Expected behavior:
 - Frontend text overrides: `__dom_override`
 - Frontend image overrides: `__img_override`
 - Frontend section structure overrides: section order/layout/enabled/record entries
+- Per-post Page Builder: post meta `lf_pb_config` (`order` + `sections`) for services, service areas, pages, posts, and projects — see `09_PAGE_BUILDER_MAPS_NAV_AI.md`
+
+## Related docs
+- **Operators:** LeadsForward → Theme Docs (playbook in wp-admin) and `09_PAGE_BUILDER_MAPS_NAV_AI.md` for maps, menus, and AI draft creation into sections.
