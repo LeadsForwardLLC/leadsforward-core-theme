@@ -136,6 +136,29 @@ function lf_ai_is_inline_dom_html_string( string $value ): bool {
 /**
  * Sanitize one benefits_items line (optional "title || body" with link-safe HTML).
  */
+/**
+ * Strip decorative bullets / ordinals models often prepend to benefit titles.
+ */
+function lf_ai_strip_benefit_title_markers( string $text ): string {
+	$text = trim( $text );
+	if ( $text === '' ) {
+		return '';
+	}
+	$text = preg_replace( '/^\s*[•·▪\*\-]+\s+/u', '', $text );
+	$text = preg_replace( '/>\s*[•·▪\*]+\s+/u', '>', $text );
+	$plain = wp_strip_all_tags( $text );
+	$plain = preg_replace( '/^[\s\-\*•·▪▸►]+/u', '', $plain );
+	$plain = preg_replace( '/^\d+[\.\)]\s*/', '', (string) $plain );
+	$plain = trim( (string) $plain );
+	if ( $plain === '' ) {
+		return $text;
+	}
+	if ( $text === wp_strip_all_tags( $text ) ) {
+		return $plain;
+	}
+	return trim( $text );
+}
+
 function lf_ai_sanitize_benefits_items_line( string $line ): string {
 	$line = trim( $line );
 	if ( $line === '' ) {
@@ -145,9 +168,11 @@ function lf_ai_sanitize_benefits_items_line( string $line ): string {
 		$parts = explode( ' || ', $line, 2 );
 		$t     = lf_ai_sanitize_inline_dom_html( (string) ( $parts[0] ?? '' ) );
 		$b     = lf_ai_sanitize_inline_dom_html( (string) ( $parts[1] ?? '' ) );
+		$t     = lf_ai_strip_benefit_title_markers( $t );
 		return $b !== '' ? $t . ' || ' . $b : $t;
 	}
-	return lf_ai_sanitize_inline_dom_html( $line );
+	$out = lf_ai_sanitize_inline_dom_html( $line );
+	return lf_ai_strip_benefit_title_markers( $out );
 }
 
 /**

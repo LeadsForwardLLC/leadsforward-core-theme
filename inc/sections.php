@@ -1075,6 +1075,18 @@ function lf_sections_parse_lines($value): array {
 }
 
 /**
+ * Remove leading "1." / "2)" style prefixes when steps also show visual numbers (AI or pasted lists).
+ */
+function lf_sections_strip_inline_process_step_prefix(string $title): string {
+	$t = trim($title);
+	if ($t === '') {
+		return $t;
+	}
+	$plain = preg_replace('/^\d{1,2}\s*[\.\)]\s*/', '', $t);
+	return trim((string) $plain);
+}
+
+/**
  * Resolve process section steps:
  * - If any published lf_process_step posts resolve from process_selected_ids, those drive the section.
  * - Otherwise, if process_selected_ids is empty, try taxonomy auto-pick (lf_process_group) for service pages/homepage.
@@ -1210,6 +1222,7 @@ function lf_sections_process_steps_for_render(array $settings, ?\WP_Post $post =
 			$title = (string) ($parts[0] ?? $line);
 			$body = (string) ($parts[1] ?? '');
 		}
+		$title = lf_sections_strip_inline_process_step_prefix($title);
 		$steps[] = [
 			'id' => 0,
 			'title' => $title,
@@ -1674,6 +1687,9 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 		}
 		$title_text = trim($title_text);
 		$body_text = trim($body_text);
+		if (function_exists('lf_ai_strip_benefit_title_markers')) {
+			$title_text = lf_ai_strip_benefit_title_markers($title_text);
+		}
 		$trim_unless_html = static function ( string $text, int $limit ): string {
 			$text = trim( $text );
 			if ( $text === '' ) {
