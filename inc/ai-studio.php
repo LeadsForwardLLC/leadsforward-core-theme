@@ -3732,6 +3732,13 @@ function lf_ai_studio_manifest_to_setup_data(array $manifest): array {
 			'slug' => (string) ($item['slug'] ?? ''),
 		];
 	}
+	$domain_email_setup = trim((string) ($business['domain_email'] ?? ''));
+	$business_email_setup = ($domain_email_setup !== '' && is_email($domain_email_setup))
+		? $domain_email_setup
+		: (string) ($business['email'] ?? '');
+	if ($business_email_setup !== '' && !is_email($business_email_setup)) {
+		$business_email_setup = '';
+	}
 	return [
 		'niche_slug' => $niche_slug,
 		'business_name' => (string) ($business['name'] ?? ''),
@@ -3740,7 +3747,7 @@ function lf_ai_studio_manifest_to_setup_data(array $manifest): array {
 		'business_phone_tracking' => '',
 		'business_phone_display' => 'primary',
 		'business_phone' => (string) ($business['phone'] ?? ''),
-		'business_email' => (string) ($business['email'] ?? ''),
+		'business_email' => $business_email_setup,
 		'business_address' => '',
 		'business_address_street' => (string) ($address['street'] ?? ''),
 		'business_address_city' => (string) ($address['city'] ?? ''),
@@ -3808,7 +3815,13 @@ function lf_ai_studio_apply_manifest_to_site_options(array $manifest, ?array $se
 	$biz_name = (string) ($business['name'] ?? '');
 	$biz_legal = (string) ($business['legal_name'] ?? '');
 	$biz_phone = (string) ($business['phone'] ?? '');
-	$biz_email = (string) ($business['email'] ?? '');
+	$domain_email = trim((string) ($business['domain_email'] ?? ''));
+	$biz_email = $domain_email !== '' && is_email($domain_email)
+		? $domain_email
+		: (string) ($business['email'] ?? '');
+	if ($biz_email !== '' && !is_email($biz_email)) {
+		$biz_email = '';
+	}
 	$address_street = (string) ($address['street'] ?? '');
 	$address_city = (string) ($address['city'] ?? '');
 	$address_state = (string) ($address['state'] ?? '');

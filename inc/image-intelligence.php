@@ -181,6 +181,34 @@ function lf_image_intelligence_normalize_filename(string $filename): string {
 }
 
 /**
+ * Turn workflow-suggested filenames into a safe attachment basename; reject junk like "...-jpg" from LLM output.
+ */
+function lf_image_intelligence_sanitize_recommended_attachment_basename(string $raw): string {
+	$raw = trim($raw);
+	if ($raw === '') {
+		return '';
+	}
+	$base = $raw;
+	if (preg_match('/\.[a-z0-9]{2,5}$/i', $raw) === 1) {
+		$base = (string) preg_replace('/\.[a-z0-9]{2,5}$/i', '', $raw);
+	}
+	$slug = sanitize_title($base);
+	if ($slug === '') {
+		return '';
+	}
+	$bad_tokens = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'avif'];
+	foreach ($bad_tokens as $tok) {
+		if (preg_match('/(^|-)' . preg_quote($tok, '/') . '(-|$)/', $slug) === 1) {
+			return '';
+		}
+	}
+	if (strlen($slug) < 4) {
+		return '';
+	}
+	return $slug;
+}
+
+/**
  * Whether an incoming filename already looks intentional for SEO (do not replace with a generic niche slug).
  *
  * @param array<string, string> $context primary_keyword, city, niche, business_name, service_name, etc.
@@ -509,7 +537,9 @@ function lf_image_intelligence_upload_prefilter(array $file): array {
 	if (strpos($mime, 'image/') !== 0) {
 		return $file;
 	}
-	$file['name'] = lf_image_intelligence_resolve_upload_filename($name, null);
+	// Keep operator / workflow filenames: do not rewrite uploads to niche-keyword slugs here.
+	// Website Manifester still runs contextual naming in lf_ai_studio_process_images_upload when needed.
+	$file['name'] = sanitize_file_name($name);
 	return $file;
 }
 
@@ -1487,7 +1517,7 @@ function lf_image_intelligence_apply_vision_annotations(array $annotations): arr
 		$alt_clean = lf_image_intelligence_clean_media_text($alt_raw);
 		$title_clean = lf_image_intelligence_clean_media_text($title_raw);
 		$caption_clean = lf_image_intelligence_clean_media_text($caption_raw);
-		$recommended_filename_clean = sanitize_title($recommended_filename_raw);
+		$recommended_filename_clean = lf_image_intelligence_sanitize_recommended_attachment_basename($recommended_filename_raw);
 		if ($caption_clean === '' && $description_clean !== '') {
 			$caption_clean = $description_clean;
 		}
@@ -1507,7 +1537,8 @@ function lf_image_intelligence_apply_vision_annotations(array $annotations): arr
 			'recommended_filename' => $recommended_filename_clean,
 		];
 		$stored[$attachment_id] = $entry;
-		if ($entry['recommended_filename'] !== '') {
+		$allow_vision_rename = (bool) apply_filters('lf_image_intelligence_rename_from_vision_annotations', false);
+		if ($allow_vision_rename && $entry['recommended_filename'] !== '') {
 			lf_image_intelligence_rename_attachment_file($attachment_id, $entry['recommended_filename']);
 		}
 		if ($entry['alt_text'] !== '') {

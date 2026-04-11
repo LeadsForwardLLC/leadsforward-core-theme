@@ -634,19 +634,16 @@ function lf_ops_handle_global_settings_save(): void {
 		$val = isset($_POST[$key]) ? sanitize_hex_color(wp_unslash($_POST[$key])) : '';
 		update_option('options_' . $key, $val ?: '');
 	}
+	// ACF options must use the literal "option" post_id; invalid IDs (e.g. "lf-global") trigger capability errors on save.
 	if (function_exists('update_field')) {
-		$global_post_ids = ['lf-global', 'options_lf_global', 'options_lf-global', 'option', 'options'];
-		foreach ($global_post_ids as $post_id) {
-			update_field('lf_global_logo', $logo_id, $post_id);
-			update_field('lf_header_cta_label', isset($_POST['lf_header_cta_label']) ? sanitize_text_field(wp_unslash($_POST['lf_header_cta_label'])) : '', $post_id);
-			update_field('lf_header_cta_url', isset($_POST['lf_header_cta_url']) ? esc_url_raw(wp_unslash($_POST['lf_header_cta_url'])) : '', $post_id);
-		}
+		$acf_option = 'option';
+		update_field('lf_global_logo', $logo_id, $acf_option);
+		update_field('lf_header_cta_label', isset($_POST['lf_header_cta_label']) ? sanitize_text_field(wp_unslash($_POST['lf_header_cta_label'])) : '', $acf_option);
+		update_field('lf_header_cta_url', isset($_POST['lf_header_cta_url']) ? esc_url_raw(wp_unslash($_POST['lf_header_cta_url'])) : '', $acf_option);
 		foreach ($keys as $key) {
 			$val = isset($_POST[$key]) ? sanitize_hex_color(wp_unslash($_POST[$key])) : '';
 			if ($val) {
-				foreach (['lf-branding', 'options_lf_branding', 'options_lf-branding', 'option', 'options'] as $post_id) {
-					update_field($key, $val, $post_id);
-				}
+				update_field($key, $val, $acf_option);
 			}
 		}
 	}

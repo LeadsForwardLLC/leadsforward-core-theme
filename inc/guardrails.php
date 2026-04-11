@@ -154,11 +154,10 @@ function lf_update_cta_option_value(string $key, string $value): void {
 }
 
 function lf_update_global_option_value(string $key, string $value): void {
-	$post_ids = ['lf-global', 'options_lf_global', 'options_lf-global', 'option', 'options'];
+	// Field group location uses slug lf-global, but Global Settings is a custom admin page (no acf_add_options_sub_page).
+	// update_field with invalid/mismatched post_id can trigger ACF capability failures; options fields persist on "option".
 	if (function_exists('update_field')) {
-		foreach ($post_ids as $post_id) {
-			update_field($key, $value, $post_id);
-		}
+		update_field($key, $value, 'option');
 	}
 	update_option('options_' . $key, $value);
 }
