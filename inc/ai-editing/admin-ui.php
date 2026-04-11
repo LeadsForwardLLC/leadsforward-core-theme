@@ -2718,7 +2718,7 @@ function lf_ai_ajax_update_section_cta(): void {
 	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
 
 	if ($cta_target === 'benefits') {
-		if (!in_array($cta_action, ['quote', 'link'], true)) {
+		if (!in_array($cta_action, ['quote', 'call', 'link'], true)) {
 			$cta_action = 'quote';
 		}
 		if ($cta_action !== 'link') {
@@ -2727,6 +2727,9 @@ function lf_ai_ajax_update_section_cta(): void {
 		$text = trim($text);
 		if ($text !== '' && $cta_action === 'link' && $url === '') {
 			wp_send_json_error(['message' => __('Link URL is required when action is Link.', 'leadsforward-core')]);
+		}
+		if ($text !== '' && $cta_action === 'call' && (!function_exists('lf_get_cta_phone') || lf_get_cta_phone() === '')) {
+			wp_send_json_error(['message' => __('Add a phone number in Business Info before using Call.', 'leadsforward-core')]);
 		}
 		if ($context_type === 'homepage' || $context_id_use === 'homepage') {
 			if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config') || !function_exists('lf_homepage_base_section_type')) {
@@ -2810,6 +2813,9 @@ function lf_ai_ajax_update_section_cta(): void {
 	$text = trim($text);
 	if ($text === '') {
 		wp_send_json_error(['message' => __('Button text cannot be empty.', 'leadsforward-core')]);
+	}
+	if ($cta_action === 'call' && (!function_exists('lf_get_cta_phone') || lf_get_cta_phone() === '')) {
+		wp_send_json_error(['message' => __('Add a phone number in Business Info before using Call.', 'leadsforward-core')]);
 	}
 	$override_key = $slot === 'secondary' ? 'cta_secondary_override' : 'cta_primary_override';
 	$action_key = $slot === 'secondary' ? 'cta_secondary_action' : 'cta_primary_action';

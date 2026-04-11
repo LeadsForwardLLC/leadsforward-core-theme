@@ -418,6 +418,7 @@ function lf_sections_registry(): array {
 				['key' => 'benefits_cta_text', 'label' => __('CTA button text (optional)', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'benefits_cta_action', 'label' => __('CTA button action', 'leadsforward-core'), 'type' => 'select', 'default' => 'quote', 'options' => [
 					'quote' => __('Open Quote Builder', 'leadsforward-core'),
+					'call'  => __('Call (site phone)', 'leadsforward-core'),
 					'link'  => __('Link', 'leadsforward-core'),
 				]],
 				['key' => 'benefits_cta_url', 'label' => __('CTA button URL (if action=Link)', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
@@ -1781,7 +1782,7 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	$trust_block = trim((string) ($settings['benefits_trust_block'] ?? ''));
 	$cta_text = trim((string) ($settings['benefits_cta_text'] ?? ''));
 	$cta_action = (string) ($settings['benefits_cta_action'] ?? 'quote');
-	if (!in_array($cta_action, ['quote', 'link'], true)) {
+	if (!in_array($cta_action, ['quote', 'call', 'link'], true)) {
 		$cta_action = 'quote';
 	}
 	$cta_url = trim((string) ($settings['benefits_cta_url'] ?? ''));
@@ -1794,6 +1795,10 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 		$grid_cols = '3';
 	}
 	if ($cta_action === 'link' && $cta_url === '') {
+		$cta_action = 'quote';
+	}
+	$cta_phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
+	if ($cta_action === 'call' && $cta_phone === '') {
 		$cta_action = 'quote';
 	}
 	$icon_data = function_exists('lf_section_icon_data') ? lf_section_icon_data($settings, 'benefits') : ['enabled' => false];
@@ -1915,6 +1920,8 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 			<div class="lf-benefits__actions lf-benefits__actions--align-<?php echo esc_attr($cta_align); ?>">
 				<?php if ($cta_action === 'link' && $cta_url !== '') : ?>
 					<a class="lf-btn lf-btn--primary" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($cta_text); ?></a>
+				<?php elseif ($cta_action === 'call' && $cta_phone !== '') : ?>
+					<a class="lf-btn lf-btn--primary" href="<?php echo esc_url('tel:' . $cta_phone); ?>"><?php echo esc_html($cta_text); ?></a>
 				<?php else : ?>
 					<button type="button" class="lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="benefits"><?php echo esc_html($cta_text); ?></button>
 				<?php endif; ?>
