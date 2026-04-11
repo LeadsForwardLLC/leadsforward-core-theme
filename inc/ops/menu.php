@@ -930,6 +930,10 @@ function lf_ops_render_global_settings_page(): void {
 			.lf-settings-toggle:hover { background: #e2e8f0; }
 			.lf-settings-fields--collapsed { display: none; }
 			.lf-settings-panel--collapsed .lf-settings-toggle { background: #0f172a; color: #fff; border-color: #0f172a; }
+			.lf-global-manifest-advanced > summary { list-style: none; }
+			.lf-global-manifest-advanced > summary::-webkit-details-marker { display: none; }
+			.lf-global-manifest-advanced > summary::before { content: '▸ '; display: inline-block; transition: transform 0.15s ease; }
+			.lf-global-manifest-advanced[open] > summary::before { transform: rotate(90deg); }
 		</style>
 		<form method="post" data-maps-key="<?php echo esc_attr($can_sensitive ? $maps_api_key : ''); ?>">
 			<?php wp_nonce_field('lf_global_settings', 'lf_global_settings_nonce'); ?>
@@ -949,6 +953,19 @@ function lf_ops_render_global_settings_page(): void {
 								<td><label><input type="checkbox" name="lf_ai_studio_enabled" value="1" <?php checked($manifester_enabled); ?> /> <?php esc_html_e('Allow Manifester runs', 'leadsforward-core'); ?></label></td>
 							</tr>
 							<tr>
+								<th scope="row"><label for="lf_ai_studio_webhook_global"><?php esc_html_e('Orchestrator Webhook URL', 'leadsforward-core'); ?></label></th>
+								<td><input type="url" class="large-text" name="lf_ai_studio_webhook" id="lf_ai_studio_webhook_global" value="<?php echo esc_attr($can_sensitive ? $manifester_webhook : ''); ?>" placeholder="<?php echo esc_attr($can_sensitive ? 'https://n8n.example.com/webhook/...' : __('Admins only', 'leadsforward-core')); ?>" <?php disabled(!$can_sensitive); ?> required /></td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_studio_secret_global"><?php esc_html_e('Orchestrator Shared Secret', 'leadsforward-core'); ?></label></th>
+								<td><input type="text" class="large-text" name="lf_ai_studio_secret" id="lf_ai_studio_secret_global" value="<?php echo esc_attr($can_sensitive ? $manifester_secret : ''); ?>" placeholder="<?php echo esc_attr($can_sensitive ? '' : __('Admins only', 'leadsforward-core')); ?>" <?php disabled(!$can_sensitive); ?> required /></td>
+							</tr>
+					</table>
+							<details class="lf-global-manifest-advanced" style="margin:1rem 0;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
+								<summary style="cursor:pointer;font-weight:600;"><?php esc_html_e('Advanced: orchestrator auth, automatic repairs & autonomy', 'leadsforward-core'); ?></summary>
+								<p class="description" style="margin-top:10px;"><?php esc_html_e('For n8n engineers and debugging. Typical sites leave repair loops off, autonomy off, auth on Compatibility, and HMAC tolerance at 300 seconds.', 'leadsforward-core'); ?></p>
+								<table class="form-table" role="presentation">
+							<tr>
 								<th scope="row"><?php esc_html_e('Auto repair after apply', 'leadsforward-core'); ?></th>
 								<td>
 									<label><input type="checkbox" name="lf_ai_studio_auto_requeue" value="1" <?php checked($manifester_auto_requeue); ?> /> <?php esc_html_e('If the post-apply content audit finds issues, automatically queue a second n8n repair run', 'leadsforward-core'); ?></label>
@@ -961,14 +978,6 @@ function lf_ops_render_global_settings_page(): void {
 									<label><input type="checkbox" name="lf_ai_studio_repair_interior_only" value="1" <?php checked($manifester_repair_interior_only); ?> /> <?php esc_html_e('Repair without apply_scope: when the callback mixes homepage with posts/FAQs/service_meta, skip the homepage row. If the callback is homepage-only, homepage still applies.', 'leadsforward-core'); ?></label>
 									<p class="description"><?php esc_html_e('Prevents repair runs from rewriting the whole front page when the payload still includes options/homepage. Turn off if a repair must update homepage fields; or send apply_scope "homepage" or "full" in the JSON for that callback.', 'leadsforward-core'); ?></p>
 								</td>
-							</tr>
-							<tr>
-								<th scope="row"><label for="lf_ai_studio_webhook_global"><?php esc_html_e('Orchestrator Webhook URL', 'leadsforward-core'); ?></label></th>
-								<td><input type="url" class="large-text" name="lf_ai_studio_webhook" id="lf_ai_studio_webhook_global" value="<?php echo esc_attr($can_sensitive ? $manifester_webhook : ''); ?>" placeholder="<?php echo esc_attr($can_sensitive ? 'https://n8n.example.com/webhook/...' : __('Admins only', 'leadsforward-core')); ?>" <?php disabled(!$can_sensitive); ?> required /></td>
-							</tr>
-							<tr>
-								<th scope="row"><label for="lf_ai_studio_secret_global"><?php esc_html_e('Orchestrator Shared Secret', 'leadsforward-core'); ?></label></th>
-								<td><input type="text" class="large-text" name="lf_ai_studio_secret" id="lf_ai_studio_secret_global" value="<?php echo esc_attr($can_sensitive ? $manifester_secret : ''); ?>" placeholder="<?php echo esc_attr($can_sensitive ? '' : __('Admins only', 'leadsforward-core')); ?>" <?php disabled(!$can_sensitive); ?> required /></td>
 							</tr>
 							<tr>
 								<th scope="row"><label for="lf_ai_auth_mode"><?php esc_html_e('Auth mode', 'leadsforward-core'); ?></label></th>
@@ -1040,6 +1049,9 @@ function lf_ops_render_global_settings_page(): void {
 								<th scope="row"><label for="lf_ai_autonomy_cooldown_seconds"><?php esc_html_e('Cooldown seconds', 'leadsforward-core'); ?></label></th>
 								<td><input type="number" min="60" max="86400" step="60" class="small-text" name="lf_ai_autonomy_cooldown_seconds" id="lf_ai_autonomy_cooldown_seconds" value="<?php echo esc_attr((string) $autonomy_cooldown); ?>" /></td>
 							</tr>
+								</table>
+							</details>
+							<table class="form-table" role="presentation">
 							<tr>
 								<th scope="row"><label for="lf_maps_api_key"><?php esc_html_e('Google Maps API key', 'leadsforward-core'); ?></label></th>
 								<td>
