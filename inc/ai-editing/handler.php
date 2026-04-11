@@ -204,6 +204,7 @@ function lf_ai_get_current_values(string $context_type, $context_id, array $fiel
 	$out = [];
 	if ($context_type === 'homepage') {
 		$homepage_row_id = sanitize_text_field($homepage_row_id);
+		$hero_field_keys = function_exists('lf_ai_homepage_hero_row_field_keys') ? lf_ai_homepage_hero_row_field_keys() : ['hero_headline', 'hero_subheadline', 'cta_primary_override'];
 		if ($homepage_row_id !== '' && function_exists('lf_get_homepage_section_config')) {
 			$config = lf_get_homepage_section_config();
 			$row = is_array($config[ $homepage_row_id ] ?? null) ? $config[ $homepage_row_id ] : null;
@@ -219,11 +220,19 @@ function lf_ai_get_current_values(string $context_type, $context_id, array $fiel
 						$resolved_primary_cta = (string) $cta['primary_text'];
 					}
 				}
+				$hero_row = lf_ai_get_homepage_hero_row();
+				$hero_resolved_cta = '';
+				if (function_exists('lf_resolve_cta') && is_array($hero_row)) {
+					$hcta = lf_resolve_cta(['homepage' => true, 'section' => $hero_row], $hero_row, []);
+					if (is_array($hcta) && isset($hcta['primary_text'])) {
+						$hero_resolved_cta = (string) $hcta['primary_text'];
+					}
+				}
 				foreach ($field_keys as $key) {
-					if (in_array($key, ['hero_headline', 'hero_subheadline', 'cta_primary_override'], true)) {
-						$value = (string) ($row[ $key ] ?? '');
-						if ($key === 'cta_primary_override' && $value === '' && $resolved_primary_cta !== '') {
-							$value = $resolved_primary_cta;
+					if (in_array($key, $hero_field_keys, true)) {
+						$value = is_array($hero_row) ? (string) ($hero_row[ $key ] ?? '') : '';
+						if ($key === 'cta_primary_override' && $value === '' && $hero_resolved_cta !== '') {
+							$value = $hero_resolved_cta;
 						}
 						$override = lf_ai_get_inline_dom_override_for_field($context_type, $context_id, (string) $key);
 						$out[ $key ] = $override !== '' ? $override : $value;
@@ -361,16 +370,41 @@ function lf_ai_apply_proposal(string $context_type, $context_id, array $proposed
 	}
 	$current = lf_ai_get_current_values($context_type, $context_id, array_keys($to_apply), $scoped_homepage_row);
 	if ($context_type === 'homepage') {
-		$hero_keys = ['hero_headline', 'hero_subheadline', 'cta_primary_override'];
+		$hero_keys = function_exists('lf_ai_homepage_hero_row_field_keys') ? lf_ai_homepage_hero_row_field_keys() : ['hero_headline', 'hero_subheadline', 'cta_primary_override'];
 		$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
 		if ($scoped_homepage_row !== '' && !is_array($config[ $scoped_homepage_row ] ?? null)) {
 			return ['success' => false, 'log_id' => ''];
 		}
 		$option_only_keys = ['lf_homepage_cta_primary', 'lf_homepage_cta_secondary'];
+		$hero_section_key = '';
+		if (is_array($config['hero'] ?? null)) {
+			$hero_section_key = 'hero';
+		} elseif (is_array($config)) {
+			foreach ($config as $sid => $row) {
+				if (!is_string($sid) || !is_array($row)) {
+					continue;
+				}
+				$base = $sid;
+				if (function_exists('lf_homepage_base_section_type')) {
+					$base = lf_homepage_base_section_type($sid);
+				}
+				$row_type = (string) ($row['section_type'] ?? $row['type'] ?? '');
+				if ($base === 'hero' || $row_type === 'hero') {
+					$hero_section_key = $sid;
+					break;
+				}
+			}
+		}
 		if ($scoped_homepage_row !== '' && is_array($config[ $scoped_homepage_row ] ?? null)) {
 			foreach ($to_apply as $key => $value) {
 				if (in_array($key, $option_only_keys, true) && function_exists('update_field')) {
 					update_field($key, $value, 'option');
+					continue;
+				}
+				if (in_array($key, $hero_keys, true)) {
+					if ($hero_section_key !== '' && is_array($config[ $hero_section_key ] ?? null)) {
+						$config[ $hero_section_key ][ $key ] = $value;
+					}
 					continue;
 				}
 				$config[ $scoped_homepage_row ][ $key ] = $value;
@@ -379,25 +413,6 @@ function lf_ai_apply_proposal(string $context_type, $context_id, array $proposed
 				update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 			}
 		} else {
-			$hero_section_key = '';
-			if (is_array($config['hero'] ?? null)) {
-				$hero_section_key = 'hero';
-			} elseif (is_array($config)) {
-				foreach ($config as $sid => $row) {
-					if (!is_string($sid) || !is_array($row)) {
-						continue;
-					}
-					$base = $sid;
-					if (function_exists('lf_homepage_base_section_type')) {
-						$base = lf_homepage_base_section_type($sid);
-					}
-					$row_type = (string) ($row['section_type'] ?? $row['type'] ?? '');
-					if ($base === 'hero' || $row_type === 'hero') {
-						$hero_section_key = $sid;
-						break;
-					}
-				}
-			}
 			if ($hero_section_key !== '' && !empty($config[ $hero_section_key ]) && is_array($config[ $hero_section_key ])) {
 				foreach ($hero_keys as $hk) {
 					if (isset($to_apply[ $hk ])) {

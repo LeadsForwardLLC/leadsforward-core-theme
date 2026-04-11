@@ -271,8 +271,30 @@ function lf_ai_assistant_requested_edit_keys(string $prompt, $context_id): array
 		$add_if_allowed('hero_subheadline');
 	}
 
-	// "headline" should mean hero_headline unless prompt indicates supporting/subheadline copy.
-	if (strpos($prompt_lower, 'headline') !== false && !$has_subheadline_signal) {
+	$hero_headline_phrases = [
+		'hero headline',
+		'hero title',
+		'hero heading',
+		'main headline',
+		'main heading',
+		'top headline',
+		'above the fold',
+		'first section headline',
+		'homepage headline',
+		'home page headline',
+	];
+	foreach ($hero_headline_phrases as $phrase) {
+		if (!$has_subheadline_signal && strpos($prompt_lower, $phrase) !== false) {
+			$add_if_allowed('hero_headline');
+			break;
+		}
+	}
+
+	// "headline" / "h1" (homepage) should mean hero_headline unless prompt indicates supporting/subheadline copy.
+	if (!$has_subheadline_signal && strpos($prompt_lower, 'headline') !== false) {
+		$add_if_allowed('hero_headline');
+	}
+	if (!$has_subheadline_signal && preg_match('/\bthe h1\b|\bmain h1\b|\bhero h1\b/', $prompt_lower) === 1) {
 		$add_if_allowed('hero_headline');
 	}
 	if (strpos($prompt_lower, 'primary cta') !== false || strpos($prompt_lower, 'cta primary') !== false) {
@@ -1107,6 +1129,7 @@ function lf_ai_ajax_generate(): void {
 		$homepage_section_row_id = '';
 		$registry_section_type_for_labels = '';
 		$scoped_editable = null;
+		$requested_keys = lf_ai_assistant_requested_edit_keys($prompt, $context_id_use);
 		if ($context_type_use === 'homepage' && $selected_section_id !== '') {
 			$homepage_section_row_id = $selected_section_id;
 			$registry_section_type_for_labels = lf_ai_resolve_registry_section_type($context_type_use, $context_id_use, $selected_section_id, $selected_section_type);
@@ -1117,6 +1140,13 @@ function lf_ai_ajax_generate(): void {
 					$copy_keys[] = $sk;
 				}
 			}
+			$hero_row_keys = function_exists('lf_ai_homepage_hero_row_field_keys') ? lf_ai_homepage_hero_row_field_keys() : [];
+			foreach ($requested_keys as $rk) {
+				if (in_array($rk, $hero_row_keys, true) && lf_is_field_ai_editable($rk) && !in_array($rk, $copy_keys, true)) {
+					$copy_keys[] = $rk;
+				}
+			}
+			$copy_keys = array_values(array_unique($copy_keys));
 			if (empty($copy_keys)) {
 				wp_send_json_error(['message' => __('No editable fields were found for the selected section target.', 'leadsforward-core')]);
 			}
@@ -1126,12 +1156,18 @@ function lf_ai_ajax_generate(): void {
 					$scoped_editable[ $ck ] = $ck;
 				}
 			}
+			$hero_merge_keys = array_values(array_intersect($copy_keys, $hero_row_keys));
+			if ($hero_merge_keys !== []) {
+				$hero_label_map = lf_ai_editable_labels_for_registry_keys('hero', $hero_merge_keys);
+				foreach ($hero_label_map as $hk => $lab) {
+					$scoped_editable[ $hk ] = $lab;
+				}
+			}
 		}
 		$result = lf_ai_generate_proposal($context_type_use, $context_id_use, $prompt, $homepage_section_row_id, $scoped_editable);
 		if (!$result['success']) {
 			wp_send_json_error(['message' => $result['error']]);
 		}
-		$requested_keys = lf_ai_assistant_requested_edit_keys($prompt, $context_id_use);
 		if (!empty($requested_keys)) {
 			$result['proposed'] = array_intersect_key($result['proposed'], array_flip($requested_keys));
 			if (empty($result['proposed'])) {
@@ -1140,6 +1176,13 @@ function lf_ai_ajax_generate(): void {
 		}
 		$section_keys = lf_ai_assistant_section_allowed_keys($context_type_use, $context_id_use, $selected_section_id, $selected_section_type);
 		if (!empty($section_keys)) {
+			$hero_row_keys = function_exists('lf_ai_homepage_hero_row_field_keys') ? lf_ai_homepage_hero_row_field_keys() : [];
+			foreach ($requested_keys as $rk) {
+				if (in_array($rk, $hero_row_keys, true)) {
+					$section_keys[] = $rk;
+				}
+			}
+			$section_keys = array_values(array_unique($section_keys));
 			$result['proposed'] = array_intersect_key($result['proposed'], array_flip($section_keys));
 			if (empty($result['proposed'])) {
 				wp_send_json_error(['message' => __('No editable fields were found for the selected section target.', 'leadsforward-core')]);
