@@ -900,6 +900,7 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-rail.is-collapsed .lf-ai-rail__body { display:none; }
 		.lf-ai-rail__list { display:flex; flex-direction:column; gap:8px; margin:0; padding:0; }
 		.lf-ai-rail__list-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#94a3b8; margin:4px 2px 0; }
+		.lf-ai-rail__empty { font-size:11px; line-height:1.45; color:#64748b; padding:8px 6px; margin:0; border:1px dashed #cbd5e1; border-radius:10px; background:#f8fafc; }
 		.lf-ai-rail__item { border:1px solid #e2e8f0; border-radius:10px; padding:9px 10px; font-size:12px; cursor:pointer; color:#0f172a; background:#fafafa; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; transition:border-color .15s ease, box-shadow .15s ease; }
 		.lf-ai-rail__item:hover { border-color:#c4b5fd; background:#fff; box-shadow:0 2px 10px rgba(99,102,241,.1); }
 		.lf-ai-rail__item.is-active { border-color:#8348f9; background:#f5f0ff; box-shadow:0 0 0 2px rgba(131,72,249,.12); }
@@ -3271,12 +3272,8 @@ function lf_ai_assistant_widget_js(): string {
 				return;
 			}
 			var wraps = collectSectionWrappers();
-			if (!wraps.length) {
-				if (sectionRailEl && sectionRailEl.parentNode) {
-					sectionRailEl.parentNode.removeChild(sectionRailEl);
-				}
-				sectionRailEl = null;
-				return;
+			if (selectedSectionWrap && wraps.indexOf(selectedSectionWrap) === -1) {
+				selectedSectionWrap = null;
 			}
 			var rail = ensureSectionRail();
 			var list = rail.querySelector("[data-lf-ai-rail-list]");
@@ -3307,6 +3304,13 @@ function lf_ai_assistant_widget_js(): string {
 				return row;
 			}
 			list.innerHTML = "";
+			if (!wraps.length) {
+				var emptyHint = document.createElement("p");
+				emptyHint.className = "lf-ai-rail__empty";
+				emptyHint.setAttribute("role", "status");
+				emptyHint.textContent = "No section wrappers found on this page yet. Use + to add from the library, or open a Page Builder template URL if this view has no data-lf-section-wrap output.";
+				list.appendChild(emptyHint);
+			}
 			wraps.forEach(function(wrap){
 				var row = document.createElement("div");
 				var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
