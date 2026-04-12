@@ -2866,9 +2866,112 @@ function lf_ai_ajax_update_section_cta(): void {
 		]);
 	}
 
+	if ($cta_target === 'pricing') {
+		if (!in_array($cta_action, ['quote', 'call', 'link'], true)) {
+			$cta_action = 'quote';
+		}
+		if ($cta_action !== 'link') {
+			$url = '';
+		}
+		$text = trim($text);
+		if ($text === '') {
+			wp_send_json_error(['message' => __('Button text cannot be empty.', 'leadsforward-core')]);
+		}
+		if ($cta_action === 'link' && $url === '') {
+			wp_send_json_error(['message' => __('Link URL is required when action is Link.', 'leadsforward-core')]);
+		}
+		if ($cta_action === 'call' && (!function_exists('lf_get_cta_phone') || lf_get_cta_phone() === '')) {
+			wp_send_json_error(['message' => __('Add a phone number in Business Info before using Call.', 'leadsforward-core')]);
+		}
+		$pricing_style_raw = isset($_POST['button_style']) ? sanitize_key(wp_unslash((string) $_POST['button_style'])) : '';
+		$pricing_tone_raw = isset($_POST['button_tone']) ? sanitize_key(wp_unslash((string) $_POST['button_tone'])) : '';
+		if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+			if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config') || !function_exists('lf_homepage_base_section_type')) {
+				wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
+			}
+			$config = lf_get_homepage_section_config();
+			$resolved_section_id = lf_ai_homepage_resolve_section_id($section_id);
+			$old_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
+			if (empty($old_row)) {
+				wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+			}
+			if (lf_homepage_base_section_type((string) $resolved_section_id) !== 'pricing') {
+				wp_send_json_error(['message' => __('This control applies to pricing sections only.', 'leadsforward-core')]);
+			}
+			$config[$resolved_section_id]['pricing_cta_text'] = $text;
+			$config[$resolved_section_id]['pricing_cta_action'] = $cta_action;
+			$config[$resolved_section_id]['pricing_cta_url'] = $url;
+			if (function_exists('lf_sections_sanitize_button_style')) {
+				$config[$resolved_section_id]['pricing_cta_style'] = lf_sections_sanitize_button_style($pricing_style_raw);
+			}
+			if (function_exists('lf_sections_sanitize_button_tone')) {
+				$config[$resolved_section_id]['pricing_cta_tone'] = lf_sections_sanitize_button_tone($pricing_tone_raw);
+			}
+			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+			$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
+			$log_id = function_exists('lf_ai_log_action')
+				? lf_ai_log_action(
+					$context_type,
+					$context_id_use,
+					['__homepage_section_row::' . $resolved_section_id => $old_row],
+					['__homepage_section_row::' . $resolved_section_id => $new_row],
+					'Inline pricing CTA edit'
+				)
+				: '';
+			wp_send_json_success([
+				'message' => __('Button updated.', 'leadsforward-core'),
+				'reload' => true,
+				'log_id' => $log_id,
+			]);
+		}
+		$pid = (int) $context_id_use;
+		$post = get_post($pid);
+		if (!$post instanceof \WP_Post || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+			wp_send_json_error(['message' => __('Section settings are unavailable for this target.', 'leadsforward-core')]);
+		}
+		$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+		if ($pb_context === '') {
+			wp_send_json_error(['message' => __('This target does not support button editing.', 'leadsforward-core')]);
+		}
+		$config = lf_pb_get_post_config($pid, $pb_context);
+		$old_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+		if (empty($old_row) || (string) ($old_row['type'] ?? '') !== 'pricing') {
+			wp_send_json_error(['message' => __('This control applies to pricing sections only.', 'leadsforward-core')]);
+		}
+		$settings = is_array($old_row['settings'] ?? null) ? $old_row['settings'] : [];
+		$settings['pricing_cta_text'] = $text;
+		$settings['pricing_cta_action'] = $cta_action;
+		$settings['pricing_cta_url'] = $url;
+		if (function_exists('lf_sections_sanitize_button_style')) {
+			$settings['pricing_cta_style'] = lf_sections_sanitize_button_style($pricing_style_raw);
+		}
+		if (function_exists('lf_sections_sanitize_button_tone')) {
+			$settings['pricing_cta_tone'] = lf_sections_sanitize_button_tone($pricing_tone_raw);
+		}
+		$config['sections'][$section_id]['settings'] = $settings;
+		update_post_meta($pid, LF_PB_META_KEY, $config);
+		$new_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+		$log_id = function_exists('lf_ai_log_action')
+			? lf_ai_log_action(
+				$context_type,
+				$context_id_use,
+				['__section_record::' . $section_id => $old_row],
+				['__section_record::' . $section_id => $new_row],
+				'Inline pricing CTA edit'
+			)
+			: '';
+		wp_send_json_success([
+			'message' => __('Button updated.', 'leadsforward-core'),
+			'reload' => true,
+			'log_id' => $log_id,
+		]);
+	}
+
 	$slot = $slot === 'secondary' ? 'secondary' : 'primary';
-	$button_style_post = isset($_POST['button_style']) ? sanitize_key(wp_unslash((string) $_POST['button_style'])) : '';
-	$button_tone_post = isset($_POST['button_tone']) ? sanitize_key(wp_unslash((string) $_POST['button_tone'])) : '';
+	$button_style_raw = isset($_POST['button_style']) ? sanitize_key(wp_unslash((string) $_POST['button_style'])) : '';
+	$button_tone_raw = isset($_POST['button_tone']) ? sanitize_key(wp_unslash((string) $_POST['button_tone'])) : '';
+	$button_style_eff = function_exists('lf_sections_sanitize_button_style') ? lf_sections_sanitize_button_style($button_style_raw) : 'solid';
+	$button_tone_eff = function_exists('lf_sections_sanitize_button_tone') ? lf_sections_sanitize_button_tone($button_tone_raw) : 'primary';
 	if (!in_array($cta_action, ['quote', 'call', 'link'], true)) {
 		$cta_action = 'quote';
 	}
@@ -2901,19 +3004,25 @@ function lf_ai_ajax_update_section_cta(): void {
 		$hp_base = function_exists('lf_homepage_base_section_type') ? lf_homepage_base_section_type((string) $resolved_section_id) : '';
 		$hp_is_hero = $hp_base === 'hero';
 		$hp_is_media = function_exists('lf_sections_row_uses_media_content_layout') && lf_sections_row_uses_media_content_layout((string) $resolved_section_id);
-		if ($hp_is_hero && isset($_POST['button_style']) && function_exists('lf_sections_sanitize_button_style')) {
+		$hp_is_cta = $hp_base === 'cta';
+		if ($hp_is_hero) {
 			$sk = $slot === 'secondary' ? 'hero_cta_secondary_style' : 'hero_cta_primary_style';
-			$config[ $resolved_section_id ][ $sk ] = lf_sections_sanitize_button_style($button_style_post);
-		}
-		if ($hp_is_hero && isset($_POST['button_tone']) && function_exists('lf_sections_sanitize_button_tone')) {
 			$tk = $slot === 'secondary' ? 'hero_cta_secondary_tone' : 'hero_cta_primary_tone';
-			$config[ $resolved_section_id ][ $tk ] = lf_sections_sanitize_button_tone($button_tone_post);
+			$config[ $resolved_section_id ][ $sk ] = $button_style_eff;
+			$config[ $resolved_section_id ][ $tk ] = $button_tone_eff;
 		}
-		if ($hp_is_media && $slot === 'primary' && isset($_POST['button_style']) && function_exists('lf_sections_sanitize_button_style')) {
-			$config[ $resolved_section_id ]['section_cta_style'] = lf_sections_sanitize_button_style($button_style_post);
+		if ($hp_is_media && $slot === 'primary') {
+			$config[ $resolved_section_id ]['section_cta_style'] = $button_style_eff;
+			$config[ $resolved_section_id ]['section_cta_tone'] = $button_tone_eff;
 		}
-		if ($hp_is_media && $slot === 'primary' && isset($_POST['button_tone']) && function_exists('lf_sections_sanitize_button_tone')) {
-			$config[ $resolved_section_id ]['section_cta_tone'] = lf_sections_sanitize_button_tone($button_tone_post);
+		if ($hp_is_cta) {
+			if ($slot === 'secondary') {
+				$config[ $resolved_section_id ]['cta_secondary_style'] = $button_style_eff;
+				$config[ $resolved_section_id ]['cta_secondary_tone'] = $button_tone_eff;
+			} else {
+				$config[ $resolved_section_id ]['cta_primary_style'] = $button_style_eff;
+				$config[ $resolved_section_id ]['cta_primary_tone'] = $button_tone_eff;
+			}
 		}
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 		$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
@@ -2953,19 +3062,25 @@ function lf_ai_ajax_update_section_cta(): void {
 	$pb_type = (string) ($old_row['type'] ?? '');
 	$pb_is_hero = $pb_type === 'hero';
 	$pb_is_media = function_exists('lf_sections_row_uses_media_content_layout') && lf_sections_row_uses_media_content_layout($pb_type);
-	if ($pb_is_hero && isset($_POST['button_style']) && function_exists('lf_sections_sanitize_button_style')) {
+	$pb_is_cta = $pb_type === 'cta';
+	if ($pb_is_hero) {
 		$sk = $slot === 'secondary' ? 'hero_cta_secondary_style' : 'hero_cta_primary_style';
-		$settings[ $sk ] = lf_sections_sanitize_button_style($button_style_post);
-	}
-	if ($pb_is_hero && isset($_POST['button_tone']) && function_exists('lf_sections_sanitize_button_tone')) {
 		$tk = $slot === 'secondary' ? 'hero_cta_secondary_tone' : 'hero_cta_primary_tone';
-		$settings[ $tk ] = lf_sections_sanitize_button_tone($button_tone_post);
+		$settings[ $sk ] = $button_style_eff;
+		$settings[ $tk ] = $button_tone_eff;
 	}
-	if ($pb_is_media && $slot === 'primary' && isset($_POST['button_style']) && function_exists('lf_sections_sanitize_button_style')) {
-		$settings['section_cta_style'] = lf_sections_sanitize_button_style($button_style_post);
+	if ($pb_is_media && $slot === 'primary') {
+		$settings['section_cta_style'] = $button_style_eff;
+		$settings['section_cta_tone'] = $button_tone_eff;
 	}
-	if ($pb_is_media && $slot === 'primary' && isset($_POST['button_tone']) && function_exists('lf_sections_sanitize_button_tone')) {
-		$settings['section_cta_tone'] = lf_sections_sanitize_button_tone($button_tone_post);
+	if ($pb_is_cta) {
+		if ($slot === 'secondary') {
+			$settings['cta_secondary_style'] = $button_style_eff;
+			$settings['cta_secondary_tone'] = $button_tone_eff;
+		} else {
+			$settings['cta_primary_style'] = $button_style_eff;
+			$settings['cta_primary_tone'] = $button_tone_eff;
+		}
 	}
 	$config['sections'][$section_id]['settings'] = $settings;
 	update_post_meta($pid, LF_PB_META_KEY, $config);

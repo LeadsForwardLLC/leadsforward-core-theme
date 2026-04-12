@@ -585,6 +585,10 @@ function lf_sections_registry(): array {
 					'link'  => __('Link', 'leadsforward-core'),
 				]],
 				['key' => 'cta_secondary_url', 'label' => __('Secondary CTA URL', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
+				['key' => 'cta_primary_style', 'label' => __('Primary button fill', 'leadsforward-core'), 'type' => 'select', 'default' => 'solid', 'options' => lf_sections_button_style_options()],
+				['key' => 'cta_primary_tone', 'label' => __('Primary button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'primary', 'options' => lf_sections_button_tone_options()],
+				['key' => 'cta_secondary_style', 'label' => __('Secondary button fill', 'leadsforward-core'), 'type' => 'select', 'default' => 'outline', 'options' => lf_sections_button_style_options()],
+				['key' => 'cta_secondary_tone', 'label' => __('Secondary button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'secondary', 'options' => lf_sections_button_tone_options()],
 			],
 			'render' => 'lf_sections_render_cta_band',
 		],
@@ -736,6 +740,8 @@ function lf_sections_registry(): array {
 					'link'  => __('Link', 'leadsforward-core'),
 				]],
 				['key' => 'pricing_cta_url', 'label' => __('CTA URL (if Link)', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
+				['key' => 'pricing_cta_style', 'label' => __('CTA button fill', 'leadsforward-core'), 'type' => 'select', 'default' => 'solid', 'options' => lf_sections_button_style_options()],
+				['key' => 'pricing_cta_tone', 'label' => __('CTA button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'primary', 'options' => lf_sections_button_tone_options()],
 				['key' => 'section_header_align', 'label' => __('Header alignment', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
 					'left' => __('Left', 'leadsforward-core'),
 					'center' => __('Center', 'leadsforward-core'),
@@ -1672,6 +1678,79 @@ function lf_sections_hero_cta_data_attrs(array $section, string $slot): string {
 	return sprintf(
 		' data-lf-cta-slot="%s" data-lf-btn-style="%s" data-lf-btn-tone="%s"',
 		esc_attr($slot),
+		esc_attr($st),
+		esc_attr($tn)
+	);
+}
+
+/**
+ * CTA band block: primary/secondary keys cta_primary_style, cta_secondary_style, etc.
+ *
+ * @param array<string, mixed> $section Block context section.
+ */
+function lf_sections_cta_band_cta_button_classes(array $section, string $slot, string $extra_class = ''): string {
+	$slot = $slot === 'secondary' ? 'secondary' : 'primary';
+	$s_key = $slot === 'secondary' ? 'cta_secondary_style' : 'cta_primary_style';
+	$t_key = $slot === 'secondary' ? 'cta_secondary_tone' : 'cta_primary_tone';
+	$style_in = array_key_exists($s_key, $section) ? (string) $section[ $s_key ] : '';
+	$tone_in = array_key_exists($t_key, $section) ? (string) $section[ $t_key ] : '';
+	$default_style = $slot === 'secondary' ? 'outline' : 'solid';
+	$default_tone = $slot === 'secondary' ? 'secondary' : 'primary';
+	list($style, $tone) = lf_sections_resolve_button_style_tone($style_in, $tone_in, $default_style, $default_tone);
+	$out = 'lf-btn ' . lf_sections_button_visual_classes($style, $tone);
+	$extra_class = trim(preg_replace('/[^a-z0-9 _-]/i', '', $extra_class));
+	if ($extra_class !== '') {
+		$out .= ' ' . $extra_class;
+	}
+	return trim($out);
+}
+
+/**
+ * @param array<string, mixed> $section Block context section.
+ */
+function lf_sections_cta_band_cta_data_attrs(array $section, string $slot): string {
+	$slot = $slot === 'secondary' ? 'secondary' : 'primary';
+	$s_key = $slot === 'secondary' ? 'cta_secondary_style' : 'cta_primary_style';
+	$t_key = $slot === 'secondary' ? 'cta_secondary_tone' : 'cta_primary_tone';
+	$style_in = array_key_exists($s_key, $section) ? (string) $section[ $s_key ] : '';
+	$tone_in = array_key_exists($t_key, $section) ? (string) $section[ $t_key ] : '';
+	$default_style = $slot === 'secondary' ? 'outline' : 'solid';
+	$default_tone = $slot === 'secondary' ? 'secondary' : 'primary';
+	list($st, $tn) = lf_sections_resolve_button_style_tone($style_in, $tone_in, $default_style, $default_tone);
+	return sprintf(
+		' data-lf-cta-slot="%s" data-lf-btn-style="%s" data-lf-btn-tone="%s"',
+		esc_attr($slot),
+		esc_attr($st),
+		esc_attr($tn)
+	);
+}
+
+/**
+ * Pricing block single CTA.
+ *
+ * @param array<string, mixed> $section Block context section.
+ */
+function lf_sections_pricing_cta_button_classes(array $section, string $extra_class = ''): string {
+	$style_in = array_key_exists('pricing_cta_style', $section) ? (string) $section['pricing_cta_style'] : '';
+	$tone_in = array_key_exists('pricing_cta_tone', $section) ? (string) $section['pricing_cta_tone'] : '';
+	list($style, $tone) = lf_sections_resolve_button_style_tone($style_in, $tone_in, 'solid', 'primary');
+	$out = 'lf-btn ' . lf_sections_button_visual_classes($style, $tone);
+	$extra_class = trim(preg_replace('/[^a-z0-9 _-]/i', '', $extra_class));
+	if ($extra_class !== '') {
+		$out .= ' ' . $extra_class;
+	}
+	return trim($out);
+}
+
+/**
+ * @param array<string, mixed> $section Block context section.
+ */
+function lf_sections_pricing_cta_data_attrs(array $section): string {
+	$style_in = array_key_exists('pricing_cta_style', $section) ? (string) $section['pricing_cta_style'] : '';
+	$tone_in = array_key_exists('pricing_cta_tone', $section) ? (string) $section['pricing_cta_tone'] : '';
+	list($st, $tn) = lf_sections_resolve_button_style_tone($style_in, $tone_in, 'solid', 'primary');
+	return sprintf(
+		' data-lf-cta-slot="primary" data-lf-btn-style="%s" data-lf-btn-tone="%s"',
 		esc_attr($st),
 		esc_attr($tn)
 	);
@@ -2688,6 +2767,10 @@ function lf_sections_render_cta_band(string $context, array $settings, \WP_Post 
 			'cta_primary_url' => $settings['cta_primary_url'] ?? '',
 			'cta_secondary_action' => $settings['cta_secondary_action'] ?? '',
 			'cta_secondary_url' => $settings['cta_secondary_url'] ?? '',
+			'cta_primary_style' => $settings['cta_primary_style'] ?? '',
+			'cta_primary_tone' => $settings['cta_primary_tone'] ?? '',
+			'cta_secondary_style' => $settings['cta_secondary_style'] ?? '',
+			'cta_secondary_tone' => $settings['cta_secondary_tone'] ?? '',
 			'cta_trust_strip_enabled' => $settings['cta_trust_strip_enabled'] ?? '0',
 			'cta_trust_rating' => $settings['cta_trust_rating'] ?? '',
 			'cta_trust_review_count' => $settings['cta_trust_review_count'] ?? '',
@@ -2903,6 +2986,8 @@ function lf_sections_render_pricing(string $context, array $settings, \WP_Post $
 		'pricing_cta_text' => $settings['pricing_cta_text'] ?? '',
 		'pricing_cta_action' => $settings['pricing_cta_action'] ?? 'quote',
 		'pricing_cta_url' => $settings['pricing_cta_url'] ?? '',
+		'pricing_cta_style' => $settings['pricing_cta_style'] ?? '',
+		'pricing_cta_tone' => $settings['pricing_cta_tone'] ?? '',
 		'section_background' => $settings['section_background'] ?? 'light',
 		'section_background_custom' => $settings['section_background_custom'] ?? '',
 		'section_header_align' => $settings['section_header_align'] ?? 'center',

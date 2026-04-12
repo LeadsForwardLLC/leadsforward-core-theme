@@ -39,6 +39,13 @@ if ($cta_action === 'call' && $cta_phone === '') {
 if ($cta_action === 'link' && $cta_url === '') {
 	$cta_action = 'quote';
 }
+if (function_exists('lf_sections_pricing_cta_button_classes') && function_exists('lf_sections_pricing_cta_data_attrs')) {
+	$pricing_cta_cls = lf_sections_pricing_cta_button_classes($section);
+	$pricing_cta_attr = lf_sections_pricing_cta_data_attrs($section);
+} else {
+	$pricing_cta_cls = 'lf-btn lf-btn--primary';
+	$pricing_cta_attr = ' data-lf-cta-slot="primary" data-lf-btn-style="solid" data-lf-btn-tone="primary"';
+}
 ?>
 <section class="lf-block lf-block-pricing <?php echo esc_attr($surface['class'] ?: 'lf-surface-light'); ?> lf-block-pricing--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>"<?php echo $style_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<div class="lf-block-pricing__inner">
@@ -67,11 +74,11 @@ if ($cta_action === 'link' && $cta_url === '') {
 		<?php if ($cta_text !== '') : ?>
 			<div class="lf-block-pricing__actions">
 				<?php if ($cta_action === 'link') : ?>
-					<a class="lf-btn lf-btn--primary" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($cta_text); ?></a>
+					<a class="<?php echo esc_attr($pricing_cta_cls); ?>" href="<?php echo esc_url($cta_url); ?>"<?php echo $pricing_cta_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($cta_text); ?></a>
 				<?php elseif ($cta_action === 'call' && $cta_phone !== '') : ?>
-					<a class="lf-btn lf-btn--primary" href="<?php echo esc_url('tel:' . $cta_phone); ?>"><?php echo esc_html($cta_text); ?></a>
+					<a class="<?php echo esc_attr($pricing_cta_cls); ?>" href="<?php echo esc_url('tel:' . $cta_phone); ?>"<?php echo $pricing_cta_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($cta_text); ?></a>
 				<?php else : ?>
-					<button type="button" class="lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="pricing"><?php echo esc_html($cta_text); ?></button>
+					<button type="button" class="<?php echo esc_attr($pricing_cta_cls); ?>" data-lf-quote-trigger="1" data-lf-quote-source="pricing"<?php echo $pricing_cta_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($cta_text); ?></button>
 				<?php endif; ?>
 			</div>
 		<?php endif; ?>

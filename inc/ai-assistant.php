@@ -741,7 +741,7 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-section-align-picker__subhead { margin-top:4px; font-size:12px; font-weight:600; color:#64748b; }
 		.lf-ai-benefits-cta-picker { position:fixed; inset:0; z-index:100006; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; padding:18px; }
 		.lf-ai-benefits-cta-picker[hidden] { display:none !important; }
-		.lf-ai-benefits-cta-picker__card { width:min(400px, calc(100vw - 30px)); background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); padding:14px; display:flex; flex-direction:column; gap:10px; }
+		.lf-ai-benefits-cta-picker__card { width:min(440px, calc(100vw - 30px)); max-height:min(90vh, 640px); overflow:auto; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); padding:14px; display:flex; flex-direction:column; gap:10px; }
 		.lf-ai-benefits-cta-picker__label { font-size:12px; font-weight:600; color:#334155; }
 		.lf-ai-benefits-cta-picker__input { width:100%; border:1px solid #d6c8fb; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box; }
 		.lf-ai-benefits-cta-picker__row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
@@ -5572,19 +5572,24 @@ function lf_ai_assistant_widget_js(): string {
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			if (!sectionId) return;
 			setStatus("Saving button...", false);
+			var ctaTarget = "hero";
+			if (wrap.querySelector && wrap.querySelector(".lf-block-pricing")) {
+				ctaTarget = "pricing";
+			}
 			var payload = {
 				action: "lf_ai_update_section_cta",
 				nonce: lfAiFloating.nonce,
 				context_type: activeContextType,
 				context_id: activeContextId,
 				section_id: sectionId,
+				cta_target: ctaTarget,
 				slot: String(slot || "primary"),
 				text: String(text || ""),
 				cta_action: String(action || "quote"),
-				url: String(url || "")
+				url: String(url || ""),
+				button_style: String(buttonStyle != null && buttonStyle !== "" ? buttonStyle : "solid"),
+				button_tone: String(buttonTone != null && buttonTone !== "" ? buttonTone : "primary")
 			};
-			if (buttonStyle) payload.button_style = String(buttonStyle);
-			if (buttonTone) payload.button_tone = String(buttonTone);
 			$.post(lfAiFloating.ajax_url, payload).done(function(res){
 				if (res && res.success) {
 					setStatus((res.data && res.data.message) ? res.data.message : "Button saved.", false);
@@ -6325,7 +6330,7 @@ function lf_ai_assistant_widget_js(): string {
 			var lookWrap = benefitsCtaPickerEl.querySelector("[data-lf-section-cta-look-wrap]");
 			var styleSelPick = benefitsCtaPickerEl.__lfCtaStyleSel;
 			var toneSelPick = benefitsCtaPickerEl.__lfCtaToneSel;
-			var showLook = isBenefits || (wrap && (wrap.querySelector(".lf-block-hero") || wrap.querySelector(".lf-media-section__actions")));
+			var showLook = isBenefits || !!(buttonNode && (buttonNode.closest(".lf-block-hero") || buttonNode.closest(".lf-media-section__actions") || buttonNode.closest(".lf-block-cta") || buttonNode.closest(".lf-block-pricing")));
 			if (lookWrap) lookWrap.hidden = !showLook;
 			var textInp = benefitsCtaPickerEl.querySelector("[data-lf-benefits-cta-text]");
 			var actSel = benefitsCtaPickerEl.querySelector("[data-lf-benefits-cta-action]");

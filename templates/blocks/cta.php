@@ -71,6 +71,19 @@ $cta_secondary_url = $cta['secondary_url'] ?? '';
 $cta_phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
 $use_phone_link = $cta_type === 'call' && $cta_phone && $primary;
 $show_form = ($cta_type === 'form' && $ghl_embed) || ($cta_type !== 'call' && $ghl_embed);
+if (function_exists('lf_sections_cta_band_cta_button_classes') && function_exists('lf_sections_cta_band_cta_data_attrs')) {
+	$cta_pri_link_cls = lf_sections_cta_band_cta_button_classes($section, 'primary', 'lf-block-cta__primary-link');
+	$cta_pri_text_cls = lf_sections_cta_band_cta_button_classes($section, 'primary', 'lf-block-cta__primary-text');
+	$cta_sec_cls = lf_sections_cta_band_cta_button_classes($section, 'secondary', 'lf-block-cta__secondary-link');
+	$cta_pri_attr = lf_sections_cta_band_cta_data_attrs($section, 'primary');
+	$cta_sec_attr = lf_sections_cta_band_cta_data_attrs($section, 'secondary');
+} else {
+	$cta_pri_link_cls = 'lf-block-cta__primary-link lf-btn lf-btn--primary';
+	$cta_pri_text_cls = 'lf-block-cta__primary-text lf-btn lf-btn--primary';
+	$cta_sec_cls = 'lf-block-cta__secondary-link lf-btn lf-btn--secondary';
+	$cta_pri_attr = ' data-lf-cta-slot="primary" data-lf-btn-style="solid" data-lf-btn-tone="primary"';
+	$cta_sec_attr = ' data-lf-cta-slot="secondary" data-lf-btn-style="outline" data-lf-btn-tone="secondary"';
+}
 ?>
 <section class="lf-block lf-block-cta <?php echo esc_attr($surface['class'] ?: 'lf-surface-dark'); ?> lf-block-cta--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" aria-label="<?php esc_attr_e('Call to action', 'leadsforward-core'); ?>"<?php echo $cta_surface_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<div class="lf-block-cta__inner">
@@ -117,26 +130,26 @@ $show_form = ($cta_type === 'form' && $ghl_embed) || ($cta_type !== 'call' && $g
 					<?php if ($primary) : ?>
 						<div class="lf-block-cta__primary">
 							<?php if ($use_phone_link) : ?>
-								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-cta__primary-link lf-btn lf-btn--primary"><?php echo esc_html($primary); ?></a>
+								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="<?php echo esc_attr($cta_pri_link_cls); ?>"<?php echo $cta_pri_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($primary); ?></a>
 							<?php elseif ($cta_action === 'quote') : ?>
-								<button type="button" class="lf-block-cta__primary-text lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="cta"><?php echo esc_html($primary); ?></button>
+								<button type="button" class="<?php echo esc_attr($cta_pri_text_cls); ?>" data-lf-quote-trigger="1" data-lf-quote-source="cta"<?php echo $cta_pri_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($primary); ?></button>
 							<?php elseif ($cta_url !== '') : ?>
-								<a href="<?php echo esc_url($cta_url); ?>" class="lf-block-cta__primary-link lf-btn lf-btn--primary"><?php echo esc_html($primary); ?></a>
+								<a href="<?php echo esc_url($cta_url); ?>" class="<?php echo esc_attr($cta_pri_link_cls); ?>"<?php echo $cta_pri_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($primary); ?></a>
 							<?php else : ?>
-								<span class="lf-block-cta__primary-text lf-btn lf-btn--primary"><?php echo esc_html($primary); ?></span>
+								<span class="<?php echo esc_attr($cta_pri_text_cls); ?>"<?php echo $cta_pri_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($primary); ?></span>
 							<?php endif; ?>
 						</div>
 					<?php endif; ?>
 					<?php if ($secondary) : ?>
 						<div class="lf-block-cta__secondary">
 							<?php if ($cta_secondary_action === 'quote') : ?>
-								<button type="button" class="lf-block-cta__secondary-link lf-btn lf-btn--secondary" data-lf-quote-trigger="1" data-lf-quote-source="cta-secondary"><?php echo esc_html($secondary); ?></button>
+								<button type="button" class="<?php echo esc_attr($cta_sec_cls); ?>" data-lf-quote-trigger="1" data-lf-quote-source="cta-secondary"<?php echo $cta_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($secondary); ?></button>
 							<?php elseif ($cta_secondary_action === 'call' && $cta_phone) : ?>
-								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-block-cta__secondary-link lf-btn lf-btn--secondary"><?php echo esc_html($secondary); ?></a>
+								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="<?php echo esc_attr($cta_sec_cls); ?>"<?php echo $cta_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($secondary); ?></a>
 							<?php elseif ($cta_secondary_action === 'link' && $cta_secondary_url !== '') : ?>
-								<a href="<?php echo esc_url($cta_secondary_url); ?>" class="lf-block-cta__secondary-link lf-btn lf-btn--secondary"><?php echo esc_html($secondary); ?></a>
+								<a href="<?php echo esc_url($cta_secondary_url); ?>" class="<?php echo esc_attr($cta_sec_cls); ?>"<?php echo $cta_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($secondary); ?></a>
 							<?php else : ?>
-								<span class="lf-block-cta__secondary-link lf-btn lf-btn--secondary"><?php echo esc_html($secondary); ?></span>
+								<span class="<?php echo esc_attr($cta_sec_cls); ?>"<?php echo $cta_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($secondary); ?></span>
 							<?php endif; ?>
 						</div>
 					<?php endif; ?>
