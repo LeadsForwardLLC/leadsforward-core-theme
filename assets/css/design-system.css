@@ -2723,12 +2723,10 @@ button:focus-visible,
 
 .lf-block-hero.lf-surface-dark {
 	background: var(--lf-surface-dark);
-	color: var(--lf-text-inverse);
 }
 
 .lf-block-hero.lf-surface-black {
 	background: #000000;
-	color: var(--lf-text-inverse);
 }
 
 .lf-block-hero {
@@ -2764,79 +2762,60 @@ button:focus-visible,
 	opacity: 0;
 }
 
-/* Titles/subtitles that sit directly on the dark hero canvas (not inside light conversion/form/visual cards). */
-.lf-block-hero.lf-surface-dark .lf-block-hero__title,
-.lf-block-hero.lf-surface-black .lf-block-hero__title,
-.lf-block-hero.lf-surface-dark .lf-hero-basic__title,
-.lf-block-hero.lf-surface-black .lf-hero-basic__title {
+/*
+ * Hero canvas contrast: data-lf-hero-bg-tone is set from PHP (luminance of preset or custom BG).
+ * Light panels (.lf-hero-stack, form panel, visual content card, split content frosted panel) override below.
+ */
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-block-hero__title,
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-hero-basic__title {
 	color: var(--lf-text-inverse);
 }
 
-.lf-block-hero.lf-surface-dark .lf-block-hero__subtitle,
-.lf-block-hero.lf-surface-black .lf-block-hero__subtitle,
-.lf-block-hero.lf-surface-dark .lf-hero-basic__subtitle,
-.lf-block-hero.lf-surface-black .lf-hero-basic__subtitle {
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-block-hero__subtitle,
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-hero-basic__subtitle {
 	color: var(--lf-cta-block-text-muted);
 }
 
-.lf-block-hero.lf-surface-dark .lf-hero-basic__actions,
-.lf-block-hero.lf-surface-black .lf-hero-basic__actions,
-.lf-block-hero.lf-surface-dark .lf-hero-split__phone,
-.lf-block-hero.lf-surface-black .lf-hero-split__phone,
-.lf-block-hero.lf-surface-dark .lf-block-hero__phone,
-.lf-block-hero.lf-surface-black .lf-block-hero__phone {
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-block-hero__subtitle a,
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-hero-basic__subtitle a {
+	color: #bae6fd;
+	text-decoration: underline;
+}
+
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-hero-basic__actions,
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-hero-split__phone,
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-block-hero__phone {
 	color: var(--lf-text-inverse);
 }
 
-.lf-block-hero.lf-surface-dark .lf-block-hero__reviews,
-.lf-block-hero.lf-surface-black .lf-block-hero__reviews {
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-block-hero__reviews {
 	color: var(--lf-text-inverse);
 }
 
-.lf-block-hero.lf-surface-dark .lf-block-hero__reviews-count,
-.lf-block-hero.lf-surface-black .lf-block-hero__reviews-count {
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-block-hero__reviews-count {
 	background: rgba(255, 255, 255, 0.18);
 	color: var(--lf-text-inverse);
 }
 
-.lf-block-hero.lf-surface-dark,
-.lf-block-hero.lf-surface-black {
-	--lf-pill-container-bg: rgba(255, 255, 255, 0.12);
-	--lf-pill-container-border: 1px solid rgba(255, 255, 255, 0.24);
-	--lf-pill-accent-bg: rgba(255, 255, 255, 0.18);
-	--lf-pill-accent-border: 1px solid rgba(255, 255, 255, 0.28);
-	--lf-pill-accent-color: #f8fafc;
-	--lf-pill-icon-bg: rgba(255, 255, 255, 0.18);
-	--lf-pill-icon-border: 1px solid rgba(255, 255, 255, 0.28);
-	--lf-pill-icon-color: #f8fafc;
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-block-hero__card,
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-block-hero__form,
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-block-hero__quote {
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-block-hero__card a,
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-block-hero__quote a {
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--internal .lf-hero-basic__content {
 	--lf-pill-eyebrow-bg: rgba(255, 255, 255, 0.12);
 	--lf-pill-eyebrow-border: 1px solid rgba(255, 255, 255, 0.25);
 	--lf-pill-eyebrow-color: var(--lf-text-inverse);
-	--lf-pill-shadow: 0 16px 32px rgba(0, 0, 0, 0.35);
 }
 
-.lf-block-hero.lf-surface-dark .lf-hero-trust__value,
-.lf-block-hero.lf-surface-dark .lf-hero-trust__label-only,
-.lf-block-hero.lf-surface-black .lf-hero-trust__value,
-.lf-block-hero.lf-surface-black .lf-hero-trust__label-only {
-	color: #f8fafc;
-}
-
-
-.lf-block-hero.lf-surface-dark .lf-block-hero__card,
-.lf-block-hero.lf-surface-dark .lf-block-hero__form,
-.lf-block-hero.lf-surface-dark .lf-block-hero__quote,
-.lf-block-hero.lf-surface-black .lf-block-hero__card,
-.lf-block-hero.lf-surface-black .lf-block-hero__form,
-.lf-block-hero.lf-surface-black .lf-block-hero__quote {
-	color: var(--lf-text-primary);
-}
-
-.lf-block-hero.lf-surface-dark .lf-block-hero__card a,
-.lf-block-hero.lf-surface-dark .lf-block-hero__quote a,
-.lf-block-hero.lf-surface-black .lf-block-hero__card a,
-.lf-block-hero.lf-surface-black .lf-block-hero__quote a {
-	color: var(--lf-text-primary);
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--internal .lf-hero-basic__content .lf-heading-icon {
+	color: var(--lf-text-inverse);
 }
 
 /* Conversion stack card: inner copy stays readable on any hero surface */
@@ -2864,33 +2843,105 @@ button:focus-visible,
 	color: var(--lf-text-primary);
 }
 
-/* Form First + Visual Proof: chips live on light content columns — keep dark-readable pills (not global dark-hero chip styling). */
-.lf-block-hero.lf-surface-dark.lf-block-hero--b .lf-hero-form__content .lf-hero-chip,
-.lf-block-hero.lf-surface-black.lf-block-hero--b .lf-hero-form__content .lf-hero-chip,
-.lf-block-hero.lf-surface-dark.lf-block-hero--c .lf-hero-visual__content .lf-hero-chip,
-.lf-block-hero.lf-surface-black.lf-block-hero--c .lf-hero-visual__content .lf-hero-chip {
+/* Conversion stack: frosted card always uses dark-on-light copy (never inherit canvas inverse). */
+.lf-block-hero--a .lf-hero-stack {
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero--a .lf-hero-stack .lf-hero-stack__subtitle a {
+	color: var(--lf-primary);
+	text-decoration: underline;
+}
+
+/* Form First: left column on canvas — light text when hero BG is dark. */
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--b .lf-hero-form__content {
+	--lf-pill-eyebrow-bg: rgba(255, 255, 255, 0.12);
+	--lf-pill-eyebrow-border: 1px solid rgba(255, 255, 255, 0.25);
+	--lf-pill-eyebrow-color: var(--lf-text-inverse);
+}
+
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--b .lf-hero-form__content .lf-hero-form__title,
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--b .lf-hero-form__content .lf-heading-icon {
+	color: var(--lf-text-inverse);
+}
+
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--b .lf-hero-form__content .lf-hero-form__subtitle {
+	color: var(--lf-cta-block-text-muted);
+}
+
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--b .lf-hero-form__content .lf-hero-form__subtitle a {
+	color: #bae6fd;
+	text-decoration: underline;
+}
+
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--b .lf-hero-form__content .lf-hero-chip {
+	background: rgba(255, 255, 255, 0.14);
+	border: 1px solid rgba(255, 255, 255, 0.32);
+	color: var(--lf-text-inverse);
+}
+
+/* Form First: right panel is always a light card */
+.lf-block-hero--b .lf-hero-form__panel,
+.lf-block-hero--b .lf-hero-form__panel-inner {
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero--b .lf-hero-form__panel .lf-hero-form__panel-title,
+.lf-block-hero--b .lf-hero-form__panel .lf-hero-form__panel-text,
+.lf-block-hero--b .lf-hero-form__panel .lf-hero-form__panel-note {
+	color: inherit;
+}
+
+.lf-block-hero--b .lf-hero-form__panel .lf-hero-form__panel-text,
+.lf-block-hero--b .lf-hero-form__panel .lf-hero-form__panel-note {
+	color: var(--lf-text-muted);
+}
+
+/* Visual Proof: copy column always sits on a light surface — dark text regardless of section BG. */
+.lf-block-hero--c .lf-hero-visual__content {
+	background: var(--lf-surface-card, #ffffff);
+	border: 1px solid rgba(15, 23, 42, 0.08);
+	border-radius: 22px;
+	padding: 1.5rem 1.75rem;
+	box-shadow: 0 16px 40px rgba(15, 23, 42, 0.1);
+	color: var(--lf-text-primary);
+	--lf-pill-eyebrow-bg: rgba(15, 23, 42, 0.06);
+	--lf-pill-eyebrow-border: 1px solid rgba(15, 23, 42, 0.12);
+	--lf-pill-eyebrow-color: var(--lf-text-primary);
+}
+
+.lf-block-hero--c .lf-hero-visual__content .lf-hero-visual__title,
+.lf-block-hero--c .lf-hero-visual__content .lf-heading-icon {
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero--c .lf-hero-visual__content .lf-hero-visual__subtitle {
+	color: var(--lf-text-muted);
+}
+
+.lf-block-hero--c .lf-hero-visual__content .lf-hero-visual__subtitle a {
+	color: var(--lf-primary);
+	text-decoration: underline;
+}
+
+.lf-block-hero--c .lf-hero-visual__content .lf-hero-chip {
 	background: var(--lf-pill-muted-bg);
 	border: var(--lf-pill-muted-border);
 	color: var(--lf-text-primary);
 }
 
-.lf-block-hero.lf-surface-dark.lf-block-hero--b .lf-hero-form__content .lf-hero-form__subtitle,
-.lf-block-hero.lf-surface-black.lf-block-hero--b .lf-hero-form__content .lf-hero-form__subtitle,
-.lf-block-hero.lf-surface-dark.lf-block-hero--c .lf-hero-visual__content .lf-hero-visual__subtitle,
-.lf-block-hero.lf-surface-black.lf-block-hero--c .lf-hero-visual__content .lf-hero-visual__subtitle {
+.lf-block-hero--c .lf-hero-visual__content .lf-hero-visual__trust {
 	color: var(--lf-text-muted);
 }
 
-.lf-block-hero.lf-surface-dark.lf-block-hero--b .lf-hero-form__content .lf-hero-form__title,
-.lf-block-hero.lf-surface-black.lf-block-hero--b .lf-hero-form__content .lf-hero-form__title,
-.lf-block-hero.lf-surface-dark.lf-block-hero--c .lf-hero-visual__content .lf-hero-visual__title,
-.lf-block-hero.lf-surface-black.lf-block-hero--c .lf-hero-visual__content .lf-hero-visual__title {
+.lf-block-hero--c .lf-hero-visual__content .lf-hero-trust__label-only,
+.lf-block-hero--c .lf-hero-visual__content .lf-hero-trust__rating,
+.lf-block-hero--c .lf-hero-visual__content .lf-hero-trust__value {
 	color: var(--lf-text-primary);
 }
 
-/* Authority Split: left column reads on a light panel over a dark hero surface. */
-.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content,
-.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content {
+/* Authority Split: frosted panel when canvas is dark; on light canvas copy sits directly on the BG. */
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--default .lf-hero-split__content {
 	padding: 1.5rem 1.75rem;
 	border-radius: 22px;
 	background: rgba(255, 255, 255, 0.94);
@@ -2898,40 +2949,55 @@ button:focus-visible,
 	box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
 }
 
-.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content .lf-hero-split__title,
-.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content .lf-hero-split__title {
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--default .lf-hero-split__content .lf-hero-split__title,
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--default .lf-hero-split__content .lf-heading-icon {
 	color: var(--lf-text-primary);
 }
 
-.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content .lf-hero-split__subtitle,
-.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content .lf-hero-split__subtitle {
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--default .lf-hero-split__content .lf-hero-split__subtitle {
 	color: var(--lf-text-muted);
 }
 
-.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content .lf-hero-split__eyebrow,
-.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content .lf-hero-split__eyebrow {
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--default .lf-hero-split__content .lf-hero-split__subtitle a {
+	color: var(--lf-primary);
+	text-decoration: underline;
+}
+
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--default .lf-hero-split__content .lf-hero-split__eyebrow {
 	background: rgba(15, 23, 42, 0.06);
 	border: 1px solid rgba(15, 23, 42, 0.12);
 	color: var(--lf-text-primary);
 }
 
-.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content .lf-hero-chip,
-.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content .lf-hero-chip {
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--default .lf-hero-split__content .lf-hero-chip {
 	background: var(--lf-pill-muted-bg);
 	border: var(--lf-pill-muted-border);
 	color: var(--lf-text-primary);
 }
 
-.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content .lf-hero-split__trust,
-.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content .lf-hero-split__trust {
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--default .lf-hero-split__content .lf-hero-split__trust {
 	color: var(--lf-text-muted);
 }
 
-.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content .lf-hero-trust__label-only,
-.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content .lf-hero-trust__rating,
-.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content .lf-hero-trust__label-only,
-.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content .lf-hero-trust__rating {
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--default .lf-hero-split__content .lf-hero-trust__label-only,
+.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--default .lf-hero-split__content .lf-hero-trust__rating {
 	color: var(--lf-text-primary);
+}
+
+/* Authority split: copy on a light section BG — no frosted panel; ensure dark type (not inverse). */
+.lf-block-hero[data-lf-hero-bg-tone="light"].lf-block-hero--default .lf-hero-split__content .lf-hero-split__title,
+.lf-block-hero[data-lf-hero-bg-tone="light"].lf-block-hero--default .lf-hero-split__content .lf-heading-icon {
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero[data-lf-hero-bg-tone="light"].lf-block-hero--default .lf-hero-split__content .lf-hero-split__subtitle {
+	color: var(--lf-text-muted);
+}
+
+.lf-block-hero[data-lf-hero-bg-tone="light"].lf-block-hero--default .lf-hero-split__content .lf-hero-split__eyebrow {
+	--lf-pill-eyebrow-bg: rgba(15, 23, 42, 0.06);
+	--lf-pill-eyebrow-border: 1px solid rgba(15, 23, 42, 0.12);
+	--lf-pill-eyebrow-color: var(--lf-text-primary);
 }
 
 .lf-block-hero--a .lf-hero-stack .lf-hero-stack__eyebrow {
@@ -3510,14 +3576,18 @@ button:focus-visible,
 	letter-spacing: 0.01em;
 }
 
-.lf-block-hero.lf-surface-dark .lf-hero-chip,
-.lf-block-hero.lf-surface-black .lf-hero-chip,
-.lf-block-hero.lf-surface-primary .lf-hero-chip,
-.lf-block-hero.lf-surface-secondary .lf-hero-chip,
-.lf-block-hero.lf-surface-accent .lf-hero-chip {
+/* Chips on dark hero canvas (not inside light sub-panels). */
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-hero-chip {
 	background: rgba(255, 255, 255, 0.14);
 	border: 1px solid rgba(255, 255, 255, 0.32);
 	color: var(--lf-text-inverse);
+}
+
+.lf-block-hero--c .lf-hero-visual__content .lf-hero-chip,
+.lf-block-hero--default .lf-hero-split__content .lf-hero-chip {
+	background: var(--lf-pill-muted-bg);
+	border: var(--lf-pill-muted-border);
+	color: var(--lf-text-primary);
 }
 
 .lf-hero-stack__chips,

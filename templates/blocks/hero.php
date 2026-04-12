@@ -317,8 +317,9 @@ $hero_combined_style = trim(
 	. ($hero_bg_style !== '' ? ' ' . $hero_bg_style : '')
 	. ($hero_video_overlay_css !== '' ? ' ' . $hero_video_overlay_css : '')
 );
+$hero_bg_tone = (function_exists('lf_sections_hero_background_is_dark') && lf_sections_hero_background_is_dark($section)) ? 'dark' : 'light';
 ?>
-<section class="<?php echo esc_attr($hero_outer_class); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" data-lf-hero-bg-mode="<?php echo esc_attr($hero_bg_mode); ?>" data-lf-hero-bg-image-id="<?php echo esc_attr((string) $hero_bg_stored_image_id); ?>" data-lf-hero-bg-video-id="<?php echo esc_attr((string) $hero_bg_stored_video_id); ?>" data-lf-hero-trust-strip-setting="<?php echo esc_attr($hero_trust_strip_enabled ? '1' : '0'); ?>"<?php echo $hero_combined_style !== '' ? ' style="' . esc_attr($hero_combined_style) . '"' : ''; ?>>
+<section class="<?php echo esc_attr($hero_outer_class); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" data-lf-hero-bg-tone="<?php echo esc_attr($hero_bg_tone); ?>" data-lf-hero-bg-mode="<?php echo esc_attr($hero_bg_mode); ?>" data-lf-hero-bg-image-id="<?php echo esc_attr((string) $hero_bg_stored_image_id); ?>" data-lf-hero-bg-video-id="<?php echo esc_attr((string) $hero_bg_stored_video_id); ?>" data-lf-hero-trust-strip-setting="<?php echo esc_attr($hero_trust_strip_enabled ? '1' : '0'); ?>"<?php echo $hero_combined_style !== '' ? ' style="' . esc_attr($hero_combined_style) . '"' : ''; ?>>
 	<div class="lf-block-hero__bg" aria-hidden="true">
 		<?php if ($hero_video_url !== '' && $hero_bg_mode === 'video' && $variant !== 'c') : ?>
 			<video class="lf-block-hero__video" autoplay muted loop playsinline>
