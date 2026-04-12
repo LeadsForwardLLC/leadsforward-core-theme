@@ -848,7 +848,7 @@ function lf_ai_section_style_cycle_value(string $current, array $allowed): strin
  * Apply a section style patch from the front-end editor (background presets, custom color, header align).
  *
  * @param array<string, mixed> $settings
- * @param array{background_slug?:string,custom_background?:string,header_align?:string,benefits_cta_align?:string,grid_columns?:string} $extra
+ * @param array{background_slug?:string,custom_background?:string,header_align?:string,benefits_cta_align?:string,section_actions_align?:string,grid_columns?:string} $extra
  * @return array{0: array<string, mixed>, 1: string} Updated settings and empty string, or original settings and error message.
  */
 function lf_ai_mutate_section_style_settings(array $settings, string $patch, array $extra): array {
@@ -859,6 +859,7 @@ function lf_ai_mutate_section_style_settings(array $settings, string $patch, arr
 	$custom_raw = (string) ($extra['custom_background'] ?? '');
 	$h_align = sanitize_key((string) ($extra['header_align'] ?? ''));
 	$benefits_cta_align = sanitize_key((string) ($extra['benefits_cta_align'] ?? ''));
+	$section_actions_align = sanitize_key((string) ($extra['section_actions_align'] ?? ''));
 	$grid_columns = sanitize_key((string) ($extra['grid_columns'] ?? ''));
 
 	if ($patch === 'cycle_background') {
@@ -912,6 +913,13 @@ function lf_ai_mutate_section_style_settings(array $settings, string $patch, arr
 		$settings['benefits_cta_align'] = $benefits_cta_align;
 		return [$settings, ''];
 	}
+	if ($patch === 'set_section_actions_align') {
+		if (!in_array($section_actions_align, $aligns, true)) {
+			return [$settings, __('Choose left, center, or right for the button row.', 'leadsforward-core')];
+		}
+		$settings['section_actions_align'] = $section_actions_align;
+		return [$settings, ''];
+	}
 	if ($patch === 'set_benefits_grid_columns') {
 		if (!in_array($grid_columns, ['2', '3', '4'], true)) {
 			return [$settings, __('Choose 2, 3, or 4 columns.', 'leadsforward-core')];
@@ -957,6 +965,7 @@ function lf_ai_ajax_update_section_style(): void {
 		'custom_background' => isset($_POST['custom_background']) ? wp_unslash((string) $_POST['custom_background']) : '',
 		'header_align' => isset($_POST['header_align']) ? sanitize_key(wp_unslash((string) $_POST['header_align'])) : '',
 		'benefits_cta_align' => isset($_POST['benefits_cta_align']) ? sanitize_key(wp_unslash((string) $_POST['benefits_cta_align'])) : '',
+		'section_actions_align' => isset($_POST['section_actions_align']) ? sanitize_key(wp_unslash((string) $_POST['section_actions_align'])) : '',
 		'grid_columns' => isset($_POST['grid_columns']) ? sanitize_key(wp_unslash((string) $_POST['grid_columns'])) : '',
 	];
 
@@ -977,6 +986,9 @@ function lf_ai_ajax_update_section_style(): void {
 		if ($patch === 'set_benefits_cta_align' && function_exists('lf_homepage_base_section_type') && lf_homepage_base_section_type((string) $resolved) !== 'benefits') {
 			wp_send_json_error(['message' => __('Button alignment applies to benefits sections only.', 'leadsforward-core')]);
 		}
+		if ($patch === 'set_section_actions_align' && function_exists('lf_sections_row_uses_media_content_layout') && !lf_sections_row_uses_media_content_layout((string) $resolved)) {
+			wp_send_json_error(['message' => __('That alignment applies to image + content sections only.', 'leadsforward-core')]);
+		}
 		if ($patch === 'set_benefits_grid_columns' && function_exists('lf_homepage_base_section_type') && lf_homepage_base_section_type((string) $resolved) !== 'benefits') {
 			wp_send_json_error(['message' => __('Column count applies to benefits sections only.', 'leadsforward-core')]);
 		}
@@ -988,6 +1000,10 @@ function lf_ai_ajax_update_section_style(): void {
 		[$row_settings, $err] = lf_ai_mutate_section_style_settings($row_settings, $patch, $style_extra);
 		if ($err !== '') {
 			wp_send_json_error(['message' => $err]);
+		}
+		$hero_bg_patches = ['set_preset_bg', 'set_custom_bg', 'cycle_background', 'clear_custom_bg'];
+		if (in_array($patch, $hero_bg_patches, true) && function_exists('lf_homepage_base_section_type') && lf_homepage_base_section_type((string) $resolved) === 'hero') {
+			$row_settings['hero_background_mode'] = 'color';
 		}
 		$config[$resolved] = $row_settings;
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
@@ -1033,6 +1049,9 @@ function lf_ai_ajax_update_section_style(): void {
 	if ($patch === 'set_benefits_cta_align' && $section_type !== 'benefits') {
 		wp_send_json_error(['message' => __('Button alignment applies to benefits sections only.', 'leadsforward-core')]);
 	}
+	if ($patch === 'set_section_actions_align' && function_exists('lf_sections_row_uses_media_content_layout') && !lf_sections_row_uses_media_content_layout($section_id)) {
+		wp_send_json_error(['message' => __('That alignment applies to image + content sections only.', 'leadsforward-core')]);
+	}
 	if ($patch === 'set_benefits_grid_columns' && $section_type !== 'benefits') {
 		wp_send_json_error(['message' => __('Column count applies to benefits sections only.', 'leadsforward-core')]);
 	}
@@ -1043,6 +1062,10 @@ function lf_ai_ajax_update_section_style(): void {
 	[$settings, $err_pb] = lf_ai_mutate_section_style_settings($settings, $patch, $style_extra);
 	if ($err_pb !== '') {
 		wp_send_json_error(['message' => $err_pb]);
+	}
+	$hero_bg_patches_pb = ['set_preset_bg', 'set_custom_bg', 'cycle_background', 'clear_custom_bg'];
+	if (in_array($patch, $hero_bg_patches_pb, true) && $section_type === 'hero') {
+		$settings['hero_background_mode'] = 'color';
 	}
 	$config['sections'][$section_id]['settings'] = $settings;
 	update_post_meta($pid, LF_PB_META_KEY, $config);
@@ -2735,13 +2758,8 @@ function lf_ai_ajax_update_section_cta(): void {
 		if ($cta_action !== 'link') {
 			$url = '';
 		}
+		$remove = isset($_POST['benefits_cta_remove']) && (string) wp_unslash((string) ($_POST['benefits_cta_remove'] ?? '')) === '1';
 		$text = trim($text);
-		if ($text !== '' && $cta_action === 'link' && $url === '') {
-			wp_send_json_error(['message' => __('Link URL is required when action is Link.', 'leadsforward-core')]);
-		}
-		if ($text !== '' && $cta_action === 'call' && (!function_exists('lf_get_cta_phone') || lf_get_cta_phone() === '')) {
-			wp_send_json_error(['message' => __('Add a phone number in Business Info before using Call.', 'leadsforward-core')]);
-		}
 		if ($context_type === 'homepage' || $context_id_use === 'homepage') {
 			if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config') || !function_exists('lf_homepage_base_section_type')) {
 				wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
@@ -2755,10 +2773,27 @@ function lf_ai_ajax_update_section_cta(): void {
 			if (lf_homepage_base_section_type((string) $resolved_section_id) !== 'benefits') {
 				wp_send_json_error(['message' => __('This control applies to benefits sections only.', 'leadsforward-core')]);
 			}
+			if ($remove) {
+				$text = '';
+			} elseif ($text === '') {
+				$text = trim((string) ($old_row['benefits_cta_text'] ?? ''));
+			}
+			if ($text !== '' && $cta_action === 'link' && $url === '') {
+				wp_send_json_error(['message' => __('Link URL is required when action is Link.', 'leadsforward-core')]);
+			}
+			if ($text !== '' && $cta_action === 'call' && (!function_exists('lf_get_cta_phone') || lf_get_cta_phone() === '')) {
+				wp_send_json_error(['message' => __('Add a phone number in Business Info before using Call.', 'leadsforward-core')]);
+			}
 			$config[$resolved_section_id]['benefits_cta_text'] = $text;
 			$config[$resolved_section_id]['benefits_cta_action'] = $text === '' ? 'quote' : $cta_action;
 			$config[$resolved_section_id]['benefits_cta_url'] = $text === '' ? '' : $url;
 			$config[$resolved_section_id]['benefits_cta_align'] = $benefits_cta_align;
+			if (isset($_POST['benefits_cta_style']) && function_exists('lf_sections_sanitize_button_style')) {
+				$config[$resolved_section_id]['benefits_cta_style'] = lf_sections_sanitize_button_style(sanitize_key(wp_unslash((string) $_POST['benefits_cta_style'])));
+			}
+			if (isset($_POST['benefits_cta_tone']) && function_exists('lf_sections_sanitize_button_tone')) {
+				$config[$resolved_section_id]['benefits_cta_tone'] = lf_sections_sanitize_button_tone(sanitize_key(wp_unslash((string) $_POST['benefits_cta_tone'])));
+			}
 			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 			$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 			$log_id = function_exists('lf_ai_log_action')
@@ -2791,10 +2826,27 @@ function lf_ai_ajax_update_section_cta(): void {
 			wp_send_json_error(['message' => __('This control applies to benefits sections only.', 'leadsforward-core')]);
 		}
 		$settings = is_array($old_row['settings'] ?? null) ? $old_row['settings'] : [];
+		if ($remove) {
+			$text = '';
+		} elseif ($text === '') {
+			$text = trim((string) ($settings['benefits_cta_text'] ?? ''));
+		}
+		if ($text !== '' && $cta_action === 'link' && $url === '') {
+			wp_send_json_error(['message' => __('Link URL is required when action is Link.', 'leadsforward-core')]);
+		}
+		if ($text !== '' && $cta_action === 'call' && (!function_exists('lf_get_cta_phone') || lf_get_cta_phone() === '')) {
+			wp_send_json_error(['message' => __('Add a phone number in Business Info before using Call.', 'leadsforward-core')]);
+		}
 		$settings['benefits_cta_text'] = $text;
 		$settings['benefits_cta_action'] = $text === '' ? 'quote' : $cta_action;
 		$settings['benefits_cta_url'] = $text === '' ? '' : $url;
 		$settings['benefits_cta_align'] = $benefits_cta_align;
+		if (isset($_POST['benefits_cta_style']) && function_exists('lf_sections_sanitize_button_style')) {
+			$settings['benefits_cta_style'] = lf_sections_sanitize_button_style(sanitize_key(wp_unslash((string) $_POST['benefits_cta_style'])));
+		}
+		if (isset($_POST['benefits_cta_tone']) && function_exists('lf_sections_sanitize_button_tone')) {
+			$settings['benefits_cta_tone'] = lf_sections_sanitize_button_tone(sanitize_key(wp_unslash((string) $_POST['benefits_cta_tone'])));
+		}
 		$config['sections'][$section_id]['settings'] = $settings;
 		update_post_meta($pid, LF_PB_META_KEY, $config);
 		$new_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
@@ -2815,6 +2867,8 @@ function lf_ai_ajax_update_section_cta(): void {
 	}
 
 	$slot = $slot === 'secondary' ? 'secondary' : 'primary';
+	$button_style_post = isset($_POST['button_style']) ? sanitize_key(wp_unslash((string) $_POST['button_style'])) : '';
+	$button_tone_post = isset($_POST['button_tone']) ? sanitize_key(wp_unslash((string) $_POST['button_tone'])) : '';
 	if (!in_array($cta_action, ['quote', 'call', 'link'], true)) {
 		$cta_action = 'quote';
 	}
@@ -2844,6 +2898,23 @@ function lf_ai_ajax_update_section_cta(): void {
 		$config[$resolved_section_id][$override_key] = $text;
 		$config[$resolved_section_id][$action_key] = $cta_action;
 		$config[$resolved_section_id][$url_key] = $url;
+		$hp_base = function_exists('lf_homepage_base_section_type') ? lf_homepage_base_section_type((string) $resolved_section_id) : '';
+		$hp_is_hero = $hp_base === 'hero';
+		$hp_is_media = function_exists('lf_sections_row_uses_media_content_layout') && lf_sections_row_uses_media_content_layout((string) $resolved_section_id);
+		if ($hp_is_hero && isset($_POST['button_style']) && function_exists('lf_sections_sanitize_button_style')) {
+			$sk = $slot === 'secondary' ? 'hero_cta_secondary_style' : 'hero_cta_primary_style';
+			$config[ $resolved_section_id ][ $sk ] = lf_sections_sanitize_button_style($button_style_post);
+		}
+		if ($hp_is_hero && isset($_POST['button_tone']) && function_exists('lf_sections_sanitize_button_tone')) {
+			$tk = $slot === 'secondary' ? 'hero_cta_secondary_tone' : 'hero_cta_primary_tone';
+			$config[ $resolved_section_id ][ $tk ] = lf_sections_sanitize_button_tone($button_tone_post);
+		}
+		if ($hp_is_media && $slot === 'primary' && isset($_POST['button_style']) && function_exists('lf_sections_sanitize_button_style')) {
+			$config[ $resolved_section_id ]['section_cta_style'] = lf_sections_sanitize_button_style($button_style_post);
+		}
+		if ($hp_is_media && $slot === 'primary' && isset($_POST['button_tone']) && function_exists('lf_sections_sanitize_button_tone')) {
+			$config[ $resolved_section_id ]['section_cta_tone'] = lf_sections_sanitize_button_tone($button_tone_post);
+		}
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 		$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 		$log_id = function_exists('lf_ai_log_action')
@@ -2879,6 +2950,23 @@ function lf_ai_ajax_update_section_cta(): void {
 	$settings[$override_key] = $text;
 	$settings[$action_key] = $cta_action;
 	$settings[$url_key] = $url;
+	$pb_type = (string) ($old_row['type'] ?? '');
+	$pb_is_hero = $pb_type === 'hero';
+	$pb_is_media = function_exists('lf_sections_row_uses_media_content_layout') && lf_sections_row_uses_media_content_layout($pb_type);
+	if ($pb_is_hero && isset($_POST['button_style']) && function_exists('lf_sections_sanitize_button_style')) {
+		$sk = $slot === 'secondary' ? 'hero_cta_secondary_style' : 'hero_cta_primary_style';
+		$settings[ $sk ] = lf_sections_sanitize_button_style($button_style_post);
+	}
+	if ($pb_is_hero && isset($_POST['button_tone']) && function_exists('lf_sections_sanitize_button_tone')) {
+		$tk = $slot === 'secondary' ? 'hero_cta_secondary_tone' : 'hero_cta_primary_tone';
+		$settings[ $tk ] = lf_sections_sanitize_button_tone($button_tone_post);
+	}
+	if ($pb_is_media && $slot === 'primary' && isset($_POST['button_style']) && function_exists('lf_sections_sanitize_button_style')) {
+		$settings['section_cta_style'] = lf_sections_sanitize_button_style($button_style_post);
+	}
+	if ($pb_is_media && $slot === 'primary' && isset($_POST['button_tone']) && function_exists('lf_sections_sanitize_button_tone')) {
+		$settings['section_cta_tone'] = lf_sections_sanitize_button_tone($button_tone_post);
+	}
 	$config['sections'][$section_id]['settings'] = $settings;
 	update_post_meta($pid, LF_PB_META_KEY, $config);
 	$new_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];

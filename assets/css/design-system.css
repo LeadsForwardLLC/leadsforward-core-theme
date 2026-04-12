@@ -321,6 +321,98 @@
 	box-shadow: none;
 }
 
+.lf-btn--solid.lf-btn--tone-primary {
+	background-color: var(--lf-primary);
+	color: #fff;
+	border: 2px solid var(--lf-primary);
+	box-shadow: none;
+}
+
+.lf-btn--solid.lf-btn--tone-primary:hover {
+	background-color: color-mix(in srgb, var(--lf-primary) 88%, #000);
+	border-color: color-mix(in srgb, var(--lf-primary) 88%, #000);
+	color: #fff;
+}
+
+.lf-btn--outline.lf-btn--tone-primary {
+	background-color: transparent;
+	color: var(--lf-primary);
+	border: 2px solid var(--lf-primary);
+	box-shadow: none;
+}
+
+.lf-btn--outline.lf-btn--tone-primary:hover {
+	background-color: rgba(37, 99, 235, 0.08);
+	color: var(--lf-primary);
+}
+
+.lf-btn--solid.lf-btn--tone-secondary {
+	background-color: var(--lf-secondary);
+	color: #fff;
+	border: 2px solid var(--lf-secondary);
+	box-shadow: none;
+}
+
+.lf-btn--solid.lf-btn--tone-secondary:hover {
+	filter: brightness(0.92);
+}
+
+.lf-btn--outline.lf-btn--tone-secondary {
+	background-color: transparent;
+	color: var(--lf-secondary);
+	border: 2px solid var(--lf-secondary);
+	box-shadow: none;
+}
+
+.lf-btn--outline.lf-btn--tone-secondary:hover {
+	background-color: color-mix(in srgb, var(--lf-secondary) 12%, transparent);
+}
+
+.lf-btn--solid.lf-btn--tone-white {
+	background-color: #fff;
+	color: var(--lf-text-primary);
+	border: 2px solid rgba(15, 23, 42, 0.12);
+	box-shadow: none;
+}
+
+.lf-btn--solid.lf-btn--tone-white:hover {
+	background-color: #f8fafc;
+}
+
+.lf-btn--outline.lf-btn--tone-white {
+	background-color: transparent;
+	color: #fff;
+	border: 2px solid rgba(255, 255, 255, 0.85);
+	box-shadow: none;
+}
+
+.lf-btn--outline.lf-btn--tone-white:hover {
+	background-color: rgba(255, 255, 255, 0.1);
+}
+
+.lf-btn--solid.lf-btn--tone-black {
+	background-color: #0f172a;
+	color: #fff;
+	border: 2px solid #0f172a;
+	box-shadow: none;
+}
+
+.lf-btn--solid.lf-btn--tone-black:hover {
+	background-color: #020617;
+	border-color: #020617;
+}
+
+.lf-btn--outline.lf-btn--tone-black {
+	background-color: transparent;
+	color: #0f172a;
+	border: 2px solid #0f172a;
+	box-shadow: none;
+}
+
+.lf-btn--outline.lf-btn--tone-black:hover {
+	background-color: rgba(15, 23, 42, 0.06);
+}
+
 .lf-block-cta .lf-btn--secondary {
 	color: #fff;
 	border-color: rgba(255, 255, 255, 0.6);
@@ -1273,6 +1365,18 @@ button:focus-visible,
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.75rem;
+}
+
+.lf-media-section__actions--align-left {
+	justify-content: flex-start;
+}
+
+.lf-media-section__actions--align-center {
+	justify-content: center;
+}
+
+.lf-media-section__actions--align-right {
+	justify-content: flex-end;
 }
 
 .lf-media-section__image-frame {
@@ -2708,14 +2812,35 @@ button:focus-visible,
 	color: var(--lf-text-primary);
 }
 
-.lf-block-hero--a .lf-hero-stack__title {
+/* Conversion stack card: inner copy stays readable on any hero surface */
+.lf-block-hero--a .lf-hero-stack .lf-hero-stack__title {
 	color: var(--lf-text-primary);
 }
 
-.lf-block-hero--a .lf-hero-stack__subtitle,
-.lf-block-hero--a .lf-hero-stack__trust,
-.lf-block-hero--a .lf-hero-stack__phone {
+.lf-block-hero--a .lf-hero-stack .lf-hero-stack__subtitle {
 	color: var(--lf-text-muted);
+}
+
+.lf-block-hero--a .lf-hero-stack .lf-hero-stack__trust,
+.lf-block-hero--a .lf-hero-stack .lf-hero-stack__phone {
+	color: var(--lf-text-muted);
+}
+
+.lf-block-hero--a .lf-hero-stack .lf-hero-trust__label-only,
+.lf-block-hero--a .lf-hero-stack .lf-hero-trust__rating {
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero--a .lf-hero-stack .lf-hero-chip {
+	background: var(--lf-pill-muted-bg);
+	border: var(--lf-pill-muted-border);
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero--a .lf-hero-stack .lf-hero-stack__eyebrow {
+	background: rgba(15, 23, 42, 0.06);
+	border: 1px solid rgba(15, 23, 42, 0.12);
+	color: var(--lf-text-primary);
 }
 
 .lf-block-hero__bg {
@@ -3361,6 +3486,23 @@ button:focus-visible,
 }
 
 .lf-hero-stack__actions .lf-btn {
+	width: 100%;
+}
+
+.lf-block-hero--a .lf-hero-stack__actions {
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: center;
+	max-width: 100%;
+}
+
+.lf-block-hero--a .lf-hero-stack__actions .lf-btn {
+	width: auto;
+	min-width: min(12.5rem, 100%);
+}
+
+.lf-block-hero--a .lf-hero-stack__trust {
+	justify-content: center;
 	width: 100%;
 }
 
