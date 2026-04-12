@@ -2371,19 +2371,16 @@ function lf_ai_studio_seed_sample_projects(): void {
 }
 
 function lf_ai_studio_blog_post_topics(array $manifest, array $homepage_payload): array {
-	$topics = [];
 	$primary = (string) ($homepage_payload['keywords']['primary'] ?? '');
 	$secondary = $homepage_payload['keywords']['secondary'] ?? [];
 	if (!is_array($secondary)) {
 		$secondary = [];
 	}
-	$business_name = (string) ($homepage_payload['business_name'] ?? '');
 	$niche = (string) ($homepage_payload['niche'] ?? '');
 	$city = (string) ($homepage_payload['city_region'] ?? '');
 	if (!empty($manifest)) {
 		$primary = (string) ($manifest['homepage']['primary_keyword'] ?? $primary);
 		$secondary = is_array($manifest['homepage']['secondary_keywords'] ?? null) ? $manifest['homepage']['secondary_keywords'] : $secondary;
-		$business_name = (string) ($manifest['business']['name'] ?? $business_name);
 		$niche = (string) ($manifest['business']['niche'] ?? $niche);
 		$city = (string) ($manifest['business']['primary_city'] ?? ($manifest['business']['address']['city'] ?? $city));
 	}
@@ -2395,6 +2392,11 @@ function lf_ai_studio_blog_post_topics(array $manifest, array $homepage_payload)
 		return $keyword !== '' && strcasecmp($keyword, $primary) !== 0;
 	}));
 
+	$mg = isset($manifest['global']) && is_array($manifest['global']) ? $manifest['global'] : [];
+	$ls = lf_launch_schedule_normalize(is_array($mg['launch_schedule'] ?? null) ? $mg['launch_schedule'] : []);
+	$total_needed = (int) $ls['blog']['publish_now_count'] + (int) $ls['blog']['scheduled_count'];
+	$total_needed = max(1, min(20, $total_needed));
+
 	$focus = $primary !== '' ? $primary : ($niche !== '' ? $niche : __('home services', 'leadsforward-core'));
 	$location = $city !== '' ? $city : __('your area', 'leadsforward-core');
 	$secondary_or_focus = static function (int $index) use ($secondary, $focus): string {
@@ -2404,49 +2406,72 @@ function lf_ai_studio_blog_post_topics(array $manifest, array $homepage_payload)
 		return $focus;
 	};
 
-	$topics[] = [
-		'title' => sprintf(__('Complete pillar guide to %1$s in %2$s', 'leadsforward-core'), $focus, $location),
-		'keyword' => $focus,
-		'format' => 'pillar',
-	];
-	$topics[] = [
-		'title' => sprintf(__('How to plan a %s project without costly surprises', 'leadsforward-core'), $secondary_or_focus(0)),
-		'keyword' => $secondary_or_focus(0),
-		'format' => 'how_to',
-	];
-	$topics[] = [
-		'title' => sprintf(__('How much does %1$s cost in %2$s', 'leadsforward-core'), $secondary_or_focus(1), $location),
-		'keyword' => $secondary_or_focus(1),
-		'format' => 'cost',
-	];
-	$topics[] = [
-		'title' => sprintf(__('%1$s versus alternatives: what homeowners should choose', 'leadsforward-core'), $secondary_or_focus(2)),
-		'keyword' => $secondary_or_focus(2),
-		'format' => 'comparison',
-	];
-	$topics[] = [
-		'title' => sprintf(__('Homeowner checklist before hiring a %s company', 'leadsforward-core'), $niche !== '' ? $niche : $focus),
-		'keyword' => $secondary_or_focus(3),
-		'format' => 'checklist',
-	];
-	$topics[] = [
-		'title' => sprintf(__('Seasonal timing for %1$s in %2$s', 'leadsforward-core'), $secondary_or_focus(4), $location),
-		'keyword' => $secondary_or_focus(4),
-		'format' => 'local_guide',
-	];
-	$topics[] = [
-		'title' => sprintf(__('Top homeowner questions about %s answered', 'leadsforward-core'), $secondary_or_focus(5)),
-		'keyword' => $secondary_or_focus(5),
-		'format' => 'faq_roundup',
+	$templates = [
+		[
+			'title' => sprintf(__('Complete pillar guide to %1$s in %2$s', 'leadsforward-core'), $focus, $location),
+			'keyword' => $focus,
+			'format' => 'pillar',
+		],
+		[
+			'title' => sprintf(__('How to plan a %s project without costly surprises', 'leadsforward-core'), $secondary_or_focus(0)),
+			'keyword' => $secondary_or_focus(0),
+			'format' => 'how_to',
+		],
+		[
+			'title' => sprintf(__('How much does %1$s cost in %2$s', 'leadsforward-core'), $secondary_or_focus(1), $location),
+			'keyword' => $secondary_or_focus(1),
+			'format' => 'cost',
+		],
+		[
+			'title' => sprintf(__('%1$s versus alternatives: what homeowners should choose', 'leadsforward-core'), $secondary_or_focus(2)),
+			'keyword' => $secondary_or_focus(2),
+			'format' => 'comparison',
+		],
+		[
+			'title' => sprintf(__('Homeowner checklist before hiring a %s company', 'leadsforward-core'), $niche !== '' ? $niche : $focus),
+			'keyword' => $secondary_or_focus(3),
+			'format' => 'checklist',
+		],
+		[
+			'title' => sprintf(__('Seasonal timing for %1$s in %2$s', 'leadsforward-core'), $secondary_or_focus(4), $location),
+			'keyword' => $secondary_or_focus(4),
+			'format' => 'local_guide',
+		],
+		[
+			'title' => sprintf(__('Top homeowner questions about %s answered', 'leadsforward-core'), $secondary_or_focus(5)),
+			'keyword' => $secondary_or_focus(5),
+			'format' => 'faq_roundup',
+		],
 	];
 
-	return array_slice($topics, 0, 5);
+	$repeat_formats = ['comparison', 'checklist', 'local_guide', 'faq_roundup', 'how_to', 'cost'];
+	$topics = [];
+	for ($i = 0; $i < $total_needed; $i++) {
+		if (isset($templates[$i])) {
+			$topics[] = $templates[$i];
+			continue;
+		}
+		$kw = $secondary_or_focus($i);
+		$fmt = $repeat_formats[($i - count($templates)) % count($repeat_formats)];
+		$topics[] = [
+			'title' => sprintf(__('Deeper dive: %1$s in %2$s', 'leadsforward-core'), $kw, $location),
+			'keyword' => $kw,
+			'format' => $fmt,
+		];
+	}
+
+	return $topics;
 }
 
-function lf_ai_studio_ensure_blog_posts(array $topics): array {
-	$now_ts = current_time('timestamp');
-	$publish_now_count = 3;
-	$total_posts = 5;
+function lf_ai_studio_ensure_blog_posts(array $topics, array $manifest = []): array {
+	$mg = isset($manifest['global']) && is_array($manifest['global']) ? $manifest['global'] : [];
+	$ls = lf_launch_schedule_normalize(is_array($mg['launch_schedule'] ?? null) ? $mg['launch_schedule'] : []);
+	$blog = $ls['blog'];
+	$publish_now_count = (int) $blog['publish_now_count'];
+	$scheduled_weeks_between = max(1, (int) $blog['scheduled_weeks_between']);
+	$total_posts = max(1, min(20, $publish_now_count + $scheduled_count));
+	$hour = (int) ($ls['publish_hour'] ?? 9);
+	$anchor_ts = lf_launch_schedule_anchor_ts((string) ($ls['anchor'] ?? ''));
 	$topics = array_slice($topics, 0, $total_posts);
 	$ai_ids = get_posts([
 		'post_type'      => 'post',
@@ -2514,9 +2539,13 @@ function lf_ai_studio_ensure_blog_posts(array $topics): array {
 		if ($slot <= $publish_now_count) {
 			$post_update['post_status'] = 'publish';
 		} else {
-			$weeks_out = $slot - $publish_now_count;
-			$scheduled_ts = strtotime('+' . $weeks_out . ' week', $now_ts);
-			$local_date = wp_date('Y-m-d 09:00:00', $scheduled_ts, wp_timezone());
+			$weeks_out = ($slot - $publish_now_count) * $scheduled_weeks_between;
+			$scheduled_ts = strtotime('+' . $weeks_out . ' week', $anchor_ts);
+			if ($scheduled_ts === false) {
+				$scheduled_ts = $anchor_ts;
+			}
+			$local_date = wp_date('Y-m-d', (int) $scheduled_ts, wp_timezone()) . sprintf(' %02d:00:00', $hour);
+			$local_date = lf_launch_schedule_bump_until_future($local_date);
 			$post_update['post_status'] = 'future';
 			$post_update['post_date'] = $local_date;
 			$post_update['post_date_gmt'] = get_gmt_from_date($local_date);
@@ -4214,7 +4243,7 @@ function lf_ai_studio_scaffold_manifest(array $manifest): array {
 		}
 		$homepage_payload = lf_ai_studio_build_homepage_blueprint();
 		$blog_topics = lf_ai_studio_blog_post_topics($manifest, is_array($homepage_payload) ? $homepage_payload : []);
-		lf_ai_studio_ensure_blog_posts($blog_topics);
+		lf_ai_studio_ensure_blog_posts($blog_topics, $manifest);
 		lf_ai_studio_fill_site_content_without_ai();
 		if (function_exists('lf_seo_refresh_metadata_for_generated_content')) {
 			lf_seo_refresh_metadata_for_generated_content();
@@ -4747,6 +4776,7 @@ function lf_ai_studio_normalize_manifest(array $manifest): array {
 	$services = isset($manifest['services']) && is_array($manifest['services']) ? $manifest['services'] : [];
 	$areas = isset($manifest['service_areas']) && is_array($manifest['service_areas']) ? $manifest['service_areas'] : [];
 	$global = isset($manifest['global']) && is_array($manifest['global']) ? $manifest['global'] : [];
+	$launch_schedule_in = isset($global['launch_schedule']) && is_array($global['launch_schedule']) ? $global['launch_schedule'] : [];
 	$secondary = $homepage['secondary_keywords'] ?? [];
 	if (!is_array($secondary)) {
 		$secondary = [];
@@ -4813,6 +4843,7 @@ function lf_ai_studio_normalize_manifest(array $manifest): array {
 				'headline' => sanitize_text_field((string) ($global['custom_global_cta']['headline'] ?? '')),
 				'subheadline' => sanitize_text_field((string) ($global['custom_global_cta']['subheadline'] ?? '')),
 			],
+			'launch_schedule' => lf_launch_schedule_normalize($launch_schedule_in),
 		],
 	];
 }
@@ -4897,59 +4928,166 @@ function lf_ai_studio_manifest_keyword_map(array $manifest, string $key): array 
 }
 
 function lf_ai_studio_sync_manifest_posts(array $manifest): void {
-	$services = isset($manifest['services']) && is_array($manifest['services']) ? $manifest['services'] : [];
-	foreach ($services as $item) {
+	$mg = isset($manifest['global']) && is_array($manifest['global']) ? $manifest['global'] : [];
+	$ls = lf_launch_schedule_normalize(is_array($mg['launch_schedule'] ?? null) ? $mg['launch_schedule'] : []);
+	$anchor_ts = lf_launch_schedule_anchor_ts((string) ($ls['anchor'] ?? ''));
+
+	$services_raw = isset($manifest['services']) && is_array($manifest['services']) ? $manifest['services'] : [];
+	$service_slugs = [];
+	foreach ($services_raw as $item) {
+		$n = lf_ai_studio_normalize_service_item($item);
+		if ($n['slug'] !== '') {
+			$service_slugs[] = $n['slug'];
+		}
+	}
+	[$now_services, $later_services] = lf_launch_schedule_partition_slugs($service_slugs, (float) ($ls['services_initial_ratio'] ?? 0.5));
+	$service_now_set = array_fill_keys($now_services, true);
+
+	$areas_raw = isset($manifest['service_areas']) && is_array($manifest['service_areas']) ? $manifest['service_areas'] : [];
+	$area_slugs = [];
+	foreach ($areas_raw as $item) {
+		$n = lf_ai_studio_normalize_area_item($item);
+		if ($n['slug'] !== '') {
+			$area_slugs[] = $n['slug'];
+		}
+	}
+	[$now_areas, $later_areas] = lf_launch_schedule_partition_slugs($area_slugs, (float) ($ls['service_areas_initial_ratio'] ?? 0.5));
+	$area_now_set = array_fill_keys($now_areas, true);
+
+	$deferred_map = lf_launch_schedule_deferred_datetimes($later_services, $later_areas, $ls, $anchor_ts);
+
+	$resolve_deferred_local = static function (string $key) use ($deferred_map, $anchor_ts): string {
+		$local = (string) ($deferred_map[$key]['local'] ?? '');
+		if ($local !== '') {
+			$local = lf_launch_schedule_bump_until_future($local);
+		}
+		if ($local === '') {
+			$fallback = wp_date('Y-m-d H:i:s', $anchor_ts + WEEK_IN_SECONDS, wp_timezone());
+
+			return lf_launch_schedule_bump_until_future($fallback);
+		}
+
+		return $local;
+	};
+
+	foreach ($services_raw as $item) {
 		$normalized = lf_ai_studio_normalize_service_item($item);
 		if ($normalized['slug'] === '') {
 			continue;
 		}
-		$existing = get_page_by_path($normalized['slug'], OBJECT, 'lf_service');
+		$slug = $normalized['slug'];
+		$key = 'lf_service:' . $slug;
+		$publish_now = isset($service_now_set[$slug]);
+		$existing = get_page_by_path($slug, OBJECT, 'lf_service');
 		if ($existing instanceof \WP_Post) {
 			$title = $normalized['title'] !== '' ? $normalized['title'] : $existing->post_title;
-			wp_update_post([
+			$args = [
 				'ID' => $existing->ID,
 				'post_title' => $title,
-				'post_name' => $normalized['slug'],
-			]);
+				'post_name' => $slug,
+			];
+			if ($publish_now) {
+				$args['post_status'] = 'publish';
+				if ($existing->post_status !== 'publish') {
+					$args['post_date'] = current_time('mysql');
+					$args['post_date_gmt'] = current_time('mysql', 1);
+				}
+			} else {
+				$local = $resolve_deferred_local($key);
+				$args['post_status'] = 'future';
+				$args['post_date'] = $local;
+				$args['post_date_gmt'] = get_gmt_from_date($local);
+			}
+			wp_update_post($args);
+			update_post_meta($existing->ID, 'lf_manifest_schedule_managed', 1);
 		} else {
-			wp_insert_post([
-				'post_type' => 'lf_service',
-				'post_status' => 'publish',
-				'post_title' => $normalized['title'] !== '' ? $normalized['title'] : $normalized['slug'],
-				'post_name' => $normalized['slug'],
-				'post_author' => get_current_user_id(),
-			]);
+			$base_title = $normalized['title'] !== '' ? $normalized['title'] : $slug;
+			if ($publish_now) {
+				$post_id = wp_insert_post([
+					'post_type' => 'lf_service',
+					'post_status' => 'publish',
+					'post_title' => $base_title,
+					'post_name' => $slug,
+					'post_author' => get_current_user_id(),
+				]);
+			} else {
+				$local = $resolve_deferred_local($key);
+				$post_id = wp_insert_post([
+					'post_type' => 'lf_service',
+					'post_status' => 'future',
+					'post_title' => $base_title,
+					'post_name' => $slug,
+					'post_author' => get_current_user_id(),
+					'post_date' => $local,
+					'post_date_gmt' => get_gmt_from_date($local),
+				]);
+			}
+			if ($post_id && !is_wp_error($post_id)) {
+				update_post_meta((int) $post_id, 'lf_manifest_schedule_managed', 1);
+			}
 		}
 	}
-	$areas = isset($manifest['service_areas']) && is_array($manifest['service_areas']) ? $manifest['service_areas'] : [];
-	foreach ($areas as $item) {
+
+	foreach ($areas_raw as $item) {
 		$normalized = lf_ai_studio_normalize_area_item($item);
 		if ($normalized['slug'] === '') {
 			continue;
 		}
-		$existing = get_page_by_path($normalized['slug'], OBJECT, 'lf_service_area');
+		$slug = $normalized['slug'];
+		$key = 'lf_service_area:' . $slug;
+		$publish_now = isset($area_now_set[$slug]);
+		$title = trim($normalized['city'] . ($normalized['state'] ? ', ' . $normalized['state'] : ''));
+		if ($title === '') {
+			$title = $slug;
+		}
+		$existing = get_page_by_path($slug, OBJECT, 'lf_service_area');
 		if ($existing instanceof \WP_Post) {
-			$title = trim($normalized['city'] . ($normalized['state'] ? ', ' . $normalized['state'] : ''));
-			if ($title === '') {
+			if (trim($normalized['city'] . ($normalized['state'] ? ', ' . $normalized['state'] : '')) === '') {
 				$title = $existing->post_title;
 			}
-			wp_update_post([
+			$args = [
 				'ID' => $existing->ID,
 				'post_title' => $title,
-				'post_name' => $normalized['slug'],
-			]);
-		} else {
-			$title = trim($normalized['city'] . ($normalized['state'] ? ', ' . $normalized['state'] : ''));
-			if ($title === '') {
-				$title = $normalized['slug'];
+				'post_name' => $slug,
+			];
+			if ($publish_now) {
+				$args['post_status'] = 'publish';
+				if ($existing->post_status !== 'publish') {
+					$args['post_date'] = current_time('mysql');
+					$args['post_date_gmt'] = current_time('mysql', 1);
+				}
+			} else {
+				$local = $resolve_deferred_local($key);
+				$args['post_status'] = 'future';
+				$args['post_date'] = $local;
+				$args['post_date_gmt'] = get_gmt_from_date($local);
 			}
-			wp_insert_post([
-				'post_type' => 'lf_service_area',
-				'post_status' => 'publish',
-				'post_title' => $title,
-				'post_name' => $normalized['slug'],
-				'post_author' => get_current_user_id(),
-			]);
+			wp_update_post($args);
+			update_post_meta($existing->ID, 'lf_manifest_schedule_managed', 1);
+		} else {
+			if ($publish_now) {
+				$post_id = wp_insert_post([
+					'post_type' => 'lf_service_area',
+					'post_status' => 'publish',
+					'post_title' => $title,
+					'post_name' => $slug,
+					'post_author' => get_current_user_id(),
+				]);
+			} else {
+				$local = $resolve_deferred_local($key);
+				$post_id = wp_insert_post([
+					'post_type' => 'lf_service_area',
+					'post_status' => 'future',
+					'post_title' => $title,
+					'post_name' => $slug,
+					'post_author' => get_current_user_id(),
+					'post_date' => $local,
+					'post_date_gmt' => get_gmt_from_date($local),
+				]);
+			}
+			if ($post_id && !is_wp_error($post_id)) {
+				update_post_meta((int) $post_id, 'lf_manifest_schedule_managed', 1);
+			}
 		}
 	}
 }
@@ -6265,7 +6403,7 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 	}
 	if (!empty($scope['blog_posts'])) {
 		$blog_topics = lf_ai_studio_blog_post_topics($manifest, $homepage_payload);
-		$blog_posts = lf_ai_studio_ensure_blog_posts($blog_topics);
+		$blog_posts = lf_ai_studio_ensure_blog_posts($blog_topics, $manifest);
 		foreach ($blog_posts as $entry) {
 			$post = $entry['post'] ?? null;
 			if (!$post instanceof \WP_Post) {
@@ -6358,7 +6496,7 @@ function lf_ai_studio_build_blog_payload(): array {
 		return lf_ai_studio_fail_result('build_blog_payload', (string) $homepage_payload['error']);
 	}
 	$blog_topics = lf_ai_studio_blog_post_topics($manifest, $homepage_payload);
-	$blog_posts = lf_ai_studio_ensure_blog_posts($blog_topics);
+	$blog_posts = lf_ai_studio_ensure_blog_posts($blog_topics, $manifest);
 	$blueprints = [];
 	foreach ($blog_posts as $entry) {
 		$post = $entry['post'] ?? null;

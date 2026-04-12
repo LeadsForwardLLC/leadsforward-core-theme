@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('LF_THEME_VERSION', '0.1.5');
+define('LF_THEME_VERSION', '0.1.6');
 define('LF_THEME_DIR', get_template_directory());
 define('LF_THEME_URI', get_template_directory_uri());
 /** Admin page slug for LeadsForward → Manifest Website (orchestrator UI). */
@@ -57,6 +57,8 @@ lf_load_inc('blog.php');
 lf_load_inc('headings.php');
 // Deterministic media indexing + matching engine.
 lf_load_inc('image-intelligence.php');
+// Manifest launch scheduling (service/area/blog publish windows).
+lf_load_inc('launch-schedule.php');
 // AI Studio core + REST endpoints (used outside admin).
 lf_load_inc('ai-studio.php');
 lf_load_inc('ai-studio-wiring.php');
