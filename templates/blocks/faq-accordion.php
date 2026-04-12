@@ -21,6 +21,7 @@ $header_align = function_exists('lf_sections_sanitize_header_align') ? lf_sectio
 $section_surface_style = $surface['style'] !== '' ? ' style="' . esc_attr($surface['style']) . '"' : '';
 $heading  = !empty($section['section_heading']) ? $section['section_heading'] : __('Frequently Asked Questions', 'leadsforward-core');
 $intro    = !empty($section['section_intro']) ? $section['section_intro'] : '';
+$section_heading_tag = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($section) : 'h2';
 $icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'faq_accordion', 'above', 'lf-heading-icon') : '';
 $icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'faq_accordion', 'left', 'lf-heading-icon') : '';
 $columns = 1;
@@ -135,10 +136,10 @@ $has_faq_posts = $query->have_posts();
 			<?php if ($icon_left) : ?>
 				<div class="lf-heading-row">
 					<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
-					<h2 class="lf-block-faq-accordion__title"><?php echo esc_html($heading); ?></h2>
+					<<?php echo esc_html($section_heading_tag); ?> class="lf-block-faq-accordion__title"><?php echo esc_html($heading); ?></<?php echo esc_html($section_heading_tag); ?>>
 				</div>
 			<?php else : ?>
-				<h2 class="lf-block-faq-accordion__title"><?php echo esc_html($heading); ?></h2>
+				<<?php echo esc_html($section_heading_tag); ?> class="lf-block-faq-accordion__title"><?php echo esc_html($heading); ?></<?php echo esc_html($section_heading_tag); ?>>
 			<?php endif; ?>
 			<?php if ($intro !== '') : ?>
 				<p class="lf-block-faq-accordion__intro"><?php echo esc_html($intro); ?></p>

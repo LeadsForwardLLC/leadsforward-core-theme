@@ -1050,10 +1050,12 @@ function lf_pb_render_sections(\WP_Post $post): void {
 		if ($type === '') {
 			continue;
 		}
+		$sec_settings_pb = is_array($sec_cfg['settings'] ?? null) ? $sec_cfg['settings'] : [];
+		$wrap_heading_tag_pb = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($sec_settings_pb) : 'h2';
 		// If a section is hidden, keep a placeholder wrapper for front-end editors so it can be restored.
 		if (!$enabled) {
 			if (current_user_can('edit_theme_options')) {
-				echo '<div class="lf-inline-section-wrap lf-inline-section-wrap--hidden" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-visible="0">';
+				echo '<div class="lf-inline-section-wrap lf-inline-section-wrap--hidden" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_pb) . '" data-lf-section-visible="0">';
 				echo '<div class="lf-ai-hidden-section-placeholder" aria-label="' . esc_attr__('Hidden section', 'leadsforward-core') . '">';
 				echo esc_html__('Hidden section:', 'leadsforward-core') . ' ' . esc_html((string) ($type ?: $section_id));
 				echo '</div>';
@@ -1099,7 +1101,7 @@ function lf_pb_render_sections(\WP_Post $post): void {
 				implode(', ', $rendered)
 			));
 		}
-		echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-visible="1">';
+		echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_pb) . '" data-lf-section-visible="1">';
 		lf_sections_render_section($type, $context, $sec_cfg['settings'] ?? [], $post);
 		echo '</div>';
 	}

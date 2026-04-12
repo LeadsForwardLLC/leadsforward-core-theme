@@ -21,6 +21,7 @@ $style_attr = $surface['style'] !== '' ? ' style="' . esc_attr($surface['style']
 
 $heading = (string) ($section['section_heading'] ?? '');
 $intro = (string) ($section['section_intro'] ?? '');
+$section_heading_tag = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($section) : 'h2';
 $factors = preg_split('/\r?\n+/', (string) ($section['pricing_factors'] ?? ''));
 $factors = array_values(array_filter(array_map('trim', is_array($factors) ? $factors : [])));
 $financing_enabled = (string) ($section['financing_enabled'] ?? '0') !== '0';
@@ -43,7 +44,7 @@ if ($cta_action === 'link' && $cta_url === '') {
 	<div class="lf-block-pricing__inner">
 		<?php if ($heading !== '' || $intro !== '') : ?>
 			<header class="lf-block-pricing__header lf-section__header lf-section__header--align-<?php echo esc_attr($header_align); ?>">
-				<?php if ($heading !== '') : ?><h2 class="lf-block-pricing__title"><?php echo esc_html($heading); ?></h2><?php endif; ?>
+				<?php if ($heading !== '') : ?><<?php echo esc_html($section_heading_tag); ?> class="lf-block-pricing__title"><?php echo esc_html($heading); ?></<?php echo esc_html($section_heading_tag); ?>><?php endif; ?>
 				<?php if ($intro !== '') : ?><p class="lf-block-pricing__intro"><?php echo esc_html($intro); ?></p><?php endif; ?>
 			</header>
 		<?php endif; ?>

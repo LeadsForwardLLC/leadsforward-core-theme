@@ -20,6 +20,7 @@ $header_align = function_exists('lf_sections_sanitize_header_align') ? lf_sectio
 $style_attr = $surface['style'] !== '' ? ' style="' . esc_attr($surface['style']) . '"' : '';
 $heading = (string) ($section['section_heading'] ?? '');
 $intro = (string) ($section['section_intro'] ?? '');
+$section_heading_tag = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($section) : 'h2';
 $people_raw = (string) ($section['team_members'] ?? '');
 $rows = preg_split('/\r?\n+/', trim($people_raw));
 $rows = array_values(array_filter(array_map('trim', is_array($rows) ? $rows : [])));
@@ -41,7 +42,7 @@ $columns = max(2, min(4, $columns));
 	<div class="lf-block-team__inner">
 		<?php if ($heading !== '' || $intro !== '') : ?>
 			<header class="lf-block-team__header lf-section__header lf-section__header--align-<?php echo esc_attr($header_align); ?>">
-				<?php if ($heading !== '') : ?><h2 class="lf-block-team__title"><?php echo esc_html($heading); ?></h2><?php endif; ?>
+				<?php if ($heading !== '') : ?><<?php echo esc_html($section_heading_tag); ?> class="lf-block-team__title"><?php echo esc_html($heading); ?></<?php echo esc_html($section_heading_tag); ?>><?php endif; ?>
 				<?php if ($intro !== '') : ?><p class="lf-block-team__intro"><?php echo esc_html($intro); ?></p><?php endif; ?>
 			</header>
 		<?php endif; ?>

@@ -1203,9 +1203,9 @@ button:focus-visible,
 }
 
 .lf-service-details__checklists {
-	display: grid;
+	display: flex;
+	flex-direction: column;
 	gap: 1rem;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .lf-service-details__micro {
