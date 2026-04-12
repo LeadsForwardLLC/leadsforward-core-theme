@@ -18,6 +18,17 @@ add_action('admin_footer', 'lf_ai_assistant_render_floating_widget');
 add_action('wp_footer', 'lf_ai_assistant_render_floating_widget');
 add_action('wp_footer', 'lf_ai_inline_overrides_frontend_script', 5);
 add_filter('lf_keep_jquery', 'lf_ai_assistant_keep_jquery_for_frontend_admins');
+add_filter('lf_script_no_defer', 'lf_ai_assistant_no_defer_floating_script');
+
+/**
+ * Keep the floating assistant bundle from being deferred (avoids init racing footer markup / optimizers).
+ *
+ * @param list<string> $handles
+ * @return list<string>
+ */
+function lf_ai_assistant_no_defer_floating_script($handles): array {
+	return array_values(array_unique(array_merge(is_array($handles) ? $handles : [], ['lf-ai-floating-assistant'])));
+}
 
 function lf_ai_assistant_keep_jquery_for_frontend_admins($keep): bool {
 	if (is_admin()) {
@@ -1087,12 +1098,18 @@ function lf_ai_assistant_widget_js(): string {
 	// DOM-ready: section markup + float widget must exist before init (script reorder / optimizers).
 	return 'jQuery(function($){
 		"use strict";
+		function lfAiRun() {
 		var stateKey = "lfAiFloatState";
 		var seoStateKey = "lfAiSeoFloatState";
 		var $root = $("[data-lf-ai-float]");
 		var $linkRoot = $("[data-lf-ai-inline-link-root]");
 		var $seoRoot = $("[data-lf-ai-seo-float]");
-		if (!$root.length || typeof lfAiFloating === "undefined") return;
+		if (!$root.length || typeof lfAiFloating === "undefined") {
+			return false;
+		}
+		if ($root.attr("data-lf-ai-js-init") === "1") {
+			return true;
+		}
 		$root.attr("data-lf-ai-js-init", "1");
 		var $toggle = $root.find("[data-lf-ai-toggle]");
 		var $panel = $root.find("#lf-ai-float-panel");
@@ -8846,7 +8863,20 @@ function lf_ai_assistant_widget_js(): string {
 			setStatus("Live mode enabled. Toggle ✎ (editor) in the AI Assistant header to show section controls and inline editing.", false);
 		}
 		renderSeoSnapshot();
-	});';
+		return true;
+		}
+		var lfAiBootAttempts = 0;
+		function lfAiBootTick() {
+			if (lfAiRun()) {
+				return;
+			}
+			lfAiBootAttempts++;
+			if (lfAiBootAttempts < 120) {
+				window.setTimeout(lfAiBootTick, 50);
+			}
+		}
+		lfAiBootTick();
+});';
 }
 
 function lf_ai_assistant_widget_fallback_js(): string {
