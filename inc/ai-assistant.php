@@ -159,7 +159,10 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		return;
 	}
 
-	wp_register_script('lf-ai-floating-assistant', '', ['jquery'], LF_THEME_VERSION, true);
+	// wp-hooks + wp-i18n define window.wp pieces before wp-i18n inline (avoids "wp is not defined" on front).
+	wp_enqueue_script('wp-hooks');
+	wp_enqueue_script('wp-i18n');
+	wp_register_script('lf-ai-floating-assistant', '', ['jquery', 'wp-hooks', 'wp-i18n'], LF_THEME_VERSION, true);
 	wp_enqueue_script('lf-ai-floating-assistant');
 	if (function_exists('wp_enqueue_media')) {
 		wp_enqueue_media();
@@ -6911,6 +6914,7 @@ function lf_ai_assistant_widget_js(): string {
 			collectSectionWrappers().forEach(function(wrap){
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
 				if (wrap.querySelector(".lf-ai-section-insert")) return;
+				var sid = String(wrap.getAttribute("data-lf-section-id") || "");
 				var shell = document.createElement("div");
 				shell.className = "lf-ai-section-insert lf-ai-inline-editor-ignore";
 				var topZ = document.createElement("div");
@@ -6924,7 +6928,6 @@ function lf_ai_assistant_widget_js(): string {
 				topBtn.addEventListener("click", function(e){
 					e.preventDefault();
 					e.stopPropagation();
-					var sid = String(wrap.getAttribute("data-lf-section-id") || "");
 					openSectionInsertPicker("", sid);
 				});
 				topZ.appendChild(topBtn);
@@ -6939,7 +6942,6 @@ function lf_ai_assistant_widget_js(): string {
 				botBtn.addEventListener("click", function(e){
 					e.preventDefault();
 					e.stopPropagation();
-					var sid = String(wrap.getAttribute("data-lf-section-id") || "");
 					openSectionInsertPicker(sid, "");
 				});
 				botZ.appendChild(botBtn);
