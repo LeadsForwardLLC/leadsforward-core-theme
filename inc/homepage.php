@@ -81,7 +81,7 @@ function lf_homepage_legacy_order(): array {
 function lf_homepage_sanitize_order(array $order, bool $append_missing = true): array {
 	$canonical = lf_homepage_default_order();
 	// Allow any section type registered for the homepage (not only the default order list),
-	// so Structure / library adds (team, pricing, packages, logo_strip, …) are not stripped.
+	// so Structure / library adds (pricing, packages, logo_strip, …) are not stripped.
 	$allowed_bases = $canonical;
 	if (function_exists('lf_sections_get_context_sections')) {
 		$hp = lf_sections_get_context_sections('homepage');

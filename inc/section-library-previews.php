@@ -189,19 +189,6 @@ function lf_ai_section_library_preview_svg(string $section_id): string {
 				'<rect x="94" y="46" width="16" height="6" rx="2" fill="' . $muted . '"/>'
 			);
 
-		case 'team':
-			return $wrap(
-				'<rect x="55" y="12" width="90" height="8" rx="3" fill="' . $ink . '"/>' .
-				'<rect x="22" y="36" width="44" height="72" rx="8" fill="#fff" stroke="' . $stroke . '"/>' .
-				'<circle cx="44" cy="54" r="12" fill="' . $light . '"/>' .
-				'<rect x="30" y="72" width="28" height="5" rx="2" fill="' . $ink . '"/>' .
-				'<rect x="32" y="82" width="24" height="3" rx="2" fill="' . $muted . '"/>' .
-				'<rect x="78" y="36" width="44" height="72" rx="8" fill="#fff" stroke="' . $stroke . '"/>' .
-				'<circle cx="100" cy="54" r="12" fill="' . $light . '"/>' .
-				'<rect x="134" y="36" width="44" height="72" rx="8" fill="#fff" stroke="' . $stroke . '"/>' .
-				'<circle cx="156" cy="54" r="12" fill="' . $light . '"/>'
-			);
-
 		case 'pricing':
 			return $wrap(
 				'<rect x="50" y="12" width="100" height="8" rx="3" fill="' . $ink . '"/>' .
