@@ -20,6 +20,7 @@ $header_align = function_exists('lf_sections_sanitize_header_align') ? lf_sectio
 $style_attr = $surface['style'] !== '' ? ' style="' . esc_attr($surface['style']) . '"' : '';
 $heading = (string) ($section['section_heading'] ?? '');
 $intro = (string) ($section['section_intro'] ?? '');
+$section_heading_tag = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($section) : 'h2';
 $logos_raw = (string) ($section['logo_strip_logos'] ?? '');
 $logo_ids = preg_split('/[\r\n,]+/', $logos_raw);
 $logo_ids = array_values(array_filter(array_map(static function ($v): int {
@@ -37,7 +38,7 @@ if (count($logo_ids) > $max) {
 	<div class="lf-block-logo-strip__inner">
 		<?php if ($heading !== '' || $intro !== '') : ?>
 			<header class="lf-block-logo-strip__header lf-section__header lf-section__header--align-<?php echo esc_attr($header_align); ?>">
-				<?php if ($heading !== '') : ?><h2 class="lf-block-logo-strip__title"><?php echo esc_html($heading); ?></h2><?php endif; ?>
+				<?php if ($heading !== '') : ?><<?php echo esc_html($section_heading_tag); ?> class="lf-block-logo-strip__title"><?php echo esc_html($heading); ?></<?php echo esc_html($section_heading_tag); ?>><?php endif; ?>
 				<?php if ($intro !== '') : ?><p class="lf-block-logo-strip__intro"><?php echo esc_html($intro); ?></p><?php endif; ?>
 			</header>
 		<?php endif; ?>

@@ -926,6 +926,16 @@ function lf_ai_mutate_section_style_settings(array $settings, string $patch, arr
 		$settings['service_intro_columns'] = $grid_columns;
 		return [$settings, ''];
 	}
+	if ($patch === 'cycle_section_heading_tag') {
+		$allowed = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+		$cur = function_exists('lf_sections_sanitize_section_heading_tag')
+			? lf_sections_sanitize_section_heading_tag($settings)
+			: 'h2';
+		$idx = array_search($cur, $allowed, true);
+		$idx = $idx === false ? 1 : (int) $idx;
+		$settings['section_heading_tag'] = $allowed[ ( $idx + 1 ) % count($allowed) ];
+		return [$settings, ''];
+	}
 	return [$settings, __('Unknown style action.', 'leadsforward-core')];
 }
 

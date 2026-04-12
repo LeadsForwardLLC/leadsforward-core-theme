@@ -43,6 +43,7 @@ $maps_api_key = get_option('lf_maps_api_key', '');
 $maps_api_key = is_string($maps_api_key) ? $maps_api_key : '';
 $heading = !empty($section['section_heading']) ? $section['section_heading'] : __('Areas We Serve', 'leadsforward-core');
 $intro   = !empty($section['section_intro']) ? $section['section_intro'] : '';
+$section_heading_tag = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($section) : 'h2';
 $icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'map_nap', 'above', 'lf-heading-icon') : '';
 $icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'map_nap', 'left', 'lf-heading-icon') : '';
 $list_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'map_nap', 'list', 'lf-block-map-nap__icon') : '';
@@ -174,10 +175,10 @@ $areas_query = new WP_Query([
 					<?php if ($icon_left) : ?>
 						<div class="lf-heading-row">
 							<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
-							<h2 class="lf-block-map-nap__title"><?php echo esc_html($heading); ?></h2>
+							<<?php echo esc_html($section_heading_tag); ?> class="lf-block-map-nap__title"><?php echo esc_html($heading); ?></<?php echo esc_html($section_heading_tag); ?>>
 						</div>
 					<?php else : ?>
-						<h2 class="lf-block-map-nap__title"><?php echo esc_html($heading); ?></h2>
+						<<?php echo esc_html($section_heading_tag); ?> class="lf-block-map-nap__title"><?php echo esc_html($heading); ?></<?php echo esc_html($section_heading_tag); ?>>
 					<?php endif; ?>
 					<?php if ($intro !== '') : ?>
 						<p class="lf-block-map-nap__intro"><?php echo esc_html($intro); ?></p>

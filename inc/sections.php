@@ -1070,6 +1070,9 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 				break;
 		}
 	}
+	if (array_key_exists('section_heading_tag', $input)) {
+		$out['section_heading_tag'] = lf_sections_sanitize_section_heading_tag(['section_heading_tag' => $input['section_heading_tag']]);
+	}
 	return $out;
 }
 
@@ -1546,6 +1549,16 @@ function lf_sections_sanitize_header_align(array $settings): string {
 }
 
 /**
+ * Sanitize section title HTML tag for shell and block headings (H1–H6).
+ *
+ * @param array<string, mixed> $settings
+ */
+function lf_sections_sanitize_section_heading_tag(array $settings): string {
+	$tag = strtolower(trim((string) ($settings['section_heading_tag'] ?? '')));
+	return preg_match('/^h[1-6]$/', $tag) ? $tag : 'h2';
+}
+
+/**
  * Surface class + optional inline background for block-style sections.
  *
  * @param array<string, mixed> $section
@@ -1632,6 +1645,7 @@ function lf_sections_render_shell_open(string $id, string $title = '', string $i
 	$bg_class = $custom_bg !== '' ? 'lf-section--custom-section-bg' : lf_sections_bg_class($background);
 	$section_style = $custom_bg !== '' ? ' style="background-color:' . esc_attr($custom_bg) . ';"' : ''; // safe: esc_attr on color
 	$header_align = lf_sections_sanitize_header_align($settings);
+	$heading_tag = lf_sections_sanitize_section_heading_tag($settings);
 	$icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, $id, 'above', 'lf-heading-icon') : '';
 	$icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, $id, 'left', 'lf-heading-icon') : '';
 	$has_header = $title || $intro || $icon_above || $icon_left;
@@ -1647,10 +1661,10 @@ function lf_sections_render_shell_open(string $id, string $title = '', string $i
 						<?php if ($icon_left) : ?>
 							<div class="lf-heading-row">
 								<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
-								<h2 class="lf-section__title"><?php echo esc_html($title); ?></h2>
+								<<?php echo esc_html($heading_tag); ?> class="lf-section__title"><?php echo esc_html($title); ?></<?php echo esc_html($heading_tag); ?>>
 							</div>
 						<?php else : ?>
-							<h2 class="lf-section__title"><?php echo esc_html($title); ?></h2>
+							<<?php echo esc_html($heading_tag); ?> class="lf-section__title"><?php echo esc_html($title); ?></<?php echo esc_html($heading_tag); ?>>
 						<?php endif; ?>
 					<?php endif; ?>
 					<?php if ($intro) : ?><p class="lf-section__intro"><?php echo esc_html($intro); ?></p><?php endif; ?>
@@ -2149,7 +2163,8 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 			<?php if ($render_header_in_content && ($title || $intro)) : ?>
 				<div class="lf-service-details__header">
 					<?php if ($title) : ?>
-						<h2 class="lf-section__title"><?php echo esc_html($title); ?></h2>
+						<?php $lf_sd_heading_tag = lf_sections_sanitize_section_heading_tag($settings); ?>
+						<<?php echo esc_html($lf_sd_heading_tag); ?> class="lf-section__title"><?php echo esc_html($title); ?></<?php echo esc_html($lf_sd_heading_tag); ?>>
 					<?php endif; ?>
 					<?php if ($intro) : ?>
 						<p class="lf-section__intro"><?php echo esc_html($intro); ?></p>

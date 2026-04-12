@@ -962,8 +962,9 @@ function lf_render_homepage_section(array $section, int $index): void {
 	$enabled = !empty($section['enabled']);
 	if (!$enabled) {
 		// Keep a placeholder wrapper for front-end editors so hidden sections can be restored.
+		$wrap_heading_tag_hp = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($section) : 'h2';
 		if (current_user_can('edit_theme_options')) {
-			echo '<div class="lf-inline-section-wrap lf-inline-section-wrap--hidden" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-visible="0">';
+			echo '<div class="lf-inline-section-wrap lf-inline-section-wrap--hidden" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_hp) . '" data-lf-section-visible="0">';
 			echo '<div class="lf-ai-hidden-section-placeholder" aria-label="' . esc_attr__('Hidden section', 'leadsforward-core') . '">';
 			echo esc_html__('Hidden section:', 'leadsforward-core') . ' ' . esc_html((string) $type);
 			echo '</div>';
@@ -998,7 +999,8 @@ function lf_render_homepage_section(array $section, int $index): void {
 			implode(', ', $rendered)
 		));
 	}
-	echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-visible="1">';
+	$wrap_heading_tag_hp = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($section) : 'h2';
+	echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_hp) . '" data-lf-section-visible="1">';
 	lf_sections_render_section($type, 'homepage', $section, $post);
 	echo '</div>';
 }

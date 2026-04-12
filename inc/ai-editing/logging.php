@@ -118,6 +118,16 @@ function lf_ai_inline_link_allowed_kses(): array {
 		'em'     => [],
 		'b'      => [],
 		'i'      => [],
+		'u'      => [],
+		'span'   => [
+			'style' => true,
+			'class' => true,
+		],
+		'font'   => [
+			'color' => true,
+			'face'  => true,
+			'size'  => true,
+		],
 	];
 }
 

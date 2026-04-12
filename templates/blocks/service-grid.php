@@ -18,6 +18,7 @@ $context = $block['context'] ?? [];
 $section = $context['section'] ?? [];
 $heading = !empty($section['section_heading']) ? $section['section_heading'] : __('Our Services', 'leadsforward-core');
 $intro   = !empty($section['section_intro']) ? $section['section_intro'] : '';
+$section_heading_tag = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($section) : 'h2';
 $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'light') : '';
 $surface = function_exists('lf_sections_block_surface_attrs') ? lf_sections_block_surface_attrs($section) : ['class' => $bg_class, 'style' => ''];
 $header_align = function_exists('lf_sections_sanitize_header_align') ? lf_sections_sanitize_header_align($section) : 'center';
@@ -42,10 +43,10 @@ $query = new WP_Query([
 			<?php if ($icon_left) : ?>
 				<div class="lf-heading-row">
 					<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
-					<h2 class="lf-block-service-grid__title"><?php echo esc_html($heading); ?></h2>
+					<<?php echo esc_html($section_heading_tag); ?> class="lf-block-service-grid__title"><?php echo esc_html($heading); ?></<?php echo esc_html($section_heading_tag); ?>>
 				</div>
 			<?php else : ?>
-				<h2 class="lf-block-service-grid__title"><?php echo esc_html($heading); ?></h2>
+				<<?php echo esc_html($section_heading_tag); ?> class="lf-block-service-grid__title"><?php echo esc_html($heading); ?></<?php echo esc_html($section_heading_tag); ?>>
 			<?php endif; ?>
 			<?php if ($intro !== '') : ?>
 				<p class="lf-block-service-grid__intro"><?php echo esc_html($intro); ?></p>

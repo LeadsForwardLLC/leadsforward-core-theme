@@ -17,6 +17,7 @@ $context = $block['context'] ?? [];
 $section = $context['section'] ?? [];
 $heading = !empty($section['section_heading']) ? $section['section_heading'] : __('Areas We Serve', 'leadsforward-core');
 $intro   = !empty($section['section_intro']) ? $section['section_intro'] : '';
+$section_heading_tag = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($section) : 'h2';
 $map_heading = !empty($section['map_heading']) ? (string) $section['map_heading'] : __('Service area map', 'leadsforward-core');
 $map_intro = !empty($section['map_intro']) ? (string) $section['map_intro'] : __('Map pins show the areas currently covered by our team.', 'leadsforward-core');
 $search_placeholder = !empty($section['search_placeholder']) ? (string) $section['search_placeholder'] : __('Search city or neighborhood', 'leadsforward-core');
@@ -127,10 +128,10 @@ $points_json = wp_json_encode(array_map(static function (array $area): array {
 			<?php if ($icon_left) : ?>
 				<div class="lf-heading-row">
 					<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
-					<h2 class="lf-block-service-areas__title"><?php echo esc_html($heading); ?></h2>
+					<<?php echo esc_html($section_heading_tag); ?> class="lf-block-service-areas__title"><?php echo esc_html($heading); ?></<?php echo esc_html($section_heading_tag); ?>>
 				</div>
 			<?php else : ?>
-				<h2 class="lf-block-service-areas__title"><?php echo esc_html($heading); ?></h2>
+				<<?php echo esc_html($section_heading_tag); ?> class="lf-block-service-areas__title"><?php echo esc_html($heading); ?></<?php echo esc_html($section_heading_tag); ?>>
 			<?php endif; ?>
 			<?php if ($intro !== '') : ?>
 				<p class="lf-block-service-areas__intro"><?php echo esc_html($intro); ?></p>

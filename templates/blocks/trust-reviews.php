@@ -16,6 +16,7 @@ $render_id = $block_id ?: 'block-' . uniqid();
 $variant = $block['variant'] ?? 'default';
 $context = $block['context'] ?? [];
 $section = $context['section'] ?? [];
+$section_heading_tag = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($section) : 'h2';
 $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'soft') : '';
 $surface = function_exists('lf_sections_block_surface_attrs') ? lf_sections_block_surface_attrs($section) : ['class' => $bg_class, 'style' => ''];
 $header_align = function_exists('lf_sections_sanitize_header_align') ? lf_sections_sanitize_header_align($section) : 'center';
@@ -123,10 +124,10 @@ $full_section_style = trim($surface['style'] . ' ' . $section_inline_style);
 			<?php if ($icon_left) : ?>
 				<div class="lf-heading-row">
 					<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
-					<h2 class="lf-block-trust-reviews__title"><?php echo esc_html($heading); ?></h2>
+					<<?php echo esc_html($section_heading_tag); ?> class="lf-block-trust-reviews__title"><?php echo esc_html($heading); ?></<?php echo esc_html($section_heading_tag); ?>>
 				</div>
 			<?php else : ?>
-				<h2 class="lf-block-trust-reviews__title"><?php echo esc_html($heading); ?></h2>
+				<<?php echo esc_html($section_heading_tag); ?> class="lf-block-trust-reviews__title"><?php echo esc_html($heading); ?></<?php echo esc_html($section_heading_tag); ?>>
 			<?php endif; ?>
 			<?php if ($show_summary && $total_reviews > 0) : ?>
 				<div class="lf-block-trust-reviews__summary" role="note" aria-label="<?php esc_attr_e('Review summary', 'leadsforward-core'); ?>">

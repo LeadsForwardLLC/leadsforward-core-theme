@@ -15,6 +15,7 @@ if (!defined('ABSPATH')) {
 $block_id = $block['id'] ?? '';
 $context = $block['context'] ?? [];
 $section = $context['section'] ?? [];
+$section_heading_tag = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($section) : 'h2';
 $variant = $block['variant'] ?? 'default';
 $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'dark') : '';
 $surface = function_exists('lf_sections_block_surface_attrs') ? lf_sections_block_surface_attrs($section) : ['class' => $bg_class, 'style' => ''];
@@ -82,10 +83,10 @@ $show_form = ($cta_type === 'form' && $ghl_embed) || ($cta_type !== 'call' && $g
 				<?php if ($icon_left) : ?>
 					<div class="lf-heading-row">
 						<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
-						<h2 class="lf-block-cta__headline"><?php echo esc_html($headline); ?></h2>
+						<<?php echo esc_html($section_heading_tag); ?> class="lf-block-cta__headline"><?php echo esc_html($headline); ?></<?php echo esc_html($section_heading_tag); ?>>
 					</div>
 				<?php else : ?>
-					<h2 class="lf-block-cta__headline"><?php echo esc_html($headline); ?></h2>
+					<<?php echo esc_html($section_heading_tag); ?> class="lf-block-cta__headline"><?php echo esc_html($headline); ?></<?php echo esc_html($section_heading_tag); ?>>
 				<?php endif; ?>
 			<?php endif; ?>
 			<?php if ($subheadline !== '') : ?>
