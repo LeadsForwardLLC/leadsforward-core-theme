@@ -500,10 +500,23 @@ function lf_ai_assistant_render_floating_widget(): void {
 					<button type="button" class="lf-ai-inline-link__fmt" data-lf-ai-inline-cmd="justifyRight" title="<?php esc_attr_e('Align right', 'leadsforward-core'); ?>">R</button>
 				</span>
 				<span class="lf-ai-inline-link__toolbar-group" role="group" aria-label="<?php esc_attr_e('Text color', 'leadsforward-core'); ?>">
-					<button type="button" class="lf-ai-inline-link__fmt lf-ai-inline-link__fmt--swatch" data-lf-ai-inline-cmd="foreColor" data-lf-ai-inline-cmd-value="#0f172a" style="background:#0f172a" title="<?php esc_attr_e('Text black', 'leadsforward-core'); ?>" aria-label="<?php esc_attr_e('Text black', 'leadsforward-core'); ?>"></button>
-					<button type="button" class="lf-ai-inline-link__fmt lf-ai-inline-link__fmt--swatch" data-lf-ai-inline-cmd="foreColor" data-lf-ai-inline-cmd-value="#1d4ed8" style="background:#1d4ed8" title="<?php esc_attr_e('Text blue', 'leadsforward-core'); ?>" aria-label="<?php esc_attr_e('Text blue', 'leadsforward-core'); ?>"></button>
-					<button type="button" class="lf-ai-inline-link__fmt lf-ai-inline-link__fmt--swatch" data-lf-ai-inline-cmd="foreColor" data-lf-ai-inline-cmd-value="#b91c1c" style="background:#b91c1c" title="<?php esc_attr_e('Text red', 'leadsforward-core'); ?>" aria-label="<?php esc_attr_e('Text red', 'leadsforward-core'); ?>"></button>
-					<button type="button" class="lf-ai-inline-link__fmt lf-ai-inline-link__fmt--swatch" data-lf-ai-inline-cmd="foreColor" data-lf-ai-inline-cmd-value="#15803d" style="background:#15803d" title="<?php esc_attr_e('Text green', 'leadsforward-core'); ?>" aria-label="<?php esc_attr_e('Text green', 'leadsforward-core'); ?>"></button>
+					<?php
+					$lf_inline_colors = function_exists('lf_branding_inline_text_color_swatches') ? lf_branding_inline_text_color_swatches() : [];
+					if ($lf_inline_colors === []) {
+						$lf_inline_colors = [
+							['hex' => '#0f172a', 'label' => __('Body text', 'leadsforward-core')],
+							['hex' => '#2563eb', 'label' => __('Primary brand', 'leadsforward-core')],
+						];
+					}
+					foreach ($lf_inline_colors as $lf_swatch) :
+						$lf_hex = isset($lf_swatch['hex']) ? (string) $lf_swatch['hex'] : '';
+						$lf_lab = isset($lf_swatch['label']) ? (string) $lf_swatch['label'] : '';
+						if ($lf_hex === '') {
+							continue;
+						}
+						?>
+					<button type="button" class="lf-ai-inline-link__fmt lf-ai-inline-link__fmt--swatch" data-lf-ai-inline-cmd="foreColor" data-lf-ai-inline-cmd-value="<?php echo esc_attr($lf_hex); ?>" style="<?php echo esc_attr('background:' . $lf_hex); ?>" title="<?php echo esc_attr($lf_lab); ?>" aria-label="<?php echo esc_attr($lf_lab); ?>"></button>
+					<?php endforeach; ?>
 				</span>
 				<button type="button" class="lf-ai-inline-link__open" data-lf-ai-inline-link-open><?php esc_html_e('Link…', 'leadsforward-core'); ?></button>
 			</div>

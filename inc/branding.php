@@ -101,6 +101,54 @@ function lf_branding_get_value(string $key, string $default): string {
 	return $val;
 }
 
+/**
+ * Hex colors for the front-end inline rich-text toolbar (foreColor), from Global Settings / branding.
+ *
+ * @return list<array{hex:string,label:string}>
+ */
+function lf_branding_inline_text_color_swatches(): array {
+	$candidates = [
+		[
+			'hex'   => lf_branding_get_value('lf_brand_primary', '#2563eb'),
+			'label' => __('Primary brand', 'leadsforward-core'),
+		],
+		[
+			'hex'   => lf_branding_get_value('lf_brand_secondary', '#0ea5e9'),
+			'label' => __('Secondary brand', 'leadsforward-core'),
+		],
+		[
+			'hex'   => lf_branding_get_value('lf_brand_tertiary', '#f97316'),
+			'label' => __('Accent', 'leadsforward-core'),
+		],
+		[
+			'hex'   => lf_branding_get_value('lf_text_primary', '#0f172a'),
+			'label' => __('Body text', 'leadsforward-core'),
+		],
+		[
+			'hex'   => lf_branding_get_value('lf_text_muted', '#64748b'),
+			'label' => __('Muted text', 'leadsforward-core'),
+		],
+		[
+			'hex'   => lf_branding_get_value('lf_text_inverse', '#ffffff'),
+			'label' => __('Light / inverse', 'leadsforward-core'),
+		],
+	];
+	$out = [];
+	$seen = [];
+	foreach ($candidates as $row) {
+		$hex = is_string($row['hex'] ?? null) ? strtolower(trim($row['hex'])) : '';
+		if ($hex === '' || isset($seen[ $hex ])) {
+			continue;
+		}
+		$seen[ $hex ] = true;
+		$out[] = [
+			'hex'   => $row['hex'],
+			'label' => $row['label'],
+		];
+	}
+	return $out;
+}
+
 function lf_branding_css(): string {
 	$primary   = lf_branding_get_value('lf_brand_primary', '#2563eb');
 	$secondary = lf_branding_get_value('lf_brand_secondary', '#0ea5e9');
