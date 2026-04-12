@@ -37,8 +37,28 @@ foreach ($cards_raw as $row) {
 	}
 	$highlight = (string) ($parts[3] ?? '') === '1';
 	if ($name !== '') {
-		$cards[] = ['name' => $name, 'best_for' => $best_for, 'bullets' => $bullets, 'highlight' => $highlight];
+		$cards[] = [
+			'name' => $name,
+			'best_for' => $best_for,
+			'bullets' => $bullets,
+			'highlight' => $highlight,
+			'line' => $row,
+		];
 	}
+}
+
+// Three tiers with exactly one "recommended" card: always render highlight in the center column.
+$highlight_cards = [];
+$other_cards = [];
+foreach ($cards as $c) {
+	if (!empty($c['highlight'])) {
+		$highlight_cards[] = $c;
+	} else {
+		$other_cards[] = $c;
+	}
+}
+if (count($cards) === 3 && count($highlight_cards) === 1 && count($other_cards) === 2) {
+	$cards = [ $other_cards[0], $highlight_cards[0], $other_cards[1] ];
 }
 ?>
 <section class="lf-block lf-block-packages <?php echo esc_attr($surface['class'] ?: 'lf-surface-light'); ?> lf-block-packages--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>"<?php echo $style_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
@@ -51,7 +71,7 @@ foreach ($cards_raw as $row) {
 		<?php endif; ?>
 		<div class="lf-block-packages__grid">
 			<?php foreach ($cards as $card) : ?>
-				<article class="lf-block-packages__card<?php echo !empty($card['highlight']) ? ' is-highlight' : ''; ?>">
+				<article class="lf-block-packages__card<?php echo !empty($card['highlight']) ? ' is-highlight' : ''; ?>" data-lf-package-line="<?php echo esc_attr((string) ($card['line'] ?? '')); ?>">
 					<?php if (!empty($card['highlight'])) : ?>
 						<span class="lf-block-packages__badge"><?php esc_html_e('Recommended', 'leadsforward-core'); ?></span>
 					<?php endif; ?>

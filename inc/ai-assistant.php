@@ -984,7 +984,7 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-section-align-picker__btn { flex:1; min-width:72px; border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:34px; font-size:12px; font-weight:600; cursor:pointer; }
 		.lf-ai-section-align-picker__btn:hover { background:#f5f0ff; }
 		.lf-ai-section-align-picker__close { align-self:flex-end; border:1px solid #e2e8f0; background:#fff; color:#64748b; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:15px; line-height:1; }
-		.lf-ai-benefit-card-drag.is-dragging, .lf-ai-service-intro-card-drag.is-dragging { opacity:.65; outline:2px dashed rgba(131,72,249,.45); outline-offset:2px; }
+		.lf-ai-benefit-card-drag.is-dragging, .lf-ai-service-intro-card-drag.is-dragging, .lf-ai-packages-card-drag.is-dragging { opacity:.65; outline:2px dashed rgba(131,72,249,.45); outline-offset:2px; }
 		.lf-ai-float__confirm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.4); z-index:5; padding:12px; pointer-events:auto; }
 		.lf-ai-float__confirm[hidden] { display:none !important; pointer-events:none !important; }
 		.lf-ai-float__confirm-card { width:100%; max-width:360px; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 10px 34px rgba(15,23,42,.28); padding:14px; }
@@ -1177,6 +1177,7 @@ function lf_ai_assistant_widget_js(): string {
 		var activeProcessDragEl = null;
 		var activeFaqDragEl = null;
 		var activeBenefitDragEl = null;
+		var activePackagesDragEl = null;
 		var activeServiceIntroDragEl = null;
 		var sectionBgPickerEl = null;
 		var sectionBgPickerWrap = null;
@@ -2653,6 +2654,7 @@ function lf_ai_assistant_widget_js(): string {
 			buildSectionMediaEditors();
 			buildFaqReorderControls();
 			buildBenefitsReorderControls();
+			buildPackagesReorderControls();
 			buildBenefitsTextEditors();
 			buildServiceIntroReorderControls();
 			buildServiceIntroCardEditors();
@@ -2955,6 +2957,7 @@ function lf_ai_assistant_widget_js(): string {
 				buildSectionMediaEditors();
 				buildFaqReorderControls();
 				buildBenefitsReorderControls();
+				buildPackagesReorderControls();
 				buildBenefitsTextEditors();
 				buildServiceIntroReorderControls();
 				buildBenefitsIconEditors();
@@ -4965,6 +4968,86 @@ function lf_ai_assistant_widget_js(): string {
 				});
 			});
 		}
+		function packageLinesFromGrid(grid) {
+			if (!grid) return [];
+			return Array.prototype.slice.call(grid.querySelectorAll(".lf-block-packages__card")).map(function(card){
+				return String(card.getAttribute("data-lf-package-line") || "").trim();
+			}).filter(function(v){ return v !== ""; });
+		}
+		function swapSiblingDomNodes(n1, n2) {
+			if (!n1 || !n2 || n1.parentNode !== n2.parentNode) return;
+			var parent = n1.parentNode;
+			var i1 = n1.nextSibling;
+			var i2 = n2.nextSibling;
+			parent.insertBefore(n1, i2);
+			parent.insertBefore(n2, i1);
+		}
+		function buildPackagesReorderControls() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				if (String(wrap.getAttribute("data-lf-section-type") || "") !== "packages") return;
+				var grid = wrap.querySelector(".lf-block-packages__grid");
+				if (!grid) return;
+				var cards = Array.prototype.slice.call(grid.querySelectorAll(".lf-block-packages__card"));
+				cards.forEach(function(card){
+					card.removeAttribute("draggable");
+					card.classList.remove("lf-ai-packages-card-drag", "is-dragging");
+					card.removeAttribute("title");
+					card.ondragstart = null;
+					card.ondragover = null;
+					card.ondrop = null;
+					card.ondragend = null;
+				});
+				if (cards.length < 2) return;
+				var highlights = cards.filter(function(c){ return c.classList.contains("is-highlight"); });
+				var lockCenter = (cards.length === 3 && highlights.length === 1);
+				cards.forEach(function(card){
+					if (lockCenter && card.classList.contains("is-highlight")) {
+						return;
+					}
+					card.setAttribute("draggable", "true");
+					card.classList.add("lf-ai-packages-card-drag", "lf-ai-inline-editor-ignore");
+					card.setAttribute("title", lockCenter ? "Drag to swap with the other package" : "Drag to reorder packages");
+					card.ondragstart = function(e){
+						activePackagesDragEl = card;
+						card.classList.add("is-dragging");
+						if (e.dataTransfer) {
+							e.dataTransfer.effectAllowed = "move";
+							e.dataTransfer.setData("text/plain", "package");
+						}
+					};
+					card.ondragover = function(e){
+						if (!activePackagesDragEl || activePackagesDragEl === card) return;
+						if (lockCenter && card.classList.contains("is-highlight")) return;
+						e.preventDefault();
+					};
+					card.ondrop = function(e){
+						if (!activePackagesDragEl || activePackagesDragEl === card) return;
+						if (lockCenter && card.classList.contains("is-highlight")) return;
+						e.preventDefault();
+						if (lockCenter) {
+							swapSiblingDomNodes(activePackagesDragEl, card);
+						} else {
+							var rect = card.getBoundingClientRect();
+							var wideCard = rect.width >= rect.height * 1.2;
+							var after = wideCard
+								? (e.clientX > rect.left + rect.width / 2)
+								: (e.clientY > rect.top + rect.height / 2);
+							if (after) {
+								grid.insertBefore(activePackagesDragEl, card.nextSibling);
+							} else {
+								grid.insertBefore(activePackagesDragEl, card);
+							}
+						}
+						persistSectionLineItems(wrap, "package_cards", packageLinesFromGrid(grid), "Saving package order...");
+					};
+					card.ondragend = function(){
+						card.classList.remove("is-dragging");
+						activePackagesDragEl = null;
+					};
+				});
+			});
+		}
 		function buildBenefitsTextEditors() {
 			collectSectionWrappers().forEach(function(wrap){
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
@@ -6040,6 +6123,7 @@ function lf_ai_assistant_widget_js(): string {
 					buildSectionMediaEditors();
 					buildFaqReorderControls();
 					buildBenefitsReorderControls();
+					buildPackagesReorderControls();
 					buildBenefitsTextEditors();
 					buildServiceIntroReorderControls();
 					buildServiceIntroCardEditors();
