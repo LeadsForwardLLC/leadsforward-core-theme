@@ -23,6 +23,7 @@ const LF_QUOTE_BUILDER_GHL_RETRY_HOOK = 'lf_quote_builder_process_ghl_retries';
 
 add_action('admin_init', 'lf_quote_builder_handle_save');
 add_action('admin_init', 'lf_quote_builder_integrations_handle_save');
+add_action('admin_init', 'lf_quote_builder_handle_resync_from_niche');
 add_action('admin_init', 'lf_quote_builder_maybe_create_analytics_table');
 add_action('admin_init', 'lf_quote_builder_redirect_legacy_pages');
 add_action('admin_init', 'lf_quote_builder_handle_reset_analytics');
@@ -864,6 +865,29 @@ function lf_quote_builder_redirect_legacy_pages(): void {
 		wp_safe_redirect(admin_url('admin.php?page=lf-quote-builder&section=' . ($page === 'lf-quote-builder-integrations' ? 'integrations' : 'analytics')));
 		exit;
 	}
+}
+
+function lf_quote_builder_handle_resync_from_niche(): void {
+	if (!isset($_POST['lf_qb_resync_from_niche'])) {
+		return;
+	}
+	if (!current_user_can('edit_theme_options')) {
+		return;
+	}
+	if (!isset($_POST['lf_qb_resync_from_niche_nonce']) || !wp_verify_nonce($_POST['lf_qb_resync_from_niche_nonce'], 'lf_quote_builder_resync_from_niche')) {
+		return;
+	}
+	$slug = (string) get_option('lf_homepage_niche_slug', '');
+	if ($slug === '' && function_exists('lf_default_niche_slug')) {
+		$slug = lf_default_niche_slug();
+	}
+	$slug = sanitize_title($slug);
+	if ($slug === '') {
+		$slug = 'general';
+	}
+	lf_quote_builder_apply_niche_config($slug);
+	wp_safe_redirect(admin_url('admin.php?page=lf-quote-builder&resynced=1'));
+	exit;
 }
 
 function lf_quote_builder_handle_reset_analytics(): void {
@@ -2115,6 +2139,18 @@ function lf_quote_builder_render_admin(): void {
 	$steps = $config['steps'] ?? [];
 	$section = isset($_GET['section']) ? sanitize_key((string) $_GET['section']) : '';
 	$saved = isset($_GET['saved']) && $_GET['saved'] === '1' && $section !== 'integrations';
+	$resynced = isset($_GET['resynced']) && $_GET['resynced'] === '1';
+	$niche_slug_for_display = (string) get_option('lf_homepage_niche_slug', '');
+	if ($niche_slug_for_display === '' && function_exists('lf_default_niche_slug')) {
+		$niche_slug_for_display = lf_default_niche_slug();
+	}
+	$niche_label_for_display = $niche_slug_for_display;
+	if (function_exists('lf_get_niche')) {
+		$niche_row = lf_get_niche($niche_slug_for_display);
+		if (is_array($niche_row) && !empty($niche_row['name'])) {
+			$niche_label_for_display = (string) $niche_row['name'];
+		}
+	}
 	echo '<div class="wrap"><h1>' . esc_html__('Quote Builder', 'leadsforward-core') . '</h1>';
 	echo '<p class="description">' . esc_html__('Configure the multi-step Quote Builder. This is a structured, safe editor—no HTML, no layout changes.', 'leadsforward-core') . '</p>';
 	?>
@@ -2145,9 +2181,34 @@ function lf_quote_builder_render_admin(): void {
 			<button type="button" class="lf-qb-panel-toggle" data-target="builder" aria-expanded="true">▾ <?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
 		</div>
 		<div class="lf-qb-panel-body">
+			<?php if ($resynced) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php echo esc_html(sprintf(__('Quote form was reset from the current niche (%s). Manual override is cleared.', 'leadsforward-core'), $niche_label_for_display)); ?></p></div>
+			<?php endif; ?>
 			<?php if ($saved) : ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Quote Builder settings saved.', 'leadsforward-core'); ?></p></div>
 			<?php endif; ?>
+			<div class="lf-qb-resync" style="margin:0 0 1.25rem;padding:1rem 1.1rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;">
+				<p style="margin:0 0 0.65rem;"><strong><?php esc_html_e('Resync from niche', 'leadsforward-core'); ?></strong></p>
+				<p class="description" style="margin:0 0 0.85rem;">
+					<?php
+					echo esc_html(sprintf(
+						/* translators: 1: niche name, 2: Global Settings screen name */
+						__('Reload steps and default fields from the theme preset for your Global Settings niche (%1$s). This removes the “manual override” flag and replaces any edits you made on this screen. Change the niche under %2$s if needed.', 'leadsforward-core'),
+						$niche_label_for_display,
+						__('Global Settings', 'leadsforward-core')
+					));
+					?>
+					<?php
+					$global_url = admin_url('admin.php?page=lf-ops');
+					echo ' <a href="' . esc_url($global_url) . '">' . esc_html__('Open Global Settings', 'leadsforward-core') . '</a>';
+					?>
+				</p>
+				<form method="post" style="margin:0;" onsubmit="return window.confirm(<?php echo esc_js(__('Replace the entire Quote Builder configuration with the default for your current niche? Custom labels and choices you saved here will be lost.', 'leadsforward-core')); ?>); ?>">
+					<?php wp_nonce_field('lf_quote_builder_resync_from_niche', 'lf_qb_resync_from_niche_nonce'); ?>
+					<input type="hidden" name="lf_qb_resync_from_niche" value="1" />
+					<button type="submit" class="button button-secondary"><?php esc_html_e('Resync quote form from niche', 'leadsforward-core'); ?></button>
+				</form>
+			</div>
 			<form method="post">
 				<?php wp_nonce_field('lf_quote_builder_save', 'lf_quote_builder_nonce'); ?>
 				<?php foreach ($steps as $index => $step) :
