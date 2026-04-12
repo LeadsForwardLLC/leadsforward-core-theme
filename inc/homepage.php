@@ -80,6 +80,20 @@ function lf_homepage_legacy_order(): array {
  */
 function lf_homepage_sanitize_order(array $order, bool $append_missing = true): array {
 	$canonical = lf_homepage_default_order();
+	// Allow any section type registered for the homepage (not only the default order list),
+	// so Structure / library adds (team, pricing, packages, logo_strip, …) are not stripped.
+	$allowed_bases = $canonical;
+	if (function_exists('lf_sections_get_context_sections')) {
+		$hp = lf_sections_get_context_sections('homepage');
+		if (is_array($hp)) {
+			foreach (array_keys($hp) as $reg_id) {
+				$b = lf_homepage_base_section_type((string) $reg_id);
+				if ($b !== '' && ! in_array($b, $allowed_bases, true)) {
+					$allowed_bases[] = $b;
+				}
+			}
+		}
+	}
 	$clean = [];
 	foreach ($order as $item) {
 		if (!is_string($item)) {
@@ -90,13 +104,13 @@ function lf_homepage_sanitize_order(array $order, bool $append_missing = true): 
 			continue;
 		}
 		$base = lf_homepage_base_section_type($item);
-		if ($base !== '' && in_array($base, $canonical, true)) {
+		if ($base !== '' && in_array($base, $allowed_bases, true)) {
 			$clean[] = $item;
 		}
 	}
 	if ($append_missing) {
 		foreach ($canonical as $type) {
-			if (!in_array($type, $clean, true)) {
+			if (! in_array($type, $clean, true)) {
 				$clean[] = $type;
 			}
 		}
