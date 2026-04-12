@@ -188,7 +188,6 @@ if (!$has_nap && empty($services) && empty($areas) && empty($company_links) && e
 			</div>
 			<div class="lf-footer-copy">
 				<?php echo esc_html(sprintf(__('© %1$s %2$s. All rights reserved.', 'leadsforward-core'), date_i18n('Y'), $nap['name'] ?? get_bloginfo('name'))); ?>
-				<span class="lf-footer-easter-egg"><?php esc_html_e(' | Psst... built on bedrock.', 'leadsforward-core'); ?></span>
 			</div>
 		</div>
 	</div>
