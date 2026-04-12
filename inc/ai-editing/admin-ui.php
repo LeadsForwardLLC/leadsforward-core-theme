@@ -3235,6 +3235,7 @@ function lf_ai_allowed_line_fields_for_section_type(string $section_type): array
 		'service_intro' => ['service_intro_service_ids'],
 		'process' => ['process_steps', 'process_selected_ids'],
 		'faq_accordion' => ['faq_selected_ids'],
+		'packages' => ['package_cards'],
 		'service_details' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_proof_badges'],
 		'content_image' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_proof_badges'],
 		'content_image_a' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_proof_badges'],
