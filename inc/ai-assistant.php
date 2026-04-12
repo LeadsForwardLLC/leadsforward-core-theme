@@ -730,9 +730,38 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-checklist-add:hover { background:#f5f0ff; }
 		.lf-ai-checklist-remove { border:1px solid #e2e8f0; background:#fff; color:#64748b; border-radius:6px; min-width:20px; height:20px; padding:0 5px; font-size:11px; line-height:18px; margin-left:8px; cursor:pointer; vertical-align:middle; }
 		.lf-ai-checklist-remove:hover { border-color:#fecaca; color:#b91c1c; background:#fff5f5; }
-		.lf-ai-benefit-remove { position:absolute; top:6px; right:6px; z-index:3; margin:0 !important; min-width:26px !important; height:26px !important; line-height:24px !important; border-radius:999px !important; }
+		/* Corner remove on grid cards (benefits, service intro, etc.) — one consistent control */
+		.lf-ai-card-remove {
+			position:absolute;
+			top:6px;
+			right:6px;
+			z-index:3;
+			box-sizing:border-box;
+			margin:0 !important;
+			padding:0 !important;
+			width:26px;
+			height:26px;
+			min-width:26px !important;
+			border:1px solid #e2e8f0;
+			background:#fff;
+			color:#64748b;
+			border-radius:999px !important;
+			font-size:15px;
+			font-weight:600;
+			line-height:1;
+			cursor:pointer;
+			display:inline-flex;
+			align-items:center;
+			justify-content:center;
+			box-shadow:0 1px 3px rgba(15,23,42,.08);
+		}
+		.lf-ai-card-remove:hover {
+			border-color:#fecaca;
+			color:#b91c1c;
+			background:#fff5f5;
+		}
 		.lf-ai-benefits-grid-actions { margin-top:10px; display:flex; justify-content:center; width:100%; }
-		.lf-ai-editor-on .lf-block-service-intro__card { position:relative; }
+		.lf-ai-editor-on .lf-block-service-intro__card { position:relative; overflow:visible; }
 		.lf-ai-hero-pills-controls { margin-top:8px; display:flex; gap:8px; align-items:center; }
 		.lf-ai-hero-trust-strip-controls { margin-top:10px; padding:8px 10px; border-radius:8px; background:rgba(131,72,249,.08); border:1px solid rgba(131,72,249,.25); font-size:13px; }
 		.lf-ai-benefit-editable { cursor:text; border-radius:6px; transition:box-shadow .15s ease; }
@@ -4953,10 +4982,11 @@ function lf_ai_assistant_widget_js(): string {
 				Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card")).forEach(function(card){
 					var rm = document.createElement("button");
 					rm.type = "button";
-					rm.className = "lf-ai-checklist-remove lf-ai-inline-editor-ignore";
+					rm.className = "lf-ai-card-remove lf-ai-inline-editor-ignore";
 					rm.setAttribute("data-lf-ai-service-intro-remove", "1");
-					rm.textContent = "x";
-					rm.setAttribute("title", "Remove from this section");
+					rm.textContent = "×";
+					rm.setAttribute("title", "Remove card");
+					rm.setAttribute("aria-label", "Remove card");
 					rm.addEventListener("click", function(e){
 						e.preventDefault();
 						e.stopPropagation();
@@ -5399,10 +5429,11 @@ function lf_ai_assistant_widget_js(): string {
 				Array.prototype.slice.call(grid.querySelectorAll(".lf-benefits__card")).forEach(function(card){
 					var btn = document.createElement("button");
 					btn.type = "button";
-					btn.className = "lf-ai-benefit-remove lf-ai-inline-editor-ignore";
+					btn.className = "lf-ai-card-remove lf-ai-inline-editor-ignore";
 					btn.setAttribute("data-lf-ai-benefit-remove", "1");
 					btn.textContent = "×";
 					btn.setAttribute("title", "Remove card");
+					btn.setAttribute("aria-label", "Remove card");
 					btn.addEventListener("click", function(e){
 						e.preventDefault();
 						e.stopPropagation();
