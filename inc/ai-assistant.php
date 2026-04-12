@@ -52,7 +52,7 @@ function lf_ai_section_library_row_meta(string $section_id): array {
 		'service_grid' => __('Grid of services with imagery.', 'leadsforward-core'),
 		'service_areas' => __('Areas you serve with clear locality messaging.', 'leadsforward-core'),
 		'logo_strip' => __('Certifications, manufacturer logos, and partner badges.', 'leadsforward-core'),
-		'team' => __('Team members with roles and short bios.', 'leadsforward-core'),
+		'team' => __('Team grid with photos (Media Library image ID per line), roles, and bios.', 'leadsforward-core'),
 		'pricing' => __('What affects pricing, financing note, and estimate CTA.', 'leadsforward-core'),
 		'packages' => __('Side-by-side packages or plan comparison.', 'leadsforward-core'),
 		'blog_posts' => __('Latest articles from your blog.', 'leadsforward-core'),

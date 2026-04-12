@@ -781,7 +781,12 @@ function lf_sections_registry(): array {
 					'3' => __('3 columns', 'leadsforward-core'),
 					'4' => __('4 columns', 'leadsforward-core'),
 				]],
-				['key' => 'team_members', 'label' => __('Members (one per line: Name || Role || Bio)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Alex Morgan || Project Manager || Your point of contact from scheduling to final walkthrough.' . "\n" . 'Jordan Lee || Lead Technician || Detail-focused workmanship and clean job sites.' . "\n" . 'Taylor Reed || Customer Support || Fast responses and clear next steps.', 'leadsforward-core')],
+				['key' => 'team_avatar_shape', 'label' => __('Photo shape', 'leadsforward-core'), 'type' => 'select', 'default' => 'circle', 'options' => [
+					'circle' => __('Circle', 'leadsforward-core'),
+					'rounded' => __('Rounded square', 'leadsforward-core'),
+					'square' => __('Square', 'leadsforward-core'),
+				]],
+				['key' => 'team_members', 'label' => __('Members (one per line: Name || Role || Bio || optional image ID)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Alex Morgan || Project Manager || Your point of contact from scheduling to final walkthrough.' . "\n" . 'Jordan Lee || Lead Technician || Detail-focused workmanship and clean job sites.' . "\n" . 'Taylor Reed || Customer Support || Fast responses and clear next steps.', 'leadsforward-core')],
 				['key' => 'section_header_align', 'label' => __('Header alignment', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
 					'left' => __('Left', 'leadsforward-core'),
 					'center' => __('Center', 'leadsforward-core'),
@@ -3243,6 +3248,35 @@ function lf_sections_render_logo_strip(string $context, array $settings, \WP_Pos
 	lf_render_block_template('logo-strip', $block, false, $block['context']);
 }
 
+/**
+ * Two-letter initials for team placeholder avatars when no photo is set.
+ *
+ * @param string $name Display name.
+ * @return string
+ */
+function lf_team_member_initials(string $name): string {
+	$name = trim($name);
+	if ($name === '') {
+		return '?';
+	}
+	$parts = preg_split('/\s+/u', $name);
+	if (!is_array($parts)) {
+		return strtoupper(substr($name, 0, 1));
+	}
+	$initials = '';
+	$take = array_slice($parts, 0, 2);
+	foreach ($take as $p) {
+		if ($p !== '') {
+			if (function_exists('mb_substr')) {
+				$initials .= mb_strtoupper(mb_substr($p, 0, 1));
+			} else {
+				$initials .= strtoupper(substr($p, 0, 1));
+			}
+		}
+	}
+	return $initials !== '' ? $initials : '?';
+}
+
 function lf_sections_render_team(string $context, array $settings, \WP_Post $post): void {
 	if (!function_exists('lf_render_block_template')) {
 		return;
@@ -3251,6 +3285,7 @@ function lf_sections_render_team(string $context, array $settings, \WP_Post $pos
 		'section_heading' => $settings['section_heading'] ?? '',
 		'section_intro' => $settings['section_intro'] ?? '',
 		'team_columns' => $settings['team_columns'] ?? '3',
+		'team_avatar_shape' => $settings['team_avatar_shape'] ?? 'circle',
 		'team_members' => $settings['team_members'] ?? '',
 		'section_background' => $settings['section_background'] ?? 'light',
 		'section_background_custom' => $settings['section_background_custom'] ?? '',

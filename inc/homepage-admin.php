@@ -497,10 +497,14 @@ function lf_homepage_admin_render(): void {
 	$order = lf_homepage_controller_order();
 	$labels = lf_homepage_admin_section_labels();
 	$section_defs = function_exists('lf_sections_get_context_sections') ? lf_sections_get_context_sections('homepage') : [];
-	$section_list = array_values(array_filter($section_defs, function ($def) use ($order) {
-		$id = is_array($def) && isset($def['id']) ? (string) $def['id'] : '';
-		return $id !== '' && in_array($id, $order, true);
-	}));
+	// Full registry for the sidebar library (same source as Page Builder + front-end Structure panel).
+	$section_list = array_values($section_defs);
+	usort(
+		$section_list,
+		static function (array $a, array $b): int {
+			return strcasecmp((string) ( $a['label'] ?? '' ), (string) ( $b['label'] ?? '' ));
+		}
+	);
 	$variants = function_exists('lf_sections_hero_variant_options') ? lf_sections_hero_variant_options() : [
 		'default' => __('Authority Split (Recommended)', 'leadsforward-core'),
 		'a'       => __('Conversion Stack', 'leadsforward-core'),
