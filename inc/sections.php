@@ -776,6 +776,12 @@ function lf_sections_registry(): array {
 				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Meet the team', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro (optional)', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Local professionals committed to clean work and clear communication.', 'leadsforward-core')],
+				['key' => 'team_members_source', 'label' => __('Member source', 'leadsforward-core'), 'type' => 'select', 'default' => 'cpt', 'options' => [
+					'cpt' => __('Team library (recommended)', 'leadsforward-core'),
+					'manual' => __('Manual list (legacy)', 'leadsforward-core'),
+				]],
+				['key' => 'team_max_members', 'label' => __('Max members (team library)', 'leadsforward-core'), 'type' => 'number', 'default' => '12'],
+				['key' => 'team_selected_ids', 'label' => __('Selected member IDs (optional, one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 				['key' => 'team_columns', 'label' => __('Columns', 'leadsforward-core'), 'type' => 'select', 'default' => '3', 'options' => [
 					'2' => __('2 columns', 'leadsforward-core'),
 					'3' => __('3 columns', 'leadsforward-core'),
@@ -786,7 +792,7 @@ function lf_sections_registry(): array {
 					'rounded' => __('Rounded square', 'leadsforward-core'),
 					'square' => __('Square', 'leadsforward-core'),
 				]],
-				['key' => 'team_members', 'label' => __('Members (one per line: Name || Role || Bio || optional image ID)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Alex Morgan || Project Manager || Your point of contact from scheduling to final walkthrough.' . "\n" . 'Jordan Lee || Lead Technician || Detail-focused workmanship and clean job sites.' . "\n" . 'Taylor Reed || Customer Support || Fast responses and clear next steps.', 'leadsforward-core')],
+				['key' => 'team_members', 'label' => __('Manual members (one per line: Name || Role || Bio || optional image ID)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Alex Morgan || Project Manager || Your point of contact from scheduling to final walkthrough.' . "\n" . 'Jordan Lee || Lead Technician || Detail-focused workmanship and clean job sites.' . "\n" . 'Taylor Reed || Customer Support || Fast responses and clear next steps.', 'leadsforward-core')],
 				['key' => 'section_header_align', 'label' => __('Header alignment', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
 					'left' => __('Left', 'leadsforward-core'),
 					'center' => __('Center', 'leadsforward-core'),
@@ -3277,6 +3283,79 @@ function lf_team_member_initials(string $name): string {
 	return $initials !== '' ? $initials : '?';
 }
 
+/**
+ * Query team members for the Team block (CPT mode).
+ *
+ * @return list<array{name: string, role: string, bio: string, image_id: int}>
+ */
+function lf_team_members_query_for_section(array $section): array {
+	if (!post_type_exists('lf_team_member')) {
+		return [];
+	}
+	$max = (int) ($section['team_max_members'] ?? 12);
+	if ($max <= 0) {
+		$max = 12;
+	}
+	$max = min(50, $max);
+	$raw_ids = preg_split('/[\r\n,]+/', (string) ($section['team_selected_ids'] ?? ''));
+	$raw_ids = is_array($raw_ids) ? $raw_ids : [];
+	$ids = array_values(array_filter(array_map(static function ($value): int {
+		return (int) trim((string) $value);
+	}, $raw_ids), static function (int $id): bool {
+		return $id > 0;
+	}));
+	$args = [
+		'post_type' => 'lf_team_member',
+		'post_status' => 'publish',
+		'posts_per_page' => $max,
+		'no_found_rows' => true,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+	];
+	if (!empty($ids)) {
+		$args['post__in'] = $ids;
+		$args['orderby'] = 'post__in';
+	}
+	$query = new \WP_Query($args);
+	$people = [];
+	if ($query->have_posts()) {
+		while ($query->have_posts()) {
+			$query->the_post();
+			$pid = (int) get_the_ID();
+			$name = get_the_title($pid);
+			$name = is_string($name) ? $name : '';
+			$role = '';
+			$bio = '';
+			if (function_exists('get_field')) {
+				$role_f = get_field('lf_team_role', $pid);
+				$bio_f = get_field('lf_team_bio', $pid);
+				$role = is_string($role_f) ? $role_f : '';
+				$bio = is_string($bio_f) ? $bio_f : '';
+			}
+			if ($role === '') {
+				$role = (string) get_post_meta($pid, 'lf_team_role', true);
+			}
+			if ($bio === '') {
+				$bio = (string) get_post_meta($pid, 'lf_team_bio', true);
+			}
+			if ($bio === '') {
+				$bio = trim((string) get_post_field('post_excerpt', $pid));
+			}
+			$thumb = (int) get_post_thumbnail_id($pid);
+			if ($name !== '') {
+				$people[] = [
+					'name' => $name,
+					'role' => $role,
+					'bio' => $bio,
+					'image_id' => $thumb,
+				];
+			}
+		}
+		wp_reset_postdata();
+	}
+	return $people;
+}
+
 function lf_sections_render_team(string $context, array $settings, \WP_Post $post): void {
 	if (!function_exists('lf_render_block_template')) {
 		return;
@@ -3284,6 +3363,9 @@ function lf_sections_render_team(string $context, array $settings, \WP_Post $pos
 	$section = [
 		'section_heading' => $settings['section_heading'] ?? '',
 		'section_intro' => $settings['section_intro'] ?? '',
+		'team_members_source' => $settings['team_members_source'] ?? 'cpt',
+		'team_max_members' => $settings['team_max_members'] ?? '12',
+		'team_selected_ids' => $settings['team_selected_ids'] ?? '',
 		'team_columns' => $settings['team_columns'] ?? '3',
 		'team_avatar_shape' => $settings['team_avatar_shape'] ?? 'circle',
 		'team_members' => $settings['team_members'] ?? '',

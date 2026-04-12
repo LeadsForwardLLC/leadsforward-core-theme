@@ -44,6 +44,7 @@ function lf_ai_assistant_allowed_cpt_types(): array {
 		'lf_service',
 		'lf_service_area',
 		'lf_faq',
+		'lf_team_member',
 		'lf_project',
 		'lf_testimonial',
 	];
@@ -56,6 +57,7 @@ function lf_ai_assistant_batch_types(): array {
 		'lf_service',
 		'lf_service_area',
 		'lf_faq',
+		'lf_team_member',
 		'lf_project',
 		'lf_testimonial',
 	];
@@ -159,7 +161,7 @@ function lf_ai_assistant_resolve_target_context(string $reference, string $fallb
 		$path = (string) parse_url($reference, PHP_URL_PATH);
 		$slug = sanitize_title((string) basename(trim($path, '/')));
 	}
-	$post_types = ['page', 'post', 'lf_service', 'lf_service_area', 'lf_faq', 'lf_project', 'lf_testimonial'];
+	$post_types = ['page', 'post', 'lf_service', 'lf_service_area', 'lf_faq', 'lf_team_member', 'lf_project', 'lf_testimonial'];
 	if ($slug !== '') {
 		$by_path = get_page_by_path($slug, OBJECT, $post_types);
 		if ($by_path instanceof \WP_Post) {
