@@ -62,6 +62,7 @@ function lf_ai_section_library_row_meta(string $section_id): array {
 		'services_offered_here' => __('Services available in a specific service area.', 'leadsforward-core'),
 		'content' => __('Flexible text section for policies, long copy, or resources.', 'leadsforward-core'),
 		'content_centered' => __('Centered heading and rich text for simple pages.', 'leadsforward-core'),
+		'rich_content' => __('One rich text area for headings, lists, and button-style links that follow global theme styles.', 'leadsforward-core'),
 	];
 	$svg = function_exists('lf_ai_section_library_preview_svg')
 		? lf_ai_section_library_preview_svg($section_id)

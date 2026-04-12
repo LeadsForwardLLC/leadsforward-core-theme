@@ -496,6 +496,27 @@ function lf_sections_registry(): array {
 			],
 			'render' => 'lf_sections_render_content_centered',
 		],
+		'rich_content' => [
+			'label' => __('Rich text (design system)', 'leadsforward-core'),
+			'contexts' => ['homepage', 'page', 'post', 'service', 'service_area'],
+			'fields' => [
+				$bg_field,
+				['key' => 'section_heading', 'label' => __('Optional section heading', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
+				['key' => 'section_intro', 'label' => __('Optional intro (plain text)', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
+				[
+					'key' => 'rich_content_body',
+					'label' => __('Content', 'leadsforward-core'),
+					'type' => 'richtext',
+					'default' => '<h2>' . __('Flexible long-form content', 'leadsforward-core') . '</h2>'
+						. '<p>' . __('Mix headings, paragraphs, and lists in one block. Styling uses the same typography and list treatment as the rest of the theme, so nothing drifts off-brand.', 'leadsforward-core') . '</p>'
+						. '<h3>' . __('Example subheading', 'leadsforward-core') . '</h3>'
+						. '<ul><li>' . __('Bullet lists pick up theme spacing and accent markers.', 'leadsforward-core') . '</li><li>'
+						. __('Numbered lists follow the same rhythm.', 'leadsforward-core') . '</li></ul>'
+						. '<p><a class="lf-btn lf-btn--primary lf-btn--solid lf-btn--tone-primary" href="#">' . __('Example button-style link', 'leadsforward-core') . '</a></p>',
+				],
+			],
+			'render' => 'lf_sections_render_rich_content',
+		],
 		'content' => [
 			'label' => __('Content', 'leadsforward-core'),
 			'contexts' => ['service', 'service_area', 'page', 'post'],
@@ -1094,6 +1115,20 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 		$out['section_heading_tag'] = lf_sections_sanitize_section_heading_tag(['section_heading_tag' => $input['section_heading_tag']]);
 	}
 	return $out;
+}
+
+/**
+ * Prepare stored rich text for output: wpautop only when the string has no block-level HTML.
+ */
+function lf_sections_format_richtext_output(string $html): string {
+	$html = trim($html);
+	if ($html === '') {
+		return '';
+	}
+	if (!preg_match('/<(p|h[1-6]|ul|ol|li|div|blockquote|table|figure|section|article|pre)\b/i', $html)) {
+		$html = wpautop($html);
+	}
+	return wp_kses_post($html);
 }
 
 function lf_sections_parse_lines($value): array {
@@ -2777,6 +2812,22 @@ function lf_sections_render_content_centered(string $context, array $settings, \
 	}
 	lf_sections_render_shell_close();
 }
+
+function lf_sections_render_rich_content(string $context, array $settings, \WP_Post $post): void {
+	$title = trim((string) ($settings['section_heading'] ?? ''));
+	$intro = trim((string) ($settings['section_intro'] ?? ''));
+	$body_raw = (string) ($settings['rich_content_body'] ?? '');
+	$body = lf_sections_format_richtext_output($body_raw);
+	if ($title === '' && $intro === '' && $body === '') {
+		return;
+	}
+	lf_sections_render_shell_open('rich-content', $title, $intro, $settings['section_background'] ?? 'light', $settings);
+	if ($body !== '') {
+		echo '<div class="lf-rich-content"><div class="lf-rich-content__prose lf-prose lf-prose--rich-section">' . $body . '</div></div>';
+	}
+	lf_sections_render_shell_close();
+}
+
 function lf_sections_render_process(string $context, array $settings, \WP_Post $post): void {
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
