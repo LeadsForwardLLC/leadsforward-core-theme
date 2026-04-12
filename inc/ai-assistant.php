@@ -1084,7 +1084,8 @@ function lf_ai_assistant_widget_css(): string {
 }
 
 function lf_ai_assistant_widget_js(): string {
-	return '(function($){
+	// DOM-ready: section markup + float widget must exist before init (script reorder / optimizers).
+	return 'jQuery(function($){
 		"use strict";
 		var stateKey = "lfAiFloatState";
 		var seoStateKey = "lfAiSeoFloatState";
@@ -8845,7 +8846,7 @@ function lf_ai_assistant_widget_js(): string {
 			setStatus("Live mode enabled. Toggle ✎ (editor) in the AI Assistant header to show section controls and inline editing.", false);
 		}
 		renderSeoSnapshot();
-	})(jQuery);';
+	});';
 }
 
 function lf_ai_assistant_widget_fallback_js(): string {
