@@ -37,10 +37,46 @@ jobs:
           fi
           ssh-keygen -y -f ~/.ssh/id_sg_deploy >/dev/null
 
+      # ssh-keyscan exits 1 if it cannot fetch keys (DNS, rate-limit, SG hiccup). Retries + optional pin.
+      # If this step still fails, add repo secret SG_SSH_KNOWN_HOSTS with the output of:
+      #   ssh-keyscan -p "$SG_PORT" -H "$SG_HOST"
+      # (one or more lines), then re-run the workflow.
       - name: Trust SiteGround host key
+        env:
+          SG_SSH_KNOWN_HOSTS: ${{ secrets.SG_SSH_KNOWN_HOSTS }}
         run: |
+          set -e
           mkdir -p ~/.ssh
-          ssh-keyscan -p "${{ secrets.SG_PORT }}" -H "${{ secrets.SG_HOST }}" >> ~/.ssh/known_hosts
+          chmod 700 ~/.ssh
+          : > ~/.ssh/known_hosts
+          if [ -n "${SG_SSH_KNOWN_HOSTS}" ]; then
+            printf '%s\n' "${SG_SSH_KNOWN_HOSTS}" >> ~/.ssh/known_hosts
+            echo "Using SG_SSH_KNOWN_HOSTS (pinned host key lines)."
+          else
+            if [ -z "${{ secrets.SG_HOST }}" ] || [ -z "${{ secrets.SG_PORT }}" ]; then
+              echo "::error::SG_HOST and SG_PORT repository secrets must be set for ssh-keyscan."
+              exit 1
+            fi
+            ok=""
+            for attempt in 1 2 3 4 5 6 7 8; do
+              if ssh-keyscan -T 15 -p "${{ secrets.SG_PORT }}" -H "${{ secrets.SG_HOST }}" >> ~/.ssh/known_hosts 2>/tmp/lf-keyscan.log; then
+                if [ -s ~/.ssh/known_hosts ]; then
+                  ok="1"
+                  echo "ssh-keyscan succeeded on attempt ${attempt}"
+                  break
+                fi
+              fi
+              echo "ssh-keyscan attempt ${attempt} failed; retrying in 5s..."
+              cat /tmp/lf-keyscan.log || true
+              : > ~/.ssh/known_hosts
+              sleep 5
+            done
+            if [ -z "${ok}" ]; then
+              echo "::error::ssh-keyscan could not populate known_hosts after retries."
+              echo "Add repository secret SG_SSH_KNOWN_HOSTS with: ssh-keyscan -p PORT -H HOST"
+              exit 1
+            fi
+          fi
 
       - name: Verify SSH authentication
         run: |
