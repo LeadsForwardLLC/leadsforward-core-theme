@@ -151,6 +151,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		'section_library' => lf_ai_assistant_section_library($context),
 		'icon_slugs' => function_exists('lf_icon_list') ? array_values(array_map('sanitize_text_field', lf_icon_list())) : [],
 		'bg_palette' => $bg_palette,
+		'brand_settings_url' => admin_url('admin.php?page=lf-ops'),
 		'hero_variants' => $hero_variants_ui,
 		'hero_bg_modes' => [
 			['value' => 'color', 'label' => __('Background color', 'leadsforward-core')],
@@ -832,6 +833,7 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-faq-picker__item:hover { border-color:#c4b5fd; background:#faf7ff; }
 		.lf-ai-faq-picker__meta b { display:block; font-size:12px; color:#0f172a; margin-bottom:3px; }
 		.lf-ai-faq-picker__meta small { display:block; font-size:11px; color:#64748b; line-height:1.35; }
+		.lf-ai-faq-picker__context { display:block; font-size:11px; color:#475569; margin-top:4px; font-weight:600; line-height:1.35; }
 		.lf-ai-faq-picker__add { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:28px; padding:0 10px; font-size:12px; cursor:pointer; white-space:nowrap; }
 		.lf-ai-faq-picker__add:hover { background:#f5f0ff; }
 		.lf-ai-faq-picker__add[disabled] { opacity:.5; cursor:default; background:#f8fafc; }
@@ -2444,6 +2446,7 @@ function lf_ai_assistant_widget_js(): string {
 			buildHeroTrustStripControls();
 			buildTrustBadgePillsControls();
 			buildChecklistControls();
+			buildProofBadgeControls();
 			buildServiceDetailsMicroControls();
 			buildProcessStepControls();
 			buildSectionColumnSwapTargets();
@@ -2747,6 +2750,7 @@ function lf_ai_assistant_widget_js(): string {
 				buildHeroTrustStripControls();
 				buildTrustBadgePillsControls();
 				buildChecklistControls();
+				buildProofBadgeControls();
 				buildProcessStepControls();
 				buildSectionMediaEditors();
 				buildFaqReorderControls();
@@ -3310,9 +3314,9 @@ function lf_ai_assistant_widget_js(): string {
 					host.appendChild(newList);
 					listEls = Array.prototype.slice.call(host.querySelectorAll("ul.lf-service-details__checklist"));
 				}
-				function wireChecklistList(list) {
+				function wireChecklistListItems(list) {
 					Array.prototype.slice.call(list.querySelectorAll("li")).forEach(function(li){
-						var textNode = checklistTextNodeFromLi(li);
+						checklistTextNodeFromLi(li);
 						Array.prototype.slice.call(li.querySelectorAll("[data-lf-ai-checklist-remove=\"1\"]")).forEach(function(node){
 							if (node && node.parentNode) node.parentNode.removeChild(node);
 						});
@@ -3333,6 +3337,10 @@ function lf_ai_assistant_widget_js(): string {
 						li.appendChild(removeBtn);
 						bindChecklistItemEditor(li, wrap);
 					});
+				}
+				listEls.forEach(wireChecklistListItems);
+				var primaryList = listEls[0];
+				if (primaryList) {
 					var controls = document.createElement("div");
 					controls.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
 					controls.setAttribute("data-lf-ai-checklist-controls", "1");
@@ -3340,6 +3348,7 @@ function lf_ai_assistant_widget_js(): string {
 					addBtn.type = "button";
 					addBtn.className = "lf-ai-checklist-add lf-ai-inline-editor-ignore";
 					addBtn.textContent = "+ Add item";
+					addBtn.setAttribute("title", "Add item to the main checklist");
 					addBtn.addEventListener("click", function(e){
 						e.preventDefault();
 						e.stopPropagation();
@@ -3363,15 +3372,14 @@ function lf_ai_assistant_widget_js(): string {
 							persistSectionChecklist(wrap, li);
 						});
 						li.appendChild(removeBtn2);
-						list.appendChild(li);
+						primaryList.appendChild(li);
 						bindChecklistItemEditor(li, wrap);
 						persistSectionChecklist(wrap, li);
 						startChecklistTextEdit(textNode, li, wrap);
 					});
 					controls.appendChild(addBtn);
-					host.insertBefore(controls, list.nextSibling);
+					host.appendChild(controls);
 				}
-				listEls.forEach(wireChecklistList);
 			});
 		}
 		function microLinesFromWrap(microRoot) {
@@ -3385,105 +3393,144 @@ function lf_ai_assistant_widget_js(): string {
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
 				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 				if (!sectionSupportsChecklistEditor(sectionType)) return;
-				var content = wrap.querySelector(".lf-service-details__content");
-				if (!content) return;
 				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-micro-controls=\"1\"]")).forEach(function(node){
 					if (node && node.parentNode) node.parentNode.removeChild(node);
 				});
 				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-micro-remove=\"1\"]")).forEach(function(node){
 					if (node && node.parentNode) node.parentNode.removeChild(node);
 				});
-				var microRoot = content.querySelector("[data-lf-service-details-micro=\"1\"]");
-				if (!microRoot) {
-					microRoot = document.createElement("div");
-					microRoot.className = "lf-service-details__micro lf-prose";
-					microRoot.setAttribute("data-lf-service-details-micro", "1");
-					var proofM = content.querySelector(".lf-service-details__proof");
-					if (proofM) {
-						content.insertBefore(microRoot, proofM);
-					} else {
-						content.appendChild(microRoot);
-					}
+			});
+		}
+		function proofBadgeLinesFromWrap(wrap) {
+			var box = wrap ? wrap.querySelector(".lf-service-details__proof-badges") : null;
+			if (!box) return [];
+			return Array.prototype.slice.call(box.querySelectorAll(".lf-service-details__proof-badge")).map(function(badge){
+				return String(badge.textContent || "").replace(/\s+/g, " ").trim();
+			}).filter(function(v){ return v !== ""; });
+		}
+		function persistProofBadges(wrap) {
+			if (!wrap) return;
+			persistSectionLineItems(wrap, "service_details_proof_badges", proofBadgeLinesFromWrap(wrap), "Saving proof keywords...");
+		}
+		function buildProofBadgeControls() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
+				if (!sectionSupportsChecklistEditor(sectionType)) return;
+				var content = wrap.querySelector(".lf-service-details__content");
+				if (!content) return;
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-proof-badge-controls=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				var proof = content.querySelector(".lf-service-details__proof");
+				if (!proof) {
+					proof = document.createElement("div");
+					proof.className = "lf-service-details__proof";
+					proof.setAttribute("role", "note");
+					var badges = document.createElement("div");
+					badges.className = "lf-service-details__proof-badges";
+					proof.appendChild(badges);
+					content.appendChild(proof);
 				}
-				Array.prototype.slice.call(microRoot.querySelectorAll(".lf-service-details__micro-line")).forEach(function(pLine){
-					var span = pLine.querySelector(".lf-service-details__micro-text");
-					if (!span) {
-						span = document.createElement("span");
-						span.className = "lf-service-details__micro-text";
-						span.textContent = String(pLine.textContent || "").trim() || "Line";
-						pLine.innerHTML = "";
-						pLine.appendChild(span);
-					}
-					Array.prototype.slice.call(pLine.querySelectorAll("[data-lf-ai-micro-remove=\"1\"]")).forEach(function(n){
-						if (n && n.parentNode) n.parentNode.removeChild(n);
-					});
+				var badgesBox = proof.querySelector(".lf-service-details__proof-badges");
+				if (!badgesBox) {
+					badgesBox = document.createElement("div");
+					badgesBox.className = "lf-service-details__proof-badges";
+					proof.appendChild(badgesBox);
+				}
+				Array.prototype.slice.call(badgesBox.children).forEach(function(badge){
+					if (!badge.classList || !badge.classList.contains("lf-service-details__proof-badge")) return;
+					var row = document.createElement("span");
+					row.className = "lf-service-details__proof-badge-wrap lf-ai-inline-editor-ignore";
+					badge.parentNode.insertBefore(row, badge);
+					row.appendChild(badge);
+					badge.classList.add("lf-service-details__proof-badge--editable");
 					var rb = document.createElement("button");
 					rb.type = "button";
-					rb.className = "lf-ai-checklist-remove lf-ai-inline-editor-ignore";
-					rb.setAttribute("data-lf-ai-micro-remove", "1");
-					rb.textContent = "x";
-					rb.setAttribute("title", "Remove line");
+					rb.className = "lf-ai-proof-badge-remove lf-ai-inline-editor-ignore";
+					rb.setAttribute("data-lf-ai-proof-badge-remove", "1");
+					rb.textContent = "×";
+					rb.setAttribute("title", "Remove keyword");
+					rb.addEventListener("mousedown", function(e){ if (e) e.stopPropagation(); });
 					rb.addEventListener("click", function(e){
 						e.preventDefault();
 						e.stopPropagation();
-						if (pLine.parentNode) {
-							pLine.parentNode.removeChild(pLine);
-						}
-						persistSectionLineItems(wrap, "service_details_micro_sections", microLinesFromWrap(microRoot), "Saving supporting lines...");
+						if (row.parentNode) row.parentNode.removeChild(row);
+						persistProofBadges(wrap);
 					});
-					pLine.appendChild(rb);
-					span.classList.add("lf-ai-inline-editor-ignore");
-					span.setAttribute("title", "Click to edit line");
-					span.onmousedown = function(e){ if (e) e.stopPropagation(); };
-					span.onclick = function(e){
+					row.appendChild(rb);
+				});
+				Array.prototype.slice.call(badgesBox.querySelectorAll(".lf-service-details__proof-badge")).forEach(function(badge){
+					if (String(badge.getAttribute("data-lf-proof-badge-wired") || "") === "1") return;
+					badge.setAttribute("data-lf-proof-badge-wired", "1");
+					var row = badge.parentElement;
+					badge.setAttribute("title", "Click to edit keyword");
+					badge.onmousedown = function(e){ if (e) e.stopPropagation(); };
+					badge.onclick = function(e){
 						if (!editingEnabled) return;
 						if (e) {
 							e.preventDefault();
 							e.stopPropagation();
 						}
-						if (String(span.getAttribute("data-lf-ai-editing") || "") === "1") return;
-						span.setAttribute("data-lf-ai-original-html", innerHtmlFromEditableNode(span));
-						span.setAttribute("data-lf-ai-editing", "1");
-						span.setAttribute("contenteditable", "true");
-						try { span.focus(); } catch (errM) {}
+						if (String(badge.getAttribute("data-lf-ai-editing") || "") === "1") return;
+						badge.setAttribute("data-lf-ai-editing", "1");
+						badge.setAttribute("contenteditable", "true");
+						try { badge.focus(); } catch (e1) {}
 					};
-					span.onblur = function(){
-						var oh = String(span.getAttribute("data-lf-ai-original-html") || "");
-						var nh = innerHtmlFromEditableNode(span);
-						span.removeAttribute("contenteditable");
-						span.removeAttribute("data-lf-ai-editing");
-						span.removeAttribute("data-lf-ai-original-html");
-						if (lfPlainFromHtml(nh) === "") {
-							span.innerHTML = oh || "Line";
+					badge.onblur = function(){
+						if (String(badge.getAttribute("data-lf-ai-editing") || "") !== "1") return;
+						badge.removeAttribute("contenteditable");
+						badge.removeAttribute("data-lf-ai-editing");
+						var t = String(badge.textContent || "").replace(/\s+/g, " ").trim();
+						if (t === "") {
+							if (row && row.parentNode) row.parentNode.removeChild(row);
+							persistProofBadges(wrap);
 							return;
 						}
-						if (nh !== oh) {
-							persistSectionLineItems(wrap, "service_details_micro_sections", microLinesFromWrap(microRoot), "Saving supporting lines...");
-						}
+						persistProofBadges(wrap);
 					};
 				});
 				var ctrl = document.createElement("div");
 				ctrl.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
-				ctrl.setAttribute("data-lf-ai-micro-controls", "1");
+				ctrl.setAttribute("data-lf-ai-proof-badge-controls", "1");
 				var addB = document.createElement("button");
 				addB.type = "button";
 				addB.className = "lf-ai-checklist-add lf-ai-inline-editor-ignore";
-				addB.textContent = "+ Add supporting line";
+				addB.textContent = "+ Add keyword line";
+				addB.setAttribute("title", "Add a short trust or SEO keyword line");
 				addB.addEventListener("click", function(e){
 					e.preventDefault();
 					e.stopPropagation();
-					var pLine = document.createElement("p");
-					pLine.className = "lf-service-details__micro-line";
-					var spanNew = document.createElement("span");
-					spanNew.className = "lf-service-details__micro-text";
-					spanNew.textContent = "New supporting line";
-					pLine.appendChild(spanNew);
-					microRoot.appendChild(pLine);
-					buildServiceDetailsMicroControls();
-					persistSectionLineItems(wrap, "service_details_micro_sections", microLinesFromWrap(microRoot), "Saving supporting lines...");
+					var row = document.createElement("span");
+					row.className = "lf-service-details__proof-badge-wrap lf-ai-inline-editor-ignore";
+					var badge = document.createElement("span");
+					badge.className = "lf-service-details__proof-badge lf-service-details__proof-badge--editable";
+					badge.textContent = "New keyword line";
+					row.appendChild(badge);
+					var rb2 = document.createElement("button");
+					rb2.type = "button";
+					rb2.className = "lf-ai-proof-badge-remove lf-ai-inline-editor-ignore";
+					rb2.setAttribute("data-lf-ai-proof-badge-remove", "1");
+					rb2.textContent = "×";
+					rb2.setAttribute("title", "Remove keyword");
+					rb2.addEventListener("mousedown", function(ev){ if (ev) ev.stopPropagation(); });
+					rb2.addEventListener("click", function(ev){
+						ev.preventDefault();
+						ev.stopPropagation();
+						if (row.parentNode) row.parentNode.removeChild(row);
+						persistProofBadges(wrap);
+					});
+					row.appendChild(rb2);
+					badgesBox.appendChild(row);
+					buildProofBadgeControls();
+					persistProofBadges(wrap);
 				});
 				ctrl.appendChild(addB);
-				content.insertBefore(ctrl, microRoot.nextSibling);
+				if (proof.nextSibling) {
+					content.insertBefore(ctrl, proof.nextSibling);
+				} else {
+					content.appendChild(ctrl);
+				}
 			});
 		}
 		function heroPillsFromWrap(wrap) {
@@ -4250,6 +4297,13 @@ function lf_ai_assistant_widget_js(): string {
 				preview.textContent = previewText.length > 140 ? (previewText.slice(0, 137) + "...") : previewText;
 				meta.appendChild(title);
 				meta.appendChild(preview);
+				var gls = Array.isArray(row.group_labels) ? row.group_labels.filter(function(x){ return String(x || "").trim() !== ""; }) : [];
+				if (gls.length) {
+					var ctxEl = document.createElement("div");
+					ctxEl.className = "lf-ai-faq-picker__context";
+					ctxEl.textContent = "Process context: " + gls.join(", ");
+					meta.appendChild(ctxEl);
+				}
 				var addBtn = document.createElement("button");
 				addBtn.type = "button";
 				addBtn.className = "lf-ai-faq-picker__add lf-ai-inline-editor-ignore";
@@ -4969,6 +5023,115 @@ function lf_ai_assistant_widget_js(): string {
 				}
 			});
 		}
+		function wireOneServiceIntroMedia(media, sid, card, wrap) {
+			if (!media || !sid || !card) return;
+			Array.prototype.slice.call(media.querySelectorAll("[data-lf-service-intro-img-remove=\"1\"]")).forEach(function(n){
+				if (n && n.parentNode) n.parentNode.removeChild(n);
+			});
+			Array.prototype.slice.call(media.querySelectorAll("[data-lf-service-intro-media-add=\"1\"]")).forEach(function(n){
+				if (n && n.parentNode) n.parentNode.removeChild(n);
+			});
+			var img = media.querySelector("img.lf-block-service-intro__image");
+			if (img) {
+				var rm = document.createElement("button");
+				rm.type = "button";
+				rm.className = "lf-service-intro-thumb-remove lf-ai-inline-editor-ignore";
+				rm.setAttribute("data-lf-service-intro-img-remove", "1");
+				rm.textContent = "×";
+				rm.setAttribute("title", "Remove image");
+				rm.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					$.post(lfAiFloating.ajax_url, {
+						action: "lf_ai_set_service_thumbnail",
+						nonce: lfAiFloating.nonce,
+						service_post_id: sid,
+						attachment_id: 0
+					}).done(function(res){
+						if (res && res.success) {
+							media.innerHTML = "";
+							wireOneServiceIntroMedia(media, sid, card, wrap);
+							setStatus((res.data && res.data.message) ? res.data.message : "Image removed.", false);
+						} else {
+							setStatus((res && res.data && res.data.message) ? res.data.message : "Could not remove image.", true);
+						}
+					}).fail(function(xhr){
+						var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Could not remove image.";
+						setStatus(msg, true);
+					});
+				});
+				media.appendChild(rm);
+				return;
+			}
+			var ph = document.createElement("button");
+			ph.type = "button";
+			ph.className = "lf-block-service-intro__media-add lf-ai-inline-editor-ignore";
+			ph.setAttribute("data-lf-service-intro-media-add", "1");
+			ph.textContent = "+ Add image";
+			ph.setAttribute("title", "Set featured image on this service");
+			ph.addEventListener("click", function(e){
+				e.preventDefault();
+				e.stopPropagation();
+				if (!(window.wp && wp.media)) {
+					setStatus("Image library is not available on this screen.", true);
+					return;
+				}
+				var frame = wp.media({ library: { type: "image" }, multiple: false });
+				frame.on("select", function(){
+					var att = frame.state().get("selection").first();
+					var aid = att ? parseInt(String(att.id || "0"), 10) : 0;
+					if (!aid) return;
+					$.post(lfAiFloating.ajax_url, {
+						action: "lf_ai_set_service_thumbnail",
+						nonce: lfAiFloating.nonce,
+						service_post_id: sid,
+						attachment_id: aid
+					}).done(function(res){
+						if (res && res.success && res.data && res.data.thumbnail_url) {
+							media.innerHTML = "";
+							var nimg = document.createElement("img");
+							nimg.className = "lf-block-service-intro__image";
+							nimg.src = String(res.data.thumbnail_url);
+							nimg.alt = "";
+							nimg.setAttribute("loading", "lazy");
+							media.appendChild(nimg);
+							wireOneServiceIntroMedia(media, sid, card, wrap);
+							setStatus((res.data && res.data.message) ? res.data.message : "Image saved.", false);
+						} else {
+							setStatus((res && res.data && res.data.message) ? res.data.message : "Image save failed.", true);
+						}
+					}).fail(function(xhr){
+						var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Image save failed.";
+						setStatus(msg, true);
+					});
+				});
+				frame.open();
+			});
+			media.appendChild(ph);
+		}
+		function wireServiceIntroThumbnailsForWrap(wrap) {
+			if (!wrap) return;
+			Array.prototype.slice.call(wrap.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id]")).forEach(function(card){
+				var sid = String(card.getAttribute("data-lf-service-id") || "").trim();
+				if (!sid) return;
+				var media = card.querySelector(".lf-block-service-intro__media");
+				if (!media) {
+					media = document.createElement("div");
+					media.className = "lf-block-service-intro__media";
+					var head = card.querySelector(".lf-block-service-intro__card-head");
+					if (head) {
+						if (head.nextSibling) {
+							card.insertBefore(media, head.nextSibling);
+						} else {
+							card.appendChild(media);
+						}
+					} else {
+						card.insertBefore(media, card.firstChild);
+					}
+				}
+				wireOneServiceIntroMedia(media, sid, card, wrap);
+			});
+		}
 		function buildServiceIntroCardEditors() {
 			collectSectionWrappers().forEach(function(wrap){
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
@@ -4989,6 +5152,7 @@ function lf_ai_assistant_widget_js(): string {
 					}
 					desc.setAttribute("title", "Click to edit card description");
 				});
+				wireServiceIntroThumbnailsForWrap(wrap);
 			});
 		}
 		function closeServicePicker() {
@@ -5039,6 +5203,11 @@ function lf_ai_assistant_widget_js(): string {
 			document.body.appendChild(servicePickerEl);
 			return servicePickerEl;
 		}
+		function lfDecodeHtmlEntities(str) {
+			var t = document.createElement("textarea");
+			t.innerHTML = String(str || "");
+			return String(t.value || "");
+		}
 		function renderServicePickerList(query) {
 			if (!servicePickerListEl) return;
 			var rows = Array.isArray(serviceLibraryCache) ? serviceLibraryCache : [];
@@ -5069,7 +5238,7 @@ function lf_ai_assistant_widget_js(): string {
 				var meta = document.createElement("div");
 				meta.className = "lf-ai-faq-picker__meta";
 				var title = document.createElement("b");
-				title.textContent = String(row.title || "Service");
+				title.textContent = lfDecodeHtmlEntities(String(row.title || "Service"));
 				meta.appendChild(title);
 				var addBtn = document.createElement("button");
 				addBtn.type = "button";
@@ -5107,16 +5276,28 @@ function lf_ai_assistant_widget_js(): string {
 			head.className = "lf-block-service-intro__card-head";
 			var h3 = document.createElement("h3");
 			h3.className = "lf-block-service-intro__card-title";
-			h3.textContent = String(row.title || "Service");
+			h3.textContent = lfDecodeHtmlEntities(String(row.title || "Service"));
 			head.appendChild(h3);
+			var media = document.createElement("div");
+			media.className = "lf-block-service-intro__media";
+			var thumb = String(row.thumbnail_url || "").trim();
+			if (thumb) {
+				var img = document.createElement("img");
+				img.className = "lf-block-service-intro__image";
+				img.src = thumb;
+				img.alt = "";
+				img.setAttribute("loading", "lazy");
+				media.appendChild(img);
+			}
 			var desc = document.createElement("p");
 			desc.className = "lf-block-service-intro__desc";
 			desc.textContent = "Short overview — click to edit.";
 			var link = document.createElement("a");
 			link.className = "lf-block-service-intro__link";
 			link.href = String(row.permalink || "#");
-			link.textContent = "Learn more →";
+			link.textContent = "Learn more";
 			art.appendChild(head);
+			art.appendChild(media);
 			art.appendChild(desc);
 			art.appendChild(link);
 			grid.appendChild(art);
@@ -5196,6 +5377,13 @@ function lf_ai_assistant_widget_js(): string {
 			sectionGridPickerPatch = patch;
 			sectionGridPickerEl.hidden = false;
 		}
+		function renumberBenefitIconIndices(grid) {
+			if (!grid) return;
+			Array.prototype.slice.call(grid.querySelectorAll(".lf-benefits__card")).forEach(function(card, idx){
+				var ic = card.querySelector(".lf-benefits__icon[data-lf-benefit-icon-index]");
+				if (ic) ic.setAttribute("data-lf-benefit-icon-index", String(idx));
+			});
+		}
 		function buildBenefitsGridChrome() {
 			collectSectionWrappers().forEach(function(wrap){
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
@@ -5244,8 +5432,16 @@ function lf_ai_assistant_widget_js(): string {
 					var bd = document.createElement("p");
 					bd.className = "lf-benefits__desc";
 					bd.textContent = "New supporting text";
+					if (grid.querySelector(".lf-benefits__icon")) {
+						var icNew = document.createElement("span");
+						icNew.className = "lf-benefits__icon lf-benefits__icon--empty";
+						icNew.setAttribute("aria-hidden", "true");
+						icNew.setAttribute("data-lf-benefit-icon-index", "0");
+						c.appendChild(icNew);
+					}
 					c.appendChild(ht);
 					c.appendChild(bd);
+					renumberBenefitIconIndices(grid);
 					var act = grid.querySelector(".lf-benefits__actions");
 					var pts = grid.querySelector(".lf-benefits__points");
 					if (act) {
@@ -5263,6 +5459,7 @@ function lf_ai_assistant_widget_js(): string {
 				});
 				bar.appendChild(addC);
 				grid.parentNode.insertBefore(bar, grid.nextSibling);
+				renumberBenefitIconIndices(grid);
 			});
 		}
 		function trustLayoutFromWrap(wrap) {
@@ -5639,6 +5836,7 @@ function lf_ai_assistant_widget_js(): string {
 					buildHeroTrustStripControls();
 					buildTrustBadgePillsControls();
 					buildChecklistControls();
+					buildProofBadgeControls();
 					buildServiceDetailsMicroControls();
 					buildProcessStepControls();
 					buildSectionColumnSwapTargets();
@@ -5720,6 +5918,18 @@ function lf_ai_assistant_widget_js(): string {
 				});
 				swatches.appendChild(btn);
 			});
+			var brandNote = document.createElement("p");
+			brandNote.className = "lf-ai-section-bg-picker__brand-note";
+			brandNote.style.margin = "10px 0 0";
+			brandNote.style.fontSize = "12px";
+			brandNote.style.color = "#64748b";
+			brandNote.style.lineHeight = "1.45";
+			var bUrl = String((lfAiFloating && lfAiFloating.brand_settings_url) ? lfAiFloating.brand_settings_url : "");
+			if (bUrl) {
+				brandNote.innerHTML = "Swatches use your saved brand colors. Update primary, secondary, and surfaces in <a href=\"" + bUrl + "\" target=\"_blank\" rel=\"noopener\">LeadsForward → Global Settings</a>.";
+			} else {
+				brandNote.textContent = "Swatches use your saved brand colors from Global Settings.";
+			}
 			var customRow = document.createElement("div");
 			customRow.className = "lf-ai-section-bg-picker__custom";
 			var inp = document.createElement("input");
@@ -5751,6 +5961,7 @@ function lf_ai_assistant_widget_js(): string {
 			});
 			card.appendChild(head);
 			card.appendChild(swatches);
+			card.appendChild(brandNote);
 			card.appendChild(customRow);
 			card.appendChild(clearCustom);
 			root.appendChild(card);
@@ -6583,8 +6794,8 @@ function lf_ai_assistant_widget_js(): string {
 			if (extra && typeof extra === "object") {
 				if (extra.background_slug) payload.background_slug = String(extra.background_slug);
 				if (extra.custom_background) payload.custom_background = String(extra.custom_background);
-				if (extra.header_align) payload.header_align = String(extra.header_align);
-				if (extra.benefits_cta_align) payload.benefits_cta_align = String(extra.benefits_cta_align);
+				if (Object.prototype.hasOwnProperty.call(extra, "header_align")) payload.header_align = String(extra.header_align || "");
+				if (Object.prototype.hasOwnProperty.call(extra, "benefits_cta_align")) payload.benefits_cta_align = String(extra.benefits_cta_align || "");
 				if (extra.grid_columns) payload.grid_columns = String(extra.grid_columns);
 			}
 			$.post(lfAiFloating.ajax_url, payload).done(function(res){
