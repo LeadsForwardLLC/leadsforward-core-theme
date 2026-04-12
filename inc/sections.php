@@ -3344,6 +3344,7 @@ function lf_team_members_query_for_section(array $section): array {
 			$thumb = (int) get_post_thumbnail_id($pid);
 			if ($name !== '') {
 				$people[] = [
+					'post_id' => $pid,
 					'name' => $name,
 					'role' => $role,
 					'bio' => $bio,

@@ -2102,6 +2102,7 @@ button:focus-visible,
 /* Team: responsive grid, optional photos, placeholder initials */
 .lf-block-team {
 	--lf-team-photo: 140px;
+	margin-bottom: var(--lf-section-padding-md, 1.5rem);
 }
 
 .lf-block-team__inner {
@@ -2110,7 +2111,8 @@ button:focus-visible,
 	margin-left: auto;
 	margin-right: auto;
 	box-sizing: border-box;
-	padding: var(--lf-section-padding-lg) var(--lf-section-padding-x);
+	padding: var(--lf-section-padding-lg) var(--lf-section-padding-x)
+		calc(var(--lf-section-padding-lg) + clamp(1.25rem, 3vw, 2.25rem));
 }
 
 .lf-block-team__header {
@@ -2204,6 +2206,81 @@ button:focus-visible,
 	display: flex;
 	justify-content: center;
 	margin-bottom: 1rem;
+	position: relative;
+}
+
+.lf-block-team__media-add {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--lf-team-photo);
+	height: var(--lf-team-photo);
+	margin: 0;
+	padding: 0.5rem;
+	box-sizing: border-box;
+	border: 2px dashed rgba(59, 130, 246, 0.35);
+	border-radius: inherit;
+	background: rgba(59, 130, 246, 0.06);
+	color: var(--lf-primary);
+	font-weight: 600;
+	font-size: 0.85rem;
+	cursor: pointer;
+	font-family: inherit;
+	text-align: center;
+	line-height: 1.25;
+}
+
+/* Overlay "+ Add photo" on initials placeholder without breaking the centered layout */
+.lf-block-team__media > .lf-block-team__media-add {
+	position: absolute;
+	left: 50%;
+	top: 0;
+	transform: translateX(-50%);
+	z-index: 2;
+	background: rgba(255, 255, 255, 0.82);
+	backdrop-filter: blur(4px);
+}
+
+.lf-block-team--avatar-circle .lf-block-team__media-add {
+	border-radius: 50%;
+}
+
+.lf-block-team--avatar-rounded .lf-block-team__media-add {
+	border-radius: 22%;
+}
+
+.lf-block-team--avatar-square .lf-block-team__media-add {
+	border-radius: 12px;
+}
+
+.lf-block-team__media-add:hover {
+	background: rgba(59, 130, 246, 0.1);
+}
+
+.lf-team-member-thumb-remove {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	z-index: 2;
+	width: 28px;
+	height: 28px;
+	border-radius: 999px;
+	border: 1px solid rgba(255, 255, 255, 0.85);
+	background: rgba(15, 23, 42, 0.55);
+	color: #fff;
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	font-family: inherit;
+}
+
+.lf-block-team__photo .lf-team-member-thumb-remove {
+	top: 8px;
+	right: 8px;
 }
 
 .lf-block-team__photo {

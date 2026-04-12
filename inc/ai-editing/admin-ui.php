@@ -816,6 +816,7 @@ add_action('wp_ajax_lf_ai_faq_library', 'lf_ai_ajax_faq_library');
 add_action('wp_ajax_lf_ai_service_library', 'lf_ai_ajax_service_library');
 add_action('wp_ajax_lf_ai_process_step_library', 'lf_ai_ajax_process_step_library');
 add_action('wp_ajax_lf_ai_set_service_thumbnail', 'lf_ai_ajax_set_service_thumbnail');
+add_action('wp_ajax_lf_ai_set_team_member_thumbnail', 'lf_ai_ajax_set_team_member_thumbnail');
 add_action('wp_ajax_lf_ai_reorder_faq_items', 'lf_ai_ajax_reorder_faq_items');
 add_action('wp_ajax_lf_ai_set_trust_layout', 'lf_ai_ajax_set_trust_layout');
 add_action('wp_ajax_lf_ai_toggle_section_visibility', 'lf_ai_ajax_toggle_section_visibility');
@@ -1845,6 +1846,9 @@ function lf_ai_ajax_inline_save(): void {
 			$log_event('cleared_selector_overrides', ['selector' => $sel, 'context_type' => $ctx_type, 'context_id' => $ctx_id]);
 		}
 	};
+	$team_member_post_id = isset($_POST['team_member_post_id']) ? absint(wp_unslash((string) $_POST['team_member_post_id'])) : 0;
+	$team_field_allows_empty = $team_member_post_id > 0 && in_array($field_key, ['lf_team_role', 'lf_team_bio'], true);
+	$team_title_field = $team_member_post_id > 0 && $field_key === 'lf_team_member_post_title';
 	$log_event('received', [
 		'context_type' => $context_type,
 		'context_id' => $context_id_use,
@@ -1858,7 +1862,7 @@ function lf_ai_ajax_inline_save(): void {
 	if ($plain_len > 4000) {
 		wp_send_json_error(['message' => __('Text is too long for inline editing.', 'leadsforward-core')]);
 	}
-	if (trim(wp_strip_all_tags($value)) === '') {
+	if (trim(wp_strip_all_tags($value)) === '' && !$team_field_allows_empty && !$team_title_field) {
 		wp_send_json_error(['message' => __('Text cannot be empty.', 'leadsforward-core')]);
 	}
 
@@ -1899,6 +1903,95 @@ function lf_ai_ajax_inline_save(): void {
 			'service_post_id' => $service_post_id,
 			'log_id' => $log_id,
 		]);
+	}
+
+	// Team section: name, role, and bio live on lf_team_member CPT (ACF + post title).
+	if ($team_member_post_id > 0 && in_array($field_key, ['lf_team_member_post_title', 'lf_team_role', 'lf_team_bio'], true)) {
+		$member = get_post($team_member_post_id);
+		if (!$member instanceof \WP_Post || $member->post_type !== 'lf_team_member') {
+			wp_send_json_error(['message' => __('That team member could not be found.', 'leadsforward-core')]);
+		}
+		if (!current_user_can('edit_post', $team_member_post_id)) {
+			wp_send_json_error(['message' => __('You cannot edit this team member.', 'leadsforward-core')]);
+		}
+		if ($field_key === 'lf_team_member_post_title') {
+			$title = trim(sanitize_text_field($value));
+			if ($title === '') {
+				wp_send_json_error(['message' => __('Name cannot be empty.', 'leadsforward-core')]);
+			}
+			$old_title = (string) get_the_title($team_member_post_id);
+			$updated = wp_update_post(
+				[
+					'ID' => $team_member_post_id,
+					'post_title' => $title,
+				],
+				true
+			);
+			if (is_wp_error($updated)) {
+				wp_send_json_error(['message' => __('Could not update the name.', 'leadsforward-core')]);
+			}
+			$log_id = function_exists('lf_ai_log_action')
+				? lf_ai_log_action(
+					$context_type,
+					$context_id_use,
+					['lf_team_member_title::' . $team_member_post_id => $old_title],
+					['lf_team_member_title::' . $team_member_post_id => $title],
+					'Inline team member name'
+				)
+				: '';
+			wp_send_json_success([
+				'message' => __('Team member name saved.', 'leadsforward-core'),
+				'field_key' => $field_key,
+				'team_member_post_id' => $team_member_post_id,
+				'log_id' => $log_id,
+			]);
+		}
+		if ($field_key === 'lf_team_role') {
+			$role_plain = trim(sanitize_text_field(wp_strip_all_tags($value)));
+			if (function_exists('update_field')) {
+				update_field('lf_team_role', $role_plain, $team_member_post_id);
+			} else {
+				update_post_meta($team_member_post_id, 'lf_team_role', $role_plain);
+			}
+			$log_id = function_exists('lf_ai_log_action')
+				? lf_ai_log_action(
+					$context_type,
+					$context_id_use,
+					['lf_team_role::' . $team_member_post_id => ''],
+					['lf_team_role::' . $team_member_post_id => $role_plain],
+					'Inline team member role'
+				)
+				: '';
+			wp_send_json_success([
+				'message' => __('Role saved.', 'leadsforward-core'),
+				'field_key' => $field_key,
+				'team_member_post_id' => $team_member_post_id,
+				'log_id' => $log_id,
+			]);
+		}
+		if ($field_key === 'lf_team_bio') {
+			$bio_plain = trim(sanitize_textarea_field(wp_strip_all_tags($value)));
+			if (function_exists('update_field')) {
+				update_field('lf_team_bio', $bio_plain, $team_member_post_id);
+			} else {
+				update_post_meta($team_member_post_id, 'lf_team_bio', $bio_plain);
+			}
+			$log_id = function_exists('lf_ai_log_action')
+				? lf_ai_log_action(
+					$context_type,
+					$context_id_use,
+					['lf_team_bio::' . $team_member_post_id => ''],
+					['lf_team_bio::' . $team_member_post_id => $bio_plain],
+					'Inline team member bio'
+				)
+				: '';
+			wp_send_json_success([
+				'message' => __('Bio saved.', 'leadsforward-core'),
+				'field_key' => $field_key,
+				'team_member_post_id' => $team_member_post_id,
+				'log_id' => $log_id,
+			]);
+		}
 	}
 
 	// Direct section-field persistence for service_details body edits.
@@ -3351,6 +3444,41 @@ function lf_ai_ajax_set_service_thumbnail(): void {
 	$url = get_the_post_thumbnail_url($post_id, 'medium');
 	wp_send_json_success([
 		'message' => __('Service image updated.', 'leadsforward-core'),
+		'thumbnail_url' => is_string($url) ? $url : '',
+	]);
+}
+
+function lf_ai_ajax_set_team_member_thumbnail(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$post_id = isset($_POST['team_member_post_id']) ? absint(wp_unslash((string) $_POST['team_member_post_id'])) : 0;
+	$attachment_id = isset($_POST['attachment_id']) ? absint(wp_unslash((string) $_POST['attachment_id'])) : 0;
+	if ($post_id <= 0) {
+		wp_send_json_error(['message' => __('Invalid team member.', 'leadsforward-core')]);
+	}
+	$post = get_post($post_id);
+	if (!$post instanceof \WP_Post || $post->post_type !== 'lf_team_member') {
+		wp_send_json_error(['message' => __('Invalid team member.', 'leadsforward-core')]);
+	}
+	if (!current_user_can('edit_post', $post_id)) {
+		wp_send_json_error(['message' => __('You cannot edit this team member.', 'leadsforward-core')]);
+	}
+	if ($attachment_id > 0 && !wp_attachment_is_image($attachment_id)) {
+		wp_send_json_error(['message' => __('Choose a valid image file.', 'leadsforward-core')]);
+	}
+	if ($attachment_id > 0) {
+		set_post_thumbnail($post_id, $attachment_id);
+	} else {
+		delete_post_thumbnail($post_id);
+	}
+	$url = get_the_post_thumbnail_url($post_id, 'medium_large');
+	if (!is_string($url) || $url === '') {
+		$url = get_the_post_thumbnail_url($post_id, 'medium');
+	}
+	wp_send_json_success([
+		'message' => __('Team photo updated.', 'leadsforward-core'),
 		'thumbnail_url' => is_string($url) ? $url : '',
 	]);
 }
