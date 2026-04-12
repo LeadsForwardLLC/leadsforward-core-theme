@@ -137,6 +137,8 @@ function lf_wizard_extended_page_titles(): array {
 /**
  * Full ordered slug list for setup: core + cross-niche optionals + niche-specific extras.
  *
+ * Result is passed through `lf_leadgen_page_slugs` so manifests or integrations can adjust slugs.
+ *
  * @param array<string, mixed>|null $niche Row from lf_get_niche_registry().
  * @return list<string>
  */
@@ -154,7 +156,7 @@ function lf_wizard_page_slugs_for_niche(?array $niche): array {
 			$out[] = $s;
 		}
 	}
-	return $out;
+	return apply_filters('lf_leadgen_page_slugs', $out, $slug !== '' ? $slug : null);
 }
 
 /**

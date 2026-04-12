@@ -236,6 +236,9 @@ function lf_quote_builder_niche_fields(?string $niche_slug = null): array {
 		: (string) get_option('lf_homepage_niche_slug', function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair');
 	$niche_data = function_exists('lf_get_niche') ? lf_get_niche($niche) : null;
 	$layout_profile = is_array($niche_data) ? (string) ($niche_data['layout_profile'] ?? '') : '';
+	if ($niche === 'general') {
+		return apply_filters('lf_quote_builder_niche_fields', [], $niche);
+	}
 	$project_fields = [
 		[
 			'key' => 'project_scope',
@@ -297,6 +300,79 @@ function lf_quote_builder_niche_fields(?string $niche_slug = null): array {
 				__('Within 6 months', 'leadsforward-core'),
 				__('1-2 years ago', 'leadsforward-core'),
 				__('3+ years ago', 'leadsforward-core'),
+				__('Not sure', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$pw_light = [
+		[
+			'key' => 'property_type',
+			'label' => __('Property type', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Residential', 'leadsforward-core'),
+				__('Commercial', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$duct_fields = [
+		[
+			'key' => 'property_type',
+			'label' => __('Property type', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Residential', 'leadsforward-core'),
+				__('Commercial', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+		[
+			'key' => 'duct_concern',
+			'label' => __('Main concern', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Allergies / dust', 'leadsforward-core'),
+				__('Musty or stale air', 'leadsforward-core'),
+				__('New home / first cleaning', 'leadsforward-core'),
+				__('Routine maintenance', 'leadsforward-core'),
+				__('Not sure', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$carpet_light = [
+		[
+			'key' => 'carpet_area',
+			'label' => __('How much carpet?', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('1 room', 'leadsforward-core'),
+				__('2–3 rooms', 'leadsforward-core'),
+				__('4+ rooms', 'leadsforward-core'),
+				__('Stairs or hallways', 'leadsforward-core'),
+				__('Whole home', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$tree_quote_fields = [
+		[
+			'key' => 'tree_job_type',
+			'label' => __('What do you need?', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Removal', 'leadsforward-core'),
+				__('Trimming / pruning', 'leadsforward-core'),
+				__('Health or hazard check', 'leadsforward-core'),
+				__('Storm cleanup', 'leadsforward-core'),
+				__('Stump work', 'leadsforward-core'),
 				__('Not sure', 'leadsforward-core'),
 			],
 			'default' => '',
@@ -415,14 +491,14 @@ function lf_quote_builder_niche_fields(?string $niche_slug = null): array {
 	$pool_service_fields = [
 		[
 			'key' => 'pool_service_need',
-			'label' => __('Service need', 'leadsforward-core'),
+			'label' => __('What do you need help with?', 'leadsforward-core'),
 			'type' => 'choice',
 			'required' => false,
 			'options' => [
-				__('Weekly maintenance', 'leadsforward-core'),
-				__('Chemical balance', 'leadsforward-core'),
+				__('Routine care / chemicals', 'leadsforward-core'),
 				__('Equipment repair', 'leadsforward-core'),
-				__('Open/close', 'leadsforward-core'),
+				__('Open / close', 'leadsforward-core'),
+				__('Something else', 'leadsforward-core'),
 			],
 			'default' => '',
 		],
@@ -560,6 +636,14 @@ function lf_quote_builder_niche_fields(?string $niche_slug = null): array {
 		],
 	];
 	$map = [
+		'remodeling' => $project_fields,
+		'pressure-washing' => $pw_light,
+		'power-washing' => $pw_light,
+		'gutter-services' => $pw_light,
+		'window-cleaning' => $window_fields,
+		'carpet-cleaning' => $carpet_light,
+		'air-duct-cleaning' => $duct_fields,
+		'tree-service' => $tree_quote_fields,
 		'roofing' => [
 			[
 				'key' => 'roof_type',
@@ -654,9 +738,7 @@ function lf_quote_builder_niche_fields(?string $niche_slug = null): array {
 	];
 	if (!empty($map[$niche])) {
 		$fields = $map[$niche];
-	} elseif (in_array($niche, ['air-duct-cleaning', 'carpet-cleaning', 'pressure-washing', 'power-washing', 'window-cleaning', 'gutter-services'], true)) {
-		$fields = $cleaning_fields;
-	} elseif (in_array($niche, ['tree-service', 'excavation', 'concrete-cutting', 'stamped-concrete', 'paving', 'masonry', 'landscaping', 'fencing', 'deck-building', 'lanais-patios'], true)) {
+	} elseif (in_array($niche, ['excavation', 'concrete-cutting', 'stamped-concrete', 'paving', 'masonry', 'landscaping', 'fencing', 'deck-building', 'lanais-patios'], true)) {
 		$fields = $project_fields;
 	} elseif ($layout_profile === 'project-heavy') {
 		$fields = $project_fields;
@@ -1086,12 +1168,16 @@ function lf_quote_builder_get_review_previews(int $limit = 3): array {
 	return $out;
 }
 
-function lf_quote_builder_render_review_preview(array $review): void {
+function lf_quote_builder_render_review_preview(array $review, bool $compact = false): void {
 	if (empty($review)) {
 		return;
 	}
+	$wrap_classes = 'lf-quote-reviews lf-quote-reviews--single';
+	if ($compact) {
+		$wrap_classes .= ' lf-quote-reviews--compact';
+	}
 	?>
-	<div class="lf-quote-reviews lf-quote-reviews--single" role="note" aria-label="<?php esc_attr_e('Recent review', 'leadsforward-core'); ?>">
+	<div class="<?php echo esc_attr($wrap_classes); ?>" role="note" aria-label="<?php esc_attr_e('Recent review', 'leadsforward-core'); ?>">
 		<p class="lf-quote-reviews__eyebrow"><?php esc_html_e('Recent review', 'leadsforward-core'); ?></p>
 		<div class="lf-quote-reviews__list">
 			<div class="lf-quote-reviews__card">
@@ -1126,9 +1212,7 @@ function lf_quote_builder_render_modal(): void {
 	$first_title_id = 'lf-quote-title-0';
 	$review_previews = lf_quote_builder_get_review_previews(3);
 	$review_steps = [
-		'service_type' => 0,
-		'contact' => 1,
-		'confirmation' => 2,
+		'confirmation' => 0,
 	];
 	?>
 	<div class="lf-quote-modal" id="<?php echo esc_attr($modal_id); ?>" aria-hidden="true">
@@ -1173,7 +1257,7 @@ function lf_quote_builder_render_modal(): void {
 								<p class="lf-quote-step__confirm-body"><?php echo esc_html($step['confirmation_body'] ?? ''); ?></p>
 							</div>
 						<?php if (!empty($review_for_step)) : ?>
-							<?php lf_quote_builder_render_review_preview($review_for_step); ?>
+							<?php lf_quote_builder_render_review_preview($review_for_step, true); ?>
 						<?php endif; ?>
 						<?php else : ?>
 							<div class="lf-quote-fields">
@@ -1211,9 +1295,6 @@ function lf_quote_builder_render_modal(): void {
 									</div>
 								<?php endforeach; ?>
 							</div>
-						<?php if (!empty($review_for_step)) : ?>
-							<?php lf_quote_builder_render_review_preview($review_for_step); ?>
-						<?php endif; ?>
 						<?php endif; ?>
 					</section>
 				<?php endforeach; ?>
