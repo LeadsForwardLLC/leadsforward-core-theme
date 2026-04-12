@@ -72,7 +72,6 @@ function lf_pb_basic_page_slugs(): array {
 		'why-choose-us',
 		'financing',
 		'faq',
-		'our-work',
 		'reviews',
 		'blog',
 		'sitemap',
@@ -1193,6 +1192,9 @@ function lf_ai_pb_filter_section_patch(string $section_type, $raw): array {
 			continue;
 		}
 		$out[ $key ] = $v;
+	}
+	if ($section_type === 'service_details') {
+		unset($out['service_details_micro_sections'], $out['service_details_proof_badges'], $out['service_details_proof_label']);
 	}
 	return $out;
 }
