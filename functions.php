@@ -113,6 +113,7 @@ lf_load_inc('homepage.php');
 lf_load_inc('variation-copy.php');
 
 // Niche registry and setup flow.
+lf_load_inc('niches/leadgen-pages.php');
 lf_load_inc('niches/registry.php');
 lf_load_inc('niches/setup-runner.php');
 lf_load_inc('niches/wizard.php');
