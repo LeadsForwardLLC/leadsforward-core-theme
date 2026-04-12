@@ -1892,6 +1892,169 @@ button:focus-visible,
 	line-height: var(--lf-line-height-body);
 }
 
+/* Rich text section: block editor content uses theme type scale, list rhythm, and button classes */
+.lf-rich-content {
+	width: 100%;
+}
+
+.lf-rich-content__prose.lf-prose--rich-section {
+	max-width: min(52rem, var(--lf-container-narrow));
+}
+
+.lf-section--rich-content .lf-section__header.lf-section__header--align-center ~ .lf-section__body .lf-rich-content {
+	display: flex;
+	justify-content: center;
+}
+
+.lf-section--rich-content .lf-section__header.lf-section__header--align-left ~ .lf-section__body .lf-rich-content {
+	display: flex;
+	justify-content: flex-start;
+}
+
+.lf-section--rich-content .lf-section__header.lf-section__header--align-right ~ .lf-section__body .lf-rich-content {
+	display: flex;
+	justify-content: flex-end;
+}
+
+/* No shell header: center the prose column by default */
+.lf-section--rich-content .lf-section__inner > .lf-section__body:first-child .lf-rich-content {
+	display: flex;
+	justify-content: center;
+}
+
+.site-main .lf-prose--rich-section > * + * {
+	margin-top: var(--lf-spacing-tight);
+}
+
+.site-main .lf-prose--rich-section > * + h2,
+.site-main .lf-prose--rich-section > * + h3,
+.site-main .lf-prose--rich-section > * + h4 {
+	margin-top: var(--lf-spacing-normal);
+}
+
+.site-main .lf-prose--rich-section h2,
+.site-main .lf-prose--rich-section h3,
+.site-main .lf-prose--rich-section h4,
+.site-main .lf-prose--rich-section h5,
+.site-main .lf-prose--rich-section h6 {
+	font-weight: var(--lf-heading-weight);
+	line-height: var(--lf-line-height-heading);
+	color: var(--lf-text);
+	margin: 0 0 var(--lf-spacing-tight);
+}
+
+.site-main .lf-prose--rich-section h2 {
+	font-size: var(--lf-fs-h2);
+}
+
+.site-main .lf-prose--rich-section h3 {
+	font-size: var(--lf-fs-h3);
+}
+
+.site-main .lf-prose--rich-section h4 {
+	font-size: var(--lf-fs-h4);
+}
+
+.site-main .lf-prose--rich-section h5 {
+	font-size: var(--lf-fs-body);
+}
+
+.site-main .lf-prose--rich-section h6 {
+	font-size: 0.95rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--lf-text-muted);
+}
+
+.site-main .lf-prose--rich-section p {
+	margin: 0 0 var(--lf-spacing-tight);
+	color: var(--lf-text-muted);
+}
+
+.site-main .lf-prose--rich-section p:last-child {
+	margin-bottom: 0;
+}
+
+.site-main .lf-prose--rich-section > h2:last-child,
+.site-main .lf-prose--rich-section > h3:last-child,
+.site-main .lf-prose--rich-section > h4:last-child {
+	margin-bottom: 0;
+}
+
+.site-main .lf-prose--rich-section ul,
+.site-main .lf-prose--rich-section ol {
+	margin: 0 0 var(--lf-spacing-tight);
+	padding-left: 1.35rem;
+	color: var(--lf-text-muted);
+}
+
+.site-main .lf-prose--rich-section ul {
+	list-style: disc;
+}
+
+.site-main .lf-prose--rich-section ol {
+	list-style: decimal;
+}
+
+.site-main .lf-prose--rich-section li {
+	margin: 0.35rem 0;
+	padding-left: 0.25rem;
+}
+
+.site-main .lf-prose--rich-section li::marker {
+	color: var(--lf-accent);
+	font-weight: var(--lf-fw-semibold);
+}
+
+.site-main .lf-prose--rich-section blockquote {
+	margin: var(--lf-spacing-tight) 0;
+	padding: 0.75rem 0 0.75rem 1rem;
+	border-left: 3px solid var(--lf-primary);
+	color: var(--lf-text-muted);
+	font-style: italic;
+}
+
+.site-main .lf-prose--rich-section a:not(.lf-btn) {
+	color: var(--lf-primary);
+	text-decoration: underline;
+	text-underline-offset: 0.12em;
+}
+
+.site-main .lf-prose--rich-section a:not(.lf-btn):hover {
+	color: var(--lf-secondary);
+}
+
+.site-main .lf-prose--rich-section .lf-btn {
+	margin-top: 0.25rem;
+	margin-bottom: 0.25rem;
+}
+
+.lf-surface-dark .lf-prose--rich-section :is(h2, h3, h4, h5, h6) {
+	color: inherit;
+}
+
+.lf-surface-dark .lf-prose--rich-section p,
+.lf-surface-dark .lf-prose--rich-section li,
+.lf-surface-dark .lf-prose--rich-section blockquote {
+	color: inherit;
+	opacity: 0.92;
+}
+
+.lf-surface-dark .lf-prose--rich-section h6 {
+	color: inherit;
+	opacity: 0.85;
+}
+
+.lf-surface-dark .lf-prose--rich-section a:not(.lf-btn) {
+	color: inherit;
+	text-decoration: underline;
+}
+
+.lf-surface-dark .lf-prose--rich-section li::marker {
+	color: inherit;
+	opacity: 0.95;
+}
+
 .site-main {
 	min-height: 1px;
 	padding-top: 0;

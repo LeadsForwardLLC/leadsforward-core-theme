@@ -275,6 +275,19 @@ function lf_ai_section_library_preview_svg(string $section_id): string {
 				'<rect x="24" y="78" width="100" height="5" rx="2" fill="' . $light . '"/>'
 			);
 
+		case 'rich_content':
+			return $wrap(
+				'<rect x="32" y="14" width="100" height="8" rx="3" fill="' . $ink . '"/>' .
+				'<rect x="32" y="28" width="136" height="4" rx="2" fill="' . $muted . '"/>' .
+				'<rect x="32" y="36" width="120" height="4" rx="2" fill="' . $light . '"/>' .
+				'<rect x="32" y="48" width="72" height="6" rx="2" fill="' . $ink . '"/>' .
+				'<circle cx="38" cy="62" r="2" fill="' . $brand . '"/>' .
+				'<rect x="44" y="60" width="110" height="4" rx="2" fill="' . $light . '"/>' .
+				'<circle cx="38" cy="72" r="2" fill="' . $brand . '"/>' .
+				'<rect x="44" y="70" width="96" height="4" rx="2" fill="' . $light . '"/>' .
+				'<rect x="32" y="84" width="48" height="12" rx="6" fill="' . $brand . '"/>'
+			);
+
 		case 'sitemap_links':
 			return $wrap(
 				'<rect x="40" y="18" width="120" height="8" rx="3" fill="' . $ink . '"/>' .
