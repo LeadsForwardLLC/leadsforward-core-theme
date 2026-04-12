@@ -63,12 +63,9 @@ function lf_ai_section_library_row_meta(string $section_id): array {
 		'content' => __('Flexible text section for policies, long copy, or resources.', 'leadsforward-core'),
 		'content_centered' => __('Centered heading and rich text for simple pages.', 'leadsforward-core'),
 	];
-	$palette = ['#6366f1', '#0ea5e9', '#22c55e', '#f97316'];
-	$accent = $palette[abs(crc32($section_id)) % 4];
-	$svg = sprintf(
-		'<svg xmlns="http://www.w3.org/2000/svg" width="160" height="100" viewBox="0 0 160 100" fill="none" aria-hidden="true"><rect width="160" height="100" rx="10" fill="#f8fafc" stroke="#e2e8f0"/><rect x="10" y="12" width="90" height="9" rx="4" fill="#334155"/><rect x="10" y="28" width="140" height="5" rx="2" fill="#94a3b8"/><rect x="10" y="38" width="120" height="5" rx="2" fill="#cbd5e1"/><rect x="10" y="56" width="48" height="14" rx="7" fill="%s"/><rect x="66" y="56" width="48" height="14" rx="7" fill="#e2e8f0"/></svg>',
-		esc_attr($accent)
-	);
+	$svg = function_exists('lf_ai_section_library_preview_svg')
+		? lf_ai_section_library_preview_svg($section_id)
+		: '';
 	return [
 		'hint' => $hints[ $section_id ] ?? __('Adds this block to the page layout.', 'leadsforward-core'),
 		'preview_svg' => $svg,

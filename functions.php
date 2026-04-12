@@ -131,6 +131,7 @@ lf_load_inc('ai-editing/logging.php');
 lf_load_inc('ai-editing/handler.php');
 lf_load_inc('ai-editing/provider-openai.php');
 lf_load_inc('ai-editing/admin-ui.php');
+lf_load_inc('section-library-previews.php');
 lf_load_inc('ai-assistant.php');
 
 if (is_admin()) {
