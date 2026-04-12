@@ -288,6 +288,18 @@ function lf_ai_section_library_preview_svg(string $section_id): string {
 				'<rect x="32" y="84" width="48" height="12" rx="6" fill="' . $brand . '"/>'
 			);
 
+		case 'layout_heading':
+			return $wrap(
+				'<rect x="24" y="48" width="152" height="12" rx="3" fill="' . $ink . '"/>' .
+				'<rect x="56" y="70" width="88" height="4" rx="2" fill="' . $muted . '"/>'
+			);
+
+		case 'layout_button':
+			return $wrap(
+				'<rect x="62" y="42" width="76" height="22" rx="11" fill="' . $brand . '"/>' .
+				'<rect x="78" y="50" width="44" height="6" rx="2" fill="#fff" opacity="0.9"/>'
+			);
+
 		case 'sitemap_links':
 			return $wrap(
 				'<rect x="40" y="18" width="120" height="8" rx="3" fill="' . $ink . '"/>' .
