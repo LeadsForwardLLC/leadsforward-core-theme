@@ -2055,6 +2055,50 @@ button:focus-visible,
 	opacity: 0.95;
 }
 
+/* Layout blocks: heading-only and single-button rows */
+.lf-layout-heading {
+	width: 100%;
+	max-width: var(--lf-container-wide, 72rem);
+	margin-left: auto;
+	margin-right: auto;
+	padding-left: var(--lf-section-padding-x);
+	padding-right: var(--lf-section-padding-x);
+}
+
+.lf-layout-heading__text {
+	margin: 0;
+}
+
+.lf-section--layout-heading .lf-section__body {
+	padding-top: 0.25rem;
+	padding-bottom: 0.25rem;
+}
+
+.lf-layout-button {
+	width: 100%;
+	max-width: var(--lf-container-wide, 72rem);
+	margin-left: auto;
+	margin-right: auto;
+	padding-left: var(--lf-section-padding-x);
+	padding-right: var(--lf-section-padding-x);
+}
+
+.lf-layout-button .lf-section__buttons {
+	justify-content: inherit;
+}
+
+.lf-layout-button__form {
+	margin-top: var(--lf-spacing-tight);
+	max-width: 40rem;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.lf-section--layout-button .lf-section__body {
+	padding-top: var(--lf-spacing-tight);
+	padding-bottom: var(--lf-spacing-tight);
+}
+
 .site-main {
 	min-height: 1px;
 	padding-top: 0;

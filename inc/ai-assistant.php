@@ -62,7 +62,9 @@ function lf_ai_section_library_row_meta(string $section_id): array {
 		'services_offered_here' => __('Services available in a specific service area.', 'leadsforward-core'),
 		'content' => __('Flexible text section for policies, long copy, or resources.', 'leadsforward-core'),
 		'content_centered' => __('Centered heading and rich text for simple pages.', 'leadsforward-core'),
-		'rich_content' => __('One rich text area for headings, lists, and button-style links that follow global theme styles.', 'leadsforward-core'),
+		'rich_content' => __('HTML-friendly rich text (headings, lists, HR, links, button classes) styled by the theme. Edit the field in Dashboard → page builder for full markup.', 'leadsforward-core'),
+		'layout_heading' => __('Single heading with alignment—quick section breaks.', 'leadsforward-core'),
+		'layout_button' => __('One CTA button using global / section CTA rules (quote, call, or link).', 'leadsforward-core'),
 	];
 	$svg = function_exists('lf_ai_section_library_preview_svg')
 		? lf_ai_section_library_preview_svg($section_id)
@@ -116,16 +118,29 @@ function lf_ai_assistant_section_library(array $context): array {
 		}
 		$label = sanitize_text_field((string) ($row['label'] ?? $sid));
 		$meta = lf_ai_section_library_row_meta($sid);
+		$group = sanitize_key((string) ( $row['library_group'] ?? 'sections' ));
+		if ($group === '') {
+			$group = 'sections';
+		}
 		$rows[] = [
 			'id' => $sid,
 			'label' => $label,
 			'hint' => $meta['hint'],
 			'preview_svg' => $meta['preview_svg'],
+			'group' => $group,
 		];
 	}
-	usort($rows, static function (array $a, array $b): int {
-		return strcmp((string) ($a['label'] ?? ''), (string) ($b['label'] ?? ''));
-	});
+	usort(
+		$rows,
+		static function (array $a, array $b): int {
+			$ga = ( ( $a['group'] ?? 'sections' ) === 'content_blocks' ) ? 1 : 0;
+			$gb = ( ( $b['group'] ?? 'sections' ) === 'content_blocks' ) ? 1 : 0;
+			if ($ga !== $gb) {
+				return $ga <=> $gb;
+			}
+			return strcmp((string) ( $a['label'] ?? '' ), (string) ( $b['label'] ?? '' ));
+		}
+	);
 	return $rows;
 }
 
@@ -800,16 +815,21 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-benefits-cta-picker__btn.is-active { outline:2px solid #8348f9; }
 		.lf-ai-section-insert-picker { position:fixed; inset:0; z-index:100006; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; padding:18px; }
 		.lf-ai-section-insert-picker[hidden] { display:none !important; }
-		.lf-ai-section-insert-picker__card { width:min(420px, calc(100vw - 30px)); max-height:80vh; overflow:auto; background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); padding:12px; display:flex; flex-direction:column; gap:8px; }
-		.lf-ai-section-insert-picker__head { font-size:14px; font-weight:700; color:#0f172a; }
-		.lf-ai-section-insert-picker__item { display:block; width:100%; text-align:left; border:1px solid #e2e8f0; background:#f8fafc; border-radius:8px; padding:8px 10px; font-size:12px; cursor:pointer; color:#0f172a; }
-		.lf-ai-section-insert-picker__item:hover { border-color:#c4b5fd; background:#faf7ff; }
+		.lf-ai-section-insert-picker__card { width:min(440px, calc(100vw - 30px)); max-height:min(85vh, 640px); overflow:hidden; background:#fff; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 24px 60px rgba(15,23,42,.2); padding:0; display:flex; flex-direction:column; gap:0; }
+		.lf-ai-section-insert-picker__head { font-size:15px; font-weight:800; color:#0f172a; padding:14px 16px 0; }
+		.lf-ai-section-insert-picker__item { display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%; text-align:left; border:1px solid #e2e8f0; background:#fff; border-radius:10px; padding:10px 12px; font-size:13px; font-weight:600; cursor:pointer; color:#0f172a; }
+		.lf-ai-section-insert-picker__item:hover { border-color:#a78bfa; background:#faf7ff; }
 		.lf-ai-section-lib-row { display:flex; flex-direction:column; gap:0; }
-		.lf-ai-section-lib-row__id { color:#64748b; font-weight:400; }
+		.lf-ai-section-lib-row__id { color:#64748b; font-weight:500; font-size:11px; }
+		.lf-ai-section-lib-row__hint { display:block; font-size:11px; color:#64748b; font-weight:400; line-height:1.35; margin-top:4px; max-width:100%; }
 		.lf-ai-section-lib-row__preview { display:none; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; padding:6px; text-align:center; box-shadow:0 4px 14px rgba(15,23,42,.08); }
 		.lf-ai-section-lib-row__preview.is-visible { display:block; }
 		.lf-ai-section-lib-row__preview svg { margin:0 auto; display:block; max-width:100%; height:auto; }
-		[data-lf-section-insert-list] { display:flex; flex-direction:column; gap:6px; max-height:min(52vh,420px); overflow:auto; }
+		[data-lf-section-insert-list] { display:flex; flex-direction:column; gap:8px; max-height:min(52vh,420px); overflow:auto; padding:10px 16px 4px; }
+		.lf-ai-section-insert-picker__hint { margin:0 16px 8px; font-size:12px; color:#64748b; line-height:1.4; }
+		.lf-ai-section-insert-picker__foot { padding:12px 16px 14px; border-top:1px solid #f1f5f9; margin-top:auto; }
+		.lf-ai-section-insert-picker__foot .lf-ai-section-insert-picker__cancel { width:100%; border:1px solid #e2e8f0; background:#f8fafc; color:#334155; border-radius:10px; min-height:40px; font-size:13px; font-weight:600; cursor:pointer; }
+		.lf-ai-section-insert-picker__foot .lf-ai-section-insert-picker__cancel:hover { border-color:#c4b5fd; background:#faf7ff; color:#5b21b6; }
 		.lf-ai-checklist-controls { margin-top:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 		.lf-ai-checklist-add { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:28px; padding:0 10px; font-size:12px; cursor:pointer; }
 		.lf-ai-checklist-add:hover { background:#f5f0ff; }
@@ -863,40 +883,53 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-column-draggable { cursor:ew-resize; transition:outline-color .15s ease; }
 		.lf-ai-column-draggable:hover { outline:2px dashed rgba(131,72,249,.3); outline-offset:3px; }
 		.lf-ai-column-draggable.is-dragging { outline:2px solid #8348f9 !important; outline-offset:3px; opacity:.85; }
-		.lf-ai-rail { position:fixed; left:14px; top:54px; z-index:99997; width:248px; max-height:calc(100vh - 84px); overflow:auto; background:rgba(255,255,255,.98); border:1px solid #ddd6fe; border-radius:16px; box-shadow:0 18px 44px rgba(79,35,180,.2); padding:10px; backdrop-filter:blur(8px); }
-		.lf-ai-rail.is-collapsed { width:auto; background:transparent; border:0; box-shadow:none; padding:0; max-height:none; }
-		.lf-ai-rail__head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 8px; }
-		.lf-ai-rail__title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#5b21b6; margin:0; }
+		.lf-ai-rail { position:fixed; left:14px; top:54px; z-index:99997; width:280px; max-height:calc(100vh - 84px); overflow:hidden; display:flex; flex-direction:column; background:#fff; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 12px 40px rgba(15,23,42,.12), 0 0 0 1px rgba(99,102,241,.06); padding:0; backdrop-filter:blur(10px); }
+		.lf-ai-rail.is-collapsed { width:auto; background:transparent; border:0; box-shadow:none; padding:0; max-height:none; overflow:visible; }
+		.lf-ai-rail__head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 12px 10px; margin:0; border-bottom:1px solid #f1f5f9; flex-shrink:0; }
+		.lf-ai-rail__title { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:#475569; margin:0; }
 		.lf-ai-rail.is-collapsed .lf-ai-rail__title { display:none; }
 		.lf-ai-rail__head-actions { display:flex; gap:6px; }
-		.lf-ai-rail__toggle { border:1px solid #c4b5fd; background:#fff; color:#5b21b6; border-radius:10px; min-width:30px; height:30px; cursor:pointer; font-size:14px; line-height:1; font-weight:700; }
-		.lf-ai-rail__add { border:1px solid #c4b5fd; background:#fff; color:#5b21b6; border-radius:10px; width:30px; height:30px; cursor:pointer; font-size:16px; line-height:1; }
-		.lf-ai-rail__toggle:hover, .lf-ai-rail__add:hover { background:#f5f3ff; border-color:#a78bfa; }
-		.lf-ai-rail.is-collapsed .lf-ai-rail__head { margin:0; }
-		.lf-ai-rail.is-collapsed .lf-ai-rail__toggle { width:auto; min-width:0; height:44px; border-radius:999px; padding:0 16px; border:0; color:#fff; background:#6a3be8; box-shadow:none; font-size:22px; font-weight:700; letter-spacing:.02em; }
-		.lf-ai-rail.is-collapsed .lf-ai-rail__toggle::before { content:"●"; color:#22c55e; font-size:12px; margin-right:8px; vertical-align:middle; text-shadow:0 0 0 4px rgba(34,197,94,.2); }
+		.lf-ai-rail__toggle { border:1px solid #e2e8f0; background:#f8fafc; color:#334155; border-radius:8px; min-width:30px; height:30px; cursor:pointer; font-size:14px; line-height:1; font-weight:700; }
+		.lf-ai-rail__add { border:1px solid #c4b5fd; background:#f5f3ff; color:#5b21b6; border-radius:8px; width:30px; height:30px; cursor:pointer; font-size:18px; line-height:1; font-weight:700; }
+		.lf-ai-rail__toggle:hover, .lf-ai-rail__add:hover { background:#ede9fe; border-color:#a78bfa; color:#4c1d95; }
+		.lf-ai-rail.is-collapsed .lf-ai-rail__head { margin:0; padding:0; border:0; }
+		.lf-ai-rail.is-collapsed .lf-ai-rail__toggle { width:auto; min-width:0; height:44px; border-radius:999px; padding:0 16px; border:0; color:#fff; background:#6a3be8; box-shadow:0 8px 24px rgba(106,59,232,.35); font-size:15px; font-weight:700; letter-spacing:.02em; }
+		.lf-ai-rail.is-collapsed .lf-ai-rail__toggle::before { content:"●"; color:#22c55e; font-size:11px; margin-right:8px; vertical-align:middle; }
 		.lf-ai-rail.is-collapsed .lf-ai-rail__add { display:none; }
-		.lf-ai-rail__list { display:flex; flex-direction:column; gap:7px; }
-		.lf-ai-rail.is-collapsed .lf-ai-rail__list { display:none; }
-		.lf-ai-rail__item { border:1px solid #e9e1ff; border-radius:10px; padding:7px 9px; font-size:12px; cursor:pointer; color:#0f172a; background:#fff; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
-		.lf-ai-rail__item:hover { border-color:#a78bfa; background:#faf7ff; box-shadow:0 4px 12px rgba(131,72,249,.12); }
-		.lf-ai-rail__item.is-active { border-color:#8348f9; background:#f5f0ff; box-shadow:0 0 0 2px rgba(131,72,249,.15); }
-		.lf-ai-rail__item small { display:block; color:#6b7280; margin-top:2px; }
+		.lf-ai-rail.is-collapsed .lf-ai-rail__library { display:none !important; }
+		.lf-ai-rail__body { flex:1; min-height:0; overflow:auto; padding:10px 12px 12px; display:flex; flex-direction:column; gap:10px; }
+		.lf-ai-rail.is-collapsed .lf-ai-rail__body { display:none; }
+		.lf-ai-rail__list { display:flex; flex-direction:column; gap:8px; margin:0; padding:0; }
+		.lf-ai-rail__list-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#94a3b8; margin:4px 2px 0; }
+		.lf-ai-rail__item { border:1px solid #e2e8f0; border-radius:10px; padding:9px 10px; font-size:12px; cursor:pointer; color:#0f172a; background:#fafafa; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; transition:border-color .15s ease, box-shadow .15s ease; }
+		.lf-ai-rail__item:hover { border-color:#c4b5fd; background:#fff; box-shadow:0 2px 10px rgba(99,102,241,.1); }
+		.lf-ai-rail__item.is-active { border-color:#8348f9; background:#f5f0ff; box-shadow:0 0 0 2px rgba(131,72,249,.12); }
+		.lf-ai-rail__item small { display:block; color:#64748b; margin-top:3px; font-size:11px; }
 		.lf-ai-rail__item-body { min-width:0; flex:1; }
-		.lf-ai-rail__drag { border:1px solid #e9e1ff; border-radius:7px; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; color:#6b7280; cursor:grab; user-select:none; background:#fff; font-size:12px; line-height:1; }
+		.lf-ai-rail__drag { border:1px solid #e2e8f0; border-radius:7px; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; color:#64748b; cursor:grab; user-select:none; background:#fff; font-size:11px; line-height:1; flex-shrink:0; }
 		.lf-ai-rail__drag:active { cursor:grabbing; }
 		.lf-ai-rail__item.is-dragging { opacity:.55; border-color:#8348f9; }
 		.lf-ai-rail__item.is-drop-before { box-shadow: inset 0 3px 0 #8348f9; }
 		.lf-ai-rail__item.is-drop-after { box-shadow: inset 0 -3px 0 #8348f9; }
 		body.lf-ai-rail-dragging { user-select:none; -webkit-user-select:none; }
-		.lf-ai-rail__library { border:1px solid #ddd6fe; border-radius:12px; padding:7px; margin:0 0 9px; background:#f6f1ff; display:flex; flex-direction:column; gap:6px; }
+		.lf-ai-rail__library { border:1px solid #e2e8f0; border-radius:12px; padding:0; margin:0; background:#f8fafc; display:flex; flex-direction:column; gap:0; flex-shrink:0; overflow:hidden; }
 		.lf-ai-rail__library[hidden] { display:none !important; }
-		.lf-ai-rail__library-search { width:100%; border:1px solid #c4b5fd; border-radius:9px; padding:7px 8px; font-size:12px; }
-		.lf-ai-rail__library-search:focus { outline:none; border-color:#8348f9; box-shadow:0 0 0 3px rgba(131,72,249,.18); }
-		.lf-ai-rail__library-list { max-height:180px; overflow:auto; display:flex; flex-direction:column; gap:4px; }
-		.lf-ai-rail__library-item { border:1px solid #e9e1ff; border-radius:9px; background:#fff; padding:6px 8px; font-size:12px; cursor:pointer; text-align:left; color:#0f172a; }
-		.lf-ai-rail__library-item:hover { border-color:#a78bfa; background:#faf7ff; }
+		.lf-ai-rail__library-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:10px 10px 0; }
+		.lf-ai-rail__library-title { font-size:13px; font-weight:700; color:#0f172a; margin:0; line-height:1.25; }
+		.lf-ai-rail__library-close { border:0; background:transparent; color:#64748b; width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:20px; line-height:1; flex-shrink:0; }
+		.lf-ai-rail__library-close:hover { background:#e2e8f0; color:#0f172a; }
+		.lf-ai-rail__library-sub { margin:4px 10px 8px; font-size:11px; color:#64748b; line-height:1.4; }
+		.lf-ai-rail__library-search { width:calc(100% - 20px); margin:0 10px 8px; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box; }
+		.lf-ai-rail__library-search:focus { outline:none; border-color:#8348f9; box-shadow:0 0 0 3px rgba(131,72,249,.15); }
+		.lf-ai-rail__library-list { max-height:min(240px, 38vh); overflow:auto; display:flex; flex-direction:column; gap:6px; padding:0 10px 10px; }
+		.lf-ai-rail__library-group-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; margin:10px 2px 4px; }
+		.lf-ai-rail__library-group-label:first-child { margin-top:2px; }
+		.lf-ai-rail__library-item { border:1px solid #e2e8f0; border-radius:10px; background:#fff; padding:8px 10px; font-size:12px; cursor:grab; text-align:left; color:#0f172a; font-weight:600; display:flex; flex-direction:column; align-items:flex-start; gap:2px; transition:border-color .15s ease, box-shadow .15s ease; }
+		.lf-ai-rail__library-item:hover { border-color:#a78bfa; box-shadow:0 2px 8px rgba(99,102,241,.12); }
+		.lf-ai-rail__library-item.is-dragging { opacity:.65; outline:2px dashed #8348f9; }
 		.lf-ai-rail__library-item[disabled] { opacity:.5; cursor:default; }
+		.lf-ai-section-insert__zone.is-library-drop { opacity:1 !important; }
+		.lf-ai-section-insert__zone.is-library-drop .lf-ai-section-insert__btn { background:#ede9fe; border-color:#8348f9; color:#5b21b6; transform:scale(1.05); }
 		.lf-ai-command { position:fixed; left:50%; top:16%; transform:translateX(-50%); z-index:100001; width:min(560px, calc(100vw - 26px)); background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); padding:10px; }
 		.lf-ai-command[hidden] { display:none !important; }
 		.lf-ai-command__input { width:100%; border:1px solid #d6c8fb; border-radius:8px; padding:10px; font-size:14px; }
@@ -2988,14 +3021,50 @@ function lf_ai_assistant_widget_js(): string {
 				window.scrollTo({ top: desired, behavior: "smooth" });
 			} catch (e) {}
 		}
+		function clearLibraryInsertDropHighlights() {
+			try {
+				Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-insert__zone.is-library-drop")).forEach(function(z){
+					z.classList.remove("is-library-drop");
+				});
+			} catch (e) {}
+		}
+		function bindSectionInsertZoneLibraryDrop(zone, afterSectionId, beforeSectionId) {
+			if (!zone || zone.__lfLibraryDropBound) return;
+			zone.__lfLibraryDropBound = true;
+			var aid = String(afterSectionId || "");
+			var bid = String(beforeSectionId || "");
+			zone.addEventListener("dragover", function(e){
+				if (!activeLibraryDragSectionType) return;
+				e.preventDefault();
+				e.stopPropagation();
+				if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+				zone.classList.add("is-library-drop");
+			});
+			zone.addEventListener("dragleave", function(e){
+				var rel = e.relatedTarget;
+				if (rel && zone.contains(rel)) return;
+				zone.classList.remove("is-library-drop");
+			});
+			zone.addEventListener("drop", function(e){
+				if (!activeLibraryDragSectionType) return;
+				e.preventDefault();
+				e.stopPropagation();
+				zone.classList.remove("is-library-drop");
+				clearLibraryInsertDropHighlights();
+				var t = activeLibraryDragSectionType;
+				activeLibraryDragSectionType = "";
+				addSectionFromLibrary(t, aid, bid);
+			});
+		}
 		function ensureSectionRail() {
 			if (sectionRailEl) return sectionRailEl;
 			sectionRailEl = document.createElement("aside");
 			sectionRailEl.className = "lf-ai-rail lf-ai-inline-editor-ignore";
-			sectionRailEl.innerHTML = "<div class=\"lf-ai-rail__head\"><div class=\"lf-ai-rail__title\">Page Structure</div><div class=\"lf-ai-rail__head-actions\"><button type=\"button\" class=\"lf-ai-rail__add\" data-lf-ai-rail-add aria-label=\"Add section\" title=\"Add section\">+</button><button type=\"button\" class=\"lf-ai-rail__toggle\" data-lf-ai-rail-toggle aria-label=\"Minimize structure rail\" title=\"Minimize structure rail\">\u2212</button></div></div><div class=\"lf-ai-rail__library\" data-lf-ai-rail-library hidden><input type=\"text\" class=\"lf-ai-rail__library-search\" data-lf-ai-rail-library-search placeholder=\"Search sections...\" /><div class=\"lf-ai-rail__library-list\" data-lf-ai-rail-library-list></div></div><div class=\"lf-ai-rail__list\" data-lf-ai-rail-list></div>";
+			sectionRailEl.innerHTML = "<div class=\"lf-ai-rail__head\"><div class=\"lf-ai-rail__title\">Page Structure</div><div class=\"lf-ai-rail__head-actions\"><button type=\"button\" class=\"lf-ai-rail__add\" data-lf-ai-rail-add aria-label=\"Add section\" title=\"Add section\">+</button><button type=\"button\" class=\"lf-ai-rail__toggle\" data-lf-ai-rail-toggle aria-label=\"Minimize structure rail\" title=\"Minimize structure rail\">\u2212</button></div></div><div class=\"lf-ai-rail__library\" data-lf-ai-rail-library hidden><div class=\"lf-ai-rail__library-top\"><p class=\"lf-ai-rail__library-title\">Add to page</p><button type=\"button\" class=\"lf-ai-rail__library-close\" data-lf-ai-rail-library-close aria-label=\"Close add panel\" title=\"Close\">\u00d7</button></div><p class=\"lf-ai-rail__library-sub\">Search, click to insert after the selected section, or drag a type onto the + zones between sections.</p><input type=\"text\" class=\"lf-ai-rail__library-search\" data-lf-ai-rail-library-search placeholder=\"Search by name or type\u2026\" /><div class=\"lf-ai-rail__library-list\" data-lf-ai-rail-library-list></div></div><div class=\"lf-ai-rail__body\"><div class=\"lf-ai-rail__list-label\">On this page</div><div class=\"lf-ai-rail__list\" data-lf-ai-rail-list></div></div>";
 			var toggle = sectionRailEl.querySelector("[data-lf-ai-rail-toggle]");
 			var addBtn = sectionRailEl.querySelector("[data-lf-ai-rail-add]");
 			var library = sectionRailEl.querySelector("[data-lf-ai-rail-library]");
+			var libraryClose = sectionRailEl.querySelector("[data-lf-ai-rail-library-close]");
 			var librarySearch = sectionRailEl.querySelector("[data-lf-ai-rail-library-search]");
 			if (toggle) {
 				toggle.addEventListener("click", function(){
@@ -3004,7 +3073,18 @@ function lf_ai_assistant_widget_js(): string {
 					toggle.textContent = railCollapsed ? "\u2630 Structure" : "\u2212";
 					toggle.setAttribute("aria-label", railCollapsed ? "Expand structure rail" : "Minimize structure rail");
 					toggle.setAttribute("title", railCollapsed ? "Expand structure rail" : "Minimize structure rail");
+					if (railCollapsed && library) {
+						railLibraryOpen = false;
+						library.hidden = true;
+					}
 					try { window.localStorage.setItem(railStateKey, railCollapsed ? "collapsed" : "expanded"); } catch (e) {}
+				});
+			}
+			if (libraryClose && library) {
+				libraryClose.addEventListener("click", function(e){
+					e.preventDefault();
+					railLibraryOpen = false;
+					library.hidden = true;
 				});
 			}
 			if (addBtn && library) {
@@ -3071,8 +3151,16 @@ function lf_ai_assistant_widget_js(): string {
 			var filterRow = typeof o.filterRow === "function" ? o.filterRow : null;
 			var draggable = !!o.draggable;
 			var onPick = typeof o.onPick === "function" ? o.onPick : function(){};
+			var showGroupLabels = !!o.showGroupLabels;
+			var showHints = !!o.showHints;
 			listEl.innerHTML = "";
 			var rows = Array.isArray(lfAiFloating.section_library) ? lfAiFloating.section_library : [];
+			var lastGroup = null;
+			function groupLabelText(g) {
+				var key = String(g || "sections");
+				if (key === "content_blocks") return "Content blocks";
+				return "Sections";
+			}
 			rows.forEach(function(row){
 				if (filterRow && !filterRow(row)) return;
 				var id = String(row && row.id ? row.id : "");
@@ -3080,6 +3168,14 @@ function lf_ai_assistant_widget_js(): string {
 				if (!id) return;
 				var hint = String(row && row.hint ? row.hint : "");
 				var svg = String(row && row.preview_svg ? row.preview_svg : "");
+				var g = String(row && row.group ? row.group : "sections");
+				if (showGroupLabels && g !== lastGroup) {
+					lastGroup = g;
+					var glab = document.createElement("div");
+					glab.className = "lf-ai-rail__library-group-label";
+					glab.textContent = groupLabelText(g);
+					listEl.appendChild(glab);
+				}
 				var wrap = document.createElement("div");
 				wrap.className = "lf-ai-section-lib-row";
 				var b = document.createElement("button");
@@ -3090,10 +3186,16 @@ function lf_ai_assistant_widget_js(): string {
 				lab.textContent = label;
 				var sid = document.createElement("span");
 				sid.className = "lf-ai-section-lib-row__id";
-				sid.textContent = " (" + id + ")";
+				sid.textContent = id;
 				b.appendChild(lab);
 				b.appendChild(sid);
 				if (hint) b.setAttribute("title", hint);
+				if (hint && showHints) {
+					var hi = document.createElement("span");
+					hi.className = "lf-ai-section-lib-row__hint";
+					hi.textContent = hint;
+					b.appendChild(hi);
+				}
 				b.addEventListener("click", function(e){
 					e.preventDefault();
 					onPick(id);
@@ -3112,6 +3214,7 @@ function lf_ai_assistant_widget_js(): string {
 					b.addEventListener("dragend", function(){
 						b.classList.remove("is-dragging");
 						activeLibraryDragSectionType = "";
+						clearLibraryInsertDropHighlights();
 					});
 				}
 				wrap.appendChild(b);
@@ -3137,6 +3240,8 @@ function lf_ai_assistant_widget_js(): string {
 			fillSectionLibraryList(list, {
 				itemClass: "lf-ai-rail__library-item",
 				draggable: true,
+				showGroupLabels: true,
+				showHints: false,
 				filterRow: function(row){
 					var id = String(row && row.id ? row.id : "");
 					var label = String(row && row.label ? row.label : id);
@@ -3268,6 +3373,10 @@ function lf_ai_assistant_widget_js(): string {
 				row.addEventListener("dragover", function(e){
 					if (activeLibraryDragSectionType) {
 						e.preventDefault();
+						clearRailDropMarkers();
+						var rectL = row.getBoundingClientRect();
+						var afterL = e.clientY > (rectL.top + rectL.height / 2);
+						row.classList.add(afterL ? "is-drop-after" : "is-drop-before");
 						return;
 					}
 					if (!activeRailDragSectionId || activeRailDragSectionId === sectionId) return;
@@ -3283,8 +3392,17 @@ function lf_ai_assistant_widget_js(): string {
 				row.addEventListener("drop", function(e){
 					if (activeLibraryDragSectionType) {
 						e.preventDefault();
-						addSectionFromLibrary(activeLibraryDragSectionType, sectionId);
+						var rect = row.getBoundingClientRect();
+						var after = e.clientY > (rect.top + rect.height / 2);
+						var t = activeLibraryDragSectionType;
 						activeLibraryDragSectionType = "";
+						clearRailDropMarkers();
+						if (after) {
+							addSectionFromLibrary(t, sectionId, "");
+						} else {
+							addSectionFromLibrary(t, "", sectionId);
+						}
+						clearLibraryInsertDropHighlights();
 						return;
 					}
 					if (!activeRailDragSectionId || activeRailDragSectionId === sectionId) return;
@@ -3314,8 +3432,10 @@ function lf_ai_assistant_widget_js(): string {
 				list.addEventListener("drop", function(e){
 					if (!activeLibraryDragSectionType) return;
 					e.preventDefault();
-					addSectionFromLibrary(activeLibraryDragSectionType, "");
+					var t = activeLibraryDragSectionType;
 					activeLibraryDragSectionType = "";
+					clearLibraryInsertDropHighlights();
+					addSectionFromLibrary(t, "");
 				});
 				document.addEventListener("mousemove", function(e){
 					if (!railPointerDrag || !railPointerDrag.row) return;
@@ -6706,28 +6826,28 @@ function lf_ai_assistant_widget_js(): string {
 			card.className = "lf-ai-section-insert-picker__card";
 			var head = document.createElement("div");
 			head.className = "lf-ai-section-insert-picker__head";
-			head.textContent = "Add section";
+			head.textContent = "Add to page";
 			var hint = document.createElement("p");
-			hint.style.margin = "0";
-			hint.style.fontSize = "12px";
-			hint.style.color = "#64748b";
+			hint.className = "lf-ai-section-insert-picker__hint";
 			hint.setAttribute("data-lf-section-insert-hint", "1");
-			hint.textContent = "Choose a section type.";
+			hint.textContent = "Choose a section or content block.";
 			var list = document.createElement("div");
 			list.setAttribute("data-lf-section-insert-list", "1");
+			var foot = document.createElement("div");
+			foot.className = "lf-ai-section-insert-picker__foot";
 			var closeBtn = document.createElement("button");
 			closeBtn.type = "button";
-			closeBtn.className = "lf-ai-benefits-cta-picker__btn";
-			closeBtn.style.marginTop = "6px";
+			closeBtn.className = "lf-ai-section-insert-picker__cancel";
 			closeBtn.textContent = "Cancel";
 			closeBtn.addEventListener("click", function(e){
 				e.preventDefault();
 				closeSectionInsertPicker();
 			});
+			foot.appendChild(closeBtn);
 			card.appendChild(head);
 			card.appendChild(hint);
 			card.appendChild(list);
-			card.appendChild(closeBtn);
+			card.appendChild(foot);
 			root.appendChild(card);
 			root.addEventListener("click", function(e){
 				if (e.target === root) closeSectionInsertPicker();
@@ -6753,6 +6873,8 @@ function lf_ai_assistant_widget_js(): string {
 				fillSectionLibraryList(list, {
 					itemClass: "lf-ai-section-insert-picker__item",
 					draggable: false,
+					showGroupLabels: true,
+					showHints: true,
 					onPick: function(id){
 						var aid = sectionInsertAfterId;
 						var bid = sectionInsertBeforeId;
@@ -6802,6 +6924,8 @@ function lf_ai_assistant_widget_js(): string {
 				botZ.appendChild(botBtn);
 				shell.appendChild(topZ);
 				shell.appendChild(botZ);
+				bindSectionInsertZoneLibraryDrop(topZ, "", sid);
+				bindSectionInsertZoneLibraryDrop(botZ, sid, "");
 				wrap.appendChild(shell);
 			});
 		}

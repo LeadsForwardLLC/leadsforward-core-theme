@@ -498,6 +498,7 @@ function lf_sections_registry(): array {
 		],
 		'rich_content' => [
 			'label' => __('Rich text (design system)', 'leadsforward-core'),
+			'library_group' => 'content_blocks',
 			'contexts' => ['homepage', 'page', 'post', 'service', 'service_area'],
 			'fields' => [
 				$bg_field,
@@ -516,6 +517,50 @@ function lf_sections_registry(): array {
 				],
 			],
 			'render' => 'lf_sections_render_rich_content',
+		],
+		'layout_heading' => [
+			'label' => __('Heading block', 'leadsforward-core'),
+			'library_group' => 'content_blocks',
+			'contexts' => ['homepage', 'page', 'post', 'service', 'service_area'],
+			'fields' => [
+				$bg_field,
+				['key' => 'layout_heading_text', 'label' => __('Heading text', 'leadsforward-core'), 'type' => 'text', 'default' => __('Section heading', 'leadsforward-core')],
+				['key' => 'layout_heading_tag', 'label' => __('Heading level', 'leadsforward-core'), 'type' => 'select', 'default' => 'h2', 'options' => [
+					'h2' => __('H2', 'leadsforward-core'),
+					'h3' => __('H3', 'leadsforward-core'),
+					'h4' => __('H4', 'leadsforward-core'),
+				]],
+				['key' => 'section_header_align', 'label' => __('Alignment', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
+					'left' => __('Left', 'leadsforward-core'),
+					'center' => __('Center', 'leadsforward-core'),
+					'right' => __('Right', 'leadsforward-core'),
+				]],
+			],
+			'render' => 'lf_sections_render_layout_heading',
+		],
+		'layout_button' => [
+			'label' => __('Button block', 'leadsforward-core'),
+			'library_group' => 'content_blocks',
+			'contexts' => ['homepage', 'page', 'post', 'service', 'service_area'],
+			'fields' => [
+				$bg_field,
+				['key' => 'cta_primary_override', 'label' => __('Button label', 'leadsforward-core'), 'type' => 'text', 'default' => __('Get started', 'leadsforward-core')],
+				['key' => 'cta_primary_action', 'label' => __('Action', 'leadsforward-core'), 'type' => 'select', 'default' => '', 'options' => [
+					''      => __('Use global', 'leadsforward-core'),
+					'quote' => __('Open Quote Builder', 'leadsforward-core'),
+					'call'  => __('Call now', 'leadsforward-core'),
+					'link'  => __('Link', 'leadsforward-core'),
+				]],
+				['key' => 'cta_primary_url', 'label' => __('URL (if Link)', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
+				['key' => 'cta_primary_style', 'label' => __('Button fill', 'leadsforward-core'), 'type' => 'select', 'default' => 'solid', 'options' => lf_sections_button_style_options()],
+				['key' => 'cta_primary_tone', 'label' => __('Button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'primary', 'options' => lf_sections_button_tone_options()],
+				['key' => 'section_header_align', 'label' => __('Alignment', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
+					'left' => __('Left', 'leadsforward-core'),
+					'center' => __('Center', 'leadsforward-core'),
+					'right' => __('Right', 'leadsforward-core'),
+				]],
+			],
+			'render' => 'lf_sections_render_layout_button',
 		],
 		'content' => [
 			'label' => __('Content', 'leadsforward-core'),
@@ -2825,6 +2870,81 @@ function lf_sections_render_rich_content(string $context, array $settings, \WP_P
 	if ($body !== '') {
 		echo '<div class="lf-rich-content"><div class="lf-rich-content__prose lf-prose lf-prose--rich-section">' . $body . '</div></div>';
 	}
+	lf_sections_render_shell_close();
+}
+
+/**
+ * Minimal heading-only layout block (no shell title row; alignment controls the heading).
+ */
+function lf_sections_render_layout_heading(string $context, array $settings, \WP_Post $post): void {
+	$text = trim((string) ($settings['layout_heading_text'] ?? ''));
+	if ($text === '') {
+		return;
+	}
+	$tag = strtolower((string) ($settings['layout_heading_tag'] ?? 'h2'));
+	if (!in_array($tag, ['h2', 'h3', 'h4'], true)) {
+		$tag = 'h2';
+	}
+	lf_sections_render_shell_open('layout-heading', '', '', $settings['section_background'] ?? 'light', $settings);
+	$align = function_exists('lf_sections_sanitize_header_align') ? lf_sections_sanitize_header_align($settings) : 'center';
+	echo '<div class="lf-layout-heading lf-section__header lf-section__header--align-' . esc_attr($align) . '">';
+	echo '<' . esc_html($tag) . ' class="lf-layout-heading__text lf-section__title">' . esc_html($text) . '</' . esc_html($tag) . '>';
+	echo '</div>';
+	lf_sections_render_shell_close();
+}
+
+/**
+ * Single primary CTA (same resolution as CTA band; no headline band chrome).
+ */
+function lf_sections_render_layout_button(string $context, array $settings, \WP_Post $post): void {
+	$ctx = [
+		'homepage' => ( $context === 'homepage' ),
+		'section'  => $settings,
+	];
+	$cta = function_exists('lf_resolve_cta') ? lf_resolve_cta($ctx, $settings, []) : [
+		'primary_text'   => '',
+		'primary_type'   => 'text',
+		'primary_action' => 'quote',
+		'primary_url'    => '',
+		'ghl_embed'      => '',
+	];
+	$label = trim((string) ( $cta['primary_text'] ?? '' ));
+	if ($label === '') {
+		return;
+	}
+	$cta_type = (string) ( $cta['primary_type'] ?? 'text' );
+	$cta_action = (string) ( $cta['primary_action'] ?? 'quote' );
+	$cta_url = trim((string) ( $cta['primary_url'] ?? '' ));
+	$ghl_embed = (string) ( $cta['ghl_embed'] ?? '' );
+	$cta_phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
+	$use_phone_link = $cta_type === 'call' && $cta_phone !== '' && $label !== '';
+	$show_form = ( $cta_type === 'form' && $ghl_embed !== '' ) || ( $cta_type !== 'call' && $ghl_embed !== '' );
+
+	$pri_cls = function_exists('lf_sections_cta_band_cta_button_classes')
+		? lf_sections_cta_band_cta_button_classes($settings, 'primary', 'lf-layout-button__control')
+		: 'lf-btn lf-btn--primary lf-layout-button__control';
+	$pri_attr = function_exists('lf_sections_cta_band_cta_data_attrs')
+		? lf_sections_cta_band_cta_data_attrs($settings, 'primary')
+		: ' data-lf-cta-slot="primary" data-lf-btn-style="solid" data-lf-btn-tone="primary"';
+
+	lf_sections_render_shell_open('layout-button', '', '', $settings['section_background'] ?? 'light', $settings);
+	$align = function_exists('lf_sections_sanitize_header_align') ? lf_sections_sanitize_header_align($settings) : 'center';
+	echo '<div class="lf-layout-button lf-section__header lf-section__header--align-' . esc_attr($align) . '">';
+	echo '<div class="lf-section__buttons">';
+	if ($use_phone_link) {
+		echo '<a href="tel:' . esc_attr($cta_phone) . '" class="' . esc_attr($pri_cls) . '"' . $pri_attr . '>' . esc_html($label) . '</a>';
+	} elseif ($cta_action === 'quote') {
+		echo '<button type="button" class="' . esc_attr($pri_cls) . '" data-lf-quote-trigger="1" data-lf-quote-source="layout-button"' . $pri_attr . '>' . esc_html($label) . '</button>';
+	} elseif ($cta_url !== '') {
+		echo '<a href="' . esc_url($cta_url) . '" class="' . esc_attr($pri_cls) . '"' . $pri_attr . '>' . esc_html($label) . '</a>';
+	} else {
+		echo '<span class="' . esc_attr($pri_cls) . '"' . $pri_attr . '>' . esc_html($label) . '</span>';
+	}
+	echo '</div>';
+	if ($show_form) {
+		echo '<div class="lf-layout-button__form">' . wp_kses_post($ghl_embed) . '</div>';
+	}
+	echo '</div>';
 	lf_sections_render_shell_close();
 }
 
