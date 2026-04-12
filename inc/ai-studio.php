@@ -2405,40 +2405,43 @@ function lf_ai_studio_blog_post_topics(array $manifest, array $homepage_payload)
 		}
 		return $focus;
 	};
+	$h = static function (string $phrase): string {
+		return lf_ai_humanize_blog_headline_phrase($phrase);
+	};
 
 	$templates = [
 		[
-			'title' => sprintf(__('Complete pillar guide to %1$s in %2$s', 'leadsforward-core'), $focus, $location),
+			'title' => sprintf(__('Complete guide: %1$s in %2$s', 'leadsforward-core'), $h($focus), $h($location)),
 			'keyword' => $focus,
 			'format' => 'pillar',
 		],
 		[
-			'title' => sprintf(__('How to plan a %s project without costly surprises', 'leadsforward-core'), $secondary_or_focus(0)),
+			'title' => sprintf(__('How to plan a %s project (and avoid costly surprises)', 'leadsforward-core'), $h($secondary_or_focus(0))),
 			'keyword' => $secondary_or_focus(0),
 			'format' => 'how_to',
 		],
 		[
-			'title' => sprintf(__('How much does %1$s cost in %2$s', 'leadsforward-core'), $secondary_or_focus(1), $location),
+			'title' => sprintf(__('%1$s costs in %2$s: what shapes your estimate', 'leadsforward-core'), $h($secondary_or_focus(1)), $h($location)),
 			'keyword' => $secondary_or_focus(1),
 			'format' => 'cost',
 		],
 		[
-			'title' => sprintf(__('%1$s versus alternatives: what homeowners should choose', 'leadsforward-core'), $secondary_or_focus(2)),
+			'title' => sprintf(__('%1$s vs. alternatives: a homeowner\'s decision guide', 'leadsforward-core'), $h($secondary_or_focus(2))),
 			'keyword' => $secondary_or_focus(2),
 			'format' => 'comparison',
 		],
 		[
-			'title' => sprintf(__('Homeowner checklist before hiring a %s company', 'leadsforward-core'), $niche !== '' ? $niche : $focus),
+			'title' => sprintf(__('Checklist: hiring a %s contractor you can trust', 'leadsforward-core'), $h($niche !== '' ? $niche : $focus)),
 			'keyword' => $secondary_or_focus(3),
 			'format' => 'checklist',
 		],
 		[
-			'title' => sprintf(__('Seasonal timing for %1$s in %2$s', 'leadsforward-core'), $secondary_or_focus(4), $location),
+			'title' => sprintf(__('Best timing for %1$s work in %2$s', 'leadsforward-core'), $h($secondary_or_focus(4)), $h($location)),
 			'keyword' => $secondary_or_focus(4),
 			'format' => 'local_guide',
 		],
 		[
-			'title' => sprintf(__('Top homeowner questions about %s answered', 'leadsforward-core'), $secondary_or_focus(5)),
+			'title' => sprintf(__('Your top questions about %s, answered', 'leadsforward-core'), $h($secondary_or_focus(5))),
 			'keyword' => $secondary_or_focus(5),
 			'format' => 'faq_roundup',
 		],
@@ -2454,7 +2457,7 @@ function lf_ai_studio_blog_post_topics(array $manifest, array $homepage_payload)
 		$kw = $secondary_or_focus($i);
 		$fmt = $repeat_formats[($i - count($templates)) % count($repeat_formats)];
 		$topics[] = [
-			'title' => sprintf(__('Deeper dive: %1$s in %2$s', 'leadsforward-core'), $kw, $location),
+			'title' => sprintf(__('Deeper dive: %1$s in %2$s', 'leadsforward-core'), $h($kw), $h($location)),
 			'keyword' => $kw,
 			'format' => $fmt,
 		];
@@ -2468,6 +2471,7 @@ function lf_ai_studio_ensure_blog_posts(array $topics, array $manifest = []): ar
 	$ls = lf_launch_schedule_normalize(is_array($mg['launch_schedule'] ?? null) ? $mg['launch_schedule'] : []);
 	$blog = $ls['blog'];
 	$publish_now_count = (int) $blog['publish_now_count'];
+	$scheduled_count = (int) $blog['scheduled_count'];
 	$scheduled_weeks_between = max(1, (int) $blog['scheduled_weeks_between']);
 	$total_posts = max(1, min(20, $publish_now_count + $scheduled_count));
 	$hour = (int) ($ls['publish_hour'] ?? 9);
@@ -2497,7 +2501,7 @@ function lf_ai_studio_ensure_blog_posts(array $topics, array $manifest = []): ar
 		if (!is_array($topic)) {
 			continue;
 		}
-		$title = (string) ($topic['title'] ?? '');
+		$title = lf_ai_humanize_blog_headline_phrase((string) ($topic['title'] ?? ''));
 		$keyword = (string) ($topic['keyword'] ?? '');
 		$format = sanitize_key((string) ($topic['format'] ?? 'standard'));
 		if ($title === '') {
@@ -2551,6 +2555,10 @@ function lf_ai_studio_ensure_blog_posts(array $topics, array $manifest = []): ar
 			$post_update['post_date_gmt'] = get_gmt_from_date($local_date);
 		}
 		wp_update_post($post_update);
+		$cat_id = lf_ai_studio_blog_category_id_for_format($format);
+		if ($cat_id > 0) {
+			wp_set_post_categories((int) $post->ID, [$cat_id], false);
+		}
 	}
 
 	$ai_posts = get_posts([
@@ -2622,8 +2630,8 @@ function lf_ai_studio_backfill_post_title_excerpt(int $post_id): void {
 	}
 	$title = trim((string) $title);
 	$excerpt = trim((string) $excerpt);
-	if ($title !== '' && !preg_match('/[A-Z]/', $title)) {
-		$title = ucwords($title);
+	if ($title !== '') {
+		$title = lf_ai_humanize_blog_headline_phrase($title);
 	}
 	$update = ['ID' => $post_id];
 	if ($title !== '') {
@@ -2636,6 +2644,75 @@ function lf_ai_studio_backfill_post_title_excerpt(int $post_id): void {
 		wp_update_post($update);
 		update_post_meta($post_id, 'lf_ai_generated_filled', 1);
 	}
+}
+
+/**
+ * Title-case a short phrase for blog headlines (avoids all-lowercase SEO slug style).
+ */
+function lf_ai_humanize_blog_headline_phrase(string $phrase): string {
+	$phrase = trim(wp_strip_all_tags($phrase));
+	if ($phrase === '') {
+		return '';
+	}
+	if (function_exists('mb_convert_case')) {
+		$phrase = mb_convert_case($phrase, MB_CASE_TITLE, 'UTF-8');
+	} else {
+		$phrase = ucwords(strtolower($phrase));
+	}
+	// Collapse duplicate trailing "in {Place} in {Place}" (any casing).
+	$phrase = preg_replace('/\s+in\s+(.+?)\s+in\s+\1$/iu', ' in $1', $phrase);
+	return trim((string) $phrase);
+}
+
+/**
+ * Ensure category terms used for AI-generated blog posts (stable slugs).
+ *
+ * @return array<string,int> slug => term_id
+ */
+function lf_ai_studio_blog_category_term_map(): array {
+	static $cache = null;
+	if (is_array($cache)) {
+		return $cache;
+	}
+	$pairs = [
+		'lf-blog-guides' => __('Guides & resources', 'leadsforward-core'),
+		'lf-blog-how-to' => __('How-to', 'leadsforward-core'),
+		'lf-blog-costs' => __('Costs & planning', 'leadsforward-core'),
+		'lf-blog-comparison' => __('Comparisons', 'leadsforward-core'),
+		'lf-blog-checklist' => __('Checklists', 'leadsforward-core'),
+		'lf-blog-local' => __('Local insights', 'leadsforward-core'),
+		'lf-blog-faq' => __('FAQs explained', 'leadsforward-core'),
+	];
+	$out = [];
+	foreach ($pairs as $slug => $name) {
+		$exists = term_exists($slug, 'category');
+		if (!$exists) {
+			$created = wp_insert_term($name, 'category', ['slug' => $slug]);
+			if (!is_wp_error($created) && isset($created['term_id'])) {
+				$out[ $slug ] = (int) $created['term_id'];
+			}
+		} else {
+			$out[ $slug ] = is_array($exists) ? (int) ( $exists['term_id'] ?? 0 ) : (int) $exists;
+		}
+	}
+	$cache = $out;
+	return $out;
+}
+
+function lf_ai_studio_blog_category_id_for_format(string $format): int {
+	$format = sanitize_key($format);
+	$map = [
+		'pillar' => 'lf-blog-guides',
+		'how_to' => 'lf-blog-how-to',
+		'cost' => 'lf-blog-costs',
+		'comparison' => 'lf-blog-comparison',
+		'checklist' => 'lf-blog-checklist',
+		'local_guide' => 'lf-blog-local',
+		'faq_roundup' => 'lf-blog-faq',
+	];
+	$slug = $map[ $format ] ?? 'lf-blog-guides';
+	$terms = lf_ai_studio_blog_category_term_map();
+	return (int) ( $terms[ $slug ] ?? 0 );
 }
 
 function lf_ai_studio_is_generic_copy(string $value): bool {
@@ -3655,7 +3732,15 @@ function lf_ai_studio_sync_blog_post_content_from_sections(int $post_id): void {
 		if (!is_array($section) || empty($section['enabled'])) {
 			continue;
 		}
+		$type = (string) ($section['type'] ?? '');
 		$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+		if ($type === 'rich_content') {
+			$rich = trim((string) ($settings['rich_content_body'] ?? ''));
+			if ($rich !== '' && !lf_ai_studio_is_generic_copy($rich)) {
+				$chunks[] = function_exists('lf_sections_format_richtext_output') ? lf_sections_format_richtext_output($rich) : wp_kses_post($rich);
+			}
+			continue;
+		}
 		$heading = trim((string) ($settings['section_heading'] ?? $settings['hero_headline'] ?? ''));
 		if ($heading !== '') {
 			$chunks[] = '<h2>' . esc_html($heading) . '</h2>';
@@ -3674,7 +3759,7 @@ function lf_ai_studio_sync_blog_post_content_from_sections(int $post_id): void {
 			if ($plain === '' || lf_ai_studio_is_generic_copy($plain)) {
 				continue;
 			}
-			$chunks[] = '<p>' . wp_kses_post($plain) . '</p>';
+			$chunks[] = function_exists('lf_sections_format_richtext_output') ? lf_sections_format_richtext_output($candidate) : '<p>' . wp_kses_post($plain) . '</p>';
 		}
 	}
 	$content = trim(implode("\n\n", $chunks));
@@ -5118,7 +5203,7 @@ function lf_ai_studio_llm_system_message(): string {
 		'FAQ strategy: create one global pool of 8-12 evergreen FAQs. Reuse across pages unless contextual variation is required. Homepage shows 5. Service pages show 4-6 relevant. Service area pages show 3-5 localized. Overview pages optionally 3-4.',
 		'CTA strategy: treat the homepage CTA section as the canonical global CTA copy. For each page, add exactly one contextual sentence in cta_subheadline_secondary. Never duplicate CTA sentences across pages.',
 		'CTA button labels: keep 2-5 words, max 32 characters, no trailing punctuation.',
-	'Service Details section: service_details_body is a tight overview only — max 3 short paragraphs, stay within blueprint body_words max; prefer 2 paragraphs when possible. Leave depth to process, FAQ, benefits, and other sections. Use service_details_micro_sections sparingly (0-3 lines) only when the blueprint includes that field; each line 15-25 words. Use service_details_checklist for process/assurance points (one per line), each 8-15 words.',
+	'Service Details section: service_details_body is a tight overview only — max 3 short paragraphs, stay within blueprint body_words max; prefer 2 paragraphs when possible. Leave depth to process, FAQ, benefits, and other sections. Do NOT fill service_details_micro_sections, service_details_proof_badges, or service_details_proof_label (leave empty). Use service_details_checklist only for process/assurance points (one per line), each 8-15 words, maximum 5 lines total.',
 	'Process section: You may create or update reusable lf_process_step posts (title = step headline, editor = step body). Homepage and Page Builder process sections accept process_selected_ids (one numeric post ID per line); when any resolve to published lf_process_step posts, they override process_steps. Otherwise format process_steps with separators: "Step Title || Step description" or "Step Title | Step description" per line.',
 	'Service pages: Always fill short_description field with 25-35 words summarizing service. Include primary benefit and location context.',
 	'Service page blueprints: short_description field is required and should be filled with compelling service summary.',
@@ -5976,6 +6061,12 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 			$has_new = lf_ai_studio_config_has_section_types($existing_config, ['service_areas', 'faq_accordion', 'cta']);
 			$has_old = lf_ai_studio_config_has_section_types($existing_config, ['nearby_areas', 'content_image_a']);
 			$force_reseed = $force_reseed || !$has_new || $has_old;
+		}
+		if ($slug === 'faq') {
+			$force_reseed = $force_reseed || !lf_ai_studio_config_has_section_types($existing_config, ['faq_accordion', 'content_centered']);
+		}
+		if ($slug === 'financing') {
+			$force_reseed = $force_reseed || !lf_ai_studio_config_has_section_types($existing_config, ['pricing', 'benefits']);
 		}
 		if (!$is_minimal && !$force_reseed) {
 			continue;
@@ -8669,7 +8760,7 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response, array $o
 }
 
 function lf_ai_studio_extract_primary_post_content(array $sections, array $order): array {
-	$content = '';
+	$chunks = [];
 	$excerpt = '';
 	foreach ($order as $section_id) {
 		$section = $sections[ $section_id ] ?? null;
@@ -8678,20 +8769,39 @@ function lf_ai_studio_extract_primary_post_content(array $sections, array $order
 		}
 		$type = (string) ($section['type'] ?? '');
 		$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+		if ($excerpt === '') {
+			$excerpt = trim((string) ($settings['section_intro'] ?? $settings['hero_subheadline'] ?? $settings['hero_supporting_text'] ?? ''));
+		}
+		if ($type === 'rich_content') {
+			$rich = trim((string) ($settings['rich_content_body'] ?? ''));
+			if ($rich !== '') {
+				$chunks[] = $rich;
+			}
+			continue;
+		}
 		if (!in_array($type, ['content', 'content_centered', 'content_image', 'image_content', 'content_image_a', 'image_content_b', 'content_image_c'], true)) {
 			continue;
 		}
 		$body = trim((string) ($settings['section_body'] ?? ''));
 		$body_secondary = trim((string) ($settings['section_body_secondary'] ?? ''));
 		$intro = trim((string) ($settings['section_intro'] ?? ''));
-		$content = $body_secondary !== '' && $body !== '' ? ( $body . "\n\n" . $body_secondary ) : ( $body !== '' ? $body : $body_secondary );
-		if ($excerpt === '') {
-			$excerpt = $intro;
+		$heading = trim((string) ($settings['section_heading'] ?? ''));
+		$block = '';
+		if ($heading !== '') {
+			$block .= '<h2>' . esc_html($heading) . '</h2>' . "\n\n";
 		}
-		if ($content !== '') {
-			break;
+		if ($intro !== '' && $type !== 'content_centered') {
+			$block .= '<p>' . esc_html($intro) . '</p>' . "\n\n";
+		}
+		$body_combined = $body_secondary !== '' && $body !== '' ? ( $body . "\n\n" . $body_secondary ) : ( $body !== '' ? $body : $body_secondary );
+		if ($body_combined !== '') {
+			$block .= function_exists('lf_sections_format_richtext_output') ? lf_sections_format_richtext_output($body_combined) : wp_kses_post(wpautop($body_combined));
+		}
+		if (trim(wp_strip_all_tags($block)) !== '') {
+			$chunks[] = trim($block);
 		}
 	}
+	$content = trim(implode("\n\n", array_filter($chunks)));
 	return [
 		'content' => $content,
 		'excerpt' => $excerpt,

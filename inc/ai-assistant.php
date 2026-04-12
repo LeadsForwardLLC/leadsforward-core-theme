@@ -218,11 +218,20 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		}
 	}
 
+	$admin_post_edit_url = '';
+	$ctx_type = (string) ($context['type'] ?? '');
+	$ctx_id = absint($context['id'] ?? 0);
+	if ($ctx_id > 0 && in_array($ctx_type, ['post', 'page', 'lf_service', 'lf_service_area', 'lf_project'], true)) {
+		$edit_link = get_edit_post_link($ctx_id, 'raw');
+		$admin_post_edit_url = is_string($edit_link) ? $edit_link : '';
+	}
+
 	wp_localize_script('lf-ai-floating-assistant', 'lfAiFloating', [
 		'ajax_url' => admin_url('admin-ajax.php'),
 		'nonce'    => wp_create_nonce('lf_ai_editing'),
 		'context_type' => (string) ($context['type'] ?? 'homepage'),
 		'context_id' => (string) ($context['id'] ?? 'homepage'),
+		'admin_post_edit_url' => $admin_post_edit_url,
 		'process_library_filter' => lf_ai_assistant_process_library_filter_context($context),
 		'target_label' => $target_label,
 		'labels' => $editable,
@@ -567,6 +576,13 @@ function lf_ai_assistant_render_floating_widget(): void {
 	<div class="lf-ai-inline-link" data-lf-ai-inline-link-root>
 		<div class="lf-ai-inline-link__toolbar" data-lf-ai-inline-link-toolbar hidden>
 			<div class="lf-ai-inline-link__toolbar-inner">
+				<span class="lf-ai-inline-link__toolbar-group" data-lf-ai-heading-tools hidden role="group" aria-label="<?php esc_attr_e('Heading level', 'leadsforward-core'); ?>">
+					<?php
+					for ($lf_hi = 1; $lf_hi <= 6; $lf_hi++) {
+						echo '<button type="button" class="lf-ai-inline-link__fmt lf-ai-inline-link__fmt--h" data-lf-ai-heading-level="' . (int) $lf_hi . '" title="' . esc_attr(sprintf(/* translators: %d: heading level 1–6 */ __('Use heading H%d', 'leadsforward-core'), $lf_hi)) . '">H' . (int) $lf_hi . '</button>';
+					}
+					?>
+				</span>
 				<span class="lf-ai-inline-link__toolbar-group" role="group" aria-label="<?php esc_attr_e('Text emphasis', 'leadsforward-core'); ?>">
 					<button type="button" class="lf-ai-inline-link__fmt" data-lf-ai-inline-cmd="bold" title="<?php esc_attr_e('Bold', 'leadsforward-core'); ?>"><strong>B</strong></button>
 					<button type="button" class="lf-ai-inline-link__fmt" data-lf-ai-inline-cmd="italic" title="<?php esc_attr_e('Italic', 'leadsforward-core'); ?>"><em>I</em></button>
@@ -1726,6 +1742,7 @@ function lf_ai_assistant_widget_js(): string {
 		function lfHideInlineLinkToolbar() {
 			if ($linkRoot.length) {
 				$linkRoot.find("[data-lf-ai-inline-link-toolbar]").prop("hidden", true);
+				$linkRoot.find("[data-lf-ai-heading-tools]").prop("hidden", true);
 			}
 		}
 		function lfHideInlineLinkPanel() {
@@ -1761,11 +1778,25 @@ function lf_ai_assistant_widget_js(): string {
 		function lfAnyInlineLinkHostEl() {
 			return inlineActiveEl || lfManagedContentEditableHost();
 		}
+		function lfFindHeadingInHost(host) {
+			if (!host) return null;
+			var sel = window.getSelection();
+			if (!sel || !sel.rangeCount) return null;
+			var r = sel.getRangeAt(0);
+			var n = r.commonAncestorContainer;
+			var el = n.nodeType === 3 ? n.parentElement : n;
+			while (el && el !== host) {
+				var tn = el.tagName ? String(el.tagName).toLowerCase() : "";
+				if (/^h[1-6]$/.test(tn)) return el;
+				el = el.parentElement;
+			}
+			return null;
+		}
 		function lfPositionInlineLinkToolbar() {
 			var host = lfAnyInlineLinkHostEl();
 			if (!$linkRoot.length || !host) return;
 			var sel = window.getSelection();
-			if (!sel.rangeCount || sel.isCollapsed) {
+			if (!sel.rangeCount) {
 				lfHideInlineLinkToolbar();
 				return;
 			}
@@ -1779,17 +1810,25 @@ function lf_ai_assistant_widget_js(): string {
 				lfHideInlineLinkToolbar();
 				return;
 			}
+			var hEl = lfFindHeadingInHost(host);
+			var collapsed = sel.isCollapsed;
 			var t = String(sel.toString() || "").trim();
-			if (t.length < 1) {
+			if (collapsed && !hEl) {
 				lfHideInlineLinkToolbar();
 				return;
 			}
-			var rect = range.getBoundingClientRect();
+			if (!collapsed && t.length < 1) {
+				lfHideInlineLinkToolbar();
+				return;
+			}
+			var rect = (collapsed && hEl) ? hEl.getBoundingClientRect() : range.getBoundingClientRect();
 			if (rect.width === 0 && rect.height === 0) {
 				lfHideInlineLinkToolbar();
 				return;
 			}
 			var $tb = $linkRoot.find("[data-lf-ai-inline-link-toolbar]");
+			var $hg = $linkRoot.find("[data-lf-ai-heading-tools]");
+			$hg.prop("hidden", !hEl);
 			var top = rect.bottom + 6;
 			var left = rect.left;
 			$tb.css({ position: "fixed", top: top + "px", left: Math.max(8, left) + "px" });
@@ -2216,6 +2255,21 @@ function lf_ai_assistant_widget_js(): string {
 			});
 			$linkRoot.find("[data-lf-ai-inline-link-search]").on("input", function(){
 				lfRenderInternalLinkList($(this).val() || "");
+			});
+			$linkRoot.on("click", "[data-lf-ai-heading-level]", function(e){
+				e.preventDefault();
+				var lvl = parseInt($(this).attr("data-lf-ai-heading-level") || "0", 10);
+				if (lvl < 1 || lvl > 6) return;
+				var host = lfManagedContentEditableHost();
+				if (!host) return;
+				var hEl = lfFindHeadingInHost(host);
+				if (!hEl || !hEl.parentNode) return;
+				var nu = document.createElement("h" + String(lvl));
+				nu.innerHTML = hEl.innerHTML;
+				hEl.parentNode.replaceChild(nu, hEl);
+				try {
+					persistInlineNodeNow(host, "Heading level updated.");
+				} catch (errH) {}
 			});
 		}
 		lfInitInlineLinkUi();
@@ -3210,7 +3264,8 @@ function lf_ai_assistant_widget_js(): string {
 				sid.textContent = id;
 				b.appendChild(lab);
 				b.appendChild(sid);
-				if (hint) b.setAttribute("title", hint);
+				var tip = hint ? (label + " — " + hint) : label;
+				b.setAttribute("title", tip);
 				if (hint && showHints) {
 					var hi = document.createElement("span");
 					hi.className = "lf-ai-section-lib-row__hint";
@@ -3239,15 +3294,6 @@ function lf_ai_assistant_widget_js(): string {
 					});
 				}
 				wrap.appendChild(b);
-				if (svg) {
-					var prev = document.createElement("div");
-					prev.className = "lf-ai-section-lib-row__preview";
-					prev.setAttribute("aria-hidden", "true");
-					prev.innerHTML = svg;
-					wrap.appendChild(prev);
-					b.addEventListener("mouseenter", function(){ prev.classList.add("is-visible"); });
-					b.addEventListener("mouseleave", function(){ prev.classList.remove("is-visible"); });
-				}
 				listEl.appendChild(wrap);
 			});
 		}
@@ -3740,6 +3786,10 @@ function lf_ai_assistant_widget_js(): string {
 					addBtn.addEventListener("click", function(e){
 						e.preventDefault();
 						e.stopPropagation();
+						if (primaryList.querySelectorAll("li").length >= 5) {
+							try { window.alert("This checklist allows up to 5 items."); } catch (eMax) {}
+							return;
+						}
 						var li = document.createElement("li");
 						var textNode = document.createElement("span");
 						textNode.className = "lf-service-details__text";
@@ -7439,6 +7489,16 @@ function lf_ai_assistant_widget_js(): string {
 					});
 					ensureBtn("CTA", "Add or edit the optional benefits button", "Benefits button", function(){
 						openBenefitsCtaPicker(wrap, null);
+					});
+				}
+				if (sectionType === "rich_content") {
+					ensureBtn("WP", "Edit full HTML, lists, and button markup in the WordPress editor (Page Builder field).", "Open WordPress editor", function(){
+						var u = String(lfAiFloating.admin_post_edit_url || "");
+						if (u) {
+							window.open(u, "_blank", "noopener,noreferrer");
+						} else {
+							try { window.alert("Open this page in WordPress admin to edit the rich text section."); } catch (eAl) {}
+						}
 					});
 				}
 				if (sectionType === "service_intro") {

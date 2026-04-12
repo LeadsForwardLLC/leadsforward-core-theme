@@ -1138,6 +1138,10 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 	if (array_key_exists('section_heading_tag', $input)) {
 		$out['section_heading_tag'] = lf_sections_sanitize_section_heading_tag(['section_heading_tag' => $input['section_heading_tag']]);
 	}
+	if ($section_id === 'service_details' && isset($out['service_details_checklist'])) {
+		$chk_lines = lf_sections_parse_lines((string) $out['service_details_checklist']);
+		$out['service_details_checklist'] = implode("\n", array_slice($chk_lines, 0, 5));
+	}
 	return $out;
 }
 

@@ -112,7 +112,14 @@ $auto_select_faq_ids = static function (int $limit) use ($section): array {
 	return $ids;
 };
 
-$faq_ids_for_query = !empty($selected_faq_ids) ? $selected_faq_ids : $auto_select_faq_ids($max_items > 0 ? $max_items : 6);
+if (!empty($selected_faq_ids)) {
+	$faq_ids_for_query = $selected_faq_ids;
+} elseif ($max_items > 0) {
+	$faq_ids_for_query = $auto_select_faq_ids($max_items);
+} else {
+	// Unlimited / no manual pick: list every published FAQ in menu order (FAQ hub pages).
+	$faq_ids_for_query = [];
+}
 $query_args = [
 	'post_type' => 'lf_faq',
 	'posts_per_page' => $max_items > 0 ? $max_items : -1,

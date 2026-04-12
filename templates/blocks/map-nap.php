@@ -266,27 +266,25 @@ $areas_query = new WP_Query([
 							echo wp_kses($map_embed_override, $allowed_embed);
 							?>
 						</div>
-					<?php elseif ($map_embed_url !== '') : ?>
-						<div class="lf-block-map-nap__map">
-							<iframe title="<?php echo esc_attr($place_name !== '' ? $place_name : __('Business location', 'leadsforward-core')); ?>" src="<?php echo esc_url($map_embed_url); ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-						</div>
 					<?php else : ?>
-						<p class="lf-block-map-nap__empty">
-							<?php
-							if (current_user_can('edit_theme_options')) {
-								echo wp_kses(
-									sprintf(
-										/* translators: %s: link to Business Info on Homepage settings */
-										__('Add your Google Maps API key and select a place (or paste a map iframe) in <strong>Global Settings → Business Entity</strong> on <a href="%s">LeadsForward → Global Settings</a> to show the map.', 'leadsforward-core'),
-										esc_url(admin_url('admin.php?page=lf-global#lf-business-map-embed'))
-									),
-									['a' => ['href' => true], 'strong' => []]
-								);
-							} else {
-								esc_html_e('Map will appear here.', 'leadsforward-core');
-							}
-							?>
-						</p>
+						<div class="lf-block-map-nap__map-placeholder" data-lf-map-embed-placeholder="1">
+							<p class="lf-block-map-nap__empty lf-block-map-nap__empty--embed">
+								<?php
+								if (current_user_can('edit_theme_options')) {
+									echo wp_kses(
+										sprintf(
+											/* translators: %s: URL to Global Settings map embed field */
+											__('Paste your Google Maps <strong>embed iframe</strong> under <a href="%s">Global Settings → Business entity → Map iframe embed</a>. Until then, visitors see this placeholder instead of an auto-generated map.', 'leadsforward-core'),
+											esc_url(admin_url('admin.php?page=lf-global#lf-business-map-embed'))
+										),
+										['a' => ['href' => true], 'strong' => []]
+									);
+								} else {
+									esc_html_e('Map preview is not shown until your team adds an embed from Google Maps.', 'leadsforward-core');
+								}
+								?>
+							</p>
+						</div>
 					<?php endif; ?>
 					<?php if (!$is_contact_layout && ($map_title || $map_subtitle || $map_view_url || $gbp_url || ($avg_rating > 0 && $ratings_count > 0))) : ?>
 						<div class="lf-block-map-nap__map-meta">

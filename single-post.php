@@ -30,6 +30,7 @@ get_header();
 		$author_name = get_the_author();
 		$author_url = get_author_posts_url($author_id);
 		$author_bio = get_the_author_meta('description');
+		$lf_hide_blog_author = (string) get_post_meta($post_id, 'lf_ai_generated', true) === '1';
 	?>
 		<article id="post-<?php the_ID(); ?>" <?php post_class('lf-blog-post'); ?>>
 			<header class="lf-section lf-section--blog-hero">
@@ -54,15 +55,17 @@ get_header();
 							<?php if (has_excerpt()) : ?>
 								<p class="lf-blog-hero__intro"><?php echo esc_html(get_the_excerpt()); ?></p>
 							<?php endif; ?>
-							<div class="lf-blog-hero__author">
-								<?php if ($author_id) : ?>
-									<?php echo get_avatar($author_id, 48, '', '', ['class' => 'lf-blog-hero__avatar']); ?>
-								<?php endif; ?>
-								<div class="lf-blog-hero__author-meta">
-									<span><?php esc_html_e('By', 'leadsforward-core'); ?></span>
-									<a href="<?php echo esc_url($author_url); ?>"><?php echo esc_html($author_name); ?></a>
+							<?php if (!$lf_hide_blog_author) : ?>
+								<div class="lf-blog-hero__author">
+									<?php if ($author_id) : ?>
+										<?php echo get_avatar($author_id, 48, '', '', ['class' => 'lf-blog-hero__avatar']); ?>
+									<?php endif; ?>
+									<div class="lf-blog-hero__author-meta">
+										<span><?php esc_html_e('By', 'leadsforward-core'); ?></span>
+										<a href="<?php echo esc_url($author_url); ?>"><?php echo esc_html($author_name); ?></a>
+									</div>
 								</div>
-							</div>
+							<?php endif; ?>
 						</div>
 						<?php if ($image_html) : ?>
 							<div class="lf-blog-hero__media">
@@ -75,7 +78,7 @@ get_header();
 
 			<section class="lf-section lf-section--blog-content">
 				<div class="lf-section__inner">
-					<div class="lf-blog-content lf-prose">
+					<div class="lf-blog-content lf-prose lf-prose--rich-section">
 						<?php the_content(); ?>
 					</div>
 					<?php
@@ -105,7 +108,7 @@ get_header();
 				</div>
 			</section>
 
-			<?php if ($author_bio) : ?>
+			<?php if (!$lf_hide_blog_author && $author_bio) : ?>
 				<section class="lf-section lf-section--blog-author">
 					<div class="lf-section__inner">
 						<div class="lf-blog-author-card">

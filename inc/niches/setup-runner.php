@@ -59,11 +59,15 @@ function lf_run_setup(array $data): array {
 			continue;
 		}
 		$content = lf_wizard_placeholder_content($slug, $title, $data);
+		$page_status = 'publish';
+		if ($slug === 'financing') {
+			$page_status = 'draft';
+		}
 		$pid = wp_insert_post([
 			'post_title'   => $title,
 			'post_name'    => $slug,
 			'post_content' => $content,
-			'post_status'  => 'publish',
+			'post_status'  => $page_status,
 			'post_type'    => 'page',
 			'post_author'  => get_current_user_id(),
 		], true);
@@ -1081,25 +1085,73 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 		$s = (string) ( $copy['hero_subheadline'] ?? '' );
 		$st = (string) ( $copy['seo_title'] ?? '' );
 		$sd = (string) ( $copy['seo_description'] ?? '' );
-		if ($lg_slug === 'our-work') {
-			$blueprints[ $lg_slug ] = [
-				'order' => ['hero', 'project_gallery', 'trust_reviews', 'cta'],
+		if ($lg_slug === 'faq') {
+			$blueprints['faq'] = [
+				'order' => ['hero', 'content_centered', 'faq_accordion', 'cta'],
 				'overrides' => [
 					'hero' => [
 						'hero_headline' => $h,
 						'hero_subheadline' => $s,
 					],
-					'project_gallery' => [
-						'section_heading' => __('Featured projects', 'leadsforward-core'),
-						'section_intro' => __('A snapshot of recent work in the field.', 'leadsforward-core'),
+					'content_centered' => [
+						'section_heading' => __('Questions & answers', 'leadsforward-core'),
+						'optional_subheading' => '',
+						'supporting_text' => $contact_line !== ''
+							? sprintf(
+								/* translators: %s: phone or contact line */
+								__('Below you will find answers to common questions. Still unsure? %s', 'leadsforward-core'),
+								$contact_line
+							)
+							: __('Below you will find answers to common questions. Reach out anytime and we will point you in the right direction.', 'leadsforward-core'),
+					],
+					'faq_accordion' => [
+						'section_heading' => __('All FAQs', 'leadsforward-core'),
+						'section_intro' => '',
+						'faq_max_items' => -1,
+						'faq_selected_ids' => '',
+					],
+					'cta' => [
+						'cta_headline' => $cta_headline,
+						'cta_subheadline' => __('Tell us about your project — we respond quickly.', 'leadsforward-core'),
+					],
+				],
+				'seo' => [
+					'title' => $st,
+					'description' => $sd,
+				],
+			];
+			continue;
+		}
+		if ($lg_slug === 'financing') {
+			$blueprints['financing'] = [
+				'order' => ['hero', 'content_centered', 'pricing', 'benefits', 'trust_reviews', 'cta'],
+				'overrides' => [
+					'hero' => [
+						'hero_headline' => $h,
+						'hero_subheadline' => $s,
+					],
+					'content_centered' => [
+						'section_heading' => __('Plan your project with confidence', 'leadsforward-core'),
+						'optional_subheading' => '',
+						'supporting_text' => __('Many homeowners prefer to phase work or use financing for larger scopes. We keep estimates transparent so you can compare options and move forward when you are ready.', 'leadsforward-core'),
+					],
+					'pricing' => [
+						'section_heading' => __('Pricing & financing', 'leadsforward-core'),
+						'section_intro' => __('Cost depends on scope, materials, and site conditions. Ask what plans may be available for your project.', 'leadsforward-core'),
+						'financing_enabled' => '1',
+						'financing_text' => __('Flexible payment options may be available — ask during your estimate.', 'leadsforward-core'),
+					],
+					'benefits' => [
+						'section_heading' => __('Why homeowners choose us', 'leadsforward-core'),
+						'section_intro' => __('Clear communication, careful workmanship, and respect for your home.', 'leadsforward-core'),
 					],
 					'trust_reviews' => [
-						'trust_heading' => __('What customers say', 'leadsforward-core'),
+						'trust_heading' => __('Recent reviews', 'leadsforward-core'),
 						'trust_max_items' => 6,
 					],
 					'cta' => [
 						'cta_headline' => $cta_headline,
-						'cta_subheadline' => __('Request pricing and availability.', 'leadsforward-core'),
+						'cta_subheadline' => __('Request pricing and explore next steps.', 'leadsforward-core'),
 					],
 				],
 				'seo' => [
@@ -1295,7 +1347,6 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	$blog_id = $created_pages['blog'] ?? null;
 	$financing_id = $created_pages['financing'] ?? null;
 	$faq_page_id = $created_pages['faq'] ?? null;
-	$our_work_id = $created_pages['our-work'] ?? null;
 	$sitemap_id = $created_pages['sitemap'] ?? null;
 	$privacy_id = $created_pages['privacy-policy'] ?? null;
 	$terms_id = $created_pages['terms-of-service'] ?? null;
@@ -1438,7 +1489,6 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	if ($why_choose_id) $more_children[] = ['type' => 'page', 'object_id' => $why_choose_id];
 	if ($financing_id) $more_children[] = ['type' => 'page', 'object_id' => $financing_id];
 	if ($faq_page_id) $more_children[] = ['type' => 'page', 'object_id' => $faq_page_id];
-	if ($our_work_id) $more_children[] = ['type' => 'page', 'object_id' => $our_work_id];
 	if ($blog_id) $more_children[] = ['type' => 'page', 'object_id' => $blog_id];
 	$project_archive = get_post_type_archive_link('lf_project');
 	if ($project_archive) $more_children[] = ['type' => 'custom', 'url' => $project_archive, 'title' => __('Projects', 'leadsforward-core')];

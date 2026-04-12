@@ -90,6 +90,9 @@ $all_review_ids = get_posts([
 	'meta_query'     => $rating_meta_query,
 ]);
 $total_reviews = is_array($all_review_ids) ? count($all_review_ids) : 0;
+if ($total_reviews < 1) {
+	return;
+}
 $display_limit = $is_reviews_page ? $reviews_page_limit : $review_total;
 $ratings_total = 0;
 $ratings_count = 0;

@@ -42,7 +42,6 @@ function lf_leadgen_cross_niche_page_slugs(): array {
 	return [
 		'financing',
 		'faq',
-		'our-work',
 	];
 }
 
@@ -114,7 +113,6 @@ function lf_wizard_extended_page_titles(): array {
 	return [
 		'financing' => __('Financing', 'leadsforward-core'),
 		'faq' => __('FAQ', 'leadsforward-core'),
-		'our-work' => __('Our Work', 'leadsforward-core'),
 		'foundation-warning-signs' => __('Signs of Foundation Problems', 'leadsforward-core'),
 		'storm-damage-roofing' => __('Storm & Insurance Claims', 'leadsforward-core'),
 		'commercial-pressure-washing' => __('Commercial Pressure Washing', 'leadsforward-core'),
@@ -212,12 +210,6 @@ function lf_leadgen_page_marketing_copy(string $business, string $city_line): ar
 			'hero_subheadline' => __('Quick answers about scheduling, pricing, and what to expect.', 'leadsforward-core'),
 			'seo_title' => sprintf(__('FAQ | %s', 'leadsforward-core'), $b),
 			'seo_description' => __('Answers to common questions about our services and process.', 'leadsforward-core'),
-		],
-		'our-work' => [
-			'hero_headline' => __('Our work', 'leadsforward-core'),
-			'hero_subheadline' => __('Recent projects and results from local homeowners.', 'leadsforward-core'),
-			'seo_title' => sprintf(__('Our Work | %s', 'leadsforward-core'), $b),
-			'seo_description' => __('Browse project photos and see the quality we deliver.', 'leadsforward-core'),
 		],
 		'foundation-warning-signs' => [
 			'hero_headline' => __('Signs your foundation needs attention', 'leadsforward-core'),
