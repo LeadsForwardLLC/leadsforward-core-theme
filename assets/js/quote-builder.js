@@ -2,8 +2,11 @@
 (function () {
 	'use strict';
 
+	function initQuoteBuilder() {
 	var modal = document.getElementById('lf-quote-builder');
-	if (!modal) return;
+	if (!modal) {
+		return;
+	}
 
 	var body = document.body;
 	var dialog = modal.querySelector('.lf-quote-modal__dialog');
@@ -206,6 +209,10 @@
 		steps.forEach(function (step, i) {
 			step.classList.toggle('is-active', i === index);
 		});
+		var scrollEl = modal.querySelector('.lf-quote-modal__scroll');
+		if (scrollEl) {
+			scrollEl.scrollTop = 0;
+		}
 		var total = steps.length;
 		if (progressLabel) {
 			progressLabel.textContent = 'Step ' + (index + 1) + ' of ' + total;
@@ -245,9 +252,13 @@
 			field.classList.remove('is-invalid');
 			field.setAttribute('aria-invalid', 'false');
 			if ((field.type === 'radio')) {
-				var group = current.querySelectorAll('input[name="' + field.name + '"]');
+				var radios = current.querySelectorAll('input[type="radio"]');
 				var checked = false;
-				group.forEach(function (r) { if (r.checked) checked = true; });
+				Array.prototype.forEach.call(radios, function (r) {
+					if (r.name === field.name && r.checked) {
+						checked = true;
+					}
+				});
 				if (!checked) ok = false;
 			} else if (!field.value || String(field.value).trim() === '') {
 				ok = false;
@@ -370,7 +381,7 @@
 				return;
 			}
 			onNext();
-		}, 380);
+		}, 260);
 	}
 
 	function bindEvents() {
@@ -390,23 +401,40 @@
 		if (backBtn) backBtn.addEventListener('click', onBack);
 		if (nextBtn) nextBtn.addEventListener('click', onNext);
 		if (form) form.addEventListener('submit', function (e) { e.preventDefault(); });
-		document.querySelectorAll('.lf-quote-choice__card input[type="radio"]').forEach(function (input) {
-			input.addEventListener('change', function () {
-				var parent = input.closest('.lf-quote-choice');
-				if (!parent) return;
-				parent.querySelectorAll('.lf-quote-choice__card').forEach(function (card) {
-					card.classList.toggle('is-selected', card.querySelector('input').checked);
-				});
-				scheduleAutoAdvanceServiceStep(input);
+
+		modal.addEventListener('change', function (e) {
+			var t = e.target;
+			if (!t || t.nodeName !== 'INPUT' || t.type !== 'radio') {
+				return;
+			}
+			if (!t.closest('.lf-quote-choice__card')) {
+				return;
+			}
+			var parent = t.closest('.lf-quote-choice');
+			if (!parent) {
+				return;
+			}
+			parent.querySelectorAll('.lf-quote-choice__card').forEach(function (card) {
+				var inp = card.querySelector('input[type="radio"]');
+				card.classList.toggle('is-selected', !!(inp && inp.checked));
 			});
+			scheduleAutoAdvanceServiceStep(t);
 		});
-		document.querySelectorAll('.lf-quote-choice').forEach(function (group) {
+
+		modal.querySelectorAll('.lf-quote-choice').forEach(function (group) {
 			group.querySelectorAll('.lf-quote-choice__card').forEach(function (card) {
-				var radio = card.querySelector('input');
-				card.classList.toggle('is-selected', radio && radio.checked);
+				var radio = card.querySelector('input[type="radio"]');
+				card.classList.toggle('is-selected', !!(radio && radio.checked));
 			});
 		});
 	}
 
 	bindEvents();
+	}
+
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initQuoteBuilder);
+	} else {
+		initQuoteBuilder();
+	}
 })();

@@ -1260,6 +1260,7 @@ function lf_quote_builder_render_modal(): void {
 				<input type="hidden" name="lf_quote[submission_id]" value="" />
 				<input type="hidden" name="lf_quote[pages_path]" value="[]" />
 				<input type="text" name="lf_quote[website]" value="" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;opacity:0;" aria-hidden="true" />
+				<div class="lf-quote-modal__scroll">
 				<?php foreach ($steps as $index => $step) :
 					$step_id = $step['id'] ?? 'step-' . $index;
 					$step_type = $step['type'] ?? 'standard';
@@ -1322,6 +1323,7 @@ function lf_quote_builder_render_modal(): void {
 						<?php endif; ?>
 					</section>
 				<?php endforeach; ?>
+				</div>
 				<div class="lf-quote-modal__actions">
 					<button type="button" class="lf-quote-btn lf-quote-btn--ghost" data-lf-quote-back><?php esc_html_e('Back', 'leadsforward-core'); ?></button>
 					<button type="button" class="lf-quote-btn lf-quote-btn--primary" data-lf-quote-next><?php esc_html_e('Continue', 'leadsforward-core'); ?></button>
