@@ -18,6 +18,9 @@ $section  = $context['section'] ?? [];
 $bg_class = function_exists('lf_sections_bg_class') ? lf_sections_bg_class($section['section_background'] ?? 'light') : '';
 $surface = function_exists('lf_sections_block_surface_attrs') ? lf_sections_block_surface_attrs($section) : ['class' => $bg_class, 'style' => ''];
 $header_align = function_exists('lf_sections_sanitize_header_align') ? lf_sections_sanitize_header_align($section) : 'center';
+if (!array_key_exists('section_header_align', $section) || $section['section_header_align'] === '' || $section['section_header_align'] === null) {
+	$header_align = 'left';
+}
 $section_surface_style = $surface['style'] !== '' ? ' style="' . esc_attr($surface['style']) . '"' : '';
 $entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
 $name     = $entity['name'] ?? (function_exists('lf_get_option') ? lf_get_option('lf_business_name', 'option') : '');

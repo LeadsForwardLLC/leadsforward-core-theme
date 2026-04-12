@@ -813,6 +813,7 @@ add_action('wp_ajax_lf_ai_update_section_lines', 'lf_ai_ajax_update_section_line
 add_action('wp_ajax_lf_ai_faq_library', 'lf_ai_ajax_faq_library');
 add_action('wp_ajax_lf_ai_service_library', 'lf_ai_ajax_service_library');
 add_action('wp_ajax_lf_ai_process_step_library', 'lf_ai_ajax_process_step_library');
+add_action('wp_ajax_lf_ai_set_service_thumbnail', 'lf_ai_ajax_set_service_thumbnail');
 add_action('wp_ajax_lf_ai_reorder_faq_items', 'lf_ai_ajax_reorder_faq_items');
 add_action('wp_ajax_lf_ai_set_trust_layout', 'lf_ai_ajax_set_trust_layout');
 add_action('wp_ajax_lf_ai_toggle_section_visibility', 'lf_ai_ajax_toggle_section_visibility');
@@ -3021,12 +3022,12 @@ function lf_ai_allowed_line_fields_for_section_type(string $section_type): array
 		'service_intro' => ['service_intro_service_ids'],
 		'process' => ['process_steps', 'process_selected_ids'],
 		'faq_accordion' => ['faq_selected_ids'],
-		'service_details' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_micro_sections'],
-		'content_image' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_micro_sections'],
-		'content_image_a' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_micro_sections'],
-		'image_content' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_micro_sections'],
-		'image_content_b' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_micro_sections'],
-		'content_image_c' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_micro_sections'],
+		'service_details' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_proof_badges'],
+		'content_image' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_proof_badges'],
+		'content_image_a' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_proof_badges'],
+		'image_content' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_proof_badges'],
+		'image_content_b' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_proof_badges'],
+		'content_image_c' => ['service_details_checklist', 'service_details_checklist_secondary', 'service_details_proof_badges'],
 	];
 	return $map[$type] ?? [];
 }
@@ -3095,15 +3096,46 @@ function lf_ai_ajax_service_library(): void {
 	while ($q->have_posts()) {
 		$q->the_post();
 		$sid = (int) get_the_ID();
+		$thumb = get_the_post_thumbnail_url($sid, 'medium');
 		$rows[] = [
-			'id'        => $sid,
-			'title'     => (string) get_the_title(),
-			'permalink' => (string) get_permalink($sid),
+			'id'            => $sid,
+			'title'         => html_entity_decode((string) get_the_title(), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+			'permalink'     => (string) get_permalink($sid),
+			'thumbnail_url' => is_string($thumb) ? $thumb : '',
 		];
 	}
 	wp_reset_postdata();
 	wp_send_json_success([
 		'items' => $rows,
+	]);
+}
+
+function lf_ai_ajax_set_service_thumbnail(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$post_id = isset($_POST['service_post_id']) ? absint(wp_unslash((string) $_POST['service_post_id'])) : 0;
+	$attachment_id = isset($_POST['attachment_id']) ? absint(wp_unslash((string) $_POST['attachment_id'])) : 0;
+	if ($post_id <= 0) {
+		wp_send_json_error(['message' => __('Invalid service.', 'leadsforward-core')]);
+	}
+	$post = get_post($post_id);
+	if (!$post instanceof \WP_Post || $post->post_type !== 'lf_service') {
+		wp_send_json_error(['message' => __('Invalid service.', 'leadsforward-core')]);
+	}
+	if ($attachment_id > 0 && !wp_attachment_is_image($attachment_id)) {
+		wp_send_json_error(['message' => __('Choose a valid image file.', 'leadsforward-core')]);
+	}
+	if ($attachment_id > 0) {
+		set_post_thumbnail($post_id, $attachment_id);
+	} else {
+		delete_post_thumbnail($post_id);
+	}
+	$url = get_the_post_thumbnail_url($post_id, 'medium');
+	wp_send_json_success([
+		'message' => __('Service image updated.', 'leadsforward-core'),
+		'thumbnail_url' => is_string($url) ? $url : '',
 	]);
 }
 
@@ -3144,12 +3176,14 @@ function lf_ai_ajax_process_step_library(): void {
 		$body = trim((string) get_post_field('post_content', $id));
 		$body_plain = wp_strip_all_tags($body);
 		$groups = [];
+		$group_labels = [];
 		if (taxonomy_exists('lf_process_group')) {
 			$terms = get_the_terms($id, 'lf_process_group');
 			if (is_array($terms)) {
 				foreach ($terms as $term) {
 					if ($term instanceof \WP_Term) {
 						$groups[] = (string) $term->slug;
+						$group_labels[] = (string) $term->name;
 					}
 				}
 			}
@@ -3169,6 +3203,7 @@ function lf_ai_ajax_process_step_library(): void {
 			'title' => $title,
 			'body' => $body_plain,
 			'groups' => $groups,
+			'group_labels' => $group_labels,
 			'service_ids' => $service_ids,
 		];
 	}
@@ -3204,6 +3239,8 @@ function lf_ai_ajax_update_section_lines(): void {
 			$value = lf_ai_sanitize_inline_dom_html($raw);
 		} elseif ($field_key === 'service_details_micro_sections' && function_exists('lf_ai_sanitize_inline_dom_html')) {
 			$value = lf_ai_sanitize_inline_dom_html($raw);
+		} elseif ($field_key === 'service_details_proof_badges') {
+			$value = sanitize_text_field(wp_strip_all_tags(html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
 		} elseif (in_array($field_key, ['hero_proof_bullets', 'hero_chip_bullets', 'trust_badges'], true) && function_exists('lf_ai_sanitize_inline_dom_html')) {
 			$value = lf_ai_sanitize_inline_dom_html($raw);
 		} else {

@@ -1511,6 +1511,19 @@ function lf_sections_sanitize_custom_background(string $raw): string {
  * @return array<string, string>
  */
 function lf_sections_bg_swatch_hex_map(): array {
+	if (function_exists('lf_branding_get_value')) {
+		return [
+			'white'     => '#ffffff',
+			'light'     => lf_branding_get_value('lf_surface_light', '#ffffff'),
+			'soft'      => lf_branding_get_value('lf_surface_soft', '#f8fafc'),
+			'primary'   => lf_branding_get_value('lf_brand_primary', '#2563eb'),
+			'secondary' => lf_branding_get_value('lf_brand_secondary', '#0ea5e9'),
+			'accent'    => lf_branding_get_value('lf_brand_tertiary', '#f97316'),
+			'dark'      => lf_branding_get_value('lf_surface_dark', '#0f172a'),
+			'black'     => '#020617',
+			'card'      => lf_branding_get_value('lf_surface_card', '#ffffff'),
+		];
+	}
 	return [
 		'white' => '#ffffff',
 		'light' => '#f8fafc',
@@ -1867,11 +1880,23 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 			'source_line' => trim((string) $raw_item),
 		];
 	}
-	if (count($parsed_items) > 3) {
-		$parsed_items = array_slice($parsed_items, 0, 3);
+	$max_benefit_cards = (int) apply_filters('lf_benefits_max_cards', 24);
+	if ($max_benefit_cards < 1) {
+		$max_benefit_cards = 24;
 	}
-	while (count($parsed_items) < 3) {
-		$parsed_items[] = ['title' => '', 'body' => '', 'source_line' => ''];
+	if (count($parsed_items) > $max_benefit_cards) {
+		$parsed_items = array_slice($parsed_items, 0, $max_benefit_cards);
+	}
+	if ($parsed_items === []) {
+		foreach ($default_items as $def) {
+			$t = (string) ( $def['title'] ?? '' );
+			$b = (string) ( $def['body'] ?? '' );
+			$parsed_items[] = [
+				'title'         => $t,
+				'body'          => $b,
+				'source_line'   => trim( $t . ' || ' . $b ),
+			];
+		}
 	}
 	$used_icons = [];
 	lf_sections_render_shell_open('benefits', $title, $intro_text, $settings['section_background'] ?? 'light', $settings);
@@ -1909,12 +1934,14 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 			<div class="<?php echo esc_attr($card_class); ?>" data-lf-benefit-line="<?php echo esc_attr($line_attr); ?>">
 					<?php if ($icon_enabled) : ?>
 						<?php $icon_slug = lf_sections_benefits_pick_icon_slug($item, $icon_overrides, $used_icons, $index); ?>
-						<?php if ($icon_slug !== '' && function_exists('lf_icon')) : ?>
+						<?php if ($icon_slug !== '') : ?>
 							<?php $used_icons[] = $icon_slug; ?>
-							<span class="lf-benefits__icon" aria-hidden="true" data-lf-benefit-icon-index="<?php echo esc_attr((string) $index); ?>">
-								<?php echo lf_icon($icon_slug, ['class' => trim('lf-icon--' . $icon_size . ' lf-icon--' . $icon_color)]); ?>
-							</span>
 						<?php endif; ?>
+						<span class="lf-benefits__icon<?php echo $icon_slug === '' ? ' lf-benefits__icon--empty' : ''; ?>" aria-hidden="true" data-lf-benefit-icon-index="<?php echo esc_attr((string) $index); ?>">
+							<?php if ($icon_slug !== '' && function_exists('lf_icon')) : ?>
+								<?php echo lf_icon($icon_slug, ['class' => trim('lf-icon--' . $icon_size . ' lf-icon--' . $icon_color)]); ?>
+							<?php endif; ?>
+						</span>
 					<?php endif; ?>
 					<h3 class="lf-benefits__title"><?php echo wp_kses( (string) $item['title'], function_exists( 'lf_ai_inline_link_allowed_kses' ) ? lf_ai_inline_link_allowed_kses() : [] ); ?></h3>
 					<p class="lf-benefits__desc"><?php echo wp_kses( (string) $item['body'], function_exists( 'lf_ai_inline_link_allowed_kses' ) ? lf_ai_inline_link_allowed_kses() : [] ); ?></p>

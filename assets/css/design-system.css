@@ -995,6 +995,14 @@ button:focus-visible,
 	height: 28px;
 }
 
+.lf-benefits__icon--empty {
+	min-height: 56px;
+	min-width: 56px;
+	box-sizing: border-box;
+	border: 1px dashed rgba(59, 130, 246, 0.35);
+	background: rgba(59, 130, 246, 0.06);
+}
+
 .lf-benefits__title {
 	margin: 0;
 	font-size: 1.06rem;
@@ -1017,6 +1025,11 @@ button:focus-visible,
 	gap: 0.75rem;
 	margin-top: 1.25rem;
 	grid-column: 1 / -1;
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+	overflow: visible;
+	min-width: 0;
 }
 
 .lf-benefits__actions--align-left {
@@ -3275,6 +3288,16 @@ button:focus-visible,
 	letter-spacing: 0.01em;
 }
 
+.lf-block-hero.lf-surface-dark .lf-hero-chip,
+.lf-block-hero.lf-surface-black .lf-hero-chip,
+.lf-block-hero.lf-surface-primary .lf-hero-chip,
+.lf-block-hero.lf-surface-secondary .lf-hero-chip,
+.lf-block-hero.lf-surface-accent .lf-hero-chip {
+	background: rgba(255, 255, 255, 0.14);
+	border: 1px solid rgba(255, 255, 255, 0.32);
+	color: var(--lf-text-inverse);
+}
+
 .lf-hero-stack__chips,
 .lf-hero-form__chips,
 .lf-hero-visual__chips,
@@ -4173,6 +4196,76 @@ button:focus-visible,
 .lf-block-service-intro__media {
 	border-radius: 0.6rem;
 	overflow: hidden;
+	position: relative;
+}
+
+.lf-block-service-intro__media-add {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	min-height: 160px;
+	margin: 0;
+	padding: 0.75rem;
+	box-sizing: border-box;
+	border: 2px dashed rgba(59, 130, 246, 0.35);
+	border-radius: 0.6rem;
+	background: rgba(59, 130, 246, 0.06);
+	color: var(--lf-primary);
+	font-weight: 600;
+	font-size: 0.9rem;
+	cursor: pointer;
+	font-family: inherit;
+}
+
+.lf-block-service-intro__media-add:hover {
+	background: rgba(59, 130, 246, 0.1);
+}
+
+.lf-service-intro-thumb-remove {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	z-index: 2;
+	width: 28px;
+	height: 28px;
+	border-radius: 999px;
+	border: 1px solid rgba(255, 255, 255, 0.85);
+	background: rgba(15, 23, 42, 0.55);
+	color: #fff;
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+}
+
+.lf-service-intro-thumb-remove:hover {
+	background: rgba(15, 23, 42, 0.75);
+}
+
+.lf-service-details__proof-badge-wrap {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	margin: 0.25rem 0.5rem 0.25rem 0;
+	vertical-align: middle;
+}
+
+.lf-ai-proof-badge-remove {
+	flex-shrink: 0;
+	width: 22px;
+	height: 22px;
+	border-radius: 4px;
+	border: 1px solid #e2e8f0;
+	background: #fff;
+	color: #64748b;
+	font-size: 12px;
+	line-height: 1;
+	cursor: pointer;
+	padding: 0;
 }
 
 .lf-block-service-intro__image {
