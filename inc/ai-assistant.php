@@ -29,6 +29,52 @@ function lf_ai_assistant_keep_jquery_for_frontend_admins($keep): bool {
 	return (bool) $keep;
 }
 
+/**
+ * Hint + lightweight schematic for Structure / add-section UI.
+ *
+ * @return array{hint: string, preview_svg: string}
+ */
+function lf_ai_section_library_row_meta(string $section_id): array {
+	$hints = [
+		'hero' => __('Primary headline area with CTAs and trust strip options.', 'leadsforward-core'),
+		'trust_bar' => __('Compact rating strip with trust badges.', 'leadsforward-core'),
+		'benefits' => __('Icon cards explaining why homeowners choose your team.', 'leadsforward-core'),
+		'service_details' => __('Service story with checklist and optional media.', 'leadsforward-core'),
+		'content_image' => __('Image or video beside body copy.', 'leadsforward-core'),
+		'image_content' => __('Body copy beside image or video.', 'leadsforward-core'),
+		'process' => __('Step-by-step how it works.', 'leadsforward-core'),
+		'related_links' => __('Links to related services or resources.', 'leadsforward-core'),
+		'nearby_areas' => __('Nearby cities and service area links.', 'leadsforward-core'),
+		'faq_accordion' => __('Expandable FAQs with optional schema.', 'leadsforward-core'),
+		'cta' => __('Conversion band with headline, text, and buttons.', 'leadsforward-core'),
+		'trust_reviews' => __('Customer reviews in a slider, grid, or masonry.', 'leadsforward-core'),
+		'service_intro' => __('Service cards that deep-link to detail pages.', 'leadsforward-core'),
+		'service_grid' => __('Grid of services with imagery.', 'leadsforward-core'),
+		'service_areas' => __('Areas you serve with clear locality messaging.', 'leadsforward-core'),
+		'logo_strip' => __('Certifications, manufacturer logos, and partner badges.', 'leadsforward-core'),
+		'team' => __('Team members with roles and short bios.', 'leadsforward-core'),
+		'pricing' => __('What affects pricing, financing note, and estimate CTA.', 'leadsforward-core'),
+		'packages' => __('Side-by-side packages or plan comparison.', 'leadsforward-core'),
+		'blog_posts' => __('Latest articles from your blog.', 'leadsforward-core'),
+		'map_nap' => __('Map plus name, address, and phone.', 'leadsforward-core'),
+		'project_gallery' => __('Before/after or project photo gallery.', 'leadsforward-core'),
+		'sitemap_links' => __('Structured list of pages for SEO or utility pages.', 'leadsforward-core'),
+		'services_offered_here' => __('Services available in a specific service area.', 'leadsforward-core'),
+		'content' => __('Flexible text section for policies, long copy, or resources.', 'leadsforward-core'),
+		'content_centered' => __('Centered heading and rich text for simple pages.', 'leadsforward-core'),
+	];
+	$palette = ['#6366f1', '#0ea5e9', '#22c55e', '#f97316'];
+	$accent = $palette[abs(crc32($section_id)) % 4];
+	$svg = sprintf(
+		'<svg xmlns="http://www.w3.org/2000/svg" width="160" height="100" viewBox="0 0 160 100" fill="none" aria-hidden="true"><rect width="160" height="100" rx="10" fill="#f8fafc" stroke="#e2e8f0"/><rect x="10" y="12" width="90" height="9" rx="4" fill="#334155"/><rect x="10" y="28" width="140" height="5" rx="2" fill="#94a3b8"/><rect x="10" y="38" width="120" height="5" rx="2" fill="#cbd5e1"/><rect x="10" y="56" width="48" height="14" rx="7" fill="%s"/><rect x="66" y="56" width="48" height="14" rx="7" fill="#e2e8f0"/></svg>',
+		esc_attr($accent)
+	);
+	return [
+		'hint' => $hints[ $section_id ] ?? __('Adds this block to the page layout.', 'leadsforward-core'),
+		'preview_svg' => $svg,
+	];
+}
+
 function lf_ai_assistant_section_library(array $context): array {
 	if (!function_exists('lf_sections_get_context_sections')) {
 		return [];
@@ -71,7 +117,13 @@ function lf_ai_assistant_section_library(array $context): array {
 			continue;
 		}
 		$label = sanitize_text_field((string) ($row['label'] ?? $sid));
-		$rows[] = ['id' => $sid, 'label' => $label];
+		$meta = lf_ai_section_library_row_meta($sid);
+		$rows[] = [
+			'id' => $sid,
+			'label' => $label,
+			'hint' => $meta['hint'],
+			'preview_svg' => $meta['preview_svg'],
+		];
 	}
 	usort($rows, static function (array $a, array $b): int {
 		return strcmp((string) ($a['label'] ?? ''), (string) ($b['label'] ?? ''));
@@ -754,6 +806,12 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-section-insert-picker__head { font-size:14px; font-weight:700; color:#0f172a; }
 		.lf-ai-section-insert-picker__item { display:block; width:100%; text-align:left; border:1px solid #e2e8f0; background:#f8fafc; border-radius:8px; padding:8px 10px; font-size:12px; cursor:pointer; color:#0f172a; }
 		.lf-ai-section-insert-picker__item:hover { border-color:#c4b5fd; background:#faf7ff; }
+		.lf-ai-section-lib-row { display:flex; flex-direction:column; gap:0; }
+		.lf-ai-section-lib-row__id { color:#64748b; font-weight:400; }
+		.lf-ai-section-lib-row__preview { display:none; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; padding:6px; text-align:center; box-shadow:0 4px 14px rgba(15,23,42,.08); }
+		.lf-ai-section-lib-row__preview.is-visible { display:block; }
+		.lf-ai-section-lib-row__preview svg { margin:0 auto; display:block; max-width:100%; height:auto; }
+		[data-lf-section-insert-list] { display:flex; flex-direction:column; gap:6px; max-height:min(52vh,420px); overflow:auto; }
 		.lf-ai-checklist-controls { margin-top:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 		.lf-ai-checklist-add { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:28px; padding:0 10px; font-size:12px; cursor:pointer; }
 		.lf-ai-checklist-add:hover { background:#f5f0ff; }
@@ -2268,8 +2326,14 @@ function lf_ai_assistant_widget_js(): string {
 			closeHeroSettingsPicker();
 			refreshAiScopeBanner();
 		}
+		function removeBenefitIconBgRow() {
+			if (!iconPickerEl) return;
+			var r = iconPickerEl.querySelector("[data-lf-benefit-icon-bg-row]");
+			if (r && r.parentNode) r.parentNode.removeChild(r);
+		}
 		function closeIconPicker() {
 			if (!iconPickerEl) return;
+			removeBenefitIconBgRow();
 			iconPickerEl.hidden = true;
 			iconPickerOnSelect = null;
 			try { if (iconPickerSearchEl) iconPickerSearchEl.value = ""; } catch (e) {}
@@ -2336,12 +2400,69 @@ function lf_ai_assistant_widget_js(): string {
 			document.body.appendChild(iconPickerEl);
 			return iconPickerEl;
 		}
-		function openIconPicker(currentSlug, onSelect) {
+		var benefitIconTileColor = "auto";
+		function injectBenefitIconBgRow(currentToken) {
+			removeBenefitIconBgRow();
+			ensureIconPicker();
+			var card = iconPickerEl.querySelector(".lf-ai-icon-picker__card");
+			var search = iconPickerEl.querySelector("[data-lf-ai-icon-picker-search]");
+			if (!card || !search) return;
+			benefitIconTileColor = currentToken === "blue" || currentToken === "green" || currentToken === "orange" ? currentToken : "auto";
+			var row = document.createElement("div");
+			row.setAttribute("data-lf-benefit-icon-bg-row", "1");
+			row.style.marginBottom = "8px";
+			var lab = document.createElement("div");
+			lab.style.fontSize = "11px";
+			lab.style.fontWeight = "700";
+			lab.style.color = "#334155";
+			lab.style.marginBottom = "6px";
+			lab.textContent = "Icon tile color";
+			var btns = document.createElement("div");
+			btns.style.display = "flex";
+			btns.style.flexWrap = "wrap";
+			btns.style.gap = "6px";
+			var opts = [["auto", "Auto (cycle)"], ["blue", "Blue"], ["green", "Green"], ["orange", "Orange"]];
+			function paintBgButtons() {
+				Array.prototype.forEach.call(btns.querySelectorAll("button[data-lf-benefit-icon-bg-tok]"), function(btn){
+					var tok = String(btn.getAttribute("data-lf-benefit-icon-bg-tok") || "");
+					btn.style.background = benefitIconTileColor === tok ? "#ede9fe" : "#fff";
+				});
+			}
+			opts.forEach(function(pair){
+				var b = document.createElement("button");
+				b.type = "button";
+				b.setAttribute("data-lf-benefit-icon-bg-tok", pair[0]);
+				b.textContent = pair[1];
+				b.style.fontSize = "11px";
+				b.style.fontWeight = "600";
+				b.style.padding = "5px 8px";
+				b.style.borderRadius = "8px";
+				b.style.border = "1px solid #c4b5fd";
+				b.style.cursor = "pointer";
+				b.addEventListener("click", function(e){
+					e.preventDefault();
+					benefitIconTileColor = String(b.getAttribute("data-lf-benefit-icon-bg-tok") || "auto");
+					paintBgButtons();
+				});
+				btns.appendChild(b);
+			});
+			paintBgButtons();
+			row.appendChild(lab);
+			row.appendChild(btns);
+			card.insertBefore(row, search);
+		}
+		function openIconPicker(currentSlug, onSelect, pickerOpts) {
 			if (!iconSlugs.length) {
 				setStatus("Icon library is unavailable on this screen.", true);
 				return;
 			}
+			pickerOpts = pickerOpts || {};
 			ensureIconPicker();
+			if (pickerOpts.benefitBg) {
+				injectBenefitIconBgRow(String(pickerOpts.benefitTileToken || "auto"));
+			} else {
+				removeBenefitIconBgRow();
+			}
 			iconPickerCurrentSlug = String(currentSlug || "");
 			iconPickerOnSelect = typeof onSelect === "function" ? onSelect : null;
 			if (!iconPickerEl) return;
@@ -2942,46 +3063,87 @@ function lf_ai_assistant_widget_js(): string {
 				try { window.alert(msg); } catch (e) {}
 			});
 		}
+		function fillSectionLibraryList(listEl, opts) {
+			if (!listEl) return;
+			var o = opts || {};
+			var itemClass = String(o.itemClass || "lf-ai-rail__library-item");
+			var filterRow = typeof o.filterRow === "function" ? o.filterRow : null;
+			var draggable = !!o.draggable;
+			var onPick = typeof o.onPick === "function" ? o.onPick : function(){};
+			listEl.innerHTML = "";
+			var rows = Array.isArray(lfAiFloating.section_library) ? lfAiFloating.section_library : [];
+			rows.forEach(function(row){
+				if (filterRow && !filterRow(row)) return;
+				var id = String(row && row.id ? row.id : "");
+				var label = String(row && row.label ? row.label : id);
+				if (!id) return;
+				var hint = String(row && row.hint ? row.hint : "");
+				var svg = String(row && row.preview_svg ? row.preview_svg : "");
+				var wrap = document.createElement("div");
+				wrap.className = "lf-ai-section-lib-row";
+				var b = document.createElement("button");
+				b.type = "button";
+				b.className = itemClass;
+				var lab = document.createElement("span");
+				lab.className = "lf-ai-section-lib-row__label";
+				lab.textContent = label;
+				var sid = document.createElement("span");
+				sid.className = "lf-ai-section-lib-row__id";
+				sid.textContent = " (" + id + ")";
+				b.appendChild(lab);
+				b.appendChild(sid);
+				if (hint) b.setAttribute("title", hint);
+				b.addEventListener("click", function(e){
+					e.preventDefault();
+					onPick(id);
+				});
+				if (draggable) {
+					b.setAttribute("draggable", "true");
+					b.setAttribute("data-lf-library-section-type", id);
+					b.addEventListener("dragstart", function(e){
+						activeLibraryDragSectionType = id;
+						b.classList.add("is-dragging");
+						if (e.dataTransfer) {
+							e.dataTransfer.effectAllowed = "copyMove";
+							e.dataTransfer.setData("text/plain", id);
+						}
+					});
+					b.addEventListener("dragend", function(){
+						b.classList.remove("is-dragging");
+						activeLibraryDragSectionType = "";
+					});
+				}
+				wrap.appendChild(b);
+				if (svg) {
+					var prev = document.createElement("div");
+					prev.className = "lf-ai-section-lib-row__preview";
+					prev.setAttribute("aria-hidden", "true");
+					prev.innerHTML = svg;
+					wrap.appendChild(prev);
+					b.addEventListener("mouseenter", function(){ prev.classList.add("is-visible"); });
+					b.addEventListener("mouseleave", function(){ prev.classList.remove("is-visible"); });
+				}
+				listEl.appendChild(wrap);
+			});
+		}
 		function refreshRailLibrary() {
 			if (!sectionRailEl) return;
 			var library = sectionRailEl.querySelector("[data-lf-ai-rail-library]");
 			var list = sectionRailEl.querySelector("[data-lf-ai-rail-library-list]");
 			var search = sectionRailEl.querySelector("[data-lf-ai-rail-library-search]");
 			if (!library || !list) return;
-			var visibleIds = {};
-			collectSectionWrappers().forEach(function(w){
-				visibleIds[String(w.getAttribute("data-lf-section-id") || "")] = true;
-			});
 			var q = String(search && search.value ? search.value : "").trim().toLowerCase();
-			var rows = Array.isArray(lfAiFloating.section_library) ? lfAiFloating.section_library : [];
-			list.innerHTML = "";
-			rows.forEach(function(row){
-				var id = String(row && row.id ? row.id : "");
-				var label = String(row && row.label ? row.label : id);
-				if (!id) return;
-				if (q && label.toLowerCase().indexOf(q) === -1 && id.toLowerCase().indexOf(q) === -1) return;
-				var btn = document.createElement("button");
-				btn.type = "button";
-				btn.className = "lf-ai-rail__library-item";
-				btn.textContent = label + " (" + id + ")";
-				btn.setAttribute("draggable", "true");
-				btn.setAttribute("data-lf-library-section-type", id);
-				btn.addEventListener("dragstart", function(e){
-					activeLibraryDragSectionType = id;
-					btn.classList.add("is-dragging");
-					if (e.dataTransfer) {
-						e.dataTransfer.effectAllowed = "copyMove";
-						e.dataTransfer.setData("text/plain", id);
-					}
-				});
-				btn.addEventListener("dragend", function(){
-					btn.classList.remove("is-dragging");
-					activeLibraryDragSectionType = "";
-				});
-				btn.addEventListener("click", function(){
-					addSectionFromLibrary(id);
-				});
-				list.appendChild(btn);
+			fillSectionLibraryList(list, {
+				itemClass: "lf-ai-rail__library-item",
+				draggable: true,
+				filterRow: function(row){
+					var id = String(row && row.id ? row.id : "");
+					var label = String(row && row.label ? row.label : id);
+					if (!id) return false;
+					if (q && label.toLowerCase().indexOf(q) === -1 && id.toLowerCase().indexOf(q) === -1) return false;
+					return true;
+				},
+				onPick: function(id){ addSectionFromLibrary(id); }
 			});
 		}
 		function sectionWrapById(sectionId) {
@@ -3628,11 +3790,20 @@ function lf_ai_assistant_widget_js(): string {
 			});
 			return textNode;
 		}
-		function persistSectionLineItems(wrap, fieldKey, items, savingLabel) {
+		function persistSectionLineItems(wrap, fieldKey, items, savingLabel, opts) {
 			if (!wrap || !fieldKey) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			if (!sectionId) return;
-			var lines = Array.isArray(items) ? items.map(function(v){ return String(v || "").trim(); }).filter(function(v){ return v !== ""; }) : [];
+			opts = opts || {};
+			var preserve = parseInt(String(opts.preserveCount || "0"), 10) || 0;
+			var rawLines = Array.isArray(items) ? items.map(function(v){ return String(v == null ? "" : v).trim(); }) : [];
+			var lines;
+			if (preserve > 0) {
+				lines = rawLines.slice(0, preserve);
+				while (lines.length < preserve) lines.push("");
+			} else {
+				lines = rawLines.filter(function(v){ return v !== ""; });
+			}
 			var pc = persistContextFromWrap(wrap);
 			setStatus(savingLabel || "Saving list...", false);
 			$.post(lfAiFloating.ajax_url, {
@@ -3646,6 +3817,7 @@ function lf_ai_assistant_widget_js(): string {
 			}).done(function(res){
 				if (res && res.success) {
 					setStatus((res.data && res.data.message) ? res.data.message : "List saved.", false);
+					if (typeof opts.onDone === "function") opts.onDone(res);
 				} else {
 					setStatus((res && res.data && res.data.message) ? res.data.message : "List save failed.", true);
 				}
@@ -5500,30 +5672,35 @@ function lf_ai_assistant_widget_js(): string {
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
 				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 				if (sectionType !== "benefits") return;
-				var nodes = Array.prototype.slice.call(wrap.querySelectorAll(".lf-benefits__icon[data-lf-benefit-icon-index]"));
-				if (!nodes.length || !iconSlugs.length) return;
-				var currentOverrides = [];
-				function parseCurrentOverrides() {
-					currentOverrides = [];
-					nodes.forEach(function(iconNode){
-						var svg = iconNode.querySelector("svg");
-						if (!svg) {
-							currentOverrides.push("");
+				if (!iconSlugs.length) return;
+				var cards = wrap.querySelectorAll(".lf-benefits__card");
+				if (!cards.length) return;
+				function parseIconLinesFromDom() {
+					var slugs = [];
+					var bgs = [];
+					Array.prototype.forEach.call(cards, function(card){
+						var iconNode = card.querySelector(".lf-benefits__icon[data-lf-benefit-icon-index]");
+						if (!iconNode) {
 							return;
 						}
-						var cls = String(svg.getAttribute("class") || "");
-						var m = cls.match(/\blf-icon--([a-z0-9-]+)\b/i);
-						currentOverrides.push(m && m[1] ? String(m[1]) : "");
+						var svg = iconNode.querySelector("svg");
+						var slug = "";
+						if (svg) {
+							var cls = String(svg.getAttribute("class") || "");
+							var m = cls.match(/\blf-icon--([a-z0-9-]+)\b/i);
+							if (m && m[1]) slug = String(m[1]);
+						}
+						slugs.push(slug);
+						var bt = String(iconNode.getAttribute("data-lf-benefit-icon-bg") || "auto");
+						bgs.push(bt === "auto" ? "" : bt);
 					});
+					return { slugs: slugs, bgs: bgs };
 				}
-				function persistOverrides() {
-					persistSectionLineItems(wrap, "benefits_icon_overrides", currentOverrides, "Saving icons...");
-					setTimeout(function(){ window.location.reload(); }, 220);
-				}
-				parseCurrentOverrides();
-				nodes.forEach(function(iconNode){
+				Array.prototype.forEach.call(cards, function(card){
+					var iconNode = card.querySelector(".lf-benefits__icon[data-lf-benefit-icon-index]");
+					if (!iconNode) return;
 					iconNode.classList.add("lf-ai-inline-editor-ignore");
-					iconNode.setAttribute("title", "Click to change icon");
+					iconNode.setAttribute("title", "Click to change icon and tile color");
 					iconNode.style.cursor = "pointer";
 					iconNode.onclick = function(e){
 						if (!editingEnabled) return;
@@ -5531,22 +5708,43 @@ function lf_ai_assistant_widget_js(): string {
 						e.stopPropagation();
 						var idx = parseInt(String(iconNode.getAttribute("data-lf-benefit-icon-index") || "0"), 10);
 						if (isNaN(idx) || idx < 0) idx = 0;
-						while (currentOverrides.length <= idx) currentOverrides.push("");
-						var currentSlug = String(currentOverrides[idx] || "");
+						var state = parseIconLinesFromDom();
+						var slugs = state.slugs;
+						var bgs = state.bgs;
+						var currentSlug = String(slugs[idx] || "");
+						var curBgTok = String(iconNode.getAttribute("data-lf-benefit-icon-bg") || "auto");
 						openIconPicker(currentSlug, function(selectedSlug){
-							currentOverrides[idx] = String(selectedSlug || "");
-							persistOverrides();
-						});
+							slugs[idx] = String(selectedSlug || "");
+							bgs[idx] = benefitIconTileColor === "auto" ? "" : benefitIconTileColor;
+							var n = wrap.querySelectorAll(".lf-benefits__card").length;
+							while (slugs.length < n) slugs.push("");
+							while (bgs.length < n) bgs.push("");
+							persistSectionLineItems(wrap, "benefits_icon_overrides", slugs, "Saving icons...", {
+								preserveCount: n,
+								onDone: function(){
+									persistSectionLineItems(wrap, "benefits_icon_bg_overrides", bgs, "Saving tile colors...", {
+										preserveCount: n,
+										onDone: function(){
+											window.location.reload();
+										}
+									});
+								}
+							});
+						}, { benefitBg: true, benefitTileToken: curBgTok });
 					};
 				});
 			});
 		}
 		function ctaSlotForButton(node) {
 			if (!node || !node.getAttribute) return "primary";
-			var ds = String(node.getAttribute("data-lf-cta-slot") || "");
+			var ds = String(node.getAttribute("data-lf-cta-slot") || "").toLowerCase();
 			if (ds === "secondary") return "secondary";
 			if (ds === "primary") return "primary";
-			if (node.classList && (node.classList.contains("lf-btn--secondary") || /secondary/i.test(String(node.className || "")))) {
+			var src = String(node.getAttribute("data-lf-quote-source") || "");
+			if (src.indexOf("secondary") !== -1) return "secondary";
+			if (node.classList && node.classList.contains("lf-btn--secondary")) return "secondary";
+			var cn = String(node.className || "");
+			if (/\b(lf-hero-(basic|stack|form|visual|split)__\S*secondary|lf-block-cta__(secondary|secondary-link|secondary-text))\b/.test(cn)) {
 				return "secondary";
 			}
 			return "primary";
@@ -6260,8 +6458,8 @@ function lf_ai_assistant_widget_js(): string {
 					setStatus("Link URL is required for link action.", true);
 					return;
 				}
-				closeBenefitsCtaPicker();
 				var slot = ctaSlotForButton(benefitsCtaPickerButtonNode);
+				closeBenefitsCtaPicker();
 				if (w) persistSectionButtonCta(w, slot, t, act, act === "link" ? u : "", st, tn);
 			});
 			var cancelBtn = document.createElement("button");
@@ -6470,24 +6668,15 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			var list = sectionInsertPickerEl.querySelector("[data-lf-section-insert-list]");
 			if (list) {
-				list.innerHTML = "";
-				var rows = Array.isArray(lfAiFloating.section_library) ? lfAiFloating.section_library : [];
-				rows.forEach(function(row){
-					var id = String(row && row.id ? row.id : "");
-					var label = String(row && row.label ? row.label : id);
-					if (!id) return;
-					var b = document.createElement("button");
-					b.type = "button";
-					b.className = "lf-ai-section-insert-picker__item";
-					b.textContent = label + " (" + id + ")";
-					b.addEventListener("click", function(e){
-						e.preventDefault();
+				fillSectionLibraryList(list, {
+					itemClass: "lf-ai-section-insert-picker__item",
+					draggable: false,
+					onPick: function(id){
 						var aid = sectionInsertAfterId;
 						var bid = sectionInsertBeforeId;
 						closeSectionInsertPicker();
 						addSectionFromLibrary(id, aid, bid);
-					});
-					list.appendChild(b);
+					}
 				});
 			}
 			sectionInsertPickerEl.hidden = false;

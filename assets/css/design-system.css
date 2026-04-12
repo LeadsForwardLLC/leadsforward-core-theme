@@ -1136,33 +1136,55 @@ button:focus-visible,
 	justify-content: flex-end;
 }
 
-.lf-benefits__card:nth-child(1) .lf-benefits__icon {
+/* Default blue → green → orange cycle for any number of cards (manual --bg-* overrides skip this). */
+.lf-benefits__card:nth-child(3n + 1) .lf-benefits__icon:not([class*="lf-benefits__icon--bg-"]) {
 	background: rgba(59, 130, 246, 0.14);
 	color: #1d4ed8;
 	box-shadow: inset 0 0 0 1px rgba(29, 78, 216, 0.25);
 }
 
-.lf-benefits__card:nth-child(2) .lf-benefits__icon {
+.lf-benefits__card:nth-child(3n + 2) .lf-benefits__icon:not([class*="lf-benefits__icon--bg-"]) {
 	background: rgba(16, 185, 129, 0.14);
 	color: #0f766e;
 	box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.22);
 }
 
-.lf-benefits__card:nth-child(3) .lf-benefits__icon {
+.lf-benefits__card:nth-child(3n + 3) .lf-benefits__icon:not([class*="lf-benefits__icon--bg-"]) {
 	background: rgba(234, 88, 12, 0.14);
 	color: #c2410c;
 	box-shadow: inset 0 0 0 1px rgba(194, 65, 12, 0.22);
 }
 
-.lf-benefits__card:nth-child(1)::after {
+.lf-benefits__icon--bg-blue,
+.lf-benefits__icon--bg-blue.lf-benefits__icon--empty {
+	background: rgba(59, 130, 246, 0.14);
+	color: #1d4ed8;
+	box-shadow: inset 0 0 0 1px rgba(29, 78, 216, 0.25);
+}
+
+.lf-benefits__icon--bg-green,
+.lf-benefits__icon--bg-green.lf-benefits__icon--empty {
+	background: rgba(16, 185, 129, 0.14);
+	color: #0f766e;
+	box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.22);
+}
+
+.lf-benefits__icon--bg-orange,
+.lf-benefits__icon--bg-orange.lf-benefits__icon--empty {
+	background: rgba(234, 88, 12, 0.14);
+	color: #c2410c;
+	box-shadow: inset 0 0 0 1px rgba(194, 65, 12, 0.22);
+}
+
+.lf-benefits__card:nth-child(3n + 1)::after {
 	background: #2563eb;
 }
 
-.lf-benefits__card:nth-child(2)::after {
+.lf-benefits__card:nth-child(3n + 2)::after {
 	background: #0f766e;
 }
 
-.lf-benefits__card:nth-child(3)::after {
+.lf-benefits__card:nth-child(3n + 3)::after {
 	background: #c2410c;
 }
 
@@ -2742,45 +2764,43 @@ button:focus-visible,
 	opacity: 0;
 }
 
+/* Titles/subtitles that sit directly on the dark hero canvas (not inside light conversion/form/visual cards). */
 .lf-block-hero.lf-surface-dark .lf-block-hero__title,
-.lf-block-hero.lf-surface-dark .lf-hero-stack__title,
-.lf-block-hero.lf-surface-dark .lf-hero-form__title,
-.lf-block-hero.lf-surface-dark .lf-hero-visual__title,
-.lf-block-hero.lf-surface-dark .lf-hero-split__title,
-.lf-block-hero.lf-surface-dark .lf-hero-basic__title {
+.lf-block-hero.lf-surface-black .lf-block-hero__title,
+.lf-block-hero.lf-surface-dark .lf-hero-basic__title,
+.lf-block-hero.lf-surface-black .lf-hero-basic__title {
 	color: var(--lf-text-inverse);
 }
 
 .lf-block-hero.lf-surface-dark .lf-block-hero__subtitle,
-.lf-block-hero.lf-surface-dark .lf-hero-stack__subtitle,
-.lf-block-hero.lf-surface-dark .lf-hero-form__subtitle,
-.lf-block-hero.lf-surface-dark .lf-hero-visual__subtitle,
-.lf-block-hero.lf-surface-dark .lf-hero-split__subtitle,
-.lf-block-hero.lf-surface-dark .lf-hero-basic__subtitle {
+.lf-block-hero.lf-surface-black .lf-block-hero__subtitle,
+.lf-block-hero.lf-surface-dark .lf-hero-basic__subtitle,
+.lf-block-hero.lf-surface-black .lf-hero-basic__subtitle {
 	color: var(--lf-cta-block-text-muted);
 }
 
-.lf-block-hero.lf-surface-dark .lf-hero-stack__trust,
-.lf-block-hero.lf-surface-dark .lf-hero-form__trust,
-.lf-block-hero.lf-surface-dark .lf-hero-visual__trust,
-.lf-block-hero.lf-surface-dark .lf-hero-split__trust,
 .lf-block-hero.lf-surface-dark .lf-hero-basic__actions,
-.lf-block-hero.lf-surface-dark .lf-hero-stack__phone,
+.lf-block-hero.lf-surface-black .lf-hero-basic__actions,
 .lf-block-hero.lf-surface-dark .lf-hero-split__phone,
-.lf-block-hero.lf-surface-dark .lf-block-hero__phone {
+.lf-block-hero.lf-surface-black .lf-hero-split__phone,
+.lf-block-hero.lf-surface-dark .lf-block-hero__phone,
+.lf-block-hero.lf-surface-black .lf-block-hero__phone {
 	color: var(--lf-text-inverse);
 }
 
-.lf-block-hero.lf-surface-dark .lf-block-hero__reviews {
+.lf-block-hero.lf-surface-dark .lf-block-hero__reviews,
+.lf-block-hero.lf-surface-black .lf-block-hero__reviews {
 	color: var(--lf-text-inverse);
 }
 
-.lf-block-hero.lf-surface-dark .lf-block-hero__reviews-count {
+.lf-block-hero.lf-surface-dark .lf-block-hero__reviews-count,
+.lf-block-hero.lf-surface-black .lf-block-hero__reviews-count {
 	background: rgba(255, 255, 255, 0.18);
 	color: var(--lf-text-inverse);
 }
 
-.lf-block-hero.lf-surface-dark {
+.lf-block-hero.lf-surface-dark,
+.lf-block-hero.lf-surface-black {
 	--lf-pill-container-bg: rgba(255, 255, 255, 0.12);
 	--lf-pill-container-border: 1px solid rgba(255, 255, 255, 0.24);
 	--lf-pill-accent-bg: rgba(255, 255, 255, 0.18);
@@ -2796,19 +2816,26 @@ button:focus-visible,
 }
 
 .lf-block-hero.lf-surface-dark .lf-hero-trust__value,
-.lf-block-hero.lf-surface-dark .lf-hero-trust__label-only {
+.lf-block-hero.lf-surface-dark .lf-hero-trust__label-only,
+.lf-block-hero.lf-surface-black .lf-hero-trust__value,
+.lf-block-hero.lf-surface-black .lf-hero-trust__label-only {
 	color: #f8fafc;
 }
 
 
 .lf-block-hero.lf-surface-dark .lf-block-hero__card,
 .lf-block-hero.lf-surface-dark .lf-block-hero__form,
-.lf-block-hero.lf-surface-dark .lf-block-hero__quote {
+.lf-block-hero.lf-surface-dark .lf-block-hero__quote,
+.lf-block-hero.lf-surface-black .lf-block-hero__card,
+.lf-block-hero.lf-surface-black .lf-block-hero__form,
+.lf-block-hero.lf-surface-black .lf-block-hero__quote {
 	color: var(--lf-text-primary);
 }
 
 .lf-block-hero.lf-surface-dark .lf-block-hero__card a,
-.lf-block-hero.lf-surface-dark .lf-block-hero__quote a {
+.lf-block-hero.lf-surface-dark .lf-block-hero__quote a,
+.lf-block-hero.lf-surface-black .lf-block-hero__card a,
+.lf-block-hero.lf-surface-black .lf-block-hero__quote a {
 	color: var(--lf-text-primary);
 }
 
@@ -2834,6 +2861,76 @@ button:focus-visible,
 .lf-block-hero--a .lf-hero-stack .lf-hero-chip {
 	background: var(--lf-pill-muted-bg);
 	border: var(--lf-pill-muted-border);
+	color: var(--lf-text-primary);
+}
+
+/* Form First + Visual Proof: chips live on light content columns — keep dark-readable pills (not global dark-hero chip styling). */
+.lf-block-hero.lf-surface-dark.lf-block-hero--b .lf-hero-form__content .lf-hero-chip,
+.lf-block-hero.lf-surface-black.lf-block-hero--b .lf-hero-form__content .lf-hero-chip,
+.lf-block-hero.lf-surface-dark.lf-block-hero--c .lf-hero-visual__content .lf-hero-chip,
+.lf-block-hero.lf-surface-black.lf-block-hero--c .lf-hero-visual__content .lf-hero-chip {
+	background: var(--lf-pill-muted-bg);
+	border: var(--lf-pill-muted-border);
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero.lf-surface-dark.lf-block-hero--b .lf-hero-form__content .lf-hero-form__subtitle,
+.lf-block-hero.lf-surface-black.lf-block-hero--b .lf-hero-form__content .lf-hero-form__subtitle,
+.lf-block-hero.lf-surface-dark.lf-block-hero--c .lf-hero-visual__content .lf-hero-visual__subtitle,
+.lf-block-hero.lf-surface-black.lf-block-hero--c .lf-hero-visual__content .lf-hero-visual__subtitle {
+	color: var(--lf-text-muted);
+}
+
+.lf-block-hero.lf-surface-dark.lf-block-hero--b .lf-hero-form__content .lf-hero-form__title,
+.lf-block-hero.lf-surface-black.lf-block-hero--b .lf-hero-form__content .lf-hero-form__title,
+.lf-block-hero.lf-surface-dark.lf-block-hero--c .lf-hero-visual__content .lf-hero-visual__title,
+.lf-block-hero.lf-surface-black.lf-block-hero--c .lf-hero-visual__content .lf-hero-visual__title {
+	color: var(--lf-text-primary);
+}
+
+/* Authority Split: left column reads on a light panel over a dark hero surface. */
+.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content,
+.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content {
+	padding: 1.5rem 1.75rem;
+	border-radius: 22px;
+	background: rgba(255, 255, 255, 0.94);
+	border: 1px solid rgba(15, 23, 42, 0.08);
+	box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+}
+
+.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content .lf-hero-split__title,
+.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content .lf-hero-split__title {
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content .lf-hero-split__subtitle,
+.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content .lf-hero-split__subtitle {
+	color: var(--lf-text-muted);
+}
+
+.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content .lf-hero-split__eyebrow,
+.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content .lf-hero-split__eyebrow {
+	background: rgba(15, 23, 42, 0.06);
+	border: 1px solid rgba(15, 23, 42, 0.12);
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content .lf-hero-chip,
+.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content .lf-hero-chip {
+	background: var(--lf-pill-muted-bg);
+	border: var(--lf-pill-muted-border);
+	color: var(--lf-text-primary);
+}
+
+.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content .lf-hero-split__trust,
+.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content .lf-hero-split__trust {
+	color: var(--lf-text-muted);
+}
+
+.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content .lf-hero-trust__label-only,
+.lf-block-hero.lf-surface-dark.lf-block-hero--default .lf-hero-split__content .lf-hero-trust__rating,
+.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content .lf-hero-trust__label-only,
+.lf-block-hero.lf-surface-black.lf-block-hero--default .lf-hero-split__content .lf-hero-trust__rating {
 	color: var(--lf-text-primary);
 }
 
