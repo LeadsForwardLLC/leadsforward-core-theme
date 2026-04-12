@@ -5793,9 +5793,11 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 		}
 		// Preserve frontend editor overrides during reseed.
 	}
-	$slugs = function_exists('lf_wizard_required_page_slugs')
-		? lf_wizard_required_page_slugs()
-		: ['about-us', 'our-services', 'service-areas', 'reviews', 'blog', 'sitemap', 'contact', 'privacy-policy', 'terms-of-service', 'thank-you'];
+	$slugs = (function_exists('lf_wizard_page_slugs_for_niche') && is_array($niche))
+		? lf_wizard_page_slugs_for_niche($niche)
+		: (function_exists('lf_wizard_required_page_slugs')
+			? lf_wizard_required_page_slugs()
+			: ['about-us', 'our-services', 'service-areas', 'reviews', 'blog', 'sitemap', 'contact', 'privacy-policy', 'terms-of-service', 'thank-you']);
 	$created_pages = [];
 	foreach ($slugs as $slug) {
 		$page = get_page_by_path($slug);

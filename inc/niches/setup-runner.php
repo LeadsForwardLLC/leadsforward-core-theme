@@ -31,9 +31,13 @@ function lf_run_setup(array $data): array {
 		return ['success' => false, 'message' => __('Invalid niche.', 'leadsforward-core'), 'created' => $log['created'], 'errors' => $log['errors']];
 	}
 
-	// 1. Pages (idempotent)
-	$page_titles = array_merge(lf_wizard_default_page_titles(), $niche['required_pages'] ?? []);
-	$slugs = lf_wizard_required_page_slugs();
+	// 1. Pages (idempotent): core + cross-niche + per-niche landing pages
+	$page_titles = array_merge(
+		lf_wizard_default_page_titles(),
+		function_exists('lf_wizard_extended_page_titles') ? lf_wizard_extended_page_titles() : [],
+		$niche['required_pages'] ?? []
+	);
+	$slugs = function_exists('lf_wizard_page_slugs_for_niche') ? lf_wizard_page_slugs_for_niche($niche) : lf_wizard_required_page_slugs();
 	$created_pages = [];
 	$new_pages = [];
 	foreach ($slugs as $slug) {
@@ -753,26 +757,21 @@ function lf_wizard_seed_pb_config(int $post_id, string $context, array $data, ar
 
 function lf_wizard_build_sitemap_body(array $created_pages): string {
 	$links = [];
-	$add_page = function (string $slug, string $label) use (&$links, $created_pages): void {
-		if (empty($created_pages[$slug])) {
-			return;
+	$titles = array_merge(
+		lf_wizard_default_page_titles(),
+		function_exists('lf_wizard_extended_page_titles') ? lf_wizard_extended_page_titles() : []
+	);
+	$order = function_exists('lf_wizard_sitemap_slug_order') ? lf_wizard_sitemap_slug_order($created_pages) : array_keys($created_pages);
+	foreach ($order as $slug) {
+		if (empty($created_pages[ $slug ])) {
+			continue;
 		}
-		$url = get_permalink((int) $created_pages[$slug]);
+		$label = $titles[ $slug ] ?? ucwords(str_replace(['-', '_'], ' ', (string) $slug));
+		$url = get_permalink((int) $created_pages[ $slug ]);
 		if ($url) {
 			$links[] = '<li><a href="' . esc_url($url) . '">' . esc_html($label) . '</a></li>';
 		}
-	};
-	$add_page('home', __('Home', 'leadsforward-core'));
-	$add_page('about-us', __('About Us', 'leadsforward-core'));
-	$add_page('why-choose-us', __('Why Choose Us', 'leadsforward-core'));
-	$add_page('our-services', __('Services', 'leadsforward-core'));
-	$add_page('service-areas', __('Service Areas', 'leadsforward-core'));
-	$add_page('reviews', __('Reviews', 'leadsforward-core'));
-	$add_page('blog', __('Blog', 'leadsforward-core'));
-	$add_page('contact', __('Contact', 'leadsforward-core'));
-	$add_page('privacy-policy', __('Privacy Policy', 'leadsforward-core'));
-	$add_page('terms-of-service', __('Terms of Service', 'leadsforward-core'));
-	$add_page('thank-you', __('Thank You', 'leadsforward-core'));
+	}
 
 	$service_archive = get_post_type_archive_link('lf_service');
 	if ($service_archive) {
@@ -1073,6 +1072,73 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 		],
 	];
 
+	$leadgen_copy = function_exists('lf_leadgen_page_marketing_copy') ? lf_leadgen_page_marketing_copy($business, $city_line) : [];
+	foreach ($leadgen_copy as $lg_slug => $copy) {
+		if (!is_array($copy)) {
+			continue;
+		}
+		$h = (string) ( $copy['hero_headline'] ?? '' );
+		$s = (string) ( $copy['hero_subheadline'] ?? '' );
+		$st = (string) ( $copy['seo_title'] ?? '' );
+		$sd = (string) ( $copy['seo_description'] ?? '' );
+		if ($lg_slug === 'our-work') {
+			$blueprints[ $lg_slug ] = [
+				'order' => ['hero', 'project_gallery', 'trust_reviews', 'cta'],
+				'overrides' => [
+					'hero' => [
+						'hero_headline' => $h,
+						'hero_subheadline' => $s,
+					],
+					'project_gallery' => [
+						'section_heading' => __('Featured projects', 'leadsforward-core'),
+						'section_intro' => __('A snapshot of recent work in the field.', 'leadsforward-core'),
+					],
+					'trust_reviews' => [
+						'trust_heading' => __('What customers say', 'leadsforward-core'),
+						'trust_max_items' => 6,
+					],
+					'cta' => [
+						'cta_headline' => $cta_headline,
+						'cta_subheadline' => __('Request pricing and availability.', 'leadsforward-core'),
+					],
+				],
+				'seo' => [
+					'title' => $st,
+					'description' => $sd,
+				],
+			];
+			continue;
+		}
+		$blueprints[ $lg_slug ] = [
+			'order' => ['hero', 'content_image', 'faq_accordion', 'cta'],
+			'overrides' => [
+				'hero' => [
+					'hero_headline' => $h,
+					'hero_subheadline' => $s,
+				],
+				'content_image' => [
+					'section_heading' => __('How we help', 'leadsforward-core'),
+					'section_intro' => __('Straightforward recommendations and clear pricing paths.', 'leadsforward-core'),
+					'section_body' => $contact_line !== ''
+						? sprintf(__('Questions? Start with a free estimate. %s', 'leadsforward-core'), $contact_line)
+						: __('Questions? Start with a free estimate and we will outline next steps.', 'leadsforward-core'),
+				],
+				'faq_accordion' => [
+					'section_heading' => __('Common questions', 'leadsforward-core'),
+					'section_intro' => __('Quick answers about scheduling and service.', 'leadsforward-core'),
+				],
+				'cta' => [
+					'cta_headline' => $cta_headline,
+					'cta_subheadline' => __('Tell us about your project — we respond quickly.', 'leadsforward-core'),
+				],
+			],
+			'seo' => [
+				'title' => $st,
+				'description' => $sd,
+			],
+		];
+	}
+
 	$layout_profile = (string) ($niche['layout_profile'] ?? '');
 	if ($layout_profile === 'project-heavy') {
 		foreach (['about-us', 'our-services'] as $slug) {
@@ -1227,6 +1293,9 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	$contact_id = $created_pages['contact'] ?? null;
 	$reviews_id = $created_pages['reviews'] ?? null;
 	$blog_id = $created_pages['blog'] ?? null;
+	$financing_id = $created_pages['financing'] ?? null;
+	$faq_page_id = $created_pages['faq'] ?? null;
+	$our_work_id = $created_pages['our-work'] ?? null;
 	$sitemap_id = $created_pages['sitemap'] ?? null;
 	$privacy_id = $created_pages['privacy-policy'] ?? null;
 	$terms_id = $created_pages['terms-of-service'] ?? null;
@@ -1367,6 +1436,9 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	$more_children = [];
 	if ($about_id) $more_children[] = ['type' => 'page', 'object_id' => $about_id];
 	if ($why_choose_id) $more_children[] = ['type' => 'page', 'object_id' => $why_choose_id];
+	if ($financing_id) $more_children[] = ['type' => 'page', 'object_id' => $financing_id];
+	if ($faq_page_id) $more_children[] = ['type' => 'page', 'object_id' => $faq_page_id];
+	if ($our_work_id) $more_children[] = ['type' => 'page', 'object_id' => $our_work_id];
 	if ($blog_id) $more_children[] = ['type' => 'page', 'object_id' => $blog_id];
 	$project_archive = get_post_type_archive_link('lf_project');
 	if ($project_archive) $more_children[] = ['type' => 'custom', 'url' => $project_archive, 'title' => __('Projects', 'leadsforward-core')];
@@ -1399,6 +1471,7 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	if ($home_id) $footer_items[] = ['type' => 'page', 'object_id' => $home_id];
 	if ($contact_id) $footer_items[] = ['type' => 'page', 'object_id' => $contact_id];
 	if ($reviews_id) $footer_items[] = ['type' => 'page', 'object_id' => $reviews_id];
+	if ($financing_id) $footer_items[] = ['type' => 'page', 'object_id' => $financing_id];
 	if ($blog_id) $footer_items[] = ['type' => 'page', 'object_id' => $blog_id];
 	if ($project_archive) $footer_items[] = ['type' => 'custom', 'url' => $project_archive, 'title' => __('Projects', 'leadsforward-core')];
 	if ($sitemap_id) $footer_items[] = ['type' => 'page', 'object_id' => $sitemap_id];

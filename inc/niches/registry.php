@@ -14,10 +14,10 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * All required page slugs the setup flow creates. Same for all niches; titles may vary.
+ * Required core page slugs (health checks, audits). Full setup list includes extras via lf_wizard_page_slugs_for_niche().
  */
 function lf_wizard_required_page_slugs(): array {
-	return [
+	return function_exists('lf_wizard_core_page_slugs') ? lf_wizard_core_page_slugs() : [
 		'home',
 		'about-us',
 		'why-choose-us',
@@ -737,8 +737,15 @@ function lf_builder_supported_niche_slugs(): array {
 		'tree-service',
 		'hvac',
 		'windows-doors',
-		'remodeling',
+		'waterproofing',
 		'paving',
+		'solar',
+		'water-damage',
+		'remodeling',
+		'carpet-cleaning',
+		'stamped-concrete',
+		'pool-service',
+		'general',
 	];
 	$registry = lf_get_niche_registry();
 	$filtered = array_values(array_filter($slugs, static function (string $slug) use ($registry): bool {
