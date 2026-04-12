@@ -75,17 +75,20 @@ $shape_class = 'lf-block-team--avatar-' . $avatar_shape;
 			<?php endif; ?>
 			<?php foreach ($people as $p) : ?>
 				<?php
-				$pid = (int) ( $p['image_id'] ?? 0 );
+				$member_post_id = (int) ( $p['post_id'] ?? 0 );
+				$img_id = (int) ( $p['image_id'] ?? 0 );
 				$pname = (string) ( $p['name'] ?? '' );
+				$prole = (string) ( $p['role'] ?? '' );
+				$pbio = (string) ( $p['bio'] ?? '' );
 				$img_html = '';
-				if ($pid > 0 && wp_attachment_is_image($pid)) {
+				if ($img_id > 0 && wp_attachment_is_image($img_id)) {
 					$alt = sprintf(
 						/* translators: %s: person name */
 						__('Photo of %s', 'leadsforward-core'),
 						$pname
 					);
 					$img_html = wp_get_attachment_image(
-						$pid,
+						$img_id,
 						'medium_large',
 						false,
 						[
@@ -97,8 +100,12 @@ $shape_class = 'lf-block-team--avatar-' . $avatar_shape;
 					);
 				}
 				$initials = function_exists('lf_team_member_initials') ? lf_team_member_initials($pname) : '?';
+				$card_attrs = '';
+				if ($member_post_id > 0) {
+					$card_attrs = ' data-lf-team-member-post-id="' . esc_attr((string) $member_post_id) . '" data-lf-team-member-initials="' . esc_attr($initials) . '"';
+				}
 				?>
-				<article class="lf-block-team__card">
+				<article class="lf-block-team__card"<?php echo $card_attrs; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 					<div class="lf-block-team__media">
 						<?php if ($img_html !== '') : ?>
 							<div class="lf-block-team__photo">
@@ -112,8 +119,17 @@ $shape_class = 'lf-block-team--avatar-' . $avatar_shape;
 					</div>
 					<div class="lf-block-team__body">
 						<h3 class="lf-block-team__name"><?php echo esc_html($pname); ?></h3>
-						<?php if ($p['role'] !== '') : ?><p class="lf-block-team__role"><?php echo esc_html($p['role']); ?></p><?php endif; ?>
-						<?php if ($p['bio'] !== '') : ?><div class="lf-block-team__bio lf-prose"><?php echo wp_kses_post(wpautop($p['bio'])); ?></div><?php endif; ?>
+						<?php if ($member_post_id > 0) : ?>
+							<p class="lf-block-team__role"><?php echo esc_html($prole); ?></p>
+							<div class="lf-block-team__bio lf-prose"><?php echo $pbio !== '' ? wp_kses_post(wpautop($pbio)) : ''; ?></div>
+						<?php else : ?>
+							<?php if ($prole !== '') : ?>
+								<p class="lf-block-team__role"><?php echo esc_html($prole); ?></p>
+							<?php endif; ?>
+							<?php if ($pbio !== '') : ?>
+								<div class="lf-block-team__bio lf-prose"><?php echo wp_kses_post(wpautop($pbio)); ?></div>
+							<?php endif; ?>
+						<?php endif; ?>
 					</div>
 				</article>
 			<?php endforeach; ?>

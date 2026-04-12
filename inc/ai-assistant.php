@@ -1242,7 +1242,7 @@ function lf_ai_assistant_widget_js(): string {
 		var faqPickerWrap = null;
 		var faqPickerList = null;
 		var faqLibraryCache = null;
-		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption,main .lf-block-hero__card-item-text,main .lf-service-details__text,main .lf-service-details__micro-text,#primary h1,#primary h2,#primary h3,#primary h4,#primary h5,#primary h6,#primary p,#primary li,#primary blockquote,#primary figcaption,#primary .lf-block-hero__card-item-text,#primary .lf-service-details__text,#primary .lf-service-details__micro-text,.site-main h1,.site-main h2,.site-main h3,.site-main h4,.site-main h5,.site-main h6,.site-main p,.site-main li,.site-main blockquote,.site-main figcaption,.site-main .lf-block-hero__card-item-text,.site-main .lf-service-details__text,.site-main .lf-service-details__micro-text,.site-content h1,.site-content h2,.site-content h3,.site-content h4,.site-content h5,.site-content h6,.site-content p,.site-content li,.site-content blockquote,.site-content figcaption,.site-content .lf-block-hero__card-item-text,.site-content .lf-service-details__text,.site-content .lf-service-details__micro-text,article h1,article h2,article h3,article h4,article h5,article h6,article p,article li,article blockquote,article figcaption,article .lf-block-hero__card-item-text,article .lf-service-details__text,article .lf-service-details__micro-text";
+		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption,main .lf-block-hero__card-item-text,main .lf-service-details__text,main .lf-service-details__micro-text,main .lf-block-team__bio,#primary h1,#primary h2,#primary h3,#primary h4,#primary h5,#primary h6,#primary p,#primary li,#primary blockquote,#primary figcaption,#primary .lf-block-hero__card-item-text,#primary .lf-service-details__text,#primary .lf-service-details__micro-text,#primary .lf-block-team__bio,.site-main h1,.site-main h2,.site-main h3,.site-main h4,.site-main h5,.site-main h6,.site-main p,.site-main li,.site-main blockquote,.site-main figcaption,.site-main .lf-block-hero__card-item-text,.site-main .lf-service-details__text,.site-main .lf-service-details__micro-text,.site-main .lf-block-team__bio,.site-content h1,.site-content h2,.site-content h3,.site-content h4,.site-content h5,.site-content h6,.site-content p,.site-content li,.site-content blockquote,.site-content figcaption,.site-content .lf-block-hero__card-item-text,.site-content .lf-service-details__text,.site-content .lf-service-details__micro-text,.site-content .lf-block-team__bio,article h1,article h2,article h3,article h4,article h5,article h6,article p,article li,article blockquote,article figcaption,article .lf-block-hero__card-item-text,article .lf-service-details__text,article .lf-service-details__micro-text,article .lf-block-team__bio";
 		var inlineImageCandidateSelector = "main img,#primary img,.site-main img,.site-content img,article img";
 		var mediaFrame = null;
 		var launcherGapPx = 8;
@@ -2691,6 +2691,7 @@ function lf_ai_assistant_widget_js(): string {
 			buildBenefitsTextEditors();
 			buildServiceIntroReorderControls();
 			buildServiceIntroCardEditors();
+			buildTeamMemberCardEditors();
 			buildBenefitsGridChrome();
 			buildBenefitsIconEditors();
 			refreshSectionRail();
@@ -2749,6 +2750,9 @@ function lf_ai_assistant_widget_js(): string {
 			if (node.closest(".lf-block-map-nap__areas-list,.lf-block-map-nap__areas-item,.lf-block-map-nap__areas-link")) return false;
 			// Reviews content is source-of-truth data; do not edit testimonial copy inline.
 			if (node.closest(".lf-block-trust-reviews__item,.lf-block-trust-reviews__summary")) return false;
+			if (node.matches && (node.matches(".lf-block-team__role") || node.matches(".lf-block-team__bio")) && node.closest(".lf-block-team__card[data-lf-team-member-post-id]")) {
+				return true;
+			}
 			var tag = node.tagName ? node.tagName.toLowerCase() : "";
 			var isHeading = /^h[1-6]$/.test(tag);
 			// CPT / archive card titles (fixed); not section headings like lf-block-service-intro__title.
@@ -2843,6 +2847,7 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function inlineImageEligible(img) {
 			if (!img || !img.getAttribute) return false;
+			if (img.closest(".lf-block-team__card[data-lf-team-member-post-id]")) return false;
 			if (img.closest(".lf-ai-float,.lf-ai-seo-float")) return false;
 			if (img.closest("nav, footer, .site-header, .site-footer, #masthead, #colophon")) return false;
 			var src = String(img.getAttribute("src") || "").trim();
@@ -2978,6 +2983,7 @@ function lf_ai_assistant_widget_js(): string {
 				buildSectionInsertZones();
 				buildServiceDetailsMicroControls();
 				buildServiceIntroCardEditors();
+				buildTeamMemberCardEditors();
 				buildBenefitsGridChrome();
 				// Self-heal list/pill controls in case a row lost its remove button.
 				buildHeroPillsControls();
@@ -5494,6 +5500,144 @@ function lf_ai_assistant_widget_js(): string {
 				wireOneServiceIntroMedia(media, sid, card, wrap);
 			});
 		}
+		function wireOneTeamMemberMedia(media, mid, card) {
+			if (!media || !mid || !card) return;
+			Array.prototype.slice.call(media.querySelectorAll("[data-lf-team-member-img-remove=\"1\"]")).forEach(function(n){
+				if (n && n.parentNode) n.parentNode.removeChild(n);
+			});
+			Array.prototype.slice.call(media.querySelectorAll("[data-lf-team-member-media-add=\"1\"]")).forEach(function(n){
+				if (n && n.parentNode) n.parentNode.removeChild(n);
+			});
+			var photoWrap = media.querySelector(".lf-block-team__photo");
+			var img = photoWrap ? photoWrap.querySelector("img.lf-block-team__photo-img") : null;
+			if (img) {
+				var rm = document.createElement("button");
+				rm.type = "button";
+				rm.className = "lf-team-member-thumb-remove lf-ai-inline-editor-ignore";
+				rm.setAttribute("data-lf-team-member-img-remove", "1");
+				rm.textContent = "×";
+				rm.setAttribute("title", "Remove photo");
+				rm.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					$.post(lfAiFloating.ajax_url, {
+						action: "lf_ai_set_team_member_thumbnail",
+						nonce: lfAiFloating.nonce,
+						team_member_post_id: mid,
+						attachment_id: 0
+					}).done(function(res){
+						if (res && res.success) {
+							var initials = String(card.getAttribute("data-lf-team-member-initials") || "").trim() || "?";
+							media.innerHTML = "<div class=\"lf-block-team__placeholder\" aria-hidden=\"true\"><span class=\"lf-block-team__placeholder-text\">" + escapeHtml(initials) + "</span></div>";
+							wireOneTeamMemberMedia(media, mid, card);
+							setStatus((res.data && res.data.message) ? res.data.message : "Photo removed.", false);
+						} else {
+							setStatus((res && res.data && res.data.message) ? res.data.message : "Could not remove photo.", true);
+						}
+					}).fail(function(xhr){
+						var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Could not remove photo.";
+						setStatus(msg, true);
+					});
+				});
+				(photoWrap || media).appendChild(rm);
+				return;
+			}
+			var ph = document.createElement("button");
+			ph.type = "button";
+			ph.className = "lf-block-team__media-add lf-ai-inline-editor-ignore";
+			ph.setAttribute("data-lf-team-member-media-add", "1");
+			ph.textContent = "+ Add photo";
+			ph.setAttribute("title", "Set featured image on this team member");
+			ph.addEventListener("click", function(e){
+				e.preventDefault();
+				e.stopPropagation();
+				if (!(window.wp && wp.media)) {
+					setStatus("Image library is not available on this screen.", true);
+					return;
+				}
+				var frame = wp.media({ library: { type: "image" }, multiple: false });
+				frame.on("select", function(){
+					var att = frame.state().get("selection").first();
+					var aid = att ? parseInt(String(att.id || "0"), 10) : 0;
+					if (!aid) return;
+					$.post(lfAiFloating.ajax_url, {
+						action: "lf_ai_set_team_member_thumbnail",
+						nonce: lfAiFloating.nonce,
+						team_member_post_id: mid,
+						attachment_id: aid
+					}).done(function(res){
+						if (res && res.success && res.data && res.data.thumbnail_url) {
+							media.innerHTML = "";
+							var pw = document.createElement("div");
+							pw.className = "lf-block-team__photo";
+							var nimg = document.createElement("img");
+							nimg.className = "lf-block-team__photo-img";
+							nimg.src = String(res.data.thumbnail_url);
+							nimg.alt = "";
+							nimg.setAttribute("loading", "lazy");
+							nimg.setAttribute("decoding", "async");
+							pw.appendChild(nimg);
+							media.appendChild(pw);
+							wireOneTeamMemberMedia(media, mid, card);
+							setStatus((res.data && res.data.message) ? res.data.message : "Photo saved.", false);
+						} else {
+							setStatus((res && res.data && res.data.message) ? res.data.message : "Photo save failed.", true);
+						}
+					}).fail(function(xhr){
+						var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Photo save failed.";
+						setStatus(msg, true);
+					});
+				});
+				frame.open();
+			});
+			media.appendChild(ph);
+		}
+		function buildTeamMemberCardEditors() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				if (String(wrap.getAttribute("data-lf-section-type") || "") !== "team") return;
+				Array.prototype.slice.call(wrap.querySelectorAll(".lf-block-team__card[data-lf-team-member-post-id]")).forEach(function(card){
+					var mid = String(card.getAttribute("data-lf-team-member-post-id") || "").trim();
+					if (!mid) return;
+					var sid = String(wrap.getAttribute("data-lf-section-id") || "");
+					var nameEl = card.querySelector(".lf-block-team__name");
+					if (nameEl) {
+						nameEl.setAttribute("data-lf-inline-editable", "1");
+						nameEl.setAttribute("data-lf-inline-field-key", "lf_team_member_post_title");
+						nameEl.setAttribute("data-lf-team-member-post-id", mid);
+						try {
+							nameEl.setAttribute("data-lf-inline-selector", buildInlineSelector(nameEl));
+						} catch (eName) {}
+						if (sid) nameEl.setAttribute("data-lf-inline-section-id", sid);
+						nameEl.setAttribute("title", "Click to edit name");
+					}
+					var roleEl = card.querySelector(".lf-block-team__role");
+					if (roleEl) {
+						roleEl.setAttribute("data-lf-inline-editable", "1");
+						roleEl.setAttribute("data-lf-inline-field-key", "lf_team_role");
+						roleEl.setAttribute("data-lf-team-member-post-id", mid);
+						try {
+							roleEl.setAttribute("data-lf-inline-selector", buildInlineSelector(roleEl));
+						} catch (eRole) {}
+						if (sid) roleEl.setAttribute("data-lf-inline-section-id", sid);
+						roleEl.setAttribute("title", "Click to edit role");
+					}
+					var bioEl = card.querySelector(".lf-block-team__bio");
+					if (bioEl) {
+						bioEl.setAttribute("data-lf-inline-editable", "1");
+						bioEl.setAttribute("data-lf-inline-field-key", "lf_team_bio");
+						bioEl.setAttribute("data-lf-team-member-post-id", mid);
+						try {
+							bioEl.setAttribute("data-lf-inline-selector", buildInlineSelector(bioEl));
+						} catch (eBio) {}
+						if (sid) bioEl.setAttribute("data-lf-inline-section-id", sid);
+						bioEl.setAttribute("title", "Click to edit bio");
+					}
+					var media = card.querySelector(".lf-block-team__media");
+					if (media) wireOneTeamMemberMedia(media, mid, card);
+				});
+			});
+		}
 		function buildServiceIntroCardEditors() {
 			collectSectionWrappers().forEach(function(wrap){
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
@@ -6174,7 +6318,7 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function stripClonedSectionEditorArtifacts(root) {
 			if (!root || !root.querySelectorAll) return;
-			Array.prototype.slice.call(root.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,.lf-ai-benefits-grid-actions,[data-lf-ai-benefits-grid-actions=\"1\"],[data-lf-ai-service-intro-actions=\"1\"],[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-micro-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-micro-remove=\"1\"],[data-lf-ai-benefit-remove=\"1\"],[data-lf-ai-service-intro-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
+			Array.prototype.slice.call(root.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,.lf-ai-benefits-grid-actions,[data-lf-ai-benefits-grid-actions=\"1\"],[data-lf-ai-service-intro-actions=\"1\"],[data-lf-team-member-img-remove=\"1\"],[data-lf-team-member-media-add=\"1\"],[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-micro-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-micro-remove=\"1\"],[data-lf-ai-benefit-remove=\"1\"],[data-lf-ai-service-intro-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
 				if (node && node.parentNode) node.parentNode.removeChild(node);
 			});
 			Array.prototype.slice.call(root.querySelectorAll("[data-lf-benefits-editor-bound]")).forEach(function(node){
@@ -6247,6 +6391,7 @@ function lf_ai_assistant_widget_js(): string {
 					buildBenefitsTextEditors();
 					buildServiceIntroReorderControls();
 					buildServiceIntroCardEditors();
+					buildTeamMemberCardEditors();
 					buildBenefitsGridChrome();
 					buildBenefitsIconEditors();
 					setSelectedSection(clone);
@@ -6265,7 +6410,7 @@ function lf_ai_assistant_widget_js(): string {
 		function sectionSupportsHeaderAlign(wrap) {
 			if (!wrap) return false;
 			if (String(wrap.getAttribute("data-lf-section-type") || "") === "hero") return false;
-			return !!(wrap.querySelector(".lf-section__header, .lf-block-faq-accordion__header, .lf-block-trust-reviews__header, .lf-block-map-nap__header, .lf-block-service-intro__header, .lf-block-service-grid__header, .lf-block-service-areas__header, .lf-block-cta__content"));
+			return !!(wrap.querySelector(".lf-section__header, .lf-block-faq-accordion__header, .lf-block-trust-reviews__header, .lf-block-map-nap__header, .lf-block-service-intro__header, .lf-block-service-grid__header, .lf-block-service-areas__header, .lf-block-team__header, .lf-block-cta__content"));
 		}
 		function sectionSupportsSectionHeadingTag(wrap) {
 			return sectionSupportsHeaderAlign(wrap);
@@ -7784,7 +7929,8 @@ function lf_ai_assistant_widget_js(): string {
 				if (typeof done === "function") done();
 				return;
 			}
-			if (newText === "") {
+			var allowEmptyTeamField = fieldKey === "lf_team_role" || fieldKey === "lf_team_bio";
+			if (newText === "" && !allowEmptyTeamField) {
 				setStatus("Text cannot be empty.", true);
 				if (typeof done === "function") done();
 				return;
@@ -7828,6 +7974,10 @@ function lf_ai_assistant_widget_js(): string {
 			var svcPostId = String(el.getAttribute("data-lf-service-post-id") || "");
 			if (fieldKey === "lf_service_short_desc" && svcPostId) {
 				payload.service_post_id = svcPostId;
+			}
+			var teamMemberPostId = String(el.getAttribute("data-lf-team-member-post-id") || "");
+			if ((fieldKey === "lf_team_member_post_title" || fieldKey === "lf_team_role" || fieldKey === "lf_team_bio") && teamMemberPostId) {
+				payload.team_member_post_id = teamMemberPostId;
 			}
 			$.post(lfAiFloating.ajax_url, payload).done(function(res){
 				if (res && res.success) {
@@ -7884,7 +8034,8 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			var valueText = String(valueNode.textContent || "").trim();
 			var valueHtml = String(valueNode.innerHTML || "").trim();
-			if (valueText === "") {
+			var allowEmptyTeamFieldPersist = fieldKey === "lf_team_role" || fieldKey === "lf_team_bio";
+			if (valueText === "" && !allowEmptyTeamFieldPersist) {
 				setStatus("Text cannot be empty.", true);
 				if (typeof done === "function") done(false);
 				return;
@@ -7907,6 +8058,10 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			if (sectionId) {
 				payload.section_id = sectionId;
+			}
+			var teamMemberPostIdPersist = String(el.getAttribute("data-lf-team-member-post-id") || "");
+			if ((fieldKey === "lf_team_member_post_title" || fieldKey === "lf_team_role" || fieldKey === "lf_team_bio") && teamMemberPostIdPersist) {
+				payload.team_member_post_id = teamMemberPostIdPersist;
 			}
 			setStatus("Saving inline edit...", false);
 			$.post(lfAiFloating.ajax_url, payload).done(function(res){
