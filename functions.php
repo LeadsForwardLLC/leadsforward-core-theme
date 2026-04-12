@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('LF_THEME_VERSION', '0.1.2');
+define('LF_THEME_VERSION', '0.1.3');
 define('LF_THEME_DIR', get_template_directory());
 define('LF_THEME_URI', get_template_directory_uri());
 /** Admin page slug for LeadsForward → Manifest Website (orchestrator UI). */
@@ -74,6 +74,7 @@ lf_load_inc('cpt/service-areas.php');
 lf_load_inc('cpt/projects.php');
 lf_load_inc('cpt/testimonials.php');
 lf_load_inc('cpt/faqs.php');
+lf_load_inc('cpt/team-members.php');
 lf_load_inc('cpt/process-steps.php');
 
 // ACF options + field groups (load only when ACF present; guardrails handle fallback).
@@ -88,6 +89,7 @@ lf_load_inc('acf/field-group-service-area.php');
 lf_load_inc('acf/field-group-project.php');
 lf_load_inc('acf/field-group-testimonial.php');
 lf_load_inc('acf/field-group-faq.php');
+lf_load_inc('acf/field-group-team-member.php');
 lf_load_inc('acf/field-group-process-step.php');
 
 // Project gallery helpers.

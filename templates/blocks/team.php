@@ -21,27 +21,36 @@ $style_attr = $surface['style'] !== '' ? ' style="' . esc_attr($surface['style']
 $heading = (string) ($section['section_heading'] ?? '');
 $intro = (string) ($section['section_intro'] ?? '');
 $section_heading_tag = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($section) : 'h2';
-$people_raw = (string) ($section['team_members'] ?? '');
-$rows = preg_split('/\r?\n+/', trim($people_raw));
-$rows = array_values(array_filter(array_map('trim', is_array($rows) ? $rows : [])));
+$source = (string) ($section['team_members_source'] ?? 'cpt');
+if (!in_array($source, ['cpt', 'manual'], true)) {
+	$source = 'cpt';
+}
 $people = [];
-foreach ($rows as $row) {
-	// Format: Name || Role || Bio || Image attachment ID (optional).
-	$parts = array_map('trim', explode('||', $row));
-	$name = $parts[0] ?? '';
-	$role = $parts[1] ?? '';
-	$bio = $parts[2] ?? '';
-	$img_raw = $parts[3] ?? '';
-	$image_id = ( $img_raw !== '' && ctype_digit(preg_replace('/\s+/', '', $img_raw)) )
-		? absint(preg_replace('/\s+/', '', $img_raw))
-		: 0;
-	if ($name !== '') {
-		$people[] = [
-			'name' => $name,
-			'role' => $role,
-			'bio' => $bio,
-			'image_id' => $image_id,
-		];
+if ($source === 'cpt' && function_exists('lf_team_members_query_for_section')) {
+	$people = lf_team_members_query_for_section($section);
+}
+if (empty($people)) {
+	$people_raw = (string) ($section['team_members'] ?? '');
+	$rows = preg_split('/\r?\n+/', trim($people_raw));
+	$rows = array_values(array_filter(array_map('trim', is_array($rows) ? $rows : [])));
+	foreach ($rows as $row) {
+		// Format: Name || Role || Bio || Image attachment ID (optional).
+		$parts = array_map('trim', explode('||', $row));
+		$name = $parts[0] ?? '';
+		$role = $parts[1] ?? '';
+		$bio = $parts[2] ?? '';
+		$img_raw = $parts[3] ?? '';
+		$image_id = ( $img_raw !== '' && ctype_digit(preg_replace('/\s+/', '', $img_raw)) )
+			? absint(preg_replace('/\s+/', '', $img_raw))
+			: 0;
+		if ($name !== '') {
+			$people[] = [
+				'name' => $name,
+				'role' => $role,
+				'bio' => $bio,
+				'image_id' => $image_id,
+			];
+		}
 	}
 }
 $columns = isset($section['team_columns']) ? (int) $section['team_columns'] : 3;
@@ -61,6 +70,9 @@ $shape_class = 'lf-block-team--avatar-' . $avatar_shape;
 			</header>
 		<?php endif; ?>
 		<div class="lf-block-team__grid" style="<?php echo esc_attr('--lf-team-cols:' . $columns . ';'); ?>">
+			<?php if (empty($people)) : ?>
+				<p class="lf-block-team__empty"><?php esc_html_e('No team members yet. Add people under Team in the WordPress admin, or switch this section to “Manual list” and paste rows here.', 'leadsforward-core'); ?></p>
+			<?php endif; ?>
 			<?php foreach ($people as $p) : ?>
 				<?php
 				$pid = (int) ( $p['image_id'] ?? 0 );

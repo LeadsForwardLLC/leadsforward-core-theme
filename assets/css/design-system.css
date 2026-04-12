@@ -2102,8 +2102,6 @@ button:focus-visible,
 /* Team: responsive grid, optional photos, placeholder initials */
 .lf-block-team {
 	--lf-team-photo: 140px;
-	padding-top: clamp(2.5rem, 5vw, 4rem);
-	padding-bottom: clamp(2.5rem, 5vw, 4rem);
 }
 
 .lf-block-team__inner {
@@ -2111,8 +2109,8 @@ button:focus-visible,
 	max-width: var(--lf-container-wide, 72rem);
 	margin-left: auto;
 	margin-right: auto;
-	padding-left: var(--lf-section-padding-x);
-	padding-right: var(--lf-section-padding-x);
+	box-sizing: border-box;
+	padding: var(--lf-section-padding-lg) var(--lf-section-padding-x);
 }
 
 .lf-block-team__header {
@@ -2139,6 +2137,17 @@ button:focus-visible,
 .lf-block-team__header.lf-section__header--align-right .lf-block-team__intro {
 	margin-left: 0;
 	margin-right: 0;
+}
+
+.lf-block-team__empty {
+	grid-column: 1 / -1;
+	margin: 0 auto;
+	text-align: center;
+	color: var(--lf-text-muted);
+	font-size: 1rem;
+	line-height: 1.55;
+	max-width: 36rem;
+	padding: 1rem 0 0.5rem;
 }
 
 .lf-block-team__grid {
