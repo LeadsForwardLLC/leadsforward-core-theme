@@ -5529,8 +5529,11 @@ function lf_ai_assistant_widget_js(): string {
 			});
 		}
 		function ctaSlotForButton(node) {
-			if (!node || !node.classList) return "primary";
-			if (node.classList.contains("lf-btn--secondary") || /secondary/i.test(String(node.className || ""))) {
+			if (!node || !node.getAttribute) return "primary";
+			var ds = String(node.getAttribute("data-lf-cta-slot") || "");
+			if (ds === "secondary") return "secondary";
+			if (ds === "primary") return "primary";
+			if (node.classList && (node.classList.contains("lf-btn--secondary") || /secondary/i.test(String(node.className || "")))) {
 				return "secondary";
 			}
 			return "primary";
@@ -5551,12 +5554,12 @@ function lf_ai_assistant_widget_js(): string {
 			if (!href || /^tel:/i.test(href)) return "";
 			return href;
 		}
-		function persistSectionButtonCta(wrap, slot, text, action, url) {
+		function persistSectionButtonCta(wrap, slot, text, action, url, buttonStyle, buttonTone) {
 			if (!wrap) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			if (!sectionId) return;
 			setStatus("Saving button...", false);
-			$.post(lfAiFloating.ajax_url, {
+			var payload = {
 				action: "lf_ai_update_section_cta",
 				nonce: lfAiFloating.nonce,
 				context_type: activeContextType,
@@ -5566,7 +5569,10 @@ function lf_ai_assistant_widget_js(): string {
 				text: String(text || ""),
 				cta_action: String(action || "quote"),
 				url: String(url || "")
-			}).done(function(res){
+			};
+			if (buttonStyle) payload.button_style = String(buttonStyle);
+			if (buttonTone) payload.button_tone = String(buttonTone);
+			$.post(lfAiFloating.ajax_url, payload).done(function(res){
 				if (res && res.success) {
 					setStatus((res.data && res.data.message) ? res.data.message : "Button saved.", false);
 					if (res.data && res.data.reload) {
@@ -6006,6 +6012,26 @@ function lf_ai_assistant_widget_js(): string {
 				});
 				ctaRow.appendChild(cb);
 			});
+			var mediaCtaHead = document.createElement("div");
+			mediaCtaHead.className = "lf-ai-section-align-picker__subhead";
+			mediaCtaHead.setAttribute("data-lf-media-cta-align-head", "1");
+			mediaCtaHead.textContent = "Content button row";
+			var mediaCtaRow = document.createElement("div");
+			mediaCtaRow.className = "lf-ai-section-align-picker__row";
+			mediaCtaRow.setAttribute("data-lf-media-cta-align-row", "1");
+			["left", "center", "right"].forEach(function(al){
+				var mb = document.createElement("button");
+				mb.type = "button";
+				mb.className = "lf-ai-section-align-picker__btn";
+				mb.textContent = al.charAt(0).toUpperCase() + al.slice(1);
+				mb.addEventListener("click", function(e){
+					e.preventDefault();
+					var w = sectionAlignPickerWrap;
+					closeSectionAlignPicker();
+					if (w) persistSectionStyle(w, "set_section_actions_align", { section_actions_align: al });
+				});
+				mediaCtaRow.appendChild(mb);
+			});
 			var closeBtn = document.createElement("button");
 			closeBtn.type = "button";
 			closeBtn.className = "lf-ai-section-align-picker__close";
@@ -6019,6 +6045,8 @@ function lf_ai_assistant_widget_js(): string {
 			card.appendChild(row);
 			card.appendChild(ctaHead);
 			card.appendChild(ctaRow);
+			card.appendChild(mediaCtaHead);
+			card.appendChild(mediaCtaRow);
 			card.appendChild(closeBtn);
 			root.appendChild(card);
 			root.addEventListener("click", function(e){
@@ -6033,10 +6061,15 @@ function lf_ai_assistant_widget_js(): string {
 			sectionAlignPickerWrap = wrap;
 			sectionAlignPickerEl.hidden = false;
 			var isBen = wrap && String(wrap.getAttribute("data-lf-section-type") || "") === "benefits";
+			var hasMediaAct = wrap && wrap.querySelector(".lf-media-section__actions");
 			var ctaHead = sectionAlignPickerEl.querySelector("[data-lf-benefits-cta-align-head]");
 			var ctaRow = sectionAlignPickerEl.querySelector("[data-lf-benefits-cta-align-row]");
+			var mHead = sectionAlignPickerEl.querySelector("[data-lf-media-cta-align-head]");
+			var mRow = sectionAlignPickerEl.querySelector("[data-lf-media-cta-align-row]");
 			if (ctaHead) ctaHead.hidden = !isBen;
 			if (ctaRow) ctaRow.hidden = !isBen;
+			if (mHead) mHead.hidden = !hasMediaAct || isBen;
+			if (mRow) mRow.hidden = !hasMediaAct || isBen;
 		}
 		function closeBenefitsCtaPicker() {
 			if (benefitsCtaPickerEl) benefitsCtaPickerEl.hidden = true;
@@ -6069,7 +6102,7 @@ function lf_ai_assistant_widget_js(): string {
 			textLab.setAttribute("data-lf-section-cta-text-label", "1");
 			var textLabSpan = document.createElement("span");
 			textLabSpan.setAttribute("data-lf-section-cta-text-label-copy", "1");
-			textLabSpan.textContent = "Button text (leave empty to remove)";
+			textLabSpan.textContent = "Button text (use Remove to delete)";
 			textLab.appendChild(textLabSpan);
 			var textInp = document.createElement("input");
 			textInp.type = "text";
@@ -6107,6 +6140,38 @@ function lf_ai_assistant_widget_js(): string {
 			callHint.style.color = "#64748b";
 			callHint.textContent = "Uses the phone number from Business Info (global settings).";
 			callHint.hidden = true;
+			var lookWrap = document.createElement("div");
+			lookWrap.setAttribute("data-lf-section-cta-look-wrap", "1");
+			var lookLab = document.createElement("div");
+			lookLab.className = "lf-ai-benefits-cta-picker__label";
+			lookLab.textContent = "Button look";
+			var lookRow = document.createElement("div");
+			lookRow.className = "lf-ai-benefits-cta-picker__row";
+			lookRow.style.display = "flex";
+			lookRow.style.flexWrap = "wrap";
+			lookRow.style.gap = "8px";
+			var styleSel = document.createElement("select");
+			styleSel.className = "lf-ai-benefits-cta-picker__input";
+			styleSel.setAttribute("data-lf-cta-style-select", "1");
+			[["solid", "Solid"], ["outline", "Outline"]].forEach(function(opt){
+				var o = document.createElement("option");
+				o.value = opt[0];
+				o.textContent = opt[1];
+				styleSel.appendChild(o);
+			});
+			var toneSel = document.createElement("select");
+			toneSel.className = "lf-ai-benefits-cta-picker__input";
+			toneSel.setAttribute("data-lf-cta-tone-select", "1");
+			[["primary", "Primary"], ["secondary", "Secondary"], ["white", "White"], ["black", "Black"]].forEach(function(opt){
+				var o = document.createElement("option");
+				o.value = opt[0];
+				o.textContent = opt[1];
+				toneSel.appendChild(o);
+			});
+			lookRow.appendChild(styleSel);
+			lookRow.appendChild(toneSel);
+			lookWrap.appendChild(lookLab);
+			lookWrap.appendChild(lookRow);
 			var alignLab = document.createElement("div");
 			alignLab.className = "lf-ai-benefits-cta-picker__label";
 			alignLab.textContent = "Alignment";
@@ -6144,7 +6209,7 @@ function lf_ai_assistant_widget_js(): string {
 				if (!benefitsCtaPickerIsBenefits) return;
 				var w = benefitsCtaPickerWrap;
 				closeBenefitsCtaPicker();
-				if (w) persistBenefitsSectionCta(w, "", "quote", "", "center");
+				if (w) persistBenefitsSectionCta(w, "", "quote", "", alignState.value, "solid", "primary", true);
 			});
 			var saveBtn = document.createElement("button");
 			saveBtn.type = "button";
@@ -6153,12 +6218,20 @@ function lf_ai_assistant_widget_js(): string {
 			saveBtn.addEventListener("click", function(e){
 				e.preventDefault();
 				var w = benefitsCtaPickerWrap;
+				var st = String(styleSel.value || "solid");
+				var tn = String(toneSel.value || "primary");
 				var t = String(textInp.value || "").trim();
 				var act = String(actSel.value || "quote");
 				var u = String(urlInp.value || "").trim();
 				if (benefitsCtaPickerIsBenefits) {
+					var storedTxt = "";
+					if (w) {
+						var actEl = w.querySelector(".lf-benefits__actions");
+						if (actEl) storedTxt = String(actEl.getAttribute("data-lf-benefits-cta-stored-text") || "").trim();
+					}
+					if (t === "" && storedTxt !== "") t = storedTxt;
 					closeBenefitsCtaPicker();
-					if (w) persistBenefitsSectionCta(w, t, act, u, alignState.value);
+					if (w) persistBenefitsSectionCta(w, t, act, u, alignState.value, st, tn, false);
 					return;
 				}
 				if (t === "") {
@@ -6171,7 +6244,7 @@ function lf_ai_assistant_widget_js(): string {
 				}
 				closeBenefitsCtaPicker();
 				var slot = ctaSlotForButton(benefitsCtaPickerButtonNode);
-				if (w) persistSectionButtonCta(w, slot, t, act, act === "link" ? u : "");
+				if (w) persistSectionButtonCta(w, slot, t, act, act === "link" ? u : "", st, tn);
 			});
 			var cancelBtn = document.createElement("button");
 			cancelBtn.type = "button";
@@ -6197,6 +6270,7 @@ function lf_ai_assistant_widget_js(): string {
 			card.appendChild(actLab);
 			card.appendChild(urlLab);
 			card.appendChild(callHint);
+			card.appendChild(lookWrap);
 			card.appendChild(alignWrap);
 			card.appendChild(btnRow);
 			root.appendChild(card);
@@ -6205,6 +6279,8 @@ function lf_ai_assistant_widget_js(): string {
 			});
 			root.__lfAlignState = alignState;
 			root.__lfAlignRow = alignRow;
+			root.__lfCtaStyleSel = styleSel;
+			root.__lfCtaToneSel = toneSel;
 			root.__lfSyncCtaPickerActionUi = syncCtaPickerActionUi;
 			document.body.appendChild(root);
 			benefitsCtaPickerEl = root;
@@ -6222,7 +6298,7 @@ function lf_ai_assistant_widget_js(): string {
 			var textLabCopy = benefitsCtaPickerEl.querySelector("[data-lf-section-cta-text-label-copy]");
 			if (isBenefits) {
 				if (titleEl) titleEl.textContent = "Benefits button";
-				if (textLabCopy) textLabCopy.textContent = "Button text (leave empty to remove)";
+				if (textLabCopy) textLabCopy.textContent = "Button text (use Remove to delete)";
 				if (alignWrap) alignWrap.hidden = false;
 				if (removeBtn) removeBtn.hidden = false;
 			} else {
@@ -6233,12 +6309,21 @@ function lf_ai_assistant_widget_js(): string {
 				if (alignWrap) alignWrap.hidden = true;
 				if (removeBtn) removeBtn.hidden = true;
 			}
+			var lookWrap = benefitsCtaPickerEl.querySelector("[data-lf-section-cta-look-wrap]");
+			var styleSelPick = benefitsCtaPickerEl.__lfCtaStyleSel;
+			var toneSelPick = benefitsCtaPickerEl.__lfCtaToneSel;
+			var showLook = isBenefits || (wrap && (wrap.querySelector(".lf-block-hero") || wrap.querySelector(".lf-media-section__actions")));
+			if (lookWrap) lookWrap.hidden = !showLook;
 			var textInp = benefitsCtaPickerEl.querySelector("[data-lf-benefits-cta-text]");
 			var actSel = benefitsCtaPickerEl.querySelector("[data-lf-benefits-cta-action]");
 			var urlInp = benefitsCtaPickerEl.querySelector("[data-lf-benefits-cta-url]");
 			var actionsEl = wrap ? wrap.querySelector(".lf-benefits__actions") : null;
 			var btn = isBenefits ? (buttonNode || (actionsEl ? actionsEl.querySelector("a.lf-btn,button.lf-btn") : null)) : buttonNode;
 			var curText = btn ? String(btn.textContent || "").trim() : "";
+			if (isBenefits && actionsEl && curText === "") {
+				var st0 = String(actionsEl.getAttribute("data-lf-benefits-cta-stored-text") || "").trim();
+				if (st0) curText = st0;
+			}
 			var curAct = "quote";
 			var curUrl = "";
 			if (btn) {
@@ -6257,6 +6342,15 @@ function lf_ai_assistant_widget_js(): string {
 				else actSel.value = "quote";
 			}
 			if (urlInp) urlInp.value = curUrl;
+			if (styleSelPick && btn) {
+				var ds = String(btn.getAttribute("data-lf-btn-style") || "");
+				styleSelPick.value = ds === "outline" ? "outline" : "solid";
+			}
+			if (toneSelPick && btn) {
+				var dt = String(btn.getAttribute("data-lf-btn-tone") || "");
+				if (["primary", "secondary", "white", "black"].indexOf(dt) >= 0) toneSelPick.value = dt;
+				else toneSelPick.value = "primary";
+			}
 			var alignRow = benefitsCtaPickerEl.__lfAlignRow;
 			var alignState = benefitsCtaPickerEl.__lfAlignState;
 			if (alignState) alignState.value = curAlign;
@@ -6272,13 +6366,13 @@ function lf_ai_assistant_widget_js(): string {
 		function openBenefitsCtaPicker(wrap, buttonNode) {
 			openSectionCtaPicker(wrap, buttonNode, true);
 		}
-		function persistBenefitsSectionCta(wrap, text, action, url, align) {
+		function persistBenefitsSectionCta(wrap, text, action, url, align, buttonStyle, buttonTone, isRemove) {
 			if (!wrap) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			if (!sectionId) return;
 			var ctx = persistContextFromWrap(wrap);
 			setStatus("Saving button...", false);
-			$.post(lfAiFloating.ajax_url, {
+			var payload = {
 				action: "lf_ai_update_section_cta",
 				nonce: lfAiFloating.nonce,
 				context_type: ctx.context_type,
@@ -6288,8 +6382,12 @@ function lf_ai_assistant_widget_js(): string {
 				text: String(text || ""),
 				cta_action: String(action || "quote"),
 				url: String(url || ""),
-				benefits_cta_align: String(align || "center")
-			}).done(function(res){
+				benefits_cta_align: String(align || "center"),
+				benefits_cta_style: String(buttonStyle || "solid"),
+				benefits_cta_tone: String(buttonTone || "primary")
+			};
+			if (isRemove) payload.benefits_cta_remove = "1";
+			$.post(lfAiFloating.ajax_url, payload).done(function(res){
 				if (res && res.success) {
 					setStatus((res.data && res.data.message) ? res.data.message : "Saved.", false);
 					if (res.data && res.data.reload) window.location.reload();
@@ -6780,6 +6878,7 @@ function lf_ai_assistant_widget_js(): string {
 				if (extra.custom_background) payload.custom_background = String(extra.custom_background);
 				if (Object.prototype.hasOwnProperty.call(extra, "header_align")) payload.header_align = String(extra.header_align || "");
 				if (Object.prototype.hasOwnProperty.call(extra, "benefits_cta_align")) payload.benefits_cta_align = String(extra.benefits_cta_align || "");
+				if (Object.prototype.hasOwnProperty.call(extra, "section_actions_align")) payload.section_actions_align = String(extra.section_actions_align || "");
 				if (extra.grid_columns) payload.grid_columns = String(extra.grid_columns);
 			}
 			$.post(lfAiFloating.ajax_url, payload).done(function(res){

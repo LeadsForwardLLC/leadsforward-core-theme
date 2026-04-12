@@ -155,6 +155,13 @@ function lf_sections_registry(): array {
 			'link'  => __('Link', 'leadsforward-core'),
 		]],
 		['key' => 'cta_primary_url', 'label' => __('Primary CTA URL', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
+		['key' => 'section_actions_align', 'label' => __('Bottom button alignment', 'leadsforward-core'), 'type' => 'select', 'default' => 'left', 'options' => [
+			'left' => __('Left', 'leadsforward-core'),
+			'center' => __('Center', 'leadsforward-core'),
+			'right' => __('Right', 'leadsforward-core'),
+		]],
+		['key' => 'section_cta_style', 'label' => __('Button fill', 'leadsforward-core'), 'type' => 'select', 'default' => 'solid', 'options' => lf_sections_button_style_options()],
+		['key' => 'section_cta_tone', 'label' => __('Button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'primary', 'options' => lf_sections_button_tone_options()],
 		['key' => 'image_id', 'label' => __('Image', 'leadsforward-core'), 'type' => 'image', 'default' => function_exists('lf_get_placeholder_image_id') ? lf_get_placeholder_image_id() : 0],
 		['key' => 'image_alt', 'label' => __('Image alt text (optional)', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 		['key' => 'image_position', 'label' => __('Image focal point', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
@@ -369,6 +376,10 @@ function lf_sections_registry(): array {
 				['key' => 'cta_primary_url', 'label' => __('Primary CTA URL', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
 				['key' => 'cta_secondary_action', 'label' => __('Secondary CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => '', 'options' => lf_sections_cta_action_options(true)],
 				['key' => 'cta_secondary_url', 'label' => __('Secondary CTA URL', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
+				['key' => 'hero_cta_primary_style', 'label' => __('Primary button fill', 'leadsforward-core'), 'type' => 'select', 'default' => 'solid', 'options' => lf_sections_button_style_options()],
+				['key' => 'hero_cta_primary_tone', 'label' => __('Primary button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'primary', 'options' => lf_sections_button_tone_options()],
+				['key' => 'hero_cta_secondary_style', 'label' => __('Secondary button fill', 'leadsforward-core'), 'type' => 'select', 'default' => 'outline', 'options' => lf_sections_button_style_options()],
+				['key' => 'hero_cta_secondary_tone', 'label' => __('Secondary button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'primary', 'options' => lf_sections_button_tone_options()],
 			],
 			'render' => 'lf_sections_render_hero',
 		],
@@ -427,6 +438,8 @@ function lf_sections_registry(): array {
 					'center' => __('Center', 'leadsforward-core'),
 					'right' => __('Right', 'leadsforward-core'),
 				]],
+				['key' => 'benefits_cta_style', 'label' => __('CTA button fill', 'leadsforward-core'), 'type' => 'select', 'default' => 'solid', 'options' => lf_sections_button_style_options()],
+				['key' => 'benefits_cta_tone', 'label' => __('CTA button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'primary', 'options' => lf_sections_button_tone_options()],
 				['key' => 'benefits_grid_columns', 'label' => __('Card columns (desktop)', 'leadsforward-core'), 'type' => 'select', 'default' => '3', 'options' => [
 					'2' => __('2 columns', 'leadsforward-core'),
 					'3' => __('3 columns', 'leadsforward-core'),
@@ -1579,6 +1592,120 @@ function lf_sections_block_surface_attrs(array $section): array {
 	];
 }
 
+/**
+ * @return array<string, string>
+ */
+function lf_sections_button_style_options(): array {
+	return [
+		'solid'   => __('Solid', 'leadsforward-core'),
+		'outline' => __('Outline', 'leadsforward-core'),
+	];
+}
+
+/**
+ * @return array<string, string>
+ */
+function lf_sections_button_tone_options(): array {
+	return [
+		'primary'   => __('Primary', 'leadsforward-core'),
+		'secondary' => __('Secondary', 'leadsforward-core'),
+		'white'     => __('White', 'leadsforward-core'),
+		'black'     => __('Black', 'leadsforward-core'),
+	];
+}
+
+function lf_sections_sanitize_button_style(string $v): string {
+	return in_array($v, ['solid', 'outline'], true) ? $v : 'solid';
+}
+
+function lf_sections_sanitize_button_tone(string $v): string {
+	return in_array($v, ['primary', 'secondary', 'white', 'black'], true) ? $v : 'primary';
+}
+
+/**
+ * @return array{0:string,1:string} style, tone
+ */
+function lf_sections_resolve_button_style_tone(string $style_in, string $tone_in, string $default_style, string $default_tone): array {
+	$style = $style_in === '' ? lf_sections_sanitize_button_style($default_style) : lf_sections_sanitize_button_style($style_in);
+	$tone = $tone_in === '' ? lf_sections_sanitize_button_tone($default_tone) : lf_sections_sanitize_button_tone($tone_in);
+	return [ $style, $tone ];
+}
+
+function lf_sections_button_visual_classes(string $style, string $tone): string {
+	$style = lf_sections_sanitize_button_style($style);
+	$tone = lf_sections_sanitize_button_tone($tone);
+	return 'lf-btn--' . $style . ' lf-btn--tone-' . $tone;
+}
+
+/**
+ * @param array<string, mixed> $section Hero section settings (block context).
+ */
+function lf_sections_hero_cta_button_classes(array $section, string $slot, string $extra_class = ''): string {
+	$slot = $slot === 'secondary' ? 'secondary' : 'primary';
+	$s_key = $slot === 'secondary' ? 'hero_cta_secondary_style' : 'hero_cta_primary_style';
+	$t_key = $slot === 'secondary' ? 'hero_cta_secondary_tone' : 'hero_cta_primary_tone';
+	$style_in = array_key_exists($s_key, $section) ? (string) $section[ $s_key ] : '';
+	$tone_in = array_key_exists($t_key, $section) ? (string) $section[ $t_key ] : '';
+	$default_style = $slot === 'secondary' ? 'outline' : 'solid';
+	list($style, $tone) = lf_sections_resolve_button_style_tone($style_in, $tone_in, $default_style, 'primary');
+	$out = 'lf-btn ' . lf_sections_button_visual_classes($style, $tone);
+	$extra_class = trim(preg_replace('/[^a-z0-9 _-]/i', '', $extra_class));
+	if ($extra_class !== '') {
+		$out .= ' ' . $extra_class;
+	}
+	return trim($out);
+}
+
+/**
+ * data-lf-* attributes for inline CTA editor (hero).
+ *
+ * @param array<string, mixed> $section Hero section settings.
+ */
+function lf_sections_hero_cta_data_attrs(array $section, string $slot): string {
+	$slot = $slot === 'secondary' ? 'secondary' : 'primary';
+	$s_key = $slot === 'secondary' ? 'hero_cta_secondary_style' : 'hero_cta_primary_style';
+	$t_key = $slot === 'secondary' ? 'hero_cta_secondary_tone' : 'hero_cta_primary_tone';
+	$style_in = array_key_exists($s_key, $section) ? (string) $section[ $s_key ] : '';
+	$tone_in = array_key_exists($t_key, $section) ? (string) $section[ $t_key ] : '';
+	$default_style = $slot === 'secondary' ? 'outline' : 'solid';
+	list($st, $tn) = lf_sections_resolve_button_style_tone($style_in, $tone_in, $default_style, 'primary');
+	return sprintf(
+		' data-lf-cta-slot="%s" data-lf-btn-style="%s" data-lf-btn-tone="%s"',
+		esc_attr($slot),
+		esc_attr($st),
+		esc_attr($tn)
+	);
+}
+
+/**
+ * @param array<string, mixed> $settings
+ */
+function lf_sections_benefits_cta_button_classes(array $settings): string {
+	$style_in = (string) ($settings['benefits_cta_style'] ?? '');
+	$tone_in = (string) ($settings['benefits_cta_tone'] ?? '');
+	list($style, $tone) = lf_sections_resolve_button_style_tone($style_in, $tone_in, 'solid', 'primary');
+	return 'lf-btn ' . lf_sections_button_visual_classes($style, $tone);
+}
+
+/**
+ * @param array<string, mixed> $settings
+ */
+function lf_sections_media_cta_button_classes(array $settings): string {
+	$style_in = (string) ($settings['section_cta_style'] ?? '');
+	$tone_in = (string) ($settings['section_cta_tone'] ?? '');
+	list($style, $tone) = lf_sections_resolve_button_style_tone($style_in, $tone_in, 'solid', 'primary');
+	return 'lf-btn ' . lf_sections_button_visual_classes($style, $tone);
+}
+
+function lf_sections_row_uses_media_content_layout(string $section_id): bool {
+	$reg = lf_sections_registry()[ $section_id ] ?? null;
+	if (!is_array($reg)) {
+		return false;
+	}
+	$cb = (string) ( $reg['render'] ?? '' );
+	return in_array($cb, ['lf_sections_render_content_image', 'lf_sections_render_image_content'], true);
+}
+
 function lf_sections_bg_class(?string $value): string {
 	switch ($value) {
 		case 'white':
@@ -1697,6 +1824,7 @@ function lf_sections_hero_block_section(array $settings): array {
 		'hero_eyebrow_enabled', 'hero_eyebrow_text', 'hero_media', 'hero_image_id',
 		'cta_primary_enabled', 'cta_secondary_enabled', 'cta_primary_override', 'cta_secondary_override',
 		'cta_primary_action', 'cta_primary_url', 'cta_secondary_action', 'cta_secondary_url',
+		'hero_cta_primary_style', 'hero_cta_primary_tone', 'hero_cta_secondary_style', 'hero_cta_secondary_tone',
 		'icon_enabled', 'icon_slug', 'icon_position', 'icon_size', 'icon_color',
 	];
 	$section = ['section_type' => 'hero'];
@@ -1969,13 +2097,22 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 			</ul>
 		<?php endif; ?>
 		<?php if ($cta_text !== '') : ?>
-			<div class="lf-benefits__actions lf-benefits__actions--align-<?php echo esc_attr($cta_align); ?>">
+			<?php
+			$cta_btn_class = lf_sections_benefits_cta_button_classes($settings);
+			list($b_style, $b_tone) = lf_sections_resolve_button_style_tone(
+				(string) ($settings['benefits_cta_style'] ?? ''),
+				(string) ($settings['benefits_cta_tone'] ?? ''),
+				'solid',
+				'primary'
+			);
+			?>
+			<div class="lf-benefits__actions lf-benefits__actions--align-<?php echo esc_attr($cta_align); ?>" data-lf-benefits-cta-stored-text="<?php echo esc_attr($cta_text); ?>">
 				<?php if ($cta_action === 'link' && $cta_url !== '') : ?>
-					<a class="lf-btn lf-btn--primary" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($cta_text); ?></a>
+					<a class="<?php echo esc_attr($cta_btn_class); ?>" href="<?php echo esc_url($cta_url); ?>" data-lf-cta-slot="primary" data-lf-btn-style="<?php echo esc_attr($b_style); ?>" data-lf-btn-tone="<?php echo esc_attr($b_tone); ?>"><?php echo esc_html($cta_text); ?></a>
 				<?php elseif ($cta_action === 'call' && $cta_phone !== '') : ?>
-					<a class="lf-btn lf-btn--primary" href="<?php echo esc_url('tel:' . $cta_phone); ?>"><?php echo esc_html($cta_text); ?></a>
+					<a class="<?php echo esc_attr($cta_btn_class); ?>" href="<?php echo esc_url('tel:' . $cta_phone); ?>" data-lf-cta-slot="primary" data-lf-btn-style="<?php echo esc_attr($b_style); ?>" data-lf-btn-tone="<?php echo esc_attr($b_tone); ?>"><?php echo esc_html($cta_text); ?></a>
 				<?php else : ?>
-					<button type="button" class="lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="benefits"><?php echo esc_html($cta_text); ?></button>
+					<button type="button" class="<?php echo esc_attr($cta_btn_class); ?>" data-lf-quote-trigger="1" data-lf-quote-source="benefits" data-lf-cta-slot="primary" data-lf-btn-style="<?php echo esc_attr($b_style); ?>" data-lf-btn-tone="<?php echo esc_attr($b_tone); ?>"><?php echo esc_html($cta_text); ?></button>
 				<?php endif; ?>
 			</div>
 		<?php endif; ?>
@@ -2293,6 +2430,18 @@ function lf_sections_render_media_content(string $context, array $settings, \WP_
 		$primary_action = 'quote';
 	}
 
+	$actions_align = (string) ($settings['section_actions_align'] ?? 'left');
+	if (!in_array($actions_align, ['left', 'center', 'right'], true)) {
+		$actions_align = 'left';
+	}
+	$media_btn_class = lf_sections_media_cta_button_classes($settings);
+	list($m_style, $m_tone) = lf_sections_resolve_button_style_tone(
+		(string) ($settings['section_cta_style'] ?? ''),
+		(string) ($settings['section_cta_tone'] ?? ''),
+		'solid',
+		'primary'
+	);
+
 	$image_id = isset($settings['image_id']) ? (int) $settings['image_id'] : 0;
 	if ($image_id === 0 && function_exists('lf_get_placeholder_image_id')) {
 		$image_id = lf_get_placeholder_image_id();
@@ -2334,11 +2483,11 @@ function lf_sections_render_media_content(string $context, array $settings, \WP_
 				<div class="lf-media-section__body lf-prose"><?php echo wp_kses_post(wpautop($body)); ?></div>
 			<?php endif; ?>
 			<?php if ($primary_text) : ?>
-				<div class="lf-media-section__actions">
+				<div class="lf-media-section__actions lf-media-section__actions--align-<?php echo esc_attr($actions_align); ?>">
 					<?php if ($primary_action === 'quote') : ?>
-						<button type="button" class="lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="content-image"><?php echo esc_html($primary_text); ?></button>
+						<button type="button" class="<?php echo esc_attr($media_btn_class); ?>" data-lf-quote-trigger="1" data-lf-quote-source="content-image" data-lf-cta-slot="primary" data-lf-btn-style="<?php echo esc_attr($m_style); ?>" data-lf-btn-tone="<?php echo esc_attr($m_tone); ?>"><?php echo esc_html($primary_text); ?></button>
 					<?php elseif ($primary_action === 'link' && $primary_url !== '') : ?>
-						<a href="<?php echo esc_url($primary_url); ?>" class="lf-btn lf-btn--primary"><?php echo esc_html($primary_text); ?></a>
+						<a href="<?php echo esc_url($primary_url); ?>" class="<?php echo esc_attr($media_btn_class); ?>" data-lf-cta-slot="primary" data-lf-btn-style="<?php echo esc_attr($m_style); ?>" data-lf-btn-tone="<?php echo esc_attr($m_tone); ?>"><?php echo esc_html($primary_text); ?></a>
 					<?php endif; ?>
 				</div>
 			<?php endif; ?>
