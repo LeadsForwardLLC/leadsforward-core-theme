@@ -26,8 +26,18 @@ $factors = array_values(array_filter(array_map('trim', is_array($factors) ? $fac
 $financing_enabled = (string) ($section['financing_enabled'] ?? '0') !== '0';
 $financing_text = (string) ($section['financing_text'] ?? '');
 $cta_text = (string) ($section['pricing_cta_text'] ?? '');
-$cta_action = (string) ($section['pricing_cta_action'] ?? 'quote');
-$cta_url = (string) ($section['pricing_cta_url'] ?? '');
+$cta_action = strtolower(trim((string) ($section['pricing_cta_action'] ?? 'quote')));
+if (!in_array($cta_action, ['quote', 'call', 'link'], true)) {
+	$cta_action = 'quote';
+}
+$cta_url = trim((string) ($section['pricing_cta_url'] ?? ''));
+$cta_phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
+if ($cta_action === 'call' && $cta_phone === '') {
+	$cta_action = 'quote';
+}
+if ($cta_action === 'link' && $cta_url === '') {
+	$cta_action = 'quote';
+}
 ?>
 <section class="lf-block lf-block-pricing <?php echo esc_attr($surface['class'] ?: 'lf-surface-light'); ?> lf-block-pricing--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>"<?php echo $style_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<div class="lf-block-pricing__inner">
@@ -55,8 +65,10 @@ $cta_url = (string) ($section['pricing_cta_url'] ?? '');
 
 		<?php if ($cta_text !== '') : ?>
 			<div class="lf-block-pricing__actions">
-				<?php if ($cta_action === 'link' && $cta_url !== '') : ?>
+				<?php if ($cta_action === 'link') : ?>
 					<a class="lf-btn lf-btn--primary" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($cta_text); ?></a>
+				<?php elseif ($cta_action === 'call' && $cta_phone !== '') : ?>
+					<a class="lf-btn lf-btn--primary" href="<?php echo esc_url('tel:' . $cta_phone); ?>"><?php echo esc_html($cta_text); ?></a>
 				<?php else : ?>
 					<button type="button" class="lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="pricing"><?php echo esc_html($cta_text); ?></button>
 				<?php endif; ?>

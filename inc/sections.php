@@ -719,6 +719,7 @@ function lf_sections_registry(): array {
 				['key' => 'pricing_cta_text', 'label' => __('CTA text (optional)', 'leadsforward-core'), 'type' => 'text', 'default' => __('Get a free estimate', 'leadsforward-core')],
 				['key' => 'pricing_cta_action', 'label' => __('CTA action', 'leadsforward-core'), 'type' => 'select', 'default' => 'quote', 'options' => [
 					'quote' => __('Open Quote Builder', 'leadsforward-core'),
+					'call'  => __('Call (site phone)', 'leadsforward-core'),
 					'link'  => __('Link', 'leadsforward-core'),
 				]],
 				['key' => 'pricing_cta_url', 'label' => __('CTA URL (if Link)', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
@@ -760,6 +761,11 @@ function lf_sections_registry(): array {
 					'slider' => __('Slider', 'leadsforward-core'),
 				]],
 				['key' => 'posts_slider_controls', 'label' => __('Show slider controls', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
+				['key' => 'section_header_align', 'label' => __('Header alignment', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
+					'left' => __('Left', 'leadsforward-core'),
+					'center' => __('Center', 'leadsforward-core'),
+					'right' => __('Right', 'leadsforward-core'),
+				]],
 			],
 			'render' => 'lf_sections_render_blog_posts',
 		],
@@ -770,6 +776,11 @@ function lf_sections_registry(): array {
 				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Quick links', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Browse the full site from one place.', 'leadsforward-core')],
+				['key' => 'section_header_align', 'label' => __('Header alignment', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
+					'left' => __('Left', 'leadsforward-core'),
+					'center' => __('Center', 'leadsforward-core'),
+					'right' => __('Right', 'leadsforward-core'),
+				]],
 			],
 			'render' => 'lf_sections_render_sitemap_links',
 		],
@@ -2839,7 +2850,7 @@ function lf_sections_render_blog_posts(string $context, array $settings, \WP_Pos
 		}
 		wp_reset_postdata();
 	} else {
-		echo '<p>' . esc_html__('No posts yet.', 'leadsforward-core') . '</p>';
+		echo '<p class="lf-section-blog-posts__empty">' . esc_html__('No posts yet.', 'leadsforward-core') . '</p>';
 	}
 	lf_sections_render_shell_close();
 }
@@ -2897,28 +2908,31 @@ function lf_sections_render_sitemap_links(string $context, array $settings, \WP_
 
 	echo '<div class="lf-sitemap">';
 	if (!empty($pages)) {
-		echo '<h3>' . esc_html__('Pages', 'leadsforward-core') . '</h3>';
-		echo '<ul class="lf-related-links" role="list">';
+		echo '<div class="lf-sitemap__group">';
+		echo '<h3 class="lf-sitemap__heading">' . esc_html__('Pages', 'leadsforward-core') . '</h3>';
+		echo '<ul class="lf-sitemap__list" role="list">';
 		foreach ($pages as $page) {
-			echo '<li><a href="' . esc_url(get_permalink($page)) . '">' . esc_html(get_the_title($page)) . '</a></li>';
+			echo '<li class="lf-sitemap__item"><a class="lf-sitemap__link" href="' . esc_url(get_permalink($page)) . '">' . esc_html(get_the_title($page)) . '</a></li>';
 		}
-		echo '</ul>';
+		echo '</ul></div>';
 	}
 	if (!empty($services)) {
-		echo '<h3>' . esc_html__('Services', 'leadsforward-core') . '</h3>';
-		echo '<ul class="lf-related-links" role="list">';
+		echo '<div class="lf-sitemap__group">';
+		echo '<h3 class="lf-sitemap__heading">' . esc_html__('Services', 'leadsforward-core') . '</h3>';
+		echo '<ul class="lf-sitemap__list" role="list">';
 		foreach ($services as $svc) {
-			echo '<li><a href="' . esc_url(get_permalink($svc)) . '">' . esc_html(get_the_title($svc)) . '</a></li>';
+			echo '<li class="lf-sitemap__item"><a class="lf-sitemap__link" href="' . esc_url(get_permalink($svc)) . '">' . esc_html(get_the_title($svc)) . '</a></li>';
 		}
-		echo '</ul>';
+		echo '</ul></div>';
 	}
 	if (!empty($areas)) {
-		echo '<h3>' . esc_html__('Service Areas', 'leadsforward-core') . '</h3>';
-		echo '<ul class="lf-related-links" role="list">';
+		echo '<div class="lf-sitemap__group">';
+		echo '<h3 class="lf-sitemap__heading">' . esc_html__('Service Areas', 'leadsforward-core') . '</h3>';
+		echo '<ul class="lf-sitemap__list" role="list">';
 		foreach ($areas as $area) {
-			echo '<li><a href="' . esc_url(get_permalink($area)) . '">' . esc_html(get_the_title($area)) . '</a></li>';
+			echo '<li class="lf-sitemap__item"><a class="lf-sitemap__link" href="' . esc_url(get_permalink($area)) . '">' . esc_html(get_the_title($area)) . '</a></li>';
 		}
-		echo '</ul>';
+		echo '</ul></div>';
 	}
 	echo '</div>';
 
