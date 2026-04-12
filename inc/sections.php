@@ -420,6 +420,7 @@ function lf_sections_registry(): array {
 				['key' => 'section_intro_secondary', 'label' => __('Secondary intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				['key' => 'benefits_items', 'label' => __('Benefits (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Fast response windows || Clear arrival times and quick follow-up after you reach out.' . "\n" . 'Licensed, insured professionals || Fully vetted team backed by proper coverage and local reviews.' . "\n" . 'Upfront pricing before work starts || Detailed estimates so you always know the next step.', 'leadsforward-core')],
 				['key' => 'benefits_icon_overrides', 'label' => __('Benefit icons (one per line, optional icon slug)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
+				['key' => 'benefits_icon_bg_overrides', 'label' => __('Benefit icon tile colors (one per line: auto, blue, green, orange)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 				['key' => 'benefits_title_word_limit', 'label' => __('Benefit title word limit', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
 				['key' => 'benefits_body_word_limit', 'label' => __('Benefit body word limit', 'leadsforward-core'), 'type' => 'number', 'default' => '18'],
 				// Added for density expansion – vNext
@@ -686,7 +687,7 @@ function lf_sections_registry(): array {
 			'render' => 'lf_sections_render_project_gallery',
 		],
 		'logo_strip' => [
-			'label' => __('Certifications / Logo Strip', 'leadsforward-core'),
+			'label' => __('Certifications, logos & partners', 'leadsforward-core'),
 			'contexts' => ['homepage', 'page', 'service', 'service_area', 'post'],
 			'fields' => [
 				$bg_field,
@@ -704,7 +705,7 @@ function lf_sections_registry(): array {
 		],
 		'team' => [
 			'label' => __('Team', 'leadsforward-core'),
-			'contexts' => ['homepage', 'page', 'service', 'service_area'],
+			'contexts' => ['homepage', 'page', 'service', 'service_area', 'post'],
 			'fields' => [
 				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Meet the team', 'leadsforward-core')],
@@ -724,8 +725,8 @@ function lf_sections_registry(): array {
 			'render' => 'lf_sections_render_team',
 		],
 		'pricing' => [
-			'label' => __('Pricing & Financing', 'leadsforward-core'),
-			'contexts' => ['page', 'service', 'service_area'],
+			'label' => __('Pricing & financing', 'leadsforward-core'),
+			'contexts' => ['homepage', 'page', 'service', 'service_area', 'post'],
 			'fields' => [
 				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('What affects cost', 'leadsforward-core')],
@@ -751,8 +752,8 @@ function lf_sections_registry(): array {
 			'render' => 'lf_sections_render_pricing',
 		],
 		'packages' => [
-			'label' => __('Packages / Comparison', 'leadsforward-core'),
-			'contexts' => ['page', 'service'],
+			'label' => __('Packages & comparison', 'leadsforward-core'),
+			'contexts' => ['homepage', 'page', 'service', 'service_area', 'post'],
 			'fields' => [
 				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Choose the right option', 'leadsforward-core')],
@@ -2023,6 +2024,7 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	$body_limit = max(8, min(20, (int) ($settings['benefits_body_word_limit'] ?? 14)));
 	$default_items = lf_sections_benefits_default_items();
 	$icon_overrides = lf_sections_parse_lines((string) ($settings['benefits_icon_overrides'] ?? ''));
+	$icon_bg_overrides = lf_sections_parse_lines((string) ($settings['benefits_icon_bg_overrides'] ?? ''));
 	$supporting_points = lf_sections_parse_lines((string) ($settings['benefits_supporting_points'] ?? ''));
 	$trust_block = trim((string) ($settings['benefits_trust_block'] ?? ''));
 	$cta_text = trim((string) ($settings['benefits_cta_text'] ?? ''));
@@ -2158,7 +2160,11 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 						<?php if ($icon_slug !== '') : ?>
 							<?php $used_icons[] = $icon_slug; ?>
 						<?php endif; ?>
-						<span class="lf-benefits__icon<?php echo $icon_slug === '' ? ' lf-benefits__icon--empty' : ''; ?>" aria-hidden="true" data-lf-benefit-icon-index="<?php echo esc_attr((string) $index); ?>">
+						<?php
+						$icon_bg_class = lf_sections_benefits_icon_bg_class($icon_bg_overrides, $index);
+						$icon_bg_data = lf_sections_benefits_icon_bg_data_value($icon_bg_overrides, $index);
+						?>
+						<span class="lf-benefits__icon<?php echo $icon_slug === '' ? ' lf-benefits__icon--empty' : ''; ?><?php echo esc_attr($icon_bg_class); ?>" aria-hidden="true" data-lf-benefit-icon-index="<?php echo esc_attr((string) $index); ?>" data-lf-benefit-icon-bg="<?php echo esc_attr($icon_bg_data); ?>">
 							<?php if ($icon_slug !== '' && function_exists('lf_icon')) : ?>
 								<?php echo lf_icon($icon_slug, ['class' => trim('lf-icon--' . $icon_size . ' lf-icon--' . $icon_color)]); ?>
 							<?php endif; ?>
@@ -2241,6 +2247,36 @@ function lf_sections_benefits_supporting_text(string $title, int $index, array $
 		return (string) $defaults[$index]['body'];
 	}
 	return __('Clear communication, consistent quality, and a stress-free experience.', 'leadsforward-core');
+}
+
+function lf_sections_sanitize_benefits_icon_bg_token(string $raw): string {
+	$t = strtolower(trim($raw));
+	return in_array($t, ['auto', 'blue', 'green', 'orange'], true) ? $t : '';
+}
+
+/**
+ * Extra classes for benefit icon tile when a manual color is chosen (otherwise CSS 3n cycle applies).
+ *
+ * @param array<int, string> $bg_overrides Lines from benefits_icon_bg_overrides.
+ */
+function lf_sections_benefits_icon_bg_class(array $bg_overrides, int $index): string {
+	$line = isset($bg_overrides[ $index ]) ? (string) $bg_overrides[ $index ] : '';
+	$san = lf_sections_sanitize_benefits_icon_bg_token($line);
+	if ($san === '' || $san === 'auto') {
+		return '';
+	}
+	return ' lf-benefits__icon--bg-' . $san;
+}
+
+/**
+ * Stored token for inline editor (auto | blue | green | orange).
+ *
+ * @param array<int, string> $bg_overrides
+ */
+function lf_sections_benefits_icon_bg_data_value(array $bg_overrides, int $index): string {
+	$line = isset($bg_overrides[ $index ]) ? (string) $bg_overrides[ $index ] : '';
+	$san = lf_sections_sanitize_benefits_icon_bg_token($line);
+	return $san !== '' ? $san : 'auto';
 }
 
 function lf_sections_benefits_pick_icon_slug(array $item, array $overrides, array $used_icons, int $index): string {

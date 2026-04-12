@@ -3231,7 +3231,7 @@ function lf_ai_allowed_line_fields_for_section_type(string $section_type): array
 	$map = [
 		'hero' => ['hero_proof_bullets', 'hero_chip_bullets'],
 		'trust_bar' => ['trust_badges'],
-		'benefits' => ['benefits_icon_overrides', 'benefits_items'],
+		'benefits' => ['benefits_icon_overrides', 'benefits_icon_bg_overrides', 'benefits_items'],
 		'service_intro' => ['service_intro_service_ids'],
 		'process' => ['process_steps', 'process_selected_ids'],
 		'faq_accordion' => ['faq_selected_ids'],
@@ -3440,6 +3440,7 @@ function lf_ai_ajax_update_section_lines(): void {
 	if ($context_type === '' || $context_id === '' || $section_id === '' || $field_key === '' || !is_array($items_decoded)) {
 		wp_send_json_error(['message' => __('Invalid list payload.', 'leadsforward-core')]);
 	}
+	$allow_empty = in_array($field_key, ['benefits_icon_overrides', 'benefits_icon_bg_overrides'], true);
 	$items = [];
 	foreach ($items_decoded as $item) {
 		$raw = (string) $item;
@@ -3448,6 +3449,8 @@ function lf_ai_ajax_update_section_lines(): void {
 				$raw = html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 			}
 			$value = lf_ai_sanitize_benefits_items_line($raw);
+		} elseif ($field_key === 'benefits_icon_bg_overrides') {
+			$value = function_exists('lf_sections_sanitize_benefits_icon_bg_token') ? lf_sections_sanitize_benefits_icon_bg_token($raw) : '';
 		} elseif (in_array($field_key, ['service_details_checklist', 'service_details_checklist_secondary'], true) && function_exists('lf_ai_sanitize_inline_dom_html')) {
 			$value = lf_ai_sanitize_inline_dom_html($raw);
 		} elseif ($field_key === 'service_details_micro_sections' && function_exists('lf_ai_sanitize_inline_dom_html')) {
@@ -3459,7 +3462,7 @@ function lf_ai_ajax_update_section_lines(): void {
 		} else {
 			$value = trim(sanitize_text_field($raw));
 		}
-		if ($value === '') {
+		if (!$allow_empty && $value === '') {
 			continue;
 		}
 		$items[] = $value;
