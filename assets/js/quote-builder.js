@@ -26,6 +26,7 @@
 	var returningKey = 'lf_qb_returning';
 	var lastOpenKey = 'lf_qb_last_open';
 	var pathKey = 'lf_qb_page_path';
+	var autoAdvanceTimer = null;
 	if (!sessionId) {
 		sessionId = 'qb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
 		if (window.sessionStorage) {
@@ -133,6 +134,10 @@
 
 	function openModal() {
 		if (isOpen) return;
+		if (autoAdvanceTimer) {
+			clearTimeout(autoAdvanceTimer);
+			autoAdvanceTimer = null;
+		}
 		isOpen = true;
 		hasCompleted = false;
 		isSubmitting = false;
@@ -168,6 +173,10 @@
 	}
 
 	function closeModal() {
+		if (autoAdvanceTimer) {
+			clearTimeout(autoAdvanceTimer);
+			autoAdvanceTimer = null;
+		}
 		if (!isOpen) return;
 		isOpen = false;
 		modal.classList.remove('is-open');
@@ -299,6 +308,10 @@
 	}
 
 	function onNext() {
+		if (autoAdvanceTimer) {
+			clearTimeout(autoAdvanceTimer);
+			autoAdvanceTimer = null;
+		}
 		var current = steps[index];
 		if (!current) return;
 		var isConfirm = current.getAttribute('data-step-type') === 'confirmation';
@@ -327,9 +340,37 @@
 	}
 
 	function onBack() {
+		if (autoAdvanceTimer) {
+			clearTimeout(autoAdvanceTimer);
+			autoAdvanceTimer = null;
+		}
 		if (index === 0) return;
 		index -= 1;
 		updateStep();
+	}
+
+	function scheduleAutoAdvanceServiceStep(radioEl) {
+		var step = radioEl.closest('.lf-quote-step');
+		if (!step || step.getAttribute('data-step-id') !== 'service_type') {
+			return;
+		}
+		if (index !== 0) {
+			return;
+		}
+		if (autoAdvanceTimer) {
+			clearTimeout(autoAdvanceTimer);
+		}
+		autoAdvanceTimer = setTimeout(function () {
+			autoAdvanceTimer = null;
+			var cur = steps[index];
+			if (!cur || cur.getAttribute('data-step-id') !== 'service_type') {
+				return;
+			}
+			if (!validateStep()) {
+				return;
+			}
+			onNext();
+		}, 380);
 	}
 
 	function bindEvents() {
@@ -356,6 +397,7 @@
 				parent.querySelectorAll('.lf-quote-choice__card').forEach(function (card) {
 					card.classList.toggle('is-selected', card.querySelector('input').checked);
 				});
+				scheduleAutoAdvanceServiceStep(input);
 			});
 		});
 		document.querySelectorAll('.lf-quote-choice').forEach(function (group) {

@@ -6671,13 +6671,14 @@ body.lf-quote-open {
 	position: relative;
 	height: 100%;
 	width: 100%;
+	min-height: 0;
 	background: var(--lf-surface-light);
 	color: var(--lf-text-primary);
 	display: flex;
 	flex-direction: column;
 	padding: clamp(1.25rem, 3vw, 2.75rem);
 	box-sizing: border-box;
-	overflow: auto;
+	overflow: hidden;
 	transform: translateY(18px);
 	transition: transform 0.25s ease;
 }
@@ -6736,6 +6737,11 @@ body.lf-quote-open {
 
 .lf-quote-step.is-active {
 	display: block;
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	padding-bottom: 0.25rem;
 }
 
 .lf-quote-step__title {
@@ -6817,6 +6823,36 @@ body.lf-quote-open {
 	color: var(--lf-warning);
 }
 
+.lf-quote-reviews--compact {
+	margin-top: 0.75rem;
+	margin-bottom: 0;
+	padding: 0.65rem 0.8rem;
+}
+
+.lf-quote-reviews--compact .lf-quote-reviews__eyebrow {
+	font-size: 0.65rem;
+	margin-bottom: 0.35rem;
+}
+
+.lf-quote-reviews--compact .lf-quote-reviews__text {
+	font-size: 0.88rem;
+	margin-bottom: 0.45rem;
+	line-height: 1.45;
+}
+
+.lf-quote-reviews--compact .lf-quote-reviews__card {
+	padding: 0.55rem 0.65rem;
+	box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.lf-quote-modal__dialog > .lf-quote-form {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+	min-height: 0;
+	width: 100%;
+}
+
 .lf-quote-fields {
 	display: grid;
 	gap: 1rem;
@@ -6863,15 +6899,26 @@ body.lf-quote-open {
 	background: #fff;
 	cursor: pointer;
 	display: flex;
-	align-items: center;
-	gap: 0.6rem;
+	align-items: flex-start;
+	justify-content: flex-start;
+	gap: 0.65rem;
 	font-weight: 600;
 	min-height: 56px;
+	text-align: left;
 	transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.lf-quote-choice__card input {
+.lf-quote-choice__card input[type="radio"] {
 	margin: 0;
+	flex-shrink: 0;
+	margin-top: 0.15em;
+}
+
+.lf-quote-choice__card > span {
+	flex: 1 1 auto;
+	min-width: 0;
+	text-align: left;
+	line-height: 1.35;
 }
 
 .lf-quote-choice__card.is-selected {
@@ -6881,10 +6928,14 @@ body.lf-quote-open {
 
 .lf-quote-modal__actions {
 	margin-top: auto;
+	flex-shrink: 0;
 	display: flex;
 	gap: 0.75rem;
 	align-items: center;
-	padding-top: 1.5rem;
+	padding-top: 1.25rem;
+	padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+	border-top: 1px solid rgba(15, 23, 42, 0.06);
+	background: var(--lf-surface-light);
 }
 
 .lf-quote-btn {
