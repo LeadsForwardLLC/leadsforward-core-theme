@@ -1561,6 +1561,91 @@ function lf_sections_bg_swatch_hex_map(): array {
 }
 
 /**
+ * Normalize hex to 6 lowercase digits (no leading #).
+ */
+function lf_sections_normalize_hex_digits(string $hex): string {
+	$hex = strtolower(ltrim(trim($hex), '#'));
+	if (strlen($hex) === 3 && ctype_xdigit($hex)) {
+		return $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+	}
+
+	return $hex;
+}
+
+/**
+ * Convert sanitized custom background (#hex or rgb/rgba) to #rrggbb.
+ */
+function lf_sections_css_color_to_hex(string $css): ?string {
+	$css = trim($css);
+	if (preg_match('/^#([0-9a-f]{3}|[0-9a-f]{6})$/i', $css)) {
+		return '#' . lf_sections_normalize_hex_digits($css);
+	}
+	if (preg_match('/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*[\d.]+\s*)?\)$/i', $css, $m)) {
+		$r = max(0, min(255, (int) $m[1]));
+		$g = max(0, min(255, (int) $m[2]));
+		$b = max(0, min(255, (int) $m[3]));
+
+		return sprintf('#%02x%02x%02x', $r, $g, $b);
+	}
+
+	return null;
+}
+
+/**
+ * WCAG relative luminance for sRGB hex (#rrggbb).
+ */
+function lf_sections_relative_luminance_from_hex(string $hex): ?float {
+	$d = lf_sections_normalize_hex_digits(ltrim($hex, '#'));
+	if (strlen($d) !== 6 || ! ctype_xdigit($d)) {
+		return null;
+	}
+	$r = hexdec(substr($d, 0, 2)) / 255.0;
+	$g = hexdec(substr($d, 2, 2)) / 255.0;
+	$b = hexdec(substr($d, 4, 2)) / 255.0;
+	$lin = static function (float $c): float {
+		return $c <= 0.03928 ? $c / 12.92 : pow(($c + 0.055) / 1.055, 2.4);
+	};
+	$r = $lin($r);
+	$g = $lin($g);
+	$b = $lin($b);
+
+	return 0.2126 * $r + 0.7152 * $g + 0.0722 * $b;
+}
+
+/**
+ * Whether the hero section background reads as "dark" for typography (light text on canvas).
+ *
+ * @param array<string, mixed> $section Hero block context section settings.
+ */
+function lf_sections_hero_background_is_dark(array $section): bool {
+	$custom = lf_sections_sanitize_custom_background((string) ($section['section_background_custom'] ?? ''));
+	if ($custom !== '') {
+		$hex = lf_sections_css_color_to_hex($custom);
+		if ($hex === null) {
+			return false;
+		}
+		$l = lf_sections_relative_luminance_from_hex($hex);
+
+		return $l !== null && $l < 0.452;
+	}
+	$slug = sanitize_key((string) ($section['section_background'] ?? 'light'));
+	if (in_array($slug, ['dark', 'black'], true)) {
+		return true;
+	}
+	if (in_array($slug, ['white', 'light', 'soft', 'card'], true)) {
+		return false;
+	}
+	$map = lf_sections_bg_swatch_hex_map();
+	$hex = isset($map[ $slug ]) ? (string) $map[ $slug ] : '';
+	if ($hex === '' || $hex[0] !== '#') {
+		return false;
+	}
+	$l = lf_sections_relative_luminance_from_hex($hex);
+
+	return $l !== null && $l < 0.452;
+}
+
+/**
  * @param array<string, mixed> $settings
  */
 function lf_sections_sanitize_header_align(array $settings): string {
