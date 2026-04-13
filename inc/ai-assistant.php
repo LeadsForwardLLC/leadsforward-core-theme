@@ -583,6 +583,10 @@ function lf_ai_assistant_render_floating_widget(): void {
 					}
 					?>
 				</span>
+				<span class="lf-ai-inline-link__toolbar-group" data-lf-ai-list-tools hidden role="group" aria-label="<?php esc_attr_e('Lists', 'leadsforward-core'); ?>">
+					<button type="button" class="lf-ai-inline-link__fmt" data-lf-ai-inline-cmd="insertUnorderedList" title="<?php esc_attr_e('Bullet list', 'leadsforward-core'); ?>">•</button>
+					<button type="button" class="lf-ai-inline-link__fmt" data-lf-ai-inline-cmd="insertOrderedList" title="<?php esc_attr_e('Numbered list', 'leadsforward-core'); ?>">1.</button>
+				</span>
 				<span class="lf-ai-inline-link__toolbar-group" role="group" aria-label="<?php esc_attr_e('Text emphasis', 'leadsforward-core'); ?>">
 					<button type="button" class="lf-ai-inline-link__fmt" data-lf-ai-inline-cmd="bold" title="<?php esc_attr_e('Bold', 'leadsforward-core'); ?>"><strong>B</strong></button>
 					<button type="button" class="lf-ai-inline-link__fmt" data-lf-ai-inline-cmd="italic" title="<?php esc_attr_e('Italic', 'leadsforward-core'); ?>"><em>I</em></button>
@@ -1743,6 +1747,7 @@ function lf_ai_assistant_widget_js(): string {
 			if ($linkRoot.length) {
 				$linkRoot.find("[data-lf-ai-inline-link-toolbar]").prop("hidden", true);
 				$linkRoot.find("[data-lf-ai-heading-tools]").prop("hidden", true);
+				$linkRoot.find("[data-lf-ai-list-tools]").prop("hidden", true);
 			}
 		}
 		function lfHideInlineLinkPanel() {
@@ -1770,7 +1775,7 @@ function lf_ai_assistant_widget_js(): string {
 		function lfManagedContentEditableHost() {
 			var ae = document.activeElement;
 			if (!ae || !ae.isContentEditable) return null;
-			if (ae.matches(".lf-benefits__title, .lf-benefits__desc, .lf-service-details__text, .lf-service-details__micro-text, .lf-block-hero__card-item-text, .lf-section__intro, [data-lf-inline-editable=\"1\"]")) {
+			if (ae.matches(".lf-benefits__title, .lf-benefits__desc, .lf-service-details__text, .lf-service-details__micro-text, .lf-block-hero__card-item-text, .lf-section__intro, .lf-rich-content__prose, [data-lf-inline-editable=\"1\"]")) {
 				return ae;
 			}
 			return null;
@@ -1791,6 +1796,16 @@ function lf_ai_assistant_widget_js(): string {
 				el = el.parentElement;
 			}
 			return null;
+		}
+		function lfHeadingUsesConfigurableSectionTag(hEl, wrap) {
+			if (!hEl || !wrap) return false;
+			if (hEl.closest(".lf-benefits__card")) return false;
+			if (hEl.classList.contains("lf-benefits__title")) return false;
+			if (hEl.closest(".lf-rich-content__prose")) return false;
+			if (hEl.classList.contains("lf-layout-heading__text")) return true;
+			if (hEl.classList.contains("lf-section__title")) return true;
+			var cn = String(hEl.className || "");
+			return /\blf-block-[a-z0-9-]+__title\b/.test(cn);
 		}
 		function lfPositionInlineLinkToolbar() {
 			var host = lfAnyInlineLinkHostEl();
@@ -1813,7 +1828,8 @@ function lf_ai_assistant_widget_js(): string {
 			var hEl = lfFindHeadingInHost(host);
 			var collapsed = sel.isCollapsed;
 			var t = String(sel.toString() || "").trim();
-			if (collapsed && !hEl) {
+			var inRichProse = !!(host.closest && host.closest(".lf-rich-content__prose"));
+			if (collapsed && !hEl && !inRichProse) {
 				lfHideInlineLinkToolbar();
 				return;
 			}
@@ -1828,7 +1844,9 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			var $tb = $linkRoot.find("[data-lf-ai-inline-link-toolbar]");
 			var $hg = $linkRoot.find("[data-lf-ai-heading-tools]");
+			var $lg = $linkRoot.find("[data-lf-ai-list-tools]");
 			$hg.prop("hidden", !hEl);
+			$lg.prop("hidden", !inRichProse);
 			var top = rect.bottom + 6;
 			var left = rect.left;
 			$tb.css({ position: "fixed", top: top + "px", left: Math.max(8, left) + "px" });
@@ -2260,11 +2278,32 @@ function lf_ai_assistant_widget_js(): string {
 				e.preventDefault();
 				var lvl = parseInt($(this).attr("data-lf-ai-heading-level") || "0", 10);
 				if (lvl < 1 || lvl > 6) return;
+				var tag = "h" + String(lvl);
 				var host = lfManagedContentEditableHost();
 				if (!host) return;
 				var hEl = lfFindHeadingInHost(host);
 				if (!hEl || !hEl.parentNode) return;
-				var nu = document.createElement("h" + String(lvl));
+				var wrap = hEl.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]");
+				var sectionType = wrap ? String(wrap.getAttribute("data-lf-section-type") || "") : "";
+				var prose = hEl.closest(".lf-rich-content__prose");
+				if (prose && host.contains(hEl)) {
+					var nuRich = document.createElement(tag);
+					nuRich.innerHTML = hEl.innerHTML;
+					hEl.parentNode.replaceChild(nuRich, hEl);
+					persistRichContentBodyNow(prose, "Heading level updated.");
+					return;
+				}
+				if (lfHeadingUsesConfigurableSectionTag(hEl, wrap)) {
+					if (sectionType === "layout_heading") {
+						var layoutTag = tag;
+						if (lvl < 2 || lvl > 4) layoutTag = "h2";
+						persistSectionStyle(wrap, "set_layout_heading_tag", { heading_tag: layoutTag });
+					} else {
+						persistSectionStyle(wrap, "set_section_heading_tag", { heading_tag: tag });
+					}
+					return;
+				}
+				var nu = document.createElement(tag);
 				nu.innerHTML = hEl.innerHTML;
 				hEl.parentNode.replaceChild(nu, hEl);
 				try {
@@ -2745,6 +2784,7 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function buildEditorUi() {
 			buildInlineTargets();
+			buildRichContentProseTargets();
 			buildInlineImageTargets();
 			buildSectionTargets();
 			buildSectionControls();
@@ -2824,6 +2864,8 @@ function lf_ai_assistant_widget_js(): string {
 			if (node.closest(".lf-block-map-nap__areas-list,.lf-block-map-nap__areas-item,.lf-block-map-nap__areas-link")) return false;
 			// Reviews content is source-of-truth data; do not edit testimonial copy inline.
 			if (node.closest(".lf-block-trust-reviews__item,.lf-block-trust-reviews__summary")) return false;
+			// Rich text sections: one contenteditable host for the full prose (rich_content_body).
+			if (node.closest(".lf-rich-content__prose")) return false;
 			var tag = node.tagName ? node.tagName.toLowerCase() : "";
 			var isHeading = /^h[1-6]$/.test(tag);
 			// CPT / archive card titles (fixed); not section headings like lf-block-service-intro__title.
@@ -2914,6 +2956,26 @@ function lf_ai_assistant_widget_js(): string {
 				} else {
 					node.removeAttribute("data-lf-inline-field-key");
 				}
+			});
+		}
+		function buildRichContentProseTargets() {
+			var proseNodes = document.querySelectorAll("[data-lf-section-wrap=\"1\"][data-lf-section-type=\"rich_content\"] .lf-rich-content__prose");
+			if (!proseNodes || !proseNodes.length) return;
+			Array.prototype.forEach.call(proseNodes, function(prose){
+				if (!prose || prose.closest(".lf-ai-float,.lf-ai-seo-float")) return;
+				var selector = buildInlineSelector(prose);
+				if (!selector) return;
+				prose.setAttribute("data-lf-inline-editable", "1");
+				prose.setAttribute("data-lf-inline-selector", selector);
+				prose.setAttribute("data-lf-inline-field-key", "rich_content_body");
+				var sectionWrap = prose.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]");
+				var sectionId = sectionWrap ? String(sectionWrap.getAttribute("data-lf-section-id") || "") : "";
+				if (sectionId) {
+					prose.setAttribute("data-lf-inline-section-id", sectionId);
+				} else {
+					prose.removeAttribute("data-lf-inline-section-id");
+				}
+				prose.removeAttribute("data-lf-inline-source-selector");
 			});
 		}
 		function inlineImageEligible(img) {
@@ -6301,6 +6363,7 @@ function lf_ai_assistant_widget_js(): string {
 					wrap.parentNode.insertBefore(clone, wrap.nextSibling);
 					buildSectionTargets();
 					buildInlineTargets();
+					buildRichContentProseTargets();
 					buildInlineImageTargets();
 					buildSectionControls();
 					buildSectionInsertZones();
@@ -6340,9 +6403,6 @@ function lf_ai_assistant_widget_js(): string {
 			if (!wrap) return false;
 			if (String(wrap.getAttribute("data-lf-section-type") || "") === "hero") return false;
 			return !!(wrap.querySelector(".lf-section__header, .lf-block-faq-accordion__header, .lf-block-trust-reviews__header, .lf-block-map-nap__header, .lf-block-service-intro__header, .lf-block-service-grid__header, .lf-block-service-areas__header, .lf-block-cta__content"));
-		}
-		function sectionSupportsSectionHeadingTag(wrap) {
-			return sectionSupportsHeaderAlign(wrap);
 		}
 		function closeSectionBgPicker() {
 			if (sectionBgPickerEl) sectionBgPickerEl.hidden = true;
@@ -6948,7 +7008,7 @@ function lf_ai_assistant_widget_js(): string {
 					itemClass: "lf-ai-section-insert-picker__item",
 					draggable: false,
 					showGroupLabels: true,
-					showHints: true,
+					showHints: false,
 					onPick: function(id){
 						var aid = sectionInsertAfterId;
 						var bid = sectionInsertBeforeId;
@@ -7366,6 +7426,7 @@ function lf_ai_assistant_widget_js(): string {
 				if (Object.prototype.hasOwnProperty.call(extra, "benefits_cta_align")) payload.benefits_cta_align = String(extra.benefits_cta_align || "");
 				if (Object.prototype.hasOwnProperty.call(extra, "section_actions_align")) payload.section_actions_align = String(extra.section_actions_align || "");
 				if (extra.grid_columns) payload.grid_columns = String(extra.grid_columns);
+				if (extra.heading_tag) payload.heading_tag = String(extra.heading_tag);
 			}
 			$.post(lfAiFloating.ajax_url, payload).done(function(res){
 				if (res && res.success) {
@@ -7467,38 +7528,12 @@ function lf_ai_assistant_widget_js(): string {
 					});
 					controls.appendChild(alignBtn);
 				}
-				if (sectionSupportsSectionHeadingTag(wrap)) {
-					var hTagBtn = document.createElement("button");
-					hTagBtn.type = "button";
-					hTagBtn.className = "lf-ai-section-btn";
-					var curHt = String(wrap.getAttribute("data-lf-section-heading-tag") || "h2").toLowerCase();
-					if (!/^h[1-6]$/.test(curHt)) curHt = "h2";
-					hTagBtn.textContent = curHt.toUpperCase();
-					hTagBtn.setAttribute("title", "Cycle section title level (H1–H6)");
-					hTagBtn.setAttribute("aria-label", "Cycle section heading level");
-					hTagBtn.addEventListener("click", function(e){
-						e.preventDefault();
-						e.stopPropagation();
-						persistSectionStyle(wrap, "cycle_section_heading_tag");
-					});
-					controls.appendChild(hTagBtn);
-				}
 				if (sectionType === "benefits") {
 					ensureBtn("Grid", "Card columns: 2, 3, or 4 on desktop", "Set benefit columns", function(){
 						openSectionGridPicker(wrap);
 					});
 					ensureBtn("CTA", "Add or edit the optional benefits button", "Benefits button", function(){
 						openBenefitsCtaPicker(wrap, null);
-					});
-				}
-				if (sectionType === "rich_content") {
-					ensureBtn("WP", "Edit full HTML, lists, and button markup in the WordPress editor (Page Builder field).", "Open WordPress editor", function(){
-						var u = String(lfAiFloating.admin_post_edit_url || "");
-						if (u) {
-							window.open(u, "_blank", "noopener,noreferrer");
-						} else {
-							try { window.alert("Open this page in WordPress admin to edit the rich text section."); } catch (eAl) {}
-						}
 					});
 				}
 				if (sectionType === "service_intro") {
@@ -7938,6 +7973,53 @@ function lf_ai_assistant_widget_js(): string {
 			}).always(function(){
 				inlineIsSaving = false;
 				if (typeof done === "function") done();
+			});
+		}
+		function persistRichContentBodyNow(proseEl, successMessage, done) {
+			if (!proseEl) {
+				if (typeof done === "function") done(false);
+				return;
+			}
+			var fieldKey = String(proseEl.getAttribute("data-lf-inline-field-key") || "");
+			var sectionId = String(proseEl.getAttribute("data-lf-inline-section-id") || "");
+			var selector = String(proseEl.getAttribute("data-lf-inline-selector") || "");
+			if (fieldKey !== "rich_content_body" || !sectionId) {
+				setStatus("Could not save rich text (missing section binding).", true);
+				if (typeof done === "function") done(false);
+				return;
+			}
+			var valueHtml = String(proseEl.innerHTML || "").trim();
+			var valueText = String(proseEl.textContent || "").trim();
+			if (valueText === "") {
+				setStatus("Text cannot be empty.", true);
+				if (typeof done === "function") done(false);
+				return;
+			}
+			var wrap = proseEl.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]");
+			var ctx = persistContextFromWrap(wrap);
+			setStatus("Saving rich text...", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_inline_save",
+				nonce: lfAiFloating.nonce,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
+				field_key: fieldKey,
+				section_id: sectionId,
+				selector: selector,
+				value: valueHtml,
+				value_format: "html"
+			}).done(function(res){
+				if (res && res.success) {
+					setStatus(successMessage || "Saved.", false);
+					if (typeof done === "function") done(true);
+					return;
+				}
+				setStatus((res && res.data && res.data.message) ? res.data.message : "Save failed.", true);
+				if (typeof done === "function") done(false);
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Save failed.";
+				setStatus(msg, true);
+				if (typeof done === "function") done(false);
 			});
 		}
 		function persistInlineNodeNow(el, successMessage, done) {

@@ -848,7 +848,7 @@ function lf_ai_section_style_cycle_value(string $current, array $allowed): strin
  * Apply a section style patch from the front-end editor (background presets, custom color, header align).
  *
  * @param array<string, mixed> $settings
- * @param array{background_slug?:string,custom_background?:string,header_align?:string,benefits_cta_align?:string,section_actions_align?:string,grid_columns?:string} $extra
+ * @param array{background_slug?:string,custom_background?:string,header_align?:string,benefits_cta_align?:string,section_actions_align?:string,grid_columns?:string,heading_tag?:string} $extra
  * @return array{0: array<string, mixed>, 1: string} Updated settings and empty string, or original settings and error message.
  */
 function lf_ai_mutate_section_style_settings(array $settings, string $patch, array $extra): array {
@@ -861,6 +861,7 @@ function lf_ai_mutate_section_style_settings(array $settings, string $patch, arr
 	$benefits_cta_align = sanitize_key((string) ($extra['benefits_cta_align'] ?? ''));
 	$section_actions_align = sanitize_key((string) ($extra['section_actions_align'] ?? ''));
 	$grid_columns = sanitize_key((string) ($extra['grid_columns'] ?? ''));
+	$heading_tag_raw = strtolower(trim((string) ($extra['heading_tag'] ?? '')));
 
 	if ($patch === 'cycle_background') {
 		$cur = (string) ($settings['section_background'] ?? 'light');
@@ -944,6 +945,21 @@ function lf_ai_mutate_section_style_settings(array $settings, string $patch, arr
 		$settings['section_heading_tag'] = $allowed[ ( $idx + 1 ) % count($allowed) ];
 		return [$settings, ''];
 	}
+	if ($patch === 'set_section_heading_tag') {
+		if (!preg_match('/^h[1-6]$/', $heading_tag_raw)) {
+			return [$settings, __('Choose a valid heading level (H1–H6).', 'leadsforward-core')];
+		}
+		$settings['section_heading_tag'] = $heading_tag_raw;
+		return [$settings, ''];
+	}
+	if ($patch === 'set_layout_heading_tag') {
+		$layout_allowed = ['h2', 'h3', 'h4'];
+		if (!in_array($heading_tag_raw, $layout_allowed, true)) {
+			return [$settings, __('That heading level is not allowed for this block.', 'leadsforward-core')];
+		}
+		$settings['layout_heading_tag'] = $heading_tag_raw;
+		return [$settings, ''];
+	}
 	return [$settings, __('Unknown style action.', 'leadsforward-core')];
 }
 
@@ -967,6 +983,7 @@ function lf_ai_ajax_update_section_style(): void {
 		'benefits_cta_align' => isset($_POST['benefits_cta_align']) ? sanitize_key(wp_unslash((string) $_POST['benefits_cta_align'])) : '',
 		'section_actions_align' => isset($_POST['section_actions_align']) ? sanitize_key(wp_unslash((string) $_POST['section_actions_align'])) : '',
 		'grid_columns' => isset($_POST['grid_columns']) ? sanitize_key(wp_unslash((string) $_POST['grid_columns'])) : '',
+		'heading_tag' => isset($_POST['heading_tag']) ? sanitize_key(wp_unslash((string) $_POST['heading_tag'])) : '',
 	];
 
 	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
@@ -994,6 +1011,12 @@ function lf_ai_ajax_update_section_style(): void {
 		}
 		if ($patch === 'set_service_intro_grid_columns' && function_exists('lf_homepage_base_section_type') && lf_homepage_base_section_type((string) $resolved) !== 'service_intro') {
 			wp_send_json_error(['message' => __('Column count applies to service overview sections only.', 'leadsforward-core')]);
+		}
+		if ($patch === 'set_layout_heading_tag' && function_exists('lf_homepage_base_section_type') && lf_homepage_base_section_type((string) $resolved) !== 'layout_heading') {
+			wp_send_json_error(['message' => __('That heading control applies to heading blocks only.', 'leadsforward-core')]);
+		}
+		if ($patch === 'set_section_heading_tag' && function_exists('lf_homepage_base_section_type') && lf_homepage_base_section_type((string) $resolved) === 'layout_heading') {
+			wp_send_json_error(['message' => __('Use the heading toolbar for this heading block level.', 'leadsforward-core')]);
 		}
 		$old_row = $config[$resolved];
 		$row_settings = is_array($config[$resolved]) ? $config[$resolved] : [];
@@ -1057,6 +1080,12 @@ function lf_ai_ajax_update_section_style(): void {
 	}
 	if ($patch === 'set_service_intro_grid_columns' && $section_type !== 'service_intro') {
 		wp_send_json_error(['message' => __('Column count applies to service overview sections only.', 'leadsforward-core')]);
+	}
+	if ($patch === 'set_layout_heading_tag' && $section_type !== 'layout_heading') {
+		wp_send_json_error(['message' => __('That heading control applies to heading blocks only.', 'leadsforward-core')]);
+	}
+	if ($patch === 'set_section_heading_tag' && $section_type === 'layout_heading') {
+		wp_send_json_error(['message' => __('Use the heading toolbar for this heading block level.', 'leadsforward-core')]);
 	}
 	$old_settings = $settings;
 	[$settings, $err_pb] = lf_ai_mutate_section_style_settings($settings, $patch, $style_extra);
@@ -1853,8 +1882,12 @@ function lf_ai_ajax_inline_save(): void {
 		'plain_len' => (int) (function_exists('mb_strlen') ? mb_strlen(wp_strip_all_tags($value)) : strlen(wp_strip_all_tags($value))),
 	]);
 	$plain_len = function_exists('mb_strlen') ? mb_strlen(wp_strip_all_tags($value)) : strlen(wp_strip_all_tags($value));
-	if ($plain_len > 4000) {
+	$long_html_body_field = ($section_id !== '' && in_array($field_key, ['service_details_body', 'rich_content_body'], true));
+	if (!$long_html_body_field && $plain_len > 4000) {
 		wp_send_json_error(['message' => __('Text is too long for inline editing.', 'leadsforward-core')]);
+	}
+	if ($long_html_body_field && $plain_len > 120000) {
+		wp_send_json_error(['message' => __('This content is too long to save from the inline editor.', 'leadsforward-core')]);
 	}
 	if (trim(wp_strip_all_tags($value)) === '') {
 		wp_send_json_error(['message' => __('Text cannot be empty.', 'leadsforward-core')]);
@@ -1976,6 +2009,94 @@ function lf_ai_ajax_inline_save(): void {
 				['__section_record::' . $section_id => $old_row],
 				['__section_record::' . $section_id => $new_row],
 				'Inline service details body edit'
+			)
+			: '';
+		wp_send_json_success([
+			'message' => __('Inline edit saved.', 'leadsforward-core'),
+			'field_key' => $field_key,
+			'section_id' => $section_id,
+			'value' => $value,
+			'log_id' => $log_id,
+		]);
+	}
+
+	// Rich text (design system): persist full prose HTML from the front-end editor.
+	if ($field_key === 'rich_content_body' && $section_id !== '') {
+		if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+			if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+				wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
+			}
+			$config = lf_get_homepage_section_config();
+			if (!is_array($config)) {
+				wp_send_json_error(['message' => __('Homepage configuration is missing.', 'leadsforward-core')]);
+			}
+			$resolved_section_id = function_exists('lf_ai_homepage_resolve_section_id')
+				? lf_ai_homepage_resolve_section_id($section_id, 'rich_content')
+				: $section_id;
+			$old_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
+			if (empty($old_row)) {
+				wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+			}
+			$hp_type = function_exists('lf_homepage_base_section_type') ? lf_homepage_base_section_type((string) $resolved_section_id) : '';
+			if ($hp_type !== 'rich_content') {
+				wp_send_json_error(['message' => __('Rich text content can only be saved for rich text sections.', 'leadsforward-core')]);
+			}
+			$config[ $resolved_section_id ]['rich_content_body'] = $value;
+			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+			$clear_selector_overrides($context_type, $context_id_use, $selector);
+			$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
+			$log_id = function_exists('lf_ai_log_action')
+				? lf_ai_log_action(
+					$context_type,
+					$context_id_use,
+					['__homepage_section_row::' . $resolved_section_id => $old_row],
+					['__homepage_section_row::' . $resolved_section_id => $new_row],
+					'Inline rich content body edit'
+				)
+				: '';
+			wp_send_json_success([
+				'message' => __('Inline edit saved.', 'leadsforward-core'),
+				'field_key' => $field_key,
+				'section_id' => $resolved_section_id,
+				'value' => $value,
+				'log_id' => $log_id,
+			]);
+		}
+
+		$pid = (int) $context_id_use;
+		$post = get_post($pid);
+		if (!$post instanceof \WP_Post || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+			wp_send_json_error(['message' => __('Section settings are unavailable for this target.', 'leadsforward-core')]);
+		}
+		$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+		if ($pb_context === '') {
+			wp_send_json_error(['message' => __('This target does not support section editing.', 'leadsforward-core')]);
+		}
+		$config = lf_pb_get_post_config($pid, $pb_context);
+		$old_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+		if (empty($old_row)) {
+			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+		}
+		$section_type = sanitize_text_field((string) ($old_row['type'] ?? ''));
+		if ($section_type !== 'rich_content') {
+			wp_send_json_error(['message' => __('Rich text content can only be saved for rich text sections.', 'leadsforward-core')]);
+		}
+		$settings = is_array($old_row['settings'] ?? null) ? $old_row['settings'] : [];
+		$settings['rich_content_body'] = $value;
+		if (function_exists('lf_sections_sanitize_settings')) {
+			$settings = lf_sections_sanitize_settings($section_type, $settings);
+		}
+		$config['sections'][$section_id]['settings'] = $settings;
+		update_post_meta($pid, LF_PB_META_KEY, $config);
+		$clear_selector_overrides($context_type, $context_id_use, $selector);
+		$new_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+		$log_id = function_exists('lf_ai_log_action')
+			? lf_ai_log_action(
+				$context_type,
+				$context_id_use,
+				['__section_record::' . $section_id => $old_row],
+				['__section_record::' . $section_id => $new_row],
+				'Inline rich content body edit'
 			)
 			: '';
 		wp_send_json_success([
