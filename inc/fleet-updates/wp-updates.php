@@ -30,6 +30,13 @@ add_filter('pre_set_site_transient_update_themes', static function ($transient) 
 		return $transient;
 	}
 
+	$installed = (string) $theme->get('Version');
+	$offered = (string) $offer['version'];
+	if ($installed !== '' && $offered !== '' && version_compare($installed, $offered, '>=')) {
+		delete_site_transient(LF_FLEET_OFFER_TRANSIENT);
+		return $transient;
+	}
+
 	$transient->response[$slug] = [
 		'theme' => $slug,
 		'new_version' => (string) $offer['version'],
