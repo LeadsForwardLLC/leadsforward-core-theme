@@ -2339,6 +2339,9 @@ button:focus-visible,
 
 .site-header__phone-icon {
 	font-size: 0.95rem;
+	vertical-align: middle;
+	position: relative;
+	top: 1px;
 }
 
 .site-header__cta {

@@ -55,14 +55,27 @@ function lf_icon_normalize_slug(string $slug): string {
 }
 
 function lf_icon_list(): array {
-	$slugs = function_exists('lf_icon_pack_all_icons') ? lf_icon_pack_all_icons() : [];
+	static $cache = null;
+	if (is_array($cache)) {
+		return $cache;
+	}
+	$slugs = [];
+	$dir = LF_THEME_DIR . '/assets/icons/tabler/outline';
+	if (is_dir($dir)) {
+		$files = glob($dir . '/*.svg') ?: [];
+		foreach ($files as $path) {
+			$base = basename((string) $path, '.svg');
+			$slug = sanitize_title((string) $base);
+			if ($slug !== '') {
+				$slugs[] = $slug;
+			}
+		}
+	}
+	// Ensure any legacy aliases/extras still resolve even if not present in Tabler.
 	$slugs = array_merge($slugs, lf_icon_extra_icons());
-	$slugs = array_filter(array_map('sanitize_title', $slugs));
-	$slugs = array_values(array_filter($slugs, function ($slug) {
-		return strpos((string) $slug, 'social-') !== 0;
-	}));
-	$slugs = array_values(array_unique($slugs));
+	$slugs = array_values(array_unique(array_filter($slugs)));
 	sort($slugs);
+	$cache = $slugs;
 	return $slugs;
 }
 
