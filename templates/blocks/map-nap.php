@@ -25,7 +25,7 @@ $section_surface_style = $surface['style'] !== '' ? ' style="' . esc_attr($surfa
 $entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
 $name     = $entity['name'] ?? (function_exists('lf_get_option') ? lf_get_option('lf_business_name', 'option') : '');
 $phone    = $entity['phone_display'] ?? (function_exists('lf_get_option') ? lf_get_option('lf_business_phone', 'option') : '');
-$email    = $entity['email'] ?? (function_exists('lf_get_option') ? lf_get_option('lf_business_email', 'option') : '');
+$email    = $entity['email'] ?? '';
 $address  = $entity['address'] ?? (function_exists('lf_get_option') ? lf_get_option('lf_business_address', 'option') : '');
 $place_id = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_id', '') : '';
 $place_id = is_string($place_id) ? trim($place_id) : '';

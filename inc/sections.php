@@ -1166,7 +1166,31 @@ function lf_sections_format_richtext_output(string $html): string {
 	if (!preg_match('/<(p|h[1-6]|ul|ol|li|div|blockquote|table|figure|section|article|pre)\b/i', $html)) {
 		$html = wpautop($html);
 	}
-	return wp_kses_post($html);
+	$html = wp_kses_post($html);
+	// Replace [lf_icon ...] tokens after KSES so the SVG output is not stripped.
+	// We intentionally only support this single token (no broad do_shortcode()).
+	if (strpos($html, '[lf_icon') !== false && function_exists('lf_icon')) {
+		$html = preg_replace_callback('/\[lf_icon\s+([^\]]+)\]/i', static function (array $m): string {
+			$atts = shortcode_parse_atts((string) ($m[1] ?? ''));
+			if (!is_array($atts)) {
+				return $m[0];
+			}
+			$name = (string) ($atts['name'] ?? $atts['slug'] ?? '');
+			$name = sanitize_title($name);
+			if ($name === '') {
+				return '';
+			}
+			$args = [];
+			if (!empty($atts['class'])) {
+				$args['class'] = sanitize_text_field((string) $atts['class']);
+			}
+			if (!empty($atts['title'])) {
+				$args['title'] = sanitize_text_field((string) $atts['title']);
+			}
+			return lf_icon($name, $args);
+		}, $html);
+	}
+	return $html;
 }
 
 function lf_sections_parse_lines($value): array {

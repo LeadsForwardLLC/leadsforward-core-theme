@@ -834,6 +834,16 @@ function lf_ai_ajax_update_business_map_embed(): void {
 	}
 	$raw = isset($_POST['map_embed']) ? (string) wp_unslash($_POST['map_embed']) : '';
 	$raw = trim($raw);
+	// Accept either a full <iframe>...</iframe> or a raw Google Maps embed URL (or pb=... fragment).
+	if (stripos($raw, '<iframe') === false) {
+		$maybe = $raw;
+		if (stripos($maybe, 'http') !== 0 && strpos($maybe, 'pb=') !== false) {
+			$maybe = 'https://www.google.com/maps/embed?' . ltrim($maybe, '?');
+		}
+		if (stripos($maybe, 'google.com/maps') !== false) {
+			$raw = '<iframe src="' . esc_url_raw($maybe) . '" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>';
+		}
+	}
 	$allowed = function_exists('lf_map_embed_allowed_iframe_kses') ? lf_map_embed_allowed_iframe_kses() : ['iframe' => ['src' => true]];
 	$clean = wp_kses($raw, $allowed);
 	if (trim(wp_strip_all_tags($clean)) === '' || stripos($clean, '<iframe') === false) {

@@ -136,7 +136,7 @@ function lf_build_local_business_schema(): array {
 	if (!empty($phone)) {
 		$schema['telephone'] = $phone;
 	}
-	$email = $entity['email'] ?? lf_get_option('lf_business_email', 'option');
+	$email = $entity['email'] ?? '';
 	if (!empty($email)) {
 		$schema['email'] = $email;
 	}
