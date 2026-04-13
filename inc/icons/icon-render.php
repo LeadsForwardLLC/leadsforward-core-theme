@@ -1,6 +1,6 @@
 <?php
 /**
- * Icon renderer (Lucide sprite).
+ * Icon renderer (Tabler SVG files).
  *
  * @package LeadsForward_Core
  * @since 0.1.0
@@ -12,41 +12,28 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-function lf_icon_sprite_path(): string {
-	return LF_THEME_DIR . '/assets/icons/sprite.svg';
+function lf_icon_tabler_dir(): string {
+	return LF_THEME_DIR . '/assets/icons/tabler/outline';
 }
 
-function lf_icon_sprite_markup(): string {
-	static $sprite = null;
-	if ($sprite !== null) {
-		return $sprite;
+function lf_icon_tabler_path(string $slug): string {
+	$slug = sanitize_title($slug);
+	if ($slug === '') {
+		return '';
 	}
-	$path = lf_icon_sprite_path();
-	$sprite = is_readable($path) ? (string) file_get_contents($path) : '';
-	return $sprite;
+	return rtrim(lf_icon_tabler_dir(), '/') . '/' . $slug . '.svg';
 }
-
-function lf_icon_sprite(): void {
-	static $rendered = false;
-	if ($rendered) {
-		return;
-	}
-	$rendered = true;
-	$sprite = lf_icon_sprite_markup();
-	if ($sprite === '') {
-		return;
-	}
-	echo $sprite;
-}
-
-add_action('wp_footer', 'lf_icon_sprite', 1);
-add_action('admin_footer', 'lf_icon_sprite', 1);
 
 function lf_icon_exists(string $slug): bool {
-	if (function_exists('lf_icon_list')) {
-		return in_array($slug, lf_icon_list(), true);
+	$slug = sanitize_title((string) $slug);
+	if ($slug === '') {
+		return false;
 	}
-	return $slug !== '';
+	if (function_exists('lf_icon_list') && !in_array($slug, lf_icon_list(), true)) {
+		return false;
+	}
+	$path = lf_icon_tabler_path($slug);
+	return $path !== '' && is_readable($path);
 }
 
 function lf_icon(string $name, array $args = []): string {
@@ -58,6 +45,18 @@ function lf_icon(string $name, array $args = []): string {
 		$slug = lf_icon_normalize_slug($slug);
 	}
 	if (!lf_icon_exists($slug)) {
+		return '';
+	}
+
+	static $cache = [];
+	if (isset($cache[$slug]) && is_string($cache[$slug])) {
+		$svg_raw = $cache[$slug];
+	} else {
+		$path = lf_icon_tabler_path($slug);
+		$svg_raw = ($path !== '' && is_readable($path)) ? (string) file_get_contents($path) : '';
+		$cache[$slug] = $svg_raw;
+	}
+	if ($svg_raw === '') {
 		return '';
 	}
 	$class = 'lf-icon';
@@ -73,19 +72,24 @@ function lf_icon(string $name, array $args = []): string {
 	if ($stroke_width > 0) {
 		$style = trim('--lf-icon-stroke:' . $stroke_width . '; ' . $style);
 	}
-	$style_attr = $style !== '' ? ' style="' . esc_attr($style) . '"' : '';
-	$title_markup = $title !== '' ? '<title>' . esc_html($title) . '</title>' : '';
-	$symbol_id = 'lf-icon-' . $slug;
 
-	return sprintf(
-		'<svg class="%s" role="%s" aria-hidden="%s"%s%s focusable="false"><use href="#%s" xlink:href="#%s"></use>%s</svg>',
-		esc_attr($class),
-		esc_attr($role),
-		esc_attr($aria_hidden),
-		$aria_label !== '' ? ' aria-label="' . esc_attr($aria_label) . '"' : '',
-		$style_attr,
-		esc_attr($symbol_id),
-		esc_attr($symbol_id),
-		$title_markup
-	);
+	// Inject class/aria while keeping Tabler paths intact. Remove width/height so CSS can size via em.
+	$attrs = 'class="' . esc_attr($class) . '" role="' . esc_attr($role) . '" aria-hidden="' . esc_attr($aria_hidden) . '" focusable="false"';
+	if ($aria_label !== '') {
+		$attrs .= ' aria-label="' . esc_attr($aria_label) . '"';
+	}
+	if ($style !== '') {
+		$attrs .= ' style="' . esc_attr($style) . '"';
+	}
+	$title_markup = $title !== '' ? '<title>' . esc_html($title) . '</title>' : '';
+
+	$svg = preg_replace('/<svg\b[^>]*>/i', '<svg ' . $attrs . '>', $svg_raw, 1);
+	if (!is_string($svg) || $svg === '') {
+		return '';
+	}
+	$svg = preg_replace('/\s(width|height)="[^"]*"/i', '', $svg);
+	if ($title_markup !== '') {
+		$svg = preg_replace('/<svg\b([^>]*)>/i', '<svg$1>' . $title_markup, $svg, 1);
+	}
+	return $svg;
 }
