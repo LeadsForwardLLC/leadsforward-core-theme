@@ -33,7 +33,12 @@ function lf_fleet_updates_admin_render(): void {
 	if (isset($_POST['lf_fleet_save']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce')) {
 		update_option(LF_FLEET_OPT_API_BASE, esc_url_raw((string) wp_unslash($_POST['api_base'] ?? '')));
 		update_option(LF_FLEET_OPT_SITE_ID, sanitize_text_field((string) wp_unslash($_POST['site_id'] ?? '')));
-		update_option(LF_FLEET_OPT_TOKEN, sanitize_text_field((string) wp_unslash($_POST['token'] ?? '')));
+		$tok_raw = (string) wp_unslash($_POST['token'] ?? '');
+		$tok_raw = trim($tok_raw);
+		// Allow URL-safe base64 or base64; strip only whitespace and quotes.
+		$tok_raw = trim($tok_raw, " \t\n\r\0\x0B\"'");
+		$tok_clean = preg_replace('/[^A-Za-z0-9\-\_\+\/=]/', '', $tok_raw);
+		update_option(LF_FLEET_OPT_TOKEN, is_string($tok_clean) ? $tok_clean : $tok_raw);
 		$decoded = json_decode((string) wp_unslash($_POST['pubkeys_json'] ?? ''), true);
 		update_option(LF_FLEET_OPT_PUBKEYS, wp_json_encode(is_array($decoded) ? $decoded : []));
 		$did = 'saved';

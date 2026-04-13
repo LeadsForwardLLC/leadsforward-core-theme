@@ -95,9 +95,16 @@ function lf_fleet_controller_generate_ed25519_keypair(): array {
 	];
 }
 
+function lf_fleet_controller_token_new(): string {
+	// URL-safe base64 (no + / =) to avoid sanitization/paste issues.
+	$raw = base64_encode(random_bytes(32));
+	$safe = strtr($raw, '+/', '-_');
+	return rtrim($safe, '=');
+}
+
 function lf_fleet_controller_mint_site(string $site_url = '', string $label = ''): array {
 	$site_id = function_exists('wp_generate_uuid4') ? wp_generate_uuid4() : (string) wp_rand();
-	$token = base64_encode(random_bytes(32));
+	$token = lf_fleet_controller_token_new();
 	$site_url = esc_url_raw($site_url);
 	$label = sanitize_text_field($label);
 	return [
@@ -146,7 +153,7 @@ function lf_fleet_controller_verify_request(string $path): array {
 
 	$sites = lf_fleet_controller_sites();
 	$row = $sites[$site_id] ?? null;
-	$token = is_array($row) ? (string) ($row['token'] ?? '') : '';
+	$token = is_array($row) ? trim((string) ($row['token'] ?? '')) : '';
 	if ($token === '') {
 		return ['ok' => false, 'site_id' => '', 'error' => 'unknown_site'];
 	}
