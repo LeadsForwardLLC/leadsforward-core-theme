@@ -33,7 +33,8 @@ function lf_fleet_is_connected(): bool {
 		&& (string) get_option(LF_FLEET_OPT_TOKEN, '') !== '';
 }
 
-add_action('admin_menu', 'lf_fleet_updates_admin_register_menu');
+// Menu registration is handled by `inc/ops/menu.php` so the submenu is guaranteed
+// to be part of the authorized LeadsForward menu tree (prevents "not allowed"/404-like behavior).
 
 add_filter('cron_schedules', static function (array $schedules): array {
 	if (!isset($schedules['lf_15m'])) {
