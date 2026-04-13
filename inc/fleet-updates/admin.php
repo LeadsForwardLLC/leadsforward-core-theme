@@ -83,13 +83,32 @@ function lf_fleet_updates_admin_render(): void {
 		], JSON_PRETTY_PRINT);
 		$controller_did = 'site_created';
 	}
-	if (isset($_POST['lf_fleet_controller_rollout_save']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_enabled')) {
-		$approve_all = isset($_POST['lf_fleet_ctrl_approve_all']) ? '1' : '0';
-		update_option(LF_FLEET_CTRL_OPT_APPROVE_ALL, $approve_all);
+	if (isset($_POST['lf_fleet_controller_rollout_save']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_sites')) {
+		$scope_raw = isset($_POST['lf_fleet_rollout_scope']) ? sanitize_text_field((string) wp_unslash($_POST['lf_fleet_rollout_scope'])) : 'off';
+		$scope = in_array($scope_raw, ['off', 'all', 'selected'], true) ? $scope_raw : 'off';
+		update_option(LF_FLEET_CTRL_OPT_ROLLOUT_SCOPE, $scope);
+		// Keep legacy option aligned for any external reads.
+		update_option(LF_FLEET_CTRL_OPT_APPROVE_ALL, $scope === 'all' ? '1' : '0');
+
+		$sites = lf_fleet_controller_sites();
+		$posted = isset($_POST['lf_fleet_site_rollout']) && is_array($_POST['lf_fleet_site_rollout'])
+			? wp_unslash($_POST['lf_fleet_site_rollout'])
+			: [];
+		foreach ($sites as $sid => &$row) {
+			if (!is_array($row)) {
+				continue;
+			}
+			$key = (string) $sid;
+			$row['rollout'] = isset($posted[$key]) && (string) $posted[$key] === '1';
+		}
+		unset($row);
+		if (function_exists('lf_fleet_controller_update_sites')) {
+			lf_fleet_controller_update_sites($sites);
+		}
 		$controller_did = 'rollout_saved';
 	}
 	if (isset($_POST['lf_fleet_controller_remove_site']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_sites')) {
-		$rm = isset($_POST['lf_fleet_remove_site_id']) ? sanitize_text_field((string) wp_unslash($_POST['lf_fleet_remove_site_id'])) : '';
+		$rm = sanitize_text_field((string) wp_unslash((string) $_POST['lf_fleet_controller_remove_site']));
 		if ($rm !== '') {
 			$sites = lf_fleet_controller_sites();
 			if (isset($sites[$rm])) {
@@ -194,7 +213,7 @@ function lf_fleet_updates_admin_render(): void {
 		echo '<p style="margin-top:10px;"><button type="submit" class="button button-primary" name="lf_fleet_controller_save" value="1">' . esc_html__('Save controller settings', 'leadsforward-core') . '</button></p>';
 
 		if ($is_controller) {
-			$approve_all = get_option(LF_FLEET_CTRL_OPT_APPROVE_ALL, '0') === '1';
+			$rollout_scope = function_exists('lf_fleet_controller_rollout_scope') ? lf_fleet_controller_rollout_scope() : 'off';
 			$approved_version = (string) get_option(LF_FLEET_CTRL_OPT_APPROVED_VERSION, '');
 			if ($approved_version === '' && function_exists('lf_fleet_controller_current_version')) {
 				$approved_version = lf_fleet_controller_current_version();
@@ -214,10 +233,14 @@ function lf_fleet_updates_admin_render(): void {
 			echo '<p><button type="submit" class="button button-primary" name="lf_fleet_controller_add_site" value="1">' . esc_html__('Create Site ID + Token bundle', 'leadsforward-core') . '</button></p>';
 
 			echo '<h3 style="margin-top:18px;">' . esc_html__('Rollout (push)', 'leadsforward-core') . '</h3>';
-			echo '<p class="description">' . esc_html__('Approves the controller’s currently deployed theme version for rollout. Fleet sites will auto-update on their next check.', 'leadsforward-core') . '</p>';
+			echo '<p class="description">' . esc_html__('The controller only serves the theme version it is currently running. Choose which registered sites may receive that update.', 'leadsforward-core') . '</p>';
 			echo '<table class="form-table" role="presentation">';
 			echo '<tr><th scope="row">' . esc_html__('Controller version', 'leadsforward-core') . '</th><td><input type="text" class="regular-text" value="' . esc_attr($approved_version) . '" readonly /></td></tr>';
-			echo '<tr><th scope="row">' . esc_html__('Approve for all registered sites', 'leadsforward-core') . '</th><td><label><input type="checkbox" name="lf_fleet_ctrl_approve_all" value="1" ' . checked($approve_all, true, false) . ' /> ' . esc_html__('Enabled', 'leadsforward-core') . '</label></td></tr>';
+			echo '<tr><th scope="row">' . esc_html__('Who gets updates', 'leadsforward-core') . '</th><td>';
+			echo '<fieldset><label style="display:block;margin:0 0 6px;"><input type="radio" name="lf_fleet_rollout_scope" value="off" ' . checked($rollout_scope, 'off', false) . ' /> ' . esc_html__('Nobody (rollout paused)', 'leadsforward-core') . '</label>';
+			echo '<label style="display:block;margin:0 0 6px;"><input type="radio" name="lf_fleet_rollout_scope" value="all" ' . checked($rollout_scope, 'all', false) . ' /> ' . esc_html__('All registered sites', 'leadsforward-core') . '</label>';
+			echo '<label style="display:block;margin:0 0 6px;"><input type="radio" name="lf_fleet_rollout_scope" value="selected" ' . checked($rollout_scope, 'selected', false) . ' /> ' . esc_html__('Only sites checked below (“Include in rollout”)', 'leadsforward-core') . '</label>';
+			echo '</fieldset></td></tr>';
 			echo '</table>';
 			echo '<p><button type="submit" class="button button-primary" name="lf_fleet_controller_rollout_save" value="1">' . esc_html__('Save rollout settings', 'leadsforward-core') . '</button></p>';
 
@@ -229,7 +252,9 @@ function lf_fleet_updates_admin_render(): void {
 			$sites = function_exists('lf_fleet_controller_sites') ? lf_fleet_controller_sites() : [];
 			if ($sites !== []) {
 				echo '<h3 style="margin-top:18px;">' . esc_html__('Connected sites (heartbeat)', 'leadsforward-core') . '</h3>';
+				echo '<p class="description">' . esc_html__('When rollout scope is “selected”, only checked sites receive the update. Save rollout settings after changing checkboxes.', 'leadsforward-core') . '</p>';
 				echo '<table class="widefat striped" style="max-width:1100px;"><thead><tr>';
+				echo '<th>' . esc_html__('Include in rollout', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('Label', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('URL', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('Site ID', 'leadsforward-core') . '</th>';
@@ -245,15 +270,17 @@ function lf_fleet_updates_admin_render(): void {
 					$url = (string) ($row['site_url'] ?? '');
 					$ver = (string) ($row['current_version'] ?? '');
 					$seen = (int) ($row['last_seen_at'] ?? 0);
+					$in_rollout = !empty($row['rollout']);
+					$sid_esc = (string) $sid;
 					echo '<tr>';
+					echo '<td><label><input type="checkbox" name="lf_fleet_site_rollout[' . esc_attr($sid_esc) . ']" value="1" ' . checked($in_rollout, true, false) . ' /> ' . esc_html__('Yes', 'leadsforward-core') . '</label></td>';
 					echo '<td>' . esc_html($lab !== '' ? $lab : '—') . '</td>';
 					echo '<td>' . ($url !== '' ? '<code>' . esc_html($url) . '</code>' : '—') . '</td>';
-					echo '<td><code>' . esc_html((string) $sid) . '</code></td>';
+					echo '<td><code>' . esc_html($sid_esc) . '</code></td>';
 					echo '<td>' . esc_html($ver !== '' ? $ver : '—') . '</td>';
 					echo '<td>' . esc_html($seen > 0 ? gmdate('Y-m-d H:i:s', $seen) . ' UTC' : '—') . '</td>';
 					echo '<td>';
-					echo '<button type="submit" class="button button-small" name="lf_fleet_controller_remove_site" value="1" onclick="return confirm(\'Remove this site from controller?\');">' . esc_html__('Remove', 'leadsforward-core') . '</button>';
-					echo '<input type="hidden" name="lf_fleet_remove_site_id" value="' . esc_attr((string) $sid) . '" />';
+					echo '<button type="submit" class="button button-small" name="lf_fleet_controller_remove_site" value="' . esc_attr($sid_esc) . '" onclick="return confirm(\'Remove this site from controller?\');">' . esc_html__('Remove', 'leadsforward-core') . '</button>';
 					echo '</td>';
 					echo '</tr>';
 				}
