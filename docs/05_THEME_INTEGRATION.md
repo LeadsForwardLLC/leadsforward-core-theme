@@ -78,7 +78,11 @@ In wp-admin:
   - **Controller public keys JSON** (map of `key_id` → base64 public key)
 
 ### How it works
-- On a **~15 minute** WordPress cron schedule (with jitter), the site calls the controller **when WP-Cron runs** (typically when the site gets traffic, or when system cron hits `wp-cron.php`). Low-traffic fleet sites should use real server cron or rely on **Check now** in Fleet Updates after a release.
+- On a **~15 minute** WordPress cron schedule (default; tunable), the site calls the controller **when WP-Cron runs** (typically when the site gets traffic, or when system cron hits `wp-cron.php`). Low-traffic fleet sites should use real server cron or rely on **Check now** in Fleet Updates after a release.
+- **Interval filter:** `lf_fleet_updates_cron_interval` (seconds) adjusts how often the recurring check runs; the theme clamps values between **5 and 60 minutes** so hosts can speed up rollouts without starving the server.
+- **After connect or bundle import:** the theme schedules a **one-off** fleet run about 20 seconds ahead (guarded by a short-lived transient) and calls `spawn_cron()` when available so new connections do not wait a full interval.
+- **Fleet Updates screen:** an authorized visit to **LeadsForward → Fleet Updates** nudges `spawn_cron()` while connected, helping quiet sites pick up updates soon after you open wp-admin.
+- **Disconnect:** clears scheduled fleet cron events and the near-term ping transient so orphaned jobs do not keep firing.
 - Each run:
   - **Heartbeat**: reports current version + environment
   - **Update check**: controller returns an update only if the site is eligible + the version is approved

@@ -19,7 +19,7 @@ Use this checklist before launch and when auditing a fleet or staging site. **Th
 
 - [ ] **LeadsForward → Fleet Updates**: connection bundle saved; last check shows success when the controller is reachable.
 - [ ] **Rollout** on the controller matches this site (scope, selected sites, or tag).
-- [ ] **WP-Cron**: low-traffic sites should use a **system cron** hitting `wp-cron.php` on a steady interval so the ~15 minute fleet schedule actually runs; otherwise use **Check now** after publishing a theme release.
+- [ ] **WP-Cron**: low-traffic sites should use a **system cron** hitting `wp-cron.php` on a steady interval so the fleet schedule actually runs; otherwise use **Check now** after publishing a theme release. For faster rollouts (within 5–60 minutes), a developer can filter `lf_fleet_updates_cron_interval` in seconds — see `docs/05_THEME_INTEGRATION.md`.
 - [ ] After a failed manual theme update: confirm the theme directory is intact; re-save **Header Menu** location if navigation disappeared (see Menus → Manage Locations).
 
 See `docs/05_THEME_INTEGRATION.md` (Fleet section) for architecture and security notes.
