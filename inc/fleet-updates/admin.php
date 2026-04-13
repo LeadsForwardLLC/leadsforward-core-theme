@@ -28,6 +28,8 @@ function lf_fleet_updates_admin_render(): void {
 	}
 
 	$did = '';
+	$bundle_out = '';
+	$controller_did = '';
 	if (isset($_POST['lf_fleet_save']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce')) {
 		update_option(LF_FLEET_OPT_API_BASE, esc_url_raw((string) wp_unslash($_POST['api_base'] ?? '')));
 		update_option(LF_FLEET_OPT_SITE_ID, sanitize_text_field((string) wp_unslash($_POST['site_id'] ?? '')));
@@ -35,6 +37,46 @@ function lf_fleet_updates_admin_render(): void {
 		$decoded = json_decode((string) wp_unslash($_POST['pubkeys_json'] ?? ''), true);
 		update_option(LF_FLEET_OPT_PUBKEYS, wp_json_encode(is_array($decoded) ? $decoded : []));
 		$did = 'saved';
+	}
+	// Controller mode (theme.leadsforward.com): enable + mint site bundles + keys.
+	if (isset($_POST['lf_fleet_controller_save']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_enabled')) {
+		$enable = isset($_POST['lf_fleet_controller_enabled']) ? '1' : '0';
+		update_option(LF_FLEET_CTRL_OPT_ENABLED, $enable);
+		if ($enable !== '1') {
+			update_option(LF_FLEET_CTRL_OPT_REWRITE_FLUSHED, '0');
+		}
+		$controller_did = 'controller_saved';
+	}
+	if (isset($_POST['lf_fleet_controller_generate_key']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_generate_ed25519_keypair')) {
+		$kp = lf_fleet_controller_generate_ed25519_keypair();
+		if (!empty($kp['ok'])) {
+			$keys = function_exists('lf_fleet_controller_keys') ? lf_fleet_controller_keys() : [];
+			$keys[(string) $kp['kid']] = ['public' => (string) $kp['public'], 'private' => (string) $kp['private'], 'created_at' => time()];
+			if (function_exists('lf_fleet_controller_update_keys')) {
+				lf_fleet_controller_update_keys($keys);
+			}
+			$controller_did = 'key_created';
+		} else {
+			$controller_did = 'key_failed';
+		}
+	}
+	if (isset($_POST['lf_fleet_controller_add_site']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_mint_site')) {
+		$site_url = isset($_POST['lf_fleet_new_site_url']) ? (string) wp_unslash($_POST['lf_fleet_new_site_url']) : '';
+		$label = isset($_POST['lf_fleet_new_site_label']) ? (string) wp_unslash($_POST['lf_fleet_new_site_label']) : '';
+		$mint = lf_fleet_controller_mint_site($site_url, $label);
+		$sites = function_exists('lf_fleet_controller_sites') ? lf_fleet_controller_sites() : [];
+		$sites[(string) $mint['site_id']] = $mint;
+		if (function_exists('lf_fleet_controller_update_sites')) {
+			lf_fleet_controller_update_sites($sites);
+		}
+		$keys_json = function_exists('lf_fleet_controller_pubkeys_json') ? lf_fleet_controller_pubkeys_json() : '{}';
+		$bundle_out = wp_json_encode([
+			'api_base' => home_url('/'),
+			'site_id' => (string) $mint['site_id'],
+			'token' => (string) $mint['token'],
+			'public_keys_json' => json_decode((string) $keys_json, true) ?: new stdClass(),
+		], JSON_PRETTY_PRINT);
+		$controller_did = 'site_created';
 	}
 	if (isset($_POST['lf_fleet_disconnect']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce')) {
 		delete_option(LF_FLEET_OPT_API_BASE);
@@ -70,6 +112,15 @@ function lf_fleet_updates_admin_render(): void {
 	} elseif ($did === 'checked') {
 		echo '<div class="notice notice-info"><p>' . esc_html__('Checked for updates.', 'leadsforward-core') . '</p></div>';
 	}
+	if ($controller_did === 'controller_saved') {
+		echo '<div class="notice notice-success"><p>' . esc_html__('Controller settings saved.', 'leadsforward-core') . '</p></div>';
+	} elseif ($controller_did === 'key_created') {
+		echo '<div class="notice notice-success"><p>' . esc_html__('Signing key created.', 'leadsforward-core') . '</p></div>';
+	} elseif ($controller_did === 'key_failed') {
+		echo '<div class="notice notice-error"><p>' . esc_html__('Signing key creation failed (libsodium unavailable).', 'leadsforward-core') . '</p></div>';
+	} elseif ($controller_did === 'site_created') {
+		echo '<div class="notice notice-success"><p>' . esc_html__('Site credentials created. Copy the bundle below into the fleet site.', 'leadsforward-core') . '</p></div>';
+	}
 
 	echo '<div style="margin:14px 0; padding:12px; background:#fff; border:1px solid #dbe3ef; border-radius:10px;">';
 	echo '<strong>' . esc_html__('Status:', 'leadsforward-core') . '</strong> ';
@@ -97,6 +148,72 @@ function lf_fleet_updates_admin_render(): void {
 	}
 
 	echo '</form>';
+
+	// Controller section (only shows when controller module is present).
+	if (function_exists('lf_fleet_controller_enabled')) {
+		$is_controller = lf_fleet_controller_enabled();
+		echo '<hr style="margin:24px 0;" />';
+		echo '<h2>' . esc_html__('Controller mode (theme.leadsforward.com)', 'leadsforward-core') . '</h2>';
+		echo '<p>' . esc_html__('Enable this only on the controller. It mints Site IDs + tokens and receives heartbeat/update checks at /api/v1/.', 'leadsforward-core') . '</p>';
+		echo '<form method="post" style="margin-top:10px;">';
+		wp_nonce_field('lf_fleet_updates_save', 'lf_fleet_nonce');
+		echo '<label style="display:inline-flex;gap:8px;align-items:center;">';
+		echo '<input type="checkbox" name="lf_fleet_controller_enabled" value="1" ' . checked($is_controller, true, false) . ' /> ';
+		echo '<strong>' . esc_html__('Enable controller mode on this site', 'leadsforward-core') . '</strong>';
+		echo '</label>';
+		echo '<p style="margin-top:10px;"><button type="submit" class="button button-primary" name="lf_fleet_controller_save" value="1">' . esc_html__('Save controller settings', 'leadsforward-core') . '</button></p>';
+
+		if ($is_controller) {
+			$keys_json = function_exists('lf_fleet_controller_pubkeys_json') ? lf_fleet_controller_pubkeys_json() : '{}';
+			echo '<h3 style="margin-top:18px;">' . esc_html__('Signing keys', 'leadsforward-core') . '</h3>';
+			echo '<p><button type="submit" class="button" name="lf_fleet_controller_generate_key" value="1">' . esc_html__('Generate new Ed25519 keypair', 'leadsforward-core') . '</button></p>';
+			echo '<p class="description">' . esc_html__('Public keys are shared to fleet sites. Private keys stay on controller to sign release artifacts.', 'leadsforward-core') . '</p>';
+			echo '<pre style="background:#0b1220;color:#e2e8f0;padding:12px;border-radius:10px;max-width:980px;overflow:auto;">' . esc_html((string) $keys_json) . '</pre>';
+
+			echo '<h3 style="margin-top:18px;">' . esc_html__('Create site credentials', 'leadsforward-core') . '</h3>';
+			echo '<table class="form-table" role="presentation">';
+			echo '<tr><th scope="row"><label for="lf_fleet_new_site_url">' . esc_html__('Fleet site URL (optional)', 'leadsforward-core') . '</label></th><td><input type="url" id="lf_fleet_new_site_url" name="lf_fleet_new_site_url" class="regular-text" placeholder="https://example.com" /></td></tr>';
+			echo '<tr><th scope="row"><label for="lf_fleet_new_site_label">' . esc_html__('Label (optional)', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_fleet_new_site_label" name="lf_fleet_new_site_label" class="regular-text" placeholder="My Site" /></td></tr>';
+			echo '</table>';
+			echo '<p><button type="submit" class="button button-primary" name="lf_fleet_controller_add_site" value="1">' . esc_html__('Create Site ID + Token bundle', 'leadsforward-core') . '</button></p>';
+
+			if ($bundle_out !== '') {
+				echo '<h4>' . esc_html__('Copy/paste bundle', 'leadsforward-core') . '</h4>';
+				echo '<pre style="background:#0b1220;color:#e2e8f0;padding:12px;border-radius:10px;max-width:980px;overflow:auto;">' . esc_html($bundle_out) . '</pre>';
+			}
+
+			$sites = function_exists('lf_fleet_controller_sites') ? lf_fleet_controller_sites() : [];
+			if ($sites !== []) {
+				echo '<h3 style="margin-top:18px;">' . esc_html__('Connected sites (heartbeat)', 'leadsforward-core') . '</h3>';
+				echo '<table class="widefat striped" style="max-width:1100px;"><thead><tr>';
+				echo '<th>' . esc_html__('Label', 'leadsforward-core') . '</th>';
+				echo '<th>' . esc_html__('URL', 'leadsforward-core') . '</th>';
+				echo '<th>' . esc_html__('Site ID', 'leadsforward-core') . '</th>';
+				echo '<th>' . esc_html__('Current version', 'leadsforward-core') . '</th>';
+				echo '<th>' . esc_html__('Last seen', 'leadsforward-core') . '</th>';
+				echo '</tr></thead><tbody>';
+				foreach ($sites as $sid => $row) {
+					if (!is_array($row)) {
+						continue;
+					}
+					$lab = (string) ($row['label'] ?? '');
+					$url = (string) ($row['site_url'] ?? '');
+					$ver = (string) ($row['current_version'] ?? '');
+					$seen = (int) ($row['last_seen_at'] ?? 0);
+					echo '<tr>';
+					echo '<td>' . esc_html($lab !== '' ? $lab : '—') . '</td>';
+					echo '<td>' . ($url !== '' ? '<code>' . esc_html($url) . '</code>' : '—') . '</td>';
+					echo '<td><code>' . esc_html((string) $sid) . '</code></td>';
+					echo '<td>' . esc_html($ver !== '' ? $ver : '—') . '</td>';
+					echo '<td>' . esc_html($seen > 0 ? gmdate('Y-m-d H:i:s', $seen) . ' UTC' : '—') . '</td>';
+					echo '</tr>';
+				}
+				echo '</tbody></table>';
+			}
+		}
+		echo '</form>';
+	}
+
 	echo '</div>';
 }
 
