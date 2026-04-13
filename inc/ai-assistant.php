@@ -593,9 +593,15 @@ function lf_ai_assistant_render_floating_widget(): void {
 					<button type="button" class="lf-ai-inline-link__fmt" data-lf-ai-inline-cmd="underline" title="<?php esc_attr_e('Underline', 'leadsforward-core'); ?>"><span style="text-decoration:underline">U</span></button>
 				</span>
 				<span class="lf-ai-inline-link__toolbar-group" role="group" aria-label="<?php esc_attr_e('Alignment', 'leadsforward-core'); ?>">
-					<button type="button" class="lf-ai-inline-link__fmt" data-lf-ai-inline-cmd="justifyLeft" title="<?php esc_attr_e('Align left', 'leadsforward-core'); ?>">L</button>
-					<button type="button" class="lf-ai-inline-link__fmt" data-lf-ai-inline-cmd="justifyCenter" title="<?php esc_attr_e('Align center', 'leadsforward-core'); ?>">C</button>
-					<button type="button" class="lf-ai-inline-link__fmt" data-lf-ai-inline-cmd="justifyRight" title="<?php esc_attr_e('Align right', 'leadsforward-core'); ?>">R</button>
+					<button type="button" class="lf-ai-inline-link__fmt lf-ai-inline-link__fmt--icon" data-lf-ai-inline-cmd="justifyLeft" title="<?php esc_attr_e('Align left', 'leadsforward-core'); ?>" aria-label="<?php esc_attr_e('Align left', 'leadsforward-core'); ?>">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="2" rx="0.5"/><rect x="3" y="11" width="12" height="2" rx="0.5"/><rect x="3" y="17" width="15" height="2" rx="0.5"/></svg>
+					</button>
+					<button type="button" class="lf-ai-inline-link__fmt lf-ai-inline-link__fmt--icon" data-lf-ai-inline-cmd="justifyCenter" title="<?php esc_attr_e('Align center', 'leadsforward-core'); ?>" aria-label="<?php esc_attr_e('Align center', 'leadsforward-core'); ?>">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="2" rx="0.5"/><rect x="6" y="11" width="12" height="2" rx="0.5"/><rect x="4.5" y="17" width="15" height="2" rx="0.5"/></svg>
+					</button>
+					<button type="button" class="lf-ai-inline-link__fmt lf-ai-inline-link__fmt--icon" data-lf-ai-inline-cmd="justifyRight" title="<?php esc_attr_e('Align right', 'leadsforward-core'); ?>" aria-label="<?php esc_attr_e('Align right', 'leadsforward-core'); ?>">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="2" rx="0.5"/><rect x="9" y="11" width="12" height="2" rx="0.5"/><rect x="6" y="17" width="15" height="2" rx="0.5"/></svg>
+					</button>
 				</span>
 				<span class="lf-ai-inline-link__toolbar-group" role="group" aria-label="<?php esc_attr_e('Text color', 'leadsforward-core'); ?>">
 					<?php
@@ -1087,6 +1093,8 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-inline-link__fmt { border:1px solid rgba(255,255,255,.35); border-radius:6px; background:rgba(255,255,255,.08); color:#fff; font:inherit; font-weight:700; padding:4px 8px; cursor:pointer; min-width:28px; line-height:1.2; }
 		.lf-ai-inline-link__fmt:hover { background:rgba(255,255,255,.18); }
 		.lf-ai-inline-link__fmt--swatch { min-width:22px; width:22px; height:22px; padding:0; border-radius:6px; border:2px solid rgba(255,255,255,.5); }
+		.lf-ai-inline-link__fmt--icon { padding:5px; min-width:30px; min-height:30px; display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; }
+		.lf-ai-inline-link__fmt--icon svg { display:block; flex-shrink:0; }
 		.lf-ai-inline-link__open { border:0; border-radius:8px; background:#8348f9; color:#fff; font:inherit; font-weight:700; padding:6px 10px; cursor:pointer; }
 		.lf-ai-inline-link__open:hover { background:#6d28d9; }
 		.lf-ai-inline-link__backdrop { position:fixed; inset:0; z-index:100003; background:rgba(15,23,42,.45); }
