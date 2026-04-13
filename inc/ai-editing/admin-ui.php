@@ -822,6 +822,30 @@ add_action('wp_ajax_lf_ai_duplicate_section', 'lf_ai_ajax_duplicate_section');
 add_action('wp_ajax_lf_ai_add_section', 'lf_ai_ajax_add_section');
 add_action('wp_ajax_lf_ai_update_section_style', 'lf_ai_ajax_update_section_style');
 add_action('wp_ajax_lf_ai_update_hero_settings', 'lf_ai_ajax_update_hero_settings');
+add_action('wp_ajax_lf_ai_update_business_map_embed', 'lf_ai_ajax_update_business_map_embed');
+
+function lf_ai_ajax_update_business_map_embed(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	if (!function_exists('lf_update_business_info_value')) {
+		wp_send_json_error(['message' => __('Business settings are unavailable.', 'leadsforward-core')]);
+	}
+	$raw = isset($_POST['map_embed']) ? (string) wp_unslash($_POST['map_embed']) : '';
+	$raw = trim($raw);
+	$allowed = function_exists('lf_map_embed_allowed_iframe_kses') ? lf_map_embed_allowed_iframe_kses() : ['iframe' => ['src' => true]];
+	$clean = wp_kses($raw, $allowed);
+	if (trim(wp_strip_all_tags($clean)) === '' || stripos($clean, '<iframe') === false) {
+		wp_send_json_error(['message' => __('Paste a valid Google Maps iframe embed.', 'leadsforward-core')]);
+	}
+	lf_update_business_info_value('lf_business_map_embed', $clean);
+	wp_send_json_success([
+		'message' => __('Map embed saved.', 'leadsforward-core'),
+		'value' => $clean,
+		'reload' => true,
+	]);
+}
 
 /**
  * @return list<string>
