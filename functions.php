@@ -64,6 +64,8 @@ lf_load_inc('ai-studio.php');
 lf_load_inc('ai-studio-wiring.php');
 lf_load_inc('ai-studio-rest.php');
 lf_load_inc('ai-studio-airtable.php');
+// Private fleet update channel (controller-approved auto-updates).
+lf_load_inc('fleet-updates.php');
 lf_load_inc('docs-page.php');
 lf_load_inc('docs-content.php');
 lf_load_inc('docs-playbook.php');
