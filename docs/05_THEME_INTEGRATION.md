@@ -63,6 +63,34 @@ Server logs for the check use keys `business_expected`, `business_incoming`, and
   - honeypot bot filtering with silent-success behavior
 - Quote Builder webhook delivery now includes retry queue processing for transient remote failures.
 
+## Fleet theme updates (private channel)
+
+Fleet sites can connect to `theme.leadsforward.com` to receive **controller-approved automatic theme updates** without logging into each site.
+
+### Connect a site
+
+In wp-admin:
+- LeadsForward → Fleet Updates
+- Paste:
+  - **Controller API base** (example: `https://theme.leadsforward.com`)
+  - **Site ID** (UUID from the controller)
+  - **Token** (revocable per-site secret from the controller)
+  - **Controller public keys JSON** (map of `key_id` → base64 public key)
+
+### How it works
+- Every ~15 minutes (with jitter), the site calls the controller:
+  - **Heartbeat**: reports current version + environment
+  - **Update check**: controller returns an update only if the site is eligible + the version is approved
+- If approved:
+  - The site verifies **Ed25519 signature** + **SHA-256 checksum**
+  - Then installs via WordPress upgrader APIs
+
+### Security notes
+- Requests are **HMAC-signed** with a per-site token and include timestamp + nonce for replay protection.
+- Theme zips are verified before install:
+  - If signature or checksum fails, the update is refused.
+- No inbound “install now” endpoint exists on fleet sites (pull-only).
+
 ## SEO Enforcement
 Two layers are enforced:
 1. **n8n quality/completeness gates** inject/fix keyword coverage and reject low-volume/generic output.
