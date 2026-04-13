@@ -152,6 +152,20 @@ function lf_fleet_controller_verify_request(string $path): array {
 	}
 
 	$method = isset($_SERVER['REQUEST_METHOD']) ? (string) $_SERVER['REQUEST_METHOD'] : 'GET';
+	// Normalize the signed path to the controller's home_url() path prefix.
+	// This prevents signature mismatches on installs where WordPress is not at "/".
+	$home_path = (string) wp_parse_url(home_url('/'), PHP_URL_PATH);
+	$home_path = $home_path !== '' ? rtrim($home_path, '/') : '';
+	$req_path = isset($_SERVER['REQUEST_URI']) ? (string) wp_parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH) : '';
+	if ($req_path !== '' && $home_path !== '' && str_starts_with($req_path, $home_path . '/')) {
+		$req_path = substr($req_path, strlen($home_path));
+	}
+	$req_path = '/' . ltrim($req_path, '/');
+	$req_path = rtrim($req_path, '/');
+	$path = rtrim($path, '/');
+	if ($req_path !== '' && $req_path !== '/') {
+		$path = $req_path;
+	}
 	$body = file_get_contents('php://input');
 	$body = is_string($body) ? $body : '';
 	$body_sha = hash('sha256', $body);
