@@ -1073,7 +1073,17 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 				$out[$key] = sanitize_textarea_field(wp_unslash((string) $raw));
 				break;
 			case 'richtext':
-				$out[$key] = wp_kses_post(wp_unslash((string) $raw));
+				$raw_html = wp_unslash((string) $raw);
+				// Rich text section needs to preserve theme button/link classes.
+				if ($section_id === 'rich_content' && $key === 'rich_content_body') {
+					$allowed = wp_kses_allowed_html('post');
+					if (isset($allowed['a']) && is_array($allowed['a'])) {
+						$allowed['a']['class'] = true;
+					}
+					$out[$key] = trim((string) wp_kses($raw_html, $allowed));
+				} else {
+					$out[$key] = wp_kses_post($raw_html);
+				}
 				break;
 			case 'url':
 				$out[$key] = esc_url_raw(wp_unslash((string) $raw));
