@@ -2936,6 +2936,11 @@ button:focus-visible,
 	background: #000000;
 }
 
+/* When bg_class includes both tone + surface, ensure surface wins in hero. */
+.lf-block-hero.lf-surface-dark.lf-surface-primary { background: var(--lf-primary); --lf-hero-overlay-color: var(--lf-primary); }
+.lf-block-hero.lf-surface-dark.lf-surface-secondary { background: var(--lf-secondary); --lf-hero-overlay-color: var(--lf-secondary); }
+.lf-block-hero.lf-surface-dark.lf-surface-accent { background: var(--lf-accent); --lf-hero-overlay-color: var(--lf-accent); }
+
 .lf-block-hero {
 	--lf-hero-overlay-color: var(--lf-surface-light);
 	--lf-hero-bg-overlay-opacity: 0;
