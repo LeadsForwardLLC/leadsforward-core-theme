@@ -2809,6 +2809,124 @@ function lf_ai_assistant_widget_js(): string {
 				container.appendChild(addWrap);
 			});
 		}
+		function buildMapEmbedEditor() {
+			if (!editingEnabled) return;
+			var placeholders = document.querySelectorAll("[data-lf-map-embed-placeholder=\"1\"]");
+			if (!placeholders || !placeholders.length) return;
+			Array.prototype.forEach.call(placeholders, function(ph){
+				if (!ph || ph.querySelector("[data-lf-ai-map-embed-btn=\"1\"]")) return;
+				var btn = document.createElement("button");
+				btn.type = "button";
+				btn.className = "lf-ai-section-btn";
+				btn.textContent = "Map";
+				btn.setAttribute("data-lf-ai-map-embed-btn", "1");
+				btn.setAttribute("title", "Paste a Google Maps iframe embed");
+				btn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					openMapEmbedPicker();
+				});
+				ph.appendChild(btn);
+			});
+		}
+		var mapEmbedPickerEl = null;
+		function ensureMapEmbedPicker() {
+			if (mapEmbedPickerEl) return mapEmbedPickerEl;
+			var root = document.createElement("div");
+			root.className = "lf-ai-section-bg-picker lf-ai-inline-editor-ignore";
+			root.hidden = true;
+			var card = document.createElement("div");
+			card.className = "lf-ai-section-bg-picker__card";
+			var head = document.createElement("div");
+			head.className = "lf-ai-section-bg-picker__head";
+			var title = document.createElement("span");
+			title.className = "lf-ai-section-bg-picker__title";
+			title.textContent = "Map iframe embed";
+			var closeHead = document.createElement("button");
+			closeHead.type = "button";
+			closeHead.className = "lf-ai-section-bg-picker__close";
+			closeHead.textContent = "×";
+			closeHead.setAttribute("aria-label", "Close");
+			closeHead.addEventListener("click", function(e){
+				e.preventDefault();
+				root.hidden = true;
+			});
+			head.appendChild(title);
+			head.appendChild(closeHead);
+
+			var hint = document.createElement("p");
+			hint.className = "lf-ai-section-bg-picker__brand-note";
+			hint.style.margin = "0";
+			hint.style.fontSize = "12px";
+			hint.style.color = "#64748b";
+			hint.style.lineHeight = "1.45";
+			hint.textContent = "Paste the iframe from Google Maps → Share → Embed a map. We will save it globally for this site.";
+
+			var ta = document.createElement("textarea");
+			ta.className = "lf-ai-section-bg-picker__input";
+			ta.style.minHeight = "120px";
+			ta.style.resize = "vertical";
+			ta.setAttribute("placeholder", "<iframe ...></iframe>");
+
+			var actions = document.createElement("div");
+			actions.className = "lf-ai-section-bg-picker__custom";
+			var save = document.createElement("button");
+			save.type = "button";
+			save.className = "lf-ai-section-bg-picker__apply";
+			save.textContent = "Save iframe";
+			save.addEventListener("click", function(e){
+				e.preventDefault();
+				var v = String(ta.value || "").trim();
+				if (!v) return;
+				setStatus("Saving map embed...", false);
+				$.post(lfAiFloating.ajax_url, {
+					action: "lf_ai_update_business_map_embed",
+					nonce: lfAiFloating.nonce,
+					map_embed: v
+				}).done(function(res){
+					if (res && res.success) {
+						setStatus((res.data && res.data.message) ? res.data.message : "Saved.", false);
+						root.hidden = true;
+						if (res.data && res.data.reload) window.location.reload();
+					} else {
+						setStatus((res && res.data && res.data.message) ? res.data.message : "Save failed.", true);
+					}
+				}).fail(function(xhr){
+					var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Save failed.";
+					setStatus(msg, true);
+				});
+			});
+			var cancel = document.createElement("button");
+			cancel.type = "button";
+			cancel.className = "lf-ai-section-bg-picker__clearcustom";
+			cancel.textContent = "Cancel";
+			cancel.addEventListener("click", function(e){
+				e.preventDefault();
+				root.hidden = true;
+			});
+			actions.appendChild(save);
+			actions.appendChild(cancel);
+
+			card.appendChild(head);
+			card.appendChild(hint);
+			card.appendChild(ta);
+			card.appendChild(actions);
+			root.appendChild(card);
+			root.addEventListener("click", function(e){
+				if (e.target === root) root.hidden = true;
+			});
+			document.body.appendChild(root);
+			mapEmbedPickerEl = root;
+			return root;
+		}
+		function openMapEmbedPicker() {
+			ensureMapEmbedPicker();
+			mapEmbedPickerEl.hidden = false;
+			try {
+				var ta = mapEmbedPickerEl.querySelector("textarea");
+				if (ta) ta.focus();
+			} catch (e) {}
+		}
 		function buildEditorUi() {
 			buildInlineTargets();
 			buildRichContentProseTargets();
@@ -2817,6 +2935,7 @@ function lf_ai_assistant_widget_js(): string {
 			buildSectionControls();
 			buildSectionInsertZones();
 			buildSectionButtonEditors();
+			buildMapEmbedEditor();
 			buildHeroPillsControls();
 			buildHeroProofChecklistControls();
 			buildHeroTrustStripControls();
@@ -8604,7 +8723,11 @@ function lf_ai_assistant_widget_js(): string {
 			if ($(target).closest("[data-lf-ai-float],[data-lf-ai-seo-float]").length) {
 				return;
 			}
-			saveInlineEdit();
+			lfHideInlineLinkToolbar();
+			lfInlineToolbarPinnedHost = null;
+			saveInlineEdit(function(){
+				lfHideInlineLinkToolbar();
+			});
 		});
 		$mode.on("change", function(){
 			syncModeUi();

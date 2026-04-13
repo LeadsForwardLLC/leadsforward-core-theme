@@ -270,18 +270,7 @@ $areas_query = new WP_Query([
 						<div class="lf-block-map-nap__map-placeholder" data-lf-map-embed-placeholder="1">
 							<p class="lf-block-map-nap__empty lf-block-map-nap__empty--embed">
 								<?php
-								if (current_user_can('edit_theme_options')) {
-									echo wp_kses(
-										sprintf(
-											/* translators: %s: URL to Global Settings map embed field */
-											__('Paste your Google Maps <strong>embed iframe</strong> under <a href="%s">Global Settings → Business entity → Map iframe embed</a>. Until then, visitors see this placeholder instead of an auto-generated map.', 'leadsforward-core'),
-											esc_url(admin_url('admin.php?page=lf-global#lf-business-map-embed'))
-										),
-										['a' => ['href' => true], 'strong' => []]
-									);
-								} else {
-									esc_html_e('Map preview is not shown until your team adds an embed from Google Maps.', 'leadsforward-core');
-								}
+								esc_html_e('Paste a Google Maps iframe embed to show your map here.', 'leadsforward-core');
 								?>
 							</p>
 						</div>
