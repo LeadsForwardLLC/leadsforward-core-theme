@@ -29,9 +29,6 @@ function lf_icon_exists(string $slug): bool {
 	if ($slug === '') {
 		return false;
 	}
-	if (function_exists('lf_icon_list') && !in_array($slug, lf_icon_list(), true)) {
-		return false;
-	}
 	$path = lf_icon_tabler_path($slug);
 	return $path !== '' && is_readable($path);
 }
