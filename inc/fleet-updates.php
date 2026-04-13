@@ -101,13 +101,22 @@ function lf_fleet_check_for_update(): void {
 	}
 }
 
-function lf_fleet_maybe_auto_update(): void {
+/**
+ * Apply the pending fleet update offer via Theme_Upgrader when allowed.
+ *
+ * @param bool $from_trusted_admin When true, run in wp-admin for users who can edit theme options
+ *                                (same capability as the Fleet Updates screen). Cron passes false.
+ */
+function lf_fleet_maybe_auto_update(bool $from_trusted_admin = false): void {
 	$offer = get_site_transient(LF_FLEET_OFFER_TRANSIENT);
 	if (!is_array($offer) || empty($offer['update'])) {
 		return;
 	}
-	// Only run on cron to avoid surprising admins during regular page loads.
-	if (!defined('DOING_CRON') || !DOING_CRON) {
+	$via_cron = defined('DOING_CRON') && DOING_CRON;
+	$cap = defined('LF_OPS_CAP') ? LF_OPS_CAP : 'edit_theme_options';
+	$via_admin = $from_trusted_admin && is_admin() && current_user_can($cap);
+	// Cron: background installs. Admin: explicit "Check now" should install without waiting for cron.
+	if (!$via_cron && !$via_admin) {
 		return;
 	}
 
