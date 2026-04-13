@@ -91,6 +91,19 @@ function lf_fleet_updates_admin_render(): void {
 		update_option(LF_FLEET_CTRL_OPT_APPROVE_ALL, $approve_all);
 		$controller_did = 'rollout_saved';
 	}
+	if (isset($_POST['lf_fleet_controller_remove_site']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_sites')) {
+		$rm = isset($_POST['lf_fleet_remove_site_id']) ? sanitize_text_field((string) wp_unslash($_POST['lf_fleet_remove_site_id'])) : '';
+		if ($rm !== '') {
+			$sites = lf_fleet_controller_sites();
+			if (isset($sites[$rm])) {
+				unset($sites[$rm]);
+				if (function_exists('lf_fleet_controller_update_sites')) {
+					lf_fleet_controller_update_sites($sites);
+				}
+				$controller_did = 'site_removed';
+			}
+		}
+	}
 	if (isset($_POST['lf_fleet_disconnect']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce')) {
 		delete_option(LF_FLEET_OPT_API_BASE);
 		delete_option(LF_FLEET_OPT_SITE_ID);
@@ -138,6 +151,8 @@ function lf_fleet_updates_admin_render(): void {
 		echo '<div class="notice notice-success"><p>' . esc_html__('Site credentials created. Copy the bundle below into the fleet site.', 'leadsforward-core') . '</p></div>';
 	} elseif ($controller_did === 'rollout_saved') {
 		echo '<div class="notice notice-success"><p>' . esc_html__('Rollout settings saved.', 'leadsforward-core') . '</p></div>';
+	} elseif ($controller_did === 'site_removed') {
+		echo '<div class="notice notice-success"><p>' . esc_html__('Site removed from controller.', 'leadsforward-core') . '</p></div>';
 	}
 
 	echo '<div style="margin:14px 0; padding:12px; background:#fff; border:1px solid #dbe3ef; border-radius:10px;">';
@@ -223,6 +238,7 @@ function lf_fleet_updates_admin_render(): void {
 				echo '<th>' . esc_html__('Site ID', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('Current version', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('Last seen', 'leadsforward-core') . '</th>';
+				echo '<th>' . esc_html__('Actions', 'leadsforward-core') . '</th>';
 				echo '</tr></thead><tbody>';
 				foreach ($sites as $sid => $row) {
 					if (!is_array($row)) {
@@ -238,6 +254,10 @@ function lf_fleet_updates_admin_render(): void {
 					echo '<td><code>' . esc_html((string) $sid) . '</code></td>';
 					echo '<td>' . esc_html($ver !== '' ? $ver : '—') . '</td>';
 					echo '<td>' . esc_html($seen > 0 ? gmdate('Y-m-d H:i:s', $seen) . ' UTC' : '—') . '</td>';
+					echo '<td>';
+					echo '<button type="submit" class="button button-small" name="lf_fleet_controller_remove_site" value="1" onclick="return confirm(\'Remove this site from controller?\');">' . esc_html__('Remove', 'leadsforward-core') . '</button>';
+					echo '<input type="hidden" name="lf_fleet_remove_site_id" value="' . esc_attr((string) $sid) . '" />';
+					echo '</td>';
 					echo '</tr>';
 				}
 				echo '</tbody></table>';
