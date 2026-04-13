@@ -17,6 +17,152 @@ const LF_FLEET_CTRL_OPT_ENABLED = 'lf_fleet_controller_enabled';
 const LF_FLEET_CTRL_OPT_SITES = 'lf_fleet_controller_sites'; // JSON map site_id -> data (includes token)
 const LF_FLEET_CTRL_OPT_KEYS = 'lf_fleet_controller_keys';   // JSON map key_id -> {public,private,created_at}
 const LF_FLEET_CTRL_OPT_REWRITE_FLUSHED = 'lf_fleet_controller_rewrite_flushed';
+const LF_FLEET_CTRL_OPT_APPROVE_ALL = 'lf_fleet_controller_approve_all';
+const LF_FLEET_CTRL_OPT_APPROVED_VERSION = 'lf_fleet_controller_approved_version';
+
+const LF_FLEET_CTRL_DL_TRANSIENT_PREFIX = 'lf_fleet_dl_';
+
+function lf_fleet_controller_theme_slug(): string {
+	$theme = wp_get_theme();
+	return (string) $theme->get_stylesheet();
+}
+
+function lf_fleet_controller_current_version(): string {
+	$theme = wp_get_theme();
+	return (string) $theme->get('Version');
+}
+
+function lf_fleet_controller_latest_key_id(): string {
+	$keys = lf_fleet_controller_keys();
+	if ($keys === []) {
+		return '';
+	}
+	$best = '';
+	$best_ts = 0;
+	foreach ($keys as $kid => $row) {
+		$ts = (int) ($row['created_at'] ?? 0);
+		if ($ts >= $best_ts) {
+			$best_ts = $ts;
+			$best = (string) $kid;
+		}
+	}
+	return $best;
+}
+
+/**
+ * Build (or reuse cached) theme zip for a version.
+ *
+ * @return array{ok:bool,path:string,sha256:string,error:string}
+ */
+function lf_fleet_controller_get_theme_zip(string $slug, string $version): array {
+	$slug = sanitize_title($slug);
+	$version = preg_replace('/[^0-9A-Za-z\.\-\+_]/', '', $version);
+	if (!is_string($version) || $slug === '' || $version === '') {
+		return ['ok' => false, 'path' => '', 'sha256' => '', 'error' => 'bad_args'];
+	}
+
+	if (!class_exists('ZipArchive')) {
+		return ['ok' => false, 'path' => '', 'sha256' => '', 'error' => 'zip_unavailable'];
+	}
+
+	$uploads = wp_upload_dir();
+	$base = isset($uploads['basedir']) ? (string) $uploads['basedir'] : '';
+	if ($base === '') {
+		return ['ok' => false, 'path' => '', 'sha256' => '', 'error' => 'uploads_unavailable'];
+	}
+	$dir = rtrim($base, '/') . '/lf-fleet';
+	if (!is_dir($dir)) {
+		wp_mkdir_p($dir);
+	}
+	$zip_path = $dir . '/' . $slug . '-' . $version . '.zip';
+	if (is_readable($zip_path) && filesize($zip_path) > 1000) {
+		return ['ok' => true, 'path' => $zip_path, 'sha256' => strtolower(hash_file('sha256', $zip_path)), 'error' => ''];
+	}
+
+	$src = get_template_directory();
+	if (!is_dir($src)) {
+		return ['ok' => false, 'path' => '', 'sha256' => '', 'error' => 'theme_dir_missing'];
+	}
+
+	$zip = new \ZipArchive();
+	if ($zip->open($zip_path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+		return ['ok' => false, 'path' => '', 'sha256' => '', 'error' => 'zip_open_failed'];
+	}
+
+	$exclude = [
+		'/.git/',
+		'/.worktrees/',
+		'/node_modules/',
+		'/vendor/',
+		'/.cursor/',
+		'/mcps/',
+		'/terminals/',
+		'/agent-transcripts/',
+	];
+
+	$it = new \RecursiveIteratorIterator(
+		new \RecursiveDirectoryIterator($src, \FilesystemIterator::SKIP_DOTS),
+		\RecursiveIteratorIterator::SELF_FIRST
+	);
+	foreach ($it as $file) {
+		/** @var \SplFileInfo $file */
+		$path = (string) $file->getPathname();
+		$rel = ltrim(str_replace('\\', '/', substr($path, strlen($src))), '/');
+		if ($rel === '') {
+			continue;
+		}
+		$rel_norm = '/' . $rel;
+		$skip = false;
+		foreach ($exclude as $pat) {
+			if (strpos($rel_norm, $pat) !== false) {
+				$skip = true;
+				break;
+			}
+		}
+		if ($skip) {
+			continue;
+		}
+		if ($file->isDir()) {
+			$zip->addEmptyDir($slug . '/' . $rel);
+			continue;
+		}
+		if ($file->isFile()) {
+			$zip->addFile($path, $slug . '/' . $rel);
+		}
+	}
+	$zip->close();
+
+	if (!is_readable($zip_path) || filesize($zip_path) < 1000) {
+		@unlink($zip_path);
+		return ['ok' => false, 'path' => '', 'sha256' => '', 'error' => 'zip_build_failed'];
+	}
+	return ['ok' => true, 'path' => $zip_path, 'sha256' => strtolower(hash_file('sha256', $zip_path)), 'error' => ''];
+}
+
+function lf_fleet_controller_sign_release(string $kid, string $message): string {
+	if (!function_exists('sodium_crypto_sign_detached')) {
+		return '';
+	}
+	$keys = lf_fleet_controller_keys();
+	$row = $keys[$kid] ?? null;
+	$priv_b64 = is_array($row) ? (string) ($row['private'] ?? '') : '';
+	if ($priv_b64 === '') {
+		return '';
+	}
+	$priv = base64_decode($priv_b64, true);
+	if ($priv === false) {
+		return '';
+	}
+	$sig = sodium_crypto_sign_detached($message, $priv);
+	return base64_encode($sig);
+}
+
+function lf_fleet_controller_issue_download_token(string $site_id, string $zip_path, string $sha256, int $ttl = 600): string {
+	$t = lf_fleet_controller_token_new();
+	$key = LF_FLEET_CTRL_DL_TRANSIENT_PREFIX . md5($site_id . '|' . $t);
+	set_transient($key, wp_json_encode(['site_id' => $site_id, 'path' => $zip_path, 'sha256' => $sha256]), $ttl);
+	return $t;
+}
 
 function lf_fleet_controller_enabled(): bool {
 	return get_option(LF_FLEET_CTRL_OPT_ENABLED, '0') === '1';
@@ -217,6 +363,7 @@ add_filter('query_vars', 'lf_fleet_controller_register_query_vars');
 function lf_fleet_controller_add_rewrite_rules(): void {
 	add_rewrite_rule('^api/v1/sites/heartbeat/?$', 'index.php?lf_fleet_api=1&lf_fleet_route=sites_heartbeat', 'top');
 	add_rewrite_rule('^api/v1/updates/check/?$', 'index.php?lf_fleet_api=1&lf_fleet_route=updates_check', 'top');
+	add_rewrite_rule('^api/v1/updates/package/?$', 'index.php?lf_fleet_api=1&lf_fleet_route=updates_package', 'top');
 	add_rewrite_rule('^api/v1/controller/public-keys/?$', 'index.php?lf_fleet_api=1&lf_fleet_route=public_keys', 'top');
 }
 add_action('init', 'lf_fleet_controller_add_rewrite_rules');
@@ -248,6 +395,40 @@ function lf_fleet_controller_handle_api(): void {
 		lf_fleet_controller_json(['public_keys' => json_decode(lf_fleet_controller_pubkeys_json(), true) ?: []]);
 	}
 
+	if ($route === 'updates_package') {
+		// Public download endpoint using one-time token (no HMAC headers).
+		$t = isset($_GET['t']) ? sanitize_text_field((string) wp_unslash($_GET['t'])) : '';
+		$s = isset($_GET['site_id']) ? sanitize_text_field((string) wp_unslash($_GET['site_id'])) : '';
+		if ($t === '' || $s === '') {
+			status_header(404);
+			exit;
+		}
+		$key = LF_FLEET_CTRL_DL_TRANSIENT_PREFIX . md5($s . '|' . $t);
+		$payload = (string) get_transient($key);
+		if ($payload === '') {
+			status_header(404);
+			exit;
+		}
+		delete_transient($key);
+		$row = json_decode($payload, true);
+		$path = is_array($row) ? (string) ($row['path'] ?? '') : '';
+		$sha = is_array($row) ? (string) ($row['sha256'] ?? '') : '';
+		if ($path === '' || !is_readable($path)) {
+			status_header(404);
+			exit;
+		}
+		// Quick integrity check before streaming.
+		if ($sha !== '' && strtolower(hash_file('sha256', $path)) !== strtolower($sha)) {
+			status_header(500);
+			exit;
+		}
+		header('Content-Type: application/zip');
+		header('Content-Disposition: attachment; filename="' . basename($path) . '"');
+		header('Content-Length: ' . (string) filesize($path));
+		readfile($path);
+		exit;
+	}
+
 	$verify = lf_fleet_controller_verify_request(
 		$route === 'sites_heartbeat' ? '/api/v1/sites/heartbeat' : '/api/v1/updates/check'
 	);
@@ -273,8 +454,50 @@ function lf_fleet_controller_handle_api(): void {
 	}
 
 	if ($route === 'updates_check') {
-		// Controller-side rollout logic is next; for first connection we return no update.
-		lf_fleet_controller_json(['update' => false]);
+		$theme_slug = isset($_GET['theme_slug']) ? sanitize_text_field((string) wp_unslash($_GET['theme_slug'])) : '';
+		$current = isset($_GET['current']) ? sanitize_text_field((string) wp_unslash($_GET['current'])) : '';
+		$approved_all = get_option(LF_FLEET_CTRL_OPT_APPROVE_ALL, '0') === '1';
+		$approved_version = (string) get_option(LF_FLEET_CTRL_OPT_APPROVED_VERSION, '');
+		if ($approved_version === '') {
+			$approved_version = lf_fleet_controller_current_version();
+		}
+
+		// Only serve updates for the controller's current theme slug.
+		$controller_slug = lf_fleet_controller_theme_slug();
+		if ($theme_slug === '' || $theme_slug !== $controller_slug) {
+			lf_fleet_controller_json(['update' => false]);
+		}
+		if (!$approved_all) {
+			lf_fleet_controller_json(['update' => false]);
+		}
+		if ($current !== '' && version_compare($approved_version, $current, '<=')) {
+			lf_fleet_controller_json(['update' => false]);
+		}
+
+		$kid = lf_fleet_controller_latest_key_id();
+		if ($kid === '') {
+			lf_fleet_controller_json(['update' => false]);
+		}
+		$zip = lf_fleet_controller_get_theme_zip($controller_slug, $approved_version);
+		if (empty($zip['ok']) || $zip['path'] === '' || $zip['sha256'] === '') {
+			lf_fleet_controller_json(['update' => false]);
+		}
+		$msg = $controller_slug . "\n" . $approved_version . "\n" . strtolower((string) $zip['sha256']);
+		$sig = lf_fleet_controller_sign_release($kid, $msg);
+		if ($sig === '') {
+			lf_fleet_controller_json(['update' => false]);
+		}
+		$t = lf_fleet_controller_issue_download_token($site_id, (string) $zip['path'], (string) $zip['sha256']);
+		$download_url = home_url('/api/v1/updates/package') . '?site_id=' . rawurlencode($site_id) . '&t=' . rawurlencode($t);
+
+		lf_fleet_controller_json([
+			'update' => true,
+			'version' => $approved_version,
+			'download_url' => $download_url,
+			'sha256' => (string) $zip['sha256'],
+			'signature' => $sig,
+			'public_key_id' => $kid,
+		]);
 	}
 
 	lf_fleet_controller_json(['error' => 'not_found'], 404);
