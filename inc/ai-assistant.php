@@ -1751,6 +1751,7 @@ function lf_ai_assistant_widget_js(): string {
 		var lfInlineLinkCache = null;
 		var lfInlineLinkCacheLoading = false;
 		var lfInlineLinkSelTimer = null;
+		var lfInlineToolbarPinnedHost = null;
 		function lfHideInlineLinkToolbar() {
 			if ($linkRoot.length) {
 				$linkRoot.find("[data-lf-ai-inline-link-toolbar]").prop("hidden", true);
@@ -1819,41 +1820,57 @@ function lf_ai_assistant_widget_js(): string {
 			var host = lfAnyInlineLinkHostEl();
 			if (!$linkRoot.length || !host) return;
 			var sel = window.getSelection();
+			var pinned = !!(lfInlineToolbarPinnedHost && host === lfInlineToolbarPinnedHost);
 			if (!sel.rangeCount) {
-				lfHideInlineLinkToolbar();
-				return;
+				if (pinned) {
+					sel = null;
+				} else {
+					lfHideInlineLinkToolbar();
+					return;
+				}
 			}
 			var range = sel.getRangeAt(0);
 			try {
 				if (!host.contains(range.commonAncestorContainer)) {
+					if (!pinned) {
+						lfHideInlineLinkToolbar();
+						return;
+					}
+				}
+			} catch (errRange) {
+				if (!pinned) {
 					lfHideInlineLinkToolbar();
 					return;
 				}
-			} catch (errRange) {
-				lfHideInlineLinkToolbar();
-				return;
 			}
 			var hEl = lfFindHeadingInHost(host);
-			var collapsed = sel.isCollapsed;
-			var t = String(sel.toString() || "").trim();
+			var collapsed = sel ? sel.isCollapsed : true;
+			var t = sel ? String(sel.toString() || "").trim() : "";
 			var inRichProse = !!(host.closest && host.closest(".lf-rich-content__prose"));
-			if (collapsed && !hEl && !inRichProse) {
+			if (!pinned && collapsed && !hEl && !inRichProse) {
 				lfHideInlineLinkToolbar();
 				return;
 			}
-			if (!collapsed && t.length < 1) {
+			if (!pinned && !collapsed && t.length < 1) {
 				lfHideInlineLinkToolbar();
 				return;
 			}
-			var rect = (collapsed && hEl) ? hEl.getBoundingClientRect() : range.getBoundingClientRect();
-			if (rect.width === 0 && rect.height === 0) {
-				lfHideInlineLinkToolbar();
-				return;
+			var rect = null;
+			if (pinned && collapsed && !hEl) {
+				rect = host.getBoundingClientRect();
+			} else {
+				rect = (collapsed && hEl) ? hEl.getBoundingClientRect() : range.getBoundingClientRect();
+			}
+			if (!rect || (rect.width === 0 && rect.height === 0)) {
+				if (!pinned) {
+					lfHideInlineLinkToolbar();
+					return;
+				}
 			}
 			var $tb = $linkRoot.find("[data-lf-ai-inline-link-toolbar]");
 			var $hg = $linkRoot.find("[data-lf-ai-heading-tools]");
 			var $lg = $linkRoot.find("[data-lf-ai-list-tools]");
-			$hg.prop("hidden", !hEl);
+			$hg.prop("hidden", !(hEl || inRichProse));
 			$lg.prop("hidden", !inRichProse);
 			var top = rect.bottom + 6;
 			var left = rect.left;
@@ -2289,18 +2306,18 @@ function lf_ai_assistant_widget_js(): string {
 				var tag = "h" + String(lvl);
 				var host = lfManagedContentEditableHost();
 				if (!host) return;
+				// Rich prose: apply heading to selection (or current block) and persist full body.
+				if (host.closest && host.closest(".lf-rich-content__prose")) {
+					try { host.focus(); } catch (eF) {}
+					try { document.execCommand("formatBlock", false, tag.toUpperCase()); } catch (eFmt) {}
+					persistRichContentBodyNow(host, "Heading level updated.");
+					return;
+				}
+
 				var hEl = lfFindHeadingInHost(host);
 				if (!hEl || !hEl.parentNode) return;
 				var wrap = hEl.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]");
 				var sectionType = wrap ? String(wrap.getAttribute("data-lf-section-type") || "") : "";
-				var prose = hEl.closest(".lf-rich-content__prose");
-				if (prose && host.contains(hEl)) {
-					var nuRich = document.createElement(tag);
-					nuRich.innerHTML = hEl.innerHTML;
-					hEl.parentNode.replaceChild(nuRich, hEl);
-					persistRichContentBodyNow(prose, "Heading level updated.");
-					return;
-				}
 				if (lfHeadingUsesConfigurableSectionTag(hEl, wrap)) {
 					if (sectionType === "layout_heading") {
 						var layoutTag = tag;
@@ -2314,9 +2331,7 @@ function lf_ai_assistant_widget_js(): string {
 				var nu = document.createElement(tag);
 				nu.innerHTML = hEl.innerHTML;
 				hEl.parentNode.replaceChild(nu, hEl);
-				try {
-					persistInlineNodeNow(host, "Heading level updated.");
-				} catch (errH) {}
+				try { persistInlineNodeNow(host, "Heading level updated."); } catch (errH) {}
 			});
 		}
 		lfInitInlineLinkUi();
@@ -7819,6 +7834,7 @@ function lf_ai_assistant_widget_js(): string {
 				return;
 			}
 			inlineActiveEl = el;
+			lfInlineToolbarPinnedHost = el;
 			inlineBodyEditSourceEl = null;
 			inlineOriginalBodyHtml = "";
 			inlineOriginalBodyText = "";
@@ -7846,6 +7862,9 @@ function lf_ai_assistant_widget_js(): string {
 			el.setAttribute("data-lf-inline-active", "1");
 			el.setAttribute("contenteditable", "true");
 			el.setAttribute("spellcheck", "true");
+			if (fkInline === "rich_content_body") {
+				try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch (eSep) {}
+			}
 			try { el.focus(); } catch (e) {}
 			setStatus("Editing text. Click away to auto-save.", false);
 			el.addEventListener("blur", function onBlur(){
@@ -7869,6 +7888,7 @@ function lf_ai_assistant_widget_js(): string {
 			inlineActiveEl.removeAttribute("spellcheck");
 			inlineActiveEl.removeAttribute("data-lf-inline-active");
 			inlineActiveEl.removeAttribute("data-lf-inline-saving");
+			lfInlineToolbarPinnedHost = null;
 			inlineActiveEl = null;
 			inlineOriginalText = "";
 			inlineOriginalHtml = "";
@@ -7980,6 +8000,7 @@ function lf_ai_assistant_widget_js(): string {
 				setStatus(msg, true);
 			}).always(function(){
 				inlineIsSaving = false;
+				lfInlineToolbarPinnedHost = null;
 				if (typeof done === "function") done();
 			});
 		}
