@@ -500,28 +500,44 @@ function lf_fleet_controller_handle_api(): void {
 
 		// Only serve updates for the controller's current theme slug.
 		$controller_slug = lf_fleet_controller_theme_slug();
+		$debug = [
+			'update' => false,
+			'reason' => '',
+			'controller_slug' => $controller_slug,
+			'controller_version' => $approved_version,
+			'site_theme_slug' => $theme_slug,
+			'site_current_version' => $current,
+			'approve_all' => $approved_all,
+		];
 		if ($theme_slug === '' || $theme_slug !== $controller_slug) {
-			lf_fleet_controller_json(['update' => false]);
+			$debug['reason'] = 'theme_slug_mismatch';
+			lf_fleet_controller_json($debug);
 		}
 		if (!$approved_all) {
-			lf_fleet_controller_json(['update' => false]);
+			$debug['reason'] = 'rollout_disabled';
+			lf_fleet_controller_json($debug);
 		}
 		if ($current !== '' && version_compare($approved_version, $current, '<=')) {
-			lf_fleet_controller_json(['update' => false]);
+			$debug['reason'] = 'already_up_to_date';
+			lf_fleet_controller_json($debug);
 		}
 
 		$kid = lf_fleet_controller_latest_key_id();
 		if ($kid === '') {
-			lf_fleet_controller_json(['update' => false]);
+			$debug['reason'] = 'no_signing_keys';
+			lf_fleet_controller_json($debug);
 		}
 		$zip = lf_fleet_controller_get_theme_zip($controller_slug, $approved_version);
 		if (empty($zip['ok']) || $zip['path'] === '' || $zip['sha256'] === '') {
-			lf_fleet_controller_json(['update' => false]);
+			$debug['reason'] = 'zip_build_failed';
+			$debug['zip_error'] = (string) ($zip['error'] ?? '');
+			lf_fleet_controller_json($debug);
 		}
 		$msg = $controller_slug . "\n" . $approved_version . "\n" . strtolower((string) $zip['sha256']);
 		$sig = lf_fleet_controller_sign_release($kid, $msg);
 		if ($sig === '') {
-			lf_fleet_controller_json(['update' => false]);
+			$debug['reason'] = 'sign_failed';
+			lf_fleet_controller_json($debug);
 		}
 		$t = lf_fleet_controller_issue_download_token($site_id, (string) $zip['path'], (string) $zip['sha256']);
 		$download_url = home_url('/api/v1/updates/package') . '?site_id=' . rawurlencode($site_id) . '&t=' . rawurlencode($t);
@@ -533,6 +549,7 @@ function lf_fleet_controller_handle_api(): void {
 			'sha256' => (string) $zip['sha256'],
 			'signature' => $sig,
 			'public_key_id' => $kid,
+			'controller_version' => $approved_version,
 		]);
 	}
 
