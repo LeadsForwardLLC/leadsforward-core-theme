@@ -108,6 +108,17 @@ function lf_ops_register_menu(): void {
 		'lf-theme-docs',
 		'lf_ops_render_theme_docs_page'
 	);
+	// Fleet updates (controller-approved auto-updates).
+	if (function_exists('lf_fleet_updates_admin_render')) {
+		add_submenu_page(
+			'lf-ops',
+			__('Fleet Updates', 'leadsforward-core'),
+			__('Fleet Updates', 'leadsforward-core'),
+			LF_OPS_CAP,
+			'lf-fleet-updates',
+			'lf_fleet_updates_admin_render'
+		);
+	}
 	// Legacy/bookmark slug: same screen as Global Settings (hidden from menu).
 	add_submenu_page(
 		'lf-ops',
@@ -225,6 +236,7 @@ function lf_ops_reorder_submenus(): void {
 		'lf-ops-bulk',
 		'lf-ops-config',
 		'lf-theme-docs',
+		'lf-fleet-updates',
 	];
 	$rank = array_flip($preferred_order);
 	$items = $submenu['lf-ops'];

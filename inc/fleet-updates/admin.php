@@ -16,14 +16,14 @@ function lf_fleet_updates_admin_register_menu(): void {
 		'lf-ops',
 		__('Fleet Updates', 'leadsforward-core'),
 		__('Fleet Updates', 'leadsforward-core'),
-		'manage_options',
+		LF_OPS_CAP,
 		'lf-fleet-updates',
 		'lf_fleet_updates_admin_render'
 	);
 }
 
 function lf_fleet_updates_admin_render(): void {
-	if (!current_user_can('manage_options')) {
+	if (!current_user_can(LF_OPS_CAP)) {
 		return;
 	}
 
