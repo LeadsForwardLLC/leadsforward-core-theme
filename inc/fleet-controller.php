@@ -494,10 +494,9 @@ function lf_fleet_controller_handle_api(): void {
 		}
 		lf_fleet_controller_update_sites($sites);
 		$approved_all = get_option(LF_FLEET_CTRL_OPT_APPROVE_ALL, '0') === '1';
-		$approved_version = (string) get_option(LF_FLEET_CTRL_OPT_APPROVED_VERSION, '');
-		if ($approved_version === '') {
-			$approved_version = lf_fleet_controller_current_version();
-		}
+		// Push model: the controller can only safely serve the theme version it is currently running.
+		// (This is what GitHub auto-deploys to theme.leadsforward.com.)
+		$approved_version = lf_fleet_controller_current_version();
 
 		// Only serve updates for the controller's current theme slug.
 		$controller_slug = lf_fleet_controller_theme_slug();

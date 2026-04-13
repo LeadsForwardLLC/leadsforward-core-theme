@@ -84,9 +84,6 @@ function lf_fleet_updates_admin_render(): void {
 		$controller_did = 'site_created';
 	}
 	if (isset($_POST['lf_fleet_controller_rollout_save']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_enabled')) {
-		$ver = isset($_POST['lf_fleet_ctrl_approved_version']) ? sanitize_text_field((string) wp_unslash($_POST['lf_fleet_ctrl_approved_version'])) : '';
-		$ver = preg_replace('/[^0-9A-Za-z\.\-\+_]/', '', (string) $ver);
-		update_option(LF_FLEET_CTRL_OPT_APPROVED_VERSION, is_string($ver) ? $ver : '');
 		$approve_all = isset($_POST['lf_fleet_ctrl_approve_all']) ? '1' : '0';
 		update_option(LF_FLEET_CTRL_OPT_APPROVE_ALL, $approve_all);
 		$controller_did = 'rollout_saved';
@@ -217,9 +214,9 @@ function lf_fleet_updates_admin_render(): void {
 			echo '<p><button type="submit" class="button button-primary" name="lf_fleet_controller_add_site" value="1">' . esc_html__('Create Site ID + Token bundle', 'leadsforward-core') . '</button></p>';
 
 			echo '<h3 style="margin-top:18px;">' . esc_html__('Rollout (push)', 'leadsforward-core') . '</h3>';
-			echo '<p class="description">' . esc_html__('Approves a version for rollout. Fleet sites will auto-update on their next check.', 'leadsforward-core') . '</p>';
+			echo '<p class="description">' . esc_html__('Approves the controller’s currently deployed theme version for rollout. Fleet sites will auto-update on their next check.', 'leadsforward-core') . '</p>';
 			echo '<table class="form-table" role="presentation">';
-			echo '<tr><th scope="row">' . esc_html__('Approved version', 'leadsforward-core') . '</th><td><input type="text" class="regular-text" name="lf_fleet_ctrl_approved_version" value="' . esc_attr($approved_version) . '" /></td></tr>';
+			echo '<tr><th scope="row">' . esc_html__('Controller version', 'leadsforward-core') . '</th><td><input type="text" class="regular-text" value="' . esc_attr($approved_version) . '" readonly /></td></tr>';
 			echo '<tr><th scope="row">' . esc_html__('Approve for all registered sites', 'leadsforward-core') . '</th><td><label><input type="checkbox" name="lf_fleet_ctrl_approve_all" value="1" ' . checked($approve_all, true, false) . ' /> ' . esc_html__('Enabled', 'leadsforward-core') . '</label></td></tr>';
 			echo '</table>';
 			echo '<p><button type="submit" class="button button-primary" name="lf_fleet_controller_rollout_save" value="1">' . esc_html__('Save rollout settings', 'leadsforward-core') . '</button></p>';
