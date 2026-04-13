@@ -123,6 +123,7 @@ function lf_fleet_maybe_auto_update(): void {
 	$stylesheet = wp_get_theme()->get_stylesheet();
 	$res = $upgrader->upgrade($stylesheet);
 	if ($res === true) {
+		delete_site_transient(LF_FLEET_OFFER_TRANSIENT);
 		// Reset backoff on success.
 		if (is_array($last)) {
 			$last['failures'] = 0;
