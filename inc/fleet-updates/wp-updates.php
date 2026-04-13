@@ -104,6 +104,10 @@ function lf_fleet_download_to_temp(string $url): array {
 }
 
 add_filter('upgrader_package_options', static function (array $options): array {
+	// Controller package URLs use a one-time token; WordPress may run this filter more than once per upgrade.
+	// Re-fetching the same URL returns 404 after the first successful hit, so reuse the verified temp file.
+	static $lf_fleet_verified_local_package = '';
+
 	$offer = get_site_transient(LF_FLEET_OFFER_TRANSIENT);
 	if (!is_array($offer) || empty($offer['update'])) {
 		return $options;
@@ -111,6 +115,17 @@ add_filter('upgrader_package_options', static function (array $options): array {
 	$download = (string) ($offer['download_url'] ?? '');
 	$sha = strtolower((string) ($offer['sha256'] ?? ''));
 	if ($download === '' || $sha === '') {
+		return $options;
+	}
+
+	if ($lf_fleet_verified_local_package !== '' && is_readable($lf_fleet_verified_local_package)) {
+		$options['package'] = $lf_fleet_verified_local_package;
+		return $options;
+	}
+
+	$pkg = isset($options['package']) ? (string) $options['package'] : '';
+	if ($pkg !== '' && !preg_match('#^https?://#i', $pkg) && is_readable($pkg)) {
+		$lf_fleet_verified_local_package = $pkg;
 		return $options;
 	}
 
@@ -127,6 +142,7 @@ add_filter('upgrader_package_options', static function (array $options): array {
 	}
 
 	// Force upgrader to use verified local temp file.
+	$lf_fleet_verified_local_package = $dl['path'];
 	$options['package'] = $dl['path'];
 	return $options;
 });
