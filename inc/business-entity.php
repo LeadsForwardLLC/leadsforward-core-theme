@@ -12,6 +12,42 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+function lf_business_entity_public_email_domain(string $email): string {
+	$email = strtolower(trim($email));
+	if ($email === '' || strpos($email, '@') === false) {
+		return '';
+	}
+	$parts = explode('@', $email);
+	$domain = trim((string) end($parts));
+	$domain = preg_replace('/:\d+$/', '', $domain);
+	return is_string($domain) ? $domain : '';
+}
+
+function lf_business_entity_site_root_domain(): string {
+	$host = (string) wp_parse_url(home_url('/'), PHP_URL_HOST);
+	$host = strtolower(trim($host));
+	$host = preg_replace('/:\d+$/', '', $host);
+	$host = preg_replace('/^www\./', '', $host);
+	return $host;
+}
+
+function lf_business_entity_public_email(string $stored): string {
+	$stored = trim((string) $stored);
+	$site_domain = lf_business_entity_site_root_domain();
+	if ($stored !== '' && is_email($stored)) {
+		$ed = lf_business_entity_public_email_domain($stored);
+		$ok = ($site_domain !== '' && $ed !== '' && ($ed === $site_domain || str_ends_with($ed, '.' . $site_domain)));
+		if ($ok) {
+			return $stored;
+		}
+	}
+	// Hard fallback: never leak a non-domain inbox. Use a safe default on this domain.
+	if ($site_domain !== '') {
+		return 'info@' . $site_domain;
+	}
+	return '';
+}
+
 /**
  * Allowed HTML for pasted Google Maps (and similar) iframe embeds.
  *
@@ -162,7 +198,7 @@ function lf_business_entity_get(): array {
 		'phone_tracking' => $tracking_phone,
 		'phone_display_pref' => $display_pref,
 		'phone_display' => $display_phone,
-		'email' => (string) $get('lf_business_email', ''),
+		'email' => lf_business_entity_public_email((string) $get('lf_business_email', '')),
 		'address' => $address,
 		'address_parts' => [
 			'street' => $street,

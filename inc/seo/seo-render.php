@@ -498,7 +498,7 @@ function lf_nap_data(): array {
 		'name'    => lf_get_option('lf_business_name', 'option'),
 		'address' => lf_get_option('lf_business_address', 'option'),
 		'phone'   => lf_get_option('lf_business_phone', 'option'),
-		'email'   => lf_get_option('lf_business_email', 'option'),
+		'email'   => '',
 	];
 }
 

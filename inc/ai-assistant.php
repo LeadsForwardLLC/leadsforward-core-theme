@@ -586,6 +586,9 @@ function lf_ai_assistant_render_floating_widget(): void {
 				<span class="lf-ai-inline-link__toolbar-group" data-lf-ai-list-tools hidden role="group" aria-label="<?php esc_attr_e('Lists', 'leadsforward-core'); ?>">
 					<button type="button" class="lf-ai-inline-link__fmt" data-lf-ai-inline-cmd="insertUnorderedList" title="<?php esc_attr_e('Bullet list', 'leadsforward-core'); ?>">•</button>
 					<button type="button" class="lf-ai-inline-link__fmt" data-lf-ai-inline-cmd="insertOrderedList" title="<?php esc_attr_e('Numbered list', 'leadsforward-core'); ?>">1.</button>
+					<button type="button" class="lf-ai-inline-link__fmt lf-ai-inline-link__fmt--icon" data-lf-ai-insert-icon="1" title="<?php esc_attr_e('Insert icon', 'leadsforward-core'); ?>" aria-label="<?php esc_attr_e('Insert icon', 'leadsforward-core'); ?>">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3z"/></svg>
+					</button>
 				</span>
 				<span class="lf-ai-inline-link__toolbar-group" role="group" aria-label="<?php esc_attr_e('Text emphasis', 'leadsforward-core'); ?>">
 					<button type="button" class="lf-ai-inline-link__fmt" data-lf-ai-inline-cmd="bold" title="<?php esc_attr_e('Bold', 'leadsforward-core'); ?>"><strong>B</strong></button>
@@ -2337,6 +2340,24 @@ function lf_ai_assistant_widget_js(): string {
 				hEl.parentNode.replaceChild(nu, hEl);
 				try { persistInlineNodeNow(host, "Heading level updated."); } catch (errH) {}
 			});
+			$linkRoot.on("mousedown", "[data-lf-ai-insert-icon]", function(e){
+				e.preventDefault();
+			});
+			$linkRoot.on("click", "[data-lf-ai-insert-icon]", function(e){
+				e.preventDefault();
+				var host = lfManagedContentEditableHost();
+				if (!host || !(host.closest && host.closest(".lf-rich-content__prose"))) {
+					setStatus("Icons can currently only be inserted into Rich Text sections.", true);
+					return;
+				}
+				openIconPicker("", function(slug){
+					var s = String(slug || "").trim();
+					if (!s) return;
+					try { host.focus(); } catch (eF) {}
+					try { document.execCommand("insertText", false, "[lf_icon name=\"" + s.replace(/"/g, "") + "\"]"); } catch (eI) {}
+					persistRichContentBodyNow(host, "Icon inserted.");
+				});
+			});
 		}
 		lfInitInlineLinkUi();
 		document.addEventListener("selectionchange", function(){
@@ -2514,10 +2535,17 @@ function lf_ai_assistant_widget_js(): string {
 		function renderIconPickerList(query) {
 			if (!iconPickerListEl) return;
 			var q = String(query || "").trim().toLowerCase();
-			var rows = iconSlugs.filter(function(slug){
-				var s = String(slug || "").toLowerCase();
-				return !q || s.indexOf(q) !== -1;
-			});
+			var maxRows = 120;
+			var common = ["phone", "mail", "map-pin", "check", "star", "calendar", "shield", "home", "hammer", "wrench", "clock", "award"];
+			var rows = [];
+			if (!q) {
+				rows = common.filter(function(slug){ return iconSlugs.indexOf(slug) !== -1; });
+			} else {
+				rows = iconSlugs.filter(function(slug){
+					var s = String(slug || "").toLowerCase();
+					return s.indexOf(q) !== -1;
+				}).slice(0, maxRows);
+			}
 			iconPickerListEl.innerHTML = "";
 			var clearBtn = document.createElement("button");
 			clearBtn.type = "button";
@@ -2528,6 +2556,12 @@ function lf_ai_assistant_widget_js(): string {
 				closeIconPicker();
 			});
 			iconPickerListEl.appendChild(clearBtn);
+			if (!q) {
+				var hint = document.createElement("div");
+				hint.className = "lf-ai-icon-picker__empty";
+				hint.textContent = "Type to search (" + String(iconSlugs.length) + " icons). Showing a few common ones.";
+				iconPickerListEl.appendChild(hint);
+			}
 			if (!rows.length) {
 				var empty = document.createElement("div");
 				empty.className = "lf-ai-icon-picker__empty";
