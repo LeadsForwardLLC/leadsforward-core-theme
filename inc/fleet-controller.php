@@ -61,10 +61,6 @@ function lf_fleet_controller_get_theme_zip(string $slug, string $version): array
 		return ['ok' => false, 'path' => '', 'sha256' => '', 'error' => 'bad_args'];
 	}
 
-	if (!class_exists('ZipArchive')) {
-		return ['ok' => false, 'path' => '', 'sha256' => '', 'error' => 'zip_unavailable'];
-	}
-
 	$uploads = wp_upload_dir();
 	$base = isset($uploads['basedir']) ? (string) $uploads['basedir'] : '';
 	if ($base === '') {
@@ -84,11 +80,6 @@ function lf_fleet_controller_get_theme_zip(string $slug, string $version): array
 		return ['ok' => false, 'path' => '', 'sha256' => '', 'error' => 'theme_dir_missing'];
 	}
 
-	$zip = new \ZipArchive();
-	if ($zip->open($zip_path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-		return ['ok' => false, 'path' => '', 'sha256' => '', 'error' => 'zip_open_failed'];
-	}
-
 	$exclude = [
 		'/.git/',
 		'/.worktrees/',
@@ -100,12 +91,17 @@ function lf_fleet_controller_get_theme_zip(string $slug, string $version): array
 		'/agent-transcripts/',
 	];
 
+	// Build a stable list of relative file paths to include (directories will be created implicitly).
+	$rel_files = [];
 	$it = new \RecursiveIteratorIterator(
 		new \RecursiveDirectoryIterator($src, \FilesystemIterator::SKIP_DOTS),
 		\RecursiveIteratorIterator::SELF_FIRST
 	);
 	foreach ($it as $file) {
 		/** @var \SplFileInfo $file */
+		if (!$file->isFile()) {
+			continue;
+		}
 		$path = (string) $file->getPathname();
 		$rel = ltrim(str_replace('\\', '/', substr($path, strlen($src))), '/');
 		if ($rel === '') {
@@ -122,15 +118,47 @@ function lf_fleet_controller_get_theme_zip(string $slug, string $version): array
 		if ($skip) {
 			continue;
 		}
-		if ($file->isDir()) {
-			$zip->addEmptyDir($slug . '/' . $rel);
-			continue;
+		$rel_files[] = $rel;
+	}
+	sort($rel_files);
+
+	// Prefer ZipArchive; fall back to WP's bundled PclZip when the PHP zip extension is unavailable.
+	if (class_exists('ZipArchive')) {
+		$zip = new \ZipArchive();
+		if ($zip->open($zip_path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+			return ['ok' => false, 'path' => '', 'sha256' => '', 'error' => 'zip_open_failed'];
 		}
-		if ($file->isFile()) {
-			$zip->addFile($path, $slug . '/' . $rel);
+		foreach ($rel_files as $rel) {
+			$full = rtrim($src, '/') . '/' . $rel;
+			if (is_readable($full)) {
+				$zip->addFile($full, $slug . '/' . $rel);
+			}
+		}
+		$zip->close();
+	} else {
+		if (!class_exists('PclZip')) {
+			require_once ABSPATH . 'wp-admin/includes/class-pclzip.php';
+		}
+		if (!class_exists('PclZip')) {
+			return ['ok' => false, 'path' => '', 'sha256' => '', 'error' => 'zip_unavailable'];
+		}
+		// PclZip does not support per-file rename cleanly, so we add a path prefix and remove the source base.
+		$archive = new \PclZip($zip_path);
+		$full_paths = array_map(static function (string $rel) use ($src): string {
+			return rtrim($src, '/') . '/' . $rel;
+		}, $rel_files);
+		$r = $archive->create(
+			$full_paths,
+			PCLZIP_OPT_REMOVE_PATH,
+			rtrim($src, '/'),
+			PCLZIP_OPT_ADD_PATH,
+			$slug
+		);
+		if ($r === 0) {
+			@unlink($zip_path);
+			return ['ok' => false, 'path' => '', 'sha256' => '', 'error' => 'zip_build_failed'];
 		}
 	}
-	$zip->close();
 
 	if (!is_readable($zip_path) || filesize($zip_path) < 1000) {
 		@unlink($zip_path);
