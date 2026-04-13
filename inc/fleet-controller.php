@@ -377,6 +377,8 @@ function lf_fleet_controller_verify_request(string $path): array {
 function lf_fleet_controller_json($payload, int $status = 200): void {
 	status_header($status);
 	header('Content-Type: application/json; charset=' . get_option('blog_charset'));
+	header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+	header('Pragma: no-cache');
 	echo wp_json_encode($payload);
 	exit;
 }
@@ -482,8 +484,16 @@ function lf_fleet_controller_handle_api(): void {
 	}
 
 	if ($route === 'updates_check') {
-		$theme_slug = isset($_GET['theme_slug']) ? sanitize_text_field((string) wp_unslash($_GET['theme_slug'])) : '';
-		$current = isset($_GET['current']) ? sanitize_text_field((string) wp_unslash($_GET['current'])) : '';
+		// Accept params from query or JSON body (POST preferred to avoid caching).
+		$raw_body = (string) file_get_contents('php://input');
+		$body = json_decode($raw_body, true);
+		$body = is_array($body) ? $body : [];
+		$theme_slug = isset($_GET['theme_slug'])
+			? sanitize_text_field((string) wp_unslash($_GET['theme_slug']))
+			: sanitize_text_field((string) ($body['theme_slug'] ?? ''));
+		$current = isset($_GET['current'])
+			? sanitize_text_field((string) wp_unslash($_GET['current']))
+			: sanitize_text_field((string) ($body['current'] ?? ''));
 		// Treat updates_check as a "seen" ping too (useful when heartbeat is delayed by cron).
 		$sites[$site_id]['last_seen_at'] = time();
 		if ($current !== '') {
