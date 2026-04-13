@@ -78,7 +78,8 @@ function lf_fleet_check_for_update(): void {
 	$theme = wp_get_theme();
 	$slug = (string) $theme->get_stylesheet();
 	$cur = (string) $theme->get('Version');
-	$res = lf_fleet_controller_request('GET', '/api/v1/updates/check', [
+	// Use POST to avoid intermediary caching of GET responses.
+	$res = lf_fleet_controller_request('POST', '/api/v1/updates/check', [], [
 		'site_id' => (string) get_option(LF_FLEET_OPT_SITE_ID, ''),
 		'theme_slug' => $slug,
 		'current' => $cur,
