@@ -61,9 +61,14 @@ function lf_fe_revision_storage_key(string $context_type, string $context_id): s
 function lf_fe_revision_capture_snapshot(string $context_type, string $context_id): array {
 	if ($context_type === 'homepage' || $context_id === 'homepage') {
 		$cfg = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
+		$order = null;
+		if (defined('LF_HOMEPAGE_ORDER_OPTION')) {
+			$order = get_option(LF_HOMEPAGE_ORDER_OPTION, null);
+		}
 		return [
 			'kind' => 'homepage',
 			'homepage_config' => is_array($cfg) ? $cfg : [],
+			'homepage_order' => is_array($order) ? $order : null,
 			'inline_dom' => function_exists('lf_ai_get_inline_dom_overrides') ? lf_ai_get_inline_dom_overrides('homepage', 'homepage') : [],
 			'inline_img' => function_exists('lf_ai_get_inline_image_overrides') ? lf_ai_get_inline_image_overrides('homepage', 'homepage') : [],
 		];
@@ -259,6 +264,9 @@ function lf_fe_revision_restore(string $context_type, string $context_id, string
 			if (defined('LF_HOMEPAGE_CONFIG_OPTION') && isset($snap['homepage_config']) && is_array($snap['homepage_config'])) {
 				update_option(LF_HOMEPAGE_CONFIG_OPTION, $snap['homepage_config'], true);
 			}
+			if (defined('LF_HOMEPAGE_ORDER_OPTION') && isset($snap['homepage_order']) && is_array($snap['homepage_order'])) {
+				update_option(LF_HOMEPAGE_ORDER_OPTION, $snap['homepage_order'], true);
+			}
 			if (function_exists('lf_ai_set_inline_dom_overrides')) {
 				lf_ai_set_inline_dom_overrides('homepage', 'homepage', is_array($snap['inline_dom'] ?? null) ? $snap['inline_dom'] : []);
 			}
@@ -344,6 +352,9 @@ function lf_fe_revision_on_updated_option(string $option, $old_value, $value): v
 		LF_AI_INLINE_OVERRIDES_OPTION,
 		LF_AI_INLINE_IMAGE_OVERRIDES_OPTION,
 	];
+	if (defined('LF_HOMEPAGE_ORDER_OPTION')) {
+		$home_opts[] = LF_HOMEPAGE_ORDER_OPTION;
+	}
 	if (!in_array($option, $home_opts, true)) {
 		return;
 	}
