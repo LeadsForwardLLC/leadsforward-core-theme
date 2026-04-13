@@ -83,6 +83,14 @@ function lf_fleet_updates_admin_render(): void {
 		], JSON_PRETTY_PRINT);
 		$controller_did = 'site_created';
 	}
+	if (isset($_POST['lf_fleet_controller_rollout_save']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_enabled')) {
+		$ver = isset($_POST['lf_fleet_ctrl_approved_version']) ? sanitize_text_field((string) wp_unslash($_POST['lf_fleet_ctrl_approved_version'])) : '';
+		$ver = preg_replace('/[^0-9A-Za-z\.\-\+_]/', '', (string) $ver);
+		update_option(LF_FLEET_CTRL_OPT_APPROVED_VERSION, is_string($ver) ? $ver : '');
+		$approve_all = isset($_POST['lf_fleet_ctrl_approve_all']) ? '1' : '0';
+		update_option(LF_FLEET_CTRL_OPT_APPROVE_ALL, $approve_all);
+		$controller_did = 'rollout_saved';
+	}
 	if (isset($_POST['lf_fleet_disconnect']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce')) {
 		delete_option(LF_FLEET_OPT_API_BASE);
 		delete_option(LF_FLEET_OPT_SITE_ID);
@@ -93,6 +101,9 @@ function lf_fleet_updates_admin_render(): void {
 		$did = 'disconnected';
 	}
 	if (isset($_POST['lf_fleet_check_now']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce')) {
+		if (function_exists('lf_fleet_send_heartbeat')) {
+			lf_fleet_send_heartbeat();
+		}
 		if (function_exists('lf_fleet_check_for_update')) {
 			lf_fleet_check_for_update();
 		}
@@ -125,6 +136,8 @@ function lf_fleet_updates_admin_render(): void {
 		echo '<div class="notice notice-error"><p>' . esc_html__('Signing key creation failed (libsodium unavailable).', 'leadsforward-core') . '</p></div>';
 	} elseif ($controller_did === 'site_created') {
 		echo '<div class="notice notice-success"><p>' . esc_html__('Site credentials created. Copy the bundle below into the fleet site.', 'leadsforward-core') . '</p></div>';
+	} elseif ($controller_did === 'rollout_saved') {
+		echo '<div class="notice notice-success"><p>' . esc_html__('Rollout settings saved.', 'leadsforward-core') . '</p></div>';
 	}
 
 	echo '<div style="margin:14px 0; padding:12px; background:#fff; border:1px solid #dbe3ef; border-radius:10px;">';
@@ -169,18 +182,32 @@ function lf_fleet_updates_admin_render(): void {
 		echo '<p style="margin-top:10px;"><button type="submit" class="button button-primary" name="lf_fleet_controller_save" value="1">' . esc_html__('Save controller settings', 'leadsforward-core') . '</button></p>';
 
 		if ($is_controller) {
+			$approve_all = get_option(LF_FLEET_CTRL_OPT_APPROVE_ALL, '0') === '1';
+			$approved_version = (string) get_option(LF_FLEET_CTRL_OPT_APPROVED_VERSION, '');
+			if ($approved_version === '' && function_exists('lf_fleet_controller_current_version')) {
+				$approved_version = lf_fleet_controller_current_version();
+			}
 			$keys_json = function_exists('lf_fleet_controller_pubkeys_json') ? lf_fleet_controller_pubkeys_json() : '{}';
 			echo '<h3 style="margin-top:18px;">' . esc_html__('Signing keys', 'leadsforward-core') . '</h3>';
 			echo '<p><button type="submit" class="button" name="lf_fleet_controller_generate_key" value="1">' . esc_html__('Generate new Ed25519 keypair', 'leadsforward-core') . '</button></p>';
 			echo '<p class="description">' . esc_html__('Public keys are shared to fleet sites. Private keys stay on controller to sign release artifacts.', 'leadsforward-core') . '</p>';
 			echo '<pre style="background:#0b1220;color:#e2e8f0;padding:12px;border-radius:10px;max-width:980px;overflow:auto;">' . esc_html((string) $keys_json) . '</pre>';
 
-			echo '<h3 style="margin-top:18px;">' . esc_html__('Create site credentials', 'leadsforward-core') . '</h3>';
+			echo '<h3 style="margin-top:18px;">' . esc_html__('Register a fleet site (Site ID + Token)', 'leadsforward-core') . '</h3>';
+			echo '<p class="description">' . esc_html__('This creates a unique Site ID + Token bundle you paste into the fleet site. This is separate from signing keys (used for release verification).', 'leadsforward-core') . '</p>';
 			echo '<table class="form-table" role="presentation">';
 			echo '<tr><th scope="row"><label for="lf_fleet_new_site_url">' . esc_html__('Fleet site URL (optional)', 'leadsforward-core') . '</label></th><td><input type="url" id="lf_fleet_new_site_url" name="lf_fleet_new_site_url" class="regular-text" placeholder="https://example.com" /></td></tr>';
 			echo '<tr><th scope="row"><label for="lf_fleet_new_site_label">' . esc_html__('Label (optional)', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_fleet_new_site_label" name="lf_fleet_new_site_label" class="regular-text" placeholder="My Site" /></td></tr>';
 			echo '</table>';
 			echo '<p><button type="submit" class="button button-primary" name="lf_fleet_controller_add_site" value="1">' . esc_html__('Create Site ID + Token bundle', 'leadsforward-core') . '</button></p>';
+
+			echo '<h3 style="margin-top:18px;">' . esc_html__('Rollout (push)', 'leadsforward-core') . '</h3>';
+			echo '<p class="description">' . esc_html__('Approves a version for rollout. Fleet sites will auto-update on their next check.', 'leadsforward-core') . '</p>';
+			echo '<table class="form-table" role="presentation">';
+			echo '<tr><th scope="row">' . esc_html__('Approved version', 'leadsforward-core') . '</th><td><input type="text" class="regular-text" name="lf_fleet_ctrl_approved_version" value="' . esc_attr($approved_version) . '" /></td></tr>';
+			echo '<tr><th scope="row">' . esc_html__('Approve for all registered sites', 'leadsforward-core') . '</th><td><label><input type="checkbox" name="lf_fleet_ctrl_approve_all" value="1" ' . checked($approve_all, true, false) . ' /> ' . esc_html__('Enabled', 'leadsforward-core') . '</label></td></tr>';
+			echo '</table>';
+			echo '<p><button type="submit" class="button button-primary" name="lf_fleet_controller_rollout_save" value="1">' . esc_html__('Save rollout settings', 'leadsforward-core') . '</button></p>';
 
 			if ($bundle_out !== '') {
 				echo '<h4>' . esc_html__('Copy/paste bundle', 'leadsforward-core') . '</h4>';
