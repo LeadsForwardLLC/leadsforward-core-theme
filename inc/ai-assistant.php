@@ -1038,6 +1038,10 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-section-bg-picker__swatch-label { line-height:1.2; }
 		.lf-ai-section-bg-picker__custom { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 		.lf-ai-section-bg-picker__input { flex:1; min-width:140px; border:1px solid #d6c8fb; border-radius:8px; padding:8px 10px; font-size:13px; }
+		.lf-ai-section-bg-picker__color { width:44px; height:36px; padding:0; border:1px solid #d6c8fb; border-radius:10px; background:#fff; cursor:pointer; }
+		.lf-ai-section-bg-picker__alpha-row { display:flex; align-items:center; gap:10px; width:100%; }
+		.lf-ai-section-bg-picker__alpha-row small { font-size:11px; color:#64748b; font-weight:700; }
+		.lf-ai-section-bg-picker__alpha { flex:1; min-width:120px; }
 		.lf-ai-section-bg-picker__apply { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:32px; padding:0 12px; font-size:12px; cursor:pointer; }
 		.lf-ai-section-bg-picker__clearcustom { border:1px solid #e2e8f0; background:#f8fafc; color:#475569; border-radius:8px; min-height:32px; padding:0 12px; font-size:12px; cursor:pointer; align-self:flex-start; }
 		.lf-ai-hero-settings .lf-ai-section-bg-picker__card { width:min(480px, calc(100vw - 30px)); gap:12px; }
@@ -6491,16 +6495,79 @@ function lf_ai_assistant_widget_js(): string {
 			} else {
 				brandNote.textContent = "Swatches use your saved brand colors from Global Settings.";
 			}
+			function clamp01(n){ n = parseFloat(String(n)); if (isNaN(n)) return 1; return Math.max(0, Math.min(1, n)); }
+			function hexToRgb(hex) {
+				var h = String(hex || "").trim().replace(/^#/, "");
+				if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+				if (!/^[0-9a-f]{6}$/i.test(h)) return null;
+				return { r: parseInt(h.slice(0,2),16), g: parseInt(h.slice(2,4),16), b: parseInt(h.slice(4,6),16) };
+			}
+			function rgbToHex(r,g,b){
+				function h(n){ var s = Math.max(0, Math.min(255, n|0)).toString(16); return s.length===1 ? "0"+s : s; }
+				return "#" + h(r) + h(g) + h(b);
+			}
+			function parseRgbLike(s) {
+				var m = String(s||"").trim().match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(0|1|0?\.\d+)\s*)?\)\s*$/i);
+				if (!m) return null;
+				return { r: Math.min(255, parseInt(m[1],10)), g: Math.min(255, parseInt(m[2],10)), b: Math.min(255, parseInt(m[3],10)), a: m[4]!==undefined ? clamp01(m[4]) : 1 };
+			}
+			function toRgbaString(rgb, a) {
+				if (!rgb) return "";
+				var aa = clamp01(a);
+				return "rgba(" + (rgb.r|0) + ", " + (rgb.g|0) + ", " + (rgb.b|0) + ", " + (Math.round(aa*1000)/1000) + ")";
+			}
+
 			var customRow = document.createElement("div");
 			customRow.className = "lf-ai-section-bg-picker__custom";
+			var colorWheel = document.createElement("input");
+			colorWheel.type = "color";
+			colorWheel.className = "lf-ai-section-bg-picker__color";
+			colorWheel.value = "#2563eb";
+			var alphaRow = document.createElement("div");
+			alphaRow.className = "lf-ai-section-bg-picker__alpha-row";
+			var alphaLabel = document.createElement("small");
+			alphaLabel.textContent = "Opacity";
+			var alpha = document.createElement("input");
+			alpha.type = "range";
+			alpha.min = "0";
+			alpha.max = "1";
+			alpha.step = "0.01";
+			alpha.value = "1";
+			alpha.className = "lf-ai-section-bg-picker__alpha";
+			alphaRow.appendChild(alphaLabel);
+			alphaRow.appendChild(alpha);
 			var inp = document.createElement("input");
 			inp.type = "text";
 			inp.className = "lf-ai-section-bg-picker__input";
-			inp.setAttribute("placeholder", "#hex or rgb(...)");
+			inp.setAttribute("placeholder", "#hex, rgb(...), rgba(...)");
 			var applyCustom = document.createElement("button");
 			applyCustom.type = "button";
 			applyCustom.className = "lf-ai-section-bg-picker__apply";
 			applyCustom.textContent = "Apply custom";
+
+			function syncFromText(val) {
+				var v = String(val || "").trim();
+				var rgb = null;
+				var a = 1;
+				if (/^#/.test(v)) {
+					rgb = hexToRgb(v);
+				} else {
+					var parsed = parseRgbLike(v);
+					if (parsed) { rgb = parsed; a = parsed.a; }
+				}
+				if (rgb) {
+					try { colorWheel.value = rgbToHex(rgb.r, rgb.g, rgb.b); } catch(e){}
+					alpha.value = String(a);
+				}
+			}
+			function syncTextFromControls() {
+				var rgb = hexToRgb(colorWheel.value);
+				inp.value = rgb ? toRgbaString(rgb, alpha.value) : String(inp.value || "");
+			}
+			colorWheel.addEventListener("input", function(){ syncTextFromControls(); });
+			alpha.addEventListener("input", function(){ syncTextFromControls(); });
+			inp.addEventListener("input", function(){ syncFromText(inp.value); });
+
 			applyCustom.addEventListener("click", function(e){
 				e.preventDefault();
 				var w = sectionBgPickerWrap;
@@ -6508,8 +6575,11 @@ function lf_ai_assistant_widget_js(): string {
 				closeSectionBgPicker();
 				if (w && v) persistSectionStyle(w, "set_custom_bg", { custom_background: v });
 			});
+
+			customRow.appendChild(colorWheel);
 			customRow.appendChild(inp);
 			customRow.appendChild(applyCustom);
+			customRow.appendChild(alphaRow);
 			var clearCustom = document.createElement("button");
 			clearCustom.type = "button";
 			clearCustom.className = "lf-ai-section-bg-picker__clearcustom";
