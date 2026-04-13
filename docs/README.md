@@ -14,6 +14,7 @@ Use this page as the starting point for architecture, operations, and troublesho
 - `06_AI_PROMPT_ENGINE.md` - prompt and generation constraints.
 
 ## Frontend / UX
+- `PERFORMANCE_SEO_CONVERSION_ROADMAP.md` - prioritized performance, technical SEO, and conversion backlog (instrumentation through fleet ops).
 - `08_FRONTEND_EDITOR.md` - sidepanel/assistant editing, layout history, rich-text icon shortcodes, shortcuts.
 - `09_PAGE_BUILDER_MAPS_NAV_AI.md` - Page Builder meta (`lf_pb_config`), map iframe vs optional Maps API key, header menu “add on save”, AI creation `page_builder` JSON contract.
 - `07_ICON_SYSTEM.md` - icon picker and icon taxonomy usage.

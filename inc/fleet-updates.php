@@ -38,15 +38,19 @@ function lf_fleet_is_connected(): bool {
 // to be part of the authorized LeadsForward menu tree (prevents "not allowed"/404-like behavior).
 
 add_filter('cron_schedules', static function (array $schedules): array {
-	if (!isset($schedules['lf_15m'])) {
-		$schedules['lf_15m'] = [
-			'interval' => 15 * 60,
-			'display' => __('LeadsForward 15 minutes', 'leadsforward-core'),
-		];
-	}
+	$sec = (int) apply_filters('lf_fleet_updates_cron_interval', 15 * MINUTE_IN_SECONDS);
+	$sec = max(5 * MINUTE_IN_SECONDS, min(60 * MINUTE_IN_SECONDS, $sec));
+	$schedules['lf_15m'] = [
+		'interval' => $sec,
+		/* translators: %d: interval in minutes */
+		'display' => sprintf(__('LeadsForward fleet check (%d min)', 'leadsforward-core'), (int) round($sec / 60)),
+	];
 	return $schedules;
-});
+}, 20);
 
+/**
+ * Ensure recurring fleet cron exists when connected.
+ */
 function lf_fleet_updates_maybe_schedule(): void {
 	if (!lf_fleet_is_connected()) {
 		return;
@@ -57,6 +61,50 @@ function lf_fleet_updates_maybe_schedule(): void {
 	}
 }
 add_action('init', 'lf_fleet_updates_maybe_schedule');
+
+/**
+ * Remove all scheduled fleet cron jobs (disconnect or maintenance).
+ */
+function lf_fleet_clear_scheduled_events(): void {
+	wp_unschedule_hook(LF_FLEET_CRON_HOOK);
+}
+
+/**
+ * After connection settings change: ensure recurring event, queue a near-term run, nudge wp-cron.
+ */
+function lf_fleet_on_connection_updated(): void {
+	if (!lf_fleet_is_connected()) {
+		return;
+	}
+	lf_fleet_updates_maybe_schedule();
+	if (!get_site_transient('lf_fleet_nearterm_ping')) {
+		wp_schedule_single_event(time() + 20, LF_FLEET_CRON_HOOK);
+		set_site_transient('lf_fleet_nearterm_ping', '1', 90);
+	}
+	if (function_exists('spawn_cron')) {
+		spawn_cron();
+	}
+}
+
+/**
+ * Visiting Fleet Updates in wp-admin nudges WP-Cron so connected sites catch updates without waiting for front-end traffic.
+ */
+function lf_fleet_admin_nudge_cron(): void {
+	if (!is_admin() || !function_exists('spawn_cron')) {
+		return;
+	}
+	if (!isset($_GET['page']) || (string) wp_unslash($_GET['page']) !== 'lf-fleet-updates') {
+		return;
+	}
+	if (!current_user_can('edit_theme_options')) {
+		return;
+	}
+	if (!lf_fleet_is_connected()) {
+		return;
+	}
+	spawn_cron();
+}
+add_action('admin_init', 'lf_fleet_admin_nudge_cron', 30);
 
 function lf_fleet_send_heartbeat(): void {
 	if (!lf_fleet_is_connected()) {

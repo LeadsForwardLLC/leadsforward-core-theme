@@ -59,6 +59,9 @@ function lf_fleet_updates_admin_render(): void {
 				$did = $imp['message'] === 'invalid_json' ? 'bundle_bad_json' : 'bundle_bad_fields';
 			} else {
 				$did = 'bundle_imported';
+				if (function_exists('lf_fleet_on_connection_updated')) {
+					lf_fleet_on_connection_updated();
+				}
 			}
 		} else {
 			update_option(LF_FLEET_OPT_API_BASE, esc_url_raw((string) wp_unslash($_POST['api_base'] ?? '')));
@@ -71,6 +74,9 @@ function lf_fleet_updates_admin_render(): void {
 			$decoded = json_decode((string) wp_unslash($_POST['pubkeys_json'] ?? ''), true);
 			update_option(LF_FLEET_OPT_PUBKEYS, wp_json_encode(is_array($decoded) ? $decoded : []));
 			$did = 'saved';
+			if (function_exists('lf_fleet_is_connected') && lf_fleet_is_connected() && function_exists('lf_fleet_on_connection_updated')) {
+				lf_fleet_on_connection_updated();
+			}
 		}
 	}
 	// Controller mode (theme.leadsforward.com): enable + mint site bundles + keys.
@@ -181,6 +187,10 @@ function lf_fleet_updates_admin_render(): void {
 		}
 	}
 	if (isset($_POST['lf_fleet_disconnect']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce')) {
+		if (function_exists('lf_fleet_clear_scheduled_events')) {
+			lf_fleet_clear_scheduled_events();
+		}
+		delete_site_transient('lf_fleet_nearterm_ping');
 		delete_option(LF_FLEET_OPT_API_BASE);
 		delete_option(LF_FLEET_OPT_SITE_ID);
 		delete_option(LF_FLEET_OPT_TOKEN);
