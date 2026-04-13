@@ -3,6 +3,7 @@
 Use this page as the starting point for architecture, operations, and troubleshooting.
 
 ## Start Here
+- `00_PRODUCTION_READINESS.md` - pre-launch checklist, fleet/cron notes, version alignment.
 - `01_SYSTEM_OVERVIEW.md` - high-level system map and execution phases.
 - `05_THEME_INTEGRATION.md` - WordPress integration points, callback/apply path, repair safeguards.
 - `02_N8N_WORKFLOW_ARCHITECTURE.md` - n8n node flow, quality gates, callback/progress contract.
@@ -13,9 +14,12 @@ Use this page as the starting point for architecture, operations, and troublesho
 - `06_AI_PROMPT_ENGINE.md` - prompt and generation constraints.
 
 ## Frontend / UX
-- `08_FRONTEND_EDITOR.md` - sidepanel/assistant editing behavior and controls.
+- `08_FRONTEND_EDITOR.md` - sidepanel/assistant editing, layout history, rich-text icon shortcodes, shortcuts.
 - `09_PAGE_BUILDER_MAPS_NAV_AI.md` - Page Builder meta (`lf_pb_config`), map iframe vs optional Maps API key, header menu “add on save”, AI creation `page_builder` JSON contract.
 - `07_ICON_SYSTEM.md` - icon picker and icon taxonomy usage.
+
+## Deploy / updates
+- `05_THEME_INTEGRATION.md` - includes **Fleet theme updates** (private controller channel, HMAC, signed zips, WP-Cron behavior).
 
 ## Theme CPTs (quick reference)
 - **`lf_faq`** — FAQ accordion selections (`faq_selected_ids`).

@@ -165,6 +165,20 @@ Undo/redo is powered by change keys in the logging layer, including:
 - `__section_enabled::<section_id>`
 - `__section_record::<section_id>`
 
+## Layout history (restore points)
+
+- A separate **History** floater lists **layout revisions** (page-builder config + inline overrides) with who saved and when.
+- **Restore** reverts to a snapshot and reloads the page; concurrency uses a monotonic `layout_version` (refresh the list if someone else saved first).
+- The header **reload** control fetches the latest list from the server (not undo-in-time for arbitrary edits).
+- The row that matches the current server **layout version** is labeled **Live**; older rows can be restored.
+
+## Rich Text sections: Insert icon
+
+- In **Rich Text** (`rich_content`) sections, the formatting toolbar includes **Insert icon**.
+- Picking a slug inserts the shortcode: `[lf_icon name="your-slug"]` at the saved caret position (selection is restored after the modal so insertion is reliable).
+- PHP expands shortcodes to inline Tabler SVG on render (`inc/sections.php`, `docs/07_ICON_SYSTEM.md`).
+
 ## Related documentation
 
 - **`09_PAGE_BUILDER_MAPS_NAV_AI.md`** — How `lf_pb_config` is stored, map iframe settings, header menu “add on save,” and how the **dashboard AI assistant** creates drafts with a `page_builder` JSON object (separate from orchestrator blueprints in `06_AI_PROMPT_ENGINE.md`).
+- **`00_PRODUCTION_READINESS.md`** — Launch checklist including fleet cron and menu locations.

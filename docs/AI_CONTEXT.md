@@ -1,6 +1,6 @@
 # AI Context
 
-For full architecture and operations navigation, start with `docs/README.md`.
+For full architecture and operations navigation, start with `docs/README.md`. For launch verification and fleet/cron notes, see `docs/00_PRODUCTION_READINESS.md`.
 
 ## Image Naming Strategy
 
