@@ -1897,6 +1897,8 @@ function lf_ai_assistant_widget_js(): string {
 		var lfInlineLinkCacheLoading = false;
 		var lfInlineLinkSelTimer = null;
 		var lfInlineToolbarPinnedHost = null;
+		var lfProseIconSavedRange = null;
+		var lfProseIconSavedHost = null;
 		function lfHideInlineLinkToolbar() {
 			if ($linkRoot.length) {
 				$linkRoot.find("[data-lf-ai-inline-link-toolbar]").prop("hidden", true);
@@ -1933,6 +1935,66 @@ function lf_ai_assistant_widget_js(): string {
 				return ae;
 			}
 			return null;
+		}
+		function lfInsertShortcodeIntoContentEditable(host, savedRange, token) {
+			if (!host || !token) return false;
+			try { host.focus(); } catch (e0) {}
+			var sel = window.getSelection();
+			var r = null;
+			if (savedRange) {
+				try {
+					if (host.contains(savedRange.commonAncestorContainer)) {
+						r = savedRange;
+					}
+				} catch (eC) {}
+			}
+			if (r) {
+				try {
+					sel.removeAllRanges();
+					sel.addRange(r);
+				} catch (e1) {
+					r = null;
+				}
+			}
+			if (!r) {
+				try {
+					r = document.createRange();
+					r.selectNodeContents(host);
+					r.collapse(false);
+					sel.removeAllRanges();
+					sel.addRange(r);
+				} catch (e2) {
+					return false;
+				}
+			}
+			var ok = false;
+			try {
+				ok = document.execCommand("insertText", false, token);
+			} catch (e3) {}
+			if (!ok) {
+				try {
+					var cur = sel.rangeCount ? sel.getRangeAt(0) : null;
+					if (!cur || !host.contains(cur.commonAncestorContainer)) {
+						cur = document.createRange();
+						cur.selectNodeContents(host);
+						cur.collapse(false);
+						sel.removeAllRanges();
+						sel.addRange(cur);
+					}
+					cur.deleteContents();
+					var tn = document.createTextNode(token);
+					cur.insertNode(tn);
+					var after = document.createRange();
+					after.setStartAfter(tn);
+					after.collapse(true);
+					sel.removeAllRanges();
+					sel.addRange(after);
+					ok = true;
+				} catch (e4) {
+					ok = false;
+				}
+			}
+			return !!ok;
 		}
 		function lfAnyInlineLinkHostEl() {
 			return inlineActiveEl || lfManagedContentEditableHost();
@@ -2488,12 +2550,32 @@ function lf_ai_assistant_widget_js(): string {
 					setStatus("Icons can currently only be inserted into Rich Text sections.", true);
 					return;
 				}
+				lfProseIconSavedHost = host;
+				lfProseIconSavedRange = null;
+				var selPick = window.getSelection();
+				if (selPick && selPick.rangeCount) {
+					try {
+						var rPick = selPick.getRangeAt(0);
+						if (host.contains(rPick.commonAncestorContainer)) {
+							lfProseIconSavedRange = rPick.cloneRange();
+						}
+					} catch (eR) {}
+				}
 				openIconPicker("", function(slug){
 					var s = String(slug || "").trim();
 					if (!s) return;
-					try { host.focus(); } catch (eF) {}
-					try { document.execCommand("insertText", false, "[lf_icon name=\"" + s.replace(/"/g, "") + "\"]"); } catch (eI) {}
-					persistRichContentBodyNow(host, "Icon inserted.");
+					var h = lfProseIconSavedHost || host;
+					var sr = lfProseIconSavedRange;
+					var token = "[lf_icon name=\"" + s.replace(/"/g, "") + "\"]";
+					var inserted = lfInsertShortcodeIntoContentEditable(h, sr, token);
+					lfProseIconSavedRange = null;
+					lfProseIconSavedHost = null;
+					if (!inserted) {
+						setStatus("Could not insert icon at the cursor. Click in the text and try again.", true);
+						return;
+					}
+					try { h.focus(); } catch (eF) {}
+					persistRichContentBodyNow(h, "Icon inserted.");
 				});
 			});
 		}
@@ -2727,6 +2809,8 @@ function lf_ai_assistant_widget_js(): string {
 			removeBenefitIconBgRow();
 			iconPickerEl.hidden = true;
 			iconPickerOnSelect = null;
+			lfProseIconSavedRange = null;
+			lfProseIconSavedHost = null;
 			try { if (iconPickerSearchEl) iconPickerSearchEl.value = ""; } catch (e) {}
 		}
 		function renderIconPickerList(query) {
