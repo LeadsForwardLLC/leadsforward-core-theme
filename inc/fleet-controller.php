@@ -456,6 +456,15 @@ function lf_fleet_controller_handle_api(): void {
 	if ($route === 'updates_check') {
 		$theme_slug = isset($_GET['theme_slug']) ? sanitize_text_field((string) wp_unslash($_GET['theme_slug'])) : '';
 		$current = isset($_GET['current']) ? sanitize_text_field((string) wp_unslash($_GET['current'])) : '';
+		// Treat updates_check as a "seen" ping too (useful when heartbeat is delayed by cron).
+		$sites[$site_id]['last_seen_at'] = time();
+		if ($current !== '') {
+			$sites[$site_id]['current_version'] = $current;
+		}
+		if ($theme_slug !== '') {
+			$sites[$site_id]['theme_slug'] = $theme_slug;
+		}
+		lf_fleet_controller_update_sites($sites);
 		$approved_all = get_option(LF_FLEET_CTRL_OPT_APPROVE_ALL, '0') === '1';
 		$approved_version = (string) get_option(LF_FLEET_CTRL_OPT_APPROVED_VERSION, '');
 		if ($approved_version === '') {
