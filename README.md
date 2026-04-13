@@ -2,7 +2,7 @@
 
 Ultra-lightweight, SEO-first WordPress theme for local lead-gen sites. Built to scale across thousands of sites. Uses a **theme-native Page Builder** (Section Library + shared section registry) alongside the block editor where each post type needs it—not a third-party page builder plugin.
 
-- **Version:** 0.1.0  
+- **Version:** 0.1.30  
 - **Text domain:** `leadsforward-core`  
 - **Requires PHP:** 8.0+  
 - **Requires:** WordPress 6.0+, Advanced Custom Fields (ACF) for full functionality  
@@ -18,7 +18,7 @@ LeadsForward Core provides:
 - **Global settings & branding:** Logo + color tokens mapped to CSS variables (core, surface, text) and design presets synced to the variation profile, with optional design overrides
 - **Shared section registry:** Universal section definitions + defaults used by homepage and page builders
 - **Image system:** Media Library–only images with Unsplash placeholder seeding
-- **Icon system:** Lucide SVG sprite with per-section controls + niche-based icon packs
+- **Icon system:** Tabler Icons (inline SVG via `lf_icon()`) with per-section controls + niche-based icon packs
 - **Homepage builder:** Drag/drop order, per-section toggles, backgrounds, and copy (Hero controls match Page Builder)
 - **Page Builder Framework:** Instance-based sections for core pages, posts, services, and service areas
 - **Navigation:** Header menu auto-built after setup with a non-clickable “More” dropdown plus Call Now and CTA actions
@@ -36,7 +36,8 @@ LeadsForward Core provides:
 - **Controlled variation:** Site-wide profile (A–E), block variant registry, safe section ordering, style tokens, copy template slots (no randomness)
 - **Site setup:** Niche-aware init; seeds pages, CPTs, menus, page builder defaults, and copy templates (Manifester + Global Settings are primary)
 - **Safety:** CPT delete protection, admin notices for missing SEO-critical fields, graceful fallback when ACF is off
-- **Docs:** System architecture and schemas in `docs/`
+- **Fleet updates (optional):** Private pull-based channel to `theme.leadsforward.com` (or your controller) for signed automatic theme updates (`LeadsForward → Fleet Updates`)
+- **Docs:** System architecture and schemas in `docs/`; operator playbook in wp-admin **Theme Documentation** and `/theme-docs/`
 
 ---
 
@@ -79,7 +80,7 @@ leadsforward-core-theme/
 ├── assets/
 │   ├── css/          # editor.css, variation-tokens.css, projects.css, future front-end CSS
 │   ├── js/           # quote-builder.js, lf-section-sortable.js, project-gallery.js, section-sliders.js
-│   ├── icons/        # Runtime SVG sprite (`sprite.svg`)
+│   ├── icons/        # Tabler outline SVGs (`assets/icons/tabler/`)
 │   └── images/
 ├── docs/             # System documentation
 ├── inc/
@@ -515,4 +516,5 @@ Completion is stored in option `lf_setup_wizard_complete`. Site setup does not s
 
 ## Changelog
 
+- **0.1.30** — Production readiness doc (`docs/00_PRODUCTION_READINESS.md`); README and admin Theme Documentation aligned with Tabler icons, fleet updates, and front-end editor features.
 - **0.1.0** — Foundation: CPTs, ACF options, blocks, SEO/schema, modular homepage, CTA resolution, documentation.

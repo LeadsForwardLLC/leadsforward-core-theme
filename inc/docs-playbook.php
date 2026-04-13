@@ -29,6 +29,7 @@ function lf_docs_render_playbook_sections(): void {
 					<li><a href="<?php echo esc_url(admin_url('admin.php?page=' . $m_slug)); ?>"><?php esc_html_e('Manifest Website', 'leadsforward-core'); ?></a></li>
 					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-setup')); ?>"><?php esc_html_e('Manual setup (no Airtable)', 'leadsforward-core'); ?></a> — <?php esc_html_e('not in the sidebar; use the button on Manifest Website.', 'leadsforward-core'); ?></li>
 					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-homepage-settings')); ?>"><?php esc_html_e('Homepage sections (hidden menu URL)', 'leadsforward-core'); ?></a> — <?php esc_html_e('prefer editing the static front page under Pages.', 'leadsforward-core'); ?></li>
+					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-fleet-updates')); ?>"><?php esc_html_e('Fleet Updates', 'leadsforward-core'); ?></a> — <?php esc_html_e('private theme update channel (when enabled)', 'leadsforward-core'); ?></li>
 					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=settings')); ?>"><?php esc_html_e('SEO & Performance (SEO tab)', 'leadsforward-core'); ?></a> — <a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=health')); ?>"><?php esc_html_e('Site health tab', 'leadsforward-core'); ?></a></li>
 					<li><a href="<?php echo esc_url(admin_url('edit.php?post_type=lf_process_step')); ?>"><?php esc_html_e('Process steps (CPT)', 'leadsforward-core'); ?></a></li>
 					<li><a href="<?php echo esc_url(admin_url('edit.php?post_type=lf_faq')); ?>"><?php esc_html_e('FAQs', 'leadsforward-core'); ?></a></li>
@@ -72,6 +73,7 @@ function lf_docs_render_playbook_sections(): void {
 					<li><strong>Homepage sections</strong> — <?php esc_html_e('Section order for the static front page (direct URL only); prefer editing the Home page under Pages when possible.', 'leadsforward-core'); ?></li>
 					<li><strong>Quote Builder / Contact Form</strong> — <?php esc_html_e('Lead capture configuration.', 'leadsforward-core'); ?></li>
 					<li><strong>SEO & Performance</strong> — <?php esc_html_e('Tab: SEO settings. Tab: Site health (status, GTM check, manifester check, pre-launch run, QA checklist).', 'leadsforward-core'); ?></li>
+					<li><strong>Fleet Updates</strong> — <?php esc_html_e('Connect fleet clients to a controller for signed automatic theme ZIP installs.', 'leadsforward-core'); ?></li>
 					<li><strong>Bulk Tools / Backup & Restore</strong> — <?php esc_html_e('Batch preset, CTAs, schema toggles, linking rebuild; config export/import.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('ACF submenus (CTAs, Schema, Variation, etc.) when ACF options pages are active.', 'leadsforward-core'); ?></li>
 				</ul>
@@ -137,6 +139,8 @@ function lf_docs_render_playbook_sections(): void {
 					<li><?php esc_html_e('Drag sections to reorder; use hover controls to reverse columns, duplicate, hide/show, or delete (delete asks for confirmation).', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Use the Structure rail (☰) to jump between sections, reorder from a list, or add sections from the library.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Open the separate “SEO Health” floater for SERP preview, keyword coverage, vitals-oriented hints, and refresh—without leaving the page.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Open “History” for layout restore points (who/when). Use the header reload icon to refresh the list after a teammate saves. “Live” marks the snapshot that matches the current server version.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('In Rich Text sections, use Insert icon in the toolbar to add [lf_icon name="slug"] shortcodes at the cursor; icons render as SVG on the front end.', 'leadsforward-core'); ?></li>
 				</ul>
 				<h3><?php esc_html_e('Keyboard shortcuts (when not typing in a field)', 'leadsforward-core'); ?></h3>
 				<ul>
@@ -185,11 +189,25 @@ function lf_docs_render_playbook_sections(): void {
 				<p><?php esc_html_e('Recent AI-applied changes can be rolled back from the assistant / AI editing UI where exposed; full-site runs are tracked via AI Studio jobs.', 'leadsforward-core'); ?></p>
 			</section>
 
+			<section id="fleet-updates" class="lf-docs__section">
+				<h2><?php esc_html_e('Fleet theme updates (private channel)', 'leadsforward-core'); ?></h2>
+				<p><?php esc_html_e('For sites that should receive theme ZIPs from a central controller (for example theme.leadsforward.com) without logging into each install:', 'leadsforward-core'); ?></p>
+				<ul>
+					<li><?php esc_html_e('Go to LeadsForward → Fleet Updates and paste the connection bundle: API base, site ID, token, and controller public keys JSON.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('The theme checks about every 15 minutes when WordPress cron runs. Quiet sites may need system cron hitting wp-cron.php, or use Check now after a release.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Check now contacts the controller immediately and attempts install when an update is offered (for users who can manage theme options).', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Rollout (all sites, selected sites, or tag) is configured on the controller site; a site that is not eligible will see a reason in the last check summary.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('If navigation disappears after a theme upgrade, open Appearance → Menus → Manage Locations and assign your menu to the Header Menu display location.', 'leadsforward-core'); ?></li>
+				</ul>
+				<p><?php esc_html_e('Technical detail for developers: signed downloads, HMAC API requests, and apply path are documented in docs/05_THEME_INTEGRATION.md.', 'leadsforward-core'); ?></p>
+			</section>
+
 			<section id="developer-reference" class="lf-docs__section">
 				<h2><?php esc_html_e('Developer documentation (theme repository)', 'leadsforward-core'); ?></h2>
 				<p><?php esc_html_e('This playbook is the operator guide. For architecture, n8n contracts, manifest schema, section registry details, and the Page Builder / maps / menu / AI creation reference, use the Markdown files in the theme’s docs/ folder (same copy shipped with the theme ZIP or Git clone).', 'leadsforward-core'); ?></p>
 				<ul>
 					<li><code>docs/README.md</code> — <?php esc_html_e('index of all topics', 'leadsforward-core'); ?></li>
+					<li><code>docs/00_PRODUCTION_READINESS.md</code> — <?php esc_html_e('pre-launch checklist and fleet notes', 'leadsforward-core'); ?></li>
 					<li><code>docs/01_SYSTEM_OVERVIEW.md</code> — <?php esc_html_e('orchestrator phases, template defaults, storage keys', 'leadsforward-core'); ?></li>
 					<li><code>docs/04_SECTION_SCHEMA.md</code> — <?php esc_html_e('section types and fields', 'leadsforward-core'); ?></li>
 					<li><code>docs/05_THEME_INTEGRATION.md</code> — <?php esc_html_e('WordPress apply path, identity guard, SEO', 'leadsforward-core'); ?></li>
@@ -214,6 +232,9 @@ function lf_docs_render_playbook_sections(): void {
 					<li><?php esc_html_e('AI created a service but the main editor is empty: open Page Builder—the copy is in sections. Retry the prompt asking for page_builder section fields if a section stayed default.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Map missing on contact/home: paste the iframe under Global Settings → Business entity; confirm the Map + NAP section is enabled on that template.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('“Add to header menu” missing or service link lands top-level: assign a menu to Header Menu; you need edit theme options; if already in menu the checkbox hides. For Services/Areas submenus, the parent items need the wizard menu classes—fix under Appearance → Menus.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Fleet update never arrives: confirm rollout on the controller, run Check now, and ensure WP-Cron runs (traffic or server cron). If manual update says download failed, verify controller rewrites and try again after a fresh check.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Header nav missing after an update: Appearance → Menus → Manage Locations → assign your menu to Header Menu.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Rich Text Insert icon does nothing: click inside the paragraph first so the caret is in the prose, then open the picker.', 'leadsforward-core'); ?></li>
 				</ul>
 			</section>
 	<?php

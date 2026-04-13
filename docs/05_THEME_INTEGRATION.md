@@ -78,12 +78,15 @@ In wp-admin:
   - **Controller public keys JSON** (map of `key_id` → base64 public key)
 
 ### How it works
-- Every ~15 minutes (with jitter), the site calls the controller:
+- On a **~15 minute** WordPress cron schedule (with jitter), the site calls the controller **when WP-Cron runs** (typically when the site gets traffic, or when system cron hits `wp-cron.php`). Low-traffic fleet sites should use real server cron or rely on **Check now** in Fleet Updates after a release.
+- Each run:
   - **Heartbeat**: reports current version + environment
   - **Update check**: controller returns an update only if the site is eligible + the version is approved
 - If approved:
   - The site verifies **Ed25519 signature** + **SHA-256 checksum**
   - Then installs via WordPress upgrader APIs
+- **Check now** (wp-admin): contacts the controller immediately and, for authorized users, attempts install without waiting for cron.
+- **Manual update** from Appearance → Themes uses the same verified zip path; controller download URLs are **one-time tokens**—the theme caches the verified zip within a single upgrade request so WordPress does not request the URL twice.
 
 ### Security notes
 - Requests are **HMAC-signed** with a per-site token and include timestamp + nonce for replay protection.
