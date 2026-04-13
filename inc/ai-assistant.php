@@ -266,6 +266,10 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 			'historyRestore' => __('Restore this version', 'leadsforward-core'),
 			'historyRestoreConfirm' => __('Replace the current layout and inline edits with this version? The page will reload.', 'leadsforward-core'),
 			'historyLoadFailed' => __('Could not load history.', 'leadsforward-core'),
+			'historyRefreshing' => __('Refreshing history…', 'leadsforward-core'),
+			'historyReloadTitle' => __('Reload list from server', 'leadsforward-core'),
+			'historyLiveBadge' => __('Live', 'leadsforward-core'),
+			'historyLiveHelp' => __('This snapshot matches the version on the server right now.', 'leadsforward-core'),
 			'placeholder' => __('Ask for precise copy edits, SEO rewrites, CTA improvements, or schema-safe content upgrades...', 'leadsforward-core'),
 			'onboardingTip' => __('Click text or images to edit. Pick a section for AI changes. Press ⌘/Ctrl+K for commands.', 'leadsforward-core'),
 			'onboardingDismiss' => __('Got it', 'leadsforward-core'),
@@ -735,13 +739,13 @@ function lf_ai_assistant_render_floating_widget(): void {
 			<div class="lf-ai-float__header">
 				<strong><?php esc_html_e('Layout history', 'leadsforward-core'); ?></strong>
 				<div class="lf-ai-float__header-actions">
-					<button type="button" class="lf-ai-float__icon" data-lf-ai-history-refresh aria-label="<?php esc_attr_e('Refresh history', 'leadsforward-core'); ?>">↻</button>
+					<button type="button" class="lf-ai-float__icon" data-lf-ai-history-refresh aria-label="<?php esc_attr_e('Reload list from server', 'leadsforward-core'); ?>" title="<?php esc_attr_e('Reload list from server (fetches the latest restore points)', 'leadsforward-core'); ?>">↻</button>
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-history-minimize aria-label="<?php esc_attr_e('Minimize', 'leadsforward-core'); ?>">−</button>
 					<button type="button" class="lf-ai-float__icon" data-lf-ai-history-close aria-label="<?php esc_attr_e('Close', 'leadsforward-core'); ?>">×</button>
 				</div>
 			</div>
 			<div class="lf-ai-float__body">
-				<p class="lf-ai-history__hint"><?php esc_html_e('Each save creates a restore point (who + when). Restore reloads the page. If someone else saved first, refresh and try again.', 'leadsforward-core'); ?></p>
+				<p class="lf-ai-history__hint"><?php esc_html_e('Each save creates a restore point (who + when). The header refresh icon reloads this list from the server; use it after a teammate saves or if restore says the layout changed. Restoring reloads the page.', 'leadsforward-core'); ?></p>
 				<div class="lf-ai-history__status" data-lf-ai-history-status></div>
 				<div class="lf-ai-history__list" data-lf-ai-history-list></div>
 			</div>
@@ -778,6 +782,11 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float__header-actions { display:flex; gap:6px; }
 		.lf-ai-float__icon { border:1px solid #d6c8fb; background:#fff; width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:16px; line-height:1; color:#6a33e8; }
 		.lf-ai-float__icon.is-active { background:#f5f0ff; border-color:#8348f9; color:#5b21b6; }
+		.lf-ai-float__icon.lf-is-loading { pointer-events:none; opacity:0.72; animation: lf-ai-spin 0.7s linear infinite; }
+		@keyframes lf-ai-spin { to { transform: rotate(360deg); } }
+		.lf-ai-history__badge { display:inline-block; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; padding:2px 8px; border-radius:999px; background:#dcfce7; color:#166534; border:1px solid #bbf7d0; margin-bottom:2px; }
+		.lf-ai-history__row.is-live { border-color:#86efac; background:#f0fdf4; }
+		.lf-ai-history__restore[disabled] { opacity:0.55; cursor:default; background:#94a3b8 !important; }
 		.lf-ai-float__body { padding:12px; display:flex; flex-direction:column; gap:10px; flex:1; min-height:0; overflow:auto; overflow-x:hidden; }
 		.lf-ai-float__body, .lf-ai-float__body * { box-sizing:border-box; }
 		.lf-ai-float .lf-ai-float__body .button { appearance:none; border:1px solid #c4b5fd; border-radius:10px; background:#fff; color:#1e1b4b; min-height:34px; line-height:1.25; padding:0 12px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; }
@@ -1372,42 +1381,70 @@ function lf_ai_assistant_widget_js(): string {
 				return String(t);
 			}
 		}
-		function loadRevisionHistory() {
-			if (!$historyList.length) return;
-			$historyStatus.text("").removeClass("is-error");
+		function loadRevisionHistory($ctxRoot) {
+			var $list = ($ctxRoot && $ctxRoot.length) ? $ctxRoot.find("[data-lf-ai-history-list]") : $historyList;
+			var $status = ($ctxRoot && $ctxRoot.length) ? $ctxRoot.find("[data-lf-ai-history-status]") : $historyStatus;
+			var $refBtn = ($ctxRoot && $ctxRoot.length) ? $ctxRoot.find("[data-lf-ai-history-refresh]") : $historyRefresh;
+			if (!$list.length) return;
+			$status.text("").removeClass("is-error");
+			if ($refBtn.length) {
+				$refBtn.addClass("lf-is-loading").attr("aria-busy", "true");
+			}
+			var refreshing = (lfAiFloating.i18n && lfAiFloating.i18n.historyRefreshing) ? lfAiFloating.i18n.historyRefreshing : "Refreshing history…";
+			$status.text(refreshing);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_fe_revision_list",
 				nonce: lfAiFloating.nonce,
 				context_type: pageContextType,
 				context_id: pageContextId
 			}).done(function(res){
+				if ($refBtn.length) {
+					$refBtn.removeClass("lf-is-loading").removeAttr("aria-busy");
+				}
+				$status.text("").removeClass("is-error");
 				if (!res || !res.success || !res.data) {
-					$historyStatus.text((lfAiFloating.i18n && lfAiFloating.i18n.historyLoadFailed) ? lfAiFloating.i18n.historyLoadFailed : "Could not load history.").addClass("is-error");
+					$status.text((lfAiFloating.i18n && lfAiFloating.i18n.historyLoadFailed) ? lfAiFloating.i18n.historyLoadFailed : "Could not load history.").addClass("is-error");
 					return;
 				}
 				if (typeof res.data.layout_version === "number") {
 					layoutVersion = res.data.layout_version;
 				}
+				var liveVer = typeof res.data.layout_version === "number" ? res.data.layout_version : layoutVersion;
 				var rows = Array.isArray(res.data.revisions) ? res.data.revisions : [];
 				if (!rows.length) {
-					$historyList.html("<p class=\"lf-ai-history__empty\" style=\"font-size:12px;color:#64748b;margin:0;\">" + escapeHtml((lfAiFloating.i18n && lfAiFloating.i18n.historyEmpty) ? lfAiFloating.i18n.historyEmpty : "No revisions yet.") + "</p>");
+					$list.html("<p class=\"lf-ai-history__empty\" style=\"font-size:12px;color:#64748b;margin:0;\">" + escapeHtml((lfAiFloating.i18n && lfAiFloating.i18n.historyEmpty) ? lfAiFloating.i18n.historyEmpty : "No revisions yet.") + "</p>");
 					return;
 				}
+				var liveLabel = (lfAiFloating.i18n && lfAiFloating.i18n.historyLiveBadge) ? lfAiFloating.i18n.historyLiveBadge : "Live";
+				var liveHelp = (lfAiFloating.i18n && lfAiFloating.i18n.historyLiveHelp) ? lfAiFloating.i18n.historyLiveHelp : "";
+				var restoreLabel = (lfAiFloating.i18n && lfAiFloating.i18n.historyRestore) ? lfAiFloating.i18n.historyRestore : "Restore";
 				var html = "";
 				rows.forEach(function(row){
 					var id = row && row.id ? String(row.id) : "";
 					var uname = row && row.user_name ? String(row.user_name) : "";
 					var sum = row && row.summary ? String(row.summary) : "";
 					var when = formatRevisionTime(row && row.time);
-					html += "<div class=\"lf-ai-history__row\" data-lf-rev-id=\"" + escapeHtml(id) + "\">";
+					var rowVer = parseInt(String(row && row.layout_version != null ? row.layout_version : "0"), 10) || 0;
+					var isLive = rowVer > 0 && rowVer === liveVer;
+					html += "<div class=\"lf-ai-history__row" + (isLive ? " is-live" : "") + "\" data-lf-rev-id=\"" + escapeHtml(id) + "\">";
+					if (isLive) {
+						html += "<span class=\"lf-ai-history__badge\" title=\"" + escapeHtml(liveHelp) + "\">" + escapeHtml(liveLabel) + "</span>";
+					}
 					html += "<div class=\"lf-ai-history__summary\">" + escapeHtml(sum) + "</div>";
 					html += "<div class=\"lf-ai-history__meta\">" + escapeHtml(when) + (uname ? " · " + escapeHtml(uname) : "") + "</div>";
-					html += "<button type=\"button\" class=\"lf-ai-history__restore\" data-lf-rev-restore=\"" + escapeHtml(id) + "\">" + escapeHtml((lfAiFloating.i18n && lfAiFloating.i18n.historyRestore) ? lfAiFloating.i18n.historyRestore : "Restore") + "</button>";
+					if (isLive) {
+						html += "<button type=\"button\" class=\"lf-ai-history__restore\" disabled data-lf-rev-restore=\"" + escapeHtml(id) + "\">" + escapeHtml(liveLabel) + "</button>";
+					} else {
+						html += "<button type=\"button\" class=\"lf-ai-history__restore\" data-lf-rev-restore=\"" + escapeHtml(id) + "\">" + escapeHtml(restoreLabel) + "</button>";
+					}
 					html += "</div>";
 				});
-				$historyList.html(html);
+				$list.html(html);
 			}).fail(function(){
-				$historyStatus.text((lfAiFloating.i18n && lfAiFloating.i18n.historyLoadFailed) ? lfAiFloating.i18n.historyLoadFailed : "Could not load history.").addClass("is-error");
+				if ($refBtn.length) {
+					$refBtn.removeClass("lf-is-loading").removeAttr("aria-busy");
+				}
+				$status.text((lfAiFloating.i18n && lfAiFloating.i18n.historyLoadFailed) ? lfAiFloating.i18n.historyLoadFailed : "Could not load history.").addClass("is-error");
 			});
 		}
 		function normalizeInlineText(text) {
@@ -2501,7 +2538,12 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function setHistoryOpen(open) {
 			if (!$historyPanel.length || !$historyToggle.length) return;
-			$historyPanel.prop("hidden", !open);
+			if (open) {
+				$historyPanel.prop("hidden", false);
+				try { $historyPanel[0].removeAttribute("hidden"); } catch (eHh) {}
+			} else {
+				$historyPanel.prop("hidden", true);
+			}
 			$historyToggle.attr("aria-expanded", open ? "true" : "false");
 			if (open) {
 				setConfirmOpen(false);
@@ -2516,12 +2558,18 @@ function lf_ai_assistant_widget_js(): string {
 				lfHideInlineLinkPanel();
 				saveInlineEdit();
 				try { window.localStorage.setItem(stateKey, "closed"); } catch (e3) {}
-				loadRevisionHistory();
+				loadRevisionHistory($historyRoot);
 			}
 			try { window.localStorage.setItem(historyStateKey, open ? "open" : "closed"); } catch (e4) {}
 		}
 		function setAiOpen(open) {
-			$panel.prop("hidden", !open);
+			if (!$panel.length || !$toggle.length) return;
+			if (open) {
+				$panel.prop("hidden", false);
+				try { $panel[0].removeAttribute("hidden"); } catch (eH0) {}
+			} else {
+				$panel.prop("hidden", true);
+			}
 			$toggle.attr("aria-expanded", open ? "true" : "false");
 			if (open && $historyPanel.length) {
 				$historyPanel.prop("hidden", true);
@@ -2542,7 +2590,12 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function setSeoOpen(open) {
 			if (!$seoPanel.length || !$seoToggle.length) return;
-			$seoPanel.prop("hidden", !open);
+			if (open) {
+				$seoPanel.prop("hidden", false);
+				try { $seoPanel[0].removeAttribute("hidden"); } catch (eHs) {}
+			} else {
+				$seoPanel.prop("hidden", true);
+			}
 			$seoToggle.attr("aria-expanded", open ? "true" : "false");
 			if (open) {
 				setConfirmOpen(false);
@@ -8836,28 +8889,38 @@ function lf_ai_assistant_widget_js(): string {
 				"D = Duplicate selected section",
 				"H = Hide/Show selected section",
 				"Delete/Backspace = Delete selected section",
-				"Alt/Shift+Arrow Up/Down = Move section"
+				"Alt/Shift+Arrow Up/Down = Move section",
+				"Layout History: header refresh icon reloads from server"
 			];
 			var msg = lines.join("\n");
 			setStatus("Shortcut help opened.", false);
 			try { window.alert(msg); } catch (e) {}
 		}
 
-		$toggle.on("click", function(){
+		$(document).on("click", "[data-lf-ai-toggle]", function(e){
+			e.preventDefault();
+			var $float = $(this).closest("[data-lf-ai-float]");
+			if (!$float.length || !$root.length || $float[0] !== $root[0]) return;
 			var willOpen = $panel.prop("hidden");
 			setConfirmOpen(false);
 			setAiOpen(willOpen);
 			if (willOpen) setSeoOpen(false);
 			updateLauncherOffsets();
 		});
-		$seoToggle.on("click", function(){
+		$(document).on("click", "[data-lf-ai-seo-toggle]", function(e){
+			e.preventDefault();
+			var $float = $(this).closest("[data-lf-ai-seo-float]");
+			if (!$seoRoot.length || !$float.length || $float[0] !== $seoRoot[0]) return;
 			var willOpen = $seoPanel.prop("hidden");
 			setConfirmOpen(false);
 			setSeoOpen(willOpen);
 			if (willOpen) setAiOpen(false);
 			updateLauncherOffsets();
 		});
-		$historyToggle.on("click", function(){
+		$(document).on("click", "[data-lf-ai-history-toggle]", function(e){
+			e.preventDefault();
+			var $float = $(this).closest("[data-lf-ai-history-float]");
+			if (!$historyRoot.length || !$float.length || $float[0] !== $historyRoot[0]) return;
 			var willOpen = $historyPanel.prop("hidden");
 			setConfirmOpen(false);
 			setHistoryOpen(willOpen);
@@ -8867,18 +8930,26 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			updateLauncherOffsets();
 		});
-		$historyRefresh.on("click", function(e){
+		$(document).on("click", "[data-lf-ai-history-refresh]", function(e){
 			e.preventDefault();
-			loadRevisionHistory();
+			var $ctx = $(this).closest("[data-lf-ai-history-float]");
+			if (!$ctx.length || ($historyRoot.length && $ctx[0] !== $historyRoot[0])) return;
+			loadRevisionHistory($ctx);
 		});
-		$historyList.on("click", "[data-lf-rev-restore]", function(){
-			var rid = String($(this).attr("data-lf-rev-restore") || "");
+		$(document).on("click", "[data-lf-rev-restore]", function(e){
+			e.preventDefault();
+			var $btn = $(this);
+			if ($btn.prop("disabled")) return;
+			var $ctx = $btn.closest("[data-lf-ai-history-float]");
+			if (!$ctx.length) return;
+			var $hStatus = $ctx.find("[data-lf-ai-history-status]");
+			var rid = String($btn.attr("data-lf-rev-restore") || "");
 			if (!rid) return;
 			var msg = (lfAiFloating.i18n && lfAiFloating.i18n.historyRestoreConfirm) ? lfAiFloating.i18n.historyRestoreConfirm : "Restore this version?";
 			var ok = false;
 			try { ok = window.confirm(msg); } catch (eC) { ok = true; }
 			if (!ok) return;
-			$historyStatus.text("").removeClass("is-error");
+			$hStatus.text("").removeClass("is-error");
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_fe_revision_ping",
 				nonce: lfAiFloating.nonce,
@@ -8899,14 +8970,14 @@ function lf_ai_assistant_widget_js(): string {
 					if (res && res.success) {
 						window.location.reload();
 					} else {
-						$historyStatus.text((res && res.data && res.data.message) ? res.data.message : "Restore failed.").addClass("is-error");
+						$hStatus.text((res && res.data && res.data.message) ? res.data.message : "Restore failed.").addClass("is-error");
 					}
 				}).fail(function(xhr){
 					var m = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Restore failed.";
-					$historyStatus.text(m).addClass("is-error");
+					$hStatus.text(m).addClass("is-error");
 				});
 			}).fail(function(){
-				$historyStatus.text((lfAiFloating.i18n && lfAiFloating.i18n.historyLoadFailed) ? lfAiFloating.i18n.historyLoadFailed : "Could not verify version.").addClass("is-error");
+				$hStatus.text((lfAiFloating.i18n && lfAiFloating.i18n.historyLoadFailed) ? lfAiFloating.i18n.historyLoadFailed : "Could not verify version.").addClass("is-error");
 			});
 		});
 		$root.find("[data-lf-ai-close],[data-lf-ai-minimize]").on("click", function(){ setConfirmOpen(false); setAiOpen(false); });
