@@ -17,7 +17,8 @@ const LF_FLEET_CTRL_OPT_ENABLED = 'lf_fleet_controller_enabled';
 const LF_FLEET_CTRL_OPT_SITES = 'lf_fleet_controller_sites'; // JSON map site_id -> data (includes token)
 const LF_FLEET_CTRL_OPT_KEYS = 'lf_fleet_controller_keys';   // JSON map key_id -> {public,private,created_at}
 const LF_FLEET_CTRL_OPT_REWRITE_FLUSHED = 'lf_fleet_controller_rewrite_flushed';
-const LF_FLEET_CTRL_OPT_APPROVE_ALL = 'lf_fleet_controller_approve_all';
+const LF_FLEET_CTRL_OPT_APPROVE_ALL = 'lf_fleet_controller_approve_all'; // Legacy; migrated by lf_fleet_controller_rollout_scope().
+const LF_FLEET_CTRL_OPT_ROLLOUT_SCOPE = 'lf_fleet_controller_rollout_scope'; // off | all | selected
 const LF_FLEET_CTRL_OPT_APPROVED_VERSION = 'lf_fleet_controller_approved_version';
 
 const LF_FLEET_CTRL_DL_TRANSIENT_PREFIX = 'lf_fleet_dl_';
@@ -30,6 +31,20 @@ function lf_fleet_controller_theme_slug(): string {
 function lf_fleet_controller_current_version(): string {
 	$theme = wp_get_theme();
 	return (string) $theme->get('Version');
+}
+
+/**
+ * Rollout target: no sites, every registered site, or only sites marked rollout-eligible.
+ *
+ * @return 'off'|'all'|'selected'
+ */
+function lf_fleet_controller_rollout_scope(): string {
+	$scope = (string) get_option(LF_FLEET_CTRL_OPT_ROLLOUT_SCOPE, '');
+	if ($scope === 'off' || $scope === 'all' || $scope === 'selected') {
+		return $scope;
+	}
+	// One-time read of legacy checkbox.
+	return get_option(LF_FLEET_CTRL_OPT_APPROVE_ALL, '0') === '1' ? 'all' : 'off';
 }
 
 function lf_fleet_controller_latest_key_id(): string {
@@ -289,6 +304,7 @@ function lf_fleet_controller_mint_site(string $site_url = '', string $label = ''
 		'created_at' => time(),
 		'last_seen_at' => 0,
 		'current_version' => '',
+		'rollout' => false,
 	];
 }
 
@@ -503,13 +519,14 @@ function lf_fleet_controller_handle_api(): void {
 			$sites[$site_id]['theme_slug'] = $theme_slug;
 		}
 		lf_fleet_controller_update_sites($sites);
-		$approved_all = get_option(LF_FLEET_CTRL_OPT_APPROVE_ALL, '0') === '1';
+		$scope = lf_fleet_controller_rollout_scope();
 		// Push model: the controller can only safely serve the theme version it is currently running.
 		// (This is what GitHub auto-deploys to theme.leadsforward.com.)
 		$approved_version = lf_fleet_controller_current_version();
 
 		// Only serve updates for the controller's current theme slug.
 		$controller_slug = lf_fleet_controller_theme_slug();
+		$site_rollout = !empty($sites[$site_id]['rollout']);
 		$debug = [
 			'update' => false,
 			'reason' => '',
@@ -517,14 +534,19 @@ function lf_fleet_controller_handle_api(): void {
 			'controller_version' => $approved_version,
 			'site_theme_slug' => $theme_slug,
 			'site_current_version' => $current,
-			'approve_all' => $approved_all,
+			'rollout_scope' => $scope,
+			'site_rollout_eligible' => $site_rollout,
 		];
 		if ($theme_slug === '' || $theme_slug !== $controller_slug) {
 			$debug['reason'] = 'theme_slug_mismatch';
 			lf_fleet_controller_json($debug);
 		}
-		if (!$approved_all) {
+		if ($scope === 'off') {
 			$debug['reason'] = 'rollout_disabled';
+			lf_fleet_controller_json($debug);
+		}
+		if ($scope === 'selected' && !$site_rollout) {
+			$debug['reason'] = 'not_in_rollout_cohort';
 			lf_fleet_controller_json($debug);
 		}
 		if ($current !== '' && version_compare($approved_version, $current, '<=')) {
