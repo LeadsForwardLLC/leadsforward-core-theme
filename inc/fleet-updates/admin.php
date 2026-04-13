@@ -3,12 +3,33 @@
  * Fleet updates: wp-admin UI.
  *
  * @package LeadsForward_Core
- * @since 0.1.21
+ * @since 0.1.23
  */
 declare(strict_types=1);
 
 if (!defined('ABSPATH')) {
 	exit;
+}
+
+/**
+ * Map controller `reason` codes to short admin-facing text.
+ */
+function lf_fleet_updates_admin_reason_label(string $reason): string {
+	if ($reason === '') {
+		return '';
+	}
+	$labels = [
+		'theme_slug_mismatch' => __('This site’s theme slug does not match the controller.', 'leadsforward-core'),
+		'rollout_disabled' => __('Rollout is paused on the controller.', 'leadsforward-core'),
+		'not_in_rollout_cohort' => __('This site is not checked for “selected sites” rollout.', 'leadsforward-core'),
+		'not_in_rollout_tag' => __('This site does not have the rollout tag.', 'leadsforward-core'),
+		'rollout_tag_unset' => __('Controller rollout tag is not set.', 'leadsforward-core'),
+		'already_up_to_date' => __('Installed version is already current.', 'leadsforward-core'),
+		'no_signing_keys' => __('Controller has no signing keys.', 'leadsforward-core'),
+		'zip_build_failed' => __('Controller could not build the theme zip.', 'leadsforward-core'),
+		'sign_failed' => __('Controller could not sign the release.', 'leadsforward-core'),
+	];
+	return $labels[$reason] ?? $reason;
 }
 
 function lf_fleet_updates_admin_register_menu(): void {
@@ -31,17 +52,26 @@ function lf_fleet_updates_admin_render(): void {
 	$bundle_out = '';
 	$controller_did = '';
 	if (isset($_POST['lf_fleet_save']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce')) {
-		update_option(LF_FLEET_OPT_API_BASE, esc_url_raw((string) wp_unslash($_POST['api_base'] ?? '')));
-		update_option(LF_FLEET_OPT_SITE_ID, sanitize_text_field((string) wp_unslash($_POST['site_id'] ?? '')));
-		$tok_raw = (string) wp_unslash($_POST['token'] ?? '');
-		$tok_raw = trim($tok_raw);
-		// Allow URL-safe base64 or base64; strip only whitespace and quotes.
-		$tok_raw = trim($tok_raw, " \t\n\r\0\x0B\"'");
-		$tok_clean = preg_replace('/[^A-Za-z0-9\-\_\+\/=]/', '', $tok_raw);
-		update_option(LF_FLEET_OPT_TOKEN, is_string($tok_clean) ? $tok_clean : $tok_raw);
-		$decoded = json_decode((string) wp_unslash($_POST['pubkeys_json'] ?? ''), true);
-		update_option(LF_FLEET_OPT_PUBKEYS, wp_json_encode(is_array($decoded) ? $decoded : []));
-		$did = 'saved';
+		$bundle = isset($_POST['lf_fleet_bundle_json']) ? (string) wp_unslash($_POST['lf_fleet_bundle_json']) : '';
+		if (trim($bundle) !== '' && function_exists('lf_fleet_import_connection_bundle')) {
+			$imp = lf_fleet_import_connection_bundle($bundle);
+			if (!$imp['ok']) {
+				$did = $imp['message'] === 'invalid_json' ? 'bundle_bad_json' : 'bundle_bad_fields';
+			} else {
+				$did = 'bundle_imported';
+			}
+		} else {
+			update_option(LF_FLEET_OPT_API_BASE, esc_url_raw((string) wp_unslash($_POST['api_base'] ?? '')));
+			update_option(LF_FLEET_OPT_SITE_ID, sanitize_text_field((string) wp_unslash($_POST['site_id'] ?? '')));
+			$tok_raw = (string) wp_unslash($_POST['token'] ?? '');
+			$tok_raw = trim($tok_raw);
+			$tok_raw = trim($tok_raw, " \t\n\r\0\x0B\"'");
+			$tok_clean = preg_replace('/[^A-Za-z0-9\-\_\+\/=]/', '', $tok_raw);
+			update_option(LF_FLEET_OPT_TOKEN, is_string($tok_clean) ? $tok_clean : $tok_raw);
+			$decoded = json_decode((string) wp_unslash($_POST['pubkeys_json'] ?? ''), true);
+			update_option(LF_FLEET_OPT_PUBKEYS, wp_json_encode(is_array($decoded) ? $decoded : []));
+			$did = 'saved';
+		}
 	}
 	// Controller mode (theme.leadsforward.com): enable + mint site bundles + keys.
 	if (isset($_POST['lf_fleet_controller_save']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_enabled')) {
@@ -68,7 +98,9 @@ function lf_fleet_updates_admin_render(): void {
 	if (isset($_POST['lf_fleet_controller_add_site']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_mint_site')) {
 		$site_url = isset($_POST['lf_fleet_new_site_url']) ? (string) wp_unslash($_POST['lf_fleet_new_site_url']) : '';
 		$label = isset($_POST['lf_fleet_new_site_label']) ? (string) wp_unslash($_POST['lf_fleet_new_site_label']) : '';
+		$tags_in = isset($_POST['lf_fleet_new_site_tags']) ? (string) wp_unslash($_POST['lf_fleet_new_site_tags']) : '';
 		$mint = lf_fleet_controller_mint_site($site_url, $label);
+		$mint['tags'] = function_exists('lf_fleet_tags_from_string') ? lf_fleet_tags_from_string($tags_in) : [];
 		$sites = function_exists('lf_fleet_controller_sites') ? lf_fleet_controller_sites() : [];
 		$sites[(string) $mint['site_id']] = $mint;
 		if (function_exists('lf_fleet_controller_update_sites')) {
@@ -85,8 +117,10 @@ function lf_fleet_updates_admin_render(): void {
 	}
 	if (isset($_POST['lf_fleet_controller_rollout_save']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_sites')) {
 		$scope_raw = isset($_POST['lf_fleet_rollout_scope']) ? sanitize_text_field((string) wp_unslash($_POST['lf_fleet_rollout_scope'])) : 'off';
-		$scope = in_array($scope_raw, ['off', 'all', 'selected'], true) ? $scope_raw : 'off';
+		$scope = in_array($scope_raw, ['off', 'all', 'selected', 'tag'], true) ? $scope_raw : 'off';
 		update_option(LF_FLEET_CTRL_OPT_ROLLOUT_SCOPE, $scope);
+		$rtag = isset($_POST['lf_fleet_rollout_tag']) ? sanitize_text_field((string) wp_unslash($_POST['lf_fleet_rollout_tag'])) : '';
+		update_option(LF_FLEET_CTRL_OPT_ROLLOUT_TAG, strtolower(trim($rtag)));
 		// Keep legacy option aligned for any external reads.
 		update_option(LF_FLEET_CTRL_OPT_APPROVE_ALL, $scope === 'all' ? '1' : '0');
 
@@ -94,12 +128,18 @@ function lf_fleet_updates_admin_render(): void {
 		$posted = isset($_POST['lf_fleet_site_rollout']) && is_array($_POST['lf_fleet_site_rollout'])
 			? wp_unslash($_POST['lf_fleet_site_rollout'])
 			: [];
+		$posted_tags = isset($_POST['lf_fleet_site_tags']) && is_array($_POST['lf_fleet_site_tags'])
+			? wp_unslash($_POST['lf_fleet_site_tags'])
+			: [];
 		foreach ($sites as $sid => &$row) {
 			if (!is_array($row)) {
 				continue;
 			}
 			$key = (string) $sid;
 			$row['rollout'] = isset($posted[$key]) && (string) $posted[$key] === '1';
+			if (isset($posted_tags[$key]) && is_string($posted_tags[$key]) && function_exists('lf_fleet_tags_from_string')) {
+				$row['tags'] = lf_fleet_tags_from_string($posted_tags[$key]);
+			}
 		}
 		unset($row);
 		if (function_exists('lf_fleet_controller_update_sites')) {
@@ -117,6 +157,26 @@ function lf_fleet_updates_admin_render(): void {
 					lf_fleet_controller_update_sites($sites);
 				}
 				$controller_did = 'site_removed';
+			}
+		}
+	}
+	if (isset($_POST['lf_fleet_controller_rotate_token']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_sites') && function_exists('lf_fleet_controller_token_new')) {
+		$rot = sanitize_text_field((string) wp_unslash((string) $_POST['lf_fleet_controller_rotate_token']));
+		if ($rot !== '') {
+			$sites = lf_fleet_controller_sites();
+			if (isset($sites[$rot]) && is_array($sites[$rot])) {
+				$sites[$rot]['token'] = lf_fleet_controller_token_new();
+				if (function_exists('lf_fleet_controller_update_sites')) {
+					lf_fleet_controller_update_sites($sites);
+				}
+				$keys_json = function_exists('lf_fleet_controller_pubkeys_json') ? lf_fleet_controller_pubkeys_json() : '{}';
+				$bundle_out = wp_json_encode([
+					'api_base' => home_url('/'),
+					'site_id' => (string) $rot,
+					'token' => (string) $sites[$rot]['token'],
+					'public_keys_json' => json_decode((string) $keys_json, true) ?: new stdClass(),
+				], JSON_PRETTY_PRINT);
+				$controller_did = 'token_rotated';
 			}
 		}
 	}
@@ -143,15 +203,35 @@ function lf_fleet_updates_admin_render(): void {
 	$site_id = (string) get_option(LF_FLEET_OPT_SITE_ID, '');
 	$token = (string) get_option(LF_FLEET_OPT_TOKEN, '');
 	$pubkeys = (string) get_option(LF_FLEET_OPT_PUBKEYS, '[]');
-	$last_raw = (string) get_option(LF_FLEET_OPT_LAST, '');
 	$connected = function_exists('lf_fleet_is_connected') ? lf_fleet_is_connected() : false;
+	$summary = function_exists('lf_fleet_last_check_summary') ? lf_fleet_last_check_summary() : [
+		'has_data' => false,
+		'checked_at' => 0,
+		'http_ok' => false,
+		'status' => 0,
+		'update_available' => false,
+		'reason' => '',
+		'controller_version' => '',
+		'network_error' => '',
+		'failures' => 0,
+		'next_attempt_at' => 0,
+		'last_upgrade_error' => '',
+		'raw_json' => '',
+	];
+	$installed_ver = (string) wp_get_theme()->get('Version');
 
 	echo '<div class="wrap">';
 	echo '<h1>' . esc_html__('Fleet Updates', 'leadsforward-core') . '</h1>';
-	echo '<p>' . esc_html__('Connect this site to the LeadsForward controller for secure, approved, automatic theme updates.', 'leadsforward-core') . '</p>';
+	echo '<p class="description">' . esc_html__('Fleet sites pull updates from the controller on a schedule (about every 15 minutes when the site receives traffic). Use Check now for an immediate test.', 'leadsforward-core') . '</p>';
 
 	if ($did === 'saved') {
 		echo '<div class="notice notice-success"><p>' . esc_html__('Settings saved.', 'leadsforward-core') . '</p></div>';
+	} elseif ($did === 'bundle_imported') {
+		echo '<div class="notice notice-success"><p>' . esc_html__('Connection bundle imported. Settings were updated from the JSON you pasted.', 'leadsforward-core') . '</p></div>';
+	} elseif ($did === 'bundle_bad_json') {
+		echo '<div class="notice notice-error"><p>' . esc_html__('Could not parse the connection bundle as JSON.', 'leadsforward-core') . '</p></div>';
+	} elseif ($did === 'bundle_bad_fields') {
+		echo '<div class="notice notice-error"><p>' . esc_html__('Bundle is missing api_base, site_id, and token, or public_keys_json is not an object.', 'leadsforward-core') . '</p></div>';
 	} elseif ($did === 'disconnected') {
 		echo '<div class="notice notice-success"><p>' . esc_html__('Disconnected.', 'leadsforward-core') . '</p></div>';
 	} elseif ($did === 'checked') {
@@ -165,20 +245,66 @@ function lf_fleet_updates_admin_render(): void {
 		echo '<div class="notice notice-error"><p>' . esc_html__('Signing key creation failed (libsodium unavailable).', 'leadsforward-core') . '</p></div>';
 	} elseif ($controller_did === 'site_created') {
 		echo '<div class="notice notice-success"><p>' . esc_html__('Site credentials created. Copy the bundle below into the fleet site.', 'leadsforward-core') . '</p></div>';
+	} elseif ($controller_did === 'token_rotated') {
+		echo '<div class="notice notice-warning"><p>' . esc_html__('Token rotated. Paste the new bundle into the fleet site and save, or that site will stop authenticating.', 'leadsforward-core') . '</p></div>';
 	} elseif ($controller_did === 'rollout_saved') {
 		echo '<div class="notice notice-success"><p>' . esc_html__('Rollout settings saved.', 'leadsforward-core') . '</p></div>';
 	} elseif ($controller_did === 'site_removed') {
 		echo '<div class="notice notice-success"><p>' . esc_html__('Site removed from controller.', 'leadsforward-core') . '</p></div>';
 	}
 
-	echo '<div style="margin:14px 0; padding:12px; background:#fff; border:1px solid #dbe3ef; border-radius:10px;">';
-	echo '<strong>' . esc_html__('Status:', 'leadsforward-core') . '</strong> ';
+	echo '<h2>' . esc_html__('This site (fleet client)', 'leadsforward-core') . '</h2>';
+	echo '<div style="margin:0 0 16px; padding:14px; background:#fff; border:1px solid #dbe3ef; border-radius:10px; max-width:920px;">';
+	echo '<p style="margin:0 0 8px;"><strong>' . esc_html__('Connection', 'leadsforward-core') . '</strong> ';
 	echo $connected ? '<span style="color:#15803d;font-weight:700;">' . esc_html__('Connected', 'leadsforward-core') . '</span>' : '<span style="color:#b91c1c;font-weight:700;">' . esc_html__('Not connected', 'leadsforward-core') . '</span>';
+	echo '</p>';
+	echo '<p style="margin:0 0 6px;"><strong>' . esc_html__('Theme version on this site', 'leadsforward-core') . '</strong> <code>' . esc_html($installed_ver !== '' ? $installed_ver : '—') . '</code></p>';
+	if ($summary['has_data'] && $summary['checked_at'] > 0) {
+		echo '<p style="margin:0 0 6px;"><strong>' . esc_html__('Last controller check', 'leadsforward-core') . '</strong> ';
+		echo esc_html(
+			sprintf(
+				/* translators: %s: human time difference */
+				__('%s ago', 'leadsforward-core'),
+				human_time_diff($summary['checked_at'], time())
+			)
+		);
+		echo '</p>';
+	} elseif ($connected) {
+		echo '<p style="margin:0 0 6px;color:#64748b;">' . esc_html__('No check recorded yet. Use Check now.', 'leadsforward-core') . '</p>';
+	}
+	if ($connected && $summary['has_data']) {
+		if (!$summary['http_ok'] && $summary['network_error'] !== '') {
+			echo '<p style="margin:0 0 6px;color:#b91c1c;"><strong>' . esc_html__('Request error', 'leadsforward-core') . '</strong> ' . esc_html($summary['network_error']) . '</p>';
+		} elseif ($summary['http_ok'] && $summary['update_available']) {
+			echo '<p style="margin:0 0 6px;color:#15803d;"><strong>' . esc_html__('Update available', 'leadsforward-core') . '</strong> ';
+			if ($summary['controller_version'] !== '') {
+				echo esc_html(sprintf(/* translators: %s version */ __('Controller offers version %s.', 'leadsforward-core'), $summary['controller_version']));
+			}
+			echo '</p>';
+		} elseif ($summary['http_ok'] && !$summary['update_available'] && $summary['reason'] !== '') {
+			echo '<p style="margin:0 0 6px;"><strong>' . esc_html__('Controller response', 'leadsforward-core') . '</strong> ' . esc_html(lf_fleet_updates_admin_reason_label($summary['reason'])) . '</p>';
+		}
+		if ($summary['last_upgrade_error'] !== '') {
+			echo '<p style="margin:0 0 6px;color:#b91c1c;"><strong>' . esc_html__('Auto-install issue', 'leadsforward-core') . '</strong> ' . esc_html($summary['last_upgrade_error']) . '</p>';
+		}
+		if ($summary['next_attempt_at'] > time()) {
+			echo '<p style="margin:0;color:#64748b;">' . esc_html(
+				sprintf(
+					/* translators: %s: UTC datetime */
+					__('Next auto-install retry no earlier than %s UTC.', 'leadsforward-core'),
+					gmdate('Y-m-d H:i:s', $summary['next_attempt_at'])
+				)
+			) . '</p>';
+		}
+	}
 	echo '</div>';
 
 	echo '<form method="post">';
 	wp_nonce_field('lf_fleet_updates_save', 'lf_fleet_nonce');
 	echo '<table class="form-table" role="presentation">';
+	echo '<tr><th scope="row"><label for="lf_fleet_bundle_json">' . esc_html__('Paste connection bundle', 'leadsforward-core') . '</label></th><td>';
+	echo '<textarea id="lf_fleet_bundle_json" name="lf_fleet_bundle_json" class="large-text code" rows="5" placeholder="{ &quot;api_base&quot;: &quot;...&quot;, &quot;site_id&quot;: &quot;...&quot;, &quot;token&quot;: &quot;...&quot;, &quot;public_keys_json&quot;: {} }"></textarea>';
+	echo '<p class="description">' . esc_html__('Optional: paste the full JSON from the controller. If this box is not empty when you save, it replaces the fields below.', 'leadsforward-core') . '</p></td></tr>';
 	echo '<tr><th scope="row"><label for="lf_fleet_api_base">' . esc_html__('Controller API base', 'leadsforward-core') . '</label></th><td><input type="url" id="lf_fleet_api_base" name="api_base" class="regular-text" value="' . esc_attr($api_base) . '" placeholder="https://theme.leadsforward.com" /></td></tr>';
 	echo '<tr><th scope="row"><label for="lf_fleet_site_id">' . esc_html__('Site ID', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_fleet_site_id" name="site_id" class="regular-text" value="' . esc_attr($site_id) . '" /></td></tr>';
 	echo '<tr><th scope="row"><label for="lf_fleet_token">' . esc_html__('Token', 'leadsforward-core') . '</label></th><td><input type="password" id="lf_fleet_token" name="token" class="regular-text" value="' . esc_attr($token) . '" autocomplete="off" /></td></tr>';
@@ -191,9 +317,10 @@ function lf_fleet_updates_admin_render(): void {
 	echo '<button type="submit" class="button button-link-delete" name="lf_fleet_disconnect" value="1"' . ($connected ? '' : ' disabled') . ' onclick="return confirm(\'Disconnect this site from fleet updates?\');">' . esc_html__('Disconnect', 'leadsforward-core') . '</button>';
 	echo '</p>';
 
-	if ($last_raw !== '') {
-		echo '<h2 style="margin-top:18px;">' . esc_html__('Last result', 'leadsforward-core') . '</h2>';
-		echo '<pre style="background:#0b1220;color:#e2e8f0;padding:12px;border-radius:10px;max-width:980px;overflow:auto;">' . esc_html($last_raw) . '</pre>';
+	if ($summary['raw_json'] !== '') {
+		echo '<details style="margin-top:12px;max-width:980px;"><summary style="cursor:pointer;">' . esc_html__('Technical details (raw last result)', 'leadsforward-core') . '</summary>';
+		echo '<pre style="background:#0b1220;color:#e2e8f0;padding:12px;border-radius:10px;overflow:auto;margin-top:8px;">' . esc_html($summary['raw_json']) . '</pre>';
+		echo '</details>';
 	}
 
 	echo '</form>';
@@ -201,9 +328,9 @@ function lf_fleet_updates_admin_render(): void {
 	// Controller section (only shows when controller module is present).
 	if (function_exists('lf_fleet_controller_enabled')) {
 		$is_controller = lf_fleet_controller_enabled();
-		echo '<hr style="margin:24px 0;" />';
-		echo '<h2>' . esc_html__('Controller mode (theme.leadsforward.com)', 'leadsforward-core') . '</h2>';
-		echo '<p>' . esc_html__('Enable this only on the controller. It mints Site IDs + tokens and receives heartbeat/update checks at /api/v1/.', 'leadsforward-core') . '</p>';
+		echo '<hr style="margin:28px 0;" />';
+		echo '<h2>' . esc_html__('Controller (use only on theme.leadsforward.com)', 'leadsforward-core') . '</h2>';
+		echo '<p class="description">' . esc_html__('Mint Site IDs, signing keys, and rollout rules. Fleet sites use the section above; do not enable controller mode on normal fleet installs.', 'leadsforward-core') . '</p>';
 		echo '<form method="post" style="margin-top:10px;">';
 		wp_nonce_field('lf_fleet_updates_save', 'lf_fleet_nonce');
 		echo '<label style="display:inline-flex;gap:8px;align-items:center;">';
@@ -213,11 +340,64 @@ function lf_fleet_updates_admin_render(): void {
 		echo '<p style="margin-top:10px;"><button type="submit" class="button button-primary" name="lf_fleet_controller_save" value="1">' . esc_html__('Save controller settings', 'leadsforward-core') . '</button></p>';
 
 		if ($is_controller) {
-			$rollout_scope = function_exists('lf_fleet_controller_rollout_scope') ? lf_fleet_controller_rollout_scope() : 'off';
 			$approved_version = (string) get_option(LF_FLEET_CTRL_OPT_APPROVED_VERSION, '');
 			if ($approved_version === '' && function_exists('lf_fleet_controller_current_version')) {
 				$approved_version = lf_fleet_controller_current_version();
 			}
+			$rollout_scope = function_exists('lf_fleet_controller_rollout_scope') ? lf_fleet_controller_rollout_scope() : 'off';
+			$rollout_tag_val = (string) get_option(LF_FLEET_CTRL_OPT_ROLLOUT_TAG, '');
+			$sites = function_exists('lf_fleet_controller_sites') ? lf_fleet_controller_sites() : [];
+			$n_reg = 0;
+			$n_pick = 0;
+			$n_tag_match = 0;
+			$rt_for_count = function_exists('lf_fleet_controller_rollout_tag') ? lf_fleet_controller_rollout_tag() : '';
+			foreach ($sites as $r) {
+				if (!is_array($r)) {
+					continue;
+				}
+				$n_reg++;
+				if (!empty($r['rollout'])) {
+					$n_pick++;
+				}
+				if ($rt_for_count !== '' && function_exists('lf_fleet_controller_site_matches_rollout_tag') && lf_fleet_controller_site_matches_rollout_tag($r, $rt_for_count)) {
+					$n_tag_match++;
+				}
+			}
+			if ($rollout_scope === 'off') {
+				$sum_msg = sprintf(
+					/* translators: %d: number of sites */
+					__('Rollout is paused. %d site(s) registered.', 'leadsforward-core'),
+					$n_reg
+				);
+			} elseif ($rollout_scope === 'all') {
+				$sum_msg = sprintf(
+					/* translators: 1: site count, 2: version */
+					__('Rollout: all %1$d registered site(s) may receive version %2$s.', 'leadsforward-core'),
+					$n_reg,
+					$approved_version
+				);
+			} elseif ($rollout_scope === 'selected') {
+				$sum_msg = sprintf(
+					/* translators: 1: checked count, 2: total, 3: version */
+					__('Rollout: %1$d of %2$d site(s) checked for updates to version %3$s.', 'leadsforward-core'),
+					$n_pick,
+					$n_reg,
+					$approved_version
+				);
+			} elseif ($rollout_scope === 'tag') {
+				$sum_msg = sprintf(
+					/* translators: 1: tag, 2: matching count, 3: version */
+					__('Rollout: tag “%1$s” matches %2$d site(s) for version %3$s.', 'leadsforward-core'),
+					$rollout_tag_val !== '' ? $rollout_tag_val : '—',
+					$n_tag_match,
+					$approved_version
+				);
+			} else {
+				$sum_msg = __('Rollout scope is not recognized; save rollout settings again.', 'leadsforward-core');
+			}
+			echo '<div style="margin:16px 0; padding:12px 14px; background:#f0f6fc; border:1px solid #c3d9e8; border-radius:8px; max-width:920px;"><strong>' . esc_html__('Rollout summary', 'leadsforward-core') . '</strong> ';
+			echo esc_html($sum_msg) . '</div>';
+
 			$keys_json = function_exists('lf_fleet_controller_pubkeys_json') ? lf_fleet_controller_pubkeys_json() : '{}';
 			echo '<h3 style="margin-top:18px;">' . esc_html__('Signing keys', 'leadsforward-core') . '</h3>';
 			echo '<p><button type="submit" class="button" name="lf_fleet_controller_generate_key" value="1">' . esc_html__('Generate new Ed25519 keypair', 'leadsforward-core') . '</button></p>';
@@ -229,6 +409,7 @@ function lf_fleet_updates_admin_render(): void {
 			echo '<table class="form-table" role="presentation">';
 			echo '<tr><th scope="row"><label for="lf_fleet_new_site_url">' . esc_html__('Fleet site URL (optional)', 'leadsforward-core') . '</label></th><td><input type="url" id="lf_fleet_new_site_url" name="lf_fleet_new_site_url" class="regular-text" placeholder="https://example.com" /></td></tr>';
 			echo '<tr><th scope="row"><label for="lf_fleet_new_site_label">' . esc_html__('Label (optional)', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_fleet_new_site_label" name="lf_fleet_new_site_label" class="regular-text" placeholder="My Site" /></td></tr>';
+			echo '<tr><th scope="row"><label for="lf_fleet_new_site_tags">' . esc_html__('Tags (optional)', 'leadsforward-core') . '</label></th><td><input type="text" id="lf_fleet_new_site_tags" name="lf_fleet_new_site_tags" class="regular-text" placeholder="beta, staging" /><p class="description">' . esc_html__('Comma or space separated. Used for tag-based rollout (e.g. stable, beta).', 'leadsforward-core') . '</p></td></tr>';
 			echo '</table>';
 			echo '<p><button type="submit" class="button button-primary" name="lf_fleet_controller_add_site" value="1">' . esc_html__('Create Site ID + Token bundle', 'leadsforward-core') . '</button></p>';
 
@@ -240,7 +421,9 @@ function lf_fleet_updates_admin_render(): void {
 			echo '<fieldset><label style="display:block;margin:0 0 6px;"><input type="radio" name="lf_fleet_rollout_scope" value="off" ' . checked($rollout_scope, 'off', false) . ' /> ' . esc_html__('Nobody (rollout paused)', 'leadsforward-core') . '</label>';
 			echo '<label style="display:block;margin:0 0 6px;"><input type="radio" name="lf_fleet_rollout_scope" value="all" ' . checked($rollout_scope, 'all', false) . ' /> ' . esc_html__('All registered sites', 'leadsforward-core') . '</label>';
 			echo '<label style="display:block;margin:0 0 6px;"><input type="radio" name="lf_fleet_rollout_scope" value="selected" ' . checked($rollout_scope, 'selected', false) . ' /> ' . esc_html__('Only sites checked below (“Include in rollout”)', 'leadsforward-core') . '</label>';
-			echo '</fieldset></td></tr>';
+			echo '<label style="display:block;margin:0 0 6px;"><input type="radio" name="lf_fleet_rollout_scope" value="tag" ' . checked($rollout_scope, 'tag', false) . ' /> ' . esc_html__('Only sites whose tags include:', 'leadsforward-core') . ' ';
+			echo '<input type="text" name="lf_fleet_rollout_tag" class="regular-text" value="' . esc_attr($rollout_tag_val) . '" placeholder="stable" style="max-width:220px;" /></label>';
+			echo '</fieldset><p class="description">' . esc_html__('Tag matching is case-insensitive. Set tags per site in the table below, then save rollout settings.', 'leadsforward-core') . '</p></td></tr>';
 			echo '</table>';
 			echo '<p><button type="submit" class="button button-primary" name="lf_fleet_controller_rollout_save" value="1">' . esc_html__('Save rollout settings', 'leadsforward-core') . '</button></p>';
 
@@ -249,16 +432,16 @@ function lf_fleet_updates_admin_render(): void {
 				echo '<pre style="background:#0b1220;color:#e2e8f0;padding:12px;border-radius:10px;max-width:980px;overflow:auto;">' . esc_html($bundle_out) . '</pre>';
 			}
 
-			$sites = function_exists('lf_fleet_controller_sites') ? lf_fleet_controller_sites() : [];
 			if ($sites !== []) {
 				echo '<h3 style="margin-top:18px;">' . esc_html__('Connected sites (heartbeat)', 'leadsforward-core') . '</h3>';
-				echo '<p class="description">' . esc_html__('When rollout scope is “selected”, only checked sites receive the update. Save rollout settings after changing checkboxes.', 'leadsforward-core') . '</p>';
-				echo '<table class="widefat striped" style="max-width:1100px;"><thead><tr>';
-				echo '<th>' . esc_html__('Include in rollout', 'leadsforward-core') . '</th>';
+				echo '<p class="description">' . esc_html__('For “selected” rollout, use the checkboxes. For “tag” rollout, edit Tags and save rollout settings. Rotate token invalidates the old token until the fleet site gets the new bundle.', 'leadsforward-core') . '</p>';
+				echo '<table class="widefat striped" style="max-width:1200px;"><thead><tr>';
+				echo '<th>' . esc_html__('Include', 'leadsforward-core') . '</th>';
+				echo '<th>' . esc_html__('Tags', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('Label', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('URL', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('Site ID', 'leadsforward-core') . '</th>';
-				echo '<th>' . esc_html__('Current version', 'leadsforward-core') . '</th>';
+				echo '<th>' . esc_html__('Version', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('Last seen', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('Actions', 'leadsforward-core') . '</th>';
 				echo '</tr></thead><tbody>';
@@ -272,14 +455,20 @@ function lf_fleet_updates_admin_render(): void {
 					$seen = (int) ($row['last_seen_at'] ?? 0);
 					$in_rollout = !empty($row['rollout']);
 					$sid_esc = (string) $sid;
+					$tags_cell = '';
+					if (function_exists('lf_fleet_controller_site_tags_list')) {
+						$tags_cell = implode(', ', lf_fleet_controller_site_tags_list($row));
+					}
 					echo '<tr>';
-					echo '<td><label><input type="checkbox" name="lf_fleet_site_rollout[' . esc_attr($sid_esc) . ']" value="1" ' . checked($in_rollout, true, false) . ' /> ' . esc_html__('Yes', 'leadsforward-core') . '</label></td>';
+					echo '<td><label><input type="checkbox" name="lf_fleet_site_rollout[' . esc_attr($sid_esc) . ']" value="1" ' . checked($in_rollout, true, false) . ' /></label></td>';
+					echo '<td><input type="text" class="regular-text" name="lf_fleet_site_tags[' . esc_attr($sid_esc) . ']" value="' . esc_attr($tags_cell) . '" style="width:100%;max-width:160px;" placeholder="stable" /></td>';
 					echo '<td>' . esc_html($lab !== '' ? $lab : '—') . '</td>';
 					echo '<td>' . ($url !== '' ? '<code>' . esc_html($url) . '</code>' : '—') . '</td>';
 					echo '<td><code>' . esc_html($sid_esc) . '</code></td>';
 					echo '<td>' . esc_html($ver !== '' ? $ver : '—') . '</td>';
 					echo '<td>' . esc_html($seen > 0 ? gmdate('Y-m-d H:i:s', $seen) . ' UTC' : '—') . '</td>';
 					echo '<td>';
+					echo '<button type="submit" class="button button-small" name="lf_fleet_controller_rotate_token" value="' . esc_attr($sid_esc) . '" onclick="return confirm(\'Rotate token? The fleet site must paste the new bundle.\');">' . esc_html__('Rotate token', 'leadsforward-core') . '</button> ';
 					echo '<button type="submit" class="button button-small" name="lf_fleet_controller_remove_site" value="' . esc_attr($sid_esc) . '" onclick="return confirm(\'Remove this site from controller?\');">' . esc_html__('Remove', 'leadsforward-core') . '</button>';
 					echo '</td>';
 					echo '</tr>';

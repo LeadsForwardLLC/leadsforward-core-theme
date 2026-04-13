@@ -18,7 +18,8 @@ const LF_FLEET_CTRL_OPT_SITES = 'lf_fleet_controller_sites'; // JSON map site_id
 const LF_FLEET_CTRL_OPT_KEYS = 'lf_fleet_controller_keys';   // JSON map key_id -> {public,private,created_at}
 const LF_FLEET_CTRL_OPT_REWRITE_FLUSHED = 'lf_fleet_controller_rewrite_flushed';
 const LF_FLEET_CTRL_OPT_APPROVE_ALL = 'lf_fleet_controller_approve_all'; // Legacy; migrated by lf_fleet_controller_rollout_scope().
-const LF_FLEET_CTRL_OPT_ROLLOUT_SCOPE = 'lf_fleet_controller_rollout_scope'; // off | all | selected
+const LF_FLEET_CTRL_OPT_ROLLOUT_SCOPE = 'lf_fleet_controller_rollout_scope'; // off | all | selected | tag
+const LF_FLEET_CTRL_OPT_ROLLOUT_TAG = 'lf_fleet_controller_rollout_tag'; // tag name when scope=tag (lowercase)
 const LF_FLEET_CTRL_OPT_APPROVED_VERSION = 'lf_fleet_controller_approved_version';
 
 const LF_FLEET_CTRL_DL_TRANSIENT_PREFIX = 'lf_fleet_dl_';
@@ -34,17 +35,53 @@ function lf_fleet_controller_current_version(): string {
 }
 
 /**
- * Rollout target: no sites, every registered site, or only sites marked rollout-eligible.
+ * Rollout target: no sites, every registered site, checkbox cohort, or tag match.
  *
- * @return 'off'|'all'|'selected'
+ * @return 'off'|'all'|'selected'|'tag'
  */
 function lf_fleet_controller_rollout_scope(): string {
 	$scope = (string) get_option(LF_FLEET_CTRL_OPT_ROLLOUT_SCOPE, '');
-	if ($scope === 'off' || $scope === 'all' || $scope === 'selected') {
+	if ($scope === 'off' || $scope === 'all' || $scope === 'selected' || $scope === 'tag') {
 		return $scope;
 	}
 	// One-time read of legacy checkbox.
 	return get_option(LF_FLEET_CTRL_OPT_APPROVE_ALL, '0') === '1' ? 'all' : 'off';
+}
+
+function lf_fleet_controller_rollout_tag(): string {
+	$t = strtolower(sanitize_text_field((string) get_option(LF_FLEET_CTRL_OPT_ROLLOUT_TAG, '')));
+	return $t;
+}
+
+/**
+ * Normalized tag list for a site row.
+ *
+ * @return list<string>
+ */
+function lf_fleet_controller_site_tags_list(array $row): array {
+	$t = $row['tags'] ?? [];
+	if (is_string($t) && function_exists('lf_fleet_tags_from_string')) {
+		return lf_fleet_tags_from_string($t);
+	}
+	if (!is_array($t)) {
+		return [];
+	}
+	$out = [];
+	foreach ($t as $x) {
+		$s = strtolower(sanitize_text_field((string) $x));
+		if ($s !== '' && !in_array($s, $out, true)) {
+			$out[] = $s;
+		}
+	}
+	return $out;
+}
+
+function lf_fleet_controller_site_matches_rollout_tag(array $row, string $tag): bool {
+	$tag = strtolower(sanitize_text_field($tag));
+	if ($tag === '') {
+		return false;
+	}
+	return in_array($tag, lf_fleet_controller_site_tags_list($row), true);
 }
 
 function lf_fleet_controller_latest_key_id(): string {
@@ -305,6 +342,7 @@ function lf_fleet_controller_mint_site(string $site_url = '', string $label = ''
 		'last_seen_at' => 0,
 		'current_version' => '',
 		'rollout' => false,
+		'tags' => [],
 	];
 }
 
@@ -520,13 +558,16 @@ function lf_fleet_controller_handle_api(): void {
 		}
 		lf_fleet_controller_update_sites($sites);
 		$scope = lf_fleet_controller_rollout_scope();
+		$rollout_tag = lf_fleet_controller_rollout_tag();
 		// Push model: the controller can only safely serve the theme version it is currently running.
 		// (This is what GitHub auto-deploys to theme.leadsforward.com.)
 		$approved_version = lf_fleet_controller_current_version();
 
 		// Only serve updates for the controller's current theme slug.
 		$controller_slug = lf_fleet_controller_theme_slug();
-		$site_rollout = !empty($sites[$site_id]['rollout']);
+		$site_row = isset($sites[$site_id]) && is_array($sites[$site_id]) ? $sites[$site_id] : [];
+		$site_rollout = !empty($site_row['rollout']);
+		$tag_match = lf_fleet_controller_site_matches_rollout_tag($site_row, $rollout_tag);
 		$debug = [
 			'update' => false,
 			'reason' => '',
@@ -536,6 +577,8 @@ function lf_fleet_controller_handle_api(): void {
 			'site_current_version' => $current,
 			'rollout_scope' => $scope,
 			'site_rollout_eligible' => $site_rollout,
+			'rollout_tag' => $rollout_tag,
+			'site_tags_match' => $tag_match,
 		];
 		if ($theme_slug === '' || $theme_slug !== $controller_slug) {
 			$debug['reason'] = 'theme_slug_mismatch';
@@ -548,6 +591,16 @@ function lf_fleet_controller_handle_api(): void {
 		if ($scope === 'selected' && !$site_rollout) {
 			$debug['reason'] = 'not_in_rollout_cohort';
 			lf_fleet_controller_json($debug);
+		}
+		if ($scope === 'tag') {
+			if ($rollout_tag === '') {
+				$debug['reason'] = 'rollout_tag_unset';
+				lf_fleet_controller_json($debug);
+			}
+			if (!$tag_match) {
+				$debug['reason'] = 'not_in_rollout_tag';
+				lf_fleet_controller_json($debug);
+			}
 		}
 		if ($current !== '' && version_compare($approved_version, $current, '<=')) {
 			$debug['reason'] = 'already_up_to_date';
