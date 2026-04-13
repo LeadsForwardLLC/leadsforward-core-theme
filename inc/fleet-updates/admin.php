@@ -196,6 +196,9 @@ function lf_fleet_updates_admin_render(): void {
 		if (function_exists('lf_fleet_check_for_update')) {
 			lf_fleet_check_for_update();
 		}
+		if (function_exists('lf_fleet_maybe_auto_update')) {
+			lf_fleet_maybe_auto_update(true);
+		}
 		$did = 'checked';
 	}
 
@@ -222,7 +225,7 @@ function lf_fleet_updates_admin_render(): void {
 
 	echo '<div class="wrap">';
 	echo '<h1>' . esc_html__('Fleet Updates', 'leadsforward-core') . '</h1>';
-	echo '<p class="description">' . esc_html__('Fleet sites pull updates from the controller on a schedule (about every 15 minutes when the site receives traffic). Use Check now for an immediate test.', 'leadsforward-core') . '</p>';
+	echo '<p class="description">' . esc_html__('Fleet sites pull updates from the controller on a schedule (about every 15 minutes when WordPress cron runs—usually when the site gets visits). Use Check now to contact the controller and, if an update is offered, install it immediately without waiting for cron.', 'leadsforward-core') . '</p>';
 
 	if ($did === 'saved') {
 		echo '<div class="notice notice-success"><p>' . esc_html__('Settings saved.', 'leadsforward-core') . '</p></div>';
