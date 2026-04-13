@@ -163,14 +163,29 @@ function lf_fleet_controller_verify_request(string $path): array {
 	$req_path = '/' . ltrim($req_path, '/');
 	$req_path = rtrim($req_path, '/');
 	$path = rtrim($path, '/');
-	if ($req_path !== '' && $req_path !== '/') {
-		$path = $req_path;
-	}
+
 	$body = file_get_contents('php://input');
 	$body = is_string($body) ? $body : '';
 	$body_sha = hash('sha256', $body);
-	$expected = lf_fleet_controller_expected_sig($token, $method, $path, $ts, $nonce, $body_sha);
-	if (!hash_equals($expected, $sig)) {
+
+	// Accept a small set of equivalent path forms (slashes/subdir edge cases).
+	$candidates = array_values(array_unique(array_filter([
+		$path,
+		$req_path !== '' && $req_path !== '/' ? $req_path : '',
+		'/' . ltrim($path, '/') . '/',
+		$req_path !== '' && $req_path !== '/' ? ('/' . ltrim($req_path, '/') . '/') : '',
+	])));
+	$ok_sig = false;
+	foreach ($candidates as $cand_path) {
+		$cand_path = (string) $cand_path;
+		$cand_path = $cand_path === '/' ? '/' : rtrim($cand_path, '/');
+		$expected = lf_fleet_controller_expected_sig($token, $method, $cand_path, $ts, $nonce, $body_sha);
+		if (hash_equals($expected, $sig)) {
+			$ok_sig = true;
+			break;
+		}
+	}
+	if (!$ok_sig) {
 		return ['ok' => false, 'site_id' => '', 'error' => 'bad_sig'];
 	}
 
