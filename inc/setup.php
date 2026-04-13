@@ -254,6 +254,43 @@ function lf_header_menu_objects(array $items, $args): array {
 add_filter('wp_nav_menu_objects', 'lf_header_menu_objects', 10, 2);
 
 /**
+ * Remind admins when nav menus exist but nothing is assigned to the Header Menu theme location.
+ * The front header only calls wp_nav_menu for `header_menu`; a menu named "Header Menu" is not enough
+ * until it is checked under Appearance → Menus → Manage Locations (or Menu Settings).
+ */
+function lf_admin_notice_header_menu_location(): void {
+	if (!is_admin() || !current_user_can('edit_theme_options')) {
+		return;
+	}
+	if (has_nav_menu('header_menu')) {
+		return;
+	}
+	$menus = wp_get_nav_menus();
+	if (empty($menus)) {
+		return;
+	}
+	$screen = function_exists('get_current_screen') ? get_current_screen() : null;
+	if (!is_object($screen) || $screen->id === '') {
+		return;
+	}
+	$id = (string) $screen->id;
+	$on_appearance_sub = strpos($id, 'appearance_page_') === 0;
+	$allowed = ['dashboard', 'themes', 'nav-menus'];
+	if (!in_array($id, $allowed, true) && !$on_appearance_sub) {
+		return;
+	}
+	$url = admin_url('nav-menus.php?action=locations');
+	echo '<div class="notice notice-warning"><p>';
+	echo esc_html__(
+		'LeadsForward: no menu is assigned to the “Header Menu” display location, so the site header will not show your primary navigation. Open Manage Locations and assign your menu to Header Menu.',
+		'leadsforward-core'
+	);
+	echo ' <a href="' . esc_url($url) . '">' . esc_html__('Manage Locations', 'leadsforward-core') . '</a>';
+	echo '</p></div>';
+}
+add_action('admin_notices', 'lf_admin_notice_header_menu_location');
+
+/**
  * Register ACF Options pages when ACF is active. Global Business Info, CTAs, Schema.
  */
 function lf_register_acf_options_pages(): void {
