@@ -186,6 +186,33 @@ function lf_fleet_updates_admin_render(): void {
 			}
 		}
 	}
+	if (isset($_POST['lf_fleet_controller_push_site']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_push_site')) {
+		$sid = sanitize_text_field((string) wp_unslash($_POST['lf_fleet_controller_push_site']));
+		$override = !empty($_POST['lf_fleet_controller_push_override']);
+		lf_fleet_controller_push_site($sid, $override);
+	}
+	if (isset($_POST['lf_fleet_controller_push_bulk']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_push_site')) {
+		$override = !empty($_POST['lf_fleet_controller_push_override']);
+		$targets = isset($_POST['lf_fleet_push_select']) && is_array($_POST['lf_fleet_push_select'])
+			? array_keys($_POST['lf_fleet_push_select'])
+			: [];
+		foreach ($targets as $sid) {
+			lf_fleet_controller_push_site(sanitize_text_field((string) $sid), $override);
+		}
+	}
+	if (isset($_POST['lf_fleet_controller_push_tag_submit']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce') && function_exists('lf_fleet_controller_push_site')) {
+		$override = !empty($_POST['lf_fleet_controller_push_override']);
+		$tag = isset($_POST['lf_fleet_controller_push_tag']) ? sanitize_text_field((string) wp_unslash($_POST['lf_fleet_controller_push_tag'])) : '';
+		if ($tag !== '' && function_exists('lf_fleet_controller_sites') && function_exists('lf_fleet_controller_site_matches_rollout_tag')) {
+			$sites = lf_fleet_controller_sites();
+			foreach ($sites as $sid => $row) {
+				if (!is_array($row) || !lf_fleet_controller_site_matches_rollout_tag($row, $tag)) {
+					continue;
+				}
+				lf_fleet_controller_push_site((string) $sid, $override);
+			}
+		}
+	}
 	if (isset($_POST['lf_fleet_disconnect']) && check_admin_referer('lf_fleet_updates_save', 'lf_fleet_nonce')) {
 		if (function_exists('lf_fleet_clear_scheduled_events')) {
 			lf_fleet_clear_scheduled_events();
@@ -461,14 +488,25 @@ function lf_fleet_updates_admin_render(): void {
 			if ($sites !== []) {
 				echo '<h3 style="margin-top:18px;">' . esc_html__('Connected sites (heartbeat)', 'leadsforward-core') . '</h3>';
 				echo '<p class="description">' . esc_html__('For “selected” rollout, use the checkboxes. For “tag” rollout, edit Tags and save rollout settings. Rotate token invalidates the old token until the fleet site gets the new bundle.', 'leadsforward-core') . '</p>';
+				echo '<p style="margin:12px 0 10px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; max-width:1200px;">';
+				echo '<label style="display:inline-flex; gap:6px; align-items:center;"><input type="checkbox" name="lf_fleet_controller_push_override" value="1" /> ';
+				echo '<span>' . esc_html__('Override rollout filters on push', 'leadsforward-core') . '</span></label>';
+				echo '<button type="submit" class="button" name="lf_fleet_controller_push_bulk" value="1">' . esc_html__('Push update to selected sites', 'leadsforward-core') . '</button>';
+				echo '<span style="color:#64748b;">|</span>';
+				echo '<label style="display:inline-flex; gap:6px; align-items:center;"><span>' . esc_html__('Push to tag', 'leadsforward-core') . '</span> ';
+				echo '<input type="text" name="lf_fleet_controller_push_tag" class="regular-text" style="max-width:140px;" placeholder="' . esc_attr__('beta', 'leadsforward-core') . '" /></label>';
+				echo '<button type="submit" class="button" name="lf_fleet_controller_push_tag_submit" value="1">' . esc_html__('Push sites with tag', 'leadsforward-core') . '</button>';
+				echo '</p>';
 				echo '<table class="widefat striped" style="max-width:1200px;"><thead><tr>';
 				echo '<th>' . esc_html__('Include', 'leadsforward-core') . '</th>';
+				echo '<th>' . esc_html__('Push', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('Tags', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('Label', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('URL', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('Site ID', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('Version', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('Last seen', 'leadsforward-core') . '</th>';
+				echo '<th>' . esc_html__('Last push', 'leadsforward-core') . '</th>';
 				echo '<th>' . esc_html__('Actions', 'leadsforward-core') . '</th>';
 				echo '</tr></thead><tbody>';
 				foreach ($sites as $sid => $row) {
@@ -479,21 +517,37 @@ function lf_fleet_updates_admin_render(): void {
 					$url = (string) ($row['site_url'] ?? '');
 					$ver = (string) ($row['current_version'] ?? '');
 					$seen = (int) ($row['last_seen_at'] ?? 0);
+					$last_push_at = (int) ($row['last_push_at'] ?? 0);
+					$last_push_msg = (string) ($row['last_push_message'] ?? '');
+					$last_push_status = (string) ($row['last_push_status'] ?? '');
 					$in_rollout = !empty($row['rollout']);
 					$sid_esc = (string) $sid;
 					$tags_cell = '';
 					if (function_exists('lf_fleet_controller_site_tags_list')) {
 						$tags_cell = implode(', ', lf_fleet_controller_site_tags_list($row));
 					}
+					$last_push_cell = '—';
+					if ($last_push_at > 0) {
+						$last_push_cell = esc_html(gmdate('Y-m-d H:i:s', $last_push_at) . ' UTC');
+						if ($last_push_status !== '') {
+							$last_push_cell .= '<br /><code style="font-size:11px;">' . esc_html($last_push_status) . '</code>';
+						}
+						if ($last_push_msg !== '') {
+							$last_push_cell .= '<br /><span style="font-size:12px;color:#334155;">' . esc_html($last_push_msg) . '</span>';
+						}
+					}
 					echo '<tr>';
 					echo '<td><label><input type="checkbox" name="lf_fleet_site_rollout[' . esc_attr($sid_esc) . ']" value="1" ' . checked($in_rollout, true, false) . ' /></label></td>';
+					echo '<td><label><input type="checkbox" name="lf_fleet_push_select[' . esc_attr($sid_esc) . ']" value="1" /></label></td>';
 					echo '<td><input type="text" class="regular-text" name="lf_fleet_site_tags[' . esc_attr($sid_esc) . ']" value="' . esc_attr($tags_cell) . '" style="width:100%;max-width:160px;" placeholder="stable" /></td>';
 					echo '<td>' . esc_html($lab !== '' ? $lab : '—') . '</td>';
 					echo '<td>' . ($url !== '' ? '<code>' . esc_html($url) . '</code>' : '—') . '</td>';
 					echo '<td><code>' . esc_html($sid_esc) . '</code></td>';
 					echo '<td>' . esc_html($ver !== '' ? $ver : '—') . '</td>';
 					echo '<td>' . esc_html($seen > 0 ? gmdate('Y-m-d H:i:s', $seen) . ' UTC' : '—') . '</td>';
+					echo '<td>' . $last_push_cell . '</td>';
 					echo '<td>';
+					echo '<button type="submit" class="button button-small button-primary" name="lf_fleet_controller_push_site" value="' . esc_attr($sid_esc) . '">' . esc_html__('Push update', 'leadsforward-core') . '</button> ';
 					echo '<button type="submit" class="button button-small" name="lf_fleet_controller_rotate_token" value="' . esc_attr($sid_esc) . '" onclick="return confirm(\'Rotate token? The fleet site must paste the new bundle.\');">' . esc_html__('Rotate token', 'leadsforward-core') . '</button> ';
 					echo '<button type="submit" class="button button-small" name="lf_fleet_controller_remove_site" value="' . esc_attr($sid_esc) . '" onclick="return confirm(\'Remove this site from controller?\');">' . esc_html__('Remove', 'leadsforward-core') . '</button>';
 					echo '</td>';
