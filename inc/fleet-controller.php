@@ -561,9 +561,18 @@ function lf_fleet_controller_handle_api(): void {
 				exit;
 			}
 			if ($path === '' || !is_readable($path)) {
-				delete_transient($key);
-				status_header(404);
-				exit;
+				// On multi-instance hosts, the transient may exist but the zip file does not.
+				// Rebuild the zip on-demand instead of returning 404.
+				$controller_slug = lf_fleet_controller_theme_slug();
+				$version = lf_fleet_controller_current_version();
+				$zip = lf_fleet_controller_get_theme_zip($controller_slug, $version);
+				if (empty($zip['ok']) || $zip['path'] === '') {
+					delete_transient($key);
+					status_header(404);
+					exit;
+				}
+				$path = (string) $zip['path'];
+				$sha = (string) $zip['sha256'];
 			}
 		}
 		// Quick integrity check before streaming.
