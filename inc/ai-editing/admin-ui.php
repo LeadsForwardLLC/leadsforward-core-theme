@@ -824,6 +824,28 @@ add_action('wp_ajax_lf_ai_update_section_style', 'lf_ai_ajax_update_section_styl
 add_action('wp_ajax_lf_ai_update_hero_settings', 'lf_ai_ajax_update_hero_settings');
 add_action('wp_ajax_lf_ai_update_business_map_embed', 'lf_ai_ajax_update_business_map_embed');
 add_action('wp_ajax_lf_ai_update_header_settings', 'lf_ai_ajax_update_header_settings');
+add_action('wp_ajax_lf_ai_icon_markup', 'lf_ai_ajax_icon_markup');
+
+/**
+ * Inline SVG markup for a Tabler icon slug (Rich Text / AI toolbar insertion).
+ */
+function lf_ai_icon_markup_for_slug(string $slug): string {
+	$slug = sanitize_title($slug);
+	if ($slug === '') {
+		return '';
+	}
+	return function_exists('lf_icon') ? lf_icon($slug, ['class' => 'lf-icon lf-icon--inline']) : '';
+}
+
+function lf_ai_ajax_icon_markup(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$slug = isset($_POST['slug']) ? (string) wp_unslash($_POST['slug']) : '';
+	$markup = lf_ai_icon_markup_for_slug($slug);
+	wp_send_json_success(['markup' => $markup]);
+}
 
 function lf_ai_ajax_update_business_map_embed(): void {
 	check_ajax_referer('lf_ai_editing', 'nonce');

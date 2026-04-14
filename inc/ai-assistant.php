@@ -2084,6 +2084,72 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			return !!ok;
 		}
+		function lfInsertHtmlIntoContentEditable(host, savedRange, html) {
+			if (!host || !html) return false;
+			try { host.focus(); } catch (e0) {}
+			var sel = window.getSelection();
+			var r = null;
+			if (savedRange) {
+				try {
+					if (host.contains(savedRange.commonAncestorContainer)) {
+						r = savedRange;
+					}
+				} catch (eC) {}
+			}
+			if (r) {
+				try {
+					sel.removeAllRanges();
+					sel.addRange(r);
+				} catch (e1) {
+					r = null;
+				}
+			}
+			if (!r) {
+				try {
+					r = document.createRange();
+					r.selectNodeContents(host);
+					r.collapse(false);
+					sel.removeAllRanges();
+					sel.addRange(r);
+				} catch (e2) {
+					return false;
+				}
+			}
+			var ok = false;
+			try {
+				ok = document.execCommand("insertHTML", false, html);
+			} catch (e3) {}
+			if (!ok) {
+				try {
+					var cur = sel.rangeCount ? sel.getRangeAt(0) : null;
+					if (!cur || !host.contains(cur.commonAncestorContainer)) {
+						cur = document.createRange();
+						cur.selectNodeContents(host);
+						cur.collapse(false);
+						sel.removeAllRanges();
+						sel.addRange(cur);
+					}
+					cur.deleteContents();
+					var tpl = document.createElement("template");
+					tpl.innerHTML = html;
+					var frag = tpl.content;
+					if (!frag.childNodes.length) {
+						return false;
+					}
+					var last = frag.lastChild;
+					cur.insertNode(frag);
+					var after = document.createRange();
+					after.setStartAfter(last);
+					after.collapse(true);
+					sel.removeAllRanges();
+					sel.addRange(after);
+					ok = true;
+				} catch (e4) {
+					ok = false;
+				}
+			}
+			return !!ok;
+		}
 		function lfAnyInlineLinkHostEl() {
 			return inlineActiveEl || lfManagedContentEditableHost();
 		}
@@ -2654,16 +2720,37 @@ function lf_ai_assistant_widget_js(): string {
 					if (!s) return;
 					var h = lfProseIconSavedHost || host;
 					var sr = lfProseIconSavedRange;
-					var token = "[lf_icon name=\"" + s.replace(/"/g, "") + "\"]";
-					var inserted = lfInsertShortcodeIntoContentEditable(h, sr, token);
-					lfProseIconSavedRange = null;
-					lfProseIconSavedHost = null;
-					if (!inserted) {
-						setStatus("Could not insert icon at the cursor. Click in the text and try again.", true);
+					if (!lfAiFloating || !lfAiFloating.ajax_url || !lfAiFloating.nonce) {
+						lfProseIconSavedRange = null;
+						lfProseIconSavedHost = null;
+						setStatus("Icon insertion is unavailable. Reload the editor and try again.", true);
 						return;
 					}
-					try { h.focus(); } catch (eF) {}
-					persistRichContentBodyNow(h, "Icon inserted.");
+					$.post(lfAiFloating.ajax_url, {
+						action: "lf_ai_icon_markup",
+						slug: s,
+						nonce: lfAiFloating.nonce
+					}).done(function(res){
+						if (!res || !res.success || !res.data || !res.data.markup) {
+							lfProseIconSavedRange = null;
+							lfProseIconSavedHost = null;
+							setStatus("Could not load icon markup for that slug.", true);
+							return;
+						}
+						var inserted = lfInsertHtmlIntoContentEditable(h, sr, String(res.data.markup));
+						lfProseIconSavedRange = null;
+						lfProseIconSavedHost = null;
+						if (!inserted) {
+							setStatus("Could not insert icon at the cursor. Click in the text and try again.", true);
+							return;
+						}
+						try { h.focus(); } catch (eF) {}
+						persistRichContentBodyNow(h, "Icon inserted.");
+					}).fail(function(){
+						lfProseIconSavedRange = null;
+						lfProseIconSavedHost = null;
+						setStatus("Could not load icon markup. Check your connection and try again.", true);
+					});
 				});
 			});
 		}

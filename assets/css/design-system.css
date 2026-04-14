@@ -593,6 +593,12 @@ button:focus-visible,
 	stroke-linejoin: round;
 }
 
+.lf-icon--inline {
+	display: inline-block;
+	vertical-align: middle;
+	line-height: 1;
+}
+
 .lf-icon--sm {
 	width: 0.85em;
 	height: 0.85em;
