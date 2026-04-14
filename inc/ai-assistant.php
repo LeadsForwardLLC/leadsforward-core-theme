@@ -218,6 +218,20 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		}
 	}
 
+	$header_layouts_ui = [];
+	if (function_exists('lf_header_layout_sanitize')) {
+		$header_layouts_ui = [
+			['value' => 'modern', 'label' => __('Logo left, links right', 'leadsforward-core')],
+			['value' => 'centered', 'label' => __('Centered logo and menu', 'leadsforward-core')],
+			['value' => 'topbar', 'label' => __('Top bar above main header', 'leadsforward-core')],
+		];
+	}
+	$header_settings_local = [
+		'layout' => function_exists('lf_header_layout') ? lf_header_layout() : 'modern',
+		'topbar_enabled' => function_exists('lf_header_topbar_enabled') ? lf_header_topbar_enabled() : false,
+		'topbar_text' => function_exists('lf_header_topbar_text') ? lf_header_topbar_text() : '',
+	];
+
 	$admin_post_edit_url = '';
 	$ctx_type = (string) ($context['type'] ?? '');
 	$ctx_id = absint($context['id'] ?? 0);
@@ -250,6 +264,8 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 			['value' => 'image', 'label' => __('Featured image overlay', 'leadsforward-core')],
 			['value' => 'video', 'label' => __('Video background', 'leadsforward-core')],
 		],
+		'header_layouts' => $header_layouts_ui,
+		'header_settings' => $header_settings_local,
 		'homepage_enabled' => $homepage_enabled,
 		'i18n' => [
 			'statusReady' => __('Ready.', 'leadsforward-core'),
@@ -270,6 +286,15 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 			'historyReloadTitle' => __('Reload list from server', 'leadsforward-core'),
 			'historyLiveBadge' => __('Live', 'leadsforward-core'),
 			'historyLiveHelp' => __('This snapshot matches the version on the server right now.', 'leadsforward-core'),
+			'headerPanelTitle' => __('Site header', 'leadsforward-core'),
+			'headerPanelHint' => __('Layout and optional promo top bar apply site-wide. Saving reloads the page.', 'leadsforward-core'),
+			'headerLayoutLabel' => __('Header layout', 'leadsforward-core'),
+			'headerTopbarLabel' => __('Show promo top bar', 'leadsforward-core'),
+			'headerTopbarTextLabel' => __('Top bar text', 'leadsforward-core'),
+			'headerSave' => __('Save header', 'leadsforward-core'),
+			'headerSaving' => __('Saving header…', 'leadsforward-core'),
+			'headerSaved' => __('Header saved. Reloading…', 'leadsforward-core'),
+			'headerSaveFailed' => __('Could not save header settings.', 'leadsforward-core'),
 			'placeholder' => __('Ask for precise copy edits, SEO rewrites, CTA improvements, or schema-safe content upgrades...', 'leadsforward-core'),
 			'onboardingTip' => __('Click text or images to edit. Pick a section for AI changes. Press ⌘/Ctrl+K for commands.', 'leadsforward-core'),
 			'onboardingDismiss' => __('Got it', 'leadsforward-core'),
@@ -751,6 +776,42 @@ function lf_ai_assistant_render_floating_widget(): void {
 			</div>
 		</div>
 	</div>
+	<div class="lf-ai-float lf-ai-float--header" data-lf-ai-header-float>
+		<button type="button" class="lf-ai-float__toggle lf-ai-float__toggle--header" data-lf-ai-header-toggle aria-expanded="false" aria-controls="lf-ai-header-panel">
+			<span class="lf-ai-float__dot" aria-hidden="true"></span>
+			<?php esc_html_e('Header', 'leadsforward-core'); ?>
+		</button>
+		<div class="lf-ai-float__panel lf-ai-float__panel--header" id="lf-ai-header-panel" hidden>
+			<div class="lf-ai-float__header">
+				<strong><?php esc_html_e('Site header', 'leadsforward-core'); ?></strong>
+				<div class="lf-ai-float__header-actions">
+					<button type="button" class="lf-ai-float__icon" data-lf-ai-header-minimize aria-label="<?php esc_attr_e('Minimize', 'leadsforward-core'); ?>">−</button>
+					<button type="button" class="lf-ai-float__icon" data-lf-ai-header-close aria-label="<?php esc_attr_e('Close', 'leadsforward-core'); ?>">×</button>
+				</div>
+			</div>
+			<div class="lf-ai-float__body">
+				<p class="lf-ai-header-settings__hint"><?php esc_html_e('Layout and optional promo top bar apply site-wide. Saving reloads the page.', 'leadsforward-core'); ?></p>
+				<div class="lf-ai-float__mode lf-ai-float__mode--header">
+					<label>
+						<span><?php esc_html_e('Header layout', 'leadsforward-core'); ?></span>
+						<select data-lf-ai-header-layout></select>
+					</label>
+					<label class="lf-ai-header-settings__check">
+						<input type="checkbox" data-lf-ai-header-topbar-enabled />
+						<span><?php esc_html_e('Show promo top bar', 'leadsforward-core'); ?></span>
+					</label>
+					<label>
+						<span><?php esc_html_e('Top bar text', 'leadsforward-core'); ?></span>
+						<input type="text" class="lf-ai-header-settings__text" data-lf-ai-header-topbar-text autocomplete="off" />
+					</label>
+				</div>
+				<div class="lf-ai-header-settings__actions">
+					<button type="button" class="button button-primary" data-lf-ai-header-save><?php esc_html_e('Save header', 'leadsforward-core'); ?></button>
+				</div>
+				<div class="lf-ai-header-settings__status" data-lf-ai-header-status></div>
+			</div>
+		</div>
+	</div>
 	<?php
 }
 
@@ -759,15 +820,27 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float { position: fixed; right: 20px; bottom: 20px; z-index: 99999; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; display:flex; flex-direction:column; align-items:flex-end; }
 		.lf-ai-float--seo { right: 188px; z-index: 99998; }
 		.lf-ai-float--history { right: 356px; z-index: 99997; }
+		.lf-ai-float--header { right: 524px; z-index: 99996; }
 		.lf-ai-float__toggle { background:#6a3be8; color:#fff; border:0; border-radius:999px; padding:10px 14px; font-weight:600; box-shadow:none; cursor:pointer; display:flex; gap:8px; align-items:center; }
 		.lf-ai-float__toggle--seo { background:#6a3be8; box-shadow:none; }
 		.lf-ai-float__toggle--history { background:linear-gradient(180deg,#5b21b6 0%,#4c1d95 100%); box-shadow:none; }
+		.lf-ai-float__toggle--header { background:linear-gradient(180deg,#0f766e 0%,#0d9488 100%); box-shadow:none; }
 		.lf-ai-float__dot { width:8px; height:8px; border-radius:99px; background:#22c55e; box-shadow:0 0 0 4px rgba(34,197,94,.2); }
 		.lf-ai-float__toggle--seo .lf-ai-float__dot { background:#a7f3d0; box-shadow:0 0 0 4px rgba(167,243,208,.25); }
 		.lf-ai-float__toggle--history .lf-ai-float__dot { background:#fde68a; box-shadow:0 0 0 4px rgba(253,230,138,.35); }
+		.lf-ai-float__toggle--header .lf-ai-float__dot { background:#99f6e4; box-shadow:0 0 0 4px rgba(153,246,228,.35); }
 		.lf-ai-float__panel { width:min(440px, calc(100vw - 36px)); max-height:min(80vh, 860px); background:#fff; border:1px solid #dbe3ef; border-radius:14px; box-shadow:0 18px 55px rgba(15,23,42,.25); overflow:hidden; position:absolute; right:0; bottom:calc(100% + 10px); display:flex; flex-direction:column; }
 		.lf-ai-float__panel--seo { width:min(460px, calc(100vw - 36px)); }
 		.lf-ai-float__panel--history { width:min(400px, calc(100vw - 36px)); }
+		.lf-ai-float__panel--header { width:min(380px, calc(100vw - 36px)); }
+		.lf-ai-header-settings__hint { font-size:12px; color:#475569; margin:0; line-height:1.45; }
+		.lf-ai-float__mode--header { grid-template-columns:1fr; }
+		.lf-ai-header-settings__check { flex-direction:row !important; align-items:center; gap:8px; }
+		.lf-ai-header-settings__check input { width:auto; margin:0; cursor:pointer; }
+		.lf-ai-header-settings__text { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; width:100%; max-width:100%; box-sizing:border-box; font-family:inherit; }
+		.lf-ai-header-settings__actions { display:flex; justify-content:flex-end; }
+		.lf-ai-header-settings__status { font-size:12px; color:#475569; min-height:18px; }
+		.lf-ai-header-settings__status.is-error { color:#b91c1c; }
 		.lf-ai-history__hint { font-size:11px; line-height:1.45; color:#64748b; margin:0 0 8px; }
 		.lf-ai-history__status { font-size:12px; color:#475569; min-height:18px; margin-bottom:6px; }
 		.lf-ai-history__status.is-error { color:#b91c1c; }
@@ -1128,6 +1201,7 @@ function lf_ai_assistant_widget_css(): string {
 			.lf-ai-float { right:12px; bottom:12px; left:12px; }
 			.lf-ai-float--seo { right:12px; bottom:124px; left:12px; }
 			.lf-ai-float--history { right:12px; bottom:68px; left:12px; }
+			.lf-ai-float--header { right:12px; bottom:180px; left:12px; }
 			.lf-ai-float__toggle { width:100%; justify-content:center; }
 			.lf-ai-float__panel { width:100%; left:0; right:0; }
 			.lf-ai-float__mode { grid-template-columns:1fr; }
@@ -1195,10 +1269,12 @@ function lf_ai_assistant_widget_js(): string {
 		var stateKey = "lfAiFloatState";
 		var seoStateKey = "lfAiSeoFloatState";
 		var historyStateKey = "lfAiHistoryFloatState";
+		var headerStateKey = "lfAiHeaderFloatState";
 		var $root = $("[data-lf-ai-float]");
 		var $linkRoot = $("[data-lf-ai-inline-link-root]");
 		var $seoRoot = $("[data-lf-ai-seo-float]");
 		var $historyRoot = $("[data-lf-ai-history-float]");
+		var $headerRoot = $("[data-lf-ai-header-float]");
 		if (!$root.length || typeof lfAiFloating === "undefined") {
 			return false;
 		}
@@ -1220,6 +1296,13 @@ function lf_ai_assistant_widget_js(): string {
 		var $historyList = $historyRoot.find("[data-lf-ai-history-list]");
 		var $historyStatus = $historyRoot.find("[data-lf-ai-history-status]");
 		var $historyRefresh = $historyRoot.find("[data-lf-ai-history-refresh]");
+		var $headerToggle = $headerRoot.find("[data-lf-ai-header-toggle]");
+		var $headerPanel = $headerRoot.find("#lf-ai-header-panel");
+		var $headerSave = $headerRoot.find("[data-lf-ai-header-save]");
+		var $headerLayout = $headerRoot.find("[data-lf-ai-header-layout]");
+		var $headerTopbar = $headerRoot.find("[data-lf-ai-header-topbar-enabled]");
+		var $headerTopbarText = $headerRoot.find("[data-lf-ai-header-topbar-text]");
+		var $headerStatus = $headerRoot.find("[data-lf-ai-header-status]");
 		var layoutVersion = parseInt(String(lfAiFloating.layout_version != null ? lfAiFloating.layout_version : "0"), 10) || 0;
 		var $prompt = $root.find("[data-lf-ai-prompt]");
 		var $status = $root.find("[data-lf-ai-status]");
@@ -2605,6 +2688,7 @@ function lf_ai_assistant_widget_js(): string {
 			if (narrow) {
 				if ($seoRoot.length) $seoRoot.css("right", "12px");
 				if ($historyRoot.length) $historyRoot.css("right", "12px");
+				if ($headerRoot.length) $headerRoot.css("right", "12px");
 				return;
 			}
 			var aiWidth = Math.ceil($toggle.outerWidth() || 0);
@@ -2616,11 +2700,28 @@ function lf_ai_assistant_widget_js(): string {
 				$seoRoot.css("right", Math.max(130, seoRight) + "px");
 				if ($historyRoot.length && $historyToggle.length) {
 					var histRight = seoRight + seoW + gap;
-					$historyRoot.css("right", Math.max(220, histRight) + "px");
+					var histCss = Math.max(220, histRight);
+					$historyRoot.css("right", histCss + "px");
+					var histW = Math.ceil($historyToggle.outerWidth() || 0);
+					if ($headerRoot.length && $headerToggle.length) {
+						var headerRight = histCss + histW + gap;
+						$headerRoot.css("right", Math.max(280, headerRight) + "px");
+					}
+				} else if ($headerRoot.length && $headerToggle.length) {
+					var headerRightSolo = seoRight + seoW + gap;
+					$headerRoot.css("right", Math.max(260, headerRightSolo) + "px");
 				}
 			} else if ($historyRoot.length && $historyToggle.length) {
 				var histOnly = aiRight + aiWidth + gap;
-				$historyRoot.css("right", Math.max(130, histOnly) + "px");
+				var histCssOnly = Math.max(130, histOnly);
+				$historyRoot.css("right", histCssOnly + "px");
+				var histW2 = Math.ceil($historyToggle.outerWidth() || 0);
+				if ($headerRoot.length && $headerToggle.length) {
+					var headerRight2 = histCssOnly + histW2 + gap;
+					$headerRoot.css("right", Math.max(240, headerRight2) + "px");
+				}
+			} else if ($headerRoot.length && $headerToggle.length) {
+				$headerRoot.css("right", Math.max(130, seoRight) + "px");
 			}
 		}
 		function setHistoryOpen(open) {
@@ -2641,6 +2742,11 @@ function lf_ai_assistant_widget_js(): string {
 					$seoToggle.attr("aria-expanded", "false");
 					try { window.localStorage.setItem(seoStateKey, "closed"); } catch (e2) {}
 				}
+				if ($headerPanel.length) {
+					$headerPanel.prop("hidden", true);
+					$headerToggle.attr("aria-expanded", "false");
+					try { window.localStorage.setItem(headerStateKey, "closed"); } catch (eHdrH) {}
+				}
 				lfHideInlineLinkToolbar();
 				lfHideInlineLinkPanel();
 				saveInlineEdit();
@@ -2648,6 +2754,36 @@ function lf_ai_assistant_widget_js(): string {
 				loadRevisionHistory($historyRoot);
 			}
 			try { window.localStorage.setItem(historyStateKey, open ? "open" : "closed"); } catch (e4) {}
+		}
+		function setHeaderOpen(open) {
+			if (!$headerPanel.length || !$headerToggle.length) return;
+			if (open) {
+				$headerPanel.prop("hidden", false);
+				try { $headerPanel[0].removeAttribute("hidden"); } catch (eHdr0) {}
+			} else {
+				$headerPanel.prop("hidden", true);
+			}
+			$headerToggle.attr("aria-expanded", open ? "true" : "false");
+			if (open) {
+				setConfirmOpen(false);
+				$panel.prop("hidden", true);
+				$toggle.attr("aria-expanded", "false");
+				try { window.localStorage.setItem(stateKey, "closed"); } catch (eHdr1) {}
+				if ($historyPanel.length) {
+					$historyPanel.prop("hidden", true);
+					$historyToggle.attr("aria-expanded", "false");
+					try { window.localStorage.setItem(historyStateKey, "closed"); } catch (eHdr2) {}
+				}
+				if ($seoPanel.length) {
+					$seoPanel.prop("hidden", true);
+					$seoToggle.attr("aria-expanded", "false");
+					try { window.localStorage.setItem(seoStateKey, "closed"); } catch (eHdr3) {}
+				}
+				lfHideInlineLinkToolbar();
+				lfHideInlineLinkPanel();
+				saveInlineEdit();
+			}
+			try { window.localStorage.setItem(headerStateKey, open ? "open" : "closed"); } catch (eHdr4) {}
 		}
 		function setAiOpen(open) {
 			if (!$panel.length || !$toggle.length) return;
@@ -2667,6 +2803,11 @@ function lf_ai_assistant_widget_js(): string {
 				$seoPanel.prop("hidden", true);
 				$seoToggle.attr("aria-expanded", "false");
 				try { window.localStorage.setItem(seoStateKey, "closed"); } catch (e) {}
+			}
+			if (open && $headerPanel.length) {
+				$headerPanel.prop("hidden", true);
+				$headerToggle.attr("aria-expanded", "false");
+				try { window.localStorage.setItem(headerStateKey, "closed"); } catch (eHdrA) {}
 			}
 			if (!open) {
 				lfHideInlineLinkToolbar();
@@ -2693,6 +2834,11 @@ function lf_ai_assistant_widget_js(): string {
 					$historyToggle.attr("aria-expanded", "false");
 					try { window.localStorage.setItem(historyStateKey, "closed"); } catch (eH2) {}
 				}
+				if ($headerPanel.length) {
+					$headerPanel.prop("hidden", true);
+					$headerToggle.attr("aria-expanded", "false");
+					try { window.localStorage.setItem(headerStateKey, "closed"); } catch (eHdrS) {}
+				}
 				lfHideInlineLinkToolbar();
 				lfHideInlineLinkPanel();
 				saveInlineEdit();
@@ -2700,6 +2846,28 @@ function lf_ai_assistant_widget_js(): string {
 				renderSeoSnapshot();
 			}
 			try { window.localStorage.setItem(seoStateKey, open ? "open" : "closed"); } catch (e) {}
+		}
+		function initHeaderSettingsPanel() {
+			if (!$headerLayout.length) return;
+			var rows = Array.isArray(lfAiFloating.header_layouts) ? lfAiFloating.header_layouts : [];
+			var cur = (lfAiFloating.header_settings && typeof lfAiFloating.header_settings === "object") ? lfAiFloating.header_settings : {};
+			var curLayout = String(cur.layout || "modern");
+			$headerLayout.empty();
+			for (var hi = 0; hi < rows.length; hi++) {
+				var r = rows[hi] || {};
+				var v = String(r.value || "");
+				var lab = String(r.label || v);
+				if (!v) continue;
+				$("<option>").attr("value", v).text(lab).appendTo($headerLayout);
+			}
+			var matchOpt = $headerLayout.find("option").filter(function(){ return String(this.value) === curLayout; });
+			if (matchOpt.length) {
+				$headerLayout.val(curLayout);
+			} else if ($headerLayout.find("option").length) {
+				$headerLayout.val($headerLayout.find("option").first().attr("value"));
+			}
+			$headerTopbar.prop("checked", !!cur.topbar_enabled);
+			$headerTopbarText.val(String(cur.topbar_text || ""));
 		}
 		function setEditorToggleUi() {
 			if (!$btnEditorToggle || !$btnEditorToggle.length) return;
@@ -9036,6 +9204,20 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			updateLauncherOffsets();
 		});
+		$(document).on("click", "[data-lf-ai-header-toggle]", function(e){
+			e.preventDefault();
+			var $float = $(this).closest("[data-lf-ai-header-float]");
+			if (!$headerRoot.length || !$float.length || $float[0] !== $headerRoot[0]) return;
+			var willOpen = $headerPanel.prop("hidden");
+			setConfirmOpen(false);
+			if (willOpen) {
+				setAiOpen(false);
+				setSeoOpen(false);
+				setHistoryOpen(false);
+			}
+			setHeaderOpen(!!willOpen);
+			updateLauncherOffsets();
+		});
 		$(document).on("click", "[data-lf-ai-history-refresh]", function(e){
 			e.preventDefault();
 			var $ctx = $(this).closest("[data-lf-ai-history-float]");
@@ -9089,6 +9271,37 @@ function lf_ai_assistant_widget_js(): string {
 		$root.find("[data-lf-ai-close],[data-lf-ai-minimize]").on("click", function(){ setConfirmOpen(false); setAiOpen(false); });
 		$seoRoot.find("[data-lf-ai-seo-close],[data-lf-ai-seo-minimize]").on("click", function(){ setSeoOpen(false); });
 		$historyRoot.find("[data-lf-ai-history-close],[data-lf-ai-history-minimize]").on("click", function(){ setHistoryOpen(false); });
+		$headerRoot.find("[data-lf-ai-header-close],[data-lf-ai-header-minimize]").on("click", function(){ setHeaderOpen(false); });
+		$headerSave.on("click", function(ev){
+			ev.preventDefault();
+			var saving = (lfAiFloating.i18n && lfAiFloating.i18n.headerSaving) ? lfAiFloating.i18n.headerSaving : "Saving…";
+			var okSaved = (lfAiFloating.i18n && lfAiFloating.i18n.headerSaved) ? lfAiFloating.i18n.headerSaved : "Saved.";
+			var fail = (lfAiFloating.i18n && lfAiFloating.i18n.headerSaveFailed) ? lfAiFloating.i18n.headerSaveFailed : "Save failed.";
+			$headerStatus.text(saving).removeClass("is-error");
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_update_header_settings",
+				nonce: lfAiFloating.nonce,
+				header_layout: String($headerLayout.val() || "modern"),
+				header_topbar_enabled: $headerTopbar.is(":checked") ? "1" : "0",
+				header_topbar_text: String($headerTopbarText.val() || "")
+			}).done(function(res){
+				if (res && res.success) {
+					$headerStatus.text(okSaved).removeClass("is-error");
+					if (res.data && res.data.reload) {
+						window.location.reload();
+					}
+				} else {
+					var msg = (res && res.data && res.data.message) ? res.data.message : fail;
+					$headerStatus.text(msg).addClass("is-error");
+				}
+			}).fail(function(xhr){
+				var msg = fail;
+				if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+					msg = xhr.responseJSON.data.message;
+				}
+				$headerStatus.text(msg).addClass("is-error");
+			});
+		});
 		$(window).on("resize", function(){ updateLauncherOffsets(); });
 		$btnEditorToggle.on("click", function(){
 			setEditorEnabled(!editingEnabled);
@@ -9611,6 +9824,7 @@ function lf_ai_assistant_widget_js(): string {
 			editingEnabled = window.localStorage.getItem(editorModeKey) !== "off";
 		} catch (e) {}
 		setEditorToggleUi();
+		initHeaderSettingsPanel();
 		updateLauncherOffsets();
 		try { window.setTimeout(updateLauncherOffsets, 180); } catch (e) {}
 		$prompt.attr("placeholder", (lfAiFloating.i18n && lfAiFloating.i18n.placeholder) ? lfAiFloating.i18n.placeholder : "Ask for specific edits...");
