@@ -593,6 +593,12 @@ button:focus-visible,
 	stroke-linejoin: round;
 }
 
+.lf-icon--inline {
+	display: inline-block;
+	vertical-align: middle;
+	line-height: 1;
+}
+
 .lf-icon--sm {
 	width: 0.85em;
 	height: 0.85em;
@@ -3876,6 +3882,21 @@ button:focus-visible,
 .lf-hero-stack__chips {
 	justify-content: center;
 	width: 100%;
+}
+
+/* Conversion stack: keep pill rows visible and spaced inside stack layout */
+.lf-hero-stack__chips,
+.lf-hero-stack__pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: center;
+}
+
+.lf-hero-stack__chips .lf-hero-chip,
+.lf-hero-stack__pills .lf-hero-chip {
+	opacity: 1;
+	visibility: visible;
 }
 
 .lf-hero-form__chips,

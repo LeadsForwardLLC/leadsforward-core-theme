@@ -2084,6 +2084,72 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			return !!ok;
 		}
+		function lfInsertHtmlIntoContentEditable(host, savedRange, html) {
+			if (!host || !html) return false;
+			try { host.focus(); } catch (e0) {}
+			var sel = window.getSelection();
+			var r = null;
+			if (savedRange) {
+				try {
+					if (host.contains(savedRange.commonAncestorContainer)) {
+						r = savedRange;
+					}
+				} catch (eC) {}
+			}
+			if (r) {
+				try {
+					sel.removeAllRanges();
+					sel.addRange(r);
+				} catch (e1) {
+					r = null;
+				}
+			}
+			if (!r) {
+				try {
+					r = document.createRange();
+					r.selectNodeContents(host);
+					r.collapse(false);
+					sel.removeAllRanges();
+					sel.addRange(r);
+				} catch (e2) {
+					return false;
+				}
+			}
+			var ok = false;
+			try {
+				ok = document.execCommand("insertHTML", false, html);
+			} catch (e3) {}
+			if (!ok) {
+				try {
+					var cur = sel.rangeCount ? sel.getRangeAt(0) : null;
+					if (!cur || !host.contains(cur.commonAncestorContainer)) {
+						cur = document.createRange();
+						cur.selectNodeContents(host);
+						cur.collapse(false);
+						sel.removeAllRanges();
+						sel.addRange(cur);
+					}
+					cur.deleteContents();
+					var tpl = document.createElement("template");
+					tpl.innerHTML = html;
+					var frag = tpl.content;
+					if (!frag.childNodes.length) {
+						return false;
+					}
+					var last = frag.lastChild;
+					cur.insertNode(frag);
+					var after = document.createRange();
+					after.setStartAfter(last);
+					after.collapse(true);
+					sel.removeAllRanges();
+					sel.addRange(after);
+					ok = true;
+				} catch (e4) {
+					ok = false;
+				}
+			}
+			return !!ok;
+		}
 		function lfAnyInlineLinkHostEl() {
 			return inlineActiveEl || lfManagedContentEditableHost();
 		}
@@ -2654,16 +2720,37 @@ function lf_ai_assistant_widget_js(): string {
 					if (!s) return;
 					var h = lfProseIconSavedHost || host;
 					var sr = lfProseIconSavedRange;
-					var token = "[lf_icon name=\"" + s.replace(/"/g, "") + "\"]";
-					var inserted = lfInsertShortcodeIntoContentEditable(h, sr, token);
-					lfProseIconSavedRange = null;
-					lfProseIconSavedHost = null;
-					if (!inserted) {
-						setStatus("Could not insert icon at the cursor. Click in the text and try again.", true);
+					if (!lfAiFloating || !lfAiFloating.ajax_url || !lfAiFloating.nonce) {
+						lfProseIconSavedRange = null;
+						lfProseIconSavedHost = null;
+						setStatus("Icon insertion is unavailable. Reload the editor and try again.", true);
 						return;
 					}
-					try { h.focus(); } catch (eF) {}
-					persistRichContentBodyNow(h, "Icon inserted.");
+					$.post(lfAiFloating.ajax_url, {
+						action: "lf_ai_icon_markup",
+						slug: s,
+						nonce: lfAiFloating.nonce
+					}).done(function(res){
+						if (!res || !res.success || !res.data || !res.data.markup) {
+							lfProseIconSavedRange = null;
+							lfProseIconSavedHost = null;
+							setStatus("Could not load icon markup for that slug.", true);
+							return;
+						}
+						var inserted = lfInsertHtmlIntoContentEditable(h, sr, String(res.data.markup));
+						lfProseIconSavedRange = null;
+						lfProseIconSavedHost = null;
+						if (!inserted) {
+							setStatus("Could not insert icon at the cursor. Click in the text and try again.", true);
+							return;
+						}
+						try { h.focus(); } catch (eF) {}
+						persistRichContentBodyNow(h, "Icon inserted.");
+					}).fail(function(){
+						lfProseIconSavedRange = null;
+						lfProseIconSavedHost = null;
+						setStatus("Could not load icon markup. Check your connection and try again.", true);
+					});
 				});
 			});
 		}
@@ -4295,33 +4382,39 @@ function lf_ai_assistant_widget_js(): string {
 				? "service_details_checklist_secondary"
 				: "service_details_checklist";
 		}
+		function checklistPrimarySecondaryItemsFromWrap(wrap) {
+			var primaryItems = [];
+			var secondaryItems = [];
+			if (!wrap || !wrap.querySelector) {
+				return { primaryItems: primaryItems, secondaryItems: secondaryItems };
+			}
+			var host = wrap.querySelector(".lf-service-details__checklists");
+			if (!host) {
+				return { primaryItems: primaryItems, secondaryItems: secondaryItems };
+			}
+			var listEls = Array.prototype.slice.call(host.querySelectorAll("ul.lf-service-details__checklist"));
+			listEls.forEach(function(list){
+				var segItems = checklistItemsFromWrap(wrap, list);
+				if (list.classList && list.classList.contains("lf-service-details__checklist--secondary")) {
+					secondaryItems = secondaryItems.concat(segItems);
+				} else {
+					primaryItems = primaryItems.concat(segItems);
+				}
+			});
+			return { primaryItems: primaryItems, secondaryItems: secondaryItems };
+		}
 		function persistSectionChecklist(wrap, sourceNode) {
 			if (!wrap) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 			if (!sectionId || !sectionSupportsChecklistEditor(sectionType)) return;
-			var sourceList = sourceNode && sourceNode.closest ? sourceNode.closest("ul.lf-service-details__checklist") : null;
-			var items = checklistItemsFromWrap(wrap, sourceList);
-			var fieldKey = checklistFieldKeyFromList(sourceList);
-			var pc = persistContextFromWrap(wrap);
-			setStatus("Saving checklist...", false);
-			$.post(lfAiFloating.ajax_url, {
-				action: "lf_ai_update_section_checklist",
-				nonce: lfAiFloating.nonce,
-				context_type: pc.context_type,
-				context_id: pc.context_id,
-				section_id: sectionId,
-				field_key: fieldKey,
-				items: JSON.stringify(items)
-			}).done(function(res){
-				if (res && res.success) {
-					setStatus((res.data && res.data.message) ? res.data.message : "Checklist saved.", false);
-				} else {
-					setStatus((res && res.data && res.data.message) ? res.data.message : "Checklist save failed.", true);
-				}
-			}).fail(function(xhr){
-				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Checklist save failed.";
-				setStatus(msg, true);
+			var buckets = checklistPrimarySecondaryItemsFromWrap(wrap);
+			function saveSecondary() {
+				persistSectionLineItems(wrap, "service_details_checklist_secondary", buckets.secondaryItems, "Saving checklist...");
+			}
+			persistSectionLineItems(wrap, "service_details_checklist", buckets.primaryItems, "Saving checklist...", {
+				onDone: function(){ saveSecondary(); },
+				onFail: function(){ saveSecondary(); }
 			});
 		}
 		function buildChecklistControls() {
@@ -4725,10 +4818,12 @@ function lf_ai_assistant_widget_js(): string {
 					if (typeof opts.onDone === "function") opts.onDone(res);
 				} else {
 					setStatus((res && res.data && res.data.message) ? res.data.message : "List save failed.", true);
+					if (typeof opts.onFail === "function") opts.onFail(res);
 				}
 			}).fail(function(xhr){
 				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "List save failed.";
 				setStatus(msg, true);
+				if (typeof opts.onFail === "function") opts.onFail(xhr);
 			});
 		}
 		function simpleListItemsFromContainer(container, itemSelector) {
@@ -4737,17 +4832,13 @@ function lf_ai_assistant_widget_js(): string {
 				return textFromNodeWithoutAiControls(node);
 			}).filter(function(text){ return text !== ""; });
 		}
-		function heroProofHtmlItemsFromList(list) {
-			if (!list) return [];
-			return Array.prototype.slice.call(list.querySelectorAll("li")).map(function(li){
-				var span = li.querySelector(".lf-block-hero__card-item-text");
-				// Persist as plain text to avoid sanitizer/plugin variance dropping inline markup
-				// and causing "saved but missing after reload" behavior.
-				return span ? textFromNodeWithoutAiControls(span) : textFromNodeWithoutAiControls(li);
-			}).filter(function(t){ return String(t || "").trim() !== ""; });
+		function heroCardItemsFromWrap(wrap) {
+			if (!wrap || !wrap.querySelector) return [];
+			var list = wrap.querySelector(".lf-block-hero__card-list");
+			return list ? simpleListItemsFromContainer(list, "li") : [];
 		}
 		function persistHeroProofItems(wrap, list) {
-			if (!wrap || !list) return;
+			if (!wrap) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 			var baseType = baseSectionType(sectionType, sectionId);
@@ -4755,7 +4846,7 @@ function lf_ai_assistant_widget_js(): string {
 				sectionId = "hero";
 			}
 			if (!sectionId || baseType !== "hero") return;
-			var items = heroProofHtmlItemsFromList(list);
+			var items = heroCardItemsFromWrap(wrap);
 			var pc = persistContextFromWrap(wrap);
 			setStatus("Saving proof card...", false);
 			$.post(lfAiFloating.ajax_url, {
@@ -4770,10 +4861,10 @@ function lf_ai_assistant_widget_js(): string {
 				if (res && res.success) {
 					setStatus((res.data && res.data.message) ? res.data.message : "Proof card saved.", false);
 				} else {
-					persistSectionLineItems(wrap, "hero_proof_bullets", items, "Saving proof card...");
+					persistSectionLineItems(wrap, "hero_proof_bullets", heroCardItemsFromWrap(wrap), "Saving proof card...");
 				}
 			}).fail(function(){
-				persistSectionLineItems(wrap, "hero_proof_bullets", items, "Saving proof card...");
+				persistSectionLineItems(wrap, "hero_proof_bullets", heroCardItemsFromWrap(wrap), "Saving proof card...");
 			});
 		}
 		function createGenericRemoveButton(onClick) {
@@ -5001,9 +5092,7 @@ function lf_ai_assistant_widget_js(): string {
 				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-list-remove=\"1\"]")).forEach(function(node){
 					if (node && node.parentNode) node.parentNode.removeChild(node);
 				});
-				var list = wrap.querySelector(".lf-hero-split__proof .lf-block-hero__card-list")
-					|| wrap.querySelector(".lf-hero-visual__media .lf-block-hero__card-list")
-					|| wrap.querySelector(".lf-block-hero__card .lf-block-hero__card-list");
+				var list = wrap.querySelector(".lf-block-hero__card-list");
 				if (!list) return;
 				Array.prototype.slice.call(list.querySelectorAll("li")).forEach(function(node){
 					node.removeAttribute("data-lf-inline-editable");
@@ -9342,10 +9431,18 @@ function lf_ai_assistant_widget_js(): string {
 			if (target === inlineActiveEl || inlineActiveEl.contains(target)) {
 				return;
 			}
-			// Allow clicking within the inline toolbar/panel without closing the active edit.
-			// Do NOT treat the entire assistant containers as "inside" or the toolbar can get stuck open.
-			if ($(target).closest("[data-lf-ai-inline-link-toolbar],[data-lf-ai-inline-link-panel],[data-lf-ai-inline-link-backdrop]").length) {
-				return;
+			// Allow clicking within the inline toolbar/panel/backdrop without closing the active edit.
+			// Use class selectors + native closest so portaled/fixed UI nodes still count as "inside"
+			// without treating unrelated AI assistant markup as part of this surface.
+			var lfInlineLinkUiHit = target && target.nodeType === 3 ? target.parentElement : target;
+			if (lfInlineLinkUiHit && lfInlineLinkUiHit.closest) {
+				if (
+					lfInlineLinkUiHit.closest(".lf-ai-inline-link__panel") ||
+					lfInlineLinkUiHit.closest(".lf-ai-inline-link__toolbar") ||
+					lfInlineLinkUiHit.closest(".lf-ai-inline-link__backdrop")
+				) {
+					return;
+				}
 			}
 			lfHideInlineLinkToolbar();
 			lfInlineToolbarPinnedHost = null;
