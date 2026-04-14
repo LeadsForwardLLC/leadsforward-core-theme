@@ -1,6 +1,10 @@
 <?php
 declare(strict_types=1);
 
+if (!defined('ABSPATH')) {
+	exit;
+}
+
 function lf_fleet_push_expected_sig(string $token, string $method, string $path, int $ts, string $nonce, string $bodySha): string {
 	$payload = strtoupper($method) . "\n" . $path . "\n" . $ts . "\n" . $nonce . "\n" . $bodySha;
 	return base64_encode(hash_hmac('sha256', $payload, $token, true));

@@ -1,4 +1,8 @@
 <?php
+if (!defined('ABSPATH')) {
+	define('ABSPATH', __DIR__ . '/../');
+}
+
 require __DIR__ . '/../inc/fleet-updates/push-auth.php';
 
 function expect($cond, $msg) {
@@ -30,6 +34,24 @@ $headers = [
 	'X-LF-Nonce' => $nonce,
 	'X-LF-Signature' => $sig,
 ];
+
+$missing = [
+	'X-LF-Site' => '',
+	'X-LF-Timestamp' => (string) $ts,
+	'X-LF-Nonce' => $nonce,
+	'X-LF-Signature' => $sig,
+];
+$missing_headers = lf_fleet_push_validate_request($missing, $body, $path, 'site-123', $token, $ts + 1, $seen, $store);
+expect($missing_headers['ok'] === false && $missing_headers['error'] === 'missing_headers', 'empty site id should be missing_headers');
+
+$mismatch_headers = [
+	'X-LF-Site' => 'other-site',
+	'X-LF-Timestamp' => (string) $ts,
+	'X-LF-Nonce' => 'nonce-mismatch',
+	'X-LF-Signature' => lf_fleet_push_expected_sig($token, 'POST', $path, $ts, 'nonce-mismatch', $bodySha),
+];
+$site_mismatch = lf_fleet_push_validate_request($mismatch_headers, $body, $path, 'site-123', $token, $ts + 1, $seen, $store);
+expect($site_mismatch['ok'] === false && $site_mismatch['error'] === 'site_mismatch', 'wrong site id should be site_mismatch');
 
 $ok = lf_fleet_push_validate_request($headers, $body, $path, 'site-123', $token, $ts + 1, $seen, $store);
 expect($ok['ok'] === true, 'valid request should pass');
