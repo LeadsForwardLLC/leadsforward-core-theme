@@ -420,6 +420,12 @@ function lf_fleet_updates_admin_render(): void {
 			echo '<p class="description">' . esc_html__('Public keys are shared to fleet sites. Private keys stay on controller to sign release artifacts.', 'leadsforward-core') . '</p>';
 			echo '<pre style="background:#0b1220;color:#e2e8f0;padding:12px;border-radius:10px;max-width:980px;overflow:auto;">' . esc_html((string) $keys_json) . '</pre>';
 
+			$last_pkg = (string) get_option(LF_FLEET_CTRL_OPT_LAST_PACKAGE, '');
+			if ($last_pkg !== '') {
+				echo '<h4 style="margin-top:18px;">' . esc_html__('Last package request (debug)', 'leadsforward-core') . '</h4>';
+				echo '<pre style="background:#0b1220;color:#e2e8f0;padding:12px;border-radius:10px;max-width:980px;overflow:auto;">' . esc_html($last_pkg) . '</pre>';
+			}
+
 			echo '<h3 style="margin-top:18px;">' . esc_html__('Register a fleet site (Site ID + Token)', 'leadsforward-core') . '</h3>';
 			echo '<p class="description">' . esc_html__('This creates a unique Site ID + Token bundle you paste into the fleet site. This is separate from signing keys (used for release verification).', 'leadsforward-core') . '</p>';
 			echo '<table class="form-table" role="presentation">';
