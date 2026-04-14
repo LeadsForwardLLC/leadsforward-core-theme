@@ -123,6 +123,24 @@ Cron and **Check now** remain the primary paths for sites that never receive a p
   - If signature or checksum fails, the update is refused.
 - The only inbound fleet trigger is **`POST /wp-json/lf/v1/fleet/push`**, and it requires a valid signature for that site’s token.
 
+## Site header layout (global)
+
+Header structure is driven by global options read in `templates/parts/header.php` via `inc/header-settings.php`:
+
+- **`lf_header_layout`**: `modern` (logo left, nav right), `centered` (centered logo and menu), or `topbar` (promo strip above the main bar). Invalid values fall back to `modern`.
+- **`lf_header_topbar_enabled`** / **`lf_header_topbar_text`**: optional thin promo line when the layout supports it.
+
+**Operators:** while logged in on the public site, open the front-end editor’s **Header** floater (next to History / SEO). Pick the layout, optionally enable the promo top bar and enter its text, then **Save header**. Settings persist in Global Settings options and the page reloads so the new markup applies site-wide. Header CTA label/URL remain in **LeadsForward → Global Settings** as before.
+
+## Front-end editor saves (hero + service checklists)
+
+- **Hero Authority Split — proof checklist:** Inline edits to the right-hand proof bullets use field `hero_proof_bullets` on the **homepage** section payload. Saves from the static front page always target the homepage record even if the assistant context was another URL, so checklist lines persist after refresh.
+- **Service details — checklist columns:** The service story section exposes two newline lists (`service_details_checklist` and optional `service_details_checklist_secondary`). Front-end inline saves map each column to the correct field (including the secondary column when present). Values are capped server-side for consistent layout; see `lf_sections_cap_checklist_lines_string()` in `inc/sections.php` and persistence in `inc/ai-editing/admin-ui.php`.
+
+## Rich text — icon insertion
+
+Rich Text toolbars offer **Insert icon**, which inserts `[lf_icon name="slug"]` at the **text caret**. If nothing is focused, the UI may show an error—click inside the paragraph first. On render, shortcodes expand to inline Tabler SVG via `lf_icon()` (including after KSES), so previews and the public site match.
+
 ## SEO Enforcement
 Two layers are enforced:
 1. **n8n quality/completeness gates** inject/fix keyword coverage and reject low-volume/generic output.

@@ -29,7 +29,9 @@ See `docs/05_THEME_INTEGRATION.md` (Fleet section) for architecture and security
 
 - [ ] OpenAI key (if used) in Global Settings; restrict who can manage theme options.
 - [ ] Editors understand: **Layout history** is server-backed revision snapshots; **refresh** reloads the list; **Live** marks the row matching the current layout version.
-- [ ] **Rich Text** sections: **Insert icon** inserts `[lf_icon name="slug"]`; icons render server-side from Tabler SVGs (`docs/07_ICON_SYSTEM.md`).
+- [ ] **Site header:** the front-end **Header** panel sets global layout variants (`modern` / `centered` / `topbar`) and optional promo top bar text; saving reloads the site. Details: `docs/05_THEME_INTEGRATION.md` (Site header layout).
+- [ ] **Hero + service inline saves:** proof checklist lines on the homepage hero and both columns of the service-details checklist persist through the front-end editor (homepage targeting for hero proof; correct field keys per checklist column). See `docs/05_THEME_INTEGRATION.md` (Front-end editor saves).
+- [ ] **Rich Text** sections: **Insert icon** inserts `[lf_icon name="slug"]` at the caret; icons render server-side from Tabler SVGs with inline markup for previews (`docs/07_ICON_SYSTEM.md`, `docs/05_THEME_INTEGRATION.md`).
 
 ## SEO and launch
 
