@@ -2633,11 +2633,6 @@ function lf_ai_ajax_update_section_checklist(): void {
 		}
 		$items[] = $value;
 	}
-	$items = array_values(array_unique($items));
-	// Checklist items are intentionally capped for consistent UX + generation quality.
-	if (count($items) > 5) {
-		$items = array_slice($items, 0, 5);
-	}
 	$value = implode("\n", $items);
 	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
 	$allowed_types = lf_ai_reversible_section_types();
@@ -2680,7 +2675,8 @@ function lf_ai_ajax_update_section_checklist(): void {
 		if (empty($old_row)) {
 			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
 		}
-		$config[$resolved_section_id][$field_key] = $value;
+		$config[$resolved_section_id] = lf_ai_merge_settings_after_inline_list_save($section_type, $old_row, $field_key, $value);
+		$items = lf_ai_decode_section_lines_response_items((string) ($config[$resolved_section_id][$field_key] ?? ''), $field_key);
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 		$removed_overrides = $clear_checklist_selector_overrides($context_type, $context_id_use);
 		$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
@@ -2721,7 +2717,8 @@ function lf_ai_ajax_update_section_checklist(): void {
 		wp_send_json_error(['message' => __('This section does not support checklist editing.', 'leadsforward-core')]);
 	}
 	$settings = is_array($old_row['settings'] ?? null) ? $old_row['settings'] : [];
-	$settings[$field_key] = $value;
+	$settings = lf_ai_merge_settings_after_inline_list_save($section_type, $settings, $field_key, $value);
+	$items = lf_ai_decode_section_lines_response_items((string) ($settings[$field_key] ?? ''), $field_key);
 	$config['sections'][$section_id]['settings'] = $settings;
 	update_post_meta($pid, LF_PB_META_KEY, $config);
 	$removed_overrides = $clear_checklist_selector_overrides($context_type, $context_id_use);
@@ -3653,6 +3650,58 @@ function lf_ai_ajax_process_step_library(): void {
 	]);
 }
 
+/**
+ * Merge a section row or settings array after an inline list save: full sanitize when the field
+ * exists in the section registry; otherwise cap checklist strings when those keys are used on
+ * alias layouts (e.g. content_image).
+ *
+ * @param array<string, mixed> $base
+ * @return array<string, mixed>
+ */
+function lf_ai_merge_settings_after_inline_list_save(string $section_type, array $base, string $field_key, string $value): array {
+	$merged = array_merge($base, [$field_key => $value]);
+	if (!function_exists('lf_sections_sanitize_settings') || !function_exists('lf_sections_registry_has_field')) {
+		return $merged;
+	}
+	if (lf_sections_registry_has_field($section_type, $field_key)) {
+		return array_merge($base, lf_sections_sanitize_settings($section_type, $merged));
+	}
+	if (in_array($field_key, ['service_details_checklist', 'service_details_checklist_secondary'], true) && function_exists('lf_sections_cap_checklist_lines_string')) {
+		$merged[$field_key] = lf_sections_cap_checklist_lines_string($value);
+
+		return array_merge($base, $merged);
+	}
+
+	return $merged;
+}
+
+/**
+ * Split a stored newline list back into AJAX response items after sanitize.
+ *
+ * @return list<string>
+ */
+function lf_ai_decode_section_lines_response_items(string $stored, string $field_key): array {
+	if ($stored === '') {
+		return [];
+	}
+	$lines = preg_split("/\r\n|\r|\n/", $stored);
+	if (!is_array($lines)) {
+		return [];
+	}
+	$lines = array_map('strval', $lines);
+	if ($field_key === 'service_intro_service_ids') {
+		return array_values(array_filter(array_map('trim', $lines), static function (string $v): bool {
+			return $v !== '';
+		}));
+	}
+	if (in_array($field_key, ['service_details_checklist', 'service_details_checklist_secondary'], true)) {
+		return array_values(array_filter($lines, static function (string $l): bool {
+			return $l !== '';
+		}));
+	}
+	return array_values($lines);
+}
+
 function lf_ai_ajax_update_section_lines(): void {
 	check_ajax_referer('lf_ai_editing', 'nonce');
 	if (!current_user_can(LF_AI_CAP)) {
@@ -3697,10 +3746,6 @@ function lf_ai_ajax_update_section_lines(): void {
 	if (count($items) > 40) {
 		$items = array_slice($items, 0, 40);
 	}
-	// Keep service_details checklists short and consistent with section sanitizer expectations.
-	if (in_array($field_key, ['service_details_checklist', 'service_details_checklist_secondary'], true) && count($items) > 5) {
-		$items = array_slice($items, 0, 5);
-	}
 	$value = implode("\n", $items);
 	if (defined('WP_DEBUG') && WP_DEBUG && $field_key === 'benefits_items') {
 		error_log('LF BENEFITS SAVE: items=' . count($items) . ' has_link=' . (strpos($value, '<a ') !== false ? 'yes' : 'no'));
@@ -3724,14 +3769,15 @@ function lf_ai_ajax_update_section_lines(): void {
 		if (empty($old_row)) {
 			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
 		}
-		$config[$resolved_section_id][$field_key] = $value;
+		$config[$resolved_section_id] = lf_ai_merge_settings_after_inline_list_save($section_type, $old_row, $field_key, $value);
 		if ($field_key === 'service_intro_service_ids' && $section_type === 'service_intro') {
-			$n = count($items);
+			$n = count(lf_sections_parse_lines((string) ($config[$resolved_section_id]['service_intro_service_ids'] ?? '')));
 			$cur_max = isset($config[$resolved_section_id]['service_intro_max_items']) ? (int) $config[$resolved_section_id]['service_intro_max_items'] : 6;
 			if ($n > $cur_max) {
 				$config[$resolved_section_id]['service_intro_max_items'] = min(24, $n);
 			}
 		}
+		$items = lf_ai_decode_section_lines_response_items((string) ($config[$resolved_section_id][$field_key] ?? ''), $field_key);
 		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 		$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
 		$log_id = function_exists('lf_ai_log_action')
@@ -3769,14 +3815,15 @@ function lf_ai_ajax_update_section_lines(): void {
 		wp_send_json_error(['message' => __('This list is not editable for the selected section.', 'leadsforward-core')]);
 	}
 	$settings = is_array($old_row['settings'] ?? null) ? $old_row['settings'] : [];
-	$settings[$field_key] = $value;
+	$settings = lf_ai_merge_settings_after_inline_list_save($section_type, $settings, $field_key, $value);
 	if ($field_key === 'service_intro_service_ids' && $section_type === 'service_intro') {
-		$n = count($items);
+		$n = count(lf_sections_parse_lines((string) ($settings['service_intro_service_ids'] ?? '')));
 		$cur_max = isset($settings['service_intro_max_items']) ? (int) $settings['service_intro_max_items'] : 6;
 		if ($n > $cur_max) {
 			$settings['service_intro_max_items'] = min(24, $n);
 		}
 	}
+	$items = lf_ai_decode_section_lines_response_items((string) ($settings[$field_key] ?? ''), $field_key);
 	$config['sections'][$section_id]['settings'] = $settings;
 	update_post_meta($pid, LF_PB_META_KEY, $config);
 	$new_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];

@@ -4382,33 +4382,37 @@ function lf_ai_assistant_widget_js(): string {
 				? "service_details_checklist_secondary"
 				: "service_details_checklist";
 		}
+		function checklistPrimarySecondaryItemsFromWrap(wrap) {
+			var primaryItems = [];
+			var secondaryItems = [];
+			if (!wrap || !wrap.querySelector) {
+				return { primaryItems: primaryItems, secondaryItems: secondaryItems };
+			}
+			var host = wrap.querySelector(".lf-service-details__checklists");
+			if (!host) {
+				return { primaryItems: primaryItems, secondaryItems: secondaryItems };
+			}
+			var listEls = Array.prototype.slice.call(host.querySelectorAll("ul.lf-service-details__checklist"));
+			listEls.forEach(function(list){
+				var segItems = checklistItemsFromWrap(wrap, list);
+				if (list.classList && list.classList.contains("lf-service-details__checklist--secondary")) {
+					secondaryItems = secondaryItems.concat(segItems);
+				} else {
+					primaryItems = primaryItems.concat(segItems);
+				}
+			});
+			return { primaryItems: primaryItems, secondaryItems: secondaryItems };
+		}
 		function persistSectionChecklist(wrap, sourceNode) {
 			if (!wrap) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 			if (!sectionId || !sectionSupportsChecklistEditor(sectionType)) return;
-			var sourceList = sourceNode && sourceNode.closest ? sourceNode.closest("ul.lf-service-details__checklist") : null;
-			var items = checklistItemsFromWrap(wrap, sourceList);
-			var fieldKey = checklistFieldKeyFromList(sourceList);
-			var pc = persistContextFromWrap(wrap);
-			setStatus("Saving checklist...", false);
-			$.post(lfAiFloating.ajax_url, {
-				action: "lf_ai_update_section_checklist",
-				nonce: lfAiFloating.nonce,
-				context_type: pc.context_type,
-				context_id: pc.context_id,
-				section_id: sectionId,
-				field_key: fieldKey,
-				items: JSON.stringify(items)
-			}).done(function(res){
-				if (res && res.success) {
-					setStatus((res.data && res.data.message) ? res.data.message : "Checklist saved.", false);
-				} else {
-					setStatus((res && res.data && res.data.message) ? res.data.message : "Checklist save failed.", true);
+			var buckets = checklistPrimarySecondaryItemsFromWrap(wrap);
+			persistSectionLineItems(wrap, "service_details_checklist", buckets.primaryItems, "Saving checklist...", {
+				onDone: function() {
+					persistSectionLineItems(wrap, "service_details_checklist_secondary", buckets.secondaryItems, "Saving checklist...");
 				}
-			}).fail(function(xhr){
-				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Checklist save failed.";
-				setStatus(msg, true);
 			});
 		}
 		function buildChecklistControls() {

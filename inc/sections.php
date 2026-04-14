@@ -699,6 +699,7 @@ function lf_sections_registry(): array {
 				]],
 				['key' => 'service_intro_max_items', 'label' => __('Max services', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
 				['key' => 'service_intro_show_images', 'label' => __('Show images', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
+				['key' => 'service_intro_service_ids', 'label' => __('Selected services (IDs)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 				['key' => 'section_header_align', 'label' => __('Header & intro alignment', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
 					'left' => __('Left', 'leadsforward-core'),
 					'center' => __('Center', 'leadsforward-core'),
@@ -1026,6 +1027,29 @@ function lf_sections_service_details_alias_layouts(): array {
 	return [];
 }
 
+/**
+ * Cap a newline checklist field to five parsed lines (shared by sanitizer + inline saves).
+ */
+function lf_sections_cap_checklist_lines_string(string $raw): string {
+	$lines = lf_sections_parse_lines($raw);
+
+	return implode("\n", array_slice($lines, 0, 5));
+}
+
+function lf_sections_registry_has_field(string $section_id, string $field_key): bool {
+	$section = lf_sections_registry()[ $section_id ] ?? null;
+	if (!$section || empty($section['fields']) || !is_array($section['fields'])) {
+		return false;
+	}
+	foreach ($section['fields'] as $field) {
+		if (($field['key'] ?? '') === $field_key) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 function lf_sections_normalize_service_details_settings(string $section_id, array $settings): array {
 	$aliases = lf_sections_service_details_alias_layouts();
 	if (!isset($aliases[$section_id])) {
@@ -1148,13 +1172,12 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 	if (array_key_exists('section_heading_tag', $input)) {
 		$out['section_heading_tag'] = lf_sections_sanitize_section_heading_tag(['section_heading_tag' => $input['section_heading_tag']]);
 	}
-	if ($section_id === 'service_details' && isset($out['service_details_checklist'])) {
-		$chk_lines = lf_sections_parse_lines((string) $out['service_details_checklist']);
-		$out['service_details_checklist'] = implode("\n", array_slice($chk_lines, 0, 5));
+	// Cap checklist columns after full parse/merge (same max for all layouts that expose these fields).
+	if (isset($out['service_details_checklist'])) {
+		$out['service_details_checklist'] = lf_sections_cap_checklist_lines_string((string) $out['service_details_checklist']);
 	}
-	if ($section_id === 'service_details' && isset($out['service_details_checklist_secondary'])) {
-		$chk2_lines = lf_sections_parse_lines((string) $out['service_details_checklist_secondary']);
-		$out['service_details_checklist_secondary'] = implode("\n", array_slice($chk2_lines, 0, 5));
+	if (isset($out['service_details_checklist_secondary'])) {
+		$out['service_details_checklist_secondary'] = lf_sections_cap_checklist_lines_string((string) $out['service_details_checklist_secondary']);
 	}
 	return $out;
 }
