@@ -407,7 +407,7 @@ function lf_fleet_controller_expected_sig(string $token, string $method, string 
 
 function lf_fleet_controller_build_push_request(string $site_url, string $site_id, string $token, bool $override = false): array {
 	$endpoint = rtrim($site_url, '/') . '/wp-json/lf/v1/fleet/push';
-	$path = (string) wp_parse_url($endpoint, PHP_URL_PATH);
+	$path = '/wp-json/lf/v1/fleet/push';
 	$nonce = function_exists('wp_generate_uuid4') ? wp_generate_uuid4() : (string) wp_rand();
 	$ts = time();
 	$body = [
