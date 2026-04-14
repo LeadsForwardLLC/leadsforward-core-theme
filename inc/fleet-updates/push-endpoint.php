@@ -10,6 +10,17 @@ function lf_fleet_push_build_response(bool $ok, string $message, string $updated
 	];
 }
 
+function lf_fleet_push_build_update_response(string $before, string $after, array $offer, string $last_error): array {
+	$target = isset($offer['version']) ? (string) $offer['version'] : '';
+	if ($target !== '' && $after !== '' && version_compare($after, $target, '>=')) {
+		return lf_fleet_push_build_response(true, 'updated', $after);
+	}
+	if ($last_error !== '') {
+		return lf_fleet_push_build_response(false, $last_error, $after, 'install_failed');
+	}
+	return lf_fleet_push_build_response(false, 'install_failed', $after, 'install_failed');
+}
+
 if (!defined('ABSPATH')) {
 	return;
 }
@@ -49,9 +60,12 @@ function lf_fleet_push_rest_handler(WP_REST_Request $request): WP_REST_Response 
 		return new WP_REST_Response(lf_fleet_push_build_response(false, 'no_update_available', '', 'no_update'), 200);
 	}
 
+	$before = (string) wp_get_theme()->get('Version');
 	lf_fleet_maybe_auto_update(false, true);
-	$theme = wp_get_theme();
-	return new WP_REST_Response(lf_fleet_push_build_response(true, 'updated', (string) $theme->get('Version')), 200);
+	$after = (string) wp_get_theme()->get('Version');
+	$last = json_decode((string) get_option(LF_FLEET_OPT_LAST, ''), true);
+	$last_error = is_array($last) ? (string) ($last['last_upgrade_error'] ?? '') : '';
+	return new WP_REST_Response(lf_fleet_push_build_update_response($before, $after, $offer, $last_error), 200);
 }
 
 add_action('rest_api_init', static function (): void {

@@ -85,6 +85,10 @@ function lf_fleet_controller_site_matches_rollout_tag(array $row, string $tag): 
 	return in_array($tag, lf_fleet_controller_site_tags_list($row), true);
 }
 
+function lf_fleet_controller_override_allowed(array $body): bool {
+	return !empty($body['override']);
+}
+
 function lf_fleet_controller_latest_key_id(): string {
 	$keys = lf_fleet_controller_keys();
 	if ($keys === []) {
@@ -721,22 +725,25 @@ function lf_fleet_controller_handle_api(): void {
 			$debug['reason'] = 'theme_slug_mismatch';
 			lf_fleet_controller_json($debug);
 		}
-		if ($scope === 'off') {
-			$debug['reason'] = 'rollout_disabled';
-			lf_fleet_controller_json($debug);
-		}
-		if ($scope === 'selected' && !$site_rollout) {
-			$debug['reason'] = 'not_in_rollout_cohort';
-			lf_fleet_controller_json($debug);
-		}
-		if ($scope === 'tag') {
-			if ($rollout_tag === '') {
-				$debug['reason'] = 'rollout_tag_unset';
+		$override = lf_fleet_controller_override_allowed($body);
+		if (!$override) {
+			if ($scope === 'off') {
+				$debug['reason'] = 'rollout_disabled';
 				lf_fleet_controller_json($debug);
 			}
-			if (!$tag_match) {
-				$debug['reason'] = 'not_in_rollout_tag';
+			if ($scope === 'selected' && !$site_rollout) {
+				$debug['reason'] = 'not_in_rollout_cohort';
 				lf_fleet_controller_json($debug);
+			}
+			if ($scope === 'tag') {
+				if ($rollout_tag === '') {
+					$debug['reason'] = 'rollout_tag_unset';
+					lf_fleet_controller_json($debug);
+				}
+				if (!$tag_match) {
+					$debug['reason'] = 'not_in_rollout_tag';
+					lf_fleet_controller_json($debug);
+				}
 			}
 		}
 		if ($current !== '' && version_compare($approved_version, $current, '<=')) {
