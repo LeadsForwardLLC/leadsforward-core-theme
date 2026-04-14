@@ -140,7 +140,7 @@ function lf_docs_render_playbook_sections(): void {
 					<li><?php esc_html_e('Use the Structure rail (☰) to jump between sections, reorder from a list, or add sections from the library.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Open the separate “SEO Health” floater for SERP preview, keyword coverage, vitals-oriented hints, and refresh—without leaving the page.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Open “History” for layout restore points (who/when). Use the header reload icon to refresh the list after a teammate saves. “Live” marks the snapshot that matches the current server version.', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('In Rich Text sections, use Insert icon in the toolbar to add [lf_icon name="slug"] shortcodes at the cursor; icons render as SVG on the front end.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('In Rich Text sections, use Insert icon in the toolbar to add [lf_icon name="slug"] shortcodes at the text caret; click inside the paragraph first if the picker reports it cannot find a cursor. Icons render as inline Tabler SVG on the front end and in sanitized previews.', 'leadsforward-core'); ?></li>
 				</ul>
 				<h3><?php esc_html_e('Keyboard shortcuts (when not typing in a field)', 'leadsforward-core'); ?></h3>
 				<ul>
@@ -153,14 +153,19 @@ function lf_docs_render_playbook_sections(): void {
 				<h3><?php esc_html_e('Where it works best', 'leadsforward-core'); ?></h3>
 				<p><?php esc_html_e('Open the static front page or any URL that renders LeadsForward section wrappers (Page Builder). If no sections are detected, the UI explains that you need a page with theme sections—use wp-admin Page Builder or the homepage sections screen instead.', 'leadsforward-core'); ?></p>
 				<p><?php esc_html_e('Structural actions are logged for undo/redo. For legal/schema slug changes, new CPT posts, or manifest-scale generation, stay in wp-admin and the Manifester workflow.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Site header (front-end)', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('Open the Header floater on the public site (same layer as History and SEO Health). Choose a global layout: logo left with links right, centered logo and menu, or a promo strip above the main header. Optionally enable the promo top bar and enter its text, then Save header. Values are stored site-wide (Global Settings options) and the page reloads. Header CTA label and URL still live under LeadsForward → Global Settings.', 'leadsforward-core'); ?></p>
 				<h3><?php esc_html_e('Hero Authority Split: proof card list', 'leadsforward-core'); ?></h3>
-				<p><?php esc_html_e('The right-hand checklist uses hero_proof_bullets, stored in the homepage section option. Inline saves on the static front page always use the homepage target even if the assistant recently ran against another URL, so proof lines persist after refresh.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('The right-hand checklist uses hero_proof_bullets, stored in the homepage section option. Inline saves on the static front page always use the homepage target even if the assistant recently ran against another URL, so proof lines persist after refresh. Conversion Stack pill rows on the homepage hero use the same homepage-scoped save path.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Service details: checklist columns', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('On service (and similar) pages, the service story section can show one or two checklist columns. Inline add, edit, remove, and reorder write back to service_details_checklist and service_details_checklist_secondary so the correct column survives reload. Page Builder remains the source of truth for bulk edits.', 'leadsforward-core'); ?></p>
 			</section>
 
 			<section id="services-areas" class="lf-docs__section">
 				<h2><?php esc_html_e('Services & service areas', 'leadsforward-core'); ?></h2>
 				<p><?php esc_html_e('Create lf_service and lf_service_area posts; link areas to services in the area’s ACF field. After bulk imports, run Bulk Tools → Rebuild internal linking relationships.', 'leadsforward-core'); ?></p>
 				<p><?php esc_html_e('Assign a primary keyword per URL in the SEO meta box; use related anchors when linking between sibling services and parent areas.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('When tuning the service story checklist from the front-end editor, edits in the primary and secondary columns map to separate saved fields; if a line seems to revert, confirm you saved from the checklist area and refresh once.', 'leadsforward-core'); ?></p>
 			</section>
 
 			<section id="projects-reviews" class="lf-docs__section">

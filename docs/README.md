@@ -2,6 +2,12 @@
 
 Use this page as the starting point for architecture, operations, and troubleshooting.
 
+## Theme v0.1.42 (highlights)
+
+- **Header variants:** Global header layout (`modern`, `centered`, `topbar`) plus optional promo top bar, edited from the front-end **Header** floater; stored with Global Settings options (`docs/05_THEME_INTEGRATION.md`).
+- **Save reliability:** Homepage hero proof checklist always saves against the homepage payload; service-details checklist columns map to the correct persisted fields.
+- **Insert icon:** Rich-text toolbar inserts shortcodes at the caret; server renders matching inline SVG for display and after sanitization.
+
 ## Start Here
 - `00_PRODUCTION_READINESS.md` - pre-launch checklist, fleet/cron notes, version alignment.
 - `01_SYSTEM_OVERVIEW.md` - high-level system map and execution phases.
