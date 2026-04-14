@@ -33,9 +33,14 @@ if ($logo_text === '') {
 $layout = function_exists('lf_header_layout') ? lf_header_layout() : 'modern';
 $topbar_enabled = function_exists('lf_header_topbar_enabled') && lf_header_topbar_enabled();
 $topbar_text = function_exists('lf_header_topbar_text') ? lf_header_topbar_text() : '';
+$show_topbar = ($layout === 'topbar' && $topbar_enabled && $topbar_text !== '');
+$header_class = 'site-header site-header--modern site-header--' . $layout;
+if ($show_topbar) {
+	$header_class .= ' site-header--has-topbar';
+}
 ?>
-<header class="site-header site-header--modern site-header--<?php echo esc_attr($layout); ?>" role="banner">
-	<?php if ($layout === 'topbar' && $topbar_enabled && $topbar_text !== '') : ?>
+<header class="<?php echo esc_attr($header_class); ?>" role="banner">
+	<?php if ($show_topbar) : ?>
 		<div class="site-header__topbar"><div class="site-header__topbar-inner"><?php echo esc_html($topbar_text); ?></div></div>
 	<?php endif; ?>
 	<div class="site-header__inner">
@@ -78,7 +83,7 @@ $topbar_text = function_exists('lf_header_topbar_text') ? lf_header_topbar_text(
 					<?php if ($show_cta) : ?>
 						<?php
 					$label = $cta_label !== '' ? $cta_label : ($cta_text ?: __('Free Estimate', 'leadsforward-core'));
-						?>
+					?>
 					<?php if ($cta_url !== '') : ?>
 						<a class="site-header__cta lf-btn lf-btn--primary" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($label); ?></a>
 					<?php else : ?>
@@ -109,20 +114,39 @@ $topbar_text = function_exists('lf_header_topbar_text') ? lf_header_topbar_text(
 		var spacer = header.nextElementSibling && header.nextElementSibling.classList && header.nextElementSibling.classList.contains('site-header__spacer')
 			? header.nextElementSibling
 			: null;
-		function syncHeaderHeight() {
+		var frozenHeaderHeight = 0;
+		function applyFrozenHeaderHeight() {
+			if (!frozenHeaderHeight) return;
+			header.style.setProperty('--lf-header-height', frozenHeaderHeight + 'px');
+			if (spacer) {
+				spacer.style.height = frozenHeaderHeight + 'px';
+				spacer.style.marginTop = '';
+			}
+		}
+		function captureHeaderHeightForLayout() {
 			window.requestAnimationFrame(function () {
-				var h = Math.ceil(header.getBoundingClientRect().height);
-				if (spacer) {
-					spacer.style.height = h + 'px';
-					spacer.style.marginTop = -h + 'px';
+				if (header.classList.contains('site-header--sticky') && !header.classList.contains('site-header--open')) {
+					return;
 				}
+				var h = Math.ceil(header.getBoundingClientRect().height);
+				if (header.classList.contains('site-header--open')) {
+					frozenHeaderHeight = Math.max(frozenHeaderHeight || 0, h);
+				} else {
+					frozenHeaderHeight = h;
+				}
+				applyFrozenHeaderHeight();
 			});
 		}
-		syncHeaderHeight();
-		window.addEventListener('load', syncHeaderHeight, { passive: true });
-		window.addEventListener('resize', syncHeaderHeight, { passive: true });
+		captureHeaderHeightForLayout();
+		window.addEventListener('load', captureHeaderHeightForLayout, { passive: true });
+		window.addEventListener('resize', captureHeaderHeightForLayout, { passive: true });
 		if (typeof ResizeObserver !== 'undefined') {
-			new ResizeObserver(syncHeaderHeight).observe(header);
+			new ResizeObserver(function () {
+				if (header.classList.contains('site-header--sticky') && !header.classList.contains('site-header--open')) {
+					return;
+				}
+				captureHeaderHeightForLayout();
+			}).observe(header);
 		}
 		var toggle = header.querySelector('.site-header__toggle');
 		var panel = header.querySelector('.site-header__panel');
@@ -151,7 +175,7 @@ $topbar_text = function_exists('lf_header_topbar_text') ? lf_header_topbar_text(
 			if (!open) {
 				closeSubmenus();
 			}
-			syncHeaderHeight();
+			captureHeaderHeightForLayout();
 		}
 		if (toggle && panel) {
 			toggle.addEventListener('click', function () {
@@ -238,11 +262,9 @@ $topbar_text = function_exists('lf_header_topbar_text') ? lf_header_topbar_text(
 			if (!stickyOn && y > 8) {
 				stickyOn = true;
 				header.classList.add('site-header--sticky');
-				syncHeaderHeight();
 			} else if (stickyOn && y < 2) {
 				stickyOn = false;
 				header.classList.remove('site-header--sticky');
-				syncHeaderHeight();
 			}
 		}
 		window.addEventListener('scroll', updateStickyFromScroll, { passive: true });
