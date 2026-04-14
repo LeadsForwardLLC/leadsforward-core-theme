@@ -33,7 +33,8 @@ function lf_header_topbar_enabled(): bool {
 }
 
 function lf_header_topbar_text(): string {
-	return function_exists('lf_get_global_option')
+	$raw = function_exists('lf_get_global_option')
 		? (string) lf_get_global_option('lf_header_topbar_text', '')
 		: '';
+	return sanitize_text_field($raw);
 }

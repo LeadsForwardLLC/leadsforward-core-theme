@@ -18,11 +18,23 @@ if (!function_exists('sanitize_key')) {
 		return strtolower((string) preg_replace('/[^a-z0-9_\-]/', '', $key));
 	}
 }
+if (!function_exists('sanitize_text_field')) {
+	function sanitize_text_field(string $str): string {
+		$str = strip_tags($str);
+		return trim(preg_replace('/\s+/u', ' ', $str));
+	}
+}
 
 // Stub option getters used by lf_get_global_option.
 function get_option($key, $default = null) {
 	if ($key === 'options_lf_header_layout') {
 		return 'centered';
+	}
+	if ($key === 'options_lf_header_topbar_enabled') {
+		return '1';
+	}
+	if ($key === 'options_lf_header_topbar_text') {
+		return '  Promo <strong>with</strong> tags  ';
 	}
 	return $default;
 }
@@ -43,3 +55,5 @@ function expect($cond, $msg) {
 expect(lf_header_layout() === 'centered', 'layout reads option');
 expect(lf_header_layout_sanitize('modern') === 'modern', 'sanitize allows modern');
 expect(lf_header_layout_sanitize('bad') === 'modern', 'sanitize defaults');
+expect(lf_header_topbar_enabled() === true, 'topbar enabled reads option');
+expect(lf_header_topbar_text() === 'Promo with tags', 'topbar text is sanitized');
