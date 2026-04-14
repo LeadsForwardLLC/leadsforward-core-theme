@@ -111,17 +111,10 @@ if ($show_topbar) {
 	(function () {
 		var header = document.querySelector('.site-header');
 		if (!header) return;
-		var spacer = header.nextElementSibling && header.nextElementSibling.classList && header.nextElementSibling.classList.contains('site-header__spacer')
-			? header.nextElementSibling
-			: null;
 		var frozenHeaderHeight = 0;
 		function applyFrozenHeaderHeight() {
 			if (!frozenHeaderHeight) return;
 			header.style.setProperty('--lf-header-height', frozenHeaderHeight + 'px');
-			if (spacer) {
-				spacer.style.height = frozenHeaderHeight + 'px';
-				spacer.style.marginTop = '';
-			}
 		}
 		function captureHeaderHeightForLayout() {
 			window.requestAnimationFrame(function () {

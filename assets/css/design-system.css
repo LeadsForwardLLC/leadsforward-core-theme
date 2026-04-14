@@ -2185,7 +2185,7 @@ button:focus-visible,
 }
 
 .site-header__spacer {
-	height: var(--lf-header-height, 0);
+	height: 0;
 	width: 100%;
 	pointer-events: none;
 }
