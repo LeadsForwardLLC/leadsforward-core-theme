@@ -21,6 +21,7 @@ const LF_FLEET_CTRL_OPT_APPROVE_ALL = 'lf_fleet_controller_approve_all'; // Lega
 const LF_FLEET_CTRL_OPT_ROLLOUT_SCOPE = 'lf_fleet_controller_rollout_scope'; // off | all | selected | tag
 const LF_FLEET_CTRL_OPT_ROLLOUT_TAG = 'lf_fleet_controller_rollout_tag'; // tag name when scope=tag (lowercase)
 const LF_FLEET_CTRL_OPT_APPROVED_VERSION = 'lf_fleet_controller_approved_version';
+const LF_FLEET_CTRL_OPT_LAST_PACKAGE = 'lf_fleet_controller_last_package';
 
 const LF_FLEET_CTRL_DL_TRANSIENT_PREFIX = 'lf_fleet_dl_';
 
@@ -276,6 +277,16 @@ function lf_fleet_controller_site_eligible_for_rollout(array $row): bool {
 	return false;
 }
 
+/**
+ * Store the most recent package download attempt for debugging.
+ *
+ * @param array<string, mixed> $payload
+ */
+function lf_fleet_controller_log_package_event(array $payload): void {
+	$payload['logged_at'] = time();
+	update_option(LF_FLEET_CTRL_OPT_LAST_PACKAGE, wp_json_encode($payload));
+}
+
 function lf_fleet_controller_enabled(): bool {
 	return get_option(LF_FLEET_CTRL_OPT_ENABLED, '0') === '1';
 }
@@ -516,6 +527,11 @@ function lf_fleet_controller_handle_api(): void {
 		$t = isset($_GET['t']) ? sanitize_text_field((string) wp_unslash($_GET['t'])) : '';
 		$s = isset($_GET['site_id']) ? sanitize_text_field((string) wp_unslash($_GET['site_id'])) : '';
 		if ($t === '' || $s === '') {
+			lf_fleet_controller_log_package_event([
+				'ok' => false,
+				'reason' => 'missing_params',
+				'site_id' => $s,
+			]);
 			status_header(404);
 			exit;
 		}
@@ -525,6 +541,12 @@ function lf_fleet_controller_handle_api(): void {
 			$sites = lf_fleet_controller_sites();
 			$site_row = is_array($sites[$s] ?? null) ? $sites[$s] : [];
 			if ($site_row === [] || !lf_fleet_controller_site_eligible_for_rollout($site_row)) {
+				lf_fleet_controller_log_package_event([
+					'ok' => false,
+					'reason' => 'token_missing_or_ineligible',
+					'site_id' => $s,
+					'eligible' => $site_row !== [] && lf_fleet_controller_site_eligible_for_rollout($site_row),
+				]);
 				status_header(404);
 				exit;
 			}
@@ -533,11 +555,24 @@ function lf_fleet_controller_handle_api(): void {
 			$sig = isset($_GET['sig']) ? sanitize_text_field((string) wp_unslash($_GET['sig'])) : '';
 			$token = trim((string) ($site_row['token'] ?? ''));
 			if ($token === '' || $ts <= 0 || $nonce === '' || $sig === '' || abs(time() - $ts) > 600) {
+				lf_fleet_controller_log_package_event([
+					'ok' => false,
+					'reason' => 'fallback_sig_missing_or_expired',
+					'site_id' => $s,
+					'ts' => $ts,
+					'nonce_present' => $nonce !== '',
+					'sig_present' => $sig !== '',
+				]);
 				status_header(404);
 				exit;
 			}
 			$expected = lf_fleet_controller_download_sig($token, $ts, $nonce, $s);
 			if (!hash_equals($expected, $sig)) {
+				lf_fleet_controller_log_package_event([
+					'ok' => false,
+					'reason' => 'fallback_sig_invalid',
+					'site_id' => $s,
+				]);
 				status_header(404);
 				exit;
 			}
@@ -545,6 +580,12 @@ function lf_fleet_controller_handle_api(): void {
 			$version = lf_fleet_controller_current_version();
 			$zip = lf_fleet_controller_get_theme_zip($controller_slug, $version);
 			if (empty($zip['ok']) || $zip['path'] === '') {
+				lf_fleet_controller_log_package_event([
+					'ok' => false,
+					'reason' => 'fallback_zip_build_failed',
+					'site_id' => $s,
+					'zip_error' => (string) ($zip['error'] ?? ''),
+				]);
 				status_header(404);
 				exit;
 			}
@@ -557,6 +598,11 @@ function lf_fleet_controller_handle_api(): void {
 			$expires_at = is_array($row) ? (int) ($row['expires_at'] ?? 0) : 0;
 			if ($expires_at > 0 && $expires_at < time()) {
 				delete_transient($key);
+				lf_fleet_controller_log_package_event([
+					'ok' => false,
+					'reason' => 'token_expired',
+					'site_id' => $s,
+				]);
 				status_header(404);
 				exit;
 			}
@@ -568,6 +614,12 @@ function lf_fleet_controller_handle_api(): void {
 				$zip = lf_fleet_controller_get_theme_zip($controller_slug, $version);
 				if (empty($zip['ok']) || $zip['path'] === '') {
 					delete_transient($key);
+					lf_fleet_controller_log_package_event([
+						'ok' => false,
+						'reason' => 'token_zip_missing_and_rebuild_failed',
+						'site_id' => $s,
+						'zip_error' => (string) ($zip['error'] ?? ''),
+					]);
 					status_header(404);
 					exit;
 				}
@@ -577,9 +629,20 @@ function lf_fleet_controller_handle_api(): void {
 		}
 		// Quick integrity check before streaming.
 		if ($sha !== '' && strtolower(hash_file('sha256', $path)) !== strtolower($sha)) {
+			lf_fleet_controller_log_package_event([
+				'ok' => false,
+				'reason' => 'sha_mismatch',
+				'site_id' => $s,
+			]);
 			status_header(500);
 			exit;
 		}
+		lf_fleet_controller_log_package_event([
+			'ok' => true,
+			'reason' => 'served',
+			'site_id' => $s,
+			'path' => basename($path),
+		]);
 		header('Content-Type: application/zip');
 		header('Content-Disposition: attachment; filename="' . basename($path) . '"');
 		header('Content-Length: ' . (string) filesize($path));
