@@ -217,6 +217,7 @@ function lf_fleet_updates_admin_render(): void {
 	$token = (string) get_option(LF_FLEET_OPT_TOKEN, '');
 	$pubkeys = (string) get_option(LF_FLEET_OPT_PUBKEYS, '[]');
 	$connected = function_exists('lf_fleet_is_connected') ? lf_fleet_is_connected() : false;
+	$is_controller = function_exists('lf_fleet_controller_enabled') ? lf_fleet_controller_enabled() : false;
 	$summary = function_exists('lf_fleet_last_check_summary') ? lf_fleet_last_check_summary() : [
 		'has_data' => false,
 		'checked_at' => 0,
@@ -271,6 +272,9 @@ function lf_fleet_updates_admin_render(): void {
 	echo '<p style="margin:0 0 8px;"><strong>' . esc_html__('Connection', 'leadsforward-core') . '</strong> ';
 	echo $connected ? '<span style="color:#15803d;font-weight:700;">' . esc_html__('Connected', 'leadsforward-core') . '</span>' : '<span style="color:#b91c1c;font-weight:700;">' . esc_html__('Not connected', 'leadsforward-core') . '</span>';
 	echo '</p>';
+	if ($is_controller) {
+		echo '<p style="margin:0 0 6px;color:#64748b;">' . esc_html__('Controller mode is enabled on this site. Client connection settings are not used here.', 'leadsforward-core') . '</p>';
+	}
 	echo '<p style="margin:0 0 6px;"><strong>' . esc_html__('Theme version on this site', 'leadsforward-core') . '</strong> <code>' . esc_html($installed_ver !== '' ? $installed_ver : '—') . '</code></p>';
 	if ($summary['has_data'] && $summary['checked_at'] > 0) {
 		echo '<p style="margin:0 0 6px;"><strong>' . esc_html__('Last controller check', 'leadsforward-core') . '</strong> ';
@@ -340,7 +344,6 @@ function lf_fleet_updates_admin_render(): void {
 
 	// Controller section (only shows when controller module is present).
 	if (function_exists('lf_fleet_controller_enabled')) {
-		$is_controller = lf_fleet_controller_enabled();
 		echo '<hr style="margin:28px 0;" />';
 		echo '<h2>' . esc_html__('Controller (use only on theme.leadsforward.com)', 'leadsforward-core') . '</h2>';
 		echo '<p class="description">' . esc_html__('Mint Site IDs, signing keys, and rollout rules. Fleet sites use the section above; do not enable controller mode on normal fleet installs.', 'leadsforward-core') . '</p>';
@@ -353,10 +356,10 @@ function lf_fleet_updates_admin_render(): void {
 		echo '<p style="margin-top:10px;"><button type="submit" class="button button-primary" name="lf_fleet_controller_save" value="1">' . esc_html__('Save controller settings', 'leadsforward-core') . '</button></p>';
 
 		if ($is_controller) {
+			$current_version = function_exists('lf_fleet_controller_current_version') ? lf_fleet_controller_current_version() : '';
 			$approved_version = (string) get_option(LF_FLEET_CTRL_OPT_APPROVED_VERSION, '');
-			if ($approved_version === '' && function_exists('lf_fleet_controller_current_version')) {
-				$approved_version = lf_fleet_controller_current_version();
-			}
+			$display_version = $current_version !== '' ? $current_version : $approved_version;
+			$legacy_version = ($approved_version !== '' && $current_version !== '' && $approved_version !== $current_version) ? $approved_version : '';
 			$rollout_scope = function_exists('lf_fleet_controller_rollout_scope') ? lf_fleet_controller_rollout_scope() : 'off';
 			$rollout_tag_val = (string) get_option(LF_FLEET_CTRL_OPT_ROLLOUT_TAG, '');
 			$sites = function_exists('lf_fleet_controller_sites') ? lf_fleet_controller_sites() : [];
@@ -387,7 +390,7 @@ function lf_fleet_updates_admin_render(): void {
 					/* translators: 1: site count, 2: version */
 					__('Rollout: all %1$d registered site(s) may receive version %2$s.', 'leadsforward-core'),
 					$n_reg,
-					$approved_version
+					$display_version
 				);
 			} elseif ($rollout_scope === 'selected') {
 				$sum_msg = sprintf(
@@ -395,7 +398,7 @@ function lf_fleet_updates_admin_render(): void {
 					__('Rollout: %1$d of %2$d site(s) checked for updates to version %3$s.', 'leadsforward-core'),
 					$n_pick,
 					$n_reg,
-					$approved_version
+					$display_version
 				);
 			} elseif ($rollout_scope === 'tag') {
 				$sum_msg = sprintf(
@@ -403,7 +406,7 @@ function lf_fleet_updates_admin_render(): void {
 					__('Rollout: tag “%1$s” matches %2$d site(s) for version %3$s.', 'leadsforward-core'),
 					$rollout_tag_val !== '' ? $rollout_tag_val : '—',
 					$n_tag_match,
-					$approved_version
+					$display_version
 				);
 			} else {
 				$sum_msg = __('Rollout scope is not recognized; save rollout settings again.', 'leadsforward-core');
@@ -429,7 +432,11 @@ function lf_fleet_updates_admin_render(): void {
 			echo '<h3 style="margin-top:18px;">' . esc_html__('Rollout (push)', 'leadsforward-core') . '</h3>';
 			echo '<p class="description">' . esc_html__('The controller only serves the theme version it is currently running. Choose which registered sites may receive that update.', 'leadsforward-core') . '</p>';
 			echo '<table class="form-table" role="presentation">';
-			echo '<tr><th scope="row">' . esc_html__('Controller version', 'leadsforward-core') . '</th><td><input type="text" class="regular-text" value="' . esc_attr($approved_version) . '" readonly /></td></tr>';
+			echo '<tr><th scope="row">' . esc_html__('Controller version (running)', 'leadsforward-core') . '</th><td><input type="text" class="regular-text" value="' . esc_attr($display_version) . '" readonly />';
+			if ($legacy_version !== '') {
+				echo '<p class="description" style="margin:6px 0 0;">' . esc_html(sprintf(__('Legacy approved version saved in options: %s (not used for update offers).', 'leadsforward-core'), $legacy_version)) . '</p>';
+			}
+			echo '</td></tr>';
 			echo '<tr><th scope="row">' . esc_html__('Who gets updates', 'leadsforward-core') . '</th><td>';
 			echo '<fieldset><label style="display:block;margin:0 0 6px;"><input type="radio" name="lf_fleet_rollout_scope" value="off" ' . checked($rollout_scope, 'off', false) . ' /> ' . esc_html__('Nobody (rollout paused)', 'leadsforward-core') . '</label>';
 			echo '<label style="display:block;margin:0 0 6px;"><input type="radio" name="lf_fleet_rollout_scope" value="all" ' . checked($rollout_scope, 'all', false) . ' /> ' . esc_html__('All registered sites', 'leadsforward-core') . '</label>';
