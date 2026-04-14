@@ -20,10 +20,12 @@ function lf_fleet_push_rest_handler(WP_REST_Request $request): WP_REST_Response 
 	}
 	$site_id = (string) get_option(LF_FLEET_OPT_SITE_ID, '');
 	$token = (string) get_option(LF_FLEET_OPT_TOKEN, '');
-	$headers = [];
-	foreach ($request->get_headers() as $key => $vals) {
-		$headers['X-' . str_replace(' ', '-', ucwords(str_replace('-', ' ', $key)))] = (string) ($vals[0] ?? '');
-	}
+	$headers = [
+		'X-LF-Site' => (string) $request->get_header('X-LF-Site'),
+		'X-LF-Timestamp' => (string) $request->get_header('X-LF-Timestamp'),
+		'X-LF-Nonce' => (string) $request->get_header('X-LF-Nonce'),
+		'X-LF-Signature' => (string) $request->get_header('X-LF-Signature'),
+	];
 	$body = (string) $request->get_body();
 	$path = '/wp-json/lf/v1/fleet/push';
 	$nonce_seen = static function (string $key): bool {
