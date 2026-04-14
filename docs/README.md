@@ -21,6 +21,7 @@ Use this page as the starting point for architecture, operations, and troublesho
 
 ## Deploy / updates
 - `05_THEME_INTEGRATION.md` - includes **Fleet theme updates** (private controller channel, HMAC, signed zips, WP-Cron behavior, optional **controller push** to `POST /wp-json/lf/v1/fleet/push` on each client).
+- **Push trigger / force install:** Operators use **LeadsForward → Theme Docs** (playbook) for *Push update* steps and the optional **force install** control (sends `override: true`, same idea as rollout override on *Check now*—only when you mean to bypass gating). API/body details: `05_THEME_INTEGRATION.md`.
 
 ## Theme CPTs (quick reference)
 - **`lf_faq`** — FAQ accordion selections (`faq_selected_ids`).
