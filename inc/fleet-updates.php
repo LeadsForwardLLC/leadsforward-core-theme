@@ -24,6 +24,7 @@ const LF_FLEET_CRON_HOOK = 'lf_fleet_updates_cron';
 
 require_once LF_THEME_DIR . '/inc/fleet-updates/http.php';
 require_once LF_THEME_DIR . '/inc/fleet-updates/crypto.php';
+require_once LF_THEME_DIR . '/inc/fleet-updates/push-auth.php';
 require_once LF_THEME_DIR . '/inc/fleet-updates/helpers.php';
 require_once LF_THEME_DIR . '/inc/fleet-updates/wp-updates.php';
 require_once LF_THEME_DIR . '/inc/fleet-updates/admin.php';
