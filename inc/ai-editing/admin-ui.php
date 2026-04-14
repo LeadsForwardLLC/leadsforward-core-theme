@@ -823,6 +823,7 @@ add_action('wp_ajax_lf_ai_add_section', 'lf_ai_ajax_add_section');
 add_action('wp_ajax_lf_ai_update_section_style', 'lf_ai_ajax_update_section_style');
 add_action('wp_ajax_lf_ai_update_hero_settings', 'lf_ai_ajax_update_hero_settings');
 add_action('wp_ajax_lf_ai_update_business_map_embed', 'lf_ai_ajax_update_business_map_embed');
+add_action('wp_ajax_lf_ai_update_header_settings', 'lf_ai_ajax_update_header_settings');
 
 function lf_ai_ajax_update_business_map_embed(): void {
 	check_ajax_referer('lf_ai_editing', 'nonce');
@@ -854,6 +855,38 @@ function lf_ai_ajax_update_business_map_embed(): void {
 		'message' => __('Map embed saved.', 'leadsforward-core'),
 		'value' => $clean,
 		'reload' => true,
+	]);
+}
+
+function lf_ai_ajax_update_header_settings(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	if (!function_exists('lf_update_global_option_value')) {
+		wp_send_json_error(['message' => __('Settings could not be saved.', 'leadsforward-core')]);
+	}
+	$layout = isset($_POST['header_layout'])
+		? lf_header_layout_sanitize((string) wp_unslash($_POST['header_layout']))
+		: lf_header_layout();
+	if (isset($_POST['header_topbar_enabled'])) {
+		$topbar_raw = (string) wp_unslash((string) $_POST['header_topbar_enabled']);
+		$enabled = ($topbar_raw === '1' || strtolower($topbar_raw) === 'true' || strtolower($topbar_raw) === 'on') ? '1' : '0';
+	} else {
+		$enabled = lf_header_topbar_enabled() ? '1' : '0';
+	}
+	$text = isset($_POST['header_topbar_text'])
+		? sanitize_text_field((string) wp_unslash($_POST['header_topbar_text']))
+		: lf_header_topbar_text();
+	lf_update_global_option_value('lf_header_layout', $layout);
+	lf_update_global_option_value('lf_header_topbar_enabled', $enabled);
+	lf_update_global_option_value('lf_header_topbar_text', $text);
+	wp_send_json_success([
+		'message' => __('Header settings saved.', 'leadsforward-core'),
+		'reload' => true,
+		'header_layout' => $layout,
+		'header_topbar_enabled' => $enabled === '1',
+		'header_topbar_text' => $text,
 	]);
 }
 
