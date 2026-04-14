@@ -2247,6 +2247,7 @@ function lf_ai_ajax_inline_save(): void {
 				$config[$resolved_section_id][$field_for_selector] = implode("\n", $clean_lines);
 				update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 				error_log('LF CHECKLIST FALLBACK: homepage persisted section=' . $resolved_section_id . ' field=' . $field_for_selector . ' has_link=' . (strpos((string) $config[$resolved_section_id][$field_for_selector], '<a ') !== false ? 'yes' : 'no'));
+				lf_ai_clear_checklist_overrides($context_type, $context_id_use);
 				wp_send_json_success([
 					'message' => __('Inline edit saved.', 'leadsforward-core'),
 					'section_id' => $resolved_section_id,
@@ -2288,6 +2289,7 @@ function lf_ai_ajax_inline_save(): void {
 			$config['sections'][$section_id]['settings'] = $settings;
 			update_post_meta($pid, LF_PB_META_KEY, $config);
 			error_log('LF CHECKLIST FALLBACK: post persisted section=' . $section_id . ' field=' . $field_for_selector . ' has_link=' . (strpos((string) $settings[$field_for_selector], '<a ') !== false ? 'yes' : 'no'));
+			lf_ai_clear_checklist_overrides($context_type, $context_id_use);
 			wp_send_json_success([
 				'message' => __('Inline edit saved.', 'leadsforward-core'),
 				'section_id' => $section_id,

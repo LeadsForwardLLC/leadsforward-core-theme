@@ -4409,8 +4409,13 @@ function lf_ai_assistant_widget_js(): string {
 			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 			if (!sectionId || !sectionSupportsChecklistEditor(sectionType)) return;
 			var buckets = checklistPrimarySecondaryItemsFromWrap(wrap);
-			persistSectionLineItems(wrap, "service_details_checklist", buckets.primaryItems, "Saving checklist...");
-			persistSectionLineItems(wrap, "service_details_checklist_secondary", buckets.secondaryItems, "Saving checklist...");
+			function saveSecondary() {
+				persistSectionLineItems(wrap, "service_details_checklist_secondary", buckets.secondaryItems, "Saving checklist...");
+			}
+			persistSectionLineItems(wrap, "service_details_checklist", buckets.primaryItems, "Saving checklist...", {
+				onDone: function(){ saveSecondary(); },
+				onFail: function(){ saveSecondary(); }
+			});
 		}
 		function buildChecklistControls() {
 			function focusNodeEnd(node) {
@@ -4813,10 +4818,12 @@ function lf_ai_assistant_widget_js(): string {
 					if (typeof opts.onDone === "function") opts.onDone(res);
 				} else {
 					setStatus((res && res.data && res.data.message) ? res.data.message : "List save failed.", true);
+					if (typeof opts.onFail === "function") opts.onFail(res);
 				}
 			}).fail(function(xhr){
 				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "List save failed.";
 				setStatus(msg, true);
+				if (typeof opts.onFail === "function") opts.onFail(xhr);
 			});
 		}
 		function simpleListItemsFromContainer(container, itemSelector) {
