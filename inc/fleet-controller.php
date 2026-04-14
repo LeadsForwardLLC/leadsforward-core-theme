@@ -766,10 +766,14 @@ function lf_fleet_controller_handle_api(): void {
 		$nonce = bin2hex(random_bytes(6));
 		$token = trim((string) ($site_row['token'] ?? ''));
 		$sig_dl = $token !== '' ? lf_fleet_controller_download_sig($token, $ts, $nonce, $site_id) : '';
-		$download_url = home_url('/api/v1/updates/package') . '?site_id=' . rawurlencode($site_id) . '&t=' . rawurlencode($t);
-		if ($sig_dl !== '') {
-			$download_url .= '&ts=' . rawurlencode((string) $ts) . '&nonce=' . rawurlencode($nonce) . '&sig=' . rawurlencode($sig_dl);
-		}
+		$download_url = lf_fleet_controller_build_download_url(
+			home_url('/'),
+			$site_id,
+			$t,
+			$ts,
+			$nonce,
+			$sig_dl
+		);
 
 		lf_fleet_controller_json([
 			'update' => true,
