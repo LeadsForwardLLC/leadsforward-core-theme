@@ -1431,6 +1431,21 @@ function lf_sections_process_steps_for_render(array $settings, ?\WP_Post $post =
 		if ($line === '') {
 			continue;
 		}
+		$decoded = json_decode($line, true);
+		if (is_array($decoded) && array_key_exists('title', $decoded)) {
+			$title = trim((string) $decoded['title']);
+			$body = isset($decoded['body']) ? trim((string) $decoded['body']) : '';
+			if ($title === '') {
+				continue;
+			}
+			$title = lf_sections_strip_inline_process_step_prefix($title);
+			$steps[] = [
+				'id' => 0,
+				'title' => $title,
+				'body' => $body,
+			];
+			continue;
+		}
 		$title = $line;
 		$body = '';
 		if (strpos($line, '||') !== false) {

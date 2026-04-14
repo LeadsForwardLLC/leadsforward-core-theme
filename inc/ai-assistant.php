@@ -9431,10 +9431,18 @@ function lf_ai_assistant_widget_js(): string {
 			if (target === inlineActiveEl || inlineActiveEl.contains(target)) {
 				return;
 			}
-			// Allow clicking within the inline toolbar/panel without closing the active edit.
-			// Do NOT treat the entire assistant containers as "inside" or the toolbar can get stuck open.
-			if ($(target).closest("[data-lf-ai-inline-link-toolbar],[data-lf-ai-inline-link-panel],[data-lf-ai-inline-link-backdrop]").length) {
-				return;
+			// Allow clicking within the inline toolbar/panel/backdrop without closing the active edit.
+			// Use class selectors + native closest so portaled/fixed UI nodes still count as "inside"
+			// without treating unrelated AI assistant markup as part of this surface.
+			var lfInlineLinkUiHit = target && target.nodeType === 3 ? target.parentElement : target;
+			if (lfInlineLinkUiHit && lfInlineLinkUiHit.closest) {
+				if (
+					lfInlineLinkUiHit.closest(".lf-ai-inline-link__panel") ||
+					lfInlineLinkUiHit.closest(".lf-ai-inline-link__toolbar") ||
+					lfInlineLinkUiHit.closest(".lf-ai-inline-link__backdrop")
+				) {
+					return;
+				}
 			}
 			lfHideInlineLinkToolbar();
 			lfInlineToolbarPinnedHost = null;
