@@ -89,6 +89,10 @@ function lf_fleet_controller_override_allowed(array $body): bool {
 	return !empty($body['override']);
 }
 
+function lf_fleet_controller_should_bypass_rollout(string $scope, array $body): bool {
+	return $scope !== 'off' && !empty($body['override']);
+}
+
 function lf_fleet_controller_latest_key_id(): string {
 	$keys = lf_fleet_controller_keys();
 	if ($keys === []) {
@@ -725,12 +729,12 @@ function lf_fleet_controller_handle_api(): void {
 			$debug['reason'] = 'theme_slug_mismatch';
 			lf_fleet_controller_json($debug);
 		}
-		$override = lf_fleet_controller_override_allowed($body);
-		if (!$override) {
-			if ($scope === 'off') {
-				$debug['reason'] = 'rollout_disabled';
-				lf_fleet_controller_json($debug);
-			}
+		if ($scope === 'off') {
+			$debug['reason'] = 'rollout_disabled';
+			lf_fleet_controller_json($debug);
+		}
+		$bypass = lf_fleet_controller_should_bypass_rollout($scope, $body);
+		if (!$bypass) {
 			if ($scope === 'selected' && !$site_rollout) {
 				$debug['reason'] = 'not_in_rollout_cohort';
 				lf_fleet_controller_json($debug);
