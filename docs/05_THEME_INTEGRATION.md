@@ -90,13 +90,38 @@ In wp-admin:
   - The site verifies **Ed25519 signature** + **SHA-256 checksum**
   - Then installs via WordPress upgrader APIs
 - **Check now** (wp-admin): contacts the controller immediately and, for authorized users, attempts install without waiting for cron.
+- **Controller push** (optional): the controller WordPress can `POST` each connected site’s REST route so the site checks the controller and installs without waiting for cron (see below).
 - **Manual update** from Appearance → Themes uses the same verified zip path; controller download URLs are **one-time tokens**—the theme caches the verified zip within a single upgrade request so WordPress does not request the URL twice.
 
+### Controller-initiated push (`POST /wp-json/lf/v1/fleet/push`)
+
+When a fleet site is connected, the controller (same codebase, controller mode) can trigger an immediate **check → offer → install** cycle by posting to that site’s public REST URL. Only requests that pass **HMAC verification** run the flow; there is no unauthenticated “install now.”
+
+**Headers** (same signing scheme as outbound fleet API calls):
+
+| Header | Purpose |
+|--------|---------|
+| `X-LF-Site` | Must match the site’s stored fleet **site ID**. |
+| `X-LF-Timestamp` | Unix time; must be within **±5 minutes** of the server clock. |
+| `X-LF-Nonce` | Unique per request; stored briefly to block **replay** (about 10 minutes). |
+| `X-LF-Signature` | Base64 **HMAC-SHA256** over `METHOD\nPATH\nTIMESTAMP\nNONCE\nSHA256(body)` using the per-site token. Path must be exactly `/wp-json/lf/v1/fleet/push` (method `POST`). |
+
+**Body** (JSON): `action` = `check_install`, optional `override` (boolean), `request_id` (echoed as nonce material; use a UUID). When `override` is true, the site asks the controller for an update the same way as **Check now** with rollout override—use only when the controller operator intends to bypass normal rollout gating.
+
+**Responses** (JSON body always includes `ok`, `message`, `updated_to`, `error_code`):
+
+- **401** + `ok: false`: not connected, missing/bad headers, wrong site, expired timestamp, replay, or bad signature (`error_code` mirrors the failure reason).
+- **200** + `ok: false`, `no_update`: controller had nothing to offer (still a normal HTTP 200 so transports do not treat it as a hard failure).
+- **200** + `ok: true`, `message: updated`, `updated_to`: theme version after a successful install.
+- **200** + `ok: false`, `install_failed`: an offer existed but the upgrader did not reach the target version; check `message` / site **Fleet Updates** last result.
+
+Cron and **Check now** remain the primary paths for sites that never receive a push; push does not replace heartbeat or recurring pull unless you always push from the controller UI.
+
 ### Security notes
-- Requests are **HMAC-signed** with a per-site token and include timestamp + nonce for replay protection.
+- Outbound fleet API requests and inbound push requests are **HMAC-signed** with the per-site token; timestamp + nonce limit replay.
 - Theme zips are verified before install:
   - If signature or checksum fails, the update is refused.
-- No inbound “install now” endpoint exists on fleet sites (pull-only).
+- The only inbound fleet trigger is **`POST /wp-json/lf/v1/fleet/push`**, and it requires a valid signature for that site’s token.
 
 ## SEO Enforcement
 Two layers are enforced:

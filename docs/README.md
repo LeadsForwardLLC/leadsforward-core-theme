@@ -20,7 +20,7 @@ Use this page as the starting point for architecture, operations, and troublesho
 - `07_ICON_SYSTEM.md` - icon picker and icon taxonomy usage.
 
 ## Deploy / updates
-- `05_THEME_INTEGRATION.md` - includes **Fleet theme updates** (private controller channel, HMAC, signed zips, WP-Cron behavior).
+- `05_THEME_INTEGRATION.md` - includes **Fleet theme updates** (private controller channel, HMAC, signed zips, WP-Cron behavior, optional **controller push** to `POST /wp-json/lf/v1/fleet/push` on each client).
 
 ## Theme CPTs (quick reference)
 - **`lf_faq`** — FAQ accordion selections (`faq_selected_ids`).

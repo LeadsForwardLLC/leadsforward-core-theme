@@ -73,7 +73,7 @@ function lf_docs_render_playbook_sections(): void {
 					<li><strong>Homepage sections</strong> — <?php esc_html_e('Section order for the static front page (direct URL only); prefer editing the Home page under Pages when possible.', 'leadsforward-core'); ?></li>
 					<li><strong>Quote Builder / Contact Form</strong> — <?php esc_html_e('Lead capture configuration.', 'leadsforward-core'); ?></li>
 					<li><strong>SEO & Performance</strong> — <?php esc_html_e('Tab: SEO settings. Tab: Site health (status, GTM check, manifester check, pre-launch run, QA checklist).', 'leadsforward-core'); ?></li>
-					<li><strong>Fleet Updates</strong> — <?php esc_html_e('Connect fleet clients to a controller for signed automatic theme ZIP installs.', 'leadsforward-core'); ?></li>
+					<li><strong>Fleet Updates</strong> — <?php esc_html_e('Connect fleet clients to a controller for signed automatic theme ZIP installs; in controller mode, push updates to one site, a selection, or a tag.', 'leadsforward-core'); ?></li>
 					<li><strong>Bulk Tools / Backup & Restore</strong> — <?php esc_html_e('Batch preset, CTAs, schema toggles, linking rebuild; config export/import.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('ACF submenus (CTAs, Schema, Variation, etc.) when ACF options pages are active.', 'leadsforward-core'); ?></li>
 				</ul>
@@ -201,7 +201,16 @@ function lf_docs_render_playbook_sections(): void {
 					<li><?php esc_html_e('Rollout (all sites, selected sites, or tag) is configured on the controller site; a site that is not eligible will see a reason in the last check summary.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('If navigation disappears after a theme upgrade, open Appearance → Menus → Manage Locations and assign your menu to the Header Menu display location.', 'leadsforward-core'); ?></li>
 				</ul>
-				<p><?php esc_html_e('Technical detail for developers: signed downloads, HMAC API requests, and apply path are documented in docs/05_THEME_INTEGRATION.md.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Controller mode: push update to fleet sites', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('When the same screen is running as the controller (fleet controller enabled), the sites table adds push actions so you can trigger a signed remote check-and-install without opening each client’s wp-admin.', 'leadsforward-core'); ?></p>
+				<ul>
+					<li><?php esc_html_e('Per site: use Push update on that row.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Bulk: tick the checkboxes for the sites you want, then Push update to selected sites.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('By tag: enter a tag (lowercase, as stored on the site row) and use Push sites with tag to push every connected site that lists that tag.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Optional checkbox Force install (override rollout): when checked, pushes behave like Check now with rollout override so the controller can offer an update even when normal rollout scope would skip the site. Use deliberately.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Last push time/status/message on each row reflects the HTTP result and JSON message from the client site.', 'leadsforward-core'); ?></li>
+				</ul>
+				<p><?php esc_html_e('Technical detail for developers: signed downloads, HMAC (including the inbound push route), and apply path are documented in docs/05_THEME_INTEGRATION.md.', 'leadsforward-core'); ?></p>
 			</section>
 
 			<section id="developer-reference" class="lf-docs__section">
@@ -234,7 +243,7 @@ function lf_docs_render_playbook_sections(): void {
 					<li><?php esc_html_e('AI created a service but the main editor is empty: open Page Builder—the copy is in sections. Retry the prompt asking for page_builder section fields if a section stayed default.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Map missing on contact/home: paste the iframe under Global Settings → Business entity; confirm the Map + NAP section is enabled on that template.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('“Add to header menu” missing or service link lands top-level: assign a menu to Header Menu; you need edit theme options; if already in menu the checkbox hides. For Services/Areas submenus, the parent items need the wizard menu classes—fix under Appearance → Menus.', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('Fleet update never arrives: confirm rollout on the controller, run Check now, and ensure WP-Cron runs (traffic or server cron). If manual update says download failed, verify controller rewrites and try again after a fresh check.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Fleet update never arrives: confirm rollout on the controller, run Check now or a controller Push update, and ensure WP-Cron still runs for routine pulls and heartbeats. If manual update says download failed, verify controller rewrites and try again after a fresh check.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Header nav missing after an update: Appearance → Menus → Manage Locations → assign your menu to Header Menu.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Rich Text Insert icon does nothing: click inside the paragraph first so the caret is in the prose, then open the picker.', 'leadsforward-core'); ?></li>
 				</ul>
