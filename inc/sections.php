@@ -1152,6 +1152,10 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 		$chk_lines = lf_sections_parse_lines((string) $out['service_details_checklist']);
 		$out['service_details_checklist'] = implode("\n", array_slice($chk_lines, 0, 5));
 	}
+	if ($section_id === 'service_details' && isset($out['service_details_checklist_secondary'])) {
+		$chk2_lines = lf_sections_parse_lines((string) $out['service_details_checklist_secondary']);
+		$out['service_details_checklist_secondary'] = implode("\n", array_slice($chk2_lines, 0, 5));
+	}
 	return $out;
 }
 
@@ -3010,6 +3014,19 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 			}
 			$step_title = rtrim(trim($step_title), ':');
 			$step_body = trim($step_body);
+			// CPT-backed steps may be authored as "Label: details" in the title field.
+			// For parity with line-based steps, only bold the prefix before ":" when body is empty.
+			$step_title_prefix = '';
+			$step_title_suffix = '';
+			if ($step_body === '' && strpos($step_title, ':') !== false) {
+				$parts = array_map('trim', explode(':', $step_title, 2));
+				$step_title_prefix = (string) ($parts[0] ?? '');
+				$step_title_suffix = (string) ($parts[1] ?? '');
+				if ($step_title_prefix === '') {
+					$step_title_prefix = $step_title;
+					$step_title_suffix = '';
+				}
+			}
 			?>
 			<li class="lf-process__step" <?php echo $step_id > 0 ? 'data-lf-process-id="' . esc_attr((string) $step_id) . '"' : ''; ?>>
 				<div class="lf-process__step-main">
@@ -3017,7 +3034,11 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 						<span class="lf-process__step-title"><strong class="lf-process__step-heading"><?php echo esc_html($step_title); ?></strong></span>
 						<span class="lf-process__step-body"><?php echo esc_html($step_body); ?></span>
 					<?php else : ?>
-						<span class="lf-process__text"><strong class="lf-process__step-heading"><?php echo esc_html($step_title); ?></strong></span>
+						<?php if ($step_title_prefix !== '' && $step_title_suffix !== '') : ?>
+							<span class="lf-process__text"><strong class="lf-process__step-heading"><?php echo esc_html($step_title_prefix); ?></strong> <?php echo esc_html($step_title_suffix); ?></span>
+						<?php else : ?>
+							<span class="lf-process__text"><strong class="lf-process__step-heading"><?php echo esc_html($step_title); ?></strong></span>
+						<?php endif; ?>
 					<?php endif; ?>
 				</div>
 			</li>

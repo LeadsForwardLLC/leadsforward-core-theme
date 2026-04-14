@@ -2579,8 +2579,9 @@ function lf_ai_ajax_update_section_checklist(): void {
 		$items[] = $value;
 	}
 	$items = array_values(array_unique($items));
-	if (count($items) > 20) {
-		$items = array_slice($items, 0, 20);
+	// Checklist items are intentionally capped for consistent UX + generation quality.
+	if (count($items) > 5) {
+		$items = array_slice($items, 0, 5);
 	}
 	$value = implode("\n", $items);
 	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
@@ -3466,11 +3467,26 @@ function lf_ai_ajax_service_library(): void {
 		$q->the_post();
 		$sid = (int) get_the_ID();
 		$thumb = get_the_post_thumbnail_url($sid, 'medium');
+		$short_desc = function_exists('get_field') ? (string) get_field('lf_service_short_desc', $sid) : '';
+		if ($short_desc === '') {
+			$short_desc = (string) get_post_meta($sid, 'lf_service_short_desc', true);
+		}
+		$desc = '';
+		if ($short_desc !== '') {
+			$desc = wp_trim_words(wp_strip_all_tags($short_desc), 28);
+		}
+		if ($desc === '') {
+			$excerpt = get_the_excerpt($sid);
+			if (is_string($excerpt) && $excerpt !== '') {
+				$desc = wp_trim_words(wp_strip_all_tags($excerpt), 28);
+			}
+		}
 		$rows[] = [
 			'id'            => $sid,
 			'title'         => html_entity_decode((string) get_the_title(), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
 			'permalink'     => (string) get_permalink($sid),
 			'thumbnail_url' => is_string($thumb) ? $thumb : '',
+			'short_desc'    => $desc,
 		];
 	}
 	wp_reset_postdata();
@@ -3625,6 +3641,10 @@ function lf_ai_ajax_update_section_lines(): void {
 	}
 	if (count($items) > 40) {
 		$items = array_slice($items, 0, 40);
+	}
+	// Keep service_details checklists short and consistent with section sanitizer expectations.
+	if (in_array($field_key, ['service_details_checklist', 'service_details_checklist_secondary'], true) && count($items) > 5) {
+		$items = array_slice($items, 0, 5);
 	}
 	$value = implode("\n", $items);
 	if (defined('WP_DEBUG') && WP_DEBUG && $field_key === 'benefits_items') {
