@@ -135,6 +135,7 @@ function lf_fleet_check_for_update(bool $override = false): void {
 		'site_id' => (string) get_option(LF_FLEET_OPT_SITE_ID, ''),
 		'theme_slug' => $slug,
 		'current' => $cur,
+		'override' => $override,
 	]);
 
 	update_option(LF_FLEET_OPT_LAST, wp_json_encode([
