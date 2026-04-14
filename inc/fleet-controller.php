@@ -240,12 +240,11 @@ function lf_fleet_controller_sign_release(string $kid, string $message): string 
 function lf_fleet_controller_issue_download_token(string $site_id, string $zip_path, string $sha256, int $ttl = 600): string {
 	$t = lf_fleet_controller_token_new();
 	$key = LF_FLEET_CTRL_DL_TRANSIENT_PREFIX . md5($site_id . '|' . $t);
-	// Allow a small number of fetches for legacy clients that download twice.
+	// Allow repeated fetches within the TTL (WordPress sometimes downloads multiple times).
 	set_transient($key, wp_json_encode([
 		'site_id' => $site_id,
 		'path' => $zip_path,
 		'sha256' => $sha256,
-		'uses_left' => 2,
 		'expires_at' => time() + max(60, $ttl),
 	]), $ttl);
 	return $t;
@@ -503,7 +502,6 @@ function lf_fleet_controller_handle_api(): void {
 		$row = json_decode($payload, true);
 		$path = is_array($row) ? (string) ($row['path'] ?? '') : '';
 		$sha = is_array($row) ? (string) ($row['sha256'] ?? '') : '';
-		$uses_left = is_array($row) ? (int) ($row['uses_left'] ?? 1) : 1;
 		$expires_at = is_array($row) ? (int) ($row['expires_at'] ?? 0) : 0;
 		if ($expires_at > 0 && $expires_at < time()) {
 			delete_transient($key);
@@ -514,13 +512,6 @@ function lf_fleet_controller_handle_api(): void {
 			delete_transient($key);
 			status_header(404);
 			exit;
-		}
-		if ($uses_left <= 1) {
-			delete_transient($key);
-		} else {
-			$row['uses_left'] = $uses_left - 1;
-			$ttl_left = $expires_at > 0 ? max(60, $expires_at - time()) : 600;
-			set_transient($key, wp_json_encode($row), $ttl_left);
 		}
 		// Quick integrity check before streaming.
 		if ($sha !== '' && strtolower(hash_file('sha256', $path)) !== strtolower($sha)) {
