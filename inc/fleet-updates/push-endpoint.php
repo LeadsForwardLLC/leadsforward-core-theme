@@ -47,7 +47,7 @@ function lf_fleet_push_rest_handler(WP_REST_Request $request): WP_REST_Response 
 		return new WP_REST_Response(lf_fleet_push_build_response(false, 'no_update_available', '', 'no_update'), 200);
 	}
 
-	lf_fleet_maybe_auto_update(true);
+	lf_fleet_maybe_auto_update(false, true);
 	$theme = wp_get_theme();
 	return new WP_REST_Response(lf_fleet_push_build_response(true, 'updated', (string) $theme->get('Version')), 200);
 }

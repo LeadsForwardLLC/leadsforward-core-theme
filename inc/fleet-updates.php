@@ -24,6 +24,7 @@ const LF_FLEET_CRON_HOOK = 'lf_fleet_updates_cron';
 
 require_once LF_THEME_DIR . '/inc/fleet-updates/http.php';
 require_once LF_THEME_DIR . '/inc/fleet-updates/crypto.php';
+require_once LF_THEME_DIR . '/inc/fleet-updates/push-context.php';
 require_once LF_THEME_DIR . '/inc/fleet-updates/push-auth.php';
 require_once LF_THEME_DIR . '/inc/fleet-updates/push-endpoint.php';
 require_once LF_THEME_DIR . '/inc/fleet-updates/helpers.php';
@@ -178,17 +179,18 @@ function lf_fleet_upgrade_error_message($result, Theme_Upgrader $upgrader): stri
  *
  * @param bool $from_trusted_admin When true, run in wp-admin for users who can edit theme options
  *                                (same capability as the Fleet Updates screen). Cron passes false.
+ * @param bool $from_signed_push When true, request was verified by the signed fleet push endpoint (REST).
  */
-function lf_fleet_maybe_auto_update(bool $from_trusted_admin = false): void {
+function lf_fleet_maybe_auto_update(bool $from_trusted_admin = false, bool $from_signed_push = false): void {
 	$offer = get_site_transient(LF_FLEET_OFFER_TRANSIENT);
 	if (!is_array($offer) || empty($offer['update'])) {
 		return;
 	}
 	$via_cron = defined('DOING_CRON') && DOING_CRON;
 	$cap = defined('LF_OPS_CAP') ? LF_OPS_CAP : 'edit_theme_options';
-	$via_admin = $from_trusted_admin && is_admin() && current_user_can($cap);
-	// Cron: background installs. Admin: explicit "Check now" should install without waiting for cron.
-	if (!$via_cron && !$via_admin) {
+	$via_admin = $from_trusted_admin && function_exists('is_admin') && is_admin() && function_exists('current_user_can') && current_user_can($cap);
+	$via_push = $from_signed_push;
+	if (!lf_fleet_should_run_auto_update($via_cron, $via_admin, $via_push)) {
 		return;
 	}
 
