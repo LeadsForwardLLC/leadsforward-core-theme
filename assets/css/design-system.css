@@ -2163,6 +2163,32 @@ button:focus-visible,
 	background: transparent;
 }
 
+.site-header--sticky {
+	position: sticky;
+	top: 0;
+	z-index: 50;
+}
+
+.site-header__spacer {
+	height: var(--lf-header-height, 0);
+	width: 100%;
+	pointer-events: none;
+}
+
+.site-header__topbar {
+	background: var(--lf-surface-dark);
+	color: #fff;
+	font-size: 0.85rem;
+	line-height: 1.35;
+}
+
+.site-header__topbar-inner {
+	max-width: var(--lf-container-wide);
+	margin: 0 auto;
+	padding: 0.4rem 1rem;
+	text-align: center;
+}
+
 .site-header__inner {
 	max-width: var(--lf-container-wide);
 	margin: 0 auto;
@@ -2175,7 +2201,7 @@ button:focus-visible,
 	transition: all 0.2s ease;
 }
 
-.site-header--scrolled .site-header__inner {
+.site-header--sticky .site-header__inner {
 	background: var(--lf-surface-light);
 	border: 1px solid var(--lf-neutral-300);
 	box-shadow: 0 16px 30px rgba(15,23,42,0.12);
@@ -2197,7 +2223,7 @@ button:focus-visible,
 	display: block;
 }
 
-.site-header--scrolled .site-header__logo-img {
+.site-header--sticky .site-header__logo-img {
 	height: 62px;
 }
 
@@ -2344,16 +2370,26 @@ button:focus-visible,
 	display: inline-flex;
 	align-items: center;
 	gap: 0.4rem;
+	line-height: 1;
 	text-decoration: none;
 	font-weight: 600;
 	color: var(--lf-text-primary);
 }
 
 .site-header__phone-icon {
-	font-size: 0.95rem;
-	vertical-align: middle;
-	position: relative;
-	top: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.site-header__phone-icon .lf-icon {
+	width: 1em;
+	height: 1em;
+}
+
+.site-header__phone-text {
+	display: inline-block;
 }
 
 .site-header__cta {

@@ -30,8 +30,14 @@ $logo_text = function_exists('lf_get_option') ? (string) lf_get_option('lf_busin
 if ($logo_text === '') {
 	$logo_text = get_bloginfo('name');
 }
+$layout = function_exists('lf_header_layout') ? lf_header_layout() : 'modern';
+$topbar_enabled = function_exists('lf_header_topbar_enabled') && lf_header_topbar_enabled();
+$topbar_text = function_exists('lf_header_topbar_text') ? lf_header_topbar_text() : '';
 ?>
-<header class="site-header site-header--modern" role="banner">
+<header class="site-header site-header--modern site-header--<?php echo esc_attr($layout); ?>" role="banner">
+	<?php if ($layout === 'topbar' && $topbar_enabled && $topbar_text !== '') : ?>
+		<div class="site-header__topbar"><div class="site-header__topbar-inner"><?php echo esc_html($topbar_text); ?></div></div>
+	<?php endif; ?>
 	<div class="site-header__inner">
 		<a class="site-header__logo" href="<?php echo esc_url(home_url('/')); ?>" aria-label="<?php echo esc_attr($logo_text ?: __('Home', 'leadsforward-core')); ?>">
 			<?php if ($logo_html) : ?>
@@ -63,12 +69,10 @@ if ($logo_text === '') {
 				<div class="site-header__actions">
 					<?php if ($cta_phone) : ?>
 						<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $cta_phone)); ?>" class="site-header__phone">
-							<?php
-							if (function_exists('lf_icon')) {
-								echo lf_icon('phone', ['class' => 'site-header__phone-icon lf-icon lf-icon--sm lf-icon--inherit', 'aria-hidden' => 'true']);
-							}
-							?>
-							<span><?php esc_html_e('Call Now', 'leadsforward-core'); ?></span>
+							<?php if (function_exists('lf_icon')) : ?>
+								<span class="site-header__phone-icon" aria-hidden="true"><?php echo lf_icon('phone', ['class' => 'lf-icon lf-icon--sm lf-icon--inherit']); ?></span>
+							<?php endif; ?>
+							<span class="site-header__phone-text"><?php esc_html_e('Call Now', 'leadsforward-core'); ?></span>
 						</a>
 					<?php endif; ?>
 					<?php if ($show_cta) : ?>
@@ -97,10 +101,29 @@ if ($logo_text === '') {
 		</div>
 	</div>
 </header>
+<div class="site-header__spacer" aria-hidden="true"></div>
 <script>
 	(function () {
 		var header = document.querySelector('.site-header');
 		if (!header) return;
+		var spacer = header.nextElementSibling && header.nextElementSibling.classList && header.nextElementSibling.classList.contains('site-header__spacer')
+			? header.nextElementSibling
+			: null;
+		function syncHeaderHeight() {
+			window.requestAnimationFrame(function () {
+				var h = Math.ceil(header.getBoundingClientRect().height);
+				if (spacer) {
+					spacer.style.height = h + 'px';
+					spacer.style.marginTop = -h + 'px';
+				}
+			});
+		}
+		syncHeaderHeight();
+		window.addEventListener('load', syncHeaderHeight, { passive: true });
+		window.addEventListener('resize', syncHeaderHeight, { passive: true });
+		if (typeof ResizeObserver !== 'undefined') {
+			new ResizeObserver(syncHeaderHeight).observe(header);
+		}
 		var toggle = header.querySelector('.site-header__toggle');
 		var panel = header.querySelector('.site-header__panel');
 		var closeBtn = header.querySelector('.site-header__close');
@@ -128,6 +151,7 @@ if ($logo_text === '') {
 			if (!open) {
 				closeSubmenus();
 			}
+			syncHeaderHeight();
 		}
 		if (toggle && panel) {
 			toggle.addEventListener('click', function () {
@@ -208,12 +232,20 @@ if ($logo_text === '') {
 				setOpen(false);
 			}
 		});
-		var last = 0;
-		window.addEventListener('scroll', function () {
+		var stickyOn = false;
+		function updateStickyFromScroll() {
 			var y = window.scrollY || window.pageYOffset;
-			if (Math.abs(y - last) < 6) return;
-			header.classList.toggle('site-header--scrolled', y > 12);
-			last = y;
-		}, { passive: true });
+			if (!stickyOn && y > 8) {
+				stickyOn = true;
+				header.classList.add('site-header--sticky');
+				syncHeaderHeight();
+			} else if (stickyOn && y < 2) {
+				stickyOn = false;
+				header.classList.remove('site-header--sticky');
+				syncHeaderHeight();
+			}
+		}
+		window.addEventListener('scroll', updateStickyFromScroll, { passive: true });
+		updateStickyFromScroll();
 	})();
 </script>
