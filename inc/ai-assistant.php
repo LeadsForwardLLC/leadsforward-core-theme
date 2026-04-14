@@ -4737,17 +4737,13 @@ function lf_ai_assistant_widget_js(): string {
 				return textFromNodeWithoutAiControls(node);
 			}).filter(function(text){ return text !== ""; });
 		}
-		function heroProofHtmlItemsFromList(list) {
-			if (!list) return [];
-			return Array.prototype.slice.call(list.querySelectorAll("li")).map(function(li){
-				var span = li.querySelector(".lf-block-hero__card-item-text");
-				// Persist as plain text to avoid sanitizer/plugin variance dropping inline markup
-				// and causing "saved but missing after reload" behavior.
-				return span ? textFromNodeWithoutAiControls(span) : textFromNodeWithoutAiControls(li);
-			}).filter(function(t){ return String(t || "").trim() !== ""; });
+		function heroCardItemsFromWrap(wrap) {
+			if (!wrap || !wrap.querySelector) return [];
+			var list = wrap.querySelector(".lf-block-hero__card-list");
+			return list ? simpleListItemsFromContainer(list, "li") : [];
 		}
 		function persistHeroProofItems(wrap, list) {
-			if (!wrap || !list) return;
+			if (!wrap) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 			var baseType = baseSectionType(sectionType, sectionId);
@@ -4755,7 +4751,7 @@ function lf_ai_assistant_widget_js(): string {
 				sectionId = "hero";
 			}
 			if (!sectionId || baseType !== "hero") return;
-			var items = heroProofHtmlItemsFromList(list);
+			var items = heroCardItemsFromWrap(wrap);
 			var pc = persistContextFromWrap(wrap);
 			setStatus("Saving proof card...", false);
 			$.post(lfAiFloating.ajax_url, {
@@ -4770,10 +4766,10 @@ function lf_ai_assistant_widget_js(): string {
 				if (res && res.success) {
 					setStatus((res.data && res.data.message) ? res.data.message : "Proof card saved.", false);
 				} else {
-					persistSectionLineItems(wrap, "hero_proof_bullets", items, "Saving proof card...");
+					persistSectionLineItems(wrap, "hero_proof_bullets", heroCardItemsFromWrap(wrap), "Saving proof card...");
 				}
 			}).fail(function(){
-				persistSectionLineItems(wrap, "hero_proof_bullets", items, "Saving proof card...");
+				persistSectionLineItems(wrap, "hero_proof_bullets", heroCardItemsFromWrap(wrap), "Saving proof card...");
 			});
 		}
 		function createGenericRemoveButton(onClick) {
@@ -5001,9 +4997,7 @@ function lf_ai_assistant_widget_js(): string {
 				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-list-remove=\"1\"]")).forEach(function(node){
 					if (node && node.parentNode) node.parentNode.removeChild(node);
 				});
-				var list = wrap.querySelector(".lf-hero-split__proof .lf-block-hero__card-list")
-					|| wrap.querySelector(".lf-hero-visual__media .lf-block-hero__card-list")
-					|| wrap.querySelector(".lf-block-hero__card .lf-block-hero__card-list");
+				var list = wrap.querySelector(".lf-block-hero__card-list");
 				if (!list) return;
 				Array.prototype.slice.call(list.querySelectorAll("li")).forEach(function(node){
 					node.removeAttribute("data-lf-inline-editable");

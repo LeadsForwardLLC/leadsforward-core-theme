@@ -3878,6 +3878,21 @@ button:focus-visible,
 	width: 100%;
 }
 
+/* Conversion stack: keep pill rows visible and spaced inside stack layout */
+.lf-hero-stack__chips,
+.lf-hero-stack__pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: center;
+}
+
+.lf-hero-stack__chips .lf-hero-chip,
+.lf-hero-stack__pills .lf-hero-chip {
+	opacity: 1;
+	visibility: visible;
+}
+
 .lf-hero-form__chips,
 .lf-hero-visual__chips,
 .lf-hero-split__chips {
