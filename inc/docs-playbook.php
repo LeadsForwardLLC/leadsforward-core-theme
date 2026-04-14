@@ -197,7 +197,7 @@ function lf_docs_render_playbook_sections(): void {
 					<li><?php esc_html_e('The theme checks about every 15 minutes when WordPress cron runs. Quiet sites may need system cron hitting wp-cron.php, or use Check now after a release.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Check now contacts the controller immediately and attempts install when an update is offered (for users who can manage theme options).', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('If an auto-install fails, the Fleet Updates screen will show an “Auto-install issue” message with the most recent error (filesystem permissions, disabled file mods, or download failures).', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('Controller download tokens are reusable within their TTL to support WordPress update flows that request the package more than once.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Controller download tokens include a signed fallback so legacy clients can still fetch the package even if transient storage misses the token.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Rollout (all sites, selected sites, or tag) is configured on the controller site; a site that is not eligible will see a reason in the last check summary.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('If navigation disappears after a theme upgrade, open Appearance → Menus → Manage Locations and assign your menu to the Header Menu display location.', 'leadsforward-core'); ?></li>
 				</ul>

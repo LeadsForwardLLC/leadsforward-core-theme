@@ -250,6 +250,32 @@ function lf_fleet_controller_issue_download_token(string $site_id, string $zip_p
 	return $t;
 }
 
+function lf_fleet_controller_download_sig(string $token, int $ts, string $nonce, string $site_id): string {
+	$body_sha = hash('sha256', $site_id);
+	return lf_fleet_controller_expected_sig($token, 'GET', '/api/v1/updates/package', $ts, $nonce, $body_sha);
+}
+
+function lf_fleet_controller_site_eligible_for_rollout(array $row): bool {
+	$scope = lf_fleet_controller_rollout_scope();
+	$rollout_tag = lf_fleet_controller_rollout_tag();
+	if ($scope === 'off') {
+		return false;
+	}
+	if ($scope === 'all') {
+		return true;
+	}
+	if ($scope === 'selected') {
+		return !empty($row['rollout']);
+	}
+	if ($scope === 'tag') {
+		if ($rollout_tag === '') {
+			return false;
+		}
+		return lf_fleet_controller_site_matches_rollout_tag($row, $rollout_tag);
+	}
+	return false;
+}
+
 function lf_fleet_controller_enabled(): bool {
 	return get_option(LF_FLEET_CTRL_OPT_ENABLED, '0') === '1';
 }
@@ -496,22 +522,49 @@ function lf_fleet_controller_handle_api(): void {
 		$key = LF_FLEET_CTRL_DL_TRANSIENT_PREFIX . md5($s . '|' . $t);
 		$payload = (string) get_transient($key);
 		if ($payload === '') {
-			status_header(404);
-			exit;
-		}
-		$row = json_decode($payload, true);
-		$path = is_array($row) ? (string) ($row['path'] ?? '') : '';
-		$sha = is_array($row) ? (string) ($row['sha256'] ?? '') : '';
-		$expires_at = is_array($row) ? (int) ($row['expires_at'] ?? 0) : 0;
-		if ($expires_at > 0 && $expires_at < time()) {
-			delete_transient($key);
-			status_header(404);
-			exit;
-		}
-		if ($path === '' || !is_readable($path)) {
-			delete_transient($key);
-			status_header(404);
-			exit;
+			$sites = lf_fleet_controller_sites();
+			$site_row = is_array($sites[$s] ?? null) ? $sites[$s] : [];
+			if ($site_row === [] || !lf_fleet_controller_site_eligible_for_rollout($site_row)) {
+				status_header(404);
+				exit;
+			}
+			$ts = isset($_GET['ts']) ? (int) wp_unslash((string) $_GET['ts']) : 0;
+			$nonce = isset($_GET['nonce']) ? sanitize_text_field((string) wp_unslash($_GET['nonce'])) : '';
+			$sig = isset($_GET['sig']) ? sanitize_text_field((string) wp_unslash($_GET['sig'])) : '';
+			$token = trim((string) ($site_row['token'] ?? ''));
+			if ($token === '' || $ts <= 0 || $nonce === '' || $sig === '' || abs(time() - $ts) > 600) {
+				status_header(404);
+				exit;
+			}
+			$expected = lf_fleet_controller_download_sig($token, $ts, $nonce, $s);
+			if (!hash_equals($expected, $sig)) {
+				status_header(404);
+				exit;
+			}
+			$controller_slug = lf_fleet_controller_theme_slug();
+			$version = lf_fleet_controller_current_version();
+			$zip = lf_fleet_controller_get_theme_zip($controller_slug, $version);
+			if (empty($zip['ok']) || $zip['path'] === '') {
+				status_header(404);
+				exit;
+			}
+			$path = (string) $zip['path'];
+			$sha = (string) $zip['sha256'];
+		} else {
+			$row = json_decode($payload, true);
+			$path = is_array($row) ? (string) ($row['path'] ?? '') : '';
+			$sha = is_array($row) ? (string) ($row['sha256'] ?? '') : '';
+			$expires_at = is_array($row) ? (int) ($row['expires_at'] ?? 0) : 0;
+			if ($expires_at > 0 && $expires_at < time()) {
+				delete_transient($key);
+				status_header(404);
+				exit;
+			}
+			if ($path === '' || !is_readable($path)) {
+				delete_transient($key);
+				status_header(404);
+				exit;
+			}
 		}
 		// Quick integrity check before streaming.
 		if ($sha !== '' && strtolower(hash_file('sha256', $path)) !== strtolower($sha)) {
@@ -637,7 +690,14 @@ function lf_fleet_controller_handle_api(): void {
 			lf_fleet_controller_json($debug);
 		}
 		$t = lf_fleet_controller_issue_download_token($site_id, (string) $zip['path'], (string) $zip['sha256']);
+		$ts = time();
+		$nonce = bin2hex(random_bytes(6));
+		$token = trim((string) ($site_row['token'] ?? ''));
+		$sig_dl = $token !== '' ? lf_fleet_controller_download_sig($token, $ts, $nonce, $site_id) : '';
 		$download_url = home_url('/api/v1/updates/package') . '?site_id=' . rawurlencode($site_id) . '&t=' . rawurlencode($t);
+		if ($sig_dl !== '') {
+			$download_url .= '&ts=' . rawurlencode((string) $ts) . '&nonce=' . rawurlencode($nonce) . '&sig=' . rawurlencode($sig_dl);
+		}
 
 		lf_fleet_controller_json([
 			'update' => true,
