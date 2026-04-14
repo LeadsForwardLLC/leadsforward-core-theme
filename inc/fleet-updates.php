@@ -150,6 +150,28 @@ function lf_fleet_check_for_update(): void {
 }
 
 /**
+ * Extract the most useful upgrade error details for admin display.
+ *
+ * @param mixed $result
+ */
+function lf_fleet_upgrade_error_message($result, Theme_Upgrader $upgrader): string {
+	if (is_wp_error($result)) {
+		return $result->get_error_message();
+	}
+	$skin = $upgrader->skin ?? null;
+	if (is_object($skin) && method_exists($skin, 'get_errors')) {
+		$errors = $skin->get_errors();
+		if ($errors instanceof WP_Error) {
+			$msg = $errors->get_error_message();
+			if ($msg !== '') {
+				return $msg;
+			}
+		}
+	}
+	return '';
+}
+
+/**
  * Apply the pending fleet update offer via Theme_Upgrader when allowed.
  *
  * @param bool $from_trusted_admin When true, run in wp-admin for users who can edit theme options
@@ -165,6 +187,26 @@ function lf_fleet_maybe_auto_update(bool $from_trusted_admin = false): void {
 	$via_admin = $from_trusted_admin && is_admin() && current_user_can($cap);
 	// Cron: background installs. Admin: explicit "Check now" should install without waiting for cron.
 	if (!$via_cron && !$via_admin) {
+		return;
+	}
+
+	// If WP file modifications are disabled, bail early with a clear message.
+	if (defined('DISALLOW_FILE_MODS') && DISALLOW_FILE_MODS) {
+		$last = json_decode((string) get_option(LF_FLEET_OPT_LAST, ''), true);
+		$nu = is_array($last) ? $last : [];
+		$nu['failures'] = (int) ($nu['failures'] ?? 0) + 1;
+		$nu['next_attempt_at'] = time() + (15 * MINUTE_IN_SECONDS);
+		$nu['last_upgrade_error'] = __('Theme updates are disabled by DISALLOW_FILE_MODS.', 'leadsforward-core');
+		update_option(LF_FLEET_OPT_LAST, wp_json_encode($nu));
+		return;
+	}
+	if (function_exists('wp_is_file_mod_allowed') && !wp_is_file_mod_allowed('theme')) {
+		$last = json_decode((string) get_option(LF_FLEET_OPT_LAST, ''), true);
+		$nu = is_array($last) ? $last : [];
+		$nu['failures'] = (int) ($nu['failures'] ?? 0) + 1;
+		$nu['next_attempt_at'] = time() + (15 * MINUTE_IN_SECONDS);
+		$nu['last_upgrade_error'] = __('Theme updates are blocked by wp_is_file_mod_allowed().', 'leadsforward-core');
+		update_option(LF_FLEET_OPT_LAST, wp_json_encode($nu));
 		return;
 	}
 
@@ -198,7 +240,11 @@ function lf_fleet_maybe_auto_update(bool $from_trusted_admin = false): void {
 	$nu = is_array($last) ? $last : [];
 	$nu['failures'] = $failures;
 	$nu['next_attempt_at'] = time() + $delay;
-	$nu['last_upgrade_error'] = is_wp_error($res) ? $res->get_error_message() : (is_string($res) ? $res : '');
+	$err = lf_fleet_upgrade_error_message($res, $upgrader);
+	if ($err === '') {
+		$err = is_string($res) ? $res : __('Theme upgrade failed (no error message). Check filesystem permissions or hosting security rules.', 'leadsforward-core');
+	}
+	$nu['last_upgrade_error'] = $err;
 	update_option(LF_FLEET_OPT_LAST, wp_json_encode($nu));
 }
 
