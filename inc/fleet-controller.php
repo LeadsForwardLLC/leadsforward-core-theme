@@ -405,6 +405,83 @@ function lf_fleet_controller_expected_sig(string $token, string $method, string 
 	return base64_encode(hash_hmac('sha256', $payload, $token, true));
 }
 
+function lf_fleet_controller_build_push_request(string $site_url, string $site_id, string $token, bool $override = false): array {
+	$endpoint = rtrim($site_url, '/') . '/wp-json/lf/v1/fleet/push';
+	$path = (string) wp_parse_url($endpoint, PHP_URL_PATH);
+	$nonce = function_exists('wp_generate_uuid4') ? wp_generate_uuid4() : (string) wp_rand();
+	$ts = time();
+	$body = [
+		'action' => 'check_install',
+		'override' => $override,
+		'request_id' => $nonce,
+	];
+	$body_json = wp_json_encode($body);
+	$body_sha = lf_fleet_body_sha256((string) $body_json);
+	$sig = lf_fleet_sign_request($token, 'POST', $path, $ts, (string) $nonce, $body_sha);
+
+	return [
+		'url' => $endpoint,
+		'args' => [
+			'method' => 'POST',
+			'timeout' => 12,
+			'headers' => [
+				'Content-Type' => 'application/json',
+				'X-LF-Site' => $site_id,
+				'X-LF-Timestamp' => (string) $ts,
+				'X-LF-Nonce' => (string) $nonce,
+				'X-LF-Signature' => $sig,
+			],
+			'body' => (string) $body_json,
+		],
+	];
+}
+
+/**
+ * POST a signed push to one fleet site and persist last push metadata on the controller row.
+ *
+ * @return array{ok:bool,message:string}
+ */
+function lf_fleet_controller_push_site(string $site_id, bool $override = false): array {
+	$sites = lf_fleet_controller_sites();
+	$row = $sites[$site_id] ?? null;
+	if (!is_array($row)) {
+		return ['ok' => false, 'message' => 'unknown_site'];
+	}
+	$site_url = trim((string) ($row['site_url'] ?? ''));
+	$token = trim((string) ($row['token'] ?? ''));
+	if ($site_url === '' || $token === '') {
+		return ['ok' => false, 'message' => 'missing_url_or_token'];
+	}
+	$req = lf_fleet_controller_build_push_request($site_url, $site_id, $token, $override);
+	$res = wp_remote_request($req['url'], $req['args']);
+	$now = time();
+	if (is_wp_error($res)) {
+		$row['last_push_at'] = $now;
+		$row['last_push_status'] = '0';
+		$row['last_push_message'] = $res->get_error_message();
+		$sites[$site_id] = $row;
+		lf_fleet_controller_update_sites($sites);
+		return ['ok' => false, 'message' => (string) $row['last_push_message']];
+	}
+	$code = (int) wp_remote_retrieve_response_code($res);
+	$body_raw = (string) wp_remote_retrieve_body($res);
+	$decoded = json_decode($body_raw, true);
+	$message = is_array($decoded) && isset($decoded['message']) ? (string) $decoded['message'] : $body_raw;
+	if ($message === '') {
+		$message = 'http_' . (string) $code;
+	}
+	$ok = $code >= 200 && $code < 300;
+	if (is_array($decoded) && array_key_exists('ok', $decoded)) {
+		$ok = $ok && !empty($decoded['ok']);
+	}
+	$row['last_push_at'] = $now;
+	$row['last_push_status'] = (string) $code;
+	$row['last_push_message'] = $message;
+	$sites[$site_id] = $row;
+	lf_fleet_controller_update_sites($sites);
+	return ['ok' => $ok, 'message' => $message];
+}
+
 function lf_fleet_controller_verify_request(string $path): array {
 	$site_id = isset($_SERVER['HTTP_X_LF_SITE']) ? (string) $_SERVER['HTTP_X_LF_SITE'] : '';
 	$ts_raw = isset($_SERVER['HTTP_X_LF_TIMESTAMP']) ? (string) $_SERVER['HTTP_X_LF_TIMESTAMP'] : '';
