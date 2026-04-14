@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 	return;
 }
 
-function lf_fleet_push_rest_handler($request) {
+function lf_fleet_push_rest_handler(WP_REST_Request $request): WP_REST_Response {
 	if (!lf_fleet_is_connected()) {
 		return new WP_REST_Response(lf_fleet_push_build_response(false, 'not_connected', '', 'not_connected'), 401);
 	}

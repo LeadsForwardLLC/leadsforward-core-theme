@@ -1,4 +1,27 @@
 <?php
+declare(strict_types=1);
+
+/**
+ * Minimal stubs so push-endpoint.php can load in CLI without WordPress.
+ */
+class WP_REST_Request {
+	public function get_headers(): array {
+		return [];
+	}
+
+	public function get_body(): string {
+		return '';
+	}
+}
+
+class WP_REST_Response {
+	public function __construct(
+		public mixed $data = null,
+		public int $status = 200,
+	) {
+	}
+}
+
 require __DIR__ . '/../inc/fleet-updates/push-endpoint.php';
 
 function expect($cond, $msg) {
