@@ -32,13 +32,13 @@ function lf_fleet_push_validate_request(
 		return ['ok' => false, 'error' => 'expired', 'site_id' => ''];
 	}
 	$nonce_key = $site_id . '|' . $nonce;
+	if ($nonce_seen($nonce_key)) {
+		return ['ok' => false, 'error' => 'replay', 'site_id' => ''];
+	}
 	$body_sha = hash('sha256', $body);
 	$expected = lf_fleet_push_expected_sig($token, 'POST', $path, $ts, $nonce, $body_sha);
 	if (!hash_equals($expected, $sig)) {
 		return ['ok' => false, 'error' => 'bad_sig', 'site_id' => ''];
-	}
-	if ($nonce_seen($nonce_key)) {
-		return ['ok' => false, 'error' => 'replay', 'site_id' => ''];
 	}
 	$nonce_store($nonce_key);
 	return ['ok' => true, 'error' => '', 'site_id' => $site_id];

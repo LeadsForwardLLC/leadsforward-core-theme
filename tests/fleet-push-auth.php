@@ -40,7 +40,11 @@ expect($replay['error'] === 'replay', 'replay should fail');
 $expired = lf_fleet_push_validate_request($headers, $body, $path, 'site-123', $token, $ts + 400, $seen, $store);
 expect($expired['error'] === 'expired', 'expired should fail');
 
-$bad = $headers;
-$bad['X-LF-Signature'] = 'bad';
+$bad = [
+	'X-LF-Site' => 'site-123',
+	'X-LF-Timestamp' => (string) $ts,
+	'X-LF-Nonce' => 'nonce-fresh',
+	'X-LF-Signature' => 'bad',
+];
 $bad_sig = lf_fleet_push_validate_request($bad, $body, $path, 'site-123', $token, $ts + 1, $seen, $store);
 expect($bad_sig['error'] === 'bad_sig', 'bad signature should fail');
