@@ -4409,11 +4409,8 @@ function lf_ai_assistant_widget_js(): string {
 			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 			if (!sectionId || !sectionSupportsChecklistEditor(sectionType)) return;
 			var buckets = checklistPrimarySecondaryItemsFromWrap(wrap);
-			persistSectionLineItems(wrap, "service_details_checklist", buckets.primaryItems, "Saving checklist...", {
-				onDone: function() {
-					persistSectionLineItems(wrap, "service_details_checklist_secondary", buckets.secondaryItems, "Saving checklist...");
-				}
-			});
+			persistSectionLineItems(wrap, "service_details_checklist", buckets.primaryItems, "Saving checklist...");
+			persistSectionLineItems(wrap, "service_details_checklist_secondary", buckets.secondaryItems, "Saving checklist...");
 		}
 		function buildChecklistControls() {
 			function focusNodeEnd(node) {
