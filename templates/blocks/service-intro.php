@@ -40,6 +40,7 @@ if (!in_array($header_align, ['left', 'center', 'right'], true)) {
 	$header_align = 'center';
 }
 
+$has_explicit_order = is_array($section) && array_key_exists('service_intro_service_ids', $section);
 $order_ids_raw = trim((string) ($section['service_intro_service_ids'] ?? ''));
 $order_ids = [];
 if ($order_ids_raw !== '') {
@@ -58,6 +59,10 @@ $query_args = [
 ];
 if ($order_ids !== []) {
 	$query_args['post__in'] = $order_ids;
+	$query_args['orderby'] = 'post__in';
+} elseif ($has_explicit_order) {
+	// If the site explicitly saved an empty selection, respect it (don't fall back to "all services").
+	$query_args['post__in'] = [0];
 	$query_args['orderby'] = 'post__in';
 } else {
 	$query_args['orderby'] = 'menu_order title';
@@ -120,7 +125,9 @@ $query = new WP_Query($query_args);
 			</div>
 			<?php wp_reset_postdata(); ?>
 		<?php else : ?>
-			<p class="lf-block-service-intro__empty"><?php esc_html_e('No services yet.', 'leadsforward-core'); ?></p>
+			<p class="lf-block-service-intro__empty">
+				<?php echo esc_html($has_explicit_order ? __('No services selected yet.', 'leadsforward-core') : __('No services yet.', 'leadsforward-core')); ?>
+			</p>
 		<?php endif; ?>
 	</div>
 </section>

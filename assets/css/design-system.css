@@ -2299,6 +2299,18 @@ button:focus-visible,
 	display: inline-flex;
 	align-items: center;
 	gap: 0.45rem;
+	line-height: 1;
+}
+
+.site-header__menu .lf-menu-call > a svg,
+.site-header__phone svg {
+	display: block;
+	overflow: visible;
+}
+
+.site-header__menu .lf-menu-call > a .lf-icon,
+.site-header__phone .lf-icon {
+	flex-shrink: 0;
 }
 
 .site-header__menu .lf-menu-cta > a {
@@ -2341,7 +2353,7 @@ button:focus-visible,
 	font-size: 0.95rem;
 	vertical-align: middle;
 	position: relative;
-	top: 1px;
+	top: 0;
 }
 
 .site-header__cta {

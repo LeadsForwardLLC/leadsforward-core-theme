@@ -1205,9 +1205,14 @@ function lf_ai_assistant_widget_js(): string {
 		if ($root.attr("data-lf-ai-js-init") === "1") {
 			return true;
 		}
-		$root.attr("data-lf-ai-js-init", "1");
+		// Mark as "booting" so the vanilla fallback toggle can still bind if init errors mid-flight.
+		$root.attr("data-lf-ai-js-init", "booting");
 		var $toggle = $root.find("[data-lf-ai-toggle]");
 		var $panel = $root.find("#lf-ai-float-panel");
+		if (!$toggle.length || !$panel.length) {
+			$root.removeAttr("data-lf-ai-js-init");
+			return false;
+		}
 		var $seoToggle = $seoRoot.find("[data-lf-ai-seo-toggle]");
 		var $seoPanel = $seoRoot.find("#lf-ai-seo-panel");
 		var $historyToggle = $historyRoot.find("[data-lf-ai-history-toggle]");
@@ -4298,6 +4303,18 @@ function lf_ai_assistant_widget_js(): string {
 				listEls.forEach(wireChecklistListItems);
 				var primaryList = listEls[0];
 				if (primaryList) {
+					function normalizeChecklistList(list) {
+						if (!list) return;
+						// Some older/generated content can include non-li nodes or nested lists that confuse append order.
+						// Keep only direct <li> children in the primary list.
+						Array.prototype.slice.call(list.childNodes || []).forEach(function(n){
+							if (!n || n.nodeType !== 1) return;
+							var tag = String(n.tagName || "").toLowerCase();
+							if (tag === "li") return;
+							// allow whitespace text nodes handled elsewhere; remove any unexpected element nodes
+							try { list.removeChild(n); } catch (eRm) {}
+						});
+					}
 					var controls = document.createElement("div");
 					controls.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
 					controls.setAttribute("data-lf-ai-checklist-controls", "1");
@@ -4309,6 +4326,7 @@ function lf_ai_assistant_widget_js(): string {
 					addBtn.addEventListener("click", function(e){
 						e.preventDefault();
 						e.stopPropagation();
+						normalizeChecklistList(primaryList);
 						if (primaryList.querySelectorAll("li").length >= 5) {
 							try { window.alert("This checklist allows up to 5 items."); } catch (eMax) {}
 							return;
@@ -4333,6 +4351,7 @@ function lf_ai_assistant_widget_js(): string {
 							persistSectionChecklist(wrap, li);
 						});
 						li.appendChild(removeBtn2);
+						// Always append after the last real list item (guards against odd DOM ordering).
 						primaryList.appendChild(li);
 						bindChecklistItemEditor(li, wrap);
 						persistSectionChecklist(wrap, li);
@@ -4554,8 +4573,10 @@ function lf_ai_assistant_widget_js(): string {
 			if (!list) return [];
 			return Array.prototype.slice.call(list.querySelectorAll("li")).map(function(li){
 				var span = li.querySelector(".lf-block-hero__card-item-text");
-				return span ? innerHtmlFromEditableNode(span) : "";
-			}).filter(function(h){ return lfPlainFromHtml(h) !== ""; });
+				// Persist as plain text to avoid sanitizer/plugin variance dropping inline markup
+				// and causing "saved but missing after reload" behavior.
+				return span ? textFromNodeWithoutAiControls(span) : textFromNodeWithoutAiControls(li);
+			}).filter(function(t){ return String(t || "").trim() !== ""; });
 		}
 		function persistHeroProofItems(wrap, list) {
 			if (!wrap || !list) return;
@@ -4568,7 +4589,7 @@ function lf_ai_assistant_widget_js(): string {
 			if (!sectionId || baseType !== "hero") return;
 			var items = heroProofHtmlItemsFromList(list);
 			var pc = persistContextFromWrap(wrap);
-			setStatus("Saving checklist...", false);
+			setStatus("Saving proof card...", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_update_hero_pills",
 				nonce: lfAiFloating.nonce,
@@ -4579,12 +4600,12 @@ function lf_ai_assistant_widget_js(): string {
 				items: JSON.stringify(items)
 			}).done(function(res){
 				if (res && res.success) {
-					setStatus((res.data && res.data.message) ? res.data.message : "Checklist saved.", false);
+					setStatus((res.data && res.data.message) ? res.data.message : "Proof card saved.", false);
 				} else {
-					persistSectionLineItems(wrap, "hero_proof_bullets", items, "Saving checklist...");
+					persistSectionLineItems(wrap, "hero_proof_bullets", items, "Saving proof card...");
 				}
 			}).fail(function(){
-				persistSectionLineItems(wrap, "hero_proof_bullets", items, "Saving checklist...");
+				persistSectionLineItems(wrap, "hero_proof_bullets", items, "Saving proof card...");
 			});
 		}
 		function createGenericRemoveButton(onClick) {
@@ -6250,7 +6271,8 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			var desc = document.createElement("p");
 			desc.className = "lf-block-service-intro__desc";
-			desc.textContent = "Short overview — click to edit.";
+			var sd = String(row.short_desc || "").trim();
+			desc.textContent = sd ? sd : "Short overview — click to edit.";
 			var link = document.createElement("a");
 			link.className = "lf-block-service-intro__link";
 			link.href = String(row.permalink || "#");
@@ -9107,7 +9129,9 @@ function lf_ai_assistant_widget_js(): string {
 			if (target === inlineActiveEl || inlineActiveEl.contains(target)) {
 				return;
 			}
-			if ($(target).closest("[data-lf-ai-float],[data-lf-ai-seo-float],[data-lf-ai-history-float]").length) {
+			// Allow clicking within the inline toolbar/panel without closing the active edit.
+			// Do NOT treat the entire assistant containers as "inside" or the toolbar can get stuck open.
+			if ($(target).closest("[data-lf-ai-inline-link-toolbar],[data-lf-ai-inline-link-panel],[data-lf-ai-inline-link-backdrop]").length) {
 				return;
 			}
 			lfHideInlineLinkToolbar();
@@ -9615,6 +9639,8 @@ function lf_ai_assistant_widget_js(): string {
 			clearEditorUi();
 			setStatus("Live mode enabled. Toggle ✎ (editor) in the AI Assistant header to show section controls and inline editing.", false);
 		}
+		// Fully initialized.
+		$root.attr("data-lf-ai-js-init", "1");
 		renderSeoSnapshot();
 		return true;
 		}
@@ -9650,6 +9676,9 @@ function lf_ai_assistant_widget_fallback_js(): string {
 			var key = "lfAiFloatState";
 			function setOpen(open){
 				panel.hidden = !open;
+				if (open) {
+					try { panel.removeAttribute("hidden"); } catch (e0) {}
+				}
 				toggle.setAttribute("aria-expanded", open ? "true" : "false");
 				try { window.localStorage.setItem(key, open ? "open" : "closed"); } catch (e) {}
 			}
