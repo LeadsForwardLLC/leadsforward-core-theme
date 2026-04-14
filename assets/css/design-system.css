@@ -2214,13 +2214,14 @@ button:focus-visible,
 	justify-content: space-between;
 	gap: 1rem;
 	padding: 0.75rem 1rem;
+	border: 1px solid transparent;
 	border-radius: 20px;
-	transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, padding 0.2s ease;
+	transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .site-header--sticky .site-header__inner {
 	background: var(--lf-surface-light);
-	border: 1px solid var(--lf-neutral-300);
+	border-color: var(--lf-neutral-300);
 	box-shadow: 0 16px 30px rgba(15,23,42,0.12);
 }
 
