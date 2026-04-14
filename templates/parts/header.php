@@ -30,8 +30,19 @@ $logo_text = function_exists('lf_get_option') ? (string) lf_get_option('lf_busin
 if ($logo_text === '') {
 	$logo_text = get_bloginfo('name');
 }
+$layout = function_exists('lf_header_layout') ? lf_header_layout() : 'modern';
+$topbar_enabled = function_exists('lf_header_topbar_enabled') && lf_header_topbar_enabled();
+$topbar_text = function_exists('lf_header_topbar_text') ? lf_header_topbar_text() : '';
+$show_topbar = ($layout === 'topbar' && $topbar_enabled && $topbar_text !== '');
+$header_class = 'site-header site-header--modern site-header--' . $layout;
+if ($show_topbar) {
+	$header_class .= ' site-header--has-topbar';
+}
 ?>
-<header class="site-header site-header--modern" role="banner">
+<header class="<?php echo esc_attr($header_class); ?>" role="banner">
+	<?php if ($show_topbar) : ?>
+		<div class="site-header__topbar"><div class="site-header__topbar-inner"><?php echo esc_html($topbar_text); ?></div></div>
+	<?php endif; ?>
 	<div class="site-header__inner">
 		<a class="site-header__logo" href="<?php echo esc_url(home_url('/')); ?>" aria-label="<?php echo esc_attr($logo_text ?: __('Home', 'leadsforward-core')); ?>">
 			<?php if ($logo_html) : ?>
@@ -63,18 +74,16 @@ if ($logo_text === '') {
 				<div class="site-header__actions">
 					<?php if ($cta_phone) : ?>
 						<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $cta_phone)); ?>" class="site-header__phone">
-							<?php
-							if (function_exists('lf_icon')) {
-								echo lf_icon('phone', ['class' => 'site-header__phone-icon lf-icon lf-icon--sm lf-icon--inherit', 'aria-hidden' => 'true']);
-							}
-							?>
-							<span><?php esc_html_e('Call Now', 'leadsforward-core'); ?></span>
+							<?php if (function_exists('lf_icon')) : ?>
+								<span class="site-header__phone-icon" aria-hidden="true"><?php echo lf_icon('phone', ['class' => 'lf-icon lf-icon--sm lf-icon--inherit']); ?></span>
+							<?php endif; ?>
+							<span class="site-header__phone-text"><?php esc_html_e('Call Now', 'leadsforward-core'); ?></span>
 						</a>
 					<?php endif; ?>
 					<?php if ($show_cta) : ?>
 						<?php
 					$label = $cta_label !== '' ? $cta_label : ($cta_text ?: __('Free Estimate', 'leadsforward-core'));
-						?>
+					?>
 					<?php if ($cta_url !== '') : ?>
 						<a class="site-header__cta lf-btn lf-btn--primary" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($label); ?></a>
 					<?php else : ?>
@@ -97,10 +106,42 @@ if ($logo_text === '') {
 		</div>
 	</div>
 </header>
+<div class="site-header__spacer" aria-hidden="true"></div>
 <script>
 	(function () {
 		var header = document.querySelector('.site-header');
 		if (!header) return;
+		var frozenHeaderHeight = 0;
+		function applyFrozenHeaderHeight() {
+			if (!frozenHeaderHeight) return;
+			header.style.setProperty('--lf-header-height', frozenHeaderHeight + 'px');
+		}
+		function captureHeaderHeightForLayout() {
+			window.requestAnimationFrame(function () {
+				var hadSticky = header.classList.contains('site-header--sticky');
+				if (hadSticky) {
+					header.classList.remove('site-header--sticky');
+				}
+				var h = Math.ceil(header.getBoundingClientRect().height);
+				if (hadSticky) {
+					header.classList.add('site-header--sticky');
+				}
+				if (header.classList.contains('site-header--open')) {
+					frozenHeaderHeight = Math.max(frozenHeaderHeight || 0, h);
+				} else {
+					frozenHeaderHeight = h;
+				}
+				applyFrozenHeaderHeight();
+			});
+		}
+		captureHeaderHeightForLayout();
+		window.addEventListener('load', captureHeaderHeightForLayout, { passive: true });
+		window.addEventListener('resize', captureHeaderHeightForLayout, { passive: true });
+		if (typeof ResizeObserver !== 'undefined') {
+			new ResizeObserver(function () {
+				captureHeaderHeightForLayout();
+			}).observe(header);
+		}
 		var toggle = header.querySelector('.site-header__toggle');
 		var panel = header.querySelector('.site-header__panel');
 		var closeBtn = header.querySelector('.site-header__close');
@@ -128,6 +169,7 @@ if ($logo_text === '') {
 			if (!open) {
 				closeSubmenus();
 			}
+			captureHeaderHeightForLayout();
 		}
 		if (toggle && panel) {
 			toggle.addEventListener('click', function () {
@@ -208,12 +250,18 @@ if ($logo_text === '') {
 				setOpen(false);
 			}
 		});
-		var last = 0;
-		window.addEventListener('scroll', function () {
+		var stickyOn = false;
+		function updateStickyFromScroll() {
 			var y = window.scrollY || window.pageYOffset;
-			if (Math.abs(y - last) < 6) return;
-			header.classList.toggle('site-header--scrolled', y > 12);
-			last = y;
-		}, { passive: true });
+			if (!stickyOn && y > 8) {
+				stickyOn = true;
+				header.classList.add('site-header--sticky');
+			} else if (stickyOn && y < 2) {
+				stickyOn = false;
+				header.classList.remove('site-header--sticky');
+			}
+		}
+		window.addEventListener('scroll', updateStickyFromScroll, { passive: true });
+		updateStickyFromScroll();
 	})();
 </script>

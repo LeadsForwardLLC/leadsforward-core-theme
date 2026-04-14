@@ -2161,9 +2161,52 @@ button:focus-visible,
 	z-index: 50;
 	padding: 0.75rem 1rem;
 	background: transparent;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	min-height: var(--lf-header-height, auto);
+}
+
+.site-header--has-topbar {
+	padding-top: 0;
+	padding-right: 0;
+	padding-left: 0;
+	padding-bottom: 0;
+}
+
+.site-header--has-topbar .site-header__inner {
+	padding: 0.75rem 1rem;
+}
+
+.site-header--sticky {
+	position: sticky;
+	top: 0;
+	z-index: 50;
+}
+
+.site-header__spacer {
+	height: 0;
+	width: 100%;
+	pointer-events: none;
+}
+
+.site-header__topbar {
+	width: 100%;
+	background: var(--lf-surface-dark);
+	color: #fff;
+	font-size: 0.85rem;
+	line-height: 1.35;
+}
+
+.site-header__topbar-inner {
+	max-width: var(--lf-container-wide);
+	margin: 0 auto;
+	padding: 0.4rem 1rem;
+	text-align: center;
 }
 
 .site-header__inner {
+	width: 100%;
 	max-width: var(--lf-container-wide);
 	margin: 0 auto;
 	display: flex;
@@ -2172,14 +2215,13 @@ button:focus-visible,
 	gap: 1rem;
 	padding: 0.75rem 1rem;
 	border-radius: 20px;
-	transition: all 0.2s ease;
+	transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, padding 0.2s ease;
 }
 
-.site-header--scrolled .site-header__inner {
+.site-header--sticky .site-header__inner {
 	background: var(--lf-surface-light);
 	border: 1px solid var(--lf-neutral-300);
 	box-shadow: 0 16px 30px rgba(15,23,42,0.12);
-	padding: 0.55rem 0.9rem;
 }
 
 .site-header__logo {
@@ -2195,10 +2237,6 @@ button:focus-visible,
 	height: 76px;
 	width: auto;
 	display: block;
-}
-
-.site-header--scrolled .site-header__logo-img {
-	height: 62px;
 }
 
 .site-header__logo-text {
@@ -2344,16 +2382,26 @@ button:focus-visible,
 	display: inline-flex;
 	align-items: center;
 	gap: 0.4rem;
+	line-height: 1;
 	text-decoration: none;
 	font-weight: 600;
 	color: var(--lf-text-primary);
 }
 
 .site-header__phone-icon {
-	font-size: 0.95rem;
-	vertical-align: middle;
-	position: relative;
-	top: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.site-header__phone-icon .lf-icon {
+	width: 1em;
+	height: 1em;
+}
+
+.site-header__phone-text {
+	display: inline-block;
 }
 
 .site-header__cta {
