@@ -1413,9 +1413,22 @@ function lf_ai_assistant_widget_js(): string {
 		 * generate/apply; homepage sections live in lf_homepage_section_config, not the static front page post.
 		 */
 		function persistContextFromWrap(wrap) {
-			if (wrap && wrap.closest && wrap.closest(".site-main--homepage")) {
-				return { context_type: "homepage", context_id: "homepage" };
-			}
+			try {
+				if (wrap) {
+					var sid = String(wrap.getAttribute("data-lf-section-id") || "");
+					var st = String(wrap.getAttribute("data-lf-section-type") || "");
+					var base = baseSectionType(st, sid);
+					// If this page has homepage sections enabled, prefer the homepage store for those sections.
+					// This avoids accidental saves to the static front page post when the homepage UI is driven by
+					// lf_homepage_section_config.
+					if (homepageEnabledMap && (homepageEnabledMap[base] || homepageEnabledMap[sid])) {
+						return { context_type: "homepage", context_id: "homepage" };
+					}
+					if (wrap.closest && wrap.closest(".site-main--homepage")) {
+						return { context_type: "homepage", context_id: "homepage" };
+					}
+				}
+			} catch (ePc) {}
 			// Use the page immutable context, not the assistant active target (which can drift).
 			return { context_type: String(pageContextType || "homepage"), context_id: String(pageContextId || "homepage") };
 		}
