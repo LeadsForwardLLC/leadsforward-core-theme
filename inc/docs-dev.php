@@ -23,6 +23,10 @@ function lf_docs_render_dev_sections(): void {
 	<section class="lf-docs__section" id="dev-recent-changes">
 		<h2><?php esc_html_e('Recent changes (high level)', 'leadsforward-core'); ?></h2>
 		<ul>
+			<li><?php esc_html_e('v0.1.46: Header layouts now have real CSS variants (centered layout), the promo top bar is shown based on enabled + text (not layout), and the Header floater adds a top bar background color picker (brand swatches + custom).', 'leadsforward-core'); ?></li>
+			<li><?php esc_html_e('v0.1.46: Service Intro empty-state keeps “+ Add service” available and allows saving an explicit empty selection.', 'leadsforward-core'); ?></li>
+			<li><?php esc_html_e('v0.1.46: Layout History adds Preview for non-destructive viewing of a restore point before restoring.', 'leadsforward-core'); ?></li>
+			<li><?php esc_html_e('v0.1.46: Front-end assistant boot is hardened against wp-i18n ordering issues; i18n inline stubs prevent fatal init failures under some optimizers.', 'leadsforward-core'); ?></li>
 			<li><?php esc_html_e('v0.1.45: Inline editor toolbar can be dismissed via outside click or the new ✕ button; AI assistant init captures errors so fallback toggles still open when JS fails.', 'leadsforward-core'); ?></li>
 			<li><?php esc_html_e('v0.1.45: Rich-text icon picker adds size presets; inline SVG sizing rules prevent clipping in tight line boxes.', 'leadsforward-core'); ?></li>
 			<li><?php esc_html_e('v0.1.45: Header phone icon alignment tightened; service intro selection re-saves on picker close; hero proof list prefers the Authority Split column; process titles split on colon/dash for partial bolding.', 'leadsforward-core'); ?></li>
