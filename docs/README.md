@@ -2,11 +2,12 @@
 
 Use this page as the starting point for architecture, operations, and troubleshooting.
 
-## Theme v0.1.44 (highlights)
+## Theme v0.1.45 (highlights)
 
 - **Inline editor reliability:** Toolbar closes on outside click or the new ✕ button; AI assistant init captures errors to preserve fallback open behavior.
 - **Icon insertion:** Size presets and inline SVG sizing rules prevent clipping in rich text.
 - **Header + service intro polish:** Phone icon alignment tightened; service intro selection retries save on picker close.
+- **Hero + process steps:** Authority Split proof list targets the visible column first; process titles split on colon/dash for partial bolding.
 
 ## Start Here
 - `00_PRODUCTION_READINESS.md` - pre-launch checklist, fleet/cron notes, version alignment.

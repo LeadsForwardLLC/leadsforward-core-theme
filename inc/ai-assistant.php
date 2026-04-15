@@ -4898,9 +4898,12 @@ function lf_ai_assistant_widget_js(): string {
 				return textFromNodeWithoutAiControls(node);
 			}).filter(function(text){ return text !== ""; });
 		}
+		function heroProofListFromWrap(wrap) {
+			if (!wrap || !wrap.querySelector) return null;
+			return wrap.querySelector(".lf-hero-split__proof .lf-block-hero__card-list") || wrap.querySelector(".lf-block-hero__card-list");
+		}
 		function heroCardItemsFromWrap(wrap) {
-			if (!wrap || !wrap.querySelector) return [];
-			var list = wrap.querySelector(".lf-block-hero__card-list");
+			var list = heroProofListFromWrap(wrap);
 			return list ? simpleListItemsFromContainer(list, "li") : [];
 		}
 		function persistHeroProofItems(wrap, list) {
@@ -5158,7 +5161,7 @@ function lf_ai_assistant_widget_js(): string {
 				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-list-remove=\"1\"]")).forEach(function(node){
 					if (node && node.parentNode) node.parentNode.removeChild(node);
 				});
-				var list = wrap.querySelector(".lf-block-hero__card-list");
+			var list = heroProofListFromWrap(wrap);
 				if (!list) return;
 				Array.prototype.slice.call(list.querySelectorAll("li")).forEach(function(node){
 					node.removeAttribute("data-lf-inline-editable");
