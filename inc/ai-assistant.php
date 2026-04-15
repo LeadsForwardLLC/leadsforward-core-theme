@@ -10219,7 +10219,7 @@ function lf_ai_assistant_widget_fallback_js(): string {
 				panel.hidden = !open;
 				if (open) {
 					try { panel.removeAttribute("hidden"); } catch (e0) {}
-					// If the full init failed, show the captured error in the status area so it's actionable.
+					// If the full init failed, show the captured error in the status area so it is actionable.
 					try {
 						if (window.lfAiInitError) {
 							var status = root.querySelector("[data-lf-ai-status]");
