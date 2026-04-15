@@ -117,6 +117,7 @@ if ($show_topbar) {
 	(function () {
 		var header = document.querySelector('.site-header');
 		if (!header) return;
+		var spacer = document.querySelector('.site-header__spacer');
 		// Header height is stable (sticky visuals only), so no dynamic min-height needed.
 		var toggle = header.querySelector('.site-header__toggle');
 		var panel = header.querySelector('.site-header__panel');
@@ -232,9 +233,18 @@ if ($show_topbar) {
 			if (!stickyOn && y > 8) {
 				stickyOn = true;
 				header.classList.add('site-header--sticky');
+				// Fallback: some theme wrappers/optimizers break CSS sticky. Use fixed when scrolled.
+				header.classList.add('site-header--fixed');
+				try {
+					if (spacer) spacer.style.height = header.offsetHeight + 'px';
+				} catch (eH) {}
 			} else if (stickyOn && y < 2) {
 				stickyOn = false;
 				header.classList.remove('site-header--sticky');
+				header.classList.remove('site-header--fixed');
+				try {
+					if (spacer) spacer.style.height = '0px';
+				} catch (eH2) {}
 			}
 		}
 		window.addEventListener('scroll', updateStickyFromScroll, { passive: true });
