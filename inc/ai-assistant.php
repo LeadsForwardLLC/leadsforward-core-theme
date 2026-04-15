@@ -265,6 +265,8 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		'nonce'    => wp_create_nonce('lf_ai_editing'),
 		'context_type' => (string) ($context['type'] ?? 'homepage'),
 		'context_id' => (string) ($context['id'] ?? 'homepage'),
+		'is_front_page' => !is_admin() && is_front_page(),
+		'front_page_id' => !is_admin() ? (string) absint((int) get_option('page_on_front')) : '0',
 		'layout_version' => (int) $layout_version,
 		'admin_post_edit_url' => $admin_post_edit_url,
 		'process_library_filter' => lf_ai_assistant_process_library_filter_context($context),
@@ -1403,6 +1405,8 @@ function lf_ai_assistant_widget_js(): string {
 		var activeAssistantBatchCount = 5;
 		var pageContextType = String(lfAiFloating.context_type || "homepage");
 		var pageContextId = String(lfAiFloating.context_id || "homepage");
+		var isFrontPageView = !!lfAiFloating.is_front_page;
+		var frontPageId = String(lfAiFloating.front_page_id || "0");
 		var activeContextType = pageContextType;
 		var activeContextId = pageContextId;
 		var activeTargetLabel = String(lfAiFloating.target_label || "Homepage");
@@ -1414,6 +1418,11 @@ function lf_ai_assistant_widget_js(): string {
 		 */
 		function persistContextFromWrap(wrap) {
 			try {
+				// If this view is the front page, homepage section edits must always persist to the homepage
+				// option store, even if the view context resolves to the static front page post.
+				if (isFrontPageView) {
+					return { context_type: "homepage", context_id: "homepage" };
+				}
 				if (wrap) {
 					var sid = String(wrap.getAttribute("data-lf-section-id") || "");
 					var st = String(wrap.getAttribute("data-lf-section-type") || "");
