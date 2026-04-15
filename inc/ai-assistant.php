@@ -12,9 +12,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-add_action('admin_enqueue_scripts', 'lf_ai_assistant_assets');
 add_action('wp_enqueue_scripts', 'lf_ai_assistant_assets');
-add_action('admin_footer', 'lf_ai_assistant_render_floating_widget');
 add_action('wp_footer', 'lf_ai_assistant_render_floating_widget');
 add_action('wp_footer', 'lf_ai_inline_overrides_frontend_script', 5);
 add_filter('lf_keep_jquery', 'lf_ai_assistant_keep_jquery_for_frontend_admins');
@@ -159,10 +157,13 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		return;
 	}
 
-	// wp-hooks + wp-i18n define window.wp pieces before wp-i18n inline (avoids "wp is not defined" on front).
-	wp_enqueue_script('wp-hooks');
-	wp_enqueue_script('wp-i18n');
-	wp_register_script('lf-ai-floating-assistant', '', ['jquery', 'wp-hooks', 'wp-i18n'], LF_THEME_VERSION, true);
+	if (is_admin()) {
+		wp_enqueue_script('wp-hooks');
+		wp_enqueue_script('wp-i18n');
+		wp_register_script('lf-ai-floating-assistant', '', ['jquery', 'wp-hooks', 'wp-i18n'], LF_THEME_VERSION, true);
+	} else {
+		wp_register_script('lf-ai-floating-assistant', '', ['jquery'], LF_THEME_VERSION, true);
+	}
 	wp_enqueue_script('lf-ai-floating-assistant');
 	if (function_exists('wp_enqueue_media')) {
 		wp_enqueue_media();
