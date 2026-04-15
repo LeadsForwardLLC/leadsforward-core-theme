@@ -19,6 +19,7 @@ function expect(bool $cond, string $msg): void {
 
 expect(strpos($js, 'hero_proof_bullets') !== false, 'hero proof save exists');
 expect(strpos($js, 'lf-block-hero__card-list') !== false, 'hero card list selector present');
+expect(strpos($js, 'lf-hero-split__proof .lf-block-hero__card-list') !== false, 'hero split proof list selector present');
 expect(strpos($js, 'heroCardItemsFromWrap') !== false, 'heroCardItemsFromWrap helper present');
 expect(strpos($js, 'persistSectionLineItems(wrap, "hero_proof_bullets", heroCardItemsFromWrap(wrap)') !== false, 'hero proof persists via heroCardItemsFromWrap');
 

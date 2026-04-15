@@ -23,9 +23,9 @@ function lf_docs_render_dev_sections(): void {
 	<section class="lf-docs__section" id="dev-recent-changes">
 		<h2><?php esc_html_e('Recent changes (high level)', 'leadsforward-core'); ?></h2>
 		<ul>
-			<li><?php esc_html_e('v0.1.44: Inline editor toolbar can be dismissed via outside click or the new ✕ button; AI assistant init captures errors so fallback toggles still open when JS fails.', 'leadsforward-core'); ?></li>
-			<li><?php esc_html_e('v0.1.44: Rich-text icon picker adds size presets; inline SVG sizing rules prevent clipping in tight line boxes.', 'leadsforward-core'); ?></li>
-			<li><?php esc_html_e('v0.1.44: Header phone icon alignment tightened and service intro selection re-saves on picker close to reduce lost edits.', 'leadsforward-core'); ?></li>
+			<li><?php esc_html_e('v0.1.45: Inline editor toolbar can be dismissed via outside click or the new ✕ button; AI assistant init captures errors so fallback toggles still open when JS fails.', 'leadsforward-core'); ?></li>
+			<li><?php esc_html_e('v0.1.45: Rich-text icon picker adds size presets; inline SVG sizing rules prevent clipping in tight line boxes.', 'leadsforward-core'); ?></li>
+			<li><?php esc_html_e('v0.1.45: Header phone icon alignment tightened; service intro selection re-saves on picker close; hero proof list prefers the Authority Split column; process titles split on colon/dash for partial bolding.', 'leadsforward-core'); ?></li>
 			<li><?php esc_html_e('v0.1.42: Global header layout variants (modern, centered, topbar) and optional promo top bar in inc/header-settings.php; front-end Header floater persists via wp_ajax_lf_ai_update_header_settings in inc/ai-editing/admin-ui.php.', 'leadsforward-core'); ?></li>
 			<li><?php esc_html_e('v0.1.42: Homepage-scoped saves for hero proof bullets and Conversion Stack hero pills; service_details_checklist / _secondary persistence aligned between inc/ai-editing/admin-ui.php and the front-end checklist DOM in inc/ai-assistant.php.', 'leadsforward-core'); ?></li>
 			<li><?php esc_html_e('v0.1.42: Rich-text Insert icon inserts at caret; lf_icon() used for inline preview markup after sanitization (see inc/ai-editing/admin-ui.php helpers).', 'leadsforward-core'); ?></li>

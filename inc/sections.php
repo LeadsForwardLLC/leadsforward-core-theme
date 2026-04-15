@@ -1257,6 +1257,15 @@ function lf_sections_strip_inline_process_step_prefix(string $title): string {
 }
 
 /**
+ * Split tokens for process step titles when body text is embedded in the title.
+ *
+ * @return list<string>
+ */
+function lf_sections_process_step_splitters(): array {
+	return [':', ' — ', ' – ', ' - '];
+}
+
+/**
  * Auto-resolve process steps from taxonomy context and/or “Assigned services” (post meta CSV).
  *
  * @return list<\WP_Post>
@@ -3053,17 +3062,24 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 			$step_title = rtrim(trim($step_title), ':');
 			$step_body = trim($step_body);
 			// CPT-backed steps may be authored as "Label: details" in the title field.
-			// For parity with line-based steps, only bold the prefix before ":" when body is empty.
+		// For parity with line-based steps, only bold the prefix before a separator when body is empty.
 			$step_title_prefix = '';
 			$step_title_suffix = '';
-			if ($step_body === '' && strpos($step_title, ':') !== false) {
-				$parts = array_map('trim', explode(':', $step_title, 2));
+		if ($step_body === '') {
+			$splitters = function_exists('lf_sections_process_step_splitters') ? lf_sections_process_step_splitters() : [':'];
+			foreach ($splitters as $split) {
+				if ($split === '' || strpos($step_title, $split) === false) {
+					continue;
+				}
+				$parts = array_map('trim', explode($split, $step_title, 2));
 				$step_title_prefix = (string) ($parts[0] ?? '');
 				$step_title_suffix = (string) ($parts[1] ?? '');
 				if ($step_title_prefix === '') {
 					$step_title_prefix = $step_title;
 					$step_title_suffix = '';
 				}
+				break;
+			}
 			}
 			?>
 			<li class="lf-process__step" <?php echo $step_id > 0 ? 'data-lf-process-id="' . esc_attr((string) $step_id) . '"' : ''; ?>>
