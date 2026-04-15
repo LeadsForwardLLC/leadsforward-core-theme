@@ -8,3 +8,4 @@ function expect($cond, $msg) {
 }
 expect(strpos($css, '.site-header--sticky') !== false, 'sticky class styles exist');
 expect(strpos($css, '.site-header__topbar') !== false, 'topbar styles exist');
+expect(strpos($css, '.site-header__phone-icon') !== false && strpos($css, 'font-size: 0.9em') !== false, 'phone icon sizing exists');

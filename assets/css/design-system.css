@@ -594,9 +594,21 @@ button:focus-visible,
 }
 
 .lf-icon--inline {
-	display: inline-block;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	vertical-align: middle;
+	width: 1em;
+	height: 1em;
 	line-height: 1;
+	overflow: visible;
+}
+
+.lf-icon--inline svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
 }
 
 .lf-icon--sm {
@@ -2399,6 +2411,9 @@ button:focus-visible,
 	align-items: center;
 	justify-content: center;
 	flex-shrink: 0;
+	font-size: 0.9em;
+	line-height: 1;
+	transform: translateY(-0.02em);
 }
 
 .site-header__phone-icon .lf-icon {

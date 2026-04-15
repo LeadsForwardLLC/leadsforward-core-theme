@@ -5,6 +5,7 @@ The LeadsForward frontend editor is an always-on, inline editing layer for admin
 ## Core Capabilities
 
 - Click-to-edit text with auto-save on blur.
+- Inline toolbar dismisses on outside click or the ✕ close button.
 - Click-to-replace images using the WordPress Media Library.
 - Drag sections to reorder and persist order.
 - Reverse media/content columns for supported split sections.
@@ -12,6 +13,7 @@ The LeadsForward frontend editor is an always-on, inline editing layer for admin
 - Delete sections with confirmation (undo/redo safe).
 - Duplicate sections (page-builder contexts).
 - Selected section targeting: AI Generate requests are scoped to the currently selected section when possible.
+- Icon picker supports size presets (Small/Medium/Large) for inline SVGs.
 
 ## Section Controls
 

@@ -2,11 +2,11 @@
 
 Use this page as the starting point for architecture, operations, and troubleshooting.
 
-## Theme v0.1.42 (highlights)
+## Theme v0.1.44 (highlights)
 
-- **Header variants:** Global header layout (`modern`, `centered`, `topbar`) plus optional promo top bar, edited from the front-end **Header** floater; stored with Global Settings options (`docs/05_THEME_INTEGRATION.md`).
-- **Save reliability:** Homepage hero proof checklist always saves against the homepage payload; service-details checklist columns map to the correct persisted fields.
-- **Insert icon:** Rich-text toolbar inserts shortcodes at the caret; server renders matching inline SVG for display and after sanitization.
+- **Inline editor reliability:** Toolbar closes on outside click or the new ✕ button; AI assistant init captures errors to preserve fallback open behavior.
+- **Icon insertion:** Size presets and inline SVG sizing rules prevent clipping in rich text.
+- **Header + service intro polish:** Phone icon alignment tightened; service intro selection retries save on picker close.
 
 ## Start Here
 - `00_PRODUCTION_READINESS.md` - pre-launch checklist, fleet/cron notes, version alignment.
