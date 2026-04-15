@@ -2396,37 +2396,35 @@ button:focus-visible,
 	gap: 0.45rem;
 	line-height: 1;
 }
-.site-header__menu .lf-menu-call__link .lf-icon {
-	width: 0.44em !important;
-	height: 0.44em !important;
-	flex-shrink: 0;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	overflow: visible;
-	transform: translateY(0);
-}
-
-.site-header__menu .lf-menu-call__link .lf-menu-call__icon.lf-icon {
-	width: 0.44em !important;
-	height: 0.44em !important;
-}
-
-.site-header__menu .lf-menu-call__link svg {
-	width: 100% !important;
-	height: 100% !important;
-	display: block;
-	vertical-align: middle;
-	overflow: visible;
-	transform: none;
-}
-
-/* Hard-size the actual injected phone svg so it cannot remain oversized. */
-.site-header__menu .lf-menu-call__link svg.lf-menu-call__icon {
+/* Call icon: injected as a raw <svg class="lf-menu-call__icon ..."> */
+.site-header__menu .lf-menu-call__link > svg.lf-menu-call__icon {
 	width: 14px !important;
 	height: 14px !important;
-	margin-right: 0.35rem;
-	transform: translateY(1px);
+	flex: 0 0 14px !important;
+	display: block !important;
+	overflow: visible !important;
+	margin: 0 !important;
+	transform: none !important;
+}
+
+/* Some variants wrap the icon with lf-icon class; hard-reset drift. */
+.site-header__menu .lf-menu-call__link .lf-menu-call__icon.lf-icon,
+.site-header__menu .lf-menu-call__link .lf-icon {
+	width: 14px !important;
+	height: 14px !important;
+	flex: 0 0 14px !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	transform: none !important;
+}
+
+.site-header__menu .lf-menu-call__link .lf-menu-call__icon.lf-icon > svg,
+.site-header__menu .lf-menu-call__link .lf-icon > svg {
+	width: 14px !important;
+	height: 14px !important;
+	display: block !important;
+	transform: none !important;
 }
 
 .site-header__menu .lf-menu-call > a svg,
