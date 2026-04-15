@@ -5809,6 +5809,13 @@ function lf_ai_assistant_widget_js(): string {
 		function persistFaqSelection(list, savingLabel) {
 			if (!list) return;
 			var wrap = list.closest("[data-lf-section-wrap=\"1\"]");
+			if (!wrap) {
+				// Fallback: some renders may not place the list under the immediate wrapper node.
+				// Prefer the canonical wrapper for this section type if present.
+				try {
+					wrap = document.querySelector("[data-lf-section-wrap=\"1\"][data-lf-section-type=\"faq_accordion\"]");
+				} catch (e0) {}
+			}
 			if (!wrap) return;
 			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 			var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
@@ -5850,6 +5857,13 @@ function lf_ai_assistant_widget_js(): string {
 			if (!faqId) return;
 			var exists = list.querySelector(".lf-block-faq-accordion__item[data-lf-faq-id=\"" + faqId + "\"]");
 			if (exists) return;
+			try {
+				var wrap = list.closest(".lf-block-faq-accordion__inner") || list.closest(".lf-block-faq-accordion") || null;
+				if (wrap) {
+					var emptyHint = wrap.querySelector(".lf-block-faq-accordion__empty");
+					if (emptyHint) emptyHint.hidden = true;
+				}
+			} catch (e) {}
 			var item = document.createElement("details");
 			item.className = "lf-block-faq-accordion__item";
 			item.setAttribute("data-lf-faq-id", String(faqId));
@@ -6308,6 +6322,15 @@ function lf_ai_assistant_widget_js(): string {
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
 				if (String(wrap.getAttribute("data-lf-section-type") || "") !== "service_intro") return;
 				var grid = wrap.querySelector(".lf-block-service-intro__grid");
+				function syncServiceIntroEmptyHint() {
+					try {
+						var inner = wrap.querySelector(".lf-block-service-intro__inner") || wrap;
+						var emptyHint = inner.querySelector(".lf-block-service-intro__empty");
+						if (!emptyHint) return;
+						var hasCards = !!(grid && grid.querySelector(".lf-block-service-intro__card[data-lf-service-id]"));
+						emptyHint.hidden = hasCards;
+					} catch (e) {}
+				}
 				if (!grid) {
 					// Empty template state renders only the hint text; create a real grid so the picker + controls
 					// can still bind and persist an explicit empty selection.
@@ -6326,6 +6349,7 @@ function lf_ai_assistant_widget_js(): string {
 						inner.appendChild(grid);
 					}
 				}
+				syncServiceIntroEmptyHint();
 				Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card")).forEach(function(card){
 					card.removeAttribute("draggable");
 					card.classList.remove("lf-ai-service-intro-card-drag", "is-dragging");
@@ -6358,6 +6382,7 @@ function lf_ai_assistant_widget_js(): string {
 						if (card && card.parentNode) {
 							card.parentNode.removeChild(card);
 						}
+						syncServiceIntroEmptyHint();
 						var ids = Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id]")).map(function(n){
 							return String(n.getAttribute("data-lf-service-id") || "").trim();
 						}).filter(function(v){ return v !== ""; });
@@ -6393,6 +6418,7 @@ function lf_ai_assistant_widget_js(): string {
 						} else {
 							grid.insertBefore(activeServiceIntroDragEl, card);
 						}
+						syncServiceIntroEmptyHint();
 						var ids = Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id]")).map(function(n){
 							return String(n.getAttribute("data-lf-service-id") || "").trim();
 						}).filter(function(v){ return v !== ""; });
@@ -6726,6 +6752,14 @@ function lf_ai_assistant_widget_js(): string {
 			art.appendChild(desc);
 			art.appendChild(link);
 			grid.appendChild(art);
+			try {
+				var wrap = grid.closest("[data-lf-section-wrap=\"1\"]");
+				if (wrap) {
+					var inner = wrap.querySelector(".lf-block-service-intro__inner") || wrap;
+					var emptyHint = inner.querySelector(".lf-block-service-intro__empty");
+					if (emptyHint) emptyHint.hidden = true;
+				}
+			} catch (e) {}
 		}
 		function openServicePickerForIntro(wrap, grid) {
 			ensureServicePicker();
@@ -10185,6 +10219,15 @@ function lf_ai_assistant_widget_fallback_js(): string {
 				panel.hidden = !open;
 				if (open) {
 					try { panel.removeAttribute("hidden"); } catch (e0) {}
+					// If the full init failed, show the captured error in the status area so it's actionable.
+					try {
+						if (window.lfAiInitError) {
+							var status = root.querySelector("[data-lf-ai-status]");
+							if (status) {
+								status.textContent = "AI Assistant init error: " + String(window.lfAiInitError);
+							}
+						}
+					} catch (eErr) {}
 				}
 				toggle.setAttribute("aria-expanded", open ? "true" : "false");
 				try { window.localStorage.setItem(key, open ? "open" : "closed"); } catch (e) {}

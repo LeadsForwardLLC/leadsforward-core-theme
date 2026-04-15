@@ -2376,6 +2376,22 @@ button:focus-visible,
 	overflow: visible;
 }
 
+/* Call-now menu uses an SVG icon element directly (no wrapper span). */
+.site-header__menu .lf-menu-call__link {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+	line-height: 1;
+}
+.site-header__menu .lf-menu-call__link .lf-icon {
+	width: 0.9em;
+	height: 0.9em;
+	flex-shrink: 0;
+	display: block;
+	overflow: visible;
+	transform: translateY(-0.02em);
+}
+
 .site-header__menu .lf-menu-call > a svg,
 .site-header__phone svg {
 	display: block;
