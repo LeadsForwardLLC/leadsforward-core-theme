@@ -10215,11 +10215,11 @@ function lf_ai_assistant_widget_fallback_js(): string {
 		var roots = document.querySelectorAll("[data-lf-ai-float]");
 		if (!roots || !roots.length) return;
 		roots.forEach(function(root){
-			// If the primary jQuery controller initialized, skip fallback bindings
-			// to avoid double-toggle behavior (open then immediate close).
-			if (root.getAttribute("data-lf-ai-js-init") === "1") {
-				return;
-			}
+			// Always bind a guarded fallback: on some hosts the main init can partially boot
+			// but miss click handlers (optimizer/runtime errors). This only toggles if the
+			// main handler did not change state.
+			if (root.getAttribute("data-lf-ai-fallback-bound") === "1") return;
+			root.setAttribute("data-lf-ai-fallback-bound", "1");
 			var panel = root.querySelector("#lf-ai-float-panel");
 			var toggle = root.querySelector("[data-lf-ai-toggle]");
 			var closeButtons = root.querySelectorAll("[data-lf-ai-close],[data-lf-ai-minimize]");
@@ -10243,7 +10243,15 @@ function lf_ai_assistant_widget_fallback_js(): string {
 				try { window.localStorage.setItem(key, open ? "open" : "closed"); } catch (e) {}
 			}
 			toggle.addEventListener("click", function(){
-				setOpen(panel.hidden);
+				var wasHidden = !!panel.hidden;
+				// Give the primary handler a chance to run first.
+				setTimeout(function(){
+					try {
+						if (!!panel.hidden === wasHidden) {
+							setOpen(wasHidden);
+						}
+					} catch (e) {}
+				}, 0);
 			});
 			closeButtons.forEach(function(btn){
 				btn.addEventListener("click", function(){
