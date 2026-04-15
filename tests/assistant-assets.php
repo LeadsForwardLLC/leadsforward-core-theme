@@ -25,15 +25,11 @@ expect(
 	'AI assistant floating widget is not rendered in wp-admin'
 );
 
-expect(strpos($src, 'if (is_admin())') !== false, 'AI assistant assets branch on is_admin()');
 expect(
 	strpos($src, "wp_register_script('lf-ai-floating-assistant', '', ['jquery'],") !== false,
 	'frontend registers floating assistant with jquery-only dependency'
 );
-expect(
-	strpos($src, "wp_register_script('lf-ai-floating-assistant', '', ['jquery', 'wp-hooks', 'wp-i18n']") !== false,
-	'admin registers floating assistant with wp-hooks + wp-i18n dependencies'
-);
+expect(strpos($src, "window.wp.i18n.setLocaleData") !== false, 'wp.i18n setLocaleData stub is added');
 
 fwrite(STDOUT, "PASS: assistant-assets\n");
 

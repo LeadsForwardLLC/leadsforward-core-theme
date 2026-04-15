@@ -157,14 +157,19 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		return;
 	}
 
-	if (is_admin()) {
-		wp_enqueue_script('wp-hooks');
-		wp_enqueue_script('wp-i18n');
-		wp_register_script('lf-ai-floating-assistant', '', ['jquery', 'wp-hooks', 'wp-i18n'], LF_THEME_VERSION, true);
-	} else {
-		wp_register_script('lf-ai-floating-assistant', '', ['jquery'], LF_THEME_VERSION, true);
-	}
+	// Front-end only: do not depend on wp-i18n/wp-hooks. Some optimizers can reorder wp-i18n inline
+	// before core bootstraps, which would break the assistant.
+	wp_register_script('lf-ai-floating-assistant', '', ['jquery'], LF_THEME_VERSION, true);
 	wp_enqueue_script('lf-ai-floating-assistant');
+
+	// Some environments (security wrappers / optimizers) can execute WP package inlines before
+	// core packages initialize. Provide a tiny, safe stub so i18n inlines can't fatally error.
+	wp_add_inline_script(
+		'lf-ai-floating-assistant',
+		'(function(){try{window.wp=window.wp||{};window.wp.i18n=window.wp.i18n||{};if(typeof window.wp.i18n.setLocaleData!=="function"){window.wp.i18n.setLocaleData=function(){};}}catch(e){}})();',
+		'before'
+	);
+
 	if (function_exists('wp_enqueue_media')) {
 		wp_enqueue_media();
 	}
