@@ -111,37 +111,7 @@ if ($show_topbar) {
 	(function () {
 		var header = document.querySelector('.site-header');
 		if (!header) return;
-		var frozenHeaderHeight = 0;
-		function applyFrozenHeaderHeight() {
-			if (!frozenHeaderHeight) return;
-			header.style.setProperty('--lf-header-height', frozenHeaderHeight + 'px');
-		}
-		function captureHeaderHeightForLayout() {
-			window.requestAnimationFrame(function () {
-				var hadSticky = header.classList.contains('site-header--sticky');
-				if (hadSticky) {
-					header.classList.remove('site-header--sticky');
-				}
-				var h = Math.ceil(header.getBoundingClientRect().height);
-				if (hadSticky) {
-					header.classList.add('site-header--sticky');
-				}
-				if (header.classList.contains('site-header--open')) {
-					frozenHeaderHeight = Math.max(frozenHeaderHeight || 0, h);
-				} else {
-					frozenHeaderHeight = h;
-				}
-				applyFrozenHeaderHeight();
-			});
-		}
-		captureHeaderHeightForLayout();
-		window.addEventListener('load', captureHeaderHeightForLayout, { passive: true });
-		window.addEventListener('resize', captureHeaderHeightForLayout, { passive: true });
-		if (typeof ResizeObserver !== 'undefined') {
-			new ResizeObserver(function () {
-				captureHeaderHeightForLayout();
-			}).observe(header);
-		}
+		// Header height is stable (sticky visuals only), so no dynamic min-height needed.
 		var toggle = header.querySelector('.site-header__toggle');
 		var panel = header.querySelector('.site-header__panel');
 		var closeBtn = header.querySelector('.site-header__close');
@@ -169,7 +139,7 @@ if ($show_topbar) {
 			if (!open) {
 				closeSubmenus();
 			}
-			captureHeaderHeightForLayout();
+			// No height sync required on menu open/close.
 		}
 		if (toggle && panel) {
 			toggle.addEventListener('click', function () {

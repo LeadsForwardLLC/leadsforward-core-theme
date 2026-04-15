@@ -2170,7 +2170,6 @@ button:focus-visible,
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
-	min-height: var(--lf-header-height, auto);
 }
 
 .site-header--has-topbar {
