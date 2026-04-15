@@ -666,6 +666,7 @@ function lf_ai_assistant_render_floating_widget(): void {
 					<?php endforeach; ?>
 				</span>
 				<button type="button" class="lf-ai-inline-link__open" data-lf-ai-inline-link-open><?php esc_html_e('Link…', 'leadsforward-core'); ?></button>
+				<button type="button" class="lf-ai-inline-link__toolbar-close" data-lf-ai-inline-toolbar-close aria-label="<?php esc_attr_e('Close editor', 'leadsforward-core'); ?>">×</button>
 			</div>
 		</div>
 		<div class="lf-ai-inline-link__backdrop" data-lf-ai-inline-link-backdrop hidden></div>
@@ -1113,6 +1114,10 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-icon-picker__head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-bottom:1px solid #e2e8f0; background:#f8fafc; }
 		.lf-ai-icon-picker__title { font-size:13px; font-weight:700; color:#0f172a; }
 		.lf-ai-icon-picker__close { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:15px; line-height:1; }
+		.lf-ai-icon-picker__sizes { display:flex; gap:6px; padding:8px 12px 4px; }
+		.lf-ai-icon-picker__sizes[hidden] { display:none !important; }
+		.lf-ai-icon-picker__size { border:1px solid #d6c8fb; background:#fff; color:#5b21b6; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:700; cursor:pointer; }
+		.lf-ai-icon-picker__size.is-active { background:#8348f9; border-color:#8348f9; color:#fff; }
 		.lf-ai-icon-picker__search { border:1px solid #d6c8fb; border-radius:8px; padding:8px 10px; margin:10px 12px; font-size:13px; }
 		.lf-ai-icon-picker__list { padding:0 12px 12px; overflow:auto; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
 		.lf-ai-icon-picker__item { border:1px solid #e2e8f0; border-radius:8px; background:#fff; color:#0f172a; text-align:left; padding:8px 10px; cursor:pointer; font-size:12px; }
@@ -1233,6 +1238,8 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-inline-link__fmt--icon svg { display:block; flex-shrink:0; }
 		.lf-ai-inline-link__open { border:0; border-radius:8px; background:#8348f9; color:#fff; font:inherit; font-weight:700; padding:6px 10px; cursor:pointer; }
 		.lf-ai-inline-link__open:hover { background:#6d28d9; }
+		.lf-ai-inline-link__toolbar-close { border:1px solid rgba(255,255,255,.35); border-radius:8px; background:rgba(255,255,255,.08); color:#fff; font:inherit; font-weight:700; padding:4px 8px; cursor:pointer; line-height:1; min-width:28px; }
+		.lf-ai-inline-link__toolbar-close:hover { background:rgba(255,255,255,.2); }
 		.lf-ai-inline-link__backdrop { position:fixed; inset:0; z-index:100003; background:rgba(15,23,42,.45); }
 		.lf-ai-inline-link__backdrop[hidden] { display:none !important; }
 		.lf-ai-inline-link__panel { position:fixed; z-index:100004; left:50%; top:50%; transform:translate(-50%,-50%); width:min(400px,calc(100vw - 32px)); max-height:min(72vh,520px); overflow:auto; background:#fff; border:1px solid #dbe3ef; border-radius:14px; box-shadow:0 18px 55px rgba(15,23,42,.28); padding:14px; display:flex; flex-direction:column; gap:10px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
@@ -1275,6 +1282,7 @@ function lf_ai_assistant_widget_js(): string {
 		var $seoRoot = $("[data-lf-ai-seo-float]");
 		var $historyRoot = $("[data-lf-ai-history-float]");
 		var $headerRoot = $("[data-lf-ai-header-float]");
+		try {
 		if (!$root.length || typeof lfAiFloating === "undefined") {
 			return false;
 		}
@@ -1398,6 +1406,7 @@ function lf_ai_assistant_widget_js(): string {
 		var servicePickerSearchEl = null;
 		var servicePickerListEl = null;
 		var servicePickerWrap = null;
+		var servicePickerDirty = false;
 		var activeDragSection = null;
 		var activeColumnDrag = null;
 		var selectedSectionWrap = null;
@@ -1440,6 +1449,9 @@ function lf_ai_assistant_widget_js(): string {
 		var iconPickerSearchEl = null;
 		var iconPickerListEl = null;
 		var iconPickerCurrentSlug = "";
+		var iconPickerSizeEl = null;
+		var iconPickerCurrentSize = "sm";
+		var iconPickerSizeEnabled = false;
 		var iconPickerOnSelect = null;
 		var mediaPickerEl = null;
 		var mediaPickerWrap = null;
@@ -2001,6 +2013,26 @@ function lf_ai_assistant_widget_js(): string {
 			lfInlineLinkSavedRange = null;
 			lfInlineLinkSavedHost = null;
 			lfInlineLinkSavedAnchor = null;
+		}
+		function lfInlineUiHit(target) {
+			var hit = target && target.nodeType === 3 ? target.parentElement : target;
+			if (!hit || !hit.closest) return false;
+			return !!(
+				hit.closest(".lf-ai-inline-link__panel") ||
+				hit.closest(".lf-ai-inline-link__toolbar") ||
+				hit.closest(".lf-ai-inline-link__backdrop") ||
+				hit.closest(".lf-ai-icon-picker")
+			);
+		}
+		function closeInlineEditing() {
+			if (inlineIsSaving) return;
+			lfInlineToolbarPinnedHost = null;
+			lfHideInlineLinkToolbar();
+			lfHideInlineLinkPanel();
+			saveInlineEdit(function(){
+				lfHideInlineLinkToolbar();
+				lfHideInlineLinkPanel();
+			});
 		}
 		function lfClosestAnchorWithinHost(node, host) {
 			if (!node || !host) return null;
@@ -2630,7 +2662,7 @@ function lf_ai_assistant_widget_js(): string {
 					try { document.execCommand(cmd, false, null); } catch (errD) {}
 				}
 			});
-			$linkRoot.on("mousedown", "[data-lf-ai-inline-link-apply], [data-lf-ai-inline-link-pick], [data-lf-ai-inline-link-close], [data-lf-ai-inline-link-unlink]", function(e){
+			$linkRoot.on("mousedown", "[data-lf-ai-inline-link-apply], [data-lf-ai-inline-link-pick], [data-lf-ai-inline-link-close], [data-lf-ai-inline-link-unlink], [data-lf-ai-inline-toolbar-close]", function(e){
 				e.preventDefault();
 			});
 			$linkRoot.find("[data-lf-ai-inline-link-open]").on("click", function(e){
@@ -2640,6 +2672,10 @@ function lf_ai_assistant_widget_js(): string {
 			$linkRoot.find("[data-lf-ai-inline-link-close], [data-lf-ai-inline-link-backdrop]").on("click", function(e){
 				e.preventDefault();
 				lfHideInlineLinkPanel();
+			});
+			$linkRoot.find("[data-lf-ai-inline-toolbar-close]").on("click", function(e){
+				e.preventDefault();
+				closeInlineEditing();
 			});
 			$linkRoot.find("[data-lf-ai-inline-link-apply]").on("click", function(e){
 				e.preventDefault();
@@ -2715,43 +2751,44 @@ function lf_ai_assistant_widget_js(): string {
 						}
 					} catch (eR) {}
 				}
-				openIconPicker("", function(slug){
-					var s = String(slug || "").trim();
-					if (!s) return;
-					var h = lfProseIconSavedHost || host;
-					var sr = lfProseIconSavedRange;
-					if (!lfAiFloating || !lfAiFloating.ajax_url || !lfAiFloating.nonce) {
+			openIconPicker("", function(slug){
+				var s = String(slug || "").trim();
+				if (!s) return;
+				var h = lfProseIconSavedHost || host;
+				var sr = lfProseIconSavedRange;
+				if (!lfAiFloating || !lfAiFloating.ajax_url || !lfAiFloating.nonce) {
+					lfProseIconSavedRange = null;
+					lfProseIconSavedHost = null;
+					setStatus("Icon insertion is unavailable. Reload the editor and try again.", true);
+					return;
+				}
+				$.post(lfAiFloating.ajax_url, {
+					action: "lf_ai_icon_markup",
+					slug: s,
+					size: iconPickerCurrentSize,
+					nonce: lfAiFloating.nonce
+				}).done(function(res){
+					if (!res || !res.success || !res.data || !res.data.markup) {
 						lfProseIconSavedRange = null;
 						lfProseIconSavedHost = null;
-						setStatus("Icon insertion is unavailable. Reload the editor and try again.", true);
+						setStatus("Could not load icon markup for that slug.", true);
 						return;
 					}
-					$.post(lfAiFloating.ajax_url, {
-						action: "lf_ai_icon_markup",
-						slug: s,
-						nonce: lfAiFloating.nonce
-					}).done(function(res){
-						if (!res || !res.success || !res.data || !res.data.markup) {
-							lfProseIconSavedRange = null;
-							lfProseIconSavedHost = null;
-							setStatus("Could not load icon markup for that slug.", true);
-							return;
-						}
-						var inserted = lfInsertHtmlIntoContentEditable(h, sr, String(res.data.markup));
-						lfProseIconSavedRange = null;
-						lfProseIconSavedHost = null;
-						if (!inserted) {
-							setStatus("Could not insert icon at the cursor. Click in the text and try again.", true);
-							return;
-						}
-						try { h.focus(); } catch (eF) {}
-						persistRichContentBodyNow(h, "Icon inserted.");
-					}).fail(function(){
-						lfProseIconSavedRange = null;
-						lfProseIconSavedHost = null;
-						setStatus("Could not load icon markup. Check your connection and try again.", true);
-					});
+					var inserted = lfInsertHtmlIntoContentEditable(h, sr, String(res.data.markup));
+					lfProseIconSavedRange = null;
+					lfProseIconSavedHost = null;
+					if (!inserted) {
+						setStatus("Could not insert icon at the cursor. Click in the text and try again.", true);
+						return;
+					}
+					try { h.focus(); } catch (eF) {}
+					persistRichContentBodyNow(h, "Icon inserted.");
+				}).fail(function(){
+					lfProseIconSavedRange = null;
+					lfProseIconSavedHost = null;
+					setStatus("Could not load icon markup. Check your connection and try again.", true);
 				});
+			}, { sizeEnabled: true, size: "sm" });
 			});
 		}
 		lfInitInlineLinkUi();
@@ -3073,6 +3110,21 @@ function lf_ai_assistant_widget_js(): string {
 			lfProseIconSavedHost = null;
 			try { if (iconPickerSearchEl) iconPickerSearchEl.value = ""; } catch (e) {}
 		}
+		function syncIconPickerSizes() {
+			if (!iconPickerSizeEl) return;
+			Array.prototype.slice.call(iconPickerSizeEl.querySelectorAll("[data-lf-ai-icon-size]")).forEach(function(btn){
+				var tok = String(btn.getAttribute("data-lf-ai-icon-size") || "");
+				btn.classList.toggle("is-active", tok === iconPickerCurrentSize);
+			});
+		}
+		function setIconPickerSize(size) {
+			var next = String(size || "");
+			if (!/^(sm|md|lg)$/.test(next)) {
+				next = "sm";
+			}
+			iconPickerCurrentSize = next;
+			syncIconPickerSizes();
+		}
 		function renderIconPickerList(query) {
 			if (!iconPickerListEl) return;
 			var q = String(query || "").trim().toLowerCase();
@@ -3127,9 +3179,10 @@ function lf_ai_assistant_widget_js(): string {
 			iconPickerEl = document.createElement("div");
 			iconPickerEl.className = "lf-ai-icon-picker lf-ai-inline-editor-ignore";
 			iconPickerEl.hidden = true;
-			iconPickerEl.innerHTML = "<div class=\"lf-ai-icon-picker__card\"><div class=\"lf-ai-icon-picker__head\"><div class=\"lf-ai-icon-picker__title\">Choose an icon</div><button type=\"button\" class=\"lf-ai-icon-picker__close\" data-lf-ai-icon-picker-close aria-label=\"Close icon picker\">×</button></div><input type=\"text\" class=\"lf-ai-icon-picker__search\" data-lf-ai-icon-picker-search placeholder=\"Search icon slug...\" /><div class=\"lf-ai-icon-picker__list\" data-lf-ai-icon-picker-list></div></div>";
+			iconPickerEl.innerHTML = "<div class=\"lf-ai-icon-picker__card\"><div class=\"lf-ai-icon-picker__head\"><div class=\"lf-ai-icon-picker__title\">Choose an icon</div><button type=\"button\" class=\"lf-ai-icon-picker__close\" data-lf-ai-icon-picker-close aria-label=\"Close icon picker\">×</button></div><div class=\"lf-ai-icon-picker__sizes\" data-lf-ai-icon-sizes><button type=\"button\" class=\"lf-ai-icon-picker__size\" data-lf-ai-icon-size=\"sm\">Small</button><button type=\"button\" class=\"lf-ai-icon-picker__size\" data-lf-ai-icon-size=\"md\">Medium</button><button type=\"button\" class=\"lf-ai-icon-picker__size\" data-lf-ai-icon-size=\"lg\">Large</button></div><input type=\"text\" class=\"lf-ai-icon-picker__search\" data-lf-ai-icon-picker-search placeholder=\"Search icon slug...\" /><div class=\"lf-ai-icon-picker__list\" data-lf-ai-icon-picker-list></div></div>";
 			iconPickerSearchEl = iconPickerEl.querySelector("[data-lf-ai-icon-picker-search]");
 			iconPickerListEl = iconPickerEl.querySelector("[data-lf-ai-icon-picker-list]");
+			iconPickerSizeEl = iconPickerEl.querySelector("[data-lf-ai-icon-sizes]");
 			var closeBtn = iconPickerEl.querySelector("[data-lf-ai-icon-picker-close]");
 			if (closeBtn) {
 				closeBtn.addEventListener("click", function(e){
@@ -3140,6 +3193,14 @@ function lf_ai_assistant_widget_js(): string {
 			if (iconPickerSearchEl) {
 				iconPickerSearchEl.addEventListener("input", function(){
 					renderIconPickerList(iconPickerSearchEl.value);
+				});
+			}
+			if (iconPickerSizeEl) {
+				iconPickerSizeEl.addEventListener("click", function(e){
+					var btn = e.target && e.target.closest ? e.target.closest("[data-lf-ai-icon-size]") : null;
+					if (!btn) return;
+					e.preventDefault();
+					setIconPickerSize(btn.getAttribute("data-lf-ai-icon-size") || "sm");
 				});
 			}
 			iconPickerEl.addEventListener("click", function(e){
@@ -3211,6 +3272,11 @@ function lf_ai_assistant_widget_js(): string {
 			} else {
 				removeBenefitIconBgRow();
 			}
+			iconPickerSizeEnabled = !!pickerOpts.sizeEnabled;
+			if (iconPickerSizeEl) {
+				iconPickerSizeEl.hidden = !iconPickerSizeEnabled;
+			}
+			setIconPickerSize(pickerOpts.size || iconPickerCurrentSize || "sm");
 			iconPickerCurrentSlug = String(currentSlug || "");
 			iconPickerOnSelect = typeof onSelect === "function" ? onSelect : null;
 			if (!iconPickerEl) return;
@@ -6203,7 +6269,12 @@ function lf_ai_assistant_widget_js(): string {
 						var ids = Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id]")).map(function(n){
 							return String(n.getAttribute("data-lf-service-id") || "").trim();
 						}).filter(function(v){ return v !== ""; });
-						persistSectionLineItems(wrap, "service_intro_service_ids", ids, "Saving services...");
+						servicePickerDirty = true;
+						persistSectionLineItems(wrap, "service_intro_service_ids", ids, "Saving services...", {
+							onDone: function() {
+								servicePickerDirty = false;
+							}
+						});
 					});
 					card.insertBefore(rm, card.firstChild);
 					card.setAttribute("draggable", "true");
@@ -6233,7 +6304,12 @@ function lf_ai_assistant_widget_js(): string {
 						var ids = Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id]")).map(function(n){
 							return String(n.getAttribute("data-lf-service-id") || "").trim();
 						}).filter(function(v){ return v !== ""; });
-						persistSectionLineItems(wrap, "service_intro_service_ids", ids, "Saving service order...");
+						servicePickerDirty = true;
+						persistSectionLineItems(wrap, "service_intro_service_ids", ids, "Saving service order...", {
+							onDone: function() {
+								servicePickerDirty = false;
+							}
+						});
 					};
 					card.ondragend = function(){
 						card.classList.remove("is-dragging");
@@ -6393,6 +6469,16 @@ function lf_ai_assistant_widget_js(): string {
 			});
 		}
 		function closeServicePicker() {
+			if (servicePickerDirty && servicePickerWrap && servicePickerWrap.wrap && servicePickerWrap.grid) {
+				var ids = Array.prototype.slice.call(servicePickerWrap.grid.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id]")).map(function(n){
+					return String(n.getAttribute("data-lf-service-id") || "").trim();
+				}).filter(function(v){ return v !== ""; });
+				persistSectionLineItems(servicePickerWrap.wrap, "service_intro_service_ids", ids, "Saving services...", {
+					onDone: function() {
+						servicePickerDirty = false;
+					}
+				});
+			}
 			if (servicePickerEl) servicePickerEl.hidden = true;
 			servicePickerWrap = null;
 			try { if (servicePickerSearchEl) servicePickerSearchEl.value = ""; } catch (eSp) {}
@@ -6495,7 +6581,12 @@ function lf_ai_assistant_widget_js(): string {
 					var ids = Array.prototype.slice.call(servicePickerWrap.grid.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id]")).map(function(n){
 						return String(n.getAttribute("data-lf-service-id") || "").trim();
 					}).filter(function(v){ return v !== ""; });
-					persistSectionLineItems(servicePickerWrap.wrap, "service_intro_service_ids", ids, "Saving services...");
+					servicePickerDirty = true;
+					persistSectionLineItems(servicePickerWrap.wrap, "service_intro_service_ids", ids, "Saving services...", {
+						onDone: function() {
+							servicePickerDirty = false;
+						}
+					});
 				});
 				item.appendChild(meta);
 				item.appendChild(addBtn);
@@ -9431,25 +9522,24 @@ function lf_ai_assistant_widget_js(): string {
 			if (target === inlineActiveEl || inlineActiveEl.contains(target)) {
 				return;
 			}
-			// Allow clicking within the inline toolbar/panel/backdrop without closing the active edit.
-			// Use class selectors + native closest so portaled/fixed UI nodes still count as "inside"
-			// without treating unrelated AI assistant markup as part of this surface.
-			var lfInlineLinkUiHit = target && target.nodeType === 3 ? target.parentElement : target;
-			if (lfInlineLinkUiHit && lfInlineLinkUiHit.closest) {
-				if (
-					lfInlineLinkUiHit.closest(".lf-ai-inline-link__panel") ||
-					lfInlineLinkUiHit.closest(".lf-ai-inline-link__toolbar") ||
-					lfInlineLinkUiHit.closest(".lf-ai-inline-link__backdrop")
-				) {
-					return;
-				}
+			if (lfInlineUiHit(target)) {
+				return;
 			}
-			lfHideInlineLinkToolbar();
-			lfInlineToolbarPinnedHost = null;
-			saveInlineEdit(function(){
-				lfHideInlineLinkToolbar();
-			});
+			closeInlineEditing();
 		});
+		document.addEventListener("pointerdown", function(e){
+			if (!inlineActiveEl || inlineIsSaving) {
+				return;
+			}
+			var target = e.target;
+			if (target === inlineActiveEl || inlineActiveEl.contains(target)) {
+				return;
+			}
+			if (lfInlineUiHit(target)) {
+				return;
+			}
+			closeInlineEditing();
+		}, true);
 		$mode.on("change", function(){
 			syncModeUi();
 			var m = modeValue();
@@ -9954,6 +10044,15 @@ function lf_ai_assistant_widget_js(): string {
 		$root.attr("data-lf-ai-js-init", "1");
 		renderSeoSnapshot();
 		return true;
+		} catch (err) {
+			try {
+				window.lfAiInitError = err && err.message ? err.message : String(err);
+			} catch (eErr) {}
+			try {
+				$root.removeAttr("data-lf-ai-js-init");
+			} catch (eAttr) {}
+			return false;
+		}
 		}
 		var lfAiBootAttempts = 0;
 		function lfAiBootTick() {

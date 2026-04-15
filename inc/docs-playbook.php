@@ -135,6 +135,7 @@ function lf_docs_render_playbook_sections(): void {
 				<h3><?php esc_html_e('What you can do on the front end', 'leadsforward-core'); ?></h3>
 				<ul>
 					<li><?php esc_html_e('Click text to edit inline; changes save on blur (or use the documented save shortcut while focused).', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Inline toolbar closes on outside click or the ✕ close button; icon picker includes Small/Medium/Large presets.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Click images to swap from the Media Library.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Drag sections to reorder; use hover controls to reverse columns, duplicate, hide/show, or delete (delete asks for confirmation).', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Use the Structure rail (☰) to jump between sections, reorder from a list, or add sections from the library.', 'leadsforward-core'); ?></li>
