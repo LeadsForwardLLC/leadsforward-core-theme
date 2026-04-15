@@ -2194,9 +2194,10 @@ button:focus-visible,
 }
 
 .site-header--sticky {
-	position: sticky;
-	top: 0;
-	z-index: 50;
+	/* Sticky should apply ONLY to the main header capsule, not the promo top bar. */
+	position: relative;
+	top: auto;
+	z-index: auto;
 }
 
 .site-header__spacer {
@@ -2385,25 +2386,25 @@ button:focus-visible,
 	line-height: 1;
 }
 .site-header__menu .lf-menu-call__link .lf-icon {
-	width: 0.62em !important;
-	height: 0.62em !important;
+	width: 0.56em !important;
+	height: 0.56em !important;
 	flex-shrink: 0;
 	display: block;
 	overflow: visible;
-	transform: translateY(-0.12em);
+	transform: translateY(0.02em);
 }
 
 .site-header__menu .lf-menu-call__link .lf-menu-call__icon.lf-icon {
-	width: 0.62em !important;
-	height: 0.62em !important;
+	width: 0.56em !important;
+	height: 0.56em !important;
 }
 
 .site-header__menu .lf-menu-call__link svg {
-	width: 0.62em !important;
-	height: 0.62em !important;
+	width: 0.56em !important;
+	height: 0.56em !important;
 	display: block;
 	overflow: visible;
-	transform: translateY(-0.12em);
+	transform: translateY(0.02em);
 }
 
 .site-header__menu .lf-menu-call > a svg,
