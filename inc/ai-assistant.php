@@ -2059,11 +2059,7 @@ function lf_ai_assistant_widget_js(): string {
 				hit.closest(".lf-ai-inline-link__panel") ||
 				hit.closest(".lf-ai-inline-link__toolbar") ||
 				hit.closest(".lf-ai-inline-link__backdrop") ||
-				hit.closest(".lf-ai-icon-picker") ||
-				// Section controls / float panels should not force-close inline toolbar.
-				hit.closest(".lf-ai-section-controls") ||
-				hit.closest(".lf-ai-float__panel") ||
-				hit.closest(".lf-ai-float__toggle")
+				hit.closest(".lf-ai-icon-picker")
 			);
 		}
 		function closeInlineEditing() {

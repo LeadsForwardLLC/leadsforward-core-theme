@@ -429,18 +429,6 @@ function lf_get_homepage_section_config(): array {
 		$stored = wp_unslash($stored);
 	}
 	
-	// DEBUG: Log what we're reading from database
-	error_log('LF DEBUG: Reading homepage config from database. Stored keys: ' . json_encode(array_keys($stored ?? [])));
-	if (is_array($stored) && !empty($stored)) {
-		error_log('LF DEBUG: Sample stored data for hero: ' . json_encode(array_slice($stored['hero'] ?? [], 0, 8, true)));
-		// ALERT: Check if content disappeared
-		if (!empty($stored['hero']['hero_headline']) || !empty($stored['hero']['hero_subheadline'])) {
-			error_log('LF ALERT: HERO CONTENT DETECTED IN DATABASE - hero_headline: ' . ($stored['hero']['hero_headline'] ?? 'empty'));
-		} else {
-			error_log('LF ALERT: HERO CONTENT MISSING FROM DATABASE - This indicates data was wiped after save!');
-		}
-	}
-	
 	if ($normalized_once) {
 		$stored = get_option(LF_HOMEPAGE_CONFIG_OPTION, null);
 		if (is_array($stored)) {
@@ -463,10 +451,6 @@ function lf_get_homepage_section_config(): array {
 				break;
 			}
 		}
-		
-		// DEBUG: Log enabled detection
-		error_log('LF DEBUG: Homepage config enabled detection: has_enabled=' . ($has_enabled ? 'true' : 'false'));
-		
 		if (!$has_enabled) {
 			foreach (lf_homepage_controller_order() as $section_id) {
 				$row = $config[ $section_id ] ?? null;
@@ -484,10 +468,6 @@ function lf_get_homepage_section_config(): array {
 				}
 			}
 		}
-		
-		// DEBUG: Log content detection
-		error_log('LF DEBUG: Homepage config content detection: has_enabled=' . ($has_enabled ? 'true' : 'false'));
-		
 		// Third pass: raw option rows (or list/array fields). Without this, a site can look
 		// "empty" to the order-based checks while the DB still holds orchestrator output —
 		// then the block below overwrites lf_homepage_section_config with niche defaults on read.
@@ -513,42 +493,6 @@ function lf_get_homepage_section_config(): array {
 						break 2;
 					}
 				}
-			}
-		}
-		
-		// DEBUG: Log final detection result
-		error_log('LF DEBUG: Homepage config final detection: has_enabled=' . ($has_enabled ? 'true' : 'false') . ', manual=' . ($manual ? 'true' : 'false') . ', wizard_done=' . ($wizard_done ? 'true' : 'false'));
-		if (!$has_enabled && !$manual && $wizard_done) {
-			error_log('LF DEBUG: HOMEPAGE CONFIG RESET TRIGGERED - This will overwrite saved data!');
-			// EMERGENCY PROTECTION: Check if we have actual content before allowing reset
-			$has_real_content = false;
-			foreach ($stored as $section_id => $section_data) {
-				if (is_array($section_data)) {
-					foreach ($section_data as $key => $value) {
-						if (in_array($key, ['hero_headline', 'hero_subheadline', 'section_heading', 'section_intro', 'trust_heading']) && 
-							is_string($value) && trim($value) !== '') {
-							$has_real_content = true;
-							error_log('LF EMERGENCY: Found real content in ' . $section_id . '.' . $key . ' - BLOCKING RESET!');
-							break 2;
-						}
-					}
-				}
-			}
-			if (!$has_real_content) {
-				$niche = get_option(LF_HOMEPAGE_NICHE_OPTION, '');
-				$fresh = lf_homepage_default_config($niche ?: null);
-				// Never rewrite the option from a normal front-end hit — that could erase orchestrator
-				// content if enabled/content heuristics misfire. Admin / REST / CLI may persist the reset.
-				$may_persist_homepage_reset = is_admin()
-					|| (defined('REST_REQUEST') && REST_REQUEST)
-					|| (defined('WP_CLI') && WP_CLI);
-				if ($may_persist_homepage_reset) {
-					error_log('LF EMERGENCY: Allowing reset - no real content found');
-					update_option(LF_HOMEPAGE_CONFIG_OPTION, $fresh, true);
-					$config = $fresh;
-				}
-			} else {
-				error_log('LF EMERGENCY: Reset BLOCKED - real content detected!');
 			}
 		}
 		return $config;
