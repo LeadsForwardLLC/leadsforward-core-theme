@@ -152,6 +152,12 @@ function lf_homepage_base_section_type(string $section_id): string {
  * @return string[]
  */
 function lf_homepage_controller_order(): array {
+	if (function_exists('lf_fe_preview_homepage_order') && function_exists('lf_homepage_sanitize_order')) {
+		$preview_order = lf_fe_preview_homepage_order();
+		if (is_array($preview_order) && $preview_order !== []) {
+			return lf_homepage_sanitize_order($preview_order, false);
+		}
+	}
 	$stored = get_option(LF_HOMEPAGE_ORDER_OPTION, null);
 	if (is_array($stored) && !empty($stored)) {
 		$order = lf_homepage_sanitize_order($stored, false);
@@ -411,6 +417,12 @@ function lf_homepage_apply_niche_config(string $niche_slug, ?array $wizard_data 
  * @return array<string, array<string, mixed>>
  */
 function lf_get_homepage_section_config(): array {
+	if (function_exists('lf_fe_preview_homepage_config') && function_exists('lf_homepage_merge_config_with_defaults')) {
+		$preview = lf_fe_preview_homepage_config();
+		if (is_array($preview) && $preview !== []) {
+			return lf_homepage_merge_config_with_defaults($preview);
+		}
+	}
 	$normalized_once = lf_homepage_maybe_normalize_legacy_section_ids();
 	$stored = get_option(LF_HOMEPAGE_CONFIG_OPTION, null);
 	if (is_array($stored)) {

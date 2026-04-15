@@ -189,6 +189,12 @@ function lf_ai_sanitize_benefits_items_line( string $line ): string {
  * Get persisted inline DOM text overrides for a context.
  */
 function lf_ai_get_inline_dom_overrides(string $context_type, $context_id): array {
+	if (function_exists('lf_fe_preview_inline_dom_overrides')) {
+		$preview = lf_fe_preview_inline_dom_overrides($context_type, $context_id);
+		if (is_array($preview)) {
+			return $preview;
+		}
+	}
 	if ($context_type === 'homepage' || $context_id === 'homepage') {
 		$stored = get_option(LF_AI_INLINE_OVERRIDES_OPTION, []);
 		return is_array($stored) ? $stored : [];
@@ -235,6 +241,12 @@ function lf_ai_set_inline_dom_overrides(string $context_type, $context_id, array
  * Get persisted inline image overrides for a context.
  */
 function lf_ai_get_inline_image_overrides(string $context_type, $context_id): array {
+	if (function_exists('lf_fe_preview_inline_image_overrides')) {
+		$preview = lf_fe_preview_inline_image_overrides($context_type, $context_id);
+		if (is_array($preview)) {
+			return $preview;
+		}
+	}
 	if ($context_type === 'homepage' || $context_id === 'homepage') {
 		$stored = get_option(LF_AI_INLINE_IMAGE_OVERRIDES_OPTION, []);
 		return is_array($stored) ? $stored : [];

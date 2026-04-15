@@ -20,11 +20,182 @@ const LF_FE_REVISION_VERSION_META = '_lf_fe_layout_version';
 const LF_FE_REVISION_HOME_OPTION = 'lf_homepage_layout_revisions';
 const LF_FE_REVISION_HOME_VERSION_OPTION = 'lf_homepage_layout_version';
 
+const LF_FE_PREVIEW_QUERY_PARAM = 'lf_preview_rev';
+
 /**
  * Skip recording when applying a restore (prevents recursive snapshots).
  */
 function lf_fe_revision_internal(): bool {
 	return !empty($GLOBALS['lf_fe_revision_internal']);
+}
+
+function lf_fe_preview_requested_rev_id(): string {
+	if (is_admin()) {
+		return '';
+	}
+	if (!isset($_GET[LF_FE_PREVIEW_QUERY_PARAM])) {
+		return '';
+	}
+	$raw = sanitize_text_field((string) wp_unslash($_GET[LF_FE_PREVIEW_QUERY_PARAM]));
+	return $raw !== '' ? $raw : '';
+}
+
+/**
+ * @return array{type:string,id:string}|null
+ */
+function lf_fe_preview_context_from_request(): ?array {
+	if (is_admin()) {
+		return null;
+	}
+	if (is_front_page()) {
+		return ['type' => 'homepage', 'id' => 'homepage'];
+	}
+	$qid = get_queried_object_id();
+	if ($qid <= 0) {
+		return null;
+	}
+	$post = get_post($qid);
+	if (!$post instanceof \WP_Post) {
+		return null;
+	}
+	$front_id = (int) get_option('page_on_front');
+	if ($post->post_type === 'page' && (int) $post->ID === $front_id) {
+		return ['type' => 'homepage', 'id' => 'homepage'];
+	}
+	return ['type' => (string) $post->post_type, 'id' => (string) $post->ID];
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function lf_fe_revision_find_snapshot(string $context_type, string $context_id, string $rev_id): ?array {
+	if ($rev_id === '') {
+		return null;
+	}
+	$list = lf_fe_revision_get_list($context_type, $context_id);
+	foreach ($list as $row) {
+		if (!is_array($row) || (string) ($row['id'] ?? '') !== $rev_id) {
+			continue;
+		}
+		$snap = $row['snapshot'] ?? null;
+		return is_array($snap) ? $snap : null;
+	}
+	return null;
+}
+
+/**
+ * Resolve and cache the active preview snapshot for this request.
+ *
+ * @return array<string,mixed>|null
+ */
+function lf_fe_preview_snapshot(): ?array {
+	if (array_key_exists('lf_fe_preview_snapshot', $GLOBALS)) {
+		$val = $GLOBALS['lf_fe_preview_snapshot'];
+		return is_array($val) ? $val : null;
+	}
+	$GLOBALS['lf_fe_preview_snapshot'] = null;
+	$rev_id = lf_fe_preview_requested_rev_id();
+	if ($rev_id === '') {
+		return null;
+	}
+	$ctx = lf_fe_preview_context_from_request();
+	if ($ctx === null) {
+		return null;
+	}
+	if (!lf_fe_revision_user_can_edit((string) $ctx['type'], (string) $ctx['id'])) {
+		return null;
+	}
+	$snap = lf_fe_revision_find_snapshot((string) $ctx['type'], (string) $ctx['id'], $rev_id);
+	if (!is_array($snap) || $snap === []) {
+		return null;
+	}
+	$GLOBALS['lf_fe_preview_snapshot'] = $snap;
+	return $snap;
+}
+
+function lf_fe_preview_active(): bool {
+	return lf_fe_preview_snapshot() !== null;
+}
+
+/**
+ * @return array<string, array<string,mixed>>|null
+ */
+function lf_fe_preview_homepage_config(): ?array {
+	$snap = lf_fe_preview_snapshot();
+	if (!is_array($snap) || ($snap['kind'] ?? '') !== 'homepage') {
+		return null;
+	}
+	$cfg = $snap['homepage_config'] ?? null;
+	return is_array($cfg) ? $cfg : null;
+}
+
+/**
+ * @return string[]|null
+ */
+function lf_fe_preview_homepage_order(): ?array {
+	$snap = lf_fe_preview_snapshot();
+	if (!is_array($snap) || ($snap['kind'] ?? '') !== 'homepage') {
+		return null;
+	}
+	$order = $snap['homepage_order'] ?? null;
+	if (!is_array($order)) {
+		return null;
+	}
+	$out = [];
+	foreach ($order as $id) {
+		if (is_string($id) && trim($id) !== '') {
+			$out[] = trim($id);
+		}
+	}
+	return $out !== [] ? $out : null;
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function lf_fe_preview_post_pb_config(int $post_id): ?array {
+	$snap = lf_fe_preview_snapshot();
+	if (!is_array($snap) || ($snap['kind'] ?? '') !== 'post') {
+		return null;
+	}
+	$pid = (int) ($snap['post_id'] ?? 0);
+	if ($pid <= 0 || $pid !== $post_id) {
+		return null;
+	}
+	$pb = $snap['pb'] ?? null;
+	return is_array($pb) ? $pb : null;
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function lf_fe_preview_inline_dom_overrides(string $context_type, $context_id): ?array {
+	$snap = lf_fe_preview_snapshot();
+	if (!is_array($snap)) {
+		return null;
+	}
+	$ctx = lf_fe_preview_context_from_request();
+	if ($ctx === null || (string) $ctx['type'] !== $context_type || (string) $ctx['id'] !== (string) $context_id) {
+		return null;
+	}
+	$map = $snap['inline_dom'] ?? null;
+	return is_array($map) ? $map : null;
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function lf_fe_preview_inline_image_overrides(string $context_type, $context_id): ?array {
+	$snap = lf_fe_preview_snapshot();
+	if (!is_array($snap)) {
+		return null;
+	}
+	$ctx = lf_fe_preview_context_from_request();
+	if ($ctx === null || (string) $ctx['type'] !== $context_type || (string) $ctx['id'] !== (string) $context_id) {
+		return null;
+	}
+	$map = $snap['inline_img'] ?? null;
+	return is_array($map) ? $map : null;
 }
 
 /**
@@ -442,3 +613,27 @@ function lf_fe_ajax_revision_ping(): void {
 add_action('wp_ajax_lf_fe_revision_list', 'lf_fe_ajax_revision_list');
 add_action('wp_ajax_lf_fe_revision_restore', 'lf_fe_ajax_revision_restore');
 add_action('wp_ajax_lf_fe_revision_ping', 'lf_fe_ajax_revision_ping');
+
+function lf_fe_preview_banner(): void {
+	if (is_admin()) {
+		return;
+	}
+	$snap = lf_fe_preview_snapshot();
+	if (!is_array($snap)) {
+		return;
+	}
+	$exit = remove_query_arg(LF_FE_PREVIEW_QUERY_PARAM);
+	echo '<div class="lf-fe-preview-banner" role="status" aria-live="polite">';
+	echo '<div class="lf-fe-preview-banner__inner">';
+	echo '<strong>' . esc_html__('Previewing revision', 'leadsforward-core') . '</strong>';
+	echo '<a class="lf-fe-preview-banner__exit" href="' . esc_url($exit) . '">' . esc_html__('Exit preview', 'leadsforward-core') . '</a>';
+	echo '</div>';
+	echo '</div>';
+	echo '<style>
+		.lf-fe-preview-banner{position:sticky;top:0;z-index:9999;background:#0f172a;color:#fff;border-bottom:1px solid rgba(255,255,255,0.15)}
+		.lf-fe-preview-banner__inner{max-width:1100px;margin:0 auto;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+		.lf-fe-preview-banner__exit{color:#fff;text-decoration:underline;font-weight:700}
+	</style>';
+}
+
+add_action('wp_body_open', 'lf_fe_preview_banner', 5);

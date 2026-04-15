@@ -119,6 +119,12 @@ function lf_pb_default_config(string $context): array {
 }
 
 function lf_pb_get_post_config(int $post_id, string $context): array {
+	if (function_exists('lf_fe_preview_post_pb_config')) {
+		$preview = lf_fe_preview_post_pb_config($post_id);
+		if (is_array($preview) && $preview !== []) {
+			return $preview;
+		}
+	}
 	$default = lf_pb_default_config($context);
 	
 	// If this is the homepage, sync with homepage admin config
