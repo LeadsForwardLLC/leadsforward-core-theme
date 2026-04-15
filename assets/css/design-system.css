@@ -2369,8 +2369,7 @@ button:focus-visible,
 	transform: translateY(-0.02em);
 }
 
-.site-header__menu .lf-menu-call > a .lf-icon svg,
-.site-header__menu .lf-menu-call > a svg {
+.site-header__menu .lf-menu-call > a .lf-icon > svg {
 	width: 0.9em;
 	height: 0.9em;
 	display: block;

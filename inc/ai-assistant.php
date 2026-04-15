@@ -809,8 +809,10 @@ function lf_ai_assistant_render_floating_widget(): void {
 						<div style="font-size:12px; font-weight:600; color:#0f172a; margin-bottom:6px;"><?php esc_html_e('Top bar background', 'leadsforward-core'); ?></div>
 						<div class="lf-ai-header-settings__swatches" data-lf-ai-header-topbar-color-swatches></div>
 						<div class="lf-ai-header-settings__custom">
-							<input type="color" class="lf-ai-header-settings__wheel" data-lf-ai-header-topbar-color-wheel />
-							<input type="text" class="lf-ai-header-settings__text" data-lf-ai-header-topbar-color placeholder="#hex, rgb(...), rgba(...)" autocomplete="off" />
+							<label class="screen-reader-text" for="lf-ai-header-topbar-color-wheel"><?php esc_html_e('Top bar background color (picker)', 'leadsforward-core'); ?></label>
+							<input id="lf-ai-header-topbar-color-wheel" type="color" class="lf-ai-header-settings__wheel" data-lf-ai-header-topbar-color-wheel aria-label="<?php esc_attr_e('Top bar background color picker', 'leadsforward-core'); ?>" />
+							<label class="screen-reader-text" for="lf-ai-header-topbar-color"><?php esc_html_e('Top bar background color', 'leadsforward-core'); ?></label>
+							<input id="lf-ai-header-topbar-color" type="text" class="lf-ai-header-settings__text" data-lf-ai-header-topbar-color aria-label="<?php esc_attr_e('Top bar background color value', 'leadsforward-core'); ?>" placeholder="#hex, rgb(...), rgba(...)" autocomplete="off" />
 						</div>
 					</div>
 				</div>
