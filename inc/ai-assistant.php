@@ -3026,7 +3026,7 @@ function lf_ai_assistant_widget_js(): string {
 				node.removeAttribute("data-lf-inline-image");
 				node.removeAttribute("data-lf-inline-image-selector");
 			});
-			Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,.lf-ai-benefits-grid-actions,[data-lf-ai-benefits-grid-actions=\"1\"],[data-lf-ai-service-intro-actions=\"1\"],[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-micro-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-micro-remove=\"1\"],[data-lf-ai-benefit-remove=\"1\"],[data-lf-ai-service-intro-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
+			Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,.lf-ai-benefits-grid-actions,[data-lf-ai-benefits-grid-actions=\"1\"],[data-lf-ai-service-intro-actions=\"1\"],[data-lf-ai-service-intro-empty=\"1\"],[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-micro-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-micro-remove=\"1\"],[data-lf-ai-benefit-remove=\"1\"],[data-lf-ai-service-intro-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
 				if (node && node.parentNode) node.parentNode.removeChild(node);
 			});
 			Array.prototype.slice.call(document.querySelectorAll(".lf-service-details__text")).forEach(function(node){
@@ -6235,7 +6235,24 @@ function lf_ai_assistant_widget_js(): string {
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
 				if (String(wrap.getAttribute("data-lf-section-type") || "") !== "service_intro") return;
 				var grid = wrap.querySelector(".lf-block-service-intro__grid");
-				if (!grid) return;
+				if (!grid) {
+					// Empty template state renders only the hint text; create a real grid so the picker + controls
+					// can still bind and persist an explicit empty selection.
+					var inner = wrap.querySelector(".lf-block-service-intro__inner") || wrap;
+					var emptyHint = inner.querySelector(".lf-block-service-intro__empty");
+					grid = document.createElement("div");
+					grid.className = "lf-block-service-intro__grid";
+					grid.setAttribute("data-lf-ai-service-intro-empty", "1");
+					if (emptyHint && emptyHint.parentNode) {
+						if (emptyHint.nextSibling) {
+							emptyHint.parentNode.insertBefore(grid, emptyHint.nextSibling);
+						} else {
+							emptyHint.parentNode.appendChild(grid);
+						}
+					} else {
+						inner.appendChild(grid);
+					}
+				}
 				Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card")).forEach(function(card){
 					card.removeAttribute("draggable");
 					card.classList.remove("lf-ai-service-intro-card-drag", "is-dragging");
@@ -6321,6 +6338,10 @@ function lf_ai_assistant_widget_js(): string {
 				var introBar = document.createElement("div");
 				introBar.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
 				introBar.setAttribute("data-lf-ai-service-intro-actions", "1");
+				if (grid && String(grid.getAttribute("data-lf-ai-service-intro-empty") || "") === "1") {
+					introBar.classList.add("lf-ai-service-intro-empty");
+					introBar.setAttribute("data-lf-ai-service-intro-empty", "1");
+				}
 				var addIntro = document.createElement("button");
 				addIntro.type = "button";
 				addIntro.className = "lf-ai-checklist-add lf-ai-inline-editor-ignore";
@@ -7143,7 +7164,7 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function stripClonedSectionEditorArtifacts(root) {
 			if (!root || !root.querySelectorAll) return;
-			Array.prototype.slice.call(root.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,.lf-ai-benefits-grid-actions,[data-lf-ai-benefits-grid-actions=\"1\"],[data-lf-ai-service-intro-actions=\"1\"],[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-micro-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-micro-remove=\"1\"],[data-lf-ai-benefit-remove=\"1\"],[data-lf-ai-service-intro-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
+			Array.prototype.slice.call(root.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,.lf-ai-benefits-grid-actions,[data-lf-ai-benefits-grid-actions=\"1\"],[data-lf-ai-service-intro-actions=\"1\"],[data-lf-ai-service-intro-empty=\"1\"],[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-micro-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-micro-remove=\"1\"],[data-lf-ai-benefit-remove=\"1\"],[data-lf-ai-service-intro-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
 				if (node && node.parentNode) node.parentNode.removeChild(node);
 			});
 			Array.prototype.slice.call(root.querySelectorAll("[data-lf-benefits-editor-bound]")).forEach(function(node){

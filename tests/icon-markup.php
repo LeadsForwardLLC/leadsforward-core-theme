@@ -23,6 +23,13 @@ if (!function_exists('sanitize_title')) {
 	}
 }
 
+if (!function_exists('sanitize_key')) {
+	function sanitize_key(string $key): string {
+		$key = strtolower($key);
+		return (string) preg_replace('/[^a-z0-9_\-]/', '', $key);
+	}
+}
+
 if (!function_exists('lf_icon')) {
 	function lf_icon(string $slug, array $args = []): string {
 		return $slug === 'map-pin' ? '<svg class="lf-icon"></svg>' : '';
