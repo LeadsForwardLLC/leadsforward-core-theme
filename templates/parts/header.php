@@ -33,7 +33,8 @@ if ($logo_text === '') {
 $layout = function_exists('lf_header_layout') ? lf_header_layout() : 'modern';
 $topbar_enabled = function_exists('lf_header_topbar_enabled') && lf_header_topbar_enabled();
 $topbar_text = function_exists('lf_header_topbar_text') ? lf_header_topbar_text() : '';
-$show_topbar = ($layout === 'topbar' && $topbar_enabled && $topbar_text !== '');
+$topbar_color = function_exists('lf_header_topbar_color') ? lf_header_topbar_color() : '';
+$show_topbar = ($topbar_enabled && $topbar_text !== '');
 $header_class = 'site-header site-header--modern site-header--' . $layout;
 if ($show_topbar) {
 	$header_class .= ' site-header--has-topbar';
@@ -41,7 +42,12 @@ if ($show_topbar) {
 ?>
 <header class="<?php echo esc_attr($header_class); ?>" role="banner">
 	<?php if ($show_topbar) : ?>
-		<div class="site-header__topbar"><div class="site-header__topbar-inner"><?php echo esc_html($topbar_text); ?></div></div>
+		<div
+			class="site-header__topbar"
+			<?php if ($topbar_color !== '') : ?>
+				style="<?php echo esc_attr('--lf-header-topbar-bg:' . $topbar_color); ?>"
+			<?php endif; ?>
+		><div class="site-header__topbar-inner"><?php echo esc_html($topbar_text); ?></div></div>
 	<?php endif; ?>
 	<div class="site-header__inner">
 		<a class="site-header__logo" href="<?php echo esc_url(home_url('/')); ?>" aria-label="<?php echo esc_attr($logo_text ?: __('Home', 'leadsforward-core')); ?>">

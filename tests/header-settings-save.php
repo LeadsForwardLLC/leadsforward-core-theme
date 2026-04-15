@@ -134,6 +134,7 @@ $_POST = [
 	'header_layout' => 'centered',
 	'header_topbar_enabled' => '1',
 	'header_topbar_text' => '  Promo <b>x</b>  ',
+	'header_topbar_color' => ' rgba(10, 20, 30, 0.5) ',
 ];
 $GLOBALS['lf_test_options_written'] = [];
 run_handler();
@@ -142,9 +143,11 @@ $data = $GLOBALS['lf_test_ajax_response']['data'] ?? [];
 expect(($data['header_layout'] ?? '') === 'centered', 'response layout');
 expect(($data['header_topbar_enabled'] ?? null) === true, 'response topbar enabled bool');
 expect(($data['header_topbar_text'] ?? '') === 'Promo x', 'topbar text sanitized');
+expect(($data['header_topbar_color'] ?? '') === 'rgba(10, 20, 30, 0.5)', 'topbar color sanitized');
 expect(($GLOBALS['lf_test_options_written']['lf_header_layout'] ?? '') === 'centered', 'option layout');
 expect(($GLOBALS['lf_test_options_written']['lf_header_topbar_enabled'] ?? '') === '1', 'option topbar flag');
 expect(($GLOBALS['lf_test_options_written']['lf_header_topbar_text'] ?? '') === 'Promo x', 'option topbar text');
+expect(($GLOBALS['lf_test_options_written']['lf_header_topbar_color'] ?? '') === 'rgba(10, 20, 30, 0.5)', 'option topbar color');
 
 // Invalid layout slug falls back to modern.
 $_POST['header_layout'] = 'hax';
