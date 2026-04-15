@@ -2174,9 +2174,7 @@ button:focus-visible,
   Header — modern, sticky, app-like on mobile
   ------------------------------------------------------------------------- */
 .site-header {
-	position: sticky;
-	top: 0;
-	z-index: 50;
+	position: relative;
 	padding: 0.75rem 1rem;
 	background: transparent;
 	display: flex;
@@ -2226,6 +2224,9 @@ button:focus-visible,
 	width: 100%;
 	max-width: var(--lf-container-wide);
 	margin: 0 auto;
+	position: sticky;
+	top: 0;
+	z-index: 50;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -2384,17 +2385,25 @@ button:focus-visible,
 	line-height: 1;
 }
 .site-header__menu .lf-menu-call__link .lf-icon {
-	width: 0.72em !important;
-	height: 0.72em !important;
+	width: 0.62em !important;
+	height: 0.62em !important;
 	flex-shrink: 0;
 	display: block;
 	overflow: visible;
-	transform: translateY(-0.08em);
+	transform: translateY(-0.12em);
 }
 
 .site-header__menu .lf-menu-call__link .lf-menu-call__icon.lf-icon {
-	width: 0.72em !important;
-	height: 0.72em !important;
+	width: 0.62em !important;
+	height: 0.62em !important;
+}
+
+.site-header__menu .lf-menu-call__link svg {
+	width: 0.62em !important;
+	height: 0.62em !important;
+	display: block;
+	overflow: visible;
+	transform: translateY(-0.12em);
 }
 
 .site-header__menu .lf-menu-call > a svg,
