@@ -173,6 +173,15 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 	if (function_exists('wp_enqueue_media')) {
 		wp_enqueue_media();
 	}
+	// If wp_enqueue_media() (or other plugins) bring wp-i18n onto the front end, ensure its inlines
+	// cannot crash the page if executed before wp bootstraps under an optimizer/reorder.
+	if (!is_admin() && function_exists('wp_script_is') && wp_script_is('wp-i18n', 'enqueued') && function_exists('wp_add_inline_script')) {
+		wp_add_inline_script(
+			'wp-i18n',
+			'(function(){try{window.wp=window.wp||{};window.wp.i18n=window.wp.i18n||{};if(typeof window.wp.i18n.setLocaleData!=="function"){window.wp.i18n.setLocaleData=function(){};}}catch(e){}})();',
+			'before'
+		);
+	}
 
 	$context = lf_ai_assistant_widget_context();
 	$target_label = __('Homepage', 'leadsforward-core');
@@ -5835,7 +5844,8 @@ function lf_ai_assistant_widget_js(): string {
 				items: JSON.stringify(ids.map(function(id){ return String(id); }))
 			}).done(function(res){
 				if (res && res.success) {
-					setStatus((res.data && res.data.message) ? res.data.message : "Selected FAQs saved.", false);
+					var n = (res.data && Array.isArray(res.data.items)) ? res.data.items.length : ids.length;
+					setStatus("Selected FAQs saved (" + n + ").", false);
 				} else {
 					setStatus((res && res.data && res.data.message) ? res.data.message : "FAQ selection save failed.", true);
 				}
