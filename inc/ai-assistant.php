@@ -12,9 +12,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-add_action('admin_enqueue_scripts', 'lf_ai_assistant_assets');
 add_action('wp_enqueue_scripts', 'lf_ai_assistant_assets');
-add_action('admin_footer', 'lf_ai_assistant_render_floating_widget');
 add_action('wp_footer', 'lf_ai_assistant_render_floating_widget');
 add_action('wp_footer', 'lf_ai_inline_overrides_frontend_script', 5);
 add_filter('lf_keep_jquery', 'lf_ai_assistant_keep_jquery_for_frontend_admins');
@@ -159,11 +157,19 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		return;
 	}
 
-	// wp-hooks + wp-i18n define window.wp pieces before wp-i18n inline (avoids "wp is not defined" on front).
-	wp_enqueue_script('wp-hooks');
-	wp_enqueue_script('wp-i18n');
-	wp_register_script('lf-ai-floating-assistant', '', ['jquery', 'wp-hooks', 'wp-i18n'], LF_THEME_VERSION, true);
+	// Front-end only: do not depend on wp-i18n/wp-hooks. Some optimizers can reorder wp-i18n inline
+	// before core bootstraps, which would break the assistant.
+	wp_register_script('lf-ai-floating-assistant', '', ['jquery'], LF_THEME_VERSION, true);
 	wp_enqueue_script('lf-ai-floating-assistant');
+
+	// Some environments (security wrappers / optimizers) can execute WP package inlines before
+	// core packages initialize. Provide a tiny, safe stub so i18n inlines can't fatally error.
+	wp_add_inline_script(
+		'lf-ai-floating-assistant',
+		'(function(){try{window.wp=window.wp||{};window.wp.i18n=window.wp.i18n||{};if(typeof window.wp.i18n.setLocaleData!=="function"){window.wp.i18n.setLocaleData=function(){};}}catch(e){}})();',
+		'before'
+	);
+
 	if (function_exists('wp_enqueue_media')) {
 		wp_enqueue_media();
 	}
@@ -708,13 +714,6 @@ function lf_ai_assistant_render_floating_widget(): void {
 				</div>
 			</div>
 			<div class="lf-ai-float__body">
-				<?php if (is_admin() && current_user_can('edit_theme_options')) : ?>
-					<p class="lf-ai-seo__admin-links" style="font-size:12px;margin:0 0 10px;line-height:1.45;color:#475569;">
-						<a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=settings')); ?>"><?php esc_html_e('SEO settings', 'leadsforward-core'); ?></a>
-						<span aria-hidden="true"> · </span>
-						<a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=health')); ?>"><?php esc_html_e('Site health & pre-launch', 'leadsforward-core'); ?></a>
-					</p>
-				<?php endif; ?>
 				<div class="lf-ai-seo" data-lf-ai-seo>
 					<div class="lf-ai-seo__score" data-lf-ai-seo-score><?php esc_html_e('Overall: --', 'leadsforward-core'); ?></div>
 					<div class="lf-ai-seo__perf-chip lf-ai-seo__perf-chip--pending" data-lf-ai-seo-perf-chip><?php esc_html_e('Perf --', 'leadsforward-core'); ?></div>
@@ -3027,7 +3026,7 @@ function lf_ai_assistant_widget_js(): string {
 				node.removeAttribute("data-lf-inline-image");
 				node.removeAttribute("data-lf-inline-image-selector");
 			});
-			Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,.lf-ai-benefits-grid-actions,[data-lf-ai-benefits-grid-actions=\"1\"],[data-lf-ai-service-intro-actions=\"1\"],[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-micro-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-micro-remove=\"1\"],[data-lf-ai-benefit-remove=\"1\"],[data-lf-ai-service-intro-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
+			Array.prototype.slice.call(document.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,.lf-ai-benefits-grid-actions,[data-lf-ai-benefits-grid-actions=\"1\"],[data-lf-ai-service-intro-actions=\"1\"],[data-lf-ai-service-intro-empty=\"1\"],[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-micro-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-micro-remove=\"1\"],[data-lf-ai-benefit-remove=\"1\"],[data-lf-ai-service-intro-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
 				if (node && node.parentNode) node.parentNode.removeChild(node);
 			});
 			Array.prototype.slice.call(document.querySelectorAll(".lf-service-details__text")).forEach(function(node){
@@ -6236,7 +6235,24 @@ function lf_ai_assistant_widget_js(): string {
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
 				if (String(wrap.getAttribute("data-lf-section-type") || "") !== "service_intro") return;
 				var grid = wrap.querySelector(".lf-block-service-intro__grid");
-				if (!grid) return;
+				if (!grid) {
+					// Empty template state renders only the hint text; create a real grid so the picker + controls
+					// can still bind and persist an explicit empty selection.
+					var inner = wrap.querySelector(".lf-block-service-intro__inner") || wrap;
+					var emptyHint = inner.querySelector(".lf-block-service-intro__empty");
+					grid = document.createElement("div");
+					grid.className = "lf-block-service-intro__grid";
+					grid.setAttribute("data-lf-ai-service-intro-empty", "1");
+					if (emptyHint && emptyHint.parentNode) {
+						if (emptyHint.nextSibling) {
+							emptyHint.parentNode.insertBefore(grid, emptyHint.nextSibling);
+						} else {
+							emptyHint.parentNode.appendChild(grid);
+						}
+					} else {
+						inner.appendChild(grid);
+					}
+				}
 				Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card")).forEach(function(card){
 					card.removeAttribute("draggable");
 					card.classList.remove("lf-ai-service-intro-card-drag", "is-dragging");
@@ -6322,6 +6338,10 @@ function lf_ai_assistant_widget_js(): string {
 				var introBar = document.createElement("div");
 				introBar.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
 				introBar.setAttribute("data-lf-ai-service-intro-actions", "1");
+				if (grid && String(grid.getAttribute("data-lf-ai-service-intro-empty") || "") === "1") {
+					introBar.classList.add("lf-ai-service-intro-empty");
+					introBar.setAttribute("data-lf-ai-service-intro-empty", "1");
+				}
 				var addIntro = document.createElement("button");
 				addIntro.type = "button";
 				addIntro.className = "lf-ai-checklist-add lf-ai-inline-editor-ignore";
@@ -7144,7 +7164,7 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function stripClonedSectionEditorArtifacts(root) {
 			if (!root || !root.querySelectorAll) return;
-			Array.prototype.slice.call(root.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,.lf-ai-benefits-grid-actions,[data-lf-ai-benefits-grid-actions=\"1\"],[data-lf-ai-service-intro-actions=\"1\"],[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-micro-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-micro-remove=\"1\"],[data-lf-ai-benefit-remove=\"1\"],[data-lf-ai-service-intro-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
+			Array.prototype.slice.call(root.querySelectorAll(".lf-ai-section-controls,.lf-ai-section-insert,.lf-ai-benefits-grid-actions,[data-lf-ai-benefits-grid-actions=\"1\"],[data-lf-ai-service-intro-actions=\"1\"],[data-lf-ai-service-intro-empty=\"1\"],[data-lf-ai-hero-pills-controls=\"1\"],[data-lf-ai-hero-proof-controls=\"1\"],[data-lf-ai-hero-trust-strip-controls=\"1\"],[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-process-controls=\"1\"],[data-lf-ai-checklist-controls=\"1\"],[data-lf-ai-micro-controls=\"1\"],[data-lf-ai-faq-controls=\"1\"],[data-lf-ai-list-remove=\"1\"],[data-lf-ai-checklist-remove=\"1\"],[data-lf-ai-micro-remove=\"1\"],[data-lf-ai-benefit-remove=\"1\"],[data-lf-ai-service-intro-remove=\"1\"],[data-lf-ai-hero-pill-remove=\"1\"],[data-lf-ai-media-add=\"1\"]")).forEach(function(node){
 				if (node && node.parentNode) node.parentNode.removeChild(node);
 			});
 			Array.prototype.slice.call(root.querySelectorAll("[data-lf-benefits-editor-bound]")).forEach(function(node){
