@@ -1492,6 +1492,7 @@ function lf_ai_assistant_widget_js(): string {
 		var faqPickerListEl = null;
 		var faqPickerWrap = null;
 		var faqPickerList = null;
+		var faqPickerDirty = false;
 		var faqLibraryCache = null;
 		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption,main .lf-block-hero__card-item-text,main .lf-service-details__text,main .lf-service-details__micro-text,#primary h1,#primary h2,#primary h3,#primary h4,#primary h5,#primary h6,#primary p,#primary li,#primary blockquote,#primary figcaption,#primary .lf-block-hero__card-item-text,#primary .lf-service-details__text,#primary .lf-service-details__micro-text,.site-main h1,.site-main h2,.site-main h3,.site-main h4,.site-main h5,.site-main h6,.site-main p,.site-main li,.site-main blockquote,.site-main figcaption,.site-main .lf-block-hero__card-item-text,.site-main .lf-service-details__text,.site-main .lf-service-details__micro-text,.site-content h1,.site-content h2,.site-content h3,.site-content h4,.site-content h5,.site-content h6,.site-content p,.site-content li,.site-content blockquote,.site-content figcaption,.site-content .lf-block-hero__card-item-text,.site-content .lf-service-details__text,.site-content .lf-service-details__micro-text,article h1,article h2,article h3,article h4,article h5,article h6,article p,article li,article blockquote,article figcaption,article .lf-block-hero__card-item-text,article .lf-service-details__text,article .lf-service-details__micro-text";
 		var inlineImageCandidateSelector = "main img,#primary img,.site-main img,.site-content img,article img";
@@ -5817,7 +5818,12 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function persistFaqSelection(list, savingLabel) {
 			if (!list) return;
-			var wrap = list.closest("[data-lf-section-wrap=\"1\"]");
+			// Prefer the picker-bound wrapper when saving from the library modal. This avoids
+			// edge cases where the list is rendered outside the immediate wrapper subtree.
+			var wrap = (faqPickerWrap && faqPickerList === list) ? faqPickerWrap : null;
+			if (!wrap && list.closest) {
+				wrap = list.closest("[data-lf-section-wrap=\"1\"]");
+			}
 			if (!wrap) {
 				// Fallback: some renders may not place the list under the immediate wrapper node.
 				// Prefer the canonical wrapper for this section type if present.
@@ -5856,9 +5862,13 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function closeFaqPicker() {
 			if (!faqPickerEl) return;
+			if (faqPickerDirty && faqPickerList) {
+				persistFaqSelection(faqPickerList, "Saving selected FAQs...");
+			}
 			faqPickerEl.hidden = true;
 			faqPickerWrap = null;
 			faqPickerList = null;
+			faqPickerDirty = false;
 			try { if (faqPickerSearchEl) faqPickerSearchEl.value = ""; } catch (e) {}
 		}
 		function addFaqItemToList(list, row) {
@@ -5887,6 +5897,7 @@ function lf_ai_assistant_widget_js(): string {
 			item.appendChild(a);
 			list.appendChild(item);
 			buildFaqReorderControls();
+			faqPickerDirty = true;
 			persistFaqSelection(list, "Saving selected FAQs...");
 		}
 		function renderFaqPickerList(query) {
@@ -6035,6 +6046,7 @@ function lf_ai_assistant_widget_js(): string {
 						} else {
 							item.parentNode.insertBefore(activeFaqDragEl, item);
 						}
+						faqPickerDirty = true;
 						persistFaqSelection(list, "Saving selected FAQs...");
 					};
 					item.ondragend = function(){
@@ -6043,6 +6055,7 @@ function lf_ai_assistant_widget_js(): string {
 					};
 					var removeBtn = createGenericRemoveButton(function(){
 						if (item && item.parentNode) item.parentNode.removeChild(item);
+						faqPickerDirty = true;
 						persistFaqSelection(list, "Saving selected FAQs...");
 					});
 					item.appendChild(removeBtn);
