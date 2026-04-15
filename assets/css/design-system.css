@@ -2174,7 +2174,10 @@ button:focus-visible,
   Header — modern, sticky, app-like on mobile
   ------------------------------------------------------------------------- */
 .site-header {
-	position: relative;
+	/* Sticky wrapper: promo bar lives outside this element. */
+	position: sticky;
+	top: 0;
+	z-index: 50;
 	padding: 0.75rem 1rem;
 	background: transparent;
 	display: flex;
@@ -2212,6 +2215,9 @@ button:focus-visible,
 	color: #fff;
 	font-size: 0.85rem;
 	line-height: 1.35;
+	/* Explicitly non-sticky. */
+	position: relative;
+	z-index: 60;
 }
 
 .site-header__topbar-inner {
@@ -2225,9 +2231,7 @@ button:focus-visible,
 	width: 100%;
 	max-width: var(--lf-container-wide);
 	margin: 0 auto;
-	position: sticky;
-	top: 0;
-	z-index: 50;
+	position: relative;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -2386,25 +2390,28 @@ button:focus-visible,
 	line-height: 1;
 }
 .site-header__menu .lf-menu-call__link .lf-icon {
-	width: 0.56em !important;
-	height: 0.56em !important;
+	width: 0.44em !important;
+	height: 0.44em !important;
 	flex-shrink: 0;
-	display: block;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	overflow: visible;
-	transform: translateY(0.02em);
+	transform: translateY(0);
 }
 
 .site-header__menu .lf-menu-call__link .lf-menu-call__icon.lf-icon {
-	width: 0.56em !important;
-	height: 0.56em !important;
+	width: 0.44em !important;
+	height: 0.44em !important;
 }
 
 .site-header__menu .lf-menu-call__link svg {
-	width: 0.56em !important;
-	height: 0.56em !important;
+	width: 100% !important;
+	height: 100% !important;
 	display: block;
+	vertical-align: middle;
 	overflow: visible;
-	transform: translateY(0.02em);
+	transform: none;
 }
 
 .site-header__menu .lf-menu-call > a svg,

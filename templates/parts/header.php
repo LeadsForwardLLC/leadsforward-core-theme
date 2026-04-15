@@ -40,15 +40,15 @@ if ($show_topbar) {
 	$header_class .= ' site-header--has-topbar';
 }
 ?>
+<?php if ($show_topbar) : ?>
+	<div
+		class="site-header__topbar"
+		<?php if ($topbar_color !== '') : ?>
+			style="<?php echo esc_attr('--lf-header-topbar-bg:' . $topbar_color); ?>"
+		<?php endif; ?>
+	><div class="site-header__topbar-inner"><?php echo esc_html($topbar_text); ?></div></div>
+<?php endif; ?>
 <header class="<?php echo esc_attr($header_class); ?>" role="banner">
-	<?php if ($show_topbar) : ?>
-		<div
-			class="site-header__topbar"
-			<?php if ($topbar_color !== '') : ?>
-				style="<?php echo esc_attr('--lf-header-topbar-bg:' . $topbar_color); ?>"
-			<?php endif; ?>
-		><div class="site-header__topbar-inner"><?php echo esc_html($topbar_text); ?></div></div>
-	<?php endif; ?>
 	<div class="site-header__inner">
 		<a class="site-header__logo" href="<?php echo esc_url(home_url('/')); ?>" aria-label="<?php echo esc_attr($logo_text ?: __('Home', 'leadsforward-core')); ?>">
 			<?php if ($logo_html) : ?>
