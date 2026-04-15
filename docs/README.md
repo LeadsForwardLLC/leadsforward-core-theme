@@ -2,12 +2,13 @@
 
 Use this page as the starting point for architecture, operations, and troubleshooting.
 
-## Theme v0.1.45 (highlights)
+## Theme v0.1.46 (highlights)
 
-- **Inline editor reliability:** Toolbar closes on outside click or the new ✕ button; AI assistant init captures errors to preserve fallback open behavior.
-- **Icon insertion:** Size presets and inline SVG sizing rules prevent clipping in rich text.
-- **Header + service intro polish:** Phone icon alignment tightened; service intro selection retries save on picker close.
-- **Hero + process steps:** Authority Split proof list targets the visible column first; process titles split on colon/dash for partial bolding.
+- **Header controls that actually work:** Modern/Centered layouts now have real styling, and the promo top bar stays visible based on enabled + text (not layout).
+- **Promo top bar color:** Add a global top bar background color (brand swatches + custom input) from the front-end Header panel.
+- **Service Intro empty-state saving:** “+ Add service” remains available when empty, and an empty selection can be saved intentionally.
+- **Revision History preview:** Preview a restore point non-destructively before you restore it.
+- **AI assistant boot hardening:** Front-end assistant avoids wp-i18n dependency issues and prevents early i18n inlines from breaking boot.
 
 ## Start Here
 - `00_PRODUCTION_READINESS.md` - pre-launch checklist, fleet/cron notes, version alignment.
