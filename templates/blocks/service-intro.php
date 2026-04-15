@@ -124,10 +124,6 @@ $query = new WP_Query($query_args);
 				<?php endwhile; ?>
 			</div>
 			<?php wp_reset_postdata(); ?>
-		<?php else : ?>
-			<p class="lf-block-service-intro__empty">
-				<?php echo esc_html($has_explicit_order ? __('No services selected yet.', 'leadsforward-core') : __('No services yet.', 'leadsforward-core')); ?>
-			</p>
 		<?php endif; ?>
 	</div>
 </section>
