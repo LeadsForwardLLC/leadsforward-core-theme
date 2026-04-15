@@ -2384,12 +2384,12 @@ button:focus-visible,
 	line-height: 1;
 }
 .site-header__menu .lf-menu-call__link .lf-icon {
-	width: 1em;
-	height: 1em;
+	width: 0.85em;
+	height: 0.85em;
 	flex-shrink: 0;
 	display: block;
 	overflow: visible;
-	transform: translateY(-0.02em);
+	transform: translateY(-0.06em);
 }
 
 .site-header__menu .lf-menu-call > a svg,
