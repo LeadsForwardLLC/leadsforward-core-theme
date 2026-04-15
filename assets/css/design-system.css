@@ -2384,8 +2384,8 @@ button:focus-visible,
 	line-height: 1;
 }
 .site-header__menu .lf-menu-call__link .lf-icon {
-	width: 0.9em;
-	height: 0.9em;
+	width: 1em;
+	height: 1em;
 	flex-shrink: 0;
 	display: block;
 	overflow: visible;
