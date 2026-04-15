@@ -906,15 +906,22 @@ function lf_ai_ajax_update_header_settings(): void {
 	$text = isset($_POST['header_topbar_text'])
 		? sanitize_text_field((string) wp_unslash($_POST['header_topbar_text']))
 		: lf_header_topbar_text();
+	$color = isset($_POST['header_topbar_color'])
+		? (function_exists('lf_header_topbar_color_sanitize')
+			? lf_header_topbar_color_sanitize((string) wp_unslash($_POST['header_topbar_color']))
+			: '')
+		: (function_exists('lf_header_topbar_color') ? lf_header_topbar_color() : '');
 	lf_update_global_option_value('lf_header_layout', $layout);
 	lf_update_global_option_value('lf_header_topbar_enabled', $enabled);
 	lf_update_global_option_value('lf_header_topbar_text', $text);
+	lf_update_global_option_value('lf_header_topbar_color', $color);
 	wp_send_json_success([
 		'message' => __('Header settings saved.', 'leadsforward-core'),
 		'reload' => true,
 		'header_layout' => $layout,
 		'header_topbar_enabled' => $enabled === '1',
 		'header_topbar_text' => $text,
+		'header_topbar_color' => $color,
 	]);
 }
 

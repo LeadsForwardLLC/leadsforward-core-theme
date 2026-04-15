@@ -2209,7 +2209,7 @@ button:focus-visible,
 
 .site-header__topbar {
 	width: 100%;
-	background: var(--lf-surface-dark);
+	background: var(--lf-header-topbar-bg, var(--lf-surface-dark));
 	color: #fff;
 	font-size: 0.85rem;
 	line-height: 1.35;

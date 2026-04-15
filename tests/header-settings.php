@@ -36,6 +36,9 @@ function get_option($key, $default = null) {
 	if ($key === 'options_lf_header_topbar_text') {
 		return '  Promo <strong>with</strong> tags  ';
 	}
+	if ($key === 'options_lf_header_topbar_color') {
+		return '  #AaBbCc  ';
+	}
 	return $default;
 }
 function get_field($key, $post_id = null) {
@@ -57,3 +60,4 @@ expect(lf_header_layout_sanitize('modern') === 'modern', 'sanitize allows modern
 expect(lf_header_layout_sanitize('bad') === 'modern', 'sanitize defaults');
 expect(lf_header_topbar_enabled() === true, 'topbar enabled reads option');
 expect(lf_header_topbar_text() === 'Promo with tags', 'topbar text is sanitized');
+expect(lf_header_topbar_color() === '#aabbcc', 'topbar color is sanitized');
