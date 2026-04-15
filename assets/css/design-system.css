@@ -2242,6 +2242,13 @@ button:focus-visible,
 	transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+/* Make the main navbar capsule sticky (promo bar is outside the header). */
+.site-header__inner {
+	position: sticky !important;
+	top: 0 !important;
+	z-index: 50 !important;
+}
+
 .site-header--sticky .site-header__inner {
 	background: var(--lf-surface-light);
 	border-color: var(--lf-neutral-300);
@@ -2412,6 +2419,14 @@ button:focus-visible,
 	vertical-align: middle;
 	overflow: visible;
 	transform: none;
+}
+
+/* Hard-size the actual injected phone svg so it cannot remain oversized. */
+.site-header__menu .lf-menu-call__link svg.lf-menu-call__icon {
+	width: 14px !important;
+	height: 14px !important;
+	margin-right: 0.35rem;
+	transform: translateY(1px);
 }
 
 .site-header__menu .lf-menu-call > a svg,
