@@ -2358,6 +2358,24 @@ button:focus-visible,
 	line-height: 1;
 }
 
+.site-header__menu .lf-menu-call > a .lf-icon {
+	width: 0.9em;
+	height: 0.9em;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	overflow: visible;
+	transform: translateY(-0.02em);
+}
+
+.site-header__menu .lf-menu-call > a .lf-icon > svg {
+	width: 0.9em;
+	height: 0.9em;
+	display: block;
+	overflow: visible;
+}
+
 .site-header__menu .lf-menu-call > a svg,
 .site-header__phone svg {
 	display: block;
@@ -2436,6 +2454,26 @@ button:focus-visible,
 .site-header__cta.lf-btn--primary:hover {
 	background-color: color-mix(in srgb, var(--lf-primary) 88%, #000);
 	border-color: color-mix(in srgb, var(--lf-primary) 88%, #000);
+}
+
+@media (min-width: 901px) {
+	.site-header--centered .site-header__inner {
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		gap: 0.7rem;
+	}
+	.site-header--centered .site-header__panel {
+		justify-content: center;
+		width: 100%;
+	}
+	.site-header--centered .site-header__menu,
+	.site-header--centered .site-header__utility-menu {
+		justify-content: center;
+	}
+	.site-header--centered .site-header__actions {
+		justify-content: center;
+	}
 }
 
 @media (max-width: 900px) {

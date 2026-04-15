@@ -236,6 +236,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		'layout' => function_exists('lf_header_layout') ? lf_header_layout() : 'modern',
 		'topbar_enabled' => function_exists('lf_header_topbar_enabled') ? lf_header_topbar_enabled() : false,
 		'topbar_text' => function_exists('lf_header_topbar_text') ? lf_header_topbar_text() : '',
+		'topbar_color' => function_exists('lf_header_topbar_color') ? lf_header_topbar_color() : '',
 	];
 
 	$admin_post_edit_url = '';
@@ -286,6 +287,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 			'historyHint' => __('Each save creates a restore point with who saved it. Restoring applies that layout and adds a new history entry. If two people edit at once, you may need to refresh after a conflict.', 'leadsforward-core'),
 			'historyEmpty' => __('No saved revisions yet. Edit the page to create history.', 'leadsforward-core'),
 			'historyRestore' => __('Restore this version', 'leadsforward-core'),
+			'historyPreview' => __('Preview', 'leadsforward-core'),
 			'historyRestoreConfirm' => __('Replace the current layout and inline edits with this version? The page will reload.', 'leadsforward-core'),
 			'historyLoadFailed' => __('Could not load history.', 'leadsforward-core'),
 			'historyRefreshing' => __('Refreshing history…', 'leadsforward-core'),
@@ -804,6 +806,16 @@ function lf_ai_assistant_render_floating_widget(): void {
 						<span><?php esc_html_e('Top bar text', 'leadsforward-core'); ?></span>
 						<input type="text" class="lf-ai-header-settings__text" data-lf-ai-header-topbar-text autocomplete="off" />
 					</label>
+					<div class="lf-ai-header-settings__topbar-color" data-lf-ai-header-topbar-color-wrap>
+						<div style="font-size:12px; font-weight:600; color:#0f172a; margin-bottom:6px;"><?php esc_html_e('Top bar background', 'leadsforward-core'); ?></div>
+						<div class="lf-ai-header-settings__swatches" data-lf-ai-header-topbar-color-swatches></div>
+						<div class="lf-ai-header-settings__custom">
+							<label class="screen-reader-text" for="lf-ai-header-topbar-color-wheel"><?php esc_html_e('Top bar background color (picker)', 'leadsforward-core'); ?></label>
+							<input id="lf-ai-header-topbar-color-wheel" type="color" class="lf-ai-header-settings__wheel" data-lf-ai-header-topbar-color-wheel aria-label="<?php esc_attr_e('Top bar background color picker', 'leadsforward-core'); ?>" />
+							<label class="screen-reader-text" for="lf-ai-header-topbar-color"><?php esc_html_e('Top bar background color', 'leadsforward-core'); ?></label>
+							<input id="lf-ai-header-topbar-color" type="text" class="lf-ai-header-settings__text" data-lf-ai-header-topbar-color aria-label="<?php esc_attr_e('Top bar background color value', 'leadsforward-core'); ?>" placeholder="#hex, rgb(...), rgba(...)" autocomplete="off" />
+						</div>
+					</div>
 				</div>
 				<div class="lf-ai-header-settings__actions">
 					<button type="button" class="button button-primary" data-lf-ai-header-save><?php esc_html_e('Save header', 'leadsforward-core'); ?></button>
@@ -838,6 +850,12 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-header-settings__check { flex-direction:row !important; align-items:center; gap:8px; }
 		.lf-ai-header-settings__check input { width:auto; margin:0; cursor:pointer; }
 		.lf-ai-header-settings__text { border:1px solid #d6c8fb; border-radius:8px; padding:6px 8px; font-size:13px; color:#0f172a; background:#fff; width:100%; max-width:100%; box-sizing:border-box; font-family:inherit; }
+		.lf-ai-header-settings__topbar-color { margin-top:6px; }
+		.lf-ai-header-settings__swatches { display:flex; flex-wrap:wrap; gap:6px; }
+		.lf-ai-header-settings__swatch { border:1px solid #e2e8f0; border-radius:10px; background:#fff; padding:6px 8px; display:inline-flex; gap:8px; align-items:center; cursor:pointer; font-size:12px; color:#0f172a; }
+		.lf-ai-header-settings__swatch-color { width:14px; height:14px; border-radius:999px; border:1px solid rgba(15,23,42,.15); }
+		.lf-ai-header-settings__custom { display:flex; gap:8px; align-items:center; margin-top:8px; }
+		.lf-ai-header-settings__wheel { width:34px; height:34px; padding:0; border:1px solid #e2e8f0; border-radius:10px; background:#fff; cursor:pointer; }
 		.lf-ai-header-settings__actions { display:flex; justify-content:flex-end; }
 		.lf-ai-header-settings__status { font-size:12px; color:#475569; min-height:18px; }
 		.lf-ai-header-settings__status.is-error { color:#b91c1c; }
@@ -848,6 +866,9 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-history__row { border:1px solid #e2e8f0; border-radius:10px; padding:10px; background:#f8fafc; display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
 		.lf-ai-history__meta { font-size:11px; color:#64748b; line-height:1.35; }
 		.lf-ai-history__summary { font-size:13px; font-weight:600; color:#0f172a; }
+		.lf-ai-history__actions { display:flex; gap:8px; align-items:center; justify-content:flex-end; width:100%; }
+		.lf-ai-history__preview { align-self:flex-end; display:inline-flex; align-items:center; justify-content:center; border:1px solid #e2e8f0; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:800; text-decoration:none; background:#fff; color:#0f172a; }
+		.lf-ai-history__preview:hover { background:#f8fafc; }
 		.lf-ai-history__restore { align-self:flex-end; border:0; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; background:linear-gradient(180deg,#7c3aed 0%,#6d28d9 100%); color:#fff; }
 		.lf-ai-history__restore:hover { background:linear-gradient(180deg,#6d28d9 0%,#5b21b6 100%); }
 		.lf-ai-float__panel[hidden] { display:none !important; }
@@ -1309,6 +1330,9 @@ function lf_ai_assistant_widget_js(): string {
 		var $headerLayout = $headerRoot.find("[data-lf-ai-header-layout]");
 		var $headerTopbar = $headerRoot.find("[data-lf-ai-header-topbar-enabled]");
 		var $headerTopbarText = $headerRoot.find("[data-lf-ai-header-topbar-text]");
+		var $headerTopbarSwatches = $headerRoot.find("[data-lf-ai-header-topbar-color-swatches]");
+		var $headerTopbarColorWheel = $headerRoot.find("[data-lf-ai-header-topbar-color-wheel]");
+		var $headerTopbarColor = $headerRoot.find("[data-lf-ai-header-topbar-color]");
 		var $headerStatus = $headerRoot.find("[data-lf-ai-header-status]");
 		var layoutVersion = parseInt(String(lfAiFloating.layout_version != null ? lfAiFloating.layout_version : "0"), 10) || 0;
 		var $prompt = $root.find("[data-lf-ai-prompt]");
@@ -1517,6 +1541,18 @@ function lf_ai_assistant_widget_js(): string {
 				var liveLabel = (lfAiFloating.i18n && lfAiFloating.i18n.historyLiveBadge) ? lfAiFloating.i18n.historyLiveBadge : "Live";
 				var liveHelp = (lfAiFloating.i18n && lfAiFloating.i18n.historyLiveHelp) ? lfAiFloating.i18n.historyLiveHelp : "";
 				var restoreLabel = (lfAiFloating.i18n && lfAiFloating.i18n.historyRestore) ? lfAiFloating.i18n.historyRestore : "Restore";
+				var previewLabel = (lfAiFloating.i18n && lfAiFloating.i18n.historyPreview) ? lfAiFloating.i18n.historyPreview : "Preview";
+				function previewUrlFor(revId) {
+					try {
+						var u = new URL(String(window.location.href || ""), window.location.origin);
+						u.searchParams.set("lf_preview_rev", String(revId || ""));
+						return u.toString();
+					} catch (e) {
+						var base = String(window.location.href || "");
+						if (base.indexOf("?") === -1) return base + "?lf_preview_rev=" + encodeURIComponent(String(revId || ""));
+						return base + "&lf_preview_rev=" + encodeURIComponent(String(revId || ""));
+					}
+				}
 				var html = "";
 				rows.forEach(function(row){
 					var id = row && row.id ? String(row.id) : "";
@@ -1534,7 +1570,10 @@ function lf_ai_assistant_widget_js(): string {
 					if (isLive) {
 						html += "<button type=\"button\" class=\"lf-ai-history__restore\" disabled data-lf-rev-restore=\"" + escapeHtml(id) + "\">" + escapeHtml(liveLabel) + "</button>";
 					} else {
+						html += "<div class=\"lf-ai-history__actions\">";
+						html += "<a class=\"lf-ai-history__preview\" href=\"" + escapeHtml(previewUrlFor(id)) + "\">" + escapeHtml(previewLabel) + "</a>";
 						html += "<button type=\"button\" class=\"lf-ai-history__restore\" data-lf-rev-restore=\"" + escapeHtml(id) + "\">" + escapeHtml(restoreLabel) + "</button>";
+						html += "</div>";
 					}
 					html += "</div>";
 				});
@@ -2991,6 +3030,40 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			$headerTopbar.prop("checked", !!cur.topbar_enabled);
 			$headerTopbarText.val(String(cur.topbar_text || ""));
+			if ($headerTopbarColor.length) {
+				$headerTopbarColor.val(String(cur.topbar_color || ""));
+			}
+			if ($headerTopbarColorWheel.length) {
+				var tc = String(cur.topbar_color || "").trim();
+				if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(tc)) {
+					$headerTopbarColorWheel.val(tc);
+				}
+			}
+			if ($headerTopbarColorWheel.length && $headerTopbarColor.length) {
+				$headerTopbarColorWheel.off("input.lfHdrTopbar").on("input.lfHdrTopbar", function(){
+					$headerTopbarColor.val(String($headerTopbarColorWheel.val() || ""));
+				});
+			}
+			if ($headerTopbarSwatches.length) {
+				$headerTopbarSwatches.empty();
+				var palette = Array.isArray(lfAiFloating.bg_palette) ? lfAiFloating.bg_palette : [];
+				palette.forEach(function(entry){
+					var hex = String(entry.hex || "").trim();
+					var slug = String(entry.slug || "");
+					var label = String(entry.label || slug);
+					if (!hex) return;
+					var $b = $("<button>").attr("type","button").addClass("lf-ai-header-settings__swatch");
+					var $c = $("<span>").addClass("lf-ai-header-settings__swatch-color").css("background", hex);
+					var $l = $("<span>").text(label || hex);
+					$b.append($c).append($l);
+					$b.on("click", function(e){
+						e.preventDefault();
+						if ($headerTopbarColor.length) $headerTopbarColor.val(hex);
+						if ($headerTopbarColorWheel.length && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)) $headerTopbarColorWheel.val(hex);
+					});
+					$headerTopbarSwatches.append($b);
+				});
+			}
 		}
 		function setEditorToggleUi() {
 			if (!$btnEditorToggle || !$btnEditorToggle.length) return;
@@ -9486,7 +9559,8 @@ function lf_ai_assistant_widget_js(): string {
 				nonce: lfAiFloating.nonce,
 				header_layout: String($headerLayout.val() || "modern"),
 				header_topbar_enabled: $headerTopbar.is(":checked") ? "1" : "0",
-				header_topbar_text: String($headerTopbarText.val() || "")
+				header_topbar_text: String($headerTopbarText.val() || ""),
+				header_topbar_color: String($headerTopbarColor.length ? ($headerTopbarColor.val() || "") : "")
 			}).done(function(res){
 				if (res && res.success) {
 					$headerStatus.text(okSaved).removeClass("is-error");
