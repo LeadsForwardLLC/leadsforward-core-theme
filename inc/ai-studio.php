@@ -4410,7 +4410,7 @@ function lf_ai_studio_ensure_header_menu_primary_pages(): void {
 	if (!$menu || ($menu->name ?? '') !== 'Header Menu') {
 		return;
 	}
-	$services_page = get_page_by_path('our-services');
+	$services_page = get_page_by_path('services');
 $areas_page = get_page_by_path('service-areas');
 	if (!$services_page instanceof \WP_Post && !$areas_page instanceof \WP_Post) {
 		return;
@@ -6020,7 +6020,7 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 		? lf_wizard_page_slugs_for_niche($niche)
 		: (function_exists('lf_wizard_required_page_slugs')
 			? lf_wizard_required_page_slugs()
-			: ['about-us', 'our-services', 'service-areas', 'reviews', 'blog', 'sitemap', 'contact', 'privacy-policy', 'terms-of-service', 'thank-you']);
+			: ['about-us', 'services', 'service-areas', 'reviews', 'blog', 'sitemap', 'contact', 'privacy-policy', 'terms-of-service', 'thank-you']);
 	$created_pages = [];
 	foreach ($slugs as $slug) {
 		$page = get_page_by_path($slug);
@@ -6052,7 +6052,7 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 			// About should be content-dense (similar to Why Choose Us), but does not require a Process section.
 			$force_reseed = $force_reseed || !lf_ai_studio_config_has_section_types($existing_config, ['content_image', 'image_content', 'benefits', 'faq_accordion']);
 		}
-		if ($slug === 'our-services') {
+		if ($slug === 'services') {
 			$has_new = lf_ai_studio_config_has_section_types($existing_config, ['service_intro', 'faq_accordion', 'cta']);
 			$has_old = lf_ai_studio_config_has_section_types($existing_config, ['content_centered', 'process']);
 			$force_reseed = $force_reseed || !$has_new || $has_old;
@@ -6142,8 +6142,8 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 			// Preserve frontend editor overrides during reseed.
 		}
 	}
-	if (!empty($created_pages['our-services'])) {
-		$page = get_post((int) $created_pages['our-services']);
+	if (!empty($created_pages['services'])) {
+		$page = get_post((int) $created_pages['services']);
 		if ($page instanceof \WP_Post && $page->post_title !== __('Services', 'leadsforward-core')) {
 			wp_update_post(['ID' => $page->ID, 'post_title' => __('Services', 'leadsforward-core')]);
 		}

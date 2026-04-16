@@ -21,7 +21,7 @@ function lf_wizard_core_page_slugs(): array {
 		'home',
 		'about-us',
 		'why-choose-us',
-		'our-services',
+		'services',
 		'service-areas',
 		'reviews',
 		'blog',

@@ -139,7 +139,7 @@ function lf_health_check_core_pages_exist(): array {
 	$required = function_exists('lf_wizard_required_page_slugs') ? lf_wizard_required_page_slugs() : [
 		'home',
 		'about-us',
-		'our-services',
+		'services',
 		'service-areas',
 		'reviews',
 		'blog',
