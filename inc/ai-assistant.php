@@ -5001,6 +5001,17 @@ function lf_ai_assistant_widget_js(): string {
 						response: res
 					});
 				} catch (eLog) {}
+				try {
+					window.lfAiLastListSave = {
+						ok: !!(res && res.success),
+						field_key: String(fieldKey),
+						section_id: sectionId,
+						context_type: pc.context_type,
+						context_id: pc.context_id,
+						items: Array.isArray(lines) ? lines : [],
+						response: res
+					};
+				} catch (eSet) {}
 				if (res && res.success) {
 					setStatus((res.data && res.data.message) ? res.data.message : "List saved.", false);
 					if (typeof opts.onDone === "function") opts.onDone(res);
@@ -5019,6 +5030,17 @@ function lf_ai_assistant_widget_js(): string {
 						responseJSON: xhr && xhr.responseJSON
 					});
 				} catch (eLog2) {}
+				try {
+					window.lfAiLastListSave = {
+						ok: false,
+						field_key: String(fieldKey),
+						section_id: sectionId,
+						context_type: pc.context_type,
+						context_id: pc.context_id,
+						items: Array.isArray(lines) ? lines : [],
+						xhr: { status: xhr && xhr.status, responseJSON: xhr && xhr.responseJSON }
+					};
+				} catch (eSet2) {}
 				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "List save failed.";
 				setStatus(msg, true);
 				if (typeof opts.onFail === "function") opts.onFail(xhr);
@@ -5902,12 +5924,42 @@ function lf_ai_assistant_widget_js(): string {
 				if (res && res.success) {
 					var n = (res.data && Array.isArray(res.data.items)) ? res.data.items.length : ids.length;
 					setStatus("Selected FAQs saved (" + n + ").", false);
+					try {
+						window.lfAiLastFaqSave = {
+							ok: true,
+							section_id: sectionId,
+							context_type: ctx.context_type,
+							context_id: ctx.context_id,
+							ids: ids,
+							response: res
+						};
+					} catch (eFaq) {}
 				} else {
 					setStatus((res && res.data && res.data.message) ? res.data.message : "FAQ selection save failed.", true);
+					try {
+						window.lfAiLastFaqSave = {
+							ok: false,
+							section_id: sectionId,
+							context_type: ctx.context_type,
+							context_id: ctx.context_id,
+							ids: ids,
+							response: res
+						};
+					} catch (eFaq2) {}
 				}
 			}).fail(function(xhr){
 				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "FAQ selection save failed.";
 				setStatus(msg, true);
+				try {
+					window.lfAiLastFaqSave = {
+						ok: false,
+						section_id: sectionId,
+						context_type: ctx.context_type,
+						context_id: ctx.context_id,
+						ids: ids,
+						xhr: { status: xhr && xhr.status, responseJSON: xhr && xhr.responseJSON }
+					};
+				} catch (eFaq3) {}
 			});
 		}
 		function closeFaqPicker() {
