@@ -6832,15 +6832,19 @@ function lf_ai_assistant_widget_js(): string {
 					e.stopPropagation();
 					if (!servicePickerWrap || !servicePickerWrap.wrap || !servicePickerWrap.grid) return;
 					if (already) return;
-					appendServiceIntroCardFromRow(servicePickerWrap.grid, row);
+					// Capture references before closing (closeServicePicker nulls servicePickerWrap).
+					var sw = servicePickerWrap;
+					var grid = sw.grid;
+					var wrap = sw.wrap;
+					appendServiceIntroCardFromRow(grid, row);
 					closeServicePicker();
 					buildServiceIntroReorderControls();
 					buildServiceIntroCardEditors();
-					var ids = Array.prototype.slice.call(servicePickerWrap.grid.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id]")).map(function(n){
+					var ids = Array.prototype.slice.call(grid.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id]")).map(function(n){
 						return String(n.getAttribute("data-lf-service-id") || "").trim();
 					}).filter(function(v){ return v !== ""; });
 					servicePickerDirty = true;
-					persistSectionLineItems(servicePickerWrap.wrap, "service_intro_service_ids", ids, "Saving services...", {
+					persistSectionLineItems(wrap, "service_intro_service_ids", ids, "Saving services...", {
 						onDone: function() {
 							servicePickerDirty = false;
 						}
