@@ -4991,6 +4991,16 @@ function lf_ai_assistant_widget_js(): string {
 				field_key: String(fieldKey),
 				items: JSON.stringify(lines)
 			}).done(function(res){
+				try {
+					console.log("[LF AI] lf_ai_update_section_lines", {
+						field_key: String(fieldKey),
+						section_id: sectionId,
+						context_type: pc.context_type,
+						context_id: pc.context_id,
+						items_len: Array.isArray(lines) ? lines.length : 0,
+						response: res
+					});
+				} catch (eLog) {}
 				if (res && res.success) {
 					setStatus((res.data && res.data.message) ? res.data.message : "List saved.", false);
 					if (typeof opts.onDone === "function") opts.onDone(res);
@@ -4999,6 +5009,16 @@ function lf_ai_assistant_widget_js(): string {
 					if (typeof opts.onFail === "function") opts.onFail(res);
 				}
 			}).fail(function(xhr){
+				try {
+					console.log("[LF AI] lf_ai_update_section_lines FAIL", {
+						field_key: String(fieldKey),
+						section_id: sectionId,
+						context_type: pc.context_type,
+						context_id: pc.context_id,
+						status: xhr && xhr.status,
+						responseJSON: xhr && xhr.responseJSON
+					});
+				} catch (eLog2) {}
 				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "List save failed.";
 				setStatus(msg, true);
 				if (typeof opts.onFail === "function") opts.onFail(xhr);
