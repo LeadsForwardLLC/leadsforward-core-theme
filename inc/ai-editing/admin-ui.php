@@ -3886,15 +3886,17 @@ function lf_ai_ajax_update_section_lines(): void {
 	}
 	$config = lf_pb_get_post_config($pid, $pb_context);
 	$old_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
-	if (empty($old_row)) {
-		// Fallback: some templates emit a wrapper section_id that differs from the PB config key.
-		// When that happens, resolve the first matching section instance by type for known list fields.
-		$wanted_type = '';
-		if ($field_key === 'service_intro_service_ids') {
-			$wanted_type = 'service_intro';
-		} elseif ($field_key === 'faq_selected_ids') {
-			$wanted_type = 'faq_accordion';
-		}
+	// Fallback: some templates emit a wrapper section_id that differs from the PB config key, or
+	// a stale section instance key that now points to a different section type after layout edits.
+	// In both cases, resolve the first matching section instance by type for known list fields.
+	$wanted_type = '';
+	if ($field_key === 'service_intro_service_ids') {
+		$wanted_type = 'service_intro';
+	} elseif ($field_key === 'faq_selected_ids') {
+		$wanted_type = 'faq_accordion';
+	}
+	$current_type = sanitize_text_field((string) ($old_row['type'] ?? ''));
+	if (empty($old_row) || ($wanted_type !== '' && $current_type !== $wanted_type)) {
 		if ($wanted_type !== '' && is_array($config['sections'] ?? null)) {
 			foreach ($config['sections'] as $sid => $row) {
 				if (!is_string($sid) || !is_array($row)) {
