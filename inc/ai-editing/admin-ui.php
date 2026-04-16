@@ -2734,7 +2734,38 @@ function lf_ai_ajax_update_section_checklist(): void {
 	$config = lf_pb_get_post_config($pid, $pb_context);
 	$old_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
 	if (empty($old_row)) {
-		wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+		// Fallback: some templates can emit a wrapper section_id that differs from the PB config key.
+		// When that happens, resolve the first matching section instance by type for known list fields.
+		$wanted_type = '';
+		if ($field_key === 'service_intro_service_ids') {
+			$wanted_type = 'service_intro';
+		} elseif ($field_key === 'faq_selected_ids') {
+			$wanted_type = 'faq_accordion';
+		}
+		if ($wanted_type !== '' && is_array($config['sections'] ?? null)) {
+			foreach ($config['sections'] as $sid => $row) {
+				if (!is_string($sid) || !is_array($row)) {
+					continue;
+				}
+				$t = sanitize_text_field((string) ($row['type'] ?? ''));
+				if ($t === $wanted_type) {
+					$section_id = $sid;
+					$old_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+					break;
+				}
+			}
+		}
+	}
+	if (empty($old_row)) {
+		wp_send_json_error([
+			'message' => __('Section not found for this page.', 'leadsforward-core'),
+			'debug' => [
+				'context_type' => $context_type,
+				'context_id' => $context_id_use,
+				'section_id' => $section_id,
+				'field_key' => $field_key,
+			],
+		]);
 	}
 	$section_type = sanitize_text_field((string) ($old_row['type'] ?? ''));
 	if ($section_type === '' || !in_array($section_type, $allowed_types, true)) {
@@ -2744,7 +2775,19 @@ function lf_ai_ajax_update_section_checklist(): void {
 	$settings = lf_ai_merge_settings_after_inline_list_save($section_type, $settings, $field_key, $value);
 	$items = lf_ai_decode_section_lines_response_items((string) ($settings[$field_key] ?? ''), $field_key);
 	$config['sections'][$section_id]['settings'] = $settings;
-	update_post_meta($pid, LF_PB_META_KEY, $config);
+	$write_ok = update_post_meta($pid, LF_PB_META_KEY, $config);
+	if ($write_ok === false) {
+		wp_send_json_error([
+			'message' => __('List save failed (write error).', 'leadsforward-core'),
+			'debug' => [
+				'context_type' => $context_type,
+				'context_id' => $context_id_use,
+				'post_id' => $pid,
+				'section_id' => $section_id,
+				'field_key' => $field_key,
+			],
+		]);
+	}
 	$removed_overrides = lf_ai_clear_checklist_overrides($context_type, $context_id_use);
 	$new_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
 	$new_settings = is_array($new_row['settings'] ?? null) ? $new_row['settings'] : [];
@@ -3870,6 +3913,13 @@ function lf_ai_ajax_update_section_lines(): void {
 		'message' => __('List updated.', 'leadsforward-core'),
 		'items' => $items,
 		'log_id' => $log_id,
+		'debug' => [
+			'context_type' => $context_type,
+			'context_id' => $context_id_use,
+			'post_id' => $pid,
+			'section_id' => $section_id,
+			'field_key' => $field_key,
+		],
 	]);
 }
 
