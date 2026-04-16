@@ -39,7 +39,8 @@ function lf_register_cpt_services(): void {
 		'query_var'           => true,
 		'rewrite'             => ['slug' => 'services', 'with_front' => false],
 		'capability_type'     => 'post',
-		'has_archive'         => true,
+		// Use a real Page at /services/ as the overview hub. Keep singles at /services/{slug}/.
+		'has_archive'         => false,
 		'hierarchical'        => false,
 		'menu_position'       => 20,
 		'menu_icon'           => 'dashicons-hammer',

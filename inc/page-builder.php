@@ -507,7 +507,7 @@ function lf_pb_cleanup_templates_once(): void {
 		// About page should be as content-dense as Why Choose Us.
 		'about-us' => ['hero', 'content_image', 'benefits', 'image_content', 'faq_accordion', 'cta'],
 		'why-choose-us' => ['hero', 'benefits', 'content_image', 'image_content', 'faq_accordion', 'cta'],
-		'our-services' => ['hero', 'service_intro', 'content_image', 'faq_accordion', 'cta'],
+		'services' => ['hero', 'service_intro', 'content_image', 'faq_accordion', 'cta'],
 		'service-areas' => ['hero', 'service_areas', 'faq_accordion', 'cta'],
 		'reviews' => ['hero', 'trust_reviews', 'cta'],
 		'blog' => ['hero', 'blog_posts', 'cta'],
@@ -1072,7 +1072,7 @@ function lf_pb_render_sections(\WP_Post $post): void {
 			}
 			continue;
 		}
-		if ($context === 'page' && $post->post_name === 'our-services' && $type === 'content_centered') {
+		if ($context === 'page' && $post->post_name === 'services' && $type === 'content_centered') {
 			continue;
 		}
 		if ($context === 'page' && $post->post_name === 'contact' && $type === 'content_centered') {

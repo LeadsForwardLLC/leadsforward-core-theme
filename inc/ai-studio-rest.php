@@ -278,7 +278,7 @@ function lf_ai_studio_collect_pages_inventory(): array {
 		'privacy' => 'privacy-policy',
 		'terms' => 'terms-of-service',
 		'thank_you' => 'thank-you',
-		'services_hub' => 'our-services',
+		'services_hub' => 'services',
 		'service_areas_hub' => 'service-areas',
 	];
 	foreach ($page_slugs as $key => $slug) {

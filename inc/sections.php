@@ -1504,7 +1504,7 @@ function lf_sections_resolve_secondary_cta_browse_intent(array $resolved): array
 	$lower = strtolower($label);
 	$slug = '';
 	if (preg_match('/\b(view|see|explore|browse|visit|check)\b.*\b(service|services)\b/u', $lower)) {
-		$slug = 'our-services';
+		$slug = 'services';
 	} elseif (preg_match('/\b(service|coverage)\s+areas?\b|\bareas?\s+we\s+serve\b|\bservice\s+areas?\b/u', $lower)) {
 		$slug = 'service-areas';
 	} elseif (preg_match('/\babout(\s+us)?\b/u', $lower)) {

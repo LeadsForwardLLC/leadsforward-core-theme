@@ -1961,7 +1961,7 @@ function lf_prime_image_distribution_for_site(): array {
 		'posts_per_page' => -1,
 		'fields' => 'ids',
 		'no_found_rows' => true,
-		'post_name__in' => ['about-us', 'our-services', 'service-areas', 'reviews', 'contact'],
+		'post_name__in' => ['about-us', 'services', 'service-areas', 'reviews', 'contact'],
 	]));
 	$post_ids = array_values(array_unique(array_map('intval', $post_ids)));
 
