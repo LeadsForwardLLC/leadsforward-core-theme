@@ -1418,6 +1418,14 @@ function lf_ai_assistant_widget_js(): string {
 		 */
 		function persistContextFromWrap(wrap) {
 			try {
+				// Prefer explicit context bound to the section wrapper, if present.
+				if (wrap && wrap.getAttribute) {
+					var ct = String(wrap.getAttribute("data-lf-context-type") || "").trim();
+					var cid = String(wrap.getAttribute("data-lf-context-id") || "").trim();
+					if (ct !== "" && cid !== "") {
+						return { context_type: ct, context_id: cid };
+					}
+				}
 				// If this view is the front page, homepage section edits must always persist to the homepage
 				// option store, even if the view context resolves to the static front page post.
 				if (isFrontPageView) {
