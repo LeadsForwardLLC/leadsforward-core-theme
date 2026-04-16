@@ -5944,6 +5944,8 @@ function lf_ai_assistant_widget_js(): string {
 							ids: ids,
 							response: res
 						};
+						// Compatibility alias (some users type a capital "I" by mistake).
+						window.IfAiLastFaqSave = window.lfAiLastFaqSave;
 					} catch (eFaq) {}
 				} else {
 					setStatus((res && res.data && res.data.message) ? res.data.message : "FAQ selection save failed.", true);
@@ -5956,6 +5958,7 @@ function lf_ai_assistant_widget_js(): string {
 							ids: ids,
 							response: res
 						};
+						window.IfAiLastFaqSave = window.lfAiLastFaqSave;
 					} catch (eFaq2) {}
 				}
 			}).fail(function(xhr){
@@ -5970,6 +5973,7 @@ function lf_ai_assistant_widget_js(): string {
 						ids: ids,
 						xhr: { status: xhr && xhr.status, responseJSON: xhr && xhr.responseJSON }
 					};
+					window.IfAiLastFaqSave = window.lfAiLastFaqSave;
 				} catch (eFaq3) {}
 			});
 		}
