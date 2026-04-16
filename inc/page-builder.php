@@ -1064,7 +1064,7 @@ function lf_pb_render_sections(\WP_Post $post): void {
 		// If a section is hidden, keep a placeholder wrapper for front-end editors so it can be restored.
 		if (!$enabled) {
 			if (current_user_can('edit_theme_options')) {
-				echo '<div class="lf-inline-section-wrap lf-inline-section-wrap--hidden" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_pb) . '" data-lf-section-visible="0">';
+				echo '<div class="lf-inline-section-wrap lf-inline-section-wrap--hidden" data-lf-section-wrap="1" data-lf-context-type="' . esc_attr((string) $post->post_type) . '" data-lf-context-id="' . esc_attr((string) $post->ID) . '" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_pb) . '" data-lf-section-visible="0">';
 				echo '<div class="lf-ai-hidden-section-placeholder" aria-label="' . esc_attr__('Hidden section', 'leadsforward-core') . '">';
 				echo esc_html__('Hidden section:', 'leadsforward-core') . ' ' . esc_html((string) ($type ?: $section_id));
 				echo '</div>';
@@ -1110,7 +1110,7 @@ function lf_pb_render_sections(\WP_Post $post): void {
 				implode(', ', $rendered)
 			));
 		}
-		echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_pb) . '" data-lf-section-visible="1">';
+		echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-context-type="' . esc_attr((string) $post->post_type) . '" data-lf-context-id="' . esc_attr((string) $post->ID) . '" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_pb) . '" data-lf-section-visible="1">';
 		lf_sections_render_section($type, $context, $sec_cfg['settings'] ?? [], $post);
 		echo '</div>';
 	}
