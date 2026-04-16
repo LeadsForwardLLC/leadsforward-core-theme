@@ -3877,6 +3877,29 @@ function lf_ai_ajax_update_section_lines(): void {
 	$config = lf_pb_get_post_config($pid, $pb_context);
 	$old_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
 	if (empty($old_row)) {
+		// Fallback: some templates emit a wrapper section_id that differs from the PB config key.
+		// When that happens, resolve the first matching section instance by type for known list fields.
+		$wanted_type = '';
+		if ($field_key === 'service_intro_service_ids') {
+			$wanted_type = 'service_intro';
+		} elseif ($field_key === 'faq_selected_ids') {
+			$wanted_type = 'faq_accordion';
+		}
+		if ($wanted_type !== '' && is_array($config['sections'] ?? null)) {
+			foreach ($config['sections'] as $sid => $row) {
+				if (!is_string($sid) || !is_array($row)) {
+					continue;
+				}
+				$t = sanitize_text_field((string) ($row['type'] ?? ''));
+				if ($t === $wanted_type) {
+					$section_id = $sid;
+					$old_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+					break;
+				}
+			}
+		}
+	}
+	if (empty($old_row)) {
 		wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
 	}
 	$section_type = sanitize_text_field((string) ($old_row['type'] ?? ''));
@@ -3895,7 +3918,19 @@ function lf_ai_ajax_update_section_lines(): void {
 	}
 	$items = lf_ai_decode_section_lines_response_items((string) ($settings[$field_key] ?? ''), $field_key);
 	$config['sections'][$section_id]['settings'] = $settings;
-	update_post_meta($pid, LF_PB_META_KEY, $config);
+	$write_ok = update_post_meta($pid, LF_PB_META_KEY, $config);
+	if ($write_ok === false) {
+		wp_send_json_error([
+			'message' => __('List save failed (write error).', 'leadsforward-core'),
+			'debug' => [
+				'context_type' => $context_type,
+				'context_id' => $context_id_use,
+				'post_id' => $pid,
+				'section_id' => $section_id,
+				'field_key' => $field_key,
+			],
+		]);
+	}
 	if (in_array($field_key, ['service_details_checklist', 'service_details_checklist_secondary'], true)) {
 		lf_ai_clear_checklist_overrides($context_type, $context_id_use);
 	}
