@@ -79,3 +79,50 @@ function lf_migrate_services_overview_page_slug_once(): void {
 }
 add_action('init', 'lf_migrate_services_overview_page_slug_once', 20);
 
+/**
+ * One-time repair: if /services accidentally became the Posts page, fix it.
+ *
+ * If WordPress is configured with a static posts page and that page is currently the
+ * one with slug `services`, it will render as "Blog" (and break the intended services hub).
+ * We re-point page_for_posts back to the `blog` page when available, and free up /services/.
+ */
+function lf_fix_services_page_for_posts_misassignment_once(): void {
+	if (get_option('lf_fix_services_posts_page_v1', '0') === '1') {
+		return;
+	}
+
+	$services = get_page_by_path('services');
+	if (!$services instanceof \WP_Post) {
+		update_option('lf_fix_services_posts_page_v1', '1', true);
+		return;
+	}
+
+	$posts_page_id = (int) get_option('page_for_posts');
+	if ($posts_page_id !== (int) $services->ID) {
+		update_option('lf_fix_services_posts_page_v1', '1', true);
+		return;
+	}
+
+	$blog = get_page_by_path('blog');
+	if ($blog instanceof \WP_Post) {
+		update_option('page_for_posts', (int) $blog->ID, true);
+	} else {
+		// If no blog page exists, unassign posts page so /services/ can be a normal page again.
+		update_option('page_for_posts', 0, true);
+	}
+
+	// If the services page title looks like a blog page, revert its slug to avoid conflicts.
+	$title = strtolower(trim((string) $services->post_title));
+	if ($title === 'blog' || $title === 'posts' || $title === 'latest updates') {
+		$new_slug = ($blog instanceof \WP_Post) ? 'blog-archive' : 'blog';
+		wp_update_post([
+			'ID' => (int) $services->ID,
+			'post_name' => $new_slug,
+			'post_title' => __('Blog', 'leadsforward-core'),
+		]);
+	}
+
+	update_option('lf_fix_services_posts_page_v1', '1', true);
+}
+add_action('init', 'lf_fix_services_page_for_posts_misassignment_once', 21);
+
