@@ -3863,7 +3863,17 @@ function lf_ai_ajax_update_section_lines(): void {
 			'message' => __('List updated.', 'leadsforward-core'),
 			'items' => $items,
 			'log_id' => $log_id,
-		]);
+		'debug' => [
+			'context_type' => $context_type,
+			'context_id' => $context_id_use,
+			'field_key' => $field_key,
+			'section_id_sent' => $section_id,
+			'resolved_section_id' => $resolved_section_id,
+			'after_saved_value' => is_array($config[$resolved_section_id] ?? null)
+				? (string) ($config[$resolved_section_id]['settings'][$field_key] ?? ($config[$resolved_section_id][$field_key] ?? ''))
+				: '',
+		],
+	]);
 	}
 	$pid = (int) $context_id_use;
 	$post = get_post($pid);
@@ -3954,6 +3964,17 @@ function lf_ai_ajax_update_section_lines(): void {
 			'post_id' => $pid,
 			'section_id' => $section_id,
 			'field_key' => $field_key,
+			'write_ok' => $write_ok,
+			'after_saved_value' => (function () use ($pid, $section_id, $field_key) {
+				$stored_after = get_post_meta($pid, LF_PB_META_KEY, true);
+				if (!is_array($stored_after)) {
+					return '';
+				}
+				$sections = is_array($stored_after['sections'] ?? null) ? $stored_after['sections'] : [];
+				$row = is_array($sections[$section_id] ?? null) ? $sections[$section_id] : [];
+				$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+				return (string) ($settings[$field_key] ?? '');
+			})(),
 		],
 	]);
 }
