@@ -261,6 +261,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 	}
 
 	wp_localize_script('lf-ai-floating-assistant', 'lfAiFloating', [
+		'theme_version' => defined('LF_THEME_VERSION') ? (string) LF_THEME_VERSION : '',
 		'ajax_url' => admin_url('admin-ajax.php'),
 		'nonce'    => wp_create_nonce('lf_ai_editing'),
 		'context_type' => (string) ($context['type'] ?? 'homepage'),
@@ -319,6 +320,13 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 			'onboardingDismiss' => __('Got it', 'leadsforward-core'),
 		],
 	]);
+
+	// Inline marker so debugging can prove which build is running even under aggressive caching.
+	wp_add_inline_script(
+		'lf-ai-floating-assistant',
+		'(function(){try{window.lfAiThemeVersion=' . wp_json_encode(defined('LF_THEME_VERSION') ? (string) LF_THEME_VERSION : '') . ';window.lfAiLastListSave=window.lfAiLastListSave||null;window.lfAiLastFaqSave=window.lfAiLastFaqSave||null;}catch(e){}})();',
+		'before'
+	);
 
 	wp_add_inline_script('lf-ai-floating-assistant', lf_ai_assistant_widget_js());
 	wp_add_inline_script('lf-ai-floating-assistant', lf_ai_assistant_widget_fallback_js());
@@ -1304,6 +1312,9 @@ function lf_ai_assistant_widget_js(): string {
 	return 'jQuery(function($){
 		"use strict";
 		function lfAiRun() {
+		try { window.lfAiThemeVersion = window.lfAiThemeVersion || String((lfAiFloating && lfAiFloating.theme_version) ? lfAiFloating.theme_version : ""); } catch (eV) {}
+		try { if (typeof window.lfAiLastListSave === "undefined") window.lfAiLastListSave = null; } catch (eS1) {}
+		try { if (typeof window.lfAiLastFaqSave === "undefined") window.lfAiLastFaqSave = null; } catch (eS2) {}
 		var stateKey = "lfAiFloatState";
 		var seoStateKey = "lfAiSeoFloatState";
 		var historyStateKey = "lfAiHistoryFloatState";
