@@ -324,8 +324,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 	// Inline marker so debugging can prove which build is running even under aggressive caching.
 	wp_add_inline_script(
 		'lf-ai-floating-assistant',
-		'(function(){try{window.lfAiThemeVersion=' . wp_json_encode(defined('LF_THEME_VERSION') ? (string) LF_THEME_VERSION : '') . ';window.lfAiLastListSave=window.lfAiLastListSave||null;window.lfAiLastFaqSave=window.lfAiLastFaqSave||null;}catch(e){}})();',
-		'before'
+		'(function(){try{window.lfAiThemeVersion=' . wp_json_encode(defined('LF_THEME_VERSION') ? (string) LF_THEME_VERSION : '') . ';window.lfAiLastListSave=window.lfAiLastListSave||null;window.lfAiLastFaqSave=window.lfAiLastFaqSave||null;}catch(e){}})();'
 	);
 
 	wp_add_inline_script('lf-ai-floating-assistant', lf_ai_assistant_widget_js());
@@ -1311,6 +1310,14 @@ function lf_ai_assistant_widget_js(): string {
 	// DOM-ready: section markup + float widget must exist before init (script reorder / optimizers).
 	return 'jQuery(function($){
 		"use strict";
+	\t// Debug markers: prove which build + whether list/faq save handlers ran.
+	\ttry{
+	\t\tif(typeof window.lfAiThemeVersion==="undefined"){
+	\t\t\twindow.lfAiThemeVersion=String((typeof lfAiFloating!=="undefined" && lfAiFloating && lfAiFloating.theme_version!=null) ? lfAiFloating.theme_version : "");
+	\t\t}
+	\t\tif(typeof window.lfAiLastListSave==="undefined") window.lfAiLastListSave=null;
+	\t\tif(typeof window.lfAiLastFaqSave==="undefined") window.lfAiLastFaqSave=null;
+	\t}catch(eDbg){}
 		function lfAiRun() {
 		try { window.lfAiThemeVersion = window.lfAiThemeVersion || String((lfAiFloating && lfAiFloating.theme_version) ? lfAiFloating.theme_version : ""); } catch (eV) {}
 		try { if (typeof window.lfAiLastListSave === "undefined") window.lfAiLastListSave = null; } catch (eS1) {}
