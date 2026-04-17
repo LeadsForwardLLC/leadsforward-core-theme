@@ -1534,6 +1534,10 @@ function lf_ai_assistant_widget_js(): string {
 		var faqPickerWrap = null;
 		var faqPickerList = null;
 		var faqPickerDirty = false;
+		// Prevent overlapping FAQ save requests from racing and overwriting state.
+		var faqSaveTimer = null;
+		var faqSaveXhr = null;
+		var faqSaveSeq = 0;
 		var faqLibraryCache = null;
 		var inlineCandidateSelector = "main h1,main h2,main h3,main h4,main h5,main h6,main p,main li,main blockquote,main figcaption,main .lf-block-hero__card-item-text,main .lf-service-details__text,main .lf-service-details__micro-text,#primary h1,#primary h2,#primary h3,#primary h4,#primary h5,#primary h6,#primary p,#primary li,#primary blockquote,#primary figcaption,#primary .lf-block-hero__card-item-text,#primary .lf-service-details__text,#primary .lf-service-details__micro-text,.site-main h1,.site-main h2,.site-main h3,.site-main h4,.site-main h5,.site-main h6,.site-main p,.site-main li,.site-main blockquote,.site-main figcaption,.site-main .lf-block-hero__card-item-text,.site-main .lf-service-details__text,.site-main .lf-service-details__micro-text,.site-content h1,.site-content h2,.site-content h3,.site-content h4,.site-content h5,.site-content h6,.site-content p,.site-content li,.site-content blockquote,.site-content figcaption,.site-content .lf-block-hero__card-item-text,.site-content .lf-service-details__text,.site-content .lf-service-details__micro-text,article h1,article h2,article h3,article h4,article h5,article h6,article p,article li,article blockquote,article figcaption,article .lf-block-hero__card-item-text,article .lf-service-details__text,article .lf-service-details__micro-text";
 		var inlineImageCandidateSelector = "main img,#primary img,.site-main img,.site-content img,article img";
@@ -5922,33 +5926,58 @@ function lf_ai_assistant_widget_js(): string {
 			var ctx = (typeof persistContextFromWrap === "function")
 				? persistContextFromWrap(wrap)
 				: { context_type: activeContextType, context_id: activeContextId };
-			setStatus(savingLabel || "Saving selected FAQs...", false);
-			$.post(lfAiFloating.ajax_url, {
-				action: "lf_ai_update_section_lines",
-				nonce: lfAiFloating.nonce,
-				context_type: ctx.context_type,
-				context_id: ctx.context_id,
-				section_id: sectionId,
-				field_key: "faq_selected_ids",
-				items: JSON.stringify(ids.map(function(id){ return String(id); }))
-			}).done(function(res){
-				if (res && res.success) {
-					var n = (res.data && Array.isArray(res.data.items)) ? res.data.items.length : ids.length;
-					setStatus("Selected FAQs saved (" + n + ").", false);
-					try {
-						window.lfAiLastFaqSave = {
-							ok: true,
-							section_id: sectionId,
-							context_type: ctx.context_type,
-							context_id: ctx.context_id,
-							ids: ids,
-							response: res
-						};
-						// Compatibility alias (some users type a capital "I" by mistake).
-						window.IfAiLastFaqSave = window.lfAiLastFaqSave;
-					} catch (eFaq) {}
-				} else {
-					setStatus((res && res.data && res.data.message) ? res.data.message : "FAQ selection save failed.", true);
+			// Debounce and keep only the most recent request (avoid request races).
+			try { if (faqSaveTimer) { clearTimeout(faqSaveTimer); faqSaveTimer = null; } } catch (eT) {}
+			faqSaveTimer = setTimeout(function(){
+				var mySeq = ++faqSaveSeq;
+				try { if (faqSaveXhr && typeof faqSaveXhr.abort === "function") faqSaveXhr.abort(); } catch (eA) {}
+				setStatus(savingLabel || "Saving selected FAQs...", false);
+				faqSaveXhr = $.post(lfAiFloating.ajax_url, {
+					action: "lf_ai_update_section_lines",
+					nonce: lfAiFloating.nonce,
+					context_type: ctx.context_type,
+					context_id: ctx.context_id,
+					section_id: sectionId,
+					field_key: "faq_selected_ids",
+					items: JSON.stringify(ids.map(function(id){ return String(id); }))
+				}).done(function(res){
+					if (mySeq !== faqSaveSeq) return;
+					if (res && res.success) {
+						var n = (res.data && Array.isArray(res.data.items)) ? res.data.items.length : ids.length;
+						setStatus("Selected FAQs saved (" + n + ").", false);
+						try {
+							window.lfAiLastFaqSave = {
+								ok: true,
+								section_id: sectionId,
+								context_type: ctx.context_type,
+								context_id: ctx.context_id,
+								ids: ids,
+								response: res
+							};
+							// Compatibility alias (some users type a capital "I" by mistake).
+							window.IfAiLastFaqSave = window.lfAiLastFaqSave;
+						} catch (eFaq) {}
+					} else {
+						setStatus((res && res.data && res.data.message) ? res.data.message : "FAQ selection save failed.", true);
+						try {
+							window.lfAiLastFaqSave = {
+								ok: false,
+								section_id: sectionId,
+								context_type: ctx.context_type,
+								context_id: ctx.context_id,
+								ids: ids,
+								response: res
+							};
+							window.IfAiLastFaqSave = window.lfAiLastFaqSave;
+						} catch (eFaq2) {}
+					}
+				}).fail(function(xhr){
+					// Ignore aborted requests (a newer save superseded this one).
+					if (mySeq !== faqSaveSeq) return;
+					var msg = (xhr && xhr.statusText === "abort")
+						? ""
+						: ((xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "FAQ selection save failed.");
+					if (msg) setStatus(msg, true);
 					try {
 						window.lfAiLastFaqSave = {
 							ok: false,
@@ -5956,26 +5985,12 @@ function lf_ai_assistant_widget_js(): string {
 							context_type: ctx.context_type,
 							context_id: ctx.context_id,
 							ids: ids,
-							response: res
+							xhr: { status: xhr && xhr.status, responseJSON: xhr && xhr.responseJSON }
 						};
 						window.IfAiLastFaqSave = window.lfAiLastFaqSave;
-					} catch (eFaq2) {}
-				}
-			}).fail(function(xhr){
-				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "FAQ selection save failed.";
-				setStatus(msg, true);
-				try {
-					window.lfAiLastFaqSave = {
-						ok: false,
-						section_id: sectionId,
-						context_type: ctx.context_type,
-						context_id: ctx.context_id,
-						ids: ids,
-						xhr: { status: xhr && xhr.status, responseJSON: xhr && xhr.responseJSON }
-					};
-					window.IfAiLastFaqSave = window.lfAiLastFaqSave;
-				} catch (eFaq3) {}
-			});
+					} catch (eFaq3) {}
+				});
+			}, 250);
 		}
 		function closeFaqPicker() {
 			if (!faqPickerEl) return;
