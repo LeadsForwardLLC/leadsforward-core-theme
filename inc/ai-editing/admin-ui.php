@@ -911,10 +911,17 @@ function lf_ai_ajax_update_header_settings(): void {
 			? lf_header_topbar_color_sanitize((string) wp_unslash($_POST['header_topbar_color']))
 			: '')
 		: (function_exists('lf_header_topbar_color') ? lf_header_topbar_color() : '');
+	$heading_case = isset($_POST['heading_case_mode'])
+		? sanitize_key((string) wp_unslash($_POST['heading_case_mode']))
+		: (function_exists('lf_heading_case_mode') ? lf_heading_case_mode() : 'normal');
+	if (!in_array($heading_case, ['normal', 'capitalize', 'upper', 'lower'], true)) {
+		$heading_case = 'normal';
+	}
 	lf_update_global_option_value('lf_header_layout', $layout);
 	lf_update_global_option_value('lf_header_topbar_enabled', $enabled);
 	lf_update_global_option_value('lf_header_topbar_text', $text);
 	lf_update_global_option_value('lf_header_topbar_color', $color);
+	lf_update_global_option_value('lf_heading_case_mode', $heading_case);
 	wp_send_json_success([
 		'message' => __('Header settings saved.', 'leadsforward-core'),
 		'reload' => true,
@@ -922,6 +929,7 @@ function lf_ai_ajax_update_header_settings(): void {
 		'header_topbar_enabled' => $enabled === '1',
 		'header_topbar_text' => $text,
 		'header_topbar_color' => $color,
+		'heading_case_mode' => $heading_case,
 	]);
 }
 

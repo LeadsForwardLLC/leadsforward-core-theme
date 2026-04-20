@@ -92,6 +92,13 @@ function lf_acf_add_options_branding_fields(): void {
 				'type'  => 'color_picker',
 				'default_value' => '#ffffff',
 			],
+			[
+				'key'   => 'field_lf_link_hover_color',
+				'label' => __('Link hover color', 'leadsforward-core'),
+				'name'  => 'lf_link_hover_color',
+				'type'  => 'color_picker',
+				'default_value' => '#2563eb',
+			],
 		],
 		'location' => [
 			[

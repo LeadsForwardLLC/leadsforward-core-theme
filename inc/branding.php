@@ -153,6 +153,7 @@ function lf_branding_css(): string {
 	$primary   = lf_branding_get_value('lf_brand_primary', '#2563eb');
 	$secondary = lf_branding_get_value('lf_brand_secondary', '#0ea5e9');
 	$tertiary  = lf_branding_get_value('lf_brand_tertiary', '#f97316');
+	$link_hover = lf_branding_get_value('lf_link_hover_color', $primary);
 	$light     = lf_branding_get_value('lf_surface_light', '#ffffff');
 	$soft      = lf_branding_get_value('lf_surface_soft', '#f8fafc');
 	$dark      = lf_branding_get_value('lf_surface_dark', '#0f172a');
@@ -165,6 +166,7 @@ function lf_branding_css(): string {
 		. '--lf-color-primary:' . $primary . ';'
 		. '--lf-color-secondary:' . $secondary . ';'
 		. '--lf-color-tertiary:' . $tertiary . ';'
+		. '--lf-link-hover:' . $link_hover . ';'
 		. '--lf-surface-light:' . $light . ';'
 		. '--lf-surface-soft:' . $soft . ';'
 		. '--lf-surface-dark:' . $dark . ';'

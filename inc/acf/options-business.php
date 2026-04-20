@@ -79,6 +79,22 @@ function lf_acf_add_options_business_fields(): void {
 				'rows'     => 4,
 				'instructions' => __('e.g. Mon–Fri 8am–6pm', 'leadsforward-core'),
 			],
+			[
+				'key'   => 'field_lf_footer_address_link_auto',
+				'label' => __('Footer: auto-link address to GBP URL', 'leadsforward-core'),
+				'name'  => 'lf_footer_address_link_auto',
+				'type'  => 'true_false',
+				'ui'    => 1,
+				'default_value' => 1,
+				'instructions' => __('When enabled, the footer address links to the Google Business Profile URL (useful for CID links).', 'leadsforward-core'),
+			],
+			[
+				'key'   => 'field_lf_footer_address_link_url',
+				'label' => __('Footer: address link URL override', 'leadsforward-core'),
+				'name'  => 'lf_footer_address_link_url',
+				'type'  => 'url',
+				'instructions' => __('Optional. If set, this URL is used instead of the GBP URL.', 'leadsforward-core'),
+			],
 		],
 		'location'              => [
 			[

@@ -1346,12 +1346,30 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	$reviews_id = $created_pages['reviews'] ?? null;
 	$blog_id = $created_pages['blog'] ?? null;
 	$financing_id = $created_pages['financing'] ?? null;
+	// Never link draft/unpublished pages in menus (prevents 404 menu items).
+	if ($financing_id) {
+		$financing_post = get_post((int) $financing_id);
+		if (!$financing_post instanceof \WP_Post || $financing_post->post_status !== 'publish') {
+			$financing_id = null;
+		}
+	}
 	$faq_page_id = $created_pages['faq'] ?? null;
 	$sitemap_id = $created_pages['sitemap'] ?? null;
 	$privacy_id = $created_pages['privacy-policy'] ?? null;
 	$terms_id = $created_pages['terms-of-service'] ?? null;
 	$services_page_id = $created_pages['our-services'] ?? null;
 	$areas_page_id = $created_pages['service-areas'] ?? null;
+	$has_projects = false;
+	if (post_type_exists('lf_project')) {
+		$project_ids = get_posts([
+			'post_type' => 'lf_project',
+			'post_status' => 'publish',
+			'posts_per_page' => 1,
+			'fields' => 'ids',
+			'no_found_rows' => true,
+		]);
+		$has_projects = !empty($project_ids);
+	}
 
 	$service_children = [];
 	if (!empty($service_ids)) {
@@ -1490,7 +1508,7 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	if ($financing_id) $more_children[] = ['type' => 'page', 'object_id' => $financing_id];
 	if ($faq_page_id) $more_children[] = ['type' => 'page', 'object_id' => $faq_page_id];
 	if ($blog_id) $more_children[] = ['type' => 'page', 'object_id' => $blog_id];
-	$project_archive = get_post_type_archive_link('lf_project');
+	$project_archive = $has_projects ? get_post_type_archive_link('lf_project') : '';
 	if ($project_archive) $more_children[] = ['type' => 'custom', 'url' => $project_archive, 'title' => __('Projects', 'leadsforward-core')];
 	if ($contact_id) $more_children[] = ['type' => 'page', 'object_id' => $contact_id];
 	if (!empty($more_children)) {

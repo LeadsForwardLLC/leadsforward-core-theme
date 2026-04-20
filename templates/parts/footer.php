@@ -14,6 +14,9 @@ if (!defined('ABSPATH')) {
 
 $nap = function_exists('lf_nap_data') ? lf_nap_data() : ['name' => '', 'address' => '', 'phone' => '', 'email' => ''];
 $entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
+$footer_addr_override = function_exists('lf_get_option') ? (string) lf_get_option('lf_footer_address_link_url', 'option', '') : '';
+$footer_addr_auto = function_exists('lf_get_option') ? (string) lf_get_option('lf_footer_address_link_auto', 'option', '1') === '1' : true;
+$footer_addr_url = $footer_addr_override !== '' ? $footer_addr_override : (($footer_addr_auto && is_array($entity) && !empty($entity['gbp_url'])) ? (string) $entity['gbp_url'] : '');
 $license = (string) ($entity['license_number'] ?? '');
 $social = is_array($entity['social'] ?? null) ? $entity['social'] : [];
 $social_map = [
@@ -60,7 +63,19 @@ foreach (['about-us', 'contact', 'reviews', 'blog'] as $slug) {
 		$company_links[] = ['label' => get_the_title($page), 'url' => get_permalink($page)];
 	}
 }
-$project_archive = get_post_type_archive_link('lf_project');
+// Only show Projects if there are published projects (prevents “surprise page” links).
+$has_projects = false;
+if (post_type_exists('lf_project')) {
+	$project_ids = get_posts([
+		'post_type' => 'lf_project',
+		'post_status' => 'publish',
+		'posts_per_page' => 1,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	]);
+	$has_projects = !empty($project_ids);
+}
+$project_archive = $has_projects ? get_post_type_archive_link('lf_project') : '';
 if ($project_archive) {
 	$company_links[] = ['label' => __('Projects', 'leadsforward-core'), 'url' => $project_archive];
 }
@@ -91,7 +106,13 @@ if (!$has_nap && empty($services) && empty($areas) && empty($company_links) && e
 							<?php if (function_exists('lf_icon')) : ?>
 								<span class="lf-footer-nap__icon" aria-hidden="true"><?php echo lf_icon('map-pin', ['class' => 'lf-icon--sm lf-icon--inherit']); ?></span>
 							<?php endif; ?>
-							<span class="lf-footer-nap__text"><?php echo nl2br(esc_html($nap['address'])); ?></span>
+							<span class="lf-footer-nap__text">
+								<?php if ($footer_addr_url !== '') : ?>
+									<a href="<?php echo esc_url($footer_addr_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo nl2br(esc_html($nap['address'])); ?></a>
+								<?php else : ?>
+									<?php echo nl2br(esc_html($nap['address'])); ?>
+								<?php endif; ?>
+							</span>
 						</span>
 					<?php endif; ?>
 					<?php if (!empty($nap['phone'])) : ?>

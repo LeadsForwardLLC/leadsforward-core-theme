@@ -91,6 +91,21 @@ $all_review_ids = get_posts([
 ]);
 $total_reviews = is_array($all_review_ids) ? count($all_review_ids) : 0;
 if ($total_reviews < 1) {
+	// Reviews page should still render a helpful placeholder instead of looking broken/empty.
+	if ($is_reviews_page) {
+		$section_heading_tag_safe = in_array($section_heading_tag, ['h1', 'h2', 'h3', 'h4'], true) ? $section_heading_tag : 'h2';
+		?>
+		<section class="<?php echo esc_attr($section_classes); ?>" id="<?php echo esc_attr($render_id); ?>" style="<?php echo esc_attr($surface['style'] . $section_inline_style); ?>">
+			<div class="lf-container">
+				<div class="lf-section__header lf-section__header--<?php echo esc_attr($header_align); ?>">
+					<<?php echo esc_html($section_heading_tag_safe); ?> class="lf-section__title"><?php echo esc_html($heading); ?></<?php echo esc_html($section_heading_tag_safe); ?>>
+					<p class="lf-section__intro"><?php echo esc_html__('Reviews are coming soon. Check back after your first customers leave feedback.', 'leadsforward-core'); ?></p>
+				</div>
+			</div>
+		</section>
+		<?php
+		return;
+	}
 	return;
 }
 $display_limit = $is_reviews_page ? $reviews_page_limit : $review_total;

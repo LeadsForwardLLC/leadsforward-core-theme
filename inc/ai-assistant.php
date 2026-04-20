@@ -247,6 +247,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		'topbar_text' => function_exists('lf_header_topbar_text') ? lf_header_topbar_text() : '',
 		'topbar_color' => function_exists('lf_header_topbar_color') ? lf_header_topbar_color() : '',
 	];
+	$heading_case_mode = function_exists('lf_heading_case_mode') ? lf_heading_case_mode() : 'normal';
 
 	$admin_post_edit_url = '';
 	$ctx_type = (string) ($context['type'] ?? '');
@@ -285,6 +286,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		],
 		'header_layouts' => $header_layouts_ui,
 		'header_settings' => $header_settings_local,
+		'heading_case_mode' => $heading_case_mode,
 		'homepage_enabled' => $homepage_enabled,
 		'i18n' => [
 			'statusReady' => __('Ready.', 'leadsforward-core'),
@@ -816,6 +818,15 @@ function lf_ai_assistant_render_floating_widget(): void {
 					<label>
 						<span><?php esc_html_e('Header layout', 'leadsforward-core'); ?></span>
 						<select data-lf-ai-header-layout></select>
+					</label>
+					<label>
+						<span><?php esc_html_e('Heading case', 'leadsforward-core'); ?></span>
+						<select data-lf-ai-heading-case>
+							<option value="normal"><?php esc_html_e('Normal (as written)', 'leadsforward-core'); ?></option>
+							<option value="capitalize"><?php esc_html_e('Title case', 'leadsforward-core'); ?></option>
+							<option value="upper"><?php esc_html_e('UPPERCASE', 'leadsforward-core'); ?></option>
+							<option value="lower"><?php esc_html_e('lowercase', 'leadsforward-core'); ?></option>
+						</select>
 					</label>
 					<label class="lf-ai-header-settings__check">
 						<input type="checkbox" data-lf-ai-header-topbar-enabled />
@@ -1350,6 +1361,7 @@ function lf_ai_assistant_widget_js(): string {
 		var $headerPanel = $headerRoot.find("#lf-ai-header-panel");
 		var $headerSave = $headerRoot.find("[data-lf-ai-header-save]");
 		var $headerLayout = $headerRoot.find("[data-lf-ai-header-layout]");
+		var $headingCase = $headerRoot.find("[data-lf-ai-heading-case]");
 		var $headerTopbar = $headerRoot.find("[data-lf-ai-header-topbar-enabled]");
 		var $headerTopbarText = $headerRoot.find("[data-lf-ai-header-topbar-text]");
 		var $headerTopbarSwatches = $headerRoot.find("[data-lf-ai-header-topbar-color-swatches]");
@@ -3069,6 +3081,7 @@ function lf_ai_assistant_widget_js(): string {
 			var rows = Array.isArray(lfAiFloating.header_layouts) ? lfAiFloating.header_layouts : [];
 			var cur = (lfAiFloating.header_settings && typeof lfAiFloating.header_settings === "object") ? lfAiFloating.header_settings : {};
 			var curLayout = String(cur.layout || "modern");
+			var curHeadingCase = String(lfAiFloating.heading_case_mode || "normal");
 			$headerLayout.empty();
 			for (var hi = 0; hi < rows.length; hi++) {
 				var r = rows[hi] || {};
@@ -3085,6 +3098,12 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			$headerTopbar.prop("checked", !!cur.topbar_enabled);
 			$headerTopbarText.val(String(cur.topbar_text || ""));
+			if ($headingCase.length) {
+				$headingCase.val(curHeadingCase);
+				if (!$headingCase.val()) {
+					$headingCase.val("normal");
+				}
+			}
 			if ($headerTopbarColor.length) {
 				$headerTopbarColor.val(String(cur.topbar_color || ""));
 			}
@@ -9751,6 +9770,7 @@ function lf_ai_assistant_widget_js(): string {
 				action: "lf_ai_update_header_settings",
 				nonce: lfAiFloating.nonce,
 				header_layout: String($headerLayout.val() || "modern"),
+				heading_case_mode: String($headingCase.length ? ($headingCase.val() || "normal") : "normal"),
 				header_topbar_enabled: $headerTopbar.is(":checked") ? "1" : "0",
 				header_topbar_text: String($headerTopbarText.val() || ""),
 				header_topbar_color: String($headerTopbarColor.length ? ($headerTopbarColor.val() || "") : "")

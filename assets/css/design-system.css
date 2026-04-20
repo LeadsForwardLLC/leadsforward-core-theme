@@ -1119,6 +1119,8 @@ button:focus-visible,
 	font-weight: 500;
 	color: var(--lf-text-primary);
 	line-height: 1.35;
+	overflow-wrap: anywhere;
+	word-break: break-word;
 }
 
 .lf-benefits__desc {
@@ -1788,6 +1790,13 @@ button:focus-visible,
 
 .lf-related-links a:hover {
 	color: var(--lf-accent);
+}
+
+/* Global: internal text link hover color (tokens-controlled). */
+.site-main a:not(.lf-btn):hover,
+.site-content a:not(.lf-btn):hover,
+article a:not(.lf-btn):hover {
+	color: var(--lf-link-hover, var(--lf-primary));
 }
 
 .lf-related-links a::after {

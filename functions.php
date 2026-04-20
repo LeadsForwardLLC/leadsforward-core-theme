@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('LF_THEME_VERSION', '0.1.72');
+define('LF_THEME_VERSION', '0.1.73');
 define('LF_THEME_DIR', get_template_directory());
 define('LF_THEME_URI', get_template_directory_uri());
 /** Admin page slug for LeadsForward → Manifest Website (orchestrator UI). */
@@ -52,6 +52,7 @@ lf_load_inc('duplicate-post.php');
 // SEO and schema (foundation only).
 lf_load_inc('seo.php');
 lf_load_inc('schema.php');
+lf_load_inc('seo/internal-link-guardrails.php');
 lf_load_inc('blog.php');
 // Heading enforcement + validation.
 lf_load_inc('headings.php');
@@ -111,6 +112,8 @@ lf_load_inc('images.php');
 lf_load_inc('branding.php');
 lf_load_inc('global-settings.php');
 lf_load_inc('header-settings.php');
+lf_load_inc('menus.php');
+lf_load_inc('heading-case.php');
 lf_load_inc('redirects.php');
 lf_load_inc('site-tools.php');
 lf_load_inc('quote-builder.php');

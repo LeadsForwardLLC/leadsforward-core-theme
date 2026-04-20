@@ -44,6 +44,46 @@ function lf_acf_add_options_global_fields(): void {
 				'name'  => 'lf_header_cta_url',
 				'type'  => 'url',
 			],
+			[
+				'key'   => 'field_lf_menu_autobuild_enabled',
+				'label' => __('Auto-build primary menu', 'leadsforward-core'),
+				'name'  => 'lf_menu_autobuild_enabled',
+				'type'  => 'true_false',
+				'ui'    => 1,
+				'default_value' => 0,
+				'instructions' => __('When enabled, the theme will auto-populate the Header Menu with core pages and (optionally) selected Services. This is best for new sites; disable to manage menus manually.', 'leadsforward-core'),
+			],
+			[
+				'key'   => 'field_lf_menu_autobuild_include_services',
+				'label' => __('Menu: include these Services', 'leadsforward-core'),
+				'name'  => 'lf_menu_autobuild_include_services',
+				'type'  => 'relationship',
+				'post_type' => ['lf_service'],
+				'filters' => ['search'],
+				'return_format' => 'id',
+				'conditional_logic' => [
+					[
+						[
+							'field' => 'field_lf_menu_autobuild_enabled',
+							'operator' => '==',
+							'value' => '1',
+						],
+					],
+				],
+			],
+			[
+				'key'   => 'field_lf_heading_case_mode',
+				'label' => __('Global heading case', 'leadsforward-core'),
+				'name'  => 'lf_heading_case_mode',
+				'type'  => 'select',
+				'default_value' => 'normal',
+				'choices' => [
+					'normal' => __('Normal (as written)', 'leadsforward-core'),
+					'capitalize' => __('Title case (capitalize words)', 'leadsforward-core'),
+					'upper' => __('UPPERCASE', 'leadsforward-core'),
+					'lower' => __('lowercase', 'leadsforward-core'),
+				],
+			],
 		],
 		'location' => [
 			[
