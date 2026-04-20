@@ -16,7 +16,22 @@ $nap = function_exists('lf_nap_data') ? lf_nap_data() : ['name' => '', 'address'
 $entity = function_exists('lf_business_entity_get') ? lf_business_entity_get() : [];
 $footer_addr_override = function_exists('lf_get_option') ? (string) lf_get_option('lf_footer_address_link_url', 'option', '') : '';
 $footer_addr_auto = function_exists('lf_get_option') ? (string) lf_get_option('lf_footer_address_link_auto', 'option', '1') === '1' : true;
-$footer_addr_url = $footer_addr_override !== '' ? $footer_addr_override : (($footer_addr_auto && is_array($entity) && !empty($entity['gbp_url'])) ? (string) $entity['gbp_url'] : '');
+$footer_contact_url = '';
+$contact_page = get_page_by_path('contact');
+if ($contact_page instanceof \WP_Post && $contact_page->post_status === 'publish') {
+	$footer_contact_url = (string) get_permalink($contact_page);
+}
+$footer_addr_url = $footer_addr_override !== ''
+	? $footer_addr_override
+	: (
+		$footer_addr_auto
+			? (
+				(is_array($entity) && !empty($entity['gbp_url']))
+					? (string) $entity['gbp_url']
+					: $footer_contact_url
+			)
+			: ''
+	);
 $license = (string) ($entity['license_number'] ?? '');
 $social = is_array($entity['social'] ?? null) ? $entity['social'] : [];
 $social_map = [

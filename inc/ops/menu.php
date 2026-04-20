@@ -1440,10 +1440,10 @@ function lf_ops_render_global_settings_page(): void {
 							<td>
 								<label style="display:block; margin-bottom:6px;">
 									<input type="checkbox" name="lf_footer_address_link_auto" value="1" <?php checked($footer_addr_auto); ?> />
-									<?php esc_html_e('Auto-link footer address to GBP URL (CID-friendly).', 'leadsforward-core'); ?>
+									<?php esc_html_e('Auto-link footer address (uses Contact page by default; uses GBP URL when provided).', 'leadsforward-core'); ?>
 								</label>
 								<input type="url" class="large-text" name="lf_footer_address_link_url" placeholder="<?php esc_attr_e('Optional override URL (CID link)', 'leadsforward-core'); ?>" value="<?php echo esc_attr($footer_addr_override); ?>" />
-								<p class="description"><?php esc_html_e('If override is set, it will be used instead of the GBP URL.', 'leadsforward-core'); ?></p>
+								<p class="description"><?php esc_html_e('If override is set, it will be used. Otherwise, GBP URL is used when available; if not, the footer links to the Contact page.', 'leadsforward-core'); ?></p>
 							</td>
 						</tr>
 						<tr>
