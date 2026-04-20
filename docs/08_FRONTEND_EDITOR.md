@@ -14,7 +14,7 @@ The LeadsForward frontend editor is an always-on, inline editing layer for admin
 - Duplicate sections (page-builder contexts).
 - Selected section targeting: AI Generate requests are scoped to the currently selected section when possible.
 - Icon picker supports size presets (Small/Medium/Large) for inline SVGs.
-- Header panel supports global layout switching and promo top bar settings (including top bar background color).
+- Header panel supports global layout switching, promo top bar settings (including top bar background color), and global heading case (normal/title/upper/lower).
 - Layout History supports Preview to view a restore point non-destructively before restoring.
 
 ## Section Controls
