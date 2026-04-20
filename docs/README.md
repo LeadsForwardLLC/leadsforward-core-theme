@@ -26,6 +26,7 @@ Use this page as the starting point for architecture, operations, and troublesho
 - `08_FRONTEND_EDITOR.md` - sidepanel/assistant editing, layout history, rich-text icon shortcodes, shortcuts.
 - `09_PAGE_BUILDER_MAPS_NAV_AI.md` - Page Builder meta (`lf_pb_config`), map iframe vs optional Maps API key, header menu “add on save”, AI creation `page_builder` JSON contract.
 - `07_ICON_SYSTEM.md` - icon picker and icon taxonomy usage.
+- `TEAM_CHANGELOG.md` - internal changelog for the team (ops-focused summaries).
 
 ## Deploy / updates
 - `05_THEME_INTEGRATION.md` - includes **Fleet theme updates** (private controller channel, HMAC, signed zips, WP-Cron behavior, optional **controller push** to `POST /wp-json/lf/v1/fleet/push` on each client).
