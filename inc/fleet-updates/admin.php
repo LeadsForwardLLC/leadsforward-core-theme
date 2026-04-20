@@ -234,7 +234,7 @@ function lf_fleet_updates_admin_render(): void {
 			lf_fleet_check_for_update();
 		}
 		if (function_exists('lf_fleet_maybe_auto_update')) {
-			lf_fleet_maybe_auto_update(true);
+			lf_fleet_maybe_auto_update(true, false, true);
 		}
 		$did = 'checked';
 	}
