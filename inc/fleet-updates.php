@@ -167,7 +167,15 @@ function lf_fleet_upgrade_error_message($result, Theme_Upgrader $upgrader): stri
 		}
 		return $msg;
 	}
+	// Theme_Upgrader sometimes stores the WP_Error on the skin result.
 	$skin = $upgrader->skin ?? null;
+	if (is_object($skin) && property_exists($skin, 'result') && $skin->result instanceof WP_Error) {
+		$code = $skin->result->get_error_code();
+		$msg = $skin->result->get_error_message();
+		if ($msg !== '') {
+			return $code !== '' ? $msg . ' (' . $code . ')' : $msg;
+		}
+	}
 	if (is_object($skin) && method_exists($skin, 'get_errors')) {
 		$errors = $skin->get_errors();
 		if ($errors instanceof WP_Error) {
@@ -197,7 +205,7 @@ function lf_fleet_upgrade_error_message($result, Theme_Upgrader $upgrader): stri
  *                                (same capability as the Fleet Updates screen). Cron passes false.
  * @param bool $from_signed_push When true, request was verified by the signed fleet push endpoint (REST).
  */
-function lf_fleet_maybe_auto_update(bool $from_trusted_admin = false, bool $from_signed_push = false): void {
+function lf_fleet_maybe_auto_update(bool $from_trusted_admin = false, bool $from_signed_push = false, bool $force = false): void {
 	$offer = get_site_transient(LF_FLEET_OFFER_TRANSIENT);
 	if (!is_array($offer) || empty($offer['update'])) {
 		return;
@@ -234,7 +242,7 @@ function lf_fleet_maybe_auto_update(bool $from_trusted_admin = false, bool $from
 	$last_raw = (string) get_option(LF_FLEET_OPT_LAST, '');
 	$last = json_decode($last_raw, true);
 	$next_at = is_array($last) ? (int) ($last['next_attempt_at'] ?? 0) : 0;
-	if ($next_at > time()) {
+	if (!$force && $next_at > time()) {
 		return;
 	}
 

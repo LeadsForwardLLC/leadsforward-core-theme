@@ -61,7 +61,7 @@ function lf_fleet_push_rest_handler(WP_REST_Request $request): WP_REST_Response 
 	}
 
 	$before = (string) wp_get_theme()->get('Version');
-	lf_fleet_maybe_auto_update(false, true);
+	lf_fleet_maybe_auto_update(false, true, true);
 	$after = (string) wp_get_theme()->get('Version');
 	$last = json_decode((string) get_option(LF_FLEET_OPT_LAST, ''), true);
 	$last_error = is_array($last) ? (string) ($last['last_upgrade_error'] ?? '') : '';
