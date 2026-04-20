@@ -502,6 +502,21 @@ function lf_ops_handle_global_settings_save(): void {
 		$section_spacing = '';
 	}
 	update_option('lf_design_section_spacing', $section_spacing);
+	// Menu autobuild + heading case.
+	update_option('options_lf_menu_autobuild_enabled', !empty($_POST['lf_menu_autobuild_enabled']) ? '1' : '0');
+	$heading_case_mode = isset($_POST['lf_heading_case_mode']) ? sanitize_key((string) wp_unslash($_POST['lf_heading_case_mode'])) : 'normal';
+	if (!in_array($heading_case_mode, ['normal', 'capitalize', 'upper', 'lower'], true)) {
+		$heading_case_mode = 'normal';
+	}
+	update_option('options_lf_heading_case_mode', $heading_case_mode);
+	$service_ids = [];
+	if (!empty($_POST['lf_menu_autobuild_include_services'])) {
+		$raw = $_POST['lf_menu_autobuild_include_services'];
+		if (is_array($raw)) {
+			$service_ids = array_values(array_unique(array_filter(array_map('absint', $raw))));
+		}
+	}
+	update_option('options_lf_menu_autobuild_include_services', $service_ids);
 	$default_niche = function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair';
 	$niche_slug = isset($_POST['lf_homepage_niche_slug']) ? sanitize_text_field(wp_unslash($_POST['lf_homepage_niche_slug'])) : $default_niche;
 	$allowed_niches = function_exists('lf_builder_supported_niche_slugs') ? lf_builder_supported_niche_slugs() : [$default_niche];
@@ -622,6 +637,9 @@ function lf_ops_handle_global_settings_save(): void {
 		lf_update_business_info_value('lf_business_place_address', $place_address);
 		lf_update_business_info_value('lf_business_map_embed', $map_embed);
 	}
+	// Footer address CID/link controls.
+	update_option('options_lf_footer_address_link_auto', !empty($_POST['lf_footer_address_link_auto']) ? '1' : '0');
+	update_option('options_lf_footer_address_link_url', isset($_POST['lf_footer_address_link_url']) ? esc_url_raw(wp_unslash((string) $_POST['lf_footer_address_link_url'])) : '');
 	$keys = [
 		'lf_brand_primary',
 		'lf_brand_secondary',
@@ -633,6 +651,7 @@ function lf_ops_handle_global_settings_save(): void {
 		'lf_text_primary',
 		'lf_text_muted',
 		'lf_text_inverse',
+		'lf_link_hover_color',
 	];
 	foreach ($keys as $key) {
 		$val = isset($_POST[$key]) ? sanitize_hex_color(wp_unslash($_POST[$key])) : '';
@@ -644,6 +663,11 @@ function lf_ops_handle_global_settings_save(): void {
 		update_field('lf_global_logo', $logo_id, $acf_option);
 		update_field('lf_header_cta_label', isset($_POST['lf_header_cta_label']) ? sanitize_text_field(wp_unslash($_POST['lf_header_cta_label'])) : '', $acf_option);
 		update_field('lf_header_cta_url', isset($_POST['lf_header_cta_url']) ? esc_url_raw(wp_unslash($_POST['lf_header_cta_url'])) : '', $acf_option);
+		update_field('lf_menu_autobuild_enabled', !empty($_POST['lf_menu_autobuild_enabled']) ? 1 : 0, $acf_option);
+		update_field('lf_menu_autobuild_include_services', $service_ids, $acf_option);
+		update_field('lf_heading_case_mode', $heading_case_mode, $acf_option);
+		update_field('lf_footer_address_link_auto', !empty($_POST['lf_footer_address_link_auto']) ? 1 : 0, $acf_option);
+		update_field('lf_footer_address_link_url', isset($_POST['lf_footer_address_link_url']) ? esc_url_raw(wp_unslash((string) $_POST['lf_footer_address_link_url'])) : '', $acf_option);
 		foreach ($keys as $key) {
 			$val = isset($_POST[$key]) ? sanitize_hex_color(wp_unslash($_POST[$key])) : '';
 			if ($val) {
@@ -759,6 +783,24 @@ function lf_ops_render_global_settings_page(): void {
 	$card_radius = (string) get_option('lf_design_card_radius', '');
 	$card_shadow = (string) get_option('lf_design_card_shadow', '');
 	$section_spacing = (string) get_option('lf_design_section_spacing', '');
+	$menu_autobuild_enabled = (string) get_option('options_lf_menu_autobuild_enabled', '0') === '1';
+	$menu_autobuild_services = get_option('options_lf_menu_autobuild_include_services', []);
+	$menu_autobuild_services = is_array($menu_autobuild_services) ? array_values(array_unique(array_filter(array_map('absint', $menu_autobuild_services)))) : [];
+	$heading_case_mode = (string) get_option('options_lf_heading_case_mode', 'normal');
+	$heading_case_mode = in_array($heading_case_mode, ['normal', 'capitalize', 'upper', 'lower'], true) ? $heading_case_mode : 'normal';
+	$footer_addr_auto = (string) get_option('options_lf_footer_address_link_auto', '1') === '1';
+	$footer_addr_override = (string) get_option('options_lf_footer_address_link_url', '');
+	$all_services = [];
+	if (post_type_exists('lf_service')) {
+		$all_services = get_posts([
+			'post_type' => 'lf_service',
+			'post_status' => 'publish',
+			'posts_per_page' => 200,
+			'orderby' => 'menu_order title',
+			'order' => 'ASC',
+			'no_found_rows' => true,
+		]);
+	}
 	$heading_weights = function_exists('lf_design_heading_weight_choices') ? lf_design_heading_weight_choices() : ['600' => '600', '700' => '700', '800' => '800'];
 	$button_radii = function_exists('lf_design_button_radius_choices') ? lf_design_button_radius_choices() : ['sharp' => 'Sharp', 'soft' => 'Soft', 'pill' => 'Pill'];
 	$card_radii = function_exists('lf_design_card_radius_choices') ? lf_design_card_radius_choices() : ['tight' => 'Tight', 'medium' => 'Medium', 'round' => 'Round'];
@@ -1394,6 +1436,17 @@ function lf_ops_render_global_settings_page(): void {
 							<td><input type="url" class="large-text" id="lf_business_gbp_url" name="lf_business_gbp_url" value="<?php echo esc_attr($entity_gbp); ?>" /></td>
 						</tr>
 						<tr>
+							<th scope="row"><?php esc_html_e('Footer address link', 'leadsforward-core'); ?></th>
+							<td>
+								<label style="display:block; margin-bottom:6px;">
+									<input type="checkbox" name="lf_footer_address_link_auto" value="1" <?php checked($footer_addr_auto); ?> />
+									<?php esc_html_e('Auto-link footer address to GBP URL (CID-friendly).', 'leadsforward-core'); ?>
+								</label>
+								<input type="url" class="large-text" name="lf_footer_address_link_url" placeholder="<?php esc_attr_e('Optional override URL (CID link)', 'leadsforward-core'); ?>" value="<?php echo esc_attr($footer_addr_override); ?>" />
+								<p class="description"><?php esc_html_e('If override is set, it will be used instead of the GBP URL.', 'leadsforward-core'); ?></p>
+							</td>
+						</tr>
+						<tr>
 							<th scope="row"><?php esc_html_e('Social profiles', 'leadsforward-core'); ?></th>
 							<td>
 								<input type="url" class="large-text" name="lf_business_social_facebook" placeholder="<?php esc_attr_e('Facebook URL', 'leadsforward-core'); ?>" value="<?php echo esc_attr((string) ($entity_social['facebook'] ?? '')); ?>" />
@@ -1451,6 +1504,42 @@ function lf_ops_render_global_settings_page(): void {
 									<?php esc_html_e('Applies global styles to typography, surfaces, buttons, and section rhythm.', 'leadsforward-core'); ?>
 									<?php echo ' ' . esc_html(sprintf(__('Synced variation profile: %s.', 'leadsforward-core'), $design_profile_label)); ?>
 								</p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e('Primary menu (header)', 'leadsforward-core'); ?></th>
+							<td>
+								<label style="display:block; margin-bottom:6px;">
+									<input type="checkbox" name="lf_menu_autobuild_enabled" value="1" <?php checked($menu_autobuild_enabled); ?> />
+									<?php esc_html_e('Auto-build the primary menu (core pages) and never link unpublished pages.', 'leadsforward-core'); ?>
+								</label>
+								<?php if (!empty($all_services)) : ?>
+									<div style="margin-top:8px;">
+										<label for="lf_menu_autobuild_include_services" style="display:block; font-weight:600; margin-bottom:4px;">
+											<?php esc_html_e('Menu: include these Services', 'leadsforward-core'); ?>
+										</label>
+										<select id="lf_menu_autobuild_include_services" name="lf_menu_autobuild_include_services[]" multiple size="8" class="large-text" style="max-width:520px;">
+											<?php foreach ($all_services as $svc) : ?>
+												<?php if (!$svc instanceof \WP_Post) continue; ?>
+												<option value="<?php echo (int) $svc->ID; ?>" <?php selected(in_array((int) $svc->ID, $menu_autobuild_services, true)); ?>>
+													<?php echo esc_html(get_the_title($svc)); ?>
+												</option>
+											<?php endforeach; ?>
+										</select>
+										<p class="description"><?php esc_html_e('Selected services appear under Services when auto-build is enabled.', 'leadsforward-core'); ?></p>
+									</div>
+								<?php endif; ?>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_heading_case_mode"><?php esc_html_e('Global heading case', 'leadsforward-core'); ?></label></th>
+							<td>
+								<select name="lf_heading_case_mode" id="lf_heading_case_mode">
+									<option value="normal" <?php selected($heading_case_mode === 'normal'); ?>><?php esc_html_e('Normal (as written)', 'leadsforward-core'); ?></option>
+									<option value="capitalize" <?php selected($heading_case_mode === 'capitalize'); ?>><?php esc_html_e('Title case', 'leadsforward-core'); ?></option>
+									<option value="upper" <?php selected($heading_case_mode === 'upper'); ?>><?php esc_html_e('UPPERCASE', 'leadsforward-core'); ?></option>
+									<option value="lower" <?php selected($heading_case_mode === 'lower'); ?>><?php esc_html_e('lowercase', 'leadsforward-core'); ?></option>
+								</select>
 							</td>
 						</tr>
 						<tr>
@@ -1578,6 +1667,7 @@ function lf_ops_render_global_settings_page(): void {
 						<tr><th scope="row"><?php esc_html_e('Primary text', 'leadsforward-core'); ?></th><td><input type="text" class="lf-color" name="lf_text_primary" value="<?php echo esc_attr($get_brand('lf_text_primary', '#0f172a')); ?>" /></td></tr>
 						<tr><th scope="row"><?php esc_html_e('Muted text', 'leadsforward-core'); ?></th><td><input type="text" class="lf-color" name="lf_text_muted" value="<?php echo esc_attr($get_brand('lf_text_muted', '#64748b')); ?>" /></td></tr>
 						<tr><th scope="row"><?php esc_html_e('Inverse text', 'leadsforward-core'); ?></th><td><input type="text" class="lf-color" name="lf_text_inverse" value="<?php echo esc_attr($get_brand('lf_text_inverse', '#ffffff')); ?>" /></td></tr>
+						<tr><th scope="row"><?php esc_html_e('Link hover color', 'leadsforward-core'); ?></th><td><input type="text" class="lf-color" name="lf_link_hover_color" value="<?php echo esc_attr($get_brand('lf_link_hover_color', $get_brand('lf_brand_primary', '#2563eb'))); ?>" /></td></tr>
 					</table>
 				</div>
 			</div>
