@@ -160,16 +160,31 @@ function lf_fleet_check_for_update(bool $override = false): void {
  */
 function lf_fleet_upgrade_error_message($result, Theme_Upgrader $upgrader): string {
 	if (is_wp_error($result)) {
-		return $result->get_error_message();
+		$code = $result->get_error_code();
+		$msg = $result->get_error_message();
+		if ($code !== '' && $msg !== '') {
+			return $msg . ' (' . $code . ')';
+		}
+		return $msg;
 	}
 	$skin = $upgrader->skin ?? null;
 	if (is_object($skin) && method_exists($skin, 'get_errors')) {
 		$errors = $skin->get_errors();
 		if ($errors instanceof WP_Error) {
+			$code = $errors->get_error_code();
 			$msg = $errors->get_error_message();
 			if ($msg !== '') {
+				if ($code !== '') {
+					return $msg . ' (' . $code . ')';
+				}
 				return $msg;
 			}
+		}
+	}
+	if (is_object($skin) && property_exists($skin, 'lf_last_message')) {
+		$last_msg = (string) ($skin->lf_last_message ?? '');
+		if ($last_msg !== '') {
+			return $last_msg;
 		}
 	}
 	return '';
@@ -223,8 +238,50 @@ function lf_fleet_maybe_auto_update(bool $from_trusted_admin = false, bool $from
 		return;
 	}
 
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	$fs_method = function_exists('get_filesystem_method') ? (string) get_filesystem_method([], WP_CONTENT_DIR) : '';
+	$fs_ok = function_exists('WP_Filesystem') ? (bool) WP_Filesystem() : false;
+	if (!$fs_ok) {
+		$last = json_decode((string) get_option(LF_FLEET_OPT_LAST, ''), true);
+		$failures = is_array($last) ? (int) ($last['failures'] ?? 0) : 0;
+		$failures++;
+		$delay = min(120 * MINUTE_IN_SECONDS, (int) (15 * MINUTE_IN_SECONDS * (2 ** max(0, $failures - 1))));
+		$nu = is_array($last) ? $last : [];
+		$nu['failures'] = $failures;
+		$nu['next_attempt_at'] = time() + $delay;
+		$nu['last_upgrade_error'] = sprintf(
+			/* translators: %s: filesystem method */
+			__('Theme upgrade failed: WP_Filesystem could not initialize (method: %s). This usually means the server requires filesystem credentials or blocks direct writes/unzips.', 'leadsforward-core'),
+			$fs_method !== '' ? $fs_method : 'unknown'
+		);
+		update_option(LF_FLEET_OPT_LAST, wp_json_encode($nu));
+		return;
+	}
+
 	require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
-	$upgrader = new Theme_Upgrader(new Automatic_Upgrader_Skin());
+	if (!class_exists('LF_Fleet_Auto_Upgrader_Skin')) {
+		class LF_Fleet_Auto_Upgrader_Skin extends Automatic_Upgrader_Skin {
+			/** @var string */
+			public $lf_last_message = '';
+			public function feedback($string, ...$args) {
+				$msg = is_string($string) ? $string : '';
+				if ($msg !== '' && !empty($args)) {
+					$msg = vsprintf($msg, $args);
+				}
+				$this->lf_last_message = sanitize_text_field((string) $msg);
+				return parent::feedback($string, ...$args);
+			}
+			public function error($errors) {
+				if ($errors instanceof WP_Error) {
+					$code = $errors->get_error_code();
+					$msg = $errors->get_error_message();
+					$this->lf_last_message = sanitize_text_field(trim($msg . ($code !== '' ? ' (' . $code . ')' : '')));
+				}
+				return parent::error($errors);
+			}
+		}
+	}
+	$upgrader = new Theme_Upgrader(new LF_Fleet_Auto_Upgrader_Skin());
 	$stylesheet = wp_get_theme()->get_stylesheet();
 	$res = $upgrader->upgrade($stylesheet);
 	if ($res === true) {
