@@ -246,12 +246,17 @@ function lf_fleet_controller_sign_release(string $kid, string $message): string 
 	return base64_encode($sig);
 }
 
-function lf_fleet_controller_issue_download_token(string $site_id, string $zip_path, string $sha256, int $ttl = 600): string {
+function lf_fleet_controller_issue_download_token(string $site_id, string $zip_path, string $sha256, int $ttl = 600, string $slug = '', string $version = ''): string {
 	$t = lf_fleet_controller_token_new();
 	$key = LF_FLEET_CTRL_DL_TRANSIENT_PREFIX . md5($site_id . '|' . $t);
+	$slug = $slug !== '' ? sanitize_title($slug) : sanitize_title(lf_fleet_controller_theme_slug());
+	$version = $version !== '' ? sanitize_text_field($version) : sanitize_text_field(lf_fleet_controller_current_version());
 	// Allow repeated fetches within the TTL (WordPress sometimes downloads multiple times).
 	set_transient($key, wp_json_encode([
 		'site_id' => $site_id,
+		// Slug/version allow rebuilds on multi-instance hosts where zip file may be missing.
+		'slug' => $slug,
+		'version' => $version,
 		'path' => $zip_path,
 		'sha256' => $sha256,
 		'expires_at' => time() + max(60, $ttl),
@@ -663,7 +668,14 @@ function lf_fleet_controller_handle_api(): void {
 			}
 			$controller_slug = lf_fleet_controller_theme_slug();
 			$version = lf_fleet_controller_current_version();
-			$zip = lf_fleet_controller_get_theme_zip($controller_slug, $version);
+			$effective_slug = $controller_slug;
+			if (isset($_GET['theme_slug'])) {
+				$requested_slug = sanitize_title((string) wp_unslash($_GET['theme_slug']));
+				if ($requested_slug !== '') {
+					$effective_slug = $requested_slug;
+				}
+			}
+			$zip = lf_fleet_controller_get_theme_zip($effective_slug, $version);
 			if (empty($zip['ok']) || $zip['path'] === '') {
 				lf_fleet_controller_log_package_event([
 					'ok' => false,
@@ -695,8 +707,11 @@ function lf_fleet_controller_handle_api(): void {
 				// On multi-instance hosts, the transient may exist but the zip file does not.
 				// Rebuild the zip on-demand instead of returning 404.
 				$controller_slug = lf_fleet_controller_theme_slug();
-				$version = lf_fleet_controller_current_version();
-				$zip = lf_fleet_controller_get_theme_zip($controller_slug, $version);
+				$slug = is_array($row) ? sanitize_title((string) ($row['slug'] ?? '')) : '';
+				$slug = $slug !== '' ? $slug : $controller_slug;
+				$version = is_array($row) ? sanitize_text_field((string) ($row['version'] ?? '')) : '';
+				$version = $version !== '' ? $version : lf_fleet_controller_current_version();
+				$zip = lf_fleet_controller_get_theme_zip($slug, $version);
 				if (empty($zip['ok']) || $zip['path'] === '') {
 					delete_transient($key);
 					lf_fleet_controller_log_package_event([
@@ -785,8 +800,14 @@ function lf_fleet_controller_handle_api(): void {
 		// (This is what GitHub auto-deploys to theme.leadsforward.com.)
 		$approved_version = lf_fleet_controller_current_version();
 
-		// Only serve updates for the controller's current theme slug.
+		// The fleet site must be updated in-place using its installed theme slug.
+		// If the controller and site slugs differ (common when the theme folder was renamed),
+		// serve a "slug migration" package rooted at the site's slug so WordPress accepts it.
 		$controller_slug = lf_fleet_controller_theme_slug();
+		$effective_slug = $theme_slug !== '' ? sanitize_title($theme_slug) : '';
+		if ($effective_slug === '') {
+			$effective_slug = $controller_slug;
+		}
 		$site_row = isset($sites[$site_id]) && is_array($sites[$site_id]) ? $sites[$site_id] : [];
 		$site_rollout = !empty($site_row['rollout']);
 		$tag_match = lf_fleet_controller_site_matches_rollout_tag($site_row, $rollout_tag);
@@ -794,6 +815,7 @@ function lf_fleet_controller_handle_api(): void {
 			'update' => false,
 			'reason' => '',
 			'controller_slug' => $controller_slug,
+			'effective_slug' => $effective_slug,
 			'controller_version' => $approved_version,
 			'site_theme_slug' => $theme_slug,
 			'site_current_version' => $current,
@@ -802,9 +824,8 @@ function lf_fleet_controller_handle_api(): void {
 			'rollout_tag' => $rollout_tag,
 			'site_tags_match' => $tag_match,
 		];
-		if ($theme_slug === '' || $theme_slug !== $controller_slug) {
-			$debug['reason'] = 'theme_slug_mismatch';
-			lf_fleet_controller_json($debug);
+		if ($theme_slug === '' || sanitize_title($theme_slug) !== sanitize_title($controller_slug)) {
+			$debug['reason'] = 'theme_slug_mismatch_migrating';
 		}
 		if ($scope === 'off') {
 			$debug['reason'] = 'rollout_disabled';
@@ -837,19 +858,26 @@ function lf_fleet_controller_handle_api(): void {
 			$debug['reason'] = 'no_signing_keys';
 			lf_fleet_controller_json($debug);
 		}
-		$zip = lf_fleet_controller_get_theme_zip($controller_slug, $approved_version);
+		$zip = lf_fleet_controller_get_theme_zip($effective_slug, $approved_version);
 		if (empty($zip['ok']) || $zip['path'] === '' || $zip['sha256'] === '') {
 			$debug['reason'] = 'zip_build_failed';
 			$debug['zip_error'] = (string) ($zip['error'] ?? '');
 			lf_fleet_controller_json($debug);
 		}
-		$msg = $controller_slug . "\n" . $approved_version . "\n" . strtolower((string) $zip['sha256']);
+		$msg = $effective_slug . "\n" . $approved_version . "\n" . strtolower((string) $zip['sha256']);
 		$sig = lf_fleet_controller_sign_release($kid, $msg);
 		if ($sig === '') {
 			$debug['reason'] = 'sign_failed';
 			lf_fleet_controller_json($debug);
 		}
-		$t = lf_fleet_controller_issue_download_token($site_id, (string) $zip['path'], (string) $zip['sha256']);
+		$t = lf_fleet_controller_issue_download_token(
+			$site_id,
+			(string) $zip['path'],
+			(string) $zip['sha256'],
+			600,
+			$effective_slug,
+			$approved_version
+		);
 		$ts = time();
 		$nonce = bin2hex(random_bytes(6));
 		$token = trim((string) ($site_row['token'] ?? ''));
