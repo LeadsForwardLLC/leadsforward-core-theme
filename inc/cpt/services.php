@@ -34,6 +34,7 @@ function lf_register_cpt_services(): void {
 		'publicly_queryable'  => true,
 		'show_ui'             => true,
 		'show_in_menu'        => true,
+		'show_in_nav_menus'   => true,
 		'show_in_rest'        => true,
 		'rest_base'           => 'services',
 		'query_var'           => true,

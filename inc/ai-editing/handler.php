@@ -801,6 +801,11 @@ function lf_ai_apply_proposal(string $context_type, $context_id, array $proposed
 		if (!lf_is_field_ai_editable($key)) {
 			continue;
 		}
+		// Guardrail: prevent broken internal links in AI-generated HTML by stripping anchors
+		// that point to missing/unpublished internal targets.
+		if (is_string($value) && stripos($value, '<a') !== false && function_exists('lf_strip_broken_internal_links_from_html')) {
+			$value = lf_strip_broken_internal_links_from_html($value);
+		}
 		if ($context_type === 'homepage' && $scoped_homepage_row !== '') {
 			$to_apply[ $key ] = $value;
 		} elseif (isset($editable[ $key ])) {
