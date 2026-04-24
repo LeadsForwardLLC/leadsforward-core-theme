@@ -78,6 +78,19 @@ function lf_sitemap_sync_parse_hierarchy(string $hierarchy): array {
 }
 
 /**
+ * Airtable "Menu hierarchy" depth:
+ * - Parent => 0
+ * - Parent > Child 1 => 1
+ * - Parent > Child 1 > Child 2 => 2
+ *
+ * @param list<string> $parts
+ */
+function lf_sitemap_sync_hierarchy_depth(array $parts): int {
+	$depth = count($parts) - 1;
+	return $depth > 0 ? $depth : 0;
+}
+
+/**
  * @return array{ok:bool, menu_id:int, created:bool, assigned:bool, error:string}
  */
 function lf_sitemap_sync_ensure_header_menu(): array {
@@ -269,7 +282,7 @@ function lf_sitemap_sync_build_header_menu(): array {
 
 	$index = lf_sitemap_sync_get_page_index();
 
-	// Collect published nodes keyed by group + hierarchy.
+	// Collect published nodes keyed by group + hierarchy (depth computed from Airtable "Menu hierarchy").
 	$items = [];
 	foreach ($specs as $spec) {
 		if (!is_array($spec)) {
@@ -299,6 +312,8 @@ function lf_sitemap_sync_build_header_menu(): array {
 		}
 
 		$hier = trim((string) ($spec['menu_hierarchy'] ?? ''));
+		$hier_parts = lf_sitemap_sync_parse_hierarchy($hier);
+		$depth = lf_sitemap_sync_hierarchy_depth($hier_parts);
 		$hier_norm = strtolower(trim(preg_replace('/\s+/', ' ', $hier) ?? ''));
 
 		$items[] = [
@@ -307,6 +322,8 @@ function lf_sitemap_sync_build_header_menu(): array {
 			'title' => $title,
 			'post_id' => $post_id,
 			'hierarchy_raw' => $hier,
+			'hierarchy_parts' => $hier_parts,
+			'depth' => $depth,
 			'hierarchy_key' => $hier_norm,
 			'slug' => $slug,
 		];
@@ -328,6 +345,11 @@ function lf_sitemap_sync_build_header_menu(): array {
 		if ($oa !== $ob) {
 			return $oa < $ob ? -1 : 1;
 		}
+		$da = (int) ($a['depth'] ?? 0);
+		$db = (int) ($b['depth'] ?? 0);
+		if ($da !== $db) {
+			return $da < $db ? -1 : 1;
+		}
 		$pa = (float) ($a['priority'] ?? 0.0);
 		$pb = (float) ($b['priority'] ?? 0.0);
 		if ($pa !== $pb) {
@@ -344,65 +366,45 @@ function lf_sitemap_sync_build_header_menu(): array {
 	$position = 0;
 	$added = 0;
 
-	// First pass: create top-level group roots when present (use the first item whose hierarchy matches group name).
+	// Single deterministic pass:
+	// - Parents created before children (sort includes depth).
+	// - Children attach to the closest preceding item at depth-1 within the same group.
+	// - If a parent is missing, fall back to the group's depth-0 root (if present), otherwise top-level.
 	$group_root_item_ids = [];
-	$hier_to_item_id = [];
+	$last_by_group_depth = [];
+	$dedupe = [];
 
 	foreach ($items as $row) {
 		$group = (string) $row['group'];
-		if (isset($group_root_item_ids[$group])) {
-			continue;
-		}
-		$hier_parts = lf_sitemap_sync_parse_hierarchy((string) ($row['hierarchy_raw'] ?? ''));
-		$maybe_root = !empty($hier_parts) ? (string) $hier_parts[0] : '';
-		if ($maybe_root === '' || strcasecmp($maybe_root, $group) !== 0) {
-			continue;
-		}
-		$id = lf_sitemap_sync_add_post_menu_item($menu_id, $position, [
-			'post_id' => (int) $row['post_id'],
-			'title' => (string) $row['title'],
-			'parent_item_id' => 0,
-			'classes' => $group === 'More' ? 'lf-menu-more' : '',
-		]);
-		if ($id > 0) {
-			$group_root_item_ids[$group] = $id;
-			$hier_to_item_id[(string) $row['hierarchy_key']] = $id;
-			$added++;
-		}
-	}
-
-	// Second pass: add everything else, nesting by hierarchy when the parent exists.
-	foreach ($items as $row) {
-		$group = (string) $row['group'];
+		$depth = (int) ($row['depth'] ?? 0);
 		$hier_key = (string) ($row['hierarchy_key'] ?? '');
-
-		// Skip if already used as group root above.
-		if ($hier_key !== '' && isset($hier_to_item_id[$hier_key])) {
+		$dedupe_key = $group . '|' . $depth . '|' . $hier_key . '|' . (int) ($row['post_id'] ?? 0);
+		if (isset($dedupe[$dedupe_key])) {
 			continue;
 		}
+		$dedupe[$dedupe_key] = true;
 
 		$parent_item_id = 0;
-		$hier_parts = lf_sitemap_sync_parse_hierarchy((string) ($row['hierarchy_raw'] ?? ''));
-		if (count($hier_parts) >= 2) {
-			$parent_path = strtolower(trim(implode(' > ', array_slice($hier_parts, 0, -1))));
-			if ($parent_path !== '' && isset($hier_to_item_id[$parent_path])) {
-				$parent_item_id = (int) $hier_to_item_id[$parent_path];
+		if ($depth > 0) {
+			$prev_parent = $last_by_group_depth[$group][$depth - 1] ?? 0;
+			if ((int) $prev_parent > 0) {
+				$parent_item_id = (int) $prev_parent;
 			} elseif (isset($group_root_item_ids[$group])) {
 				$parent_item_id = (int) $group_root_item_ids[$group];
 			}
-		} elseif (isset($group_root_item_ids[$group]) && $group !== 'Home') {
-			$parent_item_id = (int) $group_root_item_ids[$group];
 		}
 
 		$id = lf_sitemap_sync_add_post_menu_item($menu_id, $position, [
 			'post_id' => (int) $row['post_id'],
 			'title' => (string) $row['title'],
 			'parent_item_id' => $parent_item_id,
+			'classes' => $group === 'More' && $depth === 0 ? 'lf-menu-more' : '',
 		]);
 		if ($id > 0) {
-			if ($hier_key !== '') {
-				$hier_to_item_id[$hier_key] = $id;
+			if ($depth === 0 && !isset($group_root_item_ids[$group])) {
+				$group_root_item_ids[$group] = $id;
 			}
+			$last_by_group_depth[$group][$depth] = $id;
 			$added++;
 		}
 	}
