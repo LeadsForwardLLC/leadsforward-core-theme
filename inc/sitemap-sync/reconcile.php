@@ -14,6 +14,25 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * Get current site niche slug (for filtering niche template sitemaps).
+ */
+function lf_sitemap_sync_get_site_niche_slug(): string {
+	$niche = trim((string) get_option('lf_homepage_niche_slug', ''));
+	if ($niche !== '') {
+		return sanitize_title($niche);
+	}
+	$manifest = get_option('lf_site_manifest', []);
+	$manifest = is_array($manifest) ? $manifest : [];
+	$from_manifest = '';
+	if (!empty($manifest['business']['niche'])) {
+		$from_manifest = (string) $manifest['business']['niche'];
+	} elseif (!empty($manifest['niche'])) {
+		$from_manifest = (string) $manifest['niche'];
+	}
+	return sanitize_title((string) $from_manifest);
+}
+
+/**
  * Get primary city for {city} resolution.
  */
 function lf_sitemap_sync_get_primary_city(): string {
@@ -216,6 +235,7 @@ function lf_sitemap_sync_reconcile_run(): array {
 		'fetched_rows' => 0,
 		'normalized' => 0,
 		'invalid' => 0,
+		'niche' => '',
 		'city' => '',
 		'created' => 0,
 		'updated' => 0,
@@ -243,6 +263,17 @@ function lf_sitemap_sync_reconcile_run(): array {
 	$specs = is_array($normalized['specs'] ?? null) ? $normalized['specs'] : [];
 	$errors = is_array($normalized['errors'] ?? null) ? $normalized['errors'] : [];
 	$result['invalid'] = (int) ($normalized['invalid'] ?? 0);
+	$site_niche = lf_sitemap_sync_get_site_niche_slug();
+	$result['niche'] = $site_niche;
+	if ($site_niche !== '') {
+		$specs = array_values(array_filter($specs, static function ($spec) use ($site_niche): bool {
+			if (!is_array($spec)) {
+				return false;
+			}
+			$spec_niche = sanitize_title((string) ($spec['niche'] ?? ''));
+			return $spec_niche !== '' && $spec_niche === $site_niche;
+		}));
+	}
 	$result['normalized'] = count($specs);
 
 	$city = lf_sitemap_sync_get_primary_city();

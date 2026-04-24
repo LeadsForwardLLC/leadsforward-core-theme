@@ -200,6 +200,9 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 		if (trim($title) === '') {
 			$row_errors[] = 'missing_title';
 		}
+		if (trim($niche) === '') {
+			$row_errors[] = 'missing_niche';
+		}
 		if (trim($primary_keyword) === '') {
 			$row_errors[] = 'missing_keyword';
 		}
