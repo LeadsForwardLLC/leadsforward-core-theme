@@ -19,9 +19,87 @@ add_action('admin_menu', 'lf_ops_remove_theme_options_menu', 999);
 add_action('admin_menu', 'lf_ops_hide_leadsforward_submenus', 999);
 add_action('admin_menu', 'lf_ops_reorder_submenus', 1000);
 add_action('admin_init', 'lf_ops_handle_global_settings_save');
+add_action('admin_init', 'lf_ops_handle_test_sitemaps_fetch');
 add_action('admin_enqueue_scripts', 'lf_ops_settings_assets');
 add_action('admin_enqueue_scripts', 'lf_ops_brand_admin_assets');
 add_action('admin_post_lf_reviews_sync', 'lf_ops_handle_reviews_sync');
+
+function lf_ops_test_sitemaps_fetch_transient_key(): string {
+	$user_id = (int) get_current_user_id();
+	return 'lf_ops_test_sitemaps_fetch_' . ($user_id > 0 ? (string) $user_id : '0');
+}
+
+function lf_ops_handle_test_sitemaps_fetch(): void {
+	if (!current_user_can(LF_OPS_CAP)) {
+		return;
+	}
+	if (!isset($_GET['page'], $_GET['lf_ops_action'])) {
+		return;
+	}
+	$page = sanitize_key((string) wp_unslash($_GET['page']));
+	if (!in_array($page, ['lf-ops', 'lf-global'], true)) {
+		return;
+	}
+	$action = sanitize_key((string) wp_unslash($_GET['lf_ops_action']));
+	if ($action !== 'test_sitemaps_fetch') {
+		return;
+	}
+	check_admin_referer('lf_ops_test_sitemaps_fetch');
+
+	$result = [
+		'ok' => false,
+		'fetched_rows' => 0,
+		'error' => '',
+		'summary' => ['total' => 0, 'invalid' => 0, 'city_token' => 0],
+		'error_codes' => [],
+		'error_count' => 0,
+	];
+
+	$fetch = function_exists('lf_airtable_sitemaps_fetch_rows')
+		? lf_airtable_sitemaps_fetch_rows()
+		: ['ok' => false, 'rows' => [], 'error' => 'missing_airtable_sitemaps_fetch'];
+	if (empty($fetch['ok'])) {
+		$result['error'] = (string) ($fetch['error'] ?? 'unknown_error');
+		set_transient(lf_ops_test_sitemaps_fetch_transient_key(), $result, 5 * MINUTE_IN_SECONDS);
+		wp_safe_redirect(admin_url('admin.php?page=lf-ops'));
+		exit;
+	}
+
+	$rows = is_array($fetch['rows'] ?? null) ? $fetch['rows'] : [];
+	$result['fetched_rows'] = count($rows);
+
+	$normalized = function_exists('lf_sitemap_specs_from_airtable_rows')
+		? lf_sitemap_specs_from_airtable_rows($rows)
+		: ['specs' => [], 'errors' => ['missing_sitemap_specs_normalizer'], 'invalid' => 0];
+	$summary = function_exists('lf_sitemap_sync_debug_summary')
+		? lf_sitemap_sync_debug_summary($normalized)
+		: ['total' => 0, 'invalid' => (int) ($normalized['invalid'] ?? 0), 'city_token' => 0];
+
+	$errors = is_array($normalized['errors'] ?? null) ? $normalized['errors'] : [];
+	$codes = [];
+	foreach ($errors as $err) {
+		$err = (string) $err;
+		$parts = explode(':', $err, 2);
+		$code = trim((string) ($parts[1] ?? $parts[0]));
+		if ($code !== '') {
+			$codes[] = $code;
+		}
+	}
+	$codes = array_values(array_unique($codes));
+
+	$result['ok'] = true;
+	$result['summary'] = [
+		'total' => (int) ($summary['total'] ?? 0),
+		'invalid' => (int) ($summary['invalid'] ?? 0),
+		'city_token' => (int) ($summary['city_token'] ?? 0),
+	];
+	$result['error_codes'] = array_slice($codes, 0, 10);
+	$result['error_count'] = count($errors);
+
+	set_transient(lf_ops_test_sitemaps_fetch_transient_key(), $result, 5 * MINUTE_IN_SECONDS);
+	wp_safe_redirect(admin_url('admin.php?page=lf-ops'));
+	exit;
+}
 
 function lf_ops_register_menu(): void {
 	// Parent opens Global Settings (first submenu duplicates this slug).
@@ -688,6 +766,32 @@ function lf_ops_render_global_settings_page(): void {
 	if (!current_user_can(LF_OPS_CAP)) {
 		return;
 	}
+	$test_key = lf_ops_test_sitemaps_fetch_transient_key();
+	$test_result = get_transient($test_key);
+	if (is_array($test_result)) {
+		delete_transient($test_key);
+		$is_ok = !empty($test_result['ok']);
+		$error = (string) ($test_result['error'] ?? '');
+		$fetched_rows = (int) ($test_result['fetched_rows'] ?? 0);
+		$summary = is_array($test_result['summary'] ?? null) ? $test_result['summary'] : [];
+		$total = (int) ($summary['total'] ?? 0);
+		$invalid = (int) ($summary['invalid'] ?? 0);
+		$city_token = (int) ($summary['city_token'] ?? 0);
+		$error_codes = is_array($test_result['error_codes'] ?? null) ? $test_result['error_codes'] : [];
+		$error_codes = array_values(array_filter(array_map('strval', $error_codes), static fn(string $v): bool => $v !== ''));
+
+		echo '<div class="notice ' . esc_attr($is_ok ? 'notice-success' : 'notice-error') . ' is-dismissible"><p>';
+		if (!$is_ok) {
+			echo '<strong>' . esc_html__('Sitemaps fetch test failed:', 'leadsforward-core') . '</strong> ' . esc_html($error !== '' ? $error : 'unknown_error');
+		} else {
+			echo '<strong>' . esc_html__('Sitemaps fetch test completed.', 'leadsforward-core') . '</strong> ';
+			echo esc_html(sprintf('Rows: %d. Valid specs: %d. Invalid: %d. {city} token: %d.', $fetched_rows, $total, $invalid, $city_token));
+			if (!empty($error_codes)) {
+				echo '<br /><strong>' . esc_html__('First error codes:', 'leadsforward-core') . '</strong> ' . esc_html(implode(', ', $error_codes));
+			}
+		}
+		echo '</p></div>';
+	}
 	$can_sensitive = lf_ops_user_can_manage_sensitive_settings();
 	$logo_id = (int) lf_get_global_option('lf_global_logo', 0);
 	$logo_url = $logo_id ? wp_get_attachment_image_url($logo_id, 'medium') : '';
@@ -1177,6 +1281,16 @@ function lf_ops_render_global_settings_page(): void {
 								<td>
 									<input type="text" class="regular-text" name="lf_ai_airtable_sitemaps_view" id="lf_ai_airtable_sitemaps_view" value="<?php echo esc_attr((string) ($airtable_settings['sitemaps']['view'] ?? 'Primary View')); ?>" <?php disabled(!$can_sensitive); ?> />
 									<p class="description"><?php esc_html_e('Default: Primary View', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e('Test Sitemaps Fetch', 'leadsforward-core'); ?></th>
+								<td>
+									<?php
+									$url = wp_nonce_url(admin_url('admin.php?page=lf-ops&lf_ops_action=test_sitemaps_fetch'), 'lf_ops_test_sitemaps_fetch');
+									?>
+									<a class="button" href="<?php echo esc_url($url); ?>"><?php esc_html_e('Test Sitemaps Fetch', 'leadsforward-core'); ?></a>
+									<p class="description"><?php esc_html_e('Fetch and normalize Airtable sitemap rows and show a debug summary (no writes).', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
