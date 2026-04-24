@@ -360,6 +360,22 @@ function lf_sitemap_sync_build_header_menu(): array {
 		return $sa <=> $sb;
 	});
 
+	// Safety: if sitemap has no published menu nodes, do NOT clear/rebuild the menu.
+	// This prevents wiping navigation when Airtable data is incomplete/invalid or publish_ratio leaves nothing published.
+	if (empty($items)) {
+		return [
+			'ok' => false,
+			'enabled' => true,
+			'menu_id' => $menu_id,
+			'created_menu' => !empty($ensure['created']),
+			'assigned_location' => !empty($ensure['assigned']),
+			'used_specs' => 0,
+			'added_items' => 0,
+			'preserved_items' => $preserved_count,
+			'error' => 'no_published_sitemap_menu_nodes',
+		];
+	}
+
 	// Clear existing non-CTA items and rebuild.
 	lf_sitemap_sync_clear_header_menu_items($menu_id);
 
