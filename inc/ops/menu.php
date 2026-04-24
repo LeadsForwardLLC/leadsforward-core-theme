@@ -135,6 +135,16 @@ function lf_ops_handle_run_sitemap_sync(): void {
 			'index_count' => 0,
 		];
 
+	// Task 4: build/update Header Menu from the (newly updated) sitemap index/cache.
+	if (!empty($run['ok']) && function_exists('lf_sitemap_sync_build_header_menu')) {
+		$menu_result = lf_sitemap_sync_build_header_menu();
+		if (is_array($menu_result) && empty($menu_result['ok'])) {
+			$run['errors'][] = 'menu_build_failed: ' . (string) ($menu_result['error'] ?? 'unknown_error');
+		} elseif (is_array($menu_result)) {
+			$run['menu'] = $menu_result;
+		}
+	}
+
 	set_transient(lf_ops_run_sitemap_sync_transient_key(), $run, 5 * MINUTE_IN_SECONDS);
 	wp_safe_redirect(admin_url('admin.php?page=lf-ops'));
 	exit;
