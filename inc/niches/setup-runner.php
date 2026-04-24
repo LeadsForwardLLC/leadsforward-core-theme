@@ -893,6 +893,36 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 				'description' => 'See what makes our team the trusted local choice' . $city_line . ' — clear scopes, quality work, and reliable communication.',
 			],
 		],
+		// Services overview page (slug: services). Keep a legacy alias (our-services) for older sites.
+		'services' => [
+			'order' => ['hero', 'service_intro', 'content_image', 'faq_accordion', 'cta'],
+			'overrides' => [
+				'hero' => [
+					'hero_headline' => 'Services' . ($business ? ' by ' . $business : ''),
+					'hero_subheadline' => 'Explore our most requested services and schedule fast, reliable help' . $city_line . '.',
+				],
+				'service_intro' => [
+					'section_heading' => 'Service options',
+					'section_intro' => 'Explore our core services with clear scopes and upfront expectations.',
+				],
+				'content_image' => [
+					'section_heading' => 'How we deliver great results',
+					'section_intro' => 'Clear communication and quality workmanship at every step.',
+				],
+				'faq_accordion' => [
+					'section_heading' => 'Service FAQs',
+					'section_intro' => 'Answers to common scheduling and service questions.',
+				],
+				'cta' => [
+					'cta_headline' => $cta_headline,
+					'cta_subheadline' => 'Fast response times and transparent pricing.',
+				],
+			],
+			'seo' => [
+				'title' => $business ? 'Services | ' . $business : 'Our Services',
+				'description' => 'Browse our services and request a fast, free estimate' . $city_line . '.',
+			],
+		],
 		'our-services' => [
 			'order' => ['hero', 'service_intro', 'content_image', 'faq_accordion', 'cta'],
 			'overrides' => [
