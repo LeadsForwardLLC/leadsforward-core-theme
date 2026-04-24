@@ -71,7 +71,7 @@ Fleet sites can connect to `theme.leadsforward.com` to receive **controller-appr
 
 The theme can also sync an Airtable-driven sitemap into WordPress Pages, generate the Header Menu from that sitemap, and enforce internal-link allowlists so AI/content never links to unpublished pages.
 
-See: `docs/09_SITEMAP_SYNC.md`
+See: `docs/09_SITEMAP_SYNC.md`.
 
 ### Connect a site
 
