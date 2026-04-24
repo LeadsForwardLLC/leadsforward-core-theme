@@ -13,6 +13,9 @@ fi
 MSG="${1:-chore: ship theme updates}"
 BRANCH="$(git branch --show-current)"
 
+echo "Running PHP syntax validation (php -l)..."
+find . -name "*.php" -print0 | xargs -0 -n1 php -l
+
 if [[ -n "$(git status --porcelain)" ]]; then
   git add -A
   git commit -m "$MSG"

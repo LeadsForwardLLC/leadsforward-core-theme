@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('LF_THEME_VERSION', '0.1.79');
+define('LF_THEME_VERSION', '0.1.80');
 define('LF_THEME_DIR', get_template_directory());
 define('LF_THEME_URI', get_template_directory_uri());
 /** Admin page slug for LeadsForward → Manifest Website (orchestrator UI). */
@@ -77,6 +77,8 @@ lf_load_inc('docs-content.php');
 lf_load_inc('docs-playbook.php');
 lf_load_inc('editor-design-preset.php');
 lf_load_inc('team-role.php');
+// Sitemap sync: shared PageSpec helpers.
+lf_load_inc('sitemap-sync/types.php');
 
 // Custom post types.
 lf_load_inc('cpt/services.php');
