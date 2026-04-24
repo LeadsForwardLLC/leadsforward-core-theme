@@ -954,7 +954,6 @@ function lf_sections_default_order(string $context): array {
 			'process',
 			'faq_accordion',
 			'trust_reviews',
-			'related_links',
 			'map_nap',
 			'cta',
 		];
@@ -3098,7 +3097,7 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 			</li>
 		<?php endforeach; ?>
 	</ol>
-	<?php if ($expectations_text !== '') : ?>
+	<?php if ($context !== 'homepage' && $expectations_text !== '') : ?>
 		<p class="lf-process__expectations"><?php echo esc_html($expectations_text); ?></p>
 	<?php endif; ?>
 	<?php
