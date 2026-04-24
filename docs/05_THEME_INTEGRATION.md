@@ -67,6 +67,12 @@ Server logs for the check use keys `business_expected`, `business_incoming`, and
 
 Fleet sites can connect to `theme.leadsforward.com` to receive **controller-approved automatic theme updates** without logging into each site.
 
+## Sitemap Sync (Airtable Sitemaps → WordPress)
+
+The theme can also sync an Airtable-driven sitemap into WordPress Pages, generate the Header Menu from that sitemap, and enforce internal-link allowlists so AI/content never links to unpublished pages.
+
+See: `docs/09_SITEMAP_SYNC.md`
+
 ### Connect a site
 
 In wp-admin:
