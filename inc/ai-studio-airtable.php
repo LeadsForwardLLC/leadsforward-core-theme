@@ -145,6 +145,8 @@ function lf_ai_studio_airtable_get_settings(): array {
 	$view = (string) get_option('lf_ai_airtable_view', 'Global Sync View (ACTIVE)');
 	$review_table = (string) get_option('lf_ai_airtable_reviews_table', 'Reviews');
 	$review_view = (string) get_option('lf_ai_airtable_reviews_view', '');
+	$sitemaps_table = (string) get_option('lf_ai_airtable_sitemaps_table', 'Sitemaps');
+	$sitemaps_view = (string) get_option('lf_ai_airtable_sitemaps_view', 'Primary View');
 	$default_review_project = (string) ($review_defaults['review_project'] ?? '');
 	if (($normalized_review_map['review_project'] ?? '') === 'Project' && $default_review_project !== '' && $default_review_project !== 'Project') {
 		$normalized_review_map['review_project'] = $default_review_project;
@@ -164,6 +166,10 @@ function lf_ai_studio_airtable_get_settings(): array {
 			'table' => $review_table,
 			'view' => $review_view,
 			'fields' => $normalized_review_map,
+		],
+		'sitemaps' => [
+			'table' => $sitemaps_table !== '' ? $sitemaps_table : 'Sitemaps',
+			'view' => $sitemaps_view !== '' ? $sitemaps_view : 'Primary View',
 		],
 	];
 }

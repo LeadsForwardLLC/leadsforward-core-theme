@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('LF_THEME_VERSION', '0.1.78');
+define('LF_THEME_VERSION', '0.1.79');
 define('LF_THEME_DIR', get_template_directory());
 define('LF_THEME_URI', get_template_directory_uri());
 /** Admin page slug for LeadsForward → Manifest Website (orchestrator UI). */
@@ -65,6 +65,7 @@ lf_load_inc('ai-studio.php');
 lf_load_inc('ai-studio-wiring.php');
 lf_load_inc('ai-studio-rest.php');
 lf_load_inc('ai-studio-airtable.php');
+lf_load_inc('airtable/sitemaps.php');
 // Private fleet update channel (controller-approved auto-updates).
 lf_load_inc('fleet-updates.php');
 // Fleet controller helpers shared with tests.

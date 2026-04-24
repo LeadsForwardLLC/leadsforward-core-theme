@@ -373,6 +373,8 @@ function lf_ai_studio_handle_save(): void {
 	update_option('lf_ai_airtable_base', isset($_POST['lf_ai_airtable_base']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_base'])) : '');
 	update_option('lf_ai_airtable_table', isset($_POST['lf_ai_airtable_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_table'])) : '');
 	update_option('lf_ai_airtable_view', isset($_POST['lf_ai_airtable_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_view'])) : '');
+	update_option('lf_ai_airtable_sitemaps_table', isset($_POST['lf_ai_airtable_sitemaps_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_sitemaps_table'])) : '');
+	update_option('lf_ai_airtable_sitemaps_view', isset($_POST['lf_ai_airtable_sitemaps_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_sitemaps_view'])) : '');
 	update_option('lf_ai_airtable_reviews_table', isset($_POST['lf_ai_airtable_reviews_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_table'])) : '');
 	update_option('lf_ai_airtable_reviews_view', isset($_POST['lf_ai_airtable_reviews_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_view'])) : '');
 	$field_defaults = function_exists('lf_ai_studio_airtable_default_field_map') ? lf_ai_studio_airtable_default_field_map() : [];
@@ -431,6 +433,8 @@ function lf_ai_studio_handle_orchestrator_save(): void {
 	update_option('lf_ai_airtable_base', isset($_POST['lf_ai_airtable_base']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_base'])) : '');
 	update_option('lf_ai_airtable_table', isset($_POST['lf_ai_airtable_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_table'])) : '');
 	update_option('lf_ai_airtable_view', isset($_POST['lf_ai_airtable_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_view'])) : '');
+	update_option('lf_ai_airtable_sitemaps_table', isset($_POST['lf_ai_airtable_sitemaps_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_sitemaps_table'])) : '');
+	update_option('lf_ai_airtable_sitemaps_view', isset($_POST['lf_ai_airtable_sitemaps_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_sitemaps_view'])) : '');
 	update_option('lf_ai_airtable_reviews_table', isset($_POST['lf_ai_airtable_reviews_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_table'])) : '');
 	update_option('lf_ai_airtable_reviews_view', isset($_POST['lf_ai_airtable_reviews_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_view'])) : '');
 	$field_defaults = function_exists('lf_ai_studio_airtable_default_field_map') ? lf_ai_studio_airtable_default_field_map() : [];

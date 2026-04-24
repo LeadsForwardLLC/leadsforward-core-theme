@@ -434,6 +434,8 @@ function lf_ops_handle_global_settings_save(): void {
 		update_option('lf_ai_airtable_base', isset($_POST['lf_ai_airtable_base']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_base'])) : '');
 		update_option('lf_ai_airtable_table', isset($_POST['lf_ai_airtable_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_table'])) : '');
 		update_option('lf_ai_airtable_view', isset($_POST['lf_ai_airtable_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_view'])) : '');
+		update_option('lf_ai_airtable_sitemaps_table', isset($_POST['lf_ai_airtable_sitemaps_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_sitemaps_table'])) : '');
+		update_option('lf_ai_airtable_sitemaps_view', isset($_POST['lf_ai_airtable_sitemaps_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_sitemaps_view'])) : '');
 		update_option('lf_ai_airtable_reviews_table', isset($_POST['lf_ai_airtable_reviews_table']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_table'])) : '');
 		update_option('lf_ai_airtable_reviews_view', isset($_POST['lf_ai_airtable_reviews_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_view'])) : '');
 		update_option('lf_maps_api_key', isset($_POST['lf_maps_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_maps_api_key'])) : '');
@@ -1158,6 +1160,23 @@ function lf_ops_render_global_settings_page(): void {
 								<td>
 									<input type="text" class="regular-text" name="lf_ai_airtable_view" id="lf_ai_airtable_view_global" value="<?php echo esc_attr((string) ($airtable_settings['view'] ?? 'Global Sync View (ACTIVE)')); ?>" <?php disabled(!$can_sensitive); ?> />
 									<p class="description"><?php esc_html_e('Optional. Leave blank to use the table default.', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th colspan="2" style="padding-top: 16px;"><?php esc_html_e('Sitemap table/view', 'leadsforward-core'); ?></th>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_airtable_sitemaps_table"><?php esc_html_e('Sitemaps table', 'leadsforward-core'); ?></label></th>
+								<td>
+									<input type="text" class="regular-text" name="lf_ai_airtable_sitemaps_table" id="lf_ai_airtable_sitemaps_table" value="<?php echo esc_attr((string) ($airtable_settings['sitemaps']['table'] ?? 'Sitemaps')); ?>" <?php disabled(!$can_sensitive); ?> />
+									<p class="description"><?php esc_html_e('Default: Sitemaps', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_ai_airtable_sitemaps_view"><?php esc_html_e('Sitemaps view', 'leadsforward-core'); ?></label></th>
+								<td>
+									<input type="text" class="regular-text" name="lf_ai_airtable_sitemaps_view" id="lf_ai_airtable_sitemaps_view" value="<?php echo esc_attr((string) ($airtable_settings['sitemaps']['view'] ?? 'Primary View')); ?>" <?php disabled(!$can_sensitive); ?> />
+									<p class="description"><?php esc_html_e('Default: Primary View', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
