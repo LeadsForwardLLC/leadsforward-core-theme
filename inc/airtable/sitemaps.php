@@ -12,6 +12,52 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * Get a trimmed string field from an Airtable "fields" array.
+ *
+ * Looks up by exact key first, then exact aliases, then case-insensitive matches.
+ *
+ * @param array<string,mixed> $fields
+ * @param string|list<string> $key_or_aliases
+ */
+function lf_airtable_sitemaps_string_field(array $fields, $key_or_aliases): string {
+	$keys = is_array($key_or_aliases) ? array_values($key_or_aliases) : [(string) $key_or_aliases];
+	$keys = array_values(array_filter(array_map('strval', $keys), static fn(string $k): bool => $k !== ''));
+
+	foreach ($keys as $key) {
+		if (array_key_exists($key, $fields)) {
+			$value = $fields[$key];
+			if (is_array($value)) {
+				$flat = array_values(array_filter(array_map('strval', $value), static fn(string $v): bool => trim($v) !== ''));
+				return trim((string) ($flat[0] ?? ''));
+			}
+			return trim((string) $value);
+		}
+	}
+
+	$lower_to_actual = [];
+	foreach (array_keys($fields) as $field_key) {
+		if (!is_string($field_key)) {
+			continue;
+		}
+		$lower_to_actual[strtolower($field_key)] = $field_key;
+	}
+	foreach ($keys as $key) {
+		$lower = strtolower($key);
+		if (isset($lower_to_actual[$lower])) {
+			$actual = $lower_to_actual[$lower];
+			$value = $fields[$actual] ?? '';
+			if (is_array($value)) {
+				$flat = array_values(array_filter(array_map('strval', $value), static fn(string $v): bool => trim($v) !== ''));
+				return trim((string) ($flat[0] ?? ''));
+			}
+			return trim((string) $value);
+		}
+	}
+
+	return '';
+}
+
+/**
  * Fetch Airtable rows from the configured Sitemaps table/view.
  *
  * @return array{ok:bool, rows:list<array<string,mixed>>, error:string}
@@ -84,6 +130,10 @@ function lf_airtable_sitemaps_fetch_rows(): array {
 		$pages++;
 	} while ($offset !== '' && $pages < $max_pages);
 
+	if ($offset !== '') {
+		return ['ok' => false, 'rows' => [], 'error' => 'airtable_pagination_limit_reached'];
+	}
+
 	return ['ok' => true, 'rows' => $rows, 'error' => ''];
 }
 
@@ -115,30 +165,35 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 			continue;
 		}
 
-		$get = static function (array $fields, string $key): string {
-			return function_exists('lf_ai_studio_airtable_string_field')
-				? lf_ai_studio_airtable_string_field($fields, $key)
-				: trim((string) ($fields[$key] ?? ''));
-		};
-
-		$title = $get($row, 'Page title | Niche');
+		$title = lf_airtable_sitemaps_string_field($row, ['Page title | Niche']);
 		if ($title === '') {
-			$title = $get($row, 'Page title (service)');
+			$title = lf_airtable_sitemaps_string_field($row, ['Page title (service)']);
 		}
-		$niche = $get($row, 'Niche');
-		$priority_raw = $get($row, 'Priority');
-		$primary_keyword = $get($row, 'Keyword');
-		$menu_group_raw = $get($row, 'menu group');
-		$menu_hierarchy = $get($row, 'Menu hiearchy');
-		$slug_template = $get($row, 'Slug');
+		$niche = lf_airtable_sitemaps_string_field($row, ['Niche']);
+		$priority_raw = lf_airtable_sitemaps_string_field($row, ['Priority']);
+		$primary_keyword = lf_airtable_sitemaps_string_field($row, ['Keyword']);
+		$menu_group_raw = lf_airtable_sitemaps_string_field($row, ['menu group']);
+		$menu_hierarchy = lf_airtable_sitemaps_string_field($row, ['Menu hiearchy', 'Menu hierarchy']);
+		$slug_template = lf_airtable_sitemaps_string_field($row, ['Slug']);
 
-		$priority = is_numeric($priority_raw) ? (float) $priority_raw : 0.0;
-		$menu_group_key = strtolower(trim($menu_group_raw));
+		$menu_group_normalized = trim(preg_replace('/\s+/', ' ', $menu_group_raw) ?? '');
+		$menu_group_key = strtolower($menu_group_normalized);
 		$menu_group = $menu_group_key !== '' && isset($allowed_menu_groups[$menu_group_key])
 			? $allowed_menu_groups[$menu_group_key]
-			: ($menu_group_raw !== '' ? trim($menu_group_raw) : '');
+			: ($menu_group_normalized !== '' ? $menu_group_normalized : '');
 
 		$row_errors = [];
+		$priority = 0.0;
+		if (trim($priority_raw) !== '') {
+			if (!is_numeric($priority_raw)) {
+				$row_errors[] = 'invalid_priority';
+			} else {
+				$priority = (float) $priority_raw;
+				if ($priority < 0.0 || $priority > 1.0) {
+					$row_errors[] = 'invalid_priority_range';
+				}
+			}
+		}
 		if (trim($slug_template) === '') {
 			$row_errors[] = 'missing_slug';
 		}
