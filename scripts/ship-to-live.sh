@@ -21,12 +21,8 @@ if [[ -n "$(git status --porcelain)" ]]; then
   git commit -m "$MSG"
 fi
 
-# GitHub often protects main (no direct push). Use a PR branch automatically.
+# GitHub protects main. Always ship via PR branch (no direct push).
 if [[ "$BRANCH" == "main" ]]; then
-  if git push origin main 2>/dev/null; then
-    echo "Done: pushed main. GitHub Actions will deploy to SiteGround."
-    exit 0
-  fi
   AUTO="chore/auto-ship-$(date +%Y%m%d-%H%M%S)"
   git checkout -b "$AUTO"
   BRANCH="$AUTO"
@@ -41,7 +37,7 @@ if [[ -z "$PR" || "$PR" == "null" ]]; then
   PR="$(gh pr list --head "$BRANCH" --state open --json number -q '.[0].number')"
 fi
 
-gh pr merge "$PR" --squash --delete-branch=false
+gh pr merge "$PR" --squash --delete-branch
 
 git fetch origin main
 git checkout main
