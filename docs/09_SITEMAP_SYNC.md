@@ -8,6 +8,7 @@ When Sitemap Sync runs it:
 
 - Fetches records from Airtable **Sitemaps table/view** (configured in LeadsForward → Global Settings).
 - Normalizes rows into `PageSpec` objects (strict validation with observable errors).
+- Filters rows to the current site’s **niche** using the Airtable `Niche` column (one Sitemaps table can hold multiple niche templates).
 - Resolves `{city}` in slugs using the site manifest’s primary city.
 - Upserts WordPress **Pages** (safe scope: `post_type=page` only).
 - Stores a sitemap cache + a `slug → post_id/status` index for fast lookups.
