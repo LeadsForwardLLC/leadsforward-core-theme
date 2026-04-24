@@ -428,7 +428,9 @@ function lf_fleet_controller_build_push_request(string $site_url, string $site_i
 		'url' => $endpoint,
 		'args' => [
 			'method' => 'POST',
-			'timeout' => 12,
+			// Theme upgrades can take longer than a quick HTTP ping (filesystem init, download, unzip).
+			// Keep controller push requests blocking and allow enough time for install + error reporting.
+			'timeout' => 90,
 			'headers' => [
 				'Content-Type' => 'application/json',
 				'X-LF-Site' => $site_id,
