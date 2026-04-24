@@ -6339,7 +6339,8 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 				if (!empty($service_slugs) && !in_array((string) $service->post_name, $service_slugs, true)) {
 					continue;
 				}
-				$keyword = (string) ($normalized['primary_keyword'] ?? '');
+				$sitemap_kw = trim((string) get_post_meta((int) $service->ID, '_lf_seo_primary_keyword', true));
+				$keyword = $sitemap_kw !== '' ? $sitemap_kw : (string) ($normalized['primary_keyword'] ?? '');
 				if ($keyword === '') {
 					$keyword = $service_keyword_map[$slug] ?? '';
 				}
@@ -6371,7 +6372,8 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 				if (!empty($service_slugs) && !in_array((string) $service->post_name, $service_slugs, true)) {
 					continue;
 				}
-				$keyword = $service_keyword_map[$service->post_name] ?? '';
+				$sitemap_kw = trim((string) get_post_meta((int) $service->ID, '_lf_seo_primary_keyword', true));
+				$keyword = $sitemap_kw !== '' ? $sitemap_kw : ($service_keyword_map[$service->post_name] ?? '');
 				if ($keyword === '') {
 					$keyword = $overview_keyword !== ''
 						? trim($service->post_title . ' ' . $overview_keyword)
@@ -6408,7 +6410,8 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 				if (!empty($area_slugs) && !in_array((string) $area->post_name, $area_slugs, true)) {
 					continue;
 				}
-				$keyword = (string) ($normalized['primary_keyword'] ?? '');
+				$sitemap_kw = trim((string) get_post_meta((int) $area->ID, '_lf_seo_primary_keyword', true));
+				$keyword = $sitemap_kw !== '' ? $sitemap_kw : (string) ($normalized['primary_keyword'] ?? '');
 				if ($keyword === '') {
 					$keyword = $area_keyword_map[$slug] ?? '';
 				}
@@ -6440,7 +6443,8 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 				if (!empty($area_slugs) && !in_array((string) $area->post_name, $area_slugs, true)) {
 					continue;
 				}
-				$keyword = $area_keyword_map[$area->post_name] ?? '';
+				$sitemap_kw = trim((string) get_post_meta((int) $area->ID, '_lf_seo_primary_keyword', true));
+				$keyword = $sitemap_kw !== '' ? $sitemap_kw : ($area_keyword_map[$area->post_name] ?? '');
 				if ($keyword === '') {
 					$keyword = $overview_keyword !== ''
 						? trim($overview_keyword . ' ' . $area->post_title)
