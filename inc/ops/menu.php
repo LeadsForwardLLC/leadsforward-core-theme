@@ -20,6 +20,7 @@ add_action('admin_menu', 'lf_ops_hide_leadsforward_submenus', 999);
 add_action('admin_menu', 'lf_ops_reorder_submenus', 1000);
 add_action('admin_init', 'lf_ops_handle_global_settings_save');
 add_action('admin_init', 'lf_ops_handle_test_sitemaps_fetch');
+add_action('admin_init', 'lf_ops_handle_run_sitemap_sync');
 add_action('admin_enqueue_scripts', 'lf_ops_settings_assets');
 add_action('admin_enqueue_scripts', 'lf_ops_brand_admin_assets');
 add_action('admin_post_lf_reviews_sync', 'lf_ops_handle_reviews_sync');
@@ -97,6 +98,44 @@ function lf_ops_handle_test_sitemaps_fetch(): void {
 	$result['error_count'] = count($errors);
 
 	set_transient(lf_ops_test_sitemaps_fetch_transient_key(), $result, 5 * MINUTE_IN_SECONDS);
+	wp_safe_redirect(admin_url('admin.php?page=lf-ops'));
+	exit;
+}
+
+function lf_ops_run_sitemap_sync_transient_key(): string {
+	$user_id = (int) get_current_user_id();
+	return 'lf_ops_run_sitemap_sync_' . ($user_id > 0 ? (string) $user_id : '0');
+}
+
+function lf_ops_handle_run_sitemap_sync(): void {
+	if (!current_user_can(LF_OPS_CAP)) {
+		return;
+	}
+	if (!isset($_GET['page'], $_GET['lf_ops_action'])) {
+		return;
+	}
+	$page = sanitize_key((string) wp_unslash($_GET['page']));
+	if (!in_array($page, ['lf-ops', 'lf-global'], true)) {
+		return;
+	}
+	$action = sanitize_key((string) wp_unslash($_GET['lf_ops_action']));
+	if ($action !== 'run_sitemap_sync') {
+		return;
+	}
+	check_admin_referer('lf_ops_run_sitemap_sync');
+
+	$run = function_exists('lf_sitemap_sync_reconcile_run')
+		? lf_sitemap_sync_reconcile_run()
+		: [
+			'ok' => false,
+			'errors' => ['missing_sitemap_sync_reconcile'],
+			'created' => 0,
+			'updated' => 0,
+			'skipped' => 0,
+			'index_count' => 0,
+		];
+
+	set_transient(lf_ops_run_sitemap_sync_transient_key(), $run, 5 * MINUTE_IN_SECONDS);
 	wp_safe_redirect(admin_url('admin.php?page=lf-ops'));
 	exit;
 }
@@ -518,6 +557,15 @@ function lf_ops_handle_global_settings_save(): void {
 		update_option('lf_ai_airtable_reviews_view', isset($_POST['lf_ai_airtable_reviews_view']) ? sanitize_text_field(wp_unslash($_POST['lf_ai_airtable_reviews_view'])) : '');
 		update_option('lf_maps_api_key', isset($_POST['lf_maps_api_key']) ? sanitize_text_field(wp_unslash($_POST['lf_maps_api_key'])) : '');
 	}
+	$ratio_raw = isset($_POST['lf_sitemap_publish_ratio']) ? (string) wp_unslash($_POST['lf_sitemap_publish_ratio']) : '';
+	$ratio_val = is_numeric($ratio_raw) ? (float) $ratio_raw : 0.5;
+	$ratio_val = max(0.0, min(1.0, $ratio_val));
+	update_option('lf_sitemap_publish_ratio', (string) $ratio_val);
+	$unpublished_mode = isset($_POST['lf_sitemap_unpublished_mode']) ? sanitize_key((string) wp_unslash($_POST['lf_sitemap_unpublished_mode'])) : 'draft';
+	if (!in_array($unpublished_mode, ['draft', 'private', 'pending'], true)) {
+		$unpublished_mode = 'draft';
+	}
+	update_option('lf_sitemap_unpublished_mode', $unpublished_mode);
 	update_option('lf_tools_hide_admin_bar', isset($_POST['lf_tools_hide_admin_bar']) ? '1' : '0');
 	update_option('lf_tools_classic_editor', isset($_POST['lf_tools_classic_editor']) ? '1' : '0');
 	update_option('lf_tools_image_optimization', isset($_POST['lf_tools_image_optimization']) ? '1' : '0');
@@ -788,6 +836,38 @@ function lf_ops_render_global_settings_page(): void {
 			echo esc_html(sprintf('Rows: %d. Valid specs: %d. Invalid: %d. {city} token: %d.', $fetched_rows, $total, $invalid, $city_token));
 			if (!empty($error_codes)) {
 				echo '<br /><strong>' . esc_html__('First error codes:', 'leadsforward-core') . '</strong> ' . esc_html(implode(', ', $error_codes));
+			}
+		}
+		echo '</p></div>';
+	}
+	$sync_key = lf_ops_run_sitemap_sync_transient_key();
+	$sync_result = get_transient($sync_key);
+	if (is_array($sync_result)) {
+		delete_transient($sync_key);
+		$is_ok = !empty($sync_result['ok']);
+		$created = (int) ($sync_result['created'] ?? 0);
+		$updated = (int) ($sync_result['updated'] ?? 0);
+		$skipped = (int) ($sync_result['skipped'] ?? 0);
+		$index_count = (int) ($sync_result['index_count'] ?? 0);
+		$errors = is_array($sync_result['errors'] ?? null) ? $sync_result['errors'] : [];
+		$errors = array_values(array_filter(array_map('strval', $errors), static fn(string $v): bool => $v !== ''));
+		$error_codes = is_array($sync_result['error_codes'] ?? null) ? $sync_result['error_codes'] : [];
+		$error_codes = array_values(array_filter(array_map('strval', $error_codes), static fn(string $v): bool => $v !== ''));
+
+		echo '<div class="notice ' . esc_attr($is_ok ? 'notice-success' : 'notice-error') . ' is-dismissible"><p>';
+		if (!$is_ok) {
+			echo '<strong>' . esc_html__('Sitemap sync failed.', 'leadsforward-core') . '</strong> ';
+			if (!empty($errors[0])) {
+				echo esc_html($errors[0]);
+			}
+		} else {
+			echo '<strong>' . esc_html__('Sitemap sync completed.', 'leadsforward-core') . '</strong> ';
+			echo esc_html(sprintf('Created: %d. Updated: %d. Skipped: %d. Index: %d.', $created, $updated, $skipped, $index_count));
+			if (!empty($error_codes)) {
+				echo '<br /><strong>' . esc_html__('First error codes:', 'leadsforward-core') . '</strong> ' . esc_html(implode(', ', array_slice($error_codes, 0, 10)));
+			}
+			if (!empty($errors)) {
+				echo '<br />' . esc_html(sprintf(__('Errors: %d (showing first 1).', 'leadsforward-core'), count($errors)));
 			}
 		}
 		echo '</p></div>';
@@ -1284,6 +1364,30 @@ function lf_ops_render_global_settings_page(): void {
 								</td>
 							</tr>
 							<tr>
+								<th scope="row"><label for="lf_sitemap_publish_ratio"><?php esc_html_e('Sitemap publish ratio', 'leadsforward-core'); ?></label></th>
+								<td>
+									<?php
+									$publish_ratio = (float) get_option('lf_sitemap_publish_ratio', 0.5);
+									if ($publish_ratio <= 0.0) $publish_ratio = 0.0;
+									if ($publish_ratio > 1.0) $publish_ratio = 1.0;
+									?>
+									<input type="number" min="0" max="1" step="0.01" class="small-text" name="lf_sitemap_publish_ratio" id="lf_sitemap_publish_ratio" value="<?php echo esc_attr((string) $publish_ratio); ?>" />
+									<p class="description"><?php esc_html_e('Non-core pages: publish top portion by priority. Default: 0.5', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_sitemap_unpublished_mode"><?php esc_html_e('Unpublished mode', 'leadsforward-core'); ?></label></th>
+								<td>
+									<?php $unpublished_mode = sanitize_key((string) get_option('lf_sitemap_unpublished_mode', 'draft')); ?>
+									<select name="lf_sitemap_unpublished_mode" id="lf_sitemap_unpublished_mode">
+										<option value="draft" <?php selected($unpublished_mode, 'draft'); ?>><?php esc_html_e('Draft', 'leadsforward-core'); ?></option>
+										<option value="pending" <?php selected($unpublished_mode, 'pending'); ?>><?php esc_html_e('Pending', 'leadsforward-core'); ?></option>
+										<option value="private" <?php selected($unpublished_mode, 'private'); ?>><?php esc_html_e('Private', 'leadsforward-core'); ?></option>
+									</select>
+									<p class="description"><?php esc_html_e('Status for non-published pages. Default: Draft', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
 								<th scope="row"><?php esc_html_e('Test Sitemaps Fetch', 'leadsforward-core'); ?></th>
 								<td>
 									<?php
@@ -1291,6 +1395,16 @@ function lf_ops_render_global_settings_page(): void {
 									?>
 									<a class="button" href="<?php echo esc_url($url); ?>"><?php esc_html_e('Test Sitemaps Fetch', 'leadsforward-core'); ?></a>
 									<p class="description"><?php esc_html_e('Fetch and normalize Airtable sitemap rows and show a debug summary (no writes).', 'leadsforward-core'); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e('Run Sitemap Sync', 'leadsforward-core'); ?></th>
+								<td>
+									<?php
+									$sync_url = wp_nonce_url(admin_url('admin.php?page=lf-ops&lf_ops_action=run_sitemap_sync'), 'lf_ops_run_sitemap_sync');
+									?>
+									<a class="button button-secondary" href="<?php echo esc_url($sync_url); ?>"><?php esc_html_e('Run Sitemap Sync', 'leadsforward-core'); ?></a>
+									<p class="description"><?php esc_html_e('Creates/updates WordPress pages from Airtable Sitemaps and updates the local sitemap cache/index.', 'leadsforward-core'); ?></p>
 								</td>
 							</tr>
 							<tr>
