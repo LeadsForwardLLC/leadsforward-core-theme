@@ -103,6 +103,8 @@ In wp-admin:
 
 When a fleet site is connected, the controller (same codebase, controller mode) can trigger an immediate **check → offer → install** cycle by posting to that site’s public REST URL. Only requests that pass **HMAC verification** run the flow; there is no unauthenticated “install now.”
 
+Note: the controller’s push request is **blocking** and may take time while the fleet site downloads/unzips/installs a theme update. The controller uses a longer timeout so successful installs can return a definitive result instead of timing out mid-install.
+
 **Headers** (same signing scheme as outbound fleet API calls):
 
 | Header | Purpose |
