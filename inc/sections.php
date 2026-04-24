@@ -1062,6 +1062,15 @@ function lf_sections_normalize_service_details_settings(string $section_id, arra
 		$body_primary = trim((string) ($settings['section_body'] ?? ''));
 		$body_secondary = trim((string) ($settings['section_body_secondary'] ?? ''));
 		if ($body_primary !== '' && $body_secondary !== '') {
+			$cmp_a = preg_replace('/\s+/', ' ', wp_strip_all_tags($body_primary));
+			$cmp_b = preg_replace('/\s+/', ' ', wp_strip_all_tags($body_secondary));
+			$cmp_a = is_string($cmp_a) ? trim($cmp_a) : '';
+			$cmp_b = is_string($cmp_b) ? trim($cmp_b) : '';
+			if ($cmp_a !== '' && $cmp_a === $cmp_b) {
+				$body_secondary = '';
+			}
+		}
+		if ($body_primary !== '' && $body_secondary !== '') {
 			$out['service_details_body'] = $body_primary . "\n\n" . $body_secondary;
 		} elseif ($body_primary !== '') {
 			$out['service_details_body'] = $body_primary;
@@ -1087,6 +1096,16 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 		return [];
 	}
 	$input = lf_sections_normalize_service_details_settings($section_id, $input);
+	// Avoid duplicated “expanded body” content when the payload sets both primary and secondary to the same value.
+	if (isset($input['section_body'], $input['section_body_secondary'])) {
+		$a = preg_replace('/\s+/', ' ', wp_strip_all_tags((string) $input['section_body']));
+		$b = preg_replace('/\s+/', ' ', wp_strip_all_tags((string) $input['section_body_secondary']));
+		$a = is_string($a) ? trim($a) : '';
+		$b = is_string($b) ? trim($b) : '';
+		if ($a !== '' && $a === $b) {
+			$input['section_body_secondary'] = '';
+		}
+	}
 	$out = [];
 	foreach ($section['fields'] as $field) {
 		$key = $field['key'];
@@ -2880,6 +2899,15 @@ function lf_sections_render_content(string $context, array $settings, \WP_Post $
 	$intro = $settings['section_intro'] ?? '';
 	$body = $settings['section_body'] ?? '';
 	$body_secondary = $settings['section_body_secondary'] ?? '';
+	if (trim((string) $body) !== '' && trim((string) $body_secondary) !== '') {
+		$cmp_a = preg_replace('/\s+/', ' ', wp_strip_all_tags((string) $body));
+		$cmp_b = preg_replace('/\s+/', ' ', wp_strip_all_tags((string) $body_secondary));
+		$cmp_a = is_string($cmp_a) ? trim($cmp_a) : '';
+		$cmp_b = is_string($cmp_b) ? trim($cmp_b) : '';
+		if ($cmp_a !== '' && $cmp_a === $cmp_b) {
+			$body_secondary = '';
+		}
+	}
 	$layout = (string) ($settings['content_layout'] ?? 'single');
 	if (!in_array($layout, ['single', 'two_col'], true)) {
 		$layout = 'single';
