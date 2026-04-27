@@ -315,7 +315,7 @@ function lf_fleet_maybe_auto_update(bool $from_trusted_admin = false, bool $from
 	// controller-provided package URL.
 	$res = $upgrader->run([
 		'package' => $pkg,
-		'destination' => WP_CONTENT_DIR . '/themes',
+		'destination' => WP_CONTENT_DIR . '/themes/' . $stylesheet,
 		'clear_destination' => true,
 		'clear_working' => true,
 		'hook_extra' => [
@@ -348,6 +348,21 @@ function lf_fleet_maybe_auto_update(bool $from_trusted_admin = false, bool $from
 	$err = lf_fleet_upgrade_error_message($res, $upgrader);
 	if ($err === '') {
 		$err = is_string($res) ? $res : __('Theme upgrade failed (no error message). Check filesystem permissions or hosting security rules.', 'leadsforward-core');
+	}
+
+	// If WP reports "up_to_date" but the controller offered a newer version, treat it as an install failure
+	// and surface more context so this can be diagnosed on locked-down hosts.
+	if (trim($err) === 'up_to_date') {
+		$before = (string) wp_get_theme()->get('Version');
+		$target = isset($offer['version']) ? (string) $offer['version'] : '';
+		if ($target !== '' && $before !== '' && version_compare($before, $target, '<')) {
+			$skin_msg = '';
+			if (is_object($upgrader->skin) && property_exists($upgrader->skin, 'lf_last_message')) {
+				$skin_msg = (string) ($upgrader->skin->lf_last_message ?? '');
+			}
+			$err = 'install_failed_up_to_date'
+				. ($skin_msg !== '' ? (': ' . $skin_msg) : '');
+		}
 	}
 	$nu['last_upgrade_error'] = $err;
 	update_option(LF_FLEET_OPT_LAST, wp_json_encode($nu));
