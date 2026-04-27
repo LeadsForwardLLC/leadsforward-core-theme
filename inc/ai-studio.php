@@ -1274,6 +1274,45 @@ function lf_ai_studio_render_page(): void {
 			}
 		}
 	}
+
+	// If no Service/Service Area CPT posts exist yet, prefer Sitemap Sync cache for smoke-test pickers.
+	// This avoids confusing "Main / Additional" placeholders when the manifest doesn't include service items.
+	if (empty($selected_service_slugs) || empty($selected_area_slugs)) {
+		$cache_raw = (string) get_option('lf_airtable_sitemap_cache', '');
+		$cache = $cache_raw !== '' ? json_decode($cache_raw, true) : null;
+		if (is_array($cache)) {
+			foreach ($cache as $spec) {
+				if (!is_array($spec)) {
+					continue;
+				}
+				$group = (string) ($spec['menu_group'] ?? '');
+				$title = (string) ($spec['title'] ?? '');
+				$slug_resolved = (string) ($spec['slug_resolved'] ?? '');
+				$slug_template = (string) ($spec['slug_template'] ?? '');
+				$slug_for_check = $slug_resolved !== '' ? $slug_resolved : $slug_template;
+				$slug_for_check = function_exists('lf_sitemap_normalize_slug_path')
+					? lf_sitemap_normalize_slug_path($slug_for_check)
+					: ('/' . trim($slug_for_check, '/') . '/');
+
+				if ($group === 'Services' && empty($selected_service_slugs)) {
+					if (strpos($slug_for_check, '/services/') === 0 && $slug_for_check !== '/services/') {
+						$key = sanitize_title((string) basename(trim($slug_for_check, '/')));
+						if ($key !== '') {
+							$selected_service_slugs[$key] = $title !== '' ? $title : $key;
+						}
+					}
+				}
+				if ($group === 'Service Areas' && empty($selected_area_slugs)) {
+					if (strpos($slug_for_check, '/service-areas/') === 0 && $slug_for_check !== '/service-areas/') {
+						$key = sanitize_title((string) basename(trim($slug_for_check, '/')));
+						if ($key !== '') {
+							$selected_area_slugs[$key] = $title !== '' ? $title : $key;
+						}
+					}
+				}
+			}
+		}
+	}
 	$stored_service_slugs = get_option('lf_ai_scope_service_slugs', []);
 	$stored_area_slugs = get_option('lf_ai_scope_service_area_slugs', []);
 	$stored_service_slugs = is_array($stored_service_slugs) ? array_values(array_filter(array_map('sanitize_title', $stored_service_slugs))) : [];
