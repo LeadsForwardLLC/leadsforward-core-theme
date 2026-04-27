@@ -208,6 +208,9 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 			? lf_sitemap_normalize_slug_template_for_key($slug_template)
 			: ('/' . trim((string) $slug_template, '/') . '/');
 		$is_core = !empty($core_templates[$template_for_check]);
+		$is_service_detail = (strpos($template_for_check, '/services/') === 0) && $template_for_check !== '/services/';
+		$is_service_area_detail = (strpos($template_for_check, '/service-areas/') === 0) && $template_for_check !== '/service-areas/';
+		$keyword_required = $is_service_detail || $is_service_area_detail;
 
 		$menu_group_normalized = trim(preg_replace('/\s+/', ' ', $menu_group_raw) ?? '');
 		$menu_group_key = strtolower($menu_group_normalized);
@@ -250,11 +253,12 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 			$row_errors[] = 'missing_niche';
 		}
 		if (trim($primary_keyword) === '') {
-			// Keywords are required for detail pages, but core hubs can safely fall back to the niche label.
-			if ($is_core) {
-				$primary_keyword = trim((string) $niche);
-			} else {
+			// Only require keywords for detail pages (service/service-area detail).
+			// Utility pages (contact/blog/faq/financing/projects/etc) can safely fall back to niche.
+			if ($keyword_required) {
 				$row_errors[] = 'missing_keyword';
+			} else {
+				$primary_keyword = trim((string) $niche);
 			}
 		}
 		if (trim($menu_group) === '') {
