@@ -69,6 +69,21 @@ function lf_ai_studio_manifest_admin_url(array $args = []): string {
 	return $args === [] ? $url : add_query_arg($args, $url);
 }
 
+/**
+ * Whether a service title is a non-real placeholder (Airtable sync artifacts).
+ */
+function lf_ai_studio_service_title_is_placeholder(string $title): bool {
+	$t = strtolower(trim(preg_replace('/\s+/', ' ', $title)));
+	if ($t === '') {
+		return true;
+	}
+	$generic = ['main', 'additional', 'main service', 'additional service', 'service', 'services'];
+	if (in_array($t, $generic, true)) {
+		return true;
+	}
+	return preg_match('/^(main|additional)(?:\s+service)?(?:\s*\(.*\))?$/i', $title) === 1;
+}
+
 add_action('init', 'lf_ai_studio_register_cpt');
 add_action('admin_post_lf_ai_studio_save', 'lf_ai_studio_handle_save');
 add_action('admin_post_lf_ai_studio_orchestrator_save', 'lf_ai_studio_handle_orchestrator_save');
@@ -1318,6 +1333,16 @@ function lf_ai_studio_render_page(): void {
 	if ($cache_service_slugs !== []) {
 		$selected_service_slugs = $cache_service_slugs;
 	}
+
+	// Never show placeholder service labels in the smoke-test picker (manifest can still contain "Main / Additional").
+	if ($selected_service_slugs !== []) {
+		foreach ($selected_service_slugs as $slug => $label) {
+			if (lf_ai_studio_service_title_is_placeholder((string) $label)) {
+				unset($selected_service_slugs[$slug]);
+			}
+		}
+	}
+
 	if ($cache_area_slugs !== []) {
 		$selected_area_slugs = $cache_area_slugs;
 	}
@@ -1398,6 +1423,33 @@ function lf_ai_studio_render_page(): void {
 			}
 		}
 	}
+
+	// If services are still empty after stripping placeholders and cache, use niche defaults from the manifest business block.
+	if ($selected_service_slugs === [] && is_array($manifest_for_picker)) {
+		$biz = is_array($manifest_for_picker['business'] ?? null) ? $manifest_for_picker['business'] : [];
+		$addr = is_array($biz['address'] ?? null) ? $biz['address'] : [];
+		$city = trim((string) ($biz['primary_city'] ?? $addr['city'] ?? ''));
+		$state = trim((string) ($addr['state'] ?? ''));
+		$name = trim((string) ($biz['name'] ?? ''));
+		$niche = trim((string) ($biz['niche'] ?? ''));
+		$niche_slug = trim((string) ($biz['niche_slug'] ?? ''));
+		if (function_exists('lf_ai_studio_airtable_resolve_niche_slug') && function_exists('lf_ai_studio_airtable_build_services_from_niche')) {
+			$ns = lf_ai_studio_airtable_resolve_niche_slug($niche, $niche_slug);
+			if ($ns !== '') {
+				foreach (lf_ai_studio_airtable_build_services_from_niche($ns, $city, $state, $name) as $svc) {
+					if (!is_array($svc)) {
+						continue;
+					}
+					$slug = sanitize_title((string) ($svc['slug'] ?? ''));
+					$tit = sanitize_text_field((string) ($svc['title'] ?? ''));
+					if ($slug !== '' && $tit !== '' && !lf_ai_studio_service_title_is_placeholder($tit)) {
+						$selected_service_slugs[$slug] = $tit;
+					}
+				}
+			}
+		}
+	}
+
 	$stored_service_slugs = get_option('lf_ai_scope_service_slugs', []);
 	$stored_area_slugs = get_option('lf_ai_scope_service_area_slugs', []);
 	$stored_service_slugs = is_array($stored_service_slugs) ? array_values(array_filter(array_map('sanitize_title', $stored_service_slugs))) : [];
