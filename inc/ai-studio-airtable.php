@@ -1186,7 +1186,7 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	if ($primary_keyword === '') {
 		$errors[] = __('Missing Primary Keyword field in Airtable.', 'leadsforward-core');
 	}
-	$generic_titles = ['main service', 'additional service', 'service', 'services'];
+	$generic_titles = ['main', 'additional', 'main service', 'additional service', 'service', 'services'];
 	$service_titles = [];
 	foreach ($services as $svc) {
 		if (is_array($svc)) {
@@ -1545,12 +1545,29 @@ function lf_ai_studio_airtable_build_service_areas_from_list(string $raw, string
 	$parts = preg_split('/\r\n|\r|\n|;/', $raw) ?: [];
 	if (count($parts) === 1) {
 		$single = trim((string) ($parts[0] ?? ''));
-		// If it looks like "City, ST" treat it as one item.
-		if ($single !== '' && preg_match('/,\s*[A-Za-z]{2}\b/', $single) === 1) {
-			$parts = [$single];
-		} else {
-			// Otherwise allow comma-delimited lists (e.g. "City1, City2, City3").
-			$parts = preg_split('/,/', $single) ?: [];
+		// If it looks like repeated "City, ST" pairs, extract each pair as one item.
+		if ($single !== '') {
+			$pairs = [];
+			if (preg_match_all('/([^,;\n]+?),\s*([A-Za-z]{2})\b/', $single, $m, PREG_SET_ORDER) === 1) {
+				// exactly one match; handle below
+			} elseif (!empty($m) && is_array($m) && count($m) > 1) {
+				foreach ($m as $row) {
+					$city_part = trim((string) ($row[1] ?? ''));
+					$st_part = strtoupper(trim((string) ($row[2] ?? '')));
+					if ($city_part !== '' && $st_part !== '') {
+						$pairs[] = $city_part . ', ' . $st_part;
+					}
+				}
+			}
+			if (!empty($pairs)) {
+				$parts = $pairs;
+			} elseif (preg_match('/,\s*[A-Za-z]{2}\b/', $single) === 1) {
+				// Single "City, ST" value.
+				$parts = [$single];
+			} else {
+				// Otherwise allow comma-delimited lists (e.g. "City1, City2, City3").
+				$parts = preg_split('/,/', $single) ?: [];
+			}
 		}
 	}
 	$areas = [];
@@ -1559,11 +1576,23 @@ function lf_ai_studio_airtable_build_service_areas_from_list(string $raw, string
 		if ($city === '') {
 			continue;
 		}
+		$state_for_area = $state;
+		$city_name = $city;
+		if (preg_match('/^(.+?),\s*([A-Za-z]{2})$/', $city, $mm) === 1) {
+			$city_name = trim((string) ($mm[1] ?? $city));
+			$maybe_state = strtoupper(trim((string) ($mm[2] ?? '')));
+			if ($maybe_state !== '') {
+				$state_for_area = $maybe_state;
+			}
+		}
+		if ($city_name === '') {
+			continue;
+		}
 		$areas[] = [
-			'city' => $city,
-			'state' => $state,
-			'slug' => sanitize_title($city),
-			'primary_keyword' => trim(sprintf('%s %s %s', $niche, $city, $state)),
+			'city' => $city_name,
+			'state' => $state_for_area,
+			'slug' => sanitize_title($city_name),
+			'primary_keyword' => trim(sprintf('%s %s %s', $niche, $city_name, $state_for_area)),
 		];
 	}
 	return $areas;
