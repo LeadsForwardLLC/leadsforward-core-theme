@@ -1276,8 +1276,54 @@ function lf_ai_studio_render_page(): void {
 	}
 
 	// If no Service/Service Area CPT posts exist yet, prefer Sitemap Sync cache for smoke-test pickers.
-	// This avoids confusing "Main / Additional" placeholders when the manifest doesn't include service items.
-	if (empty($selected_service_slugs) || empty($selected_area_slugs)) {
+	// This avoids confusing placeholders coming from manifest/sync artifacts (e.g. "Main", "Additional").
+	$cache_service_slugs = [];
+	$cache_area_slugs = [];
+	$cache_raw = (string) get_option('lf_airtable_sitemap_cache', '');
+	$cache = $cache_raw !== '' ? json_decode($cache_raw, true) : null;
+	if (is_array($cache)) {
+		foreach ($cache as $spec) {
+			if (!is_array($spec)) {
+				continue;
+			}
+			$group = (string) ($spec['menu_group'] ?? '');
+			$title = (string) ($spec['title'] ?? '');
+			$slug_resolved = (string) ($spec['slug_resolved'] ?? '');
+			$slug_template = (string) ($spec['slug_template'] ?? '');
+			$slug_for_check = $slug_resolved !== '' ? $slug_resolved : $slug_template;
+			$slug_for_check = function_exists('lf_sitemap_normalize_slug_path')
+				? lf_sitemap_normalize_slug_path($slug_for_check)
+				: ('/' . trim($slug_for_check, '/') . '/');
+
+			if ($group === 'Services') {
+				if (strpos($slug_for_check, '/services/') === 0 && $slug_for_check !== '/services/') {
+					$key = sanitize_title((string) basename(trim($slug_for_check, '/')));
+					if ($key !== '') {
+						$cache_service_slugs[$key] = $title !== '' ? $title : $key;
+					}
+				}
+			}
+			if ($group === 'Service Areas') {
+				if (strpos($slug_for_check, '/service-areas/') === 0 && $slug_for_check !== '/service-areas/') {
+					$key = sanitize_title((string) basename(trim($slug_for_check, '/')));
+					if ($key !== '') {
+						$cache_area_slugs[$key] = $title !== '' ? $title : $key;
+					}
+				}
+			}
+		}
+	}
+
+	// If we have cache-derived options, use them (they represent the real site structure).
+	if ($cache_service_slugs !== []) {
+		$selected_service_slugs = $cache_service_slugs;
+	}
+	if ($cache_area_slugs !== []) {
+		$selected_area_slugs = $cache_area_slugs;
+	}
+
+	// Back-compat: if cache is empty but manifest has real services/areas, keep existing selection.
+	if ($selected_service_slugs === [] || $selected_area_slugs === []) {
 		$cache_raw = (string) get_option('lf_airtable_sitemap_cache', '');
 		$cache = $cache_raw !== '' ? json_decode($cache_raw, true) : null;
 		if (is_array($cache)) {
