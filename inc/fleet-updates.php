@@ -333,6 +333,7 @@ function lf_fleet_maybe_auto_update(bool $from_trusted_admin = false, bool $from
 		if (is_array($last)) {
 			$last['failures'] = 0;
 			$last['next_attempt_at'] = 0;
+			$last['last_upgrade_error'] = '';
 			update_option(LF_FLEET_OPT_LAST, wp_json_encode($last));
 		}
 		return;
