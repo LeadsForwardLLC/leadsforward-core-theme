@@ -42,6 +42,11 @@ function lf_sitemap_spec_key(string $niche, string $slug_template): string {
  */
 function lf_sitemap_normalize_slug_template(string $template): array {
 	$template = trim($template);
+	// Allow homepage templates like "/" (or "////") as a special case.
+	// Internally we treat homepage as an empty template that normalizes to "/".
+	if ($template !== '' && preg_match('#^/+$#', $template)) {
+		return ['ok' => true, 'template' => '', 'error' => ''];
+	}
 	if ($template === '') {
 		return ['ok' => false, 'template' => '', 'error' => 'missing_slug'];
 	}

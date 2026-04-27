@@ -45,6 +45,12 @@ function lf_sitemap_sync_get_primary_city(): string {
 	if ($city === '' && !empty($manifest['business']['address']['city'])) {
 		$city = (string) $manifest['business']['address']['city'];
 	}
+	if ($city === '' && function_exists('lf_business_entity_get')) {
+		$entity = lf_business_entity_get();
+		if (is_array($entity) && !empty($entity['address_parts']['city'])) {
+			$city = (string) $entity['address_parts']['city'];
+		}
+	}
 	return $city;
 }
 
