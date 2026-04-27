@@ -84,6 +84,75 @@ function lf_ai_studio_service_title_is_placeholder(string $title): bool {
 	return preg_match('/^(main|additional)(?:\s+service)?(?:\s*\(.*\))?$/i', $title) === 1;
 }
 
+/**
+ * Remove placeholder labels from a slug => label map (smoke-test picker).
+ */
+function lf_ai_studio_strip_placeholder_service_slug_map(array $slug_to_label): array {
+	foreach ($slug_to_label as $slug => $label) {
+		if (lf_ai_studio_service_title_is_placeholder((string) $label)) {
+			unset($slug_to_label[$slug]);
+		}
+	}
+	return $slug_to_label;
+}
+
+/**
+ * Admin-only JSON payload for Manifest → smoke-test picker troubleshooting (?lf_scope_debug=1).
+ *
+ * @return array<string, mixed>
+ */
+function lf_ai_studio_manifest_scope_picker_debug_payload(array $manifest, string $cache_raw, array $final_services, array $final_areas): array {
+	$cache = $cache_raw !== '' ? json_decode($cache_raw, true) : null;
+	$cache_services = [];
+	if (is_array($cache)) {
+		foreach ($cache as $spec) {
+			if (!is_array($spec)) {
+				continue;
+			}
+			if ((string) ($spec['menu_group'] ?? '') !== 'Services') {
+				continue;
+			}
+			$title = (string) ($spec['title'] ?? '');
+			$slug_resolved = (string) ($spec['slug_resolved'] ?? '');
+			$slug_template = (string) ($spec['slug_template'] ?? '');
+			$slug_for_check = $slug_resolved !== '' ? $slug_resolved : $slug_template;
+			$slug_for_check = function_exists('lf_sitemap_normalize_slug_path')
+				? lf_sitemap_normalize_slug_path($slug_for_check)
+				: ('/' . trim($slug_for_check, '/') . '/');
+			if (strpos($slug_for_check, '/services/') !== 0 || $slug_for_check === '/services/') {
+				continue;
+			}
+			$cache_services[] = [
+				'title' => $title,
+				'path' => $slug_for_check,
+				'classified_placeholder' => lf_ai_studio_service_title_is_placeholder($title),
+			];
+		}
+	}
+	$manifest_svc = [];
+	$rows = is_array($manifest['services'] ?? null) ? $manifest['services'] : [];
+	foreach ($rows as $row) {
+		if (!is_array($row)) {
+			continue;
+		}
+		$manifest_svc[] = [
+			'slug' => (string) ($row['slug'] ?? ''),
+			'title' => (string) ($row['title'] ?? ''),
+		];
+		if (count($manifest_svc) >= 15) {
+			break;
+		}
+	}
+	return [
+		'theme_version' => defined('LF_THEME_VERSION') ? LF_THEME_VERSION : '',
+		'explain' => 'Smoke-test lists are built from: (1) lf_site_manifest services[], (2) lf_airtable_sitemap_cache rows for Services under /services/*, (3) placeholder titles removed, (4) niche-based defaults if still empty. Service areas use parallel logic plus business-info / primary-city fallbacks.',
+		'manifest_services_sample' => $manifest_svc,
+		'sitemap_sync_cache_service_rows' => $cache_services,
+		'final_smoke_test_services_slug_to_label' => $final_services,
+		'final_smoke_test_areas_count' => count($final_areas),
+	];
+}
+
 add_action('init', 'lf_ai_studio_register_cpt');
 add_action('admin_post_lf_ai_studio_save', 'lf_ai_studio_handle_save');
 add_action('admin_post_lf_ai_studio_orchestrator_save', 'lf_ai_studio_handle_orchestrator_save');
@@ -1334,15 +1403,6 @@ function lf_ai_studio_render_page(): void {
 		$selected_service_slugs = $cache_service_slugs;
 	}
 
-	// Never show placeholder service labels in the smoke-test picker (manifest can still contain "Main / Additional").
-	if ($selected_service_slugs !== []) {
-		foreach ($selected_service_slugs as $slug => $label) {
-			if (lf_ai_studio_service_title_is_placeholder((string) $label)) {
-				unset($selected_service_slugs[$slug]);
-			}
-		}
-	}
-
 	if ($cache_area_slugs !== []) {
 		$selected_area_slugs = $cache_area_slugs;
 	}
@@ -1424,6 +1484,10 @@ function lf_ai_studio_render_page(): void {
 		}
 	}
 
+	// Strip placeholders once after all merges. The back-compat block above can re-fill services from the same
+	// sitemap cache when areas exist but services were emptied — without this pass, "Main Service" returns.
+	$selected_service_slugs = lf_ai_studio_strip_placeholder_service_slug_map($selected_service_slugs);
+
 	// If services are still empty after stripping placeholders and cache, use niche defaults from the manifest business block.
 	if ($selected_service_slugs === [] && is_array($manifest_for_picker)) {
 		$biz = is_array($manifest_for_picker['business'] ?? null) ? $manifest_for_picker['business'] : [];
@@ -1448,6 +1512,16 @@ function lf_ai_studio_render_page(): void {
 				}
 			}
 		}
+	}
+
+	$scope_picker_debug = null;
+	if (isset($_GET['lf_scope_debug']) && (string) wp_unslash((string) $_GET['lf_scope_debug']) === '1' && current_user_can('edit_theme_options')) {
+		$scope_picker_debug = lf_ai_studio_manifest_scope_picker_debug_payload(
+			is_array($manifest_for_picker) ? $manifest_for_picker : [],
+			(string) get_option('lf_airtable_sitemap_cache', ''),
+			$selected_service_slugs,
+			$selected_area_slugs
+		);
 	}
 
 	$stored_service_slugs = get_option('lf_ai_scope_service_slugs', []);
@@ -1642,6 +1716,16 @@ function lf_ai_studio_render_page(): void {
 					<div class="lf-manifester-step__content">
 						<h3><?php esc_html_e('Load site data: Airtable (default) or manifest file', 'leadsforward-core'); ?></h3>
 						<p class="description"><?php esc_html_e('Search and select an Airtable row to build the manifest and sync business info. Or upload a JSON manifest if you do not use Airtable.', 'leadsforward-core'); ?></p>
+						<?php if (is_array($scope_picker_debug)) : ?>
+							<details open class="lf-manifest-scope-debug" style="margin:12px 0;padding:12px;border:1px solid #c3c4c7;background:#fcfcfc;">
+								<summary><strong><?php esc_html_e('Smoke-test picker debug', 'leadsforward-core'); ?></strong></summary>
+								<p class="description" style="margin:8px 0;">
+									<?php esc_html_e('Remove', 'leadsforward-core'); ?> <code>?lf_scope_debug=1</code> <?php esc_html_e('from the URL to hide this panel. Data sources: stored manifest option', 'leadsforward-core'); ?>
+									<code>lf_site_manifest</code>, <?php esc_html_e('Sitemap Sync option', 'leadsforward-core'); ?> <code>lf_airtable_sitemap_cache</code>.
+								</p>
+								<pre style="white-space:pre-wrap;max-height:420px;overflow:auto;font-size:12px;line-height:1.35;margin:0;"><?php echo esc_html(wp_json_encode($scope_picker_debug, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></pre>
+							</details>
+						<?php endif; ?>
 						<div class="lf-manifester-source">
 							<div class="lf-manifester-panel" id="lf-airtable-picker">
 								<h4 style="margin-top:0;"><?php esc_html_e('Airtable Projects', 'leadsforward-core'); ?></h4>
