@@ -194,11 +194,29 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 			continue;
 		}
 
-		$title = lf_airtable_sitemaps_string_field($row, ['Page title | Niche']);
-		if ($title === '') {
-			$title = lf_airtable_sitemaps_string_field($row, ['Page title (service)']);
-		}
+		$title_with_niche = lf_airtable_sitemaps_string_field($row, ['Page title | Niche']);
+		$title = $title_with_niche !== '' ? $title_with_niche : lf_airtable_sitemaps_string_field($row, ['Page title (service)']);
 		$niche = lf_airtable_sitemaps_string_field($row, ['Niche']);
+
+		// Airtable commonly represents "linked record" fields as record IDs in the API.
+		// If Niche is a linked record, derive the human label from "Page title | Niche" (e.g. "Home | Foundation Repair").
+		$niche_looks_like_record_id = ($niche !== '' && preg_match('/^rec[a-zA-Z0-9]{10,}$/', $niche) === 1);
+		if ($niche === '' || $niche_looks_like_record_id) {
+			if ($title_with_niche !== '' && strpos($title_with_niche, '|') !== false) {
+				$parts = array_values(array_filter(array_map('trim', explode('|', $title_with_niche)), static fn(string $v): bool => $v !== ''));
+				if (count($parts) >= 2) {
+					$derived_title = (string) ($parts[0] ?? '');
+					$derived_niche = (string) end($parts);
+					if ($derived_niche !== '') {
+						$niche = $derived_niche;
+					}
+					// Prefer a clean WP page title (without the niche suffix) when available.
+					if ($derived_title !== '') {
+						$title = $derived_title;
+					}
+				}
+			}
+		}
 		$priority_raw = lf_airtable_sitemaps_string_field($row, ['Priority']);
 		$primary_keyword = lf_airtable_sitemaps_string_field($row, ['Keyword']);
 		$menu_group_raw = lf_airtable_sitemaps_string_field($row, ['Menu Group', 'menu group']);
