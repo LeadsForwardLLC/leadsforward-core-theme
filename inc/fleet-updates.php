@@ -295,9 +295,40 @@ function lf_fleet_maybe_auto_update(bool $from_trusted_admin = false, bool $from
 	}
 	$upgrader = new Theme_Upgrader(new LF_Fleet_Auto_Upgrader_Skin());
 	$stylesheet = wp_get_theme()->get_stylesheet();
-	$res = $upgrader->upgrade($stylesheet);
+	$pkg = isset($offer['download_url']) ? (string) $offer['download_url'] : '';
+	if ($pkg === '') {
+		$last = json_decode((string) get_option(LF_FLEET_OPT_LAST, ''), true);
+		$failures = is_array($last) ? (int) ($last['failures'] ?? 0) : 0;
+		$failures++;
+		$delay = min(120 * MINUTE_IN_SECONDS, (int) (15 * MINUTE_IN_SECONDS * (2 ** max(0, $failures - 1))));
+		$nu = is_array($last) ? $last : [];
+		$nu['failures'] = $failures;
+		$nu['next_attempt_at'] = time() + $delay;
+		$nu['last_upgrade_error'] = 'missing_download_url';
+		update_option(LF_FLEET_OPT_LAST, wp_json_encode($nu));
+		return;
+	}
+
+	// IMPORTANT: do not rely on WordPress' cached `update_themes` transient.
+	// Some hosts/admin flows keep it stale, which makes Theme_Upgrader->upgrade() return "up_to_date"
+	// even when the controller is offering a signed update. We run the upgrader directly from the
+	// controller-provided package URL.
+	$res = $upgrader->run([
+		'package' => $pkg,
+		'destination' => WP_CONTENT_DIR . '/themes',
+		'clear_destination' => true,
+		'clear_working' => true,
+		'hook_extra' => [
+			'theme' => $stylesheet,
+			'type' => 'theme',
+			'action' => 'update',
+		],
+	]);
 	if ($res === true) {
 		delete_site_transient(LF_FLEET_OFFER_TRANSIENT);
+		if (function_exists('wp_clean_themes_cache')) {
+			wp_clean_themes_cache(true);
+		}
 		// Reset backoff on success.
 		if (is_array($last)) {
 			$last['failures'] = 0;
