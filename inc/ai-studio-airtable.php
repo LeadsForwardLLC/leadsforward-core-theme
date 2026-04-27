@@ -1210,6 +1210,27 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	if ((empty($services) || $has_only_generic) && $services_raw !== '') {
 		$services = lf_ai_studio_airtable_build_services_from_list($services_raw, $primary_city, $state, $business_name, $niche);
 	}
+
+	// If Airtable provided placeholder services (e.g. "Main", "Additional"), treat it as missing so we can fall back
+	// to niche/keyword defaults. This keeps Manifest Website agnostic to the operator's Global Settings.
+	if (!empty($services)) {
+		$service_titles = [];
+		foreach ($services as $svc) {
+			if (is_array($svc)) {
+				$service_titles[] = strtolower(trim((string) ($svc['title'] ?? '')));
+			}
+		}
+		$only_generic_after_build = !empty($service_titles);
+		foreach ($service_titles as $title) {
+			if ($title === '' || !in_array($title, $generic_titles, true)) {
+				$only_generic_after_build = false;
+				break;
+			}
+		}
+		if ($only_generic_after_build) {
+			$services = [];
+		}
+	}
 	if (empty($services)) {
 		$niche_slug_guess = lf_ai_studio_airtable_resolve_niche_slug($niche, $niche_slug);
 		$services = lf_ai_studio_airtable_build_services_from_niche($niche_slug_guess, $primary_city, $state, $business_name);
