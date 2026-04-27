@@ -1348,6 +1348,19 @@ function lf_ai_studio_render_page(): void {
 		}
 	}
 
+	// Last-resort: seed the picker with the site's primary city so the Service Areas picker is never blank.
+	// (The real Service Areas list should come from Airtable or Service Area CPTs, but this prevents a confusing empty UI.)
+	if ($selected_area_slugs === [] && function_exists('lf_get_business_info_value')) {
+		$city = trim((string) lf_get_business_info_value('lf_business_address_city', ''));
+		$state = trim((string) lf_get_business_info_value('lf_business_address_state', ''));
+		if ($city !== '') {
+			$key = sanitize_title($city);
+			if ($key !== '') {
+				$selected_area_slugs[$key] = trim($city . ($state !== '' ? (', ' . $state) : ''));
+			}
+		}
+	}
+
 	// Back-compat: if cache is empty but manifest has real services/areas, keep existing selection.
 	if ($selected_service_slugs === [] || $selected_area_slugs === []) {
 		$cache_raw = (string) get_option('lf_airtable_sitemap_cache', '');
