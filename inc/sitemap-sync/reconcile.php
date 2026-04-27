@@ -281,6 +281,9 @@ function lf_sitemap_sync_reconcile_run(): array {
 		}));
 	}
 	$result['normalized'] = count($specs);
+	if ($site_niche !== '' && $result['fetched_rows'] > 0 && $result['normalized'] === 0) {
+		$errors[] = 'no_specs_for_site_niche';
+	}
 
 	$city = lf_sitemap_sync_get_primary_city();
 	$result['city'] = $city;
@@ -390,7 +393,8 @@ function lf_sitemap_sync_reconcile_run(): array {
 
 	$result['errors'] = array_values(array_filter(array_map('strval', $errors)));
 	$result['error_codes'] = array_slice($codes, 0, 20);
-	$result['ok'] = true;
+	// Consider reconcile "needs attention" if it produced any errors or zero usable specs.
+	$result['ok'] = empty($errors) && $result['normalized'] > 0;
 	return $result;
 }
 
