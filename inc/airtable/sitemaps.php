@@ -243,8 +243,10 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 		}
 
 		if (!empty($row_errors)) {
+			$ctx_title = $title !== '' ? $title : '(no title)';
+			$ctx_niche = $niche !== '' ? $niche : '(no niche)';
 			foreach ($row_errors as $code) {
-				$errors[] = sprintf('row_%d: %s', (int) $i, $code);
+				$errors[] = sprintf('row_%d (%s | %s): %s', (int) $i, $ctx_title, $ctx_niche, $code);
 			}
 			$invalid++;
 			continue;
