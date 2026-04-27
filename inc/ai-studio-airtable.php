@@ -1196,7 +1196,10 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	$has_only_generic = !empty($services);
 	if (!empty($service_titles)) {
 		foreach ($service_titles as $title) {
-			if ($title === '' || !in_array($title, $generic_titles, true)) {
+			// Treat any "main"/"additional" variants as placeholders (e.g. "Additional (future)").
+			$is_placeholder = in_array($title, $generic_titles, true)
+				|| preg_match('/^(main|additional)(?:\s+service)?(?:\s*\(.*\))?$/i', $title) === 1;
+			if ($title === '' || !$is_placeholder) {
 				$has_only_generic = false;
 				break;
 			}
@@ -1222,7 +1225,9 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 		}
 		$only_generic_after_build = !empty($service_titles);
 		foreach ($service_titles as $title) {
-			if ($title === '' || !in_array($title, $generic_titles, true)) {
+			$is_placeholder = in_array($title, $generic_titles, true)
+				|| preg_match('/^(main|additional)(?:\s+service)?(?:\s*\(.*\))?$/i', $title) === 1;
+			if ($title === '' || !$is_placeholder) {
 				$only_generic_after_build = false;
 				break;
 			}
