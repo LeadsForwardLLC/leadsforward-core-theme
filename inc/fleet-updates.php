@@ -267,6 +267,10 @@ function lf_fleet_maybe_auto_update(bool $from_trusted_admin = false, bool $from
 	}
 
 	require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+	// Ensure WP's theme update transient is fresh so Theme_Upgrader sees our injected offer immediately.
+	if (function_exists('wp_update_themes')) {
+		wp_update_themes();
+	}
 	if (!class_exists('LF_Fleet_Auto_Upgrader_Skin')) {
 		class LF_Fleet_Auto_Upgrader_Skin extends Automatic_Upgrader_Skin {
 			/** @var string */
