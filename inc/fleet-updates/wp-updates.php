@@ -46,6 +46,42 @@ add_filter('pre_set_site_transient_update_themes', static function ($transient) 
 	return $transient;
 });
 
+// Ensure the update offer is visible even when WordPress already has a cached `update_themes` transient.
+// This makes the update show up under Appearance → Themes and ensures Theme_Upgrader sees the package.
+add_filter('site_transient_update_themes', static function ($transient) {
+	if (!is_object($transient)) {
+		return $transient;
+	}
+	$offer = get_site_transient(LF_FLEET_OFFER_TRANSIENT);
+	if (!is_array($offer) || empty($offer['update'])) {
+		return $transient;
+	}
+
+	$theme = wp_get_theme();
+	$slug = (string) $theme->get_stylesheet();
+	if (empty($offer['version']) || empty($offer['download_url']) || empty($offer['sha256']) || empty($offer['signature']) || empty($offer['public_key_id'])) {
+		return $transient;
+	}
+
+	$installed = (string) $theme->get('Version');
+	$offered = (string) $offer['version'];
+	if ($installed !== '' && $offered !== '' && version_compare($installed, $offered, '>=')) {
+		delete_site_transient(LF_FLEET_OFFER_TRANSIENT);
+		return $transient;
+	}
+
+	if (!isset($transient->response) || !is_array($transient->response)) {
+		$transient->response = [];
+	}
+	$transient->response[$slug] = [
+		'theme' => $slug,
+		'new_version' => (string) $offer['version'],
+		'url' => 'https://theme.leadsforward.com',
+		'package' => (string) $offer['download_url'],
+	];
+	return $transient;
+});
+
 add_filter('upgrader_pre_download', static function ($reply, $package, $upgrader) {
 	$offer = get_site_transient(LF_FLEET_OFFER_TRANSIENT);
 	if (!is_array($offer) || empty($offer['update'])) {
