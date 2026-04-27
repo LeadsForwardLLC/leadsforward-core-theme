@@ -175,6 +175,18 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 		'more' => 'More',
 	];
 
+	$core_templates = [
+		'/' => true,
+		'/services/' => true,
+		'/service-areas/' => true,
+		'/contact/' => true,
+		'/about/' => true,
+		'/why/' => true,
+		'/why-us/' => true,
+		'/reviews/' => true,
+		'/blog/' => true,
+	];
+
 	foreach ($rows as $i => $row) {
 		if (!is_array($row)) {
 			$errors[] = sprintf('row_%d: invalid_row_type', (int) $i);
@@ -192,6 +204,10 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 		$menu_group_raw = lf_airtable_sitemaps_string_field($row, ['Menu Group', 'menu group']);
 		$menu_hierarchy = lf_airtable_sitemaps_string_field($row, ['Menu Hierarchy', 'Menu hiearchy', 'Menu hierarchy']);
 		$slug_template = lf_airtable_sitemaps_string_field($row, ['Slug', 'slug', 'Slug template', 'Slug Template']);
+		$template_for_check = function_exists('lf_sitemap_normalize_slug_template_for_key')
+			? lf_sitemap_normalize_slug_template_for_key($slug_template)
+			: ('/' . trim((string) $slug_template, '/') . '/');
+		$is_core = !empty($core_templates[$template_for_check]);
 
 		$menu_group_normalized = trim(preg_replace('/\s+/', ' ', $menu_group_raw) ?? '');
 		$menu_group_key = strtolower($menu_group_normalized);
@@ -234,7 +250,12 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 			$row_errors[] = 'missing_niche';
 		}
 		if (trim($primary_keyword) === '') {
-			$row_errors[] = 'missing_keyword';
+			// Keywords are required for detail pages, but core hubs can safely fall back to the niche label.
+			if ($is_core) {
+				$primary_keyword = trim((string) $niche);
+			} else {
+				$row_errors[] = 'missing_keyword';
+			}
 		}
 		if (trim($menu_group) === '') {
 			$row_errors[] = 'missing_menu_group';
