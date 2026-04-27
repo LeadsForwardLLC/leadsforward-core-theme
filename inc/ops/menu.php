@@ -52,6 +52,8 @@ function lf_ops_handle_test_sitemaps_fetch(): void {
 		'fetched_rows' => 0,
 		'error' => '',
 		'summary' => ['total' => 0, 'invalid' => 0, 'city_token' => 0],
+		'site_niche' => '',
+		'site_total' => 0,
 		'error_codes' => [],
 		'error_count' => 0,
 	];
@@ -76,6 +78,21 @@ function lf_ops_handle_test_sitemaps_fetch(): void {
 		? lf_sitemap_sync_debug_summary($normalized)
 		: ['total' => 0, 'invalid' => (int) ($normalized['invalid'] ?? 0), 'city_token' => 0];
 
+	$site_niche = function_exists('lf_sitemap_sync_get_site_niche_slug') ? lf_sitemap_sync_get_site_niche_slug() : '';
+	$site_total = 0;
+	if ($site_niche !== '') {
+		$specs = is_array($normalized['specs'] ?? null) ? $normalized['specs'] : [];
+		foreach ($specs as $spec) {
+			if (!is_array($spec)) {
+				continue;
+			}
+			$spec_niche = sanitize_title((string) ($spec['niche'] ?? ''));
+			if ($spec_niche !== '' && $spec_niche === $site_niche) {
+				$site_total++;
+			}
+		}
+	}
+
 	$errors = is_array($normalized['errors'] ?? null) ? $normalized['errors'] : [];
 	$codes = [];
 	foreach ($errors as $err) {
@@ -94,6 +111,8 @@ function lf_ops_handle_test_sitemaps_fetch(): void {
 		'invalid' => (int) ($summary['invalid'] ?? 0),
 		'city_token' => (int) ($summary['city_token'] ?? 0),
 	];
+	$result['site_niche'] = $site_niche;
+	$result['site_total'] = $site_total;
 	$result['error_codes'] = array_slice($codes, 0, 10);
 	$result['error_count'] = count($errors);
 
@@ -835,6 +854,8 @@ function lf_ops_render_global_settings_page(): void {
 		$total = (int) ($summary['total'] ?? 0);
 		$invalid = (int) ($summary['invalid'] ?? 0);
 		$city_token = (int) ($summary['city_token'] ?? 0);
+		$site_niche = (string) ($test_result['site_niche'] ?? '');
+		$site_total = (int) ($test_result['site_total'] ?? 0);
 		$error_codes = is_array($test_result['error_codes'] ?? null) ? $test_result['error_codes'] : [];
 		$error_codes = array_values(array_filter(array_map('strval', $error_codes), static fn(string $v): bool => $v !== ''));
 
@@ -844,6 +865,9 @@ function lf_ops_render_global_settings_page(): void {
 		} else {
 			echo '<strong>' . esc_html__('Sitemaps fetch test completed.', 'leadsforward-core') . '</strong> ';
 			echo esc_html(sprintf('Rows: %d. Valid specs: %d. Invalid: %d. {city} token: %d.', $fetched_rows, $total, $invalid, $city_token));
+			if ($site_niche !== '') {
+				echo '<br />' . esc_html(sprintf('This site niche: %s. Valid specs for this niche: %d.', $site_niche, $site_total));
+			}
 			if (!empty($error_codes)) {
 				echo '<br /><strong>' . esc_html__('First error codes:', 'leadsforward-core') . '</strong> ' . esc_html(implode(', ', $error_codes));
 			}

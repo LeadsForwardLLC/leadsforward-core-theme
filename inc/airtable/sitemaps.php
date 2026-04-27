@@ -150,6 +150,23 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 	$errors = [];
 	$invalid = 0;
 
+	// Support both normalized (0.0–1.0) priorities and rank-style priorities (1..N).
+	// If any row uses rank-style priorities, we normalize them to 0.0–1.0 using max rank.
+	$max_rank_priority = 0.0;
+	foreach ($rows as $row) {
+		if (!is_array($row)) {
+			continue;
+		}
+		$raw = lf_airtable_sitemaps_string_field($row, ['Priority']);
+		if ($raw === '' || !is_numeric($raw)) {
+			continue;
+		}
+		$val = (float) $raw;
+		if ($val > 1.0 && $val > $max_rank_priority) {
+			$max_rank_priority = $val;
+		}
+	}
+
 	$allowed_menu_groups = [
 		'home' => 'Home',
 		'about' => 'About',
@@ -172,9 +189,9 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 		$niche = lf_airtable_sitemaps_string_field($row, ['Niche']);
 		$priority_raw = lf_airtable_sitemaps_string_field($row, ['Priority']);
 		$primary_keyword = lf_airtable_sitemaps_string_field($row, ['Keyword']);
-		$menu_group_raw = lf_airtable_sitemaps_string_field($row, ['menu group']);
-		$menu_hierarchy = lf_airtable_sitemaps_string_field($row, ['Menu hiearchy', 'Menu hierarchy']);
-		$slug_template = lf_airtable_sitemaps_string_field($row, ['Slug']);
+		$menu_group_raw = lf_airtable_sitemaps_string_field($row, ['Menu Group', 'menu group']);
+		$menu_hierarchy = lf_airtable_sitemaps_string_field($row, ['Menu Hierarchy', 'Menu hiearchy', 'Menu hierarchy']);
+		$slug_template = lf_airtable_sitemaps_string_field($row, ['Slug', 'slug', 'Slug template', 'Slug Template']);
 
 		$menu_group_normalized = trim(preg_replace('/\s+/', ' ', $menu_group_raw) ?? '');
 		$menu_group_key = strtolower($menu_group_normalized);
@@ -188,9 +205,22 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 			if (!is_numeric($priority_raw)) {
 				$row_errors[] = 'invalid_priority';
 			} else {
-				$priority = (float) $priority_raw;
-				if ($priority < 0.0 || $priority > 1.0) {
-					$row_errors[] = 'invalid_priority_range';
+				$priority_val = (float) $priority_raw;
+				// If Airtable uses rank-style priorities (1..N), normalize to 0..1 (1 = highest).
+				if ($priority_val > 1.0) {
+					if ($max_rank_priority > 1.0) {
+						$den = ($max_rank_priority - 1.0);
+						$priority = $den > 0.0 ? (1.0 - (($priority_val - 1.0) / $den)) : 1.0;
+					} else {
+						$priority = 1.0;
+					}
+					if ($priority < 0.0) $priority = 0.0;
+					if ($priority > 1.0) $priority = 1.0;
+				} else {
+					$priority = $priority_val;
+					if ($priority < 0.0 || $priority > 1.0) {
+						$row_errors[] = 'invalid_priority_range';
+					}
 				}
 			}
 		}
