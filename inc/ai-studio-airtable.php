@@ -1514,7 +1514,24 @@ function lf_ai_studio_airtable_pick_primary_keyword(string $raw): string {
 }
 
 function lf_ai_studio_airtable_build_service_areas_from_list(string $raw, string $state, string $niche): array {
-	$parts = preg_split('/\r\n|\r|\n|,/', $raw);
+	$raw = trim($raw);
+	if ($raw === '') {
+		return [];
+	}
+
+	// Prefer newline/semicolon-delimited lists. Do NOT blindly split on commas because many teams store values like
+	// "San Antonio, TX" which would otherwise become two separate "cities" ("San Antonio" + "TX").
+	$parts = preg_split('/\r\n|\r|\n|;/', $raw) ?: [];
+	if (count($parts) === 1) {
+		$single = trim((string) ($parts[0] ?? ''));
+		// If it looks like "City, ST" treat it as one item.
+		if ($single !== '' && preg_match('/,\s*[A-Za-z]{2}\b/', $single) === 1) {
+			$parts = [$single];
+		} else {
+			// Otherwise allow comma-delimited lists (e.g. "City1, City2, City3").
+			$parts = preg_split('/,/', $single) ?: [];
+		}
+	}
 	$areas = [];
 	foreach ((array) $parts as $part) {
 		$city = trim((string) $part);
