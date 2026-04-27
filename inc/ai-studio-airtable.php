@@ -411,6 +411,25 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 		}
 	}
 
+	// Align with Manifest page first paint: prefer lf_airtable_sitemap_cache so this AJAX response does not
+	// replace the smoke-test multiselect with niche-only fallbacks (e.g. two placeholder labels) after JS runs.
+	$smoke_cache_preview = ['service_slugs' => [], 'area_slugs' => []];
+	if (function_exists('lf_ai_studio_smoke_test_slugs_from_sitemap_cache')) {
+		$smoke_cache_preview = lf_ai_studio_smoke_test_slugs_from_sitemap_cache();
+	}
+	if ($smoke_cache_preview['service_slugs'] !== []) {
+		$cached_svcs = [];
+		foreach ($smoke_cache_preview['service_slugs'] as $slug => $tit) {
+			if (function_exists('lf_ai_studio_service_title_is_placeholder') && lf_ai_studio_service_title_is_placeholder((string) $tit)) {
+				continue;
+			}
+			$cached_svcs[] = ['slug' => (string) $slug, 'title' => (string) $tit];
+		}
+		if ($cached_svcs !== []) {
+			$service_rows = $cached_svcs;
+		}
+	}
+
 	$area_rows = [];
 	foreach ($areas as $area) {
 		if (!is_array($area)) {
@@ -458,6 +477,17 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 			}
 		}
 	}
+
+	if ($smoke_cache_preview['area_slugs'] !== []) {
+		$cached_areas = [];
+		foreach ($smoke_cache_preview['area_slugs'] as $slug => $tit) {
+			$cached_areas[] = ['slug' => (string) $slug, 'label' => (string) $tit];
+		}
+		if ($cached_areas !== []) {
+			$area_rows = $cached_areas;
+		}
+	}
+
 	wp_send_json_success([
 		'services' => $service_rows,
 		'service_areas' => $area_rows,
