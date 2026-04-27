@@ -509,50 +509,73 @@
     var strings = cfg.imagesStrings || {};
     setImagesStatus(strings.uploading || 'Uploading images…', 'info');
     imagesUploading = true;
-    var formData = new FormData();
-    formData.append('action', 'lf_ai_studio_images_upload');
-    formData.append('nonce', cfg.imagesUploadNonce);
-    Array.prototype.forEach.call(files, function (file) {
-      formData.append('lf_manifest_images[]', file);
-    });
-    fetch(cfg.ajaxUrl, {
-      method: 'POST',
-      credentials: 'same-origin',
-      body: formData
-    })
-      .then(function (res) { return res.json(); })
-      .then(function (payload) {
-        imagesUploading = false;
-        if (!payload || !payload.success) {
-          var message = strings.error || 'Image upload failed.';
-          if (payload && payload.data && payload.data.message) {
-            message = payload.data.message;
-          }
-          setImagesStatus(message, 'error');
-          return;
-        }
-        var data = payload.data || {};
-        var uploaded = Array.isArray(data.uploaded) ? data.uploaded : [];
-        var cards = imagesPreview ? imagesPreview.querySelectorAll('.lf-manifester-image-card') : [];
-        uploaded.forEach(function (item, index) {
-          var card = cards[index];
-          if (!card) return;
-          var img = card.querySelector('img');
-          if (img && item && item.url) {
-            img.src = item.url;
-          }
-          card.classList.add('is-uploaded');
-        });
-        var successMsg = strings.success || 'Images uploaded to Media Library.';
-        if (data.error_count) {
-          successMsg += ' ' + data.error_count + ' failed.';
-        }
-        setImagesStatus(successMsg, data.error_count ? 'error' : 'success');
+
+    // Upload in chunks to avoid server limits (request size / max file uploads).
+    // This removes the practical "12 images" ceiling users hit on some hosts.
+    var fileArr = Array.prototype.slice.call(files);
+    var batchSize = 20;
+    var total = fileArr.length;
+    var uploadedTotal = 0;
+    var failedTotal = 0;
+
+    function uploadBatch(startIndex) {
+      var endIndex = Math.min(total, startIndex + batchSize);
+      var formData = new FormData();
+      formData.append('action', 'lf_ai_studio_images_upload');
+      formData.append('nonce', cfg.imagesUploadNonce);
+      for (var i = startIndex; i < endIndex; i++) {
+        formData.append('lf_manifest_images[]', fileArr[i]);
+      }
+
+      setImagesStatus(
+        (strings.uploading || 'Uploading images…') + ' (' + uploadedTotal + '/' + total + ')',
+        'info'
+      );
+
+      return fetch(cfg.ajaxUrl, {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: formData
       })
-      .catch(function () {
-        imagesUploading = false;
-        setImagesStatus((cfg.imagesStrings && cfg.imagesStrings.error) || 'Image upload failed.', 'error');
-      });
+        .then(function (res) { return res.json(); })
+        .then(function (payload) {
+          if (!payload || !payload.success) {
+            failedTotal += (endIndex - startIndex);
+            return;
+          }
+          var data = payload.data || {};
+          var uploaded = Array.isArray(data.uploaded) ? data.uploaded : [];
+          var cards = imagesPreview ? imagesPreview.querySelectorAll('.lf-manifester-image-card') : [];
+          uploaded.forEach(function (item, index) {
+            var card = cards[startIndex + index];
+            if (!card) return;
+            var img = card.querySelector('img');
+            if (img && item && item.url) {
+              img.src = item.url;
+            }
+            card.classList.add('is-uploaded');
+          });
+          uploadedTotal += uploaded.length;
+          failedTotal += (data.error_count || 0);
+        })
+        .catch(function () {
+          failedTotal += (endIndex - startIndex);
+        })
+        .then(function () {
+          if (endIndex >= total) return;
+          return uploadBatch(endIndex);
+        });
+    }
+
+    uploadBatch(0).then(function () {
+      imagesUploading = false;
+      var successMsg = strings.success || 'Images uploaded to Media Library.';
+      successMsg += ' ' + uploadedTotal + '/' + total + ' uploaded.';
+      if (failedTotal) {
+        successMsg += ' ' + failedTotal + ' failed.';
+      }
+      setImagesStatus(successMsg, failedTotal ? 'error' : 'success');
+    });
   }
 
   if (imagesInput) {
