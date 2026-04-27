@@ -356,6 +356,13 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 	if (function_exists('lf_ai_studio_normalize_manifest')) {
 		$manifest = lf_ai_studio_normalize_manifest($manifest);
 	}
+	$business = is_array($manifest['business'] ?? null) ? $manifest['business'] : [];
+	$biz_address = is_array($business['address'] ?? null) ? $business['address'] : [];
+	$biz_city = trim((string) ($business['primary_city'] ?? $biz_address['city'] ?? ''));
+	$biz_state = strtoupper(trim((string) ($biz_address['state'] ?? '')));
+	$biz_name = trim((string) ($business['name'] ?? ''));
+	$biz_niche = trim((string) ($business['niche'] ?? ''));
+	$biz_niche_slug = trim((string) ($business['niche_slug'] ?? ''));
 	$services = is_array($manifest['services'] ?? null) ? $manifest['services'] : [];
 	$areas = is_array($manifest['service_areas'] ?? null) ? $manifest['service_areas'] : [];
 	$service_rows = [];
@@ -378,6 +385,32 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 		}
 		$service_rows[] = ['slug' => $slug, 'title' => $title !== '' ? $title : $slug];
 	}
+
+	// If Airtable produced only placeholders, fall back so the picker is never blank.
+	if (empty($service_rows)) {
+		$fallback = [];
+		if (function_exists('lf_ai_studio_airtable_resolve_niche_slug')) {
+			$nslug = lf_ai_studio_airtable_resolve_niche_slug($biz_niche, $biz_niche_slug);
+			if ($nslug !== '' && function_exists('lf_ai_studio_airtable_build_services_from_niche')) {
+				$fallback = lf_ai_studio_airtable_build_services_from_niche($nslug, $biz_city, $biz_state, $biz_name);
+			}
+		}
+		if (empty($fallback) && function_exists('lf_ai_studio_airtable_build_generic_services')) {
+			$fallback = lf_ai_studio_airtable_build_generic_services($biz_niche !== '' ? $biz_niche : __('Service', 'leadsforward-core'), $biz_city, $biz_state, $biz_name);
+		}
+		foreach ((array) $fallback as $svc) {
+			if (!is_array($svc)) {
+				continue;
+			}
+			$slug = sanitize_title((string) ($svc['slug'] ?? ''));
+			$title = sanitize_text_field((string) ($svc['title'] ?? $svc['name'] ?? $slug));
+			if ($slug === '' || $title === '') {
+				continue;
+			}
+			$service_rows[] = ['slug' => $slug, 'title' => $title];
+		}
+	}
+
 	$area_rows = [];
 	foreach ($areas as $area) {
 		if (!is_array($area)) {
@@ -385,37 +418,43 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 		}
 		$slug = sanitize_title((string) ($area['slug'] ?? ''));
 		$city = sanitize_text_field((string) ($area['city'] ?? ''));
-		$state = sanitize_text_field((string) ($area['state'] ?? ''));
+		$state = strtoupper(sanitize_text_field((string) ($area['state'] ?? '')));
 		if ($slug === '') {
 			continue;
+		}
+		// Normalize "City, ST" if someone shoved it into the city field.
+		if ($state === '' && preg_match('/^(.+?),\s*([A-Za-z]{2})$/', $city, $mm) === 1) {
+			$city = sanitize_text_field((string) ($mm[1] ?? $city));
+			$state = strtoupper(sanitize_text_field((string) ($mm[2] ?? '')));
+		}
+		if ($state === '' && $biz_state !== '') {
+			$state = $biz_state;
 		}
 		$label = trim($city . ($state !== '' ? (', ' . $state) : ''));
 		$area_rows[] = ['slug' => $slug, 'label' => $label !== '' ? $label : $slug];
 	}
 
-	// Guard: sometimes Airtable lists get mapped into a single "service area" row (comma-separated cities).
-	// If so, split it into discrete items so the picker doesn't show one giant option.
+	// If the builder (or Airtable field mapping) collapsed the list into a single comma-separated blob,
+	// rebuild it using the same parser we use for Airtable string lists.
 	if (count($area_rows) === 1) {
 		$only = $area_rows[0] ?? null;
 		$only_label = is_array($only) ? (string) ($only['label'] ?? '') : '';
-		$only_slug = is_array($only) ? (string) ($only['slug'] ?? '') : '';
-		// Only apply when it looks like a plain comma-separated city list (no "City, ST" pairs).
-		if ($only_label !== '' && strpos($only_label, ',') !== false && preg_match('/,\s*[A-Za-z]{2}\b/', $only_label) !== 1 && strlen($only_slug) > 40) {
-			$parts = preg_split('/,/', $only_label) ?: [];
-			$rebuilt = [];
-			foreach ((array) $parts as $p) {
-				$city = trim((string) $p);
-				if ($city === '') {
-					continue;
-				}
-				$key = sanitize_title($city);
-				if ($key === '') {
-					continue;
-				}
-				$rebuilt[] = ['slug' => $key, 'label' => $city];
-			}
+		if ($only_label !== '' && strpos($only_label, ',') !== false && function_exists('lf_ai_studio_airtable_build_service_areas_from_list')) {
+			$rebuilt = lf_ai_studio_airtable_build_service_areas_from_list($only_label, $biz_state, $biz_niche !== '' ? $biz_niche : 'Service Area');
 			if (!empty($rebuilt)) {
-				$area_rows = $rebuilt;
+				$area_rows = [];
+				foreach ((array) $rebuilt as $row) {
+					if (!is_array($row)) {
+						continue;
+					}
+					$slug = sanitize_title((string) ($row['slug'] ?? ''));
+					$city = sanitize_text_field((string) ($row['city'] ?? ''));
+					$state = strtoupper(sanitize_text_field((string) ($row['state'] ?? $biz_state)));
+					if ($slug === '' || $city === '') {
+						continue;
+					}
+					$area_rows[] = ['slug' => $slug, 'label' => trim($city . ($state !== '' ? (', ' . $state) : ''))];
+				}
 			}
 		}
 	}
