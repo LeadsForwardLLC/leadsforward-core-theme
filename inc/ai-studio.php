@@ -646,53 +646,117 @@ function lf_ai_studio_handle_scope_save(): void {
 	update_option('lf_ai_gen_blog_posts', isset($_POST['lf_ai_gen_blog_posts']) ? '1' : '0');
 	update_option('lf_ai_gen_projects', isset($_POST['lf_ai_gen_projects']) ? '1' : '0');
 
-	$service_ids = [];
-	if (isset($_POST['lf_ai_scope_service_ids']) && is_array($_POST['lf_ai_scope_service_ids'])) {
-		foreach ($_POST['lf_ai_scope_service_ids'] as $raw) {
-			$id = absint($raw);
-			if ($id > 0) {
-				$service_ids[] = $id;
-			}
-		}
-	}
-	$service_ids = array_values(array_unique($service_ids));
-	update_option('lf_ai_scope_service_ids', $service_ids, false);
+	// Smoke-test scope: CPT pickers and slug pickers are mutually exclusive in the UI. Only update the option
+	// that matches the submitted controls — otherwise POST omits the other field names and we would wipe storage.
+	$svc_mode = isset($_POST['lf_ai_scope_smoke_services_mode']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_scope_smoke_services_mode'])) : '';
+	$area_mode = isset($_POST['lf_ai_scope_smoke_areas_mode']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_scope_smoke_areas_mode'])) : '';
 
-	$area_ids = [];
-	if (isset($_POST['lf_ai_scope_service_area_ids']) && is_array($_POST['lf_ai_scope_service_area_ids'])) {
-		foreach ($_POST['lf_ai_scope_service_area_ids'] as $raw) {
-			$id = absint($raw);
-			if ($id > 0) {
-				$area_ids[] = $id;
+	if ($svc_mode === 'post') {
+		$service_ids = [];
+		if (isset($_POST['lf_ai_scope_service_ids']) && is_array($_POST['lf_ai_scope_service_ids'])) {
+			foreach ($_POST['lf_ai_scope_service_ids'] as $raw) {
+				$id = absint($raw);
+				if ($id > 0) {
+					$service_ids[] = $id;
+				}
 			}
 		}
+		$service_ids = array_values(array_unique($service_ids));
+		update_option('lf_ai_scope_service_ids', $service_ids, false);
+	} elseif ($svc_mode === 'slug') {
+		$service_slugs = [];
+		if (isset($_POST['lf_ai_scope_service_slugs']) && is_array($_POST['lf_ai_scope_service_slugs'])) {
+			foreach ($_POST['lf_ai_scope_service_slugs'] as $raw) {
+				$slug = sanitize_title((string) $raw);
+				if ($slug !== '') {
+					$service_slugs[] = $slug;
+				}
+			}
+		}
+		$service_slugs = array_values(array_unique($service_slugs));
+		update_option('lf_ai_scope_service_slugs', $service_slugs, false);
 	}
-	$area_ids = array_values(array_unique($area_ids));
-	update_option('lf_ai_scope_service_area_ids', $area_ids, false);
 
-	$service_slugs = [];
-	if (isset($_POST['lf_ai_scope_service_slugs']) && is_array($_POST['lf_ai_scope_service_slugs'])) {
-		foreach ($_POST['lf_ai_scope_service_slugs'] as $raw) {
-			$slug = sanitize_title((string) $raw);
-			if ($slug !== '') {
-				$service_slugs[] = $slug;
+	if ($area_mode === 'post') {
+		$area_ids = [];
+		if (isset($_POST['lf_ai_scope_service_area_ids']) && is_array($_POST['lf_ai_scope_service_area_ids'])) {
+			foreach ($_POST['lf_ai_scope_service_area_ids'] as $raw) {
+				$id = absint($raw);
+				if ($id > 0) {
+					$area_ids[] = $id;
+				}
 			}
 		}
+		$area_ids = array_values(array_unique($area_ids));
+		update_option('lf_ai_scope_service_area_ids', $area_ids, false);
+	} elseif ($area_mode === 'slug') {
+		$area_slugs = [];
+		if (isset($_POST['lf_ai_scope_service_area_slugs']) && is_array($_POST['lf_ai_scope_service_area_slugs'])) {
+			foreach ($_POST['lf_ai_scope_service_area_slugs'] as $raw) {
+				$slug = sanitize_title((string) $raw);
+				if ($slug !== '') {
+					$area_slugs[] = $slug;
+				}
+			}
+		}
+		$area_slugs = array_values(array_unique($area_slugs));
+		update_option('lf_ai_scope_service_area_slugs', $area_slugs, false);
 	}
-	$service_slugs = array_values(array_unique($service_slugs));
-	update_option('lf_ai_scope_service_slugs', $service_slugs, false);
 
-	$area_slugs = [];
-	if (isset($_POST['lf_ai_scope_service_area_slugs']) && is_array($_POST['lf_ai_scope_service_area_slugs'])) {
-		foreach ($_POST['lf_ai_scope_service_area_slugs'] as $raw) {
-			$slug = sanitize_title((string) $raw);
-			if ($slug !== '') {
-				$area_slugs[] = $slug;
+	if ($svc_mode === '') {
+		if (array_key_exists('lf_ai_scope_service_ids', $_POST)) {
+			$service_ids = [];
+			if (is_array($_POST['lf_ai_scope_service_ids'])) {
+				foreach ($_POST['lf_ai_scope_service_ids'] as $raw) {
+					$id = absint($raw);
+					if ($id > 0) {
+						$service_ids[] = $id;
+					}
+				}
 			}
+			update_option('lf_ai_scope_service_ids', array_values(array_unique($service_ids)), false);
+		}
+		if (array_key_exists('lf_ai_scope_service_slugs', $_POST)) {
+			$service_slugs = [];
+			if (is_array($_POST['lf_ai_scope_service_slugs'])) {
+				foreach ($_POST['lf_ai_scope_service_slugs'] as $raw) {
+					$slug = sanitize_title((string) $raw);
+					if ($slug !== '') {
+						$service_slugs[] = $slug;
+					}
+				}
+			}
+			update_option('lf_ai_scope_service_slugs', array_values(array_unique($service_slugs)), false);
 		}
 	}
-	$area_slugs = array_values(array_unique($area_slugs));
-	update_option('lf_ai_scope_service_area_slugs', $area_slugs, false);
+
+	if ($area_mode === '') {
+		if (array_key_exists('lf_ai_scope_service_area_ids', $_POST)) {
+			$area_ids = [];
+			if (is_array($_POST['lf_ai_scope_service_area_ids'])) {
+				foreach ($_POST['lf_ai_scope_service_area_ids'] as $raw) {
+					$id = absint($raw);
+					if ($id > 0) {
+						$area_ids[] = $id;
+					}
+				}
+			}
+			update_option('lf_ai_scope_service_area_ids', array_values(array_unique($area_ids)), false);
+		}
+		if (array_key_exists('lf_ai_scope_service_area_slugs', $_POST)) {
+			$area_slugs = [];
+			if (is_array($_POST['lf_ai_scope_service_area_slugs'])) {
+				foreach ($_POST['lf_ai_scope_service_area_slugs'] as $raw) {
+					$slug = sanitize_title((string) $raw);
+					if ($slug !== '') {
+						$area_slugs[] = $slug;
+					}
+				}
+			}
+			update_option('lf_ai_scope_service_area_slugs', array_values(array_unique($area_slugs)), false);
+		}
+	}
+
 	lf_ai_studio_sync_legacy_blueprint_scope_from_gen_flags();
 
 	wp_safe_redirect(lf_ai_studio_manifest_admin_url(['scope_saved' => '1']));
@@ -1763,6 +1827,7 @@ function lf_ai_studio_render_page(): void {
 													<?php esc_html_e('Select specific services to include when “Service pages” is enabled. Leave empty to include all published services.', 'leadsforward-core'); ?>
 												</p>
 												<?php if (!empty($services_for_picker)) : ?>
+													<input type="hidden" name="lf_ai_scope_smoke_services_mode" value="post" />
 													<select name="lf_ai_scope_service_ids[]" multiple size="8" style="width:100%;max-width:420px;">
 														<?php foreach ($services_for_picker as $svc) : ?>
 															<?php if (!$svc instanceof \WP_Post) { continue; } ?>
@@ -1773,7 +1838,8 @@ function lf_ai_studio_render_page(): void {
 														<?php endforeach; ?>
 													</select>
 												<?php else : ?>
-													<select id="lf-ai-scope-service-slugs" name="lf_ai_scope_service_slugs[]" multiple size="8" style="width:100%;max-width:420px;" <?php echo empty($selected_service_slugs) ? 'disabled' : ''; ?>>
+													<input type="hidden" name="lf_ai_scope_smoke_services_mode" value="slug" />
+													<select id="lf-ai-scope-service-slugs" name="lf_ai_scope_service_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
 														<?php foreach ($selected_service_slugs as $slug => $label) : ?>
 															<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_service_slugs, true)); ?>>
 																<?php echo esc_html((string) $label); ?>
@@ -1791,6 +1857,7 @@ function lf_ai_studio_render_page(): void {
 													<?php esc_html_e('Select specific service areas to include when “Service area pages” is enabled. Leave empty to include all published service areas.', 'leadsforward-core'); ?>
 												</p>
 												<?php if (!empty($areas_for_picker)) : ?>
+													<input type="hidden" name="lf_ai_scope_smoke_areas_mode" value="post" />
 													<select name="lf_ai_scope_service_area_ids[]" multiple size="8" style="width:100%;max-width:420px;">
 														<?php foreach ($areas_for_picker as $area) : ?>
 															<?php if (!$area instanceof \WP_Post) { continue; } ?>
@@ -1801,7 +1868,8 @@ function lf_ai_studio_render_page(): void {
 														<?php endforeach; ?>
 													</select>
 												<?php else : ?>
-													<select id="lf-ai-scope-area-slugs" name="lf_ai_scope_service_area_slugs[]" multiple size="8" style="width:100%;max-width:420px;" <?php echo empty($selected_area_slugs) ? 'disabled' : ''; ?>>
+													<input type="hidden" name="lf_ai_scope_smoke_areas_mode" value="slug" />
+													<select id="lf-ai-scope-area-slugs" name="lf_ai_scope_service_area_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
 														<?php foreach ($selected_area_slugs as $slug => $label) : ?>
 															<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_area_slugs, true)); ?>>
 																<?php echo esc_html((string) $label); ?>

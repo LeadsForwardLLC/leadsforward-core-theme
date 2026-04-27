@@ -163,7 +163,8 @@
       if (prev[value]) opt.selected = true;
       selectEl.appendChild(opt);
     });
-    selectEl.disabled = (selectEl.options.length === 0);
+    // Never disable: disabled controls are omitted from POST and Save Scope would drop smoke-test selections.
+    selectEl.disabled = false;
   }
 
   function fetchScopePreviewForRecord(record) {
