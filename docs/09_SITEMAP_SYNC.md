@@ -54,7 +54,7 @@ Each reconciled Page is tagged with:
 
 - `_lf_sitemap_key`: stable spec identity hash.
 - `_lf_sitemap_slug_template`: slug template from Airtable (may include `{city}`).
-- `_lf_seo_primary_keyword`: primary keyword for AI/SEO tooling. For core hub pages (home/services/service-areas/contact/about/why/reviews/blog), the keyword can be blank in Airtable and will fall back to the niche label.
+- `_lf_seo_primary_keyword`: primary keyword for AI/SEO tooling. For non-detail utility pages (home, services overview, service areas overview, contact, about, why, reviews, blog, etc.), the keyword can be blank in Airtable and will fall back to the niche label. Keywords are still required for service/service-area *detail* pages.
 
 ## Slug templating
 
