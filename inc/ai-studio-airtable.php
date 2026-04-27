@@ -359,6 +359,7 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 	$services = is_array($manifest['services'] ?? null) ? $manifest['services'] : [];
 	$areas = is_array($manifest['service_areas'] ?? null) ? $manifest['service_areas'] : [];
 	$service_rows = [];
+	$generic_titles = ['main', 'additional', 'main service', 'additional service', 'service', 'services'];
 	foreach ($services as $svc) {
 		if (!is_array($svc)) {
 			continue;
@@ -366,6 +367,13 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 		$slug = sanitize_title((string) ($svc['slug'] ?? ''));
 		$title = sanitize_text_field((string) ($svc['title'] ?? $svc['name'] ?? $slug));
 		if ($slug === '') {
+			continue;
+		}
+		$norm_title = strtolower(trim(preg_replace('/\s+/', ' ', $title)));
+		$is_placeholder = $norm_title === ''
+			|| in_array($norm_title, $generic_titles, true)
+			|| preg_match('/^(main|additional)(?:\s+service)?(?:\s*\(.*\))?$/i', $title) === 1;
+		if ($is_placeholder) {
 			continue;
 		}
 		$service_rows[] = ['slug' => $slug, 'title' => $title !== '' ? $title : $slug];
@@ -383,6 +391,33 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 		}
 		$label = trim($city . ($state !== '' ? (', ' . $state) : ''));
 		$area_rows[] = ['slug' => $slug, 'label' => $label !== '' ? $label : $slug];
+	}
+
+	// Guard: sometimes Airtable lists get mapped into a single "service area" row (comma-separated cities).
+	// If so, split it into discrete items so the picker doesn't show one giant option.
+	if (count($area_rows) === 1) {
+		$only = $area_rows[0] ?? null;
+		$only_label = is_array($only) ? (string) ($only['label'] ?? '') : '';
+		$only_slug = is_array($only) ? (string) ($only['slug'] ?? '') : '';
+		// Only apply when it looks like a plain comma-separated city list (no "City, ST" pairs).
+		if ($only_label !== '' && strpos($only_label, ',') !== false && preg_match('/,\s*[A-Za-z]{2}\b/', $only_label) !== 1 && strlen($only_slug) > 40) {
+			$parts = preg_split('/,/', $only_label) ?: [];
+			$rebuilt = [];
+			foreach ((array) $parts as $p) {
+				$city = trim((string) $p);
+				if ($city === '') {
+					continue;
+				}
+				$key = sanitize_title($city);
+				if ($key === '') {
+					continue;
+				}
+				$rebuilt[] = ['slug' => $key, 'label' => $city];
+			}
+			if (!empty($rebuilt)) {
+				$area_rows = $rebuilt;
+			}
+		}
 	}
 	wp_send_json_success([
 		'services' => $service_rows,
