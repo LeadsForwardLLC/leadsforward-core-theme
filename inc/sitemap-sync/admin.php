@@ -143,6 +143,8 @@ function lf_sitemap_sync_admin_render_page(): void {
 
 	echo '<h3>' . esc_html__('Reconcile summary', 'leadsforward-core') . '</h3>';
 	echo '<ul style="margin-left:1.2rem;">';
+	echo '<li><strong>' . esc_html__('Site niche:', 'leadsforward-core') . '</strong> ' . esc_html((string) ($reconcile['niche'] ?? '')) . '</li>';
+	echo '<li><strong>' . esc_html__('Primary city:', 'leadsforward-core') . '</strong> ' . esc_html((string) ($reconcile['city'] ?? '')) . '</li>';
 	echo '<li><strong>' . esc_html__('Fetched rows:', 'leadsforward-core') . '</strong> ' . esc_html((string) ((int) ($reconcile['fetched_rows'] ?? 0))) . '</li>';
 	echo '<li><strong>' . esc_html__('Normalized:', 'leadsforward-core') . '</strong> ' . esc_html((string) ((int) ($reconcile['normalized'] ?? 0))) . '</li>';
 	echo '<li><strong>' . esc_html__('Invalid:', 'leadsforward-core') . '</strong> ' . esc_html((string) ((int) ($reconcile['invalid'] ?? 0))) . '</li>';
