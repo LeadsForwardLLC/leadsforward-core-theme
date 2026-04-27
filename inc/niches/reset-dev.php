@@ -402,6 +402,12 @@ function lf_dev_reset_run(): void {
 	delete_option('lf_setup_wizard_complete');
 	delete_option(LF_DEV_RESET_OPTION_IDS);
 
+	// Clear Manifest Website "recent uploads" image grid for all users.
+	// Attachments are deleted above; without clearing this, the UI can still show stale thumbnails.
+	if (function_exists('delete_metadata')) {
+		delete_metadata('user', 0, 'lf_ai_studio_recent_uploads', '', true);
+	}
+
 	$log = get_option(LF_DEV_RESET_OPTION_LOG, []);
 	if (!is_array($log)) {
 		$log = [];
