@@ -1322,6 +1322,32 @@ function lf_ai_studio_render_page(): void {
 		$selected_area_slugs = $cache_area_slugs;
 	}
 
+	// If we still have no service area options (common on fresh sites), fall back to Business Info service areas list.
+	if ($selected_area_slugs === [] && function_exists('lf_get_business_info_value')) {
+		$raw = lf_get_business_info_value('lf_business_service_areas', '');
+		$lines = [];
+		if (is_array($raw)) {
+			$lines = array_map('strval', $raw);
+		} else {
+			$lines = preg_split('/\r\n|\r|\n/', (string) $raw) ?: [];
+		}
+		foreach ($lines as $line) {
+			$label = trim((string) $line);
+			if ($label === '') {
+				continue;
+			}
+			// Prefer city-only slug (drops ", ST" when present).
+			$city = $label;
+			if (preg_match('/^(.+?),\s*[A-Za-z]{2}$/', $label, $m) === 1) {
+				$city = trim((string) ($m[1] ?? $label));
+			}
+			$key = sanitize_title($city);
+			if ($key !== '') {
+				$selected_area_slugs[$key] = $label;
+			}
+		}
+	}
+
 	// Back-compat: if cache is empty but manifest has real services/areas, keep existing selection.
 	if ($selected_service_slugs === [] || $selected_area_slugs === []) {
 		$cache_raw = (string) get_option('lf_airtable_sitemap_cache', '');
