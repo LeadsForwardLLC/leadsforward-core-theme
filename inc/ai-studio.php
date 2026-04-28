@@ -81,6 +81,11 @@ function lf_ai_studio_service_title_is_placeholder(string $title): bool {
 	if (in_array($t, $generic, true)) {
 		return true;
 	}
+	// Treat any "Main"/"Additional" variants as placeholders, even when extra tokens are appended
+	// (e.g. "Main Service Hamilton OH", "Additional Service (future)", etc).
+	if (preg_match('/^(main|additional)(?:\s+service)?\b/i', $t) === 1) {
+		return true;
+	}
 	return preg_match('/^(main|additional)(?:\s+service)?(?:\s*\(.*\))?$/i', $title) === 1;
 }
 
