@@ -366,6 +366,8 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 	$services = is_array($manifest['services'] ?? null) ? $manifest['services'] : [];
 	$areas = is_array($manifest['service_areas'] ?? null) ? $manifest['service_areas'] : [];
 	$service_rows = [];
+	$airtable_services_total = is_array($services) ? count($services) : 0;
+	$airtable_real_services_count = 0;
 	foreach ($services as $svc) {
 		if (!is_array($svc)) {
 			continue;
@@ -378,11 +380,15 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 		if (function_exists('lf_ai_studio_service_title_is_placeholder') && lf_ai_studio_service_title_is_placeholder($title)) {
 			continue;
 		}
+		$airtable_real_services_count++;
 		$service_rows[] = ['slug' => $slug, 'title' => $title !== '' ? $title : $slug];
 	}
+	$services_source = $service_rows !== [] ? 'airtable' : 'none';
+	$services_placeholder_only = ($airtable_services_total > 0 && $airtable_real_services_count === 0);
 
 	// If Airtable produced only placeholders, fall back so the picker is never blank.
 	if (empty($service_rows)) {
+		$services_source = 'niche_fallback';
 		$fallback = [];
 		if (function_exists('lf_ai_studio_airtable_resolve_niche_slug')) {
 			$nslug = lf_ai_studio_airtable_resolve_niche_slug($biz_niche, $biz_niche_slug);
@@ -404,6 +410,9 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 			}
 			$service_rows[] = ['slug' => $slug, 'title' => $title];
 		}
+		if ($service_rows === []) {
+			$services_source = 'none';
+		}
 	}
 
 	// Align with Manifest page first paint: prefer lf_airtable_sitemap_cache so this AJAX response does not
@@ -415,6 +424,7 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 		$smoke_cache_preview = lf_ai_studio_smoke_test_slugs_from_sitemap_cache();
 	}
 	if (empty($service_rows) && $smoke_cache_preview['service_slugs'] !== []) {
+		$services_source = 'cache_fallback';
 		$cached_svcs = [];
 		foreach ($smoke_cache_preview['service_slugs'] as $slug => $tit) {
 			if (function_exists('lf_ai_studio_service_title_is_placeholder') && lf_ai_studio_service_title_is_placeholder((string) $tit)) {
@@ -424,6 +434,9 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 		}
 		if ($cached_svcs !== []) {
 			$service_rows = $cached_svcs;
+		}
+		if ($service_rows === []) {
+			$services_source = 'none';
 		}
 	}
 
@@ -494,6 +507,8 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 			'record_id' => $record_id,
 			'services_count' => is_array($service_rows) ? count($service_rows) : 0,
 			'areas_count' => is_array($area_rows) ? count($area_rows) : 0,
+			'services_source' => $services_source,
+			'services_placeholder_only' => $services_placeholder_only,
 		],
 	]);
 }
@@ -529,6 +544,13 @@ function lf_ai_studio_airtable_generate_from_record_id(string $record_id, string
 		];
 	}
 	$normalized = lf_ai_studio_normalize_manifest($manifest);
+
+	// Preflight: if Airtable services are placeholder-only, replace with deterministic fallbacks before saving/sync.
+	// This prevents "Main/Additional" from ever being persisted into lf_site_manifest or used for CPT creation/payloads.
+	$gen_services = get_option('lf_ai_gen_services', '1') === '1';
+	if ($gen_services) {
+		$normalized = lf_ai_studio_airtable_preflight_replace_placeholder_services($normalized);
+	}
 	update_option('lf_site_manifest', $normalized, false);
 	delete_option('lf_ai_studio_manifest_errors');
 	lf_ai_studio_sync_manifest_posts($normalized);
@@ -554,6 +576,59 @@ function lf_ai_studio_airtable_generate_from_record_id(string $record_id, string
 	update_option('lf_ai_autonomy_last_source', sanitize_text_field($source), false);
 	update_option('lf_ai_autonomy_last_run', time(), false);
 	return ['ok' => true, 'job_id' => (int) ($result['job_id'] ?? 0)];
+}
+
+function lf_ai_studio_airtable_preflight_replace_placeholder_services(array $manifest): array {
+	$services = is_array($manifest['services'] ?? null) ? $manifest['services'] : [];
+	if ($services === []) {
+		return $manifest;
+	}
+	$real = 0;
+	foreach ($services as $svc) {
+		if (!is_array($svc)) {
+			continue;
+		}
+		$title = sanitize_text_field((string) ($svc['title'] ?? $svc['name'] ?? ''));
+		$slug = sanitize_title((string) ($svc['slug'] ?? ''));
+		if ($slug === '' && $title !== '') {
+			$slug = sanitize_title($title);
+		}
+		if ($slug === '' || $title === '') {
+			continue;
+		}
+		if (function_exists('lf_ai_studio_service_title_is_placeholder') && lf_ai_studio_service_title_is_placeholder($title)) {
+			continue;
+		}
+		$real++;
+		break;
+	}
+	if ($real > 0) {
+		return $manifest;
+	}
+
+	$business = is_array($manifest['business'] ?? null) ? $manifest['business'] : [];
+	$biz_address = is_array($business['address'] ?? null) ? $business['address'] : [];
+	$biz_city = trim((string) ($business['primary_city'] ?? $biz_address['city'] ?? ''));
+	$biz_state = strtoupper(trim((string) ($biz_address['state'] ?? '')));
+	$biz_name = trim((string) ($business['name'] ?? ''));
+	$biz_niche = trim((string) ($business['niche'] ?? ''));
+	$biz_niche_slug = trim((string) ($business['niche_slug'] ?? ''));
+
+	$fallback = [];
+	if (function_exists('lf_ai_studio_airtable_resolve_niche_slug')) {
+		$nslug = lf_ai_studio_airtable_resolve_niche_slug($biz_niche, $biz_niche_slug);
+		if ($nslug !== '' && function_exists('lf_ai_studio_airtable_build_services_from_niche')) {
+			$fallback = lf_ai_studio_airtable_build_services_from_niche($nslug, $biz_city, $biz_state, $biz_name);
+		}
+	}
+	if (empty($fallback) && function_exists('lf_ai_studio_airtable_build_generic_services')) {
+		$fallback = lf_ai_studio_airtable_build_generic_services($biz_niche !== '' ? $biz_niche : __('Service', 'leadsforward-core'), $biz_city, $biz_state, $biz_name);
+	}
+	if (empty($fallback)) {
+		return $manifest;
+	}
+	$manifest['services'] = $fallback;
+	return $manifest;
 }
 
 function lf_ai_studio_airtable_get_stored_record_id(): string {

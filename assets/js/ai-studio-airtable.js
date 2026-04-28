@@ -7,8 +7,6 @@
   var searchInput = document.getElementById('lf-airtable-search');
   var resultsEl = document.getElementById('lf-airtable-results');
   var previewEl = document.getElementById('lf-airtable-preview');
-  var manifestForm = document.getElementById('lf-ai-manifest-form');
-  var manifestInput = document.getElementById('lf_site_manifest');
   var primaryGenerateBtn = document.getElementById('lf-manifester-generate');
   var primaryStatusEl = document.getElementById('lf-manifester-status');
   var statusEl = document.getElementById('lf-airtable-status');
@@ -197,19 +195,28 @@
         }
         populateMultiSelect(svcSelect, payload.data.services || [], 'title');
         populateMultiSelect(areaSelect, payload.data.service_areas || [], 'label');
-        if (payload.data.meta && payload.data.meta.theme_version) {
-          setStatus('Scope preview loaded (theme ' + payload.data.meta.theme_version + ').', 'success');
+        var meta = payload.data.meta || {};
+        var version = meta.theme_version ? String(meta.theme_version) : '';
+        var src = meta.services_source ? String(meta.services_source) : '';
+        var svcCount = (typeof meta.services_count === 'number') ? meta.services_count : null;
+        var areasCount = (typeof meta.areas_count === 'number') ? meta.areas_count : null;
+
+        var parts = [];
+        if (version) parts.push('theme ' + version);
+        if (typeof svcCount === 'number') parts.push('services ' + svcCount);
+        if (typeof areasCount === 'number') parts.push('areas ' + areasCount);
+
+        var msg = parts.length ? ('Scope preview loaded (' + parts.join(', ') + ').') : 'Scope preview loaded.';
+        if (src && src !== 'airtable') {
+          msg += ' Services list came from fallback (' + src + ').';
+          setStatus(msg, 'warn');
         } else {
-          setStatus('Scope preview loaded.', 'success');
+          setStatus(msg, 'success');
         }
       })
       .catch(function () {
         setStatus('Scope preview failed (network error).', 'error');
       });
-  }
-
-  function hasManifestFile() {
-    return !!(manifestInput && manifestInput.files && manifestInput.files.length);
   }
 
   function hasAirtableSelection() {
@@ -233,14 +240,10 @@
       setPrimaryStatus(needScope, 'error');
       return;
     }
-    var canGenerate = hasManifestFile() || hasAirtableSelection();
+    var canGenerate = hasAirtableSelection();
     primaryGenerateBtn.disabled = !canGenerate;
     if (!canGenerate) {
-      setPrimaryStatus('Select a manifest file or Airtable project to continue.', 'info');
-      return;
-    }
-    if (hasManifestFile()) {
-      setPrimaryStatus('Ready to generate from manifest.', 'success');
+      setPrimaryStatus('Select an Airtable project to continue.', 'info');
       return;
     }
     setPrimaryStatus('Ready to generate from Airtable.', 'success');
@@ -324,20 +327,6 @@
       });
   }
 
-  function submitManifestForm() {
-    if (!manifestForm) return;
-    setPrimaryStatus('Uploading manifest…', 'info');
-    setProgress(10, 'Uploading manifest…');
-    if (manifestForm.requestSubmit) {
-      manifestForm.requestSubmit();
-      return;
-    }
-    var evt = new Event('submit', { cancelable: true });
-    if (manifestForm.dispatchEvent(evt)) {
-      manifestForm.submit();
-    }
-  }
-
   if (hasAirtableUI && searchInput) {
     searchInput.addEventListener('input', function () {
       var value = searchInput.value.trim();
@@ -352,28 +341,15 @@
 
   // No secondary generate button; primary button handles generation.
 
-  if (manifestInput) {
-    manifestInput.addEventListener('change', updatePrimaryState);
-  }
-
   if (primaryGenerateBtn) {
     primaryGenerateBtn.addEventListener('click', function () {
-      if (hasManifestFile()) {
-        if (!confirmHomepageOnlyIfNeeded()) {
-          setPrimaryStatus('', '');
-          return;
-        }
-        setProgress(5, 'Queued…');
-        submitManifestForm();
-        return;
-      }
       if (hasAirtableSelection()) {
         setProgress(5, 'Queued…');
         generateFromRecord();
         return;
       }
       updatePrimaryState();
-      setPrimaryStatus('Select a manifest file or Airtable project to continue.', 'error');
+      setPrimaryStatus('Select an Airtable project to continue.', 'error');
     });
   }
 
