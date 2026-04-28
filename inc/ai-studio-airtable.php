@@ -366,7 +366,6 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 	$services = is_array($manifest['services'] ?? null) ? $manifest['services'] : [];
 	$areas = is_array($manifest['service_areas'] ?? null) ? $manifest['service_areas'] : [];
 	$service_rows = [];
-	$generic_titles = ['main', 'additional', 'main service', 'additional service', 'service', 'services'];
 	foreach ($services as $svc) {
 		if (!is_array($svc)) {
 			continue;
@@ -376,11 +375,7 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 		if ($slug === '') {
 			continue;
 		}
-		$norm_title = strtolower(trim(preg_replace('/\s+/', ' ', $title)));
-		$is_placeholder = $norm_title === ''
-			|| in_array($norm_title, $generic_titles, true)
-			|| preg_match('/^(main|additional)(?:\s+service)?(?:\s*\(.*\))?$/i', $title) === 1;
-		if ($is_placeholder) {
+		if (function_exists('lf_ai_studio_service_title_is_placeholder') && lf_ai_studio_service_title_is_placeholder($title)) {
 			continue;
 		}
 		$service_rows[] = ['slug' => $slug, 'title' => $title !== '' ? $title : $slug];
