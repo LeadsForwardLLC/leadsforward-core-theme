@@ -365,7 +365,9 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 	$biz_niche_slug = trim((string) ($business['niche_slug'] ?? ''));
 	$services = is_array($manifest['services'] ?? null) ? $manifest['services'] : [];
 	$areas = is_array($manifest['service_areas'] ?? null) ? $manifest['service_areas'] : [];
-	$service_rows = [];
+	// Services live in Airtable Sitemaps (Page title + Menu Group + Slug). Pull them first.
+	$sitemap_pull = lf_ai_studio_airtable_pull_services_from_sitemaps($manifest);
+	$service_rows = $sitemap_pull['service_rows'];
 	$airtable_services_total = is_array($services) ? count($services) : 0;
 	$airtable_real_services_count = 0;
 	foreach ($services as $svc) {
@@ -381,12 +383,17 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 			continue;
 		}
 		$airtable_real_services_count++;
-		$service_rows[] = ['slug' => $slug, 'title' => $title !== '' ? $title : $slug];
+		if ($service_rows === []) {
+			// Only use record-derived services when Sitemaps didn't provide any.
+			$service_rows[] = ['slug' => $slug, 'title' => $title !== '' ? $title : $slug];
+		}
 	}
-	$services_source = $service_rows !== [] ? 'airtable' : 'none';
+	$services_source = $sitemap_pull['services_source'] !== 'none'
+		? $sitemap_pull['services_source']
+		: ($service_rows !== [] ? 'airtable_record' : 'none');
 	$services_placeholder_only = ($airtable_services_total > 0 && $airtable_real_services_count === 0);
 
-	// If Airtable produced only placeholders, fall back so the picker is never blank.
+	// If Sitemaps (or record) produced no usable services, fall back so the picker is never blank.
 	if (empty($service_rows)) {
 		$services_source = 'niche_fallback';
 		$fallback = [];
@@ -545,6 +552,12 @@ function lf_ai_studio_airtable_generate_from_record_id(string $record_id, string
 	}
 	$normalized = lf_ai_studio_normalize_manifest($manifest);
 
+	// Refresh sitemap cache + hydrate service list from Sitemaps before any CPT sync/payload build.
+	$sitemap_pull = lf_ai_studio_airtable_pull_services_from_sitemaps($normalized, true);
+	if (!empty($sitemap_pull['services_manifest'])) {
+		$normalized['services'] = $sitemap_pull['services_manifest'];
+	}
+
 	// Preflight: if Airtable services are placeholder-only, replace with deterministic fallbacks before saving/sync.
 	// This prevents "Main/Additional" from ever being persisted into lf_site_manifest or used for CPT creation/payloads.
 	$gen_services = get_option('lf_ai_gen_services', '1') === '1';
@@ -576,6 +589,119 @@ function lf_ai_studio_airtable_generate_from_record_id(string $record_id, string
 	update_option('lf_ai_autonomy_last_source', sanitize_text_field($source), false);
 	update_option('lf_ai_autonomy_last_run', time(), false);
 	return ['ok' => true, 'job_id' => (int) ($result['job_id'] ?? 0)];
+}
+
+/**
+ * Pull service definitions from the Airtable Sitemaps table, filtered to the current manifest niche.
+ * Optionally persist the fetched specs into lf_airtable_sitemap_cache for downstream consumers.
+ *
+ * @return array{
+ *   service_rows:list<array{slug:string,title:string}>,
+ *   services_manifest:list<array<string,mixed>>,
+ *   services_source:string
+ * }
+ */
+function lf_ai_studio_airtable_pull_services_from_sitemaps(array $manifest, bool $persist_cache = false): array {
+	$business = is_array($manifest['business'] ?? null) ? $manifest['business'] : [];
+	$biz_address = is_array($business['address'] ?? null) ? $business['address'] : [];
+	$biz_city = trim((string) ($business['primary_city'] ?? $biz_address['city'] ?? ''));
+	$biz_state = strtoupper(trim((string) ($biz_address['state'] ?? '')));
+	$biz_niche = trim((string) ($business['niche'] ?? ($manifest['niche'] ?? '')));
+	$niche_key = sanitize_title($biz_niche);
+	if ($niche_key === '') {
+		return ['service_rows' => [], 'services_manifest' => [], 'services_source' => 'none'];
+	}
+	if (!function_exists('lf_airtable_sitemaps_fetch_rows') || !function_exists('lf_sitemap_specs_from_airtable_rows')) {
+		return ['service_rows' => [], 'services_manifest' => [], 'services_source' => 'none'];
+	}
+
+	$rows = lf_airtable_sitemaps_fetch_rows();
+	if (empty($rows['ok'])) {
+		return ['service_rows' => [], 'services_manifest' => [], 'services_source' => 'none'];
+	}
+	$norm = lf_sitemap_specs_from_airtable_rows((array) ($rows['rows'] ?? []));
+	$specs = is_array($norm['specs'] ?? null) ? $norm['specs'] : [];
+	if ($specs === []) {
+		return ['service_rows' => [], 'services_manifest' => [], 'services_source' => 'none'];
+	}
+
+	$cache_specs = [];
+	$service_rows = [];
+	$services_manifest = [];
+	$loc = trim($biz_city . ' ' . $biz_state);
+
+	foreach ($specs as $spec) {
+		if (!is_array($spec)) {
+			continue;
+		}
+		$spec_niche = (string) ($spec['niche'] ?? '');
+		if ($spec_niche !== '' && sanitize_title($spec_niche) !== $niche_key) {
+			continue;
+		}
+		$slug_template = (string) ($spec['slug_template'] ?? '');
+		$title = sanitize_text_field((string) ($spec['title'] ?? ''));
+		$menu_group = (string) ($spec['menu_group'] ?? '');
+		if ($slug_template === '' || $title === '' || $menu_group === '') {
+			continue;
+		}
+		$resolved = function_exists('lf_sitemap_resolve_slug_template')
+			? lf_sitemap_resolve_slug_template($slug_template, $biz_city)
+			: ['ok' => false, 'slug' => '/', 'error' => 'missing_slug_resolver'];
+		$resolved_slug = (string) ($resolved['slug'] ?? '/');
+		$resolved_norm = function_exists('lf_sitemap_normalize_slug_path') ? lf_sitemap_normalize_slug_path($resolved_slug) : ('/' . trim($resolved_slug, '/') . '/');
+		$is_service_detail = strpos($resolved_norm, '/services/') === 0 && $resolved_norm !== '/services/';
+		$is_area_detail = strpos($resolved_norm, '/service-areas/') === 0 && $resolved_norm !== '/service-areas/';
+
+		$enriched = $spec;
+		$enriched['slug_resolved'] = $resolved_slug;
+		$enriched['post_type'] = ($is_service_detail ? 'lf_service' : ($is_area_detail ? 'lf_service_area' : 'page'));
+		$cache_specs[] = $enriched;
+
+		if ($menu_group !== 'Services' || !$is_service_detail) {
+			continue;
+		}
+		if (function_exists('lf_ai_studio_service_title_is_placeholder') && lf_ai_studio_service_title_is_placeholder($title)) {
+			continue;
+		}
+		$slug = sanitize_title((string) basename(trim($resolved_norm, '/')));
+		if ($slug === '') {
+			continue;
+		}
+		$service_rows[] = ['slug' => $slug, 'title' => $title];
+		$pk = $loc !== '' ? trim($title . ' ' . $loc) : $title;
+		$services_manifest[] = [
+			'title' => $title,
+			'slug' => $slug,
+			'primary_keyword' => $pk,
+			'secondary_keywords' => [],
+			'custom_cta_context' => '',
+		];
+	}
+
+	if ($persist_cache && $cache_specs !== []) {
+		update_option('lf_airtable_sitemap_cache', wp_json_encode(array_values($cache_specs), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '[]');
+		update_option('lf_airtable_sitemap_cache_at', (string) time());
+	}
+
+	// Dedup by slug (keep first title).
+	$seen = [];
+	$out_rows = [];
+	$out_manifest = [];
+	foreach ($service_rows as $i => $row) {
+		$s = (string) ($row['slug'] ?? '');
+		if ($s === '' || isset($seen[$s])) {
+			continue;
+		}
+		$seen[$s] = true;
+		$out_rows[] = $row;
+		$out_manifest[] = $services_manifest[$i] ?? [];
+	}
+
+	return [
+		'service_rows' => $out_rows,
+		'services_manifest' => array_values(array_filter($out_manifest, static fn($v): bool => is_array($v) && !empty($v))),
+		'services_source' => $out_rows !== [] ? 'airtable_sitemaps' : 'none',
+	];
 }
 
 function lf_ai_studio_airtable_preflight_replace_placeholder_services(array $manifest): array {
