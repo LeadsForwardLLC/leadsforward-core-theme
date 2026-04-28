@@ -200,13 +200,25 @@
         var src = meta.services_source ? String(meta.services_source) : '';
         var svcCount = (typeof meta.services_count === 'number') ? meta.services_count : null;
         var areasCount = (typeof meta.areas_count === 'number') ? meta.areas_count : null;
+        var sOk = (meta.sitemaps_ok === true);
+        var sErr = meta.sitemaps_error ? String(meta.sitemaps_error) : '';
+        var sRows = (typeof meta.sitemaps_rows === 'number') ? meta.sitemaps_rows : null;
+        var sSpecs = (typeof meta.sitemaps_specs === 'number') ? meta.sitemaps_specs : null;
+        var sFound = (typeof meta.sitemaps_services_found === 'number') ? meta.sitemaps_services_found : null;
+        var sFallback = (meta.sitemaps_services_fallback_used === true);
 
         var parts = [];
         if (version) parts.push('theme ' + version);
         if (typeof svcCount === 'number') parts.push('services ' + svcCount);
         if (typeof areasCount === 'number') parts.push('areas ' + areasCount);
+        if (typeof sFound === 'number') parts.push('sitemaps services ' + sFound);
 
         var msg = parts.length ? ('Scope preview loaded (' + parts.join(', ') + ').') : 'Scope preview loaded.';
+        if (sOk && typeof sRows === 'number' && typeof sSpecs === 'number') {
+          msg += ' (Sitemaps rows ' + sRows + ', specs ' + sSpecs + (sFallback ? ', fallback used' : '') + ').';
+        } else if (!sOk) {
+          msg += ' (Sitemaps fetch failed' + (sErr ? (': ' + sErr) : '') + ').';
+        }
         if (src && src !== 'airtable') {
           msg += ' Services list came from fallback (' + src + ').';
           setStatus(msg, 'warn');
