@@ -12,6 +12,33 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+const LF_AI_STUDIO_DEBUG_LOG_OPTION = 'lf_ai_studio_debug_log';
+
+/**
+ * Persist a bounded debug log inside WP options for quick admin inspection.
+ *
+ * @param array<string, mixed> $context
+ */
+function lf_ai_studio_debug_log_append(string $message, string $level = 'INFO', array $context = []): void {
+	if ($message === '') {
+		return;
+	}
+	$max = 400;
+	$entries = get_option(LF_AI_STUDIO_DEBUG_LOG_OPTION, []);
+	$entries = is_array($entries) ? array_values(array_filter($entries, static fn($v): bool => is_array($v))) : [];
+	$entries[] = [
+		't' => time(),
+		'level' => $level,
+		'message' => $message,
+		'context' => $context,
+	];
+	$count = count($entries);
+	if ($count > $max) {
+		$entries = array_slice($entries, $count - $max, $max);
+	}
+	update_option(LF_AI_STUDIO_DEBUG_LOG_OPTION, $entries, false);
+}
+
 /**
  * Log AI Studio / manifester lines to PHP's error log (e.g. wp-content/debug.log when WP_DEBUG_LOG is true).
  *
@@ -26,6 +53,7 @@ function lf_ai_studio_error_log(string $message, string $level = 'ERROR', array 
 		}
 	}
 	error_log($line);
+	lf_ai_studio_debug_log_append($message, $level, $context);
 }
 
 /**
@@ -1639,6 +1667,26 @@ function lf_ai_studio_render_page(): void {
 	<div class="wrap">
 		<h1 class="lf-manifester-page-title"><?php esc_html_e('Manifest Website', 'leadsforward-core'); ?></h1>
 		<p class="lf-manifester-lead description"><?php esc_html_e('Load your project from Airtable, generate content with your orchestrator, and publish a full local site from one place.', 'leadsforward-core'); ?></p>
+
+		<?php
+		$debug_entries = get_option(LF_AI_STUDIO_DEBUG_LOG_OPTION, []);
+		$debug_entries = is_array($debug_entries) ? array_values(array_filter($debug_entries, static fn($v): bool => is_array($v))) : [];
+		$debug_entries = array_slice($debug_entries, -120);
+		?>
+		<details style="margin: 10px 0 16px;">
+			<summary><strong><?php esc_html_e('AI debug log (latest)', 'leadsforward-core'); ?></strong></summary>
+			<p class="description" style="margin: 6px 0 10px;"><?php esc_html_e('This is a bounded log captured by the theme (does not require wp-config debug flags). Use it to see what was sent to n8n and what callbacks returned.', 'leadsforward-core'); ?></p>
+			<pre style="white-space:pre-wrap;max-height:360px;overflow:auto;font-size:12px;line-height:1.35;margin:0;border:1px solid #c3c4c7;background:#fcfcfc;padding:10px;"><?php
+			foreach ($debug_entries as $row) {
+				$t = isset($row['t']) ? (int) $row['t'] : 0;
+				$lvl = isset($row['level']) ? (string) $row['level'] : '';
+				$msg = isset($row['message']) ? (string) $row['message'] : '';
+				$ctx = is_array($row['context'] ?? null) ? $row['context'] : [];
+				$ctx_json = $ctx !== [] ? (wp_json_encode($ctx, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '') : '';
+				echo esc_html(($t ? wp_date('H:i:s', $t) : '') . ' [' . $lvl . '] ' . $msg . ($ctx_json !== '' ? (' | ' . $ctx_json) : '')) . "\n";
+			}
+			?></pre>
+		</details>
 
 		<div class="lf-manifester-hero">
 			<div class="lf-manifester-hero__main">

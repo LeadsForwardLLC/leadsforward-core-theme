@@ -437,6 +437,16 @@ function lf_ai_studio_rest_apply(\WP_REST_Request $request): \WP_REST_Response {
 			}
 		}
 	}
+	if (function_exists('lf_ai_studio_error_log')) {
+		$keys = is_array($payload) ? array_keys($payload) : [];
+		lf_ai_studio_error_log('rest_apply: payload received', 'INFO', [
+			'route' => (string) $request->get_route(),
+			'keys' => array_slice($keys, 0, 40),
+			'job_id' => isset($payload['job_id']) ? absint($payload['job_id']) : 0,
+		]);
+		update_option('lf_ai_studio_last_rest_apply_payload', $payload, false);
+		update_option('lf_ai_studio_last_rest_apply_at', time(), false);
+	}
 	if (!is_array($payload)) {
 		if (function_exists('lf_ai_studio_error_log')) {
 			lf_ai_studio_error_log('orchestrator: invalid_json payload', 'ERROR');
@@ -510,6 +520,18 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 	}
 	if (!is_array($payload)) {
 		return new \WP_REST_Response(['error' => 'invalid_json'], 400);
+	}
+	if (function_exists('lf_ai_studio_error_log')) {
+		$keys = is_array($payload) ? array_keys($payload) : [];
+		lf_ai_studio_error_log('orchestrator_callback: payload received', 'INFO', [
+			'route' => (string) $request->get_route(),
+			'keys' => array_slice($keys, 0, 60),
+			'job_id' => isset($payload['job_id']) ? absint($payload['job_id']) : 0,
+			'request_id' => sanitize_text_field((string) ($payload['request_id'] ?? '')),
+			'blueprints' => (isset($payload['blueprints']) && is_array($payload['blueprints'])) ? count($payload['blueprints']) : 0,
+		]);
+		update_option('lf_ai_studio_last_orchestrator_callback_payload', $payload, false);
+		update_option('lf_ai_studio_last_orchestrator_callback_at', time(), false);
 	}
 	if (!empty($payload['research_document']) && is_array($payload['research_document'])) {
 		$errors = lf_ai_studio_validate_research_document($payload['research_document']);
