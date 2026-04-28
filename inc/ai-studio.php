@@ -9289,6 +9289,15 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 		continue;
 	}
 
+	if (function_exists('lf_ai_studio_error_log')) {
+		lf_ai_studio_error_log('apply_updates: update_target_counts', 'INFO', [
+			'homepage' => (int) $update_counts['homepage'],
+			'post_meta' => (int) $update_counts['post_meta'],
+			'faq' => (int) $update_counts['faq'],
+			'service_meta' => (int) $update_counts['service_meta'],
+		]);
+	}
+
 	if (!empty($homepage_updates) && function_exists('lf_get_homepage_section_config')) {
 		$config = $homepage_config;
 		$homepage_image_context = lf_ai_studio_homepage_image_context();
@@ -9339,9 +9348,11 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 						$storage_key = lf_ai_studio_resolve_homepage_config_storage_key($llm_registry_type, $config, $section_id);
 					}
 				}
-				
-				// DEBUG: Log what we're processing
-				error_log('LF ORCHESTRATOR DEBUG: Processing section_id=' . $section_id . ', field_key=' . $field_key . ', llm_registry_type=' . $llm_registry_type . ', storage_key=' . $storage_key . ', value_preview=' . substr((string)$value, 0, 50));
+
+				// DEBUG: Log what we're processing (only when WP_DEBUG is on).
+				if (defined('WP_DEBUG') && WP_DEBUG) {
+					error_log('LF ORCHESTRATOR DEBUG: Processing section_id=' . $section_id . ', field_key=' . $field_key . ', llm_registry_type=' . $llm_registry_type . ', storage_key=' . $storage_key . ', value_preview=' . substr((string) $value, 0, 50));
+				}
 				
 				if ($storage_key === '' || !isset($registry[$llm_registry_type])) {
 					$alt = lf_ai_studio_resolve_homepage_section_id_alias($section_id, $config);
@@ -9402,6 +9413,13 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 				$homepage_fields_count++;
 				$fields_updated++;
 			}
+		}
+		if (function_exists('lf_ai_studio_error_log')) {
+			lf_ai_studio_error_log('apply_updates: homepage_field_merge', 'INFO', [
+				'homepage_fields_count' => (int) $homepage_fields_count,
+				'drop_counts' => $debug_homepage_drops,
+				'drop_samples' => array_filter($debug_homepage_drop_samples, static fn($v): bool => is_array($v) && $v !== []),
+			]);
 		}
 		if (defined('WP_DEBUG') && WP_DEBUG) {
 			$section_counts = [];
