@@ -12,6 +12,7 @@
   var primaryGenerateBtn = document.getElementById('lf-manifester-generate');
   var primaryStatusEl = document.getElementById('lf-manifester-status');
   var statusEl = document.getElementById('lf-airtable-status');
+  var statusInlineEl = document.getElementById('lf-airtable-status-inline');
   var tokenToggle = document.getElementById('lf-airtable-token-toggle');
   var tokenInput = document.getElementById('lf_ai_airtable_pat');
   var storageKey = 'lfAirtableSelectedProject';
@@ -42,9 +43,12 @@
   var debounceTimer = null;
 
   function setStatus(message, type) {
-    if (!statusEl) return;
-    statusEl.textContent = message || '';
-    statusEl.className = 'lf-airtable-status' + (type ? ' is-' + type : '');
+    var els = [statusEl, statusInlineEl].filter(Boolean);
+    if (!els.length) return;
+    els.forEach(function (el) {
+      el.textContent = message || '';
+      el.className = 'lf-airtable-status' + (type ? ' is-' + type : '');
+    });
   }
 
   function setPrimaryStatus(message, type) {
