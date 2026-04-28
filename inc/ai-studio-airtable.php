@@ -494,6 +494,12 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 	wp_send_json_success([
 		'services' => $service_rows,
 		'service_areas' => $area_rows,
+		'meta' => [
+			'theme_version' => defined('LF_THEME_VERSION') ? (string) LF_THEME_VERSION : '',
+			'record_id' => $record_id,
+			'services_count' => is_array($service_rows) ? count($service_rows) : 0,
+			'areas_count' => is_array($area_rows) ? count($area_rows) : 0,
+		],
 	]);
 }
 
