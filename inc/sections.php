@@ -852,7 +852,7 @@ function lf_sections_registry(): array {
 		],
 		'related_links' => [
 			'label' => __('Related Links', 'leadsforward-core'),
-			'contexts' => ['homepage', 'service', 'service_area', 'page', 'post'],
+			'contexts' => ['service', 'service_area', 'page', 'post'],
 			'fields' => [
 				$bg_field,
 				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'conversion'],
