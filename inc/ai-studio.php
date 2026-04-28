@@ -1976,6 +1976,10 @@ function lf_ai_studio_render_page(): void {
 									<div class="lf-airtable-search">
 										<label class="screen-reader-text" for="lf-airtable-search"><?php esc_html_e('Search Airtable projects', 'leadsforward-core'); ?></label>
 										<input type="text" id="lf-airtable-search" class="regular-text" placeholder="<?php esc_attr_e('Search Airtable projects…', 'leadsforward-core'); ?>" <?php echo $airtable_ready ? '' : 'disabled'; ?> />
+										<div class="description" style="margin:6px 0 4px;">
+											<?php echo esc_html(sprintf(__('Theme version: %s', 'leadsforward-core'), defined('LF_THEME_VERSION') ? LF_THEME_VERSION : '')); ?>
+										</div>
+										<div id="lf-airtable-status-inline" class="lf-airtable-status" role="status" aria-live="polite" style="margin:6px 0 10px;"></div>
 										<div id="lf-airtable-results" class="lf-airtable-results"></div>
 									</div>
 									<div class="lf-airtable-preview">
