@@ -712,116 +712,31 @@ function lf_ai_studio_handle_scope_save(): void {
 	update_option('lf_ai_gen_blog_posts', isset($_POST['lf_ai_gen_blog_posts']) ? '1' : '0');
 	update_option('lf_ai_gen_projects', isset($_POST['lf_ai_gen_projects']) ? '1' : '0');
 
-	// Smoke-test scope: CPT pickers and slug pickers are mutually exclusive in the UI. Only update the option
-	// that matches the submitted controls — otherwise POST omits the other field names and we would wipe storage.
-	$svc_mode = isset($_POST['lf_ai_scope_smoke_services_mode']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_scope_smoke_services_mode'])) : '';
-	$area_mode = isset($_POST['lf_ai_scope_smoke_areas_mode']) ? sanitize_text_field(wp_unslash((string) $_POST['lf_ai_scope_smoke_areas_mode'])) : '';
+	// Slug mode only. Keep legacy ID options cleared so generation cannot silently read an old mode.
+	update_option('lf_ai_scope_service_ids', [], false);
+	update_option('lf_ai_scope_service_area_ids', [], false);
 
-	if ($svc_mode === 'post') {
-		$service_ids = [];
-		if (isset($_POST['lf_ai_scope_service_ids']) && is_array($_POST['lf_ai_scope_service_ids'])) {
-			foreach ($_POST['lf_ai_scope_service_ids'] as $raw) {
-				$id = absint($raw);
-				if ($id > 0) {
-					$service_ids[] = $id;
-				}
+	$service_slugs = [];
+	if (isset($_POST['lf_ai_scope_service_slugs']) && is_array($_POST['lf_ai_scope_service_slugs'])) {
+		foreach ($_POST['lf_ai_scope_service_slugs'] as $raw) {
+			$slug = sanitize_title((string) $raw);
+			if ($slug !== '') {
+				$service_slugs[] = $slug;
 			}
-		}
-		$service_ids = array_values(array_unique($service_ids));
-		update_option('lf_ai_scope_service_ids', $service_ids, false);
-	} elseif ($svc_mode === 'slug') {
-		$service_slugs = [];
-		if (isset($_POST['lf_ai_scope_service_slugs']) && is_array($_POST['lf_ai_scope_service_slugs'])) {
-			foreach ($_POST['lf_ai_scope_service_slugs'] as $raw) {
-				$slug = sanitize_title((string) $raw);
-				if ($slug !== '') {
-					$service_slugs[] = $slug;
-				}
-			}
-		}
-		$service_slugs = array_values(array_unique($service_slugs));
-		update_option('lf_ai_scope_service_slugs', $service_slugs, false);
-	}
-
-	if ($area_mode === 'post') {
-		$area_ids = [];
-		if (isset($_POST['lf_ai_scope_service_area_ids']) && is_array($_POST['lf_ai_scope_service_area_ids'])) {
-			foreach ($_POST['lf_ai_scope_service_area_ids'] as $raw) {
-				$id = absint($raw);
-				if ($id > 0) {
-					$area_ids[] = $id;
-				}
-			}
-		}
-		$area_ids = array_values(array_unique($area_ids));
-		update_option('lf_ai_scope_service_area_ids', $area_ids, false);
-	} elseif ($area_mode === 'slug') {
-		$area_slugs = [];
-		if (isset($_POST['lf_ai_scope_service_area_slugs']) && is_array($_POST['lf_ai_scope_service_area_slugs'])) {
-			foreach ($_POST['lf_ai_scope_service_area_slugs'] as $raw) {
-				$slug = sanitize_title((string) $raw);
-				if ($slug !== '') {
-					$area_slugs[] = $slug;
-				}
-			}
-		}
-		$area_slugs = array_values(array_unique($area_slugs));
-		update_option('lf_ai_scope_service_area_slugs', $area_slugs, false);
-	}
-
-	if ($svc_mode === '') {
-		if (array_key_exists('lf_ai_scope_service_ids', $_POST)) {
-			$service_ids = [];
-			if (is_array($_POST['lf_ai_scope_service_ids'])) {
-				foreach ($_POST['lf_ai_scope_service_ids'] as $raw) {
-					$id = absint($raw);
-					if ($id > 0) {
-						$service_ids[] = $id;
-					}
-				}
-			}
-			update_option('lf_ai_scope_service_ids', array_values(array_unique($service_ids)), false);
-		}
-		if (array_key_exists('lf_ai_scope_service_slugs', $_POST)) {
-			$service_slugs = [];
-			if (is_array($_POST['lf_ai_scope_service_slugs'])) {
-				foreach ($_POST['lf_ai_scope_service_slugs'] as $raw) {
-					$slug = sanitize_title((string) $raw);
-					if ($slug !== '') {
-						$service_slugs[] = $slug;
-					}
-				}
-			}
-			update_option('lf_ai_scope_service_slugs', array_values(array_unique($service_slugs)), false);
 		}
 	}
+	update_option('lf_ai_scope_service_slugs', array_values(array_unique($service_slugs)), false);
 
-	if ($area_mode === '') {
-		if (array_key_exists('lf_ai_scope_service_area_ids', $_POST)) {
-			$area_ids = [];
-			if (is_array($_POST['lf_ai_scope_service_area_ids'])) {
-				foreach ($_POST['lf_ai_scope_service_area_ids'] as $raw) {
-					$id = absint($raw);
-					if ($id > 0) {
-						$area_ids[] = $id;
-					}
-				}
+	$area_slugs = [];
+	if (isset($_POST['lf_ai_scope_service_area_slugs']) && is_array($_POST['lf_ai_scope_service_area_slugs'])) {
+		foreach ($_POST['lf_ai_scope_service_area_slugs'] as $raw) {
+			$slug = sanitize_title((string) $raw);
+			if ($slug !== '') {
+				$area_slugs[] = $slug;
 			}
-			update_option('lf_ai_scope_service_area_ids', array_values(array_unique($area_ids)), false);
-		}
-		if (array_key_exists('lf_ai_scope_service_area_slugs', $_POST)) {
-			$area_slugs = [];
-			if (is_array($_POST['lf_ai_scope_service_area_slugs'])) {
-				foreach ($_POST['lf_ai_scope_service_area_slugs'] as $raw) {
-					$slug = sanitize_title((string) $raw);
-					if ($slug !== '') {
-						$area_slugs[] = $slug;
-					}
-				}
-			}
-			update_option('lf_ai_scope_service_area_slugs', array_values(array_unique($area_slugs)), false);
 		}
 	}
+	update_option('lf_ai_scope_service_area_slugs', array_values(array_unique($area_slugs)), false);
 
 	lf_ai_studio_sync_legacy_blueprint_scope_from_gen_flags();
 
@@ -1720,7 +1635,6 @@ function lf_ai_studio_render_page(): void {
 		}
 	}
 	$manifest_exists = function_exists('lf_ai_studio_manifest_exists') && lf_ai_studio_manifest_exists();
-	$manual_setup_url = admin_url('admin.php?page=lf-setup');
 	?>
 	<div class="wrap">
 		<h1 class="lf-manifester-page-title"><?php esc_html_e('Manifest Website', 'leadsforward-core'); ?></h1>
@@ -1748,13 +1662,6 @@ function lf_ai_studio_render_page(): void {
 					</p>
 				<?php endif; ?>
 			</div>
-			<div class="lf-manifester-hero__alt">
-				<h3 class="lf-manifester-hero__alt-title"><?php esc_html_e('Not using Airtable?', 'leadsforward-core'); ?></h3>
-				<p class="description"><?php esc_html_e('Use a guided manual setup (niche, NAP, services) or upload a JSON manifest file in step 2 instead.', 'leadsforward-core'); ?></p>
-				<p class="lf-manifester-hero__alt-actions">
-					<a class="button" href="<?php echo esc_url($manual_setup_url); ?>"><?php esc_html_e('Manual setup (no Airtable)', 'leadsforward-core'); ?></a>
-				</p>
-			</div>
 		</div>
 		<?php if ($scope_saved) : ?>
 			<div class="notice notice-success is-dismissible">
@@ -1770,9 +1677,6 @@ function lf_ai_studio_render_page(): void {
 			</div>
 		<?php elseif ($saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Settings saved.', 'leadsforward-core'); ?></p></div>
-		<?php endif; ?>
-		<?php if ($manifest_saved) : ?>
-			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Manifest uploaded. Generation queued and running in the background.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
 		<?php if ($research_saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('Research document uploaded.', 'leadsforward-core'); ?></p></div>
@@ -1841,10 +1745,9 @@ function lf_ai_studio_render_page(): void {
 		<?php endif; ?>
 		<div class="card lf-manifester-card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
 			<h2 style="margin-top:0;"><?php esc_html_e('Steps', 'leadsforward-core'); ?></h2>
-			<p class="description"><?php esc_html_e('Work top to bottom. Airtable is the usual source for business data; manifest upload is an alternative.', 'leadsforward-core'); ?></p>
+			<p class="description"><?php esc_html_e('Work top to bottom. This flow is Airtable-first: select a project, confirm the preview, then generate.', 'leadsforward-core'); ?></p>
 			<?php $research_prompt_url = LF_THEME_URI . '/docs/06_AI_PROMPT_ENGINE.md'; ?>
 			<?php $global_settings_url = admin_url('admin.php?page=lf-global'); ?>
-			<?php $template_url = wp_nonce_url(admin_url('admin-post.php?action=lf_ai_studio_manifest_template'), 'lf_ai_studio_manifest_template', 'lf_ai_studio_manifest_template_nonce'); ?>
 
 			<div class="lf-manifester-steps">
 				<div class="lf-manifester-step">
@@ -1859,8 +1762,8 @@ function lf_ai_studio_render_page(): void {
 				<div class="lf-manifester-step">
 					<div class="lf-manifester-step__badge">2</div>
 					<div class="lf-manifester-step__content">
-						<h3><?php esc_html_e('Load site data: Airtable (default) or manifest file', 'leadsforward-core'); ?></h3>
-						<p class="description"><?php esc_html_e('Search and select an Airtable row to build the manifest and sync business info. Or upload a JSON manifest if you do not use Airtable.', 'leadsforward-core'); ?></p>
+						<h3><?php esc_html_e('Load site data: Airtable', 'leadsforward-core'); ?></h3>
+						<p class="description"><?php esc_html_e('Choose what to generate, then search and select an Airtable project to preview and generate from.', 'leadsforward-core'); ?></p>
 						<?php if (is_array($scope_picker_debug)) : ?>
 							<details open class="lf-manifest-scope-debug" style="margin:12px 0;padding:12px;border:1px solid #c3c4c7;background:#fcfcfc;">
 								<summary><strong><?php esc_html_e('Smoke-test picker debug', 'leadsforward-core'); ?></strong></summary>
@@ -1874,6 +1777,38 @@ function lf_ai_studio_render_page(): void {
 						<div class="lf-manifester-source">
 							<div class="lf-manifester-panel" id="lf-airtable-picker">
 								<h4 style="margin-top:0;"><?php esc_html_e('Airtable Projects', 'leadsforward-core'); ?></h4>
+								<?php
+								$last_audit = get_option('lf_ai_studio_last_payload_audit', []);
+								$last_audit = is_array($last_audit) ? $last_audit : [];
+								$last_errors = is_array($last_audit['errors'] ?? null) ? array_values(array_filter(array_map('strval', $last_audit['errors']))) : [];
+								$last_counts = is_array($last_audit['counts'] ?? null) ? $last_audit['counts'] : [];
+								$last_ts = isset($last_audit['timestamp']) ? (int) $last_audit['timestamp'] : 0;
+								$last_record = trim((string) get_option('lf_ai_airtable_project_record_id', ''));
+								?>
+								<?php if (!empty($last_audit)) : ?>
+									<div class="notice <?php echo empty($last_errors) ? 'notice-success' : 'notice-warning'; ?> inline" style="margin: 0 0 12px; padding: 10px 12px;">
+										<p style="margin:0;">
+											<strong><?php esc_html_e('Last payload audit:', 'leadsforward-core'); ?></strong>
+											<?php
+											$summary_parts = [];
+											if ($last_record !== '') {
+												$summary_parts[] = sprintf(__('record %s', 'leadsforward-core'), $last_record);
+											}
+											if ($last_ts > 0) {
+												$summary_parts[] = sprintf(__('at %s', 'leadsforward-core'), wp_date('Y-m-d H:i:s', $last_ts));
+											}
+											$total = isset($last_counts['blueprints_total']) ? (int) $last_counts['blueprints_total'] : 0;
+											if ($total > 0) {
+												$summary_parts[] = sprintf(__('%d blueprints', 'leadsforward-core'), $total);
+											}
+											echo esc_html(implode(' — ', $summary_parts));
+											?>
+										</p>
+										<?php if (!empty($last_errors)) : ?>
+											<p style="margin:6px 0 0;"><strong><?php esc_html_e('Warning:', 'leadsforward-core'); ?></strong> <?php echo esc_html($last_errors[0]); ?></p>
+										<?php endif; ?>
+									</div>
+								<?php endif; ?>
 								<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-bottom: 12px;">
 									<?php wp_nonce_field('lf_ai_studio_scope_save', 'lf_ai_studio_scope_nonce'); ?>
 									<input type="hidden" name="action" value="lf_ai_studio_scope_save" />
@@ -1885,46 +1820,6 @@ function lf_ai_studio_render_page(): void {
 										<label><input type="checkbox" id="lf_ai_gen_core_pages" name="lf_ai_gen_core_pages" value="1" <?php checked($gen_core_pages); ?> /> <?php esc_html_e('Core pages', 'leadsforward-core'); ?></label>
 										<label><input type="checkbox" id="lf_ai_gen_blog_posts" name="lf_ai_gen_blog_posts" value="1" <?php checked($gen_blog_posts); ?> /> <?php esc_html_e('AI blog posts (3 now + 2 weekly)', 'leadsforward-core'); ?></label>
 										<label><input type="checkbox" id="lf_ai_gen_projects" name="lf_ai_gen_projects" value="1" <?php checked($gen_projects); ?> /> <?php esc_html_e('Projects', 'leadsforward-core'); ?></label>
-										<div style="flex-basis:100%;"></div>
-										<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;">
-											<div style="min-width:320px;max-width:420px;">
-												<strong><?php esc_html_e('Smoke test: Services (optional)', 'leadsforward-core'); ?></strong>
-												<p class="description" style="margin:4px 0 8px;">
-													<?php esc_html_e('Select specific services to include when “Service pages” is enabled. Leave empty to include all published services.', 'leadsforward-core'); ?>
-												</p>
-												<input type="hidden" name="lf_ai_scope_smoke_services_mode" value="slug" />
-												<select id="lf-ai-scope-service-slugs" name="lf_ai_scope_service_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
-													<?php foreach ($selected_service_slugs as $slug => $label) : ?>
-														<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_service_slugs, true)); ?>>
-															<?php echo esc_html((string) $label); ?>
-														</option>
-													<?php endforeach; ?>
-												</select>
-												<p class="description" style="margin-top:6px;">
-													<?php esc_html_e('Options load from the selected Airtable project (preview) and fall back to the stored manifest/cache when needed.', 'leadsforward-core'); ?>
-												</p>
-											</div>
-											<div style="min-width:320px;max-width:420px;">
-												<strong><?php esc_html_e('Smoke test: Service Areas (optional)', 'leadsforward-core'); ?></strong>
-												<p class="description" style="margin:4px 0 8px;">
-													<?php esc_html_e('Select specific service areas to include when “Service area pages” is enabled. Leave empty to include all published service areas.', 'leadsforward-core'); ?>
-												</p>
-												<input type="hidden" name="lf_ai_scope_smoke_areas_mode" value="slug" />
-												<select id="lf-ai-scope-area-slugs" name="lf_ai_scope_service_area_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
-													<?php foreach ($selected_area_slugs as $slug => $label) : ?>
-														<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_area_slugs, true)); ?>>
-															<?php echo esc_html((string) $label); ?>
-														</option>
-													<?php endforeach; ?>
-												</select>
-												<p class="description" style="margin-top:6px;">
-													<?php esc_html_e('Options load from the selected Airtable project (preview) and fall back to the stored manifest/cache when needed.', 'leadsforward-core'); ?>
-												</p>
-											</div>
-										</div>
-										<button type="submit" class="button"><?php esc_html_e('Save Scope', 'leadsforward-core'); ?></button>
-										<button type="button" class="button" id="lf-ai-scope-select-all"><?php esc_html_e('Select all', 'leadsforward-core'); ?></button>
-										<button type="button" class="button" id="lf-ai-scope-homepage-services"><?php esc_html_e('Homepage + services', 'leadsforward-core'); ?></button>
 									</div>
 									<div class="notice notice-info inline" style="margin-top:10px;padding:8px 12px;">
 										<p style="margin:0 0 6px;"><strong><?php esc_html_e('Effective scope for the next run:', 'leadsforward-core'); ?></strong>
@@ -1943,8 +1838,43 @@ function lf_ai_studio_render_page(): void {
 											<p style="margin:0.5em 0 0;"><strong><?php esc_html_e('Heads up:', 'leadsforward-core'); ?></strong> <?php echo esc_html(sprintf(__('Your manifest lists %d services, but “Service pages” is unchecked — no service blueprints will be sent.', 'leadsforward-core'), (int) $scope_snap['services_in_manifest'])); ?></p>
 										<?php endif; ?>
 									</div>
-									<p class="description" style="margin-top:8px;"><?php esc_html_e('Unchecked boxes exclude those targets from the orchestrator payload. Manifest Website and the Airtable generate button use these checkboxes (not the manifest’s generation_scope string). Click Save Scope after changing.', 'leadsforward-core'); ?></p>
-									<p class="description" style="margin-top:4px;"><?php esc_html_e('Selecting every target is recommended: one job keeps internal links, keywords, and tone consistent. AI blog posts adds five article blueprints—three publish immediately and two are scheduled weekly; your n8n workflow must still generate body content via the normal callback.', 'leadsforward-core'); ?></p>
+									<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin-top:12px;">
+										<div style="min-width:320px;max-width:420px;">
+											<strong><?php esc_html_e('Filters (optional): Services', 'leadsforward-core'); ?></strong>
+											<p class="description" style="margin:4px 0 8px;">
+												<?php esc_html_e('Limit generation to specific services when “Service pages” is enabled. Leave empty to include all.', 'leadsforward-core'); ?>
+											</p>
+											<input type="hidden" name="lf_ai_scope_smoke_services_mode" value="slug" />
+											<select id="lf-ai-scope-service-slugs" name="lf_ai_scope_service_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
+												<?php foreach ($selected_service_slugs as $slug => $label) : ?>
+													<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_service_slugs, true)); ?>>
+														<?php echo esc_html((string) $label); ?>
+													</option>
+												<?php endforeach; ?>
+											</select>
+										</div>
+										<div style="min-width:320px;max-width:420px;">
+											<strong><?php esc_html_e('Filters (optional): Service Areas', 'leadsforward-core'); ?></strong>
+											<p class="description" style="margin:4px 0 8px;">
+												<?php esc_html_e('Limit generation to specific service areas when “Service area pages” is enabled. Leave empty to include all.', 'leadsforward-core'); ?>
+											</p>
+											<input type="hidden" name="lf_ai_scope_smoke_areas_mode" value="slug" />
+											<select id="lf-ai-scope-area-slugs" name="lf_ai_scope_service_area_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
+												<?php foreach ($selected_area_slugs as $slug => $label) : ?>
+													<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_area_slugs, true)); ?>>
+														<?php echo esc_html((string) $label); ?>
+													</option>
+												<?php endforeach; ?>
+											</select>
+										</div>
+									</div>
+									<p class="description" style="margin-top:10px;"><?php esc_html_e('Options load from the selected Airtable project preview and fall back to the stored manifest/cache when needed.', 'leadsforward-core'); ?></p>
+									<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;">
+										<button type="submit" class="button"><?php esc_html_e('Save Scope', 'leadsforward-core'); ?></button>
+										<button type="button" class="button" id="lf-ai-scope-select-all"><?php esc_html_e('Select all', 'leadsforward-core'); ?></button>
+										<button type="button" class="button" id="lf-ai-scope-homepage-services"><?php esc_html_e('Homepage + services', 'leadsforward-core'); ?></button>
+									</div>
+									<p class="description" style="margin-top:10px;"><?php esc_html_e('Unchecked boxes exclude those targets from the orchestrator payload. Click Save Scope after changing.', 'leadsforward-core'); ?></p>
 								</form>
 								<?php if (!$airtable_ready) : ?>
 									<div class="notice notice-warning inline">
@@ -1968,29 +1898,6 @@ function lf_ai_studio_render_page(): void {
 										<div id="lf-airtable-status" class="lf-airtable-status" role="status" aria-live="polite"></div>
 									</div>
 								</div>
-							</div>
-							<div class="lf-manifester-panel">
-								<h4 style="margin-top:0;"><?php esc_html_e('Manifest Upload (Deterministic)', 'leadsforward-core'); ?></h4>
-								<p class="description"><?php esc_html_e('Use a manifest JSON when you want full control over business data, services, and site structure.', 'leadsforward-core'); ?></p>
-								<?php if (!empty($manifest)) : ?>
-									<?php
-									$site_name = (string) ($manifest['business']['name'] ?? '');
-									$site_niche = (string) ($manifest['business']['niche'] ?? '');
-									$site_city = (string) ($manifest['business']['primary_city'] ?? ($manifest['business']['address']['city'] ?? ''));
-									?>
-									<p class="description">
-										<?php echo esc_html(sprintf(__('Active manifest: %1$s (%2$s) — %3$s', 'leadsforward-core'), $site_name ?: __('Unnamed', 'leadsforward-core'), $site_niche ?: __('No niche', 'leadsforward-core'), $site_city ?: __('No city', 'leadsforward-core'))); ?>
-									</p>
-								<?php endif; ?>
-								<form id="lf-ai-manifest-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
-									<?php wp_nonce_field('lf_ai_studio_manifest', 'lf_ai_studio_manifest_nonce'); ?>
-									<input type="hidden" name="action" value="lf_ai_studio_manifest" />
-									<input type="file" name="lf_site_manifest" id="lf_site_manifest" class="lf-manifester-file" accept="application/json,.json" />
-									<button type="submit" class="button button-primary lf-manifester-hidden-submit"><?php esc_html_e('Upload Manifest', 'leadsforward-core'); ?></button>
-								</form>
-								<p class="description">
-									<a class="button" href="<?php echo esc_url($template_url); ?>"><?php esc_html_e('Download Manifest Template', 'leadsforward-core'); ?></a>
-								</p>
 							</div>
 						</div>
 					</div>
@@ -2298,27 +2205,6 @@ function lf_ai_studio_render_page(): void {
 				</form>
 			<?php endif; ?>
 		</div>
-		<div id="lf-ai-manifest-loading" class="lf-ai-loading-overlay" aria-hidden="true">
-			<div class="lf-ai-loading-card" role="status" aria-live="polite">
-				<div class="lf-ai-loading-title"><?php esc_html_e('Generating site…', 'leadsforward-core'); ?></div>
-				<div class="lf-ai-loading-bar"><span></span></div>
-				<div class="lf-ai-loading-status"><?php esc_html_e('Uploading manifest…', 'leadsforward-core'); ?></div>
-			</div>
-		</div>
-		<style>
-			.lf-ai-loading-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: none; align-items: center; justify-content: center; z-index: 9999; }
-			.lf-ai-loading-overlay.is-active { display: flex; }
-			.lf-ai-loading-card { background: #fff; border-radius: 12px; padding: 24px 28px; width: min(520px, 90vw); box-shadow: 0 18px 60px rgba(15, 23, 42, 0.25); text-align: center; }
-			.lf-ai-loading-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; color: #111827; }
-			.lf-ai-loading-status { margin-top: 10px; color: #4b5563; font-size: 0.95rem; }
-			.lf-ai-loading-bar { position: relative; height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
-			.lf-ai-loading-bar span { position: absolute; inset: 0; width: 40%; background: linear-gradient(90deg, #3b82f6, #60a5fa, #3b82f6); animation: lf-ai-progress 1.4s ease-in-out infinite; }
-			@keyframes lf-ai-progress {
-				0% { transform: translateX(-100%); }
-				50% { transform: translateX(60%); }
-				100% { transform: translateX(200%); }
-			}
-		</style>
 		<script>
 			(function() {
 				var form = document.getElementById('lf-manifester-logo-form');
@@ -2407,39 +2293,6 @@ function lf_ai_studio_render_page(): void {
 						saveLogoAsync();
 					});
 				}
-			})();
-		</script>
-		<script>
-			(function() {
-				var form = document.getElementById('lf-ai-manifest-form');
-				var overlay = document.getElementById('lf-ai-manifest-loading');
-				if (!form || !overlay) {
-					return;
-				}
-				var status = overlay.querySelector('.lf-ai-loading-status');
-				var button = form.querySelector('button[type="submit"]');
-				var steps = [
-					'Uploading manifest…',
-					'Validating schema…',
-					'Building blueprints…',
-					'Generating content…',
-					'Applying updates…'
-				];
-				form.addEventListener('submit', function() {
-					overlay.classList.add('is-active');
-					overlay.setAttribute('aria-hidden', 'false');
-					if (button) {
-						button.disabled = true;
-					}
-					var idx = 0;
-					if (status) {
-						status.textContent = steps[0];
-						window.setInterval(function() {
-							idx = (idx + 1) % steps.length;
-							status.textContent = steps[idx];
-						}, 2200);
-					}
-				});
 			})();
 		</script>
 	</div>
@@ -6956,6 +6809,13 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 		$business_entity = lf_ai_studio_manifest_business_entity($manifest, is_array($business_entity) ? $business_entity : []);
 	}
 	error_log('LF MANIFEST: blueprints count ' . count($blueprints));
+	// Payload audit (server-side): fail loudly before sending a broken job to n8n.
+	$audit = lf_ai_studio_payload_audit_summary($blueprints, $scope);
+	update_option('lf_ai_studio_last_payload_audit', $audit, false);
+	if (!empty($audit['errors'])) {
+		return lf_ai_studio_fail_result('build_full_site_payload', (string) ($audit['errors'][0] ?? __('Payload audit failed.', 'leadsforward-core')));
+	}
+
 	$internal_links = lf_ai_studio_internal_links_catalog();
 	$payload = [
 		'request_id' => (string) ($homepage_payload['request_id'] ?? ''),
@@ -6986,6 +6846,71 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 		$payload['research_document'] = $research;
 	}
 	return $payload;
+}
+
+/**
+ * @param list<array<string,mixed>> $blueprints
+ * @param array<string,bool> $scope
+ * @return array<string,mixed>
+ */
+function lf_ai_studio_payload_audit_summary(array $blueprints, array $scope): array {
+	$errors = [];
+	$count_service = 0;
+	$count_service_area = 0;
+	$count_wrong_service_post_type = 0;
+	$count_wrong_service_area_post_type = 0;
+
+	foreach ($blueprints as $bp) {
+		if (!is_array($bp)) {
+			continue;
+		}
+		$page = (string) ($bp['page'] ?? '');
+		$post_id = isset($bp['post_id']) ? absint($bp['post_id']) : 0;
+		$post_type = $post_id > 0 ? (string) get_post_type($post_id) : '';
+
+		if ($page === 'service') {
+			$count_service++;
+			if ($post_type !== '' && $post_type !== 'lf_service') {
+				$count_wrong_service_post_type++;
+			}
+		}
+		if ($page === 'service_area') {
+			$count_service_area++;
+			if ($post_type !== '' && $post_type !== 'lf_service_area') {
+				$count_wrong_service_area_post_type++;
+			}
+		}
+	}
+
+	if (!empty($scope['services']) && $count_service === 0) {
+		$errors[] = __('Payload audit failed: “Service pages” is enabled but no service blueprints were built.', 'leadsforward-core');
+	}
+	if (!empty($scope['service_areas']) && $count_service_area === 0) {
+		$errors[] = __('Payload audit failed: “Service area pages” is enabled but no service area blueprints were built.', 'leadsforward-core');
+	}
+	if ($count_wrong_service_post_type > 0) {
+		$errors[] = __('Payload audit failed: one or more service blueprints target the wrong post type (must be lf_service).', 'leadsforward-core');
+	}
+	if ($count_wrong_service_area_post_type > 0) {
+		$errors[] = __('Payload audit failed: one or more service area blueprints target the wrong post type (must be lf_service_area).', 'leadsforward-core');
+	}
+
+	return [
+		'ok' => empty($errors),
+		'timestamp' => time(),
+		'scope' => [
+			'services' => !empty($scope['services']),
+			'service_areas' => !empty($scope['service_areas']),
+		],
+		'counts' => [
+			'blueprints_total' => is_array($blueprints) ? count($blueprints) : 0,
+			'service_blueprints' => $count_service,
+			'service_area_blueprints' => $count_service_area,
+			'wrong_service_post_type' => $count_wrong_service_post_type,
+			'wrong_service_area_post_type' => $count_wrong_service_area_post_type,
+		],
+		'errors' => $errors,
+	];
 }
 
 function lf_ai_studio_build_blog_payload(): array {
