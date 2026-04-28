@@ -635,7 +635,10 @@ function lf_ai_studio_airtable_pull_services_from_sitemaps(array $manifest, bool
 			continue;
 		}
 		$spec_niche = (string) ($spec['niche'] ?? '');
-		if ($spec_niche !== '' && sanitize_title($spec_niche) !== $niche_key) {
+		// Airtable often stores Niche as a linked-record ID in API responses. In that case (or when empty),
+		// do not filter out the row — the normalizer already tries to derive niche from "Page title | Niche".
+		$looks_like_record_id = ($spec_niche !== '' && preg_match('/^rec[a-zA-Z0-9]{10,}$/', $spec_niche) === 1);
+		if ($spec_niche !== '' && !$looks_like_record_id && sanitize_title($spec_niche) !== $niche_key) {
 			continue;
 		}
 		$slug_template = (string) ($spec['slug_template'] ?? '');
