@@ -516,6 +516,12 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 			'areas_count' => is_array($area_rows) ? count($area_rows) : 0,
 			'services_source' => $services_source,
 			'services_placeholder_only' => $services_placeholder_only,
+			'sitemaps_ok' => !empty($sitemap_pull['sitemaps_ok']),
+			'sitemaps_error' => (string) ($sitemap_pull['sitemaps_error'] ?? ''),
+			'sitemaps_rows' => (int) ($sitemap_pull['sitemaps_rows'] ?? 0),
+			'sitemaps_specs' => (int) ($sitemap_pull['sitemaps_specs'] ?? 0),
+			'sitemaps_services_found' => (int) ($sitemap_pull['sitemaps_services_found'] ?? 0),
+			'sitemaps_services_fallback_used' => !empty($sitemap_pull['sitemaps_services_fallback_used']),
 		],
 	]);
 }
@@ -556,6 +562,12 @@ function lf_ai_studio_airtable_generate_from_record_id(string $record_id, string
 	$sitemap_pull = lf_ai_studio_airtable_pull_services_from_sitemaps($normalized, true);
 	if (!empty($sitemap_pull['services_manifest'])) {
 		$normalized['services'] = $sitemap_pull['services_manifest'];
+	}
+	if (($sitemap_pull['services_source'] ?? 'none') === 'none') {
+		// Provide a high-signal error so it's obvious why the job isn't reaching n8n.
+		$err = (string) ($sitemap_pull['sitemaps_error'] ?? '');
+		$hint = $err !== '' ? ('Sitemaps fetch error: ' . $err) : 'No Services found in Sitemaps for this niche.';
+		update_option('lf_ai_studio_manifest_errors', [$hint], false);
 	}
 
 	// Preflight: if Airtable services are placeholder-only, replace with deterministic fallbacks before saving/sync.
@@ -609,26 +621,68 @@ function lf_ai_studio_airtable_pull_services_from_sitemaps(array $manifest, bool
 	$biz_niche = trim((string) ($business['niche'] ?? ($manifest['niche'] ?? '')));
 	$niche_key = sanitize_title($biz_niche);
 	if ($niche_key === '') {
-		return ['service_rows' => [], 'services_manifest' => [], 'services_source' => 'none'];
+		return [
+			'service_rows' => [],
+			'services_manifest' => [],
+			'services_source' => 'none',
+			'sitemaps_ok' => false,
+			'sitemaps_error' => 'missing_niche',
+			'sitemaps_rows' => 0,
+			'sitemaps_specs' => 0,
+			'sitemaps_services_found' => 0,
+			'sitemaps_services_fallback_used' => false,
+		];
 	}
 	if (!function_exists('lf_airtable_sitemaps_fetch_rows') || !function_exists('lf_sitemap_specs_from_airtable_rows')) {
-		return ['service_rows' => [], 'services_manifest' => [], 'services_source' => 'none'];
+		return [
+			'service_rows' => [],
+			'services_manifest' => [],
+			'services_source' => 'none',
+			'sitemaps_ok' => false,
+			'sitemaps_error' => 'sitemaps_helpers_missing',
+			'sitemaps_rows' => 0,
+			'sitemaps_specs' => 0,
+			'sitemaps_services_found' => 0,
+			'sitemaps_services_fallback_used' => false,
+		];
 	}
 
 	$rows = lf_airtable_sitemaps_fetch_rows();
 	if (empty($rows['ok'])) {
-		return ['service_rows' => [], 'services_manifest' => [], 'services_source' => 'none'];
+		return [
+			'service_rows' => [],
+			'services_manifest' => [],
+			'services_source' => 'none',
+			'sitemaps_ok' => false,
+			'sitemaps_error' => (string) ($rows['error'] ?? 'sitemaps_fetch_failed'),
+			'sitemaps_rows' => 0,
+			'sitemaps_specs' => 0,
+			'sitemaps_services_found' => 0,
+			'sitemaps_services_fallback_used' => false,
+		];
 	}
-	$norm = lf_sitemap_specs_from_airtable_rows((array) ($rows['rows'] ?? []));
+	$raw_rows = (array) ($rows['rows'] ?? []);
+	$norm = lf_sitemap_specs_from_airtable_rows($raw_rows);
 	$specs = is_array($norm['specs'] ?? null) ? $norm['specs'] : [];
 	if ($specs === []) {
-		return ['service_rows' => [], 'services_manifest' => [], 'services_source' => 'none'];
+		return [
+			'service_rows' => [],
+			'services_manifest' => [],
+			'services_source' => 'none',
+			'sitemaps_ok' => true,
+			'sitemaps_error' => 'no_specs',
+			'sitemaps_rows' => count($raw_rows),
+			'sitemaps_specs' => 0,
+			'sitemaps_services_found' => 0,
+			'sitemaps_services_fallback_used' => false,
+		];
 	}
 
 	$cache_specs = [];
 	$service_rows = [];
 	$services_manifest = [];
 	$loc = trim($biz_city . ' ' . $biz_state);
+	$fallback_used = false;
 
 	$is_service_detail_path = static function (string $resolved_norm): bool {
 		return (strpos($resolved_norm, '/services/') === 0 && $resolved_norm !== '/services/')
@@ -692,6 +746,7 @@ function lf_ai_studio_airtable_pull_services_from_sitemaps(array $manifest, bool
 
 	// If niche filtering caused zero services, fall back to "all Services rows" (still only detail URLs).
 	if ($service_rows === []) {
+		$fallback_used = true;
 		foreach ($specs as $spec) {
 			if (!is_array($spec)) {
 				continue;
@@ -752,6 +807,12 @@ function lf_ai_studio_airtable_pull_services_from_sitemaps(array $manifest, bool
 		'service_rows' => $out_rows,
 		'services_manifest' => array_values(array_filter($out_manifest, static fn($v): bool => is_array($v) && !empty($v))),
 		'services_source' => $out_rows !== [] ? 'airtable_sitemaps' : 'none',
+		'sitemaps_ok' => true,
+		'sitemaps_error' => '',
+		'sitemaps_rows' => count($raw_rows),
+		'sitemaps_specs' => is_array($specs) ? count($specs) : 0,
+		'sitemaps_services_found' => count($out_rows),
+		'sitemaps_services_fallback_used' => $fallback_used,
 	];
 }
 
