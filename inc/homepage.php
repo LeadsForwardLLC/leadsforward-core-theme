@@ -66,7 +66,6 @@ function lf_homepage_legacy_order(): array {
 		'process',
 		'faq_accordion',
 		'trust_reviews',
-		'related_links',
 		'map_nap',
 		'cta',
 	];
@@ -101,6 +100,14 @@ function lf_homepage_sanitize_order(array $order, bool $append_missing = true): 
 		}
 		$item = trim($item);
 		if ($item === '' || in_array($item, $clean, true)) {
+			continue;
+		}
+		// Homepage should not render related link grids (redundant with service intro + nav).
+		if ($item === 'related_links') {
+			continue;
+		}
+		// Homepage should not render service_grid (redundant with service_intro cards).
+		if ($item === 'service_grid') {
 			continue;
 		}
 		$base = lf_homepage_base_section_type($item);

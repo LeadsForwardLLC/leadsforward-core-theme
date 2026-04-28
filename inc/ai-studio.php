@@ -5417,6 +5417,7 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 		$slug = $normalized['slug'];
 		$key = 'lf_service_area:' . $slug;
 		$publish_now = isset($area_now_set[$slug]);
+		$primary_keyword = trim((string) ($normalized['primary_keyword'] ?? ''));
 		$title = trim($normalized['city'] . ($normalized['state'] ? ', ' . $normalized['state'] : ''));
 		if ($title === '') {
 			$title = $slug;
@@ -5445,6 +5446,9 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 			}
 			wp_update_post($args);
 			update_post_meta($existing->ID, 'lf_manifest_schedule_managed', 1);
+			if ($primary_keyword !== '') {
+				update_post_meta($existing->ID, 'lf_ai_post_keyword', $primary_keyword);
+			}
 		} else {
 			if ($publish_now) {
 				$post_id = wp_insert_post([
@@ -5468,6 +5472,9 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 			}
 			if ($post_id && !is_wp_error($post_id)) {
 				update_post_meta((int) $post_id, 'lf_manifest_schedule_managed', 1);
+				if ($primary_keyword !== '') {
+					update_post_meta((int) $post_id, 'lf_ai_post_keyword', $primary_keyword);
+				}
 			}
 		}
 	}
