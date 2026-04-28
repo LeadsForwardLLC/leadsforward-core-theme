@@ -8891,6 +8891,11 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response, array $o
 	$normalize_legacy_field_key = static function (string $section_id, string $field_key): array {
 		$section_id = trim($section_id);
 		$field_key = trim($field_key);
+		// Compatibility: older orchestrators used CTA-specific keys for the secondary intro.
+		// Current schema uses section_intro_secondary across content-like sections (including CTA).
+		if ($field_key === 'cta_subheadline_secondary') {
+			$field_key = 'section_intro_secondary';
+		}
 		if ($section_id === 'cta') {
 			if ($field_key === 'section_heading') {
 				$field_key = 'cta_headline';
@@ -9008,6 +9013,11 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response, array $o
 					);
 					continue;
 				}
+				// Normalize legacy CTA key aliases before resolution.
+				if ($key === 'cta_subheadline_secondary') {
+					$key = 'section_intro_secondary';
+				}
+
 				$parts = explode('.', $key, 2);
 				if (count($parts) !== 2) {
 					$resolved = lf_ai_studio_resolve_post_field_key(trim($key), $sections, $registry);
@@ -9021,6 +9031,7 @@ function lf_ai_studio_prevalidate_orchestrator_updates(array $response, array $o
 					$instance_id = trim($parts[0]);
 					$field_key = trim($parts[1]);
 				}
+				[, $field_key] = $normalize_legacy_field_key('', $field_key);
 				if (strpos($instance_id, '-') !== false) {
 					$alt_instance = str_replace('-', '_', $instance_id);
 					if (! isset($sections[ $instance_id ]) || ! is_array($sections[ $instance_id ])) {
@@ -9615,6 +9626,9 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			if (!is_string($key)) {
 				continue;
 			}
+			if ($key === 'cta_subheadline_secondary') {
+				$key = 'section_intro_secondary';
+			}
 			$debug_post_apply['incoming_keys']++;
 			if ($post->post_type === 'lf_service' && lf_ai_studio_orchestrator_bare_service_short_desc_key($key)) {
 				$raw = lf_ai_studio_normalize_value($value);
@@ -9643,6 +9657,9 @@ function lf_apply_orchestrator_updates(array $response, array $apply_options = [
 			} else {
 				$instance_id = trim($parts[0]);
 				$field_key = trim($parts[1]);
+			}
+			if ($field_key === 'cta_subheadline_secondary') {
+				$field_key = 'section_intro_secondary';
 			}
 			if ($instance_id === '' || $field_key === '') {
 				continue;
