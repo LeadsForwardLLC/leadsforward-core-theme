@@ -630,6 +630,15 @@ function lf_ai_studio_airtable_pull_services_from_sitemaps(array $manifest, bool
 	$services_manifest = [];
 	$loc = trim($biz_city . ' ' . $biz_state);
 
+	$is_service_detail_path = static function (string $resolved_norm): bool {
+		return (strpos($resolved_norm, '/services/') === 0 && $resolved_norm !== '/services/')
+			|| (strpos($resolved_norm, '/service/') === 0 && $resolved_norm !== '/service/');
+	};
+	$is_service_area_detail_path = static function (string $resolved_norm): bool {
+		return (strpos($resolved_norm, '/service-areas/') === 0 && $resolved_norm !== '/service-areas/')
+			|| (strpos($resolved_norm, '/service-area/') === 0 && $resolved_norm !== '/service-area/');
+	};
+
 	foreach ($specs as $spec) {
 		if (!is_array($spec)) {
 			continue;
@@ -652,8 +661,8 @@ function lf_ai_studio_airtable_pull_services_from_sitemaps(array $manifest, bool
 			: ['ok' => false, 'slug' => '/', 'error' => 'missing_slug_resolver'];
 		$resolved_slug = (string) ($resolved['slug'] ?? '/');
 		$resolved_norm = function_exists('lf_sitemap_normalize_slug_path') ? lf_sitemap_normalize_slug_path($resolved_slug) : ('/' . trim($resolved_slug, '/') . '/');
-		$is_service_detail = strpos($resolved_norm, '/services/') === 0 && $resolved_norm !== '/services/';
-		$is_area_detail = strpos($resolved_norm, '/service-areas/') === 0 && $resolved_norm !== '/service-areas/';
+		$is_service_detail = $is_service_detail_path($resolved_norm);
+		$is_area_detail = $is_service_area_detail_path($resolved_norm);
 
 		$enriched = $spec;
 		$enriched['slug_resolved'] = $resolved_slug;
@@ -679,6 +688,45 @@ function lf_ai_studio_airtable_pull_services_from_sitemaps(array $manifest, bool
 			'secondary_keywords' => [],
 			'custom_cta_context' => '',
 		];
+	}
+
+	// If niche filtering caused zero services, fall back to "all Services rows" (still only detail URLs).
+	if ($service_rows === []) {
+		foreach ($specs as $spec) {
+			if (!is_array($spec)) {
+				continue;
+			}
+			$slug_template = (string) ($spec['slug_template'] ?? '');
+			$title = sanitize_text_field((string) ($spec['title'] ?? ''));
+			$menu_group = (string) ($spec['menu_group'] ?? '');
+			if ($menu_group !== 'Services' || $slug_template === '' || $title === '') {
+				continue;
+			}
+			$resolved = function_exists('lf_sitemap_resolve_slug_template')
+				? lf_sitemap_resolve_slug_template($slug_template, $biz_city)
+				: ['ok' => false, 'slug' => '/', 'error' => 'missing_slug_resolver'];
+			$resolved_slug = (string) ($resolved['slug'] ?? '/');
+			$resolved_norm = function_exists('lf_sitemap_normalize_slug_path') ? lf_sitemap_normalize_slug_path($resolved_slug) : ('/' . trim($resolved_slug, '/') . '/');
+			if (!$is_service_detail_path($resolved_norm)) {
+				continue;
+			}
+			if (function_exists('lf_ai_studio_service_title_is_placeholder') && lf_ai_studio_service_title_is_placeholder($title)) {
+				continue;
+			}
+			$slug = sanitize_title((string) basename(trim($resolved_norm, '/')));
+			if ($slug === '') {
+				continue;
+			}
+			$service_rows[] = ['slug' => $slug, 'title' => $title];
+			$pk = $loc !== '' ? trim($title . ' ' . $loc) : $title;
+			$services_manifest[] = [
+				'title' => $title,
+				'slug' => $slug,
+				'primary_keyword' => $pk,
+				'secondary_keywords' => [],
+				'custom_cta_context' => '',
+			];
+		}
 	}
 
 	if ($persist_cache && $cache_specs !== []) {
