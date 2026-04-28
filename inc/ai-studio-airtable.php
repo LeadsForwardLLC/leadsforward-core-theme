@@ -412,12 +412,14 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 	}
 
 	// Align with Manifest page first paint: prefer lf_airtable_sitemap_cache so this AJAX response does not
-	// replace the smoke-test multiselect with niche-only fallbacks (e.g. two placeholder labels) after JS runs.
+	// replace the smoke-test multiselect with niche-only fallbacks after JS runs.
+	//
+	// IMPORTANT: Do NOT override a valid Airtable-derived services list with a thin/placeholder cache (e.g. "Main/Additional").
 	$smoke_cache_preview = ['service_slugs' => [], 'area_slugs' => []];
 	if (function_exists('lf_ai_studio_smoke_test_slugs_from_sitemap_cache')) {
 		$smoke_cache_preview = lf_ai_studio_smoke_test_slugs_from_sitemap_cache();
 	}
-	if ($smoke_cache_preview['service_slugs'] !== []) {
+	if (empty($service_rows) && $smoke_cache_preview['service_slugs'] !== []) {
 		$cached_svcs = [];
 		foreach ($smoke_cache_preview['service_slugs'] as $slug => $tit) {
 			if (function_exists('lf_ai_studio_service_title_is_placeholder') && lf_ai_studio_service_title_is_placeholder((string) $tit)) {
