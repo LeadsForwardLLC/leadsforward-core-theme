@@ -172,6 +172,7 @@
     var svcSelect = document.getElementById('lf-ai-scope-service-slugs');
     var areaSelect = document.getElementById('lf-ai-scope-area-slugs');
     if (!svcSelect && !areaSelect) return;
+    setStatus('Loading scope preview…', 'info');
     var body = new URLSearchParams({
       action: 'lf_ai_airtable_preview_manifest',
       nonce: cfg.nonce,
@@ -185,11 +186,22 @@
     })
       .then(function (res) { return res.json(); })
       .then(function (payload) {
-        if (!payload || !payload.success || !payload.data) return;
+        if (!payload || !payload.success || !payload.data) {
+          var msg = (payload && payload.data && payload.data.message) ? payload.data.message : 'Scope preview failed.';
+          setStatus(msg, 'error');
+          return;
+        }
         populateMultiSelect(svcSelect, payload.data.services || [], 'title');
         populateMultiSelect(areaSelect, payload.data.service_areas || [], 'label');
+        if (payload.data.meta && payload.data.meta.theme_version) {
+          setStatus('Scope preview loaded (theme ' + payload.data.meta.theme_version + ').', 'success');
+        } else {
+          setStatus('Scope preview loaded.', 'success');
+        }
       })
-      .catch(function () {});
+      .catch(function () {
+        setStatus('Scope preview failed (network error).', 'error');
+      });
   }
 
   function hasManifestFile() {
