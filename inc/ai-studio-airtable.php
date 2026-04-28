@@ -485,7 +485,8 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 		foreach ($smoke_cache_preview['area_slugs'] as $slug => $tit) {
 			$cached_areas[] = ['slug' => (string) $slug, 'label' => (string) $tit];
 		}
-		if ($cached_areas !== []) {
+		// Only fall back to cached areas when Airtable didn't produce usable rows.
+		if (empty($area_rows) && $cached_areas !== []) {
 			$area_rows = $cached_areas;
 		}
 	}
