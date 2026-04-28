@@ -144,6 +144,67 @@ function lf_ai_studio_smoke_test_slugs_from_sitemap_cache(?string $cache_raw = n
 }
 
 /**
+ * When the stored manifest contains placeholder/empty services, fall back to Sitemap Sync cache.
+ *
+ * @return list<array{title:string,slug:string,primary_keyword:string,secondary_keywords:list<string>,custom_cta_context:string}>
+ */
+function lf_ai_studio_services_fallback_from_sitemap_cache(array $manifest = []): array {
+	$rows = is_array($manifest['services'] ?? null) ? $manifest['services'] : [];
+	$has_real = false;
+	foreach ($rows as $row) {
+		if (!is_array($row)) {
+			continue;
+		}
+		$title = (string) ($row['title'] ?? $row['name'] ?? '');
+		$slug = sanitize_title((string) ($row['slug'] ?? ''));
+		if ($slug === '' && $title !== '') {
+			$slug = sanitize_title($title);
+		}
+		if ($slug !== '' && $title !== '' && !lf_ai_studio_service_title_is_placeholder($title)) {
+			$has_real = true;
+			break;
+		}
+	}
+	if ($has_real) {
+		return [];
+	}
+
+	$cache = lf_ai_studio_smoke_test_slugs_from_sitemap_cache(null);
+	$slug_to_label = is_array($cache['service_slugs'] ?? null) ? $cache['service_slugs'] : [];
+	$slug_to_label = lf_ai_studio_strip_placeholder_service_slug_map($slug_to_label);
+	if (empty($slug_to_label)) {
+		return [];
+	}
+
+	$city = '';
+	$state = '';
+	if (!empty($manifest['business']) && is_array($manifest['business'])) {
+		$business = $manifest['business'];
+		$city = sanitize_text_field((string) ($business['primary_city'] ?? ($business['address']['city'] ?? '')));
+		$state = sanitize_text_field((string) ($business['address']['state'] ?? ''));
+	}
+	$loc = trim($city . ' ' . $state);
+
+	$out = [];
+	foreach ($slug_to_label as $slug => $label) {
+		$slug = sanitize_title((string) $slug);
+		$label = sanitize_text_field((string) $label);
+		if ($slug === '' || $label === '' || lf_ai_studio_service_title_is_placeholder($label)) {
+			continue;
+		}
+		$pk = $loc !== '' ? trim($label . ' ' . $loc) : $label;
+		$out[] = [
+			'title' => $label,
+			'slug' => $slug,
+			'primary_keyword' => $pk,
+			'secondary_keywords' => [],
+			'custom_cta_context' => '',
+		];
+	}
+	return $out;
+}
+
+/**
  * Admin-only JSON payload for Manifest → smoke-test picker troubleshooting (?lf_scope_debug=1).
  *
  * @return array<string, mixed>
@@ -5365,6 +5426,10 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 	$anchor_ts = lf_launch_schedule_anchor_ts((string) ($ls['anchor'] ?? ''));
 
 	$services_raw = isset($manifest['services']) && is_array($manifest['services']) ? $manifest['services'] : [];
+	$fallback_services = lf_ai_studio_services_fallback_from_sitemap_cache($manifest);
+	if (!empty($fallback_services)) {
+		$services_raw = $fallback_services;
+	}
 	$service_slugs = [];
 	foreach ($services_raw as $item) {
 		$n = lf_ai_studio_normalize_service_item($item);
@@ -6014,6 +6079,14 @@ function lf_ai_studio_homepage_service_catalog(): array {
 	$manifest = lf_ai_studio_get_manifest();
 	if (!empty($manifest) && is_array($manifest)) {
 		$items = $manifest['services'] ?? [];
+		if (!is_array($items) || empty($items)) {
+			$items = lf_ai_studio_services_fallback_from_sitemap_cache($manifest);
+		} else {
+			$fallback = lf_ai_studio_services_fallback_from_sitemap_cache($manifest);
+			if (!empty($fallback)) {
+				$items = $fallback;
+			}
+		}
 		if (is_array($items) && !empty($items)) {
 			$out = [];
 			foreach ($items as $item) {
@@ -6666,6 +6739,10 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 		$service_slugs = is_array($service_slugs) ? array_values(array_filter(array_map('sanitize_title', $service_slugs))) : [];
 		if ($use_manifest) {
 			$services = isset($manifest['services']) && is_array($manifest['services']) ? $manifest['services'] : [];
+			$fallback_services = lf_ai_studio_services_fallback_from_sitemap_cache($manifest);
+			if (!empty($fallback_services)) {
+				$services = $fallback_services;
+			}
 			foreach ($services as $item) {
 				$normalized = lf_ai_studio_normalize_service_item($item);
 				$slug = $normalized['slug'];

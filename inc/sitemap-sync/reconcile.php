@@ -340,13 +340,24 @@ function lf_sitemap_sync_reconcile_run(): array {
 			$errors[] = sprintf('spec_%d: %s', (int) $i, $resolved_err !== '' ? $resolved_err : 'slug_resolve_failed');
 		}
 
+		// Service detail URLs belong to CPTs, not WP Pages.
+		// Keep them in the cache for downstream generators, but do not upsert `page` posts for them.
+		$resolved_norm = function_exists('lf_sitemap_normalize_slug_path') ? lf_sitemap_normalize_slug_path($resolved_slug) : ('/' . trim($resolved_slug, '/') . '/');
+		$is_service_detail = strpos($resolved_norm, '/services/') === 0 && $resolved_norm !== '/services/';
+		$is_area_detail = strpos($resolved_norm, '/service-areas/') === 0 && $resolved_norm !== '/service-areas/';
+
 		$enriched = $spec;
 		$enriched['sitemap_key'] = $key;
 		$enriched['slug_resolved'] = $resolved_slug;
-		$enriched['post_type'] = 'page';
+		$enriched['post_type'] = ($is_service_detail ? 'lf_service' : ($is_area_detail ? 'lf_service_area' : 'page'));
 		$enriched['post_status'] = $planned_status;
 
 		$cache_specs[] = $enriched;
+
+		if ($is_service_detail || $is_area_detail) {
+			$result['skipped']++;
+			continue;
+		}
 
 		$upsert = lf_sitemap_sync_upsert_page($enriched);
 		if (empty($upsert['ok'])) {
