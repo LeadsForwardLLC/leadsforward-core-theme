@@ -90,6 +90,12 @@ $query = new WP_Query($query_args);
 			<div class="lf-block-service-intro__grid">
 				<?php while ($query->have_posts()) : $query->the_post();
 					$short_desc = function_exists('get_field') ? (string) get_field('lf_service_short_desc', get_the_ID()) : '';
+					if ($short_desc === '') {
+						$meta = get_post_meta(get_the_ID(), 'lf_service_short_desc', true);
+						if (is_string($meta) && $meta !== '') {
+							$short_desc = $meta;
+						}
+					}
 					$desc = $short_desc !== '' ? wp_trim_words(wp_strip_all_tags($short_desc), 28) : '';
 					if ($desc === '') {
 						$excerpt = get_the_excerpt();
