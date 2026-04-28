@@ -1887,60 +1887,34 @@ function lf_ai_studio_render_page(): void {
 												<p class="description" style="margin:4px 0 8px;">
 													<?php esc_html_e('Select specific services to include when “Service pages” is enabled. Leave empty to include all published services.', 'leadsforward-core'); ?>
 												</p>
-												<?php if (!empty($services_for_picker)) : ?>
-													<input type="hidden" name="lf_ai_scope_smoke_services_mode" value="post" />
-													<select name="lf_ai_scope_service_ids[]" multiple size="8" style="width:100%;max-width:420px;">
-														<?php foreach ($services_for_picker as $svc) : ?>
-															<?php if (!$svc instanceof \WP_Post) { continue; } ?>
-															<option value="<?php echo esc_attr((string) $svc->ID); ?>" <?php selected(in_array((int) $svc->ID, $selected_service_ids, true)); ?>>
-																<?php echo esc_html($svc->post_title); ?>
-																<?php echo $svc->post_status !== 'publish' ? esc_html(' (' . $svc->post_status . ')') : ''; ?>
-															</option>
-														<?php endforeach; ?>
-													</select>
-												<?php else : ?>
-													<input type="hidden" name="lf_ai_scope_smoke_services_mode" value="slug" />
-													<select id="lf-ai-scope-service-slugs" name="lf_ai_scope_service_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
-														<?php foreach ($selected_service_slugs as $slug => $label) : ?>
-															<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_service_slugs, true)); ?>>
-																<?php echo esc_html((string) $label); ?>
-															</option>
-														<?php endforeach; ?>
-													</select>
-													<p class="description" style="margin-top:6px;">
-														<?php esc_html_e('No service posts exist yet — options load from the selected Airtable project/manifest.', 'leadsforward-core'); ?>
-													</p>
-												<?php endif; ?>
+												<input type="hidden" name="lf_ai_scope_smoke_services_mode" value="slug" />
+												<select id="lf-ai-scope-service-slugs" name="lf_ai_scope_service_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
+													<?php foreach ($selected_service_slugs as $slug => $label) : ?>
+														<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_service_slugs, true)); ?>>
+															<?php echo esc_html((string) $label); ?>
+														</option>
+													<?php endforeach; ?>
+												</select>
+												<p class="description" style="margin-top:6px;">
+													<?php esc_html_e('Options load from the selected Airtable project (preview) and fall back to the stored manifest/cache when needed.', 'leadsforward-core'); ?>
+												</p>
 											</div>
 											<div style="min-width:320px;max-width:420px;">
 												<strong><?php esc_html_e('Smoke test: Service Areas (optional)', 'leadsforward-core'); ?></strong>
 												<p class="description" style="margin:4px 0 8px;">
 													<?php esc_html_e('Select specific service areas to include when “Service area pages” is enabled. Leave empty to include all published service areas.', 'leadsforward-core'); ?>
 												</p>
-												<?php if (!empty($areas_for_picker)) : ?>
-													<input type="hidden" name="lf_ai_scope_smoke_areas_mode" value="post" />
-													<select name="lf_ai_scope_service_area_ids[]" multiple size="8" style="width:100%;max-width:420px;">
-														<?php foreach ($areas_for_picker as $area) : ?>
-															<?php if (!$area instanceof \WP_Post) { continue; } ?>
-															<option value="<?php echo esc_attr((string) $area->ID); ?>" <?php selected(in_array((int) $area->ID, $selected_area_ids, true)); ?>>
-																<?php echo esc_html($area->post_title); ?>
-																<?php echo $area->post_status !== 'publish' ? esc_html(' (' . $area->post_status . ')') : ''; ?>
-															</option>
-														<?php endforeach; ?>
-													</select>
-												<?php else : ?>
-													<input type="hidden" name="lf_ai_scope_smoke_areas_mode" value="slug" />
-													<select id="lf-ai-scope-area-slugs" name="lf_ai_scope_service_area_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
-														<?php foreach ($selected_area_slugs as $slug => $label) : ?>
-															<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_area_slugs, true)); ?>>
-																<?php echo esc_html((string) $label); ?>
-															</option>
-														<?php endforeach; ?>
-													</select>
-													<p class="description" style="margin-top:6px;">
-														<?php esc_html_e('No service area posts exist yet — options load from the selected Airtable project/manifest.', 'leadsforward-core'); ?>
-													</p>
-												<?php endif; ?>
+												<input type="hidden" name="lf_ai_scope_smoke_areas_mode" value="slug" />
+												<select id="lf-ai-scope-area-slugs" name="lf_ai_scope_service_area_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
+													<?php foreach ($selected_area_slugs as $slug => $label) : ?>
+														<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_area_slugs, true)); ?>>
+															<?php echo esc_html((string) $label); ?>
+														</option>
+													<?php endforeach; ?>
+												</select>
+												<p class="description" style="margin-top:6px;">
+													<?php esc_html_e('Options load from the selected Airtable project (preview) and fall back to the stored manifest/cache when needed.', 'leadsforward-core'); ?>
+												</p>
 											</div>
 										</div>
 										<button type="submit" class="button"><?php esc_html_e('Save Scope', 'leadsforward-core'); ?></button>
