@@ -964,12 +964,32 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 			$summary = is_array($report['summary'] ?? null) ? $report['summary'] : [];
 			$missing_fields = (int) ($summary['missing_fields'] ?? 0);
 			$uniq_dupes = (int) ($summary['uniqueness_duplicates'] ?? 0);
-			if ($missing_fields > 0) {
+
+			// Gate policy: keep audits visible, but don't fail a run for optional/quality-only items by default.
+			// Failures should be reserved for hard correctness issues (e.g. missing required sections),
+			// otherwise the system appears "broken" even when most content applied successfully.
+			$gate_missing_threshold = (int) apply_filters('lf_ai_studio_gate_missing_fields_threshold', 50);
+			$gate_enforce_uniqueness = (bool) apply_filters('lf_ai_studio_gate_enforce_cross_page_uniqueness', false);
+
+			if ($missing_fields > $gate_missing_threshold) {
 				$gate_errors[] = sprintf(__('Content audit: %d missing/default fields detected.', 'leadsforward-core'), $missing_fields);
 			}
-			if ($uniq_dupes > 0) {
+			if ($gate_enforce_uniqueness && $uniq_dupes > 0) {
 				$gate_errors[] = sprintf(__('Content audit: %d cross-page uniqueness duplicates detected.', 'leadsforward-core'), $uniq_dupes);
 			}
+
+			// Always log quality warnings (even when not gating).
+			if (($missing_fields > 0 || $uniq_dupes > 0) && function_exists('lf_ai_studio_error_log')) {
+				lf_ai_studio_error_log('orchestrator: post_apply_quality_warnings', 'INFO', [
+					'job_id' => $job_id,
+					'request_id' => $request_id,
+					'missing_fields' => $missing_fields,
+					'uniqueness_duplicates' => $uniq_dupes,
+					'gate_missing_threshold' => $gate_missing_threshold,
+					'gate_enforce_uniqueness' => $gate_enforce_uniqueness,
+				]);
+			}
+
 			if (!empty($gate_errors)) {
 				// Include a small sample of issues to speed debugging (scoped audits are usually small).
 				$issue_samples = [];
