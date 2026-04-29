@@ -190,6 +190,45 @@ function lf_sitemap_sync_clear_header_menu_items(int $menu_id): void {
 }
 
 /**
+ * Reorder top-level header menu items to match a desired label order.
+ *
+ * @param list<string> $labels Desired order of top-level items.
+ */
+function lf_sitemap_sync_reorder_header_menu_top_level(int $menu_id, array $labels): void {
+	if (empty($labels) || !function_exists('wp_update_nav_menu_item')) {
+		return;
+	}
+	$items = wp_get_nav_menu_items($menu_id);
+	if (!is_array($items) || empty($items)) {
+		return;
+	}
+	$top_by_label = [];
+	foreach ($items as $item) {
+		if (!$item instanceof WP_Post) {
+			continue;
+		}
+		if ((int) ($item->menu_item_parent ?? 0) !== 0) {
+			continue;
+		}
+		$title = strtolower(trim(wp_strip_all_tags((string) ($item->title ?? ''))));
+		if ($title !== '') {
+			$top_by_label[$title] = $item;
+		}
+	}
+	$pos = 0;
+	foreach ($labels as $label) {
+		$key = strtolower(trim((string) $label));
+		$item = $top_by_label[$key] ?? null;
+		if (!$item instanceof WP_Post) {
+			continue;
+		}
+		wp_update_nav_menu_item($menu_id, (int) $item->ID, [
+			'menu-item-position' => $pos++,
+		]);
+	}
+}
+
+/**
  * @param int $menu_id
  * @param int $position
  * @param array{post_id:int,title:string,parent_item_id?:int,classes?:string} $node
@@ -240,6 +279,15 @@ function lf_sitemap_sync_enforce_group_dropdown(int $menu_id, array $group): voi
 		return;
 	}
 	$page = get_page_by_path($page_slug);
+	if (!$page instanceof WP_Post) {
+		$page_id = wp_insert_post([
+			'post_type' => 'page',
+			'post_status' => 'publish',
+			'post_title' => $label,
+			'post_name' => $page_slug,
+		]);
+		$page = $page_id && !is_wp_error($page_id) ? get_post((int) $page_id) : null;
+	}
 	if (!$page instanceof WP_Post || $page->post_status !== 'publish') {
 		return;
 	}
@@ -477,8 +525,17 @@ function lf_sitemap_sync_build_header_menu(): array {
 	// Safety: if sitemap has no published menu nodes, do NOT clear/rebuild the menu.
 	// This prevents wiping navigation when Airtable data is incomplete/invalid or publish_ratio leaves nothing published.
 	if (empty($items)) {
+		// Still enforce required dropdowns and ordering.
+		lf_sitemap_sync_enforce_group_dropdown($menu_id, [
+			'label' => 'Services',
+			'page_slug' => 'services',
+			'child_post_type' => 'lf_service',
+			'child_limit' => (int) apply_filters('lf_sitemap_sync_services_menu_limit', 18),
+			'child_class' => 'lf-menu-service-child',
+		]);
+		lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'Service Areas', 'Reviews', 'More']);
 		return [
-			'ok' => false,
+			'ok' => true,
 			'enabled' => true,
 			'menu_id' => $menu_id,
 			'created_menu' => !empty($ensure['created']),
@@ -564,6 +621,7 @@ function lf_sitemap_sync_build_header_menu(): array {
 		'child_limit' => (int) apply_filters('lf_sitemap_sync_services_menu_limit', 18),
 		'child_class' => 'lf-menu-service-child',
 	]);
+	lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'Service Areas', 'Reviews', 'More']);
 
 	return [
 		'ok' => true,

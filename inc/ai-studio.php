@@ -5124,6 +5124,9 @@ function lf_ai_studio_normalize_area_item($item): array {
 		$slug = sanitize_title(trim($city . ' ' . $state));
 	}
 	$primary = sanitize_text_field((string) ($item['primary_keyword'] ?? $item['keyword'] ?? ''));
+	if ($primary !== '' && preg_match('/^rec[a-zA-Z0-9]{8,}$/', $primary) === 1) {
+		$primary = '';
+	}
 	return [
 		'city' => $city,
 		'state' => $state,
@@ -5418,6 +5421,9 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 		$key = 'lf_service_area:' . $slug;
 		$publish_now = isset($area_now_set[$slug]);
 		$primary_keyword = trim((string) ($normalized['primary_keyword'] ?? ''));
+		if ($primary_keyword === '' && !empty($manifest['homepage']['primary_keyword'])) {
+			$primary_keyword = trim((string) $manifest['homepage']['primary_keyword'] . ' ' . trim($normalized['city'] . ' ' . $normalized['state']));
+		}
 		$title = trim($normalized['city'] . ($normalized['state'] ? ', ' . $normalized['state'] : ''));
 		if ($title === '') {
 			$title = $slug;
@@ -6645,6 +6651,10 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 		$post = $posts[0] ?? null;
 		return ($post instanceof \WP_Post) ? $post : null;
 	};
+	$is_airtable_record_id_like = static function (string $value): bool {
+		$value = trim($value);
+		return $value !== '' && preg_match('/^rec[a-zA-Z0-9]{8,}$/', $value) === 1;
+	};
 
 	if ($scope['services']) {
 		$service_ids = get_option('lf_ai_scope_service_ids', []);
@@ -6788,8 +6798,14 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 				}
 				$sitemap_kw = trim((string) get_post_meta((int) $area->ID, '_lf_seo_primary_keyword', true));
 				$keyword = $sitemap_kw !== '' ? $sitemap_kw : (string) ($normalized['primary_keyword'] ?? '');
+				if ($is_airtable_record_id_like($keyword)) {
+					$keyword = '';
+				}
 				if ($keyword === '') {
 					$keyword = $area_keyword_map[$slug] ?? '';
+				}
+				if ($is_airtable_record_id_like($keyword)) {
+					$keyword = '';
 				}
 				if ($keyword === '') {
 					$keyword = $overview_keyword !== ''
@@ -7803,7 +7819,18 @@ function lf_ai_studio_clean_value_for_field($value, string $field_type, string $
 		$clean_lines = array_values(array_unique($clean_lines));
 		return implode("\n", $clean_lines);
 	}
-	return lf_ai_studio_clean_text_field_value((string) $value);
+	$text = lf_ai_studio_clean_text_field_value((string) $value);
+	// De-dupe accidental repeated sentences (common LLM artifact).
+	$sentences = preg_split('/(?<=[.!?])\s+/', trim($text)) ?: [];
+	if (count($sentences) >= 2) {
+		$first = strtolower(trim(preg_replace('/\s+/', ' ', (string) ($sentences[0] ?? ''))));
+		$second = strtolower(trim(preg_replace('/\s+/', ' ', (string) ($sentences[1] ?? ''))));
+		if ($first !== '' && $first === $second) {
+			array_shift($sentences);
+			$text = trim(implode(' ', $sentences));
+		}
+	}
+	return $text;
 }
 
 /**
@@ -8256,6 +8283,13 @@ function lf_ai_studio_parse_process_step_lines(string $raw): array {
 			$parts = explode('|', $line, 2);
 			$title = trim((string) ($parts[0] ?? ''));
 			$body = trim((string) ($parts[1] ?? ''));
+		} else {
+			// Compatibility: some orchestrators send "Title Body..." with no separator.
+			// Try to split on common lead-in tokens that start the description.
+			if (preg_match('/^(.{3,80}?)\s+(We|Our|You|The)\b(.*)$/', $line, $m) === 1) {
+				$title = trim((string) ($m[1] ?? $line));
+				$body = trim((string) (($m[2] ?? '') . ($m[3] ?? '')));
+			}
 		}
 		$title = trim((string) preg_replace('/\s+/', ' ', $title));
 		if ($title === '') {
