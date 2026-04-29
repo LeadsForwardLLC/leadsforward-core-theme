@@ -5478,6 +5478,12 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 			}
 		}
 	}
+
+	// Keep primary navigation in sync with core pages + service CPTs.
+	// This is intentionally idempotent and safe to run repeatedly.
+	if (function_exists('lf_sitemap_sync_build_header_menu')) {
+		lf_sitemap_sync_build_header_menu();
+	}
 }
 
 function lf_ai_studio_llm_system_message(): string {

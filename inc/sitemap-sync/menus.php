@@ -208,13 +208,17 @@ function lf_sitemap_sync_add_post_menu_item(int $menu_id, int &$position, array 
 	if ($title === '') {
 		$title = get_the_title($post_id);
 	}
+	$object = sanitize_key((string) ($node['object'] ?? 'page'));
+	if ($object === '') {
+		$object = 'page';
+	}
 	$parent_item_id = (int) ($node['parent_item_id'] ?? 0);
 	$classes = (string) ($node['classes'] ?? '');
 	$id = wp_update_nav_menu_item($menu_id, 0, [
 		'menu-item-title'     => $title,
 		'menu-item-url'       => get_permalink($post_id),
 		'menu-item-type'      => 'post_type',
-		'menu-item-object'    => 'page',
+		'menu-item-object'    => $object,
 		'menu-item-object-id' => $post_id,
 		'menu-item-status'    => 'publish',
 		'menu-item-parent-id' => $parent_item_id,
@@ -222,6 +226,116 @@ function lf_sitemap_sync_add_post_menu_item(int $menu_id, int &$position, array 
 		'menu-item-classes'   => $classes,
 	]);
 	return is_wp_error($id) ? 0 : (int) $id;
+}
+
+/**
+ * Ensure a menu group exists and optionally attach CPT children under it.
+ *
+ * @param array{label:string, page_slug:string, child_post_type?:string, child_limit?:int, child_class?:string} $group
+ */
+function lf_sitemap_sync_enforce_group_dropdown(int $menu_id, array $group): void {
+	$label = trim((string) ($group['label'] ?? ''));
+	$page_slug = sanitize_title((string) ($group['page_slug'] ?? ''));
+	if ($label === '' || $page_slug === '') {
+		return;
+	}
+	$page = get_page_by_path($page_slug);
+	if (!$page instanceof WP_Post || $page->post_status !== 'publish') {
+		return;
+	}
+	$items = wp_get_nav_menu_items($menu_id);
+	if (!is_array($items)) {
+		$items = [];
+	}
+
+	$parent_item_id = 0;
+	foreach ($items as $item) {
+		if (!$item instanceof WP_Post) {
+			continue;
+		}
+		$is_top = (int) ($item->menu_item_parent ?? 0) === 0;
+		if (!$is_top) {
+			continue;
+		}
+		$title = strtolower(trim(wp_strip_all_tags((string) ($item->title ?? ''))));
+		if ($title === strtolower($label)) {
+			$parent_item_id = (int) $item->ID;
+			break;
+		}
+	}
+
+	$position = 0;
+	if ($items !== []) {
+		foreach ($items as $item) {
+			if ($item instanceof WP_Post) {
+				$position = max($position, (int) ($item->menu_order ?? 0));
+			}
+		}
+		$position++;
+	}
+
+	if ($parent_item_id <= 0) {
+		$parent_item_id = lf_sitemap_sync_add_post_menu_item($menu_id, $position, [
+			'post_id' => (int) $page->ID,
+			'title' => $label,
+			'parent_item_id' => 0,
+			'object' => 'page',
+			'classes' => '',
+		]);
+		if ($parent_item_id <= 0) {
+			return;
+		}
+	}
+
+	$child_post_type = sanitize_key((string) ($group['child_post_type'] ?? ''));
+	if ($child_post_type === '') {
+		return;
+	}
+	$limit = (int) ($group['child_limit'] ?? 18);
+	$limit = $limit > 0 ? $limit : 18;
+	$child_class = trim((string) ($group['child_class'] ?? ''));
+
+	$child_posts = get_posts([
+		'post_type' => $child_post_type,
+		'post_status' => 'publish',
+		'posts_per_page' => $limit,
+		'orderby' => 'menu_order title',
+		'order' => 'ASC',
+		'no_found_rows' => true,
+	]);
+	if (!is_array($child_posts) || empty($child_posts)) {
+		return;
+	}
+
+	$existing_child_object_ids = [];
+	foreach ($items as $item) {
+		if (!$item instanceof WP_Post) {
+			continue;
+		}
+		if ((int) ($item->menu_item_parent ?? 0) !== $parent_item_id) {
+			continue;
+		}
+		$oid = (int) ($item->object_id ?? 0);
+		if ($oid > 0) {
+			$existing_child_object_ids[$oid] = true;
+		}
+	}
+
+	foreach ($child_posts as $child) {
+		if (!$child instanceof WP_Post) {
+			continue;
+		}
+		if (!empty($existing_child_object_ids[(int) $child->ID])) {
+			continue;
+		}
+		lf_sitemap_sync_add_post_menu_item($menu_id, $position, [
+			'post_id' => (int) $child->ID,
+			'title' => (string) ($child->post_title ?? ''),
+			'parent_item_id' => $parent_item_id,
+			'object' => $child_post_type,
+			'classes' => $child_class,
+		]);
+	}
 }
 
 /**
@@ -441,6 +555,15 @@ function lf_sitemap_sync_build_header_menu(): array {
 			'menu-item-classes'  => $class_str,
 		]);
 	}
+
+	// Enforce the Services dropdown group + children, even when Airtable sitemap specs are missing/incomplete.
+	lf_sitemap_sync_enforce_group_dropdown($menu_id, [
+		'label' => 'Services',
+		'page_slug' => 'services',
+		'child_post_type' => 'lf_service',
+		'child_limit' => (int) apply_filters('lf_sitemap_sync_services_menu_limit', 18),
+		'child_class' => 'lf-menu-service-child',
+	]);
 
 	return [
 		'ok' => true,
