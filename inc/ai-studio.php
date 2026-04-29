@@ -6645,6 +6645,7 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 		$service_ids = is_array($service_ids) ? array_values(array_filter(array_map('absint', $service_ids))) : [];
 		$service_slugs = get_option('lf_ai_scope_service_slugs', []);
 		$service_slugs = is_array($service_slugs) ? array_values(array_filter(array_map('sanitize_title', $service_slugs))) : [];
+		$service_blueprints_built = 0;
 		if ($use_manifest) {
 			$services = isset($manifest['services']) && is_array($manifest['services']) ? $manifest['services'] : [];
 			$fallback_services = lf_ai_studio_services_fallback_from_sitemap_cache($manifest);
@@ -6680,6 +6681,46 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 				$blueprint = lf_ai_studio_build_post_blueprint($service, 'service', 'service_detail', $keyword);
 				if (!empty($blueprint)) {
 					$blueprints[] = $blueprint;
+					$service_blueprints_built++;
+				}
+			}
+			// If the manifest list can't be resolved to real posts (placeholders, empty sitemap cache, etc),
+			// fall back to building blueprints from the actual service CPTs on this site.
+			if ($service_blueprints_built === 0) {
+				lf_ai_studio_error_log('build_full_site_payload: service manifest slugs did not resolve; falling back to CPT query', 'INFO', [
+					'service_slugs_filtered' => !empty($service_slugs),
+					'service_ids_filtered' => !empty($service_ids),
+					'manifest_services_count' => is_array($manifest['services'] ?? null) ? count($manifest['services']) : 0,
+				]);
+				$services = get_posts([
+					'post_type' => 'lf_service',
+					'post_status' => ['publish', 'future', 'draft', 'pending', 'private'],
+					'posts_per_page' => 200,
+					'orderby' => 'menu_order title',
+					'order' => 'ASC',
+				]);
+				foreach ($services as $service) {
+					if (!$service instanceof \WP_Post) {
+						continue;
+					}
+					if (!empty($service_ids) && !in_array((int) $service->ID, $service_ids, true)) {
+						continue;
+					}
+					if (!empty($service_slugs) && !in_array((string) $service->post_name, $service_slugs, true)) {
+						continue;
+					}
+					$sitemap_kw = trim((string) get_post_meta((int) $service->ID, '_lf_seo_primary_keyword', true));
+					$keyword = $sitemap_kw !== '' ? $sitemap_kw : ($service_keyword_map[$service->post_name] ?? '');
+					if ($keyword === '') {
+						$keyword = $overview_keyword !== ''
+							? trim($service->post_title . ' ' . $overview_keyword)
+							: (string) $service->post_title;
+					}
+					$blueprint = lf_ai_studio_build_post_blueprint($service, 'service', 'service_detail', $keyword);
+					if (!empty($blueprint)) {
+						$blueprints[] = $blueprint;
+						$service_blueprints_built++;
+					}
 				}
 			}
 		} else {
@@ -6710,6 +6751,7 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 				$blueprint = lf_ai_studio_build_post_blueprint($service, 'service', 'service_detail', $keyword);
 				if (!empty($blueprint)) {
 					$blueprints[] = $blueprint;
+					$service_blueprints_built++;
 				}
 			}
 		}
