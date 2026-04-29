@@ -6622,6 +6622,23 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 
 	$service_keyword_map = $use_manifest ? lf_ai_studio_manifest_keyword_map($manifest, 'services') : [];
 	$area_keyword_map = $use_manifest ? lf_ai_studio_manifest_keyword_map($manifest, 'service_areas') : [];
+	$find_post_by_slug_any_status = static function (string $slug, string $post_type): ?\WP_Post {
+		$slug = sanitize_title($slug);
+		$post_type = sanitize_key($post_type);
+		if ($slug === '' || $post_type === '') {
+			return null;
+		}
+		$posts = get_posts([
+			'post_type' => $post_type,
+			'name' => $slug,
+			'post_status' => ['publish', 'future', 'draft', 'pending', 'private'],
+			'posts_per_page' => 1,
+			'no_found_rows' => true,
+			'suppress_filters' => false,
+		]);
+		$post = $posts[0] ?? null;
+		return ($post instanceof \WP_Post) ? $post : null;
+	};
 
 	if ($scope['services']) {
 		$service_ids = get_option('lf_ai_scope_service_ids', []);
@@ -6640,7 +6657,7 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 				if ($slug === '') {
 					continue;
 				}
-				$service = get_page_by_path($slug, OBJECT, 'lf_service');
+				$service = $find_post_by_slug_any_status($slug, 'lf_service');
 				if (!$service instanceof \WP_Post) {
 					continue;
 				}
@@ -6711,7 +6728,7 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 				if ($slug === '') {
 					continue;
 				}
-				$area = get_page_by_path($slug, OBJECT, 'lf_service_area');
+				$area = $find_post_by_slug_any_status($slug, 'lf_service_area');
 				if (!$area instanceof \WP_Post) {
 					continue;
 				}
