@@ -61,12 +61,24 @@ $auto_select_faq_ids = static function (int $limit) use ($section): array {
 	if (!$query->have_posts()) {
 		return [];
 	}
-	$page_title = get_the_title(get_queried_object_id());
+	$qid = (int) get_queried_object_id();
+	$queried = get_queried_object();
+	$ctx_pt = ($queried instanceof \WP_Post) ? (string) $queried->post_type : '';
+	$ctx_id = ($queried instanceof \WP_Post) ? (int) $queried->ID : 0;
+	$page_kw = '';
+	if ($qid > 0) {
+		$page_kw = trim((string) get_post_meta($qid, '_lf_seo_primary_keyword', true));
+		if ($page_kw === '') {
+			$page_kw = trim((string) get_post_meta($qid, 'lf_ai_post_keyword', true));
+		}
+	}
+	$page_title = $qid > 0 ? get_the_title($qid) : '';
 	$intent_source = trim(implode(' ', array_filter([
 		(string) ($section['section_heading'] ?? ''),
 		(string) ($section['section_intro'] ?? ''),
 		(string) $page_title,
-		(string) get_post_field('post_excerpt', get_queried_object_id()),
+		(string) ($qid > 0 ? get_post_field('post_excerpt', $qid) : ''),
+		$page_kw,
 	])));
 	$terms = preg_split('/[^a-z0-9]+/i', strtolower($intent_source));
 	$terms = array_values(array_unique(array_filter(array_map(static function ($term): string {
@@ -74,6 +86,7 @@ $auto_select_faq_ids = static function (int $limit) use ($section): array {
 	}, is_array($terms) ? $terms : []), static function (string $term): bool {
 		return strlen($term) >= 4;
 	})));
+	$page_kw_l = strtolower(trim($page_kw));
 	$scores = [];
 	while ($query->have_posts()) {
 		$query->the_post();
@@ -89,6 +102,29 @@ $auto_select_faq_ids = static function (int $limit) use ($section): array {
 			if ($term !== '' && strpos($haystack, $term) !== false) {
 				$score += 3;
 			}
+		}
+		if ($page_kw_l !== '' && strpos($haystack, $page_kw_l) !== false) {
+			$score += 28;
+		}
+		$assoc_svc_raw = function_exists('get_field') ? get_field('lf_faq_associated_service', $faq_id) : null;
+		$assoc_area_raw = function_exists('get_field') ? get_field('lf_faq_associated_service_area', $faq_id) : null;
+		$assoc_svc = 0;
+		if (is_array($assoc_svc_raw)) {
+			$assoc_svc = (int) ($assoc_svc_raw[0] ?? 0);
+		} elseif (is_numeric($assoc_svc_raw)) {
+			$assoc_svc = (int) $assoc_svc_raw;
+		}
+		$assoc_area = 0;
+		if (is_array($assoc_area_raw)) {
+			$assoc_area = (int) ($assoc_area_raw[0] ?? 0);
+		} elseif (is_numeric($assoc_area_raw)) {
+			$assoc_area = (int) $assoc_area_raw;
+		}
+		if ($ctx_pt === 'lf_service' && $assoc_svc > 0 && $assoc_svc === $ctx_id) {
+			$score += 140;
+		}
+		if ($ctx_pt === 'lf_service_area' && $assoc_area > 0 && $assoc_area === $ctx_id) {
+			$score += 140;
 		}
 		$score += max(0, 10 - ((int) get_post_field('menu_order', $faq_id) / 10));
 		$scores[] = ['id' => $faq_id, 'score' => $score];
