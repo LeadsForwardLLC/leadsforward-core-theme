@@ -496,7 +496,7 @@ function lf_pb_cleanup_templates_once(): void {
 	if (!is_admin() || !current_user_can('edit_theme_options')) {
 		return;
 	}
-	if (get_option('lf_pb_template_cleanup_v2', '0') === '1') {
+	if (get_option('lf_pb_template_cleanup_v3', '0') === '1') {
 		return;
 	}
 	if (function_exists('lf_homepage_cleanup_sections_once')) {
@@ -511,6 +511,7 @@ function lf_pb_cleanup_templates_once(): void {
 		'service-areas' => ['hero', 'service_areas', 'faq_accordion', 'cta'],
 		'reviews' => ['hero', 'trust_reviews', 'cta'],
 		'blog' => ['hero', 'blog_posts', 'cta'],
+		'faq' => ['hero', 'faq_accordion', 'cta'],
 		'contact' => ['hero', 'map_nap', 'cta'],
 		'sitemap' => ['hero', 'sitemap_links'],
 		'privacy-policy' => ['hero', 'content'],
@@ -536,6 +537,9 @@ function lf_pb_cleanup_templates_once(): void {
 		$desired = $page_templates[$post->post_name] ?? ['hero', 'content'];
 		if (lf_pb_cleanup_post_config((int) $page_id, 'page', $desired)) {
 			$updated++;
+			if ($post->post_name === 'faq') {
+				lf_pb_normalize_faq_hub_sections((int) $page_id);
+			}
 		}
 	}
 
@@ -547,7 +551,7 @@ function lf_pb_cleanup_templates_once(): void {
 		'no_found_rows' => true,
 	]);
 	foreach ($service_ids as $service_id) {
-		if (lf_pb_cleanup_post_config((int) $service_id, 'service', ['hero', 'trust_bar', 'service_details', 'benefits', 'process', 'faq_accordion', 'cta'])) {
+		if (lf_pb_cleanup_post_config((int) $service_id, 'service', ['hero', 'trust_bar', 'service_details', 'service_details', 'benefits', 'process', 'faq_accordion', 'cta'])) {
 			$updated++;
 		}
 	}
@@ -578,8 +582,8 @@ function lf_pb_cleanup_templates_once(): void {
 		}
 	}
 
-	update_option('lf_pb_template_cleanup_v2', '1', true);
-	update_option('lf_pb_template_cleanup_v2_count', (int) $updated, false);
+	update_option('lf_pb_template_cleanup_v3', '1', true);
+	update_option('lf_pb_template_cleanup_v3_count', (int) $updated, false);
 }
 
 function lf_pb_cleanup_post_config(int $post_id, string $context, array $desired_types): bool {
@@ -595,58 +599,85 @@ function lf_pb_cleanup_post_config(int $post_id, string $context, array $desired
 	$order_in = is_array($config['order'] ?? null) ? $config['order'] : array_keys($sections_in);
 	$seo = is_array($config['seo'] ?? null) ? $config['seo'] : ['title' => '', 'description' => ''];
 
-	$kept = [];
-	$by_type = [];
+	$pools = [];
+	foreach ($desired_types as $dt) {
+		$pools[(string) $dt] = [];
+	}
 	foreach ($order_in as $instance_id) {
 		$row = $sections_in[$instance_id] ?? null;
 		if (!is_array($row)) {
 			continue;
 		}
 		$type = (string) ($row['type'] ?? '');
-		if ($type === '' || !in_array($type, $desired_types, true)) {
-			continue;
-		}
-		if (isset($by_type[$type])) {
+		if ($type === '' || !isset($pools[$type])) {
 			continue;
 		}
 		$row['enabled'] = true;
-		$kept[$instance_id] = $row;
-		$by_type[$type] = $instance_id;
+		$pools[$type][] = ['instance_id' => (string) $instance_id, 'row' => $row];
 	}
 
+	$new_sections = [];
+	$new_order = [];
 	foreach ($desired_types as $type) {
-		if (isset($by_type[$type])) {
+		$chosen = array_shift($pools[$type]);
+		if ($chosen !== null && is_array($chosen)) {
+			$new_order[] = (string) ($chosen['instance_id'] ?? '');
+			$new_sections[(string) ($chosen['instance_id'] ?? '')] = $chosen['row'];
 			continue;
 		}
 		$instance_index = 1;
 		$instance_id = lf_pb_instance_id($type, $instance_index);
-		while (isset($kept[$instance_id])) {
+		while (isset($new_sections[$instance_id])) {
 			$instance_index++;
 			$instance_id = lf_pb_instance_id($type, $instance_index);
 		}
-		$kept[$instance_id] = [
+		$new_sections[$instance_id] = [
 			'type' => $type,
 			'enabled' => true,
 			'deletable' => false,
 			'settings' => lf_sections_defaults_for($type),
 		];
-		$by_type[$type] = $instance_id;
+		$new_order[] = $instance_id;
 	}
 
-	$new_order = [];
-	foreach ($desired_types as $type) {
-		if (isset($by_type[$type])) {
-			$new_order[] = $by_type[$type];
-		}
-	}
-
-	$new_config = [
+	update_post_meta($post_id, LF_PB_META_KEY, [
 		'order' => $new_order,
-		'sections' => $kept,
+		'sections' => $new_sections,
 		'seo' => $seo,
-	];
-	update_post_meta($post_id, LF_PB_META_KEY, $new_config);
+	]);
 	return true;
+}
+
+/**
+ * Force FAQ hub accordion to expose the entire published library (runs after template cleanup migration).
+ */
+function lf_pb_normalize_faq_hub_sections(int $page_id): void {
+	$config = lf_pb_get_post_config($page_id, 'page');
+	if (!is_array($config) || empty($config['sections'])) {
+		return;
+	}
+	$sections = is_array($config['sections']) ? $config['sections'] : [];
+	$dirty = false;
+	foreach ($sections as $instance_id => $row) {
+		if (!is_array($row) || ($row['type'] ?? '') !== 'faq_accordion') {
+			continue;
+		}
+		$cfg = $row['settings'] ?? [];
+		if (!is_array($cfg)) {
+			$cfg = [];
+		}
+		$cfg['faq_max_items'] = -1;
+		$cfg['faq_selected_ids'] = '';
+		$cfg['section_heading'] = __('Frequently Asked Questions', 'leadsforward-core');
+		$sections[$instance_id]['settings'] = $cfg;
+		$sections[$instance_id]['enabled'] = true;
+		$dirty = true;
+		break;
+	}
+	if ($dirty) {
+		$config['sections'] = $sections;
+		update_post_meta($page_id, LF_PB_META_KEY, $config);
+	}
 }
 
 function lf_pb_register_meta_box(): void {
@@ -1111,7 +1142,8 @@ function lf_pb_render_sections(\WP_Post $post): void {
 			));
 		}
 		echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-context-type="' . esc_attr((string) $post->post_type) . '" data-lf-context-id="' . esc_attr((string) $post->ID) . '" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_pb) . '" data-lf-section-visible="1">';
-		lf_sections_render_section($type, $context, $sec_cfg['settings'] ?? [], $post);
+		$merged_settings = array_merge($sec_cfg['settings'] ?? [], ['_pb_instance_key' => (string) $section_id]);
+		lf_sections_render_section($type, $context, $merged_settings, $post);
 		echo '</div>';
 	}
 }

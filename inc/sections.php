@@ -881,8 +881,8 @@ function lf_sections_registry(): array {
 			'contexts' => ['service_area'],
 			'fields' => [
 				$bg_field,
-				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Nearby service areas', 'leadsforward-core')],
-				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('We also serve these nearby locations.', 'leadsforward-core')],
+				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Other Areas We Serve', 'leadsforward-core')],
+				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('We also serve nearby communities throughout the surrounding area.', 'leadsforward-core')],
 				['key' => 'nearby_areas_max', 'label' => __('Max areas', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
 			],
 			'render' => 'lf_sections_render_nearby_areas',
@@ -963,6 +963,7 @@ function lf_sections_default_order(string $context): array {
 			'hero',
 			'trust_bar',
 			'service_details',
+			'service_details',
 			'benefits',
 			'process',
 			'faq_accordion',
@@ -1032,7 +1033,59 @@ function lf_sections_service_details_alias_layouts(): array {
 function lf_sections_cap_checklist_lines_string(string $raw): string {
 	$lines = lf_sections_parse_lines($raw);
 
-	return implode("\n", array_slice($lines, 0, 5));
+	return implode("\n", array_slice($lines, 0, 6));
+}
+
+function lf_sections_is_boilerplate_service_detail_micro_line(string $plain_lower): bool {
+	if ($plain_lower === '') {
+		return false;
+	}
+	$samples = ['delivered by', 'tailored for homeowners', 'completed with careful', ' careful planning'];
+	foreach ($samples as $s) {
+		if (strpos($plain_lower, $s) !== false) {
+			return true;
+		}
+	}
+
+	return preg_match('/#\s*\d+/', $plain_lower) === 1;
+}
+
+function lf_sections_sanitize_service_details_micro_string(string $raw): string {
+	$lines = preg_split('/\r\n|\r|\n/', $raw);
+	$lines = is_array($lines) ? $lines : [];
+	$out = [];
+	foreach ($lines as $line) {
+		$line_raw = sanitize_text_field((string) trim((string) $line));
+		$plain_stripped = function_exists('wp_strip_all_tags') ? wp_strip_all_tags((string) $line_raw) : strip_tags((string) $line_raw);
+		$plain = strtolower(trim((string) $plain_stripped));
+		if ($plain === '') {
+			continue;
+		}
+		if (lf_sections_is_boilerplate_service_detail_micro_line($plain)) {
+			continue;
+		}
+		$out[] = $line_raw;
+	}
+
+	return implode("\n", array_slice($out, 0, 4));
+}
+
+/**
+ * Prefer three short paragraphs in service details media layouts (stored HTML).
+ */
+function lf_sections_trim_service_details_body_html(string $html): string {
+	$html = trim($html);
+	if ($html === '') {
+		return '';
+	}
+	if (preg_match_all('/(?:<p\b[^>]*>.*?<\\/p>|<ul\b[^>]*>.*?<\\/ul>)/is', $html, $blocks)) {
+		$chunks = $blocks[0] ?? [];
+		if (is_array($chunks) && count($chunks) > 3) {
+			return implode('', array_slice($chunks, 0, 3));
+		}
+	}
+
+	return $html;
 }
 
 function lf_sections_registry_has_field(string $section_id, string $field_key): bool {
@@ -1196,6 +1249,12 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 	}
 	if (isset($out['service_details_checklist_secondary'])) {
 		$out['service_details_checklist_secondary'] = lf_sections_cap_checklist_lines_string((string) $out['service_details_checklist_secondary']);
+	}
+	if (isset($out['service_details_micro_sections'])) {
+		$out['service_details_micro_sections'] = lf_sections_sanitize_service_details_micro_string((string) $out['service_details_micro_sections']);
+	}
+	if (isset($out['service_details_body'])) {
+		$out['service_details_body'] = lf_sections_trim_service_details_body_html((string) $out['service_details_body']);
 	}
 	return $out;
 }
@@ -2091,7 +2150,7 @@ function lf_sections_render_section(string $section_id, string $context, array $
 		return;
 	}
 	$settings = lf_sections_normalize_service_details_settings($section_id, $settings);
-	$settings['_section_instance_id'] = $section_id;
+	$settings['_section_instance_id'] = trim((string) ($settings['_pb_instance_key'] ?? ''));
 	$callback = $section['render'] ?? '';
 	if (is_callable($callback)) {
 		call_user_func($callback, $context, $settings, $post);
@@ -2559,14 +2618,18 @@ function lf_sections_benefits_pick_icon_slug(array $item, array $overrides, arra
 function lf_sections_render_service_details(string $context, array $settings, \WP_Post $post): void {
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
-	$body = $settings['service_details_body'] ?? '';
-	$body_from_settings = $body !== '';
-	if ($body_from_settings) {
-		$body = wpautop($body);
+	$body = (string) ($settings['service_details_body'] ?? '');
+	if ($body !== '') {
+		$body = lf_sections_trim_service_details_body_html($body);
+		$body = function_exists('lf_sections_format_richtext_output') ? lf_sections_format_richtext_output($body) : wpautop($body);
 	}
-	$checklist = lf_sections_parse_lines((string) ($settings['service_details_checklist'] ?? ''));
-	$checklist_secondary = lf_sections_parse_lines((string) ($settings['service_details_checklist_secondary'] ?? ''));
+	$checklist = array_slice(lf_sections_parse_lines((string) ($settings['service_details_checklist'] ?? '')), 0, 6);
+	$checklist_secondary = array_slice(lf_sections_parse_lines((string) ($settings['service_details_checklist_secondary'] ?? '')), 0, 6);
 	$micro_sections = lf_sections_parse_lines((string) ($settings['service_details_micro_sections'] ?? ''));
+	$micro_sections = array_values(array_filter($micro_sections, static function ($line): bool {
+		$plain = strtolower(trim(wp_strip_all_tags((string) $line)));
+		return $plain !== '' && !lf_sections_is_boilerplate_service_detail_micro_line($plain);
+	}));
 	$proof_label = trim((string) ($settings['service_details_proof_label'] ?? ''));
 	$proof_badges = lf_sections_parse_lines((string) ($settings['service_details_proof_badges'] ?? ''));
 	$checklist_class = 'lf-service-details__checklist';
@@ -2578,9 +2641,13 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 	if (!in_array($layout, ['content_media', 'media_content'], true)) {
 		$layout = 'content_media';
 	}
-	$instance_id = (string) ($settings['_section_instance_id'] ?? '');
-	if ($context === 'homepage' && $instance_id === 'service_details__2') {
-		$layout = 'media_content';
+	$instance_key = trim((string) ($settings['_section_instance_id'] ?? ''));
+	if ($instance_key !== '' && ($context === 'service' || $context === 'homepage') && strpos($instance_key, 'service_details') !== false) {
+		$n = 1;
+		if (preg_match('/(?:__|-)(\d+)$/', $instance_key, $mk)) {
+			$n = (int) ($mk[1] ?? 1);
+		}
+		$layout = ($n % 2 === 0) ? 'media_content' : 'content_media';
 	}
 	$media_embed = trim((string) ($settings['service_details_media_embed'] ?? ''));
 	$media_video_url = trim((string) ($settings['service_details_media_video_url'] ?? ''));
@@ -3169,9 +3236,14 @@ function lf_sections_render_faq(string $context, array $settings, \WP_Post $post
 
 function lf_sections_render_cta_band(string $context, array $settings, \WP_Post $post): void {
 	if (function_exists('lf_render_block_template')) {
+		$h = $settings['cta_headline'] ?? '';
+		$s = $settings['cta_subheadline'] ?? '';
+		if (function_exists('lf_localize_footer_cta_for_post')) {
+			list($h, $s) = lf_localize_footer_cta_for_post($post, (string) $h, (string) $s);
+		}
 		$section = [
-			'cta_headline' => $settings['cta_headline'] ?? '',
-			'cta_subheadline' => $settings['cta_subheadline'] ?? '',
+			'cta_headline' => $h,
+			'cta_subheadline' => $s,
 			'cta_primary_override' => $settings['cta_primary_override'] ?? '',
 			'cta_secondary_override' => $settings['cta_secondary_override'] ?? '',
 			'cta_primary_action' => $settings['cta_primary_action'] ?? '',
@@ -3716,9 +3788,9 @@ function lf_sections_render_nearby_areas(string $context, array $settings, \WP_P
 	}
 	lf_sections_render_shell_open('nearby-areas', $title, $intro, $settings['section_background'] ?? 'light', $settings);
 	?>
-	<ul class="lf-related-links lf-cpt-driven-links" role="list">
+	<ul class="lf-related-links lf-nearby-areas-grid lf-cpt-driven-links" role="list">
 		<?php while ($query->have_posts()) : $query->the_post();
-			$label = function_exists('lf_internal_link_label') ? lf_internal_link_label('area', get_post(), $origin_id) : get_the_title();
+			$label = get_the_title();
 		?>
 			<li>
 				<a href="<?php the_permalink(); ?>">

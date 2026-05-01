@@ -1287,6 +1287,57 @@ button:focus-visible,
 	box-shadow: none;
 }
 
+@media (min-width: 901px) {
+	.lf-service-details--media .lf-service-details__media {
+		position: sticky;
+		top: 5.5rem;
+		align-self: start;
+	}
+}
+
+.lf-nearby-areas-grid.lf-related-links {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+	gap: 0.85rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.lf-nearby-areas-grid.lf-related-links li {
+	width: auto;
+	min-width: 0;
+	max-width: 100%;
+	margin: 0;
+	border-bottom: none;
+	border: 0;
+	list-style: none;
+}
+
+.lf-nearby-areas-grid.lf-related-links > li > a {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	width: 100%;
+	min-height: 3rem;
+	padding: 0.9rem 1rem;
+	box-sizing: border-box;
+	border-radius: 14px;
+	border: 1px solid rgba(15, 23, 42, 0.1);
+	background: #fff;
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+	font-weight: 600;
+	transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+	border-bottom: none;
+}
+
+.lf-nearby-areas-grid.lf-related-links > li > a:hover {
+	transform: translateY(-2px);
+	border-color: rgba(37, 99, 235, 0.35);
+	box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
+}
+
 .lf-content {
 	display: grid;
 	gap: 1rem;
@@ -2321,6 +2372,16 @@ article a:not(.lf-btn):hover {
 	display: flex;
 	align-items: center;
 	gap: 1rem;
+	flex: 1;
+	min-width: 0;
+}
+
+@media (min-width: 901px) {
+	.site-header__nav {
+		min-width: 0;
+		flex: 1 1 auto;
+		overflow: visible;
+	}
 }
 
 .site-header__panel-header {
@@ -2336,6 +2397,14 @@ article a:not(.lf-btn):hover {
 	gap: 0.5rem;
 	align-items: center;
 	flex-wrap: wrap;
+	min-width: 0;
+}
+
+/* Prevent flex compression from collapsing top-level labels (shows only chevron/toggle). */
+@media (min-width: 901px) {
+	.site-header__menu > .menu-item {
+		flex-shrink: 0;
+	}
 }
 
 .site-header__menu a,
@@ -2847,10 +2916,17 @@ article a:not(.lf-btn):hover {
 }
 
 .site-header__menu .lf-menu-group-parent > .site-header__group-label {
-	display: block;
-	padding: 0.45rem 0.7rem;
+	display: inline-block;
+	max-width: 100%;
+	overflow: visible;
+	padding: 0.45rem 0.35rem 0.45rem 0.7rem;
 	font-weight: 600;
+	font-size: calc(var(--lf-fs-body, 1rem) - 1px);
+	line-height: 1.35;
+	color: var(--lf-text-primary);
 	white-space: nowrap;
+	vertical-align: middle;
+	border-radius: 999px;
 }
 
 .site-header__menu .sub-menu .lf-submenu-divider {

@@ -86,6 +86,13 @@ if ($business_name !== '') {
 	$heading = str_replace(['[Your Business]', '[Your Business Name]', '{business_name}'], $business_name, $heading);
 }
 
+if (function_exists('lf_strip_airtable_record_id_prefix')) {
+	$heading = lf_strip_airtable_record_id_prefix((string) $heading);
+	if ($subheading !== '') {
+		$subheading = lf_strip_airtable_record_id_prefix((string) $subheading);
+	}
+}
+
 $cta_resolved_for_type = function_exists('lf_resolve_cta') ? lf_resolve_cta($context, $section, []) : [];
 $cta_text = $cta_resolved_for_type['primary_text'] ?? '';
 if (!empty($context['homepage']) && $cta_text && function_exists('lf_copy_template')) {

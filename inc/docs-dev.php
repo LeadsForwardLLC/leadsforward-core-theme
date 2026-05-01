@@ -36,7 +36,7 @@ function lf_docs_render_dev_sections(): void {
 			<li><?php esc_html_e('Fleet controller push: optional POST to each client at /wp-json/lf/v1/fleet/push (HMAC headers, JSON body with optional override) for immediate check-and-install; see docs/05_THEME_INTEGRATION.md.', 'leadsforward-core'); ?></li>
 			<li><?php esc_html_e('Front-end inline editor: rich-text toolbar outside-click dismissal, assistant boot hardening, and per-section list persistence guardrails.', 'leadsforward-core'); ?></li>
 			<li><?php esc_html_e('Service Intro: selection empty-state is now respected; service library returns short descriptions so add/re-add is deterministic.', 'leadsforward-core'); ?></li>
-			<li><?php esc_html_e('Service details checklist: capped to 5 items across UI + persistence to prevent odd layouts on older generations.', 'leadsforward-core'); ?></li>
+			<li><?php esc_html_e('Service details checklist: capped to 6 items across UI + persistence to prevent odd layouts on older generations.', 'leadsforward-core'); ?></li>
 			<li><?php esc_html_e('Process steps: CPT titles written as “Label: details” now render with only the label bold, matching line-based behavior.', 'leadsforward-core'); ?></li>
 			<li><?php esc_html_e('Header/menu phone icon: CSS adjustments to prevent SVG clipping in tight line-box contexts.', 'leadsforward-core'); ?></li>
 		</ul>

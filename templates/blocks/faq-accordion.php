@@ -44,6 +44,16 @@ $selected_faq_ids = array_values(array_filter(array_map(static function ($value)
 	return $id > 0;
 }));
 
+$faq_hub_page = false;
+if (function_exists('get_queried_object_id') && (int) get_queried_object_id() > 0) {
+	$qo = get_queried_object();
+	$faq_hub_page = $qo instanceof WP_Post && $qo->post_type === 'page' && $qo->post_name === 'faq';
+}
+if ($faq_hub_page) {
+	$max_items = -1;
+	$selected_faq_ids = [];
+}
+
 /**
  * Lightweight FAQ auto-selector:
  * if a section has no manual selection, choose FAQs by overlap
@@ -73,12 +83,16 @@ $auto_select_faq_ids = static function (int $limit) use ($section): array {
 		}
 	}
 	$page_title = $qid > 0 ? get_the_title($qid) : '';
+	$post_name = ($qid > 0) ? (string) get_post_field('post_name', $qid, 'raw') : '';
+	$post_name_tokens = preg_replace('/[_-]+/', ' ', $post_name);
+	$post_name_tokens = is_string($post_name_tokens) ? $post_name_tokens : '';
 	$intent_source = trim(implode(' ', array_filter([
 		(string) ($section['section_heading'] ?? ''),
 		(string) ($section['section_intro'] ?? ''),
 		(string) $page_title,
 		(string) ($qid > 0 ? get_post_field('post_excerpt', $qid) : ''),
 		$page_kw,
+		(string) $post_name_tokens,
 	])));
 	$terms = preg_split('/[^a-z0-9]+/i', strtolower($intent_source));
 	$terms = array_values(array_unique(array_filter(array_map(static function ($term): string {

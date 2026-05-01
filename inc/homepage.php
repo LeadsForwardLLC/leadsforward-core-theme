@@ -977,7 +977,8 @@ function lf_render_homepage_section(array $section, int $index): void {
 		));
 	}
 	$wrap_heading_tag_hp = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($section) : 'h2';
+	$merged_hp = array_merge($section, ['_pb_instance_key' => (string) $section_id]);
 	echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-context-type="homepage" data-lf-context-id="homepage" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_hp) . '" data-lf-section-visible="1">';
-	lf_sections_render_section($type, 'homepage', $section, $post);
+	lf_sections_render_section($type, 'homepage', $merged_hp, $post);
 	echo '</div>';
 }

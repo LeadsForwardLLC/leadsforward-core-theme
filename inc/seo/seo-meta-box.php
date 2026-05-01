@@ -54,7 +54,10 @@ function lf_seo_render_meta_box(\WP_Post $post): void {
 	<table class="form-table" role="presentation">
 		<tr>
 			<th scope="row"><label for="lf_seo_primary_keyword"><?php esc_html_e('Primary Target Keyword', 'leadsforward-core'); ?></label></th>
-			<td><input type="text" class="large-text" id="lf_seo_primary_keyword" name="lf_seo_primary_keyword" value="<?php echo esc_attr($primary); ?>" /></td>
+			<td>
+				<input type="text" class="large-text" id="lf_seo_primary_keyword" name="lf_seo_primary_keyword" value="<?php echo esc_attr($primary); ?>" />
+				<p class="description"><?php esc_html_e('This phrase names what the URL is optimized for. When you change it, revisit the SEO title/description fields below (or rerun your SEO workflow) so snippets stay aligned.', 'leadsforward-core'); ?></p>
+			</td>
 		</tr>
 		<tr>
 			<th scope="row"><label for="lf_seo_secondary_keywords"><?php esc_html_e('Secondary Keywords', 'leadsforward-core'); ?></label></th>

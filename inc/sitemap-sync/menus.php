@@ -323,12 +323,15 @@ function lf_sitemap_sync_enforce_group_dropdown(int $menu_id, array $group): voi
 	}
 
 	if ($parent_item_id <= 0) {
+		$group_classes = strtolower(trim($label)) === 'services'
+			? 'lf-menu-group-parent lf-menu-services-parent'
+			: 'lf-menu-group-parent lf-menu-areas-parent';
 		$parent_item_id = lf_sitemap_sync_add_post_menu_item($menu_id, $position, [
 			'post_id' => (int) $page->ID,
 			'title' => $label,
 			'parent_item_id' => 0,
 			'object' => 'page',
-			'classes' => '',
+			'classes' => $group_classes,
 		]);
 		if ($parent_item_id <= 0) {
 			return;
