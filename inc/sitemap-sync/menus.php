@@ -568,7 +568,6 @@ function lf_sitemap_sync_build_header_menu(): array {
 			'child_class' => 'lf-menu-area-child',
 		]);
 		lf_header_menu_repair_nav_structure($menu_id);
-		lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'Service Areas', 'Reviews', 'More']);
 		return [
 			'ok' => true,
 			'enabled' => true,
@@ -664,7 +663,6 @@ function lf_sitemap_sync_build_header_menu(): array {
 		'child_class' => 'lf-menu-area-child',
 	]);
 	lf_header_menu_repair_nav_structure($menu_id);
-	lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'Service Areas', 'Reviews', 'More']);
 
 	return [
 		'ok' => true,
@@ -828,6 +826,200 @@ function lf_nav_menu_normalize_group_parent(int $menu_id, int $db_id, string $la
 		'menu-item-classes' => $classes,
 		'menu-item-position' => (int) ($item->menu_order ?? 0),
 	]);
+}
+
+function lf_nav_menu_contains_page_object(array $items, int $page_id): bool {
+	foreach ($items as $item) {
+		if (!$item instanceof WP_Post) {
+			continue;
+		}
+		if ((string) ($item->object ?? '') === 'page' && (int) ($item->object_id ?? 0) === $page_id) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Persisted submenu divider rows clutter wp-admin with blank “Custom Links” and add empty stacks in the submenu.
+ */
+function lf_nav_menu_remove_persisted_lf_submenu_divider_placeholders(int $menu_id): void {
+	$items = wp_get_nav_menu_items($menu_id);
+	if (!is_array($items)) {
+		return;
+	}
+	foreach ($items as $item) {
+		if (!$item instanceof WP_Post) {
+			continue;
+		}
+		if ((string) ($item->type ?? '') !== 'custom') {
+			continue;
+		}
+		$plain = trim(wp_strip_all_tags((string) ($item->title ?? '')));
+		if ($plain !== '') {
+			continue;
+		}
+		$url = trim((string) ($item->url ?? ''));
+		if ($url !== '' && $url !== '#') {
+			continue;
+		}
+		if (!lf_nav_menu_item_has_class($item, 'lf-submenu-divider')) {
+			continue;
+		}
+		wp_delete_post((int) $item->ID, true);
+	}
+}
+
+function lf_nav_menu_infer_blank_more_parent(int $menu_id): void {
+	if (!function_exists('wp_update_nav_menu_item')) {
+		return;
+	}
+
+	$items = wp_get_nav_menu_items($menu_id);
+	if (!is_array($items)) {
+		return;
+	}
+
+	$by_parent = lf_nav_menu_items_children_by_parent($items);
+	foreach ($items as $item) {
+		if (!$item instanceof WP_Post) {
+			continue;
+		}
+		if ((int) ($item->menu_item_parent ?? 0) !== 0) {
+			continue;
+		}
+		if (lf_nav_menu_item_is_sync_preserved_cta($item)) {
+			continue;
+		}
+
+		$classes_merge = lf_nav_menu_item_class_list($item);
+		$plain = trim(wp_strip_all_tags((string) ($item->title ?? '')));
+
+		if (lf_nav_menu_item_has_class($item, 'lf-menu-more')) {
+			if ($plain !== '') {
+				continue;
+			}
+			$args_fix = [
+				'menu-item-title' => __('More', 'leadsforward-core'),
+				'menu-item-status' => 'publish',
+				'menu-item-parent-id' => 0,
+				'menu-item-classes' => implode(' ', array_unique(array_merge($classes_merge, ['lf-menu-more']))),
+				'menu-item-position' => (int) ($item->menu_order ?? 0),
+			];
+			$stype = (string) ($item->type ?? '');
+			if ($stype === 'custom') {
+				$args_fix['menu-item-type'] = 'custom';
+				$args_fix['menu-item-object'] = 'custom';
+				$args_fix['menu-item-object-id'] = 0;
+				$args_fix['menu-item-url'] = trim((string) ($item->url ?? '')) !== '' ? trim((string) ($item->url ?? '')) : '#';
+			} elseif ($stype === 'post_type') {
+				$args_fix['menu-item-type'] = 'post_type';
+				$o = sanitize_key((string) ($item->object ?? ''));
+				$args_fix['menu-item-object'] = $o !== '' ? $o : 'page';
+				$args_fix['menu-item-object-id'] = (int) ($item->object_id ?? 0);
+				$args_fix['menu-item-url'] = '';
+			}
+			wp_update_nav_menu_item($menu_id, (int) $item->ID, $args_fix);
+			continue;
+		}
+
+		if ($plain !== '') {
+			continue;
+		}
+		if ((string) ($item->type ?? '') !== 'custom') {
+			continue;
+		}
+
+		$url = trim((string) ($item->url ?? ''));
+		if ($url !== '' && $url !== '#') {
+			continue;
+		}
+
+		$kids = array_merge([], $by_parent[(int) $item->ID] ?? []);
+		if (count($kids) < 2) {
+			continue;
+		}
+
+		$hits_cpt = false;
+		foreach ($kids as $k) {
+			if (!$k instanceof WP_Post) {
+				continue;
+			}
+			$obj = (string) ($k->object ?? '');
+			if ($obj === 'lf_service' || $obj === 'lf_service_area') {
+				$hits_cpt = true;
+				break;
+			}
+		}
+		if ($hits_cpt) {
+			continue;
+		}
+
+		wp_update_nav_menu_item($menu_id, (int) $item->ID, [
+			'menu-item-title' => __('More', 'leadsforward-core'),
+			'menu-item-url' => '#',
+			'menu-item-status' => 'publish',
+			'menu-item-type' => 'custom',
+			'menu-item-object' => 'custom',
+			'menu-item-object-id' => 0,
+			'menu-item-parent-id' => 0,
+			'menu-item-classes' => implode(' ', array_unique(array_merge($classes_merge, ['lf-menu-more', 'menu-item-has-children']))),
+			'menu-item-position' => (int) ($item->menu_order ?? 0),
+		]);
+	}
+}
+
+function lf_header_menu_append_missing_core_top_levels(int $menu_id): void {
+	if (!function_exists('wp_update_nav_menu_item')) {
+		return;
+	}
+	$items = wp_get_nav_menu_items($menu_id);
+	if (!is_array($items)) {
+		return;
+	}
+
+	$cursor = 0;
+	foreach ($items as $it) {
+		if ($it instanceof WP_Post) {
+			$cursor = max($cursor, (int) ($it->menu_order ?? 0));
+		}
+	}
+
+	$page_on_front = (int) get_option('page_on_front');
+	if ($page_on_front > 0 && get_post_status($page_on_front) === 'publish' && !lf_nav_menu_contains_page_object($items, $page_on_front)) {
+		$cursor++;
+		lf_sitemap_sync_add_post_menu_item($menu_id, $cursor, [
+			'post_id' => $page_on_front,
+			'title' => __('Home', 'leadsforward-core'),
+			'parent_item_id' => 0,
+			'object' => 'page',
+			'classes' => '',
+		]);
+		$items = wp_get_nav_menu_items($menu_id) ?: [];
+	}
+
+	$reviews = get_page_by_path('reviews');
+	$reviews_id = ($reviews instanceof WP_Post && $reviews->post_status === 'publish') ? (int) $reviews->ID : 0;
+	if ($reviews_id <= 0) {
+		return;
+	}
+
+	if (!lf_nav_menu_contains_page_object($items, $reviews_id)) {
+		$cursor = 0;
+		foreach ($items as $it) {
+			if ($it instanceof WP_Post) {
+				$cursor = max($cursor, (int) ($it->menu_order ?? 0));
+			}
+		}
+		$cursor++;
+		lf_sitemap_sync_add_post_menu_item($menu_id, $cursor, [
+			'post_id' => $reviews_id,
+			'title' => __('Reviews', 'leadsforward-core'),
+			'parent_item_id' => 0,
+			'object' => 'page',
+			'classes' => '',
+		]);
+	}
 }
 
 function lf_nav_menu_infer_blank_top_dropdown_parents(int $menu_id): void {
@@ -1154,12 +1346,19 @@ function lf_nav_menu_merge_duplicate_dropdowns(
  * and remove empty placeholder `#` customs at the header root.
  *
  * Intended for Header Menu assignments; callers pass the resolved menu term ID.
+ *
+ * When $apply_preferred_order is true, top-level positions are snapped to Home → … → Reviews → More —
+ * intentional for synced fleet menus so partial Airtable publishes do not leave core links missing.
+ *
+ * @param bool $apply_preferred_order Snap top-level ordering for known labels (fleet default).
  */
-function lf_header_menu_repair_nav_structure(int $menu_id): void {
+function lf_header_menu_repair_nav_structure(int $menu_id, bool $apply_preferred_order = true): void {
 	if ($menu_id <= 0 || !function_exists('wp_get_nav_menu_items')) {
 		return;
 	}
 
+	lf_nav_menu_remove_persisted_lf_submenu_divider_placeholders($menu_id);
+	lf_nav_menu_infer_blank_more_parent($menu_id);
 	lf_nav_menu_infer_blank_top_dropdown_parents($menu_id);
 	lf_nav_menu_delete_blank_placeholder_top_parents($menu_id);
 
@@ -1186,6 +1385,11 @@ function lf_header_menu_repair_nav_structure(int $menu_id): void {
 	);
 
 	lf_nav_menu_delete_blank_placeholder_top_parents($menu_id);
+	lf_header_menu_append_missing_core_top_levels($menu_id);
+
+	if ($apply_preferred_order) {
+		lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'Service Areas', 'Reviews', 'More']);
+	}
 }
 
 /**

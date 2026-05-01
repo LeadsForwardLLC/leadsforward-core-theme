@@ -75,6 +75,9 @@ function lf_header_menu_item_title(string $title, \WP_Post $item, $args, int $de
 	if (in_array('lf-menu-call', $classes, true)) {
 		return __('Call Now', 'leadsforward-core');
 	}
+	if (in_array('lf-menu-more', $classes, true) && trim(wp_strip_all_tags($title)) === '') {
+		return __('More', 'leadsforward-core');
+	}
 	return $title;
 }
 add_filter('nav_menu_item_title', 'lf_header_menu_item_title', 10, 4);
