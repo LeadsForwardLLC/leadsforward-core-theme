@@ -5168,12 +5168,28 @@ function lf_ai_studio_normalize_manifest(array $manifest): array {
 	$normalized_services = [];
 	foreach ($services as $item) {
 		$normalized = lf_ai_studio_normalize_service_item($item);
+		$prior_slug = sanitize_title((string) ($normalized['slug'] ?? ''));
+		$prior_pk = sanitize_text_field((string) ($normalized['primary_keyword'] ?? ''));
+		if ($prior_pk !== '' && preg_match('/^rec[a-zA-Z0-9]{8,}$/', $prior_pk) === 1) {
+			$prior_pk = '';
+		}
 		if ($normalized['title'] !== '') {
 			$normalized['title'] = lf_ai_studio_clean_service_title($normalized['title'], $location_label);
-			$normalized['slug'] = sanitize_title(str_replace(' in ', ' ', strtolower($normalized['title'])));
-			if ($normalized['primary_keyword'] === '' || stripos($normalized['primary_keyword'], $normalized['title']) === false) {
-				$normalized['primary_keyword'] = $normalized['title'];
+			if ($prior_slug !== '') {
+				$normalized['slug'] = $prior_slug;
+			} else {
+				$normalized['slug'] = sanitize_title(str_replace(' in ', ' ', strtolower($normalized['title'])));
 			}
+			if ($prior_pk === '') {
+				$normalized['primary_keyword'] = $normalized['title'];
+			} else {
+				$normalized['primary_keyword'] = $prior_pk;
+			}
+		} elseif ($prior_slug !== '') {
+			$normalized['slug'] = $prior_slug;
+		}
+		if ($normalized['primary_keyword'] !== '' && preg_match('/^rec[a-zA-Z0-9]{8,}$/', (string) $normalized['primary_keyword']) === 1) {
+			$normalized['primary_keyword'] = $normalized['title'] !== '' ? $normalized['title'] : '';
 		}
 		$normalized_services[] = $normalized;
 	}
@@ -5362,6 +5378,11 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 		$slug = $normalized['slug'];
 		$key = 'lf_service:' . $slug;
 		$publish_now = isset($service_now_set[$slug]);
+		$svc_primary_kw = trim(sanitize_text_field((string) ($normalized['primary_keyword'] ?? '')));
+		if ($svc_primary_kw !== '' && preg_match('/^rec[a-zA-Z0-9]{8,}$/', $svc_primary_kw) === 1) {
+			$svc_primary_kw = '';
+		}
+		$managed_post_id = 0;
 		$existing = get_page_by_path($slug, OBJECT, 'lf_service');
 		if ($existing instanceof \WP_Post) {
 			$title = $normalized['title'] !== '' ? $normalized['title'] : $existing->post_title;
@@ -5384,6 +5405,7 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 			}
 			wp_update_post($args);
 			update_post_meta($existing->ID, 'lf_manifest_schedule_managed', 1);
+			$managed_post_id = (int) $existing->ID;
 		} else {
 			$base_title = $normalized['title'] !== '' ? $normalized['title'] : $slug;
 			if ($publish_now) {
@@ -5408,6 +5430,19 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 			}
 			if ($post_id && !is_wp_error($post_id)) {
 				update_post_meta((int) $post_id, 'lf_manifest_schedule_managed', 1);
+				$managed_post_id = (int) $post_id;
+			}
+		}
+		if ($managed_post_id > 0 && $svc_primary_kw !== '') {
+			update_post_meta($managed_post_id, '_lf_seo_primary_keyword', $svc_primary_kw);
+			update_post_meta($managed_post_id, 'lf_ai_post_keyword', $svc_primary_kw);
+			if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+				$secondary = $manifest['homepage']['secondary_keywords'] ?? [];
+				if (!is_array($secondary)) {
+					$secondary = [];
+				}
+				$secondary = array_values(array_filter(array_map('sanitize_text_field', $secondary)));
+				lf_seo_maybe_populate_generated_meta($managed_post_id, $svc_primary_kw, $secondary);
 			}
 		}
 	}
@@ -5454,6 +5489,15 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 			update_post_meta($existing->ID, 'lf_manifest_schedule_managed', 1);
 			if ($primary_keyword !== '') {
 				update_post_meta($existing->ID, 'lf_ai_post_keyword', $primary_keyword);
+				update_post_meta($existing->ID, '_lf_seo_primary_keyword', $primary_keyword);
+				if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+					$secondary = $manifest['homepage']['secondary_keywords'] ?? [];
+					if (!is_array($secondary)) {
+						$secondary = [];
+					}
+					$secondary = array_values(array_filter(array_map('sanitize_text_field', $secondary)));
+					lf_seo_maybe_populate_generated_meta((int) $existing->ID, $primary_keyword, $secondary);
+				}
 			}
 		} else {
 			if ($publish_now) {
@@ -5480,6 +5524,15 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 				update_post_meta((int) $post_id, 'lf_manifest_schedule_managed', 1);
 				if ($primary_keyword !== '') {
 					update_post_meta((int) $post_id, 'lf_ai_post_keyword', $primary_keyword);
+					update_post_meta((int) $post_id, '_lf_seo_primary_keyword', $primary_keyword);
+					if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+						$secondary = $manifest['homepage']['secondary_keywords'] ?? [];
+						if (!is_array($secondary)) {
+							$secondary = [];
+						}
+						$secondary = array_values(array_filter(array_map('sanitize_text_field', $secondary)));
+						lf_seo_maybe_populate_generated_meta((int) $post_id, $primary_keyword, $secondary);
+					}
 				}
 			}
 		}

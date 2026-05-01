@@ -808,7 +808,10 @@ function lf_ai_studio_airtable_pull_services_from_sitemaps(array $manifest, bool
 				continue;
 			}
 			$service_rows[] = ['slug' => $slug, 'title' => $title];
-			$pk = $loc !== '' ? trim($title . ' ' . $loc) : $title;
+			$pk = sanitize_text_field((string) ($spec['primary_keyword'] ?? ''));
+			if ($pk === '' || preg_match('/^rec[a-zA-Z0-9]{8,}$/', $pk) === 1) {
+				$pk = $loc !== '' ? trim($title . ' ' . $loc) : $title;
+			}
 			$services_manifest[] = [
 				'title' => $title,
 				'slug' => $slug,
@@ -829,7 +832,10 @@ function lf_ai_studio_airtable_pull_services_from_sitemaps(array $manifest, bool
 				continue;
 			}
 			$label = trim($area_city . ($area_state !== '' ? (', ' . $area_state) : ''));
-			$pk = $loc !== '' ? trim($title . ' ' . $loc) : $title;
+			$pk = sanitize_text_field((string) ($spec['primary_keyword'] ?? ''));
+			if ($pk === '' || preg_match('/^rec[a-zA-Z0-9]{8,}$/', $pk) === 1) {
+				$pk = $loc !== '' ? trim($title . ' ' . $loc) : $title;
+			}
 			$area_rows_collect[] = [
 				'slug' => $slug,
 				'title' => $title,
@@ -873,7 +879,10 @@ function lf_ai_studio_airtable_pull_services_from_sitemaps(array $manifest, bool
 				continue;
 			}
 			$service_rows[] = ['slug' => $slug, 'title' => $title];
-			$pk = $loc !== '' ? trim($title . ' ' . $loc) : $title;
+			$pk = sanitize_text_field((string) ($spec['primary_keyword'] ?? ''));
+			if ($pk === '' || preg_match('/^rec[a-zA-Z0-9]{8,}$/', $pk) === 1) {
+				$pk = $loc !== '' ? trim($title . ' ' . $loc) : $title;
+			}
 			$services_manifest[] = [
 				'title' => $title,
 				'slug' => $slug,
@@ -913,7 +922,10 @@ function lf_ai_studio_airtable_pull_services_from_sitemaps(array $manifest, bool
 				continue;
 			}
 			$label = trim($area_city . ($area_state !== '' ? (', ' . $area_state) : ''));
-			$pk = $loc !== '' ? trim($row_title . ' ' . $loc) : $row_title;
+			$pk = sanitize_text_field((string) ($spec['primary_keyword'] ?? ''));
+			if ($pk === '' || preg_match('/^rec[a-zA-Z0-9]{8,}$/', $pk) === 1) {
+				$pk = $loc !== '' ? trim($row_title . ' ' . $loc) : $row_title;
+			}
 			$area_rows_collect[] = [
 				'slug' => $slug,
 				'title' => $row_title,

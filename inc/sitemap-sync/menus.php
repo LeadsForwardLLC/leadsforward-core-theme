@@ -351,6 +351,10 @@ function lf_sitemap_sync_enforce_group_dropdown(int $menu_id, array $group): voi
 		'order' => 'ASC',
 		'no_found_rows' => true,
 	]);
+	if ($child_post_type === 'lf_service' && function_exists('lf_ai_studio_dedupe_lf_service_posts')) {
+		$preferred = function_exists('lf_ai_studio_manifest_preferred_service_slugs') ? lf_ai_studio_manifest_preferred_service_slugs() : [];
+		$child_posts = lf_ai_studio_dedupe_lf_service_posts(is_array($child_posts) ? $child_posts : [], $preferred);
+	}
 	if (!is_array($child_posts) || empty($child_posts)) {
 		return;
 	}
@@ -533,6 +537,13 @@ function lf_sitemap_sync_build_header_menu(): array {
 			'child_limit' => (int) apply_filters('lf_sitemap_sync_services_menu_limit', 18),
 			'child_class' => 'lf-menu-service-child',
 		]);
+		lf_sitemap_sync_enforce_group_dropdown($menu_id, [
+			'label' => 'Service Areas',
+			'page_slug' => 'service-areas',
+			'child_post_type' => 'lf_service_area',
+			'child_limit' => (int) apply_filters('lf_sitemap_sync_service_areas_menu_limit', 18),
+			'child_class' => 'lf-menu-area-child',
+		]);
 		lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'Service Areas', 'Reviews', 'More']);
 		return [
 			'ok' => true,
@@ -620,6 +631,13 @@ function lf_sitemap_sync_build_header_menu(): array {
 		'child_post_type' => 'lf_service',
 		'child_limit' => (int) apply_filters('lf_sitemap_sync_services_menu_limit', 18),
 		'child_class' => 'lf-menu-service-child',
+	]);
+	lf_sitemap_sync_enforce_group_dropdown($menu_id, [
+		'label' => 'Service Areas',
+		'page_slug' => 'service-areas',
+		'child_post_type' => 'lf_service_area',
+		'child_limit' => (int) apply_filters('lf_sitemap_sync_service_areas_menu_limit', 18),
+		'child_class' => 'lf-menu-area-child',
 	]);
 	lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'Service Areas', 'Reviews', 'More']);
 
