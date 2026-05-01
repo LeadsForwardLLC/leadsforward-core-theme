@@ -124,7 +124,28 @@ function lf_header_menu_item_output(string $item_output, \WP_Post $item, int $de
 		return $args->before . '<span class="site-header__submenu-divider" aria-hidden="true"></span>' . $args->after;
 	}
 	if (in_array('lf-menu-group-parent', $classes, true)) {
-		$title = apply_filters('nav_menu_item_title', $item->title, $item, $args, $depth);
+		if (in_array('lf-menu-services-parent', $classes, true)) {
+			$title = (string) apply_filters(
+				'lf_header_services_group_label',
+				__('Services', 'leadsforward-core'),
+				$item,
+				$args,
+				$depth
+			);
+		} elseif (in_array('lf-menu-areas-parent', $classes, true)) {
+			$title = (string) apply_filters(
+				'lf_header_service_areas_group_label',
+				__('Service Areas', 'leadsforward-core'),
+				$item,
+				$args,
+				$depth
+			);
+		} else {
+			$title = (string) apply_filters('nav_menu_item_title', $item->title, $item, $args, $depth);
+		}
+		if (trim(wp_strip_all_tags($title)) === '') {
+			$title = (string) apply_filters('nav_menu_item_title', $item->title, $item, $args, $depth);
+		}
 		$item_output = $args->before
 			. '<span class="site-header__group-label">' . $args->link_before . esc_html($title) . $args->link_after . '</span>'
 			. '<button type="button" class="site-header__submenu-toggle" aria-expanded="false" aria-label="Toggle submenu">'
@@ -157,7 +178,9 @@ function lf_header_menu_css_classes(array $classes, \WP_Post $item, $args, int $
 	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || $depth !== 0) {
 		return $classes;
 	}
-	if (in_array('menu-item-has-children', $classes, true) && !in_array('lf-menu-more', $classes, true)) {
+	if (in_array('lf-menu-services-parent', $classes, true) || in_array('lf-menu-areas-parent', $classes, true)) {
+		$classes[] = 'lf-menu-group-parent';
+	} elseif (in_array('menu-item-has-children', $classes, true) && !in_array('lf-menu-more', $classes, true)) {
 		$title = strtolower(trim(wp_strip_all_tags((string) $item->title)));
 		if ($title === 'services' || $title === 'service areas') {
 			$classes[] = 'lf-menu-group-parent';
@@ -212,7 +235,9 @@ function lf_header_menu_objects(array $items, $args): array {
 	foreach ($items as $menu_item) {
 		$is_top_level = (int) ($menu_item->menu_item_parent ?? 0) === 0;
 		$title = strtolower(trim(wp_strip_all_tags((string) ($menu_item->title ?? ''))));
-		$is_group = $is_top_level && ($title === 'services' || $title === 'service areas');
+		$is_services_group = $title === 'services' || lf_header_menu_item_has_class($menu_item, 'lf-menu-services-parent');
+		$is_areas_group = $title === 'service areas' || lf_header_menu_item_has_class($menu_item, 'lf-menu-areas-parent');
+		$is_group = $is_top_level && ($is_services_group || $is_areas_group);
 		if (!$is_group) {
 			continue;
 		}
@@ -242,7 +267,7 @@ function lf_header_menu_objects(array $items, $args): array {
 			$extra_items[] = lf_header_menu_synthetic_child($parent_id, $synthetic_id--, '', '#', ['menu-item', 'lf-submenu-divider']);
 		}
 		if (!$has_all_link) {
-			$all_title = $title === 'service areas' ? __('All Service Areas', 'leadsforward-core') : __('All Services', 'leadsforward-core');
+			$all_title = $is_areas_group ? __('All Service Areas', 'leadsforward-core') : __('All Services', 'leadsforward-core');
 			$extra_items[] = lf_header_menu_synthetic_child($parent_id, $synthetic_id--, $all_title, $all_url, ['menu-item', 'lf-submenu-all-link']);
 		}
 	}

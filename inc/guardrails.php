@@ -394,3 +394,47 @@ function lf_admin_notice_seo_critical(): void {
 	echo '<div class="notice notice-warning"><p><strong>' . esc_html__('LeadsForward SEO:', 'leadsforward-core') . '</strong> ' . esc_html(implode(' ', $warnings)) . '</p></div>';
 }
 add_action('admin_notices', 'lf_admin_notice_seo_critical');
+
+/**
+ * Remove leading Airtable record IDs mistakenly merged into headings or paragraphs.
+ */
+function lf_strip_airtable_record_id_prefix(string $text): string {
+	$t = trim($text);
+	if ($t === '') {
+		return '';
+	}
+	$t = preg_replace('/^rec[a-zA-Z0-9]{8,}\\s+/u', '', $t);
+
+	return trim((string) $t);
+}
+
+/**
+ * When viewing a specific service-area page, soften boilerplate footer CTA mentions of the HQ city.
+ *
+ * Does not mutate intentionally empty strings.
+ *
+ * @return array{0:string,1:string} [headline, subheadline]
+ */
+function lf_localize_footer_cta_for_post(\WP_Post $post, string $headline, string $sub): array {
+	$headline = lf_strip_airtable_record_id_prefix($headline);
+	$sub = lf_strip_airtable_record_id_prefix($sub);
+	if ($post->post_type !== 'lf_service_area' || $sub === '') {
+		return [$headline, $sub];
+	}
+	$area_label_raw = preg_replace('/,\\s+[A-Za-z\\.\\s]{2,14}$/', '', get_the_title($post));
+	$area_label = trim(is_string($area_label_raw) ? $area_label_raw : get_the_title($post));
+	if ($area_label === '') {
+		return [$headline, $sub];
+	}
+	$needle = strtolower($area_label);
+	if (strpos(strtolower(html_entity_decode($sub, ENT_QUOTES | ENT_HTML5)), $needle) !== false) {
+		return [$headline, $sub];
+	}
+	$prefix = sprintf(
+		/* translators: %s: primary locality for this page */
+		__('Serving homeowners in %s.', 'leadsforward-core'),
+		$area_label
+	);
+
+	return [$headline, trim($prefix . ' ' . $sub)];
+}

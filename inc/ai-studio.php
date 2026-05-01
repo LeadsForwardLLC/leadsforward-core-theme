@@ -2920,6 +2920,17 @@ function lf_ai_studio_backfill_post_title_excerpt(int $post_id): void {
 			break;
 		}
 	}
+	$keyword = trim((string) get_post_meta($post_id, 'lf_ai_post_keyword', true));
+	$slot_format = (string) get_post_meta($post_id, 'lf_ai_post_format', true);
+	if ($keyword !== '') {
+		$from_kw = lf_ai_studio_blog_title_from_keyword($keyword, $slot_format);
+		if ($from_kw !== '') {
+			$title = $from_kw;
+		}
+	}
+	if ($keyword !== '') {
+		update_post_meta($post_id, '_lf_seo_primary_keyword', $keyword);
+	}
 	$title = trim((string) $title);
 	$excerpt = trim((string) $excerpt);
 	if ($title !== '') {
@@ -2954,6 +2965,38 @@ function lf_ai_humanize_blog_headline_phrase(string $phrase): string {
 	// Collapse duplicate trailing "in {Place} in {Place}" (any casing).
 	$phrase = preg_replace('/\s+in\s+(.+?)\s+in\s+\1$/iu', ' in $1', $phrase);
 	return trim((string) $phrase);
+}
+
+/**
+ * Deterministic, format-specific blog titles so multi-post schedules are not all identical.
+ */
+function lf_ai_studio_blog_title_from_keyword(string $keyword, string $format_key): string {
+	$kw = trim(wp_strip_all_tags($keyword));
+	if ($kw === '') {
+		return '';
+	}
+	$f = sanitize_key($format_key);
+	switch ($f) {
+		case 'cost':
+			$base = sprintf(/* translators: %s: focus keyword phrase */ __('%s Costs: What Drives Pricing and How to Compare Quotes', 'leadsforward-core'), $kw);
+			break;
+		case 'how_to':
+			$base = sprintf(/* translators: %s: focus keyword phrase */ __('How to Approach %s Without Costly Surprises', 'leadsforward-core'), $kw);
+			break;
+		case 'comparison':
+			$base = sprintf(/* translators: %s: focus keyword phrase */ __('%s Compared: Options, Tradeoffs, and When Each Makes Sense', 'leadsforward-core'), $kw);
+			break;
+		case 'local_guide':
+			$base = sprintf(/* translators: %s: focus keyword phrase */ __('Local Guide: %s Questions Homeowners Ask Before Starting', 'leadsforward-core'), $kw);
+			break;
+		case 'faq_roundup':
+			$base = sprintf(/* translators: %s: focus keyword phrase */ __('%s FAQ: Fast Answers to Confusing Decisions', 'leadsforward-core'), $kw);
+			break;
+		default:
+			$base = sprintf(/* translators: %s: focus keyword phrase */ __('%s Explained: Practical Advice for Homeowners', 'leadsforward-core'), $kw);
+			break;
+	}
+	return lf_ai_humanize_blog_headline_phrase($base);
 }
 
 /**
@@ -5571,7 +5614,7 @@ function lf_ai_studio_llm_system_message(): string {
 		'FAQ strategy: create one global pool of 8-12 evergreen FAQs. Reuse across pages unless contextual variation is required. Homepage shows 5. Service pages show 4-6 relevant. Service area pages show 3-5 localized. Overview pages optionally 3-4.',
 		'CTA strategy: treat the homepage CTA section as the canonical global CTA copy. For each page, add exactly one contextual sentence in cta_subheadline_secondary. Never duplicate CTA sentences across pages.',
 		'CTA button labels: keep 2-5 words, max 32 characters, no trailing punctuation.',
-	'Service Details section: service_details_body is a tight overview only — max 3 short paragraphs, stay within blueprint body_words max; prefer 2 paragraphs when possible. Leave depth to process, FAQ, benefits, and other sections. Do NOT fill service_details_micro_sections, service_details_proof_badges, or service_details_proof_label (leave empty). Use service_details_checklist only for process/assurance points (one per line), each 8-15 words, maximum 5 lines total.',
+	'Service Details section: service_details_body is a tight overview only — max 3 short paragraphs, stay within blueprint body_words max; prefer 2 paragraphs when possible. Leave depth to process, FAQ, benefits, and other sections. Do NOT fill service_details_micro_sections, service_details_proof_badges, or service_details_proof_label (leave empty). Use service_details_checklist only for process/assurance points (one per line), each 8-15 words, maximum 6 lines total.',
 	'Process section: You may create or update reusable lf_process_step posts (title = step headline, editor = step body). Homepage and Page Builder process sections accept process_selected_ids (one numeric post ID per line); when any resolve to published lf_process_step posts, they override process_steps. Otherwise format process_steps with separators: "Step Title || Step description" or "Step Title | Step description" per line.',
 	'Service pages: Always fill short_description field with 25-35 words summarizing service. Include primary benefit and location context.',
 	'Service page blueprints: short_description field is required and should be filled with compelling service summary.',

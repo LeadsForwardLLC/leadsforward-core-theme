@@ -46,6 +46,11 @@ if (!function_exists('wp_unslash')) {
 		return is_array($value) ? array_map('wp_unslash', $value) : stripslashes((string) $value);
 	}
 }
+if (!function_exists('wp_strip_all_tags')) {
+	function wp_strip_all_tags(string $str, bool $remove_breaks = false): string {
+		return strip_tags($str);
+	}
+}
 if (!function_exists('wp_kses_post')) {
 	function wp_kses_post(string $html): string {
 		return $html;
@@ -110,6 +115,16 @@ $detailsSix = lf_sections_sanitize_settings('service_details', [
 ]);
 $lines6 = preg_split("/\r\n|\r|\n/", (string) ($detailsSix['service_details_checklist'] ?? ''));
 $lines6 = array_values(array_filter(array_map('trim', $lines6), static fn(string $l): bool => $l !== ''));
-expect(count($lines6) === 5, 'sixth checklist line is capped at five');
+expect(count($lines6) === 6, 'six checklist lines survive sanitize');
+
+$detailsSeven = lf_sections_sanitize_settings('service_details', [
+	'section_heading' => 'S',
+	'section_intro' => '',
+	'service_details_body' => 'Body',
+	'service_details_checklist' => "One\nTwo\nThree\nFour\nFive\nSix\nSeven",
+]);
+$lines7 = preg_split("/\r\n|\r|\n/", (string) ($detailsSeven['service_details_checklist'] ?? ''));
+$lines7 = array_values(array_filter(array_map('trim', $lines7), static fn(string $l): bool => $l !== ''));
+expect(count($lines7) === 6, 'seventh checklist line is capped at six');
 
 fwrite(STDOUT, "PASS\n");

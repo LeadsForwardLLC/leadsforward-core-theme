@@ -622,8 +622,8 @@ function lf_internal_link_templates(): array {
 		'area' => [
 			'Service in {area}',
 			'Serving {area}',
-			'{business} in {area}',
 			'{area} service area',
+			'Explore {area}',
 		],
 		'generic' => [
 			'Learn about {title}',
