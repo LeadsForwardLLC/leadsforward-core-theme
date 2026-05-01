@@ -7190,6 +7190,106 @@ function lf_ai_studio_internal_link_area_service_ids(int $area_id): array {
 	return array_values(array_filter(array_unique($out)));
 }
 
+/**
+ * Service slugs from the stored site manifest for linking preferences (canonical URL choice).
+ *
+ * @return array<int,string>
+ */
+function lf_ai_studio_manifest_preferred_service_slugs(): array {
+	$raw = get_option('lf_site_manifest', null);
+	if (!is_array($raw)) {
+		return [];
+	}
+	$svc = $raw['services'] ?? [];
+	if (!is_array($svc)) {
+		return [];
+	}
+	$out = [];
+	foreach ($svc as $row) {
+		if (!is_array($row)) {
+			continue;
+		}
+		$s = sanitize_title((string) ($row['slug'] ?? ''));
+		if ($s !== '') {
+			$out[] = $s;
+		}
+	}
+	return $out;
+}
+
+/**
+ * Prefer one lf_service post per normalized title when duplicates exist (e.g. legacy base slug vs city-suffixed).
+ *
+ * @param array<int,\WP_Post> $posts Published lf_service posts in menu order.
+ * @param array<int,string> $preferred_slugs Manifest / sitemap slugs to prefer when present.
+ *
+ * @return array<int,\WP_Post>
+ */
+function lf_ai_studio_dedupe_lf_service_posts(array $posts, array $preferred_slugs = []): array {
+	$preferred = [];
+	foreach ($preferred_slugs as $s) {
+		$t = sanitize_title((string) $s);
+		if ($t !== '') {
+			$preferred[$t] = true;
+		}
+	}
+	$groups = [];
+	foreach ($posts as $p) {
+		if (!$p instanceof \WP_Post) {
+			continue;
+		}
+		$key = strtolower(trim(wp_strip_all_tags((string) $p->post_title)));
+		$key = (string) preg_replace('/\s+/', ' ', $key);
+		if ($key === '') {
+			$key = '_slug:' . sanitize_title((string) $p->post_name);
+		}
+		$groups[$key][] = $p;
+	}
+
+	$discard = [];
+	foreach ($groups as $bucket) {
+		if (count($bucket) <= 1) {
+			continue;
+		}
+		$winner = null;
+		foreach ($bucket as $bp) {
+			if (isset($preferred[$bp->post_name])) {
+				$winner = $bp;
+				break;
+			}
+		}
+		if ($winner === null) {
+			usort(
+				$bucket,
+				static function (\WP_Post $a, \WP_Post $b): int {
+					$len = strlen((string) $b->post_name) <=> strlen((string) $a->post_name);
+					if ($len !== 0) {
+						return $len;
+					}
+					return (int) $a->ID <=> (int) $b->ID;
+				}
+			);
+			$winner = $bucket[0];
+		}
+		foreach ($bucket as $bp) {
+			if ((int) $bp->ID !== (int) $winner->ID) {
+				$discard[(int) $bp->ID] = true;
+			}
+		}
+	}
+
+	$out = [];
+	foreach ($posts as $p) {
+		if (!$p instanceof \WP_Post) {
+			continue;
+		}
+		if (!isset($discard[(int) $p->ID])) {
+			$out[] = $p;
+		}
+	}
+	return $out;
+}
+
 function lf_ai_studio_internal_links_catalog(): array {
 	$max_services = (int) apply_filters('lf_ai_studio_internal_links_catalog_max_services', 150);
 	$max_areas = (int) apply_filters('lf_ai_studio_internal_links_catalog_max_areas', 150);
@@ -7230,6 +7330,8 @@ function lf_ai_studio_internal_links_catalog(): array {
 		'order'          => 'ASC',
 		'no_found_rows'  => true,
 	]);
+	$preferred_slugs = lf_ai_studio_manifest_preferred_service_slugs();
+	$services = lf_ai_studio_dedupe_lf_service_posts(is_array($services) ? $services : [], $preferred_slugs);
 	foreach ($services as $service) {
 		if ($service instanceof \WP_Post) {
 			$links[] = [

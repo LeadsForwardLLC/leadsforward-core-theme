@@ -63,6 +63,9 @@ $services = get_posts([
 	'order'          => 'ASC',
 	'no_found_rows'  => true,
 ]);
+if (function_exists('lf_ai_studio_dedupe_lf_service_posts') && function_exists('lf_ai_studio_manifest_preferred_service_slugs')) {
+	$services = lf_ai_studio_dedupe_lf_service_posts(is_array($services) ? $services : [], lf_ai_studio_manifest_preferred_service_slugs());
+}
 $areas = get_posts([
 	'post_type'      => 'lf_service_area',
 	'post_status'    => 'publish',
