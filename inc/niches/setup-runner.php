@@ -1449,14 +1449,7 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 			'classes' => ['lf-menu-group-parent', 'lf-menu-services-parent'],
 			'children' => $service_children,
 		];
-		if (!empty($service_children)) {
-			$header_items[count($header_items) - 1]['children'][] = [
-				'type' => 'custom',
-				'url' => '#',
-				'title' => '',
-				'classes' => 'lf-submenu-divider',
-			];
-		}
+		// Divider rows are injected on the front end via wp_nav_menu_objects (avoid empty DB placeholders).
 		$header_items[count($header_items) - 1]['children'][] = [
 			'type' => 'page',
 			'object_id' => $services_page_id,
@@ -1471,14 +1464,7 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 			'classes' => ['lf-menu-group-parent', 'lf-menu-services-parent'],
 			'children' => $service_children,
 		];
-		if (!empty($service_children)) {
-			$header_items[count($header_items) - 1]['children'][] = [
-				'type' => 'custom',
-				'url' => '#',
-				'title' => '',
-				'classes' => 'lf-submenu-divider',
-			];
-		}
+		// Divider rows are injected on the front end via wp_nav_menu_objects (avoid empty DB placeholders).
 		$header_items[count($header_items) - 1]['children'][] = [
 			'type' => 'custom',
 			'url' => get_post_type_archive_link('lf_service'),
@@ -1493,14 +1479,7 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 			'classes' => ['lf-menu-group-parent', 'lf-menu-areas-parent'],
 			'children' => $area_children,
 		];
-		if (!empty($area_children)) {
-			$header_items[count($header_items) - 1]['children'][] = [
-				'type' => 'custom',
-				'url' => '#',
-				'title' => '',
-				'classes' => 'lf-submenu-divider',
-			];
-		}
+		// Divider rows are injected on the front end via wp_nav_menu_objects (avoid empty DB placeholders).
 		$header_items[count($header_items) - 1]['children'][] = [
 			'type' => 'page',
 			'object_id' => $areas_page_id,
@@ -1515,14 +1494,7 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 			'classes' => ['lf-menu-group-parent', 'lf-menu-areas-parent'],
 			'children' => $area_children,
 		];
-		if (!empty($area_children)) {
-			$header_items[count($header_items) - 1]['children'][] = [
-				'type' => 'custom',
-				'url' => '#',
-				'title' => '',
-				'classes' => 'lf-submenu-divider',
-			];
-		}
+		// Divider rows are injected on the front end via wp_nav_menu_objects (avoid empty DB placeholders).
 		$header_items[count($header_items) - 1]['children'][] = [
 			'type' => 'custom',
 			'url' => get_post_type_archive_link('lf_service_area'),

@@ -2908,6 +2908,27 @@ article a:not(.lf-btn):hover {
 	position: relative;
 }
 
+@media (min-width: 901px) {
+	/* Group parents use span+button (no top-level <a>); keep label + chevron as one unit and show the toggle. */
+	.site-header__menu > .menu-item.lf-menu-group-parent {
+		display: inline-flex;
+		align-items: center;
+		flex-wrap: nowrap;
+		gap: 0.15rem;
+	}
+	.site-header__menu > .menu-item.lf-menu-group-parent > .site-header__submenu-toggle {
+		display: inline-flex;
+		align-self: center;
+		align-items: center;
+		justify-content: center;
+		margin-left: 0;
+		padding: 0.2rem 0.35rem;
+		border: 0;
+		background: transparent;
+		flex-shrink: 0;
+	}
+}
+
 .site-header__menu .menu-item-has-children > a::after {
 	content: '▾';
 	margin-left: 0.35rem;
