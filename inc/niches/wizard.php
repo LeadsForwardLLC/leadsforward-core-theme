@@ -296,6 +296,7 @@ function lf_wizard_handle_setup_settings(): void {
 
 	$hide_bar = !empty($_POST['lf_hide_admin_bar']) ? '1' : '0';
 	update_option('lf_hide_admin_bar', $hide_bar);
+	update_option('lf_tools_hide_admin_bar', $hide_bar);
 
 wp_safe_redirect(admin_url('admin.php?page=lf-setup&settings_saved=1'));
 	exit;
@@ -937,7 +938,9 @@ function lf_wizard_render_page(): void {
 function lf_wizard_render_setup_settings_panel(): void {
 	$maps_key = (string) get_option('lf_maps_api_key', '');
 	$openai_key_set = get_option('lf_openai_api_key', '') !== '';
-	$hide_bar = get_option('lf_hide_admin_bar', '0') === '1';
+	$hide_bar = function_exists('lf_site_tools_should_hide_frontend_admin_bar')
+		? lf_site_tools_should_hide_frontend_admin_bar()
+		: (get_option('lf_hide_admin_bar', '0') === '1' || get_option('lf_tools_hide_admin_bar', '0') === '1');
 	?>
 	<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
 		<h2 style="margin-top:0;"><?php esc_html_e('Global API & Admin Settings', 'leadsforward-core'); ?></h2>
