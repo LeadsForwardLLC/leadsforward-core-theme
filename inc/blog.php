@@ -14,12 +14,22 @@ if (!defined('ABSPATH')) {
 
 function lf_blog_base_url(): string {
 	$page_for_posts = (int) get_option('page_for_posts');
-	if ($page_for_posts) {
+	if ($page_for_posts > 0) {
 		$link = get_permalink($page_for_posts);
 		if (is_string($link) && $link !== '') {
 			return $link;
 		}
 	}
+
+	// Many LeadsForward sites use a "blog" Page without assigning it under Settings → Reading.
+	$blog_page = get_page_by_path('blog');
+	if ($blog_page instanceof WP_Post && $blog_page->post_status === 'publish') {
+		$link = get_permalink($blog_page);
+		if (is_string($link) && $link !== '') {
+			return $link;
+		}
+	}
+
 	return home_url('/');
 }
 
