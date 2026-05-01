@@ -82,3 +82,46 @@ function lf_critical_css_placeholder(): void {
 	}
 }
 add_action('wp_head', 'lf_critical_css_placeholder', 1);
+
+/**
+ * When supported, load core block styles/scripts per block on the frontend instead of one heavy bundle.
+ * Complements `lf_maybe_remove_block_library_css` in cleanup.php (default strips unused block CSS anyway).
+ */
+add_filter(
+	'should_load_separate_core_block_assets',
+	static function ($separate) {
+		if (apply_filters('lf_use_separate_core_block_assets', true) !== true) {
+			return (bool) $separate;
+		}
+		if (is_admin()) {
+			return (bool) $separate;
+		}
+		return true;
+	},
+	10,
+	1
+);
+
+/**
+ * Omit wp-embed on singular posts whose stored content has no HTTP(S) URLs (nothing for auto-embed to resolve).
+ */
+add_action(
+	'wp_enqueue_scripts',
+	static function (): void {
+		if (is_admin() || apply_filters('lf_conditional_wp_embed_scripts', true) !== true) {
+			return;
+		}
+		if (!is_singular()) {
+			return;
+		}
+		$post = get_queried_object();
+		if (!$post instanceof \WP_Post) {
+			return;
+		}
+		$content = (string) $post->post_content;
+		if ($content === '' || !preg_match('#https?://#', $content)) {
+			wp_deregister_script('wp-embed');
+		}
+	},
+	100
+);

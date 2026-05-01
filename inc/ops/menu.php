@@ -595,7 +595,9 @@ function lf_ops_handle_global_settings_save(): void {
 		$unpublished_mode = 'draft';
 	}
 	update_option('lf_sitemap_unpublished_mode', $unpublished_mode);
-	update_option('lf_tools_hide_admin_bar', isset($_POST['lf_tools_hide_admin_bar']) ? '1' : '0');
+	$tools_hide_admin = isset($_POST['lf_tools_hide_admin_bar']) ? '1' : '0';
+	update_option('lf_tools_hide_admin_bar', $tools_hide_admin);
+	update_option('lf_hide_admin_bar', $tools_hide_admin);
 	update_option('lf_tools_classic_editor', isset($_POST['lf_tools_classic_editor']) ? '1' : '0');
 	update_option('lf_tools_image_optimization', isset($_POST['lf_tools_image_optimization']) ? '1' : '0');
 	$design_preset = isset($_POST['lf_global_design_preset']) ? sanitize_text_field(wp_unslash($_POST['lf_global_design_preset'])) : 'clean-precision';
@@ -1076,7 +1078,9 @@ function lf_ops_render_global_settings_page(): void {
 	$autonomy_last_baseline_job = (int) get_option('lf_ai_autonomy_last_baseline_job_id', 0);
 	$autonomy_last_health_check = (int) get_option('lf_ai_autonomy_last_health_check', 0);
 	$openai_key_set = (string) get_option('lf_openai_api_key', '') !== '';
-	$tools_hide_admin_bar = get_option('lf_tools_hide_admin_bar', '0') === '1';
+	$tools_hide_admin_bar = function_exists('lf_site_tools_should_hide_frontend_admin_bar')
+		? lf_site_tools_should_hide_frontend_admin_bar()
+		: (get_option('lf_tools_hide_admin_bar', '0') === '1' || get_option('lf_hide_admin_bar', '0') === '1');
 	$tools_classic_editor = get_option('lf_tools_classic_editor', '0') === '1';
 	$tools_image_optimization = get_option('lf_tools_image_optimization', '1') === '1';
 	$airtable_settings = function_exists('lf_ai_studio_airtable_get_settings')
