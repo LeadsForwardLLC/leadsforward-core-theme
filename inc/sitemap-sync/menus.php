@@ -222,9 +222,9 @@ function lf_sitemap_sync_reorder_header_menu_top_level(int $menu_id, array $labe
 		if (!$item instanceof WP_Post) {
 			continue;
 		}
-		wp_update_nav_menu_item($menu_id, (int) $item->ID, [
-			'menu-item-position' => $pos++,
-		]);
+		$args = lf_nav_menu_item_build_update_args($item);
+		$args['menu-item-position'] = $pos++;
+		wp_update_nav_menu_item($menu_id, (int) $item->ID, $args);
 	}
 }
 
@@ -704,6 +704,45 @@ function lf_nav_menu_item_class_list(WP_Post $item): array {
 
 function lf_nav_menu_item_has_class(WP_Post $item, string $class): bool {
 	return in_array($class, lf_nav_menu_item_class_list($item), true);
+}
+
+/**
+ * Build a full wp_update_nav_menu_item args array from an existing menu item.
+ * WordPress can reset menu-item-parent-id (flattening children) when updates omit fields.
+ *
+ * @return array<string, mixed>
+ */
+function lf_nav_menu_item_build_update_args(WP_Post $item): array {
+	$args = [
+		'menu-item-title' => (string) ($item->title ?? ''),
+		'menu-item-status' => 'publish',
+		'menu-item-parent-id' => (int) ($item->menu_item_parent ?? 0),
+		'menu-item-position' => (int) ($item->menu_order ?? 0),
+		'menu-item-classes' => is_array($item->classes ?? null) ? implode(' ', $item->classes) : trim((string) ($item->classes ?? '')),
+	];
+	$type = (string) ($item->type ?? '');
+	if ($type === 'custom') {
+		$args['menu-item-type'] = 'custom';
+		$args['menu-item-object'] = 'custom';
+		$args['menu-item-object-id'] = 0;
+		$args['menu-item-url'] = (string) ($item->url ?? '');
+	} elseif ($type === 'post_type') {
+		$args['menu-item-type'] = 'post_type';
+		$args['menu-item-object'] = (string) ($item->object ?? '');
+		$args['menu-item-object-id'] = (int) ($item->object_id ?? 0);
+		$args['menu-item-url'] = '';
+	} elseif ($type === 'taxonomy') {
+		$args['menu-item-type'] = 'taxonomy';
+		$args['menu-item-object'] = (string) ($item->object ?? '');
+		$args['menu-item-object-id'] = (int) ($item->object_id ?? 0);
+		$args['menu-item-url'] = '';
+	} else {
+		$args['menu-item-type'] = $type !== '' ? $type : 'custom';
+		$args['menu-item-object'] = (string) ($item->object ?? '');
+		$args['menu-item-object-id'] = (int) ($item->object_id ?? 0);
+		$args['menu-item-url'] = (string) ($item->url ?? '');
+	}
+	return $args;
 }
 
 function lf_nav_menu_item_is_sync_preserved_cta(WP_Post $item): bool {
@@ -1322,11 +1361,9 @@ function lf_nav_menu_merge_duplicate_dropdowns(
 				continue;
 			}
 
-			wp_update_nav_menu_item($menu_id, (int) $ch->ID, [
-				'menu-item-parent-id' => $winner_id,
-				'menu-item-status' => 'publish',
-				'menu-item-position' => (int) ($ch->menu_order ?? 0),
-			]);
+			$move_args = lf_nav_menu_item_build_update_args($ch);
+			$move_args['menu-item-parent-id'] = $winner_id;
+			wp_update_nav_menu_item($menu_id, (int) $ch->ID, $move_args);
 		}
 
 		wp_delete_post((int) $loser_id, true);
@@ -1391,26 +1428,3 @@ function lf_header_menu_repair_nav_structure(int $menu_id, bool $apply_preferred
 		lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'Service Areas', 'Reviews', 'More']);
 	}
 }
-
-/**
- * Normalize legacy Header Menu markup when Appearance → Menus is opened.
- */
-function lf_header_menu_repair_maybe_on_menus_screen(): void {
-	if (!function_exists('lf_sitemap_menu_enable') || !lf_sitemap_menu_enable()) {
-		return;
-	}
-	$locations = get_theme_mod('nav_menu_locations') ?: [];
-	if (!isset($locations['header_menu'])) {
-		return;
-	}
-	$menu_id = (int) $locations['header_menu'];
-	if ($menu_id <= 0) {
-		return;
-	}
-	if (!current_user_can('edit_theme_options')) {
-		return;
-	}
-	lf_header_menu_repair_nav_structure($menu_id);
-}
-add_action('load-nav-menus.php', 'lf_header_menu_repair_maybe_on_menus_screen', 30);
-
