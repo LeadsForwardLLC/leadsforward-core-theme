@@ -421,8 +421,8 @@ function lf_sections_registry(): array {
 				['key' => 'benefits_items', 'label' => __('Benefits (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Fast response windows || Clear arrival times and quick follow-up after you reach out.' . "\n" . 'Licensed, insured professionals || Fully vetted team backed by proper coverage and local reviews.' . "\n" . 'Upfront pricing before work starts || Detailed estimates so you always know the next step.', 'leadsforward-core')],
 				['key' => 'benefits_icon_overrides', 'label' => __('Benefit icons (one per line, optional icon slug)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 				['key' => 'benefits_icon_bg_overrides', 'label' => __('Benefit icon tile colors (one per line: auto, blue, green, orange)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
-				['key' => 'benefits_title_word_limit', 'label' => __('Benefit title word limit', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
-				['key' => 'benefits_body_word_limit', 'label' => __('Benefit body word limit', 'leadsforward-core'), 'type' => 'number', 'default' => '18'],
+				['key' => 'benefits_title_word_limit', 'label' => __('Benefit title word limit', 'leadsforward-core'), 'type' => 'number', 'default' => '10'],
+				['key' => 'benefits_body_word_limit', 'label' => __('Benefit body word limit', 'leadsforward-core'), 'type' => 'number', 'default' => '22'],
 				// Added for density expansion – vNext
 				['key' => 'benefits_supporting_points', 'label' => __('Supporting points (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 				// Added for density expansion – vNext
@@ -2330,8 +2330,8 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 	if (!in_array($layout, ['cards', 'cards_points', 'split'], true)) {
 		$layout = 'cards';
 	}
-	$title_limit = max(3, min(8, (int) ($settings['benefits_title_word_limit'] ?? 5)));
-	$body_limit = max(8, min(20, (int) ($settings['benefits_body_word_limit'] ?? 14)));
+	$title_limit = max(4, min(14, (int) ($settings['benefits_title_word_limit'] ?? 10)));
+	$body_limit = max(10, min(28, (int) ($settings['benefits_body_word_limit'] ?? 22)));
 	$default_items = lf_sections_benefits_default_items();
 	$icon_overrides = lf_sections_parse_lines((string) ($settings['benefits_icon_overrides'] ?? ''));
 	$icon_bg_overrides = lf_sections_parse_lines((string) ($settings['benefits_icon_bg_overrides'] ?? ''));
@@ -2403,7 +2403,7 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 			if ( preg_match( '/<[a-z][^>]*>/i', $text ) ) {
 				return $text;
 			}
-			return wp_trim_words( $text, $limit, '' );
+			return wp_trim_words( $text, $limit, '…' );
 		};
 		$title_text = $trim_unless_html( $title_text, $title_limit );
 		$body_text  = $trim_unless_html( $body_text, $body_limit );
@@ -2413,9 +2413,10 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 			'source_line' => trim((string) $raw_item),
 		];
 	}
-	$max_benefit_cards = (int) apply_filters('lf_benefits_max_cards', 24);
+	$default_max_cards = ($context === 'homepage') ? 6 : 24;
+	$max_benefit_cards = (int) apply_filters('lf_benefits_max_cards', $default_max_cards, $context);
 	if ($max_benefit_cards < 1) {
-		$max_benefit_cards = 24;
+		$max_benefit_cards = $default_max_cards;
 	}
 	if (count($parsed_items) > $max_benefit_cards) {
 		$parsed_items = array_slice($parsed_items, 0, $max_benefit_cards);
@@ -2453,7 +2454,7 @@ function lf_sections_render_benefits(string $context, array $settings, \WP_Post 
 					if ( preg_match( '/<[a-z][^>]*>/i', $text ) ) {
 						return $text;
 					}
-					return wp_trim_words( $text, $limit, '' );
+					return wp_trim_words( $text, $limit, '…' );
 				};
 				$item['title'] = $trim_unless_html2( (string) $item['title'], $title_limit );
 				$item['body']  = $trim_unless_html2( (string) $item['body'], $body_limit );

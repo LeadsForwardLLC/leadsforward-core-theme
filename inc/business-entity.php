@@ -191,6 +191,40 @@ function lf_business_entity_get(): array {
 	}
 	$same_as = array_values(array_unique(array_filter($same_as)));
 
+	if (array_filter($social) === [] && $same_as !== []) {
+		foreach ($same_as as $candidate) {
+			$candidate = trim((string) $candidate);
+			if ($candidate === '') {
+				continue;
+			}
+			if (!filter_var($candidate, FILTER_VALIDATE_URL)) {
+				continue;
+			}
+			$host = strtolower((string) wp_parse_url($candidate, PHP_URL_HOST));
+			if ($host === '') {
+				continue;
+			}
+			if ($social['facebook'] === '' && str_contains($host, 'facebook.')) {
+				$social['facebook'] = $candidate;
+			}
+			if ($social['instagram'] === '' && str_contains($host, 'instagram.')) {
+				$social['instagram'] = $candidate;
+			}
+			if ($social['youtube'] === '' && (str_contains($host, 'youtube.') || str_contains($host, 'youtu.be'))) {
+				$social['youtube'] = $candidate;
+			}
+			if ($social['linkedin'] === '' && str_contains($host, 'linkedin.')) {
+				$social['linkedin'] = $candidate;
+			}
+			if ($social['tiktok'] === '' && str_contains($host, 'tiktok.')) {
+				$social['tiktok'] = $candidate;
+			}
+			if ($social['x'] === '' && (str_contains($host, 'twitter.') || str_contains($host, 'x.com'))) {
+				$social['x'] = $candidate;
+			}
+		}
+	}
+
 	return [
 		'name' => $display_name,
 		'legal_name' => $legal_name,
