@@ -1527,7 +1527,7 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	$header_items[] = [
 		'type' => 'custom',
 		'url' => $phone_href,
-		'title' => __('Call Now', 'leadsforward-core'),
+		'title' => __('Call', 'leadsforward-core'),
 		'classes' => 'lf-menu-call',
 	];
 	$header_items[] = [

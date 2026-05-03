@@ -1845,7 +1845,7 @@ function lf_ops_render_global_settings_page(): void {
 									<option value="dropdown" <?php selected($header_more_mode_ui === 'dropdown'); ?>><?php esc_html_e('Classic dropdown', 'leadsforward-core'); ?></option>
 									<option value="slideout" <?php selected($header_more_mode_ui === 'slideout'); ?>><?php esc_html_e('Slide-out panel (hamburger)', 'leadsforward-core'); ?></option>
 								</select>
-								<p class="description"><?php esc_html_e('Slide-out opens overflow links in a right drawer with a dimmed backdrop instead of a hover dropdown.', 'leadsforward-core'); ?></p>
+								<p class="description"><?php esc_html_e('Slide-out opens overflow links in a right drawer instead of a hover dropdown. Click outside the drawer or press Escape to close.', 'leadsforward-core'); ?></p>
 							</td>
 						</tr>
 						<tr>
