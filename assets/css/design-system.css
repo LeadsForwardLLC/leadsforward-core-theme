@@ -2489,24 +2489,27 @@ article a:not(.lf-btn):hover {
 }
 
 /*
- * Header “Call” link — one DOM shape (`lf-call__icon-wrap` + `lf-call__icon`) and tunable vars.
- * Override on `.site-header` or `.lf-call__icon-wrap`: --lf-call-icon-size, --lf-call-gap, --lf-call-icon-nudge
+ * Header “Call” link — `lf-call__icon-wrap` + label; tunable vars on the anchor.
+ * line-height must stay 1 so flex align-items:center centers to cap-height, not a loose line box.
+ * --lf-call-svg-art-shift: Tabler phone stroke sits low in the 24×24 viewBox; shift art up inside the box.
  */
 .site-header__menu .lf-menu-call > a.lf-menu-call__link,
 .site-header__menu .lf-menu-call > a,
 .site-header__phone {
 	--lf-call-gap: 0.52em;
-	/* Negative = shift icon up vs flex-center box (phone glyphs sit low in the viewBox). */
-	--lf-call-icon-nudge: -0.12em;
+	--lf-call-icon-nudge: -0.06em;
+	--lf-call-svg-art-shift: -16%;
 	--lf-call-icon-size: 0.88em;
 	display: inline-flex;
 	align-items: center;
 	gap: var(--lf-call-gap);
-	line-height: 1.2;
+	line-height: 1;
 	font-size: calc(var(--lf-fs-body, 1rem) + 1px);
 	font-weight: 600;
 	text-decoration: none;
 	color: var(--lf-text-primary);
+	/* Override loose menu pill padding so vertical flex alignment matches the word, not extra line-box air */
+	padding: 0.32rem 0.65rem;
 }
 
 @supports (font-size: 1cap) {
@@ -2520,35 +2523,42 @@ article a:not(.lf-btn):hover {
 
 .site-header__menu .lf-menu-call__label {
 	display: inline-block;
-	line-height: inherit;
+	line-height: 1;
 }
 
-/* Icon box tracks label cap-height / em; single optical nudge via --lf-call-icon-nudge */
+/* Icon box tracks cap/em; wrap nudge + inner SVG art shift (Tabler handset sits low in viewBox). */
 .lf-call__icon-wrap {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	flex-shrink: 0;
+	line-height: 0;
 	width: var(--lf-call-icon-size, 0.88em);
 	height: var(--lf-call-icon-size, 0.88em);
-	transform: translateY(var(--lf-call-icon-nudge, -0.12em));
+	transform: translateY(var(--lf-call-icon-nudge, -0.06em));
 }
 
-.lf-call__icon-wrap .lf-icon,
-.lf-call__icon-wrap svg.lf-call__icon,
-.lf-call__icon-wrap svg.lf-icon {
+.lf-call__icon-wrap .lf-icon {
+	width: 100%;
+	height: 100%;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0;
+	padding: 0;
+}
+
+/* One transform on the leaf SVG only (avoids double-shift when .lf-icon wraps markup). */
+.lf-call__icon-wrap > svg.lf-call__icon,
+.lf-call__icon-wrap > svg.lf-icon,
+.lf-call__icon-wrap .lf-icon > svg {
 	width: 100%;
 	height: 100%;
 	display: block;
 	overflow: visible;
 	margin: 0;
 	padding: 0;
-}
-
-.lf-call__icon-wrap .lf-icon {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
+	transform: translateY(var(--lf-call-svg-art-shift, -16%));
 }
 
 .site-header__menu .lf-menu-cta > a {
