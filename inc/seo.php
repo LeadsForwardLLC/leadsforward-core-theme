@@ -17,6 +17,7 @@ if (function_exists('lf_load_inc')) {
 	lf_load_inc('seo/seo-settings.php');
 	lf_load_inc('seo/seo-meta-box.php');
 	lf_load_inc('seo/seo-quality.php');
+	lf_load_inc('seo/seo-coverage.php');
 	lf_load_inc('seo/seo-keyword-engine.php');
 	lf_load_inc('seo/seo-render.php');
 	lf_load_inc('seo/seo-sitemap.php');
