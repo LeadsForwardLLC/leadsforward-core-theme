@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 }
 
 function lf_menu_autobuild_enabled(): bool {
-	return function_exists('lf_get_global_option') && (string) lf_get_global_option('lf_menu_autobuild_enabled', '0') === '1';
+	return function_exists('lf_get_global_option') && (string) lf_get_global_option('lf_menu_autobuild_enabled', '1') === '1';
 }
 
 /**

@@ -243,9 +243,19 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 	}
 	$header_settings_local = [
 		'layout' => function_exists('lf_header_layout') ? lf_header_layout() : 'modern',
+		'nav_width' => function_exists('lf_header_nav_width') ? lf_header_nav_width() : 'contained',
+		'more_mode' => function_exists('lf_header_more_mode') ? lf_header_more_mode() : 'dropdown',
 		'topbar_enabled' => function_exists('lf_header_topbar_enabled') ? lf_header_topbar_enabled() : false,
 		'topbar_text' => function_exists('lf_header_topbar_text') ? lf_header_topbar_text() : '',
 		'topbar_color' => function_exists('lf_header_topbar_color') ? lf_header_topbar_color() : '',
+	];
+	$header_nav_widths_ui = [
+		['value' => 'contained', 'label' => __('Contained (rounded bar)', 'leadsforward-core')],
+		['value' => 'full', 'label' => __('Full width (edge-to-edge)', 'leadsforward-core')],
+	];
+	$header_more_modes_ui = [
+		['value' => 'dropdown', 'label' => __('“More” as dropdown', 'leadsforward-core')],
+		['value' => 'slideout', 'label' => __('“More” as slide-out panel', 'leadsforward-core')],
 	];
 	$heading_case_mode = function_exists('lf_heading_case_mode') ? lf_heading_case_mode() : 'normal';
 
@@ -285,6 +295,8 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 			['value' => 'video', 'label' => __('Video background', 'leadsforward-core')],
 		],
 		'header_layouts' => $header_layouts_ui,
+		'header_nav_widths' => $header_nav_widths_ui,
+		'header_more_modes' => $header_more_modes_ui,
 		'header_settings' => $header_settings_local,
 		'heading_case_mode' => $heading_case_mode,
 		'homepage_enabled' => $homepage_enabled,
@@ -311,6 +323,8 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 			'headerPanelTitle' => __('Site header', 'leadsforward-core'),
 			'headerPanelHint' => __('Layout and optional promo top bar apply site-wide. Saving reloads the page.', 'leadsforward-core'),
 			'headerLayoutLabel' => __('Header layout', 'leadsforward-core'),
+			'headerNavWidthLabel' => __('Navigation bar width', 'leadsforward-core'),
+			'headerMoreModeLabel' => __('“More” menu (desktop)', 'leadsforward-core'),
 			'headerTopbarLabel' => __('Show promo top bar', 'leadsforward-core'),
 			'headerTopbarTextLabel' => __('Top bar text', 'leadsforward-core'),
 			'headerSave' => __('Save header', 'leadsforward-core'),
@@ -818,6 +832,14 @@ function lf_ai_assistant_render_floating_widget(): void {
 					<label>
 						<span><?php esc_html_e('Header layout', 'leadsforward-core'); ?></span>
 						<select data-lf-ai-header-layout></select>
+					</label>
+					<label>
+						<span><?php esc_html_e('Navigation bar width', 'leadsforward-core'); ?></span>
+						<select data-lf-ai-header-nav-width></select>
+					</label>
+					<label>
+						<span><?php esc_html_e('“More” menu (desktop)', 'leadsforward-core'); ?></span>
+						<select data-lf-ai-header-more-mode></select>
 					</label>
 					<label>
 						<span><?php esc_html_e('Heading case', 'leadsforward-core'); ?></span>
@@ -1361,6 +1383,8 @@ function lf_ai_assistant_widget_js(): string {
 		var $headerPanel = $headerRoot.find("#lf-ai-header-panel");
 		var $headerSave = $headerRoot.find("[data-lf-ai-header-save]");
 		var $headerLayout = $headerRoot.find("[data-lf-ai-header-layout]");
+		var $headerNavWidth = $headerRoot.find("[data-lf-ai-header-nav-width]");
+		var $headerMoreMode = $headerRoot.find("[data-lf-ai-header-more-mode]");
 		var $headingCase = $headerRoot.find("[data-lf-ai-heading-case]");
 		var $headerTopbar = $headerRoot.find("[data-lf-ai-header-topbar-enabled]");
 		var $headerTopbarText = $headerRoot.find("[data-lf-ai-header-topbar-text]");
@@ -3081,6 +3105,8 @@ function lf_ai_assistant_widget_js(): string {
 			var rows = Array.isArray(lfAiFloating.header_layouts) ? lfAiFloating.header_layouts : [];
 			var cur = (lfAiFloating.header_settings && typeof lfAiFloating.header_settings === "object") ? lfAiFloating.header_settings : {};
 			var curLayout = String(cur.layout || "modern");
+			var curNavWidth = String(cur.nav_width || "contained");
+			var curMoreMode = String(cur.more_mode || "dropdown");
 			var curHeadingCase = String(lfAiFloating.heading_case_mode || "normal");
 			$headerLayout.empty();
 			for (var hi = 0; hi < rows.length; hi++) {
@@ -3095,6 +3121,36 @@ function lf_ai_assistant_widget_js(): string {
 				$headerLayout.val(curLayout);
 			} else if ($headerLayout.find("option").length) {
 				$headerLayout.val($headerLayout.find("option").first().attr("value"));
+			}
+			var navRows = Array.isArray(lfAiFloating.header_nav_widths) ? lfAiFloating.header_nav_widths : [];
+			$headerNavWidth.empty();
+			for (var ni = 0; ni < navRows.length; ni++) {
+				var nr = navRows[ni] || {};
+				var nv = String(nr.value || "");
+				var nlab = String(nr.label || nv);
+				if (!nv) continue;
+				$("<option>").attr("value", nv).text(nlab).appendTo($headerNavWidth);
+			}
+			var nwMatch = $headerNavWidth.find("option").filter(function(){ return String(this.value) === curNavWidth; });
+			if (nwMatch.length) {
+				$headerNavWidth.val(curNavWidth);
+			} else if ($headerNavWidth.find("option").length) {
+				$headerNavWidth.val($headerNavWidth.find("option").first().attr("value"));
+			}
+			var moreRows = Array.isArray(lfAiFloating.header_more_modes) ? lfAiFloating.header_more_modes : [];
+			$headerMoreMode.empty();
+			for (var mi = 0; mi < moreRows.length; mi++) {
+				var mr = moreRows[mi] || {};
+				var mv = String(mr.value || "");
+				var mlab = String(mr.label || mv);
+				if (!mv) continue;
+				$("<option>").attr("value", mv).text(mlab).appendTo($headerMoreMode);
+			}
+			var mmMatch = $headerMoreMode.find("option").filter(function(){ return String(this.value) === curMoreMode; });
+			if (mmMatch.length) {
+				$headerMoreMode.val(curMoreMode);
+			} else if ($headerMoreMode.find("option").length) {
+				$headerMoreMode.val($headerMoreMode.find("option").first().attr("value"));
 			}
 			$headerTopbar.prop("checked", !!cur.topbar_enabled);
 			$headerTopbarText.val(String(cur.topbar_text || ""));
@@ -9770,6 +9826,8 @@ function lf_ai_assistant_widget_js(): string {
 				action: "lf_ai_update_header_settings",
 				nonce: lfAiFloating.nonce,
 				header_layout: String($headerLayout.val() || "modern"),
+				header_nav_width: String($headerNavWidth.val() || "contained"),
+				header_more_mode: String($headerMoreMode.val() || "dropdown"),
 				heading_case_mode: String($headingCase.length ? ($headingCase.val() || "normal") : "normal"),
 				header_topbar_enabled: $headerTopbar.is(":checked") ? "1" : "0",
 				header_topbar_text: String($headerTopbarText.val() || ""),

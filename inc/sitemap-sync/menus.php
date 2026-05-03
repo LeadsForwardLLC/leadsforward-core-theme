@@ -202,7 +202,8 @@ function lf_sitemap_sync_reorder_header_menu_top_level(int $menu_id, array $labe
 	if (!is_array($items) || empty($items)) {
 		return;
 	}
-	$top_by_label = [];
+
+	$pool = [];
 	foreach ($items as $item) {
 		if (!$item instanceof WP_Post) {
 			continue;
@@ -210,15 +211,78 @@ function lf_sitemap_sync_reorder_header_menu_top_level(int $menu_id, array $labe
 		if ((int) ($item->menu_item_parent ?? 0) !== 0) {
 			continue;
 		}
+		$pool[(int) $item->ID] = $item;
+	}
+	if ($pool === []) {
+		return;
+	}
+
+	$match_wanted_label = static function (WP_Post $item, string $want_raw): bool {
+		$want = strtolower(trim((string) $want_raw));
 		$title = strtolower(trim(wp_strip_all_tags((string) ($item->title ?? ''))));
-		if ($title !== '') {
-			$top_by_label[$title] = $item;
+		if ($title !== '' && $title === $want) {
+			return true;
+		}
+		if ($want === 'home') {
+			$home_id = (int) get_option('page_on_front');
+			if (
+				$home_id > 0
+				&& (string) ($item->object ?? '') === 'page'
+				&& (int) ($item->object_id ?? 0) === $home_id
+			) {
+				return true;
+			}
+			$url = isset($item->url) ? trim((string) $item->url) : '';
+			if ($url !== '') {
+				$h_slash = trailingslashit(home_url('/'));
+				$h_plain = untrailingslashit($h_slash);
+				if ($url === $h_slash || $url === $h_plain || trailingslashit($url) === $h_slash) {
+					return true;
+				}
+			}
+		}
+		return false;
+	};
+
+	$ordered = [];
+	foreach ($labels as $label) {
+		foreach ($pool as $id => $item) {
+			if (!$item instanceof WP_Post) {
+				continue;
+			}
+			if ($match_wanted_label($item, (string) $label)) {
+				$ordered[] = $item;
+				unset($pool[$id]);
+				break;
+			}
 		}
 	}
+
+	$remaining_non_cta = [];
+	$remaining_cta = [];
+	foreach ($pool as $item) {
+		if (!$item instanceof WP_Post) {
+			continue;
+		}
+		if (lf_nav_menu_item_is_sync_preserved_cta($item)) {
+			$remaining_cta[] = $item;
+		} else {
+			$remaining_non_cta[] = $item;
+		}
+	}
+	usort(
+		$remaining_non_cta,
+		static fn ($a, $b): int => ((int) ($a->menu_order ?? 0)) <=> ((int) ($b->menu_order ?? 0))
+	);
+	usort(
+		$remaining_cta,
+		static fn ($a, $b): int => ((int) ($a->menu_order ?? 0)) <=> ((int) ($b->menu_order ?? 0))
+	);
+
+	$ordered = array_merge($ordered, $remaining_non_cta, $remaining_cta);
+
 	$pos = 0;
-	foreach ($labels as $label) {
-		$key = strtolower(trim((string) $label));
-		$item = $top_by_label[$key] ?? null;
+	foreach ($ordered as $item) {
 		if (!$item instanceof WP_Post) {
 			continue;
 		}

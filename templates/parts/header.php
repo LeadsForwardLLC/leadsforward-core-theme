@@ -31,11 +31,19 @@ if ($logo_text === '') {
 	$logo_text = get_bloginfo('name');
 }
 $layout = function_exists('lf_header_layout') ? lf_header_layout() : 'modern';
+$nav_width = function_exists('lf_header_nav_width') ? lf_header_nav_width() : 'contained';
+$more_mode = function_exists('lf_header_more_mode') ? lf_header_more_mode() : 'dropdown';
 $topbar_enabled = function_exists('lf_header_topbar_enabled') && lf_header_topbar_enabled();
 $topbar_text = function_exists('lf_header_topbar_text') ? lf_header_topbar_text() : '';
 $topbar_color = function_exists('lf_header_topbar_color') ? lf_header_topbar_color() : '';
 $show_topbar = ($topbar_enabled && $topbar_text !== '');
 $header_class = 'site-header site-header--modern site-header--' . $layout;
+if ($nav_width === 'full') {
+	$header_class .= ' site-header--nav-full';
+}
+if ($more_mode === 'slideout') {
+	$header_class .= ' site-header--more-slideout';
+}
 if ($show_topbar) {
 	$header_class .= ' site-header--has-topbar';
 }
@@ -48,7 +56,7 @@ if ($show_topbar) {
 		<?php endif; ?>
 	><div class="site-header__topbar-inner"><?php echo esc_html($topbar_text); ?></div></div>
 <?php endif; ?>
-<header class="<?php echo esc_attr($header_class); ?>" role="banner">
+<header class="<?php echo esc_attr($header_class); ?>" role="banner" data-lf-more-mode="<?php echo esc_attr($more_mode); ?>">
 	<div class="site-header__inner">
 		<a class="site-header__logo" href="<?php echo esc_url(home_url('/')); ?>" aria-label="<?php echo esc_attr($logo_text ?: __('Home', 'leadsforward-core')); ?>">
 			<?php if ($logo_html) : ?>
@@ -133,6 +141,9 @@ if ($show_topbar) {
 					entryMore.setAttribute('aria-expanded', 'false');
 				}
 			});
+			try {
+				document.body.classList.remove('lf-header-more-open');
+			} catch (eB) {}
 		}
 		function setOpen(open) {
 			header.classList.toggle('site-header--open', open);
@@ -209,6 +220,14 @@ if ($show_topbar) {
 					if (moreToggle) {
 						moreToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
 					}
+					var slideoutMore =
+						header.classList.contains('site-header--more-slideout') &&
+						item.classList.contains('lf-menu-more');
+					try {
+						if (slideoutMore) {
+							document.body.classList.toggle('lf-header-more-open', open);
+						}
+					} catch (eMo) {}
 				};
 				toggleBtn.addEventListener('click', handleToggle);
 				if (moreToggle && moreToggle !== toggleBtn) {

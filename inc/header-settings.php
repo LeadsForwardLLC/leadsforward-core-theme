@@ -62,3 +62,37 @@ function lf_header_topbar_color(): string {
 		: '';
 	return lf_header_topbar_color_sanitize($raw);
 }
+
+/**
+ * Primary navigation bar width: contained capsule vs full viewport bar.
+ *
+ * @return 'contained'|'full'
+ */
+function lf_header_nav_width_sanitize(string $value): string {
+	$value = sanitize_key($value);
+	return $value === 'full' ? 'full' : 'contained';
+}
+
+function lf_header_nav_width(): string {
+	$raw = function_exists('lf_get_global_option')
+		? (string) lf_get_global_option('lf_header_nav_width', 'contained')
+		: 'contained';
+	return lf_header_nav_width_sanitize($raw);
+}
+
+/**
+ * How the "More" overflow menu behaves on desktop.
+ *
+ * @return 'dropdown'|'slideout'
+ */
+function lf_header_more_mode_sanitize(string $value): string {
+	$value = sanitize_key($value);
+	return $value === 'slideout' ? 'slideout' : 'dropdown';
+}
+
+function lf_header_more_mode(): string {
+	$raw = function_exists('lf_get_global_option')
+		? (string) lf_get_global_option('lf_header_more_mode', 'dropdown')
+		: 'dropdown';
+	return lf_header_more_mode_sanitize($raw);
+}

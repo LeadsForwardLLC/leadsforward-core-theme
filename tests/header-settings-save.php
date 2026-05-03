@@ -132,6 +132,8 @@ $GLOBALS['lf_test_current_user_can'] = true;
 $_POST = [
 	'nonce' => '1',
 	'header_layout' => 'centered',
+	'header_nav_width' => 'full',
+	'header_more_mode' => 'slideout',
 	'header_topbar_enabled' => '1',
 	'header_topbar_text' => '  Promo <b>x</b>  ',
 	'header_topbar_color' => ' rgba(10, 20, 30, 0.5) ',
@@ -145,6 +147,8 @@ expect(($data['header_topbar_enabled'] ?? null) === true, 'response topbar enabl
 expect(($data['header_topbar_text'] ?? '') === 'Promo x', 'topbar text sanitized');
 expect(($data['header_topbar_color'] ?? '') === 'rgba(10, 20, 30, 0.5)', 'topbar color sanitized');
 expect(($GLOBALS['lf_test_options_written']['lf_header_layout'] ?? '') === 'centered', 'option layout');
+expect(($GLOBALS['lf_test_options_written']['lf_header_nav_width'] ?? '') === 'full', 'option nav width');
+expect(($GLOBALS['lf_test_options_written']['lf_header_more_mode'] ?? '') === 'slideout', 'option more mode');
 expect(($GLOBALS['lf_test_options_written']['lf_header_topbar_enabled'] ?? '') === '1', 'option topbar flag');
 expect(($GLOBALS['lf_test_options_written']['lf_header_topbar_text'] ?? '') === 'Promo x', 'option topbar text');
 expect(($GLOBALS['lf_test_options_written']['lf_header_topbar_color'] ?? '') === 'rgba(10, 20, 30, 0.5)', 'option topbar color');
