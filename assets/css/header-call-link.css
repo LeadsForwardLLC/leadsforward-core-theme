@@ -5,9 +5,9 @@
 body .site-header ul.site-header__menu > li.menu-item.lf-menu-call > a.lf-menu-call__link,
 body .site-header ul.site-header__menu > li.lf-menu-call > a,
 body .site-header .site-header__phone {
-	--lf-call-gap: 0.52em;
-	--lf-call-icon-nudge: -0.06em;
-	--lf-call-svg-art-shift: -22%;
+	--lf-call-gap: 0.62em;
+	--lf-call-icon-nudge: -0.1em;
+	--lf-call-svg-art-shift: -26%;
 	--lf-call-icon-size: 0.88em;
 	font-size: calc(var(--lf-fs-body, 1rem) + 1px);
 	font-weight: 600;
