@@ -3051,10 +3051,24 @@ article a:not(.lf-btn):hover {
 }
 
 .lf-footer-nap__icon {
+	flex-shrink: 0;
+	line-height: 0;
+	width: 1.125rem;
+	height: 1.125rem;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	opacity: 0.7;
+}
+
+.lf-footer-nap__icon > svg.lf-icon {
+	flex-shrink: 0;
+	display: block;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+	stroke-linecap: round;
+	stroke-linejoin: round;
 }
 
 .lf-footer-nap__text {
@@ -3118,14 +3132,26 @@ article a:not(.lf-btn):hover {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	flex-shrink: 0;
+	line-height: 0;
+	overflow: visible;
 	width: 2.25rem;
 	height: 2.25rem;
 	border-radius: 999px;
 	border: none;
 	background: rgba(255, 255, 255, 0.12);
-	font-size: 1.1rem;
 	opacity: 0.9;
 	text-decoration: none;
+}
+
+.lf-footer-social__link .lf-footer-social__icon,
+.lf-footer-social__link > svg.lf-icon {
+	flex-shrink: 0;
+	display: block;
+	width: 1.1rem;
+	height: 1.1rem;
+	overflow: visible;
+	margin: 0;
 }
 
 .lf-footer-social__link:hover {
@@ -3133,8 +3159,8 @@ article a:not(.lf-btn):hover {
 	text-decoration: none;
 }
 
-.lf-footer-social__link .lf-icon,
-.lf-footer-social__link svg {
+.lf-footer-social__link .lf-footer-social__icon,
+.lf-footer-social__link > svg.lf-icon {
 	color: rgba(255, 255, 255, 0.95);
 }
 
