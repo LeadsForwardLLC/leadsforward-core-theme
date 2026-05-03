@@ -334,12 +334,22 @@ function lf_seo_get_template_vars(int $post_id = 0): array {
 	$city = lf_seo_get_city_name();
 	$page_title = lf_seo_get_page_title($post_id);
 	$primary = lf_seo_get_primary_keyword_for_context($post_id);
+	$primary_norm = function_exists('lf_seo_normalize_primary_keyword_core')
+		? lf_seo_normalize_primary_keyword_core($primary, $post_id)
+		: trim($primary);
+	$primary_display = function_exists('lf_seo_title_case_display_phrase')
+		? lf_seo_title_case_display_phrase($primary_norm)
+		: $primary_norm;
+	$brand_short = function_exists('lf_seo_short_brand_for_serp') ? lf_seo_short_brand_for_serp($brand) : $brand;
 	$intent = ($post_id > 0 && function_exists('lf_seo_detect_serp_intent')) ? lf_seo_detect_serp_intent($post_id, $primary) : '';
 	return [
 		'{{page_title}}' => $page_title,
 		'{{city}}' => $city,
 		'{{brand}}' => $brand,
-		'{{primary_keyword}}' => $primary,
+		'{{brand_short}}' => $brand_short,
+		'{{primary_keyword}}' => $primary_display,
+		'{{primary_keyword_raw}}' => $primary,
+		'{{primary_keyword_display}}' => $primary_display,
 		'{{intent}}' => $intent,
 	];
 }
@@ -372,6 +382,17 @@ function lf_seo_get_city_name(): string {
 		$city = (string) ($entity['address_parts']['city'] ?? '');
 		if ($city !== '') {
 			return $city;
+		}
+	}
+	$opt = trim((string) get_option('lf_homepage_city', ''));
+	if ($opt !== '') {
+		return $opt;
+	}
+	$manifest = get_option('lf_site_manifest', []);
+	if (is_array($manifest) && function_exists('lf_seo_get_manifest_city')) {
+		$mc = trim((string) lf_seo_get_manifest_city($manifest));
+		if ($mc !== '') {
+			return $mc;
 		}
 	}
 	return '';

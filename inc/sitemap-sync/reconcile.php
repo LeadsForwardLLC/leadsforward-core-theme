@@ -149,6 +149,9 @@ function lf_sitemap_sync_upsert_page(array $spec): array {
 	$resolved_slug = (string) ($spec['slug_resolved'] ?? '/');
 	$status = sanitize_key((string) ($spec['post_status'] ?? 'draft'));
 	$keyword = sanitize_text_field((string) ($spec['primary_keyword'] ?? ''));
+	if ($keyword !== '' && function_exists('lf_seo_normalize_airtable_keyword_for_storage')) {
+		$keyword = lf_seo_normalize_airtable_keyword_for_storage($keyword, $title);
+	}
 
 	if ($key === '' || $title === '' || trim($slug_template) === '' || trim($resolved_slug) === '') {
 		return ['ok' => false, 'post_id' => 0, 'created' => false, 'updated' => false, 'skipped' => false, 'error' => 'missing_required_fields'];
@@ -224,6 +227,10 @@ function lf_sitemap_sync_apply_keyword_to_detail_cpt(array $spec): void {
 	$keyword = sanitize_text_field((string) ($spec['primary_keyword'] ?? ''));
 	if ($keyword === '') {
 		return;
+	}
+	$page_title = sanitize_text_field((string) ($spec['title'] ?? ''));
+	if ($page_title !== '' && function_exists('lf_seo_normalize_airtable_keyword_for_storage')) {
+		$keyword = lf_seo_normalize_airtable_keyword_for_storage($keyword, $page_title);
 	}
 	$resolved_slug = (string) ($spec['slug_resolved'] ?? '');
 	$normalized = function_exists('lf_sitemap_normalize_slug_path')
