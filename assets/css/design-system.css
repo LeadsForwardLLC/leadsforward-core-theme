@@ -2315,6 +2315,17 @@ article a:not(.lf-btn):hover {
 	box-shadow: 0 16px 30px rgba(15,23,42,0.12);
 }
 
+/* Full-width nav bar: stretch sticky inner edge-to-edge (content padding matches sections). */
+.site-header--nav-full .site-header__inner {
+	max-width: none;
+	width: 100%;
+	margin-left: 0;
+	margin-right: 0;
+	border-radius: 0;
+	padding-left: max(1rem, var(--lf-section-padding-x, 1rem));
+	padding-right: max(1rem, var(--lf-section-padding-x, 1rem));
+}
+
 /* Hard fallback sticky: fixed header when scrolled. */
 .site-header.site-header--fixed {
 	position: fixed !important;
@@ -2998,6 +3009,55 @@ article a:not(.lf-btn):hover {
 	opacity: 1;
 	pointer-events: auto;
 	transform: translateY(0);
+}
+
+@media (min-width: 901px) {
+	/* "More" as right slide-out panel instead of hover dropdown (desktop). */
+	.site-header--more-slideout .site-header__menu > .lf-menu-more:hover > .sub-menu,
+	.site-header--more-slideout .site-header__menu > .lf-menu-more:focus-within:not(.is-open) > .sub-menu {
+		opacity: 0 !important;
+		pointer-events: none !important;
+		transform: translateX(100%) !important;
+	}
+	.site-header--more-slideout .site-header__menu > .lf-menu-more > .sub-menu {
+		position: fixed;
+		top: 0;
+		right: 0;
+		left: auto;
+		width: min(380px, 92vw);
+		max-width: 100%;
+		min-width: 0;
+		height: 100vh;
+		height: 100dvh;
+		margin: 0;
+		padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+		border-radius: 0;
+		box-shadow: -12px 0 40px rgba(15, 23, 42, 0.18);
+		opacity: 1;
+		pointer-events: none;
+		transform: translateX(100%);
+		transition: transform 0.22s ease;
+		overflow-y: auto;
+		z-index: 10001;
+	}
+	.site-header--more-slideout .site-header__menu > .lf-menu-more.is-open > .sub-menu {
+		opacity: 1 !important;
+		pointer-events: auto !important;
+		transform: translateX(0) !important;
+	}
+	.site-header--more-slideout .site-header__menu .lf-menu-more > .site-header__more-toggle::after {
+		content: '☰';
+		font-size: 0.95rem;
+		margin-left: 0.35rem;
+		opacity: 0.85;
+	}
+	body.lf-header-more-open::before {
+		content: '';
+		position: fixed;
+		inset: 0;
+		background: rgba(15, 23, 42, 0.38);
+		z-index: 10000;
+	}
 }
 
 .site-header__menu .lf-menu-cta > a:hover {

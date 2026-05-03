@@ -897,6 +897,12 @@ function lf_ai_ajax_update_header_settings(): void {
 	$layout = isset($_POST['header_layout'])
 		? lf_header_layout_sanitize((string) wp_unslash($_POST['header_layout']))
 		: lf_header_layout();
+	$nav_width = isset($_POST['header_nav_width']) && function_exists('lf_header_nav_width_sanitize')
+		? lf_header_nav_width_sanitize((string) wp_unslash($_POST['header_nav_width']))
+		: (function_exists('lf_header_nav_width') ? lf_header_nav_width() : 'contained');
+	$more_mode = isset($_POST['header_more_mode']) && function_exists('lf_header_more_mode_sanitize')
+		? lf_header_more_mode_sanitize((string) wp_unslash($_POST['header_more_mode']))
+		: (function_exists('lf_header_more_mode') ? lf_header_more_mode() : 'dropdown');
 	if (isset($_POST['header_topbar_enabled'])) {
 		$topbar_raw = (string) wp_unslash((string) $_POST['header_topbar_enabled']);
 		$enabled = ($topbar_raw === '1' || strtolower($topbar_raw) === 'true' || strtolower($topbar_raw) === 'on') ? '1' : '0';
@@ -918,6 +924,8 @@ function lf_ai_ajax_update_header_settings(): void {
 		$heading_case = 'normal';
 	}
 	lf_update_global_option_value('lf_header_layout', $layout);
+	lf_update_global_option_value('lf_header_nav_width', $nav_width);
+	lf_update_global_option_value('lf_header_more_mode', $more_mode);
 	lf_update_global_option_value('lf_header_topbar_enabled', $enabled);
 	lf_update_global_option_value('lf_header_topbar_text', $text);
 	lf_update_global_option_value('lf_header_topbar_color', $color);
@@ -926,6 +934,8 @@ function lf_ai_ajax_update_header_settings(): void {
 		'message' => __('Header settings saved.', 'leadsforward-core'),
 		'reload' => true,
 		'header_layout' => $layout,
+		'header_nav_width' => $nav_width,
+		'header_more_mode' => $more_mode,
 		'header_topbar_enabled' => $enabled === '1',
 		'header_topbar_text' => $text,
 		'header_topbar_color' => $color,

@@ -661,6 +661,26 @@ function lf_ops_handle_global_settings_save(): void {
 		$section_spacing = '';
 	}
 	update_option('lf_design_section_spacing', $section_spacing);
+	// Primary navigation (layout, bar width, More menu behavior).
+	$header_layout_save = isset($_POST['lf_header_layout'])
+		? sanitize_key((string) wp_unslash($_POST['lf_header_layout']))
+		: 'modern';
+	if (function_exists('lf_header_layout_sanitize')) {
+		$header_layout_save = lf_header_layout_sanitize($header_layout_save);
+	} elseif (!in_array($header_layout_save, ['modern', 'centered', 'topbar'], true)) {
+		$header_layout_save = 'modern';
+	}
+	update_option('options_lf_header_layout', $header_layout_save);
+	$nav_width_save = isset($_POST['lf_header_nav_width'])
+		? sanitize_key((string) wp_unslash($_POST['lf_header_nav_width']))
+		: 'contained';
+	$nav_width_save = in_array($nav_width_save, ['contained', 'full'], true) ? $nav_width_save : 'contained';
+	update_option('options_lf_header_nav_width', $nav_width_save);
+	$more_mode_save = isset($_POST['lf_header_more_mode'])
+		? sanitize_key((string) wp_unslash($_POST['lf_header_more_mode']))
+		: 'dropdown';
+	$more_mode_save = in_array($more_mode_save, ['dropdown', 'slideout'], true) ? $more_mode_save : 'dropdown';
+	update_option('options_lf_header_more_mode', $more_mode_save);
 	// Menu autobuild + heading case.
 	update_option('options_lf_menu_autobuild_enabled', !empty($_POST['lf_menu_autobuild_enabled']) ? '1' : '0');
 	$heading_case_mode = isset($_POST['lf_heading_case_mode']) ? sanitize_key((string) wp_unslash($_POST['lf_heading_case_mode'])) : 'normal';
@@ -825,6 +845,9 @@ function lf_ops_handle_global_settings_save(): void {
 		update_field('lf_menu_autobuild_enabled', !empty($_POST['lf_menu_autobuild_enabled']) ? 1 : 0, $acf_option);
 		update_field('lf_menu_autobuild_include_services', $service_ids, $acf_option);
 		update_field('lf_heading_case_mode', $heading_case_mode, $acf_option);
+		update_field('lf_header_layout', $header_layout_save, $acf_option);
+		update_field('lf_header_nav_width', $nav_width_save, $acf_option);
+		update_field('lf_header_more_mode', $more_mode_save, $acf_option);
 		update_field('lf_footer_address_link_auto', !empty($_POST['lf_footer_address_link_auto']) ? 1 : 0, $acf_option);
 		update_field('lf_footer_address_link_url', isset($_POST['lf_footer_address_link_url']) ? esc_url_raw(wp_unslash((string) $_POST['lf_footer_address_link_url'])) : '', $acf_option);
 		foreach ($keys as $key) {
@@ -1005,11 +1028,14 @@ function lf_ops_render_global_settings_page(): void {
 	$card_radius = (string) get_option('lf_design_card_radius', '');
 	$card_shadow = (string) get_option('lf_design_card_shadow', '');
 	$section_spacing = (string) get_option('lf_design_section_spacing', '');
-	$menu_autobuild_enabled = (string) get_option('options_lf_menu_autobuild_enabled', '0') === '1';
+	$menu_autobuild_enabled = (string) get_option('options_lf_menu_autobuild_enabled', '1') === '1';
 	$menu_autobuild_services = get_option('options_lf_menu_autobuild_include_services', []);
 	$menu_autobuild_services = is_array($menu_autobuild_services) ? array_values(array_unique(array_filter(array_map('absint', $menu_autobuild_services)))) : [];
 	$heading_case_mode = (string) get_option('options_lf_heading_case_mode', 'normal');
 	$heading_case_mode = in_array($heading_case_mode, ['normal', 'capitalize', 'upper', 'lower'], true) ? $heading_case_mode : 'normal';
+	$header_layout_ui = function_exists('lf_header_layout') ? lf_header_layout() : 'modern';
+	$header_nav_width_ui = function_exists('lf_header_nav_width') ? lf_header_nav_width() : 'contained';
+	$header_more_mode_ui = function_exists('lf_header_more_mode') ? lf_header_more_mode() : 'dropdown';
 	$footer_addr_auto = (string) get_option('options_lf_footer_address_link_auto', '1') === '1';
 	$footer_addr_override = (string) get_option('options_lf_footer_address_link_url', '');
 	$all_services = [];
@@ -1789,6 +1815,37 @@ function lf_ops_render_global_settings_page(): void {
 									<?php esc_html_e('Applies global styles to typography, surfaces, buttons, and section rhythm.', 'leadsforward-core'); ?>
 									<?php echo ' ' . esc_html(sprintf(__('Synced variation profile: %s.', 'leadsforward-core'), $design_profile_label)); ?>
 								</p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_header_layout"><?php esc_html_e('Header bar layout', 'leadsforward-core'); ?></label></th>
+							<td>
+								<select name="lf_header_layout" id="lf_header_layout">
+									<option value="modern" <?php selected($header_layout_ui === 'modern'); ?>><?php esc_html_e('Logo left, links right', 'leadsforward-core'); ?></option>
+									<option value="centered" <?php selected($header_layout_ui === 'centered'); ?>><?php esc_html_e('Centered logo and menu', 'leadsforward-core'); ?></option>
+									<option value="topbar" <?php selected($header_layout_ui === 'topbar'); ?>><?php esc_html_e('Promo strip above main bar', 'leadsforward-core'); ?></option>
+								</select>
+								<p class="description"><?php esc_html_e('Controls logo alignment and how the primary row is structured.', 'leadsforward-core'); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_header_nav_width"><?php esc_html_e('Navigation bar width', 'leadsforward-core'); ?></label></th>
+							<td>
+								<select name="lf_header_nav_width" id="lf_header_nav_width">
+									<option value="contained" <?php selected($header_nav_width_ui === 'contained'); ?>><?php esc_html_e('Contained (rounded capsule)', 'leadsforward-core'); ?></option>
+									<option value="full" <?php selected($header_nav_width_ui === 'full'); ?>><?php esc_html_e('Full width (edge-to-edge bar)', 'leadsforward-core'); ?></option>
+								</select>
+								<p class="description"><?php esc_html_e('Full width stretches the sticky bar across the viewport with section-aligned padding.', 'leadsforward-core'); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="lf_header_more_mode"><?php esc_html_e('“More” links (desktop)', 'leadsforward-core'); ?></label></th>
+							<td>
+								<select name="lf_header_more_mode" id="lf_header_more_mode">
+									<option value="dropdown" <?php selected($header_more_mode_ui === 'dropdown'); ?>><?php esc_html_e('Classic dropdown', 'leadsforward-core'); ?></option>
+									<option value="slideout" <?php selected($header_more_mode_ui === 'slideout'); ?>><?php esc_html_e('Slide-out panel (hamburger)', 'leadsforward-core'); ?></option>
+								</select>
+								<p class="description"><?php esc_html_e('Slide-out opens overflow links in a right drawer with a dimmed backdrop instead of a hover dropdown.', 'leadsforward-core'); ?></p>
 							</td>
 						</tr>
 						<tr>

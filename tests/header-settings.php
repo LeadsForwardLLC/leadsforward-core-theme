@@ -61,3 +61,7 @@ expect(lf_header_layout_sanitize('bad') === 'modern', 'sanitize defaults');
 expect(lf_header_topbar_enabled() === true, 'topbar enabled reads option');
 expect(lf_header_topbar_text() === 'Promo with tags', 'topbar text is sanitized');
 expect(lf_header_topbar_color() === '#aabbcc', 'topbar color is sanitized');
+expect(lf_header_nav_width_sanitize('full') === 'full', 'nav width sanitize full');
+expect(lf_header_nav_width_sanitize('bad') === 'contained', 'nav width sanitize default');
+expect(lf_header_more_mode_sanitize('slideout') === 'slideout', 'more mode slideout');
+expect(lf_header_more_mode_sanitize('nope') === 'dropdown', 'more mode default');
