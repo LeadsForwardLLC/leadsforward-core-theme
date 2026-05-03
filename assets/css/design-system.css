@@ -2488,78 +2488,7 @@ article a:not(.lf-btn):hover {
 	opacity: 0.7;
 }
 
-/*
- * Header “Call” link — `lf-call__icon-wrap` + label; tunable vars on the anchor.
- * line-height must stay 1 so flex align-items:center centers to cap-height, not a loose line box.
- * --lf-call-svg-art-shift: Tabler phone stroke sits low in the 24×24 viewBox; shift art up inside the box.
- */
-.site-header__menu .lf-menu-call > a.lf-menu-call__link,
-.site-header__menu .lf-menu-call > a,
-.site-header__phone {
-	--lf-call-gap: 0.52em;
-	--lf-call-icon-nudge: -0.06em;
-	--lf-call-svg-art-shift: -16%;
-	--lf-call-icon-size: 0.88em;
-	display: inline-flex;
-	align-items: center;
-	gap: var(--lf-call-gap);
-	line-height: 1;
-	font-size: calc(var(--lf-fs-body, 1rem) + 1px);
-	font-weight: 600;
-	text-decoration: none;
-	color: var(--lf-text-primary);
-	/* Override loose menu pill padding so vertical flex alignment matches the word, not extra line-box air */
-	padding: 0.32rem 0.65rem;
-}
-
-@supports (font-size: 1cap) {
-	.site-header__menu .lf-menu-call > a.lf-menu-call__link,
-	.site-header__menu .lf-menu-call > a,
-	.site-header__phone {
-		/* Match cap height without exceeding one em (keeps stroke lighter vs bold label). */
-		--lf-call-icon-size: min(1cap, 1em);
-	}
-}
-
-.site-header__menu .lf-menu-call__label {
-	display: inline-block;
-	line-height: 1;
-}
-
-/* Icon box tracks cap/em; wrap nudge + inner SVG art shift (Tabler handset sits low in viewBox). */
-.lf-call__icon-wrap {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-	line-height: 0;
-	width: var(--lf-call-icon-size, 0.88em);
-	height: var(--lf-call-icon-size, 0.88em);
-	transform: translateY(var(--lf-call-icon-nudge, -0.06em));
-}
-
-.lf-call__icon-wrap .lf-icon {
-	width: 100%;
-	height: 100%;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	margin: 0;
-	padding: 0;
-}
-
-/* One transform on the leaf SVG only (avoids double-shift when .lf-icon wraps markup). */
-.lf-call__icon-wrap > svg.lf-call__icon,
-.lf-call__icon-wrap > svg.lf-icon,
-.lf-call__icon-wrap .lf-icon > svg {
-	width: 100%;
-	height: 100%;
-	display: block;
-	overflow: visible;
-	margin: 0;
-	padding: 0;
-	transform: translateY(var(--lf-call-svg-art-shift, -16%));
-}
+/* Header Call link + icon: assets/css/header-call-link.css (enqueued after design-presets). */
 
 .site-header__menu .lf-menu-cta > a {
 	padding: calc(var(--lf-btn-pad-y) - 3px) calc(var(--lf-btn-pad-x) - 8px);
@@ -2586,11 +2515,6 @@ article a:not(.lf-btn):hover {
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
-}
-
-.site-header__phone-text {
-	display: inline-block;
-	line-height: inherit;
 }
 
 .site-header__cta {
