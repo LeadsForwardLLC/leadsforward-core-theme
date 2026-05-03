@@ -30,7 +30,7 @@ function lf_docs_render_playbook_sections(): void {
 					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-setup')); ?>"><?php esc_html_e('Manual setup (no Airtable)', 'leadsforward-core'); ?></a> — <?php esc_html_e('not in the sidebar; use the button on Manifest Website.', 'leadsforward-core'); ?></li>
 					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-homepage-settings')); ?>"><?php esc_html_e('Homepage sections (hidden menu URL)', 'leadsforward-core'); ?></a> — <?php esc_html_e('prefer editing the static front page under Pages.', 'leadsforward-core'); ?></li>
 					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-fleet-updates')); ?>"><?php esc_html_e('Fleet Updates', 'leadsforward-core'); ?></a> — <?php esc_html_e('private theme update channel (when enabled)', 'leadsforward-core'); ?></li>
-					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=settings')); ?>"><?php esc_html_e('SEO & Performance (SEO tab)', 'leadsforward-core'); ?></a> — <a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=health')); ?>"><?php esc_html_e('Site health tab', 'leadsforward-core'); ?></a></li>
+					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=settings')); ?>"><?php esc_html_e('SEO & Performance (SEO tab)', 'leadsforward-core'); ?></a> — <a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=health')); ?>"><?php esc_html_e('Site health tab', 'leadsforward-core'); ?></a> — <a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=coverage')); ?>"><?php esc_html_e('Coverage tab', 'leadsforward-core'); ?></a></li>
 					<li><a href="<?php echo esc_url(admin_url('edit.php?post_type=lf_process_step')); ?>"><?php esc_html_e('Process steps (CPT)', 'leadsforward-core'); ?></a></li>
 					<li><a href="<?php echo esc_url(admin_url('edit.php?post_type=lf_faq')); ?>"><?php esc_html_e('FAQs', 'leadsforward-core'); ?></a></li>
 				</ul>
@@ -72,7 +72,7 @@ function lf_docs_render_playbook_sections(): void {
 					<li><strong>Manual setup (no Airtable)</strong> — <?php esc_html_e('Optional five-step wizard; open from Manifest Website.', 'leadsforward-core'); ?></li>
 					<li><strong>Homepage sections</strong> — <?php esc_html_e('Section order for the static front page (direct URL only); prefer editing the Home page under Pages when possible.', 'leadsforward-core'); ?></li>
 					<li><strong>Quote Builder / Contact Form</strong> — <?php esc_html_e('Lead capture configuration.', 'leadsforward-core'); ?></li>
-					<li><strong>SEO & Performance</strong> — <?php esc_html_e('Tab: SEO settings. Tab: Site health (status, GTM check, manifester check, pre-launch run, QA checklist).', 'leadsforward-core'); ?></li>
+					<li><strong>SEO & Performance</strong> — <?php esc_html_e('Tab: SEO settings. Tab: Site health (status, GTM check, manifester check, pre-launch run, QA checklist). Tab: Coverage (cached sitewide roll-up of the per-URL on-page checklist).', 'leadsforward-core'); ?></li>
 					<li><strong>Fleet Updates</strong> — <?php esc_html_e('Connect fleet clients to a controller for signed automatic theme ZIP installs; in controller mode, push updates to one site, a selection, or a tag.', 'leadsforward-core'); ?></li>
 					<li><strong>Bulk Tools / Backup & Restore</strong> — <?php esc_html_e('Batch preset, CTAs, schema toggles, linking rebuild; config export/import.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('ACF submenus (CTAs, Schema, Variation, etc.) when ACF options pages are active.', 'leadsforward-core'); ?></li>
@@ -179,6 +179,7 @@ function lf_docs_render_playbook_sections(): void {
 				<h2><?php esc_html_e('SEO, performance, and launch', 'leadsforward-core'); ?></h2>
 				<p><?php esc_html_e('SEO settings: title/description templates, SERP intent templates, indexing rules, default OG image, schema toggles (also under ACF Schema), XML sitemap switches.', 'leadsforward-core'); ?></p>
 				<p><?php esc_html_e('Site health tab: live status (theme, ACF, setup flag, variation, NAP, GTM header snippet, manifester config), automated pre-launch report, QA audit trail, and the printable focused QA checklist for humans.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('Coverage tab: read-only table of published pages, posts, services, and service areas with checklist pass counts, open advisory items (same logic as each post SEO box), cached quality scores, and links to edit or view—use Refresh report to rebuild the cache.', 'leadsforward-core'); ?></p>
 				<p><?php esc_html_e('While editing, the floating SEO Health panel summarizes the same quality concepts; links open full SEO settings and Site health.', 'leadsforward-core'); ?></p>
 				<h3><?php esc_html_e('Airtable sitemap → keywords & meta (what runs automatically)', 'leadsforward-core'); ?></h3>
 				<ul>
