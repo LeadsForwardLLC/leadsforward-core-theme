@@ -13,7 +13,8 @@ expect(
 	strpos($css, '.lf-call__icon-wrap') !== false
 	&& strpos($css, '--lf-call-icon-size') !== false
 	&& strpos($css, '--lf-call-icon-nudge') !== false
-	&& strpos($css, '--lf-call-gap') !== false,
+	&& strpos($css, '--lf-call-gap') !== false
+	&& strpos($css, '--lf-call-svg-art-shift') !== false,
 	'call icon wrap + tunable CSS vars exist'
 );
 
