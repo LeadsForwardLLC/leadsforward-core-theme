@@ -218,7 +218,18 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 			}
 		}
 		$priority_raw = lf_airtable_sitemaps_string_field($row, ['Priority']);
-		$primary_keyword = lf_airtable_sitemaps_string_field($row, ['Keyword']);
+		$primary_keyword = lf_airtable_sitemaps_string_field(
+			$row,
+			[
+				'Keyword',
+				'Primary Keyword',
+				'Primary keyword',
+				'Target Keyword',
+				'Target keyword',
+				'SEO Keyword',
+				'SEO keyword',
+			]
+		);
 		$menu_group_raw = lf_airtable_sitemaps_string_field($row, ['Menu Group', 'menu group']);
 		$menu_hierarchy = lf_airtable_sitemaps_string_field($row, ['Menu Hierarchy', 'Menu hiearchy', 'Menu hierarchy']);
 		$slug_template = lf_airtable_sitemaps_string_field($row, ['Slug', 'slug', 'Slug template', 'Slug Template']);

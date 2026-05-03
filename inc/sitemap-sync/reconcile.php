@@ -202,9 +202,67 @@ function lf_sitemap_sync_upsert_page(array $spec): array {
 	update_post_meta($post_id, '_lf_sitemap_slug_template', $slug_template);
 	if ($keyword !== '') {
 		update_post_meta($post_id, '_lf_seo_primary_keyword', $keyword);
+		if (function_exists('lf_seo_register_keyword_map_for_post')) {
+			lf_seo_register_keyword_map_for_post($post_id, $keyword);
+		}
+		if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+			lf_seo_maybe_populate_generated_meta((int) $post_id, $keyword, '', true);
+		}
 	}
 
 	return ['ok' => true, 'post_id' => $post_id, 'created' => $created, 'updated' => $updated, 'skipped' => false, 'error' => ''];
+}
+
+/**
+ * Push Airtable sitemap Keyword onto matching service/service-area CPTs (cache rows skipped from Page upserts).
+ */
+function lf_sitemap_sync_apply_keyword_to_detail_cpt(array $spec): void {
+	$post_type = (string) ($spec['post_type'] ?? '');
+	if ($post_type !== 'lf_service' && $post_type !== 'lf_service_area') {
+		return;
+	}
+	$keyword = sanitize_text_field((string) ($spec['primary_keyword'] ?? ''));
+	if ($keyword === '') {
+		return;
+	}
+	$resolved_slug = (string) ($spec['slug_resolved'] ?? '');
+	$normalized = function_exists('lf_sitemap_normalize_slug_path')
+		? lf_sitemap_normalize_slug_path($resolved_slug)
+		: ('/' . trim($resolved_slug, '/') . '/');
+	$path = trim($normalized, '/');
+	if ($path === '') {
+		return;
+	}
+	$segments = array_values(array_filter(explode('/', $path), static fn(string $x): bool => $x !== ''));
+	$slug = $segments !== [] ? sanitize_title(end($segments)) : '';
+	if ($slug === '') {
+		return;
+	}
+	$key = (string) ($spec['sitemap_key'] ?? '');
+	$posts = get_posts([
+		'post_type' => sanitize_key($post_type),
+		'name' => $slug,
+		'post_status' => 'any',
+		'posts_per_page' => 1,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+		'suppress_filters' => false,
+	]);
+	$post_id = !empty($posts[0]) ? (int) $posts[0] : 0;
+	if ($post_id <= 0) {
+		return;
+	}
+	update_post_meta($post_id, '_lf_seo_primary_keyword', $keyword);
+	if ($key !== '') {
+		update_post_meta($post_id, '_lf_sitemap_key', $key);
+	}
+	update_post_meta($post_id, '_lf_sitemap_slug_template', (string) ($spec['slug_template'] ?? ''));
+	if (function_exists('lf_seo_register_keyword_map_for_post')) {
+		lf_seo_register_keyword_map_for_post($post_id, $keyword);
+	}
+	if (function_exists('lf_seo_maybe_populate_generated_meta')) {
+		lf_seo_maybe_populate_generated_meta($post_id, $keyword, '', true);
+	}
 }
 
 /**
@@ -355,6 +413,7 @@ function lf_sitemap_sync_reconcile_run(): array {
 		$cache_specs[] = $enriched;
 
 		if ($is_service_detail || $is_area_detail) {
+			lf_sitemap_sync_apply_keyword_to_detail_cpt($enriched);
 			$result['skipped']++;
 			continue;
 		}
