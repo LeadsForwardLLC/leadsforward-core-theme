@@ -275,6 +275,22 @@ function lf_seo_maybe_populate_generated_meta(int $post_id, string $primary = ''
 		return;
 	}
 
+	if (function_exists('lf_seo_normalize_primary_keyword_core')) {
+		$persisted = lf_seo_normalize_primary_keyword_core($primary_keyword, $post_id);
+		if (
+			$persisted !== ''
+			&& $persisted !== $primary_keyword
+			&& (mb_strlen($primary_keyword, 'UTF-8') - mb_strlen($persisted, 'UTF-8')) > 25
+			&& $airtable_keyword_authoritative
+		) {
+			lf_seo_update_post_meta($post_id, '_lf_seo_primary_keyword', $persisted);
+			$primary_keyword = $persisted;
+			if (function_exists('lf_seo_register_keyword_map_for_post')) {
+				lf_seo_register_keyword_map_for_post($post_id, $persisted);
+			}
+		}
+	}
+
 	$secondary_list = lf_seo_normalize_secondary_keywords($secondary);
 	if (empty($secondary_list)) {
 		$secondary_list = lf_seo_normalize_secondary_keywords((string) get_post_meta($post_id, '_lf_seo_secondary_keywords', true));
@@ -316,7 +332,7 @@ function lf_seo_maybe_populate_generated_meta(int $post_id, string $primary = ''
 	) {
 		$title = function_exists('lf_seo_generate_meta_title_for_intent')
 			? lf_seo_generate_meta_title_for_intent($post_id, $primary_keyword)
-			: lf_seo_generate_meta_title_from_keywords($primary_keyword);
+			: lf_seo_generate_meta_title_from_keywords($primary_keyword, $post_id);
 		if ($title !== '') {
 			update_post_meta($post_id, '_lf_seo_meta_title', $title);
 		}
@@ -381,9 +397,31 @@ function lf_seo_normalize_secondary_keywords($value): array {
 	return $items;
 }
 
-function lf_seo_generate_meta_title_from_keywords(string $primary_keyword): string {
+function lf_seo_generate_meta_title_from_keywords(string $primary_keyword, int $post_id = 0): string {
+	if ($post_id > 0 && function_exists('lf_seo_detect_serp_intent')) {
+		$intent = lf_seo_detect_serp_intent($post_id, $primary_keyword);
+		if (
+			function_exists('lf_seo_structured_serp_meta_enabled')
+			&& lf_seo_structured_serp_meta_enabled()
+			&& function_exists('lf_seo_compose_structured_meta_title')
+		) {
+			$composed = lf_seo_compose_structured_meta_title($post_id, $primary_keyword, $intent);
+			if ($composed !== '') {
+				return $composed;
+			}
+		}
+	}
 	$primary_keyword = trim($primary_keyword);
 	if ($primary_keyword === '') {
+		return '';
+	}
+	$kern = function_exists('lf_seo_normalize_primary_keyword_core')
+		? lf_seo_normalize_primary_keyword_core($primary_keyword, $post_id)
+		: $primary_keyword;
+	$disp = function_exists('lf_seo_title_case_display_phrase')
+		? lf_seo_title_case_display_phrase($kern)
+		: $kern;
+	if ($disp === '') {
 		return '';
 	}
 	$city = '';
@@ -394,12 +432,26 @@ function lf_seo_generate_meta_title_from_keywords(string $primary_keyword): stri
 	if ($city === '') {
 		$city = trim((string) get_option('lf_homepage_city', ''));
 	}
-	$brand = trim((string) get_bloginfo('name'));
-	$title_parts = [$primary_keyword];
-	if ($city !== '' && stripos($primary_keyword, $city) === false) {
+	if ($city === '' && function_exists('lf_seo_get_city_name')) {
+		$city = trim((string) lf_seo_get_city_name());
+	}
+	$brand = function_exists('lf_seo_short_brand_for_serp')
+		? lf_seo_short_brand_for_serp()
+		: trim((string) get_bloginfo('name'));
+	$brand = $brand !== '' ? $brand : trim((string) get_bloginfo('name'));
+
+	$core = ($city !== ''
+		&& !lf_seo_phrase_contains_place(mb_strtolower($disp, 'UTF-8'), mb_strtolower($city, 'UTF-8')))
+		? trim($disp . ' in ' . lf_seo_title_case_display_phrase($city))
+		: $disp;
+	$title_parts = [$core];
+	if ($city !== ''
+		&& !(function_exists('lf_seo_phrase_contains_place') && lf_seo_phrase_contains_place(mb_strtolower($disp, 'UTF-8'), mb_strtolower($city, 'UTF-8')))
+		&& stripos($core, $city) === false) {
 		$title_parts[] = $city;
 	}
-	if ($brand !== '' && stripos($primary_keyword, $brand) === false) {
+	if ($brand !== ''
+		&& !(function_exists('lf_seo_phrase_contains_place') && lf_seo_phrase_contains_place(mb_strtolower($core, 'UTF-8'), mb_strtolower($brand, 'UTF-8')))) {
 		$title_parts[] = $brand;
 	}
 	$title = trim(implode(' | ', array_filter($title_parts)));
@@ -424,9 +476,26 @@ function lf_seo_meta_text_needs_upgrade(string $value, string $type = 'descripti
 		'placeholder',
 		'sample',
 		'trusted experts',
+		'get clear pricing, scope',
 	];
 	foreach ($generic_patterns as $pattern) {
 		if (strpos($lower, $pattern) !== false) {
+			return true;
+		}
+	}
+	if ($type === 'description') {
+		$city = function_exists('lf_seo_get_city_name') ? trim((string) lf_seo_get_city_name()) : '';
+		if (
+			$city !== ''
+			&& preg_match('/\b' . preg_quote(mb_strtolower($city, 'UTF-8'), '/') . '\b.*\bin\b\s+' . preg_quote(mb_strtolower($city, 'UTF-8'), '/') . '/u', $lower)
+		) {
+			return true;
+		}
+		if (strpos($lower, 'learn ') === 0 && strpos($lower, '?') !== false) {
+			return true;
+		}
+		if (strpos($lower, ' from ') !== false && strpos($lower, '|') !== false) {
+			// Older pipe-y templates occasionally leaked into descriptions.
 			return true;
 		}
 	}
@@ -441,6 +510,16 @@ function lf_seo_meta_text_needs_upgrade(string $value, string $type = 'descripti
 				if (substr_count($vl, $ank) >= 2) {
 					return true;
 				}
+			}
+		}
+		if (preg_match('/\s\|\s.+\|\s/ms', $value)) {
+			return true;
+		}
+		if (strpos($lower, '|') !== false && preg_match('/\|[\s\S]{2,}$/', $value)) {
+			$pipes = preg_split('/\s*\|\s*/', $value) ?: [];
+			$tail = $pipes !== [] ? trim((string) $pipes[count($pipes) - 1]) : '';
+			if ($tail !== '' && function_exists('mb_strlen') && mb_strlen($tail, 'UTF-8') <= 18 && preg_match('/[a-z]/', $tail) && !preg_match('/[.!?]$/', $tail)) {
+				return true;
 			}
 		}
 		return function_exists('mb_strlen') ? mb_strlen($value) < 32 : strlen($value) < 32;
@@ -468,6 +547,19 @@ function lf_seo_post_location_phrase(int $post_id): string {
 }
 
 function lf_seo_generate_meta_description_from_keywords(int $post_id, string $primary_keyword, array $secondary_keywords = []): string {
+	if (
+		$post_id > 0
+		&& function_exists('lf_seo_structured_serp_meta_enabled')
+		&& lf_seo_structured_serp_meta_enabled()
+		&& function_exists('lf_seo_detect_serp_intent')
+		&& function_exists('lf_seo_compose_structured_meta_description')
+	) {
+		$intent = lf_seo_detect_serp_intent($post_id, $primary_keyword);
+		$c = lf_seo_compose_structured_meta_description($post_id, $primary_keyword, $intent, $secondary_keywords);
+		if ($c !== '') {
+			return $c;
+		}
+	}
 	$primary_keyword = trim($primary_keyword);
 	if ($primary_keyword === '') {
 		return '';
@@ -477,43 +569,81 @@ function lf_seo_generate_meta_description_from_keywords(int $post_id, string $pr
 	}));
 	$secondary_keywords = array_slice($secondary_keywords, 0, 2);
 
+	$kern_raw = function_exists('lf_seo_normalize_primary_keyword_core')
+		? lf_seo_normalize_primary_keyword_core($primary_keyword, $post_id)
+		: $primary_keyword;
+	$kern_disp = function_exists('lf_seo_title_case_display_phrase')
+		? lf_seo_title_case_display_phrase($kern_raw)
+		: $kern_raw;
 	$post_title = trim((string) get_the_title($post_id));
 	if ($post_title === '') {
 		$post_title = __('our services', 'leadsforward-core');
 	}
 	$location = lf_seo_post_location_phrase($post_id);
-	$brand = trim((string) get_bloginfo('name'));
-	$post_type = (string) get_post_type($post_id);
-	$intent_phrase = $post_type === 'post'
-		? __('in-depth guide', 'leadsforward-core')
-		: __('local service', 'leadsforward-core');
+	$brand = function_exists('lf_seo_short_brand_for_serp')
+		? lf_seo_short_brand_for_serp()
+		: trim((string) get_bloginfo('name'));
+	$brand = $brand !== '' ? $brand : trim((string) get_bloginfo('name'));
 	$secondary_phrase = '';
 	if (!empty($secondary_keywords)) {
 		$secondary_phrase = implode(', ', array_slice($secondary_keywords, 0, 2));
 	}
 
-	$description = sprintf(
-		/* translators: 1: primary keyword, 2: location, 3: post title, 4: intent phrase, 5: secondary phrase, 6: brand */
-		__('%1$s in %2$s from %6$s. This %4$s for %3$s covers process, pricing, timelines, and quality standards to help you choose confidently.', 'leadsforward-core'),
-		$primary_keyword,
-		$location !== '' ? $location : __('your area', 'leadsforward-core'),
-		$post_title,
-		$intent_phrase,
-		$secondary_phrase,
-		$brand !== '' ? $brand : __('our team', 'leadsforward-core')
-	);
+	$phrase = function_exists('lf_seo_readable_service_phrase_for_sentence')
+		? lf_seo_readable_service_phrase_for_sentence($kern_raw)
+		: mb_strtolower(trim($kern_raw), 'UTF-8');
+	if ($phrase === '') {
+		$phrase = mb_strtolower(trim($kern_disp), 'UTF-8');
+	}
+
+	$loc_chunk = '';
+	if (
+		$location !== ''
+		&& function_exists('lf_seo_phrase_contains_place')
+		&& !lf_seo_phrase_contains_place(mb_strtolower($phrase, 'UTF-8'), mb_strtolower(trim($location), 'UTF-8'))
+	) {
+		$loc_chunk = sprintf(
+			/* translators: %s: city or service area */
+			__(' in %s', 'leadsforward-core'),
+			$location
+		);
+	}
+
+	$who = $brand !== '' ? $brand : __('our team', 'leadsforward-core');
+
+	if ($location !== '' && function_exists('lf_seo_phrase_contains_place') && lf_seo_phrase_contains_place(mb_strtolower($phrase, 'UTF-8'), mb_strtolower(trim($location), 'UTF-8'))) {
+		$description = sprintf(
+			/* translators: 1: brand, 2: page title */
+			__('%1$s explains %2$s with clear scope, realistic timelines, and what typically drives cost.', 'leadsforward-core'),
+			$who,
+			$post_title
+		);
+	} else {
+		$subject = $kern_disp !== '' ? $kern_disp : $phrase;
+		$description = sprintf(
+			/* translators: 1: subject, 2: optional location chunk, 3: brand, 4: page title or context */
+			__('%1$s%2$s from %3$s — practical notes for %4$s. Process, timelines, and how to compare quotes.', 'leadsforward-core'),
+			$subject,
+			$loc_chunk,
+			$who,
+			$post_title
+		);
+	}
 	if ($secondary_phrase !== '') {
 		$description .= ' ' . sprintf(
 			/* translators: %s secondary keywords list */
-			__('Related services: %s.', 'leadsforward-core'),
+			__('Related topics: %s.', 'leadsforward-core'),
 			$secondary_phrase
 		);
 	}
-	$description .= ' ' . __('Request a quote for a tailored plan.', 'leadsforward-core');
+	$description .= ' ' . __('Request a quote when you are ready for a tailored plan.', 'leadsforward-core');
 
 	$description = trim(preg_replace('/\s+/', ' ', $description));
+	if (function_exists('lf_seo_truncate_meta_description_smart')) {
+		return lf_seo_truncate_meta_description_smart($description, 160);
+	}
 	if (function_exists('mb_substr') && mb_strlen($description) > 160) {
-		$description = rtrim(mb_substr($description, 0, 157), " \t\n\r\0\x0B,.;:-") . '...';
+		return rtrim(mb_substr($description, 0, 157), " \t\n\r\0\x0B,.;:-") . '...';
 	}
 	return $description;
 }
@@ -543,7 +673,7 @@ function lf_seo_refresh_metadata_for_generated_content(int $limit = 400): void {
 		if (lf_seo_meta_text_needs_upgrade($current_title, 'title')) {
 			$new_title = function_exists('lf_seo_generate_meta_title_for_intent')
 				? lf_seo_generate_meta_title_for_intent($post_id, $primary)
-				: lf_seo_generate_meta_title_from_keywords($primary);
+				: lf_seo_generate_meta_title_from_keywords($primary, $post_id);
 			if ($new_title !== '') {
 				update_post_meta($post_id, '_lf_seo_meta_title', $new_title);
 			}

@@ -75,19 +75,20 @@ function lf_seo_get_settings(): array {
 			'enable_keyword_density' => true,
 			'enable_quality_scorer' => true,
 			'enable_serp_templates' => true,
+			'enable_structured_serp_meta' => true,
 		],
 		'serp' => [
 			'title' => [
-				'transactional' => '{{primary_keyword}} | {{city}} | {{brand}}',
-				'local' => '{{primary_keyword}} in {{city}} | {{brand}}',
-				'informational' => '{{page_title}}: {{primary_keyword}} Guide | {{brand}}',
-				'navigational' => '{{brand}} | {{page_title}}',
+				'transactional' => '{{primary_keyword}} | {{brand_short}}',
+				'local' => '{{primary_keyword}} | {{brand_short}}',
+				'informational' => '{{page_title}} | {{brand_short}}',
+				'navigational' => '{{brand_short}} | {{page_title}}',
 			],
 			'description' => [
-				'transactional' => '{{primary_keyword}} in {{city}} from {{brand}}. Get clear pricing, scope, and scheduling with fast quote turnaround.',
-				'local' => 'Local {{primary_keyword}} in {{city}} by {{brand}}. Licensed team, clear timelines, and service-area coverage.',
-				'informational' => 'Learn {{primary_keyword}} with practical guidance from {{brand}} in {{city}}. Includes process, pricing factors, and expert tips.',
-				'navigational' => '{{page_title}} at {{brand}}. Find services, coverage areas, and next steps quickly.',
+				'transactional' => '{{brand_short}} — {{primary_keyword}} in {{city}}. Clear estimates, honest timelines, and responsive scheduling.',
+				'local' => '{{brand_short}} provides local {{primary_keyword}} support in {{city}}. Transparent scope, dependable crews.',
+				'informational' => '{{brand_short}} breaks down {{primary_keyword}} with practical guidance. Process, timelines, and cost factors—in plain language.',
+				'navigational' => '{{page_title}} at {{brand_short}}. Browse services and next steps.',
 			],
 		],
 	];
