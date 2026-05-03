@@ -273,3 +273,136 @@ function lf_business_entity_image_url(int $attachment_id, string $size = 'large'
 	$url = wp_get_attachment_image_url($attachment_id, $size);
 	return is_string($url) ? $url : '';
 }
+
+/**
+ * Whether a URL is an allowed Google Maps embed iframe src (https only).
+ */
+function lf_google_maps_embed_src_is_allowed(string $url): bool {
+	$url = trim($url);
+	if ($url === '') {
+		return false;
+	}
+	$p = wp_parse_url($url);
+	if (!is_array($p) || empty($p['scheme']) || strtolower((string) $p['scheme']) !== 'https') {
+		return false;
+	}
+	$host = strtolower((string) ($p['host'] ?? ''));
+	if ($host === '' || strpos($host, 'google') === false) {
+		return false;
+	}
+	$path = (string) ($p['path'] ?? '');
+	if (str_contains($host, 'google.com') && (str_starts_with($path, '/maps') || str_starts_with($path, '/map'))) {
+		return true;
+	}
+	return str_contains($host, 'maps.google');
+}
+
+/**
+ * Build a Google Maps iframe src from synced business data (no manual iframe paste).
+ * Uses optional Maps Embed API key when set; otherwise standard maps?q=…&output=embed URLs.
+ *
+ * Priority: lat/lng → place_id → street address → city + state → first service area line → manifest primary city → lf_homepage_city.
+ *
+ * @param array<string,mixed>|null $entity Result of lf_business_entity_get() or equivalent.
+ */
+function lf_google_maps_auto_embed_src(?array $entity = null): string {
+	if ($entity === null && function_exists('lf_business_entity_get')) {
+		$entity = lf_business_entity_get();
+	}
+	if (!is_array($entity)) {
+		$entity = [];
+	}
+
+	$maps_api_key = get_option('lf_maps_api_key', '');
+	$maps_api_key = is_string($maps_api_key) ? trim($maps_api_key) : '';
+
+	$place_id = trim((string) ($entity['place_id'] ?? ''));
+	if ($place_id !== '' && stripos($place_id, 'place_id:') === 0) {
+		$place_id = trim(substr($place_id, strlen('place_id:')));
+	}
+	if ($place_id !== '' && (strlen($place_id) < 12 || preg_match('/\s/', $place_id) === 1)) {
+		$place_id = '';
+	}
+
+	$geo = isset($entity['geo']) && is_array($entity['geo']) ? $entity['geo'] : [];
+	$lat_raw = $geo['lat'] ?? null;
+	$lng_raw = $geo['lng'] ?? null;
+	$lat_valid = $lat_raw !== null && $lat_raw !== '' && is_numeric($lat_raw);
+	$lng_valid = $lng_raw !== null && $lng_raw !== '' && is_numeric($lng_raw);
+	$lat = $lat_valid ? (float) $lat_raw : 0.0;
+	$lng = $lng_valid ? (float) $lng_raw : 0.0;
+	$has_geo = $lat_valid && $lng_valid && abs($lat) <= 90.0 && abs($lng) <= 180.0;
+
+	$address = trim((string) ($entity['address'] ?? ''));
+	$parts = isset($entity['address_parts']) && is_array($entity['address_parts']) ? $entity['address_parts'] : [];
+	$city = trim((string) ($parts['city'] ?? ''));
+	$state = trim((string) ($parts['state'] ?? ''));
+
+	if ($maps_api_key !== '') {
+		if ($place_id !== '') {
+			return 'https://www.google.com/maps/embed/v1/place?key=' . rawurlencode($maps_api_key) . '&q=place_id:' . rawurlencode($place_id);
+		}
+		if ($has_geo) {
+			return 'https://www.google.com/maps/embed/v1/view?key=' . rawurlencode($maps_api_key)
+				. '&center=' . rawurlencode((string) $lat . ',' . (string) $lng) . '&zoom=15';
+		}
+		if ($address !== '') {
+			return 'https://www.google.com/maps/embed/v1/place?key=' . rawurlencode($maps_api_key) . '&q=' . rawurlencode($address);
+		}
+	}
+
+	if ($has_geo) {
+		return 'https://www.google.com/maps?q=' . rawurlencode((string) $lat . ',' . (string) $lng) . '&z=15&output=embed';
+	}
+	if ($place_id !== '') {
+		return 'https://www.google.com/maps?q=place_id:' . rawurlencode($place_id) . '&output=embed';
+	}
+	if ($address !== '') {
+		return 'https://www.google.com/maps?q=' . rawurlencode($address) . '&output=embed';
+	}
+
+	$city_query = '';
+	if ($city !== '' && $state !== '') {
+		$city_query = $city . ', ' . $state;
+	} elseif ($city !== '') {
+		$city_query = $city;
+	}
+	if ($city_query === '') {
+		$areas = isset($entity['service_areas']) && is_array($entity['service_areas']) ? $entity['service_areas'] : [];
+		if ($areas === [] && function_exists('lf_business_entity_service_areas')) {
+			$areas = lf_business_entity_service_areas();
+		}
+		if (!empty($areas[0])) {
+			$city_query = trim((string) $areas[0]);
+		}
+	}
+	if ($city_query === '' && function_exists('lf_sitemap_sync_get_primary_city')) {
+		$city_query = trim((string) lf_sitemap_sync_get_primary_city());
+	}
+	if ($city_query === '') {
+		$city_query = trim((string) get_option('lf_homepage_city', ''));
+	}
+	if ($city_query !== '') {
+		return 'https://www.google.com/maps?q=' . rawurlencode($city_query) . '&output=embed';
+	}
+
+	return '';
+}
+
+/**
+ * Standard iframe markup for an auto-generated Maps embed src.
+ */
+function lf_google_maps_embed_iframe_html(string $src, string $title = ''): string {
+	$src = trim($src);
+	if ($src === '' || !lf_google_maps_embed_src_is_allowed($src)) {
+		return '';
+	}
+	if ($title === '') {
+		$title = __('Map', 'leadsforward-core');
+	}
+	return sprintf(
+		'<iframe src="%s" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="%s"></iframe>',
+		esc_url($src),
+		esc_attr($title)
+	);
+}

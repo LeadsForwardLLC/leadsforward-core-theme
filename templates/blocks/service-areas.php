@@ -108,7 +108,14 @@ $map_embed_html = '';
 if (function_exists('lf_get_business_info_value')) {
 	$map_embed_html = trim((string) lf_get_business_info_value('lf_business_map_embed', ''));
 }
-$use_embed_map = $map_embed_html !== '';
+$auto_map_iframe = '';
+if ($map_embed_html === '' && function_exists('lf_google_maps_auto_embed_src') && function_exists('lf_google_maps_embed_iframe_html')) {
+	$auto_src = lf_google_maps_auto_embed_src();
+	if ($auto_src !== '') {
+		$auto_map_iframe = lf_google_maps_embed_iframe_html($auto_src);
+	}
+}
+$use_embed_map = $map_embed_html !== '' || $auto_map_iframe !== '';
 $points_json = wp_json_encode(array_map(static function (array $area): array {
 	return [
 		'title' => (string) ($area['title'] ?? ''),
@@ -172,8 +179,9 @@ $points_json = wp_json_encode(array_map(static function (array $area): array {
 						$allowed_iframe = function_exists('lf_map_embed_allowed_iframe_kses')
 							? lf_map_embed_allowed_iframe_kses()
 							: ['iframe' => ['src' => true, 'width' => true, 'height' => true]];
-						// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- iframe HTML from Global Settings, passed through wp_kses.
-						echo wp_kses($map_embed_html, $allowed_iframe);
+						$embed_out = $map_embed_html !== '' ? $map_embed_html : $auto_map_iframe;
+						// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- iframe from Global Settings or auto-generated, passed through wp_kses.
+						echo wp_kses($embed_out, $allowed_iframe);
 						?>
 					</div>
 				<?php else : ?>

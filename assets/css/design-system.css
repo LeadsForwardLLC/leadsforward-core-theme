@@ -6684,12 +6684,14 @@ article a:not(.lf-btn):hover {
 }
 
 /* Pasted Google embeds are often ~450px tall; 16:9 can clip the place card UI. */
-.lf-block-map-nap__map--custom-embed {
+.lf-block-map-nap__map--custom-embed,
+.lf-block-map-nap__map--auto-embed {
 	aspect-ratio: auto;
 	min-height: min(28rem, 90vh);
 }
 
-.lf-block-map-nap__map--custom-embed iframe {
+.lf-block-map-nap__map--custom-embed iframe,
+.lf-block-map-nap__map--auto-embed iframe {
 	height: 28rem;
 	min-height: 28rem;
 	max-height: 80vh;
