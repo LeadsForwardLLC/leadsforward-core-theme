@@ -39,8 +39,13 @@ $place_name = function_exists('lf_get_business_info_value') ? lf_get_business_in
 $place_address = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_place_address', '') : '';
 $map_embed_override = function_exists('lf_get_business_info_value') ? lf_get_business_info_value('lf_business_map_embed', '') : '';
 $map_embed_override = is_string($map_embed_override) ? trim($map_embed_override) : '';
-$maps_api_key = get_option('lf_maps_api_key', '');
-$maps_api_key = is_string($maps_api_key) ? $maps_api_key : '';
+$auto_map_iframe = '';
+if ($map_embed_override === '' && function_exists('lf_google_maps_auto_embed_src') && function_exists('lf_google_maps_embed_iframe_html')) {
+	$auto_src = lf_google_maps_auto_embed_src($entity);
+	if ($auto_src !== '') {
+		$auto_map_iframe = lf_google_maps_embed_iframe_html($auto_src);
+	}
+}
 $heading = !empty($section['section_heading']) ? $section['section_heading'] : __('Areas We Serve', 'leadsforward-core');
 $intro   = !empty($section['section_intro']) ? $section['section_intro'] : '';
 $section_heading_tag = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($section) : 'h2';
@@ -142,19 +147,6 @@ if (is_string($place_id) && $place_id !== '') {
 } elseif (is_string($address) && $address !== '') {
 	$map_view_url = 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($address);
 	$map_directions_url = 'https://www.google.com/maps/dir/?api=1&destination=' . rawurlencode($address);
-}
-$map_embed_url = '';
-if (is_string($map_embed_override) && $map_embed_override !== '') {
-	$map_embed_url = trim((string) $map_embed_override);
-} elseif (is_string($place_id) && $place_id !== '' && $maps_api_key !== '') {
-	$map_embed_url = 'https://www.google.com/maps/embed/v1/place?key=' . rawurlencode($maps_api_key) . '&q=place_id:' . rawurlencode($place_id);
-} elseif (is_string($place_id) && $place_id !== '') {
-	$map_embed_url = 'https://www.google.com/maps?q=place_id:' . rawurlencode($place_id) . '&output=embed';
-} elseif (is_string($address) && trim($address) !== '' && $maps_api_key !== '') {
-	// Fallback when place_id is missing or invalid: embed by address so the map still works.
-	$map_embed_url = 'https://www.google.com/maps/embed/v1/place?key=' . rawurlencode($maps_api_key) . '&q=' . rawurlencode(trim((string) $address));
-} elseif (is_string($address) && trim($address) !== '') {
-	$map_embed_url = 'https://www.google.com/maps?q=' . rawurlencode(trim((string) $address)) . '&output=embed';
 }
 
 $areas_query = new WP_Query([
@@ -266,11 +258,20 @@ $areas_query = new WP_Query([
 							echo wp_kses($map_embed_override, $allowed_embed);
 							?>
 						</div>
+					<?php elseif (is_string($auto_map_iframe) && $auto_map_iframe !== '') : ?>
+						<div class="lf-block-map-nap__map lf-block-map-nap__map--auto-embed">
+							<?php
+							$allowed_embed = function_exists('lf_map_embed_allowed_iframe_kses')
+								? lf_map_embed_allowed_iframe_kses()
+								: ['iframe' => ['src' => true]];
+							echo wp_kses($auto_map_iframe, $allowed_embed);
+							?>
+						</div>
 					<?php else : ?>
 						<div class="lf-block-map-nap__map-placeholder" data-lf-map-embed-placeholder="1">
 							<p class="lf-block-map-nap__empty lf-block-map-nap__empty--embed">
 								<?php
-								esc_html_e('Paste a Google Maps iframe embed to show your map here.', 'leadsforward-core');
+								esc_html_e('Add your address or coordinates in Global Settings (Business location) to show a map automatically, or paste a custom iframe embed there.', 'leadsforward-core');
 								?>
 							</p>
 						</div>
