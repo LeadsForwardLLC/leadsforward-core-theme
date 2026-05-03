@@ -282,6 +282,113 @@ function lf_header_menu_objects(array $items, $args): array {
 add_filter('wp_nav_menu_objects', 'lf_header_menu_objects', 10, 2);
 
 /**
+ * Whether a header menu item represents Home / the static front page.
+ */
+function lf_header_menu_item_is_home_item(\WP_Post $item): bool {
+	$home_id = (int) get_option('page_on_front');
+	if (
+		$home_id > 0
+		&& (string) ($item->object ?? '') === 'page'
+		&& (int) ($item->object_id ?? 0) === $home_id
+	) {
+		return true;
+	}
+	$t = strtolower(trim(wp_strip_all_tags((string) ($item->title ?? ''))));
+	if ($t === 'home') {
+		return true;
+	}
+	$url = isset($item->url) ? trim((string) $item->url) : '';
+	if ($url !== '') {
+		$h_slash = trailingslashit(home_url('/'));
+		$h_plain = untrailingslashit($h_slash);
+		if ($url === $h_slash || $url === $h_plain || trailingslashit($url) === $h_slash) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Sort key for top-level header blocks: Home first, then normal links, then Call / CTA, then More.
+ *
+ * @return array{0:int,1:int}
+ */
+function lf_header_menu_top_level_sort_tuple(\WP_Post $item): array {
+	$classes = is_array($item->classes ?? null) ? $item->classes : [];
+	$mo = (int) ($item->menu_order ?? 0);
+	if (in_array('lf-menu-more', $classes, true)) {
+		return [900, $mo];
+	}
+	if (in_array('lf-menu-cta', $classes, true)) {
+		return [800, $mo];
+	}
+	if (in_array('lf-menu-call', $classes, true)) {
+		return [700, $mo];
+	}
+	if (lf_header_menu_item_is_home_item($item)) {
+		return [0, $mo];
+	}
+	return [100, $mo];
+}
+
+/**
+ * Reorder flat wp_nav_menu item list so top-level sections appear in a sensible order for the header.
+ *
+ * @param array<int,\WP_Post> $items
+ * @return array<int,\WP_Post>
+ */
+function lf_header_menu_reorder_flat_blocks(array $items): array {
+	$n = count($items);
+	if ($n < 2) {
+		return $items;
+	}
+	$blocks = [];
+	$i = 0;
+	while ($i < $n) {
+		if ((int) $items[$i]->menu_item_parent !== 0) {
+			$i++;
+			continue;
+		}
+		$start = $i;
+		$i++;
+		while ($i < $n && (int) $items[$i]->menu_item_parent !== 0) {
+			$i++;
+		}
+		$blocks[] = array_slice($items, $start, $i - $start);
+	}
+	if (count($blocks) < 2) {
+		return $items;
+	}
+	usort(
+		$blocks,
+		static function (array $a, array $b): int {
+			$ta = lf_header_menu_top_level_sort_tuple($a[0]);
+			$tb = lf_header_menu_top_level_sort_tuple($b[0]);
+			return $ta <=> $tb;
+		}
+	);
+	$out = [];
+	foreach ($blocks as $block) {
+		foreach ($block as $it) {
+			$out[] = $it;
+		}
+	}
+	return $out;
+}
+
+/**
+ * @param array<int,\WP_Post> $items
+ * @return array<int,\WP_Post>
+ */
+function lf_header_menu_reorder_display_objects(array $items, $args): array {
+	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || $items === []) {
+		return $items;
+	}
+	return lf_header_menu_reorder_flat_blocks($items);
+}
+add_filter('wp_nav_menu_objects', 'lf_header_menu_reorder_display_objects', 15, 2);
+
+/**
  * Remind admins when nav menus exist but nothing is assigned to the Header Menu theme location.
  * The front header only calls wp_nav_menu for `header_menu`; a menu named "Header Menu" is not enough
  * until it is checked under Appearance → Menus → Manage Locations (or Menu Settings).

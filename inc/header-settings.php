@@ -96,3 +96,18 @@ function lf_header_more_mode(): string {
 		: 'dropdown';
 	return lf_header_more_mode_sanitize($raw);
 }
+
+/**
+ * Show the promo strip above the main header bar.
+ * Visible when the header layout is "topbar" (Global Design) or the promo toggle is on (Site header panel),
+ * so Ops layout choice does not require a separate checkbox to see the strip.
+ */
+function lf_header_promo_strip_visible(): bool {
+	if (!function_exists('lf_header_layout')) {
+		return false;
+	}
+	if (lf_header_layout() === 'topbar') {
+		return true;
+	}
+	return function_exists('lf_header_topbar_enabled') && lf_header_topbar_enabled();
+}

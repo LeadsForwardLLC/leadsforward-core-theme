@@ -2285,6 +2285,10 @@ article a:not(.lf-btn):hover {
 	margin: 0 auto;
 	padding: 0.4rem 1rem;
 	text-align: center;
+	min-height: 2.25rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .site-header__inner {
@@ -2317,13 +2321,17 @@ article a:not(.lf-btn):hover {
 
 /* Full-width nav bar: stretch sticky inner edge-to-edge (content padding matches sections). */
 .site-header--nav-full .site-header__inner {
-	max-width: none;
+	max-width: none !important;
 	width: 100%;
 	margin-left: 0;
 	margin-right: 0;
-	border-radius: 0;
+	border-radius: 0 !important;
 	padding-left: max(1rem, var(--lf-section-padding-x, 1rem));
 	padding-right: max(1rem, var(--lf-section-padding-x, 1rem));
+}
+
+.site-header--nav-full.site-header--sticky .site-header__inner {
+	border-radius: 0 !important;
 }
 
 /* Hard fallback sticky: fixed header when scrolled. */
