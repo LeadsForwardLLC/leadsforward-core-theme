@@ -97,8 +97,11 @@ function lf_seo_generate_meta_title_for_intent(int $post_id, string $primary_key
 			? lf_seo_generate_meta_title_from_keywords($primary_keyword)
 			: '';
 	}
+	if (function_exists('lf_seo_truncate_meta_title')) {
+		return lf_seo_truncate_meta_title($title, 62);
+	}
 	if (function_exists('mb_substr') && mb_strlen($title) > 62) {
-		$title = rtrim(mb_substr($title, 0, 62));
+		return rtrim(mb_substr($title, 0, 62));
 	}
 	return $title;
 }

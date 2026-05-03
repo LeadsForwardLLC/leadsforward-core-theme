@@ -91,10 +91,11 @@ function lf_seo_build_title(): string {
 	$title = $custom !== '' ? $custom : lf_seo_apply_template($template, $vars);
 	$brand = $vars['{{brand}}'] ?? '';
 
-	if ($append_brand && $brand !== '' && stripos($title, $brand) === false) {
+	if ($append_brand && $brand !== '' && lf_seo_title_should_append_brand($title, $brand)) {
 		$sep = $separator !== '' ? ' ' . $separator . ' ' : ' ';
 		$title = rtrim($title) . $sep . $brand;
 	}
+	$title = lf_seo_normalize_title_duplicate_brand_parts($title, $separator, $brand);
 	return trim($title);
 }
 
@@ -458,6 +459,143 @@ function lf_seo_apply_template(string $template, array $vars): string {
 		return '';
 	}
 	return strtr($template, $vars);
+}
+
+/**
+ * Truncate SERP/meta titles without splitting mid-token; prefer trimming at "|" chunks.
+ *
+ * @param string $title Input title string.
+ * @param int    $max   Target max grapheme length (~pixel-safe SERP width).
+ */
+function lf_seo_truncate_meta_title(string $title, int $max = 62): string {
+	$title = trim($title);
+	if ($title === '') {
+		return '';
+	}
+	if ($max < 28) {
+		$max = 28;
+	}
+	if (!function_exists('mb_strlen')) {
+		return strlen($title) > $max ? rtrim(substr($title, 0, $max)) : $title;
+	}
+	if (mb_strlen($title) <= $max) {
+		return $title;
+	}
+	$glue = '|';
+	$chunks = [];
+	foreach (preg_split('/\s*\|\s*/u', $title) ?: [] as $chunk) {
+		$c = trim((string) $chunk);
+		if ($c !== '') {
+			$chunks[] = $c;
+		}
+	}
+	if (count($chunks) > 1) {
+		$built = $chunks[0];
+		for ($i = 1; $i < count($chunks); $i++) {
+			$n = mb_strlen(rtrim(rtrim($built) . ' ' . $glue . ' ' . $chunks[$i]));
+			if ($n <= $max) {
+				$built = rtrim($built) . ' ' . $glue . ' ' . $chunks[$i];
+				continue;
+			}
+			break;
+		}
+		if (mb_strlen($built) <= $max && $built !== '') {
+			return rtrim($built);
+		}
+	}
+	if (strpos($title, $glue) !== false) {
+		$partial = mb_substr($title, 0, $max);
+		$cut = mb_strrpos($partial, $glue);
+		if ($cut !== false && $cut > max(14, (int) floor($max * 0.35))) {
+			return rtrim(mb_substr($partial, 0, $cut));
+		}
+	}
+	$partial = mb_substr($title, 0, $max);
+	$boundary = mb_strrpos($partial, ' ');
+	if ($boundary !== false && $boundary > max(14, (int) floor($max * 0.38))) {
+		return rtrim(mb_substr($partial, 0, $boundary));
+	}
+	return rtrim($partial);
+}
+
+/**
+ * Stable first “word” of brand/dba for duplicate detection when titles are truncated.
+ */
+function lf_seo_title_brand_anchor(string $brand): string {
+	$brand = trim($brand);
+	if ($brand === '') {
+		return '';
+	}
+	preg_match('/^[\p{L}\p{N}]+/u', $brand, $m);
+	return isset($m[0]) ? strtolower((string) $m[0]) : '';
+}
+
+function lf_seo_title_should_append_brand(string $title, string $brand): bool {
+	$title = trim($title);
+	$brand = trim($brand);
+	if ($title === '' || $brand === '') {
+		return false;
+	}
+	if (stripos($title, $brand) !== false) {
+		return false;
+	}
+	$a = lf_seo_title_brand_anchor($brand);
+	if ($a !== '') {
+		$tl = function_exists('mb_strtolower') ? mb_strtolower($title, 'UTF-8') : strtolower($title);
+		if (strlen($a) >= 5 && substr_count($tl, $a) >= 2) {
+			return false;
+		}
+		$needle = strtolower(function_exists('mb_substr')
+			? mb_substr($brand, 0, min(mb_strlen($brand, 'UTF-8'), 36), 'UTF-8')
+			: substr($brand, 0, 36));
+		$prefix = strtolower(function_exists('mb_substr')
+			? mb_substr($needle, 0, min(strlen($needle), 14), 'UTF-8')
+			: substr($needle, 0, min(strlen($needle), 14)));
+		if ($prefix !== '' && str_contains($tl, $prefix)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+/**
+ * Remove truncated brand chunk before a fuller brand chunk (e.g. “AccuLevel - Schaum | AccuLevel - Schaumburg IL #21”).
+ */
+function lf_seo_normalize_title_duplicate_brand_parts(string $title, string $separator, string $brand): string {
+	$brand = trim($brand);
+	if ($brand === '') {
+		return $title;
+	}
+	$s = trim($separator);
+	if ($s === '') {
+		return $title;
+	}
+	$glue = ' ' . $s . ' ';
+	$anchor = lf_seo_title_brand_anchor($brand);
+	if (strlen($anchor) < 5) {
+		return $title;
+	}
+	$parts = explode($glue, trim($title));
+	if (count($parts) < 2) {
+		return $title;
+	}
+	for ($j = count($parts) - 1; $j >= 1; $j--) {
+		$r = strtolower(trim((string) $parts[$j]));
+		$l = strtolower(trim((string) $parts[$j - 1]));
+		if ($l === '' || $r === '') {
+			continue;
+		}
+		if (
+			str_contains($l, $anchor)
+			&& str_contains($r, $anchor)
+			&& str_starts_with($r, $l)
+			&& strlen($r) > strlen($l)
+		) {
+			unset($parts[$j - 1]);
+		}
+	}
+	$parts = array_values(array_filter(array_map('trim', $parts), static fn ($x) => $x !== ''));
+	return implode($glue, $parts);
 }
 
 function lf_seo_get_og_image_url(): string {
