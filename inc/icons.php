@@ -32,17 +32,24 @@ function lf_icon_aliases(): array {
 		'lightning' => 'zap',
 		'water-drop' => 'droplet',
 		'roof' => 'home',
-		'social-facebook' => 'facebook',
-		'social-instagram' => 'instagram',
-		'social-youtube' => 'youtube',
-		'social-linkedin' => 'linkedin',
-		'social-tiktok' => 'video',
-		'social-x' => 'twitter',
+		// Tabler ships social glyphs as brand-* (not bare facebook.svg).
+		'facebook' => 'brand-facebook',
+		'instagram' => 'brand-instagram',
+		'youtube' => 'brand-youtube',
+		'linkedin' => 'brand-linkedin',
+		'tiktok' => 'brand-tiktok',
+		'twitter' => 'brand-twitter',
+		'social-facebook' => 'brand-facebook',
+		'social-instagram' => 'brand-instagram',
+		'social-youtube' => 'brand-youtube',
+		'social-linkedin' => 'brand-linkedin',
+		'social-tiktok' => 'brand-tiktok',
+		'social-x' => 'brand-twitter',
 	];
 }
 
 function lf_icon_extra_icons(): array {
-	return ['facebook', 'instagram', 'youtube', 'linkedin', 'twitter', 'video', 'mail'];
+	return ['brand-facebook', 'brand-instagram', 'brand-youtube', 'brand-linkedin', 'brand-twitter', 'brand-tiktok', 'facebook', 'instagram', 'youtube', 'linkedin', 'twitter', 'video', 'mail'];
 }
 
 function lf_icon_normalize_slug(string $slug): string {
