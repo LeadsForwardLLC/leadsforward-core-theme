@@ -180,6 +180,19 @@ function lf_docs_render_playbook_sections(): void {
 				<p><?php esc_html_e('SEO settings: title/description templates, SERP intent templates, indexing rules, default OG image, schema toggles (also under ACF Schema), XML sitemap switches.', 'leadsforward-core'); ?></p>
 				<p><?php esc_html_e('Site health tab: live status (theme, ACF, setup flag, variation, NAP, GTM header snippet, manifester config), automated pre-launch report, QA audit trail, and the printable focused QA checklist for humans.', 'leadsforward-core'); ?></p>
 				<p><?php esc_html_e('While editing, the floating SEO Health panel summarizes the same quality concepts; links open full SEO settings and Site health.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Airtable sitemap → keywords & meta (what runs automatically)', 'leadsforward-core'); ?></h3>
+				<ul>
+					<li><?php esc_html_e('The Airtable Sitemaps table “Keyword” column (and common aliases such as Primary Keyword / Target Keyword) is the page-level target phrase. Sitemap sync writes it to each matching WordPress page as Primary Target Keyword and registers it in the keyword map.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('After sync, the theme can regenerate meta title/description for transactional and local intent when the phrase is missing from saved snippets—so Airtable stays the source of truth without you retyping meta on every URL.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Service and service-area rows use the resolved URL’s last path segment to find the lf_service or lf_service_area post by slug. If the CPT does not exist yet or the slug does not match, keyword push is skipped until the post exists.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Blog posts are not created from the sitemap sync path the same way as marketing pages; assign keywords via the SEO meta box, manifest/AI flows, or the keyword engine so posts stay in the same SEO system.', 'leadsforward-core'); ?></li>
+				</ul>
+				<h3><?php esc_html_e('On-page depth checklist (advisory, no auto-edits)', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('In the SEO meta box, the checklist scores alignment of the primary keyword with opening copy, internal links, image alt attributes in stored HTML, featured images, and—after theme updates—meta title/description, visible H1, H2 coverage, and (for local/transactional URLs) the primary city in the opening text. It does not rewrite headings, slugs, or body copy; it only highlights gaps so you or AI Studio can fix them deliberately.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Internal links and broken hrefs', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('AI output is scrubbed so internal links do not point at missing or unpublished posts when sitemap enforcement is on. For strategic coverage (which pages should link to which), use LeadsForward → SEO & Performance → Internal Link Map: it scans content and Page Builder HTML and can apply a suggested link when you approve it.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('URLs, slugs, and headings', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('The theme enforces a single logical H1 (hero vs document title) and structured data, but it does not automatically rename slugs when you change a keyword in Airtable—keep slug templates and keywords in sync in the sheet. H2/H3 wording stays in your Page Builder and editorial process; use the checklist and SEO Health to verify coverage.', 'leadsforward-core'); ?></p>
 			</section>
 
 			<section id="ai-assistant" class="lf-docs__section">
@@ -246,6 +259,7 @@ function lf_docs_render_playbook_sections(): void {
 					<li><?php esc_html_e('Pre-launch never updates: run “Run pre-launch check” on the Site health tab; confirm you are not blocked by a security plugin on admin-post.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('GTM always warns: add the snippet to SEO header scripts or ignore if you load tags exclusively elsewhere (plugin).', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Scores stuck at zero: update the page once so the SEO scorer runs on save.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('SEO checklist warns about H2s but sections look fine: the scanner only reads actual &lt;h2&gt; HTML in Page Builder/content fields—not bold lines styled to look like headings.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('AI created a service but the main editor is empty: open Page Builder—the copy is in sections. Retry the prompt asking for page_builder section fields if a section stayed default.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Map missing on contact/home: paste the iframe under Global Settings → Business entity; confirm the Map + NAP section is enabled on that template.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('“Add to header menu” missing or service link lands top-level: assign a menu to Header Menu; you need edit theme options; if already in menu the checkbox hides. For Services/Areas submenus, the parent items need the wizard menu classes—fix under Appearance → Menus.', 'leadsforward-core'); ?></li>

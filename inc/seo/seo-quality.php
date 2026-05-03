@@ -201,6 +201,59 @@ function lf_seo_collect_scoring_html(int $post_id): string {
 	return implode("\n", $parts);
 }
 
+/**
+ * Primary city for local/transactional coverage hints (business entity → manifest fallback).
+ */
+function lf_seo_get_primary_city_for_coverage(): string {
+	if (function_exists('lf_business_entity_get')) {
+		$entity = lf_business_entity_get();
+		if (is_array($entity)) {
+			$city = trim((string) ($entity['address_parts']['city'] ?? ''));
+			if ($city !== '') {
+				return $city;
+			}
+		}
+	}
+	$manifest = get_option('lf_site_manifest', []);
+	return is_array($manifest) ? lf_seo_get_manifest_city($manifest) : '';
+}
+
+function lf_seo_text_contains_keyword_phrase(string $haystack, string $keyword): bool {
+	$haystack = trim(wp_strip_all_tags($haystack));
+	$keyword = preg_replace('/\s+/u', ' ', trim($keyword));
+	if ($haystack === '' || $keyword === '') {
+		return false;
+	}
+	if (function_exists('mb_strlen') && mb_strlen($keyword, 'UTF-8') < 5) {
+		return false;
+	}
+	return function_exists('mb_stripos')
+		? mb_stripos($haystack, $keyword, 0, 'UTF-8') !== false
+		: stripos($haystack, $keyword) !== false;
+}
+
+/**
+ * @return list<string>
+ */
+function lf_seo_extract_heading_plaintexts_from_html(string $html, string $tag): array {
+	$allowed = ['h1' => 1, 'h2' => 1, 'h3' => 1, 'h4' => 1, 'h5' => 1, 'h6' => 1];
+	$tag = strtolower(preg_replace('/[^a-z0-9]/', '', $tag));
+	if ($tag === '' || !isset($allowed[$tag]) || trim($html) === '') {
+		return [];
+	}
+	if (!preg_match_all('/<' . $tag . '\b[^>]*>(.*?)<\/\s*' . $tag . '\s*>/is', $html, $m)) {
+		return [];
+	}
+	$out = [];
+	foreach ($m[1] as $inner) {
+		$t = trim(wp_strip_all_tags((string) $inner));
+		if ($t !== '') {
+			$out[] = $t;
+		}
+	}
+	return $out;
+}
+
 function lf_seo_count_internal_links_in_html(string $html, string $home_host): int {
 	$html = is_string($html) ? $html : '';
 	$home_host = strtolower(trim($home_host));
@@ -245,6 +298,11 @@ function lf_seo_get_onpage_checklist_rows(int $post_id): array {
 	$fallback_title = get_the_title($post);
 	$eff_title = $title !== '' ? $title : (string) $fallback_title;
 	$etl = function_exists('mb_strlen') ? mb_strlen($eff_title) : strlen($eff_title);
+	$html_blob = lf_seo_collect_scoring_html($post_id);
+	$intent_for_coverage = lf_seo_detect_serp_intent($post_id, $primary);
+	$pw = trim($primary);
+	$primary_len = function_exists('mb_strlen') ? mb_strlen($pw, 'UTF-8') : strlen($pw);
+	$primary_strict = $pw !== '' && $primary_len >= 8;
 
 	$rows[] = [
 		'ok' => $primary !== '',
@@ -267,15 +325,106 @@ function lf_seo_get_onpage_checklist_rows(int $post_id): array {
 			? __('Optional; if set, aim for ~120–160 characters.', 'leadsforward-core')
 			: sprintf(__('Current: %d characters.', 'leadsforward-core'), (int) $dl),
 	];
+	if ($primary !== '') {
+		if ($primary_strict && $title === '') {
+			$rows[] = [
+				'ok' => true,
+				'label' => __('Custom meta title + keyword', 'leadsforward-core'),
+				'detail' => __('No custom meta title is saved here; the public &lt;title&gt; comes from SEO → templates and intent rules on the front end. Preview the live page or use SEO Health to confirm the phrase appears.', 'leadsforward-core'),
+			];
+		} elseif ($primary_strict && $title !== '') {
+			$t_ok = lf_seo_text_contains_keyword_phrase($title, $primary);
+			$rows[] = [
+				'ok' => $t_ok,
+				'label' => __('Custom meta title + keyword', 'leadsforward-core'),
+				'detail' => $t_ok
+					? __('Saved meta title mentions the primary phrase.', 'leadsforward-core')
+					: __('Consider weaving the primary phrase into the saved meta title (still reads naturally—no stuffing).', 'leadsforward-core'),
+			];
+		}
+		if ($primary_strict && $description === '') {
+			$rows[] = [
+				'ok' => true,
+				'label' => __('Custom meta description + keyword', 'leadsforward-core'),
+				'detail' => __('No custom meta description saved; SERP snippets use SEO templates until you fill this field.', 'leadsforward-core'),
+			];
+		} elseif ($primary_strict && $description !== '') {
+			$d_ok = lf_seo_text_contains_keyword_phrase($description, $primary);
+			$rows[] = [
+				'ok' => $d_ok,
+				'label' => __('Custom meta description + keyword', 'leadsforward-core'),
+				'detail' => $d_ok
+					? __('Saved description mentions the primary phrase.', 'leadsforward-core')
+					: __('Consider including the primary phrase once in the description in natural language.', 'leadsforward-core'),
+			];
+		}
+	}
 	$first_chunk = strtolower(function_exists('mb_substr') ? mb_substr($plain, 0, 280) : substr($plain, 0, 280));
 	$rows[] = [
 		'ok' => $primary === '' || $first_chunk === '' || strpos($first_chunk, strtolower($primary)) !== false,
 		'label' => __('Keyword in opening content', 'leadsforward-core'),
 		'detail' => __('Primary keyword should appear naturally in the first screen of readable text.', 'leadsforward-core'),
 	];
+	if ($primary_strict && function_exists('lf_heading_primary_text')) {
+		$h1_text = trim((string) lf_heading_primary_text($post_id));
+		if ($h1_text !== '') {
+			$h1_ok = lf_seo_text_contains_keyword_phrase($h1_text, $primary);
+			$rows[] = [
+				'ok' => $h1_ok,
+				'label' => __('Primary headline (H1) + keyword', 'leadsforward-core'),
+				'detail' => $h1_ok
+					? __('Theme headline field includes the target phrase.', 'leadsforward-core')
+					: __('The visible H1 comes from hero or title fields; aligning it with the target phrase usually helps topical clarity.', 'leadsforward-core'),
+			];
+		}
+	}
+	if ($primary_strict && $html_blob !== '') {
+		$h2_texts = lf_seo_extract_heading_plaintexts_from_html($html_blob, 'h2');
+		if (count($h2_texts) > 0) {
+			$h2_ok = false;
+			foreach ($h2_texts as $h2_line) {
+				if (lf_seo_text_contains_keyword_phrase($h2_line, $primary)) {
+					$h2_ok = true;
+					break;
+				}
+			}
+			$rows[] = [
+				'ok' => $h2_ok,
+				'label' => __('Section headings (H2) + keyword', 'leadsforward-core'),
+				'detail' => $h2_ok
+					? __('At least one H2 mentions the topic in natural language.', 'leadsforward-core')
+					: __('Add topical H2 subheads in Page Builder richtext; at least one should reflect the URL’s main phrase without repeating it awkwardly.', 'leadsforward-core'),
+			];
+		}
+	}
+	$coverage_city = lf_seo_get_primary_city_for_coverage();
+	if (
+		$primary_strict
+		&& $coverage_city !== ''
+		&& in_array($intent_for_coverage, ['transactional', 'local'], true)
+		&& $first_chunk !== ''
+		&& (function_exists('mb_strlen') ? mb_strlen(trim($coverage_city), 'UTF-8') : strlen(trim($coverage_city))) >= 3
+	) {
+		$city_lc = strtolower($coverage_city);
+		$c_ok = strpos($first_chunk, $city_lc) !== false;
+		$rows[] = [
+			'ok' => $c_ok,
+			'label' => __('Opening text + primary city', 'leadsforward-core'),
+			'detail' => $c_ok
+				? sprintf(
+					/* translators: %s: city name */
+					__('First screen of copy references %s—a strong local cue for transactional pages.', 'leadsforward-core'),
+					$coverage_city
+				)
+				: sprintf(
+					/* translators: %s: city name */
+					__('Near the top of the readable copy, clarify service area once (often %s) so humans and bots see local intent.', 'leadsforward-core'),
+					$coverage_city
+				),
+		];
+	}
 	$host = (string) wp_parse_url(home_url('/'), PHP_URL_HOST);
-	$html = lf_seo_collect_scoring_html($post_id);
-	$int_n = lf_seo_count_internal_links_in_html($html, $host);
+	$int_n = lf_seo_count_internal_links_in_html($html_blob, $host);
 	$rows[] = [
 		'ok' => $int_n > 0,
 		'label' => __('Internal links', 'leadsforward-core'),
@@ -288,7 +437,7 @@ function lf_seo_get_onpage_checklist_rows(int $post_id): array {
 			: __('Add at least one link to a related service, area, or core page.', 'leadsforward-core'),
 	];
 	$img_missing_alt = 0;
-	if ($html !== '' && preg_match_all('/<img\b[^>]*>/i', $html, $im)) {
+	if ($html_blob !== '' && preg_match_all('/<img\b[^>]*>/i', $html_blob, $im)) {
 		foreach ($im[0] as $tag) {
 			if (!preg_match('/\balt\s*=\s*["\'][^"\']+["\']/i', $tag) && !preg_match('/\balt\s*=\s*[^\s>]+/i', $tag)) {
 				$img_missing_alt++;

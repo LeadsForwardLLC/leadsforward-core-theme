@@ -15,6 +15,7 @@ Use this page as the starting point for architecture, operations, and troublesho
 - `01_SYSTEM_OVERVIEW.md` - high-level system map and execution phases.
 - `05_THEME_INTEGRATION.md` - WordPress integration points, callback/apply path, repair safeguards.
 - `02_N8N_WORKFLOW_ARCHITECTURE.md` - n8n node flow, quality gates, callback/progress contract.
+- **LeadsForward → Theme Docs (in-dashboard playbook)** — operator-facing SEO rundown: Airtable sitemap → primary keywords/meta, advisory on-page checklist in the SEO meta box, Internal Link Map, slug vs keyword expectations (section *SEO, performance, and launch*).
 
 ## Data Contracts
 - `03_MANIFEST_SCHEMA.md` - canonical manifest input structure.
