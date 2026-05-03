@@ -1825,7 +1825,7 @@ function lf_ops_render_global_settings_page(): void {
 									<option value="centered" <?php selected($header_layout_ui === 'centered'); ?>><?php esc_html_e('Centered logo and menu', 'leadsforward-core'); ?></option>
 									<option value="topbar" <?php selected($header_layout_ui === 'topbar'); ?>><?php esc_html_e('Promo strip above main bar', 'leadsforward-core'); ?></option>
 								</select>
-								<p class="description"><?php esc_html_e('Controls logo alignment and how the primary row is structured.', 'leadsforward-core'); ?></p>
+								<p class="description"><?php esc_html_e('Controls logo alignment and how the primary row is structured. Choosing “Promo strip above main bar” always shows the top promo row; add its text and color under Business location or in the front-end Site header panel.', 'leadsforward-core'); ?></p>
 							</td>
 						</tr>
 						<tr>

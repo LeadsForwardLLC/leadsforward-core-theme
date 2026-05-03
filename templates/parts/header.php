@@ -33,10 +33,9 @@ if ($logo_text === '') {
 $layout = function_exists('lf_header_layout') ? lf_header_layout() : 'modern';
 $nav_width = function_exists('lf_header_nav_width') ? lf_header_nav_width() : 'contained';
 $more_mode = function_exists('lf_header_more_mode') ? lf_header_more_mode() : 'dropdown';
-$topbar_enabled = function_exists('lf_header_topbar_enabled') && lf_header_topbar_enabled();
 $topbar_text = function_exists('lf_header_topbar_text') ? lf_header_topbar_text() : '';
 $topbar_color = function_exists('lf_header_topbar_color') ? lf_header_topbar_color() : '';
-$show_topbar = ($topbar_enabled && $topbar_text !== '');
+$show_topbar = function_exists('lf_header_promo_strip_visible') ? lf_header_promo_strip_visible() : false;
 $header_class = 'site-header site-header--modern site-header--' . $layout;
 if ($nav_width === 'full') {
 	$header_class .= ' site-header--nav-full';
@@ -54,7 +53,7 @@ if ($show_topbar) {
 		<?php if ($topbar_color !== '') : ?>
 			style="<?php echo esc_attr('--lf-header-topbar-bg:' . $topbar_color); ?>"
 		<?php endif; ?>
-	><div class="site-header__topbar-inner"><?php echo esc_html($topbar_text); ?></div></div>
+	><div class="site-header__topbar-inner"><?php echo $topbar_text !== '' ? esc_html($topbar_text) : '&nbsp;'; ?></div></div>
 <?php endif; ?>
 <header class="<?php echo esc_attr($header_class); ?>" role="banner" data-lf-more-mode="<?php echo esc_attr($more_mode); ?>">
 	<div class="site-header__inner">
@@ -132,15 +131,16 @@ if ($show_topbar) {
 		var closeBtn = header.querySelector('.site-header__close');
 		var submenuToggles = [];
 		function closeSubmenus() {
-			if (!submenuToggles.length) return;
-			submenuToggles.forEach(function (entry) {
-				entry.item.classList.remove('is-open');
-				entry.toggle.setAttribute('aria-expanded', 'false');
-				var entryMore = entry.item.querySelector(':scope > .site-header__more-toggle');
-				if (entryMore) {
-					entryMore.setAttribute('aria-expanded', 'false');
-				}
-			});
+			if (submenuToggles.length) {
+				submenuToggles.forEach(function (entry) {
+					entry.item.classList.remove('is-open');
+					entry.toggle.setAttribute('aria-expanded', 'false');
+					var entryMore = entry.item.querySelector(':scope > .site-header__more-toggle');
+					if (entryMore) {
+						entryMore.setAttribute('aria-expanded', 'false');
+					}
+				});
+			}
 			try {
 				document.body.classList.remove('lf-header-more-open');
 			} catch (eB) {}
