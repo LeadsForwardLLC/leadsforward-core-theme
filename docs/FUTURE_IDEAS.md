@@ -25,6 +25,12 @@ Living backlog of high-upside product/system ideas for LeadsForward + JobCapture
 - **Multi-Select Structural Edits:** Batch hide/show/move for selected section groups.
 - **Atomic Publish/Discard Layer:** Local draft session before persisting structural edits.
 
+## Detailed future plans
+
+Longer, implementation-shaped write-ups live in [`docs/future/`](future/):
+
+- **[Content automation pipeline](future/content-automation-pipeline-plan.md)** — Airtable (or similar) editorial queue, sanitized call/review signals, n8n/Make orchestration, WordPress REST drafts, phased rollout, and safety gates. Not theme code; reference for product/automation work.
+
 ## Always-On Constraints
 - Security first: signed callbacks, replay protection, strict schema validation, least-privilege data handling.
 - Determinism first: no random writes to live content.
