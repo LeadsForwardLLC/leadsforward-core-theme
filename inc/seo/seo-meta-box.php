@@ -256,8 +256,9 @@ function lf_seo_update_post_meta(int $post_id, string $key, string $value): void
  * @param int          $post_id Post ID.
  * @param string       $primary Optional primary keyword override.
  * @param string|array $secondary Optional secondary keywords (CSV/newlines or array).
+ * @param bool         $airtable_keyword_authoritative When true (e.g. Airtable sitemap sync), refresh generated title/description when the primary phrase is absent for transactional/local intent.
  */
-function lf_seo_maybe_populate_generated_meta(int $post_id, string $primary = '', $secondary = ''): void {
+function lf_seo_maybe_populate_generated_meta(int $post_id, string $primary = '', $secondary = '', bool $airtable_keyword_authoritative = false): void {
 	if ($post_id <= 0) {
 		return;
 	}
@@ -298,8 +299,21 @@ function lf_seo_maybe_populate_generated_meta(int $post_id, string $primary = ''
 		update_post_meta($post_id, '_lf_seo_secondary_keywords', implode(', ', $secondary_list));
 	}
 
+	$enforce_keyword_phrase = false;
+	if ($airtable_keyword_authoritative && function_exists('lf_seo_detect_serp_intent')) {
+		$intent = lf_seo_detect_serp_intent($post_id, $primary_keyword);
+		$enforce_keyword_phrase = in_array($intent, ['transactional', 'local'], true);
+	}
+
 	$current_title = trim((string) get_post_meta($post_id, '_lf_seo_meta_title', true));
-	if ($current_title === '' || lf_seo_meta_text_needs_upgrade($current_title, 'title')) {
+	if (
+		$current_title === ''
+		|| lf_seo_meta_text_needs_upgrade($current_title, 'title')
+		|| (
+			$enforce_keyword_phrase
+			&& lf_seo_meta_field_missing_primary_keyword($current_title, $primary_keyword)
+		)
+	) {
 		$title = function_exists('lf_seo_generate_meta_title_for_intent')
 			? lf_seo_generate_meta_title_for_intent($post_id, $primary_keyword)
 			: lf_seo_generate_meta_title_from_keywords($primary_keyword);
@@ -309,7 +323,14 @@ function lf_seo_maybe_populate_generated_meta(int $post_id, string $primary = ''
 	}
 
 	$current_description = trim((string) get_post_meta($post_id, '_lf_seo_meta_description', true));
-	if ($current_description === '' || lf_seo_meta_text_needs_upgrade($current_description, 'description')) {
+	if (
+		$current_description === ''
+		|| lf_seo_meta_text_needs_upgrade($current_description, 'description')
+		|| (
+			$enforce_keyword_phrase
+			&& lf_seo_meta_field_missing_primary_keyword($current_description, $primary_keyword)
+		)
+	) {
 		$description = function_exists('lf_seo_generate_meta_description_for_intent')
 			? lf_seo_generate_meta_description_for_intent($post_id, $primary_keyword, $secondary_list)
 			: lf_seo_generate_meta_description_from_keywords($post_id, $primary_keyword, $secondary_list);
@@ -320,6 +341,24 @@ function lf_seo_maybe_populate_generated_meta(int $post_id, string $primary = ''
 	if (function_exists('lf_seo_calculate_content_quality')) {
 		lf_seo_calculate_content_quality($post_id);
 	}
+}
+
+/**
+ * Whether visible meta text lacks the target primary phrase (case-insensitive).
+ * Short phrases are skipped to avoid wiping navigational snippets for tiny tokens.
+ */
+function lf_seo_meta_field_missing_primary_keyword(string $text, string $primary_keyword): bool {
+	$text = trim(wp_strip_all_tags($text));
+	$kw = preg_replace('/\s+/u', ' ', trim($primary_keyword));
+	if ($text === '' || $kw === '') {
+		return false;
+	}
+	if (function_exists('mb_strlen') && mb_strlen($kw, 'UTF-8') < 8) {
+		return false;
+	}
+	return function_exists('mb_stripos')
+		? mb_stripos($text, $kw, 0, 'UTF-8') === false
+		: stripos($text, $kw) === false;
 }
 
 /**
