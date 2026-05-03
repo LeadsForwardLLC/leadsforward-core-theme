@@ -80,5 +80,15 @@ function lf_enqueue_variation_tokens_css(): void {
 			$deps,
 			(string) filemtime($presets)
 		);
+		$deps[] = 'lf-design-presets';
+	}
+	$call = LF_THEME_DIR . '/assets/css/header-call-link.css';
+	if (is_readable($call)) {
+		wp_enqueue_style(
+			'lf-header-call-link',
+			LF_THEME_URI . '/assets/css/header-call-link.css',
+			$deps,
+			(string) filemtime($call)
+		);
 	}
 }

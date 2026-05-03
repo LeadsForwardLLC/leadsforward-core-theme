@@ -36,6 +36,7 @@ function lf_theme_setup(): void {
 	// So block editor can use theme styles; we load our own editor stylesheet.
 	add_theme_support('editor-styles');
 	add_editor_style('assets/css/editor.css');
+	add_editor_style('assets/css/header-call-link.css');
 
 	// Register nav menus. No hardcoded links; templates output nothing if empty.
 	register_nav_menus([
