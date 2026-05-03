@@ -222,6 +222,95 @@ function lf_header_menu_synthetic_child(int $parent_id, int $synthetic_id, strin
 	return new \WP_Post($item);
 }
 
+/**
+ * Services / Service Areas submenus: individual links first, divider(s), then overview (all-link) last.
+ *
+ * wp_nav_menu passes items keyed by menu_order; Walker sibling order follows the flattened list order.
+ * We rebuild order and renumber menu_order globally so keys stay consistent.
+ */
+function lf_header_menu_reorder_services_areas_children(array $items): array {
+	if ($items === []) {
+		return $items;
+	}
+	$flat = array_values($items);
+	usort(
+		$flat,
+		static function ($a, $b): int {
+			return ((int) ($a->menu_order ?? 0)) <=> ((int) ($b->menu_order ?? 0));
+		}
+	);
+
+	$group_parent_ids = [];
+	foreach ($flat as $menu_item) {
+		if ((int) ($menu_item->menu_item_parent ?? 0) !== 0) {
+			continue;
+		}
+		$title = strtolower(trim(wp_strip_all_tags((string) ($menu_item->title ?? ''))));
+		$is_services_group = $title === 'services' || lf_header_menu_item_has_class($menu_item, 'lf-menu-services-parent');
+		$is_areas_group = $title === 'service areas' || lf_header_menu_item_has_class($menu_item, 'lf-menu-areas-parent');
+		if (!$is_services_group && !$is_areas_group) {
+			continue;
+		}
+		$pid = (int) ($menu_item->ID ?? 0);
+		if ($pid > 0) {
+			$group_parent_ids[] = $pid;
+		}
+	}
+
+	$sort_by_order = static function ($a, $b): int {
+		return ((int) ($a->menu_order ?? 0)) <=> ((int) ($b->menu_order ?? 0));
+	};
+
+	foreach ($group_parent_ids as $parent_id) {
+		$indices = [];
+		foreach ($flat as $idx => $menu_item) {
+			if ((int) ($menu_item->menu_item_parent ?? 0) === $parent_id) {
+				$indices[] = $idx;
+			}
+		}
+		if ($indices === []) {
+			continue;
+		}
+		$children = [];
+		foreach ($indices as $idx) {
+			$children[] = $flat[$idx];
+		}
+		$regular = [];
+		$dividers = [];
+		$all_links = [];
+		foreach ($children as $child) {
+			if (lf_header_menu_item_has_class($child, 'lf-submenu-all-link')) {
+				$all_links[] = $child;
+			} elseif (lf_header_menu_item_has_class($child, 'lf-submenu-divider')) {
+				$dividers[] = $child;
+			} else {
+				$regular[] = $child;
+			}
+		}
+		usort($regular, $sort_by_order);
+		usort($dividers, $sort_by_order);
+		usort($all_links, $sort_by_order);
+		$ordered = array_merge($regular, $dividers, $all_links);
+
+		$first_idx = min($indices);
+		foreach (array_reverse($indices) as $idx) {
+			array_splice($flat, $idx, 1);
+		}
+		array_splice($flat, $first_idx, 0, $ordered);
+	}
+
+	$n = 1;
+	foreach ($flat as $menu_item) {
+		$menu_item->menu_order = $n;
+		++$n;
+	}
+	$out = [];
+	foreach ($flat as $menu_item) {
+		$out[$menu_item->menu_order] = $menu_item;
+	}
+	return $out;
+}
+
 function lf_header_menu_objects(array $items, $args): array {
 	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || empty($items)) {
 		return $items;
@@ -277,7 +366,7 @@ function lf_header_menu_objects(array $items, $args): array {
 	if (!empty($extra_items)) {
 		$items = array_merge($items, $extra_items);
 	}
-	return $items;
+	return lf_header_menu_reorder_services_areas_children($items);
 }
 add_filter('wp_nav_menu_objects', 'lf_header_menu_objects', 10, 2);
 
