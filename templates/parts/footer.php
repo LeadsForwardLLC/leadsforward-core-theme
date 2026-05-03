@@ -39,7 +39,7 @@ $social_map = [
 	'instagram' => ['label' => __('Instagram', 'leadsforward-core'), 'icon' => 'instagram'],
 	'youtube' => ['label' => __('YouTube', 'leadsforward-core'), 'icon' => 'youtube'],
 	'linkedin' => ['label' => __('LinkedIn', 'leadsforward-core'), 'icon' => 'linkedin'],
-	'tiktok' => ['label' => __('TikTok', 'leadsforward-core'), 'icon' => 'video'],
+	'tiktok' => ['label' => __('TikTok', 'leadsforward-core'), 'icon' => 'brand-tiktok'],
 	'x' => ['label' => __('X', 'leadsforward-core'), 'icon' => 'twitter'],
 ];
 $social_links = [];

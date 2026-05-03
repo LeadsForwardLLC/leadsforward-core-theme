@@ -159,7 +159,7 @@ function lf_header_menu_item_output(string $item_output, \WP_Post $item, int $de
 	}
 	if (in_array('lf-menu-call', $classes, true) && function_exists('lf_icon')) {
 		$icon = lf_icon('phone', ['class' => 'lf-menu-call__icon lf-icon lf-icon--sm lf-icon--inherit', 'aria-hidden' => 'true']);
-		$item_output = preg_replace('/(<a[^>]*>)(.*?)(<\/a>)/', '$1' . $icon . '<span>$2</span>$3', $item_output, 1);
+		$item_output = preg_replace('/(<a[^>]*>)(.*?)(<\/a>)/', '$1' . $icon . '<span class="lf-menu-call__label">$2</span>$3', $item_output, 1);
 	}
 	if (in_array('lf-menu-more', $classes, true)) {
 		$title = apply_filters('nav_menu_item_title', $item->title, $item, $args, $depth);
@@ -427,6 +427,11 @@ function lf_header_menu_top_level_sort_tuple(\WP_Post $item): array {
  * @return array<int,\WP_Post>
  */
 function lf_header_menu_reorder_flat_blocks(array $items): array {
+	if ($items === []) {
+		return $items;
+	}
+	// wp_nav_menu_objects uses menu_order as array keys (not 0..n); sequential index access breaks block grouping.
+	$items = array_values($items);
 	$n = count($items);
 	if ($n < 2) {
 		return $items;
