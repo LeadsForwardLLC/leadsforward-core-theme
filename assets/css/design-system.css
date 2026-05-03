@@ -2493,6 +2493,7 @@ article a:not(.lf-btn):hover {
 	align-items: center;
 	gap: 0.45rem;
 	line-height: 1;
+	font-size: calc(var(--lf-fs-body, 1rem) + 1px);
 }
 
 .site-header__menu .lf-menu-call > a .lf-icon {
@@ -2503,7 +2504,7 @@ article a:not(.lf-btn):hover {
 	justify-content: center;
 	flex-shrink: 0;
 	overflow: visible;
-	transform: translateY(-0.02em);
+	transform: translateY(-0.1em);
 }
 
 .site-header__menu .lf-menu-call > a .lf-icon > svg {
@@ -2519,6 +2520,7 @@ article a:not(.lf-btn):hover {
 	align-items: center;
 	gap: 0.45rem;
 	line-height: 1;
+	font-size: calc(var(--lf-fs-body, 1rem) + 1px);
 }
 /* Call icon: injected as a raw <svg class="lf-menu-call__icon ..."> */
 .site-header__menu .lf-menu-call__link > svg.lf-menu-call__icon {
@@ -2528,7 +2530,7 @@ article a:not(.lf-btn):hover {
 	display: block !important;
 	overflow: visible !important;
 	margin: 0 !important;
-	transform: none !important;
+	transform: translateY(-2px) !important;
 }
 
 /* Some variants wrap the icon with lf-icon class; hard-reset drift. */
@@ -2540,7 +2542,7 @@ article a:not(.lf-btn):hover {
 	display: inline-flex !important;
 	align-items: center !important;
 	justify-content: center !important;
-	transform: none !important;
+	transform: translateY(-2px) !important;
 }
 
 .site-header__menu .lf-menu-call__link .lf-menu-call__icon.lf-icon > svg,
@@ -2548,7 +2550,7 @@ article a:not(.lf-btn):hover {
 	width: 14px !important;
 	height: 14px !important;
 	display: block !important;
-	transform: none !important;
+	transform: translateY(-2px) !important;
 }
 
 .site-header__menu .lf-menu-call > a svg,
@@ -2596,6 +2598,7 @@ article a:not(.lf-btn):hover {
 	line-height: 1;
 	text-decoration: none;
 	font-weight: 600;
+	font-size: calc(var(--lf-fs-body, 1rem) + 1px);
 	color: var(--lf-text-primary);
 }
 
@@ -2606,7 +2609,7 @@ article a:not(.lf-btn):hover {
 	flex-shrink: 0;
 	font-size: 0.9em;
 	line-height: 1;
-	transform: translateY(-0.02em);
+	transform: translateY(-2px);
 }
 
 .site-header__phone-icon .lf-icon {
@@ -3079,13 +3082,6 @@ article a:not(.lf-btn):hover {
 		font-size: 0.95rem;
 		margin-left: 0.35rem;
 		opacity: 0.85;
-	}
-	body.lf-header-more-open::before {
-		content: '';
-		position: fixed;
-		inset: 0;
-		background: rgba(15, 23, 42, 0.38);
-		z-index: 10000;
 	}
 }
 

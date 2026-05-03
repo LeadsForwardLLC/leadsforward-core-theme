@@ -90,7 +90,7 @@ if ($show_topbar) {
 							<?php if (function_exists('lf_icon')) : ?>
 								<span class="site-header__phone-icon" aria-hidden="true"><?php echo lf_icon('phone', ['class' => 'lf-icon lf-icon--sm lf-icon--inherit']); ?></span>
 							<?php endif; ?>
-							<span class="site-header__phone-text"><?php esc_html_e('Call Now', 'leadsforward-core'); ?></span>
+							<span class="site-header__phone-text"><?php esc_html_e('Call', 'leadsforward-core'); ?></span>
 						</a>
 					<?php endif; ?>
 					<?php if ($show_cta) : ?>

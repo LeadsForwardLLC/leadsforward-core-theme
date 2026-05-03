@@ -3938,7 +3938,7 @@ function lf_ai_studio_fallback_homepage_field_value(string $section_id, string $
 		return __('Get a Free Quote', 'leadsforward-core');
 	}
 	if (strpos($field_key, 'cta_secondary') !== false) {
-		return __('Call Now', 'leadsforward-core');
+		return __('Call', 'leadsforward-core');
 	}
 	if (strpos($field_key, 'label') !== false) {
 		return sanitize_text_field(sprintf(__('%s details', 'leadsforward-core'), $focus));
