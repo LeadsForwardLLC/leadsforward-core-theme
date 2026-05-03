@@ -88,7 +88,7 @@ if ($show_topbar) {
 					<?php if ($cta_phone) : ?>
 						<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $cta_phone)); ?>" class="site-header__phone">
 							<?php if (function_exists('lf_icon')) : ?>
-								<span class="site-header__phone-icon" aria-hidden="true"><?php echo lf_icon('phone', ['class' => 'lf-icon lf-icon--sm lf-icon--inherit']); ?></span>
+								<span class="lf-call__icon-wrap" aria-hidden="true"><?php echo lf_icon('phone', ['class' => 'lf-call__icon lf-icon lf-icon--inherit']); ?></span>
 							<?php endif; ?>
 							<span class="site-header__phone-text"><?php esc_html_e('Call', 'leadsforward-core'); ?></span>
 						</a>

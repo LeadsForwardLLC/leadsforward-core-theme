@@ -2488,86 +2488,65 @@ article a:not(.lf-btn):hover {
 	opacity: 0.7;
 }
 
-.site-header__menu .lf-menu-call > a {
+/*
+ * Header “Call” link — one DOM shape (`lf-call__icon-wrap` + `lf-call__icon`) and tunable vars.
+ * Override on `.site-header` or `.lf-call__icon-wrap`: --lf-call-icon-size, --lf-call-gap, --lf-call-icon-nudge
+ */
+.site-header__menu .lf-menu-call > a.lf-menu-call__link,
+.site-header__menu .lf-menu-call > a,
+.site-header__phone {
+	--lf-call-gap: 0.42em;
+	--lf-call-icon-nudge: -0.05em;
+	--lf-call-icon-size: 0.95em;
 	display: inline-flex;
 	align-items: center;
-	gap: 0.6rem;
-	line-height: 1;
+	gap: var(--lf-call-gap);
+	line-height: 1.2;
 	font-size: calc(var(--lf-fs-body, 1rem) + 1px);
+	font-weight: 600;
+	text-decoration: none;
+	color: var(--lf-text-primary);
 }
 
-.site-header__menu .lf-menu-call > a .lf-icon {
-	width: 0.9em;
-	height: 0.9em;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-	overflow: visible;
-	transform: translateY(-0.14em);
-}
-
-.site-header__menu .lf-menu-call > a .lf-icon > svg {
-	width: 0.9em;
-	height: 0.9em;
-	display: block;
-	overflow: visible;
-}
-
-/* Call-now menu uses an SVG icon element directly (no wrapper span). */
-.site-header__menu .lf-menu-call__link {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.6rem;
-	line-height: 1;
-	font-size: calc(var(--lf-fs-body, 1rem) + 1px);
+@supports (font-size: 1cap) {
+	.site-header__menu .lf-menu-call > a.lf-menu-call__link,
+	.site-header__menu .lf-menu-call > a,
+	.site-header__phone {
+		--lf-call-icon-size: 1cap;
+	}
 }
 
 .site-header__menu .lf-menu-call__label {
 	display: inline-block;
-	line-height: 1.2;
-	transform: translateY(0.03em);
-}
-/* Call icon: injected as a raw <svg class="lf-menu-call__icon ..."> */
-.site-header__menu .lf-menu-call__link > svg.lf-menu-call__icon {
-	width: 14px !important;
-	height: 14px !important;
-	flex: 0 0 14px !important;
-	display: block !important;
-	overflow: visible !important;
-	margin: 0 !important;
-	transform: translateY(-3px) !important;
+	line-height: inherit;
 }
 
-/* Some variants wrap the icon with lf-icon class; hard-reset drift. */
-.site-header__menu .lf-menu-call__link .lf-menu-call__icon.lf-icon,
-.site-header__menu .lf-menu-call__link .lf-icon {
-	width: 14px !important;
-	height: 14px !important;
-	flex: 0 0 14px !important;
-	display: inline-flex !important;
-	align-items: center !important;
-	justify-content: center !important;
-	transform: translateY(-3px) !important;
+/* Icon box tracks label cap-height / em; single optical nudge via --lf-call-icon-nudge */
+.lf-call__icon-wrap {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: var(--lf-call-icon-size, 0.95em);
+	height: var(--lf-call-icon-size, 0.95em);
+	transform: translateY(var(--lf-call-icon-nudge, -0.05em));
 }
 
-.site-header__menu .lf-menu-call__link .lf-menu-call__icon.lf-icon > svg,
-.site-header__menu .lf-menu-call__link .lf-icon > svg {
-	width: 14px !important;
-	height: 14px !important;
-	display: block !important;
-	transform: translateY(-3px) !important;
-}
-
-.site-header__menu .lf-menu-call > a svg,
-.site-header__phone svg {
+.lf-call__icon-wrap .lf-icon,
+.lf-call__icon-wrap svg.lf-call__icon,
+.lf-call__icon-wrap svg.lf-icon {
+	width: 100%;
+	height: 100%;
 	display: block;
 	overflow: visible;
+	margin: 0;
+	padding: 0;
 }
 
-.site-header__menu .lf-menu-call > a .lf-icon,
-.site-header__phone .lf-icon {
-	flex-shrink: 0;
+.lf-call__icon-wrap .lf-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .site-header__menu .lf-menu-cta > a {
@@ -2597,44 +2576,9 @@ article a:not(.lf-btn):hover {
 	gap: 0.75rem;
 }
 
-.site-header__phone {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.6rem;
-	line-height: 1;
-	text-decoration: none;
-	font-weight: 600;
-	font-size: calc(var(--lf-fs-body, 1rem) + 1px);
-	color: var(--lf-text-primary);
-}
-
-.site-header__phone-icon {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-	font-size: 0.9em;
-	line-height: 1;
-	transform: translateY(-2px);
-}
-
-.site-header__phone-icon .lf-icon {
-	width: 1em;
-	height: 1em;
-}
-
-/* Ensure Call Now icon size is truly smaller (both header-action + menu-item paths). */
-.site-header__phone-icon .lf-icon,
-.site-header__phone-icon > svg.lf-icon,
-.site-header__phone-icon svg {
-	width: 14px !important;
-	height: 14px !important;
-	display: block !important;
-	transform: none !important;
-}
-
 .site-header__phone-text {
 	display: inline-block;
+	line-height: inherit;
 }
 
 .site-header__cta {

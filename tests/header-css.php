@@ -10,11 +10,11 @@ expect(strpos($css, '.site-header--sticky') !== false, 'sticky class styles exis
 expect(strpos($css, '.site-header__topbar') !== false, 'topbar styles exist');
 expect(strpos($css, '.site-header--centered') !== false, 'centered header layout styles exist');
 expect(
-	strpos($css, '.site-header__menu .lf-menu-call > a .lf-icon') !== false
-	&& (strpos($css, 'width: 0.9em') !== false || strpos($css, 'width: 1em') !== false)
-	&& (strpos($css, 'height: 0.9em') !== false || strpos($css, 'height: 1em') !== false),
-	'menu call icon sizing rules exist'
+	strpos($css, '.lf-call__icon-wrap') !== false
+	&& strpos($css, '--lf-call-icon-size') !== false
+	&& strpos($css, '--lf-call-icon-nudge') !== false
+	&& strpos($css, '--lf-call-gap') !== false,
+	'call icon wrap + tunable CSS vars exist'
 );
-expect(strpos($css, '.site-header__phone-icon') !== false && strpos($css, 'font-size: 0.9em') !== false, 'phone icon sizing exists');
 
 fwrite(STDOUT, "PASS: header-css\n");

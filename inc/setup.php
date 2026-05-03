@@ -158,7 +158,8 @@ function lf_header_menu_item_output(string $item_output, \WP_Post $item, int $de
 		return $item_output;
 	}
 	if (in_array('lf-menu-call', $classes, true) && function_exists('lf_icon')) {
-		$icon = lf_icon('phone', ['class' => 'lf-menu-call__icon lf-icon lf-icon--sm lf-icon--inherit', 'aria-hidden' => 'true']);
+		$icon = lf_icon('phone', ['class' => 'lf-call__icon lf-icon lf-icon--inherit', 'aria-hidden' => 'true']);
+		$icon = '<span class="lf-call__icon-wrap" aria-hidden="true">' . $icon . '</span>';
 		$item_output = preg_replace('/(<a[^>]*>)(.*?)(<\/a>)/', '$1' . $icon . '<span class="lf-menu-call__label">$2</span>$3', $item_output, 1);
 	}
 	if (in_array('lf-menu-more', $classes, true)) {
