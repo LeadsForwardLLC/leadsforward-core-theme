@@ -2424,6 +2424,24 @@ article a:not(.lf-btn):hover {
 	.site-header__menu > .menu-item {
 		flex-shrink: 0;
 	}
+
+	/* Breathing room after logo; primary links stay left, Call / CTA / More cluster on the right. */
+	.site-header__logo {
+		margin-right: clamp(1rem, 2.5vw, 2.25rem);
+	}
+	.site-header__menu {
+		justify-content: flex-start;
+		width: 100%;
+	}
+	.site-header__menu:has(> .lf-menu-call) > .lf-menu-call {
+		margin-left: auto;
+	}
+	.site-header__menu:not(:has(> .lf-menu-call)):has(> .lf-menu-cta) > .lf-menu-cta {
+		margin-left: auto;
+	}
+	.site-header__menu:not(:has(> .lf-menu-call)):not(:has(> .lf-menu-cta)):has(> .lf-menu-more) > .lf-menu-more {
+		margin-left: auto;
+	}
 }
 
 .site-header__menu a,
@@ -2634,7 +2652,10 @@ article a:not(.lf-btn):hover {
 		justify-content: center;
 		width: 100%;
 	}
-	.site-header--centered .site-header__menu,
+	/* Primary menu uses flex-start so Call/CTA/More can sit on the right; utility stays centered. */
+	.site-header--centered .site-header__menu {
+		justify-content: flex-start;
+	}
 	.site-header--centered .site-header__utility-menu {
 		justify-content: center;
 	}
