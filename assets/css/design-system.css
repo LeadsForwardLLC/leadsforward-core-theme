@@ -2495,9 +2495,10 @@ article a:not(.lf-btn):hover {
 .site-header__menu .lf-menu-call > a.lf-menu-call__link,
 .site-header__menu .lf-menu-call > a,
 .site-header__phone {
-	--lf-call-gap: 0.42em;
-	--lf-call-icon-nudge: -0.05em;
-	--lf-call-icon-size: 0.95em;
+	--lf-call-gap: 0.52em;
+	/* Negative = shift icon up vs flex-center box (phone glyphs sit low in the viewBox). */
+	--lf-call-icon-nudge: -0.12em;
+	--lf-call-icon-size: 0.88em;
 	display: inline-flex;
 	align-items: center;
 	gap: var(--lf-call-gap);
@@ -2512,7 +2513,8 @@ article a:not(.lf-btn):hover {
 	.site-header__menu .lf-menu-call > a.lf-menu-call__link,
 	.site-header__menu .lf-menu-call > a,
 	.site-header__phone {
-		--lf-call-icon-size: 1cap;
+		/* Match cap height without exceeding one em (keeps stroke lighter vs bold label). */
+		--lf-call-icon-size: min(1cap, 1em);
 	}
 }
 
@@ -2527,9 +2529,9 @@ article a:not(.lf-btn):hover {
 	align-items: center;
 	justify-content: center;
 	flex-shrink: 0;
-	width: var(--lf-call-icon-size, 0.95em);
-	height: var(--lf-call-icon-size, 0.95em);
-	transform: translateY(var(--lf-call-icon-nudge, -0.05em));
+	width: var(--lf-call-icon-size, 0.88em);
+	height: var(--lf-call-icon-size, 0.88em);
+	transform: translateY(var(--lf-call-icon-nudge, -0.12em));
 }
 
 .lf-call__icon-wrap .lf-icon,
