@@ -364,8 +364,11 @@ function lf_seo_generate_meta_title_from_keywords(string $primary_keyword): stri
 		$title_parts[] = $brand;
 	}
 	$title = trim(implode(' | ', array_filter($title_parts)));
+	if (function_exists('lf_seo_truncate_meta_title')) {
+		return lf_seo_truncate_meta_title($title, 62);
+	}
 	if (function_exists('mb_substr') && mb_strlen($title) > 62) {
-		$title = rtrim(mb_substr($title, 0, 62));
+		return rtrim(mb_substr($title, 0, 62));
 	}
 	return $title;
 }
@@ -389,6 +392,18 @@ function lf_seo_meta_text_needs_upgrade(string $value, string $type = 'descripti
 		}
 	}
 	if ($type === 'title') {
+		if (function_exists('lf_seo_get_brand_name') && function_exists('lf_seo_title_brand_anchor')) {
+			$bn = trim((string) lf_seo_get_brand_name());
+			$ank = lf_seo_title_brand_anchor($bn);
+			if ($ank !== '' && strlen($ank) >= 5) {
+				$vl = function_exists('mb_strtolower')
+					? mb_strtolower($value, 'UTF-8')
+					: strtolower($value);
+				if (substr_count($vl, $ank) >= 2) {
+					return true;
+				}
+			}
+		}
 		return function_exists('mb_strlen') ? mb_strlen($value) < 32 : strlen($value) < 32;
 	}
 	return function_exists('mb_strlen') ? mb_strlen($value) < 120 : strlen($value) < 120;
