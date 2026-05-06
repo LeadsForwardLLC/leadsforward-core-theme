@@ -54,7 +54,8 @@ if ($order_ids_raw !== '') {
 $query_args = [
 	'post_type'      => 'lf_service',
 	'posts_per_page' => $max_items,
-	'post_status'    => 'publish',
+	// Include non-published services so manifesting can show cards even before detail pages go live.
+	'post_status'    => ['publish', 'future', 'draft', 'pending'],
 	'no_found_rows'  => true,
 ];
 if ($order_ids !== []) {
@@ -69,6 +70,34 @@ if ($order_ids !== []) {
 	$query_args['order'] = 'ASC';
 }
 $query = new WP_Query($query_args);
+
+$services_overview_url = '';
+$services_page = get_page_by_path('services');
+if ($services_page instanceof \WP_Post) {
+	$services_overview_url = (string) get_permalink($services_page);
+}
+if ($services_overview_url === '') {
+	$services_overview_url = home_url('/services/');
+}
+$services_overview_url = rtrim($services_overview_url, '/') . '/';
+
+$desc_overrides_raw = (string) ($section['service_intro_card_desc_overrides'] ?? '');
+$desc_overrides_map = [];
+if ($desc_overrides_raw !== '') {
+	foreach (preg_split('/\r\n|\r|\n/', $desc_overrides_raw) ?: [] as $line) {
+		$line = trim((string) $line);
+		if ($line === '') {
+			continue;
+		}
+		if (preg_match('/^(\d+)\s*[:|]\s*(.+)$/u', $line, $m)) {
+			$sid = (int) ($m[1] ?? 0);
+			$val = trim((string) ($m[2] ?? ''));
+			if ($sid > 0 && $val !== '') {
+				$desc_overrides_map[(string) $sid] = $val;
+			}
+		}
+	}
+}
 ?>
 <section class="lf-block lf-block-service-intro <?php echo esc_attr($surface['class']); ?> lf-block-service-intro--<?php echo esc_attr($variant); ?> lf-block-service-intro--cols-<?php echo esc_attr((string) $columns); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>"<?php echo $section_surface_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- esc_attr in $section_surface_style ?>>
 	<div class="lf-block-service-intro__inner">
@@ -96,7 +125,13 @@ $query = new WP_Query($query_args);
 							$short_desc = $meta;
 						}
 					}
-					$desc = $short_desc !== '' ? wp_trim_words(wp_strip_all_tags($short_desc), 28) : '';
+					$sid = (int) get_the_ID();
+					$override_desc = $desc_overrides_map[(string) $sid] ?? '';
+					if (is_string($override_desc) && trim($override_desc) !== '') {
+						$desc = wp_trim_words(wp_strip_all_tags((string) $override_desc), 28);
+					} else {
+						$desc = $short_desc !== '' ? wp_trim_words(wp_strip_all_tags($short_desc), 28) : '';
+					}
 					if ($desc === '') {
 						$excerpt = get_the_excerpt();
 						if (is_string($excerpt) && $excerpt !== '') {
@@ -106,6 +141,8 @@ $query = new WP_Query($query_args);
 					if ($desc === '') {
 						$desc = sprintf(__('Short overview of %s and what to expect.', 'leadsforward-core'), get_the_title());
 					}
+					$is_published = get_post_status($sid) === 'publish';
+					$card_url = $is_published ? (string) get_permalink($sid) : $services_overview_url;
 					$image_id = $show_images ? (int) get_post_thumbnail_id(get_the_ID()) : 0;
 					if ($show_images && $image_id === 0 && function_exists('lf_get_placeholder_image_id')) {
 						$image_id = lf_get_placeholder_image_id();
@@ -125,7 +162,7 @@ $query = new WP_Query($query_args);
 							<div class="lf-block-service-intro__media"><?php echo $image_html; ?></div>
 						<?php endif; ?>
 						<p class="lf-block-service-intro__desc"><?php echo esc_html($desc); ?></p>
-						<a class="lf-block-service-intro__link" href="<?php the_permalink(); ?>"><?php esc_html_e('Learn more', 'leadsforward-core'); ?></a>
+						<a class="lf-block-service-intro__link" href="<?php echo esc_url($card_url); ?>"><?php esc_html_e('Learn more', 'leadsforward-core'); ?></a>
 					</article>
 				<?php endwhile; ?>
 			</div>

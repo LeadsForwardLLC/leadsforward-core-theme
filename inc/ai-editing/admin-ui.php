@@ -2013,7 +2013,9 @@ function lf_ai_ajax_inline_save(): void {
 		wp_send_json_error(['message' => __('Text cannot be empty.', 'leadsforward-core')]);
 	}
 
-	// Service intro cards: short description lives on the lf_service CPT (ACF).
+	// Service intro cards: by default `lf_service_short_desc` lives on the lf_service CPT (legacy behavior).
+	// New behavior: when the inline edit is happening inside a `service_intro` section, we store
+	// a section-level override map instead (so cards can have unique descriptions without mutating CPT content).
 	if ($field_key === 'lf_service_short_desc') {
 		$service_post_id = isset($_POST['service_post_id']) ? absint($_POST['service_post_id']) : 0;
 		if ($service_post_id <= 0) {
@@ -2023,12 +2025,91 @@ function lf_ai_ajax_inline_save(): void {
 		if (!$svc instanceof \WP_Post || $svc->post_type !== 'lf_service') {
 			wp_send_json_error(['message' => __('That service could not be found.', 'leadsforward-core')]);
 		}
-		if (!current_user_can('edit_post', $service_post_id)) {
-			wp_send_json_error(['message' => __('You cannot edit this service.', 'leadsforward-core')]);
-		}
 		$plain = trim(wp_strip_all_tags($value));
 		if ($plain === '') {
 			wp_send_json_error(['message' => __('Text cannot be empty.', 'leadsforward-core')]);
+		}
+
+		$saved_via_section = false;
+		if (
+			$section_id !== ''
+			&& defined('LF_PB_META_KEY')
+			&& function_exists('lf_pb_get_post_config')
+			&& function_exists('lf_ai_pb_context_for_post')
+			&& function_exists('lf_sections_sanitize_settings')
+		) {
+			$pid = (int) $context_id_use;
+			if ($pid > 0 && current_user_can('edit_post', $pid)) {
+				$post = get_post($pid);
+				if ($post instanceof \WP_Post) {
+					$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+					if ($pb_context !== '') {
+						$config = lf_pb_get_post_config($pid, $pb_context);
+						$old_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+						$section_type = sanitize_text_field((string) ($old_row['type'] ?? ''));
+						if ($section_type === 'service_intro') {
+							$settings = is_array($old_row['settings'] ?? null) ? $old_row['settings'] : [];
+							$raw_map = (string) ($settings['service_intro_card_desc_overrides'] ?? '');
+
+							$lines = function_exists('lf_sections_parse_lines') ? lf_sections_parse_lines($raw_map) : [];
+							if (!is_array($lines)) {
+								$lines = preg_split('/\r\n|\r|\n/', $raw_map) ?: [];
+							}
+
+							$found = false;
+							$new_lines = [];
+							foreach ($lines as $line) {
+								$line = trim((string) $line);
+								if ($line === '') {
+									continue;
+								}
+								if (preg_match('/^(\d+)\s*[:|]\s*(.*)$/u', $line, $m)) {
+									$existing_sid = (string) ($m[1] ?? '');
+									$existing_desc = (string) ($m[2] ?? '');
+									if ($existing_sid === (string) $service_post_id) {
+										$new_lines[] = (string) $service_post_id . '|' . $plain;
+										$found = true;
+										continue;
+									}
+								}
+								$new_lines[] = $line;
+							}
+							if (!$found) {
+								$new_lines[] = (string) $service_post_id . '|' . $plain;
+							}
+
+							$settings['service_intro_card_desc_overrides'] = implode("\n", $new_lines);
+							$settings = lf_sections_sanitize_settings('service_intro', $settings);
+							$config['sections'][$section_id]['settings'] = $settings;
+							update_post_meta($pid, LF_PB_META_KEY, $config);
+							$clear_selector_overrides($context_type, $context_id_use, $selector);
+							$saved_via_section = true;
+
+							$log_id = function_exists('lf_ai_log_action')
+								? lf_ai_log_action(
+									$context_type,
+									$context_id_use,
+									['service_intro_card_desc_overrides::' . $section_id => ''],
+									['service_intro_card_desc_overrides::' . $section_id => $settings['service_intro_card_desc_overrides'] ?? ''],
+									'Inline service intro card desc override'
+								)
+								: '';
+
+							wp_send_json_success([
+								'message' => __('Card description saved for this card.', 'leadsforward-core'),
+								'field_key' => $field_key,
+								'service_post_id' => $service_post_id,
+								'log_id' => $log_id,
+							]);
+						}
+					}
+				}
+			}
+		}
+
+		// Legacy fallback: mutate the lf_service CPT field.
+		if (!current_user_can('edit_post', $service_post_id)) {
+			wp_send_json_error(['message' => __('You cannot edit this service.', 'leadsforward-core')]);
 		}
 		if (function_exists('update_field')) {
 			update_field('lf_service_short_desc', $plain, $service_post_id);

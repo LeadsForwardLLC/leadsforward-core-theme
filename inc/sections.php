@@ -700,6 +700,7 @@ function lf_sections_registry(): array {
 				['key' => 'service_intro_max_items', 'label' => __('Max services', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
 				['key' => 'service_intro_show_images', 'label' => __('Show images', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
 				['key' => 'service_intro_service_ids', 'label' => __('Selected services (IDs)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
+				['key' => 'service_intro_card_desc_overrides', 'label' => __('Card description overrides (SERVICE_ID|Description per line)', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				['key' => 'section_header_align', 'label' => __('Header & intro alignment', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
 					'left' => __('Left', 'leadsforward-core'),
 					'center' => __('Center', 'leadsforward-core'),
@@ -715,6 +716,7 @@ function lf_sections_registry(): array {
 				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Our Services', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Explore our most requested services.', 'leadsforward-core')],
+				['key' => 'service_grid_card_desc_overrides', 'label' => __('Card description overrides (SERVICE_ID|Description per line)', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 			],
 			'render' => 'lf_sections_render_service_grid',
 		],
@@ -2625,7 +2627,15 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 		$body = function_exists('lf_sections_format_richtext_output') ? lf_sections_format_richtext_output($body) : wpautop($body);
 	}
 	$checklist = array_slice(lf_sections_parse_lines((string) ($settings['service_details_checklist'] ?? '')), 0, 6);
+	$checklist = array_values(array_filter($checklist, static function ($item): bool {
+		$plain = strtolower(trim(wp_strip_all_tags((string) $item)));
+		return $plain !== '' && !lf_sections_is_boilerplate_service_detail_micro_line($plain);
+	}));
 	$checklist_secondary = array_slice(lf_sections_parse_lines((string) ($settings['service_details_checklist_secondary'] ?? '')), 0, 6);
+	$checklist_secondary = array_values(array_filter($checklist_secondary, static function ($item): bool {
+		$plain = strtolower(trim(wp_strip_all_tags((string) $item)));
+		return $plain !== '' && !lf_sections_is_boilerplate_service_detail_micro_line($plain);
+	}));
 	$micro_sections = lf_sections_parse_lines((string) ($settings['service_details_micro_sections'] ?? ''));
 	$micro_sections = array_values(array_filter($micro_sections, static function ($line): bool {
 		$plain = strtolower(trim(wp_strip_all_tags((string) $line)));
@@ -3393,6 +3403,7 @@ function lf_sections_render_service_grid(string $context, array $settings, \WP_P
 	$section = [
 		'section_heading' => $settings['section_heading'] ?? '',
 		'section_intro' => $settings['section_intro'] ?? '',
+		'service_grid_card_desc_overrides' => $settings['service_grid_card_desc_overrides'] ?? '',
 		'section_background' => $settings['section_background'] ?? 'light',
 		'section_background_custom' => $settings['section_background_custom'] ?? '',
 		'section_header_align' => $settings['section_header_align'] ?? 'center',
@@ -3497,6 +3508,7 @@ function lf_sections_render_service_intro(string $context, array $settings, \WP_
 		'service_intro_max_items' => $settings['service_intro_max_items'] ?? '6',
 		'service_intro_show_images' => $settings['service_intro_show_images'] ?? '1',
 		'service_intro_service_ids' => $settings['service_intro_service_ids'] ?? '',
+		'service_intro_card_desc_overrides' => $settings['service_intro_card_desc_overrides'] ?? '',
 		'section_header_align' => $settings['section_header_align'] ?? 'center',
 		'icon_enabled' => $settings['icon_enabled'] ?? '0',
 		'icon_slug' => $settings['icon_slug'] ?? '',
