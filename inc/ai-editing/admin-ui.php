@@ -2013,9 +2013,9 @@ function lf_ai_ajax_inline_save(): void {
 		wp_send_json_error(['message' => __('Text cannot be empty.', 'leadsforward-core')]);
 	}
 
-	// Service intro cards: by default `lf_service_short_desc` lives on the lf_service CPT (legacy behavior).
-	// New behavior: when the inline edit is happening inside a `service_intro` section, we store
-	// a section-level override map instead (so cards can have unique descriptions without mutating CPT content).
+	// Service intro / service grid cards: by default `lf_service_short_desc` lives on the lf_service CPT (legacy).
+	// Inside `service_intro` or `service_grid` sections, store section-level overrides so homepage and /services/
+	// can diverge without mutating CPT descriptions.
 	if ($field_key === 'lf_service_short_desc') {
 		$service_post_id = isset($_POST['service_post_id']) ? absint($_POST['service_post_id']) : 0;
 		if ($service_post_id <= 0) {
@@ -2047,9 +2047,12 @@ function lf_ai_ajax_inline_save(): void {
 						$config = lf_pb_get_post_config($pid, $pb_context);
 						$old_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
 						$section_type = sanitize_text_field((string) ($old_row['type'] ?? ''));
-						if ($section_type === 'service_intro') {
+						if ($section_type === 'service_intro' || $section_type === 'service_grid') {
 							$settings = is_array($old_row['settings'] ?? null) ? $old_row['settings'] : [];
-							$raw_map = (string) ($settings['service_intro_card_desc_overrides'] ?? '');
+							$override_key = $section_type === 'service_grid'
+								? 'service_grid_card_desc_overrides'
+								: 'service_intro_card_desc_overrides';
+							$raw_map = (string) ($settings[ $override_key ] ?? '');
 
 							$lines = function_exists('lf_sections_parse_lines') ? lf_sections_parse_lines($raw_map) : [];
 							if (!is_array($lines)) {
@@ -2065,7 +2068,6 @@ function lf_ai_ajax_inline_save(): void {
 								}
 								if (preg_match('/^(\d+)\s*[:|]\s*(.*)$/u', $line, $m)) {
 									$existing_sid = (string) ($m[1] ?? '');
-									$existing_desc = (string) ($m[2] ?? '');
 									if ($existing_sid === (string) $service_post_id) {
 										$new_lines[] = (string) $service_post_id . '|' . $plain;
 										$found = true;
@@ -2078,20 +2080,23 @@ function lf_ai_ajax_inline_save(): void {
 								$new_lines[] = (string) $service_post_id . '|' . $plain;
 							}
 
-							$settings['service_intro_card_desc_overrides'] = implode("\n", $new_lines);
-							$settings = lf_sections_sanitize_settings('service_intro', $settings);
+							$settings[ $override_key ] = implode("\n", $new_lines);
+							$settings = lf_sections_sanitize_settings($section_type, $settings);
 							$config['sections'][$section_id]['settings'] = $settings;
 							update_post_meta($pid, LF_PB_META_KEY, $config);
 							$clear_selector_overrides($context_type, $context_id_use, $selector);
 							$saved_via_section = true;
 
+							$log_label = $section_type === 'service_grid'
+								? 'Inline service grid card desc override'
+								: 'Inline service intro card desc override';
 							$log_id = function_exists('lf_ai_log_action')
 								? lf_ai_log_action(
 									$context_type,
 									$context_id_use,
-									['service_intro_card_desc_overrides::' . $section_id => ''],
-									['service_intro_card_desc_overrides::' . $section_id => $settings['service_intro_card_desc_overrides'] ?? ''],
-									'Inline service intro card desc override'
+									[ $override_key . '::' . $section_id => ''],
+									[ $override_key . '::' . $section_id => $settings[ $override_key ] ?? ''],
+									$log_label
 								)
 								: '';
 
