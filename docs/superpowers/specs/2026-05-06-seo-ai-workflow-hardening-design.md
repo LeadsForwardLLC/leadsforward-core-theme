@@ -12,6 +12,7 @@ Scope covers theme behavior, n8n workflow upgrades, and a feedback loop using a 
 4. **Manual edits stay put** (if a human fixes meta, the system must not quietly overwrite it).
 5. Raise baseline “human-level” quality by adding **deterministic quality gates** and **a guided improvement loop** rather than freeform generation.
 6. **Local SERP suitability**: headings and hero copy on **service** and **service_area** URLs must visibly reflect the target **keyword + place** the page is meant to rank for (not only body keyword count).
+7. **Trustworthy backend editing**: the WordPress **page / CPT** builder stays **responsive** and the in-app **preview matches the public front end** closely enough that editors trust what they save.
 
 ## Non-goals
 
@@ -80,10 +81,14 @@ This section mirrors the master checklist Trevor maintains with the team. Techni
 1. SEO scores green while content is garbage (tighten rules vs real quality).
 2. Topic depth: required sections/H2s, internal links, FAQs that match intent.
 
-### Builder experience
+### Builder experience (backend editor — **priority review**)
 
-1. Editor slow / freezes when selecting text.
-2. `process_expectations` and similar fields: visible in UI so nothing feels “undeletable.”
+The in-admin **page / CPT editor** (manifester / theme builder) is a recurring pain: **laggy**, **sluggish**, **wonky UX**, and the canvas **often does not reflect the live front end** (layout, meta, or content), which erodes trust and slows manifests.
+
+1. **Serious performance pass**: profiling main thread and long tasks; reduce work on selection, typing, drag, scroll, and section focus changes (especially for **custom post types**).
+2. **Preview fidelity**: document and close gaps between builder preview iframe and logged-out frontend (critical CSS, `admin`/preview query args, header/nav state, caches, OG vs visible title).
+3. Editor **slow / freezes** when selecting or highlighting text; fix stacking interactions (inline toolbar, overlays, SEO Health, AI Assistant chrome).
+4. **`process_expectations`** and similar hidden-but-rendered fields: visible in sidebar / structure so editors can clear them deliberately.
 
 ### Workflow (n8n / Airtable / manifest)
 
@@ -146,7 +151,8 @@ Evidence came from Youngstown Foundation Repair Pros (and similar manifests). Ma
 | **Service area CPT**: headings + SEO fields show **`recXXXXXXXX` gibberish** + “from **My WordPress**” in meta | Airtable Record ID pasted into Keyword/Title fields; placeholder brand fallback | Workflow sanitation + Phase 1 brand hardening |
 | Meta edited in WP **reverts** on front after update | Meta regeneration overwriting without locks; conflicting sync timing | Phase 1 meta locking |
 | **Same stock image reused** everywhere on a page site-wide | Attachment picker round-robin not scoped per-section or lacks de-duplication memory | Workflow + Phase 3 image allocator |
-| **Editor freezes** when selecting/highlighting text | Heavy inline scripts, hydration, conflict with overlays (needs profiling) | Builder app + theme audit |
+| **Backend editor** sluggish, “wonky,” preview ≠ live site for **pages / CPTs** | Too much JS on selection/input; iframe preview path ≠ public; cache/host | **Phase 1 §15** (major); `inc/ai-editing/` audit |
+| **Editor freezes** when selecting/highlighting text | Same stack; competing listeners | Builder + theme audit |
 | Homepage “only one weak mention” of core keyword | Hero/H2 prompts not enforcing primary topic + locality for home archetype | Workflow + checklist |
 
 ### Part 2 Loom (timestamped) — service area + service page deep dive
@@ -350,15 +356,26 @@ Inputs:
 - Ranking: section intent keywords ∩ image alt/caption ∩ service terms; penalize mismatches (e.g. laundry room sump image on encapsulation hero).
 - Outputs should prefer responsive sizes and reasonable compression (theme image sizes + uploads discipline).
 
-### 15) Builder / admin performance (“can’t highlight; freezes”)
+### 15) Backend builder editor: performance + preview parity (**major initiative**)
 
-**Requirement**
+**Problem statement (team)**
 
-- Reproduce trace with theme-only vs builder plugin; throttle expensive listeners during text selection.
+- Editing **pages** and **`lf_*` CPTs** in the backend feels **slow, janky, and unreliable**.
+- Inline editing and structure panels **fight the user** (selection freezes, sluggish typing, overlays).
+- What you see **does not reliably match** the **public front end**, so people overwrite good content or distrust saves.
 
-**Deliverable**
+**Workstreams**
 
-- Performance ticket: profiling selection/focus handlers; defer non-critical AI chrome while editing text.
+1. **Instrumentation** — Record traces (Chrome Performance + React/Vue/other if applicable): identify handlers tied to `selectionchange`, `input`, scroll, ResizeObserver, and PB config sync.
+2. **Theme vs host** — Split findings: regressions attributable to **`inc/ai-editing/`**, **`inc/page-builder.php`**, enqueue weight, iframe preview bootstrap; vs plugins (optimization, stale full-page cache in preview).
+3. **Preview parity runbook** — Same URL: compare builder preview URL/query, **View site** logged-out, and **SEO overlays** (`<title>`, rendered H1 stack). Align cache busting (`?nocache`, `LF_*` constants) where documented.
+4. **Progressive degradation** — Option to defer **SEO Health / AI Assistant** panels until idle or explicit open on heavy posts.
+5. **CPT matrix** — Explicit QA pass per editor surface: **`page`** (homepage + inner), **`lf_service`**, **`lf_service_area`**, FAQs, optional others.
+
+**Exit criteria**
+
+- No multi-second freezes during normal **select/type** cycles on median hardware on a representative 10-section manifest.
+- Documented parity checklist passes for **homepage + service + area** on staging.
 
 ### 16) Local SEO prominence rules (hard requirements for key archetypes)
 
@@ -515,6 +532,7 @@ Tie this to:
    - “SEO/meta system” (locks, generation, templating)
    - “n8n generation quality” (prompt + QA node)
    - “Image intelligence”
+   - **“Backend builder”** (sluggish editor, preview ≠ front end, CPT-specific glitches)
 3. **Tuesday** review meeting:
    - confirm changes shipped
    - decide what becomes “hard gate” before full-scale launch
@@ -536,5 +554,5 @@ We are ready to roll full-scale when:
 - Service and service-area pages meet **heading-level local prominence** checks (money keyword + correct place visible above the fold, not buried only in body repetition).
 - Benefits cards pass **title/body integrity** QA; optional process **expectations** footnote is either intentional or absent (never “mystery” fixed copy).
 - Media attachment metadata carries **correct brand** and **topic**, not WordPress placeholders.
-- Builder remains usable: no sustained **freeze on text selection**, and preview **title/meta** matches stored meta after save (minus documented cache exclusions).
+- **Backend builder** remains usable on **pages and primary CPTs**: no sustained **freeze on selection/typing** during normal edits; **logged-out front end** matches builder preview for layout and content within the **documented parity scope**; panels (SEO Health / AI) do not block core editing.
 
