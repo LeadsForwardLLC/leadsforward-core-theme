@@ -19,6 +19,106 @@ Scope covers theme behavior, n8n workflow upgrades, and a feedback loop using a 
 2. Rewriting slugs/URLs automatically.
 3. Turning the theme into a monolithic AI product. This remains a **controlled manifest + apply system**.
 
+## LF Website Builder Issues Checklist (canonical)
+
+This section mirrors the master checklist Trevor maintains with the team. Technical workstreams in Phase 1–3 and the **n8n workflow** appendix map back to these bullets.
+
+### Brand, meta, and keywords
+
+- Stop “My WordPress” (and other defaults) showing in titles, descriptions, and media fields.
+- Fix meta that changes or “reverts” after someone saves in the editor (locks + clear “regenerate” path).
+- Fix title/description in the builder not matching the live site (cache, render path, conflicts).
+- Strip Airtable junk like `recXXXXXXXX` from keywords, headings, and meta.
+- One primary keyword per URL; stop every page inheriting the homepage keyword.
+
+### Local SEO (ranking-facing)
+
+- Enforce service-area pages: money phrase + that area in **H1** and **first big H2** + early in the copy—not buried.
+- Service pages: when the URL/slug implies a city, put city + service in **H1** or **first H2**, not a generic hero.
+- Wrong city on the wrong page (e.g. Youngstown copy on an Austintown page)—block in QA.
+- Related-services tiles must use this page’s area or neutral wording, not HQ city.
+- Homepage: main trade + market visible in headings, not a single weak mention.
+
+### Navigation and layout
+
+1. Duplicate menu items (e.g. Service Areas twice).
+2. Duplicate Call / Free Estimate and messy stacked header.
+3. Links that look like nav but don’t work (bad URL, overlay, etc.).
+4. Service areas overview: text promises a map but map doesn’t show.
+5. CTA above footer: buttons too dark on dark background (contrast).
+6. Footer: logo too big; columns need more spacing.
+
+### Page types and “wrong story”
+
+1. Why Choose Us written like a cost guide (wrong template/intent).
+2. Duplicate or irrelevant About / Why Choose Us pages; sitemap listing duplicates. **There needs to be exactly one of each.**
+3. About FAQs aren’t relevant. Should **dynamically insert “our company”–related FAQs** for this brand.
+
+### Process, benefits, FAQs
+
+1. Process steps all sound the same (inspection/assessment repeated).
+2. Mystery box under process (“60–90 minute walkthrough”): make it an obvious, clearable field **(`process_expectations`)** — or don’t auto-fill it.
+3. Too many benefit cards; default to fewer intentional cards (**6 maximum**).
+4. Benefit headlines cut off (ellipsis) and headline doesn’t match body (e.g. cracks vs “vetted team”).
+5. Benefit / checklist lines that can’t be edited or duplicate other text.
+6. FAQs from the wrong “bucket” (area questions on service pages, etc.).
+
+### Images and media
+
+1. Same image reused across sections/pages when others exist.
+2. Image doesn’t match the section (wrong trade/scene).
+3. File name / alt / title / description don’t match the page topic; “My WordPress” in attachment text.
+4. Service-area pages: process for geo-authentic or geotagged photos where you care about local relevance.
+
+### Service cards / homepage vs services page
+
+1. Homepage boxes vs `/services/` grid: different blurbs, both editable, all link to real service URLs (drafts fallback to `/services/` is already theme-side—generation should still seed good copy).
+2. Stop stuffing the city into every card the same way.
+
+### Coverage, depth, checklist quality
+
+1. SEO scores green while content is garbage (tighten rules vs real quality).
+2. Topic depth: required sections/H2s, internal links, FAQs that match intent.
+
+### Builder experience
+
+1. Editor slow / freezes when selecting text.
+2. `process_expectations` and similar fields: visible in UI so nothing feels “undeletable.”
+
+### Workflow (n8n / Airtable / manifest)
+
+1. Structured payload per page type (service vs area vs About vs Why, etc.).
+2. Second-pass QA node enforcing the rules above before publish.
+3. Reconcile duplicates when manifest creates conflicting pages.
+
+## Appendix: How `docs/n8n-workflow.json` generates content (for the team)
+
+**Workflow name:** `LeadsForward – AI Content Orchestrator`. **Entry:** POST webhook `leadsforward-website-manifester` (body is JSON with **`blueprints[]`**, business fields, callbacks, optional `research_document`, media hints).
+
+**Important:** There is **no browsing / Google SERP step** inside this exported workflow. Both “research” and “writing” calls are **LLM completions** grounded in whatever the webhook sends (business name, niche, city, keywords, blueprint section allowlists, optional pasted `research_document`).
+
+**High-level path**
+
+1. **Research Document Gate** — If the payload already includes `research_document`, that object is stored. Otherwise **Research Generator** (OpenAI) runs using a strategist prompt asking for competitor-like analysis, FAQs, imagery guidance, voice, clusters, etc. **returned as JSON**. No live scraping.
+2. **Split Blueprints + Deterministic Metadata** — Splits **`blueprints[]`** into **one item per page**; infers `page_type`; picks **`primary_keyword` / `secondary_keywords`** from blueprint or payload; injects **`research_context`** (subset of the research JSON); attaches **`style_profile`** (authority / warm_local / premium / direct) deterministically from a seed.
+3. **Blog Planner (post-only)** — Adds blog archetypes and title suggestions for **`post`** page types only.
+4. **Store Blueprint Cache** — Saves per-page inputs for retry cache keys.
+5. **Basic LLM Chain** (**OpenAI `gpt-5.2-chat-latest`**) — The main author. System instructions require **ONLY valid JSON** output with **`updates`** that map fields to **`section_id.field`** keys allowed by the blueprint. Rules include niche/city lock, minimum word counts, uniqueness, benefits format (`Title || Body`), process steps expectations, FAQ targets when blueprint specifies counts, homepage → `target: options` / pages → `post_meta`, etc.
+6. **Parse + Normalize + CTA Guard** — Parses LLM JSON, filters unknown fields, fixes targets, substitutes template tokens (`PRIMARY_KEYWORD` → real phrase if leaked), derives **`service_meta`** short description from hero copy for services.
+7. **Quality Gate + SEO Enforcement** — Adds **warnings** (missing primary keyword, duplicate sentences, duplicate whole fields, “in your area” on wrong types, forbidden tokens, low word counts, banned generic phrases). **Does not strictly block publish** unless upstream failed.
+8. **Retry Decision → optional LLM Retry Chain** — Second LLM pass with **rewrite instructions** tied to warnings.
+9. **Deterministic FAQ Enforcement** — Ensures FAQ answers are wrapped in `<p>` when needed and **forces unique `cta_subheadline_secondary`** text across merged pages via canned variants when duplicates appear.
+10. **Global Completeness + Blog Gate** — Final gate logic before merge.
+11. **Merge Blueprint Results** — Concatenates all page updates into one **`updates`** array; **uniqueness guard** can tweak duplicate headings/strings across sections.
+12. **Attach Callback Metadata** — Optionally attaches **`media_annotations`** / fallbacks keyed from `media_library_candidates` and `image_generation.targets` (**scoring filenames/alt**, not fetching new images).
+13. **HTTP Callback to WP** — POSTs JSON back to **`callback_url`** (theme REST orchestrator applies updates).
+
+**Contradictions to resolve (why sites feel “optimized wrong”)**
+
+- Prompt rule **17d** encourages **city in at most one heading** globally, while the checklist demands **money phrase + locality in multiple visible headings** on service/service-area URLs. QA does **not** yet enforce headline-level local prominence or forbid **wrong-city** mentions.
+- **`process_expectations`** is instructed as **“3–4 items”** in the prompt; theme only shows **first sentence**. That aligns with Shannon’s stray “undeletable” timing blurb unless we change prompt + QA.
+- **Benefits**: prompt mandates **exactly “3 lines”** in **`benefits_items`**; checklist wants **fewer-by-default but up to six cards**—generation and QA need to match the blueprint (max six, sane default three or four).
+
 ## Current observed problems (from team feedback)
 
 1. **Brand name leaks** into meta and copy as “My WordPress” when business entity values are missing or fallback paths are hit.
@@ -228,6 +328,7 @@ Inputs:
 **Requirement**
 
 - FAQ JSON must be selected from pools tagged `service` | `service_area` | `home` | `why` | `about` | `utility` so area-only questions never land on a service page unless explicitly local.
+- **About** pages: use a **company-focused** pool (`about_company` or equivalent) loaded from this site’s **manifest / business_entity** facts so Q&As truly reference **our team, territory, and services** — not unrelated exemplars.
 
 ### 13) Canonical overhead pages (About, Why Choose Us)
 
@@ -288,9 +389,9 @@ Inputs:
 
 ### 18) Benefits grid: count, length, and title/body integrity
 
-**Requirements**
+**Requirements** (aligned with **LF Website Builder Issues Checklist**)
 
-- Cap default **card count** (e.g. 3–4) unless extended layout is explicit.
+- Hard cap **6** benefit cards; default generation should prefer **fewer intentional** cards (e.g. 3–4) unless blueprint explicitly asks for density.
 - Enforce max **headline length** (characters or words) to prevent CSS ellipsis that ruins perceived quality.
 - QA: each card’s body must **entail** the headline topic (no “cosmetic cracks” headline with “vetted team” body).
 
