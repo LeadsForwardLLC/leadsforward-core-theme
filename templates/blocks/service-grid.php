@@ -32,9 +32,38 @@ $query = new WP_Query([
 	'posts_per_page' => -1,
 	'orderby'        => 'menu_order title',
 	'order'          => 'ASC',
-	'post_status'    => 'publish',
+	// Include non-published services so manifesting can show the full service set early.
+	'post_status'    => ['publish', 'future', 'draft', 'pending'],
 	'no_found_rows'  => true,
 ]);
+
+$services_overview_url = '';
+$services_page = get_page_by_path('services');
+if ($services_page instanceof \WP_Post) {
+	$services_overview_url = (string) get_permalink($services_page);
+}
+if ($services_overview_url === '') {
+	$services_overview_url = home_url('/services/');
+}
+$services_overview_url = rtrim($services_overview_url, '/') . '/';
+
+$desc_overrides_raw = (string) ($section['service_grid_card_desc_overrides'] ?? '');
+$desc_overrides_map = [];
+if ($desc_overrides_raw !== '') {
+	foreach (preg_split('/\r\n|\r|\n/', $desc_overrides_raw) ?: [] as $line) {
+		$line = trim((string) $line);
+		if ($line === '') {
+			continue;
+		}
+		if (preg_match('/^(\d+)\s*[:|]\s*(.+)$/u', $line, $m)) {
+			$sid = (int) ($m[1] ?? 0);
+			$val = trim((string) ($m[2] ?? ''));
+			if ($sid > 0 && $val !== '') {
+				$desc_overrides_map[(string) $sid] = $val;
+			}
+		}
+	}
+}
 ?>
 <section class="lf-block lf-block-service-grid <?php echo esc_attr($surface['class']); ?> lf-block-service-grid--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>"<?php echo $section_surface_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<div class="lf-block-service-grid__inner">
@@ -58,13 +87,20 @@ $query = new WP_Query([
 				<?php while ($query->have_posts()) : $query->the_post();
 					$index++;
 					$excerpt = '';
+					$sid = (int) get_the_ID();
+					$is_published = get_post_status($sid) === 'publish';
+					$card_url = $is_published ? (string) get_permalink($sid) : $services_overview_url;
 					if ($variant === 'a') {
+						if (!empty($desc_overrides_map[(string) $sid])) {
+							$excerpt = (string) $desc_overrides_map[(string) $sid];
+						} else {
 						$short_desc = function_exists('get_field') ? (string) get_field('lf_service_short_desc', get_the_ID()) : '';
 						$excerpt = $short_desc !== '' ? wp_strip_all_tags($short_desc) : '';
+						}
 					}
 				?>
 					<li class="lf-block-service-grid__item">
-						<a href="<?php the_permalink(); ?>" class="lf-block-service-grid__link">
+						<a href="<?php echo esc_url($card_url); ?>" class="lf-block-service-grid__link">
 							<?php if ($card_icon) : ?><span class="lf-block-service-grid__icon"><?php echo $card_icon; ?></span><?php endif; ?>
 							<?php if ($variant === 'a') : ?>
 								<span class="lf-block-service-grid__card-index"><?php echo esc_html(str_pad((string) $index, 2, '0', STR_PAD_LEFT)); ?></span>
