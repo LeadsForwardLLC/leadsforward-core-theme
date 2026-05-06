@@ -4,6 +4,8 @@ This document is the plan Trevor and the LeadsForward theme will follow to close
 
 Scope covers theme behavior, n8n workflow upgrades, and a feedback loop using a “gold standard” site Shannon polishes as the exemplar.
 
+**Team-facing extraction (no code digging):** `docs/LF-TEAM-AI-SEO-REVIEW-PACK.md` — how AI research/generation instructions stack, webhook payload, checklist, known contradictions, bug-report tags.
+
 ## Goals
 
 1. **Never leak placeholder identity** in titles/meta (no “My WordPress”, no “Site Title” defaults, no incomplete truncations).
