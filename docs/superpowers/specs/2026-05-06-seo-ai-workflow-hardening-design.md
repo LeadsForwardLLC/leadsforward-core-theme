@@ -11,6 +11,7 @@ Scope covers theme behavior, n8n workflow upgrades, and a feedback loop using a 
 3. **City targeting never drifts** (no Raytown copy on Independence pages).
 4. **Manual edits stay put** (if a human fixes meta, the system must not quietly overwrite it).
 5. Raise baseline “human-level” quality by adding **deterministic quality gates** and **a guided improvement loop** rather than freeform generation.
+6. **Local SERP suitability**: headings and hero copy on **service** and **service_area** URLs must visibly reflect the target **keyword + place** the page is meant to rank for (not only body keyword count).
 
 ## Non-goals
 
@@ -47,6 +48,31 @@ Evidence came from Youngstown Foundation Repair Pros (and similar manifests). Ma
 | **Same stock image reused** everywhere on a page site-wide | Attachment picker round-robin not scoped per-section or lacks de-duplication memory | Workflow + Phase 3 image allocator |
 | **Editor freezes** when selecting/highlighting text | Heavy inline scripts, hydration, conflict with overlays (needs profiling) | Builder app + theme audit |
 | Homepage “only one weak mention” of core keyword | Hero/H2 prompts not enforcing primary topic + locality for home archetype | Workflow + checklist |
+
+### Part 2 Loom (timestamped) — service area + service page deep dive
+
+Same site family (Youngstown / Austintown examples). Use timestamps to match the attached video frames.
+
+| Time | What she reported (transcript) | What the screens show | Owner |
+|------|-------------------------------|------------------------|-------|
+| ~0:01–0:16 | Airtable **record id** “coming through” and “duplicating” | Hero/sidebar/benefits titles like `rec… Austintown OH in Austintown, OH`; repeated location phrasing | Sync sanitize + strip `rec…` (Phase 1 §7) |
+| ~0:16–0:36 | Should rank for **foundation repair + Austintown** in headings; **Youngstown** in a tile on **Austintown** page is wrong | Related-services tiles / copy use HQ city instead of **page locality** | Workflow QA + §4 disallowed-city tokens scoped per URL |
+| ~0:47 | **Same image** reused on one page; prefers **geotagged** imagery for area pages | Identical excavation/foundation shots in stacked sections | Phase 3 allocator + ops note (manual geo EXIF workflow) |
+| ~1:00–1:29 | Something **adds itself**; **frontend meta ≠ backend**; editor **slow** | SEO overlay still shows gibberish title + “My WordPress” in description; perceived lag switching panels | §2 locks + cache/render parity audit; §15 perf |
+| ~1:38–1:51 | Service URL is crawl space repair **Youngstown** but locality missing from **H1 / first H2** | H1 generic (“Protects Your Home”) while URL has city | Workflow: **required local modifier** rule for service archetype |
+| ~1:45–1:54 | **Image ≠ service**; duplicates; filenames / library **title ≠ topic** | Cracked-wall image on crawl space section; Media Library metadata | Phase 3 relevance + ingestion rules |
+| ~1:57–2:07 | WP auto-fills **attachment title/description** inconsistent with purpose (mentions **different** job wording) | “My WordPress — …” in description field in Media modal | WP upload hook / never use raw `blogname` for captions |
+| ~2:16 | **Benefits micro-lines** cannot be edited/removed; duplicate of bullets above | Boilerplate trio (“Delivered by…”) under benefit cards tied to CPT/checklist glue | Theme: ensure benefit card bodies are editable; suppress duplicate boilerplate when redundant (see prior `service_details` filtering pattern) |
+| ~2:32–2:55 | **Ellipsis** truncation; **heading says cosmetic cracks**, body talks about **workers/insurance** | CSS or max-length trim without paired rewrite | QA: headline/body **semantic alignment** + max headline length |
+| ~3:02–3:13 | Six benefit cards → **prefer fewer**; mystery **box below process steps** cannot be deleted | Grey note: “walkthrough lasting 60–90 minutes” — theme renders **`process_expectations`** (`lf_sections_render_process`) after `<ol>` on non-homepage | Theme: expose **Expectations text** clearly in manifester PB config; empty = hide `<p class="lf-process__expectations">`; document |
+| ~3:22 | **FAQs are service-area flavoured** on a **service** page | “How far outside **Youngstown**…” on foundation inspection service URL | FAQ pool routing (Phase 1 §12) |
+| ~3:31–3:44 | **About** FAQs say “questions about our company” but **answers unrelated to this company** | Wrong exemplar/manifest bleed (Independence-style copy) | n8n: company-scoped FAQ set + forbid generic filler |
+
+**Google / local ranking lens (explicit product goal)**
+
+- **Service area CPT**: primary phrase (`{trade} + {area name}` or approved variant) belongs in **H1 or first visible H2** and at least once in opening copy without stuffing HQ city.
+- **Service CPT**: locality in **hero H1 or first section H2** when URL/slug implies city (either always or via configurable rule).
+- **Entity consistency**: attachment **alt/title/description** must match **page topic** and never inject default site title placeholders.
 
 ## Strategy (high-level)
 
@@ -233,6 +259,74 @@ Inputs:
 
 - Performance ticket: profiling selection/focus handlers; defer non-critical AI chrome while editing text.
 
+### 16) Local SEO prominence rules (hard requirements for key archetypes)
+
+**Service area (`lf_service_area`)**
+
+- Primary money phrase + **area name** (e.g. foundation repair + Austintown) must appear in **H1 or the first section H2** and in the **first ~120 words** unless a human overrides with lock.
+- **Forbidden**: repeating the **HQ / parent market** name in customer-facing tiles or intros when it conflicts with the page’s target area (e.g. “Youngstown” on Austintown page except NAP/legal brand line where appropriate).
+
+**Service (`lf_service`)**
+
+- If slug or manifest encodes **city**, **H1 or first content H2** must include that locality (configurable template: “{Service} in {City}” vs brand voice variants).
+
+**Deliverable**
+
+- n8n structured contract fields: `locality_display`, `forbidden_location_tokens[]`, `required_heading_patterns[]`.
+- Checklist / coverage dashboard flags when missing.
+
+### 17) Process “expectations” footnote (the undeletable box)
+
+**Finding**
+
+- The dashed box under numbered steps is **`process_expectations`** rendered in `lf_sections_render_process` as `lf-process__expectations` (non-homepage only). If the manifester injects text but does not surface the field, editors experience it as **not deletable**.
+
+**Requirement**
+
+- Builder UI must list **Expectations text** with the process block; **clearing the field** removes the paragraph entirely.
+- n8n: default empty unless a site wants a single timing note; avoid auto-injecting generic walkthrough copy.
+
+### 18) Benefits grid: count, length, and title/body integrity
+
+**Requirements**
+
+- Cap default **card count** (e.g. 3–4) unless extended layout is explicit.
+- Enforce max **headline length** (characters or words) to prevent CSS ellipsis that ruins perceived quality.
+- QA: each card’s body must **entail** the headline topic (no “cosmetic cracks” headline with “vetted team” body).
+
+**Deliverable**
+
+- Second-pass validator in n8n; optional theme warning in SEO Health for “orphan” boilerplate lines under benefits.
+
+### 19) WordPress media metadata hygiene (“My WordPress” in description)
+
+**Requirement**
+
+- On upload or manifest attach, **description / caption / title** must use **business entity name** + **image intent** (service/area), never raw `get_bloginfo('name')` when it is still a WP default.
+- Filename and library title should stay **consistent** with the section’s primary topic (avoid “leveling” asset on “crawl space repair” without reason).
+
+### 20) Meta rendered on front vs values in editor (debug track)
+
+**Hypotheses to eliminate**
+
+- Object/cache (SG Optimizer, full-page) serving stale `<title>`; alternate path outputting OG vs `<title>`; SEO plugin conflict; auto-regeneration after save.
+
+**Deliverable**
+
+- Short runbook: compare `wp_head` source, post meta `_lf_seo_*`, and builder “SEO Health” payload; add cache-bust or disable conflicting plugin on builder preview if needed.
+
+### 21) Service area “related services” tiles: locality substitution
+
+**Requirement**
+
+- Tile labels like “Crawl space repair in **Youngstown**” on an **Austintown** page are a ranking/UX defect. Use **current area** or neutral “Get crawl space repair” without wrong city.
+
+### 22) About-page FAQ: company alignment
+
+**Requirement**
+
+- If section heading promises “about **our company**”, every Q/A must reference **this site’s** brand, service mix, territory, or proof — not a generic or wrong-market exemplar.
+
 ## Phase 2 (this week): workflow quality improvements in n8n
 
 ### 1) Introduce “structured output contract” for each page type
@@ -256,6 +350,9 @@ QA checks:
 - meta title/description are human-readable and non-redundant
 - no placeholder brand strings
 - no `rec…` fragments, no `#` placeholders, no “My WordPress”
+- **Headline/body pairs** in benefits (and similar card grids): cosine or keyword overlap check; fail if body is generic trust line under a technical headline
+- **Headline length** within UI limits (no reliance on ellipsis for meaning)
+- **Service + service_area**: required local phrase present in designated heading slots (`h1_required`, `first_h2_required`)
 
 Output:
 
@@ -286,7 +383,7 @@ Upgrade the selection rules to prefer:
 
 - service-specific relevance (match service terms)
 - trust and authenticity (real jobs, team, equipment)
-- locality cues (when appropriate)
+- locality cues (when appropriate); for **service area** pages prefer **geo-authentic** or manually geotagged assets when ops supplies them
 
 Add a “do not use” guard for:
 
@@ -335,4 +432,8 @@ We are ready to roll full-scale when:
 - No Airtable record ids leak into headings or SEO fields.
 - Service areas overview renders map/embed when globals are set; CTA buttons remain legible on dark bands.
 - Process and FAQ content match page archetypes; images do not obviously repeat across sections when alternatives exist.
+- Service and service-area pages meet **heading-level local prominence** checks (money keyword + correct place visible above the fold, not buried only in body repetition).
+- Benefits cards pass **title/body integrity** QA; optional process **expectations** footnote is either intentional or absent (never “mystery” fixed copy).
+- Media attachment metadata carries **correct brand** and **topic**, not WordPress placeholders.
+- Builder remains usable: no sustained **freeze on text selection**, and preview **title/meta** matches stored meta after save (minus documented cache exclusions).
 
