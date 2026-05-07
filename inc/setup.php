@@ -61,6 +61,29 @@ function lf_theme_seed_default_niche(): void {
 }
 add_action('after_switch_theme', 'lf_theme_seed_default_niche');
 
+/**
+ * Default new installs to "Discourage search engines" during build.
+ *
+ * WordPress uses the `blog_public` option for Settings → Reading → Search engine visibility.
+ * We only set this on activation when the setup wizard is not complete, so launched sites
+ * are not impacted by theme updates.
+ */
+function lf_theme_default_discourage_indexing_on_activation(): void {
+	$wizard_done = (bool) get_option('lf_setup_wizard_complete', false);
+	if ($wizard_done) {
+		return;
+	}
+	if (!apply_filters('lf_default_discourage_indexing_on_activation', true)) {
+		return;
+	}
+	$current = get_option('blog_public', '1');
+	if ((string) $current === '0') {
+		return;
+	}
+	update_option('blog_public', '0', true);
+}
+add_action('after_switch_theme', 'lf_theme_default_discourage_indexing_on_activation', 20);
+
 function lf_header_menu_item_title(string $title, \WP_Post $item, $args, int $depth): string {
 	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu') {
 		return $title;
