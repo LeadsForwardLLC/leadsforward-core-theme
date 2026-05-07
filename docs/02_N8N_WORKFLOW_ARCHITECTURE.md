@@ -42,6 +42,20 @@ Webhook
 11. **Merge Blueprint Results** collects all page updates.
 12. **Callback to WP** posts the merged updates to the WP orchestrator endpoint.
 
+## Optional Human Review Checkpoint (Quality Maintenance Mode)
+
+To prevent scaled publishing without a human sanity pass, the workflow supports an optional “review required” mode.
+
+If the incoming webhook payload includes:
+
+- `human_review_required: true` (or `require_human_review: true` or `review_mode: "required"`)
+
+Then the workflow will **stop before applying updates** unless the payload also includes:
+
+- `human_review_approved: true` (or `review_approved: true`)
+
+When it stops, it returns an `ok:false` payload with `needs_human_review:true` plus a compact review packet (keyword map, redundancy model, quality gates) so operators can approve the plan before generation proceeds.
+
 ## Model Settings
 - **Page generation LLM**: `gpt-5.2-chat-latest`, `maxTokens=3500`, `temperature=0.5`
 - **Research generation LLM**: `gpt-5.2-chat-latest`, `maxTokens=3000`, `temperature=0.5`
@@ -76,3 +90,7 @@ Current progress body fields:
 - n8n is the first quality gate and catches low-quality output before callback.
 - WordPress is still authoritative and applies deterministic fallback logic server-side.
 - If n8n is unavailable, theme-side scaffold + fallback copy/image/SEO systems still populate the site without AI.
+
+## Quality Gate Notes (Current)
+
+- The quality gate emits warnings when it detects duplicated fields/sentences, placeholder tokens, missing keyword coverage, and missing internal links (no `<a href=...>` found) for most page types. This is designed to reduce “freshness boost” launches where pages ship isolated and later fall below the quality threshold.

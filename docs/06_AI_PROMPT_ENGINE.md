@@ -32,9 +32,14 @@ When a research document is present, a concise `research_context` object is inje
 - `seo_strategy`
 - `faq_strategy`
 - `content_expansion_guidelines`
+- `redundancy_risk_model`
+- `keyword_map`
+- `page_type_playbooks`
+- `image_intelligence`
+- `pre_publish_quality_gates`
 
 ## Ultimate Research Prompt (Contract)
-The research generator must return **JSON only** with the following schema:
+The research generator must return **JSON only** with the following schema. The first section is the backwards-compatible core that downstream nodes expect. The second section extends the schema to support non-redundancy planning, per-URL keyword mapping, image intelligence, and pre-publish quality gates.
 ```json
 {
   "brand_positioning": {
@@ -86,6 +91,69 @@ The research generator must return **JSON only** with the following schema:
     "homepage_depth_strategy": "",
     "service_page_depth_strategy": "",
     "service_area_localization_strategy": ""
+  },
+  "redundancy_risk_model": {
+    "what_google_already_has": [],
+    "how_we_will_not_be_redundant": [],
+    "unique_signal_checklist": []
+  },
+  "keyword_map": {
+    "rules": {
+      "one_primary_keyword_per_url": true,
+      "no_homepage_keyword_bleed": true
+    },
+    "pages": [
+      {
+        "page_hint": "Use blueprint slug/title/post_id to identify the page",
+        "page_type": "",
+        "url_slug": "",
+        "target_location": "",
+        "primary_keyword": "",
+        "secondary_keywords": [],
+        "intent": "transactional | informational | navigational",
+        "differentiation_angle": "",
+        "must_include_proof": [],
+        "avoid_topics": []
+      }
+    ]
+  },
+  "page_type_playbooks": {
+    "home": { "purpose": "", "section_briefs": [] },
+    "service": { "purpose": "", "required_sections": [], "section_briefs": [] },
+    "service_area": { "purpose": "", "required_sections": [], "section_briefs": [] },
+    "about": { "purpose": "", "section_briefs": [] },
+    "why": { "purpose": "", "section_briefs": [] },
+    "blog_post": { "purpose": "", "section_briefs": [], "rules": {} }
+  },
+  "image_intelligence": {
+    "selection_rules": [],
+    "library_analysis": [
+      {
+        "media_id": "",
+        "filename": "",
+        "inferred_subject": "",
+        "best_use_cases": [],
+        "avoid_use_cases": [],
+        "metadata_fixes": {
+          "recommended_alt": "",
+          "recommended_title": "",
+          "recommended_caption": ""
+        }
+      }
+    ],
+    "per_page_image_plan": [
+      {
+        "page_hint": "Use blueprint slug/title/post_id to identify the page",
+        "recommended_images_by_section": [
+          { "section_type_or_id": "", "media_id": "", "reason": "" }
+        ]
+      }
+    ]
+  },
+  "pre_publish_quality_gates": {
+    "block_if": [],
+    "warn_if": [],
+    "human_review_checklist": []
   }
 }
 ```

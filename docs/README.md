@@ -15,6 +15,8 @@ Use this page as the starting point for architecture, operations, and troublesho
 - `01_SYSTEM_OVERVIEW.md` - high-level system map and execution phases.
 - `05_THEME_INTEGRATION.md` - WordPress integration points, callback/apply path, repair safeguards.
 - `02_N8N_WORKFLOW_ARCHITECTURE.md` - n8n node flow, quality gates, callback/progress contract.
+- `LF-TEAM-AI-SEO-REVIEW-PACK.md` - team-facing review pack (no code reading): instruction stack, webhook payload, checklist, known contradictions.
+- `superpowers/specs/2026-05-06-seo-ai-workflow-hardening-design.md` - hardening plan and phased improvements.
 - **LeadsForward → Theme Docs (in-dashboard playbook)** — operator-facing SEO rundown: Airtable sitemap → primary keywords/meta, advisory on-page checklist in the SEO meta box, Internal Link Map, slug vs keyword expectations (section *SEO, performance, and launch*).
 
 ## Data Contracts
