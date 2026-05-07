@@ -1389,6 +1389,7 @@ function lf_quote_builder_send_ghl(array $clean): void {
 		'tags'      => array_values(array_filter(array_map('trim', explode(',', (string) ($settings['ghl_tags'] ?? ''))))),
 		'customData'=> [
 			'service_type' => $clean['service_type'] ?? '',
+			'project_details' => $clean['project_details'] ?? '',
 			'address' => $address,
 			'page_context' => $clean['page_context'] ?? '',
 			'page_title' => $clean['page_title'] ?? '',
