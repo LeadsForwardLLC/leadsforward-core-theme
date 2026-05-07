@@ -33,6 +33,10 @@ function lf_health_seo_settings_url(): string {
 	return admin_url('admin.php?page=lf-seo&tab=settings');
 }
 
+function lf_health_reading_settings_url(): string {
+	return admin_url('options-reading.php');
+}
+
 function lf_health_check_theme_active(): array {
 	$theme = wp_get_theme();
 	$name = $theme->get('Name');
@@ -233,6 +237,24 @@ function lf_health_check_noindex_money_pages(): array {
 		return ['status' => lf_health_status_warning(), 'label' => __('Noindex on money pages', 'leadsforward-core'), 'message' => __('Filter lf_output_noindex_where_needed is disabled; verify noindex is not applied to key pages.', 'leadsforward-core'), 'fix_link' => ''];
 	}
 	return ['status' => lf_health_status_pass(), 'label' => __('Noindex on money pages', 'leadsforward-core'), 'message' => __('Theme only noindexes search, 404, testimonials.', 'leadsforward-core'), 'fix_link' => ''];
+}
+
+function lf_health_check_search_engine_visibility(): array {
+	$blog_public = (string) get_option('blog_public', '1');
+	if ($blog_public === '0') {
+		return [
+			'status' => lf_health_status_warning(),
+			'label' => __('Search engine visibility', 'leadsforward-core'),
+			'message' => __('Discourage search engines from indexing is enabled. Keep this on during build, but remember to disable it before launch and submit the sitemap in GSC.', 'leadsforward-core'),
+			'fix_link' => lf_health_reading_settings_url(),
+		];
+	}
+	return [
+		'status' => lf_health_status_pass(),
+		'label' => __('Search engine visibility', 'leadsforward-core'),
+		'message' => __('Indexing is allowed at the WordPress level.', 'leadsforward-core'),
+		'fix_link' => '',
+	];
 }
 
 function lf_health_check_canonicals(): array {
@@ -474,6 +496,7 @@ function lf_health_prelaunch_checks(): array {
 			lf_health_check_service_area_pages_exist(),
 			lf_health_check_thin_pages(),
 			lf_health_check_schema_present(),
+			lf_health_check_search_engine_visibility(),
 			lf_health_check_noindex_money_pages(),
 			lf_health_check_canonicals(),
 			lf_health_check_single_h1(),
