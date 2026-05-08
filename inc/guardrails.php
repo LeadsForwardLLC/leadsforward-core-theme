@@ -396,16 +396,23 @@ function lf_admin_notice_seo_critical(): void {
 add_action('admin_notices', 'lf_admin_notice_seo_critical');
 
 /**
- * Remove leading Airtable record IDs mistakenly merged into headings or paragraphs.
+ * Remove Airtable record ID tokens (e.g. recAbCdEfGhIjKlM) mistakenly merged into copy.
  */
-function lf_strip_airtable_record_id_prefix(string $text): string {
-	$t = trim($text);
+function lf_strip_airtable_record_ids(string $text): string {
+	$t = (string) $text;
 	if ($t === '') {
 		return '';
 	}
-	$t = preg_replace('/^rec[a-zA-Z0-9]{8,}\\s+/u', '', $t);
+	$t = preg_replace('/\brec[a-zA-Z0-9]{8,}\b/u', '', $t);
+	$t = preg_replace('/[ \t]{2,}/u', ' ', $t);
+	return trim($t);
+}
 
-	return trim((string) $t);
+/**
+ * @deprecated Use lf_strip_airtable_record_ids(); kept for backward compatibility.
+ */
+function lf_strip_airtable_record_id_prefix(string $text): string {
+	return lf_strip_airtable_record_ids($text);
 }
 
 /**

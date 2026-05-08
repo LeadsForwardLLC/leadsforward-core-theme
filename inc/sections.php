@@ -1042,7 +1042,14 @@ function lf_sections_is_boilerplate_service_detail_micro_line(string $plain_lowe
 	if ($plain_lower === '') {
 		return false;
 	}
-	$samples = ['delivered by', 'tailored for homeowners', 'completed with careful', ' careful planning'];
+	$samples = [
+		'delivered by',
+		'tailored for homeowners',
+		'completed with careful',
+		'durable workmanship',
+		'clear communication and reliable',
+		'practical next-step guidance',
+	];
 	foreach ($samples as $s) {
 		if (strpos($plain_lower, $s) !== false) {
 			return true;
@@ -1050,6 +1057,34 @@ function lf_sections_is_boilerplate_service_detail_micro_line(string $plain_lowe
 	}
 
 	return preg_match('/#\s*\d+/', $plain_lower) === 1;
+}
+
+/**
+ * Drop trailing boilerplate <p> blocks from richtext (workflow often duplicates checklist/micro triads in body HTML).
+ */
+function lf_sections_strip_boilerplate_paragraphs_from_html(string $html): string {
+	$html = trim($html);
+	if ($html === '') {
+		return '';
+	}
+	if (!function_exists('lf_sections_is_boilerplate_service_detail_micro_line')) {
+		return $html;
+	}
+	$out = preg_replace_callback(
+		'/<\s*p\b[^>]*>\s*([\s\S]*?)\s*<\/\s*p\s*>/i',
+		static function (array $m): string {
+			$inner = isset($m[1]) ? wp_strip_all_tags((string) $m[1]) : '';
+			$plain = strtolower(trim((string) $inner));
+			if ($plain !== '' && lf_sections_is_boilerplate_service_detail_micro_line($plain)) {
+				return '';
+			}
+			return $m[0];
+		},
+		$html
+	);
+	$out = is_string($out) ? $out : $html;
+	$out = preg_replace('/\s{2,}/u', ' ', $out);
+	return trim((string) $out);
 }
 
 function lf_sections_sanitize_service_details_micro_string(string $raw): string {
@@ -1257,6 +1292,23 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 	}
 	if (isset($out['service_details_body'])) {
 		$out['service_details_body'] = lf_sections_trim_service_details_body_html((string) $out['service_details_body']);
+		$out['service_details_body'] = lf_sections_strip_boilerplate_paragraphs_from_html((string) $out['service_details_body']);
+	}
+	// Media + Content / Content + Media: avoid closing “triad” paragraphs when a checklist already carries proof lines.
+	if (isset($out['section_body']) && in_array($section_id, ['content_image', 'content_image_a', 'content_image_b', 'content_image_c', 'image_content', 'image_content_b'], true)) {
+		$bullets = trim((string) ($out['section_bullets'] ?? ''));
+		if ($bullets !== '') {
+			$out['section_body'] = lf_sections_strip_boilerplate_paragraphs_from_html((string) $out['section_body']);
+		}
+	}
+	// Airtable sync occasionally leaks record ids into visible copy.
+	if (function_exists('lf_strip_airtable_record_ids')) {
+		foreach ($out as $key => $val) {
+			if (!is_string($val) || $val === '') {
+				continue;
+			}
+			$out[ $key ] = lf_strip_airtable_record_ids($val);
+		}
 	}
 	return $out;
 }
