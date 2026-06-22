@@ -20,23 +20,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Research Document Gate: normalize webhook payload and require usable research before skipping generator.\nconst root = $json || {};\nconst hasBody = root.body && typeof root.body === 'object' && !Array.isArray(root.body);\nconst payload = hasBody ? root.body : root;\nconst doc = payload.research_document;\n\nfunction hasUsableResearch(document) {\n  if (!document || typeof document !== 'object' || Array.isArray(document)) return false;\n  const required = [\n    'brand_positioning',\n    'conversion_strategy',\n    'voice_guidelines',\n    'seo_strategy',\n    'faq_strategy',\n    'image_strategy',\n    'content_expansion_guidelines',\n  ];\n  for (const key of required) {\n    if (!document[key] || typeof document[key] !== 'object' || Array.isArray(document[key])) return false;\n  }\n  const bp = document.brand_positioning;\n  const signal = String(bp.market_angle || bp.primary_differentiator || bp.local_positioning_strategy || '').trim();\n  return signal.length >= 5;\n}\n\nconst useProvided = hasUsableResearch(doc);\nconst flagged = { ...payload, _lf_has_valid_research: useProvided };\nconst out = hasBody ? { ...root, body: flagged } : flagged;\nreturn [{ json: out }];\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -280,
-        0
-      ],
-      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "name": "Research Gate Evaluate"
-    },
-    {
-      "parameters": {
         "conditions": {
           "boolean": [
             {
-              "value1": "={{Boolean($json.body && $json.body._lf_has_valid_research) || Boolean($json._lf_has_valid_research)}}",
+              "value1": "={{$json.body && $json.body.research_document ? true : ($json.research_document ? true : false)}}",
               "operation": "isTrue"
             }
           ]
@@ -572,17 +559,6 @@
   "pinData": {},
   "connections": {
     "Webhook": {
-      "main": [
-        [
-          {
-            "node": "Research Gate Evaluate",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Research Gate Evaluate": {
       "main": [
         [
           {
