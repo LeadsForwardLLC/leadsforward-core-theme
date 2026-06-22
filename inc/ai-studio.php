@@ -4807,6 +4807,17 @@ function lf_ai_studio_get_research_document(): array {
 	return is_array($doc) ? $doc : [];
 }
 
+/**
+ * Whether stored research is complete enough to skip the n8n Research Generator.
+ */
+function lf_ai_studio_research_document_is_usable(?array $doc = null): bool {
+	$doc = $doc ?? lf_ai_studio_get_research_document();
+	if ($doc === []) {
+		return false;
+	}
+	return lf_ai_studio_validate_research_document($doc) === [];
+}
+
 function lf_ai_studio_research_hash(array $doc): string {
 	if (empty($doc)) {
 		return '';
@@ -7074,7 +7085,7 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 		'blueprints' => $blueprints,
 	];
 	$research = lf_ai_studio_get_research_document();
-	if (!empty($research)) {
+	if (lf_ai_studio_research_document_is_usable($research)) {
 		$payload['research_document'] = $research;
 	}
 	return $payload;
@@ -7202,7 +7213,7 @@ function lf_ai_studio_build_blog_payload(): array {
 		'blueprints' => $blueprints,
 	];
 	$research = lf_ai_studio_get_research_document();
-	if (!empty($research)) {
+	if (lf_ai_studio_research_document_is_usable($research)) {
 		$payload['research_document'] = $research;
 	}
 	return $payload;

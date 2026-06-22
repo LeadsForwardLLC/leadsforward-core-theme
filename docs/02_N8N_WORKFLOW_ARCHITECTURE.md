@@ -5,7 +5,8 @@ This workflow is the deterministic content orchestrator. It never writes directl
 ## Flow Diagram
 ```
 Webhook
--> Research Document Gate
+-> Research Gate Evaluate (code: validate research_document)
+-> Research Document Gate (IF on _lf_has_valid_research)
    -> Use Provided Research
    -> Research Generator (LLM)
 -> Store Research Document
@@ -22,25 +23,26 @@ Webhook
 
 ## Step-by-Step
 1. **Webhook entry** receives the full payload from WordPress.
-2. **Research Document Gate** checks for `research_document`.
-3. **Research Generator (LLM)** runs only if no research was provided.
-4. **Store Research Document** saves research to workflow static data.
-5. **Split Blueprints** creates one item per page and injects:
+2. **Research Gate Evaluate** (code) normalizes the webhook body and sets `_lf_has_valid_research` only when `research_document` contains required strategy objects (not merely a truthy `{}`).
+3. **Research Document Gate** (IF) routes to **Use Provided Research** when `_lf_has_valid_research` is true; otherwise **Research Generator**.
+4. **Research Generator (LLM)** runs only when no usable research was provided.
+5. **Store Research Document** saves research to workflow static data.
+6. **Split Blueprints** creates one item per page and injects:
    - `research_context` (subset of research_document)
    - deterministic `variation_seed`
    - a single `style_profile`
    - `primary_keyword` and `secondary_keywords` for that page
-6. **Basic LLM Chain** generates JSON for one page blueprint.
-7. **Parse + Normalize + CTA Guard** enforces JSON validity and preserves CTA fields for all pages.
-8. **Quality Gate + SEO Enforcement** is a soft gate that repairs missing keywords/phrases and appends warnings (never fails the run).
-9. **Deterministic FAQ Enforcement**:
+7. **Basic LLM Chain** generates JSON for one page blueprint.
+8. **Parse + Normalize + CTA Guard** enforces JSON validity and preserves CTA fields for all pages.
+9. **Quality Gate + SEO Enforcement** is a soft gate that repairs missing keywords/phrases and appends warnings (never fails the run).
+10. **Deterministic FAQ Enforcement**:
    - Preserves per-page FAQ output (no cross-page injection).
    - Normalizes FAQ answers to valid `<p>` HTML when needed.
-10. **Global Completeness + Blog Gate** (run once for all generated items):
+11. **Global Completeness + Blog Gate** (run once for all generated items):
    - soft gate: emits scope/quality warnings (no hard failures).
    - emits `quality_warnings` for observability.
-11. **Merge Blueprint Results** collects all page updates.
-12. **Callback to WP** posts the merged updates to the WP orchestrator endpoint.
+12. **Merge Blueprint Results** collects all page updates.
+13. **Callback to WP** posts the merged updates to the WP orchestrator endpoint.
 
 ## Optional Human Review Checkpoint (Quality Maintenance Mode)
 
