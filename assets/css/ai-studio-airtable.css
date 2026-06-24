@@ -704,6 +704,28 @@
   position: relative;
   z-index: 1;
   color-scheme: light;
+  -webkit-appearance: auto;
+  appearance: auto;
+}
+
+.lf-publish-schedule__date-trigger {
+  flex: 0 0 auto;
+  min-height: 30px;
+  line-height: 1;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lf-publish-schedule__date-trigger .dashicons {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+}
+
+.lf-publish-schedule__date-trigger--hidden {
+  display: none !important;
 }
 
 .lf-publish-schedule__date::-webkit-calendar-picker-indicator {

@@ -310,6 +310,25 @@ function lf_dev_reset_run(): void {
 	delete_option('lf_homepage_city');
 	delete_option('lf_homepage_keywords');
 	delete_option('lf_homepage_variation_seed');
+	delete_option('lf_site_builder_last_run');
+	delete_option('lf_ai_scope_service_ids');
+	delete_option('lf_ai_scope_service_area_ids');
+	delete_option('lf_ai_scope_service_slugs');
+	delete_option('lf_ai_scope_service_area_slugs');
+	delete_option('lf_ai_scope_service_slugs_mode');
+	delete_option('lf_ai_scope_service_area_slugs_mode');
+	update_option('lf_ai_gen_homepage', '1', false);
+	update_option('lf_ai_gen_services', '1', false);
+	update_option('lf_ai_gen_service_areas', '1', false);
+	update_option('lf_ai_gen_core_pages', '1', false);
+	update_option('lf_ai_gen_blog_posts', '0', false);
+	update_option('lf_ai_gen_projects', '0', false);
+	if (function_exists('lf_publish_schedule_reset_to_defaults')) {
+		lf_publish_schedule_reset_to_defaults();
+	} elseif (defined('LF_PUBLISH_SCHEDULE_OPTION')) {
+		delete_option(LF_PUBLISH_SCHEDULE_OPTION);
+	}
+	delete_option('lf_publish_schedule_cpt_draft_migrated');
 	update_option('blogname', '');
 	update_option('blogdescription', '');
 	// Clear global settings (logo + header CTA).

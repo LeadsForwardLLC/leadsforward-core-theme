@@ -96,6 +96,38 @@ function lf_publish_schedule_resolved_item(string $schedule_key): array {
 }
 
 /**
+ * Reset publish timing to built-in page defaults (drops per-CPT overrides).
+ */
+function lf_publish_schedule_reset_to_defaults(): void {
+	update_option(LF_PUBLISH_SCHEDULE_OPTION, ['items' => lf_publish_schedule_default_items()], false);
+}
+
+/**
+ * Remove saved CPT publish-timing rows so built-in draft defaults apply.
+ */
+function lf_publish_schedule_strip_cpt_items(): void {
+	$items = lf_publish_schedule_get_items();
+	$changed = false;
+	foreach (array_keys($items) as $key) {
+		if (!is_string($key)) {
+			continue;
+		}
+		if (preg_match('/^lf_service(:|$)/', $key) || preg_match('/^lf_service_area(:|$)/', $key)) {
+			unset($items[ $key ]);
+			$changed = true;
+		}
+	}
+	if (!$changed) {
+		return;
+	}
+	if ($items === []) {
+		lf_publish_schedule_reset_to_defaults();
+		return;
+	}
+	update_option(LF_PUBLISH_SCHEDULE_OPTION, ['items' => $items], false);
+}
+
+/**
  * Seed core page defaults into the option when nothing has been saved yet.
  */
 function lf_publish_schedule_seed_defaults_if_empty(): void {
@@ -135,6 +167,26 @@ function lf_publish_schedule_get_items(): array {
 
 	return $out;
 }
+
+/**
+ * One-time: drop legacy auto-stagger CPT schedule rows so draft defaults apply in the UI.
+ */
+function lf_publish_schedule_maybe_migrate_cpt_defaults(): void {
+	if (!is_admin() || !current_user_can('edit_theme_options')) {
+		return;
+	}
+	$page = isset($_GET['page']) ? sanitize_key((string) wp_unslash((string) $_GET['page'])) : '';
+	$manifest_slug = defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest';
+	if ($page !== $manifest_slug) {
+		return;
+	}
+	if (get_option('lf_publish_schedule_cpt_draft_migrated') === '1') {
+		return;
+	}
+	lf_publish_schedule_strip_cpt_items();
+	update_option('lf_publish_schedule_cpt_draft_migrated', '1', false);
+}
+add_action('admin_init', 'lf_publish_schedule_maybe_migrate_cpt_defaults', 20);
 
 /**
  * @param array<string, mixed> $raw_post
@@ -469,6 +521,13 @@ function lf_publish_schedule_render_controls(string $schedule_key, array $stored
 			autocomplete="off"
 			aria-label="<?php esc_attr_e('Publish date and time', 'leadsforward-core'); ?>"
 		/>
+		<button
+			type="button"
+			class="button button-small lf-publish-schedule__date-trigger<?php echo $timing === 'schedule' ? '' : ' lf-publish-schedule__date-trigger--hidden'; ?>"
+			data-lf-publish-date-trigger
+			aria-label="<?php esc_attr_e('Open date picker', 'leadsforward-core'); ?>"
+			title="<?php esc_attr_e('Pick date & time', 'leadsforward-core'); ?>"
+		><span class="dashicons dashicons-calendar-alt" aria-hidden="true"></span></button>
 	</div>
 	<?php
 }

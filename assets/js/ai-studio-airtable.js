@@ -298,11 +298,40 @@
 
   function openPublishDatePicker(input) {
     if (!input || input.classList.contains('lf-publish-schedule__date--hidden')) return;
-    try {
-      if (typeof input.showPicker === 'function') {
-        input.showPicker();
-      }
-    } catch (ePicker) {}
+    var normalized = publishScheduleToDatetimeLocalValue(input.value);
+    if (normalized) {
+      input.value = normalized;
+    }
+    if (!input.value) {
+      input.value = publishScheduleDefaultDatetimeLocal();
+    }
+    input.min = publishScheduleMinDatetimeLocal();
+    window.setTimeout(function () {
+      try {
+        if (typeof input.showPicker === 'function') {
+          input.showPicker();
+          return;
+        }
+      } catch (ePicker) {}
+      input.focus();
+      input.click();
+    }, 0);
+  }
+
+  function createPublishDateTriggerButton(dateInput, strings) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'button button-small lf-publish-schedule__date-trigger';
+    btn.setAttribute('data-lf-publish-date-trigger', '1');
+    btn.setAttribute('aria-label', strings.publishDatePlaceholder || 'Open date picker');
+    btn.title = strings.publishDatePlaceholder || 'Pick date & time';
+    btn.innerHTML = '<span class="dashicons dashicons-calendar-alt" aria-hidden="true"></span>';
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      openPublishDatePicker(dateInput);
+    });
+    return btn;
   }
 
   function publishScheduleDefaultTiming(scheduleKey) {
@@ -369,15 +398,18 @@
       e.stopPropagation();
       openPublishDatePicker(dateInput);
     });
-    dateInput.addEventListener('focus', function () {
-      openPublishDatePicker(dateInput);
-    });
     dateInput.addEventListener('change', function (e) {
       e.stopPropagation();
     });
 
+    var triggerBtn = createPublishDateTriggerButton(dateInput, strings);
+    if (timing !== 'schedule') {
+      triggerBtn.classList.add('lf-publish-schedule__date-trigger--hidden');
+    }
+
     wrap.appendChild(select);
     wrap.appendChild(dateInput);
+    wrap.appendChild(triggerBtn);
     bindPublishTimingSelect(wrap);
     return wrap;
   }
@@ -392,11 +424,20 @@
       e.stopPropagation();
       openPublishDatePicker(dateEl);
     });
-    dateEl.addEventListener('focus', function () {
-      openPublishDatePicker(dateEl);
-    });
     dateEl.addEventListener('change', function (e) {
       e.stopPropagation();
+    });
+  }
+
+  function bindPublishDateTrigger(wrap, dateEl) {
+    if (!wrap || !dateEl) return;
+    var btn = wrap.querySelector('[data-lf-publish-date-trigger]');
+    if (!btn || btn.getAttribute('data-lf-publish-trigger-bound')) return;
+    btn.setAttribute('data-lf-publish-trigger-bound', '1');
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      openPublishDatePicker(dateEl);
     });
   }
 
@@ -407,9 +448,14 @@
     var dateEl = wrap.querySelector('[data-lf-publish-date]');
     if (!select || !dateEl) return;
     bindPublishDateInput(dateEl);
+    bindPublishDateTrigger(wrap, dateEl);
+    var triggerEl = wrap.querySelector('[data-lf-publish-date-trigger]');
     var sync = function () {
       var on = select.value === 'schedule';
       dateEl.classList.toggle('lf-publish-schedule__date--hidden', !on);
+      if (triggerEl) {
+        triggerEl.classList.toggle('lf-publish-schedule__date-trigger--hidden', !on);
+      }
       if (!on) {
         dateEl.value = '';
         return;
