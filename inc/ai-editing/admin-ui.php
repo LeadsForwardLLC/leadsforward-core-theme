@@ -3675,7 +3675,9 @@ function lf_ai_ajax_service_library(): void {
 	$search = isset($_POST['search']) ? sanitize_text_field(wp_unslash((string) $_POST['search'])) : '';
 	$query_args = [
 		'post_type'      => 'lf_service',
-		'post_status'    => 'publish',
+		'post_status'    => function_exists('lf_cpt_card_query_post_statuses')
+			? lf_cpt_card_query_post_statuses()
+			: ['publish', 'future', 'draft', 'pending'],
 		'posts_per_page' => 200,
 		'orderby'        => 'menu_order title',
 		'order'          => 'ASC',
@@ -3689,6 +3691,7 @@ function lf_ai_ajax_service_library(): void {
 	while ($q->have_posts()) {
 		$q->the_post();
 		$sid = (int) get_the_ID();
+		$post = get_post($sid);
 		$thumb = get_the_post_thumbnail_url($sid, 'medium');
 		$short_desc = function_exists('get_field') ? (string) get_field('lf_service_short_desc', $sid) : '';
 		if ($short_desc === '') {
@@ -3704,13 +3707,19 @@ function lf_ai_ajax_service_library(): void {
 				$desc = wp_trim_words(wp_strip_all_tags($excerpt), 28);
 			}
 		}
-		$rows[] = [
+		$status_meta = ($post instanceof \WP_Post && function_exists('lf_cpt_editor_status_meta'))
+			? lf_cpt_editor_status_meta($post)
+			: ['status' => 'publish', 'status_label' => __('Live', 'leadsforward-core'), 'is_live' => true];
+		$permalink = ($post instanceof \WP_Post && function_exists('lf_cpt_card_permalink'))
+			? lf_cpt_card_permalink($post)
+			: (string) get_permalink($sid);
+		$rows[] = array_merge($status_meta, [
 			'id'            => $sid,
 			'title'         => html_entity_decode((string) get_the_title(), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
-			'permalink'     => (string) get_permalink($sid),
+			'permalink'     => $permalink,
 			'thumbnail_url' => is_string($thumb) ? $thumb : '',
 			'short_desc'    => $desc,
-		];
+		]);
 	}
 	wp_reset_postdata();
 	wp_send_json_success([
