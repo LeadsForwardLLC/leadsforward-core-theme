@@ -476,7 +476,7 @@ function lf_ai_studio_assets(string $hook): void {
 			'publishNow' => __('Publish now', 'leadsforward-core'),
 			'publishSchedule' => __('Schedule', 'leadsforward-core'),
 			'publishDraft' => __('Keep draft', 'leadsforward-core'),
-			'publishDatePlaceholder' => __('Pick date…', 'leadsforward-core'),
+			'publishDatePlaceholder' => __('Pick date & time…', 'leadsforward-core'),
 		],
 		'researchStrings' => [
 			'uploading' => __('Uploading research…', 'leadsforward-core'),

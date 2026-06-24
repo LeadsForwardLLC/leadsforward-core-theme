@@ -697,8 +697,18 @@
 }
 
 .lf-publish-schedule__date {
-  width: 10.5rem;
+  width: 13.5rem;
+  max-width: 100%;
   min-height: 30px;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
+  color-scheme: light;
+}
+
+.lf-publish-schedule__date::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 1;
 }
 
 .lf-publish-schedule__date--hidden {

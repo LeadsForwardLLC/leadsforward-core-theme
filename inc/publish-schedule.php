@@ -106,6 +106,12 @@ function lf_publish_schedule_normalize_datetime(string $value): string {
 	if ($value === '') {
 		return '';
 	}
+	if (preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/', $value)) {
+		$value = str_replace('T', ' ', substr($value, 0, 16));
+		if (strlen($value) === 16) {
+			$value .= ':00';
+		}
+	}
 	if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
 		return $value . ' 09:00:00';
 	}
@@ -120,6 +126,31 @@ function lf_publish_schedule_normalize_datetime(string $value): string {
 	}
 
 	return '';
+}
+
+/**
+ * Value for <input type="datetime-local"> from stored schedule datetime.
+ */
+function lf_publish_schedule_datetime_local_value(string $stored): string {
+	$stored = trim($stored);
+	if ($stored === '') {
+		return '';
+	}
+	if (preg_match('/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/', $stored, $m)) {
+		return $m[1] . 'T' . $m[2];
+	}
+	if (preg_match('/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/', $stored, $m)) {
+		return $m[1] . 'T' . $m[2];
+	}
+	if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $stored)) {
+		return $stored . 'T09:00';
+	}
+
+	return '';
+}
+
+function lf_publish_schedule_datetime_local_min(): string {
+	return wp_date('Y-m-d\TH:i');
 }
 
 /**
@@ -351,14 +382,15 @@ function lf_publish_schedule_render_controls(string $schedule_key, array $stored
 			<option value="draft" <?php selected($timing, 'draft'); ?>><?php esc_html_e('Keep draft', 'leadsforward-core'); ?></option>
 		</select>
 		<input
-			type="date"
+			type="datetime-local"
 			class="lf-publish-schedule__date<?php echo $timing === 'schedule' ? '' : ' lf-publish-schedule__date--hidden'; ?>"
 			name="<?php echo esc_attr($field_base . '[date]'); ?>"
-			value="<?php echo esc_attr($date !== '' ? substr($date, 0, 10) : ''); ?>"
-			min="<?php echo esc_attr(wp_date('Y-m-d')); ?>"
+			value="<?php echo esc_attr(lf_publish_schedule_datetime_local_value($date)); ?>"
+			min="<?php echo esc_attr(lf_publish_schedule_datetime_local_min()); ?>"
+			step="60"
 			data-lf-publish-date
 			autocomplete="off"
-			aria-label="<?php esc_attr_e('Publish date', 'leadsforward-core'); ?>"
+			aria-label="<?php esc_attr_e('Publish date and time', 'leadsforward-core'); ?>"
 		/>
 	</div>
 	<?php

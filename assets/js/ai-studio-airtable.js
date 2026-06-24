@@ -259,13 +259,50 @@
     return (cfg && cfg.strings) ? cfg.strings : {};
   }
 
-  function publishScheduleMinDate() {
+  function publishSchedulePad2(n) {
+    n = String(n);
+    return n.length < 2 ? '0' + n : n;
+  }
+
+  function publishScheduleFormatDatetimeLocal(dateObj) {
+    if (!dateObj || isNaN(dateObj.getTime())) return '';
+    return dateObj.getFullYear() + '-'
+      + publishSchedulePad2(dateObj.getMonth() + 1) + '-'
+      + publishSchedulePad2(dateObj.getDate()) + 'T'
+      + publishSchedulePad2(dateObj.getHours()) + ':'
+      + publishSchedulePad2(dateObj.getMinutes());
+  }
+
+  function publishScheduleMinDatetimeLocal() {
+    return publishScheduleFormatDatetimeLocal(new Date());
+  }
+
+  function publishScheduleDefaultDatetimeLocal() {
     var d = new Date();
-    var m = String(d.getMonth() + 1);
-    var day = String(d.getDate());
-    if (m.length < 2) m = '0' + m;
-    if (day.length < 2) day = '0' + day;
-    return d.getFullYear() + '-' + m + '-' + day;
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0);
+    return publishScheduleFormatDatetimeLocal(d);
+  }
+
+  function publishScheduleToDatetimeLocalValue(raw) {
+    var value = String(raw || '').trim();
+    if (!value) return '';
+    var isoMatch = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+    if (isoMatch) return isoMatch[1] + 'T' + isoMatch[2];
+    var mysqlMatch = value.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
+    if (mysqlMatch) return mysqlMatch[1] + 'T' + mysqlMatch[2];
+    var dateOnly = value.match(/^(\d{4}-\d{2}-\d{2})$/);
+    if (dateOnly) return dateOnly[1] + 'T09:00';
+    return '';
+  }
+
+  function openPublishDatePicker(input) {
+    if (!input || input.classList.contains('lf-publish-schedule__date--hidden')) return;
+    try {
+      if (typeof input.showPicker === 'function') {
+        input.showPicker();
+      }
+    } catch (ePicker) {}
   }
 
   function buildPublishScheduleNode(scheduleKey, stored) {
@@ -295,14 +332,15 @@
     });
 
     var dateInput = document.createElement('input');
-    dateInput.type = 'date';
+    dateInput.type = 'datetime-local';
     dateInput.className = 'lf-publish-schedule__date';
     dateInput.name = 'lf_ai_publish_schedule[' + scheduleKey + '][date]';
-    dateInput.value = date.length >= 10 ? date.slice(0, 10) : date;
-    dateInput.min = publishScheduleMinDate();
+    dateInput.value = publishScheduleToDatetimeLocalValue(date);
+    dateInput.min = publishScheduleMinDatetimeLocal();
+    dateInput.step = '60';
     dateInput.setAttribute('data-lf-publish-date', '1');
     dateInput.autocomplete = 'off';
-    dateInput.setAttribute('aria-label', strings.publishDatePlaceholder || 'Publish date');
+    dateInput.setAttribute('aria-label', strings.publishDatePlaceholder || 'Publish date and time');
     if (timing !== 'schedule') {
       dateInput.classList.add('lf-publish-schedule__date--hidden');
     }
@@ -313,8 +351,15 @@
     select.addEventListener('change', function (e) {
       e.stopPropagation();
     });
+    dateInput.addEventListener('mousedown', function (e) {
+      e.stopPropagation();
+    });
     dateInput.addEventListener('click', function (e) {
       e.stopPropagation();
+      openPublishDatePicker(dateInput);
+    });
+    dateInput.addEventListener('focus', function () {
+      openPublishDatePicker(dateInput);
     });
     dateInput.addEventListener('change', function (e) {
       e.stopPropagation();
@@ -326,18 +371,42 @@
     return wrap;
   }
 
+  function bindPublishDateInput(dateEl) {
+    if (!dateEl || dateEl.getAttribute('data-lf-publish-date-bound')) return;
+    dateEl.setAttribute('data-lf-publish-date-bound', '1');
+    dateEl.addEventListener('mousedown', function (e) {
+      e.stopPropagation();
+    });
+    dateEl.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openPublishDatePicker(dateEl);
+    });
+    dateEl.addEventListener('focus', function () {
+      openPublishDatePicker(dateEl);
+    });
+    dateEl.addEventListener('change', function (e) {
+      e.stopPropagation();
+    });
+  }
+
   function bindPublishTimingSelect(wrap) {
     if (!wrap || wrap.getAttribute('data-lf-publish-bound')) return;
     wrap.setAttribute('data-lf-publish-bound', '1');
     var select = wrap.querySelector('[data-lf-publish-timing]');
     var dateEl = wrap.querySelector('[data-lf-publish-date]');
     if (!select || !dateEl) return;
+    bindPublishDateInput(dateEl);
     var sync = function () {
       var on = select.value === 'schedule';
       dateEl.classList.toggle('lf-publish-schedule__date--hidden', !on);
       if (!on) {
         dateEl.value = '';
+        return;
       }
+      if (!dateEl.value) {
+        dateEl.value = publishScheduleDefaultDatetimeLocal();
+      }
+      dateEl.min = publishScheduleMinDatetimeLocal();
     };
     select.addEventListener('change', sync);
     sync();
@@ -370,7 +439,10 @@
         var t = sched.querySelector('[data-lf-publish-timing]');
         var d = sched.querySelector('[data-lf-publish-date]');
         if (key && t) {
-          prevSchedule[key] = { timing: t.value, date: d ? d.value : '' };
+          prevSchedule[key] = {
+            timing: t.value,
+            date: d ? publishScheduleToDatetimeLocalValue(d.value) : ''
+          };
         }
       }
     });
