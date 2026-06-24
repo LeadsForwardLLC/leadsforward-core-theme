@@ -1300,6 +1300,13 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-faq-picker__item:hover { border-color:#c4b5fd; background:#faf7ff; }
 		.lf-ai-faq-picker__meta b { display:block; font-size:12px; color:#0f172a; margin-bottom:3px; }
 		.lf-ai-faq-picker__meta small { display:block; font-size:11px; color:#64748b; line-height:1.35; }
+		.lf-ai-faq-picker__status { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.03em; margin-top:4px; padding:2px 7px; border-radius:999px; line-height:1.35; }
+		.lf-ai-faq-picker__status--publish { background:#dcfce7; color:#166534; }
+		.lf-ai-faq-picker__status--future { background:#fef3c7; color:#92400e; }
+		.lf-ai-faq-picker__status--draft,
+		.lf-ai-faq-picker__status--pending,
+		.lf-ai-faq-picker__status--private { background:#f1f5f9; color:#475569; }
+		.lf-block-service-intro__card-head .lf-ai-service-status-badge { margin-top:4px; }
 		.lf-ai-faq-picker__context { display:block; font-size:11px; color:#475569; margin-top:4px; font-weight:600; line-height:1.35; }
 		.lf-ai-faq-picker__add { border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:28px; padding:0 10px; font-size:12px; cursor:pointer; white-space:nowrap; }
 		.lf-ai-faq-picker__add:hover { background:#f5f0ff; }
@@ -7037,6 +7044,32 @@ function lf_ai_assistant_widget_js(): string {
 			});
 			media.appendChild(ph);
 		}
+		function applyServiceStatusBadgeToCard(card, row) {
+			if (!card || !row) return;
+			var head = card.querySelector(".lf-block-service-intro__card-head");
+			if (!head) return;
+			Array.prototype.slice.call(head.querySelectorAll(".lf-ai-service-status-badge")).forEach(function(node){
+				if (node && node.parentNode) node.parentNode.removeChild(node);
+			});
+			var status = String(row.status || "publish");
+			var badge = document.createElement("span");
+			badge.className = "lf-ai-service-status-badge lf-ai-faq-picker__status lf-ai-faq-picker__status--" + status;
+			badge.textContent = String(row.status_label || (row.is_live ? "Live" : "Scheduled"));
+			head.appendChild(badge);
+		}
+		function wireServiceIntroStatusBadgesForWrap(wrap) {
+			if (!wrap) return;
+			var cards = wrap.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id]");
+			if (!cards.length) return;
+			loadServiceLibrary(function(rows){
+				var byId = {};
+				(rows || []).forEach(function(r){ byId[String(r.id || "")] = r; });
+				Array.prototype.slice.call(cards).forEach(function(card){
+					var sid = String(card.getAttribute("data-lf-service-id") || "");
+					applyServiceStatusBadgeToCard(card, byId[sid]);
+				});
+			});
+		}
 		function wireServiceIntroThumbnailsForWrap(wrap) {
 			if (!wrap) return;
 			Array.prototype.slice.call(wrap.querySelectorAll(".lf-block-service-intro__card[data-lf-service-id]")).forEach(function(card){
@@ -7081,6 +7114,7 @@ function lf_ai_assistant_widget_js(): string {
 					desc.setAttribute("title", "Click to edit card description");
 				});
 				wireServiceIntroThumbnailsForWrap(wrap);
+				wireServiceIntroStatusBadgesForWrap(wrap);
 			});
 		}
 		function closeServicePicker() {
@@ -7178,6 +7212,11 @@ function lf_ai_assistant_widget_js(): string {
 				var title = document.createElement("b");
 				title.textContent = lfDecodeHtmlEntities(String(row.title || "Service"));
 				meta.appendChild(title);
+				var status = String(row.status || "publish");
+				var statusBadge = document.createElement("span");
+				statusBadge.className = "lf-ai-faq-picker__status lf-ai-faq-picker__status--" + status;
+				statusBadge.textContent = String(row.status_label || (row.is_live ? "Live" : "Scheduled"));
+				meta.appendChild(statusBadge);
 				var addBtn = document.createElement("button");
 				addBtn.type = "button";
 				addBtn.className = "lf-ai-faq-picker__add lf-ai-inline-editor-ignore";
@@ -7194,6 +7233,7 @@ function lf_ai_assistant_widget_js(): string {
 					var grid = sw.grid;
 					var wrap = sw.wrap;
 					appendServiceIntroCardFromRow(grid, row);
+					applyServiceStatusBadgeToCard(grid.lastElementChild, row);
 					closeServicePicker();
 					buildServiceIntroReorderControls();
 					buildServiceIntroCardEditors();
@@ -7261,6 +7301,7 @@ function lf_ai_assistant_widget_js(): string {
 		function openServicePickerForIntro(wrap, grid) {
 			ensureServicePicker();
 			servicePickerWrap = { wrap: wrap, grid: grid };
+			serviceLibraryCache = null;
 			loadServiceLibrary(function(){
 				renderServicePickerList("");
 				if (servicePickerEl) servicePickerEl.hidden = false;

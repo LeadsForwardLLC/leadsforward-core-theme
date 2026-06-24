@@ -234,6 +234,47 @@ function lf_cpt_card_is_live(\WP_Post $post): bool {
 }
 
 /**
+ * Editor-facing publish state for service / area pickers.
+ *
+ * @return array{status: string, status_label: string, is_live: bool}
+ */
+function lf_cpt_editor_status_meta(\WP_Post $post): array {
+	$status = sanitize_key((string) $post->post_status);
+	switch ($status) {
+		case 'publish':
+			$label = __('Live', 'leadsforward-core');
+			break;
+		case 'future':
+			$ts = strtotime((string) $post->post_date_gmt . ' GMT');
+			$when = $ts ? wp_date('M j, Y g:ia', $ts) : '';
+			$label = $when !== ''
+				? sprintf(
+					/* translators: %s: scheduled publish datetime */
+					__('Scheduled · %s', 'leadsforward-core'),
+					$when
+				)
+				: __('Scheduled', 'leadsforward-core');
+			break;
+		case 'draft':
+			$label = __('Draft', 'leadsforward-core');
+			break;
+		case 'pending':
+			$label = __('Pending review', 'leadsforward-core');
+			break;
+		case 'private':
+			$label = __('Private', 'leadsforward-core');
+			break;
+		default:
+			$label = ucfirst($status);
+	}
+	return [
+		'status' => $status,
+		'status_label' => $label,
+		'is_live' => $status === 'publish',
+	];
+}
+
+/**
  * Fallback URL for unpublished service / area cards (overview page, then Global Settings).
  */
 function lf_unpublished_cpt_card_url(?\WP_Post $post = null): string {
