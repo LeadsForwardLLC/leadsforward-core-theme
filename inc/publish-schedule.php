@@ -149,6 +149,47 @@ function lf_publish_schedule_seed_defaults_if_empty(): void {
 }
 
 /**
+ * Whether a normalized row matches the built-in default for its key.
+ *
+ * @param array{timing:string,date:string} $normalized
+ */
+function lf_publish_schedule_row_matches_default(string $schedule_key, array $normalized): bool {
+	$default = lf_publish_schedule_default_item_for_key($schedule_key);
+	if ($default === null) {
+		return false;
+	}
+	if ($normalized['timing'] !== $default['timing']) {
+		return false;
+	}
+	if ($normalized['timing'] === 'schedule') {
+		return $normalized['date'] === $default['date'];
+	}
+
+	return true;
+}
+
+/**
+ * Split stored schedule datetime into HTML date / time control values.
+ *
+ * @return array{date:string,time:string}
+ */
+function lf_publish_schedule_split_datetime_local(string $stored): array {
+	$local = lf_publish_schedule_datetime_local_value($stored);
+	if ($local === '') {
+		return ['date' => '', 'time' => '09:00'];
+	}
+	if (preg_match('/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/', $local, $m)) {
+		return ['date' => $m[1], 'time' => $m[2]];
+	}
+
+	return ['date' => '', 'time' => '09:00'];
+}
+
+function lf_publish_schedule_date_input_min(): string {
+	return wp_date('Y-m-d');
+}
+
+/**
  * Whether a schedule key is a service / service-area CPT row.
  */
 function lf_publish_schedule_is_cpt_key(string $schedule_key): bool {
@@ -194,7 +235,7 @@ function lf_publish_schedule_get_items(): array {
 			continue;
 		}
 		$normalized = lf_publish_schedule_normalize_row($key, $row);
-		if (lf_publish_schedule_is_cpt_key($key) && $normalized['timing'] === 'draft') {
+		if (lf_publish_schedule_row_matches_default($key, $normalized)) {
 			continue;
 		}
 		$out[ $key ] = $normalized;
@@ -215,11 +256,11 @@ function lf_publish_schedule_maybe_migrate_cpt_defaults(): void {
 	if ($page !== $manifest_slug) {
 		return;
 	}
-	if (get_option('lf_publish_schedule_cpt_draft_migrated') === '2') {
+	if (get_option('lf_publish_schedule_cpt_draft_migrated') === '3') {
 		return;
 	}
-	lf_publish_schedule_strip_cpt_items();
-	update_option('lf_publish_schedule_cpt_draft_migrated', '2', false);
+	lf_publish_schedule_reset_to_defaults();
+	update_option('lf_publish_schedule_cpt_draft_migrated', '3', false);
 }
 add_action('admin_init', 'lf_publish_schedule_maybe_migrate_cpt_defaults', 20);
 
@@ -231,11 +272,14 @@ function lf_publish_schedule_save_from_post(array $raw_post): void {
 	$items = [];
 
 	foreach (lf_publish_schedule_page_keys() as $page_key) {
-		if (isset($raw_post[ $page_key ]) && is_array($raw_post[ $page_key ])) {
-			$items[ $page_key ] = lf_publish_schedule_normalize_row($page_key, $raw_post[ $page_key ]);
+		if (!isset($raw_post[ $page_key ]) || !is_array($raw_post[ $page_key ])) {
 			continue;
 		}
-		$items[ $page_key ] = $page_defaults[ $page_key ] ?? ['timing' => 'draft', 'date' => ''];
+		$normalized = lf_publish_schedule_normalize_row($page_key, $raw_post[ $page_key ]);
+		if (lf_publish_schedule_row_matches_default($page_key, $normalized)) {
+			continue;
+		}
+		$items[ $page_key ] = $normalized;
 	}
 
 	foreach ($raw_post as $key => $row) {
@@ -247,7 +291,7 @@ function lf_publish_schedule_save_from_post(array $raw_post): void {
 			continue;
 		}
 		$normalized = lf_publish_schedule_normalize_row($key, $row);
-		if ($normalized['timing'] === 'draft') {
+		if (lf_publish_schedule_row_matches_default($key, $normalized)) {
 			continue;
 		}
 		$items[ $key ] = $normalized;
@@ -533,8 +577,10 @@ function lf_publish_schedule_render_controls(string $schedule_key, array $stored
 		$timing = $default['timing'];
 	}
 	$date = sanitize_text_field((string) ($resolved['date'] ?? ''));
+	$parts = lf_publish_schedule_split_datetime_local($date);
 	$field_base = 'lf_ai_publish_schedule[' . esc_attr($schedule_key) . ']';
 	$wrap_class = $compact ? 'lf-publish-schedule lf-publish-schedule--compact' : 'lf-publish-schedule';
+	$datetime_hidden = $timing !== 'schedule';
 	?>
 	<div class="<?php echo esc_attr($wrap_class); ?>" data-lf-publish-schedule data-schedule-key="<?php echo esc_attr($schedule_key); ?>">
 		<label class="screen-reader-text" for="<?php echo esc_attr('lf-ps-timing-' . md5($schedule_key)); ?>"><?php esc_html_e('Publish timing', 'leadsforward-core'); ?></label>
@@ -548,24 +594,33 @@ function lf_publish_schedule_render_controls(string $schedule_key, array $stored
 			<option value="schedule" <?php selected($timing, 'schedule'); ?>><?php esc_html_e('Schedule', 'leadsforward-core'); ?></option>
 			<option value="draft" <?php selected($timing, 'draft'); ?>><?php esc_html_e('Keep draft', 'leadsforward-core'); ?></option>
 		</select>
-		<input
-			type="datetime-local"
-			class="lf-publish-schedule__date<?php echo $timing === 'schedule' ? '' : ' lf-publish-schedule__date--hidden'; ?>"
-			name="<?php echo esc_attr($field_base . '[date]'); ?>"
-			value="<?php echo esc_attr(lf_publish_schedule_datetime_local_value($date)); ?>"
-			min="<?php echo esc_attr(lf_publish_schedule_datetime_local_min()); ?>"
-			step="60"
-			data-lf-publish-date
-			autocomplete="off"
-			aria-label="<?php esc_attr_e('Publish date and time', 'leadsforward-core'); ?>"
-		/>
-		<button
-			type="button"
-			class="button button-small lf-publish-schedule__date-trigger<?php echo $timing === 'schedule' ? '' : ' lf-publish-schedule__date-trigger--hidden'; ?>"
-			data-lf-publish-date-trigger
-			aria-label="<?php esc_attr_e('Open date picker', 'leadsforward-core'); ?>"
-			title="<?php esc_attr_e('Pick date & time', 'leadsforward-core'); ?>"
-		><span class="dashicons dashicons-calendar-alt" aria-hidden="true"></span></button>
+		<div class="lf-publish-schedule__datetime<?php echo $datetime_hidden ? ' lf-publish-schedule__datetime--hidden' : ''; ?>" data-lf-publish-datetime>
+			<input
+				type="date"
+				class="lf-publish-schedule__date-part"
+				value="<?php echo esc_attr($parts['date']); ?>"
+				min="<?php echo esc_attr(lf_publish_schedule_date_input_min()); ?>"
+				data-lf-publish-date-part
+				autocomplete="off"
+				aria-label="<?php esc_attr_e('Publish date', 'leadsforward-core'); ?>"
+			/>
+			<input
+				type="time"
+				class="lf-publish-schedule__time-part"
+				value="<?php echo esc_attr($parts['time']); ?>"
+				step="60"
+				data-lf-publish-time-part
+				autocomplete="off"
+				aria-label="<?php esc_attr_e('Publish time', 'leadsforward-core'); ?>"
+			/>
+			<input
+				type="hidden"
+				class="lf-publish-schedule__date"
+				name="<?php echo esc_attr($field_base . '[date]'); ?>"
+				value="<?php echo esc_attr(lf_publish_schedule_datetime_local_value($date)); ?>"
+				data-lf-publish-date
+			/>
+		</div>
 	</div>
 	<?php
 }
@@ -574,7 +629,6 @@ function lf_publish_schedule_render_controls(string $schedule_key, array $stored
  * Page-type publish timing block (homepage, core pages, overviews).
  */
 function lf_publish_schedule_render_page_types_panel(): void {
-	$items = lf_publish_schedule_get_items();
 	$labels = lf_publish_schedule_page_labels();
 	?>
 	<details class="lf-publish-schedule-panel">
@@ -585,7 +639,7 @@ function lf_publish_schedule_render_page_types_panel(): void {
 				<?php foreach (lf_publish_schedule_page_keys() as $key) : ?>
 					<div class="lf-publish-schedule-panel__row">
 						<span class="lf-publish-schedule-panel__label"><?php echo esc_html($labels[$key] ?? $key); ?></span>
-						<?php lf_publish_schedule_render_controls($key, $items[$key] ?? lf_publish_schedule_resolved_item($key), true); ?>
+						<?php lf_publish_schedule_render_controls($key, lf_publish_schedule_resolved_item($key), true); ?>
 					</div>
 				<?php endforeach; ?>
 			</div>

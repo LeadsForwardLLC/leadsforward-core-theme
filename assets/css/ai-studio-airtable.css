@@ -696,39 +696,38 @@
   max-width: 9.5rem;
 }
 
-.lf-publish-schedule__date {
-  width: 13.5rem;
-  max-width: 100%;
+.lf-publish-schedule__datetime {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.lf-publish-schedule__datetime--hidden {
+  display: none !important;
+}
+
+.lf-publish-schedule__date-part,
+.lf-publish-schedule__time-part {
   min-height: 30px;
   pointer-events: auto;
-  position: relative;
-  z-index: 1;
   color-scheme: light;
   -webkit-appearance: auto;
   appearance: auto;
 }
 
-.lf-publish-schedule__date-trigger {
-  flex: 0 0 auto;
-  min-height: 30px;
-  line-height: 1;
-  padding: 0 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.lf-publish-schedule__date-part {
+  width: 10.5rem;
+  max-width: 100%;
 }
 
-.lf-publish-schedule__date-trigger .dashicons {
-  width: 18px;
-  height: 18px;
-  font-size: 18px;
+.lf-publish-schedule__time-part {
+  width: 7.5rem;
+  max-width: 100%;
 }
 
-.lf-publish-schedule__date-trigger--hidden {
-  display: none !important;
-}
-
-.lf-publish-schedule__date::-webkit-calendar-picker-indicator {
+.lf-publish-schedule__date-part::-webkit-calendar-picker-indicator,
+.lf-publish-schedule__time-part::-webkit-calendar-picker-indicator {
   cursor: pointer;
   opacity: 1;
 }

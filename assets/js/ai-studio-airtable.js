@@ -296,42 +296,35 @@
     return '';
   }
 
-  function openPublishDatePicker(input) {
-    if (!input || input.classList.contains('lf-publish-schedule__date--hidden')) return;
-    var normalized = publishScheduleToDatetimeLocalValue(input.value);
-    if (normalized) {
-      input.value = normalized;
-    }
-    if (!input.value) {
-      input.value = publishScheduleDefaultDatetimeLocal();
-    }
-    input.min = publishScheduleMinDatetimeLocal();
-    window.setTimeout(function () {
-      try {
-        if (typeof input.showPicker === 'function') {
-          input.showPicker();
-          return;
-        }
-      } catch (ePicker) {}
-      input.focus();
-      input.click();
-    }, 0);
+  function publishScheduleSplitDatetimeLocal(value) {
+    value = publishScheduleToDatetimeLocalValue(value);
+    if (!value) return { date: '', time: '09:00' };
+    var m = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+    if (!m) return { date: '', time: '09:00' };
+    return { date: m[1], time: m[2] };
   }
 
-  function createPublishDateTriggerButton(dateInput, strings) {
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'button button-small lf-publish-schedule__date-trigger';
-    btn.setAttribute('data-lf-publish-date-trigger', '1');
-    btn.setAttribute('aria-label', strings.publishDatePlaceholder || 'Open date picker');
-    btn.title = strings.publishDatePlaceholder || 'Pick date & time';
-    btn.innerHTML = '<span class="dashicons dashicons-calendar-alt" aria-hidden="true"></span>';
-    btn.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      openPublishDatePicker(dateInput);
-    });
-    return btn;
+  function publishScheduleCombineDateTime(datePart, timePart) {
+    if (!datePart) return '';
+    return String(datePart) + 'T' + (timePart || '09:00');
+  }
+
+  function publishScheduleDateInputMin() {
+    return publishScheduleFormatDatetimeLocal(new Date()).slice(0, 10);
+  }
+
+  function publishScheduleApplyHiddenToParts(hidden, datePart, timePart) {
+    var parts = publishScheduleSplitDatetimeLocal(hidden ? hidden.value : '');
+    if (datePart) datePart.value = parts.date;
+    if (timePart) timePart.value = parts.time;
+  }
+
+  function publishScheduleSyncHiddenFromParts(hidden, datePart, timePart) {
+    if (!hidden) return;
+    hidden.value = publishScheduleCombineDateTime(
+      datePart ? datePart.value : '',
+      timePart ? timePart.value : '09:00'
+    );
   }
 
   function publishScheduleDefaultTiming(scheduleKey) {
@@ -356,7 +349,50 @@
         && timing === 'now' && defaultTiming === 'draft' && !String(stored.date || '').trim()) {
       return { timing: 'draft', date: '' };
     }
+    if (scheduleKey.indexOf('page:') === 0 && timing === 'now' && defaultTiming === 'draft' && !String(stored.date || '').trim()) {
+      return { timing: 'draft', date: '' };
+    }
     return { timing: timing, date: String(stored.date || '') };
+  }
+
+  function publishScheduleBuildDatetimeWrap(scheduleKey, storedDate, timing) {
+    var parts = publishScheduleSplitDatetimeLocal(storedDate);
+    var datetimeWrap = document.createElement('div');
+    datetimeWrap.className = 'lf-publish-schedule__datetime';
+    datetimeWrap.setAttribute('data-lf-publish-datetime', '1');
+    if (timing !== 'schedule') {
+      datetimeWrap.classList.add('lf-publish-schedule__datetime--hidden');
+    }
+
+    var datePart = document.createElement('input');
+    datePart.type = 'date';
+    datePart.className = 'lf-publish-schedule__date-part';
+    datePart.value = parts.date;
+    datePart.min = publishScheduleDateInputMin();
+    datePart.setAttribute('data-lf-publish-date-part', '1');
+    datePart.autocomplete = 'off';
+    datePart.setAttribute('aria-label', 'Publish date');
+
+    var timePart = document.createElement('input');
+    timePart.type = 'time';
+    timePart.className = 'lf-publish-schedule__time-part';
+    timePart.value = parts.time;
+    timePart.step = '60';
+    timePart.setAttribute('data-lf-publish-time-part', '1');
+    timePart.autocomplete = 'off';
+    timePart.setAttribute('aria-label', 'Publish time');
+
+    var hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.className = 'lf-publish-schedule__date';
+    hidden.name = 'lf_ai_publish_schedule[' + scheduleKey + '][date]';
+    hidden.value = publishScheduleToDatetimeLocalValue(storedDate);
+    hidden.setAttribute('data-lf-publish-date', '1');
+
+    datetimeWrap.appendChild(datePart);
+    datetimeWrap.appendChild(timePart);
+    datetimeWrap.appendChild(hidden);
+    return datetimeWrap;
   }
 
   function buildPublishScheduleNode(scheduleKey, stored) {
@@ -364,6 +400,10 @@
     var strings = publishScheduleStrings();
     var timing = String(stored.timing || publishScheduleDefaultTiming(scheduleKey));
     if ((scheduleKey.indexOf('lf_service:') === 0 || scheduleKey.indexOf('lf_service_area:') === 0)
+        && timing === 'now' && publishScheduleDefaultTiming(scheduleKey) === 'draft' && !String(stored.date || '').trim()) {
+      timing = 'draft';
+    }
+    if (scheduleKey.indexOf('page:') === 0
         && timing === 'now' && publishScheduleDefaultTiming(scheduleKey) === 'draft' && !String(stored.date || '').trim()) {
       timing = 'draft';
     }
@@ -389,99 +429,69 @@
       select.appendChild(opt);
     });
 
-    var dateInput = document.createElement('input');
-    dateInput.type = 'datetime-local';
-    dateInput.className = 'lf-publish-schedule__date';
-    dateInput.name = 'lf_ai_publish_schedule[' + scheduleKey + '][date]';
-    dateInput.value = publishScheduleToDatetimeLocalValue(date);
-    dateInput.min = publishScheduleMinDatetimeLocal();
-    dateInput.step = '60';
-    dateInput.setAttribute('data-lf-publish-date', '1');
-    dateInput.autocomplete = 'off';
-    dateInput.setAttribute('aria-label', strings.publishDatePlaceholder || 'Publish date and time');
-    if (timing !== 'schedule') {
-      dateInput.classList.add('lf-publish-schedule__date--hidden');
-    }
-
     select.addEventListener('click', function (e) {
       e.stopPropagation();
     });
     select.addEventListener('change', function (e) {
       e.stopPropagation();
     });
-    dateInput.addEventListener('mousedown', function (e) {
-      e.stopPropagation();
-    });
-    dateInput.addEventListener('click', function (e) {
-      e.stopPropagation();
-      openPublishDatePicker(dateInput);
-    });
-    dateInput.addEventListener('change', function (e) {
-      e.stopPropagation();
-    });
 
-    var triggerBtn = createPublishDateTriggerButton(dateInput, strings);
-    if (timing !== 'schedule') {
-      triggerBtn.classList.add('lf-publish-schedule__date-trigger--hidden');
-    }
+    var datetimeWrap = publishScheduleBuildDatetimeWrap(scheduleKey, date, timing);
 
     wrap.appendChild(select);
-    wrap.appendChild(dateInput);
-    wrap.appendChild(triggerBtn);
+    wrap.appendChild(datetimeWrap);
     bindPublishTimingSelect(wrap);
     return wrap;
   }
 
-  function bindPublishDateInput(dateEl) {
-    if (!dateEl || dateEl.getAttribute('data-lf-publish-date-bound')) return;
-    dateEl.setAttribute('data-lf-publish-date-bound', '1');
-    dateEl.addEventListener('mousedown', function (e) {
-      e.stopPropagation();
-    });
-    dateEl.addEventListener('click', function (e) {
-      e.stopPropagation();
-      openPublishDatePicker(dateEl);
-    });
-    dateEl.addEventListener('change', function (e) {
-      e.stopPropagation();
-    });
-  }
-
-  function bindPublishDateTrigger(wrap, dateEl) {
-    if (!wrap || !dateEl) return;
-    var btn = wrap.querySelector('[data-lf-publish-date-trigger]');
-    if (!btn || btn.getAttribute('data-lf-publish-trigger-bound')) return;
-    btn.setAttribute('data-lf-publish-trigger-bound', '1');
-    btn.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      openPublishDatePicker(dateEl);
-    });
+  function bindPublishDatetimeParts(wrap) {
+    if (!wrap || wrap.getAttribute('data-lf-publish-datetime-bound')) return;
+    wrap.setAttribute('data-lf-publish-datetime-bound', '1');
+    var datePart = wrap.querySelector('[data-lf-publish-date-part]');
+    var timePart = wrap.querySelector('[data-lf-publish-time-part]');
+    var hidden = wrap.querySelector('[data-lf-publish-date]');
+    var sync = function () {
+      publishScheduleSyncHiddenFromParts(hidden, datePart, timePart);
+    };
+    if (datePart) {
+      datePart.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+      datePart.addEventListener('click', function (e) { e.stopPropagation(); });
+      datePart.addEventListener('change', sync);
+    }
+    if (timePart) {
+      timePart.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+      timePart.addEventListener('click', function (e) { e.stopPropagation(); });
+      timePart.addEventListener('change', sync);
+    }
+    sync();
   }
 
   function bindPublishTimingSelect(wrap) {
     if (!wrap || wrap.getAttribute('data-lf-publish-bound')) return;
     wrap.setAttribute('data-lf-publish-bound', '1');
     var select = wrap.querySelector('[data-lf-publish-timing]');
-    var dateEl = wrap.querySelector('[data-lf-publish-date]');
-    if (!select || !dateEl) return;
-    bindPublishDateInput(dateEl);
-    bindPublishDateTrigger(wrap, dateEl);
-    var triggerEl = wrap.querySelector('[data-lf-publish-date-trigger]');
+    var datetimeWrap = wrap.querySelector('[data-lf-publish-datetime]');
+    var hidden = wrap.querySelector('[data-lf-publish-date]');
+    var datePart = wrap.querySelector('[data-lf-publish-date-part]');
+    var timePart = wrap.querySelector('[data-lf-publish-time-part]');
+    if (!select || !hidden) return;
+    bindPublishDatetimeParts(wrap);
     var sync = function () {
       var on = select.value === 'schedule';
-      dateEl.classList.toggle('lf-publish-schedule__date--hidden', !on);
-      if (triggerEl) {
-        triggerEl.classList.toggle('lf-publish-schedule__date-trigger--hidden', !on);
+      if (datetimeWrap) {
+        datetimeWrap.classList.toggle('lf-publish-schedule__datetime--hidden', !on);
       }
       if (!on) {
-        dateEl.value = '';
+        hidden.value = '';
+        if (datePart) datePart.value = '';
+        if (timePart) timePart.value = '09:00';
         return;
       }
-      if (!dateEl.value) {
-        dateEl.value = publishScheduleDefaultDatetimeLocal();
+      if (!hidden.value) {
+        hidden.value = publishScheduleDefaultDatetimeLocal();
       }
-      dateEl.min = publishScheduleMinDatetimeLocal();
+      publishScheduleApplyHiddenToParts(hidden, datePart, timePart);
+      if (datePart) datePart.min = publishScheduleDateInputMin();
     };
     select.addEventListener('change', sync);
     sync();
