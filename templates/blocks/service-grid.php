@@ -32,20 +32,9 @@ $query = new WP_Query([
 	'posts_per_page' => -1,
 	'orderby'        => 'menu_order title',
 	'order'          => 'ASC',
-	// Include non-published services so manifesting can show the full service set early.
-	'post_status'    => ['publish', 'future', 'draft', 'pending'],
+	'post_status'    => function_exists('lf_cpt_card_query_post_statuses') ? lf_cpt_card_query_post_statuses() : ['publish', 'future', 'draft', 'pending'],
 	'no_found_rows'  => true,
 ]);
-
-$services_overview_url = '';
-$services_page = get_page_by_path('services');
-if ($services_page instanceof \WP_Post) {
-	$services_overview_url = (string) get_permalink($services_page);
-}
-if ($services_overview_url === '') {
-	$services_overview_url = home_url('/services/');
-}
-$services_overview_url = rtrim($services_overview_url, '/') . '/';
 
 $desc_overrides_raw = (string) ($section['service_grid_card_desc_overrides'] ?? '');
 $desc_overrides_map = [];
@@ -88,8 +77,10 @@ if ($desc_overrides_raw !== '') {
 					$index++;
 					$excerpt = '';
 					$sid = (int) get_the_ID();
-					$is_published = get_post_status($sid) === 'publish';
-					$card_url = $is_published ? (string) get_permalink($sid) : $services_overview_url;
+					$post_obj = get_post($sid);
+					$card_url = ($post_obj instanceof \WP_Post && function_exists('lf_cpt_card_permalink'))
+						? lf_cpt_card_permalink($post_obj)
+						: (string) get_permalink($sid);
 					if ($variant === 'a') {
 						if (!empty($desc_overrides_map[(string) $sid])) {
 							$excerpt = (string) $desc_overrides_map[(string) $sid];

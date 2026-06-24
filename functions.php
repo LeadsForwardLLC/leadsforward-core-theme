@@ -60,6 +60,7 @@ lf_load_inc('headings.php');
 lf_load_inc('image-intelligence.php');
 // Manifest launch scheduling (service/area/blog publish windows).
 lf_load_inc('launch-schedule.php');
+lf_load_inc('publish-schedule.php');
 // AI Studio core + REST endpoints (used outside admin).
 lf_load_inc('ai-studio.php');
 lf_load_inc('ai-studio-wiring.php');

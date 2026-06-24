@@ -3752,16 +3752,17 @@ function lf_sections_render_related_links(string $context, array $settings, \WP_
 	$max_links = 8;
 	$origin_id = $post->ID;
 	if ($mode === 'services' || $mode === 'both') {
+		$card_statuses = function_exists('lf_cpt_card_query_post_statuses') ? lf_cpt_card_query_post_statuses() : ['publish'];
 		$services = get_posts([
 			'post_type'      => 'lf_service',
 			'posts_per_page' => $max_links,
 			'orderby'        => 'menu_order title',
 			'order'          => 'ASC',
-			'post_status'    => 'publish',
+			'post_status'    => $card_statuses,
 			'no_found_rows'  => true,
 		]);
 		foreach ($services as $svc) {
-			if (count($links) >= $max_links) {
+			if (!$svc instanceof \WP_Post || count($links) >= $max_links) {
 				break;
 			}
 			$label = function_exists('lf_internal_link_label') ? lf_internal_link_label('service', $svc, $origin_id) : get_the_title($svc);
@@ -3770,20 +3771,22 @@ function lf_sections_render_related_links(string $context, array $settings, \WP_
 				$image_id = lf_get_placeholder_image_id();
 			}
 			$image_url = $image_id ? wp_get_attachment_image_url($image_id, 'large') : '';
-			$links[] = ['label' => $label, 'url' => get_permalink($svc), 'image' => $image_url];
+			$url = function_exists('lf_cpt_card_permalink') ? lf_cpt_card_permalink($svc) : (string) get_permalink($svc);
+			$links[] = ['label' => $label, 'url' => $url, 'image' => $image_url];
 		}
 	}
 	if ($mode === 'areas' || $mode === 'both') {
+		$card_statuses = function_exists('lf_cpt_card_query_post_statuses') ? lf_cpt_card_query_post_statuses() : ['publish'];
 		$areas = get_posts([
 			'post_type'      => 'lf_service_area',
 			'posts_per_page' => $max_links,
 			'orderby'        => 'menu_order title',
 			'order'          => 'ASC',
-			'post_status'    => 'publish',
+			'post_status'    => $card_statuses,
 			'no_found_rows'  => true,
 		]);
 		foreach ($areas as $area) {
-			if (count($links) >= $max_links) {
+			if (!$area instanceof \WP_Post || count($links) >= $max_links) {
 				break;
 			}
 			$label = function_exists('lf_internal_link_label') ? lf_internal_link_label('area', $area, $origin_id) : get_the_title($area);
@@ -3792,7 +3795,8 @@ function lf_sections_render_related_links(string $context, array $settings, \WP_
 				$image_id = lf_get_placeholder_image_id();
 			}
 			$image_url = $image_id ? wp_get_attachment_image_url($image_id, 'large') : '';
-			$links[] = ['label' => $label, 'url' => get_permalink($area), 'image' => $image_url];
+			$url = function_exists('lf_cpt_card_permalink') ? lf_cpt_card_permalink($area) : (string) get_permalink($area);
+			$links[] = ['label' => $label, 'url' => $url, 'image' => $image_url];
 		}
 	}
 	if (empty($links)) {

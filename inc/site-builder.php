@@ -37,6 +37,8 @@ function lf_site_builder_run_from_manifest(array $manifest): array {
 
 	if (function_exists('lf_ai_studio_sync_manifest_posts')) {
 		lf_ai_studio_sync_manifest_posts($manifest);
+	} elseif (function_exists('lf_publish_schedule_apply_site_pages')) {
+		lf_publish_schedule_apply_site_pages();
 	}
 	if (function_exists('lf_ai_studio_ensure_core_page_sections')) {
 		lf_ai_studio_ensure_core_page_sections($manifest, true);

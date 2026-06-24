@@ -106,6 +106,16 @@ function lf_acf_add_options_global_fields(): void {
 				],
 			],
 			[
+				'key'   => 'field_lf_unpublished_card_link',
+				'label' => __('Unpublished service/area card link', 'leadsforward-core'),
+				'name'  => 'lf_unpublished_card_link',
+				'type'  => 'page_link',
+				'post_type' => ['page'],
+				'allow_null' => 0,
+				'allow_archives' => 0,
+				'instructions' => __('Service and area cards link here until that page is published. Defaults to Contact.', 'leadsforward-core'),
+			],
+			[
 				'key'   => 'field_lf_heading_case_mode',
 				'label' => __('Global heading case', 'leadsforward-core'),
 				'name'  => 'lf_heading_case_mode',
