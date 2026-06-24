@@ -1179,6 +1179,15 @@ function lf_ai_assistant_widget_css(): string {
 		}
 		.lf-ai-benefits-grid-actions { margin-top:10px; display:flex; justify-content:center; width:100%; }
 		.lf-ai-editor-on .lf-block-service-intro__card { position:relative; overflow:visible; }
+		.lf-ai-editor-on .lf-block-service-areas__item { position:relative; overflow:visible; }
+		.lf-ai-service-status-badge,
+		.lf-ai-area-status-badge {
+			position:absolute;
+			top:10px;
+			left:10px;
+			z-index:2;
+			pointer-events:none;
+		}
 		.lf-ai-hero-pills-controls { margin-top:8px; display:flex; gap:8px; align-items:center; }
 		.lf-ai-hero-trust-strip-controls { margin-top:10px; padding:8px 10px; border-radius:8px; background:rgba(131,72,249,.08); border:1px solid rgba(131,72,249,.25); font-size:13px; }
 		.lf-ai-benefit-editable { cursor:text; border-radius:6px; transition:box-shadow .15s ease; }
@@ -1596,6 +1605,12 @@ function lf_ai_assistant_widget_js(): string {
 		var servicePickerListEl = null;
 		var servicePickerWrap = null;
 		var servicePickerDirty = false;
+		var areaLibraryCache = null;
+		var areaPickerEl = null;
+		var areaPickerSearchEl = null;
+		var areaPickerListEl = null;
+		var areaPickerWrap = null;
+		var areaPickerDirty = false;
 		var activeDragSection = null;
 		var activeColumnDrag = null;
 		var selectedSectionWrap = null;
@@ -3875,6 +3890,7 @@ function lf_ai_assistant_widget_js(): string {
 			buildBenefitsTextEditors();
 			buildServiceIntroReorderControls();
 			buildServiceIntroCardEditors();
+			buildServiceAreasEditorControls();
 			buildBenefitsGridChrome();
 			buildBenefitsIconEditors();
 			refreshSectionRail();
@@ -4310,6 +4326,7 @@ function lf_ai_assistant_widget_js(): string {
 				buildPackagesReorderControls();
 				buildBenefitsTextEditors();
 				buildServiceIntroReorderControls();
+				buildServiceAreasEditorControls();
 				buildBenefitsIconEditors();
 				try {
 					var sid = String(selectedSectionWrap.getAttribute("data-lf-section-id") || "");
@@ -7308,6 +7325,296 @@ function lf_ai_assistant_widget_js(): string {
 				try { if (servicePickerSearchEl) servicePickerSearchEl.focus(); } catch (eF) {}
 			});
 		}
+		function areaIdsFromList(list) {
+			if (!list) return [];
+			return Array.prototype.slice.call(list.querySelectorAll(".lf-block-service-areas__item[data-area-id]")).map(function(n){
+				return String(n.getAttribute("data-area-id") || "").trim();
+			}).filter(function(v){ return v !== ""; });
+		}
+		function persistServiceAreaIds(wrap, list, label, opts) {
+			if (!wrap || !list) return;
+			persistSectionLineItems(wrap, "service_areas_area_ids", areaIdsFromList(list), label || "Saving service areas...", opts || {});
+		}
+		function applyAreaStatusBadgeToItem(item, row) {
+			if (!item) return;
+			Array.prototype.slice.call(item.querySelectorAll(".lf-ai-area-status-badge")).forEach(function(node){
+				if (node && node.parentNode) node.parentNode.removeChild(node);
+			});
+			var status = row ? String(row.status || "publish") : String(item.getAttribute("data-area-status") || "publish");
+			var label = row ? String(row.status_label || (row.is_live ? "Live" : "Scheduled")) : "";
+			if (!label) {
+				if (status === "publish") label = "Live";
+				else if (status === "future") label = "Scheduled";
+				else if (status === "draft") label = "Draft";
+				else if (status === "pending") label = "Pending review";
+				else label = status.charAt(0).toUpperCase() + status.slice(1);
+			}
+			var badge = document.createElement("span");
+			badge.className = "lf-ai-area-status-badge lf-ai-faq-picker__status lf-ai-faq-picker__status--" + status;
+			badge.textContent = label;
+			item.insertBefore(badge, item.firstChild);
+		}
+		function wireServiceAreasStatusBadgesForWrap(wrap) {
+			if (!wrap) return;
+			var items = wrap.querySelectorAll(".lf-block-service-areas__item[data-area-id]");
+			if (!items.length) return;
+			loadAreaLibrary(function(rows){
+				var byId = {};
+				(rows || []).forEach(function(r){ byId[String(r.id || "")] = r; });
+				Array.prototype.slice.call(items).forEach(function(item){
+					var aid = String(item.getAttribute("data-area-id") || "");
+					applyAreaStatusBadgeToItem(item, byId[aid] || null);
+				});
+			});
+		}
+		function closeAreaPicker() {
+			if (areaPickerDirty && areaPickerWrap && areaPickerWrap.wrap && areaPickerWrap.list) {
+				persistServiceAreaIds(areaPickerWrap.wrap, areaPickerWrap.list, "Saving service areas...", {
+					onDone: function() {
+						areaPickerDirty = false;
+					}
+				});
+			}
+			if (areaPickerEl) areaPickerEl.hidden = true;
+			areaPickerWrap = null;
+			try { if (areaPickerSearchEl) areaPickerSearchEl.value = ""; } catch (eAp) {}
+		}
+		function loadAreaLibrary(done) {
+			if (Array.isArray(areaLibraryCache)) {
+				if (typeof done === "function") done(areaLibraryCache);
+				return;
+			}
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_area_library",
+				nonce: lfAiFloating.nonce
+			}).done(function(res){
+				areaLibraryCache = (res && res.success && res.data && Array.isArray(res.data.items)) ? res.data.items : [];
+				if (typeof done === "function") done(areaLibraryCache);
+			}).fail(function(){
+				areaLibraryCache = [];
+				setStatus("Service area library unavailable.", true);
+				if (typeof done === "function") done(areaLibraryCache);
+			});
+		}
+		function ensureAreaPicker() {
+			if (areaPickerEl) return areaPickerEl;
+			areaPickerEl = document.createElement("div");
+			areaPickerEl.className = "lf-ai-faq-picker lf-ai-inline-editor-ignore";
+			areaPickerEl.hidden = true;
+			areaPickerEl.innerHTML = "<div class=\"lf-ai-faq-picker__card\"><div class=\"lf-ai-faq-picker__head\"><div class=\"lf-ai-faq-picker__title\">Add a service area</div><button type=\"button\" class=\"lf-ai-faq-picker__close\" data-lf-ai-area-picker-close aria-label=\"Close\">×</button></div><input type=\"text\" class=\"lf-ai-faq-picker__search\" data-lf-ai-area-picker-search placeholder=\"Search service areas...\" /><div class=\"lf-ai-faq-picker__list\" data-lf-ai-area-picker-list></div></div>";
+			areaPickerSearchEl = areaPickerEl.querySelector("[data-lf-ai-area-picker-search]");
+			areaPickerListEl = areaPickerEl.querySelector("[data-lf-ai-area-picker-list]");
+			var cbtn = areaPickerEl.querySelector("[data-lf-ai-area-picker-close]");
+			if (cbtn) {
+				cbtn.addEventListener("click", function(e){
+					e.preventDefault();
+					closeAreaPicker();
+				});
+			}
+			if (areaPickerSearchEl) {
+				areaPickerSearchEl.addEventListener("input", function(){
+					renderAreaPickerList(areaPickerSearchEl.value);
+				});
+			}
+			areaPickerEl.addEventListener("click", function(e){
+				if (e.target === areaPickerEl) closeAreaPicker();
+			});
+			document.body.appendChild(areaPickerEl);
+			return areaPickerEl;
+		}
+		function appendServiceAreaItemFromRow(list, row) {
+			if (!list || !row) return;
+			var aid = String(row.id || "");
+			if (!aid) return;
+			var li = document.createElement("li");
+			li.className = "lf-block-service-areas__item";
+			li.setAttribute("data-title", String(row.title || ""));
+			li.setAttribute("data-area-id", aid);
+			li.setAttribute("data-area-status", String(row.status || "publish"));
+			var link = document.createElement("a");
+			link.className = "lf-block-service-areas__link";
+			link.href = String(row.permalink || "#");
+			var title = document.createElement("span");
+			title.className = "lf-block-service-areas__card-title";
+			title.textContent = lfDecodeHtmlEntities(String(row.title || "Service area"));
+			var action = document.createElement("span");
+			action.className = "lf-block-service-areas__card-action";
+			action.setAttribute("aria-hidden", "true");
+			action.textContent = "View area";
+			link.appendChild(title);
+			link.appendChild(action);
+			li.appendChild(link);
+			list.appendChild(li);
+			applyAreaStatusBadgeToItem(li, row);
+			try {
+				var wrap = list.closest("[data-lf-section-wrap=\"1\"]");
+				if (wrap) {
+					var inner = wrap.querySelector(".lf-block-service-areas__inner") || wrap;
+					var emptyHint = inner.querySelector(".lf-block-service-areas__empty");
+					if (emptyHint) emptyHint.hidden = true;
+					var noResults = inner.querySelector("[data-service-areas-empty]");
+					if (noResults) noResults.hidden = true;
+				}
+			} catch (e) {}
+		}
+		function renderAreaPickerList(query) {
+			if (!areaPickerListEl) return;
+			var rows = Array.isArray(areaLibraryCache) ? areaLibraryCache : [];
+			var q = String(query || "").trim().toLowerCase();
+			var onList = areaPickerWrap ? areaPickerWrap.list : null;
+			var existing = {};
+			if (onList) {
+				Array.prototype.slice.call(onList.querySelectorAll(".lf-block-service-areas__item[data-area-id]")).forEach(function(item){
+					existing[String(item.getAttribute("data-area-id") || "")] = true;
+				});
+			}
+			areaPickerListEl.innerHTML = "";
+			var filtered = rows.filter(function(row){
+				var t = String(row.title || "").toLowerCase();
+				return !q || t.indexOf(q) !== -1;
+			});
+			if (!filtered.length) {
+				var em = document.createElement("div");
+				em.className = "lf-ai-faq-picker__empty";
+				em.textContent = "No service areas match.";
+				areaPickerListEl.appendChild(em);
+				return;
+			}
+			filtered.forEach(function(row){
+				var aid = String(row.id || "");
+				var item = document.createElement("div");
+				item.className = "lf-ai-faq-picker__item";
+				var meta = document.createElement("div");
+				meta.className = "lf-ai-faq-picker__meta";
+				var title = document.createElement("b");
+				title.textContent = lfDecodeHtmlEntities(String(row.title || "Service area"));
+				meta.appendChild(title);
+				var status = String(row.status || "publish");
+				var statusBadge = document.createElement("span");
+				statusBadge.className = "lf-ai-faq-picker__status lf-ai-faq-picker__status--" + status;
+				statusBadge.textContent = String(row.status_label || (row.is_live ? "Live" : "Scheduled"));
+				meta.appendChild(statusBadge);
+				var addBtn = document.createElement("button");
+				addBtn.type = "button";
+				addBtn.className = "lf-ai-faq-picker__add lf-ai-inline-editor-ignore";
+				var already = !!existing[aid];
+				addBtn.textContent = already ? "Added" : "Add";
+				addBtn.disabled = already;
+				addBtn.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					if (!areaPickerWrap || !areaPickerWrap.wrap || !areaPickerWrap.list) return;
+					if (already) return;
+					var sw = areaPickerWrap;
+					var list = sw.list;
+					var wrap = sw.wrap;
+					appendServiceAreaItemFromRow(list, row);
+					closeAreaPicker();
+					buildServiceAreasEditorControls();
+					areaPickerDirty = true;
+					persistServiceAreaIds(wrap, list, "Saving service areas...", {
+						onDone: function() {
+							areaPickerDirty = false;
+						}
+					});
+				});
+				item.appendChild(meta);
+				item.appendChild(addBtn);
+				areaPickerListEl.appendChild(item);
+			});
+		}
+		function openAreaPickerForSection(wrap, list) {
+			ensureAreaPicker();
+			areaPickerWrap = { wrap: wrap, list: list };
+			areaLibraryCache = null;
+			loadAreaLibrary(function(){
+				renderAreaPickerList("");
+				if (areaPickerEl) areaPickerEl.hidden = false;
+				try { if (areaPickerSearchEl) areaPickerSearchEl.focus(); } catch (eF) {}
+			});
+		}
+		function buildServiceAreasEditorControls() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				if (String(wrap.getAttribute("data-lf-section-type") || "") !== "service_areas") return;
+				var inner = wrap.querySelector(".lf-block-service-areas__inner") || wrap;
+				var list = wrap.querySelector("[data-service-areas-list]");
+				function syncServiceAreasEmptyHint() {
+					try {
+						var emptyHint = inner.querySelector(".lf-block-service-areas__empty");
+						if (!emptyHint) return;
+						var hasItems = !!(list && list.querySelector(".lf-block-service-areas__item[data-area-id]"));
+						emptyHint.hidden = hasItems;
+					} catch (e) {}
+				}
+				if (!list) {
+					var emptyHint = inner.querySelector(".lf-block-service-areas__empty");
+					list = document.createElement("ul");
+					list.className = "lf-block-service-areas__list lf-cpt-driven-links";
+					list.setAttribute("role", "list");
+					list.setAttribute("data-service-areas-list", "");
+					if (emptyHint && emptyHint.parentNode) {
+						if (emptyHint.nextSibling) {
+							emptyHint.parentNode.insertBefore(list, emptyHint.nextSibling);
+						} else {
+							emptyHint.parentNode.appendChild(list);
+						}
+					} else {
+						inner.appendChild(list);
+					}
+				}
+				syncServiceAreasEmptyHint();
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-service-areas-actions=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-service-areas-remove=\"1\"]")).forEach(function(node){
+					if (node && node.parentNode) node.parentNode.removeChild(node);
+				});
+				Array.prototype.slice.call(list.querySelectorAll(".lf-block-service-areas__item[data-area-id]")).forEach(function(item){
+					var rm = document.createElement("button");
+					rm.type = "button";
+					rm.className = "lf-ai-card-remove lf-ai-inline-editor-ignore";
+					rm.setAttribute("data-lf-ai-service-areas-remove", "1");
+					rm.textContent = "×";
+					rm.setAttribute("title", "Remove area from this page");
+					rm.setAttribute("aria-label", "Remove area from this page");
+					rm.addEventListener("click", function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						if (item && item.parentNode) {
+							item.parentNode.removeChild(item);
+						}
+						syncServiceAreasEmptyHint();
+						areaPickerDirty = true;
+						persistServiceAreaIds(wrap, list, "Saving service areas...", {
+							onDone: function() {
+								areaPickerDirty = false;
+							}
+						});
+					});
+					item.insertBefore(rm, item.firstChild);
+				});
+				wireServiceAreasStatusBadgesForWrap(wrap);
+				var areaBar = document.createElement("div");
+				areaBar.className = "lf-ai-checklist-controls lf-ai-inline-editor-ignore";
+				areaBar.setAttribute("data-lf-ai-service-areas-actions", "1");
+				var addArea = document.createElement("button");
+				addArea.type = "button";
+				addArea.className = "lf-ai-checklist-add lf-ai-inline-editor-ignore";
+				addArea.textContent = "+ Add service area";
+				addArea.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					openAreaPickerForSection(wrap, list);
+				});
+				areaBar.appendChild(addArea);
+				if (list.nextSibling) {
+					list.parentNode.insertBefore(areaBar, list.nextSibling);
+				} else {
+					list.parentNode.appendChild(areaBar);
+				}
+			});
+		}
 		function closeSectionGridPicker() {
 			if (sectionGridPickerEl) sectionGridPickerEl.hidden = true;
 			sectionGridPickerWrap = null;
@@ -7889,6 +8196,7 @@ function lf_ai_assistant_widget_js(): string {
 					buildBenefitsTextEditors();
 					buildServiceIntroReorderControls();
 					buildServiceIntroCardEditors();
+					buildServiceAreasEditorControls();
 					buildBenefitsGridChrome();
 					buildBenefitsIconEditors();
 					setSelectedSection(clone);

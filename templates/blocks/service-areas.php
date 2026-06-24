@@ -33,6 +33,18 @@ $icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup(
 $card_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'service_areas', 'list', 'lf-block-service-areas__icon') : '';
 $render_id = $block_id !== '' ? $block_id : 'block-' . uniqid();
 
+$order_ids_raw = trim((string) ($section['service_areas_area_ids'] ?? ''));
+$order_ids = [];
+if ($order_ids_raw !== '') {
+	foreach (preg_split('/[\s,]+/', $order_ids_raw) ?: [] as $pid) {
+		$pid = (int) $pid;
+		if ($pid > 0) {
+			$order_ids[] = $pid;
+		}
+	}
+}
+$has_explicit_order = is_array($section) && array_key_exists('service_areas_area_ids', $section) && $order_ids !== [];
+
 $query = new WP_Query([
 	'post_type'      => 'lf_service_area',
 	'posts_per_page' => -1,
@@ -41,6 +53,25 @@ $query = new WP_Query([
 	'post_status'    => function_exists('lf_cpt_card_query_post_statuses') ? lf_cpt_card_query_post_statuses() : ['publish', 'future', 'draft', 'pending'],
 	'no_found_rows'  => true,
 ]);
+if ($order_ids !== []) {
+	$query = new WP_Query([
+		'post_type'      => 'lf_service_area',
+		'post__in'       => $order_ids,
+		'orderby'        => 'post__in',
+		'posts_per_page' => -1,
+		'post_status'    => function_exists('lf_cpt_card_query_post_statuses') ? lf_cpt_card_query_post_statuses() : ['publish', 'future', 'draft', 'pending'],
+		'no_found_rows'  => true,
+	]);
+} elseif ($has_explicit_order) {
+	$query = new WP_Query([
+		'post_type'      => 'lf_service_area',
+		'post__in'       => [0],
+		'orderby'        => 'post__in',
+		'posts_per_page' => -1,
+		'post_status'    => function_exists('lf_cpt_card_query_post_statuses') ? lf_cpt_card_query_post_statuses() : ['publish', 'future', 'draft', 'pending'],
+		'no_found_rows'  => true,
+	]);
+}
 
 $business_geo = [];
 if (function_exists('lf_get_option')) {
@@ -63,6 +94,7 @@ if ($query->have_posts()) {
 		$area_url = ($area_post instanceof \WP_Post && function_exists('lf_cpt_card_permalink'))
 			? lf_cpt_card_permalink($area_post)
 			: (string) get_permalink();
+		$area_status = ($area_post instanceof \WP_Post) ? sanitize_key((string) $area_post->post_status) : 'publish';
 		$area_state = '';
 		if (function_exists('get_field')) {
 			$area_state = (string) get_field('lf_service_area_state', $area_id);
@@ -91,6 +123,7 @@ if ($query->have_posts()) {
 			'id' => $area_id,
 			'title' => wp_strip_all_tags($area_title),
 			'url' => esc_url_raw($area_url),
+			'status' => $area_status,
 			'state' => $area_state,
 			'lat' => $lat,
 			'lng' => $lng,
@@ -194,7 +227,7 @@ $points_json = wp_json_encode(array_map(static function (array $area): array {
 
 			<ul class="lf-block-service-areas__list lf-cpt-driven-links" role="list" data-service-areas-list>
 				<?php foreach ($areas as $index => $area) : ?>
-					<li class="lf-block-service-areas__item" data-title="<?php echo esc_attr((string) ($area['title'] ?? '')); ?>" data-area-id="<?php echo esc_attr((string) (int) ($area['id'] ?? 0)); ?>" data-point-index="<?php echo esc_attr((string) $index); ?>">
+					<li class="lf-block-service-areas__item" data-title="<?php echo esc_attr((string) ($area['title'] ?? '')); ?>" data-area-id="<?php echo esc_attr((string) (int) ($area['id'] ?? 0)); ?>" data-area-status="<?php echo esc_attr((string) ($area['status'] ?? 'publish')); ?>" data-point-index="<?php echo esc_attr((string) $index); ?>">
 						<a href="<?php echo esc_url((string) ($area['url'] ?? '')); ?>" class="lf-block-service-areas__link">
 							<?php if ($card_icon) : ?><span class="lf-block-service-areas__icon"><?php echo $card_icon; ?></span><?php endif; ?>
 							<span class="lf-block-service-areas__card-title"><?php echo esc_html((string) ($area['title'] ?? '')); ?></span>

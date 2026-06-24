@@ -812,6 +812,7 @@ add_action('wp_ajax_lf_ai_update_section_media', 'lf_ai_ajax_update_section_medi
 add_action('wp_ajax_lf_ai_update_section_lines', 'lf_ai_ajax_update_section_lines');
 add_action('wp_ajax_lf_ai_faq_library', 'lf_ai_ajax_faq_library');
 add_action('wp_ajax_lf_ai_service_library', 'lf_ai_ajax_service_library');
+add_action('wp_ajax_lf_ai_area_library', 'lf_ai_ajax_area_library');
 add_action('wp_ajax_lf_ai_process_step_library', 'lf_ai_ajax_process_step_library');
 add_action('wp_ajax_lf_ai_set_service_thumbnail', 'lf_ai_ajax_set_service_thumbnail');
 add_action('wp_ajax_lf_ai_reorder_faq_items', 'lf_ai_ajax_reorder_faq_items');
@@ -2847,6 +2848,8 @@ function lf_ai_ajax_update_section_checklist(): void {
 		$wanted_type = '';
 		if ($field_key === 'service_intro_service_ids') {
 			$wanted_type = 'service_intro';
+		} elseif ($field_key === 'service_areas_area_ids') {
+			$wanted_type = 'service_areas';
 		} elseif ($field_key === 'faq_selected_ids') {
 			$wanted_type = 'faq_accordion';
 		}
@@ -3616,6 +3619,7 @@ function lf_ai_allowed_line_fields_for_section_type(string $section_type): array
 		'trust_bar' => ['trust_badges'],
 		'benefits' => ['benefits_icon_overrides', 'benefits_icon_bg_overrides', 'benefits_items'],
 		'service_intro' => ['service_intro_service_ids'],
+		'service_areas' => ['service_areas_area_ids'],
 		'process' => ['process_steps', 'process_selected_ids'],
 		'faq_accordion' => ['faq_selected_ids'],
 		'packages' => ['package_cards'],
@@ -3723,6 +3727,49 @@ function lf_ai_ajax_service_library(): void {
 			'permalink'     => $permalink,
 			'thumbnail_url' => is_string($thumb) ? $thumb : '',
 			'short_desc'    => $desc,
+		]);
+	}
+	wp_reset_postdata();
+	wp_send_json_success([
+		'items' => $rows,
+	]);
+}
+
+function lf_ai_ajax_area_library(): void {
+	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!current_user_can(LF_AI_CAP)) {
+		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
+	}
+	$search = isset($_POST['search']) ? sanitize_text_field(wp_unslash((string) $_POST['search'])) : '';
+	$query_args = [
+		'post_type'      => 'lf_service_area',
+		'post_status'    => function_exists('lf_cpt_card_query_post_statuses')
+			? lf_cpt_card_query_post_statuses()
+			: ['publish', 'future', 'draft', 'pending'],
+		'posts_per_page' => 200,
+		'orderby'        => 'menu_order title',
+		'order'          => 'ASC',
+		'no_found_rows'  => true,
+	];
+	if ($search !== '') {
+		$query_args['s'] = $search;
+	}
+	$q = new \WP_Query($query_args);
+	$rows = [];
+	while ($q->have_posts()) {
+		$q->the_post();
+		$aid = (int) get_the_ID();
+		$post = get_post($aid);
+		$status_meta = ($post instanceof \WP_Post && function_exists('lf_cpt_editor_status_meta'))
+			? lf_cpt_editor_status_meta($post)
+			: ['status' => 'publish', 'status_label' => __('Live', 'leadsforward-core'), 'is_live' => true];
+		$permalink = ($post instanceof \WP_Post && function_exists('lf_cpt_card_permalink'))
+			? lf_cpt_card_permalink($post)
+			: (string) get_permalink($aid);
+		$rows[] = array_merge($status_meta, [
+			'id'        => $aid,
+			'title'     => html_entity_decode((string) get_the_title(), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+			'permalink' => $permalink,
 		]);
 	}
 	wp_reset_postdata();
@@ -3873,7 +3920,7 @@ function lf_ai_decode_section_lines_response_items(string $stored, string $field
 		return [];
 	}
 	$lines = array_map('strval', $lines);
-	if ($field_key === 'service_intro_service_ids') {
+	if ($field_key === 'service_intro_service_ids' || $field_key === 'service_areas_area_ids') {
 		return array_values(array_filter(array_map('trim', $lines), static function (string $v): bool {
 			return $v !== '';
 		}));
@@ -4009,6 +4056,8 @@ function lf_ai_ajax_update_section_lines(): void {
 	$wanted_type = '';
 	if ($field_key === 'service_intro_service_ids') {
 		$wanted_type = 'service_intro';
+	} elseif ($field_key === 'service_areas_area_ids') {
+		$wanted_type = 'service_areas';
 	} elseif ($field_key === 'faq_selected_ids') {
 		$wanted_type = 'faq_accordion';
 	}
