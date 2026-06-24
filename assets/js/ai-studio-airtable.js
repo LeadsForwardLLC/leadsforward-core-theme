@@ -162,20 +162,14 @@
     var strings = (cfg && cfg.strings) ? cfg.strings : {};
     countEl.classList.remove('is-warn');
     if (total === 0) {
-      countEl.textContent = strings.scopeFilterEmpty || 'No options';
+      countEl.textContent = strings.scopeFilterEmpty || 'No list loaded';
       return;
     }
-    if (selected === 0) {
-      countEl.textContent = strings.scopeFilterNone || 'None selected';
-      countEl.classList.add('is-warn');
-      return;
-    }
-    if (selected === total) {
-      countEl.textContent = strings.scopeFilterAllIncluded || ('All ' + total + ' included');
-      return;
-    }
-    var tpl = strings.scopeFilterSome || '{selected} of {total} included';
+    var tpl = strings.scopeFilterCount || '{selected}/{total} included';
     countEl.textContent = tpl.replace('{selected}', String(selected)).replace('{total}', String(total));
+    if (selected === 0) {
+      countEl.classList.add('is-warn');
+    }
   }
 
   function setScopeFilterChecks(filterEl, on) {
@@ -224,20 +218,31 @@
     });
   }
 
-  function normalizeScopeListForSubmit(listEl) {
-    if (!listEl) return;
+  function deriveScopePickMode(listEl) {
+    if (!listEl) return 'all';
     var boxes = listEl.querySelectorAll('.lf-scope-filter__checkbox');
     var total = boxes.length;
+    if (total === 0) return 'all';
     var checked = 0;
     boxes.forEach(function (cb) {
       if (cb.checked) checked++;
+    });
+    if (checked === 0) return 'none';
+    if (checked === total) return 'all';
+    return 'pick';
+  }
+
+  function syncScopeModeOnSubmit(filterEl) {
+    if (!filterEl) return;
+    var listEl = filterEl.querySelector('.lf-scope-filter__list');
+    var modeInput = filterEl.querySelector('[data-lf-scope-mode]');
+    if (!listEl || !modeInput) return;
+    var mode = deriveScopePickMode(listEl);
+    modeInput.value = mode;
+    listEl.setAttribute('data-scope-mode', mode);
+    listEl.querySelectorAll('.lf-scope-filter__checkbox').forEach(function (cb) {
       cb.disabled = false;
     });
-    if (total > 0 && checked === total) {
-      boxes.forEach(function (cb) {
-        cb.checked = false;
-      });
-    }
   }
 
   function syncScopeSectionVisibility() {
@@ -253,12 +258,13 @@
     if (!listEl) return;
     var filterEl = listEl.closest('[data-lf-scope-filter]');
     var inputName = listEl.getAttribute('data-input-name') || 'lf_ai_scope_service_slugs';
+    var modeInput = filterEl ? filterEl.querySelector('[data-lf-scope-mode]') : null;
+    var mode = (modeInput && modeInput.value) ? modeInput.value : (listEl.getAttribute('data-scope-mode') || 'all');
     var prev = {};
     listEl.querySelectorAll('.lf-scope-filter__checkbox').forEach(function (cb) {
       if (cb.checked) prev[String(cb.value || '')] = true;
     });
     var hadPrev = Object.keys(prev).length > 0;
-    var defaultAll = listEl.getAttribute('data-default-all') === '1' || !hadPrev;
     listEl.innerHTML = '';
     var hasRows = false;
     (rows || []).forEach(function (row) {
@@ -275,7 +281,13 @@
       input.className = 'lf-scope-filter__checkbox';
       input.name = inputName + '[]';
       input.value = value;
-      input.checked = hadPrev ? !!prev[value] : defaultAll;
+      if (mode === 'all') {
+        input.checked = true;
+      } else if (mode === 'none') {
+        input.checked = false;
+      } else {
+        input.checked = hadPrev ? !!prev[value] : false;
+      }
       var span = document.createElement('span');
       span.className = 'lf-scope-filter__label';
       span.textContent = label;
@@ -288,10 +300,10 @@
       empty.className = 'lf-scope-filter__empty';
       empty.textContent = (cfg.strings && cfg.strings.scopeFilterNoOptions)
         ? cfg.strings.scopeFilterNoOptions
-        : 'No options for this project.';
+        : 'No items for this project.';
       listEl.appendChild(empty);
     } else {
-      listEl.setAttribute('data-default-all', defaultAll ? '1' : '0');
+      listEl.setAttribute('data-scope-mode', mode);
     }
     if (filterEl) {
       bindScopeFilter(filterEl);
@@ -629,8 +641,7 @@
     });
 
     form.addEventListener('submit', function () {
-      normalizeScopeListForSubmit(byId('lf-ai-scope-service-slugs'));
-      normalizeScopeListForSubmit(byId('lf-ai-scope-area-slugs'));
+      document.querySelectorAll('[data-lf-scope-filter]').forEach(syncScopeModeOnSubmit);
     });
 
     syncScopeSectionVisibility();
