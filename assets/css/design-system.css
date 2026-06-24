@@ -5154,6 +5154,15 @@ article a:not(.lf-btn):hover {
 	content: "→";
 }
 
+.lf-block-service-intro__view-all-wrap {
+	margin: 1.75rem 0 0;
+	text-align: center;
+}
+
+.lf-block-service-intro__view-all {
+	display: inline-flex;
+}
+
 .lf-block-service-intro__empty {
 	margin: 0;
 	color: var(--lf-text-muted);

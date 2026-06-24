@@ -55,25 +55,43 @@ foreach ($social_map as $key => $meta) {
 }
 $has_nap = !empty(trim((string) ($nap['name'] ?? ''))) || !empty(trim((string) ($nap['phone'] ?? '')));
 
-$services = get_posts([
+$footer_services_limit = (int) apply_filters('lf_footer_services_menu_limit', 18);
+$footer_areas_limit = (int) apply_filters('lf_footer_service_areas_menu_limit', 18);
+$footer_services_limit = $footer_services_limit > 0 ? $footer_services_limit : 18;
+$footer_areas_limit = $footer_areas_limit > 0 ? $footer_areas_limit : 18;
+
+$all_services = get_posts([
 	'post_type'      => 'lf_service',
 	'post_status'    => 'publish',
-	'posts_per_page' => 6,
+	'posts_per_page' => -1,
 	'orderby'        => 'menu_order title',
 	'order'          => 'ASC',
 	'no_found_rows'  => true,
 ]);
 if (function_exists('lf_ai_studio_dedupe_lf_service_posts') && function_exists('lf_ai_studio_manifest_preferred_service_slugs')) {
-	$services = lf_ai_studio_dedupe_lf_service_posts(is_array($services) ? $services : [], lf_ai_studio_manifest_preferred_service_slugs());
+	$all_services = lf_ai_studio_dedupe_lf_service_posts(is_array($all_services) ? $all_services : [], lf_ai_studio_manifest_preferred_service_slugs());
 }
-$areas = get_posts([
+$services = array_slice(is_array($all_services) ? $all_services : [], 0, $footer_services_limit);
+$services_overview_page = get_page_by_path('services');
+$services_overview_url = ($services_overview_page instanceof \WP_Post && $services_overview_page->post_status === 'publish')
+	? (string) get_permalink($services_overview_page)
+	: home_url('/services/');
+$show_footer_all_services = count($all_services) > count($services);
+
+$all_areas = get_posts([
 	'post_type'      => 'lf_service_area',
 	'post_status'    => 'publish',
-	'posts_per_page' => 6,
+	'posts_per_page' => -1,
 	'orderby'        => 'menu_order title',
 	'order'          => 'ASC',
 	'no_found_rows'  => true,
 ]);
+$areas = array_slice(is_array($all_areas) ? $all_areas : [], 0, $footer_areas_limit);
+$areas_overview_page = get_page_by_path('service-areas');
+$areas_overview_url = ($areas_overview_page instanceof \WP_Post && $areas_overview_page->post_status === 'publish')
+	? (string) get_permalink($areas_overview_page)
+	: home_url('/service-areas/');
+$show_footer_all_areas = count($all_areas) > count($areas);
 $company_links = [];
 foreach (['about-us', 'contact', 'reviews', 'blog'] as $slug) {
 	$page = get_page_by_path($slug);
@@ -181,6 +199,9 @@ if (!$has_nap && empty($services) && empty($areas) && empty($company_links) && e
 							<?php foreach ($services as $service) : ?>
 								<li><a href="<?php echo esc_url(get_permalink($service)); ?>"><?php echo esc_html(get_the_title($service)); ?></a></li>
 							<?php endforeach; ?>
+							<?php if ($show_footer_all_services) : ?>
+								<li><a href="<?php echo esc_url($services_overview_url); ?>"><?php esc_html_e('View all services', 'leadsforward-core'); ?></a></li>
+							<?php endif; ?>
 						</ul>
 					</div>
 				<?php endif; ?>
@@ -191,6 +212,9 @@ if (!$has_nap && empty($services) && empty($areas) && empty($company_links) && e
 							<?php foreach ($areas as $area) : ?>
 								<li><a href="<?php echo esc_url(get_permalink($area)); ?>"><?php echo esc_html(get_the_title($area)); ?></a></li>
 							<?php endforeach; ?>
+							<?php if ($show_footer_all_areas) : ?>
+								<li><a href="<?php echo esc_url($areas_overview_url); ?>"><?php esc_html_e('View all service areas', 'leadsforward-core'); ?></a></li>
+							<?php endif; ?>
 						</ul>
 					</div>
 				<?php endif; ?>
