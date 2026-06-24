@@ -17,30 +17,33 @@ const LF_PUBLISH_SCHEDULE_OPTION = 'lf_ai_publish_schedule';
  * @return list<string>
  */
 function lf_publish_schedule_page_keys(): array {
-	return [
-		'page:home',
-		'page:about',
-		'page:contact',
-		'page:reviews',
-		'page:blog',
-		'page:services',
-		'page:service-areas',
-	];
+	$slugs = function_exists('lf_wizard_core_page_slugs')
+		? lf_wizard_core_page_slugs()
+		: ['home', 'about-us', 'why-choose-us', 'services', 'service-areas', 'reviews', 'blog', 'sitemap', 'contact', 'privacy-policy', 'terms-of-service', 'thank-you'];
+	$keys = [];
+	foreach ($slugs as $slug) {
+		$slug = sanitize_title((string) $slug);
+		if ($slug === '') {
+			continue;
+		}
+		$keys[] = $slug === 'about-us' ? 'page:about' : 'page:' . $slug;
+	}
+
+	return $keys;
 }
 
 /**
  * @return array<string, string>
  */
 function lf_publish_schedule_page_labels(): array {
-	return [
-		'page:home' => __('Homepage', 'leadsforward-core'),
-		'page:about' => __('About', 'leadsforward-core'),
-		'page:contact' => __('Contact', 'leadsforward-core'),
-		'page:reviews' => __('Reviews', 'leadsforward-core'),
-		'page:blog' => __('Blog', 'leadsforward-core'),
-		'page:services' => __('Services overview', 'leadsforward-core'),
-		'page:service-areas' => __('Service areas overview', 'leadsforward-core'),
-	];
+	$titles = function_exists('lf_wizard_default_page_titles') ? lf_wizard_default_page_titles() : [];
+	$labels = [];
+	foreach (lf_publish_schedule_page_keys() as $key) {
+		$path = lf_publish_schedule_page_path($key);
+		$labels[ $key ] = $titles[ $path ] ?? $key;
+	}
+
+	return $labels;
 }
 
 /**
@@ -49,15 +52,15 @@ function lf_publish_schedule_page_labels(): array {
  * @return array<string, array{timing:string,date:string}>
  */
 function lf_publish_schedule_default_items(): array {
-	return [
-		'page:home' => ['timing' => 'now', 'date' => ''],
-		'page:services' => ['timing' => 'now', 'date' => ''],
-		'page:service-areas' => ['timing' => 'now', 'date' => ''],
-		'page:contact' => ['timing' => 'now', 'date' => ''],
-		'page:about' => ['timing' => 'draft', 'date' => ''],
-		'page:reviews' => ['timing' => 'draft', 'date' => ''],
-		'page:blog' => ['timing' => 'draft', 'date' => ''],
-	];
+	$publish_now = ['page:home', 'page:services', 'page:service-areas', 'page:contact'];
+	$items = [];
+	foreach (lf_publish_schedule_page_keys() as $key) {
+		$items[ $key ] = in_array($key, $publish_now, true)
+			? ['timing' => 'now', 'date' => '']
+			: ['timing' => 'draft', 'date' => ''];
+	}
+
+	return $items;
 }
 
 /**
@@ -418,20 +421,15 @@ function lf_publish_schedule_merge_status_args(string $schedule_key, array $base
  * Map schedule page key to WP page path.
  */
 function lf_publish_schedule_page_path(string $schedule_key): string {
-	$map = [
-		'page:home' => 'home',
-		'page:about' => 'about-us',
-		'page:contact' => 'contact',
-		'page:reviews' => 'reviews',
-		'page:blog' => 'blog',
-		'page:services' => 'services',
-		'page:service-areas' => 'service-areas',
-	];
-	if (!isset($map[$schedule_key])) {
+	if (!str_starts_with($schedule_key, 'page:')) {
 		return '';
 	}
+	$slug = substr($schedule_key, 5);
+	if ($slug === 'about') {
+		return 'about-us';
+	}
 
-	return $map[$schedule_key];
+	return $slug;
 }
 
 /**
@@ -594,7 +592,7 @@ function lf_publish_schedule_render_controls(string $schedule_key, array $stored
 			<option value="schedule" <?php selected($timing, 'schedule'); ?>><?php esc_html_e('Schedule', 'leadsforward-core'); ?></option>
 			<option value="draft" <?php selected($timing, 'draft'); ?>><?php esc_html_e('Keep draft', 'leadsforward-core'); ?></option>
 		</select>
-		<div class="lf-publish-schedule__datetime<?php echo $datetime_hidden ? ' lf-publish-schedule__datetime--hidden' : ''; ?>" data-lf-publish-datetime>
+		<div class="lf-publish-schedule__datetime<?php echo $datetime_hidden ? ' lf-publish-schedule__datetime--hidden' : ''; ?>" data-lf-publish-datetime<?php echo $datetime_hidden ? ' hidden' : ''; ?>>
 			<input
 				type="date"
 				class="lf-publish-schedule__date-part"

@@ -362,6 +362,7 @@
     datetimeWrap.setAttribute('data-lf-publish-datetime', '1');
     if (timing !== 'schedule') {
       datetimeWrap.classList.add('lf-publish-schedule__datetime--hidden');
+      datetimeWrap.setAttribute('hidden', 'hidden');
     }
 
     var datePart = document.createElement('input');
@@ -480,6 +481,11 @@
       var on = select.value === 'schedule';
       if (datetimeWrap) {
         datetimeWrap.classList.toggle('lf-publish-schedule__datetime--hidden', !on);
+        if (on) {
+          datetimeWrap.removeAttribute('hidden');
+        } else {
+          datetimeWrap.setAttribute('hidden', 'hidden');
+        }
       }
       if (!on) {
         hidden.value = '';
