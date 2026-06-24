@@ -846,7 +846,6 @@ function lf_ai_studio_render_scope_slug_checklist(string $list_id, string $input
 	$check_all = ($mode === 'all');
 	$check_none = ($mode === 'none');
 	$mode_field = str_contains($input_name, 'area') ? 'lf_ai_scope_service_area_slugs_mode' : 'lf_ai_scope_service_slugs_mode';
-	$schedule_items = lf_publish_schedule_get_items();
 	?>
 	<details class="lf-scope-filter" data-lf-scope-filter data-lf-scope-section="<?php echo esc_attr($list_id); ?>" <?php echo $slug_map !== [] ? 'open' : ''; ?>>
 		<summary class="lf-scope-filter__summary">
@@ -873,7 +872,7 @@ function lf_ai_studio_render_scope_slug_checklist(string $list_id, string $input
 					<?php foreach ($slug_map as $slug => $label) : ?>
 						<?php
 						$schedule_key = $schedule_prefix . ':' . sanitize_title((string) $slug);
-						$stored_schedule = $schedule_items[$schedule_key] ?? [];
+						$stored_schedule = lf_publish_schedule_resolved_item($schedule_key);
 						?>
 						<div class="lf-scope-filter__item" data-lf-scope-item>
 							<label class="lf-scope-filter__check">
@@ -886,7 +885,7 @@ function lf_ai_studio_render_scope_slug_checklist(string $list_id, string $input
 								/>
 								<span class="lf-scope-filter__label"><?php echo esc_html((string) $label); ?></span>
 							</label>
-							<?php lf_publish_schedule_render_controls($schedule_key, is_array($stored_schedule) ? $stored_schedule : [], true); ?>
+							<?php lf_publish_schedule_render_controls($schedule_key, $stored_schedule, true); ?>
 						</div>
 					<?php endforeach; ?>
 				<?php endif; ?>
@@ -5493,6 +5492,10 @@ function lf_ai_studio_manifest_keyword_map(array $manifest, string $key): array 
 }
 
 function lf_ai_studio_sync_manifest_posts(array $manifest): void {
+	if (function_exists('lf_publish_schedule_seed_defaults_if_empty')) {
+		lf_publish_schedule_seed_defaults_if_empty();
+	}
+
 	if (function_exists('lf_service_areas_repair_lumped_posts')) {
 		lf_service_areas_repair_lumped_posts();
 	}
@@ -5513,7 +5516,7 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 			$service_slugs[] = $n['slug'];
 		}
 	}
-	[$now_services, $later_services] = lf_launch_schedule_partition_slugs($service_slugs, (float) ($ls['services_initial_ratio'] ?? 0.5));
+	[$now_services, $later_services] = lf_launch_schedule_partition_slugs($service_slugs, (float) ($ls['services_initial_ratio'] ?? 0.0));
 	$service_now_set = array_fill_keys($now_services, true);
 
 	$areas_raw = isset($manifest['service_areas']) && is_array($manifest['service_areas']) ? $manifest['service_areas'] : [];
@@ -5530,7 +5533,7 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 			$area_slugs[] = $n['slug'];
 		}
 	}
-	[$now_areas, $later_areas] = lf_launch_schedule_partition_slugs($area_slugs, (float) ($ls['service_areas_initial_ratio'] ?? 0.5));
+	[$now_areas, $later_areas] = lf_launch_schedule_partition_slugs($area_slugs, (float) ($ls['service_areas_initial_ratio'] ?? 0.0));
 	$area_now_set = array_fill_keys($now_areas, true);
 
 	$deferred_map = lf_launch_schedule_deferred_datetimes($later_services, $later_areas, $ls, $anchor_ts);
@@ -5577,10 +5580,7 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 					$args['post_date_gmt'] = current_time('mysql', 1);
 				}
 			} else {
-				$local = $resolve_deferred_local($key);
-				$args['post_status'] = 'future';
-				$args['post_date'] = $local;
-				$args['post_date_gmt'] = get_gmt_from_date($local);
+				$args['post_status'] = 'draft';
 			}
 			$args = lf_publish_schedule_merge_status_args($key, $args);
 			wp_update_post($args);
@@ -5597,10 +5597,7 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 			if ($publish_now) {
 				$insert_args['post_status'] = 'publish';
 			} else {
-				$local = $resolve_deferred_local($key);
-				$insert_args['post_status'] = 'future';
-				$insert_args['post_date'] = $local;
-				$insert_args['post_date_gmt'] = get_gmt_from_date($local);
+				$insert_args['post_status'] = 'draft';
 			}
 			$insert_args = lf_publish_schedule_merge_status_args($key, $insert_args);
 			$post_id = wp_insert_post($insert_args);
@@ -5656,10 +5653,7 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 					$args['post_date_gmt'] = current_time('mysql', 1);
 				}
 			} else {
-				$local = $resolve_deferred_local($key);
-				$args['post_status'] = 'future';
-				$args['post_date'] = $local;
-				$args['post_date_gmt'] = get_gmt_from_date($local);
+				$args['post_status'] = 'draft';
 			}
 			$args = lf_publish_schedule_merge_status_args($key, $args);
 			wp_update_post($args);
@@ -5686,10 +5680,7 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 			if ($publish_now) {
 				$insert_args['post_status'] = 'publish';
 			} else {
-				$local = $resolve_deferred_local($key);
-				$insert_args['post_status'] = 'future';
-				$insert_args['post_date'] = $local;
-				$insert_args['post_date_gmt'] = get_gmt_from_date($local);
+				$insert_args['post_status'] = 'draft';
 			}
 			$insert_args = lf_publish_schedule_merge_status_args($key, $insert_args);
 			$post_id = wp_insert_post($insert_args);

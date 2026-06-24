@@ -21,8 +21,8 @@ if (!defined('ABSPATH')) {
 function lf_launch_schedule_defaults(): array {
 	return [
 		'anchor' => '',
-		'services_initial_ratio' => 0.5,
-		'service_areas_initial_ratio' => 0.5,
+		'services_initial_ratio' => 0.0,
+		'service_areas_initial_ratio' => 0.0,
 		'deferred_mode' => 'weekly_pair',
 		'spread_days' => 30,
 		'publish_hour' => 9,
