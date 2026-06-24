@@ -33,6 +33,7 @@ function lf_load_inc(string $path): void {
 
 // Core setup: theme support, menus, editor styles.
 lf_load_inc('setup.php');
+lf_load_inc('menus-service-categories.php');
 
 // WordPress cleanup: emojis, oEmbed, dashicons, bloat.
 lf_load_inc('cleanup.php');

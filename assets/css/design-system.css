@@ -2947,6 +2947,32 @@ article a:not(.lf-btn):hover {
 }
 
 @media (min-width: 901px) {
+	.site-header__menu .sub-menu .lf-menu-service-category > .sub-menu {
+		position: absolute;
+		top: 0;
+		left: calc(100% + 0.2rem);
+		min-width: 240px;
+		max-width: min(320px, 42vw);
+		margin-top: 0;
+		opacity: 0;
+		pointer-events: none;
+		transform: translateX(6px);
+	}
+
+	.site-header__menu .sub-menu .lf-menu-service-category:hover > .sub-menu,
+	.site-header__menu .sub-menu .lf-menu-service-category:focus-within > .sub-menu,
+	.site-header__menu .sub-menu .lf-menu-service-category.is-open > .sub-menu {
+		opacity: 1;
+		pointer-events: auto;
+		transform: translateX(0);
+	}
+
+	.site-header__menu .sub-menu .lf-menu-service-category > a.lf-menu-service-category__link {
+		font-weight: 600;
+	}
+}
+
+@media (min-width: 901px) {
 	/* "More" as right slide-out panel instead of hover dropdown (desktop). */
 	.site-header--more-slideout .site-header__menu > .lf-menu-more:hover > .sub-menu,
 	.site-header--more-slideout .site-header__menu > .lf-menu-more:focus-within:not(.is-open) > .sub-menu {
@@ -3020,6 +3046,15 @@ article a:not(.lf-btn):hover {
 	.site-header__menu .sub-menu a {
 		padding: 0.75rem 0;
 		font-size: 1rem;
+	}
+	.site-header__menu .sub-menu .lf-menu-service-category > a {
+		font-weight: 600;
+	}
+	.site-header__menu .sub-menu .lf-menu-service-category > .sub-menu {
+		padding-left: 0.85rem;
+	}
+	.site-header__menu .sub-menu .lf-menu-service-category:not(.is-open) > .sub-menu {
+		display: none;
 	}
 }
 
