@@ -122,6 +122,11 @@ function lf_header_menu_link_attributes(array $atts, \WP_Post $item, $args, int 
 		$atts['tabindex'] = '-1';
 		$atts['class'] = trim(($atts['class'] ?? '') . ' is-divider');
 	}
+	if (in_array('lf-menu-service-category', $classes, true)) {
+		$atts['href'] = '#';
+		$atts['class'] = trim(($atts['class'] ?? '') . ' lf-menu-service-category__link');
+		$atts['aria-haspopup'] = 'true';
+	}
 	if (in_array('lf-menu-cta', $classes, true)) {
 		$cta_url = function_exists('lf_get_global_option') ? (string) lf_get_global_option('lf_header_cta_url', '') : '';
 		if ($cta_url !== '') {
@@ -309,11 +314,39 @@ function lf_header_menu_reorder_services_areas_children(array $items): array {
 				$all_links[] = $child;
 			} elseif (lf_header_menu_item_has_class($child, 'lf-submenu-divider')) {
 				$dividers[] = $child;
+			} elseif (lf_header_menu_item_has_class($child, 'lf-menu-service-category')) {
+				$regular[] = $child;
 			} else {
 				$regular[] = $child;
 			}
 		}
-		usort($regular, $sort_by_order);
+		if ($regular !== [] && lf_header_menu_item_has_class($regular[0], 'lf-menu-service-category')) {
+			$cat_rank = static function (\WP_Post $item): int {
+				$classes = is_array($item->classes ?? null) ? $item->classes : [];
+				$order = ['foundation-repair', 'waterproofing', 'crawl-space'];
+				foreach ($order as $idx => $slug) {
+					if (in_array('lf-menu-cat--' . $slug, $classes, true)) {
+						return $idx;
+					}
+				}
+
+				return 99;
+			};
+			usort(
+				$regular,
+				static function (\WP_Post $a, \WP_Post $b) use ($cat_rank): int {
+					$ra = $cat_rank($a);
+					$rb = $cat_rank($b);
+					if ($ra !== $rb) {
+						return $ra <=> $rb;
+					}
+
+					return strcasecmp((string) ($a->title ?? ''), (string) ($b->title ?? ''));
+				}
+			);
+		} else {
+			usort($regular, $sort_by_order);
+		}
 		usort($dividers, $sort_by_order);
 		usort($all_links, $sort_by_order);
 		$ordered = array_merge($regular, $dividers, $all_links);

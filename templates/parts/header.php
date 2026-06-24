@@ -189,10 +189,29 @@ if ($show_topbar) {
 				}
 			});
 		}
-		/* Remove any submenu toggles incorrectly added to nested items (keeps chevron on parent only) */
-		header.querySelectorAll('.site-header__menu .sub-menu .menu-item .site-header__submenu-toggle').forEach(function (btn) {
+		/* Remove submenu toggles on nested items except service category rows. */
+		header.querySelectorAll('.site-header__menu .sub-menu .menu-item:not(.lf-menu-service-category) .site-header__submenu-toggle').forEach(function (btn) {
 			btn.remove();
 		});
+		var categoryItems = header.querySelectorAll('.site-header__menu .lf-menu-service-category');
+		if (categoryItems.length) {
+			categoryItems.forEach(function (item) {
+				var catLink = item.querySelector(':scope > a.lf-menu-service-category__link, :scope > a');
+				if (!catLink) return;
+				catLink.addEventListener('click', function (event) {
+					if (window.matchMedia('(min-width: 901px)').matches) {
+						event.preventDefault();
+						return;
+					}
+					event.preventDefault();
+					var wasOpen = item.classList.contains('is-open');
+					Array.prototype.forEach.call(categoryItems, function (peer) {
+						if (peer !== item) peer.classList.remove('is-open');
+					});
+					item.classList.toggle('is-open', !wasOpen);
+				});
+			});
+		}
 		var submenuItems = header.querySelectorAll('.site-header__menu > .menu-item-has-children, .site-header__menu > .lf-menu-more');
 		if (submenuItems.length) {
 			submenuItems.forEach(function (item) {
