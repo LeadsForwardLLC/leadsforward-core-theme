@@ -129,13 +129,11 @@ Choose one source:
 
 Set generation scope as needed.
 
-Set **Hybrid image generation limit** to cap AI-generated missing hero/content images per run.
+Preset niche image packs load automatically from the theme (`assets/niche-packs/{niche}/`) — filenames, alt text, and compression are already tuned for local SEO.
 
-### Step 3: Upload required images
+### Step 3: Optional custom images
 
-Use Manifester step:
-
-- **Upload required images for auto-distribution**
+Use Manifester step **Images** if you want to add your own photos on top of the preset pack:
 
 Action:
 

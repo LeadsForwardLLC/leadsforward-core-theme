@@ -1757,7 +1757,15 @@ function lf_ai_studio_render_page(): void {
 		'order' => 'ASC',
 	]);
 	$scope_snap = lf_ai_studio_get_generation_scope_snapshot_for_ui(is_array($manifest) ? $manifest : []);
-	$image_generation_limit = max(1, min(60, (int) get_option('lf_ai_image_generation_limit', 12)));
+	$images_niche_slug = is_array($manifest) && function_exists('lf_site_builder_niche_slug_from_manifest')
+		? lf_site_builder_niche_slug_from_manifest($manifest)
+		: sanitize_title((string) get_option('lf_homepage_niche_slug', 'foundation-repair'));
+	$images_niche_pack = function_exists('lf_site_builder_load_niche_pack')
+		? lf_site_builder_load_niche_pack($images_niche_slug)
+		: null;
+	$images_pack_count = is_array($images_niche_pack) && is_array($images_niche_pack['images'] ?? null)
+		? count($images_niche_pack['images'])
+		: 0;
 	$vision_debug_job_id = $job_id > 0 ? $job_id : lf_ai_studio_latest_job_id_for_debug();
 	$vision_debug_payload = [];
 	$vision_annotations = [];
@@ -2070,7 +2078,34 @@ function lf_ai_studio_render_page(): void {
 					<div class="lf-manifester-step__badge">4</div>
 					<div class="lf-manifester-step__content">
 						<h3><?php esc_html_e('Images', 'leadsforward-core'); ?></h3>
-						<p class="description"><?php esc_html_e('Upload your library — the theme optimizes, renames, and fills missing alt text.', 'leadsforward-core'); ?></p>
+						<p class="description">
+							<?php esc_html_e('Each page template includes a curated niche photo pack — already compressed, renamed, and tagged with local SEO keywords. When you run the manifester, those images slot into hero and content areas automatically.', 'leadsforward-core'); ?>
+						</p>
+						<?php if ($images_pack_count > 0) : ?>
+							<div class="lf-manifester-status is-success">
+								<?php
+								printf(
+									/* translators: 1: niche slug, 2: image count */
+									esc_html__('Preset pack ready: %1$s (%2$d SEO-optimized images).', 'leadsforward-core'),
+									esc_html(str_replace('-', ' ', $images_niche_slug)),
+									(int) $images_pack_count
+								);
+								?>
+							</div>
+						<?php else : ?>
+							<div class="lf-manifester-status is-info">
+								<?php
+								printf(
+									/* translators: %s: niche slug */
+									esc_html__('No preset pack found for “%s” yet — upload your own library below or add a pack under assets/niche-packs/.', 'leadsforward-core'),
+									esc_html($images_niche_slug)
+								);
+								?>
+							</div>
+						<?php endif; ?>
+						<p class="description lf-manifester-step__note" style="margin-top:8px;">
+							<?php esc_html_e('Optional: upload your own photos to add to the media library. The theme still optimizes filenames and alt text on anything you add.', 'leadsforward-core'); ?>
+						</p>
 						<form id="lf-manifester-images-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
 							<?php wp_nonce_field('lf_ai_studio_images_upload', 'lf_ai_studio_images_upload_nonce'); ?>
 							<input type="hidden" name="action" value="lf_ai_studio_images_upload" />
@@ -2117,18 +2152,6 @@ function lf_ai_studio_render_page(): void {
 							</script>
 						<?php endif; ?>
 						<div id="lf-manifester-images-status" class="lf-manifester-status" role="status" aria-live="polite"></div>
-						<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:10px;">
-							<?php wp_nonce_field('lf_ai_studio_image_settings_save', 'lf_ai_studio_image_settings_nonce'); ?>
-							<input type="hidden" name="action" value="lf_ai_studio_image_settings_save" />
-							<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
-								<label for="lf_ai_image_generation_limit"><?php esc_html_e('Hybrid image generation limit per run', 'leadsforward-core'); ?></label>
-								<input id="lf_ai_image_generation_limit" type="number" name="lf_ai_image_generation_limit" min="1" max="60" value="<?php echo esc_attr((string) $image_generation_limit); ?>" style="width:76px;" />
-								<button type="submit" class="button"><?php esc_html_e('Save Image Settings', 'leadsforward-core'); ?></button>
-							</div>
-						</form>
-						<p class="description lf-manifester-step__note">
-							<?php esc_html_e('Hybrid mode fills missing hero slots (up to your limit). Tip: use service + city in filenames.', 'leadsforward-core'); ?>
-						</p>
 					</div>
 				</div>
 
