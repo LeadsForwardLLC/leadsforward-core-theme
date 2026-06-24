@@ -106,13 +106,20 @@ function lf_publish_schedule_reset_to_defaults(): void {
  * Remove saved CPT publish-timing rows so built-in draft defaults apply.
  */
 function lf_publish_schedule_strip_cpt_items(): void {
-	$items = lf_publish_schedule_get_items();
+	$raw = get_option(LF_PUBLISH_SCHEDULE_OPTION, []);
+	if (!is_array($raw)) {
+		return;
+	}
+	$items = isset($raw['items']) && is_array($raw['items']) ? $raw['items'] : $raw;
+	if (!is_array($items)) {
+		return;
+	}
 	$changed = false;
 	foreach (array_keys($items) as $key) {
 		if (!is_string($key)) {
 			continue;
 		}
-		if (preg_match('/^lf_service(:|$)/', $key) || preg_match('/^lf_service_area(:|$)/', $key)) {
+		if (lf_publish_schedule_is_cpt_key($key)) {
 			unset($items[ $key ]);
 			$changed = true;
 		}
@@ -142,6 +149,37 @@ function lf_publish_schedule_seed_defaults_if_empty(): void {
 }
 
 /**
+ * Whether a schedule key is a service / service-area CPT row.
+ */
+function lf_publish_schedule_is_cpt_key(string $schedule_key): bool {
+	return (bool) preg_match('/^lf_service(:|$)/', $schedule_key)
+		|| (bool) preg_match('/^lf_service_area(:|$)/', $schedule_key);
+}
+
+/**
+ * @param array<string, mixed> $row
+ * @return array{timing:string,date:string}
+ */
+function lf_publish_schedule_normalize_row(string $schedule_key, array $row): array {
+	$default = lf_publish_schedule_default_item_for_key($schedule_key) ?? ['timing' => 'draft', 'date' => ''];
+	$timing = sanitize_key((string) ($row['timing'] ?? $default['timing']));
+	if ($timing === '' || !in_array($timing, ['now', 'schedule', 'draft'], true)) {
+		$timing = $default['timing'];
+	}
+	$date = sanitize_text_field((string) ($row['date'] ?? ''));
+	if ($timing === 'schedule') {
+		$date = lf_publish_schedule_normalize_datetime($date);
+	} else {
+		$date = '';
+	}
+
+	return [
+		'timing' => $timing,
+		'date' => $date,
+	];
+}
+
+/**
  * @return array<string, array{timing:string,date:string}>
  */
 function lf_publish_schedule_get_items(): array {
@@ -155,14 +193,11 @@ function lf_publish_schedule_get_items(): array {
 		if (!is_string($key) || !is_array($row)) {
 			continue;
 		}
-		$timing = sanitize_key((string) ($row['timing'] ?? 'now'));
-		if (!in_array($timing, ['now', 'schedule', 'draft'], true)) {
-			$timing = 'now';
+		$normalized = lf_publish_schedule_normalize_row($key, $row);
+		if (lf_publish_schedule_is_cpt_key($key) && $normalized['timing'] === 'draft') {
+			continue;
 		}
-		$out[$key] = [
-			'timing' => $timing,
-			'date' => sanitize_text_field((string) ($row['date'] ?? '')),
-		];
+		$out[ $key ] = $normalized;
 	}
 
 	return $out;
@@ -180,11 +215,11 @@ function lf_publish_schedule_maybe_migrate_cpt_defaults(): void {
 	if ($page !== $manifest_slug) {
 		return;
 	}
-	if (get_option('lf_publish_schedule_cpt_draft_migrated') === '1') {
+	if (get_option('lf_publish_schedule_cpt_draft_migrated') === '2') {
 		return;
 	}
 	lf_publish_schedule_strip_cpt_items();
-	update_option('lf_publish_schedule_cpt_draft_migrated', '1', false);
+	update_option('lf_publish_schedule_cpt_draft_migrated', '2', false);
 }
 add_action('admin_init', 'lf_publish_schedule_maybe_migrate_cpt_defaults', 20);
 
@@ -192,30 +227,32 @@ add_action('admin_init', 'lf_publish_schedule_maybe_migrate_cpt_defaults', 20);
  * @param array<string, mixed> $raw_post
  */
 function lf_publish_schedule_save_from_post(array $raw_post): void {
+	$page_defaults = lf_publish_schedule_default_items();
 	$items = [];
+
+	foreach (lf_publish_schedule_page_keys() as $page_key) {
+		if (isset($raw_post[ $page_key ]) && is_array($raw_post[ $page_key ])) {
+			$items[ $page_key ] = lf_publish_schedule_normalize_row($page_key, $raw_post[ $page_key ]);
+			continue;
+		}
+		$items[ $page_key ] = $page_defaults[ $page_key ] ?? ['timing' => 'draft', 'date' => ''];
+	}
+
 	foreach ($raw_post as $key => $row) {
 		if (!is_string($key) || !is_array($row)) {
 			continue;
 		}
 		$key = sanitize_text_field($key);
-		if ($key === '') {
+		if ($key === '' || !lf_publish_schedule_is_cpt_key($key)) {
 			continue;
 		}
-		$timing = sanitize_key((string) ($row['timing'] ?? 'now'));
-		if (!in_array($timing, ['now', 'schedule', 'draft'], true)) {
-			$timing = 'now';
+		$normalized = lf_publish_schedule_normalize_row($key, $row);
+		if ($normalized['timing'] === 'draft') {
+			continue;
 		}
-		$date = sanitize_text_field((string) ($row['date'] ?? ''));
-		if ($timing === 'schedule') {
-			$date = lf_publish_schedule_normalize_datetime($date);
-		} else {
-			$date = '';
-		}
-		$items[$key] = [
-			'timing' => $timing,
-			'date' => $date,
-		];
+		$items[ $key ] = $normalized;
 	}
+
 	update_option(LF_PUBLISH_SCHEDULE_OPTION, ['items' => $items], false);
 }
 
@@ -490,9 +527,10 @@ function lf_cpt_card_permalink(\WP_Post $post): string {
  */
 function lf_publish_schedule_render_controls(string $schedule_key, array $stored, bool $compact = false): void {
 	$resolved = $stored !== [] ? $stored : lf_publish_schedule_resolved_item($schedule_key);
-	$timing = sanitize_key((string) ($resolved['timing'] ?? 'now'));
+	$default = lf_publish_schedule_default_item_for_key($schedule_key) ?? ['timing' => 'draft', 'date' => ''];
+	$timing = sanitize_key((string) ($resolved['timing'] ?? $default['timing']));
 	if (!in_array($timing, ['now', 'schedule', 'draft'], true)) {
-		$timing = 'now';
+		$timing = $default['timing'];
 	}
 	$date = sanitize_text_field((string) ($resolved['date'] ?? ''));
 	$field_base = 'lf_ai_publish_schedule[' . esc_attr($schedule_key) . ']';

@@ -345,10 +345,28 @@
     return 'draft';
   }
 
+  function publishScheduleResolvedStored(scheduleKey, stored) {
+    stored = stored || {};
+    var defaultTiming = publishScheduleDefaultTiming(scheduleKey);
+    var timing = String(stored.timing || '');
+    if (!timing) {
+      return { timing: defaultTiming, date: '' };
+    }
+    if ((scheduleKey.indexOf('lf_service:') === 0 || scheduleKey.indexOf('lf_service_area:') === 0)
+        && timing === 'now' && defaultTiming === 'draft' && !String(stored.date || '').trim()) {
+      return { timing: 'draft', date: '' };
+    }
+    return { timing: timing, date: String(stored.date || '') };
+  }
+
   function buildPublishScheduleNode(scheduleKey, stored) {
     stored = stored || {};
     var strings = publishScheduleStrings();
     var timing = String(stored.timing || publishScheduleDefaultTiming(scheduleKey));
+    if ((scheduleKey.indexOf('lf_service:') === 0 || scheduleKey.indexOf('lf_service_area:') === 0)
+        && timing === 'now' && publishScheduleDefaultTiming(scheduleKey) === 'draft' && !String(stored.date || '').trim()) {
+      timing = 'draft';
+    }
     var date = String(stored.date || '');
     var wrap = document.createElement('div');
     wrap.className = 'lf-publish-schedule lf-publish-schedule--compact';
@@ -514,7 +532,9 @@
       if (!value) return;
       hasRows = true;
       var scheduleKey = schedulePrefix + ':' + value;
-      var schedStored = prevSchedule[scheduleKey] || storedSchedule[scheduleKey] || { timing: publishScheduleDefaultTiming(scheduleKey), date: '' };
+      var schedStored = prevSchedule[scheduleKey]
+        || publishScheduleResolvedStored(scheduleKey, storedSchedule[scheduleKey])
+        || { timing: publishScheduleDefaultTiming(scheduleKey), date: '' };
 
       var item = document.createElement('div');
       item.className = 'lf-scope-filter__item';
