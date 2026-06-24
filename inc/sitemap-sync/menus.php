@@ -495,6 +495,9 @@ function lf_sitemap_sync_enforce_group_dropdown(int $menu_id, array $group): voi
  * }
  */
 function lf_sitemap_sync_build_header_menu(): array {
+	if (function_exists('lf_service_areas_repair_lumped_posts')) {
+		lf_service_areas_repair_lumped_posts();
+	}
 	$enabled = lf_sitemap_menu_enable();
 	if (!$enabled) {
 		return [
@@ -1401,8 +1404,16 @@ function lf_nav_menu_repair_group_dropdown_children(int $menu_id): void {
 			$should_delete = false;
 			if ($page_id > 0 && $object === 'page' && $object_id === $page_id) {
 				$should_delete = true;
-			} elseif ($plain_title !== '' && str_contains($plain_title, ',') && $object !== (string) $group['child_object']) {
-				$should_delete = true;
+			} elseif ($plain_title !== '' && str_contains($plain_title, ',')) {
+				if ($object !== (string) $group['child_object']) {
+					$should_delete = true;
+				} elseif (
+					(string) $group['child_object'] === 'lf_service_area'
+					&& function_exists('lf_service_area_title_looks_lumped')
+					&& lf_service_area_title_looks_lumped($plain_title)
+				) {
+					$should_delete = true;
+				}
 			}
 
 			if ($should_delete) {

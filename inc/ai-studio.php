@@ -5331,6 +5331,9 @@ function lf_ai_studio_normalize_manifest(array $manifest): array {
 	if ($location_label === '') {
 		$location_label = sanitize_text_field((string) ($business['primary_city'] ?? ($address['city'] ?? '')));
 	}
+	if (function_exists('lf_expand_manifest_service_area_items')) {
+		$areas = lf_expand_manifest_service_area_items($areas, $location_label);
+	}
 	$normalized_services = [];
 	foreach ($services as $item) {
 		$normalized = lf_ai_studio_normalize_service_item($item);
@@ -5490,6 +5493,10 @@ function lf_ai_studio_manifest_keyword_map(array $manifest, string $key): array 
 }
 
 function lf_ai_studio_sync_manifest_posts(array $manifest): void {
+	if (function_exists('lf_service_areas_repair_lumped_posts')) {
+		lf_service_areas_repair_lumped_posts();
+	}
+
 	$mg = isset($manifest['global']) && is_array($manifest['global']) ? $manifest['global'] : [];
 	$ls = lf_launch_schedule_normalize(is_array($mg['launch_schedule'] ?? null) ? $mg['launch_schedule'] : []);
 	$anchor_ts = lf_launch_schedule_anchor_ts((string) ($ls['anchor'] ?? ''));
@@ -5510,6 +5517,12 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 	$service_now_set = array_fill_keys($now_services, true);
 
 	$areas_raw = isset($manifest['service_areas']) && is_array($manifest['service_areas']) ? $manifest['service_areas'] : [];
+	if (function_exists('lf_expand_manifest_service_area_items')) {
+		$biz = is_array($manifest['business'] ?? null) ? $manifest['business'] : [];
+		$addr = is_array($biz['address'] ?? null) ? $biz['address'] : [];
+		$default_state = sanitize_text_field((string) ($addr['state'] ?? ''));
+		$areas_raw = lf_expand_manifest_service_area_items($areas_raw, $default_state);
+	}
 	$area_slugs = [];
 	foreach ($areas_raw as $item) {
 		$n = lf_ai_studio_normalize_area_item($item);

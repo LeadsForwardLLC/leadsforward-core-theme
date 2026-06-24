@@ -2209,58 +2209,20 @@ function lf_ai_studio_airtable_build_service_areas_from_list(string $raw, string
 		return [];
 	}
 
-	// Prefer newline/semicolon-delimited lists. Do NOT blindly split on commas because many teams store values like
-	// "San Antonio, TX" which would otherwise become two separate "cities" ("San Antonio" + "TX").
-	$parts = preg_split('/\r\n|\r|\n|;/', $raw) ?: [];
-	if (count($parts) === 1) {
-		$single = trim((string) ($parts[0] ?? ''));
-		// If it looks like repeated "City, ST" pairs, extract each pair as one item.
-		if ($single !== '') {
-			$pairs = [];
-			if (preg_match_all('/([^,;\n]+?),\s*([A-Za-z]{2})\b/', $single, $m, PREG_SET_ORDER) === 1) {
-				// exactly one match; handle below
-			} elseif (!empty($m) && is_array($m) && count($m) > 1) {
-				foreach ($m as $row) {
-					$city_part = trim((string) ($row[1] ?? ''));
-					$st_part = strtoupper(trim((string) ($row[2] ?? '')));
-					if ($city_part !== '' && $st_part !== '') {
-						$pairs[] = $city_part . ', ' . $st_part;
-					}
-				}
-			}
-			if (!empty($pairs)) {
-				$parts = $pairs;
-			} elseif (preg_match('/,\s*[A-Za-z]{2}\b/', $single) === 1) {
-				// Single "City, ST" value.
-				$parts = [$single];
-			} else {
-				// Otherwise allow comma-delimited lists (e.g. "City1, City2, City3").
-				$parts = preg_split('/,/', $single) ?: [];
-			}
-		}
-	}
+	$parsed = function_exists('lf_parse_service_area_location_list')
+		? lf_parse_service_area_location_list($raw, $state)
+		: [];
 	$areas = [];
-	foreach ((array) $parts as $part) {
-		$city = trim((string) $part);
-		if ($city === '') {
-			continue;
-		}
-		$state_for_area = $state;
-		$city_name = $city;
-		if (preg_match('/^(.+?),\s*([A-Za-z]{2})$/', $city, $mm) === 1) {
-			$city_name = trim((string) ($mm[1] ?? $city));
-			$maybe_state = strtoupper(trim((string) ($mm[2] ?? '')));
-			if ($maybe_state !== '') {
-				$state_for_area = $maybe_state;
-			}
-		}
+	foreach ($parsed as $row) {
+		$city_name = trim((string) ($row['name'] ?? ''));
 		if ($city_name === '') {
 			continue;
 		}
+		$state_for_area = strtoupper(trim((string) ($row['state'] ?? $state)));
 		$areas[] = [
 			'city' => $city_name,
 			'state' => $state_for_area,
-			'slug' => sanitize_title($city_name),
+			'slug' => sanitize_title($state_for_area !== '' ? $city_name . '-' . $state_for_area : $city_name),
 			'primary_keyword' => trim(sprintf('%s %s %s', $niche, $city_name, $state_for_area)),
 		];
 	}
