@@ -424,6 +424,8 @@ function lf_ai_studio_assets(string $hook): void {
 		return;
 	}
 	wp_enqueue_media();
+	wp_enqueue_script('jquery-ui-datepicker');
+	wp_enqueue_style('jquery-ui-datepicker-style', 'https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css', [], '1.13.2');
 	wp_enqueue_style(
 		'lf-ai-studio-airtable',
 		LF_THEME_URI . '/assets/css/ai-studio-airtable.css',
@@ -433,7 +435,7 @@ function lf_ai_studio_assets(string $hook): void {
 	wp_enqueue_script(
 		'lf-ai-studio-airtable',
 		LF_THEME_URI . '/assets/js/ai-studio-airtable.js',
-		[],
+		['jquery', 'jquery-ui-datepicker'],
 		LF_THEME_VERSION,
 		true
 	);
@@ -454,6 +456,7 @@ function lf_ai_studio_assets(string $hook): void {
 		'imagesUploadNonce' => wp_create_nonce('lf_ai_studio_images_upload'),
 		'jobStatusNonce' => wp_create_nonce('lf_ai_studio_job_status'),
 		'enabled' => !empty($airtable_settings['enabled']),
+		'publishSchedule' => lf_publish_schedule_get_items(),
 		'scope' => [
 			'isHomepageOnly' => !empty($scope_for_scope_js['is_homepage_only']),
 			'servicePostsPublished' => (int) ( $scope_for_scope_js['service_posts_published'] ?? 0 ),
@@ -472,6 +475,10 @@ function lf_ai_studio_assets(string $hook): void {
 			'scopeFilterCount' => __('{selected}/{total} included', 'leadsforward-core'),
 			'scopeFilterEmpty' => __('No list loaded', 'leadsforward-core'),
 			'scopeFilterNoOptions' => __('No items for this project.', 'leadsforward-core'),
+			'publishNow' => __('Publish now', 'leadsforward-core'),
+			'publishSchedule' => __('Schedule', 'leadsforward-core'),
+			'publishDraft' => __('Keep draft', 'leadsforward-core'),
+			'publishDatePlaceholder' => __('Pick date…', 'leadsforward-core'),
 		],
 		'researchStrings' => [
 			'uploading' => __('Uploading research…', 'leadsforward-core'),
@@ -780,6 +787,10 @@ function lf_ai_studio_handle_scope_save(): void {
 	update_option('lf_ai_scope_service_slugs_mode', lf_ai_studio_normalize_scope_slug_mode($service_mode), false);
 	update_option('lf_ai_scope_service_area_slugs_mode', lf_ai_studio_normalize_scope_slug_mode($area_mode), false);
 
+	if (isset($_POST['lf_ai_publish_schedule']) && is_array($_POST['lf_ai_publish_schedule'])) {
+		lf_publish_schedule_save_from_post(wp_unslash($_POST['lf_ai_publish_schedule']));
+	}
+
 	lf_ai_studio_sync_legacy_blueprint_scope_from_gen_flags();
 
 	wp_safe_redirect(lf_ai_studio_manifest_admin_url(['scope_saved' => '1']));
@@ -831,12 +842,13 @@ function lf_ai_studio_scope_slug_included(string $post_slug, string $mode, array
  * @param array<string, string> $slug_map slug => label
  * @param string[]              $stored_slugs
  */
-function lf_ai_studio_render_scope_slug_checklist(string $list_id, string $input_name, array $slug_map, array $stored_slugs, string $summary_label, string $stored_mode = 'all'): void {
+function lf_ai_studio_render_scope_slug_checklist(string $list_id, string $input_name, array $slug_map, array $stored_slugs, string $summary_label, string $stored_mode = 'all', string $schedule_prefix = 'lf_service'): void {
 	$stored_slugs = array_values(array_filter(array_map('sanitize_title', $stored_slugs)));
 	$mode = lf_ai_studio_normalize_scope_slug_mode($stored_mode);
 	$check_all = ($mode === 'all');
 	$check_none = ($mode === 'none');
 	$mode_field = str_contains($input_name, 'area') ? 'lf_ai_scope_service_area_slugs_mode' : 'lf_ai_scope_service_slugs_mode';
+	$schedule_items = lf_publish_schedule_get_items();
 	?>
 	<details class="lf-scope-filter" data-lf-scope-filter data-lf-scope-section="<?php echo esc_attr($list_id); ?>" <?php echo $slug_map !== [] ? 'open' : ''; ?>>
 		<summary class="lf-scope-filter__summary">
@@ -861,16 +873,23 @@ function lf_ai_studio_render_scope_slug_checklist(string $list_id, string $input
 					<p class="lf-scope-filter__empty"><?php esc_html_e('Pick an Airtable project first.', 'leadsforward-core'); ?></p>
 				<?php else : ?>
 					<?php foreach ($slug_map as $slug => $label) : ?>
-						<label class="lf-scope-filter__item" data-lf-scope-item>
-							<input
-								type="checkbox"
-								class="lf-scope-filter__checkbox"
-								name="<?php echo esc_attr($input_name); ?>[]"
-								value="<?php echo esc_attr((string) $slug); ?>"
-								<?php checked(!$check_none && ($check_all || in_array((string) $slug, $stored_slugs, true))); ?>
-							/>
-							<span class="lf-scope-filter__label"><?php echo esc_html((string) $label); ?></span>
-						</label>
+						<?php
+						$schedule_key = $schedule_prefix . ':' . sanitize_title((string) $slug);
+						$stored_schedule = $schedule_items[$schedule_key] ?? [];
+						?>
+						<div class="lf-scope-filter__item" data-lf-scope-item>
+							<label class="lf-scope-filter__check">
+								<input
+									type="checkbox"
+									class="lf-scope-filter__checkbox"
+									name="<?php echo esc_attr($input_name); ?>[]"
+									value="<?php echo esc_attr((string) $slug); ?>"
+									<?php checked(!$check_none && ($check_all || in_array((string) $slug, $stored_slugs, true))); ?>
+								/>
+								<span class="lf-scope-filter__label"><?php echo esc_html((string) $label); ?></span>
+							</label>
+							<?php lf_publish_schedule_render_controls($schedule_key, is_array($stored_schedule) ? $stored_schedule : [], true); ?>
+						</div>
 					<?php endforeach; ?>
 				<?php endif; ?>
 			</div>
@@ -2000,11 +2019,12 @@ function lf_ai_studio_render_page(): void {
 										<label class="lf-scope-type"><input type="checkbox" id="lf_ai_gen_projects" name="lf_ai_gen_projects" value="1" <?php checked($gen_projects); ?> /><span><?php esc_html_e('Projects', 'leadsforward-core'); ?></span></label>
 									</div>
 									<div class="lf-scope-narrow" id="lf-scope-services-wrap" data-lf-scope-toggle="lf_ai_gen_services">
-										<?php lf_ai_studio_render_scope_slug_checklist('lf-ai-scope-service-slugs', 'lf_ai_scope_service_slugs', $selected_service_slugs, $stored_service_slugs, __('Services', 'leadsforward-core'), $stored_service_mode); ?>
+										<?php lf_ai_studio_render_scope_slug_checklist('lf-ai-scope-service-slugs', 'lf_ai_scope_service_slugs', $selected_service_slugs, $stored_service_slugs, __('Services', 'leadsforward-core'), $stored_service_mode, 'lf_service'); ?>
 									</div>
 									<div class="lf-scope-narrow" id="lf-scope-areas-wrap" data-lf-scope-toggle="lf_ai_gen_service_areas">
-										<?php lf_ai_studio_render_scope_slug_checklist('lf-ai-scope-area-slugs', 'lf_ai_scope_service_area_slugs', $selected_area_slugs, $stored_area_slugs, __('Service areas', 'leadsforward-core'), $stored_area_mode); ?>
+										<?php lf_ai_studio_render_scope_slug_checklist('lf-ai-scope-area-slugs', 'lf_ai_scope_service_area_slugs', $selected_area_slugs, $stored_area_slugs, __('Service areas', 'leadsforward-core'), $stored_area_mode, 'lf_service_area'); ?>
 									</div>
+									<?php lf_publish_schedule_render_page_types_panel(); ?>
 									<?php if (empty($scope_snap['enabled_labels'])) : ?>
 										<p class="lf-scope-panel__warn"><?php esc_html_e('Enable at least one page type.', 'leadsforward-core'); ?></p>
 									<?php endif; ?>
@@ -5528,31 +5548,28 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 				$args['post_date'] = $local;
 				$args['post_date_gmt'] = get_gmt_from_date($local);
 			}
+			$args = lf_publish_schedule_merge_status_args($key, $args);
 			wp_update_post($args);
 			update_post_meta($existing->ID, 'lf_manifest_schedule_managed', 1);
 			$managed_post_id = (int) $existing->ID;
 		} else {
 			$base_title = $normalized['title'] !== '' ? $normalized['title'] : $slug;
+			$insert_args = [
+				'post_type' => 'lf_service',
+				'post_title' => $base_title,
+				'post_name' => $slug,
+				'post_author' => get_current_user_id(),
+			];
 			if ($publish_now) {
-				$post_id = wp_insert_post([
-					'post_type' => 'lf_service',
-					'post_status' => 'publish',
-					'post_title' => $base_title,
-					'post_name' => $slug,
-					'post_author' => get_current_user_id(),
-				]);
+				$insert_args['post_status'] = 'publish';
 			} else {
 				$local = $resolve_deferred_local($key);
-				$post_id = wp_insert_post([
-					'post_type' => 'lf_service',
-					'post_status' => 'future',
-					'post_title' => $base_title,
-					'post_name' => $slug,
-					'post_author' => get_current_user_id(),
-					'post_date' => $local,
-					'post_date_gmt' => get_gmt_from_date($local),
-				]);
+				$insert_args['post_status'] = 'future';
+				$insert_args['post_date'] = $local;
+				$insert_args['post_date_gmt'] = get_gmt_from_date($local);
 			}
+			$insert_args = lf_publish_schedule_merge_status_args($key, $insert_args);
+			$post_id = wp_insert_post($insert_args);
 			if ($post_id && !is_wp_error($post_id)) {
 				update_post_meta((int) $post_id, 'lf_manifest_schedule_managed', 1);
 				$managed_post_id = (int) $post_id;
@@ -5610,6 +5627,7 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 				$args['post_date'] = $local;
 				$args['post_date_gmt'] = get_gmt_from_date($local);
 			}
+			$args = lf_publish_schedule_merge_status_args($key, $args);
 			wp_update_post($args);
 			update_post_meta($existing->ID, 'lf_manifest_schedule_managed', 1);
 			if ($primary_keyword !== '') {
@@ -5625,26 +5643,22 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 				}
 			}
 		} else {
+			$insert_args = [
+				'post_type' => 'lf_service_area',
+				'post_title' => $title,
+				'post_name' => $slug,
+				'post_author' => get_current_user_id(),
+			];
 			if ($publish_now) {
-				$post_id = wp_insert_post([
-					'post_type' => 'lf_service_area',
-					'post_status' => 'publish',
-					'post_title' => $title,
-					'post_name' => $slug,
-					'post_author' => get_current_user_id(),
-				]);
+				$insert_args['post_status'] = 'publish';
 			} else {
 				$local = $resolve_deferred_local($key);
-				$post_id = wp_insert_post([
-					'post_type' => 'lf_service_area',
-					'post_status' => 'future',
-					'post_title' => $title,
-					'post_name' => $slug,
-					'post_author' => get_current_user_id(),
-					'post_date' => $local,
-					'post_date_gmt' => get_gmt_from_date($local),
-				]);
+				$insert_args['post_status'] = 'future';
+				$insert_args['post_date'] = $local;
+				$insert_args['post_date_gmt'] = get_gmt_from_date($local);
 			}
+			$insert_args = lf_publish_schedule_merge_status_args($key, $insert_args);
+			$post_id = wp_insert_post($insert_args);
 			if ($post_id && !is_wp_error($post_id)) {
 				update_post_meta((int) $post_id, 'lf_manifest_schedule_managed', 1);
 				if ($primary_keyword !== '') {
@@ -5662,6 +5676,8 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 			}
 		}
 	}
+
+	lf_publish_schedule_apply_site_pages();
 
 	// Keep primary navigation in sync with core pages + service CPTs.
 	// This is intentionally idempotent and safe to run repeatedly.

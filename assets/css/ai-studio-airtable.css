@@ -620,12 +620,23 @@
 .lf-scope-filter__item {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   margin: 0;
   padding: 11px 12px;
   border-bottom: 1px solid #eef0f2;
-  cursor: pointer;
   line-height: 1.4;
+  flex-wrap: wrap;
+}
+
+.lf-scope-filter__check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  flex: 1 1 180px;
+  cursor: pointer;
+  min-width: 0;
 }
 
 .lf-scope-filter__item:last-child {
@@ -671,5 +682,76 @@
 .lf-scope-filter__empty {
   margin: 12px;
   color: #6b7280;
-  font-size: 0.9rem;
+  font-size: 0.9375rem;
+}
+
+.lf-publish-schedule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.lf-publish-schedule--compact .lf-publish-schedule__timing {
+  max-width: 9.5rem;
+}
+
+.lf-publish-schedule__date {
+  width: 8.5rem;
+}
+
+.lf-publish-schedule-panel {
+  margin-top: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.lf-publish-schedule-panel__summary {
+  padding: 12px 14px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.lf-publish-schedule-panel__summary::-webkit-details-marker {
+  display: none;
+}
+
+.lf-publish-schedule-panel__body {
+  padding: 0 14px 14px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.lf-publish-schedule-panel__lead {
+  margin: 10px 0 12px !important;
+  font-size: 0.9375rem;
+}
+
+.lf-publish-schedule-panel__table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lf-publish-schedule-panel__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.lf-publish-schedule-panel__row:last-child {
+  border-bottom: 0;
+}
+
+.lf-publish-schedule-panel__label {
+  font-weight: 500;
+  font-size: 0.9375rem;
+  flex: 1 1 140px;
 }

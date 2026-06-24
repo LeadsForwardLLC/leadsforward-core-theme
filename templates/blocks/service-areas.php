@@ -38,7 +38,7 @@ $query = new WP_Query([
 	'posts_per_page' => -1,
 	'orderby'        => 'menu_order title',
 	'order'          => 'ASC',
-	'post_status'    => 'publish',
+	'post_status'    => function_exists('lf_cpt_card_query_post_statuses') ? lf_cpt_card_query_post_statuses() : ['publish', 'future', 'draft', 'pending'],
 	'no_found_rows'  => true,
 ]);
 
@@ -59,7 +59,10 @@ if ($query->have_posts()) {
 		$query->the_post();
 		$area_id = (int) get_the_ID();
 		$area_title = (string) get_the_title();
-		$area_url = (string) get_permalink();
+		$area_post = get_post($area_id);
+		$area_url = ($area_post instanceof \WP_Post && function_exists('lf_cpt_card_permalink'))
+			? lf_cpt_card_permalink($area_post)
+			: (string) get_permalink();
 		$area_state = '';
 		if (function_exists('get_field')) {
 			$area_state = (string) get_field('lf_service_area_state', $area_id);

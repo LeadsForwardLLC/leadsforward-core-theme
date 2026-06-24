@@ -21,7 +21,7 @@ if (empty($services)) {
 	$services = get_posts([
 		'post_type'      => 'lf_service',
 		'posts_per_page' => 8,
-		'post_status'    => 'publish',
+		'post_status'    => function_exists('lf_cpt_card_query_post_statuses') ? lf_cpt_card_query_post_statuses() : ['publish', 'future', 'draft', 'pending'],
 		'orderby'        => 'menu_order title',
 		'order'          => 'ASC',
 		'no_found_rows'  => true,
@@ -37,13 +37,14 @@ $icon = isset($args['icon']) && is_string($args['icon']) ? $args['icon'] : '';
 	<?php
 	$origin_id = get_the_ID();
 	foreach ($services as $service) :
-		if (!$service || $service->post_status !== 'publish') {
+		if (!$service instanceof \WP_Post) {
 			continue;
 		}
 		$label = function_exists('lf_internal_link_label') ? lf_internal_link_label('service', $service, $origin_id) : $service->post_title;
+		$href = function_exists('lf_cpt_card_permalink') ? lf_cpt_card_permalink($service) : get_permalink($service);
 	?>
 		<li>
-			<a href="<?php echo esc_url(get_permalink($service)); ?>">
+			<a href="<?php echo esc_url($href); ?>">
 				<?php if ($icon) : ?><span class="lf-related-links__icon"><?php echo $icon; ?></span><?php endif; ?>
 				<span class="lf-related-links__label"><?php echo esc_html($label); ?></span>
 			</a>

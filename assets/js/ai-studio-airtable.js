@@ -254,17 +254,116 @@
     });
   }
 
+  function publishScheduleStrings() {
+    return (cfg && cfg.strings) ? cfg.strings : {};
+  }
+
+  function buildPublishScheduleNode(scheduleKey, stored) {
+    stored = stored || {};
+    var strings = publishScheduleStrings();
+    var timing = String(stored.timing || 'now');
+    var date = String(stored.date || '');
+    var wrap = document.createElement('div');
+    wrap.className = 'lf-publish-schedule lf-publish-schedule--compact';
+    wrap.setAttribute('data-lf-publish-schedule', '1');
+    wrap.setAttribute('data-schedule-key', scheduleKey);
+
+    var select = document.createElement('select');
+    select.className = 'lf-publish-schedule__timing';
+    select.name = 'lf_ai_publish_schedule[' + scheduleKey + '][timing]';
+    select.setAttribute('data-lf-publish-timing', '1');
+    [
+      ['now', strings.publishNow || 'Publish now'],
+      ['schedule', strings.publishSchedule || 'Schedule'],
+      ['draft', strings.publishDraft || 'Keep draft']
+    ].forEach(function (pair) {
+      var opt = document.createElement('option');
+      opt.value = pair[0];
+      opt.textContent = pair[1];
+      if (timing === pair[0]) opt.selected = true;
+      select.appendChild(opt);
+    });
+
+    var dateInput = document.createElement('input');
+    dateInput.type = 'text';
+    dateInput.className = 'lf-publish-schedule__date';
+    dateInput.name = 'lf_ai_publish_schedule[' + scheduleKey + '][date]';
+    dateInput.value = date;
+    dateInput.placeholder = strings.publishDatePlaceholder || 'Pick date…';
+    dateInput.setAttribute('data-lf-publish-date', '1');
+    dateInput.autocomplete = 'off';
+    if (timing !== 'schedule') {
+      dateInput.hidden = true;
+    }
+
+    wrap.appendChild(select);
+    wrap.appendChild(dateInput);
+    bindPublishTimingSelect(wrap);
+    return wrap;
+  }
+
+  function bindPublishTimingSelect(wrap) {
+    if (!wrap || wrap.getAttribute('data-lf-publish-bound')) return;
+    wrap.setAttribute('data-lf-publish-bound', '1');
+    var select = wrap.querySelector('[data-lf-publish-timing]');
+    var dateEl = wrap.querySelector('[data-lf-publish-date]');
+    if (!select || !dateEl) return;
+    var sync = function () {
+      var on = select.value === 'schedule';
+      dateEl.hidden = !on;
+      if (!on) {
+        dateEl.value = '';
+      } else {
+        initPublishDatepickers(wrap);
+      }
+    };
+    select.addEventListener('change', sync);
+    sync();
+  }
+
+  function initPublishDatepickers(root) {
+    if (!window.jQuery || !jQuery.fn || !jQuery.fn.datepicker) return;
+    var scope = root || document;
+    scope.querySelectorAll('[data-lf-publish-date]').forEach(function (el) {
+      if (el.getAttribute('data-lf-date-bound')) return;
+      el.setAttribute('data-lf-date-bound', '1');
+      jQuery(el).datepicker({
+        dateFormat: 'yy-mm-dd',
+        minDate: 0
+      });
+    });
+  }
+
+  function initPublishScheduleUI(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-lf-publish-schedule]').forEach(bindPublishTimingSelect);
+    initPublishDatepickers(root);
+  }
+
   function populateScopeChecklist(listEl, rows, labelKey) {
     if (!listEl) return;
     var filterEl = listEl.closest('[data-lf-scope-filter]');
     var inputName = listEl.getAttribute('data-input-name') || 'lf_ai_scope_service_slugs';
+    var schedulePrefix = inputName.indexOf('area') !== -1 ? 'lf_service_area' : 'lf_service';
     var modeInput = filterEl ? filterEl.querySelector('[data-lf-scope-mode]') : null;
     var mode = (modeInput && modeInput.value) ? modeInput.value : (listEl.getAttribute('data-scope-mode') || 'all');
     var prev = {};
-    listEl.querySelectorAll('.lf-scope-filter__checkbox').forEach(function (cb) {
-      if (cb.checked) prev[String(cb.value || '')] = true;
+    var prevSchedule = {};
+    listEl.querySelectorAll('.lf-scope-filter__item').forEach(function (item) {
+      var cb = item.querySelector('.lf-scope-filter__checkbox');
+      if (cb && cb.checked) prev[String(cb.value || '')] = true;
+      var sched = item.querySelector('[data-lf-publish-schedule]');
+      if (sched) {
+        var key = sched.getAttribute('data-schedule-key') || '';
+        var t = sched.querySelector('[data-lf-publish-timing]');
+        var d = sched.querySelector('[data-lf-publish-date]');
+        if (key && t) {
+          prevSchedule[key] = { timing: t.value, date: d ? d.value : '' };
+        }
+      }
     });
     var hadPrev = Object.keys(prev).length > 0;
+    var storedSchedule = (cfg && cfg.publishSchedule) ? cfg.publishSchedule : {};
     listEl.innerHTML = '';
     var hasRows = false;
     (rows || []).forEach(function (row) {
@@ -273,9 +372,15 @@
       var label = String(row[labelKey] || row.title || row.label || value);
       if (!value) return;
       hasRows = true;
-      var item = document.createElement('label');
+      var scheduleKey = schedulePrefix + ':' + value;
+      var schedStored = prevSchedule[scheduleKey] || storedSchedule[scheduleKey] || { timing: 'now', date: '' };
+
+      var item = document.createElement('div');
       item.className = 'lf-scope-filter__item';
       item.setAttribute('data-lf-scope-item', '1');
+
+      var checkLabel = document.createElement('label');
+      checkLabel.className = 'lf-scope-filter__check';
       var input = document.createElement('input');
       input.type = 'checkbox';
       input.className = 'lf-scope-filter__checkbox';
@@ -291,8 +396,10 @@
       var span = document.createElement('span');
       span.className = 'lf-scope-filter__label';
       span.textContent = label;
-      item.appendChild(input);
-      item.appendChild(span);
+      checkLabel.appendChild(input);
+      checkLabel.appendChild(span);
+      item.appendChild(checkLabel);
+      item.appendChild(buildPublishScheduleNode(scheduleKey, schedStored));
       listEl.appendChild(item);
     });
     if (!hasRows) {
@@ -304,6 +411,7 @@
       listEl.appendChild(empty);
     } else {
       listEl.setAttribute('data-scope-mode', mode);
+      initPublishScheduleUI(listEl);
     }
     if (filterEl) {
       bindScopeFilter(filterEl);
@@ -645,7 +753,10 @@
     });
 
     syncScopeSectionVisibility();
+    initPublishScheduleUI(form);
   })();
+
+  initPublishScheduleUI(document.getElementById('lf-scope-form'));
 
   if (hasAirtableUI) {
     if (!cfg.enabled) {

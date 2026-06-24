@@ -1,0 +1,337 @@
+<?php
+/**
+ * Per-page publish timing (Manifest scope UI) + unpublished CPT card links.
+ *
+ * @package LeadsForward_Core
+ */
+
+declare(strict_types=1);
+
+if (!defined('ABSPATH')) {
+	exit;
+}
+
+const LF_PUBLISH_SCHEDULE_OPTION = 'lf_ai_publish_schedule';
+
+/**
+ * @return list<string>
+ */
+function lf_publish_schedule_page_keys(): array {
+	return [
+		'page:home',
+		'page:about',
+		'page:contact',
+		'page:reviews',
+		'page:blog',
+		'page:services',
+		'page:service-areas',
+	];
+}
+
+/**
+ * @return array<string, string>
+ */
+function lf_publish_schedule_page_labels(): array {
+	return [
+		'page:home' => __('Homepage', 'leadsforward-core'),
+		'page:about' => __('About', 'leadsforward-core'),
+		'page:contact' => __('Contact', 'leadsforward-core'),
+		'page:reviews' => __('Reviews', 'leadsforward-core'),
+		'page:blog' => __('Blog', 'leadsforward-core'),
+		'page:services' => __('Services overview', 'leadsforward-core'),
+		'page:service-areas' => __('Service areas overview', 'leadsforward-core'),
+	];
+}
+
+/**
+ * @return array<string, array{timing:string,date:string}>
+ */
+function lf_publish_schedule_get_items(): array {
+	$raw = get_option(LF_PUBLISH_SCHEDULE_OPTION, []);
+	if (!is_array($raw)) {
+		return [];
+	}
+	$items = isset($raw['items']) && is_array($raw['items']) ? $raw['items'] : $raw;
+	$out = [];
+	foreach ($items as $key => $row) {
+		if (!is_string($key) || !is_array($row)) {
+			continue;
+		}
+		$timing = sanitize_key((string) ($row['timing'] ?? 'now'));
+		if (!in_array($timing, ['now', 'schedule', 'draft'], true)) {
+			$timing = 'now';
+		}
+		$out[$key] = [
+			'timing' => $timing,
+			'date' => sanitize_text_field((string) ($row['date'] ?? '')),
+		];
+	}
+
+	return $out;
+}
+
+/**
+ * @param array<string, mixed> $raw_post
+ */
+function lf_publish_schedule_save_from_post(array $raw_post): void {
+	$items = [];
+	foreach ($raw_post as $key => $row) {
+		if (!is_string($key) || !is_array($row)) {
+			continue;
+		}
+		$key = sanitize_text_field($key);
+		if ($key === '') {
+			continue;
+		}
+		$timing = sanitize_key((string) ($row['timing'] ?? 'now'));
+		if (!in_array($timing, ['now', 'schedule', 'draft'], true)) {
+			$timing = 'now';
+		}
+		$date = sanitize_text_field((string) ($row['date'] ?? ''));
+		if ($timing === 'schedule') {
+			$date = lf_publish_schedule_normalize_datetime($date);
+		} else {
+			$date = '';
+		}
+		$items[$key] = [
+			'timing' => $timing,
+			'date' => $date,
+		];
+	}
+	update_option(LF_PUBLISH_SCHEDULE_OPTION, ['items' => $items], false);
+}
+
+function lf_publish_schedule_normalize_datetime(string $value): string {
+	$value = trim($value);
+	if ($value === '') {
+		return '';
+	}
+	if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+		return $value . ' 09:00:00';
+	}
+	if (preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/', $value)) {
+		try {
+			$dt = new \DateTimeImmutable($value, wp_timezone());
+
+			return $dt->format('Y-m-d H:i:s');
+		} catch (\Throwable $e) {
+			return '';
+		}
+	}
+
+	return '';
+}
+
+/**
+ * Resolve WordPress post_status + dates for a schedule key.
+ *
+ * @return array<string, string>|array{}
+ */
+function lf_publish_schedule_status_args(string $schedule_key): array {
+	$items = lf_publish_schedule_get_items();
+	$item = $items[$schedule_key] ?? null;
+	if (!is_array($item)) {
+		return [];
+	}
+	$timing = (string) ($item['timing'] ?? 'now');
+	if ($timing === 'now') {
+		return [
+			'post_status' => 'publish',
+			'post_date' => current_time('mysql'),
+			'post_date_gmt' => current_time('mysql', 1),
+		];
+	}
+	if ($timing === 'draft') {
+		return [
+			'post_status' => 'draft',
+		];
+	}
+	$date = lf_publish_schedule_normalize_datetime((string) ($item['date'] ?? ''));
+	if ($date === '') {
+		return [
+			'post_status' => 'draft',
+		];
+	}
+	$date = lf_launch_schedule_bump_until_future($date);
+
+	return [
+		'post_status' => 'future',
+		'post_date' => $date,
+		'post_date_gmt' => get_gmt_from_date($date),
+	];
+}
+
+/**
+ * @param array<string, mixed> $base_args
+ * @return array<string, mixed>
+ */
+function lf_publish_schedule_merge_status_args(string $schedule_key, array $base_args): array {
+	$explicit = lf_publish_schedule_status_args($schedule_key);
+	if ($explicit === []) {
+		return $base_args;
+	}
+
+	return array_merge($base_args, $explicit);
+}
+
+/**
+ * Map schedule page key to WP page path.
+ */
+function lf_publish_schedule_page_path(string $schedule_key): string {
+	$map = [
+		'page:home' => 'home',
+		'page:about' => 'about',
+		'page:contact' => 'contact',
+		'page:reviews' => 'reviews',
+		'page:blog' => 'blog',
+		'page:services' => 'services',
+		'page:service-areas' => 'service-areas',
+	];
+	if (!isset($map[$schedule_key])) {
+		return '';
+	}
+
+	return $map[$schedule_key];
+}
+
+/**
+ * Apply saved publish timing to core/overview pages.
+ */
+function lf_publish_schedule_apply_site_pages(): void {
+	foreach (lf_publish_schedule_page_keys() as $key) {
+		$status_args = lf_publish_schedule_status_args($key);
+		if ($status_args === []) {
+			continue;
+		}
+		$path = lf_publish_schedule_page_path($key);
+		if ($path === '') {
+			continue;
+		}
+		$page = get_page_by_path($path, OBJECT, 'page');
+		if (!$page instanceof \WP_Post) {
+			continue;
+		}
+		$update = array_merge(['ID' => (int) $page->ID], $status_args);
+		wp_update_post($update);
+		update_post_meta((int) $page->ID, 'lf_manifest_schedule_managed', 1);
+	}
+}
+
+/**
+ * Post statuses to include in service / area card grids (unpublished still listed).
+ *
+ * @return list<string>
+ */
+function lf_cpt_card_query_post_statuses(): array {
+	return ['publish', 'future', 'draft', 'pending', 'private'];
+}
+
+/**
+ * Whether a CPT row should link to its own permalink (live on the front end).
+ */
+function lf_cpt_card_is_live(\WP_Post $post): bool {
+	return $post->post_status === 'publish';
+}
+
+/**
+ * Fallback URL for unpublished service / area cards (Global Settings).
+ */
+function lf_unpublished_cpt_card_url(): string {
+	$page_id = 0;
+	if (function_exists('lf_get_option')) {
+		$page_id = (int) lf_get_option('lf_unpublished_card_link', 'option', 0);
+	}
+	if ($page_id > 0) {
+		$url = get_permalink($page_id);
+		if (is_string($url) && $url !== '') {
+			return $url;
+		}
+	}
+	$contact = get_page_by_path('contact', OBJECT, 'page');
+	if ($contact instanceof \WP_Post) {
+		$url = get_permalink($contact);
+		if (is_string($url) && $url !== '') {
+			return $url;
+		}
+	}
+
+	return home_url('/contact/');
+}
+
+/**
+ * Permalink for a service / area card (live page or Global Settings fallback).
+ */
+function lf_cpt_card_permalink(\WP_Post $post): string {
+	if (lf_cpt_card_is_live($post)) {
+		$url = get_permalink($post);
+		if (is_string($url) && $url !== '') {
+			return $url;
+		}
+	}
+
+	return lf_unpublished_cpt_card_url();
+}
+
+/**
+ * Render publish-timing controls for one schedule key.
+ *
+ * @param array{timing?:string,date?:string} $stored
+ */
+function lf_publish_schedule_render_controls(string $schedule_key, array $stored, bool $compact = false): void {
+	$timing = sanitize_key((string) ($stored['timing'] ?? 'now'));
+	if (!in_array($timing, ['now', 'schedule', 'draft'], true)) {
+		$timing = 'now';
+	}
+	$date = sanitize_text_field((string) ($stored['date'] ?? ''));
+	$field_base = 'lf_ai_publish_schedule[' . esc_attr($schedule_key) . ']';
+	$wrap_class = $compact ? 'lf-publish-schedule lf-publish-schedule--compact' : 'lf-publish-schedule';
+	?>
+	<div class="<?php echo esc_attr($wrap_class); ?>" data-lf-publish-schedule data-schedule-key="<?php echo esc_attr($schedule_key); ?>">
+		<label class="screen-reader-text" for="<?php echo esc_attr('lf-ps-timing-' . md5($schedule_key)); ?>"><?php esc_html_e('Publish timing', 'leadsforward-core'); ?></label>
+		<select
+			id="<?php echo esc_attr('lf-ps-timing-' . md5($schedule_key)); ?>"
+			class="lf-publish-schedule__timing"
+			name="<?php echo esc_attr($field_base . '[timing]'); ?>"
+			data-lf-publish-timing
+		>
+			<option value="now" <?php selected($timing, 'now'); ?>><?php esc_html_e('Publish now', 'leadsforward-core'); ?></option>
+			<option value="schedule" <?php selected($timing, 'schedule'); ?>><?php esc_html_e('Schedule', 'leadsforward-core'); ?></option>
+			<option value="draft" <?php selected($timing, 'draft'); ?>><?php esc_html_e('Keep draft', 'leadsforward-core'); ?></option>
+		</select>
+		<input
+			type="text"
+			class="lf-publish-schedule__date"
+			name="<?php echo esc_attr($field_base . '[date]'); ?>"
+			value="<?php echo esc_attr($date); ?>"
+			placeholder="<?php esc_attr_e('Pick date…', 'leadsforward-core'); ?>"
+			data-lf-publish-date
+			autocomplete="off"
+			<?php echo $timing === 'schedule' ? '' : 'hidden'; ?>
+		/>
+	</div>
+	<?php
+}
+
+/**
+ * Page-type publish timing block (homepage, core pages, overviews).
+ */
+function lf_publish_schedule_render_page_types_panel(): void {
+	$items = lf_publish_schedule_get_items();
+	$labels = lf_publish_schedule_page_labels();
+	?>
+	<details class="lf-publish-schedule-panel">
+		<summary class="lf-publish-schedule-panel__summary"><?php esc_html_e('Publish timing', 'leadsforward-core'); ?></summary>
+		<div class="lf-publish-schedule-panel__body">
+			<p class="description lf-publish-schedule-panel__lead"><?php esc_html_e('Publish now, schedule a date (WordPress auto-publishes), or keep as draft.', 'leadsforward-core'); ?></p>
+			<div class="lf-publish-schedule-panel__table" role="group" aria-label="<?php esc_attr_e('Page publish timing', 'leadsforward-core'); ?>">
+				<?php foreach (lf_publish_schedule_page_keys() as $key) : ?>
+					<div class="lf-publish-schedule-panel__row">
+						<span class="lf-publish-schedule-panel__label"><?php echo esc_html($labels[$key] ?? $key); ?></span>
+						<?php lf_publish_schedule_render_controls($key, $items[$key] ?? [], true); ?>
+					</div>
+				<?php endforeach; ?>
+			</div>
+		</div>
+	</details>
+	<?php
+}
