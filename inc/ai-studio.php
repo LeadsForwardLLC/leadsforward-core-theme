@@ -470,7 +470,9 @@ function lf_ai_studio_assets(string $hook): void {
 			'scopeNoTargets' => __('Enable at least one target under step 2 (Generate) and click Save Scope before orchestrator runs.', 'leadsforward-core'),
 			'readyBuild' => __('Ready to build from Airtable.', 'leadsforward-core'),
 			'scopeFilterAll' => __('All items included (none checked)', 'leadsforward-core'),
-			'scopeFilterSome' => __('{selected} of {total} selected', 'leadsforward-core'),
+			'scopeFilterAllIncluded' => __('All included', 'leadsforward-core'),
+			'scopeFilterNone' => __('None selected', 'leadsforward-core'),
+			'scopeFilterSome' => __('{selected} of {total} included', 'leadsforward-core'),
 			'scopeFilterEmpty' => __('No options loaded', 'leadsforward-core'),
 			'scopeFilterNoOptions' => __('No services or areas for this project.', 'leadsforward-core'),
 		],
@@ -779,46 +781,52 @@ function lf_ai_studio_handle_scope_save(): void {
 }
 
 /**
- * Checkbox list for optional service / area slug filters (replaces opaque multi-select).
+ * Compact checkbox list for service / area scope (included in build when checked).
  *
  * @param array<string, string> $slug_map slug => label
- * @param string[]              $stored_slugs
+ * @param string[]              $stored_slugs empty = all included
  */
-function lf_ai_studio_render_scope_slug_checklist(string $list_id, string $input_name, array $slug_map, array $stored_slugs): void {
+function lf_ai_studio_render_scope_slug_checklist(string $list_id, string $input_name, array $slug_map, array $stored_slugs, string $summary_label): void {
 	$stored_slugs = array_values(array_filter(array_map('sanitize_title', $stored_slugs)));
+	$include_all = ($stored_slugs === []);
 	?>
-	<div class="lf-scope-filter" data-lf-scope-filter>
-		<p class="description lf-scope-filter__hint">
-			<?php esc_html_e('Check one or more items to limit the run. Leave all unchecked to include every item in the list.', 'leadsforward-core'); ?>
-		</p>
-		<div class="lf-scope-filter__toolbar">
+	<details class="lf-scope-filter" data-lf-scope-filter data-lf-scope-section="<?php echo esc_attr($list_id); ?>">
+		<summary class="lf-scope-filter__summary">
+			<span class="lf-scope-filter__summary-label"><?php echo esc_html($summary_label); ?></span>
 			<span class="lf-scope-filter__count" data-lf-scope-count aria-live="polite"></span>
-			<button type="button" class="button button-small" data-lf-scope-all><?php esc_html_e('Select all', 'leadsforward-core'); ?></button>
-			<button type="button" class="button button-small" data-lf-scope-none><?php esc_html_e('Clear all', 'leadsforward-core'); ?></button>
+		</summary>
+		<div class="lf-scope-filter__body">
+			<div class="lf-scope-filter__toolbar">
+				<input type="search" class="lf-scope-filter__search" placeholder="<?php esc_attr_e('Search…', 'leadsforward-core'); ?>" data-lf-scope-search autocomplete="off" />
+				<button type="button" class="button button-small" data-lf-scope-all><?php esc_html_e('All', 'leadsforward-core'); ?></button>
+				<button type="button" class="button button-small" data-lf-scope-none><?php esc_html_e('None', 'leadsforward-core'); ?></button>
+			</div>
+			<div
+				class="lf-scope-filter__list"
+				id="<?php echo esc_attr($list_id); ?>"
+				data-input-name="<?php echo esc_attr($input_name); ?>"
+				data-default-all="<?php echo $include_all ? '1' : '0'; ?>"
+				role="group"
+			>
+				<?php if ($slug_map === []) : ?>
+					<p class="lf-scope-filter__empty"><?php esc_html_e('Select an Airtable project to load the list.', 'leadsforward-core'); ?></p>
+				<?php else : ?>
+					<?php foreach ($slug_map as $slug => $label) : ?>
+						<label class="lf-scope-filter__item" data-lf-scope-item>
+							<input
+								type="checkbox"
+								class="lf-scope-filter__checkbox"
+								name="<?php echo esc_attr($input_name); ?>[]"
+								value="<?php echo esc_attr((string) $slug); ?>"
+								<?php checked($include_all || in_array((string) $slug, $stored_slugs, true)); ?>
+							/>
+							<span class="lf-scope-filter__label"><?php echo esc_html((string) $label); ?></span>
+						</label>
+					<?php endforeach; ?>
+				<?php endif; ?>
+			</div>
 		</div>
-		<div
-			class="lf-scope-filter__list"
-			id="<?php echo esc_attr($list_id); ?>"
-			data-input-name="<?php echo esc_attr($input_name); ?>"
-			role="group"
-		>
-			<?php if ($slug_map === []) : ?>
-				<p class="lf-scope-filter__empty description"><?php esc_html_e('No options yet — select an Airtable project above to load services or areas.', 'leadsforward-core'); ?></p>
-			<?php else : ?>
-				<?php foreach ($slug_map as $slug => $label) : ?>
-					<label class="lf-scope-filter__item">
-						<input
-							type="checkbox"
-							name="<?php echo esc_attr($input_name); ?>[]"
-							value="<?php echo esc_attr((string) $slug); ?>"
-							<?php checked(in_array((string) $slug, $stored_slugs, true)); ?>
-						/>
-						<span class="lf-scope-filter__label"><?php echo esc_html((string) $label); ?></span>
-					</label>
-				<?php endforeach; ?>
-			<?php endif; ?>
-		</div>
-	</div>
+	</details>
 	<?php
 }
 
@@ -1861,7 +1869,7 @@ function lf_ai_studio_render_page(): void {
 					<div class="lf-manifester-step__badge">2</div>
 					<div class="lf-manifester-step__content">
 						<h3><?php esc_html_e('Load site data: Airtable', 'leadsforward-core'); ?></h3>
-						<p class="description"><?php esc_html_e('Choose what to generate, then search and select an Airtable project to preview and generate from.', 'leadsforward-core'); ?></p>
+						<p class="description"><?php esc_html_e('Pick a project, choose what to build, save, then run step 6.', 'leadsforward-core'); ?></p>
 						<?php if (is_array($scope_picker_debug)) : ?>
 							<details open class="lf-manifest-scope-debug" style="margin:12px 0;padding:12px;border:1px solid #c3c4c7;background:#fcfcfc;">
 								<summary><strong><?php esc_html_e('Smoke-test picker debug', 'leadsforward-core'); ?></strong></summary>
@@ -1884,84 +1892,29 @@ function lf_ai_studio_render_page(): void {
 								$last_record = trim((string) get_option('lf_ai_airtable_project_record_id', ''));
 								?>
 								<?php if (!empty($last_audit)) : ?>
-									<div class="notice <?php echo empty($last_errors) ? 'notice-success' : 'notice-warning'; ?> inline" style="margin: 0 0 12px; padding: 10px 12px;">
-										<p style="margin:0;">
-											<strong><?php esc_html_e('Last payload audit:', 'leadsforward-core'); ?></strong>
+									<details class="lf-scope-audit">
+										<summary><?php esc_html_e('Last payload audit', 'leadsforward-core'); ?></summary>
+										<p class="description" style="margin:8px 0 0;">
 											<?php
 											$summary_parts = [];
 											if ($last_record !== '') {
 												$summary_parts[] = sprintf(__('record %s', 'leadsforward-core'), $last_record);
 											}
 											if ($last_ts > 0) {
-												$summary_parts[] = sprintf(__('at %s', 'leadsforward-core'), wp_date('Y-m-d H:i:s', $last_ts));
+												$summary_parts[] = wp_date('Y-m-d H:i', $last_ts);
 											}
 											$total = isset($last_counts['blueprints_total']) ? (int) $last_counts['blueprints_total'] : 0;
 											if ($total > 0) {
 												$summary_parts[] = sprintf(__('%d blueprints', 'leadsforward-core'), $total);
 											}
-											echo esc_html(implode(' — ', $summary_parts));
+											echo esc_html(implode(' · ', $summary_parts));
+											if (!empty($last_errors)) {
+												echo ' — ' . esc_html($last_errors[0]);
+											}
 											?>
 										</p>
-										<?php if (!empty($last_errors)) : ?>
-											<p style="margin:6px 0 0;"><strong><?php esc_html_e('Warning:', 'leadsforward-core'); ?></strong> <?php echo esc_html($last_errors[0]); ?></p>
-										<?php endif; ?>
-									</div>
+									</details>
 								<?php endif; ?>
-								<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-bottom: 12px;">
-									<?php wp_nonce_field('lf_ai_studio_scope_save', 'lf_ai_studio_scope_nonce'); ?>
-									<input type="hidden" name="action" value="lf_ai_studio_scope_save" />
-									<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
-										<strong><?php esc_html_e('Generate:', 'leadsforward-core'); ?></strong>
-										<label><input type="checkbox" id="lf_ai_gen_homepage" name="lf_ai_gen_homepage" value="1" <?php checked($gen_homepage); ?> /> <?php esc_html_e('Homepage', 'leadsforward-core'); ?></label>
-										<label><input type="checkbox" id="lf_ai_gen_services" name="lf_ai_gen_services" value="1" <?php checked($gen_services); ?> /> <?php esc_html_e('Service pages', 'leadsforward-core'); ?></label>
-										<label><input type="checkbox" id="lf_ai_gen_service_areas" name="lf_ai_gen_service_areas" value="1" <?php checked($gen_service_areas); ?> /> <?php esc_html_e('Service area pages', 'leadsforward-core'); ?></label>
-										<label><input type="checkbox" id="lf_ai_gen_core_pages" name="lf_ai_gen_core_pages" value="1" <?php checked($gen_core_pages); ?> /> <?php esc_html_e('Core pages', 'leadsforward-core'); ?></label>
-										<label><input type="checkbox" id="lf_ai_gen_blog_posts" name="lf_ai_gen_blog_posts" value="1" <?php checked($gen_blog_posts); ?> /> <?php esc_html_e('AI blog posts (3 now + 2 weekly)', 'leadsforward-core'); ?></label>
-										<label><input type="checkbox" id="lf_ai_gen_projects" name="lf_ai_gen_projects" value="1" <?php checked($gen_projects); ?> /> <?php esc_html_e('Projects', 'leadsforward-core'); ?></label>
-									</div>
-									<div class="notice notice-info inline" style="margin-top:10px;padding:8px 12px;">
-										<p style="margin:0 0 6px;"><strong><?php esc_html_e('Effective scope for the next run:', 'leadsforward-core'); ?></strong>
-										<?php
-										if (!empty($scope_snap['enabled_labels'])) {
-											echo esc_html(implode(', ', $scope_snap['enabled_labels']));
-										} else {
-											esc_html_e('Nothing selected — generation will fail until you enable at least one target.', 'leadsforward-core');
-										}
-										?>
-										</p>
-										<?php if ($scope_snap['is_homepage_only'] && $scope_snap['service_posts_published'] > 0) : ?>
-											<p style="margin:0;"><strong><?php esc_html_e('Heads up:', 'leadsforward-core'); ?></strong> <?php echo esc_html(sprintf(__('You have %d published service pages but “Service pages” is off — they will not be regenerated.', 'leadsforward-core'), (int) $scope_snap['service_posts_published'])); ?></p>
-										<?php endif; ?>
-										<?php if ($scope_snap['services_in_manifest'] > 0 && empty($scope_snap['scope']['services'])) : ?>
-											<p style="margin:0.5em 0 0;"><strong><?php esc_html_e('Heads up:', 'leadsforward-core'); ?></strong> <?php echo esc_html(sprintf(__('Your manifest lists %d services, but “Service pages” is unchecked — no service blueprints will be sent.', 'leadsforward-core'), (int) $scope_snap['services_in_manifest'])); ?></p>
-										<?php endif; ?>
-									</div>
-									<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin-top:12px;">
-										<div style="min-width:320px;max-width:420px;flex:1 1 320px;">
-											<strong><?php esc_html_e('Filters (optional): Services', 'leadsforward-core'); ?></strong>
-											<p class="description" style="margin:4px 0 8px;">
-												<?php esc_html_e('When “Service pages” is enabled, checked services are included in the run. Uncheck all to include every service.', 'leadsforward-core'); ?>
-											</p>
-											<input type="hidden" name="lf_ai_scope_smoke_services_mode" value="slug" />
-											<?php lf_ai_studio_render_scope_slug_checklist('lf-ai-scope-service-slugs', 'lf_ai_scope_service_slugs', $selected_service_slugs, $stored_service_slugs); ?>
-										</div>
-										<div style="min-width:320px;max-width:420px;flex:1 1 320px;">
-											<strong><?php esc_html_e('Filters (optional): Service Areas', 'leadsforward-core'); ?></strong>
-											<p class="description" style="margin:4px 0 8px;">
-												<?php esc_html_e('When “Service area pages” is enabled, checked areas are included. Uncheck all to include every area.', 'leadsforward-core'); ?>
-											</p>
-											<input type="hidden" name="lf_ai_scope_smoke_areas_mode" value="slug" />
-											<?php lf_ai_studio_render_scope_slug_checklist('lf-ai-scope-area-slugs', 'lf_ai_scope_service_area_slugs', $selected_area_slugs, $stored_area_slugs); ?>
-										</div>
-									</div>
-									<p class="description" style="margin-top:10px;"><?php esc_html_e('Options load from the selected Airtable project preview and fall back to the stored manifest/cache when needed.', 'leadsforward-core'); ?></p>
-									<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;">
-										<button type="submit" class="button"><?php esc_html_e('Save Scope', 'leadsforward-core'); ?></button>
-										<button type="button" class="button" id="lf-ai-scope-select-all"><?php esc_html_e('Select all', 'leadsforward-core'); ?></button>
-										<button type="button" class="button" id="lf-ai-scope-homepage-services"><?php esc_html_e('Homepage + services', 'leadsforward-core'); ?></button>
-									</div>
-									<p class="description" style="margin-top:10px;"><?php esc_html_e('Unchecked boxes exclude those targets from the orchestrator payload. Click Save Scope after changing.', 'leadsforward-core'); ?></p>
-								</form>
 								<?php if (!$airtable_ready) : ?>
 									<div class="notice notice-warning inline">
 										<p><?php esc_html_e('Airtable is not configured yet. Add your PAT, Base ID, and Table in Global Settings above, then save.', 'leadsforward-core'); ?></p>
@@ -1971,19 +1924,46 @@ function lf_ai_studio_render_page(): void {
 									<div class="lf-airtable-search">
 										<label class="screen-reader-text" for="lf-airtable-search"><?php esc_html_e('Search Airtable projects', 'leadsforward-core'); ?></label>
 										<input type="text" id="lf-airtable-search" class="regular-text" placeholder="<?php esc_attr_e('Search Airtable projects…', 'leadsforward-core'); ?>" <?php echo $airtable_ready ? '' : 'disabled'; ?> />
-										<div class="description" style="margin:6px 0 4px;">
-											<?php echo esc_html(sprintf(__('Theme version: %s', 'leadsforward-core'), defined('LF_THEME_VERSION') ? LF_THEME_VERSION : '')); ?>
-										</div>
 										<div id="lf-airtable-status-inline" class="lf-airtable-status" role="status" aria-live="polite" style="margin:6px 0 10px;"></div>
 										<div id="lf-airtable-results" class="lf-airtable-results"></div>
 									</div>
 									<div class="lf-airtable-preview">
 										<div id="lf-airtable-preview" class="lf-airtable-preview-card">
-											<?php esc_html_e('Select a project to preview before generating.', 'leadsforward-core'); ?>
+											<?php esc_html_e('Select a project to preview.', 'leadsforward-core'); ?>
 										</div>
 										<div id="lf-airtable-status" class="lf-airtable-status" role="status" aria-live="polite"></div>
 									</div>
 								</div>
+								<form id="lf-scope-form" class="lf-scope-panel" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+									<?php wp_nonce_field('lf_ai_studio_scope_save', 'lf_ai_studio_scope_nonce'); ?>
+									<input type="hidden" name="action" value="lf_ai_studio_scope_save" />
+									<input type="hidden" name="lf_ai_scope_smoke_services_mode" value="slug" />
+									<input type="hidden" name="lf_ai_scope_smoke_areas_mode" value="slug" />
+									<h4 class="lf-scope-panel__title"><?php esc_html_e('What to include in this build', 'leadsforward-core'); ?></h4>
+									<p class="lf-scope-panel__lead description"><?php esc_html_e('Checked items are included. Save before you build or generate.', 'leadsforward-core'); ?></p>
+									<div class="lf-scope-types">
+										<label class="lf-scope-type"><input type="checkbox" id="lf_ai_gen_homepage" name="lf_ai_gen_homepage" value="1" <?php checked($gen_homepage); ?> /><span><?php esc_html_e('Homepage', 'leadsforward-core'); ?></span></label>
+										<label class="lf-scope-type"><input type="checkbox" id="lf_ai_gen_services" name="lf_ai_gen_services" value="1" <?php checked($gen_services); ?> /><span><?php esc_html_e('Service pages', 'leadsforward-core'); ?></span></label>
+										<label class="lf-scope-type"><input type="checkbox" id="lf_ai_gen_service_areas" name="lf_ai_gen_service_areas" value="1" <?php checked($gen_service_areas); ?> /><span><?php esc_html_e('Service area pages', 'leadsforward-core'); ?></span></label>
+										<label class="lf-scope-type"><input type="checkbox" id="lf_ai_gen_core_pages" name="lf_ai_gen_core_pages" value="1" <?php checked($gen_core_pages); ?> /><span><?php esc_html_e('Core pages (About, Contact, etc.)', 'leadsforward-core'); ?></span></label>
+										<label class="lf-scope-type"><input type="checkbox" id="lf_ai_gen_blog_posts" name="lf_ai_gen_blog_posts" value="1" <?php checked($gen_blog_posts); ?> /><span><?php esc_html_e('Blog posts', 'leadsforward-core'); ?></span></label>
+										<label class="lf-scope-type"><input type="checkbox" id="lf_ai_gen_projects" name="lf_ai_gen_projects" value="1" <?php checked($gen_projects); ?> /><span><?php esc_html_e('Projects', 'leadsforward-core'); ?></span></label>
+									</div>
+									<div class="lf-scope-narrow" id="lf-scope-services-wrap" data-lf-scope-toggle="lf_ai_gen_services">
+										<?php lf_ai_studio_render_scope_slug_checklist('lf-ai-scope-service-slugs', 'lf_ai_scope_service_slugs', $selected_service_slugs, $stored_service_slugs, __('Which services?', 'leadsforward-core')); ?>
+									</div>
+									<div class="lf-scope-narrow" id="lf-scope-areas-wrap" data-lf-scope-toggle="lf_ai_gen_service_areas">
+										<?php lf_ai_studio_render_scope_slug_checklist('lf-ai-scope-area-slugs', 'lf_ai_scope_service_area_slugs', $selected_area_slugs, $stored_area_slugs, __('Which service areas?', 'leadsforward-core')); ?>
+									</div>
+									<?php if (empty($scope_snap['enabled_labels'])) : ?>
+										<p class="lf-scope-panel__warn"><?php esc_html_e('Turn on at least one page type above.', 'leadsforward-core'); ?></p>
+									<?php endif; ?>
+									<div class="lf-scope-panel__actions">
+										<button type="submit" class="button button-primary"><?php esc_html_e('Save choices', 'leadsforward-core'); ?></button>
+										<button type="button" class="button" data-lf-scope-preset="everything"><?php esc_html_e('Everything', 'leadsforward-core'); ?></button>
+										<button type="button" class="button" data-lf-scope-preset="homepage-only"><?php esc_html_e('Homepage only', 'leadsforward-core'); ?></button>
+									</div>
+								</form>
 							</div>
 						</div>
 					</div>

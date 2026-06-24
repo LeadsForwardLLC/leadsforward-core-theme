@@ -153,50 +153,66 @@
     var countEl = filterEl.querySelector('[data-lf-scope-count]');
     var listEl = filterEl.querySelector('.lf-scope-filter__list');
     if (!countEl || !listEl) return;
-    var boxes = listEl.querySelectorAll('input[type="checkbox"]');
+    var boxes = listEl.querySelectorAll('.lf-scope-filter__checkbox');
     var total = boxes.length;
     var selected = 0;
     Array.prototype.forEach.call(boxes, function (cb) {
       if (cb.checked) selected++;
     });
     var strings = (cfg && cfg.strings) ? cfg.strings : {};
+    countEl.classList.remove('is-warn');
     if (total === 0) {
-      countEl.textContent = strings.scopeFilterEmpty || 'No options loaded';
+      countEl.textContent = strings.scopeFilterEmpty || 'No options';
       return;
     }
     if (selected === 0) {
-      countEl.textContent = strings.scopeFilterAll || ('All ' + total + ' included (none checked)');
+      countEl.textContent = strings.scopeFilterNone || 'None selected';
+      countEl.classList.add('is-warn');
       return;
     }
-    var tpl = strings.scopeFilterSome || '{selected} of {total} selected';
+    if (selected === total) {
+      countEl.textContent = strings.scopeFilterAllIncluded || ('All ' + total + ' included');
+      return;
+    }
+    var tpl = strings.scopeFilterSome || '{selected} of {total} included';
     countEl.textContent = tpl.replace('{selected}', String(selected)).replace('{total}', String(total));
   }
 
-  function bindScopeFilter(filterEl) {
-    if (!filterEl || filterEl.getAttribute('data-lf-scope-bound') === '1') return;
-    filterEl.setAttribute('data-lf-scope-bound', '1');
+  function setScopeFilterChecks(filterEl, on) {
+    if (!filterEl) return;
     var listEl = filterEl.querySelector('.lf-scope-filter__list');
-    var allBtn = filterEl.querySelector('[data-lf-scope-all]');
-    var noneBtn = filterEl.querySelector('[data-lf-scope-none]');
-    if (listEl) {
+    if (!listEl) return;
+    listEl.querySelectorAll('.lf-scope-filter__checkbox').forEach(function (cb) {
+      cb.checked = !!on;
+      cb.disabled = false;
+    });
+    updateScopeFilterCount(filterEl);
+  }
+
+  function filterScopeListItems(filterEl, query) {
+    if (!filterEl) return;
+    var q = String(query || '').trim().toLowerCase();
+    filterEl.querySelectorAll('[data-lf-scope-item]').forEach(function (item) {
+      var label = item.querySelector('.lf-scope-filter__label');
+      var text = label ? String(label.textContent || '').toLowerCase() : '';
+      item.classList.toggle('is-hidden', q !== '' && text.indexOf(q) === -1);
+    });
+  }
+
+  function bindScopeFilter(filterEl) {
+    if (!filterEl) return;
+    var listEl = filterEl.querySelector('.lf-scope-filter__list');
+    var searchEl = filterEl.querySelector('[data-lf-scope-search]');
+    if (listEl && !listEl.getAttribute('data-lf-scope-list-bound')) {
+      listEl.setAttribute('data-lf-scope-list-bound', '1');
       listEl.addEventListener('change', function () {
         updateScopeFilterCount(filterEl);
       });
     }
-    if (allBtn && listEl) {
-      allBtn.addEventListener('click', function () {
-        listEl.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
-          cb.checked = true;
-        });
-        updateScopeFilterCount(filterEl);
-      });
-    }
-    if (noneBtn && listEl) {
-      noneBtn.addEventListener('click', function () {
-        listEl.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
-          cb.checked = false;
-        });
-        updateScopeFilterCount(filterEl);
+    if (searchEl && !searchEl.getAttribute('data-lf-scope-search-bound')) {
+      searchEl.setAttribute('data-lf-scope-search-bound', '1');
+      searchEl.addEventListener('input', function () {
+        filterScopeListItems(filterEl, searchEl.value);
       });
     }
     updateScopeFilterCount(filterEl);
@@ -208,14 +224,41 @@
     });
   }
 
+  function normalizeScopeListForSubmit(listEl) {
+    if (!listEl) return;
+    var boxes = listEl.querySelectorAll('.lf-scope-filter__checkbox');
+    var total = boxes.length;
+    var checked = 0;
+    boxes.forEach(function (cb) {
+      if (cb.checked) checked++;
+      cb.disabled = false;
+    });
+    if (total > 0 && checked === total) {
+      boxes.forEach(function (cb) {
+        cb.checked = false;
+      });
+    }
+  }
+
+  function syncScopeSectionVisibility() {
+    document.querySelectorAll('[data-lf-scope-toggle]').forEach(function (wrap) {
+      var toggleId = wrap.getAttribute('data-lf-scope-toggle');
+      var toggle = toggleId ? document.getElementById(toggleId) : null;
+      var show = !!(toggle && toggle.checked);
+      wrap.classList.toggle('is-hidden', !show);
+    });
+  }
+
   function populateScopeChecklist(listEl, rows, labelKey) {
     if (!listEl) return;
     var filterEl = listEl.closest('[data-lf-scope-filter]');
     var inputName = listEl.getAttribute('data-input-name') || 'lf_ai_scope_service_slugs';
     var prev = {};
-    listEl.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+    listEl.querySelectorAll('.lf-scope-filter__checkbox').forEach(function (cb) {
       if (cb.checked) prev[String(cb.value || '')] = true;
     });
+    var hadPrev = Object.keys(prev).length > 0;
+    var defaultAll = listEl.getAttribute('data-default-all') === '1' || !hadPrev;
     listEl.innerHTML = '';
     var hasRows = false;
     (rows || []).forEach(function (row) {
@@ -226,11 +269,13 @@
       hasRows = true;
       var item = document.createElement('label');
       item.className = 'lf-scope-filter__item';
+      item.setAttribute('data-lf-scope-item', '1');
       var input = document.createElement('input');
       input.type = 'checkbox';
+      input.className = 'lf-scope-filter__checkbox';
       input.name = inputName + '[]';
       input.value = value;
-      if (prev[value]) input.checked = true;
+      input.checked = hadPrev ? !!prev[value] : defaultAll;
       var span = document.createElement('span');
       span.className = 'lf-scope-filter__label';
       span.textContent = label;
@@ -240,15 +285,19 @@
     });
     if (!hasRows) {
       var empty = document.createElement('p');
-      empty.className = 'lf-scope-filter__empty description';
+      empty.className = 'lf-scope-filter__empty';
       empty.textContent = (cfg.strings && cfg.strings.scopeFilterNoOptions)
         ? cfg.strings.scopeFilterNoOptions
         : 'No options for this project.';
       listEl.appendChild(empty);
+    } else {
+      listEl.setAttribute('data-default-all', defaultAll ? '1' : '0');
     }
     if (filterEl) {
       bindScopeFilter(filterEl);
-      updateScopeFilterCount(filterEl);
+      if (filterEl.open === false && hasRows) {
+        filterEl.open = true;
+      }
     }
   }
 
@@ -512,39 +561,79 @@
     });
   }
 
-  (function initScopeFormShortcuts() {
+  (function initScopePanel() {
+    var form = document.getElementById('lf-scope-form');
+    if (!form) return;
+
+    var pageTypeIds = [
+      'lf_ai_gen_homepage',
+      'lf_ai_gen_services',
+      'lf_ai_gen_service_areas',
+      'lf_ai_gen_core_pages',
+      'lf_ai_gen_blog_posts',
+      'lf_ai_gen_projects'
+    ];
+
     function byId(id) {
       return document.getElementById(id);
     }
-    var allBtn = byId('lf-ai-scope-select-all');
-    var hsBtn = byId('lf-ai-scope-homepage-services');
-    var ids = ['lf_ai_gen_homepage', 'lf_ai_gen_services', 'lf_ai_gen_service_areas', 'lf_ai_gen_core_pages', 'lf_ai_gen_blog_posts', 'lf_ai_gen_projects'];
-    function setAll(on) {
-      ids.forEach(function (id) {
+
+    function setPageTypes(on) {
+      pageTypeIds.forEach(function (id) {
         var el = byId(id);
-        if (el) {
-          el.checked = on;
-        }
+        if (el) el.checked = !!on;
       });
+      syncScopeSectionVisibility();
     }
-    if (allBtn) {
-      allBtn.addEventListener('click', function () {
-        setAll(true);
-      });
-    }
-    if (hsBtn) {
-      hsBtn.addEventListener('click', function () {
-        setAll(false);
-        var h = byId('lf_ai_gen_homepage');
-        var s = byId('lf_ai_gen_services');
-        if (h) {
-          h.checked = true;
+
+    form.addEventListener('click', function (e) {
+      var target = e.target;
+      if (!target || !target.closest) return;
+      var allBtn = target.closest('[data-lf-scope-all]');
+      var noneBtn = target.closest('[data-lf-scope-none]');
+      var presetBtn = target.closest('[data-lf-scope-preset]');
+      if (allBtn) {
+        e.preventDefault();
+        setScopeFilterChecks(allBtn.closest('[data-lf-scope-filter]'), true);
+        return;
+      }
+      if (noneBtn) {
+        e.preventDefault();
+        setScopeFilterChecks(noneBtn.closest('[data-lf-scope-filter]'), false);
+        return;
+      }
+      if (presetBtn) {
+        e.preventDefault();
+        var preset = presetBtn.getAttribute('data-lf-scope-preset');
+        if (preset === 'everything') {
+          setPageTypes(true);
+          document.querySelectorAll('[data-lf-scope-filter]').forEach(function (filterEl) {
+            setScopeFilterChecks(filterEl, true);
+          });
+        } else if (preset === 'homepage-only') {
+          setPageTypes(false);
+          var home = byId('lf_ai_gen_homepage');
+          if (home) home.checked = true;
+          document.querySelectorAll('[data-lf-scope-filter]').forEach(function (filterEl) {
+            setScopeFilterChecks(filterEl, false);
+          });
         }
-        if (s) {
-          s.checked = true;
-        }
-      });
-    }
+      }
+    });
+
+    form.addEventListener('change', function (e) {
+      var t = e.target;
+      if (t && pageTypeIds.indexOf(t.id) !== -1) {
+        syncScopeSectionVisibility();
+      }
+    });
+
+    form.addEventListener('submit', function () {
+      normalizeScopeListForSubmit(byId('lf-ai-scope-service-slugs'));
+      normalizeScopeListForSubmit(byId('lf-ai-scope-area-slugs'));
+    });
+
+    syncScopeSectionVisibility();
   })();
 
   if (hasAirtableUI) {
