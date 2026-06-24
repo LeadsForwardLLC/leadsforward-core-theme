@@ -40,6 +40,7 @@
 
   var selectedRecord = null;
   var debounceTimer = null;
+  var scopePreviewRecordId = '';
 
   function setStatus(message, type) {
     var els = [statusEl, statusInlineEl].filter(Boolean);
@@ -132,7 +133,8 @@
         storeSelection(record);
         updatePrimaryState();
         updatePreview(record);
-        fetchScopePreviewForRecord(record);
+        scopePreviewRecordId = '';
+        fetchScopePreviewForRecord(record, true);
         var buttons = resultsEl.querySelectorAll('.lf-airtable-result');
         buttons.forEach(function (btn) {
           btn.classList.toggle('is-active', btn === button);
@@ -141,7 +143,6 @@
       if (stored && stored.id && stored.id === record.id) {
         selectedRecord = record;
         updatePreview(record);
-        fetchScopePreviewForRecord(record);
         button.classList.add('is-active');
       }
       resultsEl.appendChild(button);
@@ -258,6 +259,15 @@
     return (cfg && cfg.strings) ? cfg.strings : {};
   }
 
+  function publishScheduleMinDate() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1);
+    var day = String(d.getDate());
+    if (m.length < 2) m = '0' + m;
+    if (day.length < 2) day = '0' + day;
+    return d.getFullYear() + '-' + m + '-' + day;
+  }
+
   function buildPublishScheduleNode(scheduleKey, stored) {
     stored = stored || {};
     var strings = publishScheduleStrings();
@@ -285,16 +295,30 @@
     });
 
     var dateInput = document.createElement('input');
-    dateInput.type = 'text';
+    dateInput.type = 'date';
     dateInput.className = 'lf-publish-schedule__date';
     dateInput.name = 'lf_ai_publish_schedule[' + scheduleKey + '][date]';
-    dateInput.value = date;
-    dateInput.placeholder = strings.publishDatePlaceholder || 'Pick date…';
+    dateInput.value = date.length >= 10 ? date.slice(0, 10) : date;
+    dateInput.min = publishScheduleMinDate();
     dateInput.setAttribute('data-lf-publish-date', '1');
     dateInput.autocomplete = 'off';
+    dateInput.setAttribute('aria-label', strings.publishDatePlaceholder || 'Publish date');
     if (timing !== 'schedule') {
-      dateInput.hidden = true;
+      dateInput.classList.add('lf-publish-schedule__date--hidden');
     }
+
+    select.addEventListener('click', function (e) {
+      e.stopPropagation();
+    });
+    select.addEventListener('change', function (e) {
+      e.stopPropagation();
+    });
+    dateInput.addEventListener('click', function (e) {
+      e.stopPropagation();
+    });
+    dateInput.addEventListener('change', function (e) {
+      e.stopPropagation();
+    });
 
     wrap.appendChild(select);
     wrap.appendChild(dateInput);
@@ -310,43 +334,31 @@
     if (!select || !dateEl) return;
     var sync = function () {
       var on = select.value === 'schedule';
-      dateEl.hidden = !on;
+      dateEl.classList.toggle('lf-publish-schedule__date--hidden', !on);
       if (!on) {
         dateEl.value = '';
-      } else {
-        initPublishDatepickers(wrap);
       }
     };
     select.addEventListener('change', sync);
     sync();
   }
 
-  function initPublishDatepickers(root) {
-    if (!window.jQuery || !jQuery.fn || !jQuery.fn.datepicker) return;
-    var scope = root || document;
-    scope.querySelectorAll('[data-lf-publish-date]').forEach(function (el) {
-      if (el.getAttribute('data-lf-date-bound')) return;
-      el.setAttribute('data-lf-date-bound', '1');
-      jQuery(el).datepicker({
-        dateFormat: 'yy-mm-dd',
-        minDate: 0
-      });
-    });
-  }
-
   function initPublishScheduleUI(root) {
     if (!root) return;
     root.querySelectorAll('[data-lf-publish-schedule]').forEach(bindPublishTimingSelect);
-    initPublishDatepickers(root);
   }
 
-  function populateScopeChecklist(listEl, rows, labelKey) {
+  function populateScopeChecklist(listEl, rows, labelKey, force) {
     if (!listEl) return;
     var filterEl = listEl.closest('[data-lf-scope-filter]');
     var inputName = listEl.getAttribute('data-input-name') || 'lf_ai_scope_service_slugs';
     var schedulePrefix = inputName.indexOf('area') !== -1 ? 'lf_service_area' : 'lf_service';
     var modeInput = filterEl ? filterEl.querySelector('[data-lf-scope-mode]') : null;
     var mode = (modeInput && modeInput.value) ? modeInput.value : (listEl.getAttribute('data-scope-mode') || 'all');
+    var hasExisting = listEl.querySelectorAll('.lf-scope-filter__item').length > 0;
+    if (!force && hasExisting && rows && rows.length > 0) {
+      return;
+    }
     var prev = {};
     var prevSchedule = {};
     listEl.querySelectorAll('.lf-scope-filter__item').forEach(function (item) {
@@ -421,10 +433,10 @@
     }
   }
 
-  function populateMultiSelect(selectEl, rows, labelKey) {
+  function populateMultiSelect(selectEl, rows, labelKey, force) {
     if (!selectEl) return;
     if (selectEl.classList && selectEl.classList.contains('lf-scope-filter__list')) {
-      populateScopeChecklist(selectEl, rows, labelKey);
+      populateScopeChecklist(selectEl, rows, labelKey, force);
       return;
     }
     var prev = {};
@@ -446,11 +458,15 @@
     selectEl.disabled = false;
   }
 
-  function fetchScopePreviewForRecord(record) {
+  function fetchScopePreviewForRecord(record, force) {
     if (!record || !record.id || !cfg || !cfg.ajaxUrl || !cfg.nonce) return;
+    if (!force && scopePreviewRecordId === record.id) {
+      return;
+    }
     var svcSelect = document.getElementById('lf-ai-scope-service-slugs');
     var areaSelect = document.getElementById('lf-ai-scope-area-slugs');
     if (!svcSelect && !areaSelect) return;
+    scopePreviewRecordId = record.id;
     setStatus('Loading scope preview…', 'info');
     var body = new URLSearchParams({
       action: 'lf_ai_airtable_preview_manifest',
@@ -470,8 +486,8 @@
           setStatus(msg, 'error');
           return;
         }
-        populateMultiSelect(svcSelect, payload.data.services || [], 'title');
-        populateMultiSelect(areaSelect, payload.data.service_areas || [], 'label');
+        populateMultiSelect(svcSelect, payload.data.services || [], 'title', !!force);
+        populateMultiSelect(areaSelect, payload.data.service_areas || [], 'label', !!force);
         var meta = payload.data.meta || {};
         var version = meta.theme_version ? String(meta.theme_version) : '';
         var src = meta.services_source ? String(meta.services_source) : '';
@@ -771,6 +787,9 @@
   if (storedSelection) {
     selectedRecord = storedSelection;
     updatePreview(storedSelection);
+    if (hasAirtableUI) {
+      fetchScopePreviewForRecord(storedSelection, true);
+    }
   }
   updatePrimaryState();
 
