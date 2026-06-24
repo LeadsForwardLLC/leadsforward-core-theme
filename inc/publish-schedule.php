@@ -44,6 +44,72 @@ function lf_publish_schedule_page_labels(): array {
 }
 
 /**
+ * Built-in publish timing for core pages (used when no per-key override is saved).
+ *
+ * @return array<string, array{timing:string,date:string}>
+ */
+function lf_publish_schedule_default_items(): array {
+	return [
+		'page:home' => ['timing' => 'now', 'date' => ''],
+		'page:services' => ['timing' => 'now', 'date' => ''],
+		'page:service-areas' => ['timing' => 'now', 'date' => ''],
+		'page:contact' => ['timing' => 'now', 'date' => ''],
+		'page:about' => ['timing' => 'draft', 'date' => ''],
+		'page:reviews' => ['timing' => 'draft', 'date' => ''],
+		'page:blog' => ['timing' => 'draft', 'date' => ''],
+	];
+}
+
+/**
+ * Default timing for one schedule key (pages from defaults map; CPT rows draft).
+ *
+ * @return array{timing:string,date:string}|null
+ */
+function lf_publish_schedule_default_item_for_key(string $schedule_key): ?array {
+	$defaults = lf_publish_schedule_default_items();
+	if (isset($defaults[$schedule_key])) {
+		return $defaults[$schedule_key];
+	}
+	if (preg_match('/^lf_service:/', $schedule_key) || preg_match('/^lf_service_area:/', $schedule_key)) {
+		return ['timing' => 'draft', 'date' => ''];
+	}
+
+	return null;
+}
+
+/**
+ * Saved or built-in timing row for UI + status resolution.
+ *
+ * @return array{timing:string,date:string}
+ */
+function lf_publish_schedule_resolved_item(string $schedule_key): array {
+	$items = lf_publish_schedule_get_items();
+	if (isset($items[$schedule_key]) && is_array($items[$schedule_key])) {
+		return $items[$schedule_key];
+	}
+	$fallback = lf_publish_schedule_default_item_for_key($schedule_key);
+	if ($fallback !== null) {
+		return $fallback;
+	}
+
+	return ['timing' => 'draft', 'date' => ''];
+}
+
+/**
+ * Seed core page defaults into the option when nothing has been saved yet.
+ */
+function lf_publish_schedule_seed_defaults_if_empty(): void {
+	$raw = get_option(LF_PUBLISH_SCHEDULE_OPTION, null);
+	if ($raw !== null && $raw !== false && $raw !== []) {
+		$items = lf_publish_schedule_get_items();
+		if ($items !== []) {
+			return;
+		}
+	}
+	update_option(LF_PUBLISH_SCHEDULE_OPTION, ['items' => lf_publish_schedule_default_items()], false);
+}
+
+/**
  * @return array<string, array{timing:string,date:string}>
  */
 function lf_publish_schedule_get_items(): array {
@@ -160,7 +226,8 @@ function lf_publish_schedule_datetime_local_min(): string {
  */
 function lf_publish_schedule_status_args(string $schedule_key): array {
 	$items = lf_publish_schedule_get_items();
-	$item = $items[$schedule_key] ?? null;
+	$has_saved = isset($items[$schedule_key]) && is_array($items[$schedule_key]);
+	$item = $has_saved ? $items[$schedule_key] : lf_publish_schedule_default_item_for_key($schedule_key);
 	if (!is_array($item)) {
 		return [];
 	}
@@ -197,6 +264,15 @@ function lf_publish_schedule_status_args(string $schedule_key): array {
  * @return array<string, mixed>
  */
 function lf_publish_schedule_merge_status_args(string $schedule_key, array $base_args): array {
+	$items = lf_publish_schedule_get_items();
+	$has_saved = isset($items[$schedule_key]) && is_array($items[$schedule_key]);
+	if (!$has_saved) {
+		$fallback = lf_publish_schedule_default_item_for_key($schedule_key);
+		if ($fallback === null) {
+			return $base_args;
+		}
+	}
+
 	$explicit = lf_publish_schedule_status_args($schedule_key);
 	if ($explicit === []) {
 		return $base_args;
@@ -211,7 +287,7 @@ function lf_publish_schedule_merge_status_args(string $schedule_key, array $base
 function lf_publish_schedule_page_path(string $schedule_key): string {
 	$map = [
 		'page:home' => 'home',
-		'page:about' => 'about',
+		'page:about' => 'about-us',
 		'page:contact' => 'contact',
 		'page:reviews' => 'reviews',
 		'page:blog' => 'blog',
@@ -361,11 +437,12 @@ function lf_cpt_card_permalink(\WP_Post $post): string {
  * @param array{timing?:string,date?:string} $stored
  */
 function lf_publish_schedule_render_controls(string $schedule_key, array $stored, bool $compact = false): void {
-	$timing = sanitize_key((string) ($stored['timing'] ?? 'now'));
+	$resolved = $stored !== [] ? $stored : lf_publish_schedule_resolved_item($schedule_key);
+	$timing = sanitize_key((string) ($resolved['timing'] ?? 'now'));
 	if (!in_array($timing, ['now', 'schedule', 'draft'], true)) {
 		$timing = 'now';
 	}
-	$date = sanitize_text_field((string) ($stored['date'] ?? ''));
+	$date = sanitize_text_field((string) ($resolved['date'] ?? ''));
 	$field_base = 'lf_ai_publish_schedule[' . esc_attr($schedule_key) . ']';
 	$wrap_class = $compact ? 'lf-publish-schedule lf-publish-schedule--compact' : 'lf-publish-schedule';
 	?>
@@ -411,7 +488,7 @@ function lf_publish_schedule_render_page_types_panel(): void {
 				<?php foreach (lf_publish_schedule_page_keys() as $key) : ?>
 					<div class="lf-publish-schedule-panel__row">
 						<span class="lf-publish-schedule-panel__label"><?php echo esc_html($labels[$key] ?? $key); ?></span>
-						<?php lf_publish_schedule_render_controls($key, $items[$key] ?? [], true); ?>
+						<?php lf_publish_schedule_render_controls($key, $items[$key] ?? lf_publish_schedule_resolved_item($key), true); ?>
 					</div>
 				<?php endforeach; ?>
 			</div>

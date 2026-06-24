@@ -305,10 +305,21 @@
     } catch (ePicker) {}
   }
 
+  function publishScheduleDefaultTiming(scheduleKey) {
+    var key = String(scheduleKey || '');
+    if (key.indexOf('lf_service:') === 0 || key.indexOf('lf_service_area:') === 0) {
+      return 'draft';
+    }
+    if (key === 'page:home' || key === 'page:services' || key === 'page:service-areas' || key === 'page:contact') {
+      return 'now';
+    }
+    return 'draft';
+  }
+
   function buildPublishScheduleNode(scheduleKey, stored) {
     stored = stored || {};
     var strings = publishScheduleStrings();
-    var timing = String(stored.timing || 'now');
+    var timing = String(stored.timing || publishScheduleDefaultTiming(scheduleKey));
     var date = String(stored.date || '');
     var wrap = document.createElement('div');
     wrap.className = 'lf-publish-schedule lf-publish-schedule--compact';
@@ -457,7 +468,7 @@
       if (!value) return;
       hasRows = true;
       var scheduleKey = schedulePrefix + ':' + value;
-      var schedStored = prevSchedule[scheduleKey] || storedSchedule[scheduleKey] || { timing: 'now', date: '' };
+      var schedStored = prevSchedule[scheduleKey] || storedSchedule[scheduleKey] || { timing: publishScheduleDefaultTiming(scheduleKey), date: '' };
 
       var item = document.createElement('div');
       item.className = 'lf-scope-filter__item';

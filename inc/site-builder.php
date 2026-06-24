@@ -36,6 +36,10 @@ function lf_site_builder_run_from_manifest(array $manifest): array {
 		return ['ok' => false, 'error' => $message, 'scaffold' => $scaffold];
 	}
 
+	if (function_exists('lf_publish_schedule_seed_defaults_if_empty')) {
+		lf_publish_schedule_seed_defaults_if_empty();
+	}
+
 	if (function_exists('lf_ai_studio_sync_manifest_posts')) {
 		lf_ai_studio_sync_manifest_posts($manifest);
 	} elseif (function_exists('lf_publish_schedule_apply_site_pages')) {

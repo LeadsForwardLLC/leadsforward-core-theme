@@ -59,10 +59,8 @@ function lf_run_setup(array $data): array {
 			continue;
 		}
 		$content = lf_wizard_placeholder_content($slug, $title, $data);
-		$page_status = 'publish';
-		if ($slug === 'financing') {
-			$page_status = 'draft';
-		}
+		$publish_pages = ['home', 'services', 'service-areas', 'contact'];
+		$page_status = in_array($slug, $publish_pages, true) ? 'publish' : 'draft';
 		$pid = wp_insert_post([
 			'post_title'   => $title,
 			'post_name'    => $slug,
@@ -137,7 +135,7 @@ function lf_run_setup(array $data): array {
 			'post_title'   => $name !== '' ? $name : $slug,
 			'post_name'   => $slug,
 			'post_content' => lf_wizard_service_placeholder_content($name !== '' ? $name : $slug, $data, $index, $niche),
-			'post_status'  => 'publish',
+			'post_status'  => 'draft',
 			'post_type'    => 'lf_service',
 			'post_author'  => get_current_user_id(),
 		], true);
@@ -170,7 +168,7 @@ function lf_run_setup(array $data): array {
 			'post_title'   => $area['name'],
 			'post_name'   => $slug,
 			'post_content' => lf_wizard_service_area_placeholder_content($area, $data, $index, $niche),
-			'post_status'  => 'publish',
+			'post_status'  => 'draft',
 			'post_type'    => 'lf_service_area',
 			'post_author'  => get_current_user_id(),
 		], true);

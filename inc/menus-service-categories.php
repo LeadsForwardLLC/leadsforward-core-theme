@@ -29,15 +29,15 @@ function lf_services_menu_categories_enabled(): bool {
 function lf_services_menu_category_definitions(): array {
 	$defs = [
 		'foundation-repair' => __('Foundation Repair', 'leadsforward-core'),
-		'waterproofing'     => __('Waterproofing', 'leadsforward-core'),
-		'crawl-space'       => __('Crawl Space', 'leadsforward-core'),
+		'waterproofing'     => __('Waterproofing / Basement Waterproofing', 'leadsforward-core'),
+		'crawl-space'       => __('Crawl Space Services', 'leadsforward-core'),
 	];
 
 	return (array) apply_filters('lf_services_menu_category_definitions', $defs);
 }
 
 /**
- * Classify a service title/slug into a menu category slug.
+ * Classify a service title/slug into a menu category slug, or empty for standalone.
  */
 function lf_foundation_repair_service_menu_category_slug(string $title, string $slug = ''): string {
 	$hay = strtolower(trim($title . ' ' . $slug));
@@ -50,8 +50,11 @@ function lf_foundation_repair_service_menu_category_slug(string $title, string $
 	if ($hay !== '' && preg_match('/\b(waterproof|flooded|leaking|sump\s*pump|drainage|basement\s*water|water\s*intrusion|seepage|wet\s*basement)\b/', $hay)) {
 		return 'waterproofing';
 	}
+	if ($hay !== '' && preg_match('/\b(foundation|crack|slab|pier|beam|settlement|structural|bowing|helical|push\s*pin)\b/', $hay)) {
+		return 'foundation-repair';
+	}
 
-	return 'foundation-repair';
+	return '';
 }
 
 /**
@@ -140,8 +143,8 @@ function lf_header_menu_categorize_foundation_services(array $items, $args): arr
 			}
 		}
 		$cat = lf_foundation_repair_service_menu_category_slug((string) ($child->title ?? ''), $slug);
-		if (!isset($bucketed[ $cat ])) {
-			$cat = 'foundation-repair';
+		if ($cat === '' || !isset($bucketed[ $cat ])) {
+			continue;
 		}
 		$bucketed[ $cat ][] = $child;
 	}
@@ -149,7 +152,7 @@ function lf_header_menu_categorize_foundation_services(array $items, $args): arr
 	$filled_categories = array_filter($bucketed, static function (array $rows): bool {
 		return $rows !== [];
 	});
-	if (count($filled_categories) < 2) {
+	if ($filled_categories === []) {
 		return $items;
 	}
 
