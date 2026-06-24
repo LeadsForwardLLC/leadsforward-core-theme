@@ -5361,12 +5361,23 @@ article a:not(.lf-btn):hover {
 	margin-bottom: 0.75rem;
 }
 
-.lf-block-service-areas__link:hover {
-	background: var(--lf-primary);
+.lf-block-service-areas__link:hover,
+.site-main .lf-block-service-areas__link:hover,
+.site-content .lf-block-service-areas__link:hover,
+article .lf-block-service-areas__link:hover {
+	background: #0f172a;
 	color: #fff;
-	border-left-color: var(--lf-primary);
-	box-shadow: 0 20px 40px -10px rgba(37,99,235,0.3), 0 8px 20px -5px rgba(37,99,235,0.2);
+	border-color: #0f172a;
+	border-left-color: #38bdf8;
+	box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.35), 0 8px 20px -5px rgba(15, 23, 42, 0.2);
 	transform: translateY(-4px);
+}
+
+.lf-block-service-areas__link:hover .lf-block-service-areas__card-title,
+.lf-block-service-areas__link:hover .lf-block-service-areas__card-action,
+.site-main .lf-block-service-areas__link:hover .lf-block-service-areas__card-title,
+.site-main .lf-block-service-areas__link:hover .lf-block-service-areas__card-action {
+	color: #fff;
 }
 
 .lf-block-service-areas__link:hover .lf-block-service-areas__icon {
