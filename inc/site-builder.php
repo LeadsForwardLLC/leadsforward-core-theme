@@ -13,6 +13,7 @@ if (!defined('ABSPATH')) {
 }
 
 lf_load_inc('site-builder/writer-guidance.php');
+lf_load_inc('site-builder/service-cards.php');
 lf_load_inc('site-builder/niche-media-pack.php');
 
 /**
@@ -43,9 +44,15 @@ function lf_site_builder_run_from_manifest(array $manifest): array {
 	if (function_exists('lf_ai_studio_ensure_core_page_sections')) {
 		lf_ai_studio_ensure_core_page_sections($manifest, true);
 	}
+	if (function_exists('lf_site_builder_sync_service_card_sections')) {
+		lf_site_builder_sync_service_card_sections();
+	}
 
 	$media = lf_site_builder_apply_niche_media_pack($manifest);
 	$guidance = lf_site_builder_fill_writer_guidance();
+	if (function_exists('lf_site_builder_strip_writer_placeholders')) {
+		lf_site_builder_strip_writer_placeholders();
+	}
 
 	$summary = [
 		'timestamp' => time(),

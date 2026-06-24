@@ -40,7 +40,6 @@ if (!in_array($header_align, ['left', 'center', 'right'], true)) {
 	$header_align = 'center';
 }
 
-$has_explicit_order = is_array($section) && array_key_exists('service_intro_service_ids', $section);
 $order_ids_raw = trim((string) ($section['service_intro_service_ids'] ?? ''));
 $order_ids = [];
 if ($order_ids_raw !== '') {
@@ -51,6 +50,7 @@ if ($order_ids_raw !== '') {
 		}
 	}
 }
+$has_explicit_order = is_array($section) && array_key_exists('service_intro_service_ids', $section) && $order_ids !== [];
 $query_args = [
 	'post_type'      => 'lf_service',
 	'posts_per_page' => $max_items,
@@ -142,7 +142,10 @@ if ($desc_overrides_raw !== '') {
 						$desc = sprintf(__('Short overview of %s and what to expect.', 'leadsforward-core'), get_the_title());
 					}
 					$is_published = get_post_status($sid) === 'publish';
-					$card_url = $is_published ? (string) get_permalink($sid) : $services_overview_url;
+					$post_obj = get_post($sid);
+					$card_url = ($post_obj instanceof \WP_Post && function_exists('lf_cpt_card_permalink'))
+						? lf_cpt_card_permalink($post_obj)
+						: ($is_published ? (string) get_permalink($sid) : $services_overview_url);
 					$image_id = $show_images ? (int) get_post_thumbnail_id(get_the_ID()) : 0;
 					if ($show_images && $image_id === 0 && function_exists('lf_get_placeholder_image_id')) {
 						$image_id = lf_get_placeholder_image_id();

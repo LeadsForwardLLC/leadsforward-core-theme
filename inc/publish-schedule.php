@@ -234,9 +234,20 @@ function lf_cpt_card_is_live(\WP_Post $post): bool {
 }
 
 /**
- * Fallback URL for unpublished service / area cards (Global Settings).
+ * Fallback URL for unpublished service / area cards (overview page, then Global Settings).
  */
-function lf_unpublished_cpt_card_url(): string {
+function lf_unpublished_cpt_card_url(?\WP_Post $post = null): string {
+	if ($post instanceof \WP_Post) {
+		$overview_slug = $post->post_type === 'lf_service_area' ? 'service-areas' : 'services';
+		$overview = get_page_by_path($overview_slug, OBJECT, 'page');
+		if ($overview instanceof \WP_Post && $overview->post_status === 'publish') {
+			$url = get_permalink($overview);
+			if (is_string($url) && $url !== '') {
+				return $url;
+			}
+		}
+	}
+
 	$page_id = 0;
 	if (function_exists('lf_get_option')) {
 		$page_id = (int) lf_get_option('lf_unpublished_card_link', 'option', 0);
@@ -259,7 +270,7 @@ function lf_unpublished_cpt_card_url(): string {
 }
 
 /**
- * Permalink for a service / area card (live page or Global Settings fallback).
+ * Permalink for a service / area card (live page or overview / Global Settings fallback).
  */
 function lf_cpt_card_permalink(\WP_Post $post): string {
 	if (lf_cpt_card_is_live($post)) {
@@ -269,7 +280,7 @@ function lf_cpt_card_permalink(\WP_Post $post): string {
 		}
 	}
 
-	return lf_unpublished_cpt_card_url();
+	return lf_unpublished_cpt_card_url($post);
 }
 
 /**

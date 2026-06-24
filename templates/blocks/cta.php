@@ -23,6 +23,10 @@ $header_align = function_exists('lf_sections_sanitize_header_align') ? lf_sectio
 $cta_surface_style = $surface['style'] !== '' ? ' style="' . esc_attr($surface['style']) . '"' : '';
 $headline = !empty($section['cta_headline']) ? $section['cta_headline'] : '';
 $subheadline = !empty($section['cta_subheadline']) ? $section['cta_subheadline'] : '';
+if (function_exists('lf_site_builder_public_text')) {
+	$headline = lf_site_builder_public_text((string) $headline, '');
+	$subheadline = lf_site_builder_public_text((string) $subheadline, '');
+}
 $trust_strip_enabled = (string) ($section['cta_trust_strip_enabled'] ?? '0') !== '0';
 $trust_rating = isset($section['cta_trust_rating']) ? (float) $section['cta_trust_rating'] : 0.0;
 $trust_count = isset($section['cta_trust_review_count']) ? (int) $section['cta_trust_review_count'] : 0;

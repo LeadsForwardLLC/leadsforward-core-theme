@@ -5705,6 +5705,13 @@ function lf_ai_studio_sync_manifest_posts(array $manifest): void {
 	if (function_exists('lf_sitemap_sync_build_header_menu')) {
 		lf_sitemap_sync_build_header_menu();
 	}
+
+	if (function_exists('lf_site_builder_sync_service_card_sections')) {
+		lf_site_builder_sync_service_card_sections();
+	}
+	if (function_exists('lf_site_builder_strip_writer_placeholders')) {
+		lf_site_builder_strip_writer_placeholders();
+	}
 }
 
 function lf_ai_studio_llm_system_message(): string {
