@@ -83,6 +83,48 @@ function lf_ai_section_library_row_meta(string $section_id): array {
 	];
 }
 
+/**
+ * Section inspector metadata for the frontend editor (Phase B).
+ *
+ * @return array{hints: array<string, string>, length_targets: array<string, array<string, mixed>>, generate_prompt: string}
+ */
+function lf_ai_assistant_section_inspector_config(): array {
+	$types = [
+		'hero',
+		'trust_bar',
+		'benefits',
+		'service_details',
+		'content_image',
+		'image_content',
+		'process',
+		'faq_accordion',
+		'cta',
+		'service_intro',
+		'service_grid',
+		'service_areas',
+		'content_centered',
+		'rich_content',
+		'pricing',
+	];
+	$hints = [];
+	$length_targets = [];
+	foreach ($types as $type) {
+		$meta = lf_ai_section_library_row_meta($type);
+		$hints[ $type ] = (string) ( $meta['hint'] ?? '' );
+		if (function_exists('lf_ai_studio_section_length_targets')) {
+			$length_targets[ $type ] = lf_ai_studio_section_length_targets($type, '');
+			$length_targets[ $type . ':homepage' ] = lf_ai_studio_section_length_targets($type, 'homepage');
+			$length_targets[ $type . ':service' ] = lf_ai_studio_section_length_targets($type, 'service');
+			$length_targets[ $type . ':service_area' ] = lf_ai_studio_section_length_targets($type, 'service_area');
+		}
+	}
+	return [
+		'hints' => $hints,
+		'length_targets' => $length_targets,
+		'generate_prompt' => __('Write polished, SEO-aware copy for this section only. Match the site voice, include the primary keyword naturally, and add internal links where appropriate. Do not change layout settings or image IDs.', 'leadsforward-core'),
+	];
+}
+
 function lf_ai_assistant_section_library(array $context): array {
 	if (!function_exists('lf_sections_get_context_sections')) {
 		return [];
@@ -285,6 +327,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		'target_label' => $target_label,
 		'labels' => $editable,
 		'section_library' => lf_ai_assistant_section_library($context),
+		'section_inspector' => lf_ai_assistant_section_inspector_config(),
 		'icon_slugs' => function_exists('lf_icon_list') ? array_values(array_map('sanitize_text_field', lf_icon_list())) : [],
 		'bg_palette' => $bg_palette,
 		'brand_settings_url' => admin_url('admin.php?page=lf-ops'),
@@ -334,6 +377,8 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 			'placeholder' => __('Ask for precise copy edits, SEO rewrites, CTA improvements, or schema-safe content upgrades...', 'leadsforward-core'),
 			'onboardingTip' => __('Click text or images to edit. Pick a section for AI changes. Press ⌘/Ctrl+K for commands.', 'leadsforward-core'),
 			'onboardingDismiss' => __('Got it', 'leadsforward-core'),
+			'inspectorGenerate' => __('Generate this section', 'leadsforward-core'),
+			'inspectorNoSection' => __('Select a section on the page to see guidance and SEO checks.', 'leadsforward-core'),
 		],
 	]);
 
@@ -573,6 +618,16 @@ function lf_ai_assistant_render_floating_widget(): void {
 				<div class="lf-ai-float__scope" data-lf-ai-section-scope hidden>
 					<span class="lf-ai-float__scope-kicker"><?php esc_html_e('AI will prioritize', 'leadsforward-core'); ?></span>
 					<span class="lf-ai-float__scope-value" data-lf-ai-section-scope-value></span>
+				</div>
+				<div class="lf-ai-float__inspector" data-lf-ai-section-inspector hidden>
+					<div class="lf-ai-float__inspector-head">
+						<strong class="lf-ai-float__inspector-title" data-lf-ai-inspector-title></strong>
+						<span class="lf-ai-float__inspector-type" data-lf-ai-inspector-type></span>
+					</div>
+					<p class="lf-ai-float__inspector-intent" data-lf-ai-inspector-intent></p>
+					<div class="lf-ai-float__inspector-guidance" data-lf-ai-inspector-guidance hidden></div>
+					<ul class="lf-ai-float__inspector-checklist" data-lf-ai-inspector-checklist></ul>
+					<button type="button" class="button button-primary button-small lf-ai-float__inspector-generate" data-lf-ai-inspector-generate><?php esc_html_e('Generate this section', 'leadsforward-core'); ?></button>
 				</div>
 				<details class="lf-ai-float__advanced">
 					<summary class="lf-ai-float__advanced-summary"><?php esc_html_e('Mode, reference page & document', 'leadsforward-core'); ?></summary>
@@ -949,6 +1004,21 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-float__scope[hidden] { display:none !important; }
 		.lf-ai-float__scope-kicker { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#166534; }
 		.lf-ai-float__scope-value { font-weight:600; color:#14532d; word-break:break-word; }
+		.lf-ai-float__inspector { font-size:12px; line-height:1.45; color:#334155; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+		.lf-ai-float__inspector[hidden] { display:none !important; }
+		.lf-ai-float__inspector-head { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px; }
+		.lf-ai-float__inspector-title { font-size:13px; color:#0f172a; }
+		.lf-ai-float__inspector-type { font-size:11px; color:#64748b; font-weight:600; }
+		.lf-ai-float__inspector-intent { margin:0; color:#475569; }
+		.lf-ai-float__inspector-guidance { font-size:11px; }
+		.lf-ai-float__inspector-guidance .lf-writer-guidance { margin:0; padding:8px 10px; font-size:11px; }
+		.lf-ai-float__inspector-checklist { margin:0; padding-left:18px; }
+		.lf-ai-float__inspector-checklist li { margin:0 0 4px; }
+		.lf-ai-float__inspector-checklist li.is-ok { color:#166534; }
+		.lf-ai-float__inspector-checklist li.is-warn { color:#b45309; }
+		.lf-ai-float__inspector-generate { align-self:flex-start; }
+		.lf-ai-section-btn--primary { background:#8348f9; border-color:#6a33e8; color:#fff; font-weight:700; }
+		.lf-ai-section-btn--primary:hover { background:#6a33e8; color:#fff; }
 		.lf-ai-float__advanced { border:1px solid #e9e1ff; border-radius:10px; background:#faf7ff; margin:2px 0 4px; }
 		.lf-ai-float__advanced-summary { cursor:pointer; font-size:12px; font-weight:700; color:#5b21b6; padding:9px 10px; list-style:none; user-select:none; }
 		.lf-ai-float__advanced-summary::-webkit-details-marker { display:none; }
@@ -4088,10 +4158,121 @@ function lf_ai_assistant_widget_js(): string {
 				$scopeVal.text("");
 			}
 		}
+		function sectionTextForSeo(wrap) {
+			if (!wrap) return "";
+			var nodes = wrap.querySelectorAll(".lf-prose, .lf-media-section__body, .lf-content__body, .lf-service-details__body, .lf-hero__subheadline, .lf-hero__headline, p, li");
+			var chunks = [];
+			Array.prototype.forEach.call(nodes || [], function(node){
+				var t = String(node.textContent || "").trim();
+				if (t) chunks.push(t);
+			});
+			return chunks.join(" ");
+		}
+		function buildSectionSeoChecklist(wrap, sectionType) {
+			var items = [];
+			var text = sectionTextForSeo(wrap);
+			var words = countWords(text);
+			var heading = wrap ? wrap.querySelector("h1,h2,h3,.lf-section__title,.lf-media-section__title,.lf-hero__headline") : null;
+			var headingText = heading ? String(heading.textContent || "").trim() : "";
+			items.push({
+				ok: headingText !== "" && headingText.indexOf("[Writer]") !== 0,
+				label: headingText ? "Section heading present" : "Add a clear section heading"
+			});
+			var minWords = 80;
+			var insp = lfAiFloating.section_inspector || {};
+			var lt = insp.length_targets || {};
+			var base = baseSectionType(String(sectionType || ""), String(wrap ? wrap.getAttribute("data-lf-section-id") || "" : ""));
+			var pageCtx = (activeContextType === "homepage") ? "homepage" : ((activeContextType === "lf_service") ? "service" : "page");
+			var targetKey = base + ":" + pageCtx;
+			var rules = lt[targetKey] || lt[base] || {};
+			if (rules.body_words && rules.body_words.min) minWords = parseInt(String(rules.body_words.min), 10) || minWords;
+			items.push({
+				ok: words >= minWords,
+				label: "Body depth: " + words + " words (target " + minWords + "+)"
+			});
+			var links = wrap ? wrap.querySelectorAll("a[href]") : [];
+			var internal = 0;
+			Array.prototype.forEach.call(links || [], function(link){
+				var href = String(link.getAttribute("href") || "");
+				if (!href || href.indexOf("#") === 0) return;
+				if (href.indexOf("http") !== 0 || href.indexOf(window.location.origin) === 0) internal++;
+			});
+			items.push({
+				ok: internal >= 1,
+				label: internal >= 1 ? "Internal link in section" : "Add at least one internal link"
+			});
+			var imgs = wrap ? Array.prototype.slice.call(wrap.querySelectorAll("img")) : [];
+			var missingAlt = imgs.filter(function(img){ return String(img.getAttribute("alt") || "").trim() === ""; }).length;
+			if (imgs.length) {
+				items.push({
+					ok: missingAlt === 0,
+					label: missingAlt === 0 ? "Images have alt text" : (missingAlt + " image(s) missing alt text")
+				});
+			}
+			var hasGuidance = !!(wrap && (wrap.querySelector(".lf-writer-guidance") || (text.indexOf("[Writer]") !== -1)));
+			if (hasGuidance) {
+				items.push({ ok: false, label: "Replace writer guidance placeholders with final copy" });
+			}
+			return items;
+		}
+		function renderSectionInspector() {
+			var $insp = $root.find("[data-lf-ai-section-inspector]");
+			if (!$insp.length) return;
+			if (!selectedSectionWrap || !editingEnabled) {
+				$insp.prop("hidden", true);
+				return;
+			}
+			$insp.prop("hidden", false);
+			var sid = String(selectedSectionWrap.getAttribute("data-lf-section-id") || "");
+			var stype = String(selectedSectionWrap.getAttribute("data-lf-section-type") || "");
+			var base = baseSectionType(stype, sid);
+			var inspCfg = lfAiFloating.section_inspector || {};
+			var hints = inspCfg.hints || {};
+			var hint = hints[stype] || hints[base] || "";
+			var label = sectionLabelForWrap(selectedSectionWrap);
+			$root.find("[data-lf-ai-inspector-title]").text(label);
+			$root.find("[data-lf-ai-inspector-type]").text(stype || sid);
+			$root.find("[data-lf-ai-inspector-intent]").text(hint || (lfAiFloating.i18n && lfAiFloating.i18n.inspectorNoSection ? lfAiFloating.i18n.inspectorNoSection : ""));
+			var guidanceNode = selectedSectionWrap.querySelector(".lf-writer-guidance");
+			var $guidance = $root.find("[data-lf-ai-inspector-guidance]");
+			if (guidanceNode) {
+				$guidance.prop("hidden", false).html(guidanceNode.innerHTML);
+			} else {
+				$guidance.prop("hidden", true).empty();
+			}
+			var checklist = buildSectionSeoChecklist(selectedSectionWrap, stype);
+			var $ul = $root.find("[data-lf-ai-inspector-checklist]").empty();
+			checklist.forEach(function(item){
+				$ul.append("<li class=\"" + (item.ok ? "is-ok" : "is-warn") + "\">" + escapeHtml(item.label) + "</li>");
+			});
+		}
+		function triggerSectionGenerate(wrap) {
+			if (!wrap) wrap = selectedSectionWrap;
+			if (!wrap) {
+				setStatus("Select a section first.", true);
+				return;
+			}
+			setSelectedSection(wrap);
+			try { $mode.val("edit_existing"); } catch (e) {}
+			syncModeUi();
+			var prompt = (lfAiFloating.section_inspector && lfAiFloating.section_inspector.generate_prompt)
+				? String(lfAiFloating.section_inspector.generate_prompt)
+				: "Write polished copy for this section only.";
+			$prompt.val(prompt);
+			try {
+				var panel = document.getElementById("lf-ai-float-panel");
+				var toggleBtn = document.querySelector("[data-lf-ai-toggle]");
+				if (panel && panel.hidden && toggleBtn) {
+					toggleBtn.click();
+				}
+			} catch (e) {}
+			$btnGenerate.trigger("click");
+		}
 		function setSelectedSection(wrap) {
 			if (!editingEnabled) {
 				selectedSectionWrap = null;
 				refreshAiScopeBanner();
+				renderSectionInspector();
 				return;
 			}
 			collectSectionWrappers().forEach(function(node){
@@ -4131,6 +4312,7 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			refreshAiScopeBanner();
 			refreshSectionRail();
+			renderSectionInspector();
 		}
 		function scrollToSectionWrap(wrap) {
 			if (!wrap || !wrap.getBoundingClientRect) return;
@@ -8732,6 +8914,22 @@ function lf_ai_assistant_widget_js(): string {
 					controls.className = "lf-ai-section-controls lf-ai-inline-editor-ignore";
 					wrap.appendChild(controls);
 				}
+				var genBtn = controls.querySelector("[data-lf-section-generate]");
+				if (!genBtn) {
+					genBtn = document.createElement("button");
+					genBtn.type = "button";
+					genBtn.className = "lf-ai-section-btn lf-ai-section-btn--primary";
+					genBtn.setAttribute("data-lf-section-generate", "1");
+					genBtn.textContent = (lfAiFloating.i18n && lfAiFloating.i18n.inspectorGenerate) ? lfAiFloating.i18n.inspectorGenerate : "Generate";
+					genBtn.setAttribute("title", "Generate AI copy for this section");
+					genBtn.setAttribute("aria-label", "Generate this section with AI");
+					genBtn.addEventListener("click", function(e){
+						e.preventDefault();
+						e.stopPropagation();
+						triggerSectionGenerate(wrap);
+					});
+					controls.insertBefore(genBtn, controls.firstChild || null);
+				}
 				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 				var ensureBtn = function(text, title, ariaLabel, onClick) {
 					if (!controls) return null;
@@ -9932,6 +10130,10 @@ function lf_ai_assistant_widget_js(): string {
 			setDocState("", "");
 			try { $docInput.val(""); } catch (e) {}
 			setStatus("Document context removed.", false);
+		});
+
+		$root.find("[data-lf-ai-inspector-generate]").on("click", function(){
+			triggerSectionGenerate(selectedSectionWrap);
 		});
 
 		$btnGenerate.on("click", function(){
