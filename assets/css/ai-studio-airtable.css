@@ -697,7 +697,12 @@
 }
 
 .lf-publish-schedule__date {
-  width: 8.5rem;
+  width: 10.5rem;
+  min-height: 30px;
+}
+
+.lf-publish-schedule__date--hidden {
+  display: none !important;
 }
 
 .lf-publish-schedule-panel {

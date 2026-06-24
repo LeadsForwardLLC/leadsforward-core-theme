@@ -299,14 +299,14 @@ function lf_publish_schedule_render_controls(string $schedule_key, array $stored
 			<option value="draft" <?php selected($timing, 'draft'); ?>><?php esc_html_e('Keep draft', 'leadsforward-core'); ?></option>
 		</select>
 		<input
-			type="text"
-			class="lf-publish-schedule__date"
+			type="date"
+			class="lf-publish-schedule__date<?php echo $timing === 'schedule' ? '' : ' lf-publish-schedule__date--hidden'; ?>"
 			name="<?php echo esc_attr($field_base . '[date]'); ?>"
-			value="<?php echo esc_attr($date); ?>"
-			placeholder="<?php esc_attr_e('Pick date…', 'leadsforward-core'); ?>"
+			value="<?php echo esc_attr($date !== '' ? substr($date, 0, 10) : ''); ?>"
+			min="<?php echo esc_attr(wp_date('Y-m-d')); ?>"
 			data-lf-publish-date
 			autocomplete="off"
-			<?php echo $timing === 'schedule' ? '' : 'hidden'; ?>
+			aria-label="<?php esc_attr_e('Publish date', 'leadsforward-core'); ?>"
 		/>
 	</div>
 	<?php

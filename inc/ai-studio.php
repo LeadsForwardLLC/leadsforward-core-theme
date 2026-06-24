@@ -424,8 +424,6 @@ function lf_ai_studio_assets(string $hook): void {
 		return;
 	}
 	wp_enqueue_media();
-	wp_enqueue_script('jquery-ui-datepicker');
-	wp_enqueue_style('jquery-ui-datepicker-style', 'https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css', [], '1.13.2');
 	wp_enqueue_style(
 		'lf-ai-studio-airtable',
 		LF_THEME_URI . '/assets/css/ai-studio-airtable.css',
@@ -435,7 +433,7 @@ function lf_ai_studio_assets(string $hook): void {
 	wp_enqueue_script(
 		'lf-ai-studio-airtable',
 		LF_THEME_URI . '/assets/js/ai-studio-airtable.js',
-		['jquery', 'jquery-ui-datepicker'],
+		[],
 		LF_THEME_VERSION,
 		true
 	);
