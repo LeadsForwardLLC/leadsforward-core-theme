@@ -53,6 +53,9 @@ function lf_site_builder_run_from_manifest(array $manifest): array {
 	if (function_exists('lf_site_builder_strip_writer_placeholders')) {
 		lf_site_builder_strip_writer_placeholders();
 	}
+	if (function_exists('lf_sections_purge_hidden_non_editable_fields_site_wide')) {
+		lf_sections_purge_hidden_non_editable_fields_site_wide();
+	}
 
 	$summary = [
 		'timestamp' => time(),

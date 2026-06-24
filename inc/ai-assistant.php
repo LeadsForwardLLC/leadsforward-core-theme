@@ -4972,12 +4972,13 @@ function lf_ai_assistant_widget_js(): string {
 				if (!host) {
 					host = document.createElement("div");
 					host.className = "lf-service-details__checklists";
-					var microEl = content.querySelector("[data-lf-service-details-micro=\"1\"]");
-					var proofEl = content.querySelector(".lf-service-details__proof");
-					if (microEl && microEl.parentNode === content) {
-						content.insertBefore(host, microEl);
-					} else if (proofEl) {
-						content.insertBefore(host, proofEl);
+					var bodyEl = content.querySelector(".lf-service-details__body");
+					if (bodyEl && bodyEl.parentNode === content) {
+						if (bodyEl.nextSibling) {
+							content.insertBefore(host, bodyEl.nextSibling);
+						} else {
+							content.appendChild(host);
+						}
 					} else {
 						content.appendChild(host);
 					}
