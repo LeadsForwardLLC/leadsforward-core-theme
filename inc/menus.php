@@ -23,6 +23,9 @@ function lf_menu_maybe_autobuild_header_menu(): void {
 	if (!lf_menu_autobuild_enabled() || is_admin()) {
 		return;
 	}
+	if (function_exists('lf_sitemap_menu_enable') && lf_sitemap_menu_enable()) {
+		return;
+	}
 	if (!function_exists('wp_get_nav_menus') || !function_exists('wp_update_nav_menu_item')) {
 		return;
 	}

@@ -2838,23 +2838,24 @@ article a:not(.lf-btn):hover {
 }
 
 @media (min-width: 901px) {
-	/* Group parents use span+button (no top-level <a>); keep label + chevron as one unit and show the toggle. */
+	/* Group parents use span+button (no top-level <a>); keep label + chevron inline without flex-row submenu layout. */
 	.site-header__menu > .menu-item.lf-menu-group-parent {
-		display: inline-flex;
-		align-items: center;
-		flex-wrap: nowrap;
-		gap: 0.15rem;
+		display: inline-block;
+		position: relative;
+		vertical-align: middle;
 	}
+	.site-header__menu > .menu-item.lf-menu-group-parent > .site-header__group-label,
 	.site-header__menu > .menu-item.lf-menu-group-parent > .site-header__submenu-toggle {
 		display: inline-flex;
-		align-self: center;
+		vertical-align: middle;
+	}
+	.site-header__menu > .menu-item.lf-menu-group-parent > .site-header__submenu-toggle {
 		align-items: center;
 		justify-content: center;
 		margin-left: 0;
 		padding: 0.2rem 0.35rem;
 		border: 0;
 		background: transparent;
-		flex-shrink: 0;
 	}
 }
 
@@ -2907,6 +2908,14 @@ article a:not(.lf-btn):hover {
 	transform: translateY(6px);
 	transition: all 0.2s ease;
 	z-index: 10;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+}
+
+.site-header__menu .sub-menu > .menu-item {
+	display: block;
+	width: 100%;
 }
 
 .site-header__menu .sub-menu a {

@@ -662,6 +662,10 @@ function lf_sitemap_sync_build_header_menu(): array {
 	foreach ($items as $row) {
 		$group = (string) $row['group'];
 		$depth = (int) ($row['depth'] ?? 0);
+		// Services / Service Areas overview dropdowns are enforced after rebuild — skip duplicate roots.
+		if ($depth === 0 && ($group === 'Services' || $group === 'Service Areas')) {
+			continue;
+		}
 		$hier_key = (string) ($row['hierarchy_key'] ?? '');
 		$dedupe_key = $group . '|' . $depth . '|' . $hier_key . '|' . (int) ($row['post_id'] ?? 0);
 		if (isset($dedupe[$dedupe_key])) {
@@ -694,21 +698,23 @@ function lf_sitemap_sync_build_header_menu(): array {
 		}
 	}
 
-	// Finally, re-add preserved CTA items to keep current header button behavior.
+	// Preserved CTAs survived clear — reposition to the end without creating duplicates.
+	$after_rebuild = wp_get_nav_menu_items($menu_id);
+	$tail_position = 0;
+	if (is_array($after_rebuild)) {
+		foreach ($after_rebuild as $it) {
+			if ($it instanceof WP_Post) {
+				$tail_position = max($tail_position, (int) ($it->menu_order ?? 0));
+			}
+		}
+	}
 	foreach ($preserved as $item) {
 		if (!$item instanceof WP_Post) {
 			continue;
 		}
-		$classes = $item->classes ?? [];
-		$class_str = is_array($classes) ? implode(' ', $classes) : (string) $classes;
-		wp_update_nav_menu_item($menu_id, 0, [
-			'menu-item-title'    => (string) ($item->title ?? ''),
-			'menu-item-url'      => (string) ($item->url ?? '#'),
-			'menu-item-type'     => 'custom',
-			'menu-item-status'   => 'publish',
-			'menu-item-position' => $position++,
-			'menu-item-classes'  => $class_str,
-		]);
+		$update = lf_nav_menu_item_build_update_args($item);
+		$update['menu-item-position'] = ++$tail_position;
+		wp_update_nav_menu_item($menu_id, (int) $item->ID, $update);
 	}
 
 	// Enforce the Services dropdown group + children, even when Airtable sitemap specs are missing/incomplete.
@@ -1331,6 +1337,190 @@ function lf_nav_menu_sort_dropdown_candidates_by_score(array $candidate_ids, arr
 	return $candidate_ids;
 }
 
+function lf_nav_menu_dedupe_duplicate_cta_items(int $menu_id): void {
+	if ($menu_id <= 0 || !function_exists('wp_get_nav_menu_items')) {
+		return;
+	}
+	$items = wp_get_nav_menu_items($menu_id);
+	if (!is_array($items) || $items === []) {
+		return;
+	}
+
+	foreach (['lf-menu-call', 'lf-menu-cta'] as $class) {
+		$matches = [];
+		foreach ($items as $item) {
+			if (!$item instanceof WP_Post) {
+				continue;
+			}
+			if ((int) ($item->menu_item_parent ?? 0) !== 0) {
+				continue;
+			}
+			if (!lf_nav_menu_item_has_class($item, $class)) {
+				continue;
+			}
+			$matches[] = $item;
+		}
+		if (count($matches) < 2) {
+			continue;
+		}
+		usort(
+			$matches,
+			static function (WP_Post $a, WP_Post $b): int {
+				return ((int) ($a->menu_order ?? 0)) <=> ((int) ($b->menu_order ?? 0));
+			}
+		);
+		foreach (array_slice($matches, 1) as $dup) {
+			wp_delete_post((int) $dup->ID, true);
+		}
+	}
+}
+
+/**
+ * @param array<int, list<WP_Post>> $by_parent
+ */
+function lf_nav_menu_score_group_overview_candidate(
+	WP_Post $item,
+	array $by_parent,
+	string $marker_class,
+	int $page_id,
+	string $child_object
+): int {
+	$score = 0;
+	if ($marker_class !== '' && lf_nav_menu_item_has_class($item, $marker_class)) {
+		$score += 100;
+	}
+	if (lf_nav_menu_item_has_class($item, 'lf-menu-group-parent')) {
+		$score += 50;
+	}
+	$kids = array_merge([], $by_parent[(int) $item->ID] ?? []);
+	if ($child_object !== '' && lf_nav_menu_children_match_dropdown_signature($kids, $child_object)) {
+		$score += 80;
+	} elseif ($kids !== []) {
+		$score += 20;
+	}
+	if ($page_id > 0 && (string) ($item->object ?? '') === 'page' && (int) ($item->object_id ?? 0) === $page_id) {
+		$score += 10;
+	}
+	return $score;
+}
+
+function lf_nav_menu_remove_duplicate_group_overview_links(int $menu_id): void {
+	if ($menu_id <= 0 || !function_exists('wp_get_nav_menu_items') || !function_exists('wp_update_nav_menu_item')) {
+		return;
+	}
+
+	$specs = [
+		[
+			'label' => 'services',
+			'page_id' => lf_nav_menu_publish_page_id('services'),
+			'marker' => 'lf-menu-services-parent',
+			'child_object' => 'lf_service',
+			'normalize_classes' => 'lf-menu-group-parent lf-menu-services-parent',
+			'title' => __('Services', 'leadsforward-core'),
+		],
+		[
+			'label' => 'service areas',
+			'page_id' => lf_nav_menu_publish_page_id('service-areas'),
+			'marker' => 'lf-menu-areas-parent',
+			'child_object' => 'lf_service_area',
+			'normalize_classes' => 'lf-menu-group-parent lf-menu-areas-parent',
+			'title' => __('Service Areas', 'leadsforward-core'),
+		],
+	];
+
+	foreach ($specs as $spec) {
+		$items = wp_get_nav_menu_items($menu_id);
+		if (!is_array($items) || $items === []) {
+			continue;
+		}
+		$by_parent = lf_nav_menu_items_children_by_parent($items);
+		$matches = [];
+		foreach ($items as $item) {
+			if (!$item instanceof WP_Post) {
+				continue;
+			}
+			if ((int) ($item->menu_item_parent ?? 0) !== 0) {
+				continue;
+			}
+			if (lf_nav_menu_item_is_sync_preserved_cta($item) || lf_nav_menu_item_has_class($item, 'lf-menu-more')) {
+				continue;
+			}
+
+			$title = strtolower(trim(wp_strip_all_tags((string) ($item->title ?? ''))));
+			$is_label = $title !== '' && $title === (string) $spec['label'];
+			$is_page = (int) $spec['page_id'] > 0
+				&& (string) ($item->object ?? '') === 'page'
+				&& (int) ($item->object_id ?? 0) === (int) $spec['page_id'];
+			if (!$is_label && !$is_page) {
+				continue;
+			}
+			$matches[] = $item;
+		}
+		if (count($matches) < 2) {
+			continue;
+		}
+
+		usort(
+			$matches,
+			static function (WP_Post $a, WP_Post $b) use ($by_parent, $spec): int {
+				$sa = lf_nav_menu_score_group_overview_candidate(
+					$a,
+					$by_parent,
+					(string) $spec['marker'],
+					(int) $spec['page_id'],
+					(string) $spec['child_object']
+				);
+				$sb = lf_nav_menu_score_group_overview_candidate(
+					$b,
+					$by_parent,
+					(string) $spec['marker'],
+					(int) $spec['page_id'],
+					(string) $spec['child_object']
+				);
+				if ($sa !== $sb) {
+					return $sb <=> $sa;
+				}
+				return ((int) ($a->menu_order ?? 0)) <=> ((int) ($b->menu_order ?? 0));
+			}
+		);
+
+		$winner = $matches[0];
+		$winner_id = (int) $winner->ID;
+		if ((int) $spec['page_id'] > 0) {
+			lf_nav_menu_normalize_group_parent(
+				$menu_id,
+				$winner_id,
+				(string) $spec['title'],
+				(int) $spec['page_id'],
+				(string) $spec['normalize_classes']
+			);
+		}
+
+		foreach (array_slice($matches, 1) as $loser) {
+			$loser_id = (int) $loser->ID;
+			if ($loser_id <= 0 || $loser_id === $winner_id) {
+				continue;
+			}
+
+			$fresh = wp_get_nav_menu_items($menu_id);
+			if (!is_array($fresh)) {
+				continue;
+			}
+			$map = lf_nav_menu_items_children_by_parent($fresh);
+			$kids = array_merge([], $map[$loser_id] ?? []);
+			foreach ($kids as $ch) {
+				if (!$ch instanceof WP_Post || (int) ($ch->menu_item_parent ?? 0) !== $loser_id) {
+					continue;
+				}
+				$move_args = lf_nav_menu_item_build_update_args($ch);
+				$move_args['menu-item-parent-id'] = $winner_id;
+				wp_update_nav_menu_item($menu_id, (int) $ch->ID, $move_args);
+			}
+			wp_delete_post($loser_id, true);
+		}
+	}
+}
+
 function lf_nav_menu_merge_duplicate_dropdowns(
 	int $menu_id,
 	string $canonical_label_lc,
@@ -1486,7 +1676,10 @@ function lf_header_menu_repair_nav_structure(int $menu_id, bool $apply_preferred
 	);
 
 	lf_nav_menu_delete_blank_placeholder_top_parents($menu_id);
+	lf_nav_menu_remove_duplicate_group_overview_links($menu_id);
+	lf_nav_menu_dedupe_duplicate_cta_items($menu_id);
 	lf_header_menu_append_missing_core_top_levels($menu_id);
+	lf_nav_menu_dedupe_duplicate_cta_items($menu_id);
 
 	if ($apply_preferred_order) {
 		lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'Service Areas', 'Reviews', 'More']);
