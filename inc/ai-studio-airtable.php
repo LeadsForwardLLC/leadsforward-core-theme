@@ -13,6 +13,7 @@ if (!defined('ABSPATH')) {
 }
 
 add_action('wp_ajax_lf_ai_airtable_search', 'lf_ai_studio_airtable_search');
+add_action('wp_ajax_lf_ai_airtable_build_site', 'lf_ai_studio_airtable_build_site');
 add_action('wp_ajax_lf_ai_airtable_generate', 'lf_ai_studio_airtable_generate');
 add_action('wp_ajax_lf_ai_airtable_preview_manifest', 'lf_ai_studio_airtable_preview_manifest');
 add_action('init', 'lf_ai_studio_airtable_schedule_reviews_sync');
@@ -297,6 +298,34 @@ function lf_ai_studio_airtable_search(): void {
 	]);
 }
 
+function lf_ai_studio_airtable_build_site(): void {
+	if (!current_user_can('edit_theme_options')) {
+		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
+	}
+	check_ajax_referer('lf_ai_airtable', 'nonce');
+
+	$record_id = isset($_POST['record_id']) ? sanitize_text_field(wp_unslash((string) $_POST['record_id'])) : '';
+	if ($record_id === '') {
+		wp_send_json_error(['message' => __('Missing Airtable record ID.', 'leadsforward-core')], 400);
+	}
+
+	$run = lf_ai_studio_airtable_build_site_from_record_id($record_id, 'manual');
+	if (empty($run['ok'])) {
+		wp_send_json_error([
+			'message' => (string) ($run['error'] ?? __('Site build failed.', 'leadsforward-core')),
+			'errors' => is_array($run['errors'] ?? null) ? array_values(array_filter(array_map('strval', $run['errors']))) : [],
+		], 400);
+	}
+
+	$redirect = function_exists('lf_ai_studio_manifest_admin_url')
+		? lf_ai_studio_manifest_admin_url(['built' => '1'])
+		: admin_url('admin.php?page=lf-manifest&built=1');
+	wp_send_json_success([
+		'redirect' => $redirect,
+		'summary' => $run['summary'] ?? [],
+	]);
+}
+
 function lf_ai_studio_airtable_generate(): void {
 	if (!current_user_can('edit_theme_options')) {
 		wp_send_json_error(['message' => __('Insufficient permissions.', 'leadsforward-core')], 403);
@@ -549,7 +578,7 @@ function lf_ai_studio_airtable_preview_manifest(): void {
 	]);
 }
 
-function lf_ai_studio_airtable_generate_from_record_id(string $record_id, string $source = 'manual'): array {
+function lf_ai_studio_airtable_prepare_manifest_from_record_id(string $record_id): array {
 	$record_result = lf_ai_studio_airtable_fetch_record($record_id);
 	if (!empty($record_result['error'])) {
 		return ['ok' => false, 'error' => (string) $record_result['error']];
@@ -629,6 +658,46 @@ function lf_ai_studio_airtable_generate_from_record_id(string $record_id, string
 	$review_result = lf_ai_studio_airtable_import_reviews($record, $settings);
 	if (!empty($review_result['error'])) {
 		error_log('LF Airtable Reviews: ' . (string) $review_result['error']);
+	}
+
+	return [
+		'ok' => true,
+		'manifest' => $normalized,
+		'record' => $record,
+		'settings' => $settings,
+	];
+}
+
+function lf_ai_studio_airtable_build_site_from_record_id(string $record_id, string $source = 'manual'): array {
+	$prep = lf_ai_studio_airtable_prepare_manifest_from_record_id($record_id);
+	if (empty($prep['ok'])) {
+		return $prep;
+	}
+	$manifest = is_array($prep['manifest'] ?? null) ? $prep['manifest'] : [];
+	if (!function_exists('lf_site_builder_run_from_manifest')) {
+		return ['ok' => false, 'error' => __('Site Builder module not loaded.', 'leadsforward-core')];
+	}
+	$result = lf_site_builder_run_from_manifest($manifest);
+	if (empty($result['ok'])) {
+		$message = (string) ($result['error'] ?? __('Site build failed.', 'leadsforward-core'));
+		update_option('lf_ai_studio_manifest_errors', [$message], false);
+		return ['ok' => false, 'error' => $message, 'errors' => [$message]];
+	}
+	update_option('lf_ai_autonomy_last_source', sanitize_text_field($source . '_template'), false);
+	update_option('lf_ai_autonomy_last_run', time(), false);
+	return [
+		'ok' => true,
+		'summary' => [
+			'guidance' => $result['guidance'] ?? [],
+			'media' => $result['media'] ?? [],
+		],
+	];
+}
+
+function lf_ai_studio_airtable_generate_from_record_id(string $record_id, string $source = 'manual'): array {
+	$prep = lf_ai_studio_airtable_prepare_manifest_from_record_id($record_id);
+	if (empty($prep['ok'])) {
+		return $prep;
 	}
 	$result = lf_ai_studio_run_generation();
 	if (!empty($result['error'])) {

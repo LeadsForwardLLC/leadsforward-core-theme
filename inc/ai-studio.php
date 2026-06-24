@@ -463,10 +463,12 @@ function lf_ai_studio_assets(string $hook): void {
 			'searchPlaceholder' => __('Search Airtable projects…', 'leadsforward-core'),
 			'noResults' => __('No projects found.', 'leadsforward-core'),
 			'notConfigured' => __('Airtable is not configured.', 'leadsforward-core'),
-			'selectPrompt' => __('Select a project to preview before generating.', 'leadsforward-core'),
-			'generating' => __('Generating from Airtable…', 'leadsforward-core'),
+			'selectPrompt' => __('Select a project to preview before building.', 'leadsforward-core'),
+			'building' => __('Building site from Airtable…', 'leadsforward-core'),
+			'generating' => __('Generating with orchestrator…', 'leadsforward-core'),
 			'confirmHomepageOnly' => __('Your scope is homepage-only, but this site has published service pages. Service pages will not be sent to the orchestrator. Continue?', 'leadsforward-core'),
-			'scopeNoTargets' => __('Enable at least one target under step 2 (Generate) and click Save Scope before running.', 'leadsforward-core'),
+			'scopeNoTargets' => __('Enable at least one target under step 2 (Generate) and click Save Scope before orchestrator runs.', 'leadsforward-core'),
+			'readyBuild' => __('Ready to build from Airtable.', 'leadsforward-core'),
 		],
 		'researchStrings' => [
 			'uploading' => __('Uploading research…', 'leadsforward-core'),
@@ -2076,21 +2078,27 @@ function lf_ai_studio_render_page(): void {
 				<div class="lf-manifester-step lf-manifester-step--action">
 					<div class="lf-manifester-step__badge">6</div>
 					<div class="lf-manifester-step__content">
-						<h3><?php esc_html_e('Run generation', 'leadsforward-core'); ?></h3>
+						<h3><?php esc_html_e('Build or generate', 'leadsforward-core'); ?></h3>
 						<p class="description"><?php esc_html_e('Uses the manifest on this site (from your last Airtable selection or file upload). Pick a project in step 2 if you have not yet.', 'leadsforward-core'); ?></p>
 						<p class="description" style="margin-bottom:12px;">
-							<strong><?php esc_html_e('This run will include:', 'leadsforward-core'); ?></strong>
+							<strong><?php esc_html_e('Template build includes:', 'leadsforward-core'); ?></strong>
 							<?php
 							if (!empty($scope_snap['enabled_labels'])) {
 								echo esc_html(implode(', ', $scope_snap['enabled_labels']));
 							} else {
-								esc_html_e('No targets — fix step 2 first.', 'leadsforward-core');
+								esc_html_e('Pages and sections from your manifest — scope checkboxes mainly affect orchestrator runs.', 'leadsforward-core');
 							}
 							?>
 						</p>
-						<button type="button" class="button button-primary button-hero" id="lf-manifester-generate" disabled>
-							<?php esc_html_e('Manifest Your Website', 'leadsforward-core'); ?>
-						</button>
+						<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+							<button type="button" class="button button-primary button-hero" id="lf-manifester-build-site" disabled>
+								<?php esc_html_e('Build site (templates)', 'leadsforward-core'); ?>
+							</button>
+							<button type="button" class="button button-hero" id="lf-manifester-generate" disabled>
+								<?php esc_html_e('Generate with AI (orchestrator)', 'leadsforward-core'); ?>
+							</button>
+						</div>
+						<p class="description" style="margin-top:10px;"><?php esc_html_e('Template build scaffolds pages, applies niche sections, imports niche images, and seeds writer guidance — no n8n required. Orchestrator runs the full AI pipeline via n8n.', 'leadsforward-core'); ?></p>
 						<div id="lf-manifester-status" class="lf-manifester-status" role="status" aria-live="polite"></div>
 						<?php
 						$progress = $job_id ? get_post_meta($job_id, 'lf_ai_job_progress', true) : [];
