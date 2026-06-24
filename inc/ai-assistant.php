@@ -769,7 +769,7 @@ function lf_ai_assistant_render_floating_widget(): void {
 				</span>
 				<span class="lf-ai-inline-link__toolbar-group" role="group" aria-label="<?php esc_attr_e('AI rewrite', 'leadsforward-core'); ?>">
 					<button type="button" class="lf-ai-inline-link__fmt lf-ai-inline-link__fmt--icon lf-ai-inline-link__fmt--ai" data-lf-ai-inline-rewrite-open title="<?php esc_attr_e('Rewrite with AI', 'leadsforward-core'); ?>" aria-label="<?php esc_attr_e('Rewrite with AI', 'leadsforward-core'); ?>">
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M5 19l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/><path d="M19 13l.75 1.5 1.5.75-1.5.75-.75 1.5-.75-1.5-1.5-.75 1.5-.75.75-1.5z"/></svg>
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="13" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1" fill="currentColor" stroke="none"/><path d="M9 17h6"/><path d="M12 8V5"/><circle cx="12" cy="3.5" r="1" fill="currentColor" stroke="none"/><path d="M4 11H2"/><path d="M22 11h-2"/></svg>
 					</button>
 				</span>
 				<button type="button" class="lf-ai-inline-link__open" data-lf-ai-inline-link-open><?php esc_html_e('Link…', 'leadsforward-core'); ?></button>
@@ -1429,7 +1429,7 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-inline-link__fmt--icon svg { display:block; flex-shrink:0; }
 		.lf-ai-inline-link__fmt--ai { background:rgba(131,72,249,.35); border-color:rgba(255,255,255,.45); }
 		.lf-ai-inline-link__fmt--ai:hover { background:rgba(131,72,249,.55); }
-		.lf-ai-inline-rewrite { position:fixed; z-index:100005; pointer-events:auto; }
+		.lf-ai-inline-rewrite { position:fixed; z-index:100010; pointer-events:auto; }
 		.lf-ai-inline-rewrite[hidden] { display:none !important; }
 		.lf-ai-inline-rewrite__card { width:min(340px,calc(100vw - 24px)); background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 14px 40px rgba(15,23,42,.22); padding:12px; display:flex; flex-direction:column; gap:10px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
 		.lf-ai-inline-rewrite__head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -2273,16 +2273,23 @@ function lf_ai_assistant_widget_js(): string {
 		var lfProseIconSavedRange = null;
 		var lfProseIconSavedHost = null;
 		var lfInlineRewriteBusy = false;
+		var lfInlineRewritePanelOpen = false;
 		function lfHideInlineRewritePanel() {
 			if (!$linkRoot.length) return;
-			$linkRoot.find("[data-lf-ai-inline-rewrite-panel]").prop("hidden", true);
+			lfInlineRewritePanelOpen = false;
+			$linkRoot.find("[data-lf-ai-inline-rewrite-panel]").prop("hidden", true).hide();
 			$linkRoot.find("[data-lf-ai-inline-rewrite-apply]").prop("hidden", true);
 		}
-		function lfHideInlineLinkToolbar() {
+		function lfHideInlineLinkToolbarOnly() {
 			if ($linkRoot.length) {
 				$linkRoot.find("[data-lf-ai-inline-link-toolbar]").prop("hidden", true);
 				$linkRoot.find("[data-lf-ai-heading-tools]").prop("hidden", true);
 				$linkRoot.find("[data-lf-ai-list-tools]").prop("hidden", true);
+			}
+		}
+		function lfHideInlineLinkToolbar() {
+			lfHideInlineLinkToolbarOnly();
+			if (!lfInlineRewritePanelOpen) {
 				lfHideInlineRewritePanel();
 			}
 		}
@@ -2308,10 +2315,12 @@ function lf_ai_assistant_widget_js(): string {
 		function closeInlineEditing() {
 			if (inlineIsSaving) return;
 			lfInlineToolbarPinnedHost = null;
-			lfHideInlineLinkToolbar();
+			lfHideInlineRewritePanel();
+			lfHideInlineLinkToolbarOnly();
 			lfHideInlineLinkPanel();
 			saveInlineEdit(function(){
-				lfHideInlineLinkToolbar();
+				lfHideInlineRewritePanel();
+				lfHideInlineLinkToolbarOnly();
 				lfHideInlineLinkPanel();
 			});
 		}
@@ -2597,9 +2606,9 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function lfShowInlineRewritePanel() {
 			lfHideInlineLinkPanel();
-			var host = lfAnyInlineLinkHostEl();
+			var host = inlineActiveEl || lfManagedContentEditableHost();
 			if (!host) {
-				setStatus("Click into text to edit, then use AI rewrite.", true);
+				setStatus("Click into text to edit, then use the robot button.", true);
 				return;
 			}
 			var scope = (lfAiFloating && lfAiFloating.page_scope) ? lfAiFloating.page_scope : {};
@@ -2610,23 +2619,45 @@ function lf_ai_assistant_widget_js(): string {
 			} else {
 				$kw.prop("hidden", true).text("");
 			}
-			$linkRoot.find("[data-lf-ai-inline-rewrite-panel]").prop("hidden", false);
+			var $panel = $linkRoot.find("[data-lf-ai-inline-rewrite-panel]");
+			lfInlineRewritePanelOpen = true;
+			$panel.prop("hidden", false).show();
+			if ($panel.length && $panel[0].parentNode !== document.body) {
+				document.body.appendChild($panel[0]);
+			}
 			var $tb = $linkRoot.find("[data-lf-ai-inline-link-toolbar]");
 			if ($tb.length && !$tb.prop("hidden")) {
 				var rect = $tb[0].getBoundingClientRect();
-				$linkRoot.find("[data-lf-ai-inline-rewrite-panel]").css({
+				$panel.css({
 					position: "fixed",
-					top: (rect.bottom + 6) + "px",
-					left: Math.max(8, rect.left) + "px"
+					top: (rect.bottom + 8) + "px",
+					left: Math.max(8, Math.min(rect.left, window.innerWidth - 360)) + "px",
+					zIndex: 100010
+				});
+			} else if (host && host.getBoundingClientRect) {
+				var hrect = host.getBoundingClientRect();
+				$panel.css({
+					position: "fixed",
+					top: (hrect.bottom + 8) + "px",
+					left: Math.max(8, hrect.left) + "px",
+					zIndex: 100010
 				});
 			}
 			try {
 				$linkRoot.find("[data-lf-ai-inline-rewrite-instruction]").val("").trigger("focus");
 			} catch (eIns) {}
 		}
+		function lfToggleInlineRewritePanel() {
+			var $panel = $linkRoot.find("[data-lf-ai-inline-rewrite-panel]");
+			if ($panel.length && !$panel.prop("hidden") && lfInlineRewritePanelOpen) {
+				lfHideInlineRewritePanel();
+				return;
+			}
+			lfShowInlineRewritePanel();
+		}
 		function lfRunInlineRewrite(mode) {
 			if (lfInlineRewriteBusy) return;
-			var host = lfAnyInlineLinkHostEl();
+			var host = inlineActiveEl || lfManagedContentEditableHost();
 			var ctx = lfInlineRewriteContextFromHost(host);
 			if (!ctx || !ctx.current_text) {
 				setStatus("Nothing to rewrite in this field.", true);
@@ -3057,19 +3088,26 @@ function lf_ai_assistant_widget_js(): string {
 					try { document.execCommand(cmd, false, null); } catch (errD) {}
 				}
 			});
-			$linkRoot.on("mousedown", "[data-lf-ai-inline-link-apply], [data-lf-ai-inline-link-pick], [data-lf-ai-inline-link-close], [data-lf-ai-inline-link-unlink], [data-lf-ai-inline-toolbar-close], [data-lf-ai-inline-rewrite-open], [data-lf-ai-inline-rewrite-close], [data-lf-ai-inline-rewrite-mode]", function(e){
+			$linkRoot.on("mousedown", "[data-lf-ai-inline-link-apply], [data-lf-ai-inline-link-pick], [data-lf-ai-inline-link-close], [data-lf-ai-inline-link-unlink], [data-lf-ai-inline-toolbar-close], [data-lf-ai-inline-rewrite-close], [data-lf-ai-inline-rewrite-mode]", function(e){
 				e.preventDefault();
 			});
-			$linkRoot.find("[data-lf-ai-inline-rewrite-open]").on("click", function(e){
+			$linkRoot.on("mousedown", "[data-lf-ai-inline-rewrite-open]", function(e){
 				e.preventDefault();
-				lfShowInlineRewritePanel();
+				e.stopPropagation();
+				lfToggleInlineRewritePanel();
 			});
-			$linkRoot.find("[data-lf-ai-inline-rewrite-close]").on("click", function(e){
+			$linkRoot.on("click", "[data-lf-ai-inline-rewrite-open]", function(e){
 				e.preventDefault();
+				e.stopPropagation();
+			});
+			$linkRoot.on("click", "[data-lf-ai-inline-rewrite-close]", function(e){
+				e.preventDefault();
+				e.stopPropagation();
 				lfHideInlineRewritePanel();
 			});
 			$linkRoot.on("click", "[data-lf-ai-inline-rewrite-mode]", function(e){
 				e.preventDefault();
+				e.stopPropagation();
 				var mode = String($(this).attr("data-lf-ai-inline-rewrite-mode") || "regenerate");
 				lfRunInlineRewrite(mode);
 			});
@@ -3203,6 +3241,9 @@ function lf_ai_assistant_widget_js(): string {
 		document.addEventListener("selectionchange", function(){
 			clearTimeout(lfInlineLinkSelTimer);
 			lfInlineLinkSelTimer = setTimeout(function(){
+				if (lfInlineRewritePanelOpen) {
+					return;
+				}
 				if (!lfAnyInlineLinkHostEl()) {
 					lfHideInlineLinkToolbar();
 					return;
@@ -9923,13 +9964,16 @@ function lf_ai_assistant_widget_js(): string {
 				try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch (eSep) {}
 			}
 			try { el.focus(); } catch (e) {}
+			lfPositionInlineLinkToolbar();
 			setStatus("Editing text. Click away to auto-save.", false);
 			el.addEventListener("blur", function onBlur(){
 				setTimeout(function(){
-					if (inlineActiveEl === el) {
-						saveInlineEdit();
-					}
-				}, 0);
+					if (inlineActiveEl !== el) return;
+					var active = document.activeElement;
+					if (active && lfInlineUiHit(active)) return;
+					if (lfInlineRewritePanelOpen) return;
+					saveInlineEdit();
+				}, 120);
 			}, { once: true });
 		}
 		function cancelInlineEdit(showStatus) {
