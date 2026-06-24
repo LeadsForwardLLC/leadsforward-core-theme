@@ -456,42 +456,60 @@ function lf_header_menu_reorder_flat_blocks(array $items): array {
 	if ($items === []) {
 		return $items;
 	}
-	// wp_nav_menu_objects uses menu_order as array keys (not 0..n); sequential index access breaks block grouping.
 	$items = array_values($items);
-	$n = count($items);
-	if ($n < 2) {
+	if (count($items) < 2) {
 		return $items;
 	}
-	$blocks = [];
-	$i = 0;
-	while ($i < $n) {
-		if ((int) $items[$i]->menu_item_parent !== 0) {
-			$i++;
-			continue;
+
+	$children_by_parent = [];
+	foreach ($items as $item) {
+		$parent = (int) ($item->menu_item_parent ?? 0);
+		if ($parent > 0) {
+			$children_by_parent[$parent][] = $item;
 		}
-		$start = $i;
-		$i++;
-		while ($i < $n && (int) $items[$i]->menu_item_parent !== 0) {
-			$i++;
-		}
-		$blocks[] = array_slice($items, $start, $i - $start);
 	}
-	if (count($blocks) < 2) {
+
+	$tops = [];
+	foreach ($items as $item) {
+		if ((int) ($item->menu_item_parent ?? 0) === 0) {
+			$tops[] = $item;
+		}
+	}
+	if (count($tops) < 2) {
 		return $items;
 	}
+
 	usort(
-		$blocks,
-		static function (array $a, array $b): int {
-			$ta = lf_header_menu_top_level_sort_tuple($a[0]);
-			$tb = lf_header_menu_top_level_sort_tuple($b[0]);
+		$tops,
+		static function (\WP_Post $a, \WP_Post $b): int {
+			$ta = lf_header_menu_top_level_sort_tuple($a);
+			$tb = lf_header_menu_top_level_sort_tuple($b);
 			return $ta <=> $tb;
 		}
 	);
-	$out = [];
-	foreach ($blocks as $block) {
-		foreach ($block as $it) {
-			$out[] = $it;
+
+	$sort_children = static function (array $children): array {
+		usort(
+			$children,
+			static function (\WP_Post $a, \WP_Post $b): int {
+				return ((int) ($a->menu_order ?? 0)) <=> ((int) ($b->menu_order ?? 0));
+			}
+		);
+		return $children;
+	};
+
+	$append_subtree = null;
+	$append_subtree = static function (\WP_Post $item, array &$out) use (&$append_subtree, $children_by_parent, $sort_children): void {
+		$out[] = $item;
+		$kids = $sort_children(array_merge([], $children_by_parent[(int) $item->ID] ?? []));
+		foreach ($kids as $child) {
+			$append_subtree($child, $out);
 		}
+	};
+
+	$out = [];
+	foreach ($tops as $top) {
+		$append_subtree($top, $out);
 	}
 	return $out;
 }

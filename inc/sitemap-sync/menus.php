@@ -1337,6 +1337,111 @@ function lf_nav_menu_sort_dropdown_candidates_by_score(array $candidate_ids, arr
 	return $candidate_ids;
 }
 
+/**
+ * Remove invalid dropdown children (combined comma titles, duplicate overview pages) and
+ * reparent orphaned CPT items under the canonical Services / Service Areas parents.
+ */
+function lf_nav_menu_repair_group_dropdown_children(int $menu_id): void {
+	if ($menu_id <= 0 || !function_exists('wp_get_nav_menu_items') || !function_exists('wp_update_nav_menu_item')) {
+		return;
+	}
+
+	$groups = [
+		[
+			'marker' => 'lf-menu-services-parent',
+			'child_object' => 'lf_service',
+			'page_slug' => 'services',
+			'label' => __('Services', 'leadsforward-core'),
+			'child_class' => 'lf-menu-service-child',
+			'child_limit' => (int) apply_filters('lf_sitemap_sync_services_menu_limit', 18),
+		],
+		[
+			'marker' => 'lf-menu-areas-parent',
+			'child_object' => 'lf_service_area',
+			'page_slug' => 'service-areas',
+			'label' => __('Service Areas', 'leadsforward-core'),
+			'child_class' => 'lf-menu-area-child',
+			'child_limit' => (int) apply_filters('lf_sitemap_sync_service_areas_menu_limit', 18),
+		],
+	];
+
+	foreach ($groups as $group) {
+		$items = wp_get_nav_menu_items($menu_id);
+		if (!is_array($items) || $items === []) {
+			continue;
+		}
+
+		$parent_id = lf_nav_menu_find_top_parent_nav_item_by_class($items, (string) $group['marker']);
+		if ($parent_id <= 0) {
+			$parent_id = lf_nav_menu_find_top_parent_nav_item_by_child_type($items, (string) $group['child_object']);
+		}
+		if ($parent_id <= 0) {
+			continue;
+		}
+
+		$page_id = lf_nav_menu_publish_page_id((string) $group['page_slug']);
+		$by_parent = lf_nav_menu_items_children_by_parent($items);
+		$kids = array_merge([], $by_parent[$parent_id] ?? []);
+
+		foreach ($kids as $child) {
+			if (!$child instanceof WP_Post) {
+				continue;
+			}
+			$child_id = (int) $child->ID;
+			if ($child_id <= 0) {
+				continue;
+			}
+			if (lf_nav_menu_item_has_class($child, 'lf-submenu-divider') || lf_nav_menu_item_has_class($child, 'lf-submenu-all-link')) {
+				continue;
+			}
+
+			$plain_title = trim(wp_strip_all_tags((string) ($child->title ?? '')));
+			$object = (string) ($child->object ?? '');
+			$object_id = (int) ($child->object_id ?? 0);
+			$should_delete = false;
+			if ($page_id > 0 && $object === 'page' && $object_id === $page_id) {
+				$should_delete = true;
+			} elseif ($plain_title !== '' && str_contains($plain_title, ',') && $object !== (string) $group['child_object']) {
+				$should_delete = true;
+			}
+
+			if ($should_delete) {
+				wp_delete_post($child_id, true);
+			}
+		}
+
+		$fresh = wp_get_nav_menu_items($menu_id);
+		if (!is_array($fresh)) {
+			continue;
+		}
+		foreach ($fresh as $item) {
+			if (!$item instanceof WP_Post) {
+				continue;
+			}
+			if ((int) ($item->menu_item_parent ?? 0) !== 0) {
+				continue;
+			}
+			if ((string) ($item->object ?? '') !== (string) $group['child_object']) {
+				continue;
+			}
+			if (lf_nav_menu_item_is_sync_preserved_cta($item) || lf_nav_menu_item_has_class($item, 'lf-menu-more')) {
+				continue;
+			}
+			$move_args = lf_nav_menu_item_build_update_args($item);
+			$move_args['menu-item-parent-id'] = $parent_id;
+			wp_update_nav_menu_item($menu_id, (int) $item->ID, $move_args);
+		}
+
+		lf_sitemap_sync_enforce_group_dropdown($menu_id, [
+			'label' => (string) $group['label'],
+			'page_slug' => (string) $group['page_slug'],
+			'child_post_type' => (string) $group['child_object'],
+			'child_limit' => (int) $group['child_limit'],
+			'child_class' => (string) $group['child_class'],
+		]);
+	}
+}
+
 function lf_nav_menu_dedupe_duplicate_cta_items(int $menu_id): void {
 	if ($menu_id <= 0 || !function_exists('wp_get_nav_menu_items')) {
 		return;
@@ -1677,6 +1782,7 @@ function lf_header_menu_repair_nav_structure(int $menu_id, bool $apply_preferred
 
 	lf_nav_menu_delete_blank_placeholder_top_parents($menu_id);
 	lf_nav_menu_remove_duplicate_group_overview_links($menu_id);
+	lf_nav_menu_repair_group_dropdown_children($menu_id);
 	lf_nav_menu_dedupe_duplicate_cta_items($menu_id);
 	lf_header_menu_append_missing_core_top_levels($menu_id);
 	lf_nav_menu_dedupe_duplicate_cta_items($menu_id);

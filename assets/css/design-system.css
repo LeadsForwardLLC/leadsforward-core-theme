@@ -2895,6 +2895,7 @@ article a:not(.lf-btn):hover {
 	top: 100%;
 	left: 0;
 	min-width: 220px;
+	max-width: min(320px, 92vw);
 	list-style: none;
 	margin: 0;
 	padding: 0.4rem;
@@ -2908,21 +2909,28 @@ article a:not(.lf-btn):hover {
 	transform: translateY(6px);
 	transition: all 0.2s ease;
 	z-index: 10;
-	display: flex;
-	flex-direction: column;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
 	align-items: stretch;
+	gap: 0;
 }
 
 .site-header__menu .sub-menu > .menu-item {
 	display: block;
 	width: 100%;
+	min-width: 0;
+	float: none;
 }
 
-.site-header__menu .sub-menu a {
+.site-header__menu .sub-menu > .menu-item > a {
 	display: block;
+	width: 100%;
+	box-sizing: border-box;
 	padding: 0.45rem 0.7rem;
 	border-radius: 0.6rem;
-	white-space: nowrap;
+	white-space: normal;
+	overflow-wrap: anywhere;
+	word-break: break-word;
 }
 
 .site-header__menu .menu-item-has-children:hover > .sub-menu {
