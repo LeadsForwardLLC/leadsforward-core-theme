@@ -415,3 +415,77 @@
   gap: 4px;
   font-size: 0.9rem;
 }
+
+/* Scope filters — checkbox lists (services / service areas) */
+.lf-scope-filter {
+  margin-top: 4px;
+}
+
+.lf-scope-filter__hint {
+  margin: 0 0 8px !important;
+}
+
+.lf-scope-filter__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.lf-scope-filter__count {
+  flex: 1 1 auto;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+  min-width: 10rem;
+}
+
+.lf-scope-filter__list {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px;
+}
+
+.lf-scope-filter__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  line-height: 1.35;
+}
+
+.lf-scope-filter__item:hover {
+  background: #f3f4f6;
+}
+
+.lf-scope-filter__item input[type="checkbox"] {
+  margin: 2px 0 0;
+  flex-shrink: 0;
+}
+
+.lf-scope-filter__label {
+  flex: 1;
+  font-size: 0.92rem;
+  color: #111827;
+}
+
+.lf-scope-filter__item:has(input:checked) {
+  background: #ecfdf5;
+}
+
+.lf-scope-filter__item:has(input:checked) .lf-scope-filter__label {
+  font-weight: 600;
+  color: #065f46;
+}
+
+.lf-scope-filter__empty {
+  margin: 8px !important;
+  color: #6b7280;
+}

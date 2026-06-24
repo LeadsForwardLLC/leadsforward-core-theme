@@ -148,8 +148,116 @@
     });
   }
 
+  function updateScopeFilterCount(filterEl) {
+    if (!filterEl) return;
+    var countEl = filterEl.querySelector('[data-lf-scope-count]');
+    var listEl = filterEl.querySelector('.lf-scope-filter__list');
+    if (!countEl || !listEl) return;
+    var boxes = listEl.querySelectorAll('input[type="checkbox"]');
+    var total = boxes.length;
+    var selected = 0;
+    Array.prototype.forEach.call(boxes, function (cb) {
+      if (cb.checked) selected++;
+    });
+    var strings = (cfg && cfg.strings) ? cfg.strings : {};
+    if (total === 0) {
+      countEl.textContent = strings.scopeFilterEmpty || 'No options loaded';
+      return;
+    }
+    if (selected === 0) {
+      countEl.textContent = strings.scopeFilterAll || ('All ' + total + ' included (none checked)');
+      return;
+    }
+    var tpl = strings.scopeFilterSome || '{selected} of {total} selected';
+    countEl.textContent = tpl.replace('{selected}', String(selected)).replace('{total}', String(total));
+  }
+
+  function bindScopeFilter(filterEl) {
+    if (!filterEl || filterEl.getAttribute('data-lf-scope-bound') === '1') return;
+    filterEl.setAttribute('data-lf-scope-bound', '1');
+    var listEl = filterEl.querySelector('.lf-scope-filter__list');
+    var allBtn = filterEl.querySelector('[data-lf-scope-all]');
+    var noneBtn = filterEl.querySelector('[data-lf-scope-none]');
+    if (listEl) {
+      listEl.addEventListener('change', function () {
+        updateScopeFilterCount(filterEl);
+      });
+    }
+    if (allBtn && listEl) {
+      allBtn.addEventListener('click', function () {
+        listEl.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+          cb.checked = true;
+        });
+        updateScopeFilterCount(filterEl);
+      });
+    }
+    if (noneBtn && listEl) {
+      noneBtn.addEventListener('click', function () {
+        listEl.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+          cb.checked = false;
+        });
+        updateScopeFilterCount(filterEl);
+      });
+    }
+    updateScopeFilterCount(filterEl);
+  }
+
+  function initScopeFilters() {
+    document.querySelectorAll('[data-lf-scope-filter]').forEach(function (filterEl) {
+      bindScopeFilter(filterEl);
+    });
+  }
+
+  function populateScopeChecklist(listEl, rows, labelKey) {
+    if (!listEl) return;
+    var filterEl = listEl.closest('[data-lf-scope-filter]');
+    var inputName = listEl.getAttribute('data-input-name') || 'lf_ai_scope_service_slugs';
+    var prev = {};
+    listEl.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+      if (cb.checked) prev[String(cb.value || '')] = true;
+    });
+    listEl.innerHTML = '';
+    var hasRows = false;
+    (rows || []).forEach(function (row) {
+      if (!row) return;
+      var value = String(row.slug || '');
+      var label = String(row[labelKey] || row.title || row.label || value);
+      if (!value) return;
+      hasRows = true;
+      var item = document.createElement('label');
+      item.className = 'lf-scope-filter__item';
+      var input = document.createElement('input');
+      input.type = 'checkbox';
+      input.name = inputName + '[]';
+      input.value = value;
+      if (prev[value]) input.checked = true;
+      var span = document.createElement('span');
+      span.className = 'lf-scope-filter__label';
+      span.textContent = label;
+      item.appendChild(input);
+      item.appendChild(span);
+      listEl.appendChild(item);
+    });
+    if (!hasRows) {
+      var empty = document.createElement('p');
+      empty.className = 'lf-scope-filter__empty description';
+      empty.textContent = (cfg.strings && cfg.strings.scopeFilterNoOptions)
+        ? cfg.strings.scopeFilterNoOptions
+        : 'No options for this project.';
+      listEl.appendChild(empty);
+    }
+    if (filterEl) {
+      bindScopeFilter(filterEl);
+      updateScopeFilterCount(filterEl);
+    }
+  }
+
   function populateMultiSelect(selectEl, rows, labelKey) {
     if (!selectEl) return;
+    if (selectEl.classList && selectEl.classList.contains('lf-scope-filter__list')) {
+      populateScopeChecklist(selectEl, rows, labelKey);
+      return;
+    }
     var prev = {};
     Array.prototype.slice.call(selectEl.options || []).forEach(function (opt) {
       if (opt && opt.selected) prev[String(opt.value || '')] = true;
@@ -454,6 +562,8 @@
     updatePreview(storedSelection);
   }
   updatePrimaryState();
+
+  initScopeFilters();
 
   function setProgress(percent, label) {
     if (progressBar) {
