@@ -8483,3 +8483,24 @@ html {
 		align-items: stretch;
 	}
 }
+
+/* Site Builder — writer guidance placeholders (visible until replaced). */
+.lf-writer-guidance {
+	margin: 0 0 1rem;
+	padding: 0.85rem 1rem;
+	border: 1px dashed var(--lf-color-border, #c8d0dc);
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--lf-color-surface-muted, #f4f7fb) 88%, transparent);
+	color: var(--lf-color-text-muted, #4a5568);
+	font-size: 0.95rem;
+	line-height: 1.5;
+}
+.lf-writer-guidance p {
+	margin: 0 0 0.5rem;
+}
+.lf-writer-guidance p:last-child {
+	margin-bottom: 0;
+}
+.lf-writer-guidance strong {
+	color: var(--lf-color-text, #1a202c);
+}

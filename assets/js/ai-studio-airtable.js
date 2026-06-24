@@ -7,7 +7,8 @@
   var searchInput = document.getElementById('lf-airtable-search');
   var resultsEl = document.getElementById('lf-airtable-results');
   var previewEl = document.getElementById('lf-airtable-preview');
-  var primaryGenerateBtn = document.getElementById('lf-manifester-generate');
+  var primaryBuildBtn = document.getElementById('lf-manifester-build-site');
+  var secondaryGenerateBtn = document.getElementById('lf-manifester-generate');
   var primaryStatusEl = document.getElementById('lf-manifester-status');
   var statusEl = document.getElementById('lf-airtable-status');
   var statusInlineEl = document.getElementById('lf-airtable-status-inline');
@@ -77,7 +78,7 @@
   function updatePreview(record) {
     if (!previewEl) return;
     if (!record) {
-      previewEl.textContent = (cfg.strings && cfg.strings.selectPrompt) ? cfg.strings.selectPrompt : 'Select a project to preview before generating.';
+      previewEl.textContent = (cfg.strings && cfg.strings.selectPrompt) ? cfg.strings.selectPrompt : 'Select a project to preview before building.';
       previewEl.classList.remove('is-selected');
       return;
     }
@@ -165,7 +166,6 @@
       if (prev[value]) opt.selected = true;
       selectEl.appendChild(opt);
     });
-    // Never disable: disabled controls are omitted from POST and Save Scope would drop smoke-test selections.
     selectEl.disabled = false;
   }
 
@@ -244,21 +244,27 @@
     return window.confirm(msg);
   }
 
+  function setActionButtonsDisabled(disabled) {
+    if (primaryBuildBtn) primaryBuildBtn.disabled = disabled;
+    if (secondaryGenerateBtn) secondaryGenerateBtn.disabled = disabled;
+  }
+
   function updatePrimaryState() {
-    if (!primaryGenerateBtn) return;
-    if (cfg.scope && cfg.scope.hasTargets === false) {
-      primaryGenerateBtn.disabled = true;
-      var needScope = (cfg.strings && cfg.strings.scopeNoTargets) ? cfg.strings.scopeNoTargets : 'Enable at least one generation target under step 2 and save.';
-      setPrimaryStatus(needScope, 'error');
-      return;
-    }
-    var canGenerate = hasAirtableSelection();
-    primaryGenerateBtn.disabled = !canGenerate;
-    if (!canGenerate) {
+    var canAct = hasAirtableSelection();
+    if (!canAct) {
+      setActionButtonsDisabled(true);
       setPrimaryStatus('Select an Airtable project to continue.', 'info');
       return;
     }
-    setPrimaryStatus('Ready to generate from Airtable.', 'success');
+    setActionButtonsDisabled(false);
+    if (secondaryGenerateBtn && cfg.scope && cfg.scope.hasTargets === false) {
+      secondaryGenerateBtn.disabled = true;
+    }
+    var readyMsg = (cfg.strings && cfg.strings.readyBuild) ? cfg.strings.readyBuild : 'Ready to build from Airtable.';
+    setPrimaryStatus(readyMsg, 'success');
+    if (secondaryGenerateBtn && secondaryGenerateBtn.disabled && cfg.strings && cfg.strings.scopeNoTargets) {
+      setPrimaryStatus(cfg.strings.scopeNoTargets, 'warn');
+    }
   }
 
   function fetchResults(query) {
@@ -291,19 +297,21 @@
       });
   }
 
-  function generateFromRecord() {
+  function handleAjaxRun(options) {
     if (!selectedRecord || !selectedRecord.id) return;
-    if (!confirmHomepageOnlyIfNeeded()) {
+    var action = options.action;
+    var statusMsg = options.statusMsg;
+    var successMsg = options.successMsg;
+    var useHomepageConfirm = !!options.useHomepageConfirm;
+    if (useHomepageConfirm && !confirmHomepageOnlyIfNeeded()) {
       updatePrimaryState();
       return;
     }
-    if (primaryGenerateBtn) {
-      primaryGenerateBtn.disabled = true;
-    }
-    setStatus(cfg.strings && cfg.strings.generating ? cfg.strings.generating : 'Generating from Airtable…', 'info');
-    setPrimaryStatus('Generating from Airtable…', 'info');
+    setActionButtonsDisabled(true);
+    setStatus(statusMsg, 'info');
+    setPrimaryStatus(statusMsg, 'info');
     var body = new URLSearchParams({
-      action: 'lf_ai_airtable_generate',
+      action: action,
       nonce: cfg.nonce,
       record_id: selectedRecord.id
     });
@@ -316,7 +324,7 @@
       .then(function (res) { return res.json(); })
       .then(function (payload) {
         if (!payload || !payload.success) {
-          var msg = payload && payload.data && payload.data.message ? payload.data.message : 'Generation failed.';
+          var msg = payload && payload.data && payload.data.message ? payload.data.message : (options.errorMsg || 'Request failed.');
           if (payload && payload.data && payload.data.errors && payload.data.errors.length) {
             msg += '\n' + payload.data.errors.join('\n');
           }
@@ -329,14 +337,35 @@
           window.location.href = payload.data.redirect;
           return;
         }
-        setStatus('Generation queued.', 'success');
-        setPrimaryStatus('Generation queued.', 'success');
+        setStatus(successMsg, 'success');
+        setPrimaryStatus(successMsg, 'success');
+        updatePrimaryState();
       })
       .catch(function () {
-        setStatus('Generation failed.', 'error');
-        setPrimaryStatus('Generation failed.', 'error');
+        var failMsg = options.errorMsg || 'Request failed.';
+        setStatus(failMsg, 'error');
+        setPrimaryStatus(failMsg, 'error');
         updatePrimaryState();
       });
+  }
+
+  function buildSiteFromRecord() {
+    handleAjaxRun({
+      action: 'lf_ai_airtable_build_site',
+      statusMsg: (cfg.strings && cfg.strings.building) ? cfg.strings.building : 'Building site from Airtable…',
+      successMsg: 'Site built. Opening manifest…',
+      errorMsg: 'Site build failed.'
+    });
+  }
+
+  function generateFromRecord() {
+    handleAjaxRun({
+      action: 'lf_ai_airtable_generate',
+      statusMsg: (cfg.strings && cfg.strings.generating) ? cfg.strings.generating : 'Generating with orchestrator…',
+      successMsg: 'Generation queued.',
+      errorMsg: 'Generation failed.',
+      useHomepageConfirm: true
+    });
   }
 
   if (hasAirtableUI && searchInput) {
@@ -351,17 +380,27 @@
     });
   }
 
-  // No secondary generate button; primary button handles generation.
-
-  if (primaryGenerateBtn) {
-    primaryGenerateBtn.addEventListener('click', function () {
-      if (hasAirtableSelection()) {
-        setProgress(5, 'Queued…');
-        generateFromRecord();
+  if (primaryBuildBtn) {
+    primaryBuildBtn.addEventListener('click', function () {
+      if (!hasAirtableSelection()) {
+        updatePrimaryState();
+        setPrimaryStatus('Select an Airtable project to continue.', 'error');
         return;
       }
-      updatePrimaryState();
-      setPrimaryStatus('Select an Airtable project to continue.', 'error');
+      setProgress(15, 'Building…');
+      buildSiteFromRecord();
+    });
+  }
+
+  if (secondaryGenerateBtn) {
+    secondaryGenerateBtn.addEventListener('click', function () {
+      if (!hasAirtableSelection()) {
+        updatePrimaryState();
+        setPrimaryStatus('Select an Airtable project to continue.', 'error');
+        return;
+      }
+      setProgress(5, 'Queued…');
+      generateFromRecord();
     });
   }
 
@@ -515,8 +554,6 @@
     setImagesStatus(strings.uploading || 'Uploading images…', 'info');
     imagesUploading = true;
 
-    // Upload in chunks to avoid server limits (request size / max file uploads).
-    // This removes the practical "12 images" ceiling users hit on some hosts.
     var fileArr = Array.prototype.slice.call(files);
     var batchSize = 20;
     var total = fileArr.length;
