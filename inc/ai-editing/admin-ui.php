@@ -2610,9 +2610,11 @@ function lf_ai_toggle_section_layout_for_context(string $context_type, $context_
 		if (function_exists('lf_sections_normalize_service_details_settings')) {
 			$row = lf_sections_normalize_service_details_settings($base_for_rules, $row);
 		}
-		$old_layout = (string) ($row['service_details_layout'] ?? 'content_media');
+		$old_layout = (string) ($row['service_details_layout'] ?? '');
 		if (!in_array($old_layout, ['content_media', 'media_content'], true)) {
-			$old_layout = 'content_media';
+			$old_layout = function_exists('lf_sections_default_media_column_layout')
+				? lf_sections_default_media_column_layout($base_for_rules)
+				: 'content_media';
 		}
 		$new_layout = $old_layout === 'media_content' ? 'content_media' : 'media_content';
 		$config[$section_id]['service_details_layout'] = $new_layout;
@@ -2642,9 +2644,11 @@ function lf_ai_toggle_section_layout_for_context(string $context_type, $context_
 	if (function_exists('lf_sections_normalize_service_details_settings')) {
 		$settings = lf_sections_normalize_service_details_settings($normalized_for_swap, $settings);
 	}
-	$old_layout = (string) ($settings['service_details_layout'] ?? 'content_media');
+	$old_layout = (string) ($settings['service_details_layout'] ?? '');
 	if (!in_array($old_layout, ['content_media', 'media_content'], true)) {
-		$old_layout = 'content_media';
+		$old_layout = function_exists('lf_sections_default_media_column_layout')
+			? lf_sections_default_media_column_layout($normalized_for_swap)
+			: 'content_media';
 	}
 	$new_layout = $old_layout === 'media_content' ? 'content_media' : 'media_content';
 	$config['sections'][$section_id]['settings']['service_details_layout'] = $new_layout;

@@ -7673,28 +7673,34 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function toggleSectionColumnsInDom(wrap, newLayout) {
 			if (!wrap) return;
-			var details = wrap.querySelector(".lf-service-details--media");
-			if (!details) return;
-			var contentNode = null;
-			var mediaNode = null;
-			Array.prototype.slice.call(details.children || []).forEach(function(child){
-				if (!child || !child.classList) return;
-				if (child.classList.contains("lf-service-details__content")) contentNode = child;
-				if (child.classList.contains("lf-service-details__media")) mediaNode = child;
-			});
-			if (!contentNode || !mediaNode) return;
 			var mediaLeft = String(newLayout || "") === "media_content";
-			if (mediaLeft) {
-				details.classList.add("lf-service-details--media-left");
-				if (details.firstElementChild !== mediaNode) {
-					details.insertBefore(mediaNode, contentNode);
+			var details = wrap.querySelector(".lf-service-details--media");
+			if (details) {
+				var contentNode = null;
+				var mediaNode = null;
+				Array.prototype.slice.call(details.children || []).forEach(function(child){
+					if (!child || !child.classList) return;
+					if (child.classList.contains("lf-service-details__content")) contentNode = child;
+					if (child.classList.contains("lf-service-details__media")) mediaNode = child;
+				});
+				if (!contentNode || !mediaNode) return;
+				if (mediaLeft) {
+					details.classList.add("lf-service-details--media-left");
+					if (details.firstElementChild !== mediaNode) {
+						details.insertBefore(mediaNode, contentNode);
+					}
+				} else {
+					details.classList.remove("lf-service-details--media-left");
+					if (details.firstElementChild !== contentNode) {
+						details.insertBefore(contentNode, mediaNode);
+					}
 				}
-			} else {
-				details.classList.remove("lf-service-details--media-left");
-				if (details.firstElementChild !== contentNode) {
-					details.insertBefore(contentNode, mediaNode);
-				}
+				return;
 			}
+			var mediaSection = wrap.querySelector(".lf-media-section");
+			if (!mediaSection) return;
+			mediaSection.classList.toggle("lf-media-section--image-left", mediaLeft);
+			mediaSection.classList.toggle("lf-media-section--image-right", !mediaLeft);
 		}
 		function persistSectionColumnSwap(wrap) {
 			if (!wrap) return;
@@ -9220,20 +9226,19 @@ function lf_ai_assistant_widget_js(): string {
 				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 				if (!sectionSupportsColumnSwap(sectionType)) return;
 				var details = wrap.querySelector(".lf-service-details--media");
-				if (!details) return;
-				var contentNode = null;
-				var mediaNode = null;
-				Array.prototype.slice.call(details.children || []).forEach(function(child){
-					if (!child || !child.classList) return;
-					if (child.classList.contains("lf-service-details__content")) contentNode = child;
-					if (child.classList.contains("lf-service-details__media")) mediaNode = child;
-				});
+				var mediaSection = wrap.querySelector(".lf-media-section");
+				var container = details || mediaSection;
+				if (!container) return;
+				var contentSelector = details ? ".lf-service-details__content" : ".lf-media-section__content";
+				var mediaSelector = details ? ".lf-service-details__media" : ".lf-media-section__media";
+				var contentNode = container.querySelector(contentSelector);
+				var mediaNode = container.querySelector(mediaSelector);
 				if (!contentNode || !mediaNode) return;
 				[contentNode, mediaNode].forEach(function(col){
 					col.classList.add("lf-ai-column-draggable", "lf-ai-inline-editor-ignore");
 					col.setAttribute("draggable", "true");
 					col.ondragstart = function(e){
-						var role = col.classList.contains("lf-service-details__media") ? "media" : "content";
+						var role = col.classList.contains(mediaSelector.slice(1)) ? "media" : "content";
 						activeColumnDrag = { wrap: wrap, role: role };
 						col.classList.add("is-dragging");
 						if (e.dataTransfer) {
@@ -9251,16 +9256,18 @@ function lf_ai_assistant_widget_js(): string {
 						activeColumnDrag = null;
 					};
 				});
-				details.ondragover = function(e){
+				container.ondragover = function(e){
 					if (!activeColumnDrag || activeColumnDrag.wrap !== wrap) return;
 					e.preventDefault();
 				};
-				details.ondrop = function(e){
+				container.ondrop = function(e){
 					if (!activeColumnDrag || activeColumnDrag.wrap !== wrap) return;
 					e.preventDefault();
-					var rect = details.getBoundingClientRect();
+					var rect = container.getBoundingClientRect();
 					var dropOnLeftHalf = e.clientX < (rect.left + rect.width / 2);
-					var currentMediaLeft = details.classList.contains("lf-service-details--media-left");
+					var currentMediaLeft = details
+						? details.classList.contains("lf-service-details--media-left")
+						: mediaSection.classList.contains("lf-media-section--image-left");
 					var desiredMediaLeft = dropOnLeftHalf;
 					if (desiredMediaLeft !== currentMediaLeft) {
 						persistSectionColumnSwap(wrap);
