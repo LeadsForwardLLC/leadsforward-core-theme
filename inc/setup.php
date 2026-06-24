@@ -208,6 +208,7 @@ function lf_header_menu_css_classes(array $classes, \WP_Post $item, $args, int $
 	}
 	if (in_array('lf-menu-services-parent', $classes, true) || in_array('lf-menu-areas-parent', $classes, true)) {
 		$classes[] = 'lf-menu-group-parent';
+		$classes[] = 'menu-item-has-children';
 	} elseif (in_array('menu-item-has-children', $classes, true) && !in_array('lf-menu-more', $classes, true)) {
 		$title = strtolower(trim(wp_strip_all_tags((string) $item->title)));
 		if ($title === 'services' || $title === 'service areas') {
