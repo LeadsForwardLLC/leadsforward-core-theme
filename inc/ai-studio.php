@@ -469,6 +469,10 @@ function lf_ai_studio_assets(string $hook): void {
 			'confirmHomepageOnly' => __('Your scope is homepage-only, but this site has published service pages. Service pages will not be sent to the orchestrator. Continue?', 'leadsforward-core'),
 			'scopeNoTargets' => __('Enable at least one target under step 2 (Generate) and click Save Scope before orchestrator runs.', 'leadsforward-core'),
 			'readyBuild' => __('Ready to build from Airtable.', 'leadsforward-core'),
+			'scopeFilterAll' => __('All items included (none checked)', 'leadsforward-core'),
+			'scopeFilterSome' => __('{selected} of {total} selected', 'leadsforward-core'),
+			'scopeFilterEmpty' => __('No options loaded', 'leadsforward-core'),
+			'scopeFilterNoOptions' => __('No services or areas for this project.', 'leadsforward-core'),
 		],
 		'researchStrings' => [
 			'uploading' => __('Uploading research…', 'leadsforward-core'),
@@ -772,6 +776,50 @@ function lf_ai_studio_handle_scope_save(): void {
 
 	wp_safe_redirect(lf_ai_studio_manifest_admin_url(['scope_saved' => '1']));
 	exit;
+}
+
+/**
+ * Checkbox list for optional service / area slug filters (replaces opaque multi-select).
+ *
+ * @param array<string, string> $slug_map slug => label
+ * @param string[]              $stored_slugs
+ */
+function lf_ai_studio_render_scope_slug_checklist(string $list_id, string $input_name, array $slug_map, array $stored_slugs): void {
+	$stored_slugs = array_values(array_filter(array_map('sanitize_title', $stored_slugs)));
+	?>
+	<div class="lf-scope-filter" data-lf-scope-filter>
+		<p class="description lf-scope-filter__hint">
+			<?php esc_html_e('Check one or more items to limit the run. Leave all unchecked to include every item in the list.', 'leadsforward-core'); ?>
+		</p>
+		<div class="lf-scope-filter__toolbar">
+			<span class="lf-scope-filter__count" data-lf-scope-count aria-live="polite"></span>
+			<button type="button" class="button button-small" data-lf-scope-all><?php esc_html_e('Select all', 'leadsforward-core'); ?></button>
+			<button type="button" class="button button-small" data-lf-scope-none><?php esc_html_e('Clear all', 'leadsforward-core'); ?></button>
+		</div>
+		<div
+			class="lf-scope-filter__list"
+			id="<?php echo esc_attr($list_id); ?>"
+			data-input-name="<?php echo esc_attr($input_name); ?>"
+			role="group"
+		>
+			<?php if ($slug_map === []) : ?>
+				<p class="lf-scope-filter__empty description"><?php esc_html_e('No options yet — select an Airtable project above to load services or areas.', 'leadsforward-core'); ?></p>
+			<?php else : ?>
+				<?php foreach ($slug_map as $slug => $label) : ?>
+					<label class="lf-scope-filter__item">
+						<input
+							type="checkbox"
+							name="<?php echo esc_attr($input_name); ?>[]"
+							value="<?php echo esc_attr((string) $slug); ?>"
+							<?php checked(in_array((string) $slug, $stored_slugs, true)); ?>
+						/>
+						<span class="lf-scope-filter__label"><?php echo esc_html((string) $label); ?></span>
+					</label>
+				<?php endforeach; ?>
+			<?php endif; ?>
+		</div>
+	</div>
+	<?php
 }
 
 function lf_ai_studio_handle_image_settings_save(): void {
@@ -1889,33 +1937,21 @@ function lf_ai_studio_render_page(): void {
 										<?php endif; ?>
 									</div>
 									<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin-top:12px;">
-										<div style="min-width:320px;max-width:420px;">
+										<div style="min-width:320px;max-width:420px;flex:1 1 320px;">
 											<strong><?php esc_html_e('Filters (optional): Services', 'leadsforward-core'); ?></strong>
 											<p class="description" style="margin:4px 0 8px;">
-												<?php esc_html_e('Limit generation to specific services when “Service pages” is enabled. Leave empty to include all.', 'leadsforward-core'); ?>
+												<?php esc_html_e('When “Service pages” is enabled, checked services are included in the run. Uncheck all to include every service.', 'leadsforward-core'); ?>
 											</p>
 											<input type="hidden" name="lf_ai_scope_smoke_services_mode" value="slug" />
-											<select id="lf-ai-scope-service-slugs" name="lf_ai_scope_service_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
-												<?php foreach ($selected_service_slugs as $slug => $label) : ?>
-													<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_service_slugs, true)); ?>>
-														<?php echo esc_html((string) $label); ?>
-													</option>
-												<?php endforeach; ?>
-											</select>
+											<?php lf_ai_studio_render_scope_slug_checklist('lf-ai-scope-service-slugs', 'lf_ai_scope_service_slugs', $selected_service_slugs, $stored_service_slugs); ?>
 										</div>
-										<div style="min-width:320px;max-width:420px;">
+										<div style="min-width:320px;max-width:420px;flex:1 1 320px;">
 											<strong><?php esc_html_e('Filters (optional): Service Areas', 'leadsforward-core'); ?></strong>
 											<p class="description" style="margin:4px 0 8px;">
-												<?php esc_html_e('Limit generation to specific service areas when “Service area pages” is enabled. Leave empty to include all.', 'leadsforward-core'); ?>
+												<?php esc_html_e('When “Service area pages” is enabled, checked areas are included. Uncheck all to include every area.', 'leadsforward-core'); ?>
 											</p>
 											<input type="hidden" name="lf_ai_scope_smoke_areas_mode" value="slug" />
-											<select id="lf-ai-scope-area-slugs" name="lf_ai_scope_service_area_slugs[]" multiple size="8" style="width:100%;max-width:420px;">
-												<?php foreach ($selected_area_slugs as $slug => $label) : ?>
-													<option value="<?php echo esc_attr((string) $slug); ?>" <?php selected(in_array((string) $slug, $stored_area_slugs, true)); ?>>
-														<?php echo esc_html((string) $label); ?>
-													</option>
-												<?php endforeach; ?>
-											</select>
+											<?php lf_ai_studio_render_scope_slug_checklist('lf-ai-scope-area-slugs', 'lf_ai_scope_service_area_slugs', $selected_area_slugs, $stored_area_slugs); ?>
 										</div>
 									</div>
 									<p class="description" style="margin-top:10px;"><?php esc_html_e('Options load from the selected Airtable project preview and fall back to the stored manifest/cache when needed.', 'leadsforward-core'); ?></p>
