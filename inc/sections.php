@@ -1024,7 +1024,29 @@ function lf_sections_defaults_for(string $section_id, string $niche_slug = ''): 
 }
 
 function lf_sections_service_details_alias_layouts(): array {
-	return [];
+	return [
+		'service_details' => 'content_media',
+		'content_image' => 'content_media',
+		'content_image_a' => 'content_media',
+		'content_image_c' => 'content_media',
+		'image_content' => 'media_content',
+		'image_content_b' => 'media_content',
+	];
+}
+
+function lf_sections_default_media_column_layout(string $section_id): string {
+	$aliases = lf_sections_service_details_alias_layouts();
+
+	return (string) ($aliases[$section_id] ?? 'content_media');
+}
+
+function lf_sections_resolve_media_image_side(array $settings, string $section_id): string {
+	$layout = (string) ($settings['service_details_layout'] ?? '');
+	if (!in_array($layout, ['content_media', 'media_content'], true)) {
+		$layout = lf_sections_default_media_column_layout($section_id);
+	}
+
+	return $layout === 'media_content' ? 'image-left' : 'image-right';
 }
 
 /**
@@ -3167,11 +3189,13 @@ function lf_sections_render_media_content(string $context, array $settings, \WP_
 }
 
 function lf_sections_render_content_image(string $context, array $settings, \WP_Post $post): void {
-	lf_sections_render_media_content($context, $settings, $post, 'image-right');
+	$side = lf_sections_resolve_media_image_side($settings, 'content_image');
+	lf_sections_render_media_content($context, $settings, $post, $side);
 }
 
 function lf_sections_render_image_content(string $context, array $settings, \WP_Post $post): void {
-	lf_sections_render_media_content($context, $settings, $post, 'image-left');
+	$side = lf_sections_resolve_media_image_side($settings, 'image_content');
+	lf_sections_render_media_content($context, $settings, $post, $side);
 }
 
 function lf_sections_render_content(string $context, array $settings, \WP_Post $post): void {
