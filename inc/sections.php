@@ -261,9 +261,6 @@ function lf_sections_registry(): array {
 		['key' => 'service_details_media_image_id', 'label' => __('Media image', 'leadsforward-core'), 'type' => 'image', 'default' => ''],
 		['key' => 'service_details_checklist', 'label' => __('Checklist (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Transparent scope and pricing' . "\n" . 'Clean, respectful crews' . "\n" . 'Work backed by warranty', 'leadsforward-core')],
 		['key' => 'service_details_checklist_secondary', 'label' => __('Checklist column 2 (one per line, optional)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
-		['key' => 'service_details_proof_label', 'label' => __('Mini proof label (optional)', 'leadsforward-core'), 'type' => 'text', 'default' => __('Also included', 'leadsforward-core')],
-		['key' => 'service_details_proof_badges', 'label' => __('Mini proof badges (one per line, optional)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
-		['key' => 'service_details_micro_sections', 'label' => __('Service micro-sections (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 	];
 	$service_details_variant = static function (array $fields, array $overrides): array {
 		foreach ($fields as &$field) {
@@ -1038,9 +1035,180 @@ function lf_sections_cap_checklist_lines_string(string $raw): string {
 	return implode("\n", array_slice($lines, 0, 6));
 }
 
+/**
+ * Section fields that are internal-only or not editable inline — never render on the public site.
+ *
+ * @return list<string>
+ */
+function lf_sections_hidden_non_editable_fields(): array {
+	return [
+		'service_details_micro_sections',
+		'service_details_proof_badges',
+		'service_details_proof_label',
+	];
+}
+
+function lf_sections_is_hidden_non_editable_field(string $field_key): bool {
+	return in_array($field_key, lf_sections_hidden_non_editable_fields(), true);
+}
+
+/**
+ * Drop writer scaffolding lines from newline list fields.
+ */
+function lf_sections_scrub_writer_list_lines(string $raw): string {
+	$lines = lf_sections_parse_lines($raw);
+	if ($lines === []) {
+		return '';
+	}
+	$out = [];
+	foreach ($lines as $line) {
+		$plain = trim(wp_strip_all_tags((string) $line));
+		if ($plain === '') {
+			continue;
+		}
+		if (function_exists('lf_site_builder_is_writer_placeholder') && lf_site_builder_is_writer_placeholder($plain)) {
+			continue;
+		}
+		if (lf_sections_is_boilerplate_service_detail_micro_line(strtolower($plain))) {
+			continue;
+		}
+		$out[] = $line;
+	}
+	return implode("\n", $out);
+}
+
+/**
+ * @param array<string, mixed> $settings
+ * @return array<string, mixed>
+ */
+function lf_sections_purge_hidden_non_editable_fields_from_settings(array $settings): array {
+	foreach (lf_sections_hidden_non_editable_fields() as $field_key) {
+		if (array_key_exists($field_key, $settings)) {
+			$settings[$field_key] = '';
+		}
+	}
+	foreach ($settings as $field_key => $value) {
+		if (!is_string($field_key) || !is_string($value)) {
+			continue;
+		}
+		if (!in_array($field_key, ['service_details_checklist', 'service_details_checklist_secondary', 'benefits_items', 'process_steps', 'trust_badges', 'hero_chip_bullets', 'hero_proof_bullets', 'cta_trust_badges', 'cta_bullets'], true)) {
+			continue;
+		}
+		$settings[$field_key] = lf_sections_scrub_writer_list_lines($value);
+	}
+	return $settings;
+}
+
+/**
+ * Clear deprecated hidden fields across homepage + page builder configs.
+ */
+function lf_sections_purge_hidden_non_editable_fields_site_wide(): array {
+	$stats = ['homepage_fields' => 0, 'post_fields' => 0, 'posts_updated' => 0];
+
+	$scrub = static function (array $settings): array {
+		return lf_sections_purge_hidden_non_editable_fields_from_settings($settings);
+	};
+
+	if (function_exists('lf_get_homepage_section_config') && defined('LF_HOMEPAGE_CONFIG_OPTION')) {
+		$home_config = lf_get_homepage_section_config();
+		if (is_array($home_config) && $home_config !== []) {
+			$home_changed = false;
+			foreach ($home_config as $section_id => $settings) {
+				if (!is_array($settings)) {
+					continue;
+				}
+				$next = $scrub($settings);
+				if ($next !== $settings) {
+					$home_config[$section_id] = $next;
+					$stats['homepage_fields']++;
+					$home_changed = true;
+				}
+			}
+			if ($home_changed) {
+				update_option(LF_HOMEPAGE_CONFIG_OPTION, $home_config, true);
+			}
+		}
+	}
+
+	if (!function_exists('lf_pb_get_context_for_post') || !function_exists('lf_pb_get_post_config') || !defined('LF_PB_META_KEY')) {
+		return $stats;
+	}
+
+	$post_ids = get_posts([
+		'post_type' => ['page', 'post', 'lf_service', 'lf_service_area'],
+		'post_status' => ['publish', 'future', 'draft', 'pending', 'private'],
+		'posts_per_page' => -1,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	]);
+	foreach (array_map('intval', $post_ids) as $post_id) {
+		$post = get_post($post_id);
+		if (!$post instanceof \WP_Post) {
+			continue;
+		}
+		$context = lf_pb_get_context_for_post($post);
+		if ($context === '') {
+			continue;
+		}
+		$config = lf_pb_get_post_config($post_id, $context);
+		$order = is_array($config['order'] ?? null) ? $config['order'] : [];
+		$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+		if ($order === [] || $sections === []) {
+			continue;
+		}
+		$changed = false;
+		foreach ($order as $instance_id) {
+			$section = $sections[$instance_id] ?? null;
+			if (!is_array($section) || empty($section['enabled'])) {
+				continue;
+			}
+			$type = (string) ($section['type'] ?? '');
+			$settings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+			$next = $scrub($settings);
+			if ($next !== $settings) {
+				$sections[$instance_id]['settings'] = function_exists('lf_sections_sanitize_settings') && $type !== ''
+					? lf_sections_sanitize_settings($type, $next)
+					: $next;
+				$stats['post_fields']++;
+				$changed = true;
+			}
+		}
+		if ($changed) {
+			update_post_meta($post_id, LF_PB_META_KEY, [
+				'order' => $order,
+				'sections' => $sections,
+				'seo' => $config['seo'] ?? ['title' => '', 'description' => '', 'noindex' => false],
+			]);
+			$stats['posts_updated']++;
+		}
+	}
+
+	return $stats;
+}
+
+function lf_sections_maybe_purge_hidden_non_editable_fields(): void {
+	if (is_admin() && !wp_doing_ajax()) {
+		return;
+	}
+	if (get_option('lf_sections_hidden_fields_purge_v1')) {
+		return;
+	}
+	if (function_exists('lf_sections_purge_hidden_non_editable_fields_site_wide')) {
+		lf_sections_purge_hidden_non_editable_fields_site_wide();
+	}
+	if (function_exists('lf_site_builder_strip_writer_placeholders')) {
+		lf_site_builder_strip_writer_placeholders();
+	}
+	update_option('lf_sections_hidden_fields_purge_v1', time(), false);
+}
+add_action('wp', 'lf_sections_maybe_purge_hidden_non_editable_fields', 4);
+
 function lf_sections_is_boilerplate_service_detail_micro_line(string $plain_lower): bool {
 	if ($plain_lower === '') {
 		return false;
+	}
+	if (function_exists('lf_site_builder_is_writer_placeholder') && lf_site_builder_is_writer_placeholder($plain_lower)) {
+		return true;
 	}
 	$samples = [
 		'delivered by',
@@ -1287,9 +1455,7 @@ function lf_sections_sanitize_settings(string $section_id, array $input): array 
 	if (isset($out['service_details_checklist_secondary'])) {
 		$out['service_details_checklist_secondary'] = lf_sections_cap_checklist_lines_string((string) $out['service_details_checklist_secondary']);
 	}
-	if (isset($out['service_details_micro_sections'])) {
-		$out['service_details_micro_sections'] = lf_sections_sanitize_service_details_micro_string((string) $out['service_details_micro_sections']);
-	}
+	$out = lf_sections_purge_hidden_non_editable_fields_from_settings($out);
 	if (isset($out['service_details_body'])) {
 		$out['service_details_body'] = lf_sections_trim_service_details_body_html((string) $out['service_details_body']);
 		$out['service_details_body'] = lf_sections_strip_boilerplate_paragraphs_from_html((string) $out['service_details_body']);
@@ -2705,13 +2871,6 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 		$plain = strtolower(trim(wp_strip_all_tags((string) $item)));
 		return $plain !== '' && !lf_sections_is_boilerplate_service_detail_micro_line($plain);
 	}));
-	$micro_sections = lf_sections_parse_lines((string) ($settings['service_details_micro_sections'] ?? ''));
-	$micro_sections = array_values(array_filter($micro_sections, static function ($line): bool {
-		$plain = strtolower(trim(wp_strip_all_tags((string) $line)));
-		return $plain !== '' && !lf_sections_is_boilerplate_service_detail_micro_line($plain);
-	}));
-	$proof_label = trim((string) ($settings['service_details_proof_label'] ?? ''));
-	$proof_badges = lf_sections_parse_lines((string) ($settings['service_details_proof_badges'] ?? ''));
 	$checklist_class = 'lf-service-details__checklist';
 	$media_mode = (string) ($settings['service_details_media_mode'] ?? 'video');
 	if (!in_array($media_mode, ['video', 'image', 'none'], true)) {
@@ -2842,33 +3001,6 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 							<?php endforeach; ?>
 						</ul>
 					<?php endif; ?>
-				</div>
-			<?php endif; ?>
-			<?php if (!empty($micro_sections)) : ?>
-				<div class="lf-service-details__micro lf-prose" data-lf-service-details-micro="1">
-					<?php foreach ($micro_sections as $micro_line) : ?>
-						<?php
-						$micro_line = trim((string) $micro_line);
-						if ($micro_line === '') {
-							continue;
-						}
-						?>
-						<p class="lf-service-details__micro-line">
-							<span class="lf-service-details__micro-text"><?php echo wp_kses($micro_line, function_exists('lf_ai_inline_link_allowed_kses') ? lf_ai_inline_link_allowed_kses() : []); ?></span>
-						</p>
-					<?php endforeach; ?>
-				</div>
-			<?php endif; ?>
-			<?php if (!empty($proof_badges)) : ?>
-				<div class="lf-service-details__proof" role="note" aria-label="<?php echo esc_attr($proof_label !== '' ? $proof_label : __('Also included', 'leadsforward-core')); ?>">
-					<?php if ($proof_label !== '') : ?>
-						<span class="lf-service-details__proof-label"><?php echo esc_html($proof_label); ?></span>
-					<?php endif; ?>
-					<div class="lf-service-details__proof-badges">
-						<?php foreach ($proof_badges as $badge) : ?>
-							<span class="lf-service-details__proof-badge"><?php echo esc_html($badge); ?></span>
-						<?php endforeach; ?>
-					</div>
 				</div>
 			<?php endif; ?>
 		</div>

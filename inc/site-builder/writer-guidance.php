@@ -36,13 +36,16 @@ function lf_site_builder_is_writer_placeholder(string $text): bool {
 	if ($text === '') {
 		return false;
 	}
-	if (strpos($text, '[Writer]') === 0) {
+	if (strpos($text, '[Writer]') === 0 || stripos($text, '[writer]') === 0) {
 		return true;
 	}
 	if (strpos($text, 'lf-writer-guidance') !== false) {
 		return true;
 	}
 	if (preg_match('/^Write the .+ for the .+ section\./i', $text) === 1) {
+		return true;
+	}
+	if (preg_match('/—\s*line\s*\d+/iu', $text) === 1) {
 		return true;
 	}
 	return false;
@@ -92,6 +95,11 @@ function lf_site_builder_is_structural_field(string $field_key): bool {
 			'icon_position',
 			'icon_size',
 			'icon_color',
+			'service_details_micro_sections',
+			'service_details_proof_badges',
+			'service_details_proof_label',
+			'section_intent',
+			'section_purpose',
 		],
 		true
 	);
@@ -270,6 +278,9 @@ function lf_site_builder_apply_guidance_to_settings(
 		if (!is_string($field_key) || $field_key === '') {
 			continue;
 		}
+		if (function_exists('lf_sections_is_hidden_non_editable_field') && lf_sections_is_hidden_non_editable_field($field_key)) {
+			continue;
+		}
 		$value = $settings[$field_key] ?? '';
 		if (is_array($value)) {
 			continue;
@@ -309,17 +320,32 @@ function lf_site_builder_strip_writer_placeholders(): array {
 
 	$scrub_settings = static function (array $settings, string $section_type, array $registry_entry) use (&$stats, $registry): array {
 		$changed = 0;
+		if (function_exists('lf_sections_purge_hidden_non_editable_fields_from_settings')) {
+			$before = wp_json_encode($settings);
+			$settings = lf_sections_purge_hidden_non_editable_fields_from_settings($settings);
+			if ($before !== wp_json_encode($settings)) {
+				$changed++;
+			}
+		}
 		foreach ($settings as $field_key => $value) {
 			if (!is_string($field_key) || is_array($value)) {
+				continue;
+			}
+			$field_type = function_exists('lf_ai_studio_registry_field_type')
+				? lf_ai_studio_registry_field_type($registry, $section_type, $field_key)
+				: 'text';
+			if ($field_type === 'list' && function_exists('lf_sections_scrub_writer_list_lines')) {
+				$scrubbed = lf_sections_scrub_writer_list_lines((string) $value);
+				if ($scrubbed !== (string) $value) {
+					$settings[$field_key] = $scrubbed;
+					$changed++;
+				}
 				continue;
 			}
 			$text = (string) $value;
 			if (!lf_site_builder_is_writer_placeholder($text)) {
 				continue;
 			}
-			$field_type = function_exists('lf_ai_studio_registry_field_type')
-				? lf_ai_studio_registry_field_type($registry, $section_type, $field_key)
-				: 'text';
 			if (lf_site_builder_is_structural_field($field_key)) {
 				$settings[$field_key] = '';
 			} else {
