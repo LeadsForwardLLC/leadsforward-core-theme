@@ -48,9 +48,9 @@ function lf_ai_section_library_row_meta(string $section_id): array {
 		'hero' => __('Primary headline area with CTAs and trust strip options.', 'leadsforward-core'),
 		'trust_bar' => __('Compact rating strip with trust badges.', 'leadsforward-core'),
 		'benefits' => __('Icon cards explaining why homeowners choose your team.', 'leadsforward-core'),
-		'service_details' => __('Service story with checklist and optional media.', 'leadsforward-core'),
-		'content_image' => __('Image or video beside body copy.', 'leadsforward-core'),
-		'image_content' => __('Body copy beside image or video.', 'leadsforward-core'),
+		'service_details' => __('Title, subtitle, body, checklist, and media—use column swap for image side.', 'leadsforward-core'),
+		'content_image' => __('Title, subtitle, body, checklist, and media—use column swap for image side.', 'leadsforward-core'),
+		'image_content' => __('Legacy alias of Content + Media (media left).', 'leadsforward-core'),
 		'process' => __('Step-by-step how it works.', 'leadsforward-core'),
 		'related_links' => __('Links to related services or resources.', 'leadsforward-core'),
 		'nearby_areas' => __('Nearby cities and service area links.', 'leadsforward-core'),
@@ -162,8 +162,8 @@ function lf_ai_assistant_section_library(array $context): array {
 		if ($sid === '') {
 			continue;
 		}
-		// Hide legacy homepage-only media variants from the library UI.
-		if (in_array($sid, ['content_image_a', 'content_image_c', 'image_content_b'], true)) {
+		// Hide legacy homepage-only media variants and duplicate layout types from the library UI.
+		if (in_array($sid, ['content_image_a', 'content_image_c', 'image_content_b', 'image_content', 'service_details'], true)) {
 			continue;
 		}
 		$label = sanitize_text_field((string) ($row['label'] ?? $sid));
@@ -1387,6 +1387,16 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-section-align-picker__btn { flex:1; min-width:72px; border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:34px; font-size:12px; font-weight:600; cursor:pointer; }
 		.lf-ai-section-align-picker__btn:hover { background:#f5f0ff; }
 		.lf-ai-section-align-picker__close { align-self:flex-end; border:1px solid #e2e8f0; background:#fff; color:#64748b; border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:15px; line-height:1; }
+		.lf-ai-cm-fields-picker { position:fixed; inset:0; z-index:100005; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; padding:18px; }
+		.lf-ai-cm-fields-picker[hidden] { display:none !important; }
+		.lf-ai-cm-fields-picker__card { width:min(340px, calc(100vw - 30px)); background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 20px 50px rgba(15,23,42,.28); padding:12px; display:flex; flex-direction:column; gap:10px; }
+		.lf-ai-cm-fields-picker__head { font-size:13px; font-weight:700; color:#0f172a; }
+		.lf-ai-cm-fields-picker__hint { margin:0; font-size:12px; line-height:1.45; color:#64748b; }
+		.lf-ai-cm-fields-picker__row { display:flex; gap:8px; flex-wrap:wrap; }
+		.lf-ai-cm-fields-picker__btn { flex:1; min-width:88px; border:1px solid #d6c8fb; background:#fff; color:#6a33e8; border-radius:8px; min-height:34px; font-size:12px; font-weight:600; cursor:pointer; }
+		.lf-ai-cm-fields-picker__btn.is-active { background:#6a33e8; border-color:#6a33e8; color:#fff; }
+		.lf-ai-cm-fields-picker__btn:hover { background:#f5f0ff; }
+		.lf-ai-cm-fields-picker__btn.is-active:hover { background:#5b2bc9; }
 		.lf-ai-benefit-card-drag.is-dragging, .lf-ai-service-intro-card-drag.is-dragging, .lf-ai-packages-card-drag.is-dragging { opacity:.65; outline:2px dashed rgba(131,72,249,.45); outline-offset:2px; }
 		.lf-ai-float__confirm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.4); z-index:5; padding:12px; pointer-events:auto; }
 		.lf-ai-float__confirm[hidden] { display:none !important; pointer-events:none !important; }
@@ -1683,6 +1693,8 @@ function lf_ai_assistant_widget_js(): string {
 		var activeServiceIntroDragEl = null;
 		var sectionBgPickerEl = null;
 		var sectionBgPickerWrap = null;
+		var contentMediaFieldsPickerEl = null;
+		var contentMediaFieldsPickerWrap = null;
 		var sectionAlignPickerEl = null;
 		var sectionAlignPickerWrap = null;
 		var sectionInsertPickerEl = null;
@@ -4104,6 +4116,7 @@ function lf_ai_assistant_widget_js(): string {
 			buildHeroTrustStripControls();
 			buildTrustBadgePillsControls();
 			buildChecklistControls();
+			applyContentMediaBlockVisibilityAll();
 			buildProofBadgeControls();
 			buildServiceDetailsMicroControls();
 			buildProcessStepControls();
@@ -5065,6 +5078,60 @@ function lf_ai_assistant_widget_js(): string {
 			var type = String(sectionType || "");
 			return ["service_details", "content_image", "content_image_a", "image_content", "image_content_b", "content_image_c"].indexOf(type) !== -1;
 		}
+		function sectionSupportsContentMediaBlocks(sectionType) {
+			return sectionSupportsColumnSwap(sectionType);
+		}
+		function contentMediaBlockEnabled(wrap, block) {
+			if (!wrap) return true;
+			var key = "data-lf-cm-show-" + String(block || "");
+			if (!wrap.hasAttribute(key)) return true;
+			return String(wrap.getAttribute(key) || "1") !== "0";
+		}
+		function applyContentMediaBlockVisibility(wrap) {
+			if (!wrap) return;
+			var content = wrap.querySelector(".lf-service-details__content");
+			if (!content) return;
+			var introNodes = [];
+			Array.prototype.slice.call(content.querySelectorAll(".lf-section__intro")).forEach(function(node){ introNodes.push(node); });
+			var shellIntro = wrap.querySelector(".lf-section__header .lf-section__intro");
+			if (shellIntro) introNodes.push(shellIntro);
+			introNodes.forEach(function(node){
+				node.style.display = contentMediaBlockEnabled(wrap, "intro") ? "" : "none";
+			});
+			var bodyEl = content.querySelector(".lf-service-details__body");
+			if (bodyEl) {
+				bodyEl.style.display = contentMediaBlockEnabled(wrap, "body") ? "" : "none";
+			}
+			var checklistHost = content.querySelector(".lf-service-details__checklists");
+			if (checklistHost) {
+				checklistHost.style.display = contentMediaBlockEnabled(wrap, "checklist") ? "" : "none";
+			}
+			Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-checklist-controls=\"1\"]")).forEach(function(ctrl){
+				ctrl.style.display = contentMediaBlockEnabled(wrap, "checklist") ? "" : "none";
+			});
+		}
+		function applyContentMediaBlockVisibilityAll() {
+			collectSectionWrappers().forEach(function(wrap){
+				if (!wrap || wrap.closest(".lf-ai-float")) return;
+				if (!sectionSupportsContentMediaBlocks(String(wrap.getAttribute("data-lf-section-type") || ""))) return;
+				applyContentMediaBlockVisibility(wrap);
+			});
+		}
+		function syncContentMediaToggleAttrs(wrap, data) {
+			if (!wrap || !data) return;
+			["intro", "body", "checklist"].forEach(function(block){
+				var field = "content_media_show_" + block;
+				if (!Object.prototype.hasOwnProperty.call(data, field)) return;
+				wrap.setAttribute("data-lf-cm-show-" + block, String(data[field]) === "0" ? "0" : "1");
+			});
+			applyContentMediaBlockVisibility(wrap);
+			if (contentMediaFieldsPickerWrap === wrap) {
+				paintContentMediaFieldsPicker(wrap);
+			}
+			if (String(data.content_media_show_checklist || "1") === "1") {
+				buildChecklistControls();
+			}
+		}
 		function sectionSupportsChecklistEditor(sectionType) {
 			var type = String(sectionType || "");
 			return ["service_details", "content_image", "content_image_a", "image_content", "image_content_b", "content_image_c"].indexOf(type) !== -1;
@@ -5215,6 +5282,7 @@ function lf_ai_assistant_widget_js(): string {
 				});
 				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 				if (!sectionSupportsChecklistEditor(sectionType)) return;
+				if (!contentMediaBlockEnabled(wrap, "checklist")) return;
 				var content = wrap.querySelector(".lf-service-details__content");
 				if (!content) return;
 				var host = content.querySelector(".lf-service-details__checklists");
@@ -8410,6 +8478,7 @@ function lf_ai_assistant_widget_js(): string {
 					buildHeroTrustStripControls();
 					buildTrustBadgePillsControls();
 					buildChecklistControls();
+					applyContentMediaBlockVisibilityAll();
 					buildProofBadgeControls();
 					buildServiceDetailsMicroControls();
 					buildProcessStepControls();
@@ -8618,6 +8687,71 @@ function lf_ai_assistant_widget_js(): string {
 			ensureSectionBgPicker();
 			sectionBgPickerWrap = wrap;
 			sectionBgPickerEl.hidden = false;
+		}
+		function closeContentMediaFieldsPicker() {
+			if (contentMediaFieldsPickerEl) contentMediaFieldsPickerEl.hidden = true;
+			contentMediaFieldsPickerWrap = null;
+		}
+		function paintContentMediaFieldsPicker(wrap) {
+			if (!contentMediaFieldsPickerEl || !wrap) return;
+			Array.prototype.slice.call(contentMediaFieldsPickerEl.querySelectorAll("[data-lf-cm-toggle]")).forEach(function(btn){
+				var block = String(btn.getAttribute("data-lf-cm-toggle") || "");
+				var on = contentMediaBlockEnabled(wrap, block);
+				btn.classList.toggle("is-active", on);
+				btn.setAttribute("aria-pressed", on ? "true" : "false");
+			});
+		}
+		function ensureContentMediaFieldsPicker() {
+			if (contentMediaFieldsPickerEl) return contentMediaFieldsPickerEl;
+			var root = document.createElement("div");
+			root.className = "lf-ai-cm-fields-picker lf-ai-inline-editor-ignore";
+			root.hidden = true;
+			var card = document.createElement("div");
+			card.className = "lf-ai-cm-fields-picker__card";
+			var head = document.createElement("div");
+			head.className = "lf-ai-cm-fields-picker__head";
+			head.textContent = "Content blocks";
+			var hint = document.createElement("p");
+			hint.className = "lf-ai-cm-fields-picker__hint";
+			hint.textContent = "Toggle subtitle, body text, and checklist on or off. Use ⇆ to swap media side.";
+			var row = document.createElement("div");
+			row.className = "lf-ai-cm-fields-picker__row";
+			[
+				{ block: "intro", label: "Subtitle", patch: "toggle_content_media_intro" },
+				{ block: "body", label: "Body", patch: "toggle_content_media_body" },
+				{ block: "checklist", label: "Checklist", patch: "toggle_content_media_checklist" }
+			].forEach(function(spec){
+				var b = document.createElement("button");
+				b.type = "button";
+				b.className = "lf-ai-cm-fields-picker__btn";
+				b.textContent = spec.label;
+				b.setAttribute("data-lf-cm-toggle", spec.block);
+				b.setAttribute("title", "Show or hide " + spec.label.toLowerCase());
+				b.addEventListener("click", function(e){
+					e.preventDefault();
+					var w = contentMediaFieldsPickerWrap;
+					if (!w) return;
+					persistSectionStyle(w, spec.patch, null);
+					setTimeout(function(){ paintContentMediaFieldsPicker(w); }, 120);
+				});
+				row.appendChild(b);
+			});
+			card.appendChild(head);
+			card.appendChild(hint);
+			card.appendChild(row);
+			root.appendChild(card);
+			root.addEventListener("click", function(e){
+				if (e.target === root) closeContentMediaFieldsPicker();
+			});
+			document.body.appendChild(root);
+			contentMediaFieldsPickerEl = root;
+			return root;
+		}
+		function openContentMediaFieldsPicker(wrap) {
+			ensureContentMediaFieldsPicker();
+			contentMediaFieldsPickerWrap = wrap;
+			paintContentMediaFieldsPicker(wrap);
+			contentMediaFieldsPickerEl.hidden = false;
 		}
 		function closeSectionAlignPicker() {
 			if (sectionAlignPickerEl) sectionAlignPickerEl.hidden = true;
@@ -9535,6 +9669,9 @@ function lf_ai_assistant_widget_js(): string {
 			$.post(lfAiFloating.ajax_url, payload).done(function(res){
 				if (res && res.success) {
 					setStatus((res.data && res.data.message) ? res.data.message : "Saved.", false);
+					if (res.data && wrap && String(patch || "").indexOf("toggle_content_media_") === 0) {
+						syncContentMediaToggleAttrs(wrap, res.data);
+					}
 					if (res.data && res.data.reload) {
 						window.location.reload();
 					}
@@ -9615,6 +9752,11 @@ function lf_ai_assistant_widget_js(): string {
 				ensureBtn("BG", "Choose section background (theme presets or custom color)", "Choose section background", function(){
 					openSectionBgPicker(wrap);
 				});
+				if (sectionSupportsContentMediaBlocks(sectionType)) {
+					ensureBtn("Fields", "Show or hide subtitle, body text, and checklist", "Content block visibility", function(){
+						openContentMediaFieldsPicker(wrap);
+					});
+				}
 				if (sectionType === "trust_reviews") {
 					ensureBtn("Layout", "Cycle review layout: slider → masonry → grid", "Cycle review layout", function(){
 						persistTrustLayout(wrap);
