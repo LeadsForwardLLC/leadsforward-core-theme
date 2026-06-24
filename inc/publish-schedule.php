@@ -14,36 +14,37 @@ if (!defined('ABSPATH')) {
 const LF_PUBLISH_SCHEDULE_OPTION = 'lf_ai_publish_schedule';
 
 /**
+ * Core marketing pages with per-site publish timing (not utility/legal defaults).
+ *
  * @return list<string>
  */
 function lf_publish_schedule_page_keys(): array {
-	$slugs = function_exists('lf_wizard_core_page_slugs')
-		? lf_wizard_core_page_slugs()
-		: ['home', 'about-us', 'why-choose-us', 'services', 'service-areas', 'reviews', 'blog', 'sitemap', 'contact', 'privacy-policy', 'terms-of-service', 'thank-you'];
-	$keys = [];
-	foreach ($slugs as $slug) {
-		$slug = sanitize_title((string) $slug);
-		if ($slug === '') {
-			continue;
-		}
-		$keys[] = $slug === 'about-us' ? 'page:about' : 'page:' . $slug;
-	}
-
-	return $keys;
+	return [
+		'page:home',
+		'page:about',
+		'page:why-choose-us',
+		'page:contact',
+		'page:reviews',
+		'page:blog',
+		'page:services',
+		'page:service-areas',
+	];
 }
 
 /**
  * @return array<string, string>
  */
 function lf_publish_schedule_page_labels(): array {
-	$titles = function_exists('lf_wizard_default_page_titles') ? lf_wizard_default_page_titles() : [];
-	$labels = [];
-	foreach (lf_publish_schedule_page_keys() as $key) {
-		$path = lf_publish_schedule_page_path($key);
-		$labels[ $key ] = $titles[ $path ] ?? $key;
-	}
-
-	return $labels;
+	return [
+		'page:home' => __('Homepage', 'leadsforward-core'),
+		'page:about' => __('About', 'leadsforward-core'),
+		'page:why-choose-us' => __('Why Choose Us', 'leadsforward-core'),
+		'page:contact' => __('Contact', 'leadsforward-core'),
+		'page:reviews' => __('Reviews', 'leadsforward-core'),
+		'page:blog' => __('Blog', 'leadsforward-core'),
+		'page:services' => __('Services overview', 'leadsforward-core'),
+		'page:service-areas' => __('Service areas overview', 'leadsforward-core'),
+	];
 }
 
 /**
@@ -52,15 +53,16 @@ function lf_publish_schedule_page_labels(): array {
  * @return array<string, array{timing:string,date:string}>
  */
 function lf_publish_schedule_default_items(): array {
-	$publish_now = ['page:home', 'page:services', 'page:service-areas', 'page:contact'];
-	$items = [];
-	foreach (lf_publish_schedule_page_keys() as $key) {
-		$items[ $key ] = in_array($key, $publish_now, true)
-			? ['timing' => 'now', 'date' => '']
-			: ['timing' => 'draft', 'date' => ''];
-	}
-
-	return $items;
+	return [
+		'page:home' => ['timing' => 'now', 'date' => ''],
+		'page:services' => ['timing' => 'now', 'date' => ''],
+		'page:service-areas' => ['timing' => 'now', 'date' => ''],
+		'page:contact' => ['timing' => 'now', 'date' => ''],
+		'page:about' => ['timing' => 'draft', 'date' => ''],
+		'page:why-choose-us' => ['timing' => 'draft', 'date' => ''],
+		'page:reviews' => ['timing' => 'draft', 'date' => ''],
+		'page:blog' => ['timing' => 'draft', 'date' => ''],
+	];
 }
 
 /**
@@ -235,6 +237,9 @@ function lf_publish_schedule_get_items(): array {
 	$out = [];
 	foreach ($items as $key => $row) {
 		if (!is_string($key) || !is_array($row)) {
+			continue;
+		}
+		if (str_starts_with($key, 'page:') && !in_array($key, lf_publish_schedule_page_keys(), true)) {
 			continue;
 		}
 		$normalized = lf_publish_schedule_normalize_row($key, $row);
