@@ -1325,22 +1325,46 @@ function lf_wizard_parse_service_areas($input): array {
 	$out = [];
 	foreach ($input as $item) {
 		if (is_array($item)) {
-			$name = $item['name'] ?? $item['city'] ?? '';
-			if ($name !== '') {
+			$name = trim((string) ($item['name'] ?? $item['city'] ?? ''));
+			$state = strtoupper(trim((string) ($item['state'] ?? '')));
+			if ($name === '') {
+				continue;
+			}
+			$line = $state !== '' && strpos($name, ',') === false ? trim($name . ', ' . $state) : $name;
+			$parsed = function_exists('lf_parse_service_area_location_list')
+				? lf_parse_service_area_location_list($line, $state)
+				: [['name' => $name, 'state' => $state]];
+			foreach ($parsed as $row) {
+				$city = trim((string) ($row['name'] ?? ''));
+				if ($city === '') {
+					continue;
+				}
+				$row_state = strtoupper(trim((string) ($row['state'] ?? '')));
 				$out[] = [
-					'name' => $name,
-					'state' => $item['state'] ?? '',
-					'slug' => $item['slug'] ?? '',
+					'name' => $city,
+					'state' => $row_state,
+					'slug' => (string) ($item['slug'] ?? ''),
 				];
 			}
 			continue;
 		}
 		$item = trim((string) $item);
-		if ($item === '') continue;
-		if (preg_match('/^(.+),\s*([A-Za-z]{2})$/', $item, $m)) {
-			$out[] = ['name' => trim($m[1]), 'state' => strtoupper($m[2])];
-		} else {
-			$out[] = ['name' => $item, 'state' => ''];
+		if ($item === '') {
+			continue;
+		}
+		$parsed = function_exists('lf_parse_service_area_location_list')
+			? lf_parse_service_area_location_list($item)
+			: [['name' => $item, 'state' => '']];
+		foreach ($parsed as $row) {
+			$city = trim((string) ($row['name'] ?? ''));
+			if ($city === '') {
+				continue;
+			}
+			$out[] = [
+				'name' => $city,
+				'state' => strtoupper(trim((string) ($row['state'] ?? ''))),
+				'slug' => '',
+			];
 		}
 	}
 	return $out;
