@@ -1802,3 +1802,29 @@ function lf_header_menu_repair_nav_structure(int $menu_id, bool $apply_preferred
 		lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'Service Areas', 'Reviews', 'More']);
 	}
 }
+
+/**
+ * Rebuild header Services / Service Areas dropdowns when a CPT is newly published.
+ */
+function lf_sitemap_sync_on_cpt_publish(string $new_status, string $old_status, \WP_Post $post): void {
+	if ($new_status !== 'publish' || $old_status === 'publish') {
+		return;
+	}
+	if (!$post instanceof \WP_Post || !in_array($post->post_type, ['lf_service', 'lf_service_area'], true)) {
+		return;
+	}
+	if (!function_exists('lf_sitemap_sync_build_header_menu')) {
+		return;
+	}
+	static $queued = false;
+	if ($queued) {
+		return;
+	}
+	$queued = true;
+	add_action('shutdown', static function (): void {
+		if (function_exists('lf_sitemap_sync_build_header_menu')) {
+			lf_sitemap_sync_build_header_menu();
+		}
+	}, 20);
+}
+add_action('transition_post_status', 'lf_sitemap_sync_on_cpt_publish', 20, 3);

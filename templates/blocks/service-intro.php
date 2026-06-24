@@ -70,6 +70,18 @@ if ($order_ids !== []) {
 	$query_args['order'] = 'ASC';
 }
 $query = new WP_Query($query_args);
+$displayed_count = (int) $query->post_count;
+$total_count_args = $query_args;
+$total_count_args['posts_per_page'] = -1;
+$total_count_args['fields'] = 'ids';
+$total_count_args['no_found_rows'] = false;
+$total_count_query = new WP_Query($total_count_args);
+$total_service_count = (int) $total_count_query->found_posts;
+$show_view_all_services = $total_service_count > $displayed_count && $displayed_count > 0;
+$view_all_label = trim((string) ($section['service_intro_view_all_label'] ?? ''));
+if ($view_all_label === '') {
+	$view_all_label = __('View all services', 'leadsforward-core');
+}
 
 $services_overview_url = '';
 $services_page = get_page_by_path('services');
@@ -170,6 +182,11 @@ if ($desc_overrides_raw !== '') {
 				<?php endwhile; ?>
 			</div>
 			<?php wp_reset_postdata(); ?>
+			<?php if ($show_view_all_services) : ?>
+				<p class="lf-block-service-intro__view-all-wrap">
+					<a class="lf-block-service-intro__view-all lf-btn lf-btn--secondary" href="<?php echo esc_url($services_overview_url); ?>"><?php echo esc_html($view_all_label); ?></a>
+				</p>
+			<?php endif; ?>
 		<?php endif; ?>
 	</div>
 </section>
