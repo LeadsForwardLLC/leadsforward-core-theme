@@ -120,6 +120,48 @@ function lf_sections_toggle_options(): array {
 	];
 }
 
+/**
+ * Section types that share the unified content + media layout (title, subtitle, body, checklist, image L/R).
+ *
+ * @return list<string>
+ */
+function lf_sections_content_media_section_types(): array {
+	return [
+		'service_details',
+		'content_image',
+		'content_image_a',
+		'content_image_c',
+		'image_content',
+		'image_content_b',
+	];
+}
+
+function lf_sections_is_content_media_section_type(string $section_type): bool {
+	return in_array($section_type, lf_sections_content_media_section_types(), true);
+}
+
+function lf_sections_content_media_toggle_enabled(array $settings, string $field_key): bool {
+	return (string) ($settings[ $field_key ] ?? '1') !== '0';
+}
+
+/**
+ * Data attributes for inline editor content-block toggles on section wrappers.
+ */
+function lf_sections_content_media_wrap_data_attrs(array $settings): string {
+	$map = [
+		'intro' => 'content_media_show_intro',
+		'body' => 'content_media_show_body',
+		'checklist' => 'content_media_show_checklist',
+	];
+	$out = '';
+	foreach ($map as $short => $field_key) {
+		$val = lf_sections_content_media_toggle_enabled($settings, $field_key) ? '1' : '0';
+		$out .= ' data-lf-cm-show-' . esc_attr($short) . '="' . esc_attr($val) . '"';
+	}
+
+	return $out;
+}
+
 function lf_sections_registry(): array {
 	$bg_field = [
 		'key' => 'section_background',
@@ -246,6 +288,9 @@ function lf_sections_registry(): array {
 		['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'service_summary'],
 		['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Service Details', 'leadsforward-core')],
 		['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Everything you need to know before scheduling.', 'leadsforward-core')],
+		['key' => 'content_media_show_intro', 'label' => __('Show subtitle', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
+		['key' => 'content_media_show_body', 'label' => __('Show body text', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
+		['key' => 'content_media_show_checklist', 'label' => __('Show checklist', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
 		['key' => 'service_details_body', 'label' => __('Body copy', 'leadsforward-core'), 'type' => 'richtext', 'default' => ''],
 		['key' => 'service_details_layout', 'label' => __('Layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'content_media', 'options' => [
 			'content_media' => __('Content left / Media right', 'leadsforward-core'),
@@ -302,6 +347,8 @@ function lf_sections_registry(): array {
 		'service_details_body' => $media_defaults['section_body'] ?? '',
 		'service_details_layout' => 'content_media',
 		'service_details_media_mode' => 'image',
+		'service_details_checklist' => '',
+		'content_media_show_checklist' => '0',
 	]);
 	$service_details_fields_media = $service_details_variant($service_details_fields, [
 		'section_heading' => $media_defaults['section_heading'] ?? '',
@@ -309,6 +356,8 @@ function lf_sections_registry(): array {
 		'service_details_body' => $media_defaults['section_body'] ?? '',
 		'service_details_layout' => 'media_content',
 		'service_details_media_mode' => 'image',
+		'service_details_checklist' => '',
+		'content_media_show_checklist' => '0',
 	]);
 	$service_details_fields_a = $service_details_variant($service_details_fields, [
 		'section_heading' => $media_a_defaults['section_heading'] ?? '',
@@ -316,6 +365,8 @@ function lf_sections_registry(): array {
 		'service_details_body' => $media_a_defaults['section_body'] ?? '',
 		'service_details_layout' => 'content_media',
 		'service_details_media_mode' => 'image',
+		'service_details_checklist' => '',
+		'content_media_show_checklist' => '0',
 	]);
 	$service_details_fields_b = $service_details_variant($service_details_fields, [
 		'section_heading' => $media_b_defaults['section_heading'] ?? '',
@@ -323,6 +374,8 @@ function lf_sections_registry(): array {
 		'service_details_body' => $media_b_defaults['section_body'] ?? '',
 		'service_details_layout' => 'media_content',
 		'service_details_media_mode' => 'image',
+		'service_details_checklist' => '',
+		'content_media_show_checklist' => '0',
 	]);
 	$service_details_fields_c = $service_details_variant($service_details_fields, [
 		'section_heading' => $media_c_defaults['section_heading'] ?? '',
@@ -330,6 +383,8 @@ function lf_sections_registry(): array {
 		'service_details_body' => $media_c_defaults['section_body'] ?? '',
 		'service_details_layout' => 'content_media',
 		'service_details_media_mode' => 'image',
+		'service_details_checklist' => '',
+		'content_media_show_checklist' => '0',
 	]);
 	$icon_fields = lf_sections_icon_fields();
 	$sections = [
@@ -455,32 +510,32 @@ function lf_sections_registry(): array {
 		'content_image' => [
 			'label' => __('Content + Media', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area', 'page', 'post'],
-			'fields' => $media_fields,
-			'render' => 'lf_sections_render_content_image',
+			'fields' => $service_details_fields_content,
+			'render' => 'lf_sections_render_service_details',
 		],
 		'content_image_a' => [
 			'label' => __('Content + Media (A)', 'leadsforward-core'),
 			'contexts' => ['homepage'],
-			'fields' => $media_fields_a,
-			'render' => 'lf_sections_render_content_image',
+			'fields' => $service_details_fields_a,
+			'render' => 'lf_sections_render_service_details',
 		],
 		'image_content' => [
 			'label' => __('Media + Content', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area', 'page', 'post'],
-			'fields' => $media_fields,
-			'render' => 'lf_sections_render_image_content',
+			'fields' => $service_details_fields_media,
+			'render' => 'lf_sections_render_service_details',
 		],
 		'image_content_b' => [
 			'label' => __('Media + Content (B)', 'leadsforward-core'),
 			'contexts' => ['homepage'],
-			'fields' => $media_fields_b,
-			'render' => 'lf_sections_render_image_content',
+			'fields' => $service_details_fields_b,
+			'render' => 'lf_sections_render_service_details',
 		],
 		'content_image_c' => [
 			'label' => __('Content + Media (C)', 'leadsforward-core'),
 			'contexts' => ['homepage'],
-			'fields' => $media_fields_c,
-			'render' => 'lf_sections_render_content_image',
+			'fields' => $service_details_fields_c,
+			'render' => 'lf_sections_render_service_details',
 		],
 		'content_centered' => [
 			'label' => __('Centered Content', 'leadsforward-core'),
@@ -1368,6 +1423,14 @@ function lf_sections_normalize_service_details_settings(string $section_id, arra
 	}
 	if (empty($out['service_details_media_mode'])) {
 		$out['service_details_media_mode'] = !empty($out['service_details_media_image_id']) ? 'image' : 'video';
+	}
+	foreach (['content_media_show_intro', 'content_media_show_body', 'content_media_show_checklist'] as $toggle_key) {
+		if (!isset($out[ $toggle_key ]) || $out[ $toggle_key ] === '') {
+			$out[ $toggle_key ] = '1';
+		}
+	}
+	if (!empty($settings['section_bullets']) && (string) ($out['content_media_show_checklist'] ?? '1') === '1') {
+		$out['content_media_show_checklist'] = '1';
 	}
 	return $out;
 }
@@ -2880,6 +2943,9 @@ function lf_sections_benefits_pick_icon_slug(array $item, array $overrides, arra
 function lf_sections_render_service_details(string $context, array $settings, \WP_Post $post): void {
 	$title = $settings['section_heading'] ?? '';
 	$intro = $settings['section_intro'] ?? '';
+	$show_intro = lf_sections_content_media_toggle_enabled($settings, 'content_media_show_intro');
+	$show_body = lf_sections_content_media_toggle_enabled($settings, 'content_media_show_body');
+	$show_checklist = lf_sections_content_media_toggle_enabled($settings, 'content_media_show_checklist');
 	$body = (string) ($settings['service_details_body'] ?? '');
 	if ($body !== '') {
 		$body = lf_sections_trim_service_details_body_html($body);
@@ -2947,7 +3013,7 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 	lf_sections_render_shell_open(
 		'service-details',
 		$render_header_in_content ? '' : $title,
-		$render_header_in_content ? '' : $intro,
+		($render_header_in_content || !$show_intro) ? '' : $intro,
 		$settings['section_background'] ?? 'light',
 		$settings
 	);
@@ -2993,21 +3059,21 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 			</div>
 		<?php endif; ?>
 		<div class="lf-service-details__content">
-			<?php if ($render_header_in_content && ($title || $intro)) : ?>
+			<?php if ($render_header_in_content && ($title || ($show_intro && $intro))) : ?>
 				<div class="lf-service-details__header">
 					<?php if ($title) : ?>
 						<?php $lf_sd_heading_tag = lf_sections_sanitize_section_heading_tag($settings); ?>
 						<<?php echo esc_html($lf_sd_heading_tag); ?> class="lf-section__title"><?php echo esc_html($title); ?></<?php echo esc_html($lf_sd_heading_tag); ?>>
 					<?php endif; ?>
-					<?php if ($intro) : ?>
+					<?php if ($show_intro && $intro) : ?>
 						<p class="lf-section__intro"><?php echo esc_html($intro); ?></p>
 					<?php endif; ?>
 				</div>
 			<?php endif; ?>
-			<?php if ($body) : ?>
+			<?php if ($show_body && $body) : ?>
 				<div class="lf-service-details__body lf-prose"><?php echo wp_kses_post($body); ?></div>
 			<?php endif; ?>
-			<?php if (!empty($checklist)) : ?>
+			<?php if ($show_checklist && !empty($checklist)) : ?>
 				<div class="lf-service-details__checklists">
 					<ul class="<?php echo esc_attr($checklist_class); ?>" role="list">
 						<?php foreach ($checklist as $item) : ?>

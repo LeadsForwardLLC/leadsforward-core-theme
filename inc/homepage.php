@@ -977,8 +977,17 @@ function lf_render_homepage_section(array $section, int $index): void {
 		));
 	}
 	$wrap_heading_tag_hp = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($section) : 'h2';
+	$cm_wrap_attrs_hp = '';
+	if (function_exists('lf_sections_is_content_media_section_type') && lf_sections_is_content_media_section_type((string) $type)) {
+		$cm_settings_hp = function_exists('lf_sections_normalize_service_details_settings')
+			? lf_sections_normalize_service_details_settings((string) $type, $section)
+			: $section;
+		$cm_wrap_attrs_hp = function_exists('lf_sections_content_media_wrap_data_attrs')
+			? lf_sections_content_media_wrap_data_attrs($cm_settings_hp)
+			: '';
+	}
 	$merged_hp = array_merge($section, ['_pb_instance_key' => (string) $section_id]);
-	echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-context-type="homepage" data-lf-context-id="homepage" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_hp) . '" data-lf-section-visible="1">';
+	echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-context-type="homepage" data-lf-context-id="homepage" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_hp) . '" data-lf-section-visible="1"' . $cm_wrap_attrs_hp . '>';
 	lf_sections_render_section($type, 'homepage', $merged_hp, $post);
 	echo '</div>';
 }

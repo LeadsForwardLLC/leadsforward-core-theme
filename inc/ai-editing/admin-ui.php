@@ -1081,6 +1081,17 @@ function lf_ai_mutate_section_style_settings(array $settings, string $patch, arr
 		$settings['layout_heading_tag'] = $heading_tag_raw;
 		return [$settings, ''];
 	}
+	$content_media_toggles = [
+		'toggle_content_media_intro' => 'content_media_show_intro',
+		'toggle_content_media_body' => 'content_media_show_body',
+		'toggle_content_media_checklist' => 'content_media_show_checklist',
+	];
+	if (isset($content_media_toggles[ $patch ])) {
+		$field_key = $content_media_toggles[ $patch ];
+		$cur = (string) ($settings[ $field_key ] ?? '1');
+		$settings[ $field_key ] = $cur === '0' ? '1' : '0';
+		return [$settings, ''];
+	}
 	return [$settings, __('Unknown style action.', 'leadsforward-core')];
 }
 
@@ -1161,14 +1172,18 @@ function lf_ai_ajax_update_section_style(): void {
 				'Inline section style'
 			)
 			: '';
+		$style_reload = !in_array($patch, ['toggle_content_media_intro', 'toggle_content_media_body', 'toggle_content_media_checklist'], true);
 		wp_send_json_success([
 			'message' => __('Section style updated.', 'leadsforward-core'),
-			'reload' => true,
+			'reload' => $style_reload,
 			'log_id' => $log_id,
 			'section_id' => $resolved,
 			'section_background' => (string) ($new_row['section_background'] ?? ''),
 			'section_background_custom' => (string) ($new_row['section_background_custom'] ?? ''),
 			'section_header_align' => (string) ($new_row['section_header_align'] ?? ''),
+			'content_media_show_intro' => (string) ($new_row['content_media_show_intro'] ?? '1'),
+			'content_media_show_body' => (string) ($new_row['content_media_show_body'] ?? '1'),
+			'content_media_show_checklist' => (string) ($new_row['content_media_show_checklist'] ?? '1'),
 		]);
 		return;
 	}
@@ -1228,14 +1243,18 @@ function lf_ai_ajax_update_section_style(): void {
 			'Inline section style'
 		)
 		: '';
+	$style_reload = !in_array($patch, ['toggle_content_media_intro', 'toggle_content_media_body', 'toggle_content_media_checklist'], true);
 	wp_send_json_success([
 		'message' => __('Section style updated.', 'leadsforward-core'),
-		'reload' => true,
+		'reload' => $style_reload,
 		'log_id' => $log_id,
 		'section_id' => $section_id,
 		'section_background' => (string) ($settings['section_background'] ?? ''),
 		'section_background_custom' => (string) ($settings['section_background_custom'] ?? ''),
 		'section_header_align' => (string) ($settings['section_header_align'] ?? ''),
+		'content_media_show_intro' => (string) ($settings['content_media_show_intro'] ?? '1'),
+		'content_media_show_body' => (string) ($settings['content_media_show_body'] ?? '1'),
+		'content_media_show_checklist' => (string) ($settings['content_media_show_checklist'] ?? '1'),
 	]);
 }
 

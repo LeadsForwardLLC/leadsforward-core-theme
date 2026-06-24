@@ -1092,10 +1092,19 @@ function lf_pb_render_sections(\WP_Post $post): void {
 		}
 		$sec_settings_pb = is_array($sec_cfg['settings'] ?? null) ? $sec_cfg['settings'] : [];
 		$wrap_heading_tag_pb = function_exists('lf_sections_sanitize_section_heading_tag') ? lf_sections_sanitize_section_heading_tag($sec_settings_pb) : 'h2';
+		$cm_wrap_attrs_pb = '';
+		if (function_exists('lf_sections_is_content_media_section_type') && lf_sections_is_content_media_section_type((string) $type)) {
+			$cm_settings_pb = function_exists('lf_sections_normalize_service_details_settings')
+				? lf_sections_normalize_service_details_settings((string) $type, $sec_settings_pb)
+				: $sec_settings_pb;
+			$cm_wrap_attrs_pb = function_exists('lf_sections_content_media_wrap_data_attrs')
+				? lf_sections_content_media_wrap_data_attrs($cm_settings_pb)
+				: '';
+		}
 		// If a section is hidden, keep a placeholder wrapper for front-end editors so it can be restored.
 		if (!$enabled) {
 			if (current_user_can('edit_theme_options')) {
-				echo '<div class="lf-inline-section-wrap lf-inline-section-wrap--hidden" data-lf-section-wrap="1" data-lf-context-type="' . esc_attr((string) $post->post_type) . '" data-lf-context-id="' . esc_attr((string) $post->ID) . '" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_pb) . '" data-lf-section-visible="0">';
+				echo '<div class="lf-inline-section-wrap lf-inline-section-wrap--hidden" data-lf-section-wrap="1" data-lf-context-type="' . esc_attr((string) $post->post_type) . '" data-lf-context-id="' . esc_attr((string) $post->ID) . '" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_pb) . '" data-lf-section-visible="0"' . $cm_wrap_attrs_pb . '>';
 				echo '<div class="lf-ai-hidden-section-placeholder" aria-label="' . esc_attr__('Hidden section', 'leadsforward-core') . '">';
 				echo esc_html__('Hidden section:', 'leadsforward-core') . ' ' . esc_html((string) ($type ?: $section_id));
 				echo '</div>';
@@ -1141,7 +1150,7 @@ function lf_pb_render_sections(\WP_Post $post): void {
 				implode(', ', $rendered)
 			));
 		}
-		echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-context-type="' . esc_attr((string) $post->post_type) . '" data-lf-context-id="' . esc_attr((string) $post->ID) . '" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_pb) . '" data-lf-section-visible="1">';
+		echo '<div class="lf-inline-section-wrap" data-lf-section-wrap="1" data-lf-context-type="' . esc_attr((string) $post->post_type) . '" data-lf-context-id="' . esc_attr((string) $post->ID) . '" data-lf-section-id="' . esc_attr((string) $section_id) . '" data-lf-section-type="' . esc_attr((string) $type) . '" data-lf-section-heading-tag="' . esc_attr($wrap_heading_tag_pb) . '" data-lf-section-visible="1"' . $cm_wrap_attrs_pb . '>';
 		$merged_settings = array_merge($sec_cfg['settings'] ?? [], ['_pb_instance_key' => (string) $section_id]);
 		lf_sections_render_section($type, $context, $merged_settings, $post);
 		echo '</div>';
