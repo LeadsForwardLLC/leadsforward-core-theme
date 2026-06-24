@@ -2544,6 +2544,160 @@ function lf_ai_ajax_internal_link_targets(): void {
 	wp_send_json_success(['items' => $items]);
 }
 
+/**
+ * Compact page scope for inline AI rewrites (SEO keywords, outline, business context).
+ *
+ * @return array{page_title:string,post_type:string,primary_keyword:string,secondary_keywords:string,intent:string,outline:list<array{section:string,heading:string}>,business_name:string}
+ */
+function lf_ai_collect_page_scope_for_editor(string $context_type, $context_id): array {
+	$context_id_use = is_string($context_id) ? $context_id : (string) $context_id;
+	$post_id = lf_ai_resolve_post_id_for_context($context_type, $context_id_use);
+	$page_title = '';
+	$post_type = '';
+	$outline = [];
+	$primary = '';
+	$secondary = '';
+	$intent = '';
+
+	if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+		$page_title = __('Homepage', 'leadsforward-core');
+		if (function_exists('lf_get_homepage_section_config')) {
+			$config = lf_get_homepage_section_config();
+			if (is_array($config)) {
+				foreach ($config as $sid => $row) {
+					if (!is_string($sid) || !is_array($row)) {
+						continue;
+					}
+					$type = sanitize_text_field((string) ($row['section_type'] ?? $row['type'] ?? $sid));
+					$heading = trim((string) ($row['section_heading'] ?? $row['hero_headline'] ?? ''));
+					$outline[] = [
+						'section' => $type,
+						'heading' => $heading,
+					];
+				}
+			}
+		}
+		if (function_exists('lf_homepage_keywords')) {
+			$hk = lf_homepage_keywords();
+			$primary = trim((string) ($hk['primary'] ?? ''));
+			$sec = $hk['secondary'] ?? [];
+			if (is_array($sec)) {
+				$secondary = implode(', ', array_values(array_filter(array_map('sanitize_text_field', $sec))));
+			}
+		}
+	} elseif ($post_id > 0) {
+		$post = get_post($post_id);
+		if ($post instanceof \WP_Post) {
+			$page_title = (string) get_the_title($post);
+			$post_type = (string) $post->post_type;
+			if (defined('LF_PB_META_KEY') && function_exists('lf_pb_get_post_config') && function_exists('lf_ai_pb_context_for_post')) {
+				$pb_context = lf_ai_pb_context_for_post($post);
+				if ($pb_context !== '') {
+					$config = lf_pb_get_post_config($post_id, $pb_context);
+					$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+					$order = is_array($config['order'] ?? null) ? $config['order'] : array_keys($sections);
+					foreach ($order as $sid) {
+						if (!is_string($sid) || !is_array($sections[$sid] ?? null)) {
+							continue;
+						}
+						$row = $sections[$sid];
+						$type = sanitize_text_field((string) ($row['type'] ?? ''));
+						$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+						$heading = trim((string) ($settings['section_heading'] ?? $settings['hero_headline'] ?? ''));
+						$outline[] = [
+							'section' => $type,
+							'heading' => $heading,
+						];
+					}
+				}
+			}
+		}
+		$snapshot = lf_ai_collect_seo_snapshot_payload($post_id);
+		$meta = is_array($snapshot['meta'] ?? null) ? $snapshot['meta'] : [];
+		$primary = trim((string) ($meta['primary_keyword'] ?? ''));
+		$secondary = trim((string) ($meta['secondary_keywords'] ?? ''));
+		$intent = trim((string) ($snapshot['intent'] ?? ''));
+	}
+
+	$business_name = function_exists('lf_get_business_info_value')
+		? trim((string) lf_get_business_info_value('lf_business_name', ''))
+		: '';
+
+	return [
+		'page_title' => $page_title,
+		'post_type' => $post_type,
+		'primary_keyword' => $primary,
+		'secondary_keywords' => $secondary,
+		'intent' => $intent,
+		'outline' => $outline,
+		'business_name' => $business_name,
+	];
+}
+
+/**
+ * @return array{role:string,length_hint:string,is_heading:bool,preserve_html:bool}
+ */
+function lf_ai_inline_rewrite_field_guidance(string $field_key, string $section_type, string $current_text): array {
+	$field_key = sanitize_text_field($field_key);
+	$section_type = sanitize_text_field($section_type);
+	$plain_len = function_exists('mb_strlen') ? mb_strlen(trim(wp_strip_all_tags($current_text))) : strlen(trim(wp_strip_all_tags($current_text)));
+	$preserve_html = in_array($field_key, ['rich_content_body', 'service_details_body'], true);
+	$heading_keys = ['hero_headline', 'section_heading'];
+	$is_heading = in_array($field_key, $heading_keys, true) || $plain_len <= 90;
+
+	$role = __('body copy snippet', 'leadsforward-core');
+	$length_hint = __('Keep similar length to the original.', 'leadsforward-core');
+
+	if ($field_key === 'lf_service_short_desc') {
+		$role = __('service card teaser blurb', 'leadsforward-core');
+		$length_hint = __('About 18–28 words. Name the service clearly and set expectations.', 'leadsforward-core');
+	} elseif ($field_key === 'hero_headline') {
+		$role = __('homepage hero headline', 'leadsforward-core');
+		$length_hint = __('Max 12 words. Clear, confident, homeowner-friendly.', 'leadsforward-core');
+		$is_heading = true;
+	} elseif ($field_key === 'hero_subheadline') {
+		$role = __('homepage hero subheadline', 'leadsforward-core');
+		$length_hint = __('15–30 words supporting the headline.', 'leadsforward-core');
+	} elseif ($field_key === 'service_details_body') {
+		$role = __('service details body paragraph', 'leadsforward-core');
+		$length_hint = __('2–3 short paragraphs, roughly 80–220 words total.', 'leadsforward-core');
+	} elseif ($field_key === 'rich_content_body') {
+		$role = __('rich text section body', 'leadsforward-core');
+		$length_hint = __('Match the depth and tone of surrounding page sections.', 'leadsforward-core');
+	} elseif ($field_key === 'section_heading' || $is_heading) {
+		$role = sprintf(__('section heading (%s)', 'leadsforward-core'), $section_type !== '' ? $section_type : 'section');
+		$length_hint = __('Concise headline, roughly 3–12 words.', 'leadsforward-core');
+		$is_heading = true;
+	} elseif ($field_key === 'section_intro') {
+		$role = __('section supporting intro line', 'leadsforward-core');
+		$length_hint = __('One or two sentences under the heading.', 'leadsforward-core');
+	}
+
+	return [
+		'role' => $role,
+		'length_hint' => $length_hint,
+		'is_heading' => $is_heading,
+		'preserve_html' => $preserve_html,
+	];
+}
+
+function lf_ai_inline_rewrite_mode_instruction(string $mode, string $custom_prompt = ''): string {
+	$mode = sanitize_key($mode);
+	switch ($mode) {
+		case 'seo':
+			return __('Rewrite for natural SEO alignment with the page target keyword. Do not keyword-stuff.', 'leadsforward-core');
+		case 'shorter':
+			return __('Make this shorter and tighter while keeping the core message.', 'leadsforward-core');
+		case 'longer':
+			return __('Expand slightly with one concrete, helpful detail. Stay on-topic.', 'leadsforward-core');
+		case 'custom':
+			return trim($custom_prompt);
+		case 'regenerate':
+		default:
+			return __('Rewrite fresh with the same intent and tone as the rest of this page.', 'leadsforward-core');
+	}
+}
+
 function lf_ai_ajax_inline_rewrite(): void {
 	check_ajax_referer('lf_ai_editing', 'nonce');
 	if (!current_user_can(LF_AI_CAP)) {
@@ -2552,33 +2706,109 @@ function lf_ai_ajax_inline_rewrite(): void {
 	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
 	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
 	$selector = isset($_POST['selector']) ? sanitize_text_field(wp_unslash($_POST['selector'])) : '';
-	$current_text = isset($_POST['current_text']) ? sanitize_textarea_field(wp_unslash($_POST['current_text'])) : '';
+	$field_key = isset($_POST['field_key']) ? sanitize_text_field(wp_unslash($_POST['field_key'])) : '';
+	$section_id = isset($_POST['section_id']) ? sanitize_text_field(wp_unslash($_POST['section_id'])) : '';
+	$section_type = isset($_POST['section_type']) ? sanitize_text_field(wp_unslash($_POST['section_type'])) : '';
+	$rewrite_mode = isset($_POST['rewrite_mode']) ? sanitize_key(wp_unslash((string) $_POST['rewrite_mode'])) : 'regenerate';
+	$service_post_id = isset($_POST['service_post_id']) ? absint(wp_unslash((string) $_POST['service_post_id'])) : 0;
+	$current_text = isset($_POST['current_text']) ? wp_unslash((string) $_POST['current_text']) : '';
+	$current_text = is_string($current_text) ? $current_text : '';
 	$prompt = isset($_POST['prompt']) ? sanitize_textarea_field(wp_unslash($_POST['prompt'])) : '';
-	if ($context_type === '' || $context_id === '' || $selector === '' || $current_text === '' || $prompt === '') {
+	$instruction = isset($_POST['instruction']) ? sanitize_textarea_field(wp_unslash($_POST['instruction'])) : '';
+	if ($context_type === '' || $context_id === '' || trim(wp_strip_all_tags($current_text)) === '') {
 		wp_send_json_error(['message' => __('Invalid rewrite payload.', 'leadsforward-core')]);
 	}
-	if (strlen($current_text) > 1200 || strlen($prompt) > 1200) {
+	$guidance = lf_ai_inline_rewrite_field_guidance($field_key, $section_type, $current_text);
+	$max_len = $guidance['preserve_html'] ? 12000 : 2000;
+	if (strlen($current_text) > $max_len) {
 		wp_send_json_error(['message' => __('Rewrite payload is too long.', 'leadsforward-core')]);
 	}
-	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
-	$is_heading = function_exists('mb_strlen') ? mb_strlen($current_text) <= 90 : strlen($current_text) <= 90;
-	$system = "You are editing one specific website text snippet.\n";
-	$system .= "Output ONLY the rewritten text. No JSON. No quotes. No preface.\n";
-	$system .= "Do not change scope beyond this one snippet.\n";
-	if ($is_heading) {
-		$system .= "Keep it concise and headline-like (roughly 3-10 words).\n";
-	} else {
-		$system .= "Keep similar length and style to the original snippet.\n";
+	$user_instruction = $instruction !== '' ? $instruction : $prompt;
+	if ($user_instruction === '') {
+		$user_instruction = lf_ai_inline_rewrite_mode_instruction($rewrite_mode, $prompt);
 	}
-	$user = "User instruction:\n" . $prompt . "\n\n";
-	$user .= "Current snippet text:\n" . $current_text . "\n\n";
-	$user .= "Rewrite only this snippet.";
+	if ($user_instruction === '' || strlen($user_instruction) > 1200) {
+		wp_send_json_error(['message' => __('Invalid rewrite instruction.', 'leadsforward-core')]);
+	}
+	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
+	$scope = lf_ai_collect_page_scope_for_editor($context_type, $context_id_use);
+	$service_title = '';
+	if ($service_post_id > 0) {
+		$svc = get_post($service_post_id);
+		if ($svc instanceof \WP_Post && $svc->post_type === 'lf_service') {
+			$service_title = (string) get_the_title($svc);
+		}
+	}
+
+	$system = "You are an expert local-business website copywriter editing ONE inline field on a live page.\n";
+	$system .= "Output ONLY the rewritten field content. No JSON. No quotes. No preface. No markdown fences.\n";
+	$system .= "Stay within the same field role — do not write a whole page or multiple sections.\n";
+	if ($guidance['preserve_html']) {
+		$system .= "You may use simple HTML (<p>, <strong>, <em>, <ul>, <ol>, <li>, <a>) when appropriate.\n";
+	} else {
+		$system .= "Output plain text only (no HTML).\n";
+	}
+	if ($guidance['is_heading']) {
+		$system .= "Keep it concise and headline-like.\n";
+	}
+	$system .= 'Length: ' . $guidance['length_hint'] . "\n";
+
+	$outline_lines = [];
+	foreach ($scope['outline'] as $row) {
+		if (!is_array($row)) {
+			continue;
+		}
+		$sec = trim((string) ($row['section'] ?? ''));
+		$head = trim((string) ($row['heading'] ?? ''));
+		if ($sec === '') {
+			continue;
+		}
+		$outline_lines[] = $head !== '' ? $sec . ': ' . $head : $sec;
+	}
+
+	$user = "Page context:\n";
+	$user .= '- Page: ' . ($scope['page_title'] !== '' ? $scope['page_title'] : __('(unknown)', 'leadsforward-core')) . "\n";
+	if ($scope['business_name'] !== '') {
+		$user .= '- Business: ' . $scope['business_name'] . "\n";
+	}
+	if ($scope['primary_keyword'] !== '') {
+		$user .= '- Target keyword: ' . $scope['primary_keyword'] . "\n";
+	}
+	if ($scope['secondary_keywords'] !== '') {
+		$user .= '- Secondary keywords: ' . $scope['secondary_keywords'] . "\n";
+	}
+	if ($scope['intent'] !== '') {
+		$user .= '- Search intent: ' . $scope['intent'] . "\n";
+	}
+	if ($outline_lines !== []) {
+		$user .= "- Page sections:\n  " . implode("\n  ", array_slice($outline_lines, 0, 14)) . "\n";
+	}
+	if ($section_type !== '' || $section_id !== '') {
+		$user .= '- Editing section: ' . ($section_type !== '' ? $section_type : $section_id) . "\n";
+	}
+	if ($field_key !== '') {
+		$user .= '- Field role: ' . $guidance['role'] . ' (' . $field_key . ")\n";
+	}
+	if ($service_title !== '') {
+		$user .= '- Service card: ' . $service_title . "\n";
+	}
+	$user .= "\nInstruction:\n" . $user_instruction . "\n\n";
+	$user .= "Current text:\n" . $current_text . "\n\n";
+	$user .= 'Rewrite only this field.';
+
 	$response = apply_filters('lf_ai_completion', '', $system, $user, $context_type, $context_id_use);
 	if (is_wp_error($response)) {
 		wp_send_json_error(['message' => $response->get_error_message()]);
 	}
-	$rewritten = is_string($response) ? trim(wp_strip_all_tags($response)) : '';
-	$rewritten = trim((string) preg_replace('/\s+/', ' ', $rewritten));
+	$rewritten = is_string($response) ? trim($response) : '';
+	if (!$guidance['preserve_html']) {
+		$rewritten = trim(wp_strip_all_tags($rewritten));
+		$rewritten = trim((string) preg_replace('/\s+/', ' ', $rewritten));
+	} else {
+		$rewritten = function_exists('lf_ai_sanitize_inline_dom_html')
+			? lf_ai_sanitize_inline_dom_html($rewritten)
+			: trim(wp_kses_post($rewritten));
+	}
 	$rewritten = trim($rewritten, "\"' \t\n\r\0\x0B");
 	if ($rewritten === '') {
 		wp_send_json_error(['message' => __('AI did not return a valid rewrite.', 'leadsforward-core')]);
@@ -2586,6 +2816,7 @@ function lf_ai_ajax_inline_rewrite(): void {
 	wp_send_json_success([
 		'rewritten_text' => $rewritten,
 		'selector' => $selector,
+		'value_format' => $guidance['preserve_html'] ? 'html' : 'text',
 	]);
 }
 

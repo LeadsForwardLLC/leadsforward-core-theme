@@ -312,6 +312,9 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 	if (function_exists('lf_fe_revision_get_version')) {
 		$layout_version = lf_fe_revision_get_version((string) ($context['type'] ?? 'homepage'), (string) ($context['id'] ?? 'homepage'));
 	}
+	$page_scope = function_exists('lf_ai_collect_page_scope_for_editor')
+		? lf_ai_collect_page_scope_for_editor((string) ($context['type'] ?? 'homepage'), (string) ($context['id'] ?? 'homepage'))
+		: [];
 
 	wp_localize_script('lf-ai-floating-assistant', 'lfAiFloating', [
 		'theme_version' => defined('LF_THEME_VERSION') ? (string) LF_THEME_VERSION : '',
@@ -319,6 +322,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		'nonce'    => wp_create_nonce('lf_ai_editing'),
 		'context_type' => (string) ($context['type'] ?? 'homepage'),
 		'context_id' => (string) ($context['id'] ?? 'homepage'),
+		'page_scope' => $page_scope,
 		'is_front_page' => !is_admin() && is_front_page(),
 		'front_page_id' => !is_admin() ? (string) absint((int) get_option('page_on_front')) : '0',
 		'layout_version' => (int) $layout_version,
@@ -763,11 +767,37 @@ function lf_ai_assistant_render_floating_widget(): void {
 					<button type="button" class="lf-ai-inline-link__fmt lf-ai-inline-link__fmt--swatch" data-lf-ai-inline-cmd="foreColor" data-lf-ai-inline-cmd-value="<?php echo esc_attr($lf_hex); ?>" style="<?php echo esc_attr('background:' . $lf_hex); ?>" title="<?php echo esc_attr($lf_lab); ?>" aria-label="<?php echo esc_attr($lf_lab); ?>"></button>
 					<?php endforeach; ?>
 				</span>
+				<span class="lf-ai-inline-link__toolbar-group" role="group" aria-label="<?php esc_attr_e('AI rewrite', 'leadsforward-core'); ?>">
+					<button type="button" class="lf-ai-inline-link__fmt lf-ai-inline-link__fmt--icon lf-ai-inline-link__fmt--ai" data-lf-ai-inline-rewrite-open title="<?php esc_attr_e('Rewrite with AI', 'leadsforward-core'); ?>" aria-label="<?php esc_attr_e('Rewrite with AI', 'leadsforward-core'); ?>">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M5 19l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/><path d="M19 13l.75 1.5 1.5.75-1.5.75-.75 1.5-.75-1.5-1.5-.75 1.5-.75.75-1.5z"/></svg>
+					</button>
+				</span>
 				<button type="button" class="lf-ai-inline-link__open" data-lf-ai-inline-link-open><?php esc_html_e('Link…', 'leadsforward-core'); ?></button>
 				<button type="button" class="lf-ai-inline-link__toolbar-close" data-lf-ai-inline-toolbar-close aria-label="<?php esc_attr_e('Close editor', 'leadsforward-core'); ?>">×</button>
 			</div>
 		</div>
 		<div class="lf-ai-inline-link__backdrop" data-lf-ai-inline-link-backdrop hidden></div>
+		<div class="lf-ai-inline-rewrite" data-lf-ai-inline-rewrite-panel hidden>
+			<div class="lf-ai-inline-rewrite__card" role="dialog" aria-label="<?php esc_attr_e('Rewrite with AI', 'leadsforward-core'); ?>">
+				<div class="lf-ai-inline-rewrite__head">
+					<strong><?php esc_html_e('Rewrite with AI', 'leadsforward-core'); ?></strong>
+					<span class="lf-ai-inline-rewrite__kw" data-lf-ai-inline-rewrite-kw hidden></span>
+					<button type="button" class="lf-ai-inline-rewrite__close" data-lf-ai-inline-rewrite-close aria-label="<?php esc_attr_e('Close', 'leadsforward-core'); ?>">×</button>
+				</div>
+				<p class="lf-ai-inline-rewrite__hint" data-lf-ai-inline-rewrite-hint><?php esc_html_e('Uses this page’s target keyword and section outline for context.', 'leadsforward-core'); ?></p>
+				<div class="lf-ai-inline-rewrite__actions">
+					<button type="button" class="lf-ai-inline-rewrite__mode" data-lf-ai-inline-rewrite-mode="regenerate"><?php esc_html_e('Regenerate', 'leadsforward-core'); ?></button>
+					<button type="button" class="lf-ai-inline-rewrite__mode" data-lf-ai-inline-rewrite-mode="seo"><?php esc_html_e('SEO polish', 'leadsforward-core'); ?></button>
+					<button type="button" class="lf-ai-inline-rewrite__mode" data-lf-ai-inline-rewrite-mode="shorter"><?php esc_html_e('Shorter', 'leadsforward-core'); ?></button>
+					<button type="button" class="lf-ai-inline-rewrite__mode" data-lf-ai-inline-rewrite-mode="longer"><?php esc_html_e('Longer', 'leadsforward-core'); ?></button>
+				</div>
+				<label class="lf-ai-inline-rewrite__label">
+					<span><?php esc_html_e('Optional instruction', 'leadsforward-core'); ?></span>
+					<input type="text" class="lf-ai-inline-rewrite__input" data-lf-ai-inline-rewrite-instruction placeholder="<?php esc_attr_e('e.g. mention free estimates, keep it friendly…', 'leadsforward-core'); ?>" />
+				</label>
+				<button type="button" class="lf-ai-inline-rewrite__apply" data-lf-ai-inline-rewrite-apply hidden><?php esc_html_e('Apply rewrite', 'leadsforward-core'); ?></button>
+			</div>
+		</div>
 		<div class="lf-ai-inline-link__panel" data-lf-ai-inline-link-panel hidden role="dialog" aria-modal="true" aria-labelledby="lf-ai-inline-link-title">
 			<div class="lf-ai-inline-link__panel-head">
 				<strong id="lf-ai-inline-link-title"><?php esc_html_e('Link to a page', 'leadsforward-core'); ?></strong>
@@ -1397,6 +1427,25 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-inline-link__fmt--swatch { min-width:22px; width:22px; height:22px; padding:0; border-radius:6px; border:2px solid rgba(255,255,255,.5); }
 		.lf-ai-inline-link__fmt--icon { padding:5px; min-width:30px; min-height:30px; display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; }
 		.lf-ai-inline-link__fmt--icon svg { display:block; flex-shrink:0; }
+		.lf-ai-inline-link__fmt--ai { background:rgba(131,72,249,.35); border-color:rgba(255,255,255,.45); }
+		.lf-ai-inline-link__fmt--ai:hover { background:rgba(131,72,249,.55); }
+		.lf-ai-inline-rewrite { position:fixed; z-index:100005; pointer-events:auto; }
+		.lf-ai-inline-rewrite[hidden] { display:none !important; }
+		.lf-ai-inline-rewrite__card { width:min(340px,calc(100vw - 24px)); background:#fff; border:1px solid #dbe3ef; border-radius:12px; box-shadow:0 14px 40px rgba(15,23,42,.22); padding:12px; display:flex; flex-direction:column; gap:10px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
+		.lf-ai-inline-rewrite__head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+		.lf-ai-inline-rewrite__head strong { font-size:13px; color:#0f172a; }
+		.lf-ai-inline-rewrite__kw { font-size:10px; font-weight:700; padding:2px 8px; border-radius:999px; background:#ede9fe; color:#5b21b6; }
+		.lf-ai-inline-rewrite__kw[hidden] { display:none !important; }
+		.lf-ai-inline-rewrite__close { margin-left:auto; border:1px solid #e2e8f0; background:#fff; width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:16px; line-height:1; color:#475569; }
+		.lf-ai-inline-rewrite__hint { margin:0; font-size:11px; color:#64748b; line-height:1.4; }
+		.lf-ai-inline-rewrite__actions { display:flex; flex-wrap:wrap; gap:6px; }
+		.lf-ai-inline-rewrite__mode { border:1px solid #d6c8fb; background:#faf5ff; color:#6d28d9; border-radius:8px; padding:6px 10px; font-size:11px; font-weight:700; cursor:pointer; }
+		.lf-ai-inline-rewrite__mode:hover { background:#f3e8ff; }
+		.lf-ai-inline-rewrite__mode.is-loading { opacity:.6; pointer-events:none; }
+		.lf-ai-inline-rewrite__label { display:flex; flex-direction:column; gap:4px; font-size:11px; font-weight:600; color:#475569; }
+		.lf-ai-inline-rewrite__input { border:1px solid #d6c8fb; border-radius:8px; padding:8px 10px; font-size:12px; width:100%; box-sizing:border-box; }
+		.lf-ai-inline-rewrite__apply { align-self:stretch; border:0; border-radius:8px; padding:8px 12px; font-weight:700; font-size:12px; cursor:pointer; background:linear-gradient(180deg,#7c3aed 0%,#6d28d9 100%); color:#fff; }
+		.lf-ai-inline-rewrite__apply[hidden] { display:none !important; }
 		.lf-ai-inline-link__open { border:0; border-radius:8px; background:#8348f9; color:#fff; font:inherit; font-weight:700; padding:6px 10px; cursor:pointer; }
 		.lf-ai-inline-link__open:hover { background:#6d28d9; }
 		.lf-ai-inline-link__toolbar-close { border:1px solid rgba(255,255,255,.35); border-radius:8px; background:rgba(255,255,255,.08); color:#fff; font:inherit; font-weight:700; padding:4px 8px; cursor:pointer; line-height:1; min-width:28px; }
@@ -1425,7 +1474,7 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-inline-link__apply:hover { background:linear-gradient(180deg,#6d28d9 0%,#5b21b6 100%); }
 		.lf-ai-inline-link__empty { font-size:12px; color:#64748b; margin:0; padding:6px; }
 		.lf-ai-inline-link { pointer-events:none; }
-		.lf-ai-inline-link__toolbar, .lf-ai-inline-link__panel, .lf-ai-inline-link__backdrop { pointer-events:auto; }
+		.lf-ai-inline-link__toolbar, .lf-ai-inline-link__panel, .lf-ai-inline-link__backdrop, .lf-ai-inline-rewrite { pointer-events:auto; }
 	';
 }
 
@@ -2223,11 +2272,18 @@ function lf_ai_assistant_widget_js(): string {
 		var lfInlineToolbarPinnedHost = null;
 		var lfProseIconSavedRange = null;
 		var lfProseIconSavedHost = null;
+		var lfInlineRewriteBusy = false;
+		function lfHideInlineRewritePanel() {
+			if (!$linkRoot.length) return;
+			$linkRoot.find("[data-lf-ai-inline-rewrite-panel]").prop("hidden", true);
+			$linkRoot.find("[data-lf-ai-inline-rewrite-apply]").prop("hidden", true);
+		}
 		function lfHideInlineLinkToolbar() {
 			if ($linkRoot.length) {
 				$linkRoot.find("[data-lf-ai-inline-link-toolbar]").prop("hidden", true);
 				$linkRoot.find("[data-lf-ai-heading-tools]").prop("hidden", true);
 				$linkRoot.find("[data-lf-ai-list-tools]").prop("hidden", true);
+				lfHideInlineRewritePanel();
 			}
 		}
 		function lfHideInlineLinkPanel() {
@@ -2245,6 +2301,7 @@ function lf_ai_assistant_widget_js(): string {
 				hit.closest(".lf-ai-inline-link__panel") ||
 				hit.closest(".lf-ai-inline-link__toolbar") ||
 				hit.closest(".lf-ai-inline-link__backdrop") ||
+				hit.closest(".lf-ai-inline-rewrite") ||
 				hit.closest(".lf-ai-icon-picker")
 			);
 		}
@@ -2493,6 +2550,120 @@ function lf_ai_assistant_widget_js(): string {
 			var left = rect.left;
 			$tb.css({ position: "fixed", top: top + "px", left: Math.max(8, left) + "px" });
 			$tb.prop("hidden", false);
+			var $rw = $linkRoot.find("[data-lf-ai-inline-rewrite-panel]");
+			if ($rw.length && !$rw.prop("hidden")) {
+				$rw.css({ position: "fixed", top: (top + $tb.outerHeight() + 6) + "px", left: Math.max(8, left) + "px" });
+			}
+		}
+		function lfInlineRewriteContextFromHost(host) {
+			if (!host) return null;
+			var wrap = host.closest ? host.closest("[data-lf-section-wrap=\"1\"][data-lf-section-id]") : null;
+			var ctx = wrap ? persistContextFromWrap(wrap) : { context_type: activeContextType, context_id: activeContextId };
+			var fieldKey = String(host.getAttribute("data-lf-inline-field-key") || "");
+			var isHtmlField = fieldKey === "rich_content_body" || fieldKey === "service_details_body";
+			var sourceSel = String(host.getAttribute("data-lf-inline-source-selector") || "");
+			var valueNode = host;
+			if (fieldKey === "service_details_body" && sourceSel) {
+				try {
+					var sn = document.querySelector(sourceSel);
+					if (sn) valueNode = sn;
+				} catch (eSrc) {}
+			}
+			var useHtml = isHtmlField || /<[a-z]/i.test(String(valueNode.innerHTML || ""));
+			var currentText = useHtml ? String(valueNode.innerHTML || "").trim() : String(valueNode.textContent || "").trim();
+			return {
+				host: host,
+				valueNode: valueNode,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
+				selector: String(host.getAttribute("data-lf-inline-selector") || ""),
+				field_key: fieldKey,
+				section_id: wrap ? String(wrap.getAttribute("data-lf-section-id") || "") : String(host.getAttribute("data-lf-inline-section-id") || ""),
+				section_type: wrap ? String(wrap.getAttribute("data-lf-section-type") || "") : "",
+				service_post_id: String(host.getAttribute("data-lf-service-post-id") || ""),
+				current_text: currentText,
+				value_format: useHtml ? "html" : "text"
+			};
+		}
+		function lfApplyInlineRewriteText(ctx, rewritten, valueFormat) {
+			if (!ctx || !ctx.valueNode) return;
+			var fmt = String(valueFormat || ctx.value_format || "text");
+			if (fmt === "html") {
+				ctx.valueNode.innerHTML = String(rewritten || "");
+			} else {
+				ctx.valueNode.textContent = String(rewritten || "");
+			}
+			try { if (ctx.host && ctx.host.focus) ctx.host.focus(); } catch (eF) {}
+		}
+		function lfShowInlineRewritePanel() {
+			lfHideInlineLinkPanel();
+			var host = lfAnyInlineLinkHostEl();
+			if (!host) {
+				setStatus("Click into text to edit, then use AI rewrite.", true);
+				return;
+			}
+			var scope = (lfAiFloating && lfAiFloating.page_scope) ? lfAiFloating.page_scope : {};
+			var pk = String(scope.primary_keyword || "").trim();
+			var $kw = $linkRoot.find("[data-lf-ai-inline-rewrite-kw]");
+			if (pk) {
+				$kw.text("Keyword: " + pk).prop("hidden", false);
+			} else {
+				$kw.prop("hidden", true).text("");
+			}
+			$linkRoot.find("[data-lf-ai-inline-rewrite-panel]").prop("hidden", false);
+			var $tb = $linkRoot.find("[data-lf-ai-inline-link-toolbar]");
+			if ($tb.length && !$tb.prop("hidden")) {
+				var rect = $tb[0].getBoundingClientRect();
+				$linkRoot.find("[data-lf-ai-inline-rewrite-panel]").css({
+					position: "fixed",
+					top: (rect.bottom + 6) + "px",
+					left: Math.max(8, rect.left) + "px"
+				});
+			}
+			try {
+				$linkRoot.find("[data-lf-ai-inline-rewrite-instruction]").val("").trigger("focus");
+			} catch (eIns) {}
+		}
+		function lfRunInlineRewrite(mode) {
+			if (lfInlineRewriteBusy) return;
+			var host = lfAnyInlineLinkHostEl();
+			var ctx = lfInlineRewriteContextFromHost(host);
+			if (!ctx || !ctx.current_text) {
+				setStatus("Nothing to rewrite in this field.", true);
+				return;
+			}
+			var instruction = String($linkRoot.find("[data-lf-ai-inline-rewrite-instruction]").val() || "").trim();
+			lfInlineRewriteBusy = true;
+			$linkRoot.find("[data-lf-ai-inline-rewrite-mode]").addClass("is-loading");
+			setStatus("AI is rewriting…", false);
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_inline_rewrite",
+				nonce: lfAiFloating.nonce,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
+				selector: ctx.selector,
+				field_key: ctx.field_key,
+				section_id: ctx.section_id,
+				section_type: ctx.section_type,
+				service_post_id: ctx.service_post_id,
+				current_text: ctx.current_text,
+				rewrite_mode: String(mode || "regenerate"),
+				instruction: instruction
+			}).done(function(res){
+				if (res && res.success && res.data && res.data.rewritten_text) {
+					lfApplyInlineRewriteText(ctx, String(res.data.rewritten_text || ""), String(res.data.value_format || ctx.value_format || "text"));
+					setStatus("AI rewrite applied. Click away to save.", false);
+					lfHideInlineRewritePanel();
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Rewrite failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Rewrite failed.";
+				setStatus(msg, true);
+			}).always(function(){
+				lfInlineRewriteBusy = false;
+				$linkRoot.find("[data-lf-ai-inline-rewrite-mode]").removeClass("is-loading");
+			});
 		}
 		function lfFetchInternalLinkTargets(done) {
 			if (lfInlineLinkCache) {
@@ -2886,8 +3057,21 @@ function lf_ai_assistant_widget_js(): string {
 					try { document.execCommand(cmd, false, null); } catch (errD) {}
 				}
 			});
-			$linkRoot.on("mousedown", "[data-lf-ai-inline-link-apply], [data-lf-ai-inline-link-pick], [data-lf-ai-inline-link-close], [data-lf-ai-inline-link-unlink], [data-lf-ai-inline-toolbar-close]", function(e){
+			$linkRoot.on("mousedown", "[data-lf-ai-inline-link-apply], [data-lf-ai-inline-link-pick], [data-lf-ai-inline-link-close], [data-lf-ai-inline-link-unlink], [data-lf-ai-inline-toolbar-close], [data-lf-ai-inline-rewrite-open], [data-lf-ai-inline-rewrite-close], [data-lf-ai-inline-rewrite-mode]", function(e){
 				e.preventDefault();
+			});
+			$linkRoot.find("[data-lf-ai-inline-rewrite-open]").on("click", function(e){
+				e.preventDefault();
+				lfShowInlineRewritePanel();
+			});
+			$linkRoot.find("[data-lf-ai-inline-rewrite-close]").on("click", function(e){
+				e.preventDefault();
+				lfHideInlineRewritePanel();
+			});
+			$linkRoot.on("click", "[data-lf-ai-inline-rewrite-mode]", function(e){
+				e.preventDefault();
+				var mode = String($(this).attr("data-lf-ai-inline-rewrite-mode") || "regenerate");
+				lfRunInlineRewrite(mode);
 			});
 			$linkRoot.find("[data-lf-ai-inline-link-open]").on("click", function(e){
 				e.preventDefault();
