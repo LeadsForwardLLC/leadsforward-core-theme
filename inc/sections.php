@@ -1750,10 +1750,16 @@ function lf_resolve_cta(array $context = [], array $section_instance = [], array
 
 	if (is_array($section) && !empty($section)) {
 		if (!empty($section['cta_primary_override'])) {
-			$resolved['primary_text'] = $section['cta_primary_override'];
+			$override = (string) $section['cta_primary_override'];
+			$resolved['primary_text'] = function_exists('lf_site_builder_public_text')
+				? lf_site_builder_public_text($override, (string) $resolved['primary_text'])
+				: $override;
 		}
 		if (!empty($section['cta_secondary_override'])) {
-			$resolved['secondary_text'] = $section['cta_secondary_override'];
+			$override = (string) $section['cta_secondary_override'];
+			$resolved['secondary_text'] = function_exists('lf_site_builder_public_text')
+				? lf_site_builder_public_text($override, (string) $resolved['secondary_text'])
+				: $override;
 		}
 		if (!empty($section['cta_ghl_override'])) {
 			$resolved['ghl_embed'] = $section['cta_ghl_override'];
@@ -1778,9 +1784,20 @@ function lf_resolve_cta(array $context = [], array $section_instance = [], array
 
 	$resolved = lf_sections_resolve_secondary_cta_browse_intent($resolved);
 
+	$sanitize_label = static function ($text, string $fallback): string {
+		if (function_exists('lf_site_builder_public_text')) {
+			return lf_site_builder_public_text((string) $text, $fallback);
+		}
+		$text = trim(wp_strip_all_tags((string) $text));
+		if ($text === '' || strpos($text, '[Writer]') === 0) {
+			return $fallback;
+		}
+		return $text;
+	};
+
 	return [
-		'primary_text'     => is_string($resolved['primary_text']) ? $resolved['primary_text'] : '',
-		'secondary_text'   => is_string($resolved['secondary_text']) ? $resolved['secondary_text'] : '',
+		'primary_text'     => $sanitize_label($resolved['primary_text'], $defaults['primary_text']),
+		'secondary_text'   => $sanitize_label($resolved['secondary_text'], $defaults['secondary_text']),
 		'ghl_embed'        => is_string($resolved['ghl_embed']) ? $resolved['ghl_embed'] : '',
 		'primary_type'     => in_array($resolved['primary_type'], ['call', 'form', 'text'], true) ? $resolved['primary_type'] : 'text',
 		'primary_action'   => in_array($resolved['primary_action'], ['link', 'quote', 'call'], true) ? $resolved['primary_action'] : 'quote',
