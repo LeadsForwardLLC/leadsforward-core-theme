@@ -2693,6 +2693,23 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			lfShowInlineRewritePanel();
 		}
+		function lfAiAjaxErrorMessage(res, xhr, fallback) {
+			if (res && res.data) {
+				if (typeof res.data === "string" && res.data) return res.data;
+				if (res.data.message) return String(res.data.message);
+			}
+			if (xhr) {
+				if (xhr.responseJSON && xhr.responseJSON.data) {
+					if (typeof xhr.responseJSON.data === "string") return xhr.responseJSON.data;
+					if (xhr.responseJSON.data.message) return String(xhr.responseJSON.data.message);
+				}
+				if (xhr.status === 403 || xhr.status === 401) return "Session expired — refresh the page and try again.";
+				if (xhr.status >= 500) return "Server error during rewrite. Check OpenAI settings or error logs.";
+				var raw = String(xhr.responseText || "").trim();
+				if (raw === "0" || raw === "-1") return "Session expired — refresh the page and try again.";
+			}
+			return fallback;
+		}
 		function lfRunInlineRewrite(mode) {
 			if (lfInlineRewriteBusy) return;
 			var host = lfInlineRewritePinnedHost || inlineActiveEl || lfManagedContentEditableHost();
@@ -2733,14 +2750,14 @@ function lf_ai_assistant_widget_js(): string {
 					setStatus("AI rewrite applied. Click away to save.", false);
 					lfHideInlineRewritePanel();
 				} else {
-					var errMsg = (res && res.data && res.data.message) ? res.data.message : "Rewrite failed.";
+					var errMsg = lfAiAjaxErrorMessage(res, null, "Rewrite failed.");
 					setStatus(errMsg, true);
 					if ($hint.length) {
 						$hint.text(errMsg);
 					}
 				}
 			}).fail(function(xhr){
-				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Rewrite failed.";
+				var msg = lfAiAjaxErrorMessage(null, xhr, "Rewrite failed.");
 				setStatus(msg, true);
 				if ($hint.length) {
 					$hint.text(msg);
