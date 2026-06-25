@@ -56,6 +56,9 @@ function lf_header_menu_fixup_dropdown_tree(array $items, $args): array {
 	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || $items === []) {
 		return $items;
 	}
+	if (function_exists('lf_header_menu_cpt_nav_dropdowns_enabled') && !lf_header_menu_cpt_nav_dropdowns_enabled()) {
+		return $items;
+	}
 
 	$id_set = lf_header_menu_item_id_set($items);
 	$services_pid = lf_header_menu_services_parent_id($items);
