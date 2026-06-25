@@ -74,6 +74,20 @@ function lf_header_menu_fixup_dropdown_tree(array $items, $args): array {
 		}
 		$object = (string) ($item->object ?? '');
 		if ($object === 'lf_service' && $services_pid > 0) {
+			$parent = (int) ($item->menu_item_parent ?? 0);
+			if ($parent !== $services_pid && $parent !== 0) {
+				foreach ($items as $maybe_parent) {
+					if (!$maybe_parent instanceof \WP_Post) {
+						continue;
+					}
+					if ((int) ($maybe_parent->ID ?? 0) !== $parent) {
+						continue;
+					}
+					if (lf_header_menu_item_has_class($maybe_parent, 'lf-menu-service-category')) {
+						continue 2;
+					}
+				}
+			}
 			$item->menu_item_parent = $services_pid;
 			continue;
 		}
