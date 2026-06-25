@@ -528,7 +528,7 @@ function lf_header_menu_objects_apply_nav_rules(array $items, $args): array {
 		if ($more_parent_id > 0) {
 			$items = array_values(array_filter(
 				$items,
-				static fn (\WP_Post $item): bool => (int) ($item->ID ?? 0) !== $more_parent_id
+				static fn ($item): bool => $item instanceof \WP_Post && (int) ($item->ID ?? 0) !== $more_parent_id
 			));
 		}
 		return $items;
@@ -605,10 +605,15 @@ function lf_header_menu_consolidate_secondary_into_more(int $menu_id): void {
 			$page = lf_header_menu_resolve_menu_item_page($item);
 			if ($page instanceof \WP_Post && (int) $page->ID === (int) $about_page->ID) {
 				$about_item_id = (int) $item->ID;
-				$args = lf_nav_menu_item_build_update_args($item);
-				$args['menu-item-title'] = lf_header_menu_about_nav_label();
-				$args['menu-item-parent-id'] = 0;
-				wp_update_nav_menu_item($menu_id, $about_item_id, $args);
+				$about_label = lf_header_menu_about_nav_label();
+				$needs_about_update = (int) ($item->menu_item_parent ?? 0) !== 0
+					|| trim(wp_strip_all_tags((string) ($item->title ?? ''))) !== $about_label;
+				if ($needs_about_update) {
+					$args = lf_nav_menu_item_build_update_args($item);
+					$args['menu-item-title'] = $about_label;
+					$args['menu-item-parent-id'] = 0;
+					wp_update_nav_menu_item($menu_id, $about_item_id, $args);
+				}
 				break;
 			}
 		}
@@ -825,20 +830,29 @@ function lf_header_menu_maybe_persist_more_consolidation(): void {
 		if (!$item instanceof \WP_Post) {
 			continue;
 		}
-		if ((int) ($item->menu_item_parent ?? 0) !== 0) {
-			continue;
-		}
-		if (lf_header_menu_item_belongs_in_more($item)) {
+		if ((int) ($item->menu_item_parent ?? 0) === 0 && lf_header_menu_item_belongs_in_more($item)) {
 			$needs_repair = true;
 			break;
 		}
-		if (lf_header_menu_item_is_about($item)) {
+		if (lf_header_menu_item_is_about($item) && (int) ($item->menu_item_parent ?? 0) !== 0) {
 			$needs_repair = true;
 			break;
 		}
 	}
 
-	if ($needs_repair || $more_parent_id > 0) {
+	if ($more_parent_id > 0) {
+		$more_children = 0;
+		foreach ($items as $item) {
+			if ($item instanceof \WP_Post && (int) ($item->menu_item_parent ?? 0) === $more_parent_id) {
+				++$more_children;
+			}
+		}
+		if ($more_children === 0) {
+			$needs_repair = true;
+		}
+	}
+
+	if ($needs_repair) {
 		lf_header_menu_consolidate_secondary_into_more($menu_id);
 	}
 }
