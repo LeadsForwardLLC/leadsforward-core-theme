@@ -212,7 +212,7 @@ if ($show_topbar) {
 				});
 			});
 		}
-		var submenuItems = header.querySelectorAll('.site-header__menu > .menu-item-has-children, .site-header__menu > .lf-menu-more');
+		var submenuItems = header.querySelectorAll('.site-header__menu > .menu-item-has-children, .site-header__menu > .lf-menu-more, .site-header__menu > .lf-menu-group-parent');
 		if (submenuItems.length) {
 			submenuItems.forEach(function (item) {
 				var link = item.querySelector(':scope > a');
@@ -231,6 +231,7 @@ if ($show_topbar) {
 				submenuToggles.push({ item: item, toggle: toggleBtn });
 				var handleToggle = function (event) {
 					event.preventDefault();
+					event.stopPropagation();
 					var wasOpen = item.classList.contains('is-open');
 					closeSubmenus();
 					var open = !wasOpen;
@@ -252,12 +253,21 @@ if ($show_topbar) {
 				if (moreToggle && moreToggle !== toggleBtn) {
 					moreToggle.addEventListener('click', handleToggle);
 				}
+				var groupLabel = item.querySelector(':scope > .site-header__group-label');
+				if (groupLabel) {
+					groupLabel.addEventListener('click', handleToggle);
+				}
 			});
 		}
 		document.addEventListener('click', function (event) {
 			if (!event.target || !header.contains(event.target)) {
 				closeSubmenus();
 				setOpen(false);
+				return;
+			}
+			var toggleHit = event.target.closest('.site-header__submenu-toggle, .site-header__more-toggle, .site-header__group-label');
+			if (toggleHit && header.contains(toggleHit)) {
+				return;
 			}
 		});
 		document.addEventListener('keydown', function (event) {

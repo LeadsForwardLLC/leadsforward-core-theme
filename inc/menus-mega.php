@@ -1,6 +1,6 @@
 <?php
 /**
- * Services mega menu: search, thumbnails, flat grid (Services only — not Service Areas).
+ * Services mega menu only (Service Areas keeps the standard dropdown).
  *
  * @package LeadsForward_Core
  */
@@ -10,9 +10,6 @@ declare(strict_types=1);
 if (!defined('ABSPATH')) {
 	exit;
 }
-
-/** @var string */
-$GLOBALS['lf_mega_submenu_context'] = '';
 
 /**
  * Whether the Services mega menu is enabled.
@@ -32,47 +29,7 @@ function lf_mega_menu_is_header_context($args, array $items = []): bool {
 }
 
 /**
- * Canonical Services group parent menu item ID.
- */
-function lf_mega_menu_services_parent_id(array $items): int {
-	return lf_header_menu_services_parent_id($items);
-}
-
-/**
- * Reparent orphaned lf_service rows onto the canonical Services parent.
- *
- * @param array<int, \WP_Post> $items
- * @return array<int, \WP_Post>
- */
-function lf_mega_menu_normalize_service_children_parents(array $items, $args): array {
-	if (!lf_mega_menu_is_header_context($args, $items)) {
-		return $items;
-	}
-
-	$parent_id = lf_mega_menu_services_parent_id($items);
-	if ($parent_id <= 0) {
-		return $items;
-	}
-
-	foreach ($items as $menu_item) {
-		if (!$menu_item instanceof \WP_Post) {
-			continue;
-		}
-		if ((string) ($menu_item->object ?? '') !== 'lf_service') {
-			continue;
-		}
-		if ((int) ($menu_item->menu_item_parent ?? 0) === $parent_id) {
-			continue;
-		}
-		$menu_item->menu_item_parent = $parent_id;
-	}
-
-	return $items;
-}
-add_filter('wp_nav_menu_objects', 'lf_mega_menu_normalize_service_children_parents', 8, 2);
-
-/**
- * Flatten service category nesting so mega menu shows one searchable grid.
+ * Flatten service category nesting into one searchable Services grid.
  *
  * @param array<int, \WP_Post> $items
  * @return array<int, \WP_Post>
@@ -82,7 +39,7 @@ function lf_mega_menu_flatten_service_categories(array $items, $args): array {
 		return $items;
 	}
 
-	$services_parent_id = lf_mega_menu_services_parent_id($items);
+	$services_parent_id = lf_header_menu_services_parent_id($items);
 	if ($services_parent_id <= 0) {
 		return $items;
 	}
@@ -99,10 +56,9 @@ function lf_mega_menu_flatten_service_categories(array $items, $args): array {
 			continue;
 		}
 		$cat_id = (int) ($menu_item->ID ?? 0);
-		if ($cat_id === 0) {
-			continue;
+		if ($cat_id !== 0) {
+			$category_ids[$cat_id] = true;
 		}
-		$category_ids[$cat_id] = true;
 	}
 
 	if ($category_ids === []) {
@@ -125,8 +81,7 @@ function lf_mega_menu_flatten_service_categories(array $items, $args): array {
 		if (!$menu_item instanceof \WP_Post) {
 			continue;
 		}
-		$id = (int) ($menu_item->ID ?? 0);
-		if (isset($category_ids[$id])) {
+		if (isset($category_ids[(int) ($menu_item->ID ?? 0)])) {
 			continue;
 		}
 		$filtered[] = $menu_item;
@@ -134,46 +89,61 @@ function lf_mega_menu_flatten_service_categories(array $items, $args): array {
 
 	return $filtered;
 }
-add_filter('wp_nav_menu_objects', 'lf_mega_menu_flatten_service_categories', 12, 2);
+add_filter('wp_nav_menu_objects', 'lf_mega_menu_flatten_service_categories', 14, 2);
 
 /**
- * Mark service CPT links for thumbnail tile rendering.
+ * Prepend Services mega search row + mark service tiles (after all tree fixups).
  *
  * @param array<int, \WP_Post> $items
  * @return array<int, \WP_Post>
  */
-function lf_mega_menu_mark_service_tiles(array $items, $args): array {
+function lf_mega_menu_prepare_services_panel(array $items, $args): array {
 	if (!lf_mega_menu_is_header_context($args, $items)) {
 		return $items;
 	}
 
-	$parent_id = lf_mega_menu_services_parent_id($items);
-	if ($parent_id <= 0) {
+	$services_parent_id = lf_header_menu_services_parent_id($items);
+	if ($services_parent_id <= 0) {
 		return $items;
 	}
 
+	$has_search = false;
 	foreach ($items as $menu_item) {
 		if (!$menu_item instanceof \WP_Post) {
 			continue;
 		}
-		if ((int) ($menu_item->menu_item_parent ?? 0) !== $parent_id) {
+		if ((int) ($menu_item->menu_item_parent ?? 0) !== $services_parent_id) {
 			continue;
 		}
-		if ((string) ($menu_item->object ?? '') !== 'lf_service') {
-			continue;
+		if (lf_header_menu_item_has_class($menu_item, 'lf-mega-search-host')) {
+			$has_search = true;
 		}
-		$menu_item->classes = array_values(array_unique(array_merge(
-			is_array($menu_item->classes ?? null) ? $menu_item->classes : [],
-			['lf-mega-tile', 'menu-item']
-		)));
+		if ((string) ($menu_item->object ?? '') === 'lf_service') {
+			$menu_item->classes = array_values(array_unique(array_merge(
+				is_array($menu_item->classes ?? null) ? $menu_item->classes : [],
+				['lf-mega-tile', 'menu-item']
+			)));
+		}
+	}
+
+	if (!$has_search) {
+		$search_item = lf_header_menu_synthetic_child(
+			$services_parent_id,
+			-4001,
+			__('Search services…', 'leadsforward-core'),
+			'#',
+			['menu-item', 'lf-mega-search-host', 'lf-mega-search-host--services']
+		);
+		$search_item->menu_order = 0;
+		$items[] = $search_item;
 	}
 
 	return $items;
 }
-add_filter('wp_nav_menu_objects', 'lf_mega_menu_mark_service_tiles', 13, 2);
+add_filter('wp_nav_menu_objects', 'lf_mega_menu_prepare_services_panel', 20, 2);
 
 /**
- * Add mega-menu class to Services parent only (not Service Areas).
+ * Services parent mega-menu class (never Service Areas).
  *
  * @param array<int, string> $classes
  * @return array<int, string>
@@ -191,50 +161,7 @@ function lf_mega_menu_parent_css_classes(array $classes, \WP_Post $item, $args, 
 add_filter('nav_menu_css_class', 'lf_mega_menu_parent_css_classes', 12, 4);
 
 /**
- * Remember when we are rendering the Services submenu.
- */
-function lf_mega_menu_track_submenu_context(string $item_output, \WP_Post $item, int $depth, $args): string {
-	if (!lf_mega_menu_enabled() || !is_object($args) || ($args->theme_location ?? '') !== 'header_menu') {
-		return $item_output;
-	}
-	if ($depth === 0 && lf_header_menu_item_has_class($item, 'lf-menu-services-parent')) {
-		$GLOBALS['lf_mega_submenu_context'] = 'services';
-	} elseif ($depth === 0) {
-		$GLOBALS['lf_mega_submenu_context'] = '';
-	}
-	return $item_output;
-}
-add_filter('walker_nav_menu_start_el', 'lf_mega_menu_track_submenu_context', 9, 4);
-
-/**
- * Inject search field at the top of the Services submenu (no synthetic nav item).
- */
-function lf_mega_menu_inject_search_row(string $output, $args, int $depth): string {
-	if (!lf_mega_menu_enabled() || !is_object($args) || ($args->theme_location ?? '') !== 'header_menu') {
-		return $output;
-	}
-	if ($depth !== 0 || ($GLOBALS['lf_mega_submenu_context'] ?? '') !== 'services') {
-		return $output;
-	}
-
-	$placeholder = esc_attr__('Search services…', 'leadsforward-core');
-	$search = '<li class="menu-item lf-mega-search-host lf-mega-search-host--services" role="presentation">'
-		. '<div class="lf-mega-search-wrap" role="search">'
-		. '<input type="search" class="lf-mega-search__input" '
-		. 'placeholder="' . $placeholder . '" '
-		. 'data-lf-mega-search="services" '
-		. 'aria-label="' . $placeholder . '" autocomplete="off" />'
-		. '</div>'
-		. '</li>';
-
-	$GLOBALS['lf_mega_submenu_context'] = '';
-
-	return $output . $search;
-}
-add_filter('walker_nav_menu_start_lvl', 'lf_mega_menu_inject_search_row', 10, 3);
-
-/**
- * Thumbnail tiles for service links in the Services mega menu.
+ * Mega search host + thumbnail tiles.
  */
 function lf_mega_menu_item_output(string $item_output, \WP_Post $item, int $depth, $args): string {
 	if (!lf_mega_menu_enabled() || !is_object($args) || ($args->theme_location ?? '') !== 'header_menu') {
@@ -242,6 +169,19 @@ function lf_mega_menu_item_output(string $item_output, \WP_Post $item, int $dept
 	}
 
 	$classes = is_array($item->classes ?? null) ? $item->classes : [];
+
+	if (in_array('lf-mega-search-host', $classes, true)) {
+		$placeholder = esc_attr(wp_strip_all_tags((string) ($item->title ?? '')));
+		return $args->before
+			. '<div class="lf-mega-search-wrap" role="search">'
+			. '<input type="search" class="lf-mega-search__input" '
+			. 'placeholder="' . $placeholder . '" '
+			. 'data-lf-mega-search="services" '
+			. 'aria-label="' . $placeholder . '" autocomplete="off" />'
+			. '</div>'
+			. $args->after;
+	}
+
 	if ($depth < 1 || !in_array('lf-mega-tile', $classes, true)) {
 		return $item_output;
 	}

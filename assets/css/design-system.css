@@ -2849,6 +2849,9 @@ article a:not(.lf-btn):hover {
 		display: inline-flex;
 		vertical-align: middle;
 	}
+	.site-header__menu > .menu-item.lf-menu-group-parent > .site-header__group-label {
+		cursor: pointer;
+	}
 	.site-header__menu > .menu-item.lf-menu-group-parent > .site-header__submenu-toggle {
 		align-items: center;
 		justify-content: center;
@@ -2934,6 +2937,15 @@ article a:not(.lf-btn):hover {
 }
 
 .site-header__menu .menu-item-has-children:hover > .sub-menu {
+	opacity: 1;
+	pointer-events: auto;
+	transform: translateY(0);
+}
+
+.site-header__menu > .lf-menu-group-parent:hover > .sub-menu,
+.site-header__menu > .lf-mega-menu--services:hover > .sub-menu,
+.site-header__menu > .lf-menu-group-parent:focus-within > .sub-menu,
+.site-header__menu > .lf-mega-menu--services:focus-within > .sub-menu {
 	opacity: 1;
 	pointer-events: auto;
 	transform: translateY(0);

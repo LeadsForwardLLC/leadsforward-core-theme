@@ -35,6 +35,7 @@ function lf_load_inc(string $path): void {
 lf_load_inc('setup.php');
 lf_load_inc('menus-service-categories.php');
 lf_load_inc('header-menu-more.php');
+lf_load_inc('header-menu-fixup.php');
 lf_load_inc('menus-mega.php');
 
 // WordPress cleanup: emojis, oEmbed, dashicons, bloat.
