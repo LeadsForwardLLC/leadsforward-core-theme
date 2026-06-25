@@ -4484,9 +4484,20 @@ function lf_ai_ajax_set_service_thumbnail(): void {
 	} else {
 		delete_post_thumbnail($post_id);
 	}
+	$context_type = isset($_POST['context_type']) ? sanitize_key((string) wp_unslash($_POST['context_type'])) : '';
+	$context_id_raw = isset($_POST['context_id']) ? (string) wp_unslash($_POST['context_id']) : '';
+	if ($context_type !== '' && $context_id_raw !== '' && function_exists('lf_ai_clear_service_intro_image_overrides_for_service')) {
+		$context_id_use = lf_ai_ajax_normalize_context_id($context_id_raw);
+		lf_ai_clear_service_intro_image_overrides_for_service($post_id, $context_type, $context_id_use);
+	}
+	if (function_exists('lf_ai_clear_service_intro_image_overrides_all_contexts')) {
+		lf_ai_clear_service_intro_image_overrides_all_contexts($post_id);
+	}
 	$url = get_the_post_thumbnail_url($post_id, 'medium');
 	wp_send_json_success([
-		'message' => __('Service image updated.', 'leadsforward-core'),
+		'message' => $attachment_id > 0
+			? __('Featured image updated for this service.', 'leadsforward-core')
+			: __('Featured image removed for this service.', 'leadsforward-core'),
 		'thumbnail_url' => is_string($url) ? $url : '',
 	]);
 }

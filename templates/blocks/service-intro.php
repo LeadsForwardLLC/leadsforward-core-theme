@@ -162,16 +162,22 @@ if ($desc_overrides_raw !== '') {
 					$card_url = ($post_obj instanceof \WP_Post && function_exists('lf_cpt_card_permalink'))
 						? lf_cpt_card_permalink($post_obj)
 						: ((string) ($status_meta['status'] ?? '') === 'publish' ? (string) get_permalink($sid) : $services_overview_url);
-					$image_id = $show_images ? (int) get_post_thumbnail_id(get_the_ID()) : 0;
+					$featured_id = $show_images ? (int) get_post_thumbnail_id(get_the_ID()) : 0;
+					$image_id = $featured_id;
+					$is_placeholder_thumb = false;
 					if ($show_images && $image_id === 0 && function_exists('lf_get_section_default_image_id')) {
 						$image_id = lf_get_section_default_image_id('service');
+						$is_placeholder_thumb = $image_id > 0;
 					} elseif ($show_images && $image_id === 0 && function_exists('lf_get_placeholder_image_id')) {
 						$image_id = lf_get_placeholder_image_id();
+						$is_placeholder_thumb = $image_id > 0;
 					}
 					$image_html = $image_id ? wp_get_attachment_image($image_id, 'medium', false, [
 						'class' => 'lf-block-service-intro__image',
 						'loading' => 'lazy',
 						'decoding' => 'async',
+						'data-lf-thumb-placeholder' => $is_placeholder_thumb ? '1' : '0',
+						'data-lf-service-featured-thumb' => $featured_id > 0 ? '1' : '0',
 					]) : '';
 				?>
 					<article class="lf-block-service-intro__card lf-card lf-card--interactive" data-lf-service-id="<?php echo esc_attr((string) get_the_ID()); ?>" data-lf-service-status="<?php echo esc_attr((string) ($status_meta['status'] ?? 'publish')); ?>">
