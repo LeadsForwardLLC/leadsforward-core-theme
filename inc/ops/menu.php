@@ -697,12 +697,20 @@ function lf_ops_handle_global_settings_save(): void {
 	}
 	update_option('options_lf_menu_autobuild_include_services', $service_ids);
 	$default_niche = function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair';
+	$prev_niche = (string) get_option('lf_homepage_niche_slug', $default_niche);
 	$niche_slug = isset($_POST['lf_homepage_niche_slug']) ? sanitize_text_field(wp_unslash($_POST['lf_homepage_niche_slug'])) : $default_niche;
 	$allowed_niches = function_exists('lf_builder_supported_niche_slugs') ? lf_builder_supported_niche_slugs() : [$default_niche];
 	if (!in_array($niche_slug, $allowed_niches, true)) {
 		$niche_slug = $default_niche;
 	}
 	update_option('lf_homepage_niche_slug', $niche_slug);
+	if (
+		$prev_niche !== $niche_slug
+		&& function_exists('lf_quote_builder_apply_niche_config')
+		&& !get_option(defined('LF_QUOTE_BUILDER_MANUAL_OPTION') ? LF_QUOTE_BUILDER_MANUAL_OPTION : 'lf_quote_builder_manual_override', false)
+	) {
+		lf_quote_builder_apply_niche_config($niche_slug);
+	}
 	if ($can_sensitive) {
 		$field_defaults = function_exists('lf_ai_studio_airtable_default_field_map') ? lf_ai_studio_airtable_default_field_map() : [];
 		$field_input = isset($_POST['lf_ai_airtable_field_map']) && is_array($_POST['lf_ai_airtable_field_map'])
