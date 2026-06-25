@@ -12,6 +12,35 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * Whether published services look like foundation-repair / waterproofing / crawl-space work.
+ */
+function lf_services_site_has_classifiable_services(int $min_posts = 2): bool {
+	$posts = get_posts([
+		'post_type'              => 'lf_service',
+		'post_status'            => 'publish',
+		'posts_per_page'         => 24,
+		'orderby'                => 'menu_order title',
+		'order'                  => 'ASC',
+		'no_found_rows'          => true,
+		'update_post_meta_cache' => false,
+		'update_post_term_cache' => false,
+	]);
+	if (!is_array($posts) || count($posts) < $min_posts) {
+		return false;
+	}
+	foreach ($posts as $post) {
+		if (!$post instanceof \WP_Post) {
+			continue;
+		}
+		if (lf_foundation_repair_service_menu_category_slug((string) $post->post_title, (string) $post->post_name) !== '') {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
  * Whether the active niche should use categorized Services submenus.
  */
 function lf_services_menu_categories_enabled(): bool {
@@ -19,8 +48,11 @@ function lf_services_menu_categories_enabled(): bool {
 	if ($niche === '' && function_exists('lf_default_niche_slug')) {
 		$niche = (string) lf_default_niche_slug();
 	}
+	$niche = sanitize_title($niche);
+	$enabled = in_array($niche, ['foundation-repair', 'waterproofing'], true)
+		|| lf_services_site_has_classifiable_services(2);
 
-	return (bool) apply_filters('lf_services_menu_use_categories', $niche === 'foundation-repair', $niche);
+	return (bool) apply_filters('lf_services_menu_use_categories', $enabled, $niche);
 }
 
 /**
@@ -138,7 +170,7 @@ function lf_services_group_posts_by_category(array $posts): array {
 	}
 
 	return [
-		'grouped'    => $categories !== [],
+		'grouped'    => count($categories) >= 2,
 		'categories' => $categories,
 	];
 }
@@ -167,9 +199,9 @@ function lf_header_menu_services_parent_id(array $items): int {
  * Minimum service links before auto-grouping kicks in (lower when mega menu is active).
  */
 function lf_services_menu_category_min_services(): int {
-	$min = 4;
+	$min = 3;
 	if (function_exists('lf_mega_menu_enabled') && lf_mega_menu_enabled()) {
-		$min = 3;
+		$min = 2;
 	}
 
 	return (int) apply_filters('lf_services_menu_category_min_count', $min);

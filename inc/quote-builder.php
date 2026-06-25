@@ -211,8 +211,44 @@ function lf_quote_builder_resolve_niche_slug(?string $niche_slug = null): string
 	if ($slug === '' && function_exists('lf_default_niche_slug')) {
 		$slug = (string) lf_default_niche_slug();
 	}
+	$slug = sanitize_title($slug);
+	if ($slug === '' || $slug === 'general') {
+		if (function_exists('lf_services_site_has_classifiable_services') && lf_services_site_has_classifiable_services(2)) {
+			return 'foundation-repair';
+		}
+	}
 
-	return sanitize_title($slug);
+	return $slug !== '' ? $slug : sanitize_title((string) lf_default_niche_slug());
+}
+
+/**
+ * Whether quote-builder service choices are generic placeholders (not real services).
+ *
+ * @param list<string> $options
+ */
+function lf_quote_builder_options_are_stub(array $options): bool {
+	if ($options === []) {
+		return true;
+	}
+	$stubs = [
+		__('Main Service', 'leadsforward-core'),
+		__('Additional Service', 'leadsforward-core'),
+		__('General Service', 'leadsforward-core'),
+		__('Repair', 'leadsforward-core'),
+		__('Installation', 'leadsforward-core'),
+		__('Maintenance', 'leadsforward-core'),
+	];
+	foreach ($options as $option) {
+		$label = trim((string) $option);
+		if ($label === '') {
+			continue;
+		}
+		if (!in_array($label, $stubs, true)) {
+			return false;
+		}
+	}
+
+	return true;
 }
 
 /**
@@ -260,20 +296,26 @@ function lf_quote_builder_published_service_titles(): array {
 
 function lf_quote_builder_service_options(?string $niche_slug = null): array {
 	$niche_slug = lf_quote_builder_resolve_niche_slug($niche_slug);
+	$published = lf_quote_builder_published_service_titles();
+	if (count($published) >= 2) {
+		return apply_filters('lf_quote_builder_service_options', $published, $niche_slug);
+	}
+
 	$niche_options = lf_quote_builder_niche_service_options($niche_slug);
-	if ($niche_options !== []) {
+	if ($niche_options !== [] && !lf_quote_builder_options_are_stub($niche_options)) {
 		return apply_filters('lf_quote_builder_service_options', $niche_options, $niche_slug);
 	}
 
-	$options = lf_quote_builder_published_service_titles();
-	if ($options === []) {
-		$options = [
-			__('General Service', 'leadsforward-core'),
-			__('Repair', 'leadsforward-core'),
-			__('Installation', 'leadsforward-core'),
-			__('Maintenance', 'leadsforward-core'),
-		];
+	if ($published !== []) {
+		return apply_filters('lf_quote_builder_service_options', $published, $niche_slug);
 	}
+
+	$options = [
+		__('General Service', 'leadsforward-core'),
+		__('Repair', 'leadsforward-core'),
+		__('Installation', 'leadsforward-core'),
+		__('Maintenance', 'leadsforward-core'),
+	];
 
 	return apply_filters('lf_quote_builder_service_options', $options, $niche_slug);
 }
@@ -857,6 +899,50 @@ function lf_quote_builder_sync_niche_driven_steps(array $config, array $default)
 	return $config;
 }
 
+/**
+ * Refresh service_type options when stored config still has generic placeholders.
+ */
+function lf_quote_builder_refresh_service_type_options(array $config, array $default): array {
+	$fresh = lf_quote_builder_sync_niche_driven_steps($config, $default);
+	$config_steps = is_array($fresh['steps'] ?? null) ? $fresh['steps'] : [];
+	$default_steps = is_array($default['steps'] ?? null) ? $default['steps'] : [];
+	$default_service_options = [];
+	foreach ($default_steps as $default_step) {
+		if (!is_array($default_step) || (string) ($default_step['id'] ?? '') !== 'service_type') {
+			continue;
+		}
+		foreach ($default_step['fields'] ?? [] as $field) {
+			if (is_array($field) && (string) ($field['key'] ?? '') === 'service_type') {
+				$default_service_options = is_array($field['options'] ?? null) ? $field['options'] : [];
+				break 2;
+			}
+		}
+	}
+	if ($default_service_options === [] || lf_quote_builder_options_are_stub($default_service_options)) {
+		return $fresh;
+	}
+	foreach ($config_steps as $index => $step) {
+		if (!is_array($step) || (string) ($step['id'] ?? '') !== 'service_type') {
+			continue;
+		}
+		$fields = is_array($step['fields'] ?? null) ? $step['fields'] : [];
+		foreach ($fields as $field_index => $field) {
+			if (!is_array($field) || (string) ($field['key'] ?? '') !== 'service_type') {
+				continue;
+			}
+			$stored_options = is_array($field['options'] ?? null) ? $field['options'] : [];
+			if (lf_quote_builder_options_are_stub($stored_options)) {
+				$fields[$field_index]['options'] = $default_service_options;
+				$config_steps[$index]['fields'] = $fields;
+			}
+			break 2;
+		}
+	}
+	$fresh['steps'] = $config_steps;
+
+	return $fresh;
+}
+
 function lf_quote_builder_get_config(): array {
 	$niche_slug = lf_quote_builder_resolve_niche_slug(null);
 	$stored = get_option(LF_QUOTE_BUILDER_OPTION, null);
@@ -866,6 +952,8 @@ function lf_quote_builder_get_config(): array {
 		$out = lf_quote_builder_merge_config($stored, $default);
 		if (!$manual) {
 			$out = lf_quote_builder_sync_niche_driven_steps($out, $default);
+		} else {
+			$out = lf_quote_builder_refresh_service_type_options($out, $default);
 		}
 
 		return $out;
@@ -1125,7 +1213,10 @@ function lf_quote_builder_sanitize_config($input, array $defaults): array {
 	return $out;
 }
 
-function lf_quote_builder_maybe_create_analytics_table(): void {
+function lf_quote_builder_maybe_create_analytics_table(bool $lightweight = false): void {
+	if ($lightweight && get_option('lf_qb_analytics_ready')) {
+		return;
+	}
 	global $wpdb;
 	$table = $wpdb->prefix . LF_QUOTE_BUILDER_ANALYTICS_TABLE;
 	$exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
@@ -1205,7 +1296,7 @@ function lf_quote_builder_record_event(string $event, string $step_id, string $c
 	}
 	$table = $wpdb->prefix . LF_QUOTE_BUILDER_ANALYTICS_TABLE;
 	$date = wp_date('Y-m-d');
-	$wpdb->query(
+	$result = $wpdb->query(
 		$wpdb->prepare(
 			"INSERT INTO $table (event_date, event_type, step_id, context, niche, form_variant, meta_key, meta_value, device, returning, count, total_time)
 			 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %d, 1, %d)
@@ -1224,6 +1315,9 @@ function lf_quote_builder_record_event(string $event, string $step_id, string $c
 			$duration
 		)
 	);
+	if ($result === false && defined('WP_DEBUG') && WP_DEBUG) {
+		error_log('lf_quote_builder_record_event failed: ' . (string) $wpdb->last_error);
+	}
 }
 
 function lf_quote_builder_handle_event(): void {
@@ -1231,7 +1325,7 @@ function lf_quote_builder_handle_event(): void {
 	if (function_exists('lf_security_rate_limit_allow') && !lf_security_rate_limit_allow('quote_builder_event', 90, 300)) {
 		wp_send_json_success(['ok' => true]);
 	}
-	lf_quote_builder_maybe_create_analytics_table();
+	lf_quote_builder_maybe_create_analytics_table(true);
 	$event = isset($_POST['event']) ? sanitize_text_field(wp_unslash((string) $_POST['event'])) : '';
 	$allowed = ['open', 'step_view', 'step_complete', 'abandon', 'complete', 'validation_error'];
 	if (!in_array($event, $allowed, true)) {
@@ -1736,31 +1830,37 @@ function lf_quote_builder_handle_submit(): void {
 		}
 	}
 
-	lf_quote_builder_maybe_create_analytics_table();
+	lf_quote_builder_maybe_create_analytics_table(true);
 	$page_label = lf_quote_builder_page_label_from_clean($clean);
-	lf_quote_builder_record_event(
-		'complete',
-		'form',
-		$clean['page_context'] ?? '',
-		0,
-		(string) get_option('lf_homepage_niche_slug', ''),
-		lf_quote_builder_get_form_variant(),
-		'page',
-		$page_label,
-		$clean['device'] ?? '',
-		isset($clean['returning']) && $clean['returning'] === '1' ? 1 : 0
-	);
-	if ($page_path_label !== '') {
+	try {
 		lf_quote_builder_record_event(
-			'pre_path',
-			'path',
+			'complete',
+			'form',
 			$clean['page_context'] ?? '',
 			0,
 			(string) get_option('lf_homepage_niche_slug', ''),
 			lf_quote_builder_get_form_variant(),
-			'path',
-			$page_path_label
+			'page',
+			$page_label,
+			$clean['device'] ?? '',
+			isset($clean['returning']) && $clean['returning'] === '1' ? 1 : 0
 		);
+		if ($page_path_label !== '') {
+			lf_quote_builder_record_event(
+				'pre_path',
+				'path',
+				$clean['page_context'] ?? '',
+				0,
+				(string) get_option('lf_homepage_niche_slug', ''),
+				lf_quote_builder_get_form_variant(),
+				'path',
+				$page_path_label
+			);
+		}
+	} catch (\Throwable $e) {
+		if (defined('WP_DEBUG') && WP_DEBUG) {
+			error_log('lf_quote_builder analytics: ' . $e->getMessage());
+		}
 	}
 	lf_quote_builder_send_ghl($clean);
 	do_action('lf_quote_builder_submission', $clean);

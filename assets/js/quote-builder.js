@@ -300,7 +300,13 @@
 				credentials: 'same-origin',
 				body: data
 			}).then(function (res) {
-				return res.json();
+				return res.text().then(function (text) {
+					try {
+						return JSON.parse(text);
+					} catch (e) {
+						return { success: false, data: { message: 'Submission failed.' } };
+					}
+				});
 			}).then(function (json) {
 				isSubmitting = false;
 				if (nextBtn) nextBtn.disabled = false;
