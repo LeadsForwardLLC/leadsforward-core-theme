@@ -88,7 +88,7 @@ function lf_mega_menu_prepare_services_panel(array $items, $args): array {
 		if ($is_services_child && lf_header_menu_item_has_class($menu_item, 'lf-menu-service-category')) {
 			$menu_item->classes = array_values(array_unique(array_merge(
 				is_array($menu_item->classes ?? null) ? $menu_item->classes : [],
-				['lf-mega-category', 'menu-item']
+				['lf-mega-cat-tile', 'menu-item']
 			)));
 		}
 		if ($parent === $services_parent_id && lf_header_menu_item_has_class($menu_item, 'lf-mega-search-host')) {
@@ -137,6 +137,40 @@ function lf_mega_menu_parent_css_classes(array $classes, \WP_Post $item, $args, 
 add_filter('nav_menu_css_class', 'lf_mega_menu_parent_css_classes', 12, 4);
 
 /**
+ * Extract smart category slug from a menu item class list.
+ */
+function lf_mega_menu_category_slug_from_item(\WP_Post $item): string {
+	$classes = is_array($item->classes ?? null) ? $item->classes : [];
+	foreach ($classes as $class) {
+		$class = (string) $class;
+		if (str_starts_with($class, 'lf-menu-cat--')) {
+			return sanitize_title(substr($class, strlen('lf-menu-cat--')));
+		}
+	}
+
+	return sanitize_title((string) ($item->lf_category_slug ?? ''));
+}
+
+/**
+ * @return list<\WP_Post>
+ */
+function lf_mega_menu_category_fallback_posts(\WP_Post $item): array {
+	$ids = $item->lf_category_service_ids ?? [];
+	if (!is_array($ids)) {
+		return [];
+	}
+	$posts = [];
+	foreach ($ids as $id) {
+		$post = get_post((int) $id);
+		if ($post instanceof \WP_Post) {
+			$posts[] = $post;
+		}
+	}
+
+	return $posts;
+}
+
+/**
  * Mega search host + thumbnail tiles.
  */
 function lf_mega_menu_item_output(string $item_output, \WP_Post $item, int $depth, $args): string {
@@ -146,11 +180,23 @@ function lf_mega_menu_item_output(string $item_output, \WP_Post $item, int $dept
 
 	$classes = is_array($item->classes ?? null) ? $item->classes : [];
 
-	if (in_array('lf-menu-service-category', $classes, true) && $depth >= 1) {
+	if (in_array('lf-menu-service-category', $classes, true) && in_array('lf-mega-cat-tile', $classes, true) && $depth >= 1) {
 		$title = wp_strip_all_tags((string) apply_filters('nav_menu_item_title', $item->title, $item, $args, $depth));
-		return $args->before
-			. '<span class="lf-mega-category__heading" role="presentation">' . esc_html($title) . '</span>'
-			. $args->after;
+		$slug = lf_mega_menu_category_slug_from_item($item);
+		$thumb_url = function_exists('lf_get_service_category_image_url')
+			? lf_get_service_category_image_url($slug, lf_mega_menu_category_fallback_posts($item))
+			: '';
+		$thumb_html = $thumb_url !== ''
+			? '<span class="lf-mega-cat-tile__thumb" aria-hidden="true"><img src="' . esc_url($thumb_url) . '" alt="" width="40" height="40" loading="lazy" decoding="async" /></span>'
+			: '';
+		$chevron = '<span class="lf-mega-cat-tile__chevron" aria-hidden="true">›</span>';
+
+		return preg_replace(
+			'/(<a\b[^>]*>)(.*?)(<\/a>)/s',
+			'$1' . $thumb_html . '<span class="lf-mega-cat-tile__label">$2</span>' . $chevron . '$3',
+			$item_output,
+			1
+		) ?? $item_output;
 	}
 
 	if (in_array('lf-mega-search-host', $classes, true)) {
@@ -165,7 +211,7 @@ function lf_mega_menu_item_output(string $item_output, \WP_Post $item, int $dept
 			. $args->after;
 	}
 
-	if ($depth < 1 || !in_array('lf-mega-tile', $classes, true)) {
+	if (!in_array('lf-mega-tile', $classes, true)) {
 		return $item_output;
 	}
 

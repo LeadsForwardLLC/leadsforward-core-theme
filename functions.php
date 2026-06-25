@@ -92,6 +92,7 @@ lf_load_inc('sitemap-sync/admin.php');
 
 // Custom post types.
 lf_load_inc('cpt/services.php');
+lf_load_inc('cpt/service-categories.php');
 lf_load_inc('cpt/service-areas.php');
 lf_load_inc('cpt/projects.php');
 lf_load_inc('cpt/testimonials.php');

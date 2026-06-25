@@ -383,18 +383,38 @@ function lf_header_menu_categorize_foundation_services(array $items, $args): arr
 		);
 
 		$cat_parent_id = $synthetic_id--;
+		$cat_post = function_exists('lf_get_service_category_post') ? lf_get_service_category_post($cat_slug) : null;
+		$cat_url = '#';
+		if ($cat_post instanceof \WP_Post) {
+			$services_hub = get_page_by_path('services');
+			if ($services_hub instanceof \WP_Post) {
+				$cat_url = (string) get_permalink($services_hub) . '#' . sanitize_title($cat_slug);
+			}
+		}
 		$cat_item = lf_header_menu_synthetic_child(
 			$services_parent_id,
 			$cat_parent_id,
 			$cat_label,
-			'#',
+			$cat_url,
 			[
 				'menu-item',
 				'lf-menu-service-category',
+				'lf-mega-cat-tile',
 				'menu-item-has-children',
 				'lf-menu-cat--' . sanitize_html_class($cat_slug),
 			]
 		);
+		if ($cat_post instanceof \WP_Post) {
+			$cat_item->object = 'lf_service_category';
+			$cat_item->object_id = (int) $cat_post->ID;
+			$cat_item->type = 'post_type';
+			$cat_item->type_label = __('Service Category', 'leadsforward-core');
+		}
+		$cat_item->lf_category_slug = $cat_slug;
+		$cat_item->lf_category_service_ids = array_values(array_filter(array_map(
+			static fn (\WP_Post $kid): int => (int) ($kid->object_id ?? 0),
+			$kids
+		)));
 		$cat_item->menu_order = $order_base;
 		$order_base += 10;
 		$category_items[] = $cat_item;
