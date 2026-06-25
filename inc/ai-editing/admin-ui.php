@@ -2861,6 +2861,12 @@ function lf_ai_extract_plain_text_from_model_response(string $raw): string {
 	if ($raw === '') {
 		return '';
 	}
+	if (preg_match('/^```(?:[a-zA-Z0-9_-]+)?\s*\r?\n(.*)\r?\n```$/s', $raw, $fence_match)) {
+		$raw = trim((string) ($fence_match[1] ?? ''));
+	}
+	if ($raw === '') {
+		return '';
+	}
 	if ($raw[0] !== '{' && $raw[0] !== '[') {
 		return trim($raw, "\"' \t\n\r\0\x0B");
 	}
@@ -2980,6 +2986,120 @@ function lf_ai_collect_page_scope_for_editor(string $context_type, $context_id, 
 }
 
 /**
+ * Lightweight page scope for inline rewrite (avoids heavy SEO scoring that can timeout or fatal).
+ *
+ * @return array<string, mixed>
+ */
+function lf_ai_collect_page_scope_for_rewrite(string $context_type, $context_id, string $current_section_id = ''): array {
+	$scope = [
+		'page_title' => '',
+		'post_type' => '',
+		'primary_keyword' => '',
+		'secondary_keywords' => '',
+		'intent' => '',
+		'outline' => [],
+		'business_name' => '',
+		'city_region' => '',
+		'quality_score' => 0,
+		'quality_grade' => '',
+		'content_inventory' => [],
+		'page_fill_summary' => '',
+	];
+
+	try {
+		$context_id_use = is_string($context_id) ? $context_id : (string) $context_id;
+		$post_id = lf_ai_resolve_post_id_for_context($context_type, $context_id_use);
+
+		if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+			$scope['page_title'] = __('Homepage', 'leadsforward-core');
+			if (function_exists('lf_homepage_keywords')) {
+				$hk = lf_homepage_keywords();
+				$scope['primary_keyword'] = trim((string) ($hk['primary'] ?? ''));
+				$sec = $hk['secondary'] ?? [];
+				if (is_array($sec)) {
+					$scope['secondary_keywords'] = implode(', ', array_values(array_filter(array_map('sanitize_text_field', $sec))));
+				}
+			}
+		} elseif ($post_id > 0) {
+			$post = get_post($post_id);
+			if ($post instanceof \WP_Post) {
+				$scope['page_title'] = (string) get_the_title($post);
+				$scope['post_type'] = (string) $post->post_type;
+				$scope['primary_keyword'] = trim((string) get_post_meta($post_id, '_lf_seo_primary_keyword', true));
+				$scope['secondary_keywords'] = trim((string) get_post_meta($post_id, '_lf_seo_secondary_keywords', true));
+				$scope['intent'] = trim((string) get_post_meta($post_id, '_lf_seo_serp_intent_detected', true));
+			}
+		}
+
+		if (function_exists('lf_get_business_info_value')) {
+			$scope['business_name'] = trim((string) lf_get_business_info_value('lf_business_name', ''));
+			$scope['city_region'] = trim((string) lf_get_business_info_value('lf_city_region', ''));
+		}
+
+		$inventory = lf_ai_collect_page_content_inventory($context_type, $context_id_use, $current_section_id);
+		$scope['content_inventory'] = array_slice(is_array($inventory) ? $inventory : [], 0, 10);
+		$scope['page_fill_summary'] = lf_ai_page_fill_summary_from_inventory($scope['content_inventory']);
+
+		if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+			if (function_exists('lf_get_homepage_section_config')) {
+				$config = lf_get_homepage_section_config();
+				if (is_array($config)) {
+					foreach ($config as $sid => $row) {
+						if (!is_string($sid) || !is_array($row) || empty($row['enabled'])) {
+							continue;
+						}
+						$type = sanitize_text_field((string) ($row['section_type'] ?? $row['type'] ?? $sid));
+						$heading = trim((string) ($row['section_heading'] ?? $row['hero_headline'] ?? ''));
+						$scope['outline'][] = [
+							'section' => $type,
+							'heading' => $heading,
+						];
+						if (count($scope['outline']) >= 10) {
+							break;
+						}
+					}
+				}
+			}
+		} elseif ($post_id > 0 && defined('LF_PB_META_KEY') && function_exists('lf_pb_get_post_config') && function_exists('lf_ai_pb_context_for_post')) {
+			$post = get_post($post_id);
+			if ($post instanceof \WP_Post) {
+				$pb_context = lf_ai_pb_context_for_post($post);
+				if ($pb_context !== '') {
+					$config = lf_pb_get_post_config($post_id, $pb_context);
+					$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+					$order = is_array($config['order'] ?? null) ? $config['order'] : array_keys($sections);
+					foreach ($order as $sid) {
+						if (!is_string($sid) || !is_array($sections[ $sid ] ?? null)) {
+							continue;
+						}
+						$row = $sections[ $sid ];
+						if (empty($row['enabled'])) {
+							continue;
+						}
+						$type = sanitize_text_field((string) ($row['type'] ?? ''));
+						$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+						$heading = trim((string) ($settings['section_heading'] ?? $settings['hero_headline'] ?? ''));
+						$scope['outline'][] = [
+							'section' => $type,
+							'heading' => $heading,
+						];
+						if (count($scope['outline']) >= 10) {
+							break;
+						}
+					}
+				}
+			}
+		}
+	} catch (\Throwable $e) {
+		if (defined('WP_DEBUG') && WP_DEBUG) {
+			error_log('lf_ai_collect_page_scope_for_rewrite: ' . $e->getMessage());
+		}
+	}
+
+	return $scope;
+}
+
+/**
  * @return array{role:string,length_hint:string,is_heading:bool,preserve_html:bool}
  */
 function lf_ai_inline_rewrite_field_guidance(string $field_key, string $section_type, string $current_text): array {
@@ -3044,10 +3164,26 @@ function lf_ai_inline_rewrite_mode_instruction(string $mode, string $custom_prom
 }
 
 function lf_ai_ajax_inline_rewrite(): void {
-	check_ajax_referer('lf_ai_editing', 'nonce');
+	if (!check_ajax_referer('lf_ai_editing', 'nonce', false)) {
+		wp_send_json_error(['message' => __('Session expired. Refresh the page and try again.', 'leadsforward-core')], 403);
+	}
 	if (!function_exists('lf_ai_editing_user_can') ? !current_user_can(LF_AI_CAP) : !lf_ai_editing_user_can()) {
 		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
 	}
+
+	try {
+		lf_ai_ajax_inline_rewrite_handle();
+	} catch (\Throwable $e) {
+		if (defined('WP_DEBUG') && WP_DEBUG) {
+			error_log('lf_ai_ajax_inline_rewrite: ' . $e->getMessage());
+		}
+		wp_send_json_error([
+			'message' => __('Rewrite failed due to a server error. Try again or check Global Settings → OpenAI key.', 'leadsforward-core'),
+		], 500);
+	}
+}
+
+function lf_ai_ajax_inline_rewrite_handle(): void {
 	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
 	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
 	$selector = isset($_POST['selector']) ? sanitize_text_field(wp_unslash($_POST['selector'])) : '';
@@ -3090,7 +3226,7 @@ function lf_ai_ajax_inline_rewrite(): void {
 		wp_send_json_error(['message' => __('Invalid rewrite instruction.', 'leadsforward-core')]);
 	}
 	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
-	$scope = lf_ai_collect_page_scope_for_editor($context_type, $context_id_use, $section_id);
+	$scope = lf_ai_collect_page_scope_for_rewrite($context_type, $context_id_use, $section_id);
 	$service_title = '';
 	if ($service_post_id > 0) {
 		$svc = get_post($service_post_id);
@@ -3195,7 +3331,10 @@ function lf_ai_ajax_inline_rewrite(): void {
 	if (is_wp_error($response)) {
 		wp_send_json_error(['message' => $response->get_error_message()]);
 	}
-	$rewritten = lf_ai_extract_plain_text_from_model_response(is_string($response) ? $response : '');
+	if (!is_string($response) || trim($response) === '') {
+		wp_send_json_error(['message' => __('AI provider returned no text. Add your OpenAI key under LeadsForward → Global Settings.', 'leadsforward-core')]);
+	}
+	$rewritten = lf_ai_extract_plain_text_from_model_response($response);
 	if (!$guidance['preserve_html']) {
 		$rewritten = trim(wp_strip_all_tags($rewritten));
 		$rewritten = trim((string) preg_replace('/\s+/', ' ', $rewritten));
