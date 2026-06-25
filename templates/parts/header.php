@@ -177,7 +177,7 @@ if ($show_topbar) {
 			panel.addEventListener('click', function (event) {
 				var target = event.target;
 				if (!target) return;
-				if (target.closest('.site-header__category-toggle, .lf-menu-service-category__link, .lf-menu-service-category > a')) {
+				if (target.closest('.lf-menu-service-category__link, .lf-menu-service-category > a')) {
 					return;
 				}
 				var link = target.closest('a');
