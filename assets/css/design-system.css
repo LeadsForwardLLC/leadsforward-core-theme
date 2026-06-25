@@ -2769,15 +2769,15 @@ article a:not(.lf-btn):hover {
 		border-bottom: 0;
 	}
 	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-mega-search-host {
-		order: 0;
-		padding: 0 0 0.25rem;
-		margin: 0;
+		order: 99;
+		padding: 0.5rem 0 0;
+		margin: 0.2rem 0 0;
 		border: 0;
-		border-bottom: 0;
+		border-top: 1px solid rgba(15, 23, 42, 0.1);
 	}
 	.site-header__menu .lf-mega-search-wrap {
 		padding: 0;
-		margin: 0 0 0.15rem;
+		margin: 0;
 		border-bottom: 0;
 	}
 	.site-header__menu .lf-mega-search__input {
@@ -2868,10 +2868,10 @@ article a:not(.lf-btn):hover {
 		display: block;
 	}
 	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-submenu-all-link {
-		order: 99;
-		margin-top: 0.25rem;
-		padding-top: 0.5rem;
-		border-top: 1px solid rgba(15, 23, 42, 0.1);
+		order: 98;
+		margin-top: 0.15rem;
+		padding-top: 0;
+		border-top: 0;
 		border-bottom: 0;
 	}
 	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-submenu-all-link > a {
@@ -3341,6 +3341,7 @@ article a:not(.lf-btn):hover {
 	}
 
 	.site-header__menu > .lf-mega-menu--services > .sub-menu:has(> .lf-mega-cat-tile) > .lf-menu-service-category {
+		order: 1;
 		position: relative;
 		width: 100%;
 		margin: 0;
@@ -3446,14 +3447,14 @@ article a:not(.lf-btn):hover {
 	}
 
 	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-mega-search-host {
-		order: 0;
+		order: 99;
 		display: block;
 		width: 100%;
-		padding: 0 0 0.35rem;
-		margin: 0;
+		padding: 0.5rem 0 0;
+		margin: 0.25rem 0 0;
 		list-style: none;
 		border: 0;
-		border-bottom: 0;
+		border-top: 1px solid rgba(15, 23, 42, 0.08);
 	}
 
 	.site-header__menu > .lf-mega-menu--services > .sub-menu:not(:has(> .lf-mega-cat-tile)) > .lf-mega-search-host {
@@ -3461,8 +3462,8 @@ article a:not(.lf-btn):hover {
 		order: 99;
 		border-top: 1px solid rgba(15, 23, 42, 0.08);
 		border-bottom: 0;
-		padding-top: 0.45rem;
-		margin-top: 0.2rem;
+		padding-top: 0.5rem;
+		margin-top: 0.25rem;
 	}
 
 	.lf-mega-search-wrap {
@@ -3549,9 +3550,9 @@ article a:not(.lf-btn):hover {
 
 	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-submenu-all-link {
 		order: 98;
-		margin-top: 0.25rem;
-		padding-top: 0.45rem;
-		border-top: 1px solid rgba(15, 23, 42, 0.08);
+		margin-top: 0.15rem;
+		padding-top: 0;
+		border-top: 0;
 		border-bottom: 0;
 	}
 
