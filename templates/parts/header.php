@@ -177,6 +177,9 @@ if ($show_topbar) {
 			panel.addEventListener('click', function (event) {
 				var target = event.target;
 				if (!target) return;
+				if (target.closest('.site-header__category-toggle, .lf-menu-service-category__link, .lf-menu-service-category > a')) {
+					return;
+				}
 				var link = target.closest('a');
 				if (link && link.tagName === 'A') {
 					var parentItem = link.closest('.menu-item-has-children, .lf-menu-more');
@@ -197,66 +200,6 @@ if ($show_topbar) {
 		header.querySelectorAll('.site-header__menu .sub-menu .menu-item:not(.lf-menu-service-category) .site-header__submenu-toggle').forEach(function (btn) {
 			btn.remove();
 		});
-		var categoryItems = header.querySelectorAll('.site-header__menu .lf-menu-service-category');
-		function lfHeaderNavIsMobile() {
-			try {
-				return window.matchMedia('(max-width: 900px)').matches;
-			} catch (e) {
-				return (window.innerWidth || 0) <= 900;
-			}
-		}
-		if (categoryItems.length) {
-			categoryItems.forEach(function (item) {
-				var catLink = item.querySelector(':scope > a.lf-menu-service-category__link, :scope > a');
-				if (!catLink) return;
-				var catToggle = item.querySelector(':scope > .site-header__category-toggle');
-				if (lfHeaderNavIsMobile() && !catToggle) {
-					catToggle = document.createElement('button');
-					catToggle.type = 'button';
-					catToggle.className = 'site-header__submenu-toggle site-header__category-toggle';
-					catToggle.setAttribute('aria-expanded', 'false');
-					catToggle.setAttribute('aria-label', 'Toggle service category');
-					catToggle.innerHTML = '<span aria-hidden="true">▾</span>';
-					catLink.insertAdjacentElement('afterend', catToggle);
-				}
-				if (!lfHeaderNavIsMobile()) {
-					if (catToggle) {
-						catToggle.remove();
-					}
-					return;
-				}
-				if (!catToggle) return;
-				var setCategoryOpen = function (open) {
-					item.classList.toggle('is-open', open);
-					catToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-					catLink.setAttribute('aria-expanded', open ? 'true' : 'false');
-				};
-				var handleCategoryToggle = function (event) {
-					if (!lfHeaderNavIsMobile()) {
-						if (event) {
-							event.preventDefault();
-						}
-						return;
-					}
-					if (event) {
-						event.preventDefault();
-						event.stopPropagation();
-					}
-					var wasOpen = item.classList.contains('is-open');
-					Array.prototype.forEach.call(categoryItems, function (peer) {
-						if (peer === item) return;
-						peer.classList.remove('is-open');
-						var peerToggle = peer.querySelector(':scope > .site-header__category-toggle');
-						var peerLink = peer.querySelector(':scope > a.lf-menu-service-category__link, :scope > a');
-						if (peerToggle) peerToggle.setAttribute('aria-expanded', 'false');
-						if (peerLink) peerLink.setAttribute('aria-expanded', 'false');
-					});
-					setCategoryOpen(!wasOpen);
-				};
-				catToggle.addEventListener('click', handleCategoryToggle);
-				catLink.addEventListener('click', handleCategoryToggle);
-			});
-		}
 		var submenuItems = header.querySelectorAll('.site-header__menu > .menu-item-has-children, .site-header__menu > .lf-menu-more, .site-header__menu > .lf-menu-group-parent');
 		if (submenuItems.length) {
 			submenuItems.forEach(function (item) {
