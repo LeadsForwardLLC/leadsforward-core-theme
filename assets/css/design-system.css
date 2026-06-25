@@ -3034,11 +3034,16 @@ article a:not(.lf-btn):hover {
 	}
 }
 
-.site-header__menu .menu-item-has-children > a::after {
+.site-header__menu .menu-item-has-children:not(.lf-menu-service-category) > a::after {
 	content: '▾';
 	margin-left: 0.35rem;
 	font-size: 0.7rem;
 	opacity: 0.7;
+}
+
+.site-header__menu .lf-mega-menu--services .lf-menu-service-category > a::after {
+	content: none;
+	display: none;
 }
 
 .site-header__menu .lf-menu-group-parent > .site-header__group-label {
