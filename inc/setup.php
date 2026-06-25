@@ -403,8 +403,8 @@ function lf_header_menu_reorder_services_areas_children(array $items): array {
 			}
 		}
 		if ($is_services_mega) {
-			// Categories first, search, then "All Services" last.
-			$ordered = array_merge($regular, $search_hosts, $all_links);
+			// Categories, then "All Services", then search at the bottom.
+			$ordered = array_merge($regular, $all_links, $search_hosts);
 		} else {
 			$ordered = array_merge($regular, $dividers, $all_links, $search_hosts);
 		}
