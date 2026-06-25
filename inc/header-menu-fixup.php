@@ -115,15 +115,23 @@ function lf_header_menu_objects_consolidate_more(array $items, $args): array {
 		return $items;
 	}
 
-	return lf_header_menu_objects_apply_nav_rules($items, $args);
+	try {
+		return lf_header_menu_objects_apply_nav_rules($items, $args);
+	} catch (\Throwable $e) {
+		if (defined('WP_DEBUG') && WP_DEBUG && function_exists('error_log')) {
+			error_log('LF header menu nav rules: ' . $e->getMessage());
+		}
+		return $items;
+	}
 }
 add_filter('wp_nav_menu_objects', 'lf_header_menu_objects_consolidate_more', 18, 2);
 
 /**
  * Repair stored menu when secondary pages are still saved at top level.
+ * Runs once per structure version (admin or front); not on every page view.
  */
 function lf_header_menu_force_structure_repair(): void {
-	if (is_admin() || !has_nav_menu('header_menu')) {
+	if (!has_nav_menu('header_menu')) {
 		return;
 	}
 
@@ -145,4 +153,4 @@ function lf_header_menu_force_structure_repair(): void {
 	}
 	update_option('lf_header_menu_structure_version', $structure_version, false);
 }
-add_action('wp', 'lf_header_menu_force_structure_repair', 12);
+add_action('admin_init', 'lf_header_menu_force_structure_repair', 12);

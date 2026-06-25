@@ -556,7 +556,10 @@ function lf_header_menu_reorder_flat_blocks(array $items): array {
 
 	usort(
 		$tops,
-		static function (\WP_Post $a, \WP_Post $b): int {
+		static function ($a, $b): int {
+			if (!$a instanceof \WP_Post || !$b instanceof \WP_Post) {
+				return 0;
+			}
 			$ta = lf_header_menu_top_level_sort_tuple($a);
 			$tb = lf_header_menu_top_level_sort_tuple($b);
 			return $ta <=> $tb;
@@ -566,7 +569,10 @@ function lf_header_menu_reorder_flat_blocks(array $items): array {
 	$sort_children = static function (array $children): array {
 		usort(
 			$children,
-			static function (\WP_Post $a, \WP_Post $b): int {
+			static function ($a, $b): int {
+				if (!$a instanceof \WP_Post || !$b instanceof \WP_Post) {
+					return 0;
+				}
 				return ((int) ($a->menu_order ?? 0)) <=> ((int) ($b->menu_order ?? 0));
 			}
 		);
@@ -574,7 +580,10 @@ function lf_header_menu_reorder_flat_blocks(array $items): array {
 	};
 
 	$append_subtree = null;
-	$append_subtree = static function (\WP_Post $item, array &$out) use (&$append_subtree, $children_by_parent, $sort_children): void {
+	$append_subtree = static function ($item, array &$out) use (&$append_subtree, $children_by_parent, $sort_children): void {
+		if (!$item instanceof \WP_Post) {
+			return;
+		}
 		$out[] = $item;
 		$kids = $sort_children(array_merge([], $children_by_parent[(int) $item->ID] ?? []));
 		foreach ($kids as $child) {
