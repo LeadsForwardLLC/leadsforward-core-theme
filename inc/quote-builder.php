@@ -36,6 +36,7 @@ add_action('wp_ajax_nopriv_lf_quote_builder_event', 'lf_quote_builder_handle_eve
 add_action(LF_QUOTE_BUILDER_GHL_RETRY_HOOK, 'lf_quote_builder_process_ghl_retries');
 
 function lf_quote_builder_default_config(?string $niche_slug = null): array {
+	$niche_slug = lf_quote_builder_resolve_niche_slug($niche_slug);
 	$service_options = lf_quote_builder_service_options($niche_slug);
 	$project_extra_fields = lf_quote_builder_niche_fields($niche_slug);
 	$config = [
@@ -199,7 +200,44 @@ function lf_quote_builder_default_config(?string $niche_slug = null): array {
 	return apply_filters('lf_quote_builder_default_config', $config, $niche_slug);
 }
 
-function lf_quote_builder_service_options(?string $niche_slug = null): array {
+/**
+ * Resolve active niche slug for quote builder defaults.
+ */
+function lf_quote_builder_resolve_niche_slug(?string $niche_slug = null): string {
+	if ($niche_slug !== null && $niche_slug !== '') {
+		return sanitize_title($niche_slug);
+	}
+	$slug = (string) get_option('lf_homepage_niche_slug', '');
+	if ($slug === '' && function_exists('lf_default_niche_slug')) {
+		$slug = (string) lf_default_niche_slug();
+	}
+
+	return sanitize_title($slug);
+}
+
+/**
+ * Standard service options from the niche registry (starter package per niche).
+ *
+ * @return list<string>
+ */
+function lf_quote_builder_niche_service_options(string $niche_slug): array {
+	if ($niche_slug === '' || !function_exists('lf_get_niche')) {
+		return [];
+	}
+	$niche = lf_get_niche($niche_slug);
+	if (!is_array($niche) || empty($niche['services']) || !is_array($niche['services'])) {
+		return [];
+	}
+
+	return array_values(array_filter(array_map('strval', $niche['services'])));
+}
+
+/**
+ * Published service CPT titles for quote builder fallback.
+ *
+ * @return list<string>
+ */
+function lf_quote_builder_published_service_titles(): array {
 	$options = [];
 	$services = get_posts([
 		'post_type' => 'lf_service',
@@ -210,16 +248,25 @@ function lf_quote_builder_service_options(?string $niche_slug = null): array {
 	]);
 	foreach ($services as $service) {
 		if ($service instanceof \WP_Post) {
-			$options[] = $service->post_title;
+			$title = trim((string) $service->post_title);
+			if ($title !== '') {
+				$options[] = $title;
+			}
 		}
 	}
-	if (empty($options) && function_exists('lf_get_niche') && $niche_slug) {
-		$niche = lf_get_niche($niche_slug);
-		if (!empty($niche['services']) && is_array($niche['services'])) {
-			$options = array_values(array_filter(array_map('strval', $niche['services'])));
-		}
+
+	return $options;
+}
+
+function lf_quote_builder_service_options(?string $niche_slug = null): array {
+	$niche_slug = lf_quote_builder_resolve_niche_slug($niche_slug);
+	$niche_options = lf_quote_builder_niche_service_options($niche_slug);
+	if ($niche_options !== []) {
+		return apply_filters('lf_quote_builder_service_options', $niche_options, $niche_slug);
 	}
-	if (empty($options)) {
+
+	$options = lf_quote_builder_published_service_titles();
+	if ($options === []) {
 		$options = [
 			__('General Service', 'leadsforward-core'),
 			__('Repair', 'leadsforward-core'),
@@ -227,14 +274,13 @@ function lf_quote_builder_service_options(?string $niche_slug = null): array {
 			__('Maintenance', 'leadsforward-core'),
 		];
 	}
+
 	return apply_filters('lf_quote_builder_service_options', $options, $niche_slug);
 }
 
 function lf_quote_builder_niche_fields(?string $niche_slug = null): array {
 	$fields = [];
-	$niche = $niche_slug
-		? (string) $niche_slug
-		: (string) get_option('lf_homepage_niche_slug', function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair');
+	$niche = lf_quote_builder_resolve_niche_slug($niche_slug);
 	$niche_data = function_exists('lf_get_niche') ? lf_get_niche($niche) : null;
 	$layout_profile = is_array($niche_data) ? (string) ($niche_data['layout_profile'] ?? '') : '';
 	if ($niche === 'general') {
@@ -395,6 +441,36 @@ function lf_quote_builder_niche_fields(?string $niche_slug = null): array {
 		],
 		[
 			'key' => 'water_urgency',
+			'label' => __('Urgency', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Emergency', 'leadsforward-core'),
+				__('Within 1-2 weeks', 'leadsforward-core'),
+				__('Within a month', 'leadsforward-core'),
+				__('Just researching', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+	];
+	$foundation_fields = [
+		[
+			'key' => 'foundation_issue',
+			'label' => __('What are you noticing?', 'leadsforward-core'),
+			'type' => 'choice',
+			'required' => false,
+			'options' => [
+				__('Cracks in walls or floors', 'leadsforward-core'),
+				__('Doors or windows sticking', 'leadsforward-core'),
+				__('Uneven or sloping floors', 'leadsforward-core'),
+				__('Bowing or leaning walls', 'leadsforward-core'),
+				__('Water or moisture in basement/crawl space', 'leadsforward-core'),
+				__('Not sure — need an inspection', 'leadsforward-core'),
+			],
+			'default' => '',
+		],
+		[
+			'key' => 'foundation_urgency',
 			'label' => __('Urgency', 'leadsforward-core'),
 			'type' => 'choice',
 			'required' => false,
@@ -731,7 +807,7 @@ function lf_quote_builder_niche_fields(?string $niche_slug = null): array {
 		'snow-removal' => $snow_fields,
 		'water-damage' => $water_fields,
 		'waterproofing' => $water_fields,
-		'foundation-repair' => $water_fields,
+		'foundation-repair' => $foundation_fields,
 		'solar' => $solar_fields,
 		'windows-doors' => $window_fields,
 		'shower-doors' => $window_fields,
@@ -747,16 +823,57 @@ function lf_quote_builder_niche_fields(?string $niche_slug = null): array {
 	return apply_filters('lf_quote_builder_niche_fields', $fields, $niche);
 }
 
+/**
+ * Keep niche-driven step fields in sync when the builder has not been manually customized.
+ */
+function lf_quote_builder_sync_niche_driven_steps(array $config, array $default): array {
+	$sync_ids = ['service_type', 'project_details'];
+	$default_steps = is_array($default['steps'] ?? null) ? $default['steps'] : [];
+	$config_steps = is_array($config['steps'] ?? null) ? $config['steps'] : [];
+	foreach ($config_steps as $index => $step) {
+		if (!is_array($step)) {
+			continue;
+		}
+		$step_id = (string) ($step['id'] ?? '');
+		if (!in_array($step_id, $sync_ids, true)) {
+			continue;
+		}
+		foreach ($default_steps as $default_step) {
+			if (!is_array($default_step) || (string) ($default_step['id'] ?? '') !== $step_id) {
+				continue;
+			}
+			$config_steps[$index]['fields'] = $default_step['fields'] ?? [];
+			if (!empty($default_step['title'])) {
+				$config_steps[$index]['title'] = $default_step['title'];
+			}
+			if (array_key_exists('helper', $default_step)) {
+				$config_steps[$index]['helper'] = $default_step['helper'];
+			}
+			break;
+		}
+	}
+	$config['steps'] = $config_steps;
+
+	return $config;
+}
+
 function lf_quote_builder_get_config(): array {
+	$niche_slug = lf_quote_builder_resolve_niche_slug(null);
 	$stored = get_option(LF_QUOTE_BUILDER_OPTION, null);
 	$manual = (bool) get_option(LF_QUOTE_BUILDER_MANUAL_OPTION, false);
-	$default = lf_quote_builder_default_config(get_option('lf_homepage_niche_slug', ''));
+	$default = lf_quote_builder_default_config($niche_slug);
 	if (is_array($stored) && !empty($stored)) {
-		return lf_quote_builder_merge_config($stored, $default);
+		$out = lf_quote_builder_merge_config($stored, $default);
+		if (!$manual) {
+			$out = lf_quote_builder_sync_niche_driven_steps($out, $default);
+		}
+
+		return $out;
 	}
 	if (!$manual) {
 		update_option(LF_QUOTE_BUILDER_OPTION, $default, true);
 	}
+
 	return $default;
 }
 
@@ -961,7 +1078,7 @@ function lf_quote_builder_handle_save(): void {
 	if (!wp_verify_nonce($_POST['lf_quote_builder_nonce'], 'lf_quote_builder_save')) {
 		return;
 	}
-	$defaults = lf_quote_builder_default_config(get_option('lf_homepage_niche_slug', ''));
+	$defaults = lf_quote_builder_default_config(lf_quote_builder_resolve_niche_slug(null));
 	$input = $_POST['lf_qb_steps'] ?? [];
 	$config = lf_quote_builder_sanitize_config($input, $defaults);
 	update_option(LF_QUOTE_BUILDER_OPTION, $config, true);
