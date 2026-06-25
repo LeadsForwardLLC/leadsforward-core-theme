@@ -790,7 +790,7 @@ function lf_ai_assistant_render_floating_widget(): void {
 					<span class="lf-ai-inline-rewrite__kw" data-lf-ai-inline-rewrite-kw hidden></span>
 					<button type="button" class="lf-ai-inline-rewrite__close" data-lf-ai-inline-rewrite-close aria-label="<?php esc_attr_e('Close', 'leadsforward-core'); ?>">×</button>
 				</div>
-				<p class="lf-ai-inline-rewrite__hint" data-lf-ai-inline-rewrite-hint><?php esc_html_e('Uses this page’s target keyword and section outline for context.', 'leadsforward-core'); ?></p>
+				<p class="lf-ai-inline-rewrite__hint" data-lf-ai-inline-rewrite-hint><?php esc_html_e('Uses this page’s SEO keyword, section outline, and fill status so rewrites match what’s already written.', 'leadsforward-core'); ?></p>
 				<div class="lf-ai-inline-rewrite__actions">
 					<button type="button" class="lf-ai-inline-rewrite__mode" data-lf-ai-inline-rewrite-mode="regenerate"><?php esc_html_e('Regenerate', 'leadsforward-core'); ?></button>
 					<button type="button" class="lf-ai-inline-rewrite__mode" data-lf-ai-inline-rewrite-mode="seo"><?php esc_html_e('SEO polish', 'leadsforward-core'); ?></button>
@@ -2294,11 +2294,16 @@ function lf_ai_assistant_widget_js(): string {
 		var lfProseIconSavedHost = null;
 		var lfInlineRewriteBusy = false;
 		var lfInlineRewritePanelOpen = false;
+		function lfInlineRewritePanel() {
+			return $("[data-lf-ai-inline-rewrite-panel]");
+		}
 		function lfHideInlineRewritePanel() {
-			if (!$linkRoot.length) return;
 			lfInlineRewritePanelOpen = false;
-			$linkRoot.find("[data-lf-ai-inline-rewrite-panel]").prop("hidden", true).hide();
-			$linkRoot.find("[data-lf-ai-inline-rewrite-apply]").prop("hidden", true);
+			var $panel = lfInlineRewritePanel();
+			if ($panel.length) {
+				$panel.prop("hidden", true).hide();
+				$panel.find("[data-lf-ai-inline-rewrite-apply]").prop("hidden", true);
+			}
 		}
 		function lfHideInlineLinkToolbarOnly() {
 			if ($linkRoot.length) {
@@ -2579,7 +2584,7 @@ function lf_ai_assistant_widget_js(): string {
 			var left = rect.left;
 			$tb.css({ position: "fixed", top: top + "px", left: Math.max(8, left) + "px" });
 			$tb.prop("hidden", false);
-			var $rw = $linkRoot.find("[data-lf-ai-inline-rewrite-panel]");
+			var $rw = lfInlineRewritePanel();
 			if ($rw.length && !$rw.prop("hidden")) {
 				$rw.css({ position: "fixed", top: (top + $tb.outerHeight() + 6) + "px", left: Math.max(8, left) + "px" });
 			}
@@ -2633,18 +2638,24 @@ function lf_ai_assistant_widget_js(): string {
 			}
 			var scope = (lfAiFloating && lfAiFloating.page_scope) ? lfAiFloating.page_scope : {};
 			var pk = String(scope.primary_keyword || "").trim();
-			var $kw = $linkRoot.find("[data-lf-ai-inline-rewrite-kw]");
+			var $panel = lfInlineRewritePanel();
+			var $kw = $panel.find("[data-lf-ai-inline-rewrite-kw]");
 			if (pk) {
 				$kw.text("Keyword: " + pk).prop("hidden", false);
 			} else {
 				$kw.prop("hidden", true).text("");
 			}
-			var $panel = $linkRoot.find("[data-lf-ai-inline-rewrite-panel]");
+			var fillSummary = String(scope.page_fill_summary || "").trim();
+			var $hint = $panel.find("[data-lf-ai-inline-rewrite-hint]");
+			if ($hint.length) {
+				if (fillSummary) {
+					$hint.text(fillSummary);
+				} else {
+					$hint.text("Uses this page’s SEO keyword, section outline, and fill status so rewrites match what’s already written.");
+				}
+			}
 			lfInlineRewritePanelOpen = true;
 			$panel.prop("hidden", false).show();
-			if ($panel.length && $panel[0].parentNode !== document.body) {
-				document.body.appendChild($panel[0]);
-			}
 			var $tb = $linkRoot.find("[data-lf-ai-inline-link-toolbar]");
 			if ($tb.length && !$tb.prop("hidden")) {
 				var rect = $tb[0].getBoundingClientRect();
@@ -2664,11 +2675,11 @@ function lf_ai_assistant_widget_js(): string {
 				});
 			}
 			try {
-				$linkRoot.find("[data-lf-ai-inline-rewrite-instruction]").val("").trigger("focus");
+				$panel.find("[data-lf-ai-inline-rewrite-instruction]").val("").trigger("focus");
 			} catch (eIns) {}
 		}
 		function lfToggleInlineRewritePanel() {
-			var $panel = $linkRoot.find("[data-lf-ai-inline-rewrite-panel]");
+			var $panel = lfInlineRewritePanel();
 			if ($panel.length && !$panel.prop("hidden") && lfInlineRewritePanelOpen) {
 				lfHideInlineRewritePanel();
 				return;
@@ -2683,9 +2694,9 @@ function lf_ai_assistant_widget_js(): string {
 				setStatus("Nothing to rewrite in this field.", true);
 				return;
 			}
-			var instruction = String($linkRoot.find("[data-lf-ai-inline-rewrite-instruction]").val() || "").trim();
+			var instruction = String(lfInlineRewritePanel().find("[data-lf-ai-inline-rewrite-instruction]").val() || "").trim();
 			lfInlineRewriteBusy = true;
-			$linkRoot.find("[data-lf-ai-inline-rewrite-mode]").addClass("is-loading");
+			lfInlineRewritePanel().find("[data-lf-ai-inline-rewrite-mode]").addClass("is-loading");
 			setStatus("AI is rewriting…", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_inline_rewrite",
@@ -2713,7 +2724,7 @@ function lf_ai_assistant_widget_js(): string {
 				setStatus(msg, true);
 			}).always(function(){
 				lfInlineRewriteBusy = false;
-				$linkRoot.find("[data-lf-ai-inline-rewrite-mode]").removeClass("is-loading");
+				lfInlineRewritePanel().find("[data-lf-ai-inline-rewrite-mode]").removeClass("is-loading");
 			});
 		}
 		function lfFetchInternalLinkTargets(done) {
@@ -3111,6 +3122,32 @@ function lf_ai_assistant_widget_js(): string {
 			$linkRoot.on("mousedown", "[data-lf-ai-inline-link-apply], [data-lf-ai-inline-link-pick], [data-lf-ai-inline-link-close], [data-lf-ai-inline-link-unlink], [data-lf-ai-inline-toolbar-close], [data-lf-ai-inline-rewrite-close], [data-lf-ai-inline-rewrite-mode]", function(e){
 				e.preventDefault();
 			});
+			$(document).on("mousedown", "[data-lf-ai-inline-rewrite-close], [data-lf-ai-inline-rewrite-mode]", function(e){
+				if (!lfInlineRewritePanelOpen) return;
+				e.preventDefault();
+			});
+			$(document).on("click", "[data-lf-ai-inline-rewrite-close]", function(e){
+				if (!lfInlineRewritePanelOpen) return;
+				e.preventDefault();
+				e.stopPropagation();
+				lfHideInlineRewritePanel();
+			});
+			$(document).on("click", "[data-lf-ai-inline-rewrite-mode]", function(e){
+				if (!lfInlineRewritePanelOpen) return;
+				e.preventDefault();
+				e.stopPropagation();
+				var mode = String($(this).attr("data-lf-ai-inline-rewrite-mode") || "regenerate");
+				lfRunInlineRewrite(mode);
+			});
+			$(document).on("keydown", "[data-lf-ai-inline-rewrite-instruction]", function(e){
+				if (!lfInlineRewritePanelOpen) return;
+				if (e.key === "Enter" && !e.shiftKey) {
+					e.preventDefault();
+					var instr = String($(this).val() || "").trim();
+					if (!instr) return;
+					lfRunInlineRewrite("custom");
+				}
+			});
 			$linkRoot.on("mousedown", "[data-lf-ai-inline-rewrite-open]", function(e){
 				e.preventDefault();
 				e.stopPropagation();
@@ -3119,17 +3156,6 @@ function lf_ai_assistant_widget_js(): string {
 			$linkRoot.on("click", "[data-lf-ai-inline-rewrite-open]", function(e){
 				e.preventDefault();
 				e.stopPropagation();
-			});
-			$linkRoot.on("click", "[data-lf-ai-inline-rewrite-close]", function(e){
-				e.preventDefault();
-				e.stopPropagation();
-				lfHideInlineRewritePanel();
-			});
-			$linkRoot.on("click", "[data-lf-ai-inline-rewrite-mode]", function(e){
-				e.preventDefault();
-				e.stopPropagation();
-				var mode = String($(this).attr("data-lf-ai-inline-rewrite-mode") || "regenerate");
-				lfRunInlineRewrite(mode);
 			});
 			$linkRoot.find("[data-lf-ai-inline-link-open]").on("click", function(e){
 				e.preventDefault();
