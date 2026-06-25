@@ -291,6 +291,61 @@ function lf_ai_set_inline_image_overrides(string $context_type, $context_id, arr
 }
 
 /**
+ * Strip inline image overrides for a service intro card (featured image is canonical).
+ */
+function lf_ai_clear_service_intro_image_overrides_for_service(int $service_post_id, string $context_type, $context_id): void {
+	if ($service_post_id <= 0 || $context_type === '') {
+		return;
+	}
+	$map = lf_ai_get_inline_image_overrides($context_type, $context_id);
+	if ($map === []) {
+		return;
+	}
+	$needle = 'data-lf-service-id="' . $service_post_id . '"';
+	$changed = false;
+	foreach (array_keys($map) as $selector) {
+		if (str_contains((string) $selector, $needle)) {
+			unset($map[$selector]);
+			$changed = true;
+		}
+	}
+	if ($changed) {
+		lf_ai_set_inline_image_overrides($context_type, $context_id, $map);
+	}
+}
+
+/**
+ * Clear service intro image overrides on homepage and services overview after featured image changes.
+ */
+function lf_ai_clear_service_intro_image_overrides_all_contexts(int $service_post_id): void {
+	if ($service_post_id <= 0) {
+		return;
+	}
+	lf_ai_clear_service_intro_image_overrides_for_service($service_post_id, 'homepage', 'homepage');
+	$services_page = get_page_by_path('services');
+	if ($services_page instanceof \WP_Post) {
+		lf_ai_clear_service_intro_image_overrides_for_service($service_post_id, 'page', (string) $services_page->ID);
+	}
+}
+
+/**
+ * When a service featured image changes in wp-admin, drop stale inline overrides on intro cards.
+ */
+function lf_ai_service_thumbnail_meta_changed_clear_intro_overrides($meta_id, $post_id, $meta_key, $meta_value): void {
+	unset($meta_id, $meta_value);
+	if ($meta_key !== '_thumbnail_id') {
+		return;
+	}
+	$post = get_post((int) $post_id);
+	if (!$post instanceof \WP_Post || $post->post_type !== 'lf_service') {
+		return;
+	}
+	lf_ai_clear_service_intro_image_overrides_all_contexts((int) $post->ID);
+}
+add_action('updated_post_meta', 'lf_ai_service_thumbnail_meta_changed_clear_intro_overrides', 10, 4);
+add_action('deleted_post_meta', 'lf_ai_service_thumbnail_meta_changed_clear_intro_overrides', 10, 4);
+
+/**
  * Persist section order for homepage/page-builder contexts.
  */
 function lf_ai_apply_section_order_to_context(string $context_type, $context_id, array $order): bool {

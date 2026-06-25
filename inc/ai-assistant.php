@@ -571,6 +571,9 @@ function lf_ai_inline_overrides_frontend_script(): void {
 					var img = document.querySelector(selector);
 					var row = imageMap[selector] || {};
 					if (img && img.tagName && img.tagName.toLowerCase() === "img" && row.url) {
+						if (img.closest(".lf-block-service-intro__card[data-lf-service-id]")) {
+							return;
+						}
 						img.setAttribute("src", String(row.url));
 						img.removeAttribute("srcset");
 						if (row.alt !== undefined) {
@@ -4381,6 +4384,8 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function inlineImageEligible(img) {
 			if (!img || !img.getAttribute) return false;
+			if (img.closest(".lf-block-service-intro__card[data-lf-service-id]")) return false;
+			if (img.classList && img.classList.contains("lf-block-service-intro__image")) return false;
 			if (img.closest(".lf-ai-float,.lf-ai-seo-float")) return false;
 			if (img.closest("nav, footer, .site-header, .site-footer, #masthead, #colophon")) return false;
 			var src = String(img.getAttribute("src") || "").trim();
@@ -7346,6 +7351,55 @@ function lf_ai_assistant_widget_js(): string {
 				}
 			});
 		}
+		function postServiceFeaturedThumbnail(sid, attachmentId, onSuccess, onError) {
+			$.post(lfAiFloating.ajax_url, {
+				action: "lf_ai_set_service_thumbnail",
+				nonce: lfAiFloating.nonce,
+				service_post_id: sid,
+				attachment_id: attachmentId,
+				context_type: activeContextType,
+				context_id: activeContextId
+			}).done(onSuccess).fail(onError);
+		}
+		function renderServiceIntroFeaturedImage(media, sid, card, wrap, thumbnailUrl) {
+			media.innerHTML = "";
+			if (thumbnailUrl) {
+				var nimg = document.createElement("img");
+				nimg.className = "lf-block-service-intro__image";
+				nimg.src = String(thumbnailUrl);
+				nimg.alt = "";
+				nimg.setAttribute("loading", "lazy");
+				nimg.setAttribute("data-lf-thumb-placeholder", "0");
+				nimg.setAttribute("data-lf-service-featured-thumb", "1");
+				media.appendChild(nimg);
+			}
+			wireOneServiceIntroMedia(media, sid, card, wrap);
+		}
+		function openServiceFeaturedThumbnailPicker(sid, media, card, wrap) {
+			if (!(window.wp && wp.media)) {
+				setStatus("Image library is not available on this screen.", true);
+				return;
+			}
+			var frame = wp.media({ library: { type: "image" }, multiple: false });
+			frame.on("select", function(){
+				var att = frame.state().get("selection").first();
+				var aid = att ? parseInt(String(att.id || "0"), 10) : 0;
+				if (!aid) return;
+				setStatus("Saving featured image...", false);
+				postServiceFeaturedThumbnail(sid, aid, function(res){
+					if (res && res.success && res.data && res.data.thumbnail_url) {
+						renderServiceIntroFeaturedImage(media, sid, card, wrap, String(res.data.thumbnail_url));
+						setStatus((res.data && res.data.message) ? res.data.message : "Featured image saved.", false);
+					} else {
+						setStatus((res && res.data && res.data.message) ? res.data.message : "Image save failed.", true);
+					}
+				}, function(xhr){
+					var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Image save failed.";
+					setStatus(msg, true);
+				});
+			});
+			frame.open();
+		}
 		function wireOneServiceIntroMedia(media, sid, card, wrap) {
 			if (!media || !sid || !card) return;
 			Array.prototype.slice.call(media.querySelectorAll("[data-lf-service-intro-img-remove=\"1\"]")).forEach(function(n){
@@ -7355,30 +7409,37 @@ function lf_ai_assistant_widget_js(): string {
 				if (n && n.parentNode) n.parentNode.removeChild(n);
 			});
 			var img = media.querySelector("img.lf-block-service-intro__image");
+			if (img && img.getAttribute("data-lf-thumb-placeholder") === "1") {
+				if (img.parentNode) img.parentNode.removeChild(img);
+				img = null;
+			}
 			if (img) {
+				img.classList.add("lf-ai-inline-editor-ignore");
+				img.setAttribute("data-lf-service-featured-thumb", "1");
+				img.style.cursor = "pointer";
+				img.setAttribute("title", "Click to change featured image");
+				img.addEventListener("click", function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					openServiceFeaturedThumbnailPicker(sid, media, card, wrap);
+				});
 				var rm = document.createElement("button");
 				rm.type = "button";
 				rm.className = "lf-service-intro-thumb-remove lf-ai-inline-editor-ignore";
 				rm.setAttribute("data-lf-service-intro-img-remove", "1");
 				rm.textContent = "×";
-				rm.setAttribute("title", "Remove image");
+				rm.setAttribute("title", "Remove featured image");
 				rm.addEventListener("click", function(e){
 					e.preventDefault();
 					e.stopPropagation();
-					$.post(lfAiFloating.ajax_url, {
-						action: "lf_ai_set_service_thumbnail",
-						nonce: lfAiFloating.nonce,
-						service_post_id: sid,
-						attachment_id: 0
-					}).done(function(res){
+					postServiceFeaturedThumbnail(sid, 0, function(res){
 						if (res && res.success) {
-							media.innerHTML = "";
-							wireOneServiceIntroMedia(media, sid, card, wrap);
-							setStatus((res.data && res.data.message) ? res.data.message : "Image removed.", false);
+							renderServiceIntroFeaturedImage(media, sid, card, wrap, "");
+							setStatus((res.data && res.data.message) ? res.data.message : "Featured image removed.", false);
 						} else {
 							setStatus((res && res.data && res.data.message) ? res.data.message : "Could not remove image.", true);
 						}
-					}).fail(function(xhr){
+					}, function(xhr){
 						var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Could not remove image.";
 						setStatus(msg, true);
 					});
@@ -7395,40 +7456,7 @@ function lf_ai_assistant_widget_js(): string {
 			ph.addEventListener("click", function(e){
 				e.preventDefault();
 				e.stopPropagation();
-				if (!(window.wp && wp.media)) {
-					setStatus("Image library is not available on this screen.", true);
-					return;
-				}
-				var frame = wp.media({ library: { type: "image" }, multiple: false });
-				frame.on("select", function(){
-					var att = frame.state().get("selection").first();
-					var aid = att ? parseInt(String(att.id || "0"), 10) : 0;
-					if (!aid) return;
-					$.post(lfAiFloating.ajax_url, {
-						action: "lf_ai_set_service_thumbnail",
-						nonce: lfAiFloating.nonce,
-						service_post_id: sid,
-						attachment_id: aid
-					}).done(function(res){
-						if (res && res.success && res.data && res.data.thumbnail_url) {
-							media.innerHTML = "";
-							var nimg = document.createElement("img");
-							nimg.className = "lf-block-service-intro__image";
-							nimg.src = String(res.data.thumbnail_url);
-							nimg.alt = "";
-							nimg.setAttribute("loading", "lazy");
-							media.appendChild(nimg);
-							wireOneServiceIntroMedia(media, sid, card, wrap);
-							setStatus((res.data && res.data.message) ? res.data.message : "Image saved.", false);
-						} else {
-							setStatus((res && res.data && res.data.message) ? res.data.message : "Image save failed.", true);
-						}
-					}).fail(function(xhr){
-						var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Image save failed.";
-						setStatus(msg, true);
-					});
-				});
-				frame.open();
+				openServiceFeaturedThumbnailPicker(sid, media, card, wrap);
 			});
 			media.appendChild(ph);
 		}
@@ -7695,6 +7723,8 @@ function lf_ai_assistant_widget_js(): string {
 				img.src = thumb;
 				img.alt = "";
 				img.setAttribute("loading", "lazy");
+				img.setAttribute("data-lf-thumb-placeholder", "0");
+				img.setAttribute("data-lf-service-featured-thumb", "1");
 				media.appendChild(img);
 			}
 			var desc = document.createElement("p");
