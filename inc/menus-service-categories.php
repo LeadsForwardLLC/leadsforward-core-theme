@@ -90,6 +90,9 @@ function lf_header_menu_categorize_foundation_services(array $items, $args): arr
 	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || $items === []) {
 		return $items;
 	}
+	if (function_exists('lf_header_menu_cpt_nav_dropdowns_enabled') && !lf_header_menu_cpt_nav_dropdowns_enabled()) {
+		return $items;
+	}
 
 	$services_parent_id = lf_header_menu_services_parent_id($items);
 	if ($services_parent_id <= 0) {

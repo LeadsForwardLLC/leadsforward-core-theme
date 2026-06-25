@@ -212,8 +212,19 @@ function lf_header_menu_css_classes(array $classes, \WP_Post $item, $args, int $
 		return $classes;
 	}
 	if (in_array('lf-menu-services-parent', $classes, true) || in_array('lf-menu-areas-parent', $classes, true)) {
-		$classes[] = 'lf-menu-group-parent';
-		$classes[] = 'menu-item-has-children';
+		if (function_exists('lf_header_menu_cpt_nav_dropdowns_enabled') && lf_header_menu_cpt_nav_dropdowns_enabled()) {
+			$classes[] = 'lf-menu-group-parent';
+			$classes[] = 'menu-item-has-children';
+		} else {
+			$classes = array_values(array_filter(
+				$classes,
+				static fn (string $class): bool => !in_array(
+					$class,
+					['lf-menu-group-parent', 'menu-item-has-children', 'lf-mega-menu', 'lf-mega-menu--services'],
+					true
+				)
+			));
+		}
 	} elseif (in_array('menu-item-has-children', $classes, true) && !in_array('lf-menu-more', $classes, true)) {
 		$title = strtolower(trim(wp_strip_all_tags((string) $item->title)));
 		if ($title === 'services' || $title === 'service areas') {
@@ -372,6 +383,9 @@ function lf_header_menu_reorder_services_areas_children(array $items): array {
 
 function lf_header_menu_objects(array $items, $args): array {
 	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || empty($items)) {
+		return $items;
+	}
+	if (function_exists('lf_header_menu_cpt_nav_dropdowns_enabled') && !lf_header_menu_cpt_nav_dropdowns_enabled()) {
 		return $items;
 	}
 	$children_by_parent = [];
