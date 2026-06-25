@@ -2743,6 +2743,85 @@ article a:not(.lf-btn):hover {
 		font-size: 1rem;
 		font-weight: 500;
 	}
+	/* Services mega menu: compact accordion list on mobile (not desktop grid). */
+	.site-header__menu > .lf-mega-menu--services > .sub-menu {
+		position: static;
+		opacity: 1;
+		pointer-events: auto;
+		transform: none;
+		box-shadow: none;
+		border: 0;
+		background: transparent;
+		min-width: 0;
+		max-width: 100%;
+		width: 100%;
+		padding: 0 0 0.5rem 0.85rem;
+		margin: 0;
+		display: none;
+		grid-template-columns: none;
+	}
+	.site-header__menu > .lf-mega-menu--services.is-open > .sub-menu {
+		display: block;
+	}
+	.site-header__menu .sub-menu > .menu-item.lf-mega-search-host {
+		padding: 0.35rem 0 0.65rem;
+		margin: 0;
+		border: 0;
+	}
+	.site-header__menu .lf-mega-search-wrap {
+		padding: 0;
+		margin: 0 0 0.35rem;
+		border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+	}
+	.site-header__menu .lf-mega-search__input {
+		width: 100%;
+		box-sizing: border-box;
+		border: 1px solid rgba(15, 23, 42, 0.12);
+		border-radius: 0.65rem;
+		padding: 0.55rem 0.75rem;
+		font: inherit;
+		font-size: 1rem;
+		background: #fff;
+	}
+	.site-header__menu .sub-menu > .menu-item.lf-mega-tile > a {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.65rem 0;
+		font-size: 1rem;
+		font-weight: 500;
+	}
+	.site-header__menu .sub-menu > .menu-item.lf-mega-tile .lf-mega-tile__thumb {
+		flex: 0 0 2.35rem;
+		width: 2.35rem;
+		height: 2.35rem;
+		min-width: 2.35rem;
+		max-width: 2.35rem;
+		border-radius: 0.4rem;
+		overflow: hidden;
+	}
+	.site-header__menu .sub-menu > .menu-item.lf-mega-tile .lf-mega-tile__thumb img {
+		width: 100%;
+		height: 100%;
+		max-width: none;
+		object-fit: cover;
+		display: block;
+	}
+	.site-header__menu .sub-menu > .menu-item.lf-mega-tile--hidden {
+		display: none;
+	}
+	.site-header__menu .sub-menu > .menu-item.lf-mega-empty {
+		padding: 0.5rem 0;
+		font-size: 0.95rem;
+		color: rgba(15, 23, 42, 0.55);
+		list-style: none;
+	}
+	.site-header__menu .sub-menu > .menu-item.lf-submenu-divider {
+		padding: 0.25rem 0;
+	}
+	.site-header__menu .sub-menu > .menu-item.lf-submenu-all-link > a {
+		font-weight: 600;
+	}
 	/* More toggle: matches regular links (padding, typography) */
 	.site-header__menu .lf-menu-more .site-header__more-toggle {
 		font-size: 1.05rem;
@@ -2934,6 +3013,38 @@ article a:not(.lf-btn):hover {
 	white-space: normal;
 	overflow-wrap: anywhere;
 	word-break: break-word;
+}
+
+.site-header__menu .sub-menu > .menu-item.lf-mega-tile > a {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	padding: 0.45rem 0.7rem;
+}
+
+.site-header__menu .sub-menu > .menu-item.lf-mega-tile .lf-mega-tile__thumb {
+	flex: 0 0 2.5rem;
+	width: 2.5rem;
+	height: 2.5rem;
+	min-width: 2.5rem;
+	max-width: 2.5rem;
+	border-radius: 0.45rem;
+	overflow: hidden;
+	background: rgba(15, 23, 42, 0.06);
+}
+
+.site-header__menu .sub-menu > .menu-item.lf-mega-tile .lf-mega-tile__thumb img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	max-width: none;
+	object-fit: cover;
+}
+
+.site-header__menu .sub-menu > .menu-item.lf-mega-tile .lf-mega-tile__label {
+	flex: 1 1 auto;
+	min-width: 0;
+	line-height: 1.35;
 }
 
 .site-header__menu .menu-item-has-children:hover > .sub-menu {
@@ -3173,46 +3284,6 @@ article a:not(.lf-btn):hover {
 
 	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-submenu-all-link > a {
 		font-weight: 600;
-	}
-}
-
-@media (max-width: 900px) {
-	.site-header__menu .lf-mega-search-wrap {
-		padding: 0.35rem 0.7rem 0.5rem;
-	}
-
-	.site-header__menu .lf-mega-search__input {
-		width: 100%;
-		box-sizing: border-box;
-		border: 1px solid rgba(15, 23, 42, 0.12);
-		border-radius: 0.65rem;
-		padding: 0.55rem 0.75rem;
-		font: inherit;
-	}
-
-	.site-header__menu .lf-mega-tile > a {
-		display: flex;
-		align-items: center;
-		gap: 0.65rem;
-	}
-
-	.lf-mega-tile__thumb {
-		flex: 0 0 2.25rem;
-		width: 2.25rem;
-		height: 2.25rem;
-		border-radius: 0.4rem;
-		overflow: hidden;
-	}
-
-	.lf-mega-tile__thumb img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		display: block;
-	}
-
-	.site-header__menu .lf-mega-tile--hidden {
-		display: none;
 	}
 }
 
