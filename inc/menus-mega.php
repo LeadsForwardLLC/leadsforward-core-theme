@@ -23,8 +23,8 @@ function lf_mega_menu_enabled(): bool {
  */
 function lf_mega_menu_is_header_context($args, array $items = []): bool {
 	return lf_mega_menu_enabled()
-		&& function_exists('lf_header_menu_cpt_nav_dropdowns_enabled')
-		&& lf_header_menu_cpt_nav_dropdowns_enabled()
+		&& function_exists('lf_header_menu_cpt_nav_dropdown_enabled')
+		&& lf_header_menu_cpt_nav_dropdown_enabled('services')
 		&& is_object($args)
 		&& ($args->theme_location ?? '') === 'header_menu'
 		&& $items !== [];
@@ -154,7 +154,7 @@ function lf_mega_menu_parent_css_classes(array $classes, \WP_Post $item, $args, 
 	if (!lf_mega_menu_enabled() || !is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || $depth !== 0) {
 		return $classes;
 	}
-	if (!function_exists('lf_header_menu_cpt_nav_dropdowns_enabled') || !lf_header_menu_cpt_nav_dropdowns_enabled()) {
+	if (!function_exists('lf_header_menu_cpt_nav_dropdown_enabled') || !lf_header_menu_cpt_nav_dropdown_enabled('services')) {
 		return $classes;
 	}
 	if (lf_header_menu_item_has_class($item, 'lf-menu-services-parent')) {

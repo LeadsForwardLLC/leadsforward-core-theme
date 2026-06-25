@@ -56,13 +56,17 @@ function lf_header_menu_fixup_dropdown_tree(array $items, $args): array {
 	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || $items === []) {
 		return $items;
 	}
-	if (function_exists('lf_header_menu_cpt_nav_dropdowns_enabled') && !lf_header_menu_cpt_nav_dropdowns_enabled()) {
+	$services_dropdown = function_exists('lf_header_menu_cpt_nav_dropdown_enabled')
+		&& lf_header_menu_cpt_nav_dropdown_enabled('services');
+	$areas_dropdown = function_exists('lf_header_menu_cpt_nav_dropdown_enabled')
+		&& lf_header_menu_cpt_nav_dropdown_enabled('areas');
+	if (!$services_dropdown && !$areas_dropdown) {
 		return $items;
 	}
 
 	$id_set = lf_header_menu_item_id_set($items);
-	$services_pid = lf_header_menu_services_parent_id($items);
-	$areas_pid = lf_header_menu_service_areas_parent_id($items);
+	$services_pid = $services_dropdown ? lf_header_menu_services_parent_id($items) : 0;
+	$areas_pid = $areas_dropdown ? lf_header_menu_service_areas_parent_id($items) : 0;
 
 	foreach ($items as $item) {
 		if (!$item instanceof \WP_Post) {

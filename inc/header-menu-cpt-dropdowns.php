@@ -1,6 +1,6 @@
 <?php
 /**
- * Services / Service Areas nav: overview links until a CPT is published, then dropdowns.
+ * Services / Service Areas nav: overview links until that CPT has published posts, then dropdown.
  *
  * @package LeadsForward_Core
  */
@@ -12,32 +12,44 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Whether at least one published service or service area CPT exists.
+ * CPT post type for a nav group kind.
+ */
+function lf_header_menu_cpt_post_type_for_kind(string $kind): string {
+	return $kind === 'areas' ? 'lf_service_area' : 'lf_service';
+}
+
+/**
+ * Whether at least one published CPT exists for a nav group (services or areas).
+ */
+function lf_header_menu_cpt_nav_dropdown_enabled(string $kind): bool {
+	static $cache = [];
+	if (isset($cache[$kind])) {
+		return $cache[$kind];
+	}
+
+	$cache[$kind] = false;
+	$found = get_posts([
+		'post_type'              => lf_header_menu_cpt_post_type_for_kind($kind),
+		'post_status'            => 'publish',
+		'posts_per_page'         => 1,
+		'fields'                 => 'ids',
+		'no_found_rows'          => true,
+		'update_post_meta_cache' => false,
+		'update_post_term_cache' => false,
+	]);
+	if (is_array($found) && $found !== []) {
+		$cache[$kind] = true;
+	}
+
+	return (bool) apply_filters('lf_header_menu_cpt_nav_dropdown_enabled', $cache[$kind], $kind);
+}
+
+/**
+ * Whether any Services or Service Areas nav dropdown is active.
  */
 function lf_header_menu_cpt_nav_dropdowns_enabled(): bool {
-	static $enabled = null;
-	if ($enabled !== null) {
-		return $enabled;
-	}
-
-	$enabled = false;
-	foreach (['lf_service', 'lf_service_area'] as $post_type) {
-		$found = get_posts([
-			'post_type'              => $post_type,
-			'post_status'            => 'publish',
-			'posts_per_page'         => 1,
-			'fields'                 => 'ids',
-			'no_found_rows'          => true,
-			'update_post_meta_cache' => false,
-			'update_post_term_cache' => false,
-		]);
-		if (is_array($found) && $found !== []) {
-			$enabled = true;
-			break;
-		}
-	}
-
-	return (bool) apply_filters('lf_header_menu_cpt_nav_dropdowns_enabled', $enabled);
+	return lf_header_menu_cpt_nav_dropdown_enabled('services')
+		|| lf_header_menu_cpt_nav_dropdown_enabled('areas');
 }
 
 /**
@@ -101,12 +113,12 @@ function lf_header_menu_apply_cpt_overview_link_mode(array $items, $args): array
 	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || $items === []) {
 		return $items;
 	}
-	if (lf_header_menu_cpt_nav_dropdowns_enabled()) {
-		return $items;
-	}
 
 	$parent_ids = [];
 	foreach (['services', 'areas'] as $kind) {
+		if (lf_header_menu_cpt_nav_dropdown_enabled($kind)) {
+			continue;
+		}
 		$parent = lf_header_menu_find_cpt_group_parent($items, $kind);
 		if (!$parent instanceof \WP_Post) {
 			continue;
@@ -162,14 +174,14 @@ function lf_header_menu_ensure_cpt_group_dropdown_children(array $items, $args):
 	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || $items === []) {
 		return $items;
 	}
-	if (!lf_header_menu_cpt_nav_dropdowns_enabled()) {
-		return $items;
-	}
 
 	$synthetic_id = -6000;
 	$extra = [];
 
 	foreach (['services' => 'lf_service', 'areas' => 'lf_service_area'] as $kind => $post_type) {
+		if (!lf_header_menu_cpt_nav_dropdown_enabled($kind)) {
+			continue;
+		}
 		$parent = lf_header_menu_find_cpt_group_parent($items, $kind);
 		if (!$parent instanceof \WP_Post) {
 			continue;
