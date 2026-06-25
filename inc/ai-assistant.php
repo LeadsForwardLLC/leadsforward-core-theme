@@ -347,6 +347,9 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		'header_settings' => $header_settings_local,
 		'heading_case_mode' => $heading_case_mode,
 		'homepage_enabled' => $homepage_enabled,
+		'service_library_bootstrap' => function_exists('lf_ai_fetch_service_library_rows')
+			? lf_ai_fetch_service_library_rows()
+			: [],
 		'i18n' => [
 			'statusReady' => __('Ready.', 'leadsforward-core'),
 			'statusGenerating' => __('Generating suggestions...', 'leadsforward-core'),
@@ -1658,7 +1661,8 @@ function lf_ai_assistant_widget_js(): string {
 		var sectionGridPickerEl = null;
 		var sectionGridPickerWrap = null;
 		var sectionGridPickerPatch = "";
-		var serviceLibraryCache = null;
+		var serviceLibraryCache = (lfAiFloating && Array.isArray(lfAiFloating.service_library_bootstrap)) ? lfAiFloating.service_library_bootstrap : null;
+		var serviceLibraryLoadState = Array.isArray(serviceLibraryCache) ? "ready" : "idle";
 		var servicePickerEl = null;
 		var servicePickerSearchEl = null;
 		var servicePickerListEl = null;
@@ -7355,16 +7359,26 @@ function lf_ai_assistant_widget_js(): string {
 			media.appendChild(ph);
 		}
 		function applyServiceStatusBadgeToCard(card, row) {
-			if (!card || !row) return;
+			if (!card) return;
 			var head = card.querySelector(".lf-block-service-intro__card-head");
 			if (!head) return;
 			Array.prototype.slice.call(head.querySelectorAll(".lf-ai-service-status-badge")).forEach(function(node){
 				if (node && node.parentNode) node.parentNode.removeChild(node);
 			});
+			if (!row) {
+				var statusAttr = String(card.getAttribute("data-lf-service-status") || "publish");
+				row = { status: statusAttr, status_label: "", is_live: statusAttr === "publish" };
+				if (statusAttr === "publish") row.status_label = "Live";
+				else if (statusAttr === "future") row.status_label = "Scheduled";
+				else if (statusAttr === "draft") row.status_label = "Draft";
+				else if (statusAttr === "pending") row.status_label = "Pending review";
+			}
 			var status = String(row.status || "publish");
+			var label = String(row.status_label || (row.is_live ? "Live" : "Scheduled"));
+			if (!label) return;
 			var badge = document.createElement("span");
 			badge.className = "lf-ai-service-status-badge lf-ai-faq-picker__status lf-ai-faq-picker__status--" + status;
-			badge.textContent = String(row.status_label || (row.is_live ? "Live" : "Scheduled"));
+			badge.textContent = label;
 			head.appendChild(badge);
 		}
 		function wireServiceIntroStatusBadgesForWrap(wrap) {
@@ -7375,8 +7389,9 @@ function lf_ai_assistant_widget_js(): string {
 				var byId = {};
 				(rows || []).forEach(function(r){ byId[String(r.id || "")] = r; });
 				Array.prototype.slice.call(cards).forEach(function(card){
+					if (card.querySelector(".lf-ai-service-status-badge")) return;
 					var sid = String(card.getAttribute("data-lf-service-id") || "");
-					applyServiceStatusBadgeToCard(card, byId[sid]);
+					applyServiceStatusBadgeToCard(card, byId[sid] || null);
 				});
 			});
 		}
@@ -7442,21 +7457,35 @@ function lf_ai_assistant_widget_js(): string {
 			servicePickerWrap = null;
 			try { if (servicePickerSearchEl) servicePickerSearchEl.value = ""; } catch (eSp) {}
 		}
-		function loadServiceLibrary(done) {
-			if (Array.isArray(serviceLibraryCache)) {
+		function loadServiceLibrary(done, forceRefresh) {
+			if (!forceRefresh && Array.isArray(serviceLibraryCache)) {
 				if (typeof done === "function") done(serviceLibraryCache);
 				return;
 			}
+			serviceLibraryLoadState = "loading";
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_service_library",
 				nonce: lfAiFloating.nonce
 			}).done(function(res){
-				serviceLibraryCache = (res && res.success && res.data && Array.isArray(res.data.items)) ? res.data.items : [];
-				if (typeof done === "function") done(serviceLibraryCache);
+				if (res && res.success && res.data && Array.isArray(res.data.items)) {
+					serviceLibraryCache = res.data.items;
+					serviceLibraryLoadState = "ready";
+				} else {
+					serviceLibraryLoadState = "error";
+					if (!Array.isArray(serviceLibraryCache)) {
+						serviceLibraryCache = null;
+					}
+					var msg = (res && res.data && res.data.message) ? res.data.message : "Could not load services.";
+					setStatus(msg, true);
+				}
+				if (typeof done === "function") done(Array.isArray(serviceLibraryCache) ? serviceLibraryCache : []);
 			}).fail(function(){
-				serviceLibraryCache = [];
+				serviceLibraryLoadState = "error";
+				if (!Array.isArray(serviceLibraryCache)) {
+					serviceLibraryCache = null;
+				}
 				setStatus("Service library unavailable.", true);
-				if (typeof done === "function") done(serviceLibraryCache);
+				if (typeof done === "function") done(Array.isArray(serviceLibraryCache) ? serviceLibraryCache : []);
 			});
 		}
 		function ensureServicePicker() {
@@ -7509,7 +7538,15 @@ function lf_ai_assistant_widget_js(): string {
 			if (!filtered.length) {
 				var em = document.createElement("div");
 				em.className = "lf-ai-faq-picker__empty";
-				em.textContent = "No services match.";
+				if (serviceLibraryLoadState === "loading") {
+					em.textContent = "Loading services...";
+				} else if (serviceLibraryLoadState === "error" && !rows.length) {
+					em.textContent = "Could not load services. Refresh the page and try again.";
+				} else if (q) {
+					em.textContent = "No services match.";
+				} else {
+					em.textContent = "No services found. Add services under Services in WordPress.";
+				}
 				servicePickerListEl.appendChild(em);
 				return;
 			}
@@ -7611,12 +7648,12 @@ function lf_ai_assistant_widget_js(): string {
 		function openServicePickerForIntro(wrap, grid) {
 			ensureServicePicker();
 			servicePickerWrap = { wrap: wrap, grid: grid };
-			serviceLibraryCache = null;
+			if (servicePickerEl) servicePickerEl.hidden = false;
+			renderServicePickerList("");
 			loadServiceLibrary(function(){
-				renderServicePickerList("");
-				if (servicePickerEl) servicePickerEl.hidden = false;
-				try { if (servicePickerSearchEl) servicePickerSearchEl.focus(); } catch (eF) {}
-			});
+				renderServicePickerList(servicePickerSearchEl ? servicePickerSearchEl.value : "");
+			}, true);
+			try { if (servicePickerSearchEl) servicePickerSearchEl.focus(); } catch (eF) {}
 		}
 		function areaIdsFromList(list) {
 			if (!list) return [];
