@@ -11,6 +11,14 @@
 			.trim();
 	}
 
+	function setEmptyVisible(empty, show) {
+		if (!empty) {
+			return;
+		}
+		empty.hidden = !show;
+		empty.classList.toggle('lf-mega-empty--visible', show);
+	}
+
 	function initMegaSearch(panel) {
 		var input = panel.querySelector('.lf-mega-search__input');
 		if (!input || input.dataset.lfMegaBound === '1') {
@@ -23,6 +31,7 @@
 			return;
 		}
 
+		var categories = panel.querySelectorAll('.lf-mega-category');
 		var empty = panel.querySelector('.lf-mega-empty');
 		if (!empty) {
 			empty = document.createElement('li');
@@ -31,6 +40,7 @@
 			empty.innerHTML = '<span class="lf-mega-empty__text">No matches</span>';
 			panel.appendChild(empty);
 		}
+		setEmptyVisible(empty, false);
 
 		input.addEventListener('input', function () {
 			var query = normalize(input.value);
@@ -45,7 +55,17 @@
 					visible += 1;
 				}
 			});
-			empty.hidden = visible > 0 || query === '';
+			categories.forEach(function (category) {
+				var catTiles = category.querySelectorAll('.lf-mega-tile');
+				var catVisible = 0;
+				catTiles.forEach(function (tile) {
+					if (!tile.hidden && !tile.classList.contains('lf-mega-tile--hidden')) {
+						catVisible += 1;
+					}
+				});
+				category.hidden = query !== '' && catVisible === 0;
+			});
+			setEmptyVisible(empty, query !== '' && visible === 0);
 		});
 	}
 

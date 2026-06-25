@@ -345,11 +345,14 @@ function lf_header_menu_reorder_services_areas_children(array $items): array {
 		$regular = [];
 		$dividers = [];
 		$all_links = [];
+		$search_hosts = [];
 		foreach ($children as $child) {
 			if (lf_header_menu_item_has_class($child, 'lf-submenu-all-link')) {
 				$all_links[] = $child;
 			} elseif (lf_header_menu_item_has_class($child, 'lf-submenu-divider')) {
 				$dividers[] = $child;
+			} elseif (lf_header_menu_item_has_class($child, 'lf-mega-search-host')) {
+				$search_hosts[] = $child;
 			} elseif (lf_header_menu_item_has_class($child, 'lf-menu-service-category')) {
 				$regular[] = $child;
 			} else {
@@ -385,7 +388,25 @@ function lf_header_menu_reorder_services_areas_children(array $items): array {
 		}
 		usort($dividers, $sort_by_order);
 		usort($all_links, $sort_by_order);
-		$ordered = array_merge($regular, $dividers, $all_links);
+		usort($search_hosts, $sort_by_order);
+		$is_services_mega = false;
+		foreach ($flat as $menu_item) {
+			if (!$menu_item instanceof \WP_Post) {
+				continue;
+			}
+			if ((int) ($menu_item->ID ?? 0) === $parent_id
+				&& lf_header_menu_item_has_class($menu_item, 'lf-menu-services-parent')
+				&& function_exists('lf_mega_menu_enabled')
+				&& lf_mega_menu_enabled()) {
+				$is_services_mega = true;
+				break;
+			}
+		}
+		if ($is_services_mega) {
+			$ordered = array_merge($regular, $all_links, $search_hosts);
+		} else {
+			$ordered = array_merge($regular, $dividers, $all_links, $search_hosts);
+		}
 
 		$first_idx = min($indices);
 		foreach (array_reverse($indices) as $idx) {
@@ -453,7 +474,10 @@ function lf_header_menu_objects(array $items, $args): array {
 		if ($all_url === '' || $all_url === '#') {
 			continue;
 		}
-		if (!$has_divider) {
+		$is_services_mega = $is_services_group
+			&& function_exists('lf_mega_menu_enabled')
+			&& lf_mega_menu_enabled();
+		if (!$has_divider && !$is_services_mega) {
 			$extra_items[] = lf_header_menu_synthetic_child($parent_id, $synthetic_id--, '', '#', ['menu-item', 'lf-submenu-divider']);
 		}
 		if (!$has_all_link) {
