@@ -4775,6 +4775,38 @@ article a:not(.lf-btn):hover {
 	padding: 0;
 }
 
+.lf-block-service-grid__categories {
+	display: flex;
+	flex-direction: column;
+	gap: 2.25rem;
+}
+
+.lf-block-service-grid__category-heading {
+	margin: 0 0 1rem;
+	padding: 0 0 0.35rem;
+	font-size: 0.78rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: rgba(15, 23, 42, 0.55);
+	border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.lf-block-service-grid__item {
+	position: relative;
+}
+
+.lf-block-service-grid__item > .lf-ai-service-status-badge {
+	position: absolute;
+	top: 0.65rem;
+	right: 0.65rem;
+	z-index: 2;
+}
+
+.lf-block-service-grid--categorized .lf-block-service-grid__category:last-child {
+	margin-bottom: 0;
+}
+
 @media (min-width: 48rem) {
 	.lf-block-service-grid__list { grid-template-columns: repeat(2, 1fr); }
 }

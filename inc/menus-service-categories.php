@@ -58,6 +58,92 @@ function lf_foundation_repair_service_menu_category_slug(string $title, string $
 }
 
 /**
+ * Group lf_service posts into smart category sections (overview page, mega menu parity).
+ *
+ * @param list<\WP_Post> $posts
+ * @return array{grouped: bool, categories: list<array{slug: string, label: string, posts: list<\WP_Post>}>}
+ */
+function lf_services_group_posts_by_category(array $posts): array {
+	$posts = array_values(array_filter(
+		$posts,
+		static fn ($post): bool => $post instanceof \WP_Post
+	));
+	if ($posts === []) {
+		return ['grouped' => false, 'categories' => []];
+	}
+
+	if (!lf_services_menu_categories_enabled()) {
+		return [
+			'grouped' => false,
+			'categories' => [
+				['slug' => '', 'label' => '', 'posts' => $posts],
+			],
+		];
+	}
+
+	$min_services = lf_services_menu_category_min_services();
+	if (count($posts) < $min_services) {
+		return [
+			'grouped' => false,
+			'categories' => [
+				['slug' => '', 'label' => '', 'posts' => $posts],
+			],
+		];
+	}
+
+	$bucketed = [
+		'foundation-repair' => [],
+		'waterproofing'     => [],
+		'crawl-space'       => [],
+	];
+	foreach ($posts as $post) {
+		$cat = lf_foundation_repair_service_menu_category_slug(
+			(string) $post->post_title,
+			(string) $post->post_name
+		);
+		if ($cat === '' || !isset($bucketed[ $cat ])) {
+			$cat = 'foundation-repair';
+		}
+		$bucketed[ $cat ][] = $post;
+	}
+
+	$filled = array_filter($bucketed, static fn (array $rows): bool => $rows !== []);
+	if ($filled === []) {
+		return [
+			'grouped' => false,
+			'categories' => [
+				['slug' => '', 'label' => '', 'posts' => $posts],
+			],
+		];
+	}
+
+	$defs = lf_services_menu_category_definitions();
+	$categories = [];
+	foreach ($defs as $slug => $label) {
+		$kids = $bucketed[ $slug ] ?? [];
+		if ($kids === []) {
+			continue;
+		}
+		usort(
+			$kids,
+			static function (\WP_Post $a, \WP_Post $b): int {
+				return strcasecmp((string) $a->post_title, (string) $b->post_title);
+			}
+		);
+		$categories[] = [
+			'slug'   => (string) $slug,
+			'label'  => (string) $label,
+			'posts'  => $kids,
+		];
+	}
+
+	return [
+		'grouped'    => $categories !== [],
+		'categories' => $categories,
+	];
+}
+
+/**
  * Find the top-level Services menu item ID.
  */
 function lf_header_menu_services_parent_id(array $items): int {
