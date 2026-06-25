@@ -144,6 +144,10 @@ if ($show_topbar) {
 			try {
 				document.body.classList.remove('lf-header-more-open');
 			} catch (eB) {}
+			var active = document.activeElement;
+			if (active && header.contains(active) && active.closest('.lf-menu-more, .menu-item-has-children, .lf-menu-group-parent')) {
+				active.blur();
+			}
 		}
 		function setOpen(open) {
 			header.classList.toggle('site-header--open', open);
@@ -239,6 +243,9 @@ if ($show_topbar) {
 					toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
 					if (moreToggle) {
 						moreToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+					}
+					if (!open && document.activeElement && item.contains(document.activeElement)) {
+						document.activeElement.blur();
 					}
 					var slideoutMore =
 						header.classList.contains('site-header--more-slideout') &&
