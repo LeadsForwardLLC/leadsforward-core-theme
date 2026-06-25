@@ -236,3 +236,112 @@ function lf_header_menu_remap_items_to_more_group(array $items): array {
 
 	return $items;
 }
+
+/**
+ * At render time, bucket secondary pages under a synthetic or existing More parent.
+ *
+ * @param array<int, \WP_Post> $items
+ * @return array<int, \WP_Post>
+ */
+function lf_header_menu_objects_consolidate_more(array $items, $args): array {
+	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || $items === []) {
+		return $items;
+	}
+
+	$more_parent_id = 0;
+	$to_move = [];
+
+	foreach ($items as $item) {
+		if (!$item instanceof \WP_Post) {
+			continue;
+		}
+		if ((int) ($item->menu_item_parent ?? 0) !== 0) {
+			continue;
+		}
+		if (lf_header_menu_item_has_class($item, 'lf-menu-more')) {
+			$more_parent_id = (int) $item->ID;
+			continue;
+		}
+		$title = strtolower(trim(wp_strip_all_tags((string) ($item->title ?? ''))));
+		if ($title === 'more') {
+			$more_parent_id = (int) $item->ID;
+			continue;
+		}
+		if (lf_header_menu_item_belongs_in_more($item)) {
+			$to_move[] = $item;
+		}
+	}
+
+	if ($to_move === []) {
+		return $items;
+	}
+
+	if ($more_parent_id <= 0) {
+		$more_parent_id = -5100;
+		$more_item = lf_header_menu_synthetic_child(
+			0,
+			$more_parent_id,
+			__('More', 'leadsforward-core'),
+			'#',
+			['menu-item', 'lf-menu-more', 'menu-item-has-children']
+		);
+		$more_item->menu_order = 9000;
+		$items[] = $more_item;
+	}
+
+	foreach ($to_move as $item) {
+		$item->menu_item_parent = $more_parent_id;
+		if (!lf_header_menu_item_has_class($item, 'menu-item')) {
+			$item->classes = array_values(array_unique(array_merge(
+				is_array($item->classes ?? null) ? $item->classes : [],
+				['menu-item']
+			)));
+		}
+	}
+
+	return $items;
+}
+add_filter('wp_nav_menu_objects', 'lf_header_menu_objects_consolidate_more', 4, 2);
+
+/**
+ * Persist More bucketing + nav repair when the stored menu is out of date.
+ */
+function lf_header_menu_maybe_repair_on_view(): void {
+	if (is_admin() || !has_nav_menu('header_menu')) {
+		return;
+	}
+	if (get_transient('lf_header_menu_repair_pending')) {
+		return;
+	}
+
+	$locations = get_nav_menu_locations();
+	$menu_id = (int) ($locations['header_menu'] ?? 0);
+	if ($menu_id <= 0 || !function_exists('lf_header_menu_repair_nav_structure')) {
+		return;
+	}
+
+	$items = wp_get_nav_menu_items($menu_id);
+	if (!is_array($items)) {
+		return;
+	}
+
+	$needs_repair = false;
+	foreach ($items as $item) {
+		if (!$item instanceof \WP_Post) {
+			continue;
+		}
+		if ((int) ($item->menu_item_parent ?? 0) === 0 && lf_header_menu_item_belongs_in_more($item)) {
+			$needs_repair = true;
+			break;
+		}
+	}
+
+	if (!$needs_repair) {
+		set_transient('lf_header_menu_repair_pending', 1, HOUR_IN_SECONDS);
+		return;
+	}
+
+	lf_header_menu_repair_nav_structure($menu_id);
+	set_transient('lf_header_menu_repair_pending', 1, MINUTE_IN_SECONDS);
+}
+add_action('wp', 'lf_header_menu_maybe_repair_on_view', 18);

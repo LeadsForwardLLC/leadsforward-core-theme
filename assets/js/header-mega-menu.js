@@ -1,5 +1,5 @@
 /**
- * Header mega menu: client-side search/filter for Services and Service Areas panels.
+ * Header mega menu: client-side search/filter for the Services panel only.
  */
 (function () {
 	'use strict';
@@ -23,11 +23,14 @@
 			return;
 		}
 
-		var empty = document.createElement('li');
-		empty.className = 'lf-mega-empty menu-item';
-		empty.hidden = true;
-		empty.innerHTML = '<span class="lf-mega-empty__text">No matches</span>';
-		panel.appendChild(empty);
+		var empty = panel.querySelector('.lf-mega-empty');
+		if (!empty) {
+			empty = document.createElement('li');
+			empty.className = 'lf-mega-empty menu-item';
+			empty.hidden = true;
+			empty.innerHTML = '<span class="lf-mega-empty__text">No matches</span>';
+			panel.appendChild(empty);
+		}
 
 		input.addEventListener('input', function () {
 			var query = normalize(input.value);
@@ -47,7 +50,7 @@
 	}
 
 	function init() {
-		document.querySelectorAll('.lf-mega-menu > .sub-menu').forEach(function (panel) {
+		document.querySelectorAll('.lf-mega-menu--services > .sub-menu').forEach(function (panel) {
 			initMegaSearch(panel);
 		});
 	}

@@ -3060,7 +3060,7 @@ article a:not(.lf-btn):hover {
 
 /* Header mega menus (Services / Service Areas) */
 @media (min-width: 901px) {
-	.site-header__menu > .lf-mega-menu > .sub-menu {
+	.site-header__menu > .lf-mega-menu--services > .sub-menu {
 		min-width: min(520px, 92vw);
 		max-width: min(640px, 94vw);
 		padding: 0.55rem;
@@ -3070,7 +3070,7 @@ article a:not(.lf-btn):hover {
 		align-items: start;
 	}
 
-	.site-header__menu > .lf-mega-menu > .sub-menu > .lf-mega-search-host {
+	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-mega-search-host {
 		grid-column: 1 / -1;
 		display: block;
 		width: 100%;
@@ -3105,7 +3105,7 @@ article a:not(.lf-btn):hover {
 		box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 	}
 
-	.site-header__menu > .lf-mega-menu > .sub-menu > .lf-mega-tile > a {
+	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-mega-tile > a {
 		display: flex;
 		align-items: center;
 		gap: 0.55rem;
@@ -3136,30 +3136,30 @@ article a:not(.lf-btn):hover {
 		font-size: 0.9rem;
 	}
 
-	.site-header__menu > .lf-mega-menu > .sub-menu > .lf-mega-tile--hidden {
+	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-mega-tile--hidden {
 		display: none;
 	}
 
-	.site-header__menu > .lf-mega-menu > .sub-menu > .lf-mega-empty {
+	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-mega-empty {
 		grid-column: 1 / -1;
 		padding: 0.65rem 0.75rem;
 		color: rgba(15, 23, 42, 0.55);
 		font-size: 0.9rem;
 	}
 
-	.site-header__menu > .lf-mega-menu > .sub-menu > .lf-submenu-divider {
+	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-submenu-divider {
 		grid-column: 1 / -1;
 		padding: 0.15rem 0.5rem;
 	}
 
-	.site-header__menu > .lf-mega-menu > .sub-menu > .lf-submenu-all-link {
+	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-submenu-all-link {
 		grid-column: 1 / -1;
 		margin-top: 0.15rem;
 		border-top: 1px solid rgba(15, 23, 42, 0.08);
 		padding-top: 0.25rem;
 	}
 
-	.site-header__menu > .lf-mega-menu > .sub-menu > .lf-submenu-all-link > a {
+	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-submenu-all-link > a {
 		font-weight: 600;
 	}
 }
