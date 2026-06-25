@@ -99,6 +99,11 @@ function lf_header_menu_item_title(string $title, \WP_Post $item, $args, int $de
 	if (in_array('lf-menu-call', $classes, true)) {
 		return __('Call', 'leadsforward-core');
 	}
+	if (function_exists('lf_header_menu_item_is_about') && lf_header_menu_item_is_about($item)) {
+		return function_exists('lf_header_menu_about_nav_label')
+			? lf_header_menu_about_nav_label()
+			: __('About', 'leadsforward-core');
+	}
 	if (in_array('lf-menu-more', $classes, true) && trim(wp_strip_all_tags($title)) === '') {
 		return __('More', 'leadsforward-core');
 	}
@@ -509,6 +514,9 @@ function lf_header_menu_top_level_sort_tuple(\WP_Post $item): array {
 	}
 	if (lf_header_menu_item_is_home_item($item)) {
 		return [0, $mo];
+	}
+	if (function_exists('lf_header_menu_item_is_about') && lf_header_menu_item_is_about($item)) {
+		return [115, $mo];
 	}
 	return [100, $mo];
 }

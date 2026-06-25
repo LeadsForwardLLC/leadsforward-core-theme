@@ -125,10 +125,11 @@ function lf_menu_maybe_autobuild_header_menu(): void {
 	}
 
 	// Common pages if present and published.
-	foreach (['service-areas', 'reviews', 'about-us', 'why-choose-us', 'contact'] as $slug) {
+	foreach (['service-areas', 'about-us', 'why-choose-us', 'contact', 'reviews', 'blog'] as $slug) {
 		$page = get_page_by_path($slug);
 		if ($page instanceof \WP_Post && $page->post_status === 'publish') {
-			$add_page((int) $page->ID);
+			$title = ($slug === 'about-us') ? __('About', 'leadsforward-core') : '';
+			$add_page((int) $page->ID, 0, $title);
 		}
 	}
 

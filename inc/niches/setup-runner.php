@@ -1524,10 +1524,16 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 			'classes' => 'lf-submenu-all-link',
 		];
 	}
-	if ($reviews_id) $header_items[] = ['type' => 'page', 'object_id' => $reviews_id];
+	if ($about_id) {
+		$header_items[] = [
+			'type' => 'page',
+			'object_id' => $about_id,
+			'title' => __('About', 'leadsforward-core'),
+			'classes' => ['lf-menu-about'],
+		];
+	}
 
 	$more_children = [];
-	if ($about_id) $more_children[] = ['type' => 'page', 'object_id' => $about_id];
 	if ($why_choose_id) $more_children[] = ['type' => 'page', 'object_id' => $why_choose_id];
 	if ($financing_id) $more_children[] = ['type' => 'page', 'object_id' => $financing_id];
 	if ($faq_page_id) $more_children[] = ['type' => 'page', 'object_id' => $faq_page_id];
@@ -1535,7 +1541,9 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	$project_archive = $has_projects ? get_post_type_archive_link('lf_project') : '';
 	if ($project_archive) $more_children[] = ['type' => 'custom', 'url' => $project_archive, 'title' => __('Projects', 'leadsforward-core')];
 	if ($contact_id) $more_children[] = ['type' => 'page', 'object_id' => $contact_id];
-	if (!empty($more_children)) {
+	if ($reviews_id) $more_children[] = ['type' => 'page', 'object_id' => $reviews_id];
+	$more_gate = ($blog_id || $reviews_id || $contact_id);
+	if ($more_gate && !empty($more_children)) {
 		$header_items[] = [
 			'type' => 'custom',
 			'url' => '#',

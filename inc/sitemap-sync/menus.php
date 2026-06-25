@@ -241,6 +241,17 @@ function lf_sitemap_sync_reorder_header_menu_top_level(int $menu_id, array $labe
 				}
 			}
 		}
+		if ($want === 'about' && function_exists('lf_header_menu_about_page_slugs')) {
+			if (function_exists('lf_header_menu_item_is_about') && lf_header_menu_item_is_about($item)) {
+				return true;
+			}
+			if ((string) ($item->object ?? '') === 'page') {
+				$page = get_post((int) ($item->object_id ?? 0));
+				if ($page instanceof WP_Post && in_array((string) $page->post_name, lf_header_menu_about_page_slugs(), true)) {
+					return true;
+				}
+			}
+		}
 		return false;
 	};
 
@@ -1114,27 +1125,33 @@ function lf_header_menu_append_missing_core_top_levels(int $menu_id): void {
 		$items = wp_get_nav_menu_items($menu_id) ?: [];
 	}
 
-	$reviews = get_page_by_path('reviews');
-	$reviews_id = ($reviews instanceof WP_Post && $reviews->post_status === 'publish') ? (int) $reviews->ID : 0;
-	if ($reviews_id <= 0) {
-		return;
-	}
-
-	if (!lf_nav_menu_contains_page_object($items, $reviews_id)) {
-		$cursor = 0;
-		foreach ($items as $it) {
-			if ($it instanceof WP_Post) {
-				$cursor = max($cursor, (int) ($it->menu_order ?? 0));
+	if (function_exists('lf_header_menu_about_page_slugs')) {
+		foreach (lf_header_menu_about_page_slugs() as $about_slug) {
+			$about = get_page_by_path($about_slug);
+			$about_id = ($about instanceof WP_Post && $about->post_status === 'publish') ? (int) $about->ID : 0;
+			if ($about_id <= 0 || lf_nav_menu_contains_page_object($items, $about_id)) {
+				continue;
 			}
+			$cursor = 0;
+			foreach ($items as $it) {
+				if ($it instanceof WP_Post) {
+					$cursor = max($cursor, (int) ($it->menu_order ?? 0));
+				}
+			}
+			$cursor++;
+			$about_title = function_exists('lf_header_menu_about_nav_label')
+				? lf_header_menu_about_nav_label()
+				: __('About', 'leadsforward-core');
+			lf_sitemap_sync_add_post_menu_item($menu_id, $cursor, [
+				'post_id' => $about_id,
+				'title' => $about_title,
+				'parent_item_id' => 0,
+				'object' => 'page',
+				'classes' => 'lf-menu-about',
+			]);
+			$items = wp_get_nav_menu_items($menu_id) ?: [];
+			break;
 		}
-		$cursor++;
-		lf_sitemap_sync_add_post_menu_item($menu_id, $cursor, [
-			'post_id' => $reviews_id,
-			'title' => __('Reviews', 'leadsforward-core'),
-			'parent_item_id' => 0,
-			'object' => 'page',
-			'classes' => '',
-		]);
 	}
 }
 
@@ -1807,7 +1824,7 @@ function lf_header_menu_repair_nav_structure(int $menu_id, bool $apply_preferred
 	}
 
 	if ($apply_preferred_order) {
-		lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'Service Areas', 'Reviews', 'More']);
+		lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'Service Areas', 'About', 'More']);
 	}
 }
 
