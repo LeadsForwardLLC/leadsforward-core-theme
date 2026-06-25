@@ -202,18 +202,45 @@ if ($show_topbar) {
 			categoryItems.forEach(function (item) {
 				var catLink = item.querySelector(':scope > a.lf-menu-service-category__link, :scope > a');
 				if (!catLink) return;
-				catLink.addEventListener('click', function (event) {
+				var catToggle = item.querySelector(':scope > .site-header__category-toggle');
+				if (!catToggle) {
+					catToggle = document.createElement('button');
+					catToggle.type = 'button';
+					catToggle.className = 'site-header__submenu-toggle site-header__category-toggle';
+					catToggle.setAttribute('aria-expanded', 'false');
+					catToggle.setAttribute('aria-label', 'Toggle service category');
+					catToggle.innerHTML = '<span aria-hidden="true">▾</span>';
+					catLink.insertAdjacentElement('afterend', catToggle);
+				}
+				var setCategoryOpen = function (open) {
+					item.classList.toggle('is-open', open);
+					catToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+					catLink.setAttribute('aria-expanded', open ? 'true' : 'false');
+				};
+				var handleCategoryToggle = function (event) {
 					if (window.matchMedia('(min-width: 901px)').matches) {
-						event.preventDefault();
+						if (event) {
+							event.preventDefault();
+						}
 						return;
 					}
-					event.preventDefault();
+					if (event) {
+						event.preventDefault();
+						event.stopPropagation();
+					}
 					var wasOpen = item.classList.contains('is-open');
 					Array.prototype.forEach.call(categoryItems, function (peer) {
-						if (peer !== item) peer.classList.remove('is-open');
+						if (peer === item) return;
+						peer.classList.remove('is-open');
+						var peerToggle = peer.querySelector(':scope > .site-header__category-toggle');
+						var peerLink = peer.querySelector(':scope > a.lf-menu-service-category__link, :scope > a');
+						if (peerToggle) peerToggle.setAttribute('aria-expanded', 'false');
+						if (peerLink) peerLink.setAttribute('aria-expanded', 'false');
 					});
-					item.classList.toggle('is-open', !wasOpen);
-				});
+					setCategoryOpen(!wasOpen);
+				};
+				catToggle.addEventListener('click', handleCategoryToggle);
+				catLink.addEventListener('click', handleCategoryToggle);
 			});
 		}
 		var submenuItems = header.querySelectorAll('.site-header__menu > .menu-item-has-children, .site-header__menu > .lf-menu-more, .site-header__menu > .lf-menu-group-parent');
