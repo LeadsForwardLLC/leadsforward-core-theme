@@ -119,22 +119,34 @@ function lf_header_menu_objects_consolidate_more(array $items, $args): array {
 		if (!$item instanceof \WP_Post) {
 			continue;
 		}
+		if (lf_header_menu_item_has_class($item, 'lf-menu-more')) {
+			if ((int) ($item->menu_item_parent ?? 0) === 0) {
+				$more_parent_id = (int) $item->ID;
+			}
+			continue;
+		}
+		$title = lf_header_menu_normalize_more_label((string) ($item->title ?? ''));
+		if ($title === 'more' && (int) ($item->menu_item_parent ?? 0) === 0) {
+			$more_parent_id = (int) $item->ID;
+			continue;
+		}
+	}
+
+	foreach ($items as $item) {
+		if (!$item instanceof \WP_Post) {
+			continue;
+		}
+		if (!lf_header_menu_item_is_more_candidate($item)) {
+			continue;
+		}
+		if ($more_parent_id > 0 && (int) ($item->menu_item_parent ?? 0) === $more_parent_id) {
+			continue;
+		}
 		if ((int) ($item->menu_item_parent ?? 0) !== 0) {
 			continue;
 		}
-		if (lf_header_menu_item_has_class($item, 'lf-menu-more')) {
-			$more_parent_id = (int) $item->ID;
-			continue;
-		}
-		$title = strtolower(trim(wp_strip_all_tags((string) ($item->title ?? ''))));
-		if ($title === 'more') {
-			$more_parent_id = (int) $item->ID;
-			continue;
-		}
-		if (lf_header_menu_item_is_more_candidate($item)) {
-			$candidates[] = $item;
-			$candidate_ids[(int) $item->ID] = true;
-		}
+		$candidates[] = $item;
+		$candidate_ids[(int) $item->ID] = true;
 	}
 
 	if ($candidates === []) {
@@ -186,7 +198,7 @@ function lf_header_menu_force_structure_repair(): void {
 		return;
 	}
 
-	$structure_version = 'header-nav-v4';
+	$structure_version = 'header-nav-v5';
 	$stored = (string) get_option('lf_header_menu_structure_version', '');
 	if ($stored === $structure_version) {
 		return;
