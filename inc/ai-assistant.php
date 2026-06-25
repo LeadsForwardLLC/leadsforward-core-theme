@@ -350,6 +350,9 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		'service_library_bootstrap' => function_exists('lf_ai_fetch_service_library_rows')
 			? lf_ai_fetch_service_library_rows()
 			: [],
+		'area_library_bootstrap' => function_exists('lf_ai_fetch_area_library_rows')
+			? lf_ai_fetch_area_library_rows()
+			: [],
 		'i18n' => [
 			'statusReady' => __('Ready.', 'leadsforward-core'),
 			'statusGenerating' => __('Generating suggestions...', 'leadsforward-core'),
@@ -1668,7 +1671,8 @@ function lf_ai_assistant_widget_js(): string {
 		var servicePickerListEl = null;
 		var servicePickerWrap = null;
 		var servicePickerDirty = false;
-		var areaLibraryCache = null;
+		var areaLibraryCache = (lfAiFloating && Array.isArray(lfAiFloating.area_library_bootstrap)) ? lfAiFloating.area_library_bootstrap : null;
+		var areaLibraryLoadState = Array.isArray(areaLibraryCache) ? "ready" : "idle";
 		var areaPickerEl = null;
 		var areaPickerSearchEl = null;
 		var areaPickerListEl = null;
@@ -7692,6 +7696,7 @@ function lf_ai_assistant_widget_js(): string {
 				var byId = {};
 				(rows || []).forEach(function(r){ byId[String(r.id || "")] = r; });
 				Array.prototype.slice.call(items).forEach(function(item){
+					if (item.querySelector(".lf-ai-area-status-badge")) return;
 					var aid = String(item.getAttribute("data-area-id") || "");
 					applyAreaStatusBadgeToItem(item, byId[aid] || null);
 				});
@@ -7709,21 +7714,35 @@ function lf_ai_assistant_widget_js(): string {
 			areaPickerWrap = null;
 			try { if (areaPickerSearchEl) areaPickerSearchEl.value = ""; } catch (eAp) {}
 		}
-		function loadAreaLibrary(done) {
-			if (Array.isArray(areaLibraryCache)) {
+		function loadAreaLibrary(done, forceRefresh) {
+			if (!forceRefresh && Array.isArray(areaLibraryCache)) {
 				if (typeof done === "function") done(areaLibraryCache);
 				return;
 			}
+			areaLibraryLoadState = "loading";
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_area_library",
 				nonce: lfAiFloating.nonce
 			}).done(function(res){
-				areaLibraryCache = (res && res.success && res.data && Array.isArray(res.data.items)) ? res.data.items : [];
-				if (typeof done === "function") done(areaLibraryCache);
+				if (res && res.success && res.data && Array.isArray(res.data.items)) {
+					areaLibraryCache = res.data.items;
+					areaLibraryLoadState = "ready";
+				} else {
+					areaLibraryLoadState = "error";
+					if (!Array.isArray(areaLibraryCache)) {
+						areaLibraryCache = null;
+					}
+					var msg = (res && res.data && res.data.message) ? res.data.message : "Could not load service areas.";
+					setStatus(msg, true);
+				}
+				if (typeof done === "function") done(Array.isArray(areaLibraryCache) ? areaLibraryCache : []);
 			}).fail(function(){
-				areaLibraryCache = [];
+				areaLibraryLoadState = "error";
+				if (!Array.isArray(areaLibraryCache)) {
+					areaLibraryCache = null;
+				}
 				setStatus("Service area library unavailable.", true);
-				if (typeof done === "function") done(areaLibraryCache);
+				if (typeof done === "function") done(Array.isArray(areaLibraryCache) ? areaLibraryCache : []);
 			});
 		}
 		function ensureAreaPicker() {
@@ -7806,7 +7825,15 @@ function lf_ai_assistant_widget_js(): string {
 			if (!filtered.length) {
 				var em = document.createElement("div");
 				em.className = "lf-ai-faq-picker__empty";
-				em.textContent = "No service areas match.";
+				if (areaLibraryLoadState === "loading") {
+					em.textContent = "Loading service areas...";
+				} else if (areaLibraryLoadState === "error" && !rows.length) {
+					em.textContent = "Could not load service areas. Refresh the page and try again.";
+				} else if (q) {
+					em.textContent = "No service areas match.";
+				} else {
+					em.textContent = "No service areas found. Add areas under Service Areas in WordPress.";
+				}
 				areaPickerListEl.appendChild(em);
 				return;
 			}
@@ -7856,12 +7883,12 @@ function lf_ai_assistant_widget_js(): string {
 		function openAreaPickerForSection(wrap, list) {
 			ensureAreaPicker();
 			areaPickerWrap = { wrap: wrap, list: list };
-			areaLibraryCache = null;
+			if (areaPickerEl) areaPickerEl.hidden = false;
+			renderAreaPickerList("");
 			loadAreaLibrary(function(){
-				renderAreaPickerList("");
-				if (areaPickerEl) areaPickerEl.hidden = false;
-				try { if (areaPickerSearchEl) areaPickerSearchEl.focus(); } catch (eF) {}
-			});
+				renderAreaPickerList(areaPickerSearchEl ? areaPickerSearchEl.value : "");
+			}, true);
+			try { if (areaPickerSearchEl) areaPickerSearchEl.focus(); } catch (eF) {}
 		}
 		function buildServiceAreasEditorControls() {
 			collectSectionWrappers().forEach(function(wrap){

@@ -32,6 +32,7 @@ $icon_above = function_exists('lf_section_icon_markup') ? lf_section_icon_markup
 $icon_left = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'service_areas', 'left', 'lf-heading-icon') : '';
 $card_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($section, 'service_areas', 'list', 'lf-block-service-areas__icon') : '';
 $render_id = $block_id !== '' ? $block_id : 'block-' . uniqid();
+$show_editor_status = !is_admin() && current_user_can('edit_theme_options');
 
 $order_ids_raw = trim((string) ($section['service_areas_area_ids'] ?? ''));
 $order_ids = [];
@@ -91,10 +92,13 @@ if ($query->have_posts()) {
 		$area_id = (int) get_the_ID();
 		$area_title = (string) get_the_title();
 		$area_post = get_post($area_id);
+		$status_meta = ($area_post instanceof \WP_Post && function_exists('lf_cpt_editor_status_meta'))
+			? lf_cpt_editor_status_meta($area_post)
+			: ['status' => 'publish', 'status_label' => '', 'is_live' => true];
 		$area_url = ($area_post instanceof \WP_Post && function_exists('lf_cpt_card_permalink'))
 			? lf_cpt_card_permalink($area_post)
 			: (string) get_permalink();
-		$area_status = ($area_post instanceof \WP_Post) ? sanitize_key((string) $area_post->post_status) : 'publish';
+		$area_status = sanitize_key((string) ($status_meta['status'] ?? 'publish'));
 		$area_state = '';
 		if (function_exists('get_field')) {
 			$area_state = (string) get_field('lf_service_area_state', $area_id);
@@ -124,6 +128,7 @@ if ($query->have_posts()) {
 			'title' => wp_strip_all_tags($area_title),
 			'url' => esc_url_raw($area_url),
 			'status' => $area_status,
+			'status_label' => (string) ($status_meta['status_label'] ?? ''),
 			'state' => $area_state,
 			'lat' => $lat,
 			'lng' => $lng,
@@ -228,6 +233,9 @@ $points_json = wp_json_encode(array_map(static function (array $area): array {
 			<ul class="lf-block-service-areas__list lf-cpt-driven-links" role="list" data-service-areas-list>
 				<?php foreach ($areas as $index => $area) : ?>
 					<li class="lf-block-service-areas__item" data-title="<?php echo esc_attr((string) ($area['title'] ?? '')); ?>" data-area-id="<?php echo esc_attr((string) (int) ($area['id'] ?? 0)); ?>" data-area-status="<?php echo esc_attr((string) ($area['status'] ?? 'publish')); ?>" data-point-index="<?php echo esc_attr((string) $index); ?>">
+						<?php if ($show_editor_status && ($area['status_label'] ?? '') !== '') : ?>
+							<span class="lf-ai-area-status-badge lf-ai-faq-picker__status lf-ai-faq-picker__status--<?php echo esc_attr((string) ($area['status'] ?? 'publish')); ?>"><?php echo esc_html((string) $area['status_label']); ?></span>
+						<?php endif; ?>
 						<a href="<?php echo esc_url((string) ($area['url'] ?? '')); ?>" class="lf-block-service-areas__link">
 							<?php if ($card_icon) : ?><span class="lf-block-service-areas__icon"><?php echo $card_icon; ?></span><?php endif; ?>
 							<span class="lf-block-service-areas__card-title"><?php echo esc_html((string) ($area['title'] ?? '')); ?></span>
