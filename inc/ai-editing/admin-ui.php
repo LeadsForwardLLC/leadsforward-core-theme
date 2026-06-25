@@ -2674,9 +2674,210 @@ function lf_ai_ajax_internal_link_targets(): void {
 /**
  * Compact page scope for inline AI rewrites (SEO keywords, outline, business context).
  *
- * @return array{page_title:string,post_type:string,primary_keyword:string,secondary_keywords:string,intent:string,outline:list<array{section:string,heading:string}>,business_name:string}
+ * @return array{
+ *   page_title:string,
+ *   post_type:string,
+ *   primary_keyword:string,
+ *   secondary_keywords:string,
+ *   intent:string,
+ *   outline:list<array{section:string,heading:string}>,
+ *   business_name:string,
+ *   city_region:string,
+ *   quality_score:int,
+ *   quality_grade:string,
+ *   content_inventory:list<array<string,mixed>>,
+ *   page_fill_summary:string
+ * }
  */
-function lf_ai_collect_page_scope_for_editor(string $context_type, $context_id): array {
+function lf_ai_content_fill_level(string $text): string {
+	$plain = trim(wp_strip_all_tags($text));
+	if ($plain === '') {
+		return 'empty';
+	}
+	$len = function_exists('mb_strlen') ? mb_strlen($plain) : strlen($plain);
+	if ($len < 45) {
+		return 'stub';
+	}
+	if ($len < 140) {
+		return 'partial';
+	}
+
+	return 'complete';
+}
+
+/**
+ * Primary copy fields to inspect per section type for fill inventory.
+ *
+ * @return list<string>
+ */
+function lf_ai_section_inventory_field_keys(string $section_type): array {
+	$type = sanitize_key($section_type);
+	$map = [
+		'hero'            => ['hero_headline', 'hero_subheadline'],
+		'content'         => ['section_heading', 'section_intro', 'rich_content_body'],
+		'service_details' => ['section_heading', 'service_details_body', 'service_details_checklist'],
+		'benefits'        => ['section_heading', 'section_intro', 'benefits_items'],
+		'service_intro'   => ['section_heading', 'section_intro'],
+		'service_grid'    => ['section_heading', 'section_intro'],
+		'faq_accordion'   => ['section_heading', 'section_intro'],
+		'cta'             => ['section_heading', 'section_intro', 'cta_primary_override'],
+		'trust_reviews'   => ['section_heading', 'section_intro'],
+		'map_nap'         => ['section_heading', 'section_intro'],
+	];
+
+	return $map[ $type ] ?? ['section_heading', 'section_intro'];
+}
+
+/**
+ * @return list<array<string, mixed>>
+ */
+function lf_ai_collect_page_content_inventory(string $context_type, $context_id, string $current_section_id = ''): array {
+	$inventory = [];
+	$current_section_id = sanitize_text_field($current_section_id);
+
+	$append_row = static function (string $section_id, string $section_type, array $settings) use (&$inventory, $current_section_id): void {
+		$keys = lf_ai_section_inventory_field_keys($section_type);
+		$heading = '';
+		$body_sample = '';
+		$worst_fill = 'empty';
+		$fill_rank = ['empty' => 0, 'stub' => 1, 'partial' => 2, 'complete' => 3];
+		foreach ($keys as $key) {
+			$raw = $settings[ $key ] ?? '';
+			$val = is_array($raw) ? implode("\n", array_map('strval', $raw)) : (string) $raw;
+			$level = lf_ai_content_fill_level($val);
+			if (($fill_rank[ $level ] ?? 0) < ($fill_rank[ $worst_fill ] ?? 0)) {
+				$worst_fill = $level;
+			}
+			if ($heading === '' && in_array($key, ['section_heading', 'hero_headline'], true)) {
+				$heading = trim(wp_strip_all_tags($val));
+			}
+			if ($body_sample === '' && in_array($key, ['rich_content_body', 'service_details_body', 'section_intro', 'hero_subheadline', 'benefits_items'], true)) {
+				$body_sample = trim(wp_strip_all_tags($val));
+			}
+		}
+		if ($heading === '') {
+			$heading = ucwords(str_replace('_', ' ', $section_type));
+		}
+		if (function_exists('mb_strlen') && mb_strlen($body_sample) > 120) {
+			$body_sample = mb_substr($body_sample, 0, 117) . '…';
+		} elseif (strlen($body_sample) > 120) {
+			$body_sample = substr($body_sample, 0, 117) . '…';
+		}
+		$inventory[] = [
+			'section_id'   => $section_id,
+			'section_type' => $section_type,
+			'heading'      => $heading,
+			'fill'         => $worst_fill,
+			'sample'       => $body_sample,
+			'is_current'   => $current_section_id !== '' && $section_id === $current_section_id,
+		];
+	};
+
+	if ($context_type === 'homepage' || (string) $context_id === 'homepage') {
+		if (!function_exists('lf_get_homepage_section_config')) {
+			return $inventory;
+		}
+		$config = lf_get_homepage_section_config();
+		if (!is_array($config)) {
+			return $inventory;
+		}
+		foreach ($config as $sid => $row) {
+			if (!is_string($sid) || !is_array($row) || empty($row['enabled'])) {
+				continue;
+			}
+			$type = sanitize_key((string) ($row['section_type'] ?? $row['type'] ?? $sid));
+			$append_row($sid, $type, $row);
+		}
+
+		return $inventory;
+	}
+
+	$post_id = lf_ai_resolve_post_id_for_context($context_type, (string) $context_id);
+	if ($post_id <= 0 || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config') || !function_exists('lf_ai_pb_context_for_post')) {
+		return $inventory;
+	}
+	$post = get_post($post_id);
+	if (!$post instanceof \WP_Post) {
+		return $inventory;
+	}
+	$pb_context = lf_ai_pb_context_for_post($post);
+	if ($pb_context === '') {
+		return $inventory;
+	}
+	$config = lf_pb_get_post_config($post_id, $pb_context);
+	$sections = is_array($config['sections'] ?? null) ? $config['sections'] : [];
+	$order = is_array($config['order'] ?? null) ? $config['order'] : array_keys($sections);
+	foreach ($order as $sid) {
+		if (!is_string($sid) || !is_array($sections[ $sid ] ?? null)) {
+			continue;
+		}
+		$row = $sections[ $sid ];
+		if (empty($row['enabled'])) {
+			continue;
+		}
+		$type = sanitize_key((string) ($row['type'] ?? ''));
+		$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+		$append_row($sid, $type, $settings);
+	}
+
+	return $inventory;
+}
+
+function lf_ai_page_fill_summary_from_inventory(array $inventory): string {
+	if ($inventory === []) {
+		return '';
+	}
+	$counts = ['empty' => 0, 'stub' => 0, 'partial' => 0, 'complete' => 0];
+	foreach ($inventory as $row) {
+		if (!is_array($row)) {
+			continue;
+		}
+		$fill = sanitize_key((string) ($row['fill'] ?? 'empty'));
+		if (!isset($counts[ $fill ])) {
+			$fill = 'empty';
+		}
+		++$counts[ $fill ];
+	}
+	$total = array_sum($counts);
+	$ready = $counts['complete'] + (int) round($counts['partial'] * 0.5);
+	$pct = $total > 0 ? (int) round(($ready / $total) * 100) : 0;
+
+	return sprintf(
+		/* translators: 1: percent ready, 2: complete count, 3: partial, 4: empty/stub, 5: total sections */
+		__('%1$d%% of sections have usable copy (%2$d complete, %3$d partial, %4$d empty/stub of %5$d).', 'leadsforward-core'),
+		$pct,
+		$counts['complete'],
+		$counts['partial'],
+		$counts['empty'] + $counts['stub'],
+		$total
+	);
+}
+
+/**
+ * Extract plain text from a model response (handles accidental JSON wrappers).
+ */
+function lf_ai_extract_plain_text_from_model_response(string $raw): string {
+	$raw = trim($raw);
+	if ($raw === '') {
+		return '';
+	}
+	if ($raw[0] !== '{' && $raw[0] !== '[') {
+		return trim($raw, "\"' \t\n\r\0\x0B");
+	}
+	$decoded = json_decode($raw, true);
+	if (!is_array($decoded)) {
+		return trim($raw, "\"' \t\n\r\0\x0B");
+	}
+	foreach (['rewritten_text', 'text', 'content', 'rewrite', 'result', 'output', 'value'] as $key) {
+		if (!empty($decoded[ $key ]) && is_string($decoded[ $key ])) {
+			return trim((string) $decoded[ $key ], "\"' \t\n\r\0\x0B");
+		}
+	}
+
+	return trim($raw, "\"' \t\n\r\0\x0B");
+}
+
+function lf_ai_collect_page_scope_for_editor(string $context_type, $context_id, string $current_section_id = ''): array {
 	$context_id_use = is_string($context_id) ? $context_id : (string) $context_id;
 	$post_id = lf_ai_resolve_post_id_for_context($context_type, $context_id_use);
 	$page_title = '';
@@ -2749,6 +2950,18 @@ function lf_ai_collect_page_scope_for_editor(string $context_type, $context_id):
 	$business_name = function_exists('lf_get_business_info_value')
 		? trim((string) lf_get_business_info_value('lf_business_name', ''))
 		: '';
+	$city_region = function_exists('lf_get_business_info_value')
+		? trim((string) lf_get_business_info_value('lf_city_region', ''))
+		: '';
+	$quality_score = 0;
+	$quality_grade = '';
+	if ($post_id > 0) {
+		$snapshot_for_quality = lf_ai_collect_seo_snapshot_payload($post_id);
+		$quality_score = (int) ($snapshot_for_quality['quality_score'] ?? 0);
+		$quality_grade = sanitize_text_field((string) ($snapshot_for_quality['quality_grade'] ?? ''));
+	}
+	$content_inventory = lf_ai_collect_page_content_inventory($context_type, $context_id_use, $current_section_id);
+	$page_fill_summary = lf_ai_page_fill_summary_from_inventory($content_inventory);
 
 	return [
 		'page_title' => $page_title,
@@ -2758,6 +2971,11 @@ function lf_ai_collect_page_scope_for_editor(string $context_type, $context_id):
 		'intent' => $intent,
 		'outline' => $outline,
 		'business_name' => $business_name,
+		'city_region' => $city_region,
+		'quality_score' => $quality_score,
+		'quality_grade' => $quality_grade,
+		'content_inventory' => $content_inventory,
+		'page_fill_summary' => $page_fill_summary,
 	];
 }
 
@@ -2827,7 +3045,7 @@ function lf_ai_inline_rewrite_mode_instruction(string $mode, string $custom_prom
 
 function lf_ai_ajax_inline_rewrite(): void {
 	check_ajax_referer('lf_ai_editing', 'nonce');
-	if (!current_user_can(LF_AI_CAP)) {
+	if (!function_exists('lf_ai_editing_user_can') ? !current_user_can(LF_AI_CAP) : !lf_ai_editing_user_can()) {
 		wp_send_json_error(['message' => __('Permission denied.', 'leadsforward-core')]);
 	}
 	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
@@ -2858,7 +3076,7 @@ function lf_ai_ajax_inline_rewrite(): void {
 		wp_send_json_error(['message' => __('Invalid rewrite instruction.', 'leadsforward-core')]);
 	}
 	$context_id_use = lf_ai_ajax_normalize_context_id($context_id);
-	$scope = lf_ai_collect_page_scope_for_editor($context_type, $context_id_use);
+	$scope = lf_ai_collect_page_scope_for_editor($context_type, $context_id_use, $section_id);
 	$service_title = '';
 	if ($service_post_id > 0) {
 		$svc = get_post($service_post_id);
@@ -2879,6 +3097,7 @@ function lf_ai_ajax_inline_rewrite(): void {
 		$system .= "Keep it concise and headline-like.\n";
 	}
 	$system .= 'Length: ' . $guidance['length_hint'] . "\n";
+	$system .= "Use the page inventory to avoid repeating copy that is already complete elsewhere; strengthen gaps and align with what is still stub/empty.\n";
 
 	$outline_lines = [];
 	foreach ($scope['outline'] as $row) {
@@ -2907,8 +3126,43 @@ function lf_ai_ajax_inline_rewrite(): void {
 	if ($scope['intent'] !== '') {
 		$user .= '- Search intent: ' . $scope['intent'] . "\n";
 	}
+	if ($scope['city_region'] !== '') {
+		$user .= '- Service area: ' . $scope['city_region'] . "\n";
+	}
+	if ((int) ($scope['quality_score'] ?? 0) > 0) {
+		$user .= '- Backend SEO quality score: ' . (int) $scope['quality_score'];
+		if (($scope['quality_grade'] ?? '') !== '') {
+			$user .= ' (' . (string) $scope['quality_grade'] . ')';
+		}
+		$user .= "\n";
+	}
+	if (($scope['page_fill_summary'] ?? '') !== '') {
+		$user .= '- Page copy status: ' . (string) $scope['page_fill_summary'] . "\n";
+	}
 	if ($outline_lines !== []) {
 		$user .= "- Page sections:\n  " . implode("\n  ", array_slice($outline_lines, 0, 14)) . "\n";
+	}
+	$inventory = is_array($scope['content_inventory'] ?? null) ? $scope['content_inventory'] : [];
+	if ($inventory !== []) {
+		$user .= "- Section fill inventory (empty/stub = needs copy; do not duplicate complete sections):\n";
+		foreach (array_slice($inventory, 0, 16) as $inv_row) {
+			if (!is_array($inv_row)) {
+				continue;
+			}
+			$inv_type = (string) ($inv_row['section_type'] ?? '');
+			$inv_heading = trim((string) ($inv_row['heading'] ?? ''));
+			$inv_fill = (string) ($inv_row['fill'] ?? 'empty');
+			$inv_sample = trim((string) ($inv_row['sample'] ?? ''));
+			$marker = !empty($inv_row['is_current']) ? ' [CURRENT FIELD]' : '';
+			$line = '  • ' . $inv_type . $marker . ' — ' . $inv_fill;
+			if ($inv_heading !== '') {
+				$line .= ' — ' . $inv_heading;
+			}
+			if ($inv_sample !== '') {
+				$line .= ' — "' . $inv_sample . '"';
+			}
+			$user .= $line . "\n";
+		}
 	}
 	if ($section_type !== '' || $section_id !== '') {
 		$user .= '- Editing section: ' . ($section_type !== '' ? $section_type : $section_id) . "\n";
@@ -2923,11 +3177,11 @@ function lf_ai_ajax_inline_rewrite(): void {
 	$user .= "Current text:\n" . $current_text . "\n\n";
 	$user .= 'Rewrite only this field.';
 
-	$response = apply_filters('lf_ai_completion', '', $system, $user, $context_type, $context_id_use);
+	$response = apply_filters('lf_ai_text_completion', '', $system, $user, $context_type, $context_id_use);
 	if (is_wp_error($response)) {
 		wp_send_json_error(['message' => $response->get_error_message()]);
 	}
-	$rewritten = is_string($response) ? trim($response) : '';
+	$rewritten = lf_ai_extract_plain_text_from_model_response(is_string($response) ? $response : '');
 	if (!$guidance['preserve_html']) {
 		$rewritten = trim(wp_strip_all_tags($rewritten));
 		$rewritten = trim((string) preg_replace('/\s+/', ' ', $rewritten));
