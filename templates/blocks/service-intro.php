@@ -93,6 +93,8 @@ if ($services_overview_url === '') {
 }
 $services_overview_url = rtrim($services_overview_url, '/') . '/';
 
+$show_editor_status = !is_admin() && current_user_can('edit_theme_options');
+
 $desc_overrides_raw = (string) ($section['service_intro_card_desc_overrides'] ?? '');
 $desc_overrides_map = [];
 if ($desc_overrides_raw !== '') {
@@ -153,11 +155,13 @@ if ($desc_overrides_raw !== '') {
 					if ($desc === '') {
 						$desc = sprintf(__('Short overview of %s and what to expect.', 'leadsforward-core'), get_the_title());
 					}
-					$is_published = get_post_status($sid) === 'publish';
 					$post_obj = get_post($sid);
+					$status_meta = ($post_obj instanceof \WP_Post && function_exists('lf_cpt_editor_status_meta'))
+						? lf_cpt_editor_status_meta($post_obj)
+						: ['status' => 'publish', 'status_label' => '', 'is_live' => true];
 					$card_url = ($post_obj instanceof \WP_Post && function_exists('lf_cpt_card_permalink'))
 						? lf_cpt_card_permalink($post_obj)
-						: ($is_published ? (string) get_permalink($sid) : $services_overview_url);
+						: ((string) ($status_meta['status'] ?? '') === 'publish' ? (string) get_permalink($sid) : $services_overview_url);
 					$image_id = $show_images ? (int) get_post_thumbnail_id(get_the_ID()) : 0;
 					if ($show_images && $image_id === 0 && function_exists('lf_get_section_default_image_id')) {
 						$image_id = lf_get_section_default_image_id('service');
@@ -170,10 +174,13 @@ if ($desc_overrides_raw !== '') {
 						'decoding' => 'async',
 					]) : '';
 				?>
-					<article class="lf-block-service-intro__card lf-card lf-card--interactive" data-lf-service-id="<?php echo esc_attr((string) get_the_ID()); ?>">
+					<article class="lf-block-service-intro__card lf-card lf-card--interactive" data-lf-service-id="<?php echo esc_attr((string) get_the_ID()); ?>" data-lf-service-status="<?php echo esc_attr((string) ($status_meta['status'] ?? 'publish')); ?>">
 						<div class="lf-block-service-intro__card-head">
 							<?php if ($card_icon) : ?><span class="lf-block-service-intro__icon"><?php echo $card_icon; ?></span><?php endif; ?>
 							<h3 class="lf-block-service-intro__card-title"><?php the_title(); ?></h3>
+							<?php if ($show_editor_status && ($status_meta['status_label'] ?? '') !== '') : ?>
+								<span class="lf-ai-service-status-badge lf-ai-faq-picker__status lf-ai-faq-picker__status--<?php echo esc_attr((string) ($status_meta['status'] ?? 'publish')); ?>"><?php echo esc_html((string) $status_meta['status_label']); ?></span>
+							<?php endif; ?>
 						</div>
 						<?php if ($image_html) : ?>
 							<div class="lf-block-service-intro__media"><?php echo $image_html; ?></div>
