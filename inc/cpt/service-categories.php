@@ -139,3 +139,27 @@ function lf_maybe_seed_service_categories(): void {
 	update_option('lf_service_categories_seeded', 1, true);
 }
 add_action('admin_init', 'lf_maybe_seed_service_categories', 20);
+
+/**
+ * Keep Service Category CPT titles aligned with lf_services_menu_category_definitions().
+ */
+function lf_sync_service_category_cpt_titles(): void {
+	if (!function_exists('lf_services_menu_category_definitions') || !function_exists('lf_get_service_category_post')) {
+		return;
+	}
+	foreach (lf_services_menu_category_definitions() as $slug => $label) {
+		$post = lf_get_service_category_post((string) $slug);
+		if (!$post instanceof \WP_Post) {
+			continue;
+		}
+		$label = trim((string) $label);
+		if ($label === '' || (string) $post->post_title === $label) {
+			continue;
+		}
+		wp_update_post([
+			'ID'         => (int) $post->ID,
+			'post_title' => $label,
+		]);
+	}
+}
+add_action('admin_init', 'lf_sync_service_category_cpt_titles', 25);

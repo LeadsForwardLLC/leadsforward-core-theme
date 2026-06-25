@@ -61,8 +61,8 @@ function lf_services_menu_categories_enabled(): bool {
 function lf_services_menu_category_definitions(): array {
 	$defs = [
 		'foundation-repair' => __('Foundation Repair', 'leadsforward-core'),
-		'waterproofing'     => __('Waterproofing / Basement Waterproofing', 'leadsforward-core'),
-		'crawl-space'       => __('Crawl Space Services', 'leadsforward-core'),
+		'waterproofing'     => __('Waterproofing', 'leadsforward-core'),
+		'crawl-space'       => __('Crawl Space', 'leadsforward-core'),
 	];
 
 	return (array) apply_filters('lf_services_menu_category_definitions', $defs);
