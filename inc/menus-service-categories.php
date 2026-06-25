@@ -47,10 +47,10 @@ function lf_foundation_repair_service_menu_category_slug(string $title, string $
 	if ($hay !== '' && preg_match('/\b(crawl\s*space|crawlspace)\b/', $hay)) {
 		return 'crawl-space';
 	}
-	if ($hay !== '' && preg_match('/\b(waterproof|flooded|leaking|sump\s*pump|drainage|basement\s*water|water\s*intrusion|seepage|wet\s*basement)\b/', $hay)) {
+	if ($hay !== '' && preg_match('/\b(waterproof|flooded|leaking|sump\s*pump|drainage|basement\s*water|water\s*intrusion|seepage|wet\s*basement|basement\s*repair)\b/', $hay)) {
 		return 'waterproofing';
 	}
-	if ($hay !== '' && preg_match('/\b(foundation|crack|slab|pier|beam|settlement|structural|bowing|helical|push\s*pin)\b/', $hay)) {
+	if ($hay !== '' && preg_match('/\b(foundation|crack|slab|pier|beam|settlement|structural|bowing|helical|push\s*pin|basement\s*wall|wall\s*repair|wall\s*stabil)\b/', $hay)) {
 		return 'foundation-repair';
 	}
 
@@ -78,6 +78,94 @@ function lf_header_menu_services_parent_id(array $items): int {
 }
 
 /**
+ * Minimum service links before auto-grouping kicks in (lower when mega menu is active).
+ */
+function lf_services_menu_category_min_services(): int {
+	$min = 4;
+	if (function_exists('lf_mega_menu_enabled') && lf_mega_menu_enabled()) {
+		$min = 3;
+	}
+
+	return (int) apply_filters('lf_services_menu_category_min_count', $min);
+}
+
+/**
+ * Whether Services menu items are already grouped under category parents with children.
+ *
+ * @param array<int, \WP_Post> $items
+ */
+function lf_header_menu_services_category_tree_is_built(array $items, int $services_parent_id): bool {
+	$category_ids = [];
+	foreach ($items as $menu_item) {
+		if (!$menu_item instanceof \WP_Post) {
+			continue;
+		}
+		if ((int) ($menu_item->menu_item_parent ?? 0) !== $services_parent_id) {
+			continue;
+		}
+		if (lf_header_menu_item_has_class($menu_item, 'lf-menu-service-category')) {
+			$category_ids[(int) ($menu_item->ID ?? 0)] = false;
+		}
+	}
+	if ($category_ids === []) {
+		return false;
+	}
+
+	foreach ($items as $menu_item) {
+		if (!$menu_item instanceof \WP_Post) {
+			continue;
+		}
+		if ((string) ($menu_item->object ?? '') !== 'lf_service') {
+			continue;
+		}
+		$parent = (int) ($menu_item->menu_item_parent ?? 0);
+		if (isset($category_ids[$parent])) {
+			$category_ids[$parent] = true;
+		}
+	}
+
+	foreach ($category_ids as $has_children) {
+		if ($has_children) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Remove stale Services category headers that have no nested service children.
+ *
+ * @param array<int, \WP_Post> $items
+ * @return array<int, \WP_Post>
+ */
+function lf_header_menu_strip_stale_service_categories(array $items, int $services_parent_id): array {
+	$stale_ids = [];
+	foreach ($items as $menu_item) {
+		if (!$menu_item instanceof \WP_Post) {
+			continue;
+		}
+		if ((int) ($menu_item->menu_item_parent ?? 0) !== $services_parent_id) {
+			continue;
+		}
+		if (lf_header_menu_item_has_class($menu_item, 'lf-menu-service-category')) {
+			$stale_ids[(int) ($menu_item->ID ?? 0)] = true;
+		}
+	}
+	if ($stale_ids === []) {
+		return $items;
+	}
+
+	return array_values(array_filter(
+		$items,
+		static function (\WP_Post $menu_item) use ($stale_ids): bool {
+			$id = (int) ($menu_item->ID ?? 0);
+			return $id === 0 || !isset($stale_ids[$id]);
+		}
+	));
+}
+
+/**
  * Group flat lf_service children under synthetic category parents (render-time only).
  *
  * @param array<int, \WP_Post> $items
@@ -99,15 +187,10 @@ function lf_header_menu_categorize_foundation_services(array $items, $args): arr
 		return $items;
 	}
 
-	foreach ($items as $menu_item) {
-		if (!$menu_item instanceof \WP_Post) {
-			continue;
-		}
-		if ((int) ($menu_item->menu_item_parent ?? 0) === $services_parent_id
-			&& lf_header_menu_item_has_class($menu_item, 'lf-menu-service-category')) {
-			return $items;
-		}
+	if (lf_header_menu_services_category_tree_is_built($items, $services_parent_id)) {
+		return $items;
 	}
+	$items = lf_header_menu_strip_stale_service_categories($items, $services_parent_id);
 
 	$service_children = [];
 	foreach ($items as $menu_item) {
@@ -127,7 +210,8 @@ function lf_header_menu_categorize_foundation_services(array $items, $args): arr
 		$service_children[] = $menu_item;
 	}
 
-	if (count($service_children) < 4) {
+	$min_services = lf_services_menu_category_min_services();
+	if (count($service_children) < $min_services) {
 		return $items;
 	}
 
@@ -147,7 +231,7 @@ function lf_header_menu_categorize_foundation_services(array $items, $args): arr
 		}
 		$cat = lf_foundation_repair_service_menu_category_slug((string) ($child->title ?? ''), $slug);
 		if ($cat === '' || !isset($bucketed[ $cat ])) {
-			continue;
+			$cat = 'foundation-repair';
 		}
 		$bucketed[ $cat ][] = $child;
 	}
@@ -211,4 +295,4 @@ function lf_header_menu_categorize_foundation_services(array $items, $args): arr
 
 	return $items;
 }
-add_filter('wp_nav_menu_objects', 'lf_header_menu_categorize_foundation_services', 9, 2);
+add_filter('wp_nav_menu_objects', 'lf_header_menu_categorize_foundation_services', 12, 2);
