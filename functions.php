@@ -34,6 +34,8 @@ function lf_load_inc(string $path): void {
 // Core setup: theme support, menus, editor styles.
 lf_load_inc('setup.php');
 lf_load_inc('menus-service-categories.php');
+lf_load_inc('header-menu-more.php');
+lf_load_inc('menus-mega.php');
 
 // WordPress cleanup: emojis, oEmbed, dashicons, bloat.
 lf_load_inc('cleanup.php');
@@ -118,6 +120,7 @@ lf_load_inc('blocks/variants.php');
 // Variation tokens: body class, data-variation, CSS vars.
 lf_load_inc('variation-tokens.php');
 lf_load_inc('images.php');
+lf_load_inc('section-default-images.php');
 lf_load_inc('branding.php');
 lf_load_inc('global-settings.php');
 lf_load_inc('header-settings.php');

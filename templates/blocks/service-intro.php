@@ -159,7 +159,9 @@ if ($desc_overrides_raw !== '') {
 						? lf_cpt_card_permalink($post_obj)
 						: ($is_published ? (string) get_permalink($sid) : $services_overview_url);
 					$image_id = $show_images ? (int) get_post_thumbnail_id(get_the_ID()) : 0;
-					if ($show_images && $image_id === 0 && function_exists('lf_get_placeholder_image_id')) {
+					if ($show_images && $image_id === 0 && function_exists('lf_get_section_default_image_id')) {
+						$image_id = lf_get_section_default_image_id('service');
+					} elseif ($show_images && $image_id === 0 && function_exists('lf_get_placeholder_image_id')) {
 						$image_id = lf_get_placeholder_image_id();
 					}
 					$image_html = $image_id ? wp_get_attachment_image($image_id, 'medium', false, [

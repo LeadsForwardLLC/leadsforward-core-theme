@@ -585,6 +585,10 @@ function lf_sitemap_sync_build_header_menu(): array {
 		];
 	}
 
+	if (function_exists('lf_header_menu_remap_items_to_more_group')) {
+		$items = lf_header_menu_remap_items_to_more_group($items);
+	}
+
 	$group_order = [
 		'Home' => 0,
 		'About' => 1,
@@ -1797,6 +1801,10 @@ function lf_header_menu_repair_nav_structure(int $menu_id, bool $apply_preferred
 	lf_nav_menu_dedupe_duplicate_cta_items($menu_id);
 	lf_header_menu_append_missing_core_top_levels($menu_id);
 	lf_nav_menu_dedupe_duplicate_cta_items($menu_id);
+
+	if (function_exists('lf_header_menu_consolidate_secondary_into_more')) {
+		lf_header_menu_consolidate_secondary_into_more($menu_id);
+	}
 
 	if ($apply_preferred_order) {
 		lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'Service Areas', 'Reviews', 'More']);
