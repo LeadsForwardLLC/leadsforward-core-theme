@@ -856,7 +856,8 @@ function lf_header_menu_maybe_persist_more_consolidation(): void {
 		lf_header_menu_consolidate_secondary_into_more($menu_id);
 	}
 }
-add_action('wp', 'lf_header_menu_maybe_persist_more_consolidation', 14);
+// Persist only during admin saves / menu sync — not on public page views (was causing DB churn + fatals).
+// add_action('wp', 'lf_header_menu_maybe_persist_more_consolidation', 14);
 
 /**
  * During sitemap menu build, remap secondary pages into the More group (About stays top-level).
