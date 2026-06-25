@@ -536,6 +536,93 @@ function lf_header_menu_item_is_home_item(\WP_Post $item): bool {
 }
 
 /**
+ * Whether a top-level item is the Services dropdown parent.
+ */
+function lf_header_menu_item_is_services_parent(\WP_Post $item): bool {
+	if ((int) ($item->menu_item_parent ?? 0) !== 0) {
+		return false;
+	}
+	$classes = is_array($item->classes ?? null) ? $item->classes : [];
+	if (in_array('lf-menu-services-parent', $classes, true)) {
+		return true;
+	}
+	$title = strtolower(trim(wp_strip_all_tags((string) ($item->title ?? ''))));
+	if ($title === 'services' || $title === 'our services') {
+		return true;
+	}
+	if (str_contains($title, 'service') && !str_contains($title, 'area')) {
+		return true;
+	}
+	$services_page = get_page_by_path('services');
+	if ($services_page instanceof \WP_Post) {
+		$services_url = trailingslashit((string) get_permalink($services_page));
+		$item_url = trailingslashit((string) ($item->url ?? ''));
+		if ($item_url !== '' && $item_url === $services_url) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Whether a top-level item is the Service Areas dropdown parent.
+ */
+function lf_header_menu_item_is_areas_parent(\WP_Post $item): bool {
+	if ((int) ($item->menu_item_parent ?? 0) !== 0) {
+		return false;
+	}
+	$classes = is_array($item->classes ?? null) ? $item->classes : [];
+	if (in_array('lf-menu-areas-parent', $classes, true)) {
+		return true;
+	}
+	$title = strtolower(trim(wp_strip_all_tags((string) ($item->title ?? ''))));
+	if ($title === 'service areas' || $title === 'areas' || str_contains($title, 'service area')) {
+		return true;
+	}
+	$areas_page = get_page_by_path('service-areas');
+	if ($areas_page instanceof \WP_Post) {
+		$areas_url = trailingslashit((string) get_permalink($areas_page));
+		$item_url = trailingslashit((string) ($item->url ?? ''));
+		if ($item_url !== '' && $item_url === $areas_url) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Stamp Services / Service Areas parent classes when the stored menu is missing markers.
+ *
+ * @param array<int, \WP_Post> $items
+ * @return array<int, \WP_Post>
+ */
+function lf_header_menu_ensure_parent_marker_classes(array $items, $args): array {
+	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || $items === []) {
+		return $items;
+	}
+	foreach ($items as $item) {
+		if (!$item instanceof \WP_Post || (int) ($item->menu_item_parent ?? 0) !== 0) {
+			continue;
+		}
+		$classes = is_array($item->classes ?? null) ? $item->classes : [];
+		if (lf_header_menu_item_is_services_parent($item) && !in_array('lf-menu-services-parent', $classes, true)) {
+			$classes[] = 'lf-menu-services-parent';
+			$item->classes = array_values(array_unique($classes));
+		}
+		if (lf_header_menu_item_is_areas_parent($item) && !in_array('lf-menu-areas-parent', $classes, true)) {
+			$classes = is_array($item->classes ?? null) ? $item->classes : [];
+			$classes[] = 'lf-menu-areas-parent';
+			$item->classes = array_values(array_unique($classes));
+		}
+	}
+
+	return $items;
+}
+add_filter('wp_nav_menu_objects', 'lf_header_menu_ensure_parent_marker_classes', 17, 2);
+
+/**
  * Sort key for top-level header blocks: Home → Services → Service Areas → About → … → Call → CTA → More.
  *
  * @return array{0:int,1:int}
@@ -552,14 +639,13 @@ function lf_header_menu_top_level_sort_tuple(\WP_Post $item): array {
 	if (in_array('lf-menu-call', $classes, true)) {
 		return [700, $mo];
 	}
-	if (lf_header_menu_item_is_home_item($item)) {
+	if (lf_header_menu_item_is_home_item($item) || in_array('lf-menu-home', $classes, true)) {
 		return [0, $mo];
 	}
-	$title = strtolower(trim(wp_strip_all_tags((string) ($item->title ?? ''))));
-	if (in_array('lf-menu-services-parent', $classes, true) || $title === 'services') {
+	if (lf_header_menu_item_is_services_parent($item)) {
 		return [105, $mo];
 	}
-	if (in_array('lf-menu-areas-parent', $classes, true) || $title === 'service areas') {
+	if (lf_header_menu_item_is_areas_parent($item)) {
 		return [110, $mo];
 	}
 	if (in_array('lf-menu-about', $classes, true)
@@ -656,7 +742,22 @@ function lf_header_menu_reorder_flat_blocks(array $items): array {
 		}
 	}
 
-	return $out;
+	// WordPress re-sorts filtered items by menu_order before the Walker runs.
+	$n = 1;
+	foreach ($out as $menu_item) {
+		if ($menu_item instanceof \WP_Post) {
+			$menu_item->menu_order = $n;
+			++$n;
+		}
+	}
+	$renumbered = [];
+	foreach ($out as $menu_item) {
+		if ($menu_item instanceof \WP_Post) {
+			$renumbered[(int) $menu_item->menu_order] = $menu_item;
+		}
+	}
+
+	return $renumbered !== [] ? $renumbered : $out;
 }
 
 /**
@@ -669,7 +770,7 @@ function lf_header_menu_reorder_display_objects(array $items, $args): array {
 	}
 	return lf_header_menu_reorder_flat_blocks($items);
 }
-add_filter('wp_nav_menu_objects', 'lf_header_menu_reorder_display_objects', 21, 2);
+add_filter('wp_nav_menu_objects', 'lf_header_menu_reorder_display_objects', 30, 2);
 
 /**
  * Remind admins when nav menus exist but nothing is assigned to the Header Menu theme location.
