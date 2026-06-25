@@ -2805,10 +2805,11 @@ article a:not(.lf-btn):hover {
 		display: flex;
 		align-items: center;
 		gap: 0.65rem;
-		padding: 0.65rem 2.5rem 0.65rem 0.65rem;
+		padding: 0.65rem 2.75rem 0.65rem 0.65rem;
 		font-size: 0.95rem;
 		font-weight: 600;
 		border-bottom: 0;
+		cursor: pointer;
 	}
 	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-menu-service-category.is-open > a.lf-menu-service-category__link {
 		background: rgba(37, 99, 235, 0.06);
@@ -2825,19 +2826,29 @@ article a:not(.lf-btn):hover {
 		display: inline-block;
 	}
 	.site-header__menu > .lf-mega-menu--services .lf-mega-cat-tile__chevron {
-		display: none;
+		display: block;
+		margin-left: auto;
+		opacity: 0.45;
+		font-size: 1rem;
+		line-height: 1;
+		transition: transform 0.2s ease, opacity 0.2s ease;
+	}
+	.site-header__menu > .lf-mega-menu--services .lf-menu-service-category.is-open .lf-mega-cat-tile__chevron {
+		transform: rotate(90deg);
+		opacity: 0.75;
 	}
 	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-menu-service-category > .sub-menu {
 		padding: 0 0.55rem 0.35rem;
 		margin: 0;
 		background: rgba(248, 250, 252, 0.95);
 		border-top: 1px solid rgba(15, 23, 42, 0.06);
+		list-style: none;
 	}
 	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-menu-service-category:not(.is-open) > .sub-menu {
-		display: none;
+		display: none !important;
 	}
 	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-menu-service-category.is-open > .sub-menu {
-		display: block;
+		display: block !important;
 	}
 	.site-header__menu > .lf-mega-menu--services .lf-menu-service-category > .sub-menu > .lf-mega-tile {
 		border-bottom: 1px solid rgba(15, 23, 42, 0.06);

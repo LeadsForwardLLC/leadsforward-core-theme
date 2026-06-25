@@ -1,5 +1,5 @@
 /**
- * Header mega menu: client-side search/filter + category flyout helpers.
+ * Header mega menu: search/filter, desktop flyouts, mobile category accordions.
  */
 (function () {
 	'use strict';
@@ -25,6 +25,83 @@
 		} catch (e) {
 			return (window.innerWidth || 0) >= 901;
 		}
+	}
+
+	function setCategoryExpanded(category, open) {
+		category.classList.toggle('is-open', open);
+		var catLink = category.querySelector(':scope > a.lf-menu-service-category__link, :scope > a');
+		var catToggle = category.querySelector(':scope > .site-header__category-toggle');
+		if (catLink) {
+			catLink.setAttribute('aria-expanded', open ? 'true' : 'false');
+		}
+		if (catToggle) {
+			catToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+		}
+	}
+
+	function ensureMobileCategoryToggles(panel) {
+		if (isDesktop()) {
+			panel.querySelectorAll('.lf-menu-service-category > .site-header__category-toggle').forEach(function (btn) {
+				btn.remove();
+			});
+			return;
+		}
+		panel.querySelectorAll(':scope > .lf-menu-service-category').forEach(function (category) {
+			var catLink = category.querySelector(':scope > a.lf-menu-service-category__link, :scope > a');
+			if (!catLink) {
+				return;
+			}
+			var catToggle = category.querySelector(':scope > .site-header__category-toggle');
+			if (!catToggle) {
+				catToggle = document.createElement('button');
+				catToggle.type = 'button';
+				catToggle.className = 'site-header__submenu-toggle site-header__category-toggle';
+				catToggle.setAttribute('aria-expanded', category.classList.contains('is-open') ? 'true' : 'false');
+				catToggle.setAttribute('aria-label', 'Toggle service category');
+				catToggle.innerHTML = '<span aria-hidden="true">▾</span>';
+				catLink.insertAdjacentElement('afterend', catToggle);
+			}
+		});
+	}
+
+	function bindMobileCategoryAccordions(panel) {
+		if (panel.dataset.lfMobileCatBound === '1') {
+			ensureMobileCategoryToggles(panel);
+			return;
+		}
+		panel.dataset.lfMobileCatBound = '1';
+		ensureMobileCategoryToggles(panel);
+
+		panel.addEventListener('click', function (event) {
+			if (isDesktop()) {
+				return;
+			}
+			if (event.target.closest('.lf-mega-tile a')) {
+				return;
+			}
+
+			var category = event.target.closest('.lf-menu-service-category');
+			if (!category || !panel.contains(category)) {
+				return;
+			}
+
+			var onToggle = event.target.closest('.site-header__category-toggle');
+			var onLink = event.target.closest('a.lf-menu-service-category__link, .lf-menu-service-category > a');
+			if (!onToggle && !onLink) {
+				return;
+			}
+
+			event.preventDefault();
+			event.stopPropagation();
+
+			var wasOpen = category.classList.contains('is-open');
+			panel.querySelectorAll(':scope > .lf-menu-service-category').forEach(function (peer) {
+				if (peer !== category) {
+					setCategoryExpanded(peer, false);
+				}
+			});
+			setCategoryExpanded(category, !wasOpen);
+		});
 	}
 
 	function bindCategoryFlyouts(panel) {
@@ -62,6 +139,8 @@
 	function initMegaSearch(panel) {
 		var input = panel.querySelector('.lf-mega-search__input');
 		if (!input || input.dataset.lfMegaBound === '1') {
+			bindMobileCategoryAccordions(panel);
+			bindCategoryFlyouts(panel);
 			return;
 		}
 		input.dataset.lfMegaBound = '1';
@@ -106,15 +185,7 @@
 					var expandForSearch = query !== '' && showCategory && catVisible > 0;
 					category.classList.toggle('is-flyout-open', expandForSearch);
 					if (!isDesktop()) {
-						category.classList.toggle('is-open', expandForSearch);
-						var catToggle = category.querySelector(':scope > .site-header__category-toggle');
-						var catLink = category.querySelector(':scope > a.lf-menu-service-category__link, :scope > a');
-						if (catToggle) {
-							catToggle.setAttribute('aria-expanded', expandForSearch ? 'true' : 'false');
-						}
-						if (catLink) {
-							catLink.setAttribute('aria-expanded', expandForSearch ? 'true' : 'false');
-						}
+						setCategoryExpanded(category, expandForSearch);
 					}
 				});
 			} else {
@@ -133,6 +204,7 @@
 			setEmptyVisible(empty, query !== '' && visible === 0);
 		});
 
+		bindMobileCategoryAccordions(panel);
 		bindCategoryFlyouts(panel);
 	}
 
@@ -142,9 +214,23 @@
 		});
 	}
 
+	function onViewportChange() {
+		document.querySelectorAll('.lf-mega-menu--services > .sub-menu').forEach(function (panel) {
+			ensureMobileCategoryToggles(panel);
+		});
+	}
+
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', init);
 	} else {
 		init();
+	}
+
+	try {
+		if (window.matchMedia) {
+			window.matchMedia('(max-width: 900px)').addEventListener('change', onViewportChange);
+		}
+	} catch (e) {
+		window.addEventListener('resize', onViewportChange);
 	}
 })();
