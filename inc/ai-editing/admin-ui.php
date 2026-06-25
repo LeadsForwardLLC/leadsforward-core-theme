@@ -3060,8 +3060,22 @@ function lf_ai_ajax_inline_rewrite(): void {
 	$current_text = is_string($current_text) ? $current_text : '';
 	$prompt = isset($_POST['prompt']) ? sanitize_textarea_field(wp_unslash($_POST['prompt'])) : '';
 	$instruction = isset($_POST['instruction']) ? sanitize_textarea_field(wp_unslash($_POST['instruction'])) : '';
-	if ($context_type === '' || $context_id === '' || trim(wp_strip_all_tags($current_text)) === '') {
+	if ($context_type === '' || $context_id === '') {
+		if ($service_post_id > 0) {
+			$context_type = 'lf_service';
+			$context_id = (string) $service_post_id;
+		} elseif (function_exists('lf_ai_assistant_widget_context')) {
+			$fallback = lf_ai_assistant_widget_context();
+			$context_type = (string) ($fallback['type'] ?? '');
+			$context_id = (string) ($fallback['id'] ?? '');
+		}
+	}
+	$text_stripped = trim(wp_strip_all_tags($current_text));
+	if ($context_type === '' || $context_id === '') {
 		wp_send_json_error(['message' => __('Invalid rewrite payload.', 'leadsforward-core')]);
+	}
+	if ($text_stripped === '' && $rewrite_mode !== 'regenerate') {
+		wp_send_json_error(['message' => __('Nothing to rewrite in this field.', 'leadsforward-core')]);
 	}
 	$guidance = lf_ai_inline_rewrite_field_guidance($field_key, $section_type, $current_text);
 	$max_len = $guidance['preserve_html'] ? 12000 : 2000;

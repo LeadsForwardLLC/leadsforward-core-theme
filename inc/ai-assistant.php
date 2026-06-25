@@ -2294,11 +2294,17 @@ function lf_ai_assistant_widget_js(): string {
 		var lfProseIconSavedHost = null;
 		var lfInlineRewriteBusy = false;
 		var lfInlineRewritePanelOpen = false;
+		var lfInlineRewritePinnedHost = null;
 		function lfInlineRewritePanel() {
 			return $("[data-lf-ai-inline-rewrite-panel]");
 		}
+		function lfInlineRewritePanelIsOpen() {
+			var $panel = lfInlineRewritePanel();
+			return !!($panel.length && lfInlineRewritePanelOpen && !$panel.prop("hidden"));
+		}
 		function lfHideInlineRewritePanel() {
 			lfInlineRewritePanelOpen = false;
+			lfInlineRewritePinnedHost = null;
 			var $panel = lfInlineRewritePanel();
 			if ($panel.length) {
 				$panel.prop("hidden", true).hide();
@@ -2636,6 +2642,7 @@ function lf_ai_assistant_widget_js(): string {
 				setStatus("Click into text to edit, then use the robot button.", true);
 				return;
 			}
+			lfInlineRewritePinnedHost = host;
 			var scope = (lfAiFloating && lfAiFloating.page_scope) ? lfAiFloating.page_scope : {};
 			var pk = String(scope.primary_keyword || "").trim();
 			var $panel = lfInlineRewritePanel();
@@ -2688,15 +2695,24 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function lfRunInlineRewrite(mode) {
 			if (lfInlineRewriteBusy) return;
-			var host = inlineActiveEl || lfManagedContentEditableHost();
+			var host = lfInlineRewritePinnedHost || inlineActiveEl || lfManagedContentEditableHost();
 			var ctx = lfInlineRewriteContextFromHost(host);
-			if (!ctx || !ctx.current_text) {
+			var modeStr = String(mode || "regenerate");
+			if (!ctx) {
+				setStatus("Click into text to edit, then use Regenerate.", true);
+				return;
+			}
+			if (!ctx.current_text && modeStr !== "regenerate") {
 				setStatus("Nothing to rewrite in this field.", true);
 				return;
 			}
 			var instruction = String(lfInlineRewritePanel().find("[data-lf-ai-inline-rewrite-instruction]").val() || "").trim();
 			lfInlineRewriteBusy = true;
 			lfInlineRewritePanel().find("[data-lf-ai-inline-rewrite-mode]").addClass("is-loading");
+			var $hint = lfInlineRewritePanel().find("[data-lf-ai-inline-rewrite-hint]");
+			if ($hint.length) {
+				$hint.text("AI is rewriting…");
+			}
 			setStatus("AI is rewriting…", false);
 			$.post(lfAiFloating.ajax_url, {
 				action: "lf_ai_inline_rewrite",
@@ -2709,7 +2725,7 @@ function lf_ai_assistant_widget_js(): string {
 				section_type: ctx.section_type,
 				service_post_id: ctx.service_post_id,
 				current_text: ctx.current_text,
-				rewrite_mode: String(mode || "regenerate"),
+				rewrite_mode: modeStr,
 				instruction: instruction
 			}).done(function(res){
 				if (res && res.success && res.data && res.data.rewritten_text) {
@@ -2717,11 +2733,18 @@ function lf_ai_assistant_widget_js(): string {
 					setStatus("AI rewrite applied. Click away to save.", false);
 					lfHideInlineRewritePanel();
 				} else {
-					setStatus((res && res.data && res.data.message) ? res.data.message : "Rewrite failed.", true);
+					var errMsg = (res && res.data && res.data.message) ? res.data.message : "Rewrite failed.";
+					setStatus(errMsg, true);
+					if ($hint.length) {
+						$hint.text(errMsg);
+					}
 				}
 			}).fail(function(xhr){
 				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Rewrite failed.";
 				setStatus(msg, true);
+				if ($hint.length) {
+					$hint.text(msg);
+				}
 			}).always(function(){
 				lfInlineRewriteBusy = false;
 				lfInlineRewritePanel().find("[data-lf-ai-inline-rewrite-mode]").removeClass("is-loading");
@@ -3098,6 +3121,10 @@ function lf_ai_assistant_widget_js(): string {
 		}
 		function lfInitInlineLinkUi() {
 			if (!$linkRoot.length) return;
+			var $rewritePanel = lfInlineRewritePanel();
+			if ($rewritePanel.length && !$rewritePanel.parent().is("body")) {
+				$rewritePanel.appendTo(document.body);
+			}
 			$linkRoot.find("[data-lf-ai-inline-link-toolbar]").on("mousedown", function(e){
 				e.preventDefault();
 			});
@@ -3123,24 +3150,24 @@ function lf_ai_assistant_widget_js(): string {
 				e.preventDefault();
 			});
 			$(document).on("mousedown", "[data-lf-ai-inline-rewrite-close], [data-lf-ai-inline-rewrite-mode]", function(e){
-				if (!lfInlineRewritePanelOpen) return;
+				if (!lfInlineRewritePanelIsOpen()) return;
 				e.preventDefault();
 			});
 			$(document).on("click", "[data-lf-ai-inline-rewrite-close]", function(e){
-				if (!lfInlineRewritePanelOpen) return;
+				if (!lfInlineRewritePanelIsOpen()) return;
 				e.preventDefault();
 				e.stopPropagation();
 				lfHideInlineRewritePanel();
 			});
 			$(document).on("click", "[data-lf-ai-inline-rewrite-mode]", function(e){
-				if (!lfInlineRewritePanelOpen) return;
+				if (!lfInlineRewritePanelIsOpen()) return;
 				e.preventDefault();
 				e.stopPropagation();
 				var mode = String($(this).attr("data-lf-ai-inline-rewrite-mode") || "regenerate");
 				lfRunInlineRewrite(mode);
 			});
 			$(document).on("keydown", "[data-lf-ai-inline-rewrite-instruction]", function(e){
-				if (!lfInlineRewritePanelOpen) return;
+				if (!lfInlineRewritePanelIsOpen()) return;
 				if (e.key === "Enter" && !e.shiftKey) {
 					e.preventDefault();
 					var instr = String($(this).val() || "").trim();
