@@ -31,65 +31,11 @@ function lf_mega_menu_is_header_context($args, array $items = []): bool {
 }
 
 /**
- * Flatten service category nesting into one searchable Services grid.
- *
- * @param array<int, \WP_Post> $items
- * @return array<int, \WP_Post>
+ * Keep categorized Services children grouped in the mega panel (do not flatten).
+ * Search filters across category sections client-side.
  */
 function lf_mega_menu_flatten_service_categories(array $items, $args): array {
-	if (!lf_mega_menu_is_header_context($args, $items)) {
-		return $items;
-	}
-
-	$services_parent_id = lf_header_menu_services_parent_id($items);
-	if ($services_parent_id <= 0) {
-		return $items;
-	}
-
-	$category_ids = [];
-	foreach ($items as $menu_item) {
-		if (!$menu_item instanceof \WP_Post) {
-			continue;
-		}
-		if ((int) ($menu_item->menu_item_parent ?? 0) !== $services_parent_id) {
-			continue;
-		}
-		if (!lf_header_menu_item_has_class($menu_item, 'lf-menu-service-category')) {
-			continue;
-		}
-		$cat_id = (int) ($menu_item->ID ?? 0);
-		if ($cat_id !== 0) {
-			$category_ids[$cat_id] = true;
-		}
-	}
-
-	if ($category_ids === []) {
-		return $items;
-	}
-
-	foreach ($items as $menu_item) {
-		if (!$menu_item instanceof \WP_Post) {
-			continue;
-		}
-		$parent = (int) ($menu_item->menu_item_parent ?? 0);
-		if (!isset($category_ids[$parent])) {
-			continue;
-		}
-		$menu_item->menu_item_parent = $services_parent_id;
-	}
-
-	$filtered = [];
-	foreach ($items as $menu_item) {
-		if (!$menu_item instanceof \WP_Post) {
-			continue;
-		}
-		if (isset($category_ids[(int) ($menu_item->ID ?? 0)])) {
-			continue;
-		}
-		$filtered[] = $menu_item;
-	}
-
-	return $filtered;
+	return $items;
 }
 add_filter('wp_nav_menu_objects', 'lf_mega_menu_flatten_service_categories', 14, 2);
 
@@ -109,7 +55,7 @@ function lf_mega_menu_prepare_services_panel(array $items, $args): array {
 		return $items;
 	}
 
-	$has_search = false;
+	$category_parent_ids = [];
 	foreach ($items as $menu_item) {
 		if (!$menu_item instanceof \WP_Post) {
 			continue;
@@ -117,16 +63,41 @@ function lf_mega_menu_prepare_services_panel(array $items, $args): array {
 		if ((int) ($menu_item->menu_item_parent ?? 0) !== $services_parent_id) {
 			continue;
 		}
-		if (lf_header_menu_item_has_class($menu_item, 'lf-mega-search-host')) {
-			$has_search = true;
+		if (lf_header_menu_item_has_class($menu_item, 'lf-menu-service-category')) {
+			$category_parent_ids[(int) ($menu_item->ID ?? 0)] = true;
 		}
-		if ((string) ($menu_item->object ?? '') === 'lf_service') {
+	}
+
+	$has_search = false;
+	$filtered = [];
+	foreach ($items as $menu_item) {
+		if (!$menu_item instanceof \WP_Post) {
+			continue;
+		}
+		$parent = (int) ($menu_item->menu_item_parent ?? 0);
+		$is_services_child = $parent === $services_parent_id || isset($category_parent_ids[$parent]);
+		if ($is_services_child && lf_header_menu_item_has_class($menu_item, 'lf-submenu-divider')) {
+			continue;
+		}
+		if ($is_services_child && (string) ($menu_item->object ?? '') === 'lf_service') {
 			$menu_item->classes = array_values(array_unique(array_merge(
 				is_array($menu_item->classes ?? null) ? $menu_item->classes : [],
 				['lf-mega-tile', 'menu-item']
 			)));
 		}
+		if ($is_services_child && lf_header_menu_item_has_class($menu_item, 'lf-menu-service-category')) {
+			$menu_item->classes = array_values(array_unique(array_merge(
+				is_array($menu_item->classes ?? null) ? $menu_item->classes : [],
+				['lf-mega-category', 'menu-item']
+			)));
+		}
+		if ($parent === $services_parent_id && lf_header_menu_item_has_class($menu_item, 'lf-mega-search-host')) {
+			$has_search = true;
+			$menu_item->menu_order = 99990;
+		}
+		$filtered[] = $menu_item;
 	}
+	$items = $filtered;
 
 	if (!$has_search) {
 		$search_item = lf_header_menu_synthetic_child(
@@ -136,7 +107,7 @@ function lf_mega_menu_prepare_services_panel(array $items, $args): array {
 			'#',
 			['menu-item', 'lf-mega-search-host', 'lf-mega-search-host--services']
 		);
-		$search_item->menu_order = 0;
+		$search_item->menu_order = 99990;
 		$items[] = $search_item;
 	}
 
@@ -174,6 +145,13 @@ function lf_mega_menu_item_output(string $item_output, \WP_Post $item, int $dept
 	}
 
 	$classes = is_array($item->classes ?? null) ? $item->classes : [];
+
+	if (in_array('lf-menu-service-category', $classes, true) && $depth >= 1) {
+		$title = wp_strip_all_tags((string) apply_filters('nav_menu_item_title', $item->title, $item, $args, $depth));
+		return $args->before
+			. '<span class="lf-mega-category__heading" role="presentation">' . esc_html($title) . '</span>'
+			. $args->after;
+	}
 
 	if (in_array('lf-mega-search-host', $classes, true)) {
 		$placeholder = esc_attr(wp_strip_all_tags((string) ($item->title ?? '')));
