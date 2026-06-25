@@ -24,7 +24,9 @@ const LF_QUOTE_BUILDER_GHL_RETRY_HOOK = 'lf_quote_builder_process_ghl_retries';
 add_action('admin_init', 'lf_quote_builder_handle_save');
 add_action('admin_init', 'lf_quote_builder_integrations_handle_save');
 add_action('admin_init', 'lf_quote_builder_handle_resync_from_niche');
-add_action('admin_init', 'lf_quote_builder_maybe_create_analytics_table');
+add_action('admin_init', static function (): void {
+	lf_quote_builder_maybe_create_analytics_table(true);
+});
 add_action('admin_init', 'lf_quote_builder_redirect_legacy_pages');
 add_action('admin_init', 'lf_quote_builder_handle_reset_analytics');
 add_action('wp_enqueue_scripts', 'lf_quote_builder_enqueue_assets');
@@ -1214,8 +1216,15 @@ function lf_quote_builder_sanitize_config($input, array $defaults): array {
 }
 
 function lf_quote_builder_maybe_create_analytics_table(bool $lightweight = false): void {
-	if ($lightweight && get_option('lf_qb_analytics_ready')) {
+	if (get_option('lf_qb_analytics_ready')) {
 		return;
+	}
+	if ($lightweight) {
+		static $ran_lightweight = false;
+		if ($ran_lightweight) {
+			return;
+		}
+		$ran_lightweight = true;
 	}
 	global $wpdb;
 	$table = $wpdb->prefix . LF_QUOTE_BUILDER_ANALYTICS_TABLE;
@@ -1245,7 +1254,10 @@ function lf_quote_builder_maybe_create_analytics_table(bool $lightweight = false
 		return;
 	}
 	$columns = $wpdb->get_results("SHOW COLUMNS FROM $table", ARRAY_A);
-	$column_names = array_map(function ($row) {
+	if (!is_array($columns)) {
+		return;
+	}
+	$column_names = array_map(static function ($row) {
 		return $row['Field'] ?? '';
 	}, $columns);
 	$add_columns = [
@@ -1260,6 +1272,9 @@ function lf_quote_builder_maybe_create_analytics_table(bool $lightweight = false
 		}
 	}
 	$indexes = $wpdb->get_results("SHOW INDEX FROM $table WHERE Key_name = 'lf_qb_unique'", ARRAY_A);
+	if (!is_array($indexes)) {
+		$indexes = [];
+	}
 	$index_cols = [];
 	foreach ($indexes as $index) {
 		if (!empty($index['Column_name'])) {

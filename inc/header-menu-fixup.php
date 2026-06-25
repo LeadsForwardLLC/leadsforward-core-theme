@@ -140,9 +140,13 @@ function lf_header_menu_objects_consolidate_more(array $items, $args): array {
 }
 add_filter('wp_nav_menu_objects', 'lf_header_menu_objects_consolidate_more', 18, 2);
 
+const LF_HEADER_MENU_STRUCTURE_VERSION = 'header-nav-v7';
+const LF_HEADER_MENU_DEFERRED_REPAIR_HOOK = 'lf_header_menu_deferred_structure_repair';
+const LF_HEADER_MENU_REPAIR_LOCK = 'lf_header_menu_repair_lock';
+
 /**
  * Repair stored menu when secondary pages are still saved at top level.
- * Runs once per structure version (admin or front); not on every page view.
+ * Version is stamped on admin_init; heavy work runs via cron so timeouts never brick wp-admin.
  */
 function lf_header_menu_force_structure_repair(): void {
 	if (!has_nav_menu('header_menu')) {
@@ -155,16 +159,43 @@ function lf_header_menu_force_structure_repair(): void {
 		return;
 	}
 
-	$structure_version = 'header-nav-v7';
 	$stored = (string) get_option('lf_header_menu_structure_version', '');
-	if ($stored === $structure_version) {
+	if ($stored === LF_HEADER_MENU_STRUCTURE_VERSION) {
 		return;
 	}
 
-	lf_header_menu_repair_nav_structure($menu_id);
-	if (function_exists('lf_header_menu_consolidate_secondary_into_more')) {
-		lf_header_menu_consolidate_secondary_into_more($menu_id);
+	// Mark complete before repair so a timeout/fatal during repair cannot white-screen every admin load.
+	update_option('lf_header_menu_structure_version', LF_HEADER_MENU_STRUCTURE_VERSION, false);
+
+	if (!wp_next_scheduled(LF_HEADER_MENU_DEFERRED_REPAIR_HOOK, [$menu_id])) {
+		wp_schedule_single_event(time() + 5, LF_HEADER_MENU_DEFERRED_REPAIR_HOOK, [$menu_id]);
 	}
-	update_option('lf_header_menu_structure_version', $structure_version, false);
 }
 add_action('admin_init', 'lf_header_menu_force_structure_repair', 12);
+
+/**
+ * Background menu structure repair (cron / async HTTP).
+ */
+function lf_header_menu_run_deferred_structure_repair(int $menu_id): void {
+	if ($menu_id <= 0 || !function_exists('lf_header_menu_repair_nav_structure')) {
+		return;
+	}
+	if (get_transient(LF_HEADER_MENU_REPAIR_LOCK)) {
+		return;
+	}
+	set_transient(LF_HEADER_MENU_REPAIR_LOCK, 1, 10 * MINUTE_IN_SECONDS);
+
+	try {
+		if (function_exists('set_time_limit')) {
+			@set_time_limit(300);
+		}
+		lf_header_menu_repair_nav_structure($menu_id);
+	} catch (\Throwable $e) {
+		if (function_exists('error_log')) {
+			error_log('LF header menu deferred repair failed: ' . $e->getMessage());
+		}
+	} finally {
+		delete_transient(LF_HEADER_MENU_REPAIR_LOCK);
+	}
+}
+add_action(LF_HEADER_MENU_DEFERRED_REPAIR_HOOK, 'lf_header_menu_run_deferred_structure_repair', 10, 1);
