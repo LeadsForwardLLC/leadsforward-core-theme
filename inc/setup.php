@@ -403,7 +403,8 @@ function lf_header_menu_reorder_services_areas_children(array $items): array {
 			}
 		}
 		if ($is_services_mega) {
-			$ordered = array_merge($regular, $all_links, $search_hosts);
+			// Categories first, search, then "All Services" last.
+			$ordered = array_merge($regular, $search_hosts, $all_links);
 		} else {
 			$ordered = array_merge($regular, $dividers, $all_links, $search_hosts);
 		}
@@ -491,6 +492,21 @@ function lf_header_menu_objects(array $items, $args): array {
 	return lf_header_menu_reorder_services_areas_children($items);
 }
 add_filter('wp_nav_menu_objects', 'lf_header_menu_objects', 10, 2);
+
+/**
+ * Re-order Services/Areas children after categorization and mega-menu prep (priority 12–20).
+ *
+ * @param array<int, \WP_Post> $items
+ * @return array<int, \WP_Post>
+ */
+function lf_header_menu_finalize_children_order(array $items, $args): array {
+	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || $items === []) {
+		return $items;
+	}
+
+	return lf_header_menu_reorder_services_areas_children($items);
+}
+add_filter('wp_nav_menu_objects', 'lf_header_menu_finalize_children_order', 25, 2);
 
 /**
  * Whether a header menu item represents Home / the static front page.

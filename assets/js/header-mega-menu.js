@@ -103,7 +103,19 @@
 					});
 					var showCategory = query === '' || catLabel.indexOf(query) !== -1 || catVisible > 0;
 					category.hidden = !showCategory;
-					category.classList.toggle('is-flyout-open', query !== '' && showCategory && catVisible > 0);
+					var expandForSearch = query !== '' && showCategory && catVisible > 0;
+					category.classList.toggle('is-flyout-open', expandForSearch);
+					if (!isDesktop()) {
+						category.classList.toggle('is-open', expandForSearch);
+						var catToggle = category.querySelector(':scope > .site-header__category-toggle');
+						var catLink = category.querySelector(':scope > a.lf-menu-service-category__link, :scope > a');
+						if (catToggle) {
+							catToggle.setAttribute('aria-expanded', expandForSearch ? 'true' : 'false');
+						}
+						if (catLink) {
+							catLink.setAttribute('aria-expanded', expandForSearch ? 'true' : 'false');
+						}
+					}
 				});
 			} else {
 				tiles.forEach(function (tile) {
