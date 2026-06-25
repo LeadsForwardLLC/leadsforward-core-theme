@@ -413,6 +413,44 @@ function lf_header_menu_objects_apply_nav_rules(array $items, $args): array {
 	$items = $filtered;
 	$more_parent_id = lf_header_menu_find_more_parent_id($items);
 
+	// Ensure Home is present at top level when a static front page is set.
+	$has_home = false;
+	foreach ($items as $item) {
+		if (!$item instanceof \WP_Post || (int) ($item->menu_item_parent ?? 0) !== 0) {
+			continue;
+		}
+		if (function_exists('lf_header_menu_item_is_home_item') && lf_header_menu_item_is_home_item($item)) {
+			$has_home = true;
+			break;
+		}
+	}
+	if (!$has_home) {
+		$home_id = (int) get_option('page_on_front');
+		$home_url = home_url('/');
+		$home_title = __('Home', 'leadsforward-core');
+		if ($home_id > 0 && get_post_status($home_id) === 'publish') {
+			$home_url = (string) get_permalink($home_id);
+			$page_title = trim((string) get_the_title($home_id));
+			if ($page_title !== '') {
+				$home_title = $page_title;
+			}
+		}
+		$home_item = lf_header_menu_synthetic_child(
+			0,
+			-5100,
+			$home_title,
+			$home_url,
+			['menu-item', 'lf-menu-home']
+		);
+		if ($home_id > 0 && get_post_status($home_id) === 'publish') {
+			$home_item->object = 'page';
+			$home_item->object_id = $home_id;
+			$home_item->type = 'post_type';
+		}
+		$home_item->menu_order = 1;
+		array_unshift($items, $home_item);
+	}
+
 	// Ensure published About is top-level with nav label "About".
 	foreach (lf_header_menu_about_page_slugs() as $slug) {
 		$about_page = lf_header_menu_published_page_for_slug($slug);

@@ -155,7 +155,7 @@ function lf_header_menu_force_structure_repair(): void {
 		return;
 	}
 
-	$structure_version = 'header-nav-v6';
+	$structure_version = 'header-nav-v7';
 	$stored = (string) get_option('lf_header_menu_structure_version', '');
 	if ($stored === $structure_version) {
 		return;
