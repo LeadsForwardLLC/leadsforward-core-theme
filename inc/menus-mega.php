@@ -1,6 +1,6 @@
 <?php
 /**
- * Services / Service Areas mega menus: search, thumbnails, flat grid layout.
+ * Services mega menu: search, thumbnails, flat grid (Services only — not Service Areas).
  *
  * @package LeadsForward_Core
  */
@@ -11,8 +11,11 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+/** @var string */
+$GLOBALS['lf_mega_submenu_context'] = '';
+
 /**
- * Whether mega menus are enabled for header Services / Service Areas dropdowns.
+ * Whether the Services mega menu is enabled.
  */
 function lf_mega_menu_enabled(): bool {
 	return (bool) apply_filters('lf_mega_menu_enabled', true);
@@ -29,26 +32,44 @@ function lf_mega_menu_is_header_context($args, array $items = []): bool {
 }
 
 /**
- * Find Services or Service Areas group parent ID.
+ * Canonical Services group parent menu item ID.
  */
-function lf_mega_menu_group_parent_id(array $items, string $kind): int {
-	if ($kind === 'services') {
-		return lf_header_menu_services_parent_id($items);
+function lf_mega_menu_services_parent_id(array $items): int {
+	return lf_header_menu_services_parent_id($items);
+}
+
+/**
+ * Reparent orphaned lf_service rows onto the canonical Services parent.
+ *
+ * @param array<int, \WP_Post> $items
+ * @return array<int, \WP_Post>
+ */
+function lf_mega_menu_normalize_service_children_parents(array $items, $args): array {
+	if (!lf_mega_menu_is_header_context($args, $items)) {
+		return $items;
 	}
+
+	$parent_id = lf_mega_menu_services_parent_id($items);
+	if ($parent_id <= 0) {
+		return $items;
+	}
+
 	foreach ($items as $menu_item) {
 		if (!$menu_item instanceof \WP_Post) {
 			continue;
 		}
-		if ((int) ($menu_item->menu_item_parent ?? 0) !== 0) {
+		if ((string) ($menu_item->object ?? '') !== 'lf_service') {
 			continue;
 		}
-		$title = strtolower(trim(wp_strip_all_tags((string) ($menu_item->title ?? ''))));
-		if ($title === 'service areas' || lf_header_menu_item_has_class($menu_item, 'lf-menu-areas-parent')) {
-			return (int) ($menu_item->ID ?? 0);
+		if ((int) ($menu_item->menu_item_parent ?? 0) === $parent_id) {
+			continue;
 		}
+		$menu_item->menu_item_parent = $parent_id;
 	}
-	return 0;
+
+	return $items;
 }
+add_filter('wp_nav_menu_objects', 'lf_mega_menu_normalize_service_children_parents', 8, 2);
 
 /**
  * Flatten service category nesting so mega menu shows one searchable grid.
@@ -61,13 +82,12 @@ function lf_mega_menu_flatten_service_categories(array $items, $args): array {
 		return $items;
 	}
 
-	$services_parent_id = lf_mega_menu_group_parent_id($items, 'services');
+	$services_parent_id = lf_mega_menu_services_parent_id($items);
 	if ($services_parent_id <= 0) {
 		return $items;
 	}
 
 	$category_ids = [];
-	$grandchildren = [];
 	foreach ($items as $menu_item) {
 		if (!$menu_item instanceof \WP_Post) {
 			continue;
@@ -117,71 +137,43 @@ function lf_mega_menu_flatten_service_categories(array $items, $args): array {
 add_filter('wp_nav_menu_objects', 'lf_mega_menu_flatten_service_categories', 12, 2);
 
 /**
- * Inject mega search row and mark CPT tiles for thumbnail rendering.
+ * Mark service CPT links for thumbnail tile rendering.
  *
  * @param array<int, \WP_Post> $items
  * @return array<int, \WP_Post>
  */
-function lf_mega_menu_prepare_items(array $items, $args): array {
+function lf_mega_menu_mark_service_tiles(array $items, $args): array {
 	if (!lf_mega_menu_is_header_context($args, $items)) {
 		return $items;
 	}
 
-	$synthetic_id = -4000;
-	$extra = [];
+	$parent_id = lf_mega_menu_services_parent_id($items);
+	if ($parent_id <= 0) {
+		return $items;
+	}
 
-	foreach (['services', 'areas'] as $kind) {
-		$parent_id = lf_mega_menu_group_parent_id($items, $kind);
-		if ($parent_id <= 0) {
+	foreach ($items as $menu_item) {
+		if (!$menu_item instanceof \WP_Post) {
 			continue;
 		}
-
-		$has_search = false;
-		$post_type = $kind === 'services' ? 'lf_service' : 'lf_service_area';
-		foreach ($items as $menu_item) {
-			if (!$menu_item instanceof \WP_Post) {
-				continue;
-			}
-			if ((int) ($menu_item->menu_item_parent ?? 0) !== $parent_id) {
-				continue;
-			}
-			if (lf_header_menu_item_has_class($menu_item, 'lf-mega-search-host')) {
-				$has_search = true;
-			}
-			if ((string) ($menu_item->object ?? '') === $post_type) {
-				$menu_item->classes = array_values(array_unique(array_merge(
-					is_array($menu_item->classes ?? null) ? $menu_item->classes : [],
-					['lf-mega-tile']
-				)));
-			}
+		if ((int) ($menu_item->menu_item_parent ?? 0) !== $parent_id) {
+			continue;
 		}
-
-		if (!$has_search) {
-			$placeholder = $kind === 'services'
-				? __('Search services…', 'leadsforward-core')
-				: __('Search service areas…', 'leadsforward-core');
-			$search_item = lf_header_menu_synthetic_child(
-				$parent_id,
-				$synthetic_id--,
-				$placeholder,
-				'#',
-				['menu-item', 'lf-mega-search-host', 'lf-mega-search-host--' . $kind]
-			);
-			$search_item->menu_order = -100;
-			$extra[] = $search_item;
+		if ((string) ($menu_item->object ?? '') !== 'lf_service') {
+			continue;
 		}
+		$menu_item->classes = array_values(array_unique(array_merge(
+			is_array($menu_item->classes ?? null) ? $menu_item->classes : [],
+			['lf-mega-tile', 'menu-item']
+		)));
 	}
 
-	if ($extra !== []) {
-		$items = array_merge($items, $extra);
-	}
-
-	return lf_header_menu_reorder_services_areas_children($items);
+	return $items;
 }
-add_filter('wp_nav_menu_objects', 'lf_mega_menu_prepare_items', 13, 2);
+add_filter('wp_nav_menu_objects', 'lf_mega_menu_mark_service_tiles', 13, 2);
 
 /**
- * Add mega-menu classes to Services / Service Areas parents.
+ * Add mega-menu class to Services parent only (not Service Areas).
  *
  * @param array<int, string> $classes
  * @return array<int, string>
@@ -193,16 +185,56 @@ function lf_mega_menu_parent_css_classes(array $classes, \WP_Post $item, $args, 
 	if (lf_header_menu_item_has_class($item, 'lf-menu-services-parent')) {
 		$classes[] = 'lf-mega-menu';
 		$classes[] = 'lf-mega-menu--services';
-	} elseif (lf_header_menu_item_has_class($item, 'lf-menu-areas-parent')) {
-		$classes[] = 'lf-mega-menu';
-		$classes[] = 'lf-mega-menu--areas';
 	}
 	return array_values(array_unique($classes));
 }
 add_filter('nav_menu_css_class', 'lf_mega_menu_parent_css_classes', 12, 4);
 
 /**
- * Mega search host row and thumbnail tiles in submenu output.
+ * Remember when we are rendering the Services submenu.
+ */
+function lf_mega_menu_track_submenu_context(string $item_output, \WP_Post $item, int $depth, $args): string {
+	if (!lf_mega_menu_enabled() || !is_object($args) || ($args->theme_location ?? '') !== 'header_menu') {
+		return $item_output;
+	}
+	if ($depth === 0 && lf_header_menu_item_has_class($item, 'lf-menu-services-parent')) {
+		$GLOBALS['lf_mega_submenu_context'] = 'services';
+	} elseif ($depth === 0) {
+		$GLOBALS['lf_mega_submenu_context'] = '';
+	}
+	return $item_output;
+}
+add_filter('walker_nav_menu_start_el', 'lf_mega_menu_track_submenu_context', 9, 4);
+
+/**
+ * Inject search field at the top of the Services submenu (no synthetic nav item).
+ */
+function lf_mega_menu_inject_search_row(string $output, $args, int $depth): string {
+	if (!lf_mega_menu_enabled() || !is_object($args) || ($args->theme_location ?? '') !== 'header_menu') {
+		return $output;
+	}
+	if ($depth !== 0 || ($GLOBALS['lf_mega_submenu_context'] ?? '') !== 'services') {
+		return $output;
+	}
+
+	$placeholder = esc_attr__('Search services…', 'leadsforward-core');
+	$search = '<li class="menu-item lf-mega-search-host lf-mega-search-host--services" role="presentation">'
+		. '<div class="lf-mega-search-wrap" role="search">'
+		. '<input type="search" class="lf-mega-search__input" '
+		. 'placeholder="' . $placeholder . '" '
+		. 'data-lf-mega-search="services" '
+		. 'aria-label="' . $placeholder . '" autocomplete="off" />'
+		. '</div>'
+		. '</li>';
+
+	$GLOBALS['lf_mega_submenu_context'] = '';
+
+	return $output . $search;
+}
+add_filter('walker_nav_menu_start_lvl', 'lf_mega_menu_inject_search_row', 10, 3);
+
+/**
+ * Thumbnail tiles for service links in the Services mega menu.
  */
 function lf_mega_menu_item_output(string $item_output, \WP_Post $item, int $depth, $args): string {
 	if (!lf_mega_menu_enabled() || !is_object($args) || ($args->theme_location ?? '') !== 'header_menu') {
@@ -210,20 +242,6 @@ function lf_mega_menu_item_output(string $item_output, \WP_Post $item, int $dept
 	}
 
 	$classes = is_array($item->classes ?? null) ? $item->classes : [];
-
-	if (in_array('lf-mega-search-host', $classes, true)) {
-		$placeholder = esc_attr(wp_strip_all_tags((string) ($item->title ?? '')));
-		$kind = in_array('lf-mega-search-host--areas', $classes, true) ? 'areas' : 'services';
-		return $args->before
-			. '<div class="lf-mega-search-wrap" role="search">'
-			. '<input type="search" class="lf-mega-search__input" '
-			. 'placeholder="' . $placeholder . '" '
-			. 'data-lf-mega-search="' . esc_attr($kind) . '" '
-			. 'aria-label="' . $placeholder . '" autocomplete="off" />'
-			. '</div>'
-			. $args->after;
-	}
-
 	if ($depth < 1 || !in_array('lf-mega-tile', $classes, true)) {
 		return $item_output;
 	}
@@ -231,24 +249,17 @@ function lf_mega_menu_item_output(string $item_output, \WP_Post $item, int $dept
 	$object_id = (int) ($item->object_id ?? 0);
 	$post = $object_id > 0 ? get_post($object_id) : null;
 	$thumb_url = '';
-	$thumb_alt = '';
 	if ($post instanceof \WP_Post && function_exists('lf_get_post_card_thumbnail_id')) {
 		$thumb_id = lf_get_post_card_thumbnail_id($post);
 		if ($thumb_id > 0) {
 			$thumb_url = (string) wp_get_attachment_image_url($thumb_id, 'thumbnail');
-			$thumb_alt = (string) get_post_meta($thumb_id, '_wp_attachment_image_alt', true);
 		}
 	}
 	if ($thumb_url === '' && function_exists('lf_get_section_default_image_url')) {
-		$ctx = (string) ($item->object ?? '') === 'lf_service_area' ? 'service_area' : 'service';
-		$thumb_url = lf_get_section_default_image_url($ctx);
+		$thumb_url = lf_get_section_default_image_url('service');
 	}
 	if ($thumb_url === '') {
 		return $item_output;
-	}
-
-	if ($thumb_alt === '') {
-		$thumb_alt = wp_strip_all_tags((string) ($item->title ?? ''));
 	}
 
 	$thumb_html = '<span class="lf-mega-tile__thumb" aria-hidden="true">'

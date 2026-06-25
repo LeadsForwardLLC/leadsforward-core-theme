@@ -377,7 +377,7 @@ function lf_header_menu_objects(array $items, $args): array {
 	$children_by_parent = [];
 	foreach ($items as $menu_item) {
 		$parent = (int) ($menu_item->menu_item_parent ?? 0);
-		if ($parent > 0) {
+		if ($parent !== 0) {
 			$children_by_parent[$parent][] = $menu_item;
 		}
 	}
@@ -497,7 +497,7 @@ function lf_header_menu_reorder_flat_blocks(array $items): array {
 	$children_by_parent = [];
 	foreach ($items as $item) {
 		$parent = (int) ($item->menu_item_parent ?? 0);
-		if ($parent > 0) {
+		if ($parent !== 0) {
 			$children_by_parent[$parent][] = $item;
 		}
 	}
@@ -544,6 +544,19 @@ function lf_header_menu_reorder_flat_blocks(array $items): array {
 	foreach ($tops as $top) {
 		$append_subtree($top, $out);
 	}
+
+	$seen = [];
+	foreach ($out as $item) {
+		$seen[(int) ($item->ID ?? 0)] = true;
+	}
+	foreach ($items as $item) {
+		$id = (int) ($item->ID ?? 0);
+		if ($id !== 0 && !isset($seen[$id])) {
+			$out[] = $item;
+			$seen[$id] = true;
+		}
+	}
+
 	return $out;
 }
 
