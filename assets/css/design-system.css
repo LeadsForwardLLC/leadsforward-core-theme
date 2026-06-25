@@ -2557,6 +2557,9 @@ article a:not(.lf-btn):hover {
 	body.site-header--menu-open {
 		overflow: hidden;
 	}
+	body.site-header--menu-open .site-header {
+		z-index: 1000;
+	}
 	.site-header__toggle {
 		display: inline-flex;
 	}
@@ -2587,30 +2590,36 @@ article a:not(.lf-btn):hover {
 		opacity: 1;
 		pointer-events: auto;
 		transform: translateY(0);
+		z-index: 1001;
 	}
-	/* Header bar: close button only, right-aligned */
+	/* Header bar: sticky close button, safe-area aware */
 	.site-header__panel-header {
 		display: flex;
 		align-items: center;
 		justify-content: flex-end;
 		flex-shrink: 0;
+		position: sticky;
+		top: 0;
+		z-index: 3;
 		width: 100%;
-		padding: 1rem 1rem 0.5rem;
+		padding: max(0.75rem, env(safe-area-inset-top)) 1rem 0.5rem;
 		background: var(--lf-surface-light);
 		box-sizing: border-box;
 	}
 	.site-header__close {
-		background: var(--lf-surface-soft);
-		border: 1px solid rgba(15, 23, 42, 0.08);
+		background: #fff;
+		border: 1px solid rgba(15, 23, 42, 0.12);
 		border-radius: 999px;
-		width: 40px;
-		height: 40px;
+		width: 44px;
+		height: 44px;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		font-size: 1rem;
+		font-size: 1.1rem;
+		line-height: 1;
+		color: var(--lf-text-primary);
 		cursor: pointer;
-		box-shadow: none;
+		box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12);
 	}
 	/* Scrollable content area - prevents overflow */
 	.site-header__nav {
@@ -2805,7 +2814,7 @@ article a:not(.lf-btn):hover {
 		display: flex;
 		align-items: center;
 		gap: 0.65rem;
-		padding: 0.65rem 2.75rem 0.65rem 0.65rem;
+		padding: 0.65rem 0.75rem;
 		font-size: 0.95rem;
 		font-weight: 600;
 		border-bottom: 0;
@@ -2815,27 +2824,22 @@ article a:not(.lf-btn):hover {
 		background: rgba(37, 99, 235, 0.06);
 		color: var(--lf-primary, #2563eb);
 	}
-	.site-header__menu > .lf-mega-menu--services .lf-menu-service-category .site-header__category-toggle {
-		top: calc(0.65rem + 0.5em);
-		right: 0.35rem;
-		width: 32px;
-		height: 32px;
-	}
-	.site-header__menu > .lf-mega-menu--services .lf-menu-service-category.is-open > .site-header__category-toggle span {
-		transform: rotate(180deg);
-		display: inline-block;
-	}
 	.site-header__menu > .lf-mega-menu--services .lf-mega-cat-tile__chevron {
 		display: block;
 		margin-left: auto;
+		flex: 0 0 auto;
 		opacity: 0.45;
-		font-size: 1rem;
+		font-size: 1.05rem;
 		line-height: 1;
-		transition: transform 0.2s ease, opacity 0.2s ease;
+		transition: transform 0.2s ease, opacity 0.2s ease, color 0.2s ease;
 	}
 	.site-header__menu > .lf-mega-menu--services .lf-menu-service-category.is-open .lf-mega-cat-tile__chevron {
 		transform: rotate(90deg);
-		opacity: 0.75;
+		opacity: 0.85;
+		color: var(--lf-primary, #2563eb);
+	}
+	.site-header__menu > .lf-mega-menu--services .lf-menu-service-category .site-header__category-toggle {
+		display: none !important;
 	}
 	.site-header__menu > .lf-mega-menu--services > .sub-menu > .lf-menu-service-category > .sub-menu {
 		padding: 0 0.55rem 0.35rem;
