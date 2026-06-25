@@ -111,80 +111,11 @@ function lf_header_menu_item_is_more_candidate(\WP_Post $item): bool {
  * @return array<int, \WP_Post>
  */
 function lf_header_menu_objects_consolidate_more(array $items, $args): array {
-	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || $items === []) {
+	if (!function_exists('lf_header_menu_objects_apply_nav_rules')) {
 		return $items;
 	}
 
-	$more_parent_id = 0;
-	$candidate_ids = [];
-	$candidates = [];
-
-	foreach ($items as $item) {
-		if (!$item instanceof \WP_Post) {
-			continue;
-		}
-		if (lf_header_menu_item_has_class($item, 'lf-menu-more')) {
-			if ((int) ($item->menu_item_parent ?? 0) === 0) {
-				$more_parent_id = (int) $item->ID;
-			}
-			continue;
-		}
-		$title = lf_header_menu_normalize_more_label((string) ($item->title ?? ''));
-		if ($title === 'more' && (int) ($item->menu_item_parent ?? 0) === 0) {
-			$more_parent_id = (int) $item->ID;
-			continue;
-		}
-	}
-
-	foreach ($items as $item) {
-		if (!$item instanceof \WP_Post) {
-			continue;
-		}
-		if (!lf_header_menu_item_is_more_candidate($item)) {
-			continue;
-		}
-		if ($more_parent_id > 0 && (int) ($item->menu_item_parent ?? 0) === $more_parent_id) {
-			continue;
-		}
-		if ((int) ($item->menu_item_parent ?? 0) !== 0) {
-			continue;
-		}
-		$candidates[] = $item;
-		$candidate_ids[(int) $item->ID] = true;
-	}
-
-	if ($candidates === []) {
-		return $items;
-	}
-
-	if ($more_parent_id <= 0) {
-		$more_parent_id = -5100;
-		$more_item = lf_header_menu_synthetic_child(
-			0,
-			$more_parent_id,
-			__('More', 'leadsforward-core'),
-			'#',
-			['menu-item', 'lf-menu-more', 'menu-item-has-children']
-		);
-		$more_item->menu_order = 9000;
-		$items[] = $more_item;
-	}
-
-	foreach ($items as $item) {
-		if (!$item instanceof \WP_Post) {
-			continue;
-		}
-		$parent = (int) ($item->menu_item_parent ?? 0);
-		if ($parent !== 0 && isset($candidate_ids[$parent])) {
-			$item->menu_item_parent = $more_parent_id;
-		}
-	}
-
-	foreach ($candidates as $item) {
-		$item->menu_item_parent = $more_parent_id;
-	}
-
-	return $items;
+	return lf_header_menu_objects_apply_nav_rules($items, $args);
 }
 add_filter('wp_nav_menu_objects', 'lf_header_menu_objects_consolidate_more', 18, 2);
 
@@ -202,7 +133,7 @@ function lf_header_menu_force_structure_repair(): void {
 		return;
 	}
 
-	$structure_version = 'header-nav-v5';
+	$structure_version = 'header-nav-v6';
 	$stored = (string) get_option('lf_header_menu_structure_version', '');
 	if ($stored === $structure_version) {
 		return;
