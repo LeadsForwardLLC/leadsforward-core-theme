@@ -496,7 +496,7 @@ function lf_header_menu_item_is_home_item(\WP_Post $item): bool {
 }
 
 /**
- * Sort key for top-level header blocks: Home first, then normal links, then Call / CTA, then More.
+ * Sort key for top-level header blocks: Home → Services → Service Areas → About → … → Call → CTA → More.
  *
  * @return array{0:int,1:int}
  */
@@ -515,10 +515,18 @@ function lf_header_menu_top_level_sort_tuple(\WP_Post $item): array {
 	if (lf_header_menu_item_is_home_item($item)) {
 		return [0, $mo];
 	}
-	if (function_exists('lf_header_menu_item_is_about') && lf_header_menu_item_is_about($item)) {
+	$title = strtolower(trim(wp_strip_all_tags((string) ($item->title ?? ''))));
+	if (in_array('lf-menu-services-parent', $classes, true) || $title === 'services') {
+		return [105, $mo];
+	}
+	if (in_array('lf-menu-areas-parent', $classes, true) || $title === 'service areas') {
+		return [110, $mo];
+	}
+	if (in_array('lf-menu-about', $classes, true)
+		|| (function_exists('lf_header_menu_item_is_about') && lf_header_menu_item_is_about($item))) {
 		return [115, $mo];
 	}
-	return [100, $mo];
+	return [120, $mo];
 }
 
 /**
@@ -621,7 +629,7 @@ function lf_header_menu_reorder_display_objects(array $items, $args): array {
 	}
 	return lf_header_menu_reorder_flat_blocks($items);
 }
-add_filter('wp_nav_menu_objects', 'lf_header_menu_reorder_display_objects', 15, 2);
+add_filter('wp_nav_menu_objects', 'lf_header_menu_reorder_display_objects', 21, 2);
 
 /**
  * Remind admins when nav menus exist but nothing is assigned to the Header Menu theme location.

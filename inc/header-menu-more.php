@@ -142,16 +142,33 @@ function lf_header_menu_published_page_for_slug(string $slug): ?\WP_Post {
 }
 
 /**
- * Whether the More dropdown should render (blog, reviews, or contact published).
+ * Whether the More dropdown should render.
+ *
+ * Requires at least one gate page (blog, reviews, contact) published AND at least one
+ * published page that would appear as a More child.
  */
 function lf_header_menu_more_is_enabled(): bool {
+	$gate_open = false;
 	foreach (lf_header_menu_more_gate_page_slugs() as $slug) {
 		if (lf_header_menu_published_page_for_slug($slug) instanceof \WP_Post) {
-			return (bool) apply_filters('lf_header_menu_more_is_enabled', true);
+			$gate_open = true;
+			break;
+		}
+	}
+	if (!$gate_open) {
+		return (bool) apply_filters('lf_header_menu_more_is_enabled', false);
+	}
+
+	$child_pages = lf_header_menu_get_published_more_child_pages();
+	$has_child = false;
+	foreach ($child_pages as $slug => $page) {
+		if ($slug === 'projects' || $page instanceof \WP_Post) {
+			$has_child = true;
+			break;
 		}
 	}
 
-	return (bool) apply_filters('lf_header_menu_more_is_enabled', false);
+	return (bool) apply_filters('lf_header_menu_more_is_enabled', $has_child);
 }
 
 /**
@@ -559,6 +576,26 @@ function lf_header_menu_objects_apply_nav_rules(array $items, $args): array {
 
 	foreach ($candidates as $item) {
 		$item->menu_item_parent = $more_parent_id;
+	}
+
+	// Drop orphan More parent when nothing renders underneath it.
+	$more_parent_id = lf_header_menu_find_more_parent_id($items);
+	if ($more_parent_id > 0) {
+		$more_children = 0;
+		foreach ($items as $item) {
+			if (!$item instanceof \WP_Post) {
+				continue;
+			}
+			if ((int) ($item->menu_item_parent ?? 0) === $more_parent_id) {
+				++$more_children;
+			}
+		}
+		if ($more_children === 0) {
+			$items = array_values(array_filter(
+				$items,
+				static fn ($item): bool => $item instanceof \WP_Post && (int) ($item->ID ?? 0) !== $more_parent_id
+			));
+		}
 	}
 
 	return $items;
