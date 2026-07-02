@@ -544,6 +544,25 @@ function lf_seo_render_settings_page(): void {
 
 			buildSeoPanels();
 
+			var hash = (window.location.hash || '').replace(/^#/, '');
+			if (hash) {
+				var targetPanel = form.querySelector('[data-panel-id="' + hash + '"]');
+				if (targetPanel) {
+					targetPanel.classList.add('is-open');
+					var targetBody = targetPanel.querySelector('.lf-seo-panel__body');
+					var targetHeader = targetPanel.querySelector('.lf-seo-panel__header');
+					if (targetBody) {
+						targetBody.hidden = false;
+					}
+					if (targetHeader) {
+						targetHeader.setAttribute('aria-expanded', 'true');
+					}
+					try {
+						targetPanel.scrollIntoView({ block: 'start' });
+					} catch (eScroll) {}
+				}
+			}
+
 			var frame;
 			var selectBtn = document.getElementById('lf-seo-og-select');
 			var clearBtn = document.getElementById('lf-seo-og-clear');
