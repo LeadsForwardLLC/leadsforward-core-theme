@@ -1835,9 +1835,15 @@ function lf_header_menu_repair_nav_structure(int $menu_id, bool $apply_preferred
 	if (function_exists('lf_header_menu_consolidate_secondary_into_more')) {
 		lf_header_menu_consolidate_secondary_into_more($menu_id);
 	}
+	if (function_exists('lf_header_menu_ensure_fleet_top_levels')) {
+		lf_header_menu_ensure_fleet_top_levels($menu_id);
+	}
 
 	if ($apply_preferred_order) {
-		lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'About']);
+		$labels = function_exists('lf_header_nav_fleet_top_level_labels')
+			? lf_header_nav_fleet_top_level_labels()
+			: ['Home', 'Services', 'Service Areas', 'About'];
+		lf_sitemap_sync_reorder_header_menu_top_level($menu_id, $labels);
 	}
 }
 

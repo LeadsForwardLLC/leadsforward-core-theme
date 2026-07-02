@@ -635,6 +635,7 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
  * @return array<string, mixed>
  */
 function lf_pci_parse_document(string $raw, ?string $force_slug = null): array {
+	$raw = preg_replace('/=== WRITER NOTES ===[\s\S]*?(?==== PAGE ===)/', '', $raw, 1) ?? $raw;
 	$header = lf_pci_extract_page_header($raw);
 	$slug = $force_slug !== null && $force_slug !== '' ? sanitize_title($force_slug) : $header['slug'];
 	$schema = lf_pci_schema_for_slug($slug);
@@ -1027,20 +1028,21 @@ function lf_pci_get_about_page_id(): int {
 /**
  * Resolve a downloadable paste template for a registered page slug.
  */
-function lf_pci_template_for_slug(string $slug): string {
+function lf_pci_template_for_slug(string $slug, bool $include_legend = true): string {
 	$slug = sanitize_title($slug);
 	$schema = lf_pci_schema_for_slug($slug);
+	$body = '';
 	if ($schema === null) {
-		return lf_pci_universal_template();
+		$body = lf_pci_universal_template(false);
+	} elseif (is_readable(LF_THEME_DIR . '/docs/templates/' . $slug . '-content-template.txt')) {
+		$body = (string) file_get_contents(LF_THEME_DIR . '/docs/templates/' . $slug . '-content-template.txt');
+	} elseif ($slug === 'about-us') {
+		$body = lf_pci_about_us_template_fallback();
+	} else {
+		$body = lf_pci_template_fallback_for_schema($schema);
 	}
-	$path = LF_THEME_DIR . '/docs/templates/' . $slug . '-content-template.txt';
-	if (is_readable($path)) {
-		return (string) file_get_contents($path);
-	}
-	if ($slug === 'about-us') {
-		return lf_pci_about_us_template_fallback();
-	}
-	return lf_pci_template_fallback_for_schema($schema);
+
+	return lf_pci_prepare_template_body($body, $include_legend);
 }
 
 /**
@@ -1095,8 +1097,8 @@ function lf_pci_template_fallback_for_schema(array $schema): string {
 /**
  * Universal paste template (includes PAGE target header).
  */
-function lf_pci_universal_template(): string {
-	return lf_pci_template_for_slug('home');
+function lf_pci_universal_template(bool $include_legend = true): string {
+	return lf_pci_template_for_slug('home', $include_legend);
 }
 
 /**
@@ -1155,4 +1157,116 @@ Subheadline: Request a free structural inspection and get a clear repair plan.
 Title: About {business}{city_line}
 Description: Meet {business} — local foundation repair specialists{city_line}. Engineered solutions, clear inspections, and crews who protect your home.
 TEMPLATE;
+}
+
+/**
+ * Token legend prepended to downloadable writer templates.
+ */
+function lf_pci_template_token_legend(): string {
+	return <<<'LEGEND'
+=== WRITER NOTES ===
+Format: Use section headers exactly as shown (=== HERO ===, === STORY ===, etc.).
+Tokens (filled on import): {business}, {city}, {city_line}, {niche}, {phone}
+Process + FAQ: Leave steps/Q&A blank to pull from LeadsForward → Niche Content Library.
+Google Docs: Download the .docx template, duplicate in Drive, then upload the .docx here or File → Download → .docx.
+
+LEGEND;
+}
+
+/**
+ * @param bool $include_legend
+ */
+function lf_pci_prepare_template_body(string $body, bool $include_legend = true): string {
+	$body = trim($body);
+	if (!$include_legend) {
+		return $body;
+	}
+	return trim(lf_pci_template_token_legend() . "\n" . $body);
+}
+
+/**
+ * Extract plain text from a .docx upload (WordprocessingML).
+ */
+function lf_pci_extract_text_from_docx(string $path): string {
+	if (!class_exists('ZipArchive') || !is_readable($path)) {
+		return '';
+	}
+	$zip = new ZipArchive();
+	if ($zip->open($path) !== true) {
+		return '';
+	}
+	$xml = $zip->getFromName('word/document.xml');
+	$zip->close();
+	if (!is_string($xml) || $xml === '') {
+		return '';
+	}
+	$xml = preg_replace('/<w:tab[^>]*\/>/', "\t", $xml) ?? $xml;
+	$xml = preg_replace('/<\/w:p>/', "\n", $xml) ?? $xml;
+	$text = wp_strip_all_tags($xml);
+	$text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+	$text = preg_replace("/\r\n|\r/", "\n", $text) ?? $text;
+	$text = preg_replace("/\n{3,}/", "\n\n", $text) ?? $text;
+
+	return trim($text);
+}
+
+/**
+ * Build a minimal Word .docx containing plain text (for Google Drive workflow).
+ */
+function lf_pci_build_docx_bytes(string $text): string {
+	if (!class_exists('ZipArchive')) {
+		return '';
+	}
+	$tmp = wp_tempnam('pci-template.docx');
+	if ($tmp === '') {
+		return '';
+	}
+	$escaped = htmlspecialchars($text, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+	$paragraphs = '';
+	foreach (preg_split("/\r\n|\n|\r/", $text) ?: [] as $line) {
+		$line = htmlspecialchars((string) $line, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+		$paragraphs .= '<w:p><w:r><w:t xml:space="preserve">' . $line . '</w:t></w:r></w:p>';
+	}
+	if ($paragraphs === '') {
+		$paragraphs = '<w:p><w:r><w:t xml:space="preserve">' . $escaped . '</w:t></w:r></w:p>';
+	}
+	$document = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+		. '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+		. '<w:body>' . $paragraphs . '</w:body></w:document>';
+	$content_types = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+		. '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+		. '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+		. '<Default Extension="xml" ContentType="application/xml"/>'
+		. '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+		. '</Types>';
+	$rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+		. '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+		. '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
+		. '</Relationships>';
+
+	$zip = new ZipArchive();
+	if ($zip->open($tmp, ZipArchive::OVERWRITE) !== true) {
+		@unlink($tmp);
+		return '';
+	}
+	$zip->addFromString('[Content_Types].xml', $content_types);
+	$zip->addFromString('_rels/.rels', $rels);
+	$zip->addFromString('word/document.xml', $document);
+	$zip->close();
+	$bytes = (string) file_get_contents($tmp);
+	@unlink($tmp);
+
+	return $bytes;
+}
+
+/**
+ * Read uploaded paste file (.txt, .md, .docx) into plain text for the parser.
+ */
+function lf_pci_read_upload_file_contents(string $path, string $filename): string {
+	$filename = strtolower($filename);
+	if (str_ends_with($filename, '.docx')) {
+		return lf_pci_extract_text_from_docx($path);
+	}
+
+	return (string) file_get_contents($path);
 }

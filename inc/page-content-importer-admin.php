@@ -30,6 +30,7 @@ function lf_pci_admin_handle_download(): void {
 	}
 	$which = isset($_GET['lf_pci_download']) ? sanitize_key((string) $_GET['lf_pci_download']) : '';
 	$slug = isset($_GET['lf_pci_template_slug']) ? sanitize_title((string) $_GET['lf_pci_template_slug']) : '';
+	$format = isset($_GET['lf_pci_format']) ? sanitize_key((string) $_GET['lf_pci_format']) : 'txt';
 	if ($which === '' && $slug === '') {
 		return;
 	}
@@ -38,17 +39,31 @@ function lf_pci_admin_handle_download(): void {
 	}
 	check_admin_referer('lf_pci_download_template');
 
+	$body = '';
+	$filename = 'page-content-template.txt';
 	if ($slug !== '' && function_exists('lf_pci_template_for_slug')) {
 		$body = lf_pci_template_for_slug($slug);
-		$filename = $slug . '-content-template.txt';
+		$filename = $slug . '-content-template.' . ($format === 'docx' ? 'docx' : 'txt');
 	} elseif ($which === 'about-us-template') {
 		$body = function_exists('lf_pci_template_for_slug') ? lf_pci_template_for_slug('about-us') : '';
-		$filename = 'about-us-content-template.txt';
+		$filename = 'about-us-content-template.' . ($format === 'docx' ? 'docx' : 'txt');
 	} elseif ($which === 'page-template' || $which === 'home-template') {
 		$body = function_exists('lf_pci_universal_template') ? lf_pci_universal_template() : '';
-		$filename = 'page-content-template.txt';
+		$filename = 'page-content-template.' . ($format === 'docx' ? 'docx' : 'txt');
 	} else {
 		return;
+	}
+
+	if ($format === 'docx' && function_exists('lf_pci_build_docx_bytes')) {
+		$bytes = lf_pci_build_docx_bytes($body);
+		if ($bytes === '') {
+			wp_die(esc_html__('Could not build .docx on this server (ZipArchive required).', 'leadsforward-core'));
+		}
+		header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+		header('Content-Disposition: attachment; filename="' . $filename . '"');
+		header('Content-Length: ' . (string) strlen($bytes));
+		echo $bytes;
+		exit;
 	}
 
 	header('Content-Type: text/plain; charset=utf-8');
@@ -153,7 +168,9 @@ function lf_pci_admin_read_uploaded_files(): array {
 		if ($path === '' || !is_readable($path)) {
 			continue;
 		}
-		$raw = (string) file_get_contents($path);
+		$raw = function_exists('lf_pci_read_upload_file_contents')
+			? lf_pci_read_upload_file_contents($path, (string) $name)
+			: (string) file_get_contents($path);
 		if ($raw === '') {
 			continue;
 		}
@@ -244,7 +261,7 @@ function lf_pci_admin_render(): void {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Import Page Content', 'leadsforward-core'); ?></h1>
-		<p><?php esc_html_e('Paste or upload formatted docs. Each file must include a === PAGE === block (or Page: slug line) so the theme knows which WordPress page to populate. Process/FAQ sections can stay blank — they pull from Niche Content Library.', 'leadsforward-core'); ?></p>
+		<p><?php esc_html_e('Paste or upload Google Docs exports (.docx) or plain text. Each file needs a === PAGE === block with Slug:. Process/FAQ can stay blank — they pull from Niche Content Library.', 'leadsforward-core'); ?></p>
 
 		<div style="margin:1rem 0;padding:1rem;background:#fff;border:1px solid #c3c4c7;border-radius:4px;max-width:960px;">
 			<h2 style="margin-top:0;"><?php esc_html_e('Writer workflow', 'leadsforward-core'); ?></h2>
@@ -255,6 +272,7 @@ function lf_pci_admin_render(): void {
 			</ol>
 			<p>
 				<a class="button button-secondary" href="<?php echo esc_url($download_url); ?>"><?php esc_html_e('Download universal template (.txt)', 'leadsforward-core'); ?></a>
+				<a class="button button-secondary" href="<?php echo esc_url(add_query_arg('lf_pci_format', 'docx', $download_url)); ?>"><?php esc_html_e('Download universal template (.docx for Google Drive)', 'leadsforward-core'); ?></a>
 			</p>
 			<?php if ($registry !== []) : ?>
 				<p class="description"><strong><?php esc_html_e('Registered page slugs:', 'leadsforward-core'); ?></strong>
@@ -268,7 +286,9 @@ function lf_pci_admin_render(): void {
 							admin_url('admin.php?page=lf-import-page-content&lf_pci_template_slug=' . rawurlencode((string) $reg_slug)),
 							'lf_pci_download_template'
 						);
-						$links[] = '<a href="' . esc_url($url) . '">' . esc_html((string) ($reg_schema['label'] ?? $reg_slug)) . '</a>';
+						$docx_url = add_query_arg('lf_pci_format', 'docx', $url);
+						$links[] = '<a href="' . esc_url($url) . '">' . esc_html((string) ($reg_schema['label'] ?? $reg_slug)) . '</a>'
+							. ' <a href="' . esc_url($docx_url) . '" class="description">(.docx)</a>';
 					}
 					echo implode(' · ', $links);
 					?>
@@ -288,8 +308,8 @@ function lf_pci_admin_render(): void {
 		<form method="post" enctype="multipart/form-data">
 			<?php wp_nonce_field('lf_pci_import', 'lf_pci_nonce'); ?>
 			<h2><?php esc_html_e('Batch upload', 'leadsforward-core'); ?></h2>
-			<p class="description"><?php esc_html_e('Upload one or more .txt files (each with its own === PAGE === header).', 'leadsforward-core'); ?></p>
-			<input type="file" name="lf_pci_files[]" accept=".txt,.md,text/plain" multiple />
+			<p class="description"><?php esc_html_e('Upload one or more .docx (Google Docs export) or .txt files (each with its own === PAGE === header).', 'leadsforward-core'); ?></p>
+			<input type="file" name="lf_pci_files[]" accept=".txt,.md,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple />
 
 			<h2 style="margin-top:2rem;"><?php esc_html_e('Or paste a single doc', 'leadsforward-core'); ?></h2>
 			<p>

@@ -140,7 +140,7 @@ function lf_header_menu_objects_consolidate_more(array $items, $args): array {
 }
 add_filter('wp_nav_menu_objects', 'lf_header_menu_objects_consolidate_more', 18, 2);
 
-const LF_HEADER_MENU_STRUCTURE_VERSION = 'header-nav-v9';
+const LF_HEADER_MENU_STRUCTURE_VERSION = 'header-nav-v10';
 const LF_HEADER_MENU_DEFERRED_REPAIR_HOOK = 'lf_header_menu_deferred_structure_repair';
 const LF_HEADER_MENU_REPAIR_LOCK = 'lf_header_menu_repair_lock';
 
@@ -163,6 +163,7 @@ function lf_header_menu_structure_needs_repair(int $menu_id): bool {
 		: 0;
 	$more_children = 0;
 	$services_parent_ok = false;
+	$areas_parent_ok = false;
 
 	foreach ($items as $item) {
 		if (!$item instanceof \WP_Post) {
@@ -173,6 +174,10 @@ function lf_header_menu_structure_needs_repair(int $menu_id): bool {
 			&& lf_header_menu_item_is_services_parent($item)) {
 			$services_parent_ok = lf_header_menu_item_has_class($item, 'lf-menu-services-parent');
 		}
+		if ($parent === 0 && function_exists('lf_header_menu_item_is_areas_parent')
+			&& lf_header_menu_item_is_areas_parent($item)) {
+			$areas_parent_ok = lf_header_menu_item_has_class($item, 'lf-menu-areas-parent');
+		}
 		if ($parent === 0 && function_exists('lf_header_menu_item_is_about') && lf_header_menu_item_is_about($item)) {
 			++$top_about;
 		}
@@ -181,12 +186,24 @@ function lf_header_menu_structure_needs_repair(int $menu_id): bool {
 			return true;
 		}
 		if ($more_parent_id !== 0 && $parent === $more_parent_id) {
+			if (function_exists('lf_header_menu_item_must_stay_top_level') && lf_header_menu_item_must_stay_top_level($item)) {
+				return true;
+			}
 			++$more_children;
 		}
 	}
 
 	if ($top_about > 1) {
 		return true;
+	}
+	if (function_exists('lf_header_menu_has_top_level_service_areas') && !lf_header_menu_has_top_level_service_areas($items)) {
+		return true;
+	}
+	if (!$areas_parent_ok) {
+		$areas_page = get_page_by_path('service-areas');
+		if ($areas_page instanceof \WP_Post && $areas_page->post_status === 'publish') {
+			return true;
+		}
 	}
 	if (!$services_parent_ok && function_exists('lf_header_menu_cpt_nav_dropdown_enabled')
 		&& lf_header_menu_cpt_nav_dropdown_enabled('services')) {
