@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('LF_THEME_VERSION', '0.1.169');
+define('LF_THEME_VERSION', '0.1.170');
 define('LF_THEME_DIR', get_template_directory());
 define('LF_THEME_URI', get_template_directory_uri());
 /** Admin page slug for LeadsForward → Manifest Website (orchestrator UI). */
@@ -66,11 +66,8 @@ lf_load_inc('image-intelligence.php');
 // Manifest launch scheduling (service/area/blog publish windows).
 lf_load_inc('launch-schedule.php');
 lf_load_inc('publish-schedule.php');
-// AI Studio core + REST endpoints (used outside admin).
-lf_load_inc('ai-studio.php');
-lf_load_inc('ai-studio-wiring.php');
-lf_load_inc('ai-studio-rest.php');
-lf_load_inc('ai-studio-airtable.php');
+// AI Manifester (orchestrator + Airtable + n8n REST) — future plugin package under inc/manifester/.
+lf_load_inc('manifester/bootstrap.php');
 lf_load_inc('site-builder.php');
 lf_load_inc('airtable/sitemaps.php');
 // Private fleet update channel (controller-approved auto-updates).
