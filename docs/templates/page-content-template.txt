@@ -1,6 +1,7 @@
 === PAGE ===
 Slug: about-us
 Name: About Us
+Notes: Change Slug to match the WordPress page (e.g. why-choose-us when that template is added). One file = one page.
 
 === HERO ===
 Headline: About {business}
