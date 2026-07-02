@@ -103,7 +103,78 @@ function lf_niche_layout_profiles(): array {
 function lf_niche_slug_aliases(): array {
 	return [
 		'power-washing' => 'pressure-washing',
+		'foundation' => 'foundation-repair',
+		'foundation-repairs' => 'foundation-repair',
+		'home-services' => 'general',
 	];
+}
+
+/**
+ * Resolve a niche slug from Airtable/manifest hints (slug, label, keywords, services).
+ *
+ * @param array<string, mixed> $hints Optional keys: business_name, primary_keyword, category, services.
+ */
+function lf_resolve_niche_slug(string $niche = '', string $niche_slug = '', array $hints = []): string {
+	$registry = lf_get_niche_registry();
+	$valid = array_keys($registry);
+	$aliases = lf_niche_slug_aliases();
+
+	$candidates = [];
+	if ($niche_slug !== '') {
+		$candidates[] = sanitize_title($niche_slug);
+	}
+	if ($niche !== '') {
+		$candidates[] = sanitize_title($niche);
+	}
+	foreach ($candidates as $slug) {
+		if ($slug === '') {
+			continue;
+		}
+		if (isset($aliases[$slug])) {
+			$slug = (string) $aliases[$slug];
+		}
+		if (in_array($slug, $valid, true)) {
+			return $slug;
+		}
+	}
+
+	$hint_parts = array_filter([
+		$niche,
+		$niche_slug,
+		(string) ($hints['business_name'] ?? ''),
+		(string) ($hints['primary_keyword'] ?? ''),
+		(string) ($hints['category'] ?? ''),
+		(string) ($hints['project_type'] ?? ''),
+	]);
+	$services = $hints['services'] ?? [];
+	if (is_array($services)) {
+		foreach ($services as $svc) {
+			if (is_array($svc)) {
+				$hint_parts[] = (string) ($svc['title'] ?? '');
+			}
+		}
+	}
+	$haystack = strtolower(implode(' ', $hint_parts));
+
+	foreach ($valid as $slug) {
+		if ($slug === 'general') {
+			continue;
+		}
+		$name = strtolower((string) ($registry[$slug]['name'] ?? ''));
+		$slug_words = str_replace('-', ' ', $slug);
+		if ($name !== '' && str_contains($haystack, $name)) {
+			return $slug;
+		}
+		if ($slug_words !== '' && str_contains($haystack, $slug_words)) {
+			return $slug;
+		}
+	}
+
+	if (in_array('general', $valid, true)) {
+		return 'general';
+	}
+
+	return lf_default_niche_slug();
 }
 
 /**

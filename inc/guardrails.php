@@ -25,6 +25,7 @@ function lf_business_option_selectors(): array {
 		'lf_business_phone_tracking',
 		'lf_business_phone_display',
 		'lf_business_email',
+		'lf_business_root_domain',
 		'lf_business_address',
 		'lf_business_address_street',
 		'lf_business_address_city',
