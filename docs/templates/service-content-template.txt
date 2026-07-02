@@ -1,0 +1,60 @@
+=== PAGE ===
+Template: service
+Slug: your-service-slug
+Name: Foundation Piering
+Notes: Match Slug to the WordPress service post slug (Services → edit post → permalink).
+
+=== HERO ===
+Headline: Foundation Piering in {city}
+Subheadline: Engineered piering and underpinning for settlement and structural stability{city_line}.
+Eyebrow: Licensed • Insured • Engineered Repairs
+
+=== TRUST BAR ===
+Heading: Trusted piering specialists
+Badges:
+- Licensed & Insured
+- Engineered Repair Plans
+- Transferable Warranties
+- Local Project Managers
+
+=== SERVICE DETAILS ===
+Heading: What foundation piering solves
+Intro: Settlement, cracks, and uneven floors often trace back to soil movement beneath your footings.
+Body: {business} installs engineered pier systems{city_line} to stabilize foundations and halt further movement. Every project starts with measurements, photos, and a written scope — so you know what is being lifted, how deep we are anchoring, and what warranty covers the work.
+Checklist:
+- Steel push piers & helical piers
+- Slab and footing stabilization
+- Engineered load calculations
+- Post-install monitoring & documentation
+
+=== SERVICE DETAILS 2 ===
+Heading: How our piering process protects your home
+Intro: Piering is precision work — not guesswork in the yard.
+Body: We locate utilities, protect landscaping, and install piers to engineered depths. Crews monitor lift in small increments, document final elevations, and leave you with warranty paperwork and maintenance guidance.
+
+=== BENEFITS ===
+Heading: Why homeowners choose {business} for piering
+Intro: Structural repairs deserve clear scopes, licensed crews, and accountability after the job is done.
+Items:
+Engineered pier systems || Sized to your soil conditions and structure — not one generic depth for every home.
+Documented lift plans || Photos, measurements, and lift logs so you understand what changed and why.
+Local project leadership || A manager who schedules inspections, crews, and follow-up visits{city_line}.
+Protected job sites || Tarps, access paths, and cleanup treated with the same care we give our own homes.
+
+=== PROCESS ===
+Heading: How piering works with {business}
+Intro: A documented path from inspection to warranty.
+(Leave steps blank — auto-filled from Niche Content Library on import.)
+
+=== FAQ ===
+Heading: Foundation piering questions
+Intro: Timelines, warranties, soil conditions, and what to expect during installation.
+(Leave Q&A blank — auto-filled from Niche Content Library on import.)
+
+=== CTA ===
+Headline: Schedule a piering inspection with {business}
+Subheadline: Request a structural evaluation and get a clear repair plan.
+
+=== SEO ===
+Title: Foundation Piering {city_line} | {business}
+Description: {business} provides foundation piering{city_line}. Engineered systems, licensed crews, and clear scopes before work starts.

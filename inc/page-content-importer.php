@@ -56,17 +56,54 @@ function lf_pci_get_page_id_for_slug(string $slug): int {
 }
 
 /**
+ * Resolve a CPT or page post ID from post type + slug.
+ */
+function lf_pci_get_post_id_for_target(string $post_type, string $slug): int {
+	$post_type = sanitize_key($post_type);
+	$slug = sanitize_title($slug);
+	if ($post_type === '' || $slug === '') {
+		return 0;
+	}
+	if ($post_type === 'page') {
+		return lf_pci_get_page_id_for_slug($slug);
+	}
+	$posts = get_posts([
+		'post_type' => $post_type,
+		'name' => $slug,
+		'post_status' => 'any',
+		'posts_per_page' => 1,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+		'update_post_meta_cache' => false,
+		'update_post_term_cache' => false,
+	]);
+	return isset($posts[0]) ? (int) $posts[0] : 0;
+}
+
+/**
+ * Map schema order key (e.g. service_details__2) to Page Builder instance id.
+ */
+function lf_pci_pb_instance_for_order_key(string $order_key): string {
+	if (preg_match('/^(.+)__(\d+)$/', $order_key, $m) === 1) {
+		return lf_pb_instance_id((string) $m[1], max(1, (int) $m[2]));
+	}
+	return lf_pb_instance_id($order_key, 1);
+}
+
+/**
  * Read PAGE target from doc header (=== PAGE === block or top "Page:" line).
  *
- * @return array{slug: string, label: string, content: string}
+ * @return array{slug: string, template: string, label: string, content: string}
  */
 function lf_pci_extract_page_header(string $raw): array {
 	$slug = '';
+	$template = '';
 	$label = '';
 	$body = $raw;
 
 	if (preg_match('/^={3,}\s*PAGE\s*={3,}\s*\n([\s\S]*?)(?=^={3,}|\z)/mi', $raw, $m)) {
 		$f = lf_pci_parse_fields(trim($m[1]), ['notes']);
+		$template = sanitize_title((string) ($f['template'] ?? $f['type'] ?? ''));
 		$slug = sanitize_title((string) ($f['slug'] ?? $f['page'] ?? $f['page_slug'] ?? ''));
 		if ($slug === '') {
 			$slug = sanitize_title((string) ($f['name'] ?? $f['label'] ?? $f['title'] ?? ''));
@@ -86,15 +123,19 @@ function lf_pci_extract_page_header(string $raw): array {
 
 	return [
 		'slug' => $slug,
+		'template' => $template,
 		'label' => $label,
 		'content' => trim($body),
 	];
 }
 
 /**
- * Whether this page supports paste import (registry or standard Page Builder page).
+ * Whether this post supports paste import.
  */
-function lf_pci_page_supports_import(\WP_Post $post): bool {
+function lf_pci_post_supports_import(\WP_Post $post): bool {
+	if ($post->post_type === 'lf_service') {
+		return lf_pci_schema_for_slug('service') !== null;
+	}
 	if ($post->post_type !== 'page') {
 		return false;
 	}
@@ -102,6 +143,25 @@ function lf_pci_page_supports_import(\WP_Post $post): bool {
 		return true;
 	}
 	return function_exists('lf_pb_is_basic_page') && lf_pb_is_basic_page($post);
+}
+
+/** @deprecated Use lf_pci_post_supports_import() */
+function lf_pci_page_supports_import(\WP_Post $post): bool {
+	return lf_pci_post_supports_import($post);
+}
+
+/**
+ * Import template registry key for a post being edited.
+ */
+function lf_pci_post_template_key(\WP_Post $post): string {
+	if ($post->post_type === 'lf_service') {
+		return 'service';
+	}
+	if ($post->post_type !== 'page') {
+		return '';
+	}
+	$schema = lf_pci_schema_for_slug($post->post_name);
+	return $schema !== null ? (string) $schema['slug'] : sanitize_title($post->post_name);
 }
 
 /**
@@ -634,22 +694,26 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
  *
  * @return array<string, mixed>
  */
-function lf_pci_parse_document(string $raw, ?string $force_slug = null): array {
+function lf_pci_parse_document(string $raw, ?string $force_template = null): array {
 	$raw = preg_replace('/=== WRITER NOTES ===[\s\S]*?(?==== PAGE ===)/', '', $raw, 1) ?? $raw;
 	$header = lf_pci_extract_page_header($raw);
-	$slug = $force_slug !== null && $force_slug !== '' ? sanitize_title($force_slug) : $header['slug'];
-	$schema = lf_pci_schema_for_slug($slug);
+	$template_key = $force_template !== null && $force_template !== ''
+		? sanitize_title($force_template)
+		: ($header['template'] !== '' ? $header['template'] : $header['slug']);
+	$schema = lf_pci_schema_for_slug($template_key);
 	if ($schema === null) {
-		$hint = $slug !== ''
+		$hint = $template_key !== ''
 			? sprintf(
-				/* translators: %s: page slug */
-				__('No import template registered for page slug "%s".', 'leadsforward-core'),
-				$slug
+				/* translators: %s: template key */
+				__('No import template registered for "%s".', 'leadsforward-core'),
+				$template_key
 			)
-			: __('Missing page target. Add a === PAGE === block with Slug: home (or a top line Page: home).', 'leadsforward-core');
+			: __('Missing page target. Add a === PAGE === block with Slug: (pages) or Template: service + Slug: (service posts).', 'leadsforward-core');
 		return [
-			'page_slug' => $slug,
+			'template_key' => $template_key,
+			'page_slug' => $header['slug'],
 			'page_label' => $header['label'],
+			'post_type' => 'page',
 			'sections' => [],
 			'process_steps' => [],
 			'faqs' => [],
@@ -660,6 +724,9 @@ function lf_pci_parse_document(string $raw, ?string $force_slug = null): array {
 		];
 	}
 	$parsed = lf_pci_parse_with_schema($header['content'], $schema);
+	$parsed['template_key'] = $template_key;
+	$parsed['page_slug'] = $header['slug'] !== '' ? $header['slug'] : (string) ($schema['slug'] ?? '');
+	$parsed['post_type'] = (string) ($schema['post_type'] ?? 'page');
 	if ($header['label'] !== '') {
 		$parsed['page_label'] = $header['label'];
 	}
@@ -767,10 +834,8 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 	$hero_variant = (string) ($schema['hero_variant'] ?? 'internal');
 
 	$pb_sections = [];
-	$counts = [];
 	foreach ($order as $type) {
-		$counts[$type] = ($counts[$type] ?? 0) + 1;
-		$instance_id = lf_pb_instance_id($type, $counts[$type]);
+		$instance_id = lf_pci_pb_instance_for_order_key($type);
 
 		if (lf_pci_section_is_locked($type, $schema) && isset($existing_sections[$instance_id]) && is_array($existing_sections[$instance_id])) {
 			$pb_sections[$instance_id] = $existing_sections[$instance_id];
@@ -982,15 +1047,17 @@ function lf_pci_apply_to_homepage(array $schema, array $sections, array $process
  * @return array<string, mixed>
  */
 function lf_pci_apply_parsed(array $parsed, array $options = []): array {
-	$slug = (string) ($parsed['page_slug'] ?? '');
-	$schema = lf_pci_schema_for_slug($slug);
+	$template_key = (string) ($parsed['template_key'] ?? $parsed['page_slug'] ?? '');
+	$schema = lf_pci_schema_for_slug($template_key);
 	if ($schema === null) {
-		return ['success' => false, 'error' => __('No template registered for this page slug.', 'leadsforward-core')];
+		return ['success' => false, 'error' => __('No template registered for this import.', 'leadsforward-core')];
 	}
 
+	$post_type = (string) ($parsed['post_type'] ?? $schema['post_type'] ?? 'page');
+	$target_slug = (string) ($options['post_slug'] ?? $parsed['page_slug'] ?? $template_key);
 	$page_id = (int) ($options['page_id'] ?? 0);
 	if ($page_id <= 0) {
-		$page_id = lf_pci_get_page_id_for_slug($slug);
+		$page_id = lf_pci_get_post_id_for_target($post_type, $target_slug);
 	}
 
 	$sections = (array) ($parsed['sections'] ?? []);
@@ -1004,14 +1071,19 @@ function lf_pci_apply_parsed(array $parsed, array $options = []): array {
 	}
 
 	if ($page_id <= 0) {
+		$label = $post_type === 'lf_service'
+			? __('Service post', 'leadsforward-core')
+			: __('WordPress page', 'leadsforward-core');
 		return [
 			'success' => false,
 			'error' => sprintf(
-				/* translators: %s: page slug */
-				__('WordPress page not found for slug "%s". Create the page first.', 'leadsforward-core'),
-				$slug
+				/* translators: 1: post type label, 2: slug */
+				__('%1$s not found for slug "%2$s". Create the post first.', 'leadsforward-core'),
+				$label,
+				$target_slug
 			),
-			'page_slug' => $slug,
+			'page_slug' => $target_slug,
+			'template_key' => $template_key,
 		];
 	}
 
@@ -1031,11 +1103,12 @@ function lf_pci_get_about_page_id(): int {
 function lf_pci_template_for_slug(string $slug, bool $include_legend = true): string {
 	$slug = sanitize_title($slug);
 	$schema = lf_pci_schema_for_slug($slug);
-	$body = '';
 	if ($schema === null) {
-		$body = lf_pci_universal_template(false);
-	} elseif (is_readable(LF_THEME_DIR . '/docs/templates/' . $slug . '-content-template.txt')) {
-		$body = (string) file_get_contents(LF_THEME_DIR . '/docs/templates/' . $slug . '-content-template.txt');
+		return '';
+	}
+	$file = LF_THEME_DIR . '/docs/templates/' . $slug . '-content-template.txt';
+	if (is_readable($file)) {
+		$body = (string) file_get_contents($file);
 	} elseif ($slug === 'about-us') {
 		$body = lf_pci_about_us_template_fallback();
 	} else {
@@ -1051,15 +1124,20 @@ function lf_pci_template_for_slug(string $slug, bool $include_legend = true): st
 function lf_pci_template_fallback_for_schema(array $schema): string {
 	$slug = (string) ($schema['slug'] ?? '');
 	$label = (string) ($schema['label'] ?? $slug);
+	$post_type = (string) ($schema['post_type'] ?? 'page');
 	$locked = lf_pci_schema_locked_types($schema);
-	$lines = [
-		'=== PAGE ===',
-		'Slug: ' . $slug,
-		'Name: ' . $label,
-		'',
-	];
+	$lines = ['=== PAGE ==='];
+	if ($post_type === 'lf_service') {
+		$lines[] = 'Template: service';
+		$lines[] = 'Slug: your-service-slug';
+		$lines[] = 'Name: ' . $label;
+	} else {
+		$lines[] = 'Slug: ' . $slug;
+		$lines[] = 'Name: ' . $label;
+	}
+	$lines[] = '';
 	if ($locked !== []) {
-		$lines[] = 'Notes: Theme-controlled sections (do not edit in doc): ' . implode(', ', $locked);
+		$lines[] = 'Notes: Theme-controlled (leave blank in doc): ' . implode(', ', $locked);
 		$lines[] = '';
 	}
 
@@ -1086,7 +1164,11 @@ function lf_pci_template_fallback_for_schema(array $schema): string {
 			$key = lf_homepage_base_section_type($type);
 		}
 		if (isset($section_docs[$key])) {
-			$lines[] = $section_docs[$key];
+			$heading = $section_docs[$key];
+			if ($type === 'service_details__2' && strpos($heading, 'SERVICE DETAILS 2') === false) {
+				$heading = $section_docs['service_details__2'];
+			}
+			$lines[] = $heading;
 			$lines[] = '';
 		}
 	}
@@ -1094,9 +1176,7 @@ function lf_pci_template_fallback_for_schema(array $schema): string {
 	return implode("\n", $lines);
 }
 
-/**
- * Universal paste template (includes PAGE target header).
- */
+/** @deprecated Universal template removed — use per-page .docx downloads. */
 function lf_pci_universal_template(bool $include_legend = true): string {
 	return lf_pci_template_for_slug('home', $include_legend);
 }
@@ -1165,10 +1245,13 @@ TEMPLATE;
 function lf_pci_template_token_legend(): string {
 	return <<<'LEGEND'
 === WRITER NOTES ===
-Format: Use section headers exactly as shown (=== HERO ===, === STORY ===, etc.).
+(Removed automatically on import — for your team / AI only.)
+1. Duplicate this .docx in Google Drive (or download and open in Word).
+2. Paste into ChatGPT or your writing AI with client facts, niche notes, and any source copy.
+3. Ask the AI to fill every section below using the exact === SECTION === headers and Key: value lines.
+4. Upload the finished .docx on LeadsForward → Import Page Content (batch upload supports multiple files).
 Tokens (filled on import): {business}, {city}, {city_line}, {niche}, {phone}
-Process + FAQ: Leave steps/Q&A blank to pull from LeadsForward → Niche Content Library.
-Google Docs: Download the .docx template, duplicate in Drive, then upload the .docx here or File → Download → .docx.
+Process + FAQ: leave blank → Niche Content Library on import.
 
 LEGEND;
 }
