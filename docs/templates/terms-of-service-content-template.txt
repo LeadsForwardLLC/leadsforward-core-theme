@@ -1,0 +1,16 @@
+=== PAGE ===
+Slug: terms-of-service
+Name: Terms of Service
+
+=== HERO ===
+Headline: Terms of Service
+Subheadline: Terms governing use of the {business} website and online services.
+Eyebrow: Website Terms
+
+=== CONTENT ===
+Heading: Terms of service
+Body: By using this website, you agree to these terms. Content is provided for general information about {business} services and does not create a contract until a written scope and estimate are accepted. We may update these terms periodically. Continued use of the site after changes constitutes acceptance. Contact us with questions about these terms.
+
+=== SEO ===
+Title: Terms of Service | {business}
+Description: Terms of service for the {business} website. Rules governing use of our site and online resources.

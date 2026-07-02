@@ -1,0 +1,13 @@
+=== PAGE ===
+Slug: sitemap
+Name: Sitemap
+Notes: Sitemap links are generated automatically. Do not edit link lists in this doc.
+
+=== HERO ===
+Headline: Sitemap
+Subheadline: Browse every page, service, and service area on {business}.
+Eyebrow: Full Site Index
+
+=== SEO ===
+Title: Sitemap | {business}
+Description: Sitemap for {business} — services, service areas, resources, and company pages.

@@ -140,13 +140,13 @@ function lf_header_menu_objects_consolidate_more(array $items, $args): array {
 }
 add_filter('wp_nav_menu_objects', 'lf_header_menu_objects_consolidate_more', 18, 2);
 
-const LF_HEADER_MENU_STRUCTURE_VERSION = 'header-nav-v7';
+const LF_HEADER_MENU_STRUCTURE_VERSION = 'header-nav-v8';
 const LF_HEADER_MENU_DEFERRED_REPAIR_HOOK = 'lf_header_menu_deferred_structure_repair';
 const LF_HEADER_MENU_REPAIR_LOCK = 'lf_header_menu_repair_lock';
 
 /**
  * Repair stored menu when secondary pages are still saved at top level.
- * Version is stamped on admin_init; heavy work runs via cron so timeouts never brick wp-admin.
+ * Runs synchronously so a missed cron job cannot leave the nav flat forever.
  */
 function lf_header_menu_force_structure_repair(): void {
 	if (!has_nav_menu('header_menu')) {
@@ -164,14 +164,10 @@ function lf_header_menu_force_structure_repair(): void {
 		return;
 	}
 
-	// Mark complete before repair so a timeout/fatal during repair cannot white-screen every admin load.
-	update_option('lf_header_menu_structure_version', LF_HEADER_MENU_STRUCTURE_VERSION, false);
-
-	if (!wp_next_scheduled(LF_HEADER_MENU_DEFERRED_REPAIR_HOOK, [$menu_id])) {
-		wp_schedule_single_event(time() + 5, LF_HEADER_MENU_DEFERRED_REPAIR_HOOK, [$menu_id]);
-	}
+	lf_header_menu_run_deferred_structure_repair($menu_id);
 }
 add_action('admin_init', 'lf_header_menu_force_structure_repair', 12);
+add_action('wp', 'lf_header_menu_force_structure_repair', 5);
 
 /**
  * Background menu structure repair (cron / async HTTP).
@@ -190,6 +186,7 @@ function lf_header_menu_run_deferred_structure_repair(int $menu_id): void {
 			@set_time_limit(300);
 		}
 		lf_header_menu_repair_nav_structure($menu_id);
+		update_option('lf_header_menu_structure_version', LF_HEADER_MENU_STRUCTURE_VERSION, false);
 	} catch (\Throwable $e) {
 		if (function_exists('error_log')) {
 			error_log('LF header menu deferred repair failed: ' . $e->getMessage());

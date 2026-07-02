@@ -1,0 +1,16 @@
+=== PAGE ===
+Slug: thank-you
+Name: Thank You
+
+=== HERO ===
+Headline: Thank You
+Subheadline: We received your request — a member of the {business} team will follow up shortly.
+Eyebrow: Request Received
+
+=== CONTENT ===
+Heading: What happens next
+Body: Thank you for contacting {business}. We typically respond within one business day to schedule inspections or answer questions. If your situation is urgent, call us directly using the number in the header. We look forward to helping you protect your home.
+
+=== SEO ===
+Title: Thank You | {business}
+Description: Thank you for contacting {business}. We received your request and will follow up shortly.

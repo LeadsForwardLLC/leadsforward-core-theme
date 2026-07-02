@@ -1,0 +1,17 @@
+=== PAGE ===
+Slug: reviews
+Name: Reviews
+Notes: The reviews carousel is theme-controlled. Do not add a === REVIEWS === block.
+
+=== HERO ===
+Headline: {business} Reviews
+Subheadline: See what local homeowners say about our inspections, crews, and finished foundation repairs{city_line}.
+Eyebrow: Real Homeowners • Real Results
+
+=== CTA ===
+Headline: Ready to join our happy customers?
+Subheadline: Request a foundation inspection and experience the same clear communication our reviewers mention.
+
+=== SEO ===
+Title: Reviews | {business}{city_line}
+Description: Read reviews for {business} — foundation repair specialists{city_line}. Licensed crews, engineered solutions, and responsive service.

@@ -30,13 +30,6 @@ function lf_menu_maybe_autobuild_header_menu(): void {
 		return;
 	}
 
-	// Avoid doing this on every request forever; rebuild at most once per day unless forced.
-	$last = (int) get_option('lf_menu_autobuild_header_last', 0);
-	if ($last > 0 && (time() - $last) < DAY_IN_SECONDS) {
-		return;
-	}
-	update_option('lf_menu_autobuild_header_last', time(), false);
-
 	$menu_name = 'Header Menu';
 	$menu_id = null;
 	$menus = wp_get_nav_menus();
@@ -46,6 +39,22 @@ function lf_menu_maybe_autobuild_header_menu(): void {
 			break;
 		}
 	}
+
+	// Never wipe a populated menu — sitemap sync or manual setup owns structure.
+	if ($menu_id) {
+		$existing = wp_get_nav_menu_items($menu_id);
+		if (is_array($existing) && count($existing) > 2) {
+			return;
+		}
+	}
+
+	// Avoid doing this on every request forever; rebuild at most once per day unless forced.
+	$last = (int) get_option('lf_menu_autobuild_header_last', 0);
+	if ($last > 0 && (time() - $last) < DAY_IN_SECONDS) {
+		return;
+	}
+	update_option('lf_menu_autobuild_header_last', time(), false);
+
 	if (!$menu_id) {
 		$created = wp_create_nav_menu($menu_name);
 		if (is_wp_error($created)) {
@@ -54,8 +63,12 @@ function lf_menu_maybe_autobuild_header_menu(): void {
 		$menu_id = (int) $created;
 	}
 
-	// Clear existing items (autobuild owns the menu).
 	$existing = wp_get_nav_menu_items($menu_id);
+	if (is_array($existing) && count($existing) > 2) {
+		return;
+	}
+
+	// Clear existing items (autobuild owns empty menus only).
 	if (!empty($existing)) {
 		foreach ($existing as $item) {
 			if (isset($item->ID)) {

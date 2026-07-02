@@ -1,0 +1,39 @@
+=== PAGE ===
+Slug: why-choose-us
+Name: Why Choose Us
+
+=== HERO ===
+Headline: Why Choose {business}
+Subheadline: Engineered foundation repair{city_line} with clear scopes, licensed crews, and accountability you can verify.
+Eyebrow: Licensed • Insured • Local Specialists
+
+=== BENEFITS ===
+Heading: What sets us apart
+Intro: Homeowners choose us when they want structural work explained clearly — and executed to plan.
+Items:
+Engineered repair plans || Every recommendation is tied to measurements, photos, and soil conditions — not sales pressure.
+Licensed, insured crews || Vetted installers with proper coverage and workmanship standards you can document.
+Responsive project leadership || A single point of contact from inspection through warranty paperwork.
+
+=== STORY ===
+Heading: More than a quick patch
+Intro: Foundation repair should reduce risk — not create new uncertainty.
+Body: {business} focuses on structural clarity{city_line}: documented inspections, engineered scopes, and crews trained on piering, stabilization, and waterproofing systems. We explain what we found, what we recommend, and what happens if you wait — so you can decide with confidence.
+
+=== TEAM ===
+Heading: People behind the work
+Intro: Inspectors, project managers, and installers aligned on the same repair plan.
+Body: Your project is coordinated by a manager who owns scheduling, permits, and daily site communication. Field crews follow written scopes — not improvised fixes — and leave your property clean at the end of each day.
+
+=== FAQ ===
+Heading: Questions about working with us
+Intro: Timelines, warranties, inspections, and what to expect before crews arrive.
+(Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
+
+=== CTA ===
+Headline: See why homeowners trust {business}
+Subheadline: Schedule a foundation inspection and get a clear repair plan.
+
+=== SEO ===
+Title: Why Choose {business}{city_line}
+Description: See why homeowners choose {business} for foundation repair{city_line}. Engineered plans, licensed crews, and clear communication.
