@@ -4357,7 +4357,7 @@ function lf_ai_studio_manifest_to_setup_data(array $manifest): array {
 	}
 	$same_as = array_values(array_unique(array_filter(array_map('esc_url_raw', $same_as))));
 	$same_as_string = $same_as ? implode("\n", $same_as) : '';
-	$niche_slug = lf_ai_studio_manifest_niche_slug($business);
+	$niche_slug = lf_ai_studio_manifest_niche_slug($business, $manifest);
 	if (is_wp_error($niche_slug)) {
 		return lf_ai_studio_fail_result('manifest_to_setup_data', $niche_slug->get_error_message());
 	}
@@ -4430,7 +4430,23 @@ function lf_ai_studio_manifest_to_setup_data(array $manifest): array {
 	];
 }
 
-function lf_ai_studio_manifest_niche_slug(array $business) {
+function lf_ai_studio_manifest_niche_slug(array $business, array $manifest = []) {
+	if (function_exists('lf_resolve_niche_slug')) {
+		$hints = [
+			'business_name' => (string) ($business['name'] ?? ''),
+			'primary_keyword' => (string) (($manifest['homepage']['primary_keyword'] ?? '')),
+			'category' => (string) ($business['category'] ?? ''),
+			'services' => $manifest['services'] ?? [],
+		];
+		$resolved = lf_resolve_niche_slug(
+			(string) ($business['niche'] ?? ''),
+			(string) ($business['niche_slug'] ?? ''),
+			$hints
+		);
+		if ($resolved !== '') {
+			return $resolved;
+		}
+	}
 	$registry = function_exists('lf_get_niche_registry') ? lf_get_niche_registry() : [];
 	$valid_slugs = is_array($registry) ? array_keys($registry) : [];
 	$provided = sanitize_title((string) ($business['niche_slug'] ?? ''));
@@ -4474,6 +4490,25 @@ function lf_ai_studio_apply_manifest_to_site_options(array $manifest, ?array $se
 	if ($biz_email !== '' && !is_email($biz_email)) {
 		$biz_email = '';
 	}
+	$root_domain = function_exists('lf_business_entity_normalize_domain_host')
+		? lf_business_entity_normalize_domain_host((string) ($business['root_domain'] ?? ''))
+		: strtolower(trim((string) ($business['root_domain'] ?? '')));
+	$social_manifest = is_array($business['social'] ?? null) ? $business['social'] : [];
+	$same_as_urls = is_array($business['same_as'] ?? null) ? $business['same_as'] : [];
+	$social_parsed = function_exists('lf_business_entity_social_from_url_list')
+		? lf_business_entity_social_from_url_list($same_as_urls)
+		: [];
+	$social_apply = [
+		'facebook' => (string) ($social_manifest['facebook'] ?? ''),
+		'instagram' => (string) ($social_manifest['instagram'] ?? ''),
+		'youtube' => (string) ($social_manifest['youtube'] ?? ''),
+		'linkedin' => (string) ($social_manifest['linkedin'] ?? ''),
+		'tiktok' => (string) ($social_manifest['tiktok'] ?? ''),
+		'x' => (string) ($social_manifest['x'] ?? ''),
+	];
+	if (function_exists('lf_business_entity_merge_social')) {
+		$social_apply = lf_business_entity_merge_social($social_apply, $social_parsed);
+	}
 	$address_street = (string) ($address['street'] ?? '');
 	$address_city = (string) ($address['city'] ?? '');
 	$address_state = (string) ($address['state'] ?? '');
@@ -4504,6 +4539,9 @@ function lf_ai_studio_apply_manifest_to_site_options(array $manifest, ?array $se
 		lf_update_business_info_value('lf_business_phone_display', $phone_display);
 		lf_update_business_info_value('lf_business_phone', $display_phone);
 		lf_update_business_info_value('lf_business_email', $biz_email);
+		if ($root_domain !== '') {
+			lf_update_business_info_value('lf_business_root_domain', $root_domain);
+		}
 		lf_update_business_info_value('lf_business_address_street', $address_street);
 		lf_update_business_info_value('lf_business_address_city', $address_city);
 		lf_update_business_info_value('lf_business_address_state', $address_state);
@@ -4515,12 +4553,12 @@ function lf_ai_studio_apply_manifest_to_site_options(array $manifest, ?array $se
 		lf_update_business_info_value('lf_business_category', $category);
 		lf_update_business_info_value('lf_business_short_description', (string) ($data['business_short_description'] ?? ''));
 		lf_update_business_info_value('lf_business_gbp_url', (string) ($data['business_gbp_url'] ?? ''));
-		lf_update_business_info_value('lf_business_social_facebook', (string) ($data['business_social_facebook'] ?? ''));
-		lf_update_business_info_value('lf_business_social_instagram', (string) ($data['business_social_instagram'] ?? ''));
-		lf_update_business_info_value('lf_business_social_youtube', (string) ($data['business_social_youtube'] ?? ''));
-		lf_update_business_info_value('lf_business_social_linkedin', (string) ($data['business_social_linkedin'] ?? ''));
-		lf_update_business_info_value('lf_business_social_tiktok', (string) ($data['business_social_tiktok'] ?? ''));
-		lf_update_business_info_value('lf_business_social_x', (string) ($data['business_social_x'] ?? ''));
+		lf_update_business_info_value('lf_business_social_facebook', (string) ($social_apply['facebook'] ?? $data['business_social_facebook'] ?? ''));
+		lf_update_business_info_value('lf_business_social_instagram', (string) ($social_apply['instagram'] ?? $data['business_social_instagram'] ?? ''));
+		lf_update_business_info_value('lf_business_social_youtube', (string) ($social_apply['youtube'] ?? $data['business_social_youtube'] ?? ''));
+		lf_update_business_info_value('lf_business_social_linkedin', (string) ($social_apply['linkedin'] ?? $data['business_social_linkedin'] ?? ''));
+		lf_update_business_info_value('lf_business_social_tiktok', (string) ($social_apply['tiktok'] ?? $data['business_social_tiktok'] ?? ''));
+		lf_update_business_info_value('lf_business_social_x', (string) ($social_apply['x'] ?? $data['business_social_x'] ?? ''));
 		lf_update_business_info_value('lf_business_same_as', (string) ($data['business_same_as'] ?? ''));
 		lf_update_business_info_value('lf_business_founding_year', (string) ($data['business_founding_year'] ?? ''));
 		lf_update_business_info_value('lf_business_license_number', (string) ($data['business_license_number'] ?? ''));

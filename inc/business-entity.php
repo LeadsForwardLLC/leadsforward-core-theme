@@ -31,21 +31,143 @@ function lf_business_entity_site_root_domain(): string {
 	return $host;
 }
 
+function lf_business_entity_normalize_domain_host(string $domain): string {
+	$domain = strtolower(trim($domain));
+	$domain = preg_replace('/:\d+$/', '', $domain);
+	$domain = preg_replace('/^https?:\/\//', '', $domain);
+	$domain = preg_replace('/^www\./', '', $domain);
+	$domain = trim($domain, '/');
+	return $domain;
+}
+
+/**
+ * Production / Airtable root domain (e.g. foundationrepaircrownpoint.com on staging hosts).
+ */
+function lf_business_entity_root_domain(): string {
+	$stored = function_exists('lf_get_business_info_value')
+		? (string) lf_get_business_info_value('lf_business_root_domain', '')
+		: (string) get_option('options_lf_business_root_domain', '');
+	$stored = lf_business_entity_normalize_domain_host($stored);
+	if ($stored !== '') {
+		return $stored;
+	}
+	$manifest = get_option('lf_site_manifest', []);
+	if (is_array($manifest)) {
+		$business = $manifest['business'] ?? [];
+		if (is_array($business)) {
+			$from_manifest = lf_business_entity_normalize_domain_host((string) ($business['root_domain'] ?? ''));
+			if ($from_manifest !== '') {
+				return $from_manifest;
+			}
+		}
+	}
+	return '';
+}
+
+/**
+ * @return array<int, string>
+ */
+function lf_business_entity_allowed_email_domains(): array {
+	$domains = [];
+	foreach ([lf_business_entity_site_root_domain(), lf_business_entity_root_domain()] as $domain) {
+		$domain = lf_business_entity_normalize_domain_host($domain);
+		if ($domain !== '') {
+			$domains[] = $domain;
+		}
+	}
+	return array_values(array_unique($domains));
+}
+
+function lf_business_entity_email_domain_is_allowed(string $email_domain): bool {
+	$email_domain = lf_business_entity_normalize_domain_host($email_domain);
+	if ($email_domain === '') {
+		return false;
+	}
+	foreach (lf_business_entity_allowed_email_domains() as $site_domain) {
+		if ($email_domain === $site_domain || str_ends_with($email_domain, '.' . $site_domain)) {
+			return true;
+		}
+	}
+	return false;
+}
+
 function lf_business_entity_public_email(string $stored): string {
 	$stored = trim((string) $stored);
-	$site_domain = lf_business_entity_site_root_domain();
 	if ($stored !== '' && is_email($stored)) {
 		$ed = lf_business_entity_public_email_domain($stored);
-		$ok = ($site_domain !== '' && $ed !== '' && ($ed === $site_domain || str_ends_with($ed, '.' . $site_domain)));
-		if ($ok) {
+		if (lf_business_entity_email_domain_is_allowed($ed)) {
 			return $stored;
 		}
 	}
-	// Hard fallback: never leak a non-domain inbox. Use a safe default on this domain.
+	$root_domain = lf_business_entity_root_domain();
+	if ($root_domain !== '') {
+		return 'info@' . $root_domain;
+	}
+	$site_domain = lf_business_entity_site_root_domain();
 	if ($site_domain !== '') {
 		return 'info@' . $site_domain;
 	}
 	return '';
+}
+
+/**
+ * Infer social profile URLs from a list of sameAs / website URLs.
+ *
+ * @param array<int, string> $urls
+ * @return array<string, string>
+ */
+function lf_business_entity_social_from_url_list(array $urls): array {
+	$social = [
+		'facebook' => '',
+		'instagram' => '',
+		'youtube' => '',
+		'linkedin' => '',
+		'tiktok' => '',
+		'x' => '',
+	];
+	foreach ($urls as $candidate) {
+		$candidate = trim((string) $candidate);
+		if ($candidate === '' || !filter_var($candidate, FILTER_VALIDATE_URL)) {
+			continue;
+		}
+		$host = strtolower((string) wp_parse_url($candidate, PHP_URL_HOST));
+		if ($host === '') {
+			continue;
+		}
+		if ($social['facebook'] === '' && str_contains($host, 'facebook.')) {
+			$social['facebook'] = $candidate;
+		}
+		if ($social['instagram'] === '' && str_contains($host, 'instagram.')) {
+			$social['instagram'] = $candidate;
+		}
+		if ($social['youtube'] === '' && (str_contains($host, 'youtube.') || str_contains($host, 'youtu.be'))) {
+			$social['youtube'] = $candidate;
+		}
+		if ($social['linkedin'] === '' && str_contains($host, 'linkedin.')) {
+			$social['linkedin'] = $candidate;
+		}
+		if ($social['tiktok'] === '' && str_contains($host, 'tiktok.')) {
+			$social['tiktok'] = $candidate;
+		}
+		if ($social['x'] === '' && (str_contains($host, 'twitter.') || str_contains($host, 'x.com'))) {
+			$social['x'] = $candidate;
+		}
+	}
+	return $social;
+}
+
+/**
+ * @param array<string, string> $stored
+ * @param array<string, string> $parsed
+ * @return array<string, string>
+ */
+function lf_business_entity_merge_social(array $stored, array $parsed): array {
+	foreach ($parsed as $key => $url) {
+		if (($stored[$key] ?? '') === '' && $url !== '') {
+			$stored[$key] = $url;
+		}
+	}
+	return $stored;
 }
 
 /**
@@ -192,38 +314,10 @@ function lf_business_entity_get(): array {
 	$same_as = array_values(array_unique(array_filter($same_as)));
 
 	if (array_filter($social) === [] && $same_as !== []) {
-		foreach ($same_as as $candidate) {
-			$candidate = trim((string) $candidate);
-			if ($candidate === '') {
-				continue;
-			}
-			if (!filter_var($candidate, FILTER_VALIDATE_URL)) {
-				continue;
-			}
-			$host = strtolower((string) wp_parse_url($candidate, PHP_URL_HOST));
-			if ($host === '') {
-				continue;
-			}
-			if ($social['facebook'] === '' && str_contains($host, 'facebook.')) {
-				$social['facebook'] = $candidate;
-			}
-			if ($social['instagram'] === '' && str_contains($host, 'instagram.')) {
-				$social['instagram'] = $candidate;
-			}
-			if ($social['youtube'] === '' && (str_contains($host, 'youtube.') || str_contains($host, 'youtu.be'))) {
-				$social['youtube'] = $candidate;
-			}
-			if ($social['linkedin'] === '' && str_contains($host, 'linkedin.')) {
-				$social['linkedin'] = $candidate;
-			}
-			if ($social['tiktok'] === '' && str_contains($host, 'tiktok.')) {
-				$social['tiktok'] = $candidate;
-			}
-			if ($social['x'] === '' && (str_contains($host, 'twitter.') || str_contains($host, 'x.com'))) {
-				$social['x'] = $candidate;
-			}
-		}
+		$social = lf_business_entity_merge_social($social, lf_business_entity_social_from_url_list($same_as));
 	}
+
+	$email_stored = (string) $get('lf_business_email', '');
 
 	return [
 		'name' => $display_name,
@@ -232,7 +326,8 @@ function lf_business_entity_get(): array {
 		'phone_tracking' => $tracking_phone,
 		'phone_display_pref' => $display_pref,
 		'phone_display' => $display_phone,
-		'email' => lf_business_entity_public_email((string) $get('lf_business_email', '')),
+		'email' => lf_business_entity_public_email($email_stored),
+		'email_stored' => $email_stored,
 		'address' => $address,
 		'address_parts' => [
 			'street' => $street,

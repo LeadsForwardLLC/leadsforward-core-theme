@@ -872,10 +872,76 @@ function lf_ops_handle_global_settings_save(): void {
 	exit;
 }
 
+/**
+ * Backfill niche/email/social/root domain from stored site manifest when generation missed fields.
+ */
+function lf_ops_hydrate_business_entity_from_manifest(): void {
+	$manifest = get_option('lf_site_manifest', []);
+	if (!is_array($manifest) || empty($manifest['business']) || !is_array($manifest['business'])) {
+		return;
+	}
+	$business = $manifest['business'];
+	if (function_exists('lf_ai_studio_manifest_niche_slug')) {
+		$expected_niche = lf_ai_studio_manifest_niche_slug($business, $manifest);
+		if (!is_wp_error($expected_niche) && $expected_niche !== '' && $expected_niche !== 'general') {
+			$default_niche = function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair';
+			$current_niche = (string) get_option('lf_homepage_niche_slug', $default_niche);
+			if ($current_niche === '' || $current_niche === 'general') {
+				update_option('lf_homepage_niche_slug', $expected_niche, true);
+				update_option('lf_active_icon_pack', $expected_niche, true);
+			}
+		}
+	}
+	if (!function_exists('lf_update_business_info_value') || !function_exists('lf_get_business_info_value')) {
+		return;
+	}
+	$root_domain = function_exists('lf_business_entity_normalize_domain_host')
+		? lf_business_entity_normalize_domain_host((string) ($business['root_domain'] ?? ''))
+		: strtolower(trim((string) ($business['root_domain'] ?? '')));
+	if ($root_domain !== '' && (string) lf_get_business_info_value('lf_business_root_domain', '') === '') {
+		lf_update_business_info_value('lf_business_root_domain', $root_domain);
+	}
+	$domain_email = trim((string) ($business['domain_email'] ?? ''));
+	if ($domain_email === '' || !is_email($domain_email)) {
+		$domain_email = trim((string) ($business['email'] ?? ''));
+	}
+	if ($domain_email !== '' && is_email($domain_email) && (string) lf_get_business_info_value('lf_business_email', '') === '') {
+		lf_update_business_info_value('lf_business_email', $domain_email);
+	}
+	$social_manifest = is_array($business['social'] ?? null) ? $business['social'] : [];
+	$same_as = is_array($business['same_as'] ?? null) ? $business['same_as'] : [];
+	$social = [
+		'facebook' => (string) ($social_manifest['facebook'] ?? ''),
+		'instagram' => (string) ($social_manifest['instagram'] ?? ''),
+		'youtube' => (string) ($social_manifest['youtube'] ?? ''),
+		'linkedin' => (string) ($social_manifest['linkedin'] ?? ''),
+		'tiktok' => (string) ($social_manifest['tiktok'] ?? ''),
+		'x' => (string) ($social_manifest['x'] ?? ''),
+	];
+	if (function_exists('lf_business_entity_merge_social') && function_exists('lf_business_entity_social_from_url_list')) {
+		$social = lf_business_entity_merge_social($social, lf_business_entity_social_from_url_list($same_as));
+	}
+	$social_map = [
+		'facebook' => 'lf_business_social_facebook',
+		'instagram' => 'lf_business_social_instagram',
+		'youtube' => 'lf_business_social_youtube',
+		'linkedin' => 'lf_business_social_linkedin',
+		'tiktok' => 'lf_business_social_tiktok',
+		'x' => 'lf_business_social_x',
+	];
+	foreach ($social_map as $key => $option_key) {
+		$url = (string) ($social[$key] ?? '');
+		if ($url !== '' && (string) lf_get_business_info_value($option_key, '') === '') {
+			lf_update_business_info_value($option_key, esc_url_raw($url));
+		}
+	}
+}
+
 function lf_ops_render_global_settings_page(): void {
 	if (!current_user_can(LF_OPS_CAP)) {
 		return;
 	}
+	lf_ops_hydrate_business_entity_from_manifest();
 	$test_key = lf_ops_test_sitemaps_fetch_transient_key();
 	$test_result = get_transient($test_key);
 	if (is_array($test_result)) {
@@ -950,7 +1016,12 @@ function lf_ops_render_global_settings_page(): void {
 	$entity_phone_primary = (string) ($entity['phone_primary'] ?? '');
 	$entity_phone_tracking = (string) ($entity['phone_tracking'] ?? '');
 	$entity_phone_display = (string) ($entity['phone_display_pref'] ?? '');
-	$entity_email = (string) ($entity['email'] ?? '');
+	$entity_email_stored = function_exists('lf_get_business_info_value')
+		? (string) lf_get_business_info_value('lf_business_email', '')
+		: (string) ($entity['email_stored'] ?? $entity['email'] ?? '');
+	$entity_email_public = function_exists('lf_business_entity_public_email')
+		? lf_business_entity_public_email($entity_email_stored)
+		: $entity_email_stored;
 	$entity_address_parts = $entity['address_parts'] ?? ['street' => '', 'city' => '', 'state' => '', 'zip' => ''];
 	$entity_address_street = (string) ($entity_address_parts['street'] ?? '');
 	$entity_address_city = (string) ($entity_address_parts['city'] ?? '');
@@ -978,14 +1049,17 @@ function lf_ops_render_global_settings_page(): void {
 	$entity_desc = (string) ($entity['description'] ?? '');
 	$entity_primary_image_id = (int) ($entity['primary_image_id'] ?? 0);
 	$entity_primary_image_url = $entity_primary_image_id ? wp_get_attachment_image_url($entity_primary_image_id, 'medium') : '';
-	$entity_social = $entity['social'] ?? [
-		'facebook' => '',
-		'instagram' => '',
-		'youtube' => '',
-		'linkedin' => '',
-		'tiktok' => '',
-		'x' => '',
+	$entity_social = [
+		'facebook' => function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_social_facebook', '') : (string) ($entity['social']['facebook'] ?? ''),
+		'instagram' => function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_social_instagram', '') : (string) ($entity['social']['instagram'] ?? ''),
+		'youtube' => function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_social_youtube', '') : (string) ($entity['social']['youtube'] ?? ''),
+		'linkedin' => function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_social_linkedin', '') : (string) ($entity['social']['linkedin'] ?? ''),
+		'tiktok' => function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_social_tiktok', '') : (string) ($entity['social']['tiktok'] ?? ''),
+		'x' => function_exists('lf_get_business_info_value') ? (string) lf_get_business_info_value('lf_business_social_x', '') : (string) ($entity['social']['x'] ?? ''),
 	];
+	if (function_exists('lf_business_entity_merge_social') && function_exists('lf_business_entity_social_from_url_list')) {
+		$entity_social = lf_business_entity_merge_social($entity_social, lf_business_entity_social_from_url_list($entity['same_as'] ?? []));
+	}
 	$entity_gbp = (string) ($entity['gbp_url'] ?? '');
 	$entity_same_as = '';
 	if (!empty($entity['same_as']) && is_array($entity['same_as'])) {
@@ -1650,7 +1724,14 @@ function lf_ops_render_global_settings_page(): void {
 						</tr>
 						<tr>
 							<th scope="row"><label for="lf_business_email"><?php esc_html_e('Email', 'leadsforward-core'); ?></label></th>
-							<td><input type="email" class="regular-text" id="lf_business_email" name="lf_business_email" value="<?php echo esc_attr($entity_email); ?>" /></td>
+							<td>
+								<input type="email" class="regular-text" id="lf_business_email" name="lf_business_email" value="<?php echo esc_attr($entity_email_stored); ?>" />
+								<?php if ($entity_email_stored !== '' && $entity_email_public !== '' && $entity_email_stored !== $entity_email_public) : ?>
+									<p class="description"><?php echo esc_html(sprintf(__('Public site email: %s', 'leadsforward-core'), $entity_email_public)); ?></p>
+								<?php elseif ($entity_email_public !== '' && $entity_email_stored === '') : ?>
+									<p class="description"><?php echo esc_html(sprintf(__('Public site email: %s', 'leadsforward-core'), $entity_email_public)); ?></p>
+								<?php endif; ?>
+							</td>
 						</tr>
 						<tr>
 							<th scope="row"><?php esc_html_e('Address (NAP)', 'leadsforward-core'); ?></th>

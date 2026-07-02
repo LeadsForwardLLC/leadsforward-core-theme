@@ -68,6 +68,8 @@ function lf_ai_studio_airtable_default_field_map(): array {
 		'x' => 'X',
 		'instagram' => 'Instagram',
 		'youtube' => 'YouTube',
+		'linkedin' => 'LinkedIn',
+		'tiktok' => 'TikTok',
 		'pinterest' => 'Pinterest',
 		'houzz' => 'Houzz',
 		'tumblr' => 'Tumblr',
@@ -1745,7 +1747,13 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	$phone = lf_ai_studio_airtable_string_field($fields, $map['phone'] ?? '');
 	// Public site / schema email: mapped column only (default "Domain Email"). Do not fall back to Google Account or Gmails — those are often personal client inboxes.
 	$domain_email_only = lf_ai_studio_airtable_string_field($fields, $map['email'] ?? '');
+	$root_domain_host = function_exists('lf_business_entity_normalize_domain_host')
+		? lf_business_entity_normalize_domain_host(lf_ai_studio_airtable_string_field($fields, $map['root_domain'] ?? ''))
+		: strtolower(trim(lf_ai_studio_airtable_string_field($fields, $map['root_domain'] ?? '')));
 	$email = $domain_email_only;
+	if ($email === '' && $root_domain_host !== '') {
+		$email = 'info@' . $root_domain_host;
+	}
 	if ($email === '') {
 		$domain_seed = sanitize_title($business_name !== '' ? $business_name : 'lead');
 		if ($domain_seed === '') {
@@ -1823,6 +1831,8 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	$x_url = lf_ai_studio_airtable_string_field($fields, $map['x'] ?? '');
 	$instagram = lf_ai_studio_airtable_string_field($fields, $map['instagram'] ?? '');
 	$youtube = lf_ai_studio_airtable_string_field($fields, $map['youtube'] ?? '');
+	$linkedin = lf_ai_studio_airtable_string_field($fields, $map['linkedin'] ?? '');
+	$tiktok = lf_ai_studio_airtable_string_field($fields, $map['tiktok'] ?? '');
 	$pinterest = lf_ai_studio_airtable_string_field($fields, $map['pinterest'] ?? '');
 	$houzz = lf_ai_studio_airtable_string_field($fields, $map['houzz'] ?? '');
 	$tumblr = lf_ai_studio_airtable_string_field($fields, $map['tumblr'] ?? '');
@@ -1926,14 +1936,23 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 
 	$variation_seed = 'airtable-' . ($record['id'] ?? wp_generate_uuid4());
 
-	$niche_slug_final = lf_ai_studio_airtable_resolve_niche_slug($niche, $niche_slug);
+	$niche_slug_final = lf_ai_studio_airtable_resolve_niche_slug($niche, $niche_slug, [
+		'business_name' => $business_name,
+		'primary_keyword' => $primary_keyword,
+		'category' => $business_category,
+		'services' => $services,
+	]);
+	$domain_email_manifest = $domain_email_only;
+	if ($domain_email_manifest === '' && $root_domain_host !== '') {
+		$domain_email_manifest = 'info@' . $root_domain_host;
+	}
 
 	$manifest = [
 		'business' => [
 			'name' => $business_name,
 			'legal_name' => $legal_name,
 			'phone' => $phone,
-			'domain_email' => $domain_email_only,
+			'domain_email' => $domain_email_manifest,
 			'email' => $email,
 			'address' => [
 				'street' => $street,
@@ -1963,8 +1982,8 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 				'facebook' => $facebook,
 				'instagram' => $instagram,
 				'youtube' => $youtube,
-				'linkedin' => '',
-				'tiktok' => '',
+				'linkedin' => $linkedin,
+				'tiktok' => $tiktok,
 				'x' => $x_url,
 			],
 			'same_as' => array_values(array_filter([
@@ -1972,6 +1991,8 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 				$facebook,
 				$instagram,
 				$youtube,
+				$linkedin,
+				$tiktok,
 				$x_url,
 				$pinterest,
 				$houzz,
@@ -2361,7 +2382,10 @@ function lf_ai_studio_airtable_build_services_from_keywords(array $keywords, str
 	return $services;
 }
 
-function lf_ai_studio_airtable_resolve_niche_slug(string $niche, string $niche_slug): string {
+function lf_ai_studio_airtable_resolve_niche_slug(string $niche, string $niche_slug, array $hints = []): string {
+	if (function_exists('lf_resolve_niche_slug')) {
+		return lf_resolve_niche_slug($niche, $niche_slug, $hints);
+	}
 	$registry = function_exists('lf_get_niche_registry') ? lf_get_niche_registry() : [];
 	$valid = is_array($registry) ? array_keys($registry) : [];
 	$aliases = function_exists('lf_niche_slug_aliases') ? lf_niche_slug_aliases() : [];
@@ -2380,7 +2404,7 @@ function lf_ai_studio_airtable_resolve_niche_slug(string $niche, string $niche_s
 	if (in_array('general', $valid, true)) {
 		return 'general';
 	}
-	return '';
+	return function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : '';
 }
 
 function lf_ai_studio_airtable_build_generic_services(string $niche, string $city, string $state, string $business_name): array {
