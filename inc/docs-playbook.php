@@ -78,16 +78,17 @@ function lf_docs_render_playbook_sections(): void {
 
 			<section id="admin-map" class="lf-docs__section">
 				<h2><?php esc_html_e('Admin map (where everything lives)', 'leadsforward-core'); ?></h2>
-				<p><?php esc_html_e('The sidebar is ordered for writers first. AI Manifester (n8n) is at the bottom—use it to scaffold or regenerate via orchestration, not for routine copy edits.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('The sidebar is ordered for operators and writers. Start with Site Setup (Airtable), then Import Page Content. AI Manifester (n8n) is a separate optional path at the bottom.', 'leadsforward-core'); ?></p>
 				<ul>
-					<li><strong><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Business entity, logo, branding, design tokens, OpenAI assistant key, site tools.', 'leadsforward-core'); ?></li>
-					<li><strong><?php esc_html_e('Import Page Content', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Paste Google Doc → Page Builder (About Us today).', 'leadsforward-core'); ?></li>
+					<li><strong><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Business entity, logo, branding, design tokens, OpenAI assistant key, Airtable credentials.', 'leadsforward-core'); ?></li>
+					<li><strong><?php esc_html_e('Site Setup', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Airtable project picker, scope, template build (no n8n).', 'leadsforward-core'); ?></li>
+					<li><strong><?php esc_html_e('Import Page Content', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Paste Google Docs into homepage and core pages.', 'leadsforward-core'); ?></li>
 					<li><strong><?php esc_html_e('Niche Content Library', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Master process steps + FAQs per niche; sync to CPTs.', 'leadsforward-core'); ?></li>
 					<li><strong><?php esc_html_e('Quote Builder / Contact Form', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Lead capture.', 'leadsforward-core'); ?></li>
 					<li><strong><?php esc_html_e('SEO & Performance', 'leadsforward-core'); ?></strong> — <?php esc_html_e('SEO settings, site health, coverage, internal link map.', 'leadsforward-core'); ?></li>
 					<li><strong><?php esc_html_e('Sitemap Sync', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Airtable sitemaps → pages, keywords, header menu.', 'leadsforward-core'); ?></li>
 					<li><strong><?php esc_html_e('Bulk Tools / Backup & Restore', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Batch ops and config export.', 'leadsforward-core'); ?></li>
-					<li><strong><?php esc_html_e('AI Manifester (n8n)', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Airtable project picker, scope, orchestrator generate. Code lives in inc/manifester/ (future plugin).', 'leadsforward-core'); ?></li>
+					<li><strong><?php esc_html_e('AI Manifester (n8n)', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Optional full-site orchestrator generation after Site Setup. Code lives in inc/manifester/ (future plugin).', 'leadsforward-core'); ?></li>
 					<li><strong><?php esc_html_e('Fleet Updates', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Private theme update channel.', 'leadsforward-core'); ?></li>
 				</ul>
 				<p class="description"><?php esc_html_e('Hidden URLs: Manual setup (lf-setup), Homepage sections (lf-homepage-settings). Legacy ACF submenus (Business Info, CTAs, Schema) are hidden—use Global Settings instead.', 'leadsforward-core'); ?></p>
@@ -95,7 +96,7 @@ function lf_docs_render_playbook_sections(): void {
 
 			<section id="manifester" class="lf-docs__section">
 				<h2><?php esc_html_e('AI Manifester (n8n) — orchestration', 'leadsforward-core'); ?></h2>
-				<p><?php esc_html_e('Separate from the theme builder. Connect webhook + Airtable in Global Settings (collapsed advanced panel) or on the Manifester screen. Pick scope, select an Airtable project, run generation. n8n calls back to WordPress REST /orchestrator. Technical docs: inc/manifester/docs/ in the theme repo.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('Optional AI path. Complete Site Setup first (Airtable sync + template build). Connect webhook + secret in Global Settings, then run Generate here. n8n calls back to WordPress REST /orchestrator. Technical docs: inc/manifester/docs/ in the theme repo.', 'leadsforward-core'); ?></p>
 				<h3><?php esc_html_e('Prerequisites', 'leadsforward-core'); ?></h3>
 				<ul>
 					<li><?php esc_html_e('Manifester enabled, webhook URL, and shared secret match your n8n (or other) orchestrator.', 'leadsforward-core'); ?></li>

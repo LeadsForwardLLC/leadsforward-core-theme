@@ -98,6 +98,25 @@ function lf_ai_studio_manifest_admin_url(array $args = []): string {
 }
 
 /**
+ * Admin URL for Site Setup (Airtable sync + template build).
+ *
+ * @param array<string, scalar|null> $args Query arguments for add_query_arg().
+ */
+function lf_ai_studio_site_setup_admin_url(array $args = []): string {
+	$slug = defined('LF_SITE_SETUP_ADMIN_SLUG') ? LF_SITE_SETUP_ADMIN_SLUG : 'lf-site-setup';
+	$url = admin_url('admin.php?page=' . $slug);
+	return $args === [] ? $url : add_query_arg($args, $url);
+}
+
+function lf_ai_studio_render_site_setup_page(): void {
+	lf_ai_studio_render_admin_page('site_setup');
+}
+
+function lf_ai_studio_render_page(): void {
+	lf_ai_studio_render_admin_page('manifester');
+}
+
+/**
  * Whether a service title is a non-real placeholder (Airtable sync artifacts).
  */
 function lf_ai_studio_service_title_is_placeholder(string $title): bool {
@@ -420,7 +439,8 @@ function lf_ai_studio_assets(string $hook): void {
 		return;
 	}
 	$manifest_hook = 'leadsforward_page_' . (defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest');
-	if ($hook !== $manifest_hook) {
+	$site_setup_hook = 'leadsforward_page_' . (defined('LF_SITE_SETUP_ADMIN_SLUG') ? LF_SITE_SETUP_ADMIN_SLUG : 'lf-site-setup');
+	if ($hook !== $manifest_hook && $hook !== $site_setup_hook) {
 		return;
 	}
 	wp_enqueue_media();
@@ -455,11 +475,13 @@ function lf_ai_studio_assets(string $hook): void {
 		'jobStatusNonce' => wp_create_nonce('lf_ai_studio_job_status'),
 		'enabled' => !empty($airtable_settings['enabled']),
 		'publishSchedule' => lf_publish_schedule_get_items(),
-		'scope' => [
+			'scope' => [
 			'isHomepageOnly' => !empty($scope_for_scope_js['is_homepage_only']),
 			'servicePostsPublished' => (int) ( $scope_for_scope_js['service_posts_published'] ?? 0 ),
 			'hasTargets' => !empty($scope_for_scope_js['enabled_labels']),
 		],
+		'manifestSaved' => function_exists('lf_ai_studio_manifest_exists') && lf_ai_studio_manifest_exists(),
+		'storedProjectRecordId' => trim((string) get_option('lf_ai_airtable_project_record_id', '')),
 		'strings' => [
 			'searchPlaceholder' => __('Search Airtable projects…', 'leadsforward-core'),
 			'noResults' => __('No projects found.', 'leadsforward-core'),
@@ -468,7 +490,7 @@ function lf_ai_studio_assets(string $hook): void {
 			'building' => __('Building site from Airtable…', 'leadsforward-core'),
 			'generating' => __('Generating with orchestrator…', 'leadsforward-core'),
 			'confirmHomepageOnly' => __('Your scope is homepage-only, but this site has published service pages. Service pages will not be sent to the orchestrator. Continue?', 'leadsforward-core'),
-			'scopeNoTargets' => __('Enable at least one target under step 2 (Generate) and click Save Scope before orchestrator runs.', 'leadsforward-core'),
+			'scopeNoTargets' => __('Enable at least one target in Site Setup and click Save scope before orchestrator runs.', 'leadsforward-core'),
 			'readyBuild' => __('Ready to build from Airtable.', 'leadsforward-core'),
 			'scopeFilterCount' => __('{selected}/{total} included', 'leadsforward-core'),
 			'scopeFilterEmpty' => __('No list loaded', 'leadsforward-core'),
@@ -791,7 +813,7 @@ function lf_ai_studio_handle_scope_save(): void {
 
 	lf_ai_studio_sync_legacy_blueprint_scope_from_gen_flags();
 
-	wp_safe_redirect(lf_ai_studio_manifest_admin_url(['scope_saved' => '1']));
+	wp_safe_redirect(lf_ai_studio_site_setup_admin_url(['scope_saved' => '1']));
 	exit;
 }
 
@@ -1253,7 +1275,7 @@ function lf_ai_studio_handle_save_logo(): void {
 	if ($logo_id > 0 && function_exists('wp_attachment_is_image') && wp_attachment_is_image($logo_id)) {
 		update_option('site_icon', $logo_id, false);
 	}
-	$redirect = lf_ai_studio_manifest_admin_url(['logo' => '1']);
+	$redirect = lf_ai_studio_site_setup_admin_url(['logo' => '1']);
 	wp_safe_redirect($redirect);
 	exit;
 }
@@ -1457,7 +1479,7 @@ function lf_ai_studio_handle_images_upload(): void {
 	check_admin_referer('lf_ai_studio_images_upload', 'lf_ai_studio_images_upload_nonce');
 	if (empty($_FILES['lf_manifest_images']) || !is_array($_FILES['lf_manifest_images'])) {
 		lf_ai_studio_error_log('images_upload: no files submitted', 'ERROR');
-		wp_safe_redirect(lf_ai_studio_manifest_admin_url(['images_error' => 'missing']));
+		wp_safe_redirect(lf_ai_studio_site_setup_admin_url(['images_error' => 'missing']));
 		exit;
 	}
 	$result = lf_ai_studio_process_images_upload($_FILES['lf_manifest_images']);
@@ -1465,7 +1487,7 @@ function lf_ai_studio_handle_images_upload(): void {
 	if ($user_id > 0) {
 		update_user_meta($user_id, 'lf_ai_studio_recent_uploads', $result['uploaded']);
 	}
-	$redirect = lf_ai_studio_manifest_admin_url(['images_uploaded' => (string) $result['uploaded_count']]);
+	$redirect = lf_ai_studio_site_setup_admin_url(['images_uploaded' => (string) $result['uploaded_count']]);
 	if ($result['error_count'] > 0) {
 		lf_ai_studio_log_user_messages('images_upload partial failures', $result['errors'] ?? []);
 		$redirect = add_query_arg('images_errors', (string) $result['error_count'], $redirect);
@@ -1527,10 +1549,15 @@ function lf_ai_studio_extract_media_annotations_for_debug(array $payload): array
 	return is_array($candidates) ? $candidates : [];
 }
 
-function lf_ai_studio_render_page(): void {
+function lf_ai_studio_render_admin_page(string $mode = 'manifester'): void {
 	if (!current_user_can('edit_theme_options')) {
 		return;
 	}
+	$mode = $mode === 'site_setup' ? 'site_setup' : 'manifester';
+	$is_site_setup = $mode === 'site_setup';
+	$site_setup_url = lf_ai_studio_site_setup_admin_url();
+	$manifester_url = lf_ai_studio_manifest_admin_url();
+	$import_content_url = admin_url('admin.php?page=lf-import-page-content');
 	$saved = isset($_GET['saved']) && $_GET['saved'] === '1';
 	$scope_saved = isset($_GET['scope_saved']) && $_GET['scope_saved'] === '1';
 	$error = isset($_GET['error']) ? sanitize_text_field(wp_unslash((string) $_GET['error'])) : '';
@@ -1798,9 +1825,15 @@ function lf_ai_studio_render_page(): void {
 	$manifest_exists = function_exists('lf_ai_studio_manifest_exists') && lf_ai_studio_manifest_exists();
 	?>
 	<div class="wrap">
-		<h1 class="lf-manifester-page-title"><?php esc_html_e('AI Manifester (n8n)', 'leadsforward-core'); ?></h1>
-		<p class="lf-manifester-lead description"><?php esc_html_e('Pick an Airtable project, set scope, then build or run the orchestrator.', 'leadsforward-core'); ?></p>
+		<?php if ($is_site_setup) : ?>
+			<h1 class="lf-manifester-page-title"><?php esc_html_e('Site Setup', 'leadsforward-core'); ?></h1>
+			<p class="lf-manifester-lead description"><?php esc_html_e('Pull project data from Airtable, scaffold pages and niche sections, then import finished copy with page templates.', 'leadsforward-core'); ?></p>
+		<?php else : ?>
+			<h1 class="lf-manifester-page-title"><?php esc_html_e('AI Manifester (n8n)', 'leadsforward-core'); ?></h1>
+			<p class="lf-manifester-lead description"><?php esc_html_e('Optional full-site AI generation via n8n. Complete Site Setup first, then use Import Page Content for writer-driven copy.', 'leadsforward-core'); ?></p>
+		<?php endif; ?>
 
+		<?php if (!$is_site_setup) : ?>
 		<?php
 		$debug_entries = get_option(LF_AI_STUDIO_DEBUG_LOG_OPTION, []);
 		$debug_entries = is_array($debug_entries) ? array_values(array_filter($debug_entries, static fn($v): bool => is_array($v))) : [];
@@ -1820,26 +1853,43 @@ function lf_ai_studio_render_page(): void {
 			}
 			?></pre>
 		</details>
+		<?php endif; ?>
 
 		<div class="lf-manifester-hero">
 			<div class="lf-manifester-hero__main">
 				<h2 class="lf-manifester-hero__title"><?php esc_html_e('Quick start', 'leadsforward-core'); ?></h2>
-				<ol class="lf-manifester-hero__steps">
-					<li><?php esc_html_e('Connect orchestrator + Airtable in Global Settings.', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('Select a project and save your build scope (step 2).', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('Build templates or run the orchestrator (step 6).', 'leadsforward-core'); ?></li>
-				</ol>
+				<?php if ($is_site_setup) : ?>
+					<ol class="lf-manifester-hero__steps">
+						<li><?php esc_html_e('Add Airtable credentials in Global Settings.', 'leadsforward-core'); ?></li>
+						<li><?php esc_html_e('Select an Airtable project and save build scope.', 'leadsforward-core'); ?></li>
+						<li><?php esc_html_e('Build site (templates) — scaffolds pages, sections, and niche images.', 'leadsforward-core'); ?></li>
+						<li><?php esc_html_e('Import page copy via Import Page Content.', 'leadsforward-core'); ?></li>
+					</ol>
+				<?php else : ?>
+					<ol class="lf-manifester-hero__steps">
+						<li><?php esc_html_e('Complete Site Setup (Airtable sync + template build).', 'leadsforward-core'); ?></li>
+						<li><?php esc_html_e('Connect n8n webhook + secret in Global Settings.', 'leadsforward-core'); ?></li>
+						<li><?php esc_html_e('Run Generate (orchestrator) for full AI-written copy.', 'leadsforward-core'); ?></li>
+					</ol>
+				<?php endif; ?>
 				<?php if ($manifest_exists) : ?>
 					<p class="lf-manifester-hero__status lf-manifester-hero__status--ok">
 						<?php esc_html_e('Manifest saved on this site.', 'leadsforward-core'); ?>
 					</p>
 				<?php elseif ($airtable_ready) : ?>
 					<p class="lf-manifester-hero__status">
-						<?php esc_html_e('Airtable connected — pick a project in step 2.', 'leadsforward-core'); ?>
+						<?php echo $is_site_setup
+							? esc_html__('Airtable connected — pick a project below.', 'leadsforward-core')
+							: esc_html__('Airtable connected — complete Site Setup if you have not yet.', 'leadsforward-core'); ?>
 					</p>
 				<?php else : ?>
 					<p class="lf-manifester-hero__status lf-manifester-hero__status--warn">
 						<?php esc_html_e('Add Airtable credentials in Global Settings.', 'leadsforward-core'); ?>
+					</p>
+				<?php endif; ?>
+				<?php if (!$is_site_setup && !$manifest_exists) : ?>
+					<p class="description" style="margin-top:8px;">
+						<a class="button button-secondary" href="<?php echo esc_url($site_setup_url); ?>"><?php esc_html_e('Open Site Setup', 'leadsforward-core'); ?></a>
 					</p>
 				<?php endif; ?>
 			</div>
@@ -1930,15 +1980,37 @@ function lf_ai_studio_render_page(): void {
 			<?php $global_settings_url = admin_url('admin.php?page=lf-global'); ?>
 
 			<div class="lf-manifester-steps">
+				<?php if ($is_site_setup) : ?>
 				<div class="lf-manifester-step">
 					<div class="lf-manifester-step__badge">1</div>
 					<div class="lf-manifester-step__content">
 						<h3><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></h3>
-						<p class="description"><?php esc_html_e('Orchestrator webhook, secret, and Airtable PAT/base/table.', 'leadsforward-core'); ?></p>
+						<p class="description"><?php esc_html_e('Airtable PAT, base ID, and projects table. n8n webhook is only needed for the optional AI path.', 'leadsforward-core'); ?></p>
 						<a class="button button-primary" href="<?php echo esc_url($global_settings_url); ?>"><?php esc_html_e('Open Global Settings', 'leadsforward-core'); ?></a>
 					</div>
 				</div>
+				<?php else : ?>
+				<div class="lf-manifester-step">
+					<div class="lf-manifester-step__badge">1</div>
+					<div class="lf-manifester-step__content">
+						<h3><?php esc_html_e('Site Setup (required first)', 'leadsforward-core'); ?></h3>
+						<p class="description"><?php esc_html_e('Sync Airtable data and run template build before orchestrator generation.', 'leadsforward-core'); ?></p>
+						<p class="description lf-manifester-step__scope">
+							<strong><?php esc_html_e('Current scope:', 'leadsforward-core'); ?></strong>
+							<?php
+							if (!empty($scope_snap['enabled_labels'])) {
+								echo esc_html(implode(', ', $scope_snap['enabled_labels']));
+							} else {
+								esc_html_e('Not set — configure in Site Setup.', 'leadsforward-core');
+							}
+							?>
+						</p>
+						<a class="button button-primary" href="<?php echo esc_url($site_setup_url); ?>"><?php esc_html_e('Open Site Setup', 'leadsforward-core'); ?></a>
+					</div>
+				</div>
+				<?php endif; ?>
 
+				<?php if ($is_site_setup) : ?>
 				<div class="lf-manifester-step">
 					<div class="lf-manifester-step__badge">2</div>
 					<div class="lf-manifester-step__content">
@@ -2043,9 +2115,11 @@ function lf_ai_studio_render_page(): void {
 						</div>
 					</div>
 				</div>
+				<?php endif; ?>
 
+				<?php if (!$is_site_setup) : ?>
 				<div class="lf-manifester-step">
-					<div class="lf-manifester-step__badge">3</div>
+					<div class="lf-manifester-step__badge">2</div>
 					<div class="lf-manifester-step__content">
 						<h3><?php esc_html_e('Research', 'leadsforward-core'); ?></h3>
 						<p class="description">
@@ -2072,13 +2146,15 @@ function lf_ai_studio_render_page(): void {
 						<?php endif; ?>
 					</div>
 				</div>
+				<?php endif; ?>
 
+				<?php if ($is_site_setup) : ?>
 				<div class="lf-manifester-step">
-					<div class="lf-manifester-step__badge">4</div>
+					<div class="lf-manifester-step__badge">3</div>
 					<div class="lf-manifester-step__content">
 						<h3><?php esc_html_e('Images', 'leadsforward-core'); ?></h3>
 						<p class="description">
-							<?php esc_html_e('Each page template includes a curated niche photo pack — already compressed, renamed, and tagged with local SEO keywords. When you run the manifester, those images slot into hero and content areas automatically.', 'leadsforward-core'); ?>
+							<?php esc_html_e('Each page template includes a curated niche photo pack. Template build slots those images into hero and content areas automatically.', 'leadsforward-core'); ?>
 						</p>
 						<?php if ($images_pack_count > 0) : ?>
 							<div class="lf-manifester-status is-success">
@@ -2155,7 +2231,7 @@ function lf_ai_studio_render_page(): void {
 				</div>
 
 				<div class="lf-manifester-step">
-					<div class="lf-manifester-step__badge">5</div>
+					<div class="lf-manifester-step__badge">4</div>
 					<div class="lf-manifester-step__content">
 						<h3><?php esc_html_e('Logo (optional)', 'leadsforward-core'); ?></h3>
 						<p class="description"><?php esc_html_e('Sets brand colors from your logo.', 'leadsforward-core'); ?></p>
@@ -2179,10 +2255,10 @@ function lf_ai_studio_render_page(): void {
 				</div>
 
 				<div class="lf-manifester-step lf-manifester-step--action">
-					<div class="lf-manifester-step__badge">6</div>
+					<div class="lf-manifester-step__badge">5</div>
 					<div class="lf-manifester-step__content">
-						<h3><?php esc_html_e('Build', 'leadsforward-core'); ?></h3>
-						<p class="description"><?php esc_html_e('Uses the manifest from your last Airtable selection.', 'leadsforward-core'); ?></p>
+						<h3><?php esc_html_e('Build site (templates)', 'leadsforward-core'); ?></h3>
+						<p class="description"><?php esc_html_e('Scaffolds pages, menus, niche section order, and placeholder images from your Airtable manifest — no n8n required.', 'leadsforward-core'); ?></p>
 						<p class="description lf-manifester-step__scope">
 							<strong><?php esc_html_e('Scope:', 'leadsforward-core'); ?></strong>
 							<?php
@@ -2197,11 +2273,48 @@ function lf_ai_studio_render_page(): void {
 							<button type="button" class="button button-primary button-hero" id="lf-manifester-build-site" disabled>
 								<?php esc_html_e('Build site', 'leadsforward-core'); ?>
 							</button>
-							<button type="button" class="button button-hero" id="lf-manifester-generate" disabled>
+						</div>
+						<p class="description lf-manifester-step__note"><?php esc_html_e('After build, paste Google Doc copy in Import Page Content.', 'leadsforward-core'); ?></p>
+						<div id="lf-manifester-status" class="lf-manifester-status" role="status" aria-live="polite"></div>
+					</div>
+				</div>
+
+				<div class="lf-manifester-step">
+					<div class="lf-manifester-step__badge">6</div>
+					<div class="lf-manifester-step__content">
+						<h3><?php esc_html_e('Import page copy', 'leadsforward-core'); ?></h3>
+						<p class="description"><?php esc_html_e('Writers paste formatted docs to populate homepage and core pages.', 'leadsforward-core'); ?></p>
+						<a class="button button-primary" href="<?php echo esc_url($import_content_url); ?>"><?php esc_html_e('Open Import Page Content', 'leadsforward-core'); ?></a>
+						<p class="description lf-manifester-step__note" style="margin-top:8px;">
+							<?php esc_html_e('Optional: use AI Manifester (n8n) instead of manual docs for full-site AI copy.', 'leadsforward-core'); ?>
+							<a href="<?php echo esc_url($manifester_url); ?>"><?php esc_html_e('Open AI Manifester', 'leadsforward-core'); ?></a>
+						</p>
+					</div>
+				</div>
+				<?php endif; ?>
+
+				<?php if (!$is_site_setup) : ?>
+				<div class="lf-manifester-step lf-manifester-step--action">
+					<div class="lf-manifester-step__badge">3</div>
+					<div class="lf-manifester-step__content">
+						<h3><?php esc_html_e('Generate (orchestrator)', 'leadsforward-core'); ?></h3>
+						<p class="description"><?php esc_html_e('Runs the full n8n AI pipeline using the manifest and scope from Site Setup.', 'leadsforward-core'); ?></p>
+						<p class="description lf-manifester-step__scope">
+							<strong><?php esc_html_e('Scope:', 'leadsforward-core'); ?></strong>
+							<?php
+							if (!empty($scope_snap['enabled_labels'])) {
+								echo esc_html(implode(', ', $scope_snap['enabled_labels']));
+							} else {
+								esc_html_e('Nothing selected — set scope in Site Setup.', 'leadsforward-core');
+							}
+							?>
+						</p>
+						<div class="lf-manifester-build-actions">
+							<button type="button" class="button button-primary button-hero" id="lf-manifester-generate" disabled>
 								<?php esc_html_e('Generate (orchestrator)', 'leadsforward-core'); ?>
 							</button>
 						</div>
-						<p class="description lf-manifester-step__note"><?php esc_html_e('Template build scaffolds pages and niche sections without n8n. Orchestrator runs the full AI pipeline.', 'leadsforward-core'); ?></p>
+						<p class="description lf-manifester-step__note"><?php esc_html_e('Requires n8n webhook + secret in Global Settings. For writer-driven copy, use Import Page Content instead.', 'leadsforward-core'); ?></p>
 						<div id="lf-manifester-status" class="lf-manifester-status" role="status" aria-live="polite"></div>
 						<?php
 						$progress = $job_id ? get_post_meta($job_id, 'lf_ai_job_progress', true) : [];
@@ -2226,8 +2339,10 @@ function lf_ai_studio_render_page(): void {
 						</div>
 					</div>
 				</div>
+				<?php endif; ?>
 			</div>
 		</div>
+		<?php if (!$is_site_setup) : ?>
 		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0;">
 			<h2 style="margin-top:0;"><?php esc_html_e('Research Override (Optional)', 'leadsforward-core'); ?></h2>
 			<p class="description"><?php esc_html_e('Upload a research JSON to override the automated research step for the next generation.', 'leadsforward-core'); ?></p>
@@ -2364,6 +2479,8 @@ function lf_ai_studio_render_page(): void {
 				</form>
 			<?php endif; ?>
 		</div>
+		<?php endif; ?>
+		<?php if ($is_site_setup) : ?>
 		<script>
 			(function() {
 				var form = document.getElementById('lf-manifester-logo-form');
@@ -2454,6 +2571,7 @@ function lf_ai_studio_render_page(): void {
 				}
 			})();
 		</script>
+		<?php endif; ?>
 	</div>
 	<?php
 }

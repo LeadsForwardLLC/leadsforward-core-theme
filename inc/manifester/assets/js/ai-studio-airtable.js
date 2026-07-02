@@ -690,7 +690,10 @@
   }
 
   function hasAirtableSelection() {
-    return !!(selectedRecord && selectedRecord.id);
+    if (selectedRecord && selectedRecord.id) {
+      return true;
+    }
+    return !!(cfg.storedProjectRecordId);
   }
 
   function confirmHomepageOnlyIfNeeded() {
@@ -708,10 +711,10 @@
   }
 
   function updatePrimaryState() {
-    var canAct = hasAirtableSelection();
+    var canAct = hasAirtableSelection() || !!cfg.manifestSaved;
     if (!canAct) {
       setActionButtonsDisabled(true);
-      setPrimaryStatus('Select an Airtable project to continue.', 'info');
+      setPrimaryStatus('Select an Airtable project in Site Setup to continue.', 'info');
       return;
     }
     setActionButtonsDisabled(false);
@@ -755,8 +758,19 @@
       });
   }
 
+  function getActiveRecordId() {
+    if (selectedRecord && selectedRecord.id) {
+      return String(selectedRecord.id);
+    }
+    if (cfg.storedProjectRecordId) {
+      return String(cfg.storedProjectRecordId);
+    }
+    return '';
+  }
+
   function handleAjaxRun(options) {
-    if (!selectedRecord || !selectedRecord.id) return;
+    var recordId = getActiveRecordId();
+    if (!recordId) return;
     var action = options.action;
     var statusMsg = options.statusMsg;
     var successMsg = options.successMsg;
@@ -771,7 +785,7 @@
     var body = new URLSearchParams({
       action: action,
       nonce: cfg.nonce,
-      record_id: selectedRecord.id
+      record_id: recordId
     });
     fetch(cfg.ajaxUrl, {
       method: 'POST',

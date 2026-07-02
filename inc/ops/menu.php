@@ -1,7 +1,7 @@
 <?php
 /**
  * LeadsForward parent menu and submenu registration. Admin only.
- * Order: Global Settings → writer tools → forms → SEO → ops → docs → AI Manifester → Fleet.
+ * Order: Global Settings → Site Setup → writer tools → forms → SEO → ops → docs → AI Manifester → Fleet.
  * Site Health UI is embedded in SEO settings (inc/seo/seo-settings.php); legacy lf-site-health URL redirects.
  *
  * @package LeadsForward_Core
@@ -337,7 +337,7 @@ function lf_ops_settings_assets(string $hook): void {
 	if (!current_user_can(LF_OPS_CAP)) {
 		return;
 	}
-	if (!in_array($hook, ['toplevel_page_lf-ops', 'leadsforward_page_lf-global'], true)) {
+	if (!in_array($hook, ['toplevel_page_lf-ops', 'leadsforward_page_lf-global', 'leadsforward_page_lf-site-setup'], true)) {
 		return;
 	}
 	wp_enqueue_media();
@@ -373,8 +373,10 @@ function lf_ops_reorder_submenus(): void {
 		return;
 	}
 	$manifest_slug = defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest';
+	$site_setup_slug = defined('LF_SITE_SETUP_ADMIN_SLUG') ? LF_SITE_SETUP_ADMIN_SLUG : 'lf-site-setup';
 	$preferred_order = [
 		'lf-ops',
+		$site_setup_slug,
 		'lf-import-page-content',
 		'lf-niche-content-library',
 		'lf-quote-builder',
@@ -1229,9 +1231,10 @@ function lf_ops_render_global_settings_page(): void {
 				<?php
 				printf(
 					wp_kses_post(
-						/* translators: 1: Import Page Content URL, 2: Niche Content Library URL */
-						__('Writers: use <a href="%1$s">Import Page Content</a> to paste Google Doc copy into pages, and <a href="%2$s">Niche Content Library</a> for shared process steps and FAQs. AI orchestration lives under <a href="%3$s">AI Manifester (n8n)</a>.', 'leadsforward-core')
+						/* translators: 1: Site Setup URL, 2: Import Page Content URL, 3: Niche Content Library URL, 4: AI Manifester URL */
+						__('Operators: start with <a href="%1$s">Site Setup</a> (Airtable sync + template build). Writers: use <a href="%2$s">Import Page Content</a> and <a href="%3$s">Niche Content Library</a>. Optional AI: <a href="%4$s">AI Manifester (n8n)</a>.', 'leadsforward-core')
 					),
+					esc_url(admin_url('admin.php?page=' . (defined('LF_SITE_SETUP_ADMIN_SLUG') ? LF_SITE_SETUP_ADMIN_SLUG : 'lf-site-setup'))),
 					esc_url(admin_url('admin.php?page=lf-import-page-content')),
 					esc_url(admin_url('admin.php?page=lf-niche-content-library')),
 					esc_url(admin_url('admin.php?page=' . (defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest')))
@@ -1334,8 +1337,11 @@ function lf_ops_render_global_settings_page(): void {
 			<div class="lf-settings-panel lf-settings-panel--collapsed" data-section="manifester_settings">
 				<div class="lf-settings-panel-header">
 					<h2><?php esc_html_e('AI Manifester & n8n (advanced)', 'leadsforward-core'); ?></h2>
+					<a class="lf-settings-toggle" href="<?php echo esc_url(admin_url('admin.php?page=' . (defined('LF_SITE_SETUP_ADMIN_SLUG') ? LF_SITE_SETUP_ADMIN_SLUG : 'lf-site-setup'))); ?>" style="margin-right:8px;">
+						<?php esc_html_e('Open Site Setup', 'leadsforward-core'); ?>
+					</a>
 					<a class="lf-settings-toggle" href="<?php echo esc_url(admin_url('admin.php?page=' . (defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest'))); ?>" style="margin-right:8px;">
-						<?php esc_html_e('Open Manifester', 'leadsforward-core'); ?>
+						<?php esc_html_e('Open AI Manifester', 'leadsforward-core'); ?>
 					</a>
 					<button type="button" class="lf-settings-toggle" data-target="manifester_settings" aria-expanded="false">
 						<span class="lf-settings-toggle-icon">▸</span>
@@ -1343,7 +1349,7 @@ function lf_ops_render_global_settings_page(): void {
 					</button>
 				</div>
 				<div class="lf-settings-panel-body lf-settings-fields--collapsed" data-parent="manifester_settings">
-					<p class="description"><?php esc_html_e('Orchestrator webhook, Airtable import, and autonomous runs. Most writers never need this—use Import Page Content after a site is scaffolded. Settings also appear on the AI Manifester screen.', 'leadsforward-core'); ?></p>
+					<p class="description"><?php esc_html_e('Airtable credentials belong here. Use Site Setup for project sync and template build. This panel is for optional n8n orchestrator webhook settings.', 'leadsforward-core'); ?></p>
 					<table class="form-table" role="presentation">
 							<tr>
 								<th scope="row"><?php esc_html_e('Enable AI', 'leadsforward-core'); ?></th>

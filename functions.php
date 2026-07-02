@@ -18,7 +18,9 @@ if (!defined('ABSPATH')) {
 define('LF_THEME_VERSION', '0.1.171');
 define('LF_THEME_DIR', get_template_directory());
 define('LF_THEME_URI', get_template_directory_uri());
-/** Admin page slug for LeadsForward → Manifest Website (orchestrator UI). */
+/** Admin page slug for LeadsForward → Site Setup (Airtable sync + template build). */
+define('LF_SITE_SETUP_ADMIN_SLUG', 'lf-site-setup');
+/** Admin page slug for LeadsForward → AI Manifester (n8n orchestrator). */
 define('LF_MANIFEST_ADMIN_SLUG', 'lf-manifest');
 
 /**
