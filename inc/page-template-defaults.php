@@ -580,15 +580,75 @@ function lf_page_template_merge_enhanced_blueprints(array &$blueprints, array $v
 }
 
 /**
- * One-time repair: sync library, normalize FAQ sections on core pages.
+ * Ensure standard fleet pages exist and are published (FAQ hub, About, etc.).
+ *
+ * @return array{created: list<string>, published: list<string>}
+ */
+function lf_core_pages_ensure_standard_pages(): array {
+	$result = ['created' => [], 'published' => []];
+	$publish_slugs = function_exists('lf_wizard_default_publish_page_slugs')
+		? lf_wizard_default_publish_page_slugs()
+		: ['home', 'about-us', 'why-choose-us', 'services', 'service-areas', 'reviews', 'faq', 'contact'];
+	$titles = function_exists('lf_wizard_default_page_titles') ? lf_wizard_default_page_titles() : [];
+	$extended = function_exists('lf_wizard_extended_page_titles') ? lf_wizard_extended_page_titles() : [];
+	$titles = array_merge($titles, $extended);
+	$data = function_exists('lf_wizard_data_from_entity') ? lf_wizard_data_from_entity() : [];
+
+	foreach ($publish_slugs as $slug) {
+		$slug = sanitize_title($slug);
+		if ($slug === '') {
+			continue;
+		}
+		$page = get_page_by_path($slug);
+		if (!$page instanceof \WP_Post) {
+			$title = (string) ($titles[$slug] ?? ucwords(str_replace('-', ' ', $slug)));
+			$content = function_exists('lf_wizard_placeholder_content')
+				? lf_wizard_placeholder_content($slug, $title, $data)
+				: '';
+			$new_id = wp_insert_post([
+				'post_title' => $title,
+				'post_name' => $slug,
+				'post_content' => $content,
+				'post_status' => 'publish',
+				'post_type' => 'page',
+				'post_author' => get_current_user_id() > 0 ? get_current_user_id() : 1,
+			], true);
+			if (!is_wp_error($new_id) && (int) $new_id > 0) {
+				$result['created'][] = $slug;
+				if ($slug === 'faq' && function_exists('lf_wizard_seed_page_pb_config')) {
+					$niche = function_exists('lf_get_niche')
+						? lf_get_niche((string) get_option('lf_homepage_niche_slug', ''))
+						: null;
+					if (is_array($niche)) {
+						lf_wizard_seed_page_pb_config((int) $new_id, 'faq', $data, $niche, []);
+					}
+				}
+			}
+			continue;
+		}
+		if ($page->post_status !== 'publish') {
+			wp_update_post([
+				'ID' => (int) $page->ID,
+				'post_status' => 'publish',
+			]);
+			$result['published'][] = $slug;
+		}
+	}
+
+	return $result;
+}
+
+/**
+ * One-time repair: ensure FAQ + standard pages, re-sync nav under More.
  */
 function lf_page_template_repair_core_pages_once(): void {
 	if (!is_admin() || !current_user_can('edit_theme_options')) {
 		return;
 	}
-	if (get_option('lf_page_template_repair_v1', '0') === '1') {
+	if (get_option('lf_page_template_repair_v2', '0') === '1') {
 		return;
 	}
+	lf_core_pages_ensure_standard_pages();
 	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'foundation-repair');
 	$vars = function_exists('lf_wizard_data_from_entity') ? lf_wizard_data_from_entity() : [];
 	if (function_exists('lf_wizard_template_vars')) {
@@ -607,7 +667,12 @@ function lf_page_template_repair_core_pages_once(): void {
 			lf_page_template_apply_faq_defaults_to_page($page_id, $slug);
 		}
 	}
-	update_option('lf_page_template_repair_v1', '1', true);
+	update_option('lf_page_template_repair_v2', '1', true);
+
+	if (function_exists('lf_header_menu_force_structure_repair')) {
+		delete_option('lf_header_menu_structure_version');
+		lf_header_menu_force_structure_repair();
+	}
 }
 
 add_action('admin_init', 'lf_page_template_repair_core_pages_once', 25);
