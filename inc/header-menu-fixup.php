@@ -177,7 +177,32 @@ function lf_header_menu_objects_enforce_fleet_contract(array $items, $args): arr
 }
 add_filter('wp_nav_menu_objects', 'lf_header_menu_objects_enforce_fleet_contract', 28, 2);
 
-const LF_HEADER_MENU_STRUCTURE_VERSION = 'header-nav-v11';
+/**
+ * Last-chance fleet pass after display reorder — bucket stragglers under More.
+ *
+ * @param array<int, \WP_Post> $items
+ * @return array<int, \WP_Post>
+ */
+function lf_header_menu_objects_enforce_fleet_contract_final(array $items, $args): array {
+	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || $items === []) {
+		return $items;
+	}
+	if (!function_exists('lf_header_menu_item_violates_fleet_top_level')
+		|| !function_exists('lf_header_menu_objects_apply_nav_rules')) {
+		return $items;
+	}
+
+	foreach ($items as $item) {
+		if ($item instanceof \WP_Post && lf_header_menu_item_violates_fleet_top_level($item)) {
+			return lf_header_menu_objects_apply_nav_rules($items, $args);
+		}
+	}
+
+	return $items;
+}
+add_filter('wp_nav_menu_objects', 'lf_header_menu_objects_enforce_fleet_contract_final', 31, 2);
+
+const LF_HEADER_MENU_STRUCTURE_VERSION = 'header-nav-v12';
 const LF_HEADER_MENU_DEFERRED_REPAIR_HOOK = 'lf_header_menu_deferred_structure_repair';
 const LF_HEADER_MENU_REPAIR_LOCK = 'lf_header_menu_repair_lock';
 
@@ -251,8 +276,14 @@ function lf_header_menu_structure_needs_repair(int $menu_id): bool {
 		return true;
 	}
 	if (function_exists('lf_header_menu_more_is_enabled') && lf_header_menu_more_is_enabled()) {
-		if ($more_parent_id <= 0 || $more_children === 0) {
+		if ($more_parent_id <= 0) {
 			return true;
+		}
+		if ($more_children === 0 && function_exists('lf_header_menu_get_published_more_child_pages')) {
+			$child_pages = lf_header_menu_get_published_more_child_pages();
+			if ($child_pages !== []) {
+				return true;
+			}
 		}
 	}
 

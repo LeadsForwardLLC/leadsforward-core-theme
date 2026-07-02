@@ -652,6 +652,10 @@ function lf_header_menu_top_level_sort_tuple(\WP_Post $item): array {
 		|| (function_exists('lf_header_menu_item_is_about') && lf_header_menu_item_is_about($item))) {
 		return [115, $mo];
 	}
+	if (function_exists('lf_header_menu_item_violates_fleet_top_level')
+		&& lf_header_menu_item_violates_fleet_top_level($item)) {
+		return [895, $mo];
+	}
 	return [120, $mo];
 }
 
