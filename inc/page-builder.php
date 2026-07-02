@@ -380,6 +380,20 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 					if ($business === '') {
 						$business = get_bloginfo('name');
 					}
+					$niche_slug = (string) get_option('lf_homepage_niche_slug', 'general');
+					$vars = [
+						'business' => $business,
+						'city' => (string) get_option('lf_homepage_city', ''),
+					];
+					$seeded = function_exists('lf_niche_seed_about_content')
+						? lf_niche_seed_about_content($niche_slug, $vars)
+						: ['process_ids' => [], 'faq_ids' => []];
+					$process_ids_line = function_exists('lf_niche_ids_to_lines')
+						? lf_niche_ids_to_lines($seeded['process_ids'])
+						: '';
+					$faq_ids_line = function_exists('lf_niche_ids_to_lines')
+						? lf_niche_ids_to_lines($seeded['faq_ids'])
+						: '';
 					$cta_headline = $business ? 'Get a free estimate from ' . $business : __('Get a free estimate', 'leadsforward-core');
 					$sections_to_add = [
 						[
@@ -389,6 +403,7 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 								'section_intro' => __('Built for homeowners who want clear pricing and reliable service.', 'leadsforward-core'),
 								'service_details_body' => __('We started this company to make home services simpler and more dependable. Our team shows up on time, keeps you informed, and treats your home with care from start to finish.', 'leadsforward-core'),
 								'service_details_checklist' => __('Clear communication' . "\n" . 'Respectful, clean crews' . "\n" . 'Work backed by warranty', 'leadsforward-core'),
+								'service_details_media_mode' => 'image',
 							],
 						],
 						[
@@ -396,7 +411,36 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 							'settings' => [
 								'section_heading' => __('Why homeowners choose us', 'leadsforward-core'),
 								'section_intro' => __('Honest pricing, reliable crews, and quality workmanship.', 'leadsforward-core'),
-								'benefits_items' => __('Licensed and insured professionals' . "\n" . 'Upfront pricing before work starts' . "\n" . 'Respectful, clean crews', 'leadsforward-core'),
+								'benefits_items' => __('Licensed and insured professionals || Fully vetted crews with proper coverage.' . "\n" . 'Upfront pricing before work starts || Documented scopes so you always know the next step.' . "\n" . 'Respectful, clean crews || Daily cleanup and clear communication.', 'leadsforward-core'),
+							],
+						],
+						[
+							'type' => 'image_content',
+							'settings' => [
+								'section_heading' => __('Meet the team behind your project', 'leadsforward-core'),
+								'section_intro' => __('Real people, accountable to your timeline and your property.', 'leadsforward-core'),
+								'service_details_body' => sprintf(
+									__('At %s, you work with a consistent point of contact from estimate to walkthrough. Our technicians follow documented standards on every job and treat your home with respect.', 'leadsforward-core'),
+									$business
+								),
+								'service_details_media_mode' => 'image',
+								'content_media_show_checklist' => '0',
+							],
+						],
+						[
+							'type' => 'process',
+							'settings' => [
+								'section_heading' => __('Our process', 'leadsforward-core'),
+								'section_intro' => __('Simple, clear steps from first call to completion.', 'leadsforward-core'),
+								'process_selected_ids' => $process_ids_line,
+							],
+						],
+						[
+							'type' => 'faq_accordion',
+							'settings' => [
+								'section_heading' => __('About us FAQs', 'leadsforward-core'),
+								'section_intro' => __('Quick answers about our team, process, and what to expect.', 'leadsforward-core'),
+								'faq_selected_ids' => $faq_ids_line,
 							],
 						],
 						[
@@ -496,7 +540,7 @@ function lf_pb_cleanup_templates_once(): void {
 	if (!is_admin() || !current_user_can('edit_theme_options')) {
 		return;
 	}
-	if (get_option('lf_pb_template_cleanup_v3', '0') === '1') {
+	if (get_option('lf_pb_template_cleanup_v4', '0') === '1') {
 		return;
 	}
 	if (function_exists('lf_homepage_cleanup_sections_once')) {
@@ -505,7 +549,7 @@ function lf_pb_cleanup_templates_once(): void {
 	$updated = 0;
 	$page_templates = [
 		// About page should be as content-dense as Why Choose Us.
-		'about-us' => ['hero', 'content_image', 'benefits', 'image_content', 'faq_accordion', 'cta'],
+		'about-us' => ['hero', 'content_image', 'benefits', 'image_content', 'process', 'faq_accordion', 'cta'],
 		'why-choose-us' => ['hero', 'benefits', 'content_image', 'image_content', 'faq_accordion', 'cta'],
 		'services' => ['hero', 'service_intro', 'content_image', 'faq_accordion', 'cta'],
 		'service-areas' => ['hero', 'service_areas', 'faq_accordion', 'cta'],
@@ -582,8 +626,8 @@ function lf_pb_cleanup_templates_once(): void {
 		}
 	}
 
-	update_option('lf_pb_template_cleanup_v3', '1', true);
-	update_option('lf_pb_template_cleanup_v3_count', (int) $updated, false);
+	update_option('lf_pb_template_cleanup_v4', '1', true);
+	update_option('lf_pb_template_cleanup_v4_count', (int) $updated, false);
 }
 
 function lf_pb_cleanup_post_config(int $post_id, string $context, array $desired_types): bool {

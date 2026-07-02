@@ -1784,6 +1784,8 @@ function lf_sections_process_steps_for_render(array $settings, ?\WP_Post $post =
 				}
 			}
 			$term_slug = $service_slug;
+		} elseif ($post instanceof \WP_Post && $post->post_type === 'page' && in_array($post->post_name, ['about-us', 'about'], true)) {
+			$term_slug = LF_NICHE_ABOUT_PROCESS_GROUP;
 		} elseif (is_front_page()) {
 			$term_slug = 'homepage-primary';
 		}
