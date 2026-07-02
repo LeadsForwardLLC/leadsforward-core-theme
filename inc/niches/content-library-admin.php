@@ -123,14 +123,15 @@ function lf_niche_content_library_admin_render(): void {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Niche Content Library', 'leadsforward-core'); ?></h1>
-		<p><?php esc_html_e('Master blueprint for About page process steps and FAQs (per niche). Use tokens like {business} and {city}. Saving the library does not change live CPTs until you sync. Site generation and “Sync to CPTs” materialize these rows as Process Step and FAQ posts on this site.', 'leadsforward-core'); ?></p>
+		<p><?php esc_html_e('Shared niche defaults for About page process steps and FAQs. Edit here only — page import does not change this library. Sync pushes to this site’s CPTs.', 'leadsforward-core'); ?></p>
 
 		<div style="margin:1rem 0;padding:1rem;background:#f0f6fc;border:1px solid #c3c4c7;border-radius:4px;max-width:920px;">
-			<strong><?php esc_html_e('How library ↔ CPTs work', 'leadsforward-core'); ?></strong>
+			<strong><?php esc_html_e('One clean process', 'leadsforward-core'); ?></strong>
 			<ul style="margin:0.5rem 0 0 1.2rem;list-style:disc;">
-				<li><?php esc_html_e('Library = global template with tokens (editable here or via Import Page Content).', 'leadsforward-core'); ?></li>
-				<li><?php esc_html_e('CPTs = this site’s live Process Step + FAQ posts (matched by step title / question).', 'leadsforward-core'); ?></li>
-				<li><?php esc_html_e('About page sections reference CPT IDs — sync rewires them after updates.', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('Library = shared steps/FAQs for this niche (with {business}, {city} tokens).', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('Import Page Content = page-specific copy (hero, story, benefits, team, CTA, SEO).', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('Import auto-pulls process/FAQs from here when the doc leaves those sections blank.', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('Page-specific FAQs later: add FAQ CPT posts and select IDs per page in Page Builder.', 'leadsforward-core'); ?></li>
 			</ul>
 		</div>
 

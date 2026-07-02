@@ -30,31 +30,12 @@ Body: At {business}, your project is led by a dedicated manager who coordinates 
 === PROCESS ===
 Heading: How foundation repair works with us
 Intro: A documented path from inspection to warranty — so you always know what happens next.
-
-Step: Free structural inspection
-Body: A certified evaluator documents cracks, settlement signs, moisture, and drainage patterns. You receive photos, measurements, and a plain-language explanation.
-
-Step: Engineered repair plan
-Body: We size piers, wall anchors, or waterproofing to your soil and load conditions. Scope, timeline, and pricing are documented before work begins.
-
-Step: Protected installation
-Body: Crews stage materials, protect landscaping, and maintain clean access paths with daily updates.
-
-Step: Final walkthrough & warranty
-Body: We review monitoring points, drainage improvements, and transferable warranty coverage.
+(Leave steps blank — auto-filled from LeadsForward → Niche Content Library on import.)
 
 === FAQ ===
 Heading: About our foundation repair team
 Intro: Honest answers about inspections, warranties, crews, and what to expect on your property.
-
-Q: Are you licensed and insured for foundation work?
-A: Yes. {business} carries general liability and workers' compensation coverage{city_line}. We provide proof of insurance on request before work begins.
-
-Q: Do you offer free foundation inspections?
-A: We provide complimentary structural evaluations for homeowners concerned about cracks, sticking doors, sloping floors, or basement moisture.
-
-Q: What warranty do you provide on foundation repairs?
-A: Every project includes written warranty documentation. We explain what is covered, for how long, and what maintenance keeps protection valid.
+(Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
 
 === CTA ===
 Headline: Schedule a foundation inspection with {business}
