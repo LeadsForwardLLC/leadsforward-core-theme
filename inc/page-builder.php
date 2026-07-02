@@ -778,12 +778,12 @@ function lf_pb_render_section_item(string $instance_id, array $def, array $secti
 	$settings = $is_template ? lf_sections_defaults_for($type) : ($section['settings'] ?? []);
 	$disabled = $is_template ? ' disabled' : '';
 	?>
-	<li class="lf-pb-section" data-instance="<?php echo esc_attr($instance_id); ?>" data-type="<?php echo esc_attr($type); ?>">
+	<li class="lf-pb-section lf-pb-section--collapsed" data-instance="<?php echo esc_attr($instance_id); ?>" data-type="<?php echo esc_attr($type); ?>">
 		<div class="lf-pb-section-header">
 			<span class="lf-pb-drag" aria-hidden="true">⋮⋮</span>
 			<strong><?php echo esc_html($label); ?></strong>
 			<label><input type="checkbox" name="lf_pb_sections[<?php echo esc_attr($instance_id); ?>][enabled]" value="1" <?php checked($enabled); ?><?php echo $disabled; ?> /> <?php esc_html_e('Enabled', 'leadsforward-core'); ?></label>
-			<button type="button" class="lf-pb-toggle" data-target="<?php echo esc_attr($instance_id); ?>" aria-expanded="true">▾ <?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
+			<button type="button" class="lf-pb-toggle" data-target="<?php echo esc_attr($instance_id); ?>" aria-expanded="false">▸ <?php esc_html_e('Expand', 'leadsforward-core'); ?></button>
 			<?php if ($deletable) : ?>
 				<button type="button" class="lf-pb-remove" aria-label="<?php esc_attr_e('Remove section', 'leadsforward-core'); ?>">✕</button>
 			<?php endif; ?>
@@ -898,10 +898,10 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 				endforeach; ?>
 			</ul>
 		</div>
-		<aside class="lf-pb-library" data-collapsed="0">
+		<aside class="lf-pb-library is-collapsed" data-collapsed="1">
 			<div class="lf-pb-library__header">
 				<h4><?php esc_html_e('Section Library', 'leadsforward-core'); ?></h4>
-				<button type="button" class="lf-pb-library__toggle" aria-expanded="true"><?php esc_html_e('Collapse', 'leadsforward-core'); ?></button>
+				<button type="button" class="lf-pb-library__toggle" aria-expanded="false">▸ <?php esc_html_e('Expand', 'leadsforward-core'); ?></button>
 			</div>
 			<div class="lf-pb-library__body">
 				<p><?php esc_html_e('Drag or click Add to insert a section.', 'leadsforward-core'); ?></p>
@@ -1007,8 +1007,17 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 				$field.find('.lf-media-preview').html('<div class="lf-media-preview__empty">No image selected</div>');
 			});
 			var libraryKey = 'lf_pb_library_collapsed';
-			var libraryCollapsed = false;
-			try { libraryCollapsed = window.localStorage.getItem(libraryKey) === '1'; } catch (e) { libraryCollapsed = false; }
+			var libraryCollapsed = true;
+			try {
+				var libraryStored = window.localStorage.getItem(libraryKey);
+				if (libraryStored === '0') {
+					libraryCollapsed = false;
+				} else if (libraryStored === '1') {
+					libraryCollapsed = true;
+				}
+			} catch (e) {
+				libraryCollapsed = true;
+			}
 			function applyLibraryCollapse() {
 				var $library = $('.lf-pb-library');
 				$library.toggleClass('is-collapsed', libraryCollapsed);
@@ -1027,7 +1036,8 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 			try { collapsed = JSON.parse(window.localStorage.getItem(key) || '{}') || {}; } catch (e) { collapsed = {}; }
 			function applyCollapse(id) {
 				var $panel = $('.lf-pb-section[data-instance="' + id + '"]');
-				var isCollapsed = !!collapsed[id];
+				// Default collapsed on first visit; localStorage false = user chose to expand.
+				var isCollapsed = collapsed[id] !== false;
 				$panel.toggleClass('lf-pb-section--collapsed', isCollapsed);
 				var $toggle = $panel.find('.lf-pb-toggle');
 				$toggle.attr('aria-expanded', (!isCollapsed).toString());
@@ -1040,7 +1050,8 @@ function lf_pb_render_admin_box(\WP_Post $post): void {
 			$(document).on('click', '.lf-pb-toggle', function () {
 				var id = $(this).data('target');
 				if (!id) return;
-				collapsed[id] = !collapsed[id];
+				var isCollapsed = collapsed[id] !== false;
+				collapsed[id] = isCollapsed ? false : true;
 				try { window.localStorage.setItem(key, JSON.stringify(collapsed)); } catch (e) {}
 				applyCollapse(id);
 			});
