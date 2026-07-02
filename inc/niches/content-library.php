@@ -249,13 +249,36 @@ function lf_niche_seed_about_content(string $niche_slug, array $vars): array {
 		}
 		$process_steps[] = ['title' => $title, 'body' => $body];
 	}
-	$process_ids = [];
-	if ($process_steps !== [] && function_exists('lf_ai_studio_upsert_process_steps')) {
-		$process_ids = lf_ai_studio_upsert_process_steps($process_steps, LF_NICHE_ABOUT_PROCESS_GROUP);
-	}
+	$process_ids = lf_niche_upsert_process_steps($process_steps, LF_NICHE_ABOUT_PROCESS_GROUP, $vars);
 
-	$faq_ids = [];
+	$faq_rows = [];
 	foreach ($library['faqs'] as $row) {
+		if (is_array($row)) {
+			$faq_rows[] = $row;
+		}
+	}
+	$faq_ids = lf_niche_upsert_context_faqs($faq_rows, LF_NICHE_ABOUT_FAQ_CONTEXT, $vars);
+
+	return [
+		'process_ids' => array_values(array_filter(array_map('absint', $process_ids))),
+		'faq_ids' => array_values(array_filter(array_map('absint', $faq_ids))),
+	];
+}
+
+/**
+ * Create/update lf_faq posts for a named context (e.g. about_company).
+ *
+ * @param list<array{question:string,answer:string}> $faqs
+ * @return list<int>
+ */
+function lf_niche_upsert_context_faqs(array $faqs, string $context, array $vars = []): array {
+	$context = sanitize_key($context);
+	if ($context === '' || !post_type_exists('lf_faq')) {
+		return [];
+	}
+	$vars = lf_niche_content_library_fill_vars($vars);
+	$faq_ids = [];
+	foreach ($faqs as $row) {
 		if (!is_array($row)) {
 			continue;
 		}
@@ -275,7 +298,7 @@ function lf_niche_seed_about_content(string $niche_slug, array $vars): array {
 				'relation' => 'AND',
 				[
 					'key' => '_lf_faq_context',
-					'value' => LF_NICHE_ABOUT_FAQ_CONTEXT,
+					'value' => $context,
 				],
 				[
 					'key' => 'lf_faq_question',
@@ -295,11 +318,13 @@ function lf_niche_seed_about_content(string $niche_slug, array $vars): array {
 				continue;
 			}
 		} else {
-			$current_answer = trim((string) get_post_field('post_content', $faq_id));
-			if ($current_answer === '' && $answer !== '') {
-				wp_update_post(['ID' => $faq_id, 'post_content' => $answer]);
-			}
 			wp_update_post(['ID' => $faq_id, 'post_title' => $question]);
+			if ($answer !== '') {
+				$current = trim((string) get_post_field('post_content', $faq_id));
+				if ($current === '') {
+					wp_update_post(['ID' => $faq_id, 'post_content' => $answer]);
+				}
+			}
 		}
 		if (function_exists('update_field')) {
 			update_field('lf_faq_question', $question, $faq_id);
@@ -318,14 +343,35 @@ function lf_niche_seed_about_content(string $niche_slug, array $vars): array {
 				}
 			}
 		}
-		update_post_meta($faq_id, '_lf_faq_context', LF_NICHE_ABOUT_FAQ_CONTEXT);
+		update_post_meta($faq_id, '_lf_faq_context', $context);
 		$faq_ids[] = $faq_id;
 	}
+	return array_values(array_filter(array_map('absint', $faq_ids)));
+}
 
-	return [
-		'process_ids' => array_values(array_filter(array_map('absint', $process_ids))),
-		'faq_ids' => array_values(array_filter(array_map('absint', $faq_ids))),
-	];
+/**
+ * @param list<array{title:string,body:string}> $steps
+ * @return list<int>
+ */
+function lf_niche_upsert_process_steps(array $steps, string $group_slug, array $vars = []): array {
+	if ($steps === [] || !function_exists('lf_ai_studio_upsert_process_steps')) {
+		return [];
+	}
+	$vars = lf_niche_content_library_fill_vars($vars);
+	$filled_steps = [];
+	foreach ($steps as $row) {
+		if (!is_array($row)) {
+			continue;
+		}
+		$filled = lf_niche_content_library_fill_row($row, $vars);
+		$title = trim((string) ($filled['title'] ?? ''));
+		$body = trim((string) ($filled['body'] ?? ''));
+		if ($title === '') {
+			continue;
+		}
+		$filled_steps[] = ['title' => $title, 'body' => $body];
+	}
+	return lf_ai_studio_upsert_process_steps($filled_steps, $group_slug);
 }
 
 function lf_niche_ids_to_lines(array $ids): string {

@@ -135,6 +135,7 @@ lf_load_inc('quote-builder.php');
 lf_load_inc('contact-form.php');
 lf_load_inc('sections.php');
 lf_load_inc('page-builder.php');
+lf_load_inc('page-content-importer.php');
 
 // Homepage section registry, defaults, CTA resolution.
 lf_load_inc('homepage.php');
@@ -169,6 +170,7 @@ if (is_admin()) {
 	// Homepage controller admin UI (must load before ops menu).
 	lf_load_inc('homepage-admin.php');
 	lf_load_inc('niches/content-library-admin.php');
+	lf_load_inc('page-content-importer-admin.php');
 	// Bulk-safe ops: export/import config, bulk actions, audit log.
 	lf_load_inc('ops.php');
 	// Site health: dashboard, pre-launch checks, QA audit trail.
