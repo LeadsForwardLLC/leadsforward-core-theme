@@ -201,7 +201,12 @@ function lf_health_render_manual_qa_checklist(): void {
 	$seo = admin_url('admin.php?page=lf-seo&tab=settings');
 	echo '<div class="lf-health-qa-checklist" style="max-width:920px;margin:24px 0;padding:16px 20px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;">';
 	echo '<h2 style="margin-top:0;">' . esc_html__('Focused pre-launch QA checklist', 'leadsforward-core') . '</h2>';
-	echo '<p class="description">' . esc_html__('Work through this list after the automated check passes or when you are close to launch. Check items off in your own tracker.', 'leadsforward-core') . '</p>';
+	echo '<p class="description">' . esc_html__(
+		'Work through this list after the automated check passes or when you are close to launch.',
+		'leadsforward-core'
+	);
+	echo ' <a href="' . esc_url(admin_url('admin.php?page=lf-launch-checklist')) . '">';
+	echo esc_html__('Open dynamic Site Launch Checklist', 'leadsforward-core') . '</a>.</p>';
 	echo '<ol style="margin:12px 0 0 1.25rem;line-height:1.65;">';
 	$items = [
 		__('Homepage: one clear H1, hero CTA works (quote / phone / form as configured), trust section shows real reviews.', 'leadsforward-core'),

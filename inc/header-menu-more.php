@@ -149,31 +149,33 @@ function lf_header_menu_published_page_for_slug(string $slug): ?\WP_Post {
 /**
  * Whether the More dropdown should render.
  *
- * Requires at least one gate page (blog, reviews, contact) published AND at least one
- * published page that would appear as a More child.
+ * Enabled whenever any More child page is published or the stored menu has top-level
+ * items outside the fleet allowlist (Home / Services / Service Areas / About / CTAs).
  */
 function lf_header_menu_more_is_enabled(): bool {
-	$gate_open = false;
-	foreach (lf_header_menu_more_gate_page_slugs() as $slug) {
-		if (lf_header_menu_published_page_for_slug($slug) instanceof \WP_Post) {
-			$gate_open = true;
-			break;
-		}
-	}
-	if (!$gate_open) {
-		return (bool) apply_filters('lf_header_menu_more_is_enabled', false);
-	}
-
 	$child_pages = lf_header_menu_get_published_more_child_pages();
-	$has_child = false;
 	foreach ($child_pages as $slug => $page) {
 		if ($slug === 'projects' || $page instanceof \WP_Post) {
-			$has_child = true;
-			break;
+			return (bool) apply_filters('lf_header_menu_more_is_enabled', true);
 		}
 	}
 
-	return (bool) apply_filters('lf_header_menu_more_is_enabled', $has_child);
+	if (has_nav_menu('header_menu') && function_exists('lf_header_menu_item_violates_fleet_top_level')) {
+		$locations = get_nav_menu_locations();
+		$menu_id = (int) ($locations['header_menu'] ?? 0);
+		if ($menu_id > 0) {
+			$items = wp_get_nav_menu_items($menu_id);
+			if (is_array($items)) {
+				foreach ($items as $item) {
+					if ($item instanceof \WP_Post && lf_header_menu_item_violates_fleet_top_level($item)) {
+						return (bool) apply_filters('lf_header_menu_more_is_enabled', true);
+					}
+				}
+			}
+		}
+	}
+
+	return (bool) apply_filters('lf_header_menu_more_is_enabled', false);
 }
 
 /**
@@ -312,6 +314,9 @@ function lf_header_menu_resolve_menu_item_page(\WP_Post $item): ?\WP_Post {
 
 /**
  * Whether a menu item should live under More (published page or projects archive).
+ *
+ * Fleet rule: any top-level item that is not Home, Services, Service Areas, About, or a CTA
+ * must bucket under More — no exceptions for Contact, Reviews, Blog, etc.
  */
 function lf_header_menu_item_belongs_in_more(\WP_Post $item): bool {
 	if (!$item instanceof \WP_Post) {
@@ -320,44 +325,63 @@ function lf_header_menu_item_belongs_in_more(\WP_Post $item): bool {
 	if (!lf_header_menu_more_is_enabled()) {
 		return false;
 	}
+	if ((int) ($item->menu_item_parent ?? 0) !== 0) {
+		if (lf_header_menu_item_is_about($item)) {
+			return false;
+		}
+		if (function_exists('lf_header_menu_item_must_stay_top_level') && lf_header_menu_item_must_stay_top_level($item)) {
+			return false;
+		}
+		$page = lf_header_menu_resolve_menu_item_page($item);
+		if ($page instanceof \WP_Post) {
+			return lf_header_menu_page_belongs_in_more($page);
+		}
+		return false;
+	}
 	if (lf_nav_menu_item_is_sync_preserved_cta($item)) {
 		return false;
 	}
 	if (lf_header_menu_item_is_about($item)) {
 		return false;
 	}
-	if (function_exists('lf_header_menu_item_must_stay_top_level') && lf_header_menu_item_must_stay_top_level($item)) {
+	if (function_exists('lf_header_menu_item_is_fleet_allowed_top_level')
+		&& lf_header_menu_item_is_fleet_allowed_top_level($item)) {
 		return false;
 	}
 	if (lf_header_menu_item_has_class($item, 'lf-menu-more')) {
 		return false;
 	}
-	if (lf_header_menu_item_has_class($item, 'lf-menu-services-parent')
-		|| lf_header_menu_item_has_class($item, 'lf-menu-areas-parent')
-		|| lf_header_menu_item_has_class($item, 'lf-menu-group-parent')) {
+	$object = (string) ($item->object ?? '');
+	if (in_array($object, ['lf_service', 'lf_service_area'], true)) {
 		return false;
 	}
 
 	$page = lf_header_menu_resolve_menu_item_page($item);
 	if ($page instanceof \WP_Post) {
-		return lf_header_menu_page_belongs_in_more($page);
-	}
-
-	$object = (string) ($item->object ?? '');
-	if ($object === 'custom') {
-		$title = (string) ($item->title ?? '');
-		if (!lf_header_menu_more_title_matches($title)) {
+		if (lf_header_menu_page_is_about($page)) {
 			return false;
 		}
+		if (in_array((string) $page->post_name, ['services', 'service-areas'], true)) {
+			return false;
+		}
+		return true;
+	}
+
+	if ($object === 'custom') {
+		$title = (string) ($item->title ?? '');
 		$norm = lf_header_menu_normalize_more_label($title);
 		if ($norm === 'projects') {
 			$url = trim((string) ($item->url ?? ''));
 			$archive = get_post_type_archive_link('lf_project');
 			return $archive !== false && $url !== '' && untrailingslashit($url) === untrailingslashit((string) $archive);
 		}
+		if ($norm !== '') {
+			return true;
+		}
 	}
 
-	return false;
+	return function_exists('lf_header_menu_item_violates_fleet_top_level')
+		&& lf_header_menu_item_violates_fleet_top_level($item);
 }
 
 /**

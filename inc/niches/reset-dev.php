@@ -420,6 +420,10 @@ function lf_dev_reset_run(): void {
 	update_option('page_on_front', 0);
 	delete_option('lf_setup_wizard_complete');
 	delete_option(LF_DEV_RESET_OPTION_IDS);
+	delete_option('lf_header_menu_structure_version');
+	if (function_exists('lf_launch_checklist_reset_manual')) {
+		lf_launch_checklist_reset_manual();
+	}
 
 	// Clear Manifest Website "recent uploads" image grid for all users.
 	// Attachments are deleted above; without clearing this, the UI can still show stale thumbnails.

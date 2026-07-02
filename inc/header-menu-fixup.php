@@ -140,7 +140,44 @@ function lf_header_menu_objects_consolidate_more(array $items, $args): array {
 }
 add_filter('wp_nav_menu_objects', 'lf_header_menu_objects_consolidate_more', 18, 2);
 
-const LF_HEADER_MENU_STRUCTURE_VERSION = 'header-nav-v10';
+/**
+ * Final fleet contract pass before display reorder — bucket any stray top-level links.
+ *
+ * @param array<int, \WP_Post> $items
+ * @return array<int, \WP_Post>
+ */
+function lf_header_menu_objects_enforce_fleet_contract(array $items, $args): array {
+	if (!is_object($args) || ($args->theme_location ?? '') !== 'header_menu' || $items === []) {
+		return $items;
+	}
+	if (!function_exists('lf_header_menu_item_violates_fleet_top_level')
+		|| !function_exists('lf_header_menu_objects_apply_nav_rules')) {
+		return $items;
+	}
+
+	$needs_bucket = false;
+	foreach ($items as $item) {
+		if ($item instanceof \WP_Post && lf_header_menu_item_violates_fleet_top_level($item)) {
+			$needs_bucket = true;
+			break;
+		}
+	}
+	if (!$needs_bucket) {
+		return $items;
+	}
+
+	try {
+		return lf_header_menu_objects_apply_nav_rules($items, $args);
+	} catch (\Throwable $e) {
+		if (defined('WP_DEBUG') && WP_DEBUG && function_exists('error_log')) {
+			error_log('LF header fleet enforce: ' . $e->getMessage());
+		}
+		return $items;
+	}
+}
+add_filter('wp_nav_menu_objects', 'lf_header_menu_objects_enforce_fleet_contract', 28, 2);
+
+const LF_HEADER_MENU_STRUCTURE_VERSION = 'header-nav-v11';
 const LF_HEADER_MENU_DEFERRED_REPAIR_HOOK = 'lf_header_menu_deferred_structure_repair';
 const LF_HEADER_MENU_REPAIR_LOCK = 'lf_header_menu_repair_lock';
 
@@ -180,6 +217,10 @@ function lf_header_menu_structure_needs_repair(int $menu_id): bool {
 		}
 		if ($parent === 0 && function_exists('lf_header_menu_item_is_about') && lf_header_menu_item_is_about($item)) {
 			++$top_about;
+		}
+		if ($parent === 0 && function_exists('lf_header_menu_item_violates_fleet_top_level')
+			&& lf_header_menu_item_violates_fleet_top_level($item)) {
+			return true;
 		}
 		if ($parent === 0 && function_exists('lf_header_menu_item_belongs_in_more')
 			&& lf_header_menu_item_belongs_in_more($item)) {

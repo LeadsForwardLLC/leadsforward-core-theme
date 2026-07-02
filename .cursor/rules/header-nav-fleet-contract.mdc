@@ -1,0 +1,36 @@
+# Header navigation fleet contract (non-negotiable)
+
+## Top-level header order
+
+**Home → Services (mega menu + search) → Service Areas → About → Call → Free Estimate → More**
+
+Only these labels may sit at **top level** (besides CTAs):
+
+- Home
+- Services
+- Service Areas
+- About
+
+## Everything else goes under **More**
+
+Never top-level: Contact, Reviews, Blog, Why Choose Us, Financing, FAQ, Projects, or any other secondary page.
+
+**Contact is in More, not top-level.**
+
+## Code source of truth
+
+- `inc/header-nav-policy.php` — `lf_header_menu_item_is_fleet_allowed_top_level()`, `lf_header_menu_item_violates_fleet_top_level()`
+- `inc/header-menu-more.php` — More bucketing runtime + DB persist
+- `inc/header-menu-fixup.php` — structure repair version (`LF_HEADER_MENU_STRUCTURE_VERSION`)
+
+## When changing nav code
+
+1. Bump `LF_HEADER_MENU_STRUCTURE_VERSION` so stored menus re-repair.
+2. Do **not** reintroduce "gate" logic that disables More when secondary pages exist.
+3. Do **not** put Service Areas under More.
+4. `lf_sitemap_sync_reorder_header_menu_top_level()` must run **after** `lf_header_menu_consolidate_secondary_into_more()` and must not re-promote More children to top level.
+5. Verify launch checklist: **LeadsForward → Launch Checklist → Header fleet navigation** passes.
+
+## Footer
+
+Footer order is separate (`lf_footer_nav_fleet_page_slugs()`). Do not confuse footer links with header top-level rules.

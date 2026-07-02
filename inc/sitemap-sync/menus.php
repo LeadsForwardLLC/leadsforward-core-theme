@@ -198,6 +198,9 @@ function lf_sitemap_sync_reorder_header_menu_top_level(int $menu_id, array $labe
 	if (empty($labels) || !function_exists('wp_update_nav_menu_item')) {
 		return;
 	}
+	if (function_exists('lf_header_menu_consolidate_secondary_into_more')) {
+		lf_header_menu_consolidate_secondary_into_more($menu_id);
+	}
 	$items = wp_get_nav_menu_items($menu_id);
 	if (!is_array($items) || empty($items)) {
 		return;
@@ -278,6 +281,10 @@ function lf_sitemap_sync_reorder_header_menu_top_level(int $menu_id, array $labe
 		}
 		if (lf_nav_menu_item_is_sync_preserved_cta($item)) {
 			$remaining_cta[] = $item;
+			continue;
+		}
+		if (function_exists('lf_header_menu_item_violates_fleet_top_level')
+			&& lf_header_menu_item_violates_fleet_top_level($item)) {
 			continue;
 		}
 		$is_more = lf_nav_menu_item_has_class($item, 'lf-menu-more')
