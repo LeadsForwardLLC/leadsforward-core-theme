@@ -1,7 +1,7 @@
 <?php
 /**
  * LeadsForward parent menu and submenu registration. Admin only.
- * Order: Global Settings → Manifest Website → … → SEO & Performance (tabs) → Bulk Tools → Backup → Theme Documentation. Manual setup is URL-only (Manifester button).
+ * Order: Global Settings → writer tools → forms → SEO → ops → docs → AI Manifester → Fleet.
  * Site Health UI is embedded in SEO settings (inc/seo/seo-settings.php); legacy lf-site-health URL redirects.
  *
  * @package LeadsForward_Core
@@ -188,15 +188,6 @@ function lf_ops_register_menu(): void {
 		'lf-ops',
 		'lf_ops_render_global_settings_page'
 	);
-	$manifest_slug = defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest';
-	add_submenu_page(
-		'lf-ops',
-		__('Manifest Website', 'leadsforward-core'),
-		__('Manifest Website', 'leadsforward-core'),
-		'edit_theme_options',
-		$manifest_slug,
-		'lf_ai_studio_render_page'
-	);
 	add_submenu_page(
 		'lf-ops',
 		__('Quote Builder', 'leadsforward-core'),
@@ -280,10 +271,19 @@ function lf_ops_register_menu(): void {
  * Remove menu entries that stay reachable via direct URL or Manifester only.
  */
 function lf_ops_hide_leadsforward_submenus(): void {
-	remove_submenu_page('lf-ops', 'lf-homepage-settings');
-	remove_submenu_page('lf-ops', 'lf-setup');
+	$hidden = [
+		'lf-homepage-settings',
+		'lf-setup',
+		'lf-business-info',
+		'lf-homepage',
+		'lf-ctas',
+		'lf-schema',
+		'lf-variation',
+	];
+	foreach ($hidden as $slug) {
+		remove_submenu_page('lf-ops', $slug);
+	}
 	// Do NOT remove lf-global: WordPress authorizes admin.php?page=… via the submenu list.
-	// Removing it makes bookmark/redirect URLs like page=lf-global fail with "not allowed" after save.
 }
 
 function lf_ops_user_can_manage_sensitive_settings(): bool {
@@ -345,7 +345,7 @@ function lf_ops_settings_assets(string $hook): void {
 	wp_enqueue_script('wp-color-picker');
 	wp_enqueue_style(
 		'lf-ai-studio-airtable',
-		LF_THEME_URI . '/assets/css/ai-studio-airtable.css',
+		(defined('LF_MANIFESTER_URI') ? LF_MANIFESTER_URI : LF_THEME_URI . '/inc/manifester') . '/assets/css/ai-studio-airtable.css',
 		[],
 		LF_THEME_VERSION
 	);
@@ -375,13 +375,16 @@ function lf_ops_reorder_submenus(): void {
 	$manifest_slug = defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest';
 	$preferred_order = [
 		'lf-ops',
-		$manifest_slug,
+		'lf-import-page-content',
+		'lf-niche-content-library',
 		'lf-quote-builder',
 		'lf-contact-form',
 		'lf-seo',
+		'lf-sitemap-sync',
 		'lf-ops-bulk',
 		'lf-ops-config',
 		'lf-theme-docs',
+		$manifest_slug,
 		'lf-fleet-updates',
 	];
 	$rank = array_flip($preferred_order);
@@ -1220,6 +1223,22 @@ function lf_ops_render_global_settings_page(): void {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></h1>
+		<div class="notice notice-info" style="margin-top:12px;">
+			<p style="margin:0;">
+				<strong><?php esc_html_e('Building page copy?', 'leadsforward-core'); ?></strong>
+				<?php
+				printf(
+					wp_kses_post(
+						/* translators: 1: Import Page Content URL, 2: Niche Content Library URL */
+						__('Writers: use <a href="%1$s">Import Page Content</a> to paste Google Doc copy into pages, and <a href="%2$s">Niche Content Library</a> for shared process steps and FAQs. AI orchestration lives under <a href="%3$s">AI Manifester (n8n)</a>.', 'leadsforward-core')
+					),
+					esc_url(admin_url('admin.php?page=lf-import-page-content')),
+					esc_url(admin_url('admin.php?page=lf-niche-content-library')),
+					esc_url(admin_url('admin.php?page=' . (defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest')))
+				);
+				?>
+			</p>
+		</div>
 		<?php if (!$can_sensitive) : ?>
 			<div class="notice notice-info">
 				<p><strong><?php esc_html_e('Limited access.', 'leadsforward-core'); ?></strong> <?php esc_html_e('Sensitive settings (API keys, webhooks, Airtable credentials) are hidden and cannot be changed from this account.', 'leadsforward-core'); ?></p>
@@ -1312,16 +1331,19 @@ function lf_ops_render_global_settings_page(): void {
 		</style>
 		<form method="post">
 			<?php wp_nonce_field('lf_global_settings', 'lf_global_settings_nonce'); ?>
-			<div class="lf-settings-panel" data-section="manifester_settings">
+			<div class="lf-settings-panel lf-settings-panel--collapsed" data-section="manifester_settings">
 				<div class="lf-settings-panel-header">
-					<h2><?php esc_html_e('Manifest Website settings', 'leadsforward-core'); ?></h2>
-					<button type="button" class="lf-settings-toggle" data-target="manifester_settings" aria-expanded="true">
-						<span class="lf-settings-toggle-icon">▾</span>
-						<span class="lf-settings-toggle-label"><?php esc_html_e('Collapse', 'leadsforward-core'); ?></span>
+					<h2><?php esc_html_e('AI Manifester & n8n (advanced)', 'leadsforward-core'); ?></h2>
+					<a class="lf-settings-toggle" href="<?php echo esc_url(admin_url('admin.php?page=' . (defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest'))); ?>" style="margin-right:8px;">
+						<?php esc_html_e('Open Manifester', 'leadsforward-core'); ?>
+					</a>
+					<button type="button" class="lf-settings-toggle" data-target="manifester_settings" aria-expanded="false">
+						<span class="lf-settings-toggle-icon">▸</span>
+						<span class="lf-settings-toggle-label"><?php esc_html_e('Expand', 'leadsforward-core'); ?></span>
 					</button>
 				</div>
-				<div class="lf-settings-panel-body" data-parent="manifester_settings">
-					<p class="description"><?php esc_html_e('Configure the orchestrator and Airtable import settings. Manifest uploads and Airtable generation use these values.', 'leadsforward-core'); ?></p>
+				<div class="lf-settings-panel-body lf-settings-fields--collapsed" data-parent="manifester_settings">
+					<p class="description"><?php esc_html_e('Orchestrator webhook, Airtable import, and autonomous runs. Most writers never need this—use Import Page Content after a site is scaffolded. Settings also appear on the AI Manifester screen.', 'leadsforward-core'); ?></p>
 					<table class="form-table" role="presentation">
 							<tr>
 								<th scope="row"><?php esc_html_e('Enable AI', 'leadsforward-core'); ?></th>
