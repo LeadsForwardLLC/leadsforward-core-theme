@@ -1,0 +1,242 @@
+<?php
+/**
+ * Page content import — template registry (per page slug).
+ *
+ * @package LeadsForward_Core
+ * @since 0.1.0
+ */
+
+declare(strict_types=1);
+
+if (!defined('ABSPATH')) {
+	exit;
+}
+
+/**
+ * Shared section heading aliases for paste docs.
+ *
+ * @return array<string, string>
+ */
+function lf_pci_common_section_aliases(): array {
+	return [
+		'hero' => 'hero',
+		'hero section' => 'hero',
+		'story' => 'content_image',
+		'company intro' => 'content_image',
+		'company story' => 'content_image',
+		'content image' => 'content_image',
+		'content_image' => 'content_image',
+		'intro' => 'content_image',
+		'overview' => 'content_image',
+		'benefits' => 'benefits',
+		'why choose us' => 'benefits',
+		'team' => 'image_content',
+		'our team' => 'image_content',
+		'image content' => 'image_content',
+		'image_content' => 'image_content',
+		'process' => 'process',
+		'our process' => 'process',
+		'faq' => 'faq_accordion',
+		'faqs' => 'faq_accordion',
+		'faq accordion' => 'faq_accordion',
+		'faq_accordion' => 'faq_accordion',
+		'cta' => 'cta',
+		'call to action' => 'cta',
+		'seo' => 'seo',
+		'meta' => 'seo',
+		'trust bar' => 'trust_bar',
+		'trust_bar' => 'trust_bar',
+		'service details' => 'service_details',
+		'service_details' => 'service_details',
+		'service details 2' => 'service_details__2',
+		'service details b' => 'service_details__2',
+		'service_details__2' => 'service_details__2',
+		'content' => 'content',
+		'page content' => 'content',
+		'legal' => 'content',
+	];
+}
+
+/**
+ * Build a page import schema.
+ *
+ * @param list<string> $order
+ * @param array{
+ *   locked?: list<string>,
+ *   storage?: string,
+ *   hero_variant?: string,
+ *   process_group?: string,
+ *   faq_context?: string,
+ *   required?: list<string>,
+ *   section_aliases?: array<string, string>
+ * } $options
+ * @return array<string, mixed>
+ */
+function lf_pci_build_schema(string $slug, string $label, array $order, array $options = []): array {
+	$aliases = array_merge(lf_pci_common_section_aliases(), $options['section_aliases'] ?? []);
+	$locked = $options['locked'] ?? [];
+	$importable = [];
+	foreach ($order as $type) {
+		if (!lf_pci_section_type_is_locked($type, $locked)) {
+			$importable[] = $type;
+		}
+	}
+	$importable[] = 'seo';
+
+	return [
+		'slug' => sanitize_title($slug),
+		'label' => $label,
+		'order' => $order,
+		'locked' => $locked,
+		'importable' => $importable,
+		'storage' => $options['storage'] ?? 'page_builder',
+		'hero_variant' => $options['hero_variant'] ?? 'internal',
+		'process_group' => $options['process_group'] ?? (defined('LF_NICHE_ABOUT_PROCESS_GROUP') ? LF_NICHE_ABOUT_PROCESS_GROUP : 'about-company'),
+		'faq_context' => $options['faq_context'] ?? (defined('LF_NICHE_ABOUT_FAQ_CONTEXT') ? LF_NICHE_ABOUT_FAQ_CONTEXT : 'about_company'),
+		'required' => $options['required'] ?? ['hero', 'cta'],
+		'section_aliases' => $aliases,
+	];
+}
+
+/**
+ * @param list<string> $locked
+ */
+function lf_pci_section_type_is_locked(string $section_key, array $locked): bool {
+	if (in_array($section_key, $locked, true)) {
+		return true;
+	}
+	$base = function_exists('lf_homepage_base_section_type')
+		? lf_homepage_base_section_type($section_key)
+		: $section_key;
+	return $base !== $section_key && in_array($base, $locked, true);
+}
+
+/**
+ * @return array<string, mixed>|null
+ */
+function lf_pci_schema_locked_types(array $schema): array {
+	return is_array($schema['locked'] ?? null) ? $schema['locked'] : [];
+}
+
+function lf_pci_section_is_locked(string $section_key, array $schema): bool {
+	return lf_pci_section_type_is_locked($section_key, lf_pci_schema_locked_types($schema));
+}
+
+/**
+ * Registered page templates keyed by WordPress page slug.
+ *
+ * @return array<string, array<string, mixed>>
+ */
+function lf_pci_registry(): array {
+	$about_order = ['hero', 'content_image', 'benefits', 'image_content', 'process', 'faq_accordion', 'cta'];
+	$why_order = ['hero', 'benefits', 'content_image', 'image_content', 'faq_accordion', 'cta'];
+	$services_order = ['hero', 'service_intro', 'content_image', 'faq_accordion', 'cta'];
+	$areas_order = ['hero', 'service_areas', 'faq_accordion', 'cta'];
+	$home_order = function_exists('lf_sections_default_order')
+		? lf_sections_default_order('homepage')
+		: [
+			'hero',
+			'trust_bar',
+			'service_intro',
+			'benefits',
+			'service_details',
+			'service_details__2',
+			'process',
+			'faq_accordion',
+			'trust_reviews',
+			'map_nap',
+			'cta',
+		];
+
+	$schemas = [
+		lf_pci_build_schema('home', __('Homepage', 'leadsforward-core'), $home_order, [
+			'storage' => 'homepage',
+			'hero_variant' => 'default',
+			'locked' => ['service_intro', 'trust_reviews', 'map_nap'],
+			'required' => ['hero', 'benefits', 'cta'],
+			'section_aliases' => [
+				'services' => 'service_intro',
+				'service intro' => 'service_intro',
+				'service_intro' => 'service_intro',
+				'reviews' => 'trust_reviews',
+				'trust reviews' => 'trust_reviews',
+				'map' => 'map_nap',
+				'map nap' => 'map_nap',
+				'areas map' => 'map_nap',
+			],
+		]),
+		lf_pci_build_schema('about-us', __('About Us', 'leadsforward-core'), $about_order, [
+			'required' => ['hero', 'content_image', 'benefits', 'cta'],
+		]),
+		lf_pci_build_schema('why-choose-us', __('Why Choose Us', 'leadsforward-core'), $why_order, [
+			'required' => ['hero', 'benefits', 'cta'],
+		]),
+		lf_pci_build_schema('services', __('Services Overview', 'leadsforward-core'), $services_order, [
+			'locked' => ['service_intro'],
+			'required' => ['hero', 'cta'],
+			'section_aliases' => [
+				'services grid' => 'service_intro',
+				'service cards' => 'service_intro',
+			],
+		]),
+		lf_pci_build_schema('service-areas', __('Service Areas Overview', 'leadsforward-core'), $areas_order, [
+			'locked' => ['service_areas'],
+			'required' => ['hero', 'cta'],
+			'section_aliases' => [
+				'service areas' => 'service_areas',
+				'areas map' => 'service_areas',
+				'map' => 'service_areas',
+			],
+		]),
+		lf_pci_build_schema('reviews', __('Reviews', 'leadsforward-core'), ['hero', 'trust_reviews', 'cta'], [
+			'locked' => ['trust_reviews'],
+			'required' => ['hero', 'cta'],
+		]),
+		lf_pci_build_schema('blog', __('Blog', 'leadsforward-core'), ['hero', 'blog_posts', 'cta'], [
+			'locked' => ['blog_posts'],
+			'required' => ['hero', 'cta'],
+		]),
+		lf_pci_build_schema('faq', __('FAQ', 'leadsforward-core'), ['hero', 'faq_accordion', 'cta'], [
+			'required' => ['hero', 'faq_accordion', 'cta'],
+		]),
+		lf_pci_build_schema('contact', __('Contact', 'leadsforward-core'), ['hero', 'map_nap', 'cta'], [
+			'locked' => ['map_nap'],
+			'required' => ['hero', 'cta'],
+		]),
+		lf_pci_build_schema('sitemap', __('Sitemap', 'leadsforward-core'), ['hero', 'sitemap_links'], [
+			'locked' => ['sitemap_links'],
+			'required' => ['hero'],
+		]),
+		lf_pci_build_schema('privacy-policy', __('Privacy Policy', 'leadsforward-core'), ['hero', 'content'], [
+			'required' => ['hero', 'content'],
+		]),
+		lf_pci_build_schema('terms-of-service', __('Terms of Service', 'leadsforward-core'), ['hero', 'content'], [
+			'required' => ['hero', 'content'],
+		]),
+		lf_pci_build_schema('thank-you', __('Thank You', 'leadsforward-core'), ['hero', 'content'], [
+			'required' => ['hero', 'content'],
+		]),
+	];
+
+	$out = [];
+	foreach ($schemas as $schema) {
+		$out[(string) $schema['slug']] = $schema;
+	}
+	return $out;
+}
+
+/**
+ * @return array<string, string>
+ */
+function lf_pci_registry_slug_aliases(): array {
+	return [
+		'about' => 'about-us',
+		'aboutus' => 'about-us',
+		'homepage' => 'home',
+		'front-page' => 'home',
+		'service_areas' => 'service-areas',
+		'privacy' => 'privacy-policy',
+		'terms' => 'terms-of-service',
+		'thankyou' => 'thank-you',
+	];
+}

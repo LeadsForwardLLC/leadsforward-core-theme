@@ -29,15 +29,28 @@ function lf_pci_admin_handle_download(): void {
 		return;
 	}
 	$which = isset($_GET['lf_pci_download']) ? sanitize_key((string) $_GET['lf_pci_download']) : '';
-	if (!in_array($which, ['about-us-template', 'page-template'], true)) {
+	$slug = isset($_GET['lf_pci_template_slug']) ? sanitize_title((string) $_GET['lf_pci_template_slug']) : '';
+	if ($which === '' && $slug === '') {
 		return;
 	}
 	if (!current_user_can(defined('LF_OPS_CAP') ? LF_OPS_CAP : 'manage_options')) {
 		wp_die(esc_html__('You do not have permission to download this template.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_pci_download_template');
-	$body = function_exists('lf_pci_universal_template') ? lf_pci_universal_template() : '';
-	$filename = $which === 'about-us-template' ? 'about-us-content-template.txt' : 'page-content-template.txt';
+
+	if ($slug !== '' && function_exists('lf_pci_template_for_slug')) {
+		$body = lf_pci_template_for_slug($slug);
+		$filename = $slug . '-content-template.txt';
+	} elseif ($which === 'about-us-template') {
+		$body = function_exists('lf_pci_template_for_slug') ? lf_pci_template_for_slug('about-us') : '';
+		$filename = 'about-us-content-template.txt';
+	} elseif ($which === 'page-template' || $which === 'home-template') {
+		$body = function_exists('lf_pci_universal_template') ? lf_pci_universal_template() : '';
+		$filename = 'page-content-template.txt';
+	} else {
+		return;
+	}
+
 	header('Content-Type: text/plain; charset=utf-8');
 	header('Content-Disposition: attachment; filename="' . $filename . '"');
 	header('Content-Length: ' . (string) strlen($body));
@@ -85,14 +98,17 @@ function lf_pci_admin_render_preview(array $parsed): void {
 						$preview = (string) ($settings['hero_headline'] ?? '');
 					} elseif ($type === 'cta') {
 						$preview = (string) ($settings['cta_headline'] ?? '');
+					} elseif ($type === 'trust_bar') {
+						$preview = (string) ($settings['trust_heading'] ?? '');
 					} else {
 						$preview = (string) ($settings['section_heading'] ?? '');
 					}
 					$preview = function_exists('lf_pci_fill_tokens') ? lf_pci_fill_tokens($preview) : $preview;
+					$locked = is_array($schema) && function_exists('lf_pci_section_is_locked') && lf_pci_section_is_locked($type, $schema);
 					?>
 					<tr>
 						<td><code><?php echo esc_html($type); ?></code></td>
-						<td><?php echo $settings !== [] ? '✓' : '—'; ?></td>
+						<td><?php echo $locked ? esc_html__('locked', 'leadsforward-core') : ($settings !== [] ? '✓' : '—'); ?></td>
 						<td><?php echo esc_html(wp_html_excerpt($preview, 80, '…')); ?></td>
 					</tr>
 				<?php endforeach; ?>
@@ -243,6 +259,19 @@ function lf_pci_admin_render(): void {
 			<?php if ($registry !== []) : ?>
 				<p class="description"><strong><?php esc_html_e('Registered page slugs:', 'leadsforward-core'); ?></strong>
 					<?php echo esc_html(implode(', ', array_keys($registry))); ?>
+				</p>
+				<p class="description"><strong><?php esc_html_e('Download templates:', 'leadsforward-core'); ?></strong>
+					<?php
+					$links = [];
+					foreach ($registry as $reg_slug => $reg_schema) {
+						$url = wp_nonce_url(
+							admin_url('admin.php?page=lf-import-page-content&lf_pci_template_slug=' . rawurlencode((string) $reg_slug)),
+							'lf_pci_download_template'
+						);
+						$links[] = '<a href="' . esc_url($url) . '">' . esc_html((string) ($reg_schema['label'] ?? $reg_slug)) . '</a>';
+					}
+					echo implode(' · ', $links);
+					?>
 				</p>
 			<?php endif; ?>
 			<p class="description">
