@@ -20,11 +20,26 @@ const LF_NICHE_PACK_ATTACHMENT_MAP_OPTION = 'lf_niche_pack_attachment_map';
  * @param array<string, mixed> $manifest
  */
 function lf_site_builder_niche_slug_from_manifest(array $manifest): string {
-	$slug = sanitize_title((string) ($manifest['business']['niche_slug'] ?? ''));
+	$business = is_array($manifest['business'] ?? null) ? $manifest['business'] : [];
+	if (function_exists('lf_ai_studio_manifest_niche_slug')) {
+		$resolved = lf_ai_studio_manifest_niche_slug($business, $manifest);
+		if (!is_wp_error($resolved) && $resolved !== '') {
+			return $resolved;
+		}
+	}
+	$slug = sanitize_title((string) ($business['niche_slug'] ?? ''));
+	if ($slug !== '' && function_exists('lf_resolve_niche_slug')) {
+		return lf_resolve_niche_slug((string) ($business['niche'] ?? ''), $slug, [
+			'business_name' => (string) ($business['name'] ?? ''),
+			'primary_keyword' => (string) ($manifest['homepage']['primary_keyword'] ?? ''),
+			'category' => (string) ($business['category'] ?? ''),
+			'project_type' => (string) ($business['project_type'] ?? ''),
+		]);
+	}
 	if ($slug !== '') {
 		return $slug;
 	}
-	$niche = sanitize_title((string) ($manifest['business']['niche'] ?? ''));
+	$niche = sanitize_title((string) ($business['niche'] ?? ''));
 	if ($niche !== '') {
 		return $niche;
 	}

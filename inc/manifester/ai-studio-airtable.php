@@ -742,9 +742,18 @@ function lf_ai_studio_airtable_pull_services_from_sitemaps(array $manifest, bool
 	$biz_address = is_array($business['address'] ?? null) ? $business['address'] : [];
 	$biz_city = trim((string) ($business['primary_city'] ?? $biz_address['city'] ?? ''));
 	$biz_state = strtoupper(trim((string) ($biz_address['state'] ?? '')));
-	$biz_niche = trim((string) ($business['niche'] ?? ($manifest['niche'] ?? '')));
-	$niche_key = sanitize_title($biz_niche);
-	if ($niche_key === '') {
+	$niche_keys = function_exists('lf_ai_studio_manifest_niche_match_keys')
+		? lf_ai_studio_manifest_niche_match_keys($manifest)
+		: [];
+	if ($niche_keys === []) {
+		$biz_niche = trim((string) ($business['niche'] ?? ($manifest['niche'] ?? '')));
+		$biz_niche_slug = trim((string) ($business['niche_slug'] ?? ''));
+		$niche_key = $biz_niche_slug !== '' ? sanitize_title($biz_niche_slug) : sanitize_title($biz_niche);
+		if ($niche_key !== '') {
+			$niche_keys = [$niche_key];
+		}
+	}
+	if ($niche_keys === []) {
 		return [
 			'service_rows' => [],
 			'services_manifest' => [],
@@ -848,7 +857,9 @@ function lf_ai_studio_airtable_pull_services_from_sitemaps(array $manifest, bool
 		// Airtable often stores Niche as a linked-record ID in API responses. In that case (or when empty),
 		// do not filter out the row — the normalizer already tries to derive niche from "Page title | Niche".
 		$looks_like_record_id = ($spec_niche !== '' && preg_match('/^rec[a-zA-Z0-9]{10,}$/', $spec_niche) === 1);
-		if ($spec_niche !== '' && !$looks_like_record_id && sanitize_title($spec_niche) !== $niche_key) {
+		$spec_key = sanitize_title($spec_niche);
+		$niche_match = $spec_key !== '' && in_array($spec_key, $niche_keys, true);
+		if ($spec_niche !== '' && !$looks_like_record_id && !$niche_match) {
 			continue;
 		}
 		$slug_template = (string) ($spec['slug_template'] ?? '');
@@ -1737,6 +1748,24 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	if ($manifest_json !== '') {
 		$decoded = json_decode($manifest_json, true);
 		if (is_array($decoded)) {
+			$live_niche = lf_ai_studio_airtable_resolve_niche_from_fields($fields, $map, $settings);
+			if (!isset($decoded['business']) || !is_array($decoded['business'])) {
+				$decoded['business'] = [];
+			}
+			if ($live_niche['niche'] !== '') {
+				$decoded['business']['niche'] = $live_niche['niche'];
+			}
+			if ($live_niche['resolved_slug'] !== '') {
+				$decoded['business']['niche_slug'] = $live_niche['resolved_slug'];
+			} elseif ($live_niche['niche_slug'] !== '') {
+				$decoded['business']['niche_slug'] = $live_niche['niche_slug'];
+			}
+			if ($live_niche['project_type'] !== '') {
+				$decoded['business']['project_type'] = $live_niche['project_type'];
+			}
+			if (function_exists('lf_ai_studio_normalize_manifest')) {
+				$decoded = lf_ai_studio_normalize_manifest($decoded);
+			}
 			return ['manifest' => $decoded, 'errors' => []];
 		}
 		$errors[] = __('Manifest JSON field is not valid JSON.', 'leadsforward-core');
@@ -1766,8 +1795,11 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	$state = lf_ai_studio_airtable_string_field($fields, $map['state'] ?? '');
 	$zip = lf_ai_studio_airtable_string_field($fields, $map['zip'] ?? '');
 	$primary_city = lf_ai_studio_airtable_string_field($fields, $map['primary_city'] ?? '');
-	$niche = lf_ai_studio_airtable_string_field($fields, $map['niche'] ?? '');
-	$niche_slug = lf_ai_studio_airtable_string_field($fields, $map['niche_slug'] ?? '');
+	$niche_bundle = lf_ai_studio_airtable_resolve_niche_from_fields($fields, $map, $settings);
+	$niche = (string) ($niche_bundle['niche'] ?? '');
+	$niche_slug = (string) ($niche_bundle['niche_slug'] ?? '');
+	$project_type = (string) ($niche_bundle['project_type'] ?? '');
+	$niche_slug_final = (string) ($niche_bundle['resolved_slug'] ?? '');
 	$site_style = lf_ai_studio_airtable_string_field($fields, $map['site_style'] ?? '');
 	$primary_keyword = lf_ai_studio_airtable_string_field($fields, $map['primary_keyword'] ?? '');
 	$primary_keyword = lf_ai_studio_airtable_pick_primary_keyword($primary_keyword);
@@ -1796,9 +1828,6 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	}
 	if ($primary_city === '') {
 		$primary_city = $city;
-	}
-	if ($niche === '') {
-		$niche = lf_ai_studio_airtable_string_field($fields, $map['business_category'] ?? '');
 	}
 	if ($niche === '') {
 		$niche = __('Home Services', 'leadsforward-core');
@@ -1936,12 +1965,15 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 
 	$variation_seed = 'airtable-' . ($record['id'] ?? wp_generate_uuid4());
 
-	$niche_slug_final = lf_ai_studio_airtable_resolve_niche_slug($niche, $niche_slug, [
-		'business_name' => $business_name,
-		'primary_keyword' => $primary_keyword,
-		'category' => $business_category,
-		'services' => $services,
-	]);
+	if ($niche_slug_final === '') {
+		$niche_slug_final = lf_ai_studio_airtable_resolve_niche_slug($niche, $niche_slug, [
+			'business_name' => $business_name,
+			'primary_keyword' => $primary_keyword,
+			'category' => $business_category,
+			'project_type' => $project_type,
+			'services' => $services,
+		]);
+	}
 	$domain_email_manifest = $domain_email_only;
 	if ($domain_email_manifest === '' && $root_domain_host !== '') {
 		$domain_email_manifest = 'info@' . $root_domain_host;
@@ -1963,6 +1995,7 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 			'primary_city' => $primary_city,
 			'niche' => $niche,
 			'niche_slug' => $niche_slug_final,
+			'project_type' => $project_type,
 			'site_style' => $site_style !== '' ? $site_style : 'premium',
 			'variation_seed' => $variation_seed,
 			'website_url' => $website_url,
@@ -2180,6 +2213,146 @@ function lf_ai_studio_airtable_match_view_in_table(array $table, string $needle)
 		}
 	}
 	return null;
+}
+
+function lf_ai_studio_airtable_value_looks_like_record_id(string $value): bool {
+	$value = trim($value);
+	return $value !== '' && preg_match('/^rec[a-zA-Z0-9]{10,}$/', $value) === 1;
+}
+
+/**
+ * Strip Airtable linked-record IDs from a scalar or comma-separated field value.
+ */
+function lf_ai_studio_airtable_sanitize_niche_token(string $raw): string {
+	$raw = trim($raw);
+	if ($raw === '') {
+		return '';
+	}
+	if (lf_ai_studio_airtable_value_looks_like_record_id($raw)) {
+		return '';
+	}
+	$parts = preg_split('/\s*,\s*/', $raw) ?: [];
+	$clean = [];
+	foreach ($parts as $part) {
+		$part = trim((string) $part);
+		if ($part === '' || lf_ai_studio_airtable_value_looks_like_record_id($part)) {
+			continue;
+		}
+		$clean[] = $part;
+	}
+	return trim(implode(', ', $clean));
+}
+
+/**
+ * @return list<string>
+ */
+function lf_ai_studio_airtable_linked_record_ids(array $fields, string $key): array {
+	$resolved_key = lf_ai_studio_airtable_resolve_field_key($fields, $key);
+	if ($resolved_key === '') {
+		return [];
+	}
+	$value = $fields[$resolved_key];
+	$ids = [];
+	if (is_array($value)) {
+		foreach ($value as $item) {
+			$item = trim((string) $item);
+			if (lf_ai_studio_airtable_value_looks_like_record_id($item)) {
+				$ids[] = $item;
+			}
+		}
+		return $ids;
+	}
+	$scalar = trim((string) $value);
+	if (lf_ai_studio_airtable_value_looks_like_record_id($scalar)) {
+		return [$scalar];
+	}
+	return [];
+}
+
+function lf_ai_studio_airtable_linked_record_label(string $record_id, array $settings): string {
+	static $cache = [];
+	$record_id = trim($record_id);
+	if ($record_id === '' || !lf_ai_studio_airtable_value_looks_like_record_id($record_id)) {
+		return '';
+	}
+	if (array_key_exists($record_id, $cache)) {
+		return (string) $cache[$record_id];
+	}
+	$result = lf_ai_studio_airtable_fetch_record($record_id);
+	$linked_fields = is_array($result['record']['fields'] ?? null) ? $result['record']['fields'] : [];
+	$label = '';
+	foreach (['Niche Slug', 'Niche', 'Slug', 'Name', 'Label', 'Title'] as $candidate) {
+		$candidate_value = lf_ai_studio_airtable_sanitize_niche_token(
+			lf_ai_studio_airtable_string_field($linked_fields, $candidate)
+		);
+		if ($candidate_value !== '') {
+			$label = $candidate_value;
+			break;
+		}
+	}
+	$cache[$record_id] = $label;
+	return $label;
+}
+
+/**
+ * Resolve niche label + slug from Business Info fields (handles linked Niche records).
+ *
+ * @return array{niche: string, niche_slug: string, project_type: string, resolved_slug: string}
+ */
+function lf_ai_studio_airtable_resolve_niche_from_fields(array $fields, array $map, array $settings = []): array {
+	$project_type = lf_ai_studio_airtable_sanitize_niche_token(
+		lf_ai_studio_airtable_string_field($fields, $map['project_type'] ?? 'Project Type')
+	);
+	$niche = lf_ai_studio_airtable_sanitize_niche_token(
+		lf_ai_studio_airtable_string_field($fields, $map['niche'] ?? '')
+	);
+	$niche_slug = lf_ai_studio_airtable_sanitize_niche_token(
+		lf_ai_studio_airtable_string_field($fields, $map['niche_slug'] ?? '')
+	);
+
+	if ($settings !== []) {
+		foreach (lf_ai_studio_airtable_linked_record_ids($fields, $map['niche'] ?? '') as $record_id) {
+			$label = lf_ai_studio_airtable_linked_record_label($record_id, $settings);
+			if ($label !== '') {
+				$niche = $label;
+				break;
+			}
+		}
+		foreach (lf_ai_studio_airtable_linked_record_ids($fields, $map['niche_slug'] ?? '') as $record_id) {
+			$label = lf_ai_studio_airtable_linked_record_label($record_id, $settings);
+			if ($label !== '') {
+				$niche_slug = sanitize_title($label);
+				if ($niche === '') {
+					$niche = $label;
+				}
+				break;
+			}
+		}
+	}
+
+	if ($niche === '' && $project_type !== '') {
+		$niche = $project_type;
+	}
+	if ($niche === '') {
+		$niche = lf_ai_studio_airtable_sanitize_niche_token(
+			lf_ai_studio_airtable_string_field($fields, $map['business_category'] ?? '')
+		);
+	}
+
+	$hints = [
+		'business_name' => lf_ai_studio_airtable_string_field($fields, $map['project'] ?? ''),
+		'primary_keyword' => lf_ai_studio_airtable_string_field($fields, $map['primary_keyword'] ?? ''),
+		'category' => lf_ai_studio_airtable_string_field($fields, $map['business_category'] ?? ''),
+		'project_type' => $project_type,
+	];
+	$resolved_slug = lf_ai_studio_airtable_resolve_niche_slug($niche, $niche_slug, $hints);
+
+	return [
+		'niche' => $niche,
+		'niche_slug' => $niche_slug,
+		'project_type' => $project_type,
+		'resolved_slug' => $resolved_slug,
+	];
 }
 
 function lf_ai_studio_airtable_string_field(array $fields, string $key): string {

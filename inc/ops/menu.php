@@ -889,11 +889,17 @@ function lf_ops_hydrate_business_entity_from_manifest(): void {
 	if (function_exists('lf_ai_studio_manifest_niche_slug')) {
 		$expected_niche = lf_ai_studio_manifest_niche_slug($business, $manifest);
 		if (!is_wp_error($expected_niche) && $expected_niche !== '' && $expected_niche !== 'general') {
-			$default_niche = function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair';
-			$current_niche = (string) get_option('lf_homepage_niche_slug', $default_niche);
-			if ($current_niche === '' || $current_niche === 'general') {
-				update_option('lf_homepage_niche_slug', $expected_niche, true);
-				update_option('lf_active_icon_pack', $expected_niche, true);
+			$current_niche = (string) get_option('lf_homepage_niche_slug', function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair');
+			if ($current_niche !== $expected_niche) {
+				if (function_exists('lf_ai_studio_apply_niche_across_site')) {
+					lf_ai_studio_apply_niche_across_site($expected_niche, $manifest);
+				} else {
+					update_option('lf_homepage_niche_slug', $expected_niche, true);
+					update_option('lf_active_icon_pack', $expected_niche, true);
+					if (function_exists('lf_quote_builder_apply_niche_config')) {
+						lf_quote_builder_apply_niche_config($expected_niche);
+					}
+				}
 			}
 		}
 	}
