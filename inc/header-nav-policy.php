@@ -22,13 +22,18 @@ function lf_header_nav_fleet_top_level_labels(): array {
 }
 
 /**
- * Menu items that must never be bucketed under More.
+ * Strict allowlist: only these may appear at header top level (before Call / CTA / More).
+ *
+ * Everything else — Reviews, Contact, Blog, Why Choose Us, etc. — belongs under More.
  */
-function lf_header_menu_item_must_stay_top_level(\WP_Post $item): bool {
+function lf_header_menu_item_is_fleet_allowed_top_level(\WP_Post $item): bool {
 	if (!$item instanceof \WP_Post || (int) ($item->menu_item_parent ?? 0) !== 0) {
 		return false;
 	}
 	if (function_exists('lf_header_menu_item_is_home_item') && lf_header_menu_item_is_home_item($item)) {
+		return true;
+	}
+	if (lf_header_menu_item_has_class($item, 'lf-menu-home')) {
 		return true;
 	}
 	if (lf_header_menu_item_has_class($item, 'lf-menu-services-parent')
@@ -44,10 +49,17 @@ function lf_header_menu_item_must_stay_top_level(\WP_Post $item): bool {
 	if (function_exists('lf_header_menu_item_is_about') && lf_header_menu_item_is_about($item)) {
 		return true;
 	}
+	if (lf_header_menu_item_has_class($item, 'lf-menu-about')) {
+		return true;
+	}
 	if (lf_nav_menu_item_is_sync_preserved_cta($item)) {
 		return true;
 	}
 	if (lf_header_menu_item_has_class($item, 'lf-menu-more')) {
+		return true;
+	}
+	$title = strtolower(trim(wp_strip_all_tags((string) ($item->title ?? ''))));
+	if ($title === 'more') {
 		return true;
 	}
 
@@ -57,13 +69,32 @@ function lf_header_menu_item_must_stay_top_level(\WP_Post $item): bool {
 	if ($page instanceof \WP_Post && in_array((string) $page->post_name, ['services', 'service-areas'], true)) {
 		return true;
 	}
-
-	$title = strtolower(trim(wp_strip_all_tags((string) ($item->title ?? ''))));
 	if (in_array($title, ['services', 'service areas'], true)) {
 		return true;
 	}
 
-	return (bool) apply_filters('lf_header_menu_item_must_stay_top_level', false, $item);
+	return (bool) apply_filters('lf_header_menu_item_is_fleet_allowed_top_level', false, $item);
+}
+
+/**
+ * Top-level header item outside the fleet allowlist (must move under More).
+ */
+function lf_header_menu_item_violates_fleet_top_level(\WP_Post $item): bool {
+	if (!$item instanceof \WP_Post || (int) ($item->menu_item_parent ?? 0) !== 0) {
+		return false;
+	}
+	if (lf_header_menu_item_is_fleet_allowed_top_level($item)) {
+		return false;
+	}
+
+	return (bool) apply_filters('lf_header_menu_item_violates_fleet_top_level', true, $item);
+}
+
+/**
+ * Menu items that must never be bucketed under More.
+ */
+function lf_header_menu_item_must_stay_top_level(\WP_Post $item): bool {
+	return lf_header_menu_item_is_fleet_allowed_top_level($item);
 }
 
 /**

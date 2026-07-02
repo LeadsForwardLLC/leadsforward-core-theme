@@ -377,6 +377,7 @@ function lf_ops_reorder_submenus(): void {
 	$preferred_order = [
 		'lf-ops',
 		$site_setup_slug,
+		'lf-launch-checklist',
 		'lf-import-page-content',
 		'lf-niche-content-library',
 		'lf-quote-builder',

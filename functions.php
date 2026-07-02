@@ -178,4 +178,5 @@ if (is_admin()) {
 	lf_load_inc('ops.php');
 	// Site health: dashboard, pre-launch checks, QA audit trail.
 	lf_load_inc('site-health.php');
+	lf_load_inc('site-launch-checklist.php');
 }
