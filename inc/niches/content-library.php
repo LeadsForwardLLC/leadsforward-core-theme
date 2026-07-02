@@ -230,9 +230,99 @@ function lf_niche_content_library_save(array $libraries): bool {
 }
 
 /**
+ * Save About-page process + FAQ rows to the niche library (master blueprint with tokens).
+ *
+ * @param list<array{title:string,body:string}> $process
+ * @param list<array{question:string,answer:string}> $faqs
+ */
+function lf_niche_save_about_library_entries(string $niche_slug, array $process, array $faqs): bool {
+	$niche_slug = lf_niche_content_library_resolve_slug($niche_slug);
+	$stored = get_option(LF_NICHE_CONTENT_LIBRARY_OPTION, []);
+	$stored = is_array($stored) ? $stored : [];
+	$stored[$niche_slug] = [
+		'about' => [
+			'process' => $process,
+			'faqs' => $faqs,
+		],
+	];
+	return lf_niche_content_library_save($stored);
+}
+
+/**
+ * Push library process + FAQ rows to this site's CPTs and wire the About page.
+ *
+ * @param 'fill_empty'|'force' $mode fill_empty = only empty CPT bodies; force = overwrite from library.
+ * @return array{process_ids: list<int>, faq_ids: list<int>, wired: bool}
+ */
+function lf_niche_sync_about_library_to_site(string $niche_slug, array $vars = [], string $mode = 'fill_empty', bool $wire_page = true): array {
+	if ($vars === [] && function_exists('lf_pci_template_vars')) {
+		$vars = lf_pci_template_vars();
+	}
+	$overwrite = ($mode === 'force');
+	$seeded = lf_niche_seed_about_content($niche_slug, $vars, $overwrite);
+	$wired = false;
+	if ($wire_page && ($seeded['process_ids'] !== [] || $seeded['faq_ids'] !== [])) {
+		$wired = lf_niche_wire_about_page_cpt_ids($seeded['process_ids'], $seeded['faq_ids']);
+	}
+	return [
+		'process_ids' => $seeded['process_ids'],
+		'faq_ids' => $seeded['faq_ids'],
+		'wired' => $wired,
+	];
+}
+
+/**
+ * Update About page Page Builder config to point at process + FAQ CPT IDs.
+ *
+ * @param list<int> $process_ids
+ * @param list<int> $faq_ids
+ */
+function lf_niche_wire_about_page_cpt_ids(array $process_ids, array $faq_ids): bool {
+	$page_id = 0;
+	if (function_exists('lf_pci_get_about_page_id')) {
+		$page_id = lf_pci_get_about_page_id();
+	} else {
+		$page = get_page_by_path('about-us');
+		$page_id = $page instanceof \WP_Post ? (int) $page->ID : 0;
+	}
+	if ($page_id <= 0 || !defined('LF_PB_META_KEY')) {
+		return false;
+	}
+	$config = get_post_meta($page_id, LF_PB_META_KEY, true);
+	if (!is_array($config) || empty($config['sections'])) {
+		return false;
+	}
+	$sections = $config['sections'];
+	$process_line = lf_niche_ids_to_lines($process_ids);
+	$faq_line = lf_niche_ids_to_lines($faq_ids);
+	foreach ($sections as $instance_id => $row) {
+		if (!is_array($row)) {
+			continue;
+		}
+		$type = (string) ($row['type'] ?? '');
+		if ($type === 'process' && $process_line !== '') {
+			$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+			$settings['process_selected_ids'] = $process_line;
+			$sections[$instance_id]['settings'] = $settings;
+		}
+		if ($type === 'faq_accordion' && $faq_line !== '') {
+			$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+			$settings['faq_selected_ids'] = $faq_line;
+			$sections[$instance_id]['settings'] = $settings;
+		}
+	}
+	update_post_meta($page_id, LF_PB_META_KEY, [
+		'order' => is_array($config['order'] ?? null) ? $config['order'] : array_keys($sections),
+		'sections' => $sections,
+		'seo' => is_array($config['seo'] ?? null) ? $config['seo'] : ['title' => '', 'description' => ''],
+	]);
+	return true;
+}
+
+/**
  * @return array{process_ids: list<int>, faq_ids: list<int>}
  */
-function lf_niche_seed_about_content(string $niche_slug, array $vars): array {
+function lf_niche_seed_about_content(string $niche_slug, array $vars, bool $overwrite_bodies = false): array {
 	$vars = lf_niche_content_library_fill_vars($vars);
 	$vars['niche'] = $niche_slug;
 	$library = lf_niche_content_library_get_for_niche($niche_slug);
@@ -249,7 +339,7 @@ function lf_niche_seed_about_content(string $niche_slug, array $vars): array {
 		}
 		$process_steps[] = ['title' => $title, 'body' => $body];
 	}
-	$process_ids = lf_niche_upsert_process_steps($process_steps, LF_NICHE_ABOUT_PROCESS_GROUP, $vars);
+	$process_ids = lf_niche_upsert_process_steps($process_steps, LF_NICHE_ABOUT_PROCESS_GROUP, $vars, $overwrite_bodies);
 
 	$faq_rows = [];
 	foreach ($library['faqs'] as $row) {
@@ -257,7 +347,7 @@ function lf_niche_seed_about_content(string $niche_slug, array $vars): array {
 			$faq_rows[] = $row;
 		}
 	}
-	$faq_ids = lf_niche_upsert_context_faqs($faq_rows, LF_NICHE_ABOUT_FAQ_CONTEXT, $vars);
+	$faq_ids = lf_niche_upsert_context_faqs($faq_rows, LF_NICHE_ABOUT_FAQ_CONTEXT, $vars, $overwrite_bodies);
 
 	return [
 		'process_ids' => array_values(array_filter(array_map('absint', $process_ids))),
@@ -271,7 +361,7 @@ function lf_niche_seed_about_content(string $niche_slug, array $vars): array {
  * @param list<array{question:string,answer:string}> $faqs
  * @return list<int>
  */
-function lf_niche_upsert_context_faqs(array $faqs, string $context, array $vars = []): array {
+function lf_niche_upsert_context_faqs(array $faqs, string $context, array $vars = [], bool $overwrite_bodies = false): array {
 	$context = sanitize_key($context);
 	if ($context === '' || !post_type_exists('lf_faq')) {
 		return [];
@@ -318,19 +408,20 @@ function lf_niche_upsert_context_faqs(array $faqs, string $context, array $vars 
 				continue;
 			}
 		} else {
-			wp_update_post(['ID' => $faq_id, 'post_title' => $question]);
+			$update = ['ID' => $faq_id, 'post_title' => $question];
 			if ($answer !== '') {
 				$current = trim((string) get_post_field('post_content', $faq_id));
-				if ($current === '') {
-					wp_update_post(['ID' => $faq_id, 'post_content' => $answer]);
+				if ($overwrite_bodies || $current === '') {
+					$update['post_content'] = $answer;
 				}
 			}
+			wp_update_post($update);
 		}
 		if (function_exists('update_field')) {
 			update_field('lf_faq_question', $question, $faq_id);
 			if ($answer !== '') {
 				$current_acf = trim((string) get_field('lf_faq_answer', $faq_id));
-				if ($current_acf === '') {
+				if ($overwrite_bodies || $current_acf === '') {
 					update_field('lf_faq_answer', $answer, $faq_id);
 				}
 			}
@@ -338,7 +429,7 @@ function lf_niche_upsert_context_faqs(array $faqs, string $context, array $vars 
 			update_post_meta($faq_id, 'lf_faq_question', $question);
 			if ($answer !== '') {
 				$current_meta = trim((string) get_post_meta($faq_id, 'lf_faq_answer', true));
-				if ($current_meta === '') {
+				if ($overwrite_bodies || $current_meta === '') {
 					update_post_meta($faq_id, 'lf_faq_answer', $answer);
 				}
 			}
@@ -353,7 +444,7 @@ function lf_niche_upsert_context_faqs(array $faqs, string $context, array $vars 
  * @param list<array{title:string,body:string}> $steps
  * @return list<int>
  */
-function lf_niche_upsert_process_steps(array $steps, string $group_slug, array $vars = []): array {
+function lf_niche_upsert_process_steps(array $steps, string $group_slug, array $vars = [], bool $overwrite_bodies = false): array {
 	if ($steps === [] || !function_exists('lf_ai_studio_upsert_process_steps')) {
 		return [];
 	}
@@ -371,7 +462,7 @@ function lf_niche_upsert_process_steps(array $steps, string $group_slug, array $
 		}
 		$filled_steps[] = ['title' => $title, 'body' => $body];
 	}
-	return lf_ai_studio_upsert_process_steps($filled_steps, $group_slug);
+	return lf_ai_studio_upsert_process_steps($filled_steps, $group_slug, $overwrite_bodies);
 }
 
 function lf_niche_ids_to_lines(array $ids): string {

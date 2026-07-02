@@ -140,7 +140,11 @@ function lf_pci_admin_render(): void {
 					(array) ($parsed['sections'] ?? []),
 					(array) ($parsed['process_steps'] ?? []),
 					(array) ($parsed['faqs'] ?? []),
-					(array) ($parsed['seo'] ?? ['title' => '', 'description' => ''])
+					(array) ($parsed['seo'] ?? ['title' => '', 'description' => '']),
+					[
+						'update_library' => !empty($_POST['lf_pci_update_library']),
+						'sync_mode' => 'force',
+					]
 				);
 				if (!empty($apply_result['success'])) {
 					$edit_url = get_edit_post_link($page_id, 'raw');
@@ -161,10 +165,13 @@ function lf_pci_admin_render(): void {
 							count((array) $apply_result['process_ids'])
 						)) . '</p></div>';
 					}
+					if (!empty($apply_result['library_updated'])) {
+						echo '<div class="notice notice-info"><p>' . esc_html__('Process + FAQ blueprint saved to Niche Content Library for this niche.', 'leadsforward-core') . '</p></div>';
+					}
 					if (!empty($apply_result['faq_ids'])) {
 						echo '<div class="notice notice-info"><p>' . esc_html(sprintf(
 							/* translators: %d: number of posts */
-							__('Created/updated %d FAQ posts.', 'leadsforward-core'),
+							__('Created/updated %d FAQ posts (synced from import).', 'leadsforward-core'),
 							count((array) $apply_result['faq_ids'])
 						)) . '</p></div>';
 					}
@@ -221,7 +228,14 @@ function lf_pci_admin_render(): void {
 			</p>
 			<textarea id="lf-pci-content" name="lf_pci_content" rows="22" class="large-text code" style="font-family:monospace;max-width:900px;"><?php echo esc_textarea($raw !== '' ? $raw : ''); ?></textarea>
 
-			<p class="submit" style="display:flex;gap:8px;align-items:center;">
+			<p>
+				<label>
+					<input type="checkbox" name="lf_pci_update_library" value="1" checked="checked" />
+					<?php esc_html_e('Also save PROCESS + FAQ blocks to Niche Content Library (master blueprint for this niche)', 'leadsforward-core'); ?>
+				</label>
+			</p>
+
+			<p class="submit" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
 				<button type="submit" name="lf_pci_action" value="preview" class="button button-secondary"><?php esc_html_e('Preview parse', 'leadsforward-core'); ?></button>
 				<button type="submit" name="lf_pci_action" value="apply" class="button button-primary" <?php disabled($page_id <= 0); ?> onclick="return confirm('<?php echo esc_js(__('Replace the About Us page template content with this import?', 'leadsforward-core')); ?>');"><?php esc_html_e('Apply to About Us page', 'leadsforward-core'); ?></button>
 			</p>

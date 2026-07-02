@@ -439,11 +439,43 @@ function lf_pci_parse_about_us(string $raw): array {
  * @param list<array{title:string,body:string}> $process_steps
  * @param list<array{question:string,answer:string}> $faqs
  * @param array{title: string, description: string} $seo
+ * @param array{update_library?: bool, sync_mode?: string} $options
  */
-function lf_pci_apply_about_us(int $page_id, array $sections, array $process_steps, array $faqs, array $seo): array {
+function lf_pci_apply_about_us(int $page_id, array $sections, array $process_steps, array $faqs, array $seo, array $options = []): array {
 	$schema = lf_pci_about_us_schema();
 	$vars = lf_pci_template_vars();
-	$result = ['page_id' => $page_id, 'process_ids' => [], 'faq_ids' => [], 'sections_updated' => []];
+	$result = ['page_id' => $page_id, 'process_ids' => [], 'faq_ids' => [], 'sections_updated' => [], 'library_updated' => false];
+	$update_library = !array_key_exists('update_library', $options) || !empty($options['update_library']);
+	$sync_mode = (string) ($options['sync_mode'] ?? 'force');
+	$overwrite = ($sync_mode === 'force');
+
+	// Save process + FAQ blueprint to niche library (tokens preserved) before site-specific fill.
+	if ($update_library && ($process_steps !== [] || $faqs !== []) && function_exists('lf_niche_save_about_library_entries')) {
+		$niche_slug = (string) get_option('lf_homepage_niche_slug', 'foundation-repair');
+		$lib_process = [];
+		foreach ($process_steps as $row) {
+			if (!is_array($row)) {
+				continue;
+			}
+			$lib_process[] = [
+				'title' => sanitize_text_field((string) ($row['title'] ?? '')),
+				'body' => sanitize_textarea_field((string) ($row['body'] ?? '')),
+			];
+		}
+		$lib_faqs = [];
+		foreach ($faqs as $row) {
+			if (!is_array($row)) {
+				continue;
+			}
+			$lib_faqs[] = [
+				'question' => sanitize_text_field((string) ($row['question'] ?? '')),
+				'answer' => wp_kses_post((string) ($row['answer'] ?? '')),
+			];
+		}
+		if ($lib_process !== [] || $lib_faqs !== []) {
+			$result['library_updated'] = lf_niche_save_about_library_entries($niche_slug, $lib_process, $lib_faqs);
+		}
+	}
 
 	// Fill tokens in all string fields.
 	foreach ($sections as $type => $settings) {
@@ -460,10 +492,10 @@ function lf_pci_apply_about_us(int $page_id, array $sections, array $process_ste
 	$faq_context = defined('LF_NICHE_ABOUT_FAQ_CONTEXT') ? LF_NICHE_ABOUT_FAQ_CONTEXT : 'about_company';
 
 	if ($process_steps !== [] && function_exists('lf_niche_upsert_process_steps')) {
-		$result['process_ids'] = lf_niche_upsert_process_steps($process_steps, $process_group, $vars);
+		$result['process_ids'] = lf_niche_upsert_process_steps($process_steps, $process_group, $vars, $overwrite);
 	}
 	if ($faqs !== [] && function_exists('lf_niche_upsert_context_faqs')) {
-		$result['faq_ids'] = lf_niche_upsert_context_faqs($faqs, $faq_context, $vars);
+		$result['faq_ids'] = lf_niche_upsert_context_faqs($faqs, $faq_context, $vars, $overwrite);
 	}
 
 	if (!empty($result['process_ids']) && function_exists('lf_niche_ids_to_lines')) {

@@ -38,7 +38,19 @@ function lf_niche_content_library_admin_render(): void {
 	if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['lf_niche_content_library_nonce'])) {
 		check_admin_referer('lf_niche_content_library_save', 'lf_niche_content_library_nonce');
 		$posted_slug = sanitize_title((string) ($_POST['niche_slug'] ?? ''));
-		if ($posted_slug !== '') {
+		$action = sanitize_key((string) ($_POST['lf_ncl_action'] ?? 'save'));
+
+		if ($posted_slug !== '' && $action === 'sync_only' && function_exists('lf_niche_sync_about_library_to_site')) {
+			$mode = !empty($_POST['lf_ncl_sync_force']) ? 'force' : 'fill_empty';
+			$synced = lf_niche_sync_about_library_to_site($posted_slug, [], $mode, true);
+			$niche_slug = $posted_slug;
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(sprintf(
+				/* translators: 1: process count, 2: faq count */
+				__('Synced library to site CPTs: %1$d process steps, %2$d FAQs. About page wired.', 'leadsforward-core'),
+				count((array) ($synced['process_ids'] ?? [])),
+				count((array) ($synced['faq_ids'] ?? []))
+			)) . '</p></div>';
+		} elseif ($posted_slug !== '') {
 			$process = [];
 			$titles = (array) ($_POST['process_title'] ?? []);
 			$bodies = (array) ($_POST['process_body'] ?? []);
@@ -65,6 +77,15 @@ function lf_niche_content_library_admin_render(): void {
 			lf_niche_content_library_save($stored);
 			$niche_slug = $posted_slug;
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Niche content library saved.', 'leadsforward-core') . '</p></div>';
+			if (!empty($_POST['lf_ncl_sync_on_save']) && function_exists('lf_niche_sync_about_library_to_site')) {
+				$mode = !empty($_POST['lf_ncl_sync_force']) ? 'force' : 'fill_empty';
+				$synced = lf_niche_sync_about_library_to_site($posted_slug, [], $mode, true);
+				echo '<div class="notice notice-info"><p>' . esc_html(sprintf(
+					__('Pushed to site CPTs: %1$d process steps, %2$d FAQs.', 'leadsforward-core'),
+					count((array) ($synced['process_ids'] ?? [])),
+					count((array) ($synced['faq_ids'] ?? []))
+				)) . '</p></div>';
+			}
 		}
 	}
 
@@ -75,7 +96,16 @@ function lf_niche_content_library_admin_render(): void {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Niche Content Library', 'leadsforward-core'); ?></h1>
-		<p><?php esc_html_e('Edit reusable About page process steps and FAQs per niche. When a site is generated or reseeded, these become Process Step and FAQ posts that can still be edited individually afterward.', 'leadsforward-core'); ?></p>
+		<p><?php esc_html_e('Master blueprint for About page process steps and FAQs (per niche). Use tokens like {business} and {city}. Saving the library does not change live CPTs until you sync. Site generation and “Sync to CPTs” materialize these rows as Process Step and FAQ posts on this site.', 'leadsforward-core'); ?></p>
+
+		<div style="margin:1rem 0;padding:1rem;background:#f0f6fc;border:1px solid #c3c4c7;border-radius:4px;max-width:920px;">
+			<strong><?php esc_html_e('How library ↔ CPTs work', 'leadsforward-core'); ?></strong>
+			<ul style="margin:0.5rem 0 0 1.2rem;list-style:disc;">
+				<li><?php esc_html_e('Library = global template with tokens (editable here or via Import Page Content).', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('CPTs = this site’s live Process Step + FAQ posts (matched by step title / question).', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('About page sections reference CPT IDs — sync rewires them after updates.', 'leadsforward-core'); ?></li>
+			</ul>
+		</div>
 
 		<form method="get" style="margin: 1rem 0;">
 			<input type="hidden" name="page" value="lf-niche-content-library" />
@@ -138,7 +168,27 @@ function lf_niche_content_library_admin_render(): void {
 			</table>
 			<p><button type="button" class="button" id="lf-add-faq-row"><?php esc_html_e('Add FAQ', 'leadsforward-core'); ?></button></p>
 
-			<?php submit_button(__('Save library', 'leadsforward-core')); ?>
+			<fieldset style="margin:1.5rem 0;padding:1rem;border:1px solid #c3c4c7;border-radius:4px;max-width:920px;">
+				<legend><strong><?php esc_html_e('Sync to this site', 'leadsforward-core'); ?></strong></legend>
+				<p class="description"><?php esc_html_e('Push library rows to lf_process_step + lf_faq CPTs and wire the About page. Match existing posts by title/question.', 'leadsforward-core'); ?></p>
+				<p>
+					<label>
+						<input type="checkbox" name="lf_ncl_sync_on_save" value="1" checked="checked" />
+						<?php esc_html_e('Sync to site CPTs when saving library', 'leadsforward-core'); ?>
+					</label>
+				</p>
+				<p>
+					<label>
+						<input type="checkbox" name="lf_ncl_sync_force" value="1" />
+						<?php esc_html_e('Overwrite existing CPT answers/bodies (force). Leave unchecked to only fill empty CPT fields.', 'leadsforward-core'); ?>
+					</label>
+				</p>
+			</fieldset>
+
+			<p class="submit" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+				<button type="submit" name="lf_ncl_action" value="save" class="button button-primary"><?php esc_html_e('Save library', 'leadsforward-core'); ?></button>
+				<button type="submit" name="lf_ncl_action" value="sync_only" class="button button-secondary"><?php esc_html_e('Sync to site CPTs (no save)', 'leadsforward-core'); ?></button>
+			</p>
 		</form>
 	</div>
 	<script>
