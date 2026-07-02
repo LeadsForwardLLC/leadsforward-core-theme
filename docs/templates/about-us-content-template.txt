@@ -1,0 +1,65 @@
+=== HERO ===
+Headline: About {business}
+Subheadline: Local foundation repair specialists{city_line} — structural solutions backed by clear communication, engineered plans, and transferable warranties.
+Eyebrow: Licensed • Insured • Engineered Repairs
+
+=== STORY ===
+Heading: Built on trust, not quick fixes
+Intro: Foundation problems do not wait — and neither should your contractor.
+Body: {business} was founded to give homeowners an honest path through foundation repair{city_line}. We combine structural evaluations, engineered solutions, and crews who respect your home. No scare tactics — just documented findings, clear pricing, and work you can stand behind when it is time to sell or refinance.
+Checklist:
+- Licensed, insured structural crews
+- Engineered repair plans before work starts
+- Transferable warranty documentation
+- Clean, protected job sites
+
+=== BENEFITS ===
+Heading: Why homeowners trust us with their foundation
+Intro: Structural decisions deserve clarity, engineering, and a crew that shows up prepared.
+Items:
+Engineered solutions || Piers, anchors, and waterproofing sized to your soil — not one-size-fits-all kits.
+Plain-language inspections || Photos, measurements, and options explained so you can make an informed decision.
+Local accountability || Project managers who answer the phone and stand behind the work{city_line}.
+Protected job sites || Landscaping, floors, and access paths treated with the same care we give our own homes.
+
+=== TEAM ===
+Heading: Meet the team behind your project
+Intro: Structural repair is a team sport — inspectors, engineers, and installers working from the same plan.
+Body: At {business}, your project is led by a dedicated manager who coordinates inspections, permits, and crew scheduling. Installers are trained on piering, wall stabilization, and waterproofing systems — not general handyman shortcuts.
+
+=== PROCESS ===
+Heading: How foundation repair works with us
+Intro: A documented path from inspection to warranty — so you always know what happens next.
+
+Step: Free structural inspection
+Body: A certified evaluator documents cracks, settlement signs, moisture, and drainage patterns. You receive photos, measurements, and a plain-language explanation.
+
+Step: Engineered repair plan
+Body: We size piers, wall anchors, or waterproofing to your soil and load conditions. Scope, timeline, and pricing are documented before work begins.
+
+Step: Protected installation
+Body: Crews stage materials, protect landscaping, and maintain clean access paths with daily updates.
+
+Step: Final walkthrough & warranty
+Body: We review monitoring points, drainage improvements, and transferable warranty coverage.
+
+=== FAQ ===
+Heading: About our foundation repair team
+Intro: Honest answers about inspections, warranties, crews, and what to expect on your property.
+
+Q: Are you licensed and insured for foundation work?
+A: Yes. {business} carries general liability and workers' compensation coverage{city_line}. We provide proof of insurance on request before work begins.
+
+Q: Do you offer free foundation inspections?
+A: We provide complimentary structural evaluations for homeowners concerned about cracks, sticking doors, sloping floors, or basement moisture.
+
+Q: What warranty do you provide on foundation repairs?
+A: Every project includes written warranty documentation. We explain what is covered, for how long, and what maintenance keeps protection valid.
+
+=== CTA ===
+Headline: Schedule a foundation inspection with {business}
+Subheadline: Request a free structural inspection and get a clear repair plan.
+
+=== SEO ===
+Title: About {business}{city_line}
+Description: Meet {business} — local foundation repair specialists{city_line}. Engineered solutions, clear inspections, and crews who protect your home.
