@@ -232,6 +232,85 @@ function lf_pci_parse_fields(string $block, array $multiline_keys = []): array {
 /**
  * @return list<string>
  */
+/**
+ * Parse benefits item lines (title || body), including bullet prefixes.
+ *
+ * @return list<string>
+ */
+function lf_pci_parse_benefits_item_lines(string $raw): array {
+	$raw = trim($raw);
+	if ($raw === '') {
+		return [];
+	}
+
+	$lines = [];
+	foreach (explode("\n", $raw) as $line) {
+		$line = trim($line);
+		if ($line === '') {
+			continue;
+		}
+		$line = preg_replace('/^[-*•]\s+/', '', $line) ?? $line;
+		$line = trim($line);
+		if ($line !== '') {
+			$lines[] = $line;
+		}
+	}
+
+	// Repair a single run-on line that merged multiple cards (common after AI paste).
+	if (count($lines) === 1 && substr_count($lines[0], '||') >= 2) {
+		$chunks = preg_split('/\.\s+(?=[A-Z])/', $lines[0]) ?: [];
+		$rebuilt = [];
+		foreach ($chunks as $chunk) {
+			$chunk = trim($chunk);
+			if ($chunk === '') {
+				continue;
+			}
+			if (strpos($chunk, '||') === false && $rebuilt !== []) {
+				$rebuilt[count($rebuilt) - 1] .= '. ' . $chunk;
+				continue;
+			}
+			$rebuilt[] = $chunk;
+		}
+		if (count($rebuilt) >= 2) {
+			$lines = $rebuilt;
+		}
+	}
+
+	return $lines;
+}
+
+/**
+ * Ensure imported benefits always render as three cards in a three-column grid.
+ *
+ * @param array<string, mixed> $settings
+ * @return array<string, mixed>
+ */
+function lf_pci_normalize_benefits_settings(array $settings): array {
+	$min_cards = 3;
+	$lines = lf_pci_parse_benefits_item_lines((string) ($settings['benefits_items'] ?? ''));
+
+	$defaults = function_exists('lf_sections_defaults_for')
+		? lf_sections_defaults_for('benefits')
+		: [];
+	$default_lines = lf_pci_parse_benefits_item_lines((string) ($defaults['benefits_items'] ?? ''));
+
+	foreach ($default_lines as $default_line) {
+		if (count($lines) >= $min_cards) {
+			break;
+		}
+		if ($default_line === '') {
+			continue;
+		}
+		$lines[] = $default_line;
+	}
+
+	$lines = array_values(array_filter($lines, static fn (string $line): bool => trim($line) !== ''));
+	$settings['benefits_items'] = implode("\n", array_slice($lines, 0, max($min_cards, count($lines))));
+	$settings['benefits_grid_columns'] = '3';
+
+	return $settings;
+}
+
 function lf_pci_parse_bullet_list(string $text): array {
 	$items = [];
 	foreach (explode("\n", $text) as $line) {
@@ -435,12 +514,13 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 		if ($items_raw === '') {
 			$items_raw = preg_replace('/^.*?(Items|Benefits)\s*:\s*/is', '', $split['benefits']) ?? $split['benefits'];
 		}
-		$items_lines = array_filter(array_map('trim', explode("\n", trim($items_raw))));
-		$sections['benefits'] = array_filter([
+		$items_lines = lf_pci_parse_benefits_item_lines($items_raw);
+		$benefits = array_filter([
 			'section_heading' => $f['heading'] ?? $f['section_heading'] ?? '',
 			'section_intro' => $f['intro'] ?? $f['section_intro'] ?? '',
 			'benefits_items' => implode("\n", $items_lines),
 		]);
+		$sections['benefits'] = lf_pci_normalize_benefits_settings($benefits);
 	}
 
 	// Team / image_content
@@ -714,6 +794,9 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 		if (function_exists('lf_sections_normalize_service_details_settings')) {
 			$merged = lf_sections_normalize_service_details_settings($base_type, $merged);
 		}
+		if ($base_type === 'benefits') {
+			$merged = lf_pci_normalize_benefits_settings($merged);
+		}
 		$pb_sections[$instance_id] = [
 			'type' => $base_type,
 			'enabled' => true,
@@ -858,6 +941,9 @@ function lf_pci_apply_to_homepage(array $schema, array $sections, array $process
 		if (function_exists('lf_sections_normalize_service_details_settings')) {
 			$merged = lf_sections_normalize_service_details_settings($base_type, $merged);
 		}
+		if ($base_type === 'benefits') {
+			$merged = lf_pci_normalize_benefits_settings($merged);
+		}
 		$config[$type] = $merged;
 		$result['sections_updated'][] = $type;
 	}
@@ -979,7 +1065,7 @@ function lf_pci_template_fallback_for_schema(array $schema): string {
 		'hero' => "=== HERO ===\nHeadline: \nSubheadline: \nEyebrow: ",
 		'trust_bar' => "=== TRUST BAR ===\nHeading: \nBadges:\n- Licensed & Insured\n- 5-Star Rated",
 		'content_image' => "=== STORY ===\nHeading: \nIntro: \nBody: \nChecklist:\n- ",
-		'benefits' => "=== BENEFITS ===\nHeading: \nIntro: \nItems:\nTitle || Body",
+		'benefits' => "=== BENEFITS ===\nHeading: \nIntro: \nItems:\nBenefit one title || Benefit one body.\nBenefit two title || Benefit two body.\nBenefit three title || Benefit three body.",
 		'image_content' => "=== TEAM ===\nHeading: \nIntro: \nBody: ",
 		'service_details' => "=== SERVICE DETAILS ===\nHeading: \nIntro: \nBody: ",
 		'service_details__2' => "=== SERVICE DETAILS 2 ===\nHeading: \nIntro: \nBody: ",

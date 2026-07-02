@@ -1,0 +1,17 @@
+=== PAGE ===
+Slug: blog
+Name: Blog
+Notes: Blog post listings are theme-controlled. Do not add a === BLOG POSTS === block.
+
+=== HERO ===
+Headline: Foundation Repair Insights
+Subheadline: Practical guidance on cracks, settlement, waterproofing, and protecting your home{city_line}.
+Eyebrow: Tips • Guides • Local Expertise
+
+=== CTA ===
+Headline: Have a foundation concern?
+Subheadline: Schedule an inspection with {business} — we will explain what we see and outline repair options.
+
+=== SEO ===
+Title: Foundation Repair Blog | {business}
+Description: Foundation repair tips and guides from {business}{city_line}. Learn when to inspect, what repairs include, and how to protect your home.

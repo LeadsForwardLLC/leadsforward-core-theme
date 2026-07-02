@@ -1,0 +1,17 @@
+=== PAGE ===
+Slug: contact
+Name: Contact
+Notes: The contact map and NAP block are theme-controlled. Do not add a === MAP === block.
+
+=== HERO ===
+Headline: Contact {business}
+Subheadline: Request a foundation inspection or ask a question — we respond quickly{city_line}.
+Eyebrow: Fast Response • Local Team
+
+=== CTA ===
+Headline: Get a free foundation inspection
+Subheadline: Tell us what you are seeing and we will schedule a visit with a clear next step.
+
+=== SEO ===
+Title: Contact {business}{city_line}
+Description: Contact {business} for foundation repair{city_line}. Schedule an inspection, call our team, or send a message today.

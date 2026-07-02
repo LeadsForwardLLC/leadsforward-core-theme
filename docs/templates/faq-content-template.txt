@@ -1,0 +1,21 @@
+=== PAGE ===
+Slug: faq
+Name: FAQ
+
+=== HERO ===
+Headline: Foundation Repair FAQ
+Subheadline: Straight answers about inspections, repair methods, timelines, and warranties{city_line}.
+Eyebrow: Clear Answers • No Jargon
+
+=== FAQ ===
+Heading: Common foundation repair questions
+Intro: If you do not see your question here, contact us — we are happy to walk through your situation.
+(Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
+
+=== CTA ===
+Headline: Still have questions?
+Subheadline: Talk with {business} — request a foundation inspection and get answers tied to your property.
+
+=== SEO ===
+Title: Foundation Repair FAQ | {business}{city_line}
+Description: Foundation repair FAQ from {business}. Inspections, piering, waterproofing, warranties, and what to expect on your property.
