@@ -33,6 +33,14 @@ function lf_health_seo_settings_url(): string {
 	return admin_url('admin.php?page=lf-seo&tab=settings');
 }
 
+function lf_health_schema_settings_url(): string {
+	return admin_url('admin.php?page=lf-seo&tab=settings#schema');
+}
+
+function lf_health_seo_scripts_settings_url(): string {
+	return admin_url('admin.php?page=lf-seo&tab=settings#scripts');
+}
+
 function lf_health_reading_settings_url(): string {
 	return admin_url('options-reading.php');
 }
@@ -217,16 +225,29 @@ function lf_health_check_thin_pages(): array {
 }
 
 function lf_health_check_schema_present(): array {
-	$toggles = ['lf_schema_local_business', 'lf_schema_organization'];
 	$on = 0;
-	foreach ($toggles as $key) {
+	if (function_exists('lf_seo_get_settings')) {
+		$settings = lf_seo_get_settings();
+		if (!empty($settings['schema']['enable_local_business'])) {
+			++$on;
+		}
+		if (!empty($settings['schema']['enable_service'])) {
+			++$on;
+		}
+	}
+	foreach (['lf_schema_local_business', 'lf_schema_organization'] as $key) {
 		$v = function_exists('get_field') ? get_field($key, 'option') : null;
 		if ($v === true || $v === '1' || $v === 1) {
-			$on++;
+			++$on;
 		}
 	}
 	if ($on === 0) {
-		return ['status' => lf_health_status_warning(), 'label' => __('Required schema', 'leadsforward-core'), 'message' => __('LocalBusiness/Organization schema toggles are off.', 'leadsforward-core'), 'fix_link' => lf_health_fix_url_acf_option_page('lf-schema')];
+		return [
+			'status' => lf_health_status_warning(),
+			'label' => __('Required schema', 'leadsforward-core'),
+			'message' => __('LocalBusiness or Service schema is off in SEO settings (or legacy Schema toggles are off).', 'leadsforward-core'),
+			'fix_link' => lf_health_schema_settings_url(),
+		];
 	}
 	return ['status' => lf_health_status_pass(), 'label' => __('Required schema', 'leadsforward-core'), 'message' => __('Schema toggles set.', 'leadsforward-core'), 'fix_link' => ''];
 }
@@ -368,7 +389,9 @@ function lf_health_check_orphaned_services(): array {
 function lf_health_check_header_analytics(): array {
 	$settings = function_exists('lf_seo_get_settings') ? lf_seo_get_settings() : [];
 	$header = trim((string) ($settings['scripts']['header'] ?? ''));
-	$fix = lf_health_seo_settings_url();
+	$fix = function_exists('lf_health_seo_scripts_settings_url')
+		? lf_health_seo_scripts_settings_url()
+		: lf_health_seo_settings_url();
 	if ($header === '') {
 		return [
 			'status' => lf_health_status_warning(),
