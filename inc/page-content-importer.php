@@ -18,9 +18,18 @@ if (!defined('ABSPATH')) {
  * @return array{slug: string, label: string, order: list<string>, section_aliases: array<string, string>}
  */
 function lf_pci_about_us_schema(): array {
+	return lf_pci_standard_page_schema('about-us', __('About Us', 'leadsforward-core'));
+}
+
+/**
+ * Standard marketing page layout (hero → story → benefits → team → process → FAQ → CTA).
+ *
+ * @return array{slug: string, label: string, order: list<string>, section_aliases: array<string, string>}
+ */
+function lf_pci_standard_page_schema(string $slug, string $label): array {
 	return [
-		'slug' => 'about-us',
-		'label' => __('About Us', 'leadsforward-core'),
+		'slug' => sanitize_title($slug),
+		'label' => $label,
 		'order' => ['hero', 'content_image', 'benefits', 'image_content', 'process', 'faq_accordion', 'cta'],
 		'section_aliases' => [
 			'hero' => 'hero',
@@ -49,6 +58,109 @@ function lf_pci_about_us_schema(): array {
 			'meta' => 'seo',
 		],
 	];
+}
+
+/**
+ * Registered page templates keyed by WordPress page slug.
+ *
+ * @return array<string, array{slug: string, label: string, order: list<string>, section_aliases: array<string, string>}>
+ */
+function lf_pci_registry(): array {
+	$about = lf_pci_about_us_schema();
+	return [
+		$about['slug'] => $about,
+	];
+}
+
+/**
+ * @return array{slug: string, label: string, order: list<string>, section_aliases: array<string, string>}|null
+ */
+function lf_pci_schema_for_slug(string $slug): ?array {
+	$slug = sanitize_title($slug);
+	if ($slug === '') {
+		return null;
+	}
+	$registry = lf_pci_registry();
+	if (isset($registry[$slug])) {
+		return $registry[$slug];
+	}
+	$aliases = [
+		'about' => 'about-us',
+		'aboutus' => 'about-us',
+	];
+	if (isset($aliases[$slug], $registry[$aliases[$slug]])) {
+		return $registry[$aliases[$slug]];
+	}
+	return null;
+}
+
+function lf_pci_get_page_id_for_slug(string $slug): int {
+	$slug = sanitize_title($slug);
+	if ($slug === '') {
+		return 0;
+	}
+	$page = get_page_by_path($slug, OBJECT, 'page');
+	return $page instanceof \WP_Post ? (int) $page->ID : 0;
+}
+
+/**
+ * Read PAGE target from doc header (=== PAGE === block or top "Page:" line).
+ *
+ * @return array{slug: string, label: string, content: string}
+ */
+function lf_pci_extract_page_header(string $raw): array {
+	$slug = '';
+	$label = '';
+	$body = $raw;
+
+	if (preg_match('/^={3,}\s*PAGE\s*={3,}\s*\n([\s\S]*?)(?=^={3,}|\z)/mi', $raw, $m)) {
+		$f = lf_pci_parse_fields(trim($m[1]), ['notes']);
+		$slug = sanitize_title((string) ($f['slug'] ?? $f['page'] ?? $f['page_slug'] ?? ''));
+		if ($slug === '') {
+			$slug = sanitize_title((string) ($f['name'] ?? $f['label'] ?? $f['title'] ?? ''));
+		}
+		$label = trim((string) ($f['name'] ?? $f['label'] ?? $f['title'] ?? ''));
+		$body = preg_replace('/^={3,}\s*PAGE\s*={3,}\s*\n[\s\S]*?(?=^={3,})/mi', '', $raw, 1);
+		if (!is_string($body)) {
+			$body = $raw;
+		}
+	} elseif (preg_match('/^Page:\s*(.+)$/mi', $raw, $m)) {
+		$slug = sanitize_title(trim($m[1]));
+		$body = preg_replace('/^Page:\s*.+$\n?/mi', '', $raw, 1);
+		if (!is_string($body)) {
+			$body = $raw;
+		}
+	}
+
+	return [
+		'slug' => $slug,
+		'label' => $label,
+		'content' => trim($body),
+	];
+}
+
+/**
+ * Whether this page supports paste import (registry or standard Page Builder page).
+ */
+function lf_pci_page_supports_import(\WP_Post $post): bool {
+	if ($post->post_type !== 'page') {
+		return false;
+	}
+	if (lf_pci_schema_for_slug($post->post_name) !== null) {
+		return true;
+	}
+	return function_exists('lf_pb_is_basic_page') && lf_pb_is_basic_page($post);
+}
+
+/**
+ * Best page slug for import on this editor screen.
+ */
+function lf_pci_page_slug_for_post(\WP_Post $post): string {
+	if ($post->post_type !== 'page') {
+		return '';
+	}
+	$schema = lf_pci_schema_for_slug($post->post_name);
+	return $schema !== null ? (string) $schema['slug'] : sanitize_title($post->post_name);
 }
 
 /**
@@ -259,9 +371,11 @@ function lf_pci_parse_faqs(string $block): array {
 }
 
 /**
- * Parse About Us doc into section settings + CPT payloads.
+ * Parse a doc for a registered page template schema.
  *
  * @return array{
+ *   page_slug: string,
+ *   page_label: string,
  *   sections: array<string, array<string, mixed>>,
  *   process_steps: list<array{title:string,body:string}>,
  *   faqs: list<array{question:string,answer:string}>,
@@ -271,10 +385,10 @@ function lf_pci_parse_faqs(string $block): array {
  *   found_sections: list<string>
  * }
  */
-function lf_pci_parse_about_us(string $raw): array {
-	$schema = lf_pci_about_us_schema();
+function lf_pci_parse_with_schema(string $raw, array $schema): array {
+	$aliases = is_array($schema['section_aliases'] ?? null) ? $schema['section_aliases'] : [];
 	$raw = lf_pci_normalize_raw($raw);
-	$split = lf_pci_split_sections($raw, $schema['section_aliases']);
+	$split = lf_pci_split_sections($raw, $aliases);
 	$warnings = [];
 	$errors = [];
 	$sections = [];
@@ -285,6 +399,8 @@ function lf_pci_parse_about_us(string $raw): array {
 	if ($split === []) {
 		$errors[] = __('No sections found. Use headings like === HERO ===, === STORY ===, etc.', 'leadsforward-core');
 		return [
+			'page_slug' => (string) ($schema['slug'] ?? ''),
+			'page_label' => (string) ($schema['label'] ?? ''),
 			'sections' => $sections,
 			'process_steps' => $process_steps,
 			'faqs' => $faqs,
@@ -424,6 +540,8 @@ function lf_pci_parse_about_us(string $raw): array {
 	}
 
 	return [
+		'page_slug' => (string) ($schema['slug'] ?? ''),
+		'page_label' => (string) ($schema['label'] ?? ''),
 		'sections' => $sections,
 		'process_steps' => $process_steps,
 		'faqs' => $faqs,
@@ -435,6 +553,47 @@ function lf_pci_parse_about_us(string $raw): array {
 }
 
 /**
+ * Parse doc; resolves target page from === PAGE === or optional override (page editor).
+ *
+ * @return array<string, mixed>
+ */
+function lf_pci_parse_document(string $raw, ?string $force_slug = null): array {
+	$header = lf_pci_extract_page_header($raw);
+	$slug = $force_slug !== null && $force_slug !== '' ? sanitize_title($force_slug) : $header['slug'];
+	$schema = lf_pci_schema_for_slug($slug);
+	if ($schema === null) {
+		$hint = $slug !== ''
+			? sprintf(
+				/* translators: %s: page slug */
+				__('No import template registered for page slug "%s".', 'leadsforward-core'),
+				$slug
+			)
+			: __('Missing page target. Add a === PAGE === block with Slug: about-us (or a top line Page: about-us).', 'leadsforward-core');
+		return [
+			'page_slug' => $slug,
+			'page_label' => $header['label'],
+			'sections' => [],
+			'process_steps' => [],
+			'faqs' => [],
+			'seo' => ['title' => '', 'description' => ''],
+			'warnings' => [],
+			'errors' => [$hint],
+			'found_sections' => [],
+		];
+	}
+	$parsed = lf_pci_parse_with_schema($header['content'], $schema);
+	if ($header['label'] !== '') {
+		$parsed['page_label'] = $header['label'];
+	}
+	return $parsed;
+}
+
+/** @deprecated Use lf_pci_parse_document() */
+function lf_pci_parse_about_us(string $raw): array {
+	return lf_pci_parse_document($raw, 'about-us');
+}
+
+/**
  * @param array<string, mixed> $sections
  * @param list<array{title:string,body:string}> $process_steps
  * @param list<array{question:string,answer:string}> $faqs
@@ -442,7 +601,19 @@ function lf_pci_parse_about_us(string $raw): array {
  * @param array{sync_mode?: string} $options
  */
 function lf_pci_apply_about_us(int $page_id, array $sections, array $process_steps, array $faqs, array $seo, array $options = []): array {
-	$schema = lf_pci_about_us_schema();
+	return lf_pci_apply_to_page($page_id, lf_pci_about_us_schema(), $sections, $process_steps, $faqs, $seo, $options);
+}
+
+/**
+ * Apply parsed section payloads to a page.
+ *
+ * @param array<string, mixed> $sections
+ * @param list<array{title:string,body:string}> $process_steps
+ * @param list<array{question:string,answer:string}> $faqs
+ * @param array{title: string, description: string} $seo
+ * @param array{sync_mode?: string} $options
+ */
+function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, array $process_steps, array $faqs, array $seo, array $options = []): array {
 	$vars = lf_pci_template_vars();
 	$result = [
 		'page_id' => $page_id,
@@ -548,22 +719,68 @@ function lf_pci_apply_about_us(int $page_id, array $sections, array $process_ste
 }
 
 /**
+ * Apply a full lf_pci_parse_document() result to the target page.
+ *
+ * @param array<string, mixed> $parsed
+ * @param array{sync_mode?: string} $options
+ * @return array<string, mixed>
+ */
+function lf_pci_apply_parsed(array $parsed, array $options = []): array {
+	$slug = (string) ($parsed['page_slug'] ?? '');
+	$page_id = (int) ($options['page_id'] ?? 0);
+	if ($page_id <= 0) {
+		$page_id = lf_pci_get_page_id_for_slug($slug);
+	}
+	if ($page_id <= 0) {
+		return [
+			'success' => false,
+			'error' => sprintf(
+				/* translators: %s: page slug */
+				__('WordPress page not found for slug "%s". Create the page first.', 'leadsforward-core'),
+				$slug
+			),
+			'page_slug' => $slug,
+		];
+	}
+	$schema = lf_pci_schema_for_slug($slug);
+	if ($schema === null) {
+		return ['success' => false, 'error' => __('No template registered for this page slug.', 'leadsforward-core')];
+	}
+	return lf_pci_apply_to_page(
+		$page_id,
+		$schema,
+		(array) ($parsed['sections'] ?? []),
+		(array) ($parsed['process_steps'] ?? []),
+		(array) ($parsed['faqs'] ?? []),
+		(array) ($parsed['seo'] ?? ['title' => '', 'description' => '']),
+		$options
+	);
+}
+
+/**
  * Resolve About Us page ID (slug about-us).
  */
 function lf_pci_get_about_page_id(): int {
-	$page = get_page_by_path('about-us');
-	return $page instanceof \WP_Post ? (int) $page->ID : 0;
+	return lf_pci_get_page_id_for_slug('about-us');
+}
+
+/**
+ * Universal paste template (includes PAGE target header).
+ */
+function lf_pci_universal_template(): string {
+	$path = LF_THEME_DIR . '/docs/templates/page-content-template.txt';
+	if (is_readable($path)) {
+		return (string) file_get_contents($path);
+	}
+	$about = lf_pci_about_us_template_fallback();
+	return "=== PAGE ===\nSlug: about-us\nName: About Us\n\n" . $about;
 }
 
 /**
  * Blank About Us template for Google Docs / paste workflow.
  */
 function lf_pci_about_us_template(): string {
-	$path = LF_THEME_DIR . '/docs/templates/about-us-content-template.txt';
-	if (is_readable($path)) {
-		return (string) file_get_contents($path);
-	}
-	return lf_pci_about_us_template_fallback();
+	return lf_pci_universal_template();
 }
 
 function lf_pci_about_us_template_fallback(): string {

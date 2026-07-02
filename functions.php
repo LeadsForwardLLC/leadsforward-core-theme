@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('LF_THEME_VERSION', '0.1.170');
+define('LF_THEME_VERSION', '0.1.171');
 define('LF_THEME_DIR', get_template_directory());
 define('LF_THEME_URI', get_template_directory_uri());
 /** Admin page slug for LeadsForward → Manifest Website (orchestrator UI). */
@@ -168,6 +168,7 @@ if (is_admin()) {
 	lf_load_inc('homepage-admin.php');
 	lf_load_inc('niches/content-library-admin.php');
 	lf_load_inc('page-content-importer-admin.php');
+	lf_load_inc('page-content-importer-meta-box.php');
 	// Bulk-safe ops: export/import config, bulk actions, audit log.
 	lf_load_inc('ops.php');
 	// Site health: dashboard, pre-launch checks, QA audit trail.
