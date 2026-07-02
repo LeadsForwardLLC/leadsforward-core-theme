@@ -12,68 +12,23 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+require_once LF_THEME_DIR . '/inc/page-content-importer-schemas.php';
+
 /**
  * About Us page template schema (section order + field keys).
  *
- * @return array{slug: string, label: string, order: list<string>, section_aliases: array<string, string>}
+ * @return array<string, mixed>
  */
 function lf_pci_about_us_schema(): array {
-	return lf_pci_standard_page_schema('about-us', __('About Us', 'leadsforward-core'));
+	return lf_pci_schema_for_slug('about-us') ?? lf_pci_build_schema(
+		'about-us',
+		__('About Us', 'leadsforward-core'),
+		['hero', 'content_image', 'benefits', 'image_content', 'process', 'faq_accordion', 'cta']
+	);
 }
 
 /**
- * Standard marketing page layout (hero → story → benefits → team → process → FAQ → CTA).
- *
- * @return array{slug: string, label: string, order: list<string>, section_aliases: array<string, string>}
- */
-function lf_pci_standard_page_schema(string $slug, string $label): array {
-	return [
-		'slug' => sanitize_title($slug),
-		'label' => $label,
-		'order' => ['hero', 'content_image', 'benefits', 'image_content', 'process', 'faq_accordion', 'cta'],
-		'section_aliases' => [
-			'hero' => 'hero',
-			'hero section' => 'hero',
-			'story' => 'content_image',
-			'company intro' => 'content_image',
-			'company story' => 'content_image',
-			'content image' => 'content_image',
-			'content_image' => 'content_image',
-			'intro' => 'content_image',
-			'benefits' => 'benefits',
-			'why choose us' => 'benefits',
-			'team' => 'image_content',
-			'our team' => 'image_content',
-			'image content' => 'image_content',
-			'image_content' => 'image_content',
-			'process' => 'process',
-			'our process' => 'process',
-			'faq' => 'faq_accordion',
-			'faqs' => 'faq_accordion',
-			'faq accordion' => 'faq_accordion',
-			'faq_accordion' => 'faq_accordion',
-			'cta' => 'cta',
-			'call to action' => 'cta',
-			'seo' => 'seo',
-			'meta' => 'seo',
-		],
-	];
-}
-
-/**
- * Registered page templates keyed by WordPress page slug.
- *
- * @return array<string, array{slug: string, label: string, order: list<string>, section_aliases: array<string, string>}>
- */
-function lf_pci_registry(): array {
-	$about = lf_pci_about_us_schema();
-	return [
-		$about['slug'] => $about,
-	];
-}
-
-/**
- * @return array{slug: string, label: string, order: list<string>, section_aliases: array<string, string>}|null
+ * @return array<string, mixed>|null
  */
 function lf_pci_schema_for_slug(string $slug): ?array {
 	$slug = sanitize_title($slug);
@@ -84,10 +39,7 @@ function lf_pci_schema_for_slug(string $slug): ?array {
 	if (isset($registry[$slug])) {
 		return $registry[$slug];
 	}
-	$aliases = [
-		'about' => 'about-us',
-		'aboutus' => 'about-us',
-	];
+	$aliases = function_exists('lf_pci_registry_slug_aliases') ? lf_pci_registry_slug_aliases() : [];
 	if (isset($aliases[$slug], $registry[$aliases[$slug]])) {
 		return $registry[$aliases[$slug]];
 	}
@@ -371,6 +323,28 @@ function lf_pci_parse_faqs(string $block): array {
 }
 
 /**
+ * Parse a content / service-details style block into section settings.
+ *
+ * @return array<string, mixed>
+ */
+function lf_pci_parse_content_block(string $block, bool $with_checklist = true): array {
+	$f = lf_pci_parse_fields($block, ['body', 'intro']);
+	$checklist_raw = $f['checklist'] ?? '';
+	if ($with_checklist && $checklist_raw === '' && preg_match('/Checklist:\s*([\s\S]+)/i', $block, $m)) {
+		$checklist_raw = trim($m[1]);
+	}
+	$checklist = $with_checklist ? lf_pci_parse_bullet_list($checklist_raw) : [];
+	return array_filter([
+		'section_heading' => $f['heading'] ?? $f['section_heading'] ?? '',
+		'section_intro' => $f['intro'] ?? $f['section_intro'] ?? '',
+		'service_details_body' => $f['body'] ?? $f['section_body'] ?? '',
+		'service_details_checklist' => $checklist !== [] ? implode("\n", $checklist) : '',
+		'service_details_media_mode' => 'image',
+		'content_media_show_checklist' => $checklist !== [] ? '1' : '0',
+	]);
+}
+
+/**
  * Parse a doc for a registered page template schema.
  *
  * @return array{
@@ -395,6 +369,19 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 	$process_steps = [];
 	$faqs = [];
 	$seo = ['title' => '', 'description' => ''];
+	$order = is_array($schema['order'] ?? null) ? $schema['order'] : [];
+	$hero_variant = (string) ($schema['hero_variant'] ?? 'internal');
+
+	foreach (array_keys($split) as $section_key) {
+		if (lf_pci_section_is_locked($section_key, $schema)) {
+			$warnings[] = sprintf(
+				/* translators: %s: section name */
+				__('Section "%s" is theme-controlled and was ignored in the doc.', 'leadsforward-core'),
+				$section_key
+			);
+			unset($split[$section_key]);
+		}
+	}
 
 	if ($split === []) {
 		$errors[] = __('No sections found. Use headings like === HERO ===, === STORY ===, etc.', 'leadsforward-core');
@@ -415,29 +402,30 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 	if (!empty($split['hero'])) {
 		$f = lf_pci_parse_fields($split['hero'], ['subheadline']);
 		$sections['hero'] = array_filter([
-			'variant' => 'internal',
+			'variant' => $hero_variant,
 			'hero_headline' => $f['headline'] ?? $f['hero_headline'] ?? '',
 			'hero_subheadline' => $f['subheadline'] ?? $f['hero_subheadline'] ?? '',
 			'hero_eyebrow_text' => $f['eyebrow'] ?? $f['eyebrow_text'] ?? $f['trust_badge'] ?? '',
 		]);
 	}
 
+	// Trust bar
+	if (!empty($split['trust_bar'])) {
+		$f = lf_pci_parse_fields($split['trust_bar'], ['badges', 'items']);
+		$badges_raw = $f['badges'] ?? $f['trust_badges'] ?? $f['items'] ?? '';
+		if ($badges_raw === '') {
+			$badges_raw = preg_replace('/^.*?(Badges|Items)\s*:\s*/is', '', $split['trust_bar']) ?? $split['trust_bar'];
+		}
+		$badge_lines = array_filter(array_map('trim', explode("\n", trim($badges_raw))));
+		$sections['trust_bar'] = array_filter([
+			'trust_heading' => $f['heading'] ?? $f['trust_heading'] ?? '',
+			'trust_badges' => implode("\n", $badge_lines),
+		]);
+	}
+
 	// Story / content_image
 	if (!empty($split['content_image'])) {
-		$f = lf_pci_parse_fields($split['content_image'], ['body', 'intro']);
-		$checklist_raw = $f['checklist'] ?? '';
-		if ($checklist_raw === '' && preg_match('/Checklist:\s*([\s\S]+)/i', $split['content_image'], $m)) {
-			$checklist_raw = trim($m[1]);
-		}
-		$checklist = lf_pci_parse_bullet_list($checklist_raw);
-		$sections['content_image'] = array_filter([
-			'section_heading' => $f['heading'] ?? $f['section_heading'] ?? '',
-			'section_intro' => $f['intro'] ?? $f['section_intro'] ?? '',
-			'service_details_body' => $f['body'] ?? $f['section_body'] ?? '',
-			'service_details_checklist' => $checklist !== [] ? implode("\n", $checklist) : '',
-			'service_details_media_mode' => 'image',
-			'content_media_show_checklist' => $checklist !== [] ? '1' : '0',
-		]);
+		$sections['content_image'] = lf_pci_parse_content_block($split['content_image']);
 	}
 
 	// Benefits
@@ -457,13 +445,22 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 
 	// Team / image_content
 	if (!empty($split['image_content'])) {
-		$f = lf_pci_parse_fields($split['image_content'], ['body', 'intro']);
-		$sections['image_content'] = array_filter([
+		$sections['image_content'] = lf_pci_parse_content_block($split['image_content'], false);
+	}
+
+	// Service details (homepage blocks A / B)
+	foreach (['service_details', 'service_details__2'] as $sd_key) {
+		if (!empty($split[$sd_key])) {
+			$sections[$sd_key] = lf_pci_parse_content_block($split[$sd_key]);
+		}
+	}
+
+	// Simple content (legal / thank-you)
+	if (!empty($split['content'])) {
+		$f = lf_pci_parse_fields($split['content'], ['body']);
+		$sections['content'] = array_filter([
 			'section_heading' => $f['heading'] ?? $f['section_heading'] ?? '',
-			'section_intro' => $f['intro'] ?? $f['section_intro'] ?? '',
-			'service_details_body' => $f['body'] ?? $f['section_body'] ?? '',
-			'service_details_media_mode' => 'image',
-			'content_media_show_checklist' => '0',
+			'service_details_body' => $f['body'] ?? $f['section_body'] ?? $split['content'],
 		]);
 	}
 
@@ -517,7 +514,7 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 		];
 	}
 
-	$required = ['hero', 'content_image', 'benefits', 'cta'];
+	$required = is_array($schema['required'] ?? null) ? $schema['required'] : ['hero', 'cta'];
 	foreach ($required as $req) {
 		if (empty($sections[$req])) {
 			$warnings[] = sprintf(
@@ -527,10 +524,10 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 			);
 		}
 	}
-	if ($process_steps === []) {
+	if (in_array('process', $order, true) && $process_steps === []) {
 		$warnings[] = __('No process steps in doc — Niche Content Library defaults will be used on apply.', 'leadsforward-core');
 	}
-	if ($faqs === []) {
+	if (in_array('faq_accordion', $order, true) && $faqs === []) {
 		$warnings[] = __('No FAQs in doc — Niche Content Library defaults will be used on apply.', 'leadsforward-core');
 	}
 
@@ -568,7 +565,7 @@ function lf_pci_parse_document(string $raw, ?string $force_slug = null): array {
 				__('No import template registered for page slug "%s".', 'leadsforward-core'),
 				$slug
 			)
-			: __('Missing page target. Add a === PAGE === block with Slug: about-us (or a top line Page: about-us).', 'leadsforward-core');
+			: __('Missing page target. Add a === PAGE === block with Slug: home (or a top line Page: home).', 'leadsforward-core');
 		return [
 			'page_slug' => $slug,
 			'page_label' => $header['label'],
@@ -620,6 +617,7 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 		'process_ids' => [],
 		'faq_ids' => [],
 		'sections_updated' => [],
+		'sections_preserved' => [],
 		'process_source' => 'import',
 		'faq_source' => 'import',
 	];
@@ -629,21 +627,28 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 		? lf_niche_content_library_get_for_niche($niche_slug)
 		: ['process' => [], 'faqs' => []];
 
-	if ($process_steps === [] && !empty($library['process'])) {
+	$order = is_array($schema['order'] ?? null) ? $schema['order'] : [];
+	$has_process = in_array('process', $order, true);
+	$has_faq = in_array('faq_accordion', $order, true);
+
+	if ($has_process && $process_steps === [] && !empty($library['process'])) {
 		$process_steps = $library['process'];
 		$result['process_source'] = 'library';
 	}
-	if ($faqs === [] && !empty($library['faqs'])) {
+	if ($has_faq && $faqs === [] && !empty($library['faqs'])) {
 		$faqs = $library['faqs'];
 		$result['faq_source'] = 'library';
 	}
 
 	$sync_mode = (string) ($options['sync_mode'] ?? 'force');
-	$overwrite_process = $result['process_source'] === 'import' && $sync_mode === 'force';
-	$overwrite_faq = $result['faq_source'] === 'import' && $sync_mode === 'force';
+	$overwrite_process = $has_process && $result['process_source'] === 'import' && $sync_mode === 'force';
+	$overwrite_faq = $has_faq && $result['faq_source'] === 'import' && $sync_mode === 'force';
 
 	// Fill tokens in all string fields.
 	foreach ($sections as $type => $settings) {
+		if (!is_array($settings)) {
+			continue;
+		}
 		foreach ($settings as $key => $val) {
 			if (is_string($val)) {
 				$sections[$type][$key] = lf_pci_fill_tokens($val, $vars);
@@ -653,13 +658,13 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 	$seo['title'] = lf_pci_fill_tokens((string) ($seo['title'] ?? ''), $vars);
 	$seo['description'] = lf_pci_fill_tokens((string) ($seo['description'] ?? ''), $vars);
 
-	$process_group = defined('LF_NICHE_ABOUT_PROCESS_GROUP') ? LF_NICHE_ABOUT_PROCESS_GROUP : 'about-company';
-	$faq_context = defined('LF_NICHE_ABOUT_FAQ_CONTEXT') ? LF_NICHE_ABOUT_FAQ_CONTEXT : 'about_company';
+	$process_group = (string) ($schema['process_group'] ?? (defined('LF_NICHE_ABOUT_PROCESS_GROUP') ? LF_NICHE_ABOUT_PROCESS_GROUP : 'about-company'));
+	$faq_context = (string) ($schema['faq_context'] ?? (defined('LF_NICHE_ABOUT_FAQ_CONTEXT') ? LF_NICHE_ABOUT_FAQ_CONTEXT : 'about_company'));
 
-	if ($process_steps !== [] && function_exists('lf_niche_upsert_process_steps')) {
+	if ($has_process && $process_steps !== [] && function_exists('lf_niche_upsert_process_steps')) {
 		$result['process_ids'] = lf_niche_upsert_process_steps($process_steps, $process_group, $vars, $overwrite_process);
 	}
-	if ($faqs !== [] && function_exists('lf_niche_upsert_context_faqs')) {
+	if ($has_faq && $faqs !== [] && function_exists('lf_niche_upsert_context_faqs')) {
 		$result['faq_ids'] = lf_niche_upsert_context_faqs($faqs, $faq_context, $vars, $overwrite_faq);
 	}
 
@@ -674,21 +679,43 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 		return array_merge($result, ['error' => __('Page Builder is not available.', 'leadsforward-core')]);
 	}
 
+	$existing_pb = get_post_meta($page_id, LF_PB_META_KEY, true);
+	$existing_sections = is_array($existing_pb) && is_array($existing_pb['sections'] ?? null)
+		? $existing_pb['sections']
+		: [];
+	$hero_variant = (string) ($schema['hero_variant'] ?? 'internal');
+
 	$pb_sections = [];
 	$counts = [];
-	foreach ($schema['order'] as $type) {
+	foreach ($order as $type) {
 		$counts[$type] = ($counts[$type] ?? 0) + 1;
 		$instance_id = lf_pb_instance_id($type, $counts[$type]);
-		$defaults = lf_sections_defaults_for($type);
-		if ($type === 'hero') {
-			$defaults['variant'] = 'internal';
+
+		if (lf_pci_section_is_locked($type, $schema) && isset($existing_sections[$instance_id]) && is_array($existing_sections[$instance_id])) {
+			$pb_sections[$instance_id] = $existing_sections[$instance_id];
+			$pb_sections[$instance_id]['enabled'] = true;
+			$pb_sections[$instance_id]['deletable'] = false;
+			$result['sections_preserved'][] = $type;
+			continue;
 		}
-		$merged = array_merge($defaults, $sections[$type] ?? []);
+
+		$base_type = function_exists('lf_homepage_base_section_type')
+			? lf_homepage_base_section_type($type)
+			: $type;
+		$defaults = lf_sections_defaults_for($base_type);
+		if ($base_type === 'hero') {
+			$defaults['variant'] = $hero_variant;
+		}
+		$imported = is_array($sections[$type] ?? null) ? $sections[$type] : [];
+		if ($imported === [] && $type === $base_type && is_array($sections[$base_type] ?? null)) {
+			$imported = $sections[$base_type];
+		}
+		$merged = array_merge($defaults, $imported);
 		if (function_exists('lf_sections_normalize_service_details_settings')) {
-			$merged = lf_sections_normalize_service_details_settings($type, $merged);
+			$merged = lf_sections_normalize_service_details_settings($base_type, $merged);
 		}
 		$pb_sections[$instance_id] = [
-			'type' => $type,
+			'type' => $base_type,
 			'enabled' => true,
 			'deletable' => false,
 			'settings' => $merged,
@@ -700,6 +727,14 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 		'title' => sanitize_text_field($seo['title']),
 		'description' => sanitize_textarea_field($seo['description']),
 	];
+
+	$existing_seo = is_array($existing_pb) && is_array($existing_pb['seo'] ?? null) ? $existing_pb['seo'] : [];
+	if ($seo_out['title'] === '' && !empty($existing_seo['title'])) {
+		$seo_out['title'] = (string) $existing_seo['title'];
+	}
+	if ($seo_out['description'] === '' && !empty($existing_seo['description'])) {
+		$seo_out['description'] = (string) $existing_seo['description'];
+	}
 
 	update_post_meta($page_id, LF_PB_META_KEY, [
 		'order' => array_keys($pb_sections),
@@ -719,6 +754,140 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 }
 
 /**
+ * Apply parsed homepage content to homepage section options.
+ *
+ * @param array<string, mixed> $sections
+ * @param list<array{title:string,body:string}> $process_steps
+ * @param list<array{question:string,answer:string}> $faqs
+ * @param array{title: string, description: string} $seo
+ * @param array{sync_mode?: string} $options
+ */
+function lf_pci_apply_to_homepage(array $schema, array $sections, array $process_steps, array $faqs, array $seo, array $options = []): array {
+	if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_homepage_default_section_config')) {
+		return ['success' => false, 'error' => __('Homepage controller is not available.', 'leadsforward-core')];
+	}
+
+	$page_id = lf_pci_get_page_id_for_slug('home');
+	$vars = lf_pci_template_vars();
+	$result = [
+		'page_id' => $page_id,
+		'process_ids' => [],
+		'faq_ids' => [],
+		'sections_updated' => [],
+		'sections_preserved' => [],
+		'process_source' => 'import',
+		'faq_source' => 'import',
+		'storage' => 'homepage',
+	];
+
+	$order = is_array($schema['order'] ?? null) ? $schema['order'] : [];
+	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'foundation-repair');
+	$library = function_exists('lf_niche_content_library_get_for_niche')
+		? lf_niche_content_library_get_for_niche($niche_slug)
+		: ['process' => [], 'faqs' => []];
+
+	if ($process_steps === [] && !empty($library['process'])) {
+		$process_steps = $library['process'];
+		$result['process_source'] = 'library';
+	}
+	if ($faqs === [] && !empty($library['faqs'])) {
+		$faqs = $library['faqs'];
+		$result['faq_source'] = 'library';
+	}
+
+	$sync_mode = (string) ($options['sync_mode'] ?? 'force');
+	$overwrite_process = $result['process_source'] === 'import' && $sync_mode === 'force';
+	$overwrite_faq = $result['faq_source'] === 'import' && $sync_mode === 'force';
+
+	foreach ($sections as $type => $settings) {
+		if (!is_array($settings)) {
+			continue;
+		}
+		foreach ($settings as $key => $val) {
+			if (is_string($val)) {
+				$sections[$type][$key] = lf_pci_fill_tokens($val, $vars);
+			}
+		}
+	}
+	$seo['title'] = lf_pci_fill_tokens((string) ($seo['title'] ?? ''), $vars);
+	$seo['description'] = lf_pci_fill_tokens((string) ($seo['description'] ?? ''), $vars);
+
+	$process_group = (string) ($schema['process_group'] ?? (defined('LF_NICHE_ABOUT_PROCESS_GROUP') ? LF_NICHE_ABOUT_PROCESS_GROUP : 'about-company'));
+	$faq_context = (string) ($schema['faq_context'] ?? (defined('LF_NICHE_ABOUT_FAQ_CONTEXT') ? LF_NICHE_ABOUT_FAQ_CONTEXT : 'about_company'));
+
+	if ($process_steps !== [] && function_exists('lf_niche_upsert_process_steps')) {
+		$result['process_ids'] = lf_niche_upsert_process_steps($process_steps, $process_group, $vars, $overwrite_process);
+	}
+	if ($faqs !== [] && function_exists('lf_niche_upsert_context_faqs')) {
+		$result['faq_ids'] = lf_niche_upsert_context_faqs($faqs, $faq_context, $vars, $overwrite_faq);
+	}
+	if (!empty($result['process_ids']) && function_exists('lf_niche_ids_to_lines')) {
+		$sections['process']['process_selected_ids'] = lf_niche_ids_to_lines($result['process_ids']);
+	}
+	if (!empty($result['faq_ids']) && function_exists('lf_niche_ids_to_lines')) {
+		$sections['faq_accordion']['faq_selected_ids'] = lf_niche_ids_to_lines($result['faq_ids']);
+	}
+
+	$existing = function_exists('lf_get_homepage_section_config')
+		? lf_get_homepage_section_config()
+		: (array) get_option(LF_HOMEPAGE_CONFIG_OPTION, []);
+	$hero_variant = (string) ($schema['hero_variant'] ?? 'default');
+	$config = [];
+
+	foreach ($order as $type) {
+		if (lf_pci_section_is_locked($type, $schema) && isset($existing[$type]) && is_array($existing[$type])) {
+			$config[$type] = $existing[$type];
+			$config[$type]['enabled'] = true;
+			$result['sections_preserved'][] = $type;
+			continue;
+		}
+
+		$base_type = function_exists('lf_homepage_base_section_type')
+			? lf_homepage_base_section_type($type)
+			: $type;
+		$defaults = lf_homepage_default_section_config($base_type, $niche_slug);
+		if ($base_type === 'hero') {
+			$defaults['variant'] = $hero_variant;
+		}
+		$imported = is_array($sections[$type] ?? null) ? $sections[$type] : [];
+		if ($imported === [] && $type === $base_type && is_array($sections[$base_type] ?? null)) {
+			$imported = $sections[$base_type];
+		}
+		$merged = array_merge($defaults, $imported);
+		$merged['enabled'] = true;
+		if (function_exists('lf_sections_normalize_service_details_settings')) {
+			$merged = lf_sections_normalize_service_details_settings($base_type, $merged);
+		}
+		$config[$type] = $merged;
+		$result['sections_updated'][] = $type;
+	}
+
+	update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, false);
+	if (defined('LF_HOMEPAGE_ORDER_OPTION')) {
+		update_option(LF_HOMEPAGE_ORDER_OPTION, $order, false);
+	}
+	if (defined('LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION')) {
+		update_option(LF_HOMEPAGE_MANUAL_OVERRIDE_OPTION, true, false);
+	}
+
+	$seo_out = [
+		'title' => sanitize_text_field($seo['title']),
+		'description' => sanitize_textarea_field($seo['description']),
+	];
+	if ($page_id > 0) {
+		if ($seo_out['title'] !== '') {
+			update_post_meta($page_id, '_lf_seo_title', $seo_out['title']);
+		}
+		if ($seo_out['description'] !== '') {
+			update_post_meta($page_id, '_lf_seo_meta_description', $seo_out['description']);
+		}
+	}
+
+	$result['success'] = true;
+	return $result;
+}
+
+/**
  * Apply a full lf_pci_parse_document() result to the target page.
  *
  * @param array<string, mixed> $parsed
@@ -727,10 +896,26 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
  */
 function lf_pci_apply_parsed(array $parsed, array $options = []): array {
 	$slug = (string) ($parsed['page_slug'] ?? '');
+	$schema = lf_pci_schema_for_slug($slug);
+	if ($schema === null) {
+		return ['success' => false, 'error' => __('No template registered for this page slug.', 'leadsforward-core')];
+	}
+
 	$page_id = (int) ($options['page_id'] ?? 0);
 	if ($page_id <= 0) {
 		$page_id = lf_pci_get_page_id_for_slug($slug);
 	}
+
+	$sections = (array) ($parsed['sections'] ?? []);
+	$process_steps = (array) ($parsed['process_steps'] ?? []);
+	$faqs = (array) ($parsed['faqs'] ?? []);
+	$seo = (array) ($parsed['seo'] ?? ['title' => '', 'description' => '']);
+	$apply_options = $options;
+
+	if (($schema['storage'] ?? 'page_builder') === 'homepage') {
+		return lf_pci_apply_to_homepage($schema, $sections, $process_steps, $faqs, $seo, $apply_options);
+	}
+
 	if ($page_id <= 0) {
 		return [
 			'success' => false,
@@ -742,19 +927,8 @@ function lf_pci_apply_parsed(array $parsed, array $options = []): array {
 			'page_slug' => $slug,
 		];
 	}
-	$schema = lf_pci_schema_for_slug($slug);
-	if ($schema === null) {
-		return ['success' => false, 'error' => __('No template registered for this page slug.', 'leadsforward-core')];
-	}
-	return lf_pci_apply_to_page(
-		$page_id,
-		$schema,
-		(array) ($parsed['sections'] ?? []),
-		(array) ($parsed['process_steps'] ?? []),
-		(array) ($parsed['faqs'] ?? []),
-		(array) ($parsed['seo'] ?? ['title' => '', 'description' => '']),
-		$options
-	);
+
+	return lf_pci_apply_to_page($page_id, $schema, $sections, $process_steps, $faqs, $seo, $apply_options);
 }
 
 /**
@@ -765,22 +939,85 @@ function lf_pci_get_about_page_id(): int {
 }
 
 /**
- * Universal paste template (includes PAGE target header).
+ * Resolve a downloadable paste template for a registered page slug.
  */
-function lf_pci_universal_template(): string {
-	$path = LF_THEME_DIR . '/docs/templates/page-content-template.txt';
+function lf_pci_template_for_slug(string $slug): string {
+	$slug = sanitize_title($slug);
+	$schema = lf_pci_schema_for_slug($slug);
+	if ($schema === null) {
+		return lf_pci_universal_template();
+	}
+	$path = LF_THEME_DIR . '/docs/templates/' . $slug . '-content-template.txt';
 	if (is_readable($path)) {
 		return (string) file_get_contents($path);
 	}
-	$about = lf_pci_about_us_template_fallback();
-	return "=== PAGE ===\nSlug: about-us\nName: About Us\n\n" . $about;
+	if ($slug === 'about-us') {
+		return lf_pci_about_us_template_fallback();
+	}
+	return lf_pci_template_fallback_for_schema($schema);
+}
+
+/**
+ * @param array<string, mixed> $schema
+ */
+function lf_pci_template_fallback_for_schema(array $schema): string {
+	$slug = (string) ($schema['slug'] ?? '');
+	$label = (string) ($schema['label'] ?? $slug);
+	$locked = lf_pci_schema_locked_types($schema);
+	$lines = [
+		'=== PAGE ===',
+		'Slug: ' . $slug,
+		'Name: ' . $label,
+		'',
+	];
+	if ($locked !== []) {
+		$lines[] = 'Notes: Theme-controlled sections (do not edit in doc): ' . implode(', ', $locked);
+		$lines[] = '';
+	}
+
+	$section_docs = [
+		'hero' => "=== HERO ===\nHeadline: \nSubheadline: \nEyebrow: ",
+		'trust_bar' => "=== TRUST BAR ===\nHeading: \nBadges:\n- Licensed & Insured\n- 5-Star Rated",
+		'content_image' => "=== STORY ===\nHeading: \nIntro: \nBody: \nChecklist:\n- ",
+		'benefits' => "=== BENEFITS ===\nHeading: \nIntro: \nItems:\nTitle || Body",
+		'image_content' => "=== TEAM ===\nHeading: \nIntro: \nBody: ",
+		'service_details' => "=== SERVICE DETAILS ===\nHeading: \nIntro: \nBody: ",
+		'service_details__2' => "=== SERVICE DETAILS 2 ===\nHeading: \nIntro: \nBody: ",
+		'process' => "=== PROCESS ===\nHeading: \nIntro: \n(Leave steps blank — Niche Content Library on import.)",
+		'faq_accordion' => "=== FAQ ===\nHeading: \nIntro: \n(Leave Q&A blank — Niche Content Library on import.)",
+		'cta' => "=== CTA ===\nHeadline: \nSubheadline: ",
+		'content' => "=== CONTENT ===\nHeading: \nBody: ",
+		'seo' => "=== SEO ===\nTitle: \nDescription: ",
+	];
+	foreach ((array) ($schema['order'] ?? []) as $type) {
+		if (lf_pci_section_is_locked($type, $schema)) {
+			continue;
+		}
+		$key = $type;
+		if (!isset($section_docs[$key]) && function_exists('lf_homepage_base_section_type')) {
+			$key = lf_homepage_base_section_type($type);
+		}
+		if (isset($section_docs[$key])) {
+			$lines[] = $section_docs[$key];
+			$lines[] = '';
+		}
+	}
+	$lines[] = $section_docs['seo'];
+	return implode("\n", $lines);
+}
+
+/**
+ * Universal paste template (includes PAGE target header).
+ */
+function lf_pci_universal_template(): string {
+	return lf_pci_template_for_slug('home');
 }
 
 /**
  * Blank About Us template for Google Docs / paste workflow.
  */
 function lf_pci_about_us_template(): string {
-	return lf_pci_universal_template();
+	return lf_pci_template_for_slug('about-us');
 }
 
 function lf_pci_about_us_template_fallback(): string {

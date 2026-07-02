@@ -1,0 +1,32 @@
+=== PAGE ===
+Slug: services
+Name: Services Overview
+Notes: The service cards grid is theme-controlled (pulled from your Services CPT). Do not add a === SERVICES === block.
+
+=== HERO ===
+Headline: Foundation Repair Services in {city}
+Subheadline: Engineered repairs for settlement, cracks, bowing walls, and moisture — scoped clearly before work starts.
+Eyebrow: Licensed • Insured • Local Crews
+
+=== STORY ===
+Heading: Complete foundation repair under one roof
+Intro: Every service starts with inspection, documentation, and a plan you can review.
+Body: {business} handles the full range of structural and waterproofing work{city_line}. From piering and wall stabilization to crack repair and encapsulation, our crews follow engineered scopes — not improvised field fixes.
+Checklist:
+- Crack repair & structural stabilization
+- Piering & underpinning
+- Basement waterproofing
+- Crawl space encapsulation
+
+=== FAQ ===
+Heading: Questions about our services
+Intro: Straight answers about scopes, timelines, and what each repair includes.
+(Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
+
+=== CTA ===
+Headline: Get a foundation repair estimate from {business}
+Subheadline: Tell us what you are seeing — we will schedule an inspection and outline options.
+
+=== SEO ===
+Title: Foundation Repair Services {city_line} | {business}
+Description: Explore foundation repair services from {business}{city_line}. Engineered scopes, licensed crews, and clear pricing.

@@ -1,0 +1,22 @@
+=== PAGE ===
+Slug: service-areas
+Name: Service Areas Overview
+Notes: The service area map and area cards are theme-controlled. Do not add a === SERVICE AREAS === or === MAP === block.
+
+=== HERO ===
+Headline: Foundation Repair Service Areas
+Subheadline: Local crews serving {city} and surrounding neighborhoods with fast inspections and engineered repairs.
+Eyebrow: Local • Responsive • Licensed
+
+=== FAQ ===
+Heading: Service area questions
+Intro: Coverage, response times, and what to expect when you request an inspection.
+(Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
+
+=== CTA ===
+Headline: Check if we serve your neighborhood
+Subheadline: Request a foundation inspection — we will confirm coverage and schedule quickly.
+
+=== SEO ===
+Title: Service Areas | {business}{city_line}
+Description: See where {business} provides foundation repair{city_line}. Local crews, fast scheduling, engineered solutions.

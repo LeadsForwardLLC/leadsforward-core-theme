@@ -1,7 +1,7 @@
 === PAGE ===
 Slug: home
 Name: Homepage
-Notes: Change Slug to match the WordPress page (home, about-us, services, service-areas, etc.). One file = one page. Service cards, reviews, maps, and similar grids are theme-controlled on overview pages.
+Notes: Service cards, reviews carousel, and map are theme-controlled — do not add === SERVICES ===, === REVIEWS ===, or === MAP === blocks.
 
 === HERO ===
 Headline: Foundation Repair in {city}
@@ -28,12 +28,17 @@ Protected job sites || Landscaping, floors, and access paths treated with the sa
 === SERVICE DETAILS ===
 Heading: Foundation repair services that protect your home long-term
 Intro: From crack repair to piering and waterproofing, we document every step before work starts.
-Body: {business} handles settlement, bowing walls, slab issues, and moisture problems with engineered plans — not guesswork.
+Body: {business} handles settlement, bowing walls, slab issues, and moisture problems with engineered plans — not guesswork. Every project starts with a structural inspection, clear scope, and pricing you can review before crews mobilize.
+Checklist:
+- Crack repair & epoxy injection
+- Piering & underpinning
+- Bowing wall stabilization
+- Basement waterproofing
 
 === SERVICE DETAILS 2 ===
 Heading: Inspections built for peace of mind
 Intro: Know what you are buying — and what you are fixing — before you commit.
-Body: Our inspectors measure movement, document conditions with photos, and explain repair options in plain language.
+Body: Our inspectors measure movement, document conditions with photos, and explain repair options in plain language. You receive a written plan with timelines, warranty details, and next steps — whether you move forward now or need time to decide.
 
 === PROCESS ===
 Heading: How foundation repair works with us

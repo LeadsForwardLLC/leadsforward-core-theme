@@ -43,9 +43,11 @@ function lf_pci_render_page_meta_box(\WP_Post $post): void {
 	$has_template = $schema !== null;
 	$bulk_url = admin_url('admin.php?page=lf-import-page-content');
 	$download_url = wp_nonce_url(
-		admin_url('admin.php?page=lf-import-page-content&lf_pci_download=page-template'),
+		admin_url('admin.php?page=lf-import-page-content&lf_pci_template_slug=' . rawurlencode($page_slug)),
 		'lf_pci_download_template'
 	);
+	$is_homepage = ($schema['storage'] ?? '') === 'homepage';
+	$locked = is_array($schema['locked'] ?? null) ? $schema['locked'] : [];
 
 	wp_nonce_field('lf_pci_page_import', 'lf_pci_page_nonce');
 	?>
@@ -58,6 +60,16 @@ function lf_pci_render_page_meta_box(\WP_Post $post): void {
 				$page_slug,
 				(string) ($schema['label'] ?? $page_slug)
 			));
+			if ($locked !== []) {
+				echo ' ' . esc_html(sprintf(
+					/* translators: %s: comma-separated section types */
+					__('Theme-controlled sections are preserved: %s.', 'leadsforward-core'),
+					implode(', ', $locked)
+				));
+			}
+			if ($is_homepage) {
+				echo ' ' . esc_html__('Homepage content is saved to Homepage Builder settings (not Page Builder meta).', 'leadsforward-core');
+			}
 		} else {
 			esc_html_e('This page slug is not in the import registry yet.', 'leadsforward-core');
 		}
@@ -68,7 +80,7 @@ function lf_pci_render_page_meta_box(\WP_Post $post): void {
 	<textarea name="lf_pci_page_content" rows="12" class="widefat code" style="font-family:monospace;" placeholder="<?php esc_attr_e('Paste doc content here, or leave empty and use Import Page Content for batch uploads.', 'leadsforward-core'); ?>"><?php echo esc_textarea((string) get_post_meta($post->ID, '_lf_pci_draft_paste', true)); ?></textarea>
 	<p style="margin:8px 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
 		<button type="submit" class="button button-secondary" name="lf_pci_page_action" value="preview"><?php esc_html_e('Preview parse', 'leadsforward-core'); ?></button>
-		<button type="submit" class="button button-primary" name="lf_pci_page_action" value="apply" <?php disabled(!$has_template); ?> onclick="return confirm('<?php echo esc_js(__('Replace this page\'s Page Builder sections with the pasted import?', 'leadsforward-core')); ?>');"><?php esc_html_e('Apply to this page', 'leadsforward-core'); ?></button>
+		<button type="submit" class="button button-primary" name="lf_pci_page_action" value="apply" <?php disabled(!$has_template); ?> onclick="return confirm('<?php echo esc_js($is_homepage ? __('Replace homepage sections with the pasted import? Service cards, reviews, and map stay theme-controlled.', 'leadsforward-core') : __('Replace this page\'s Page Builder sections with the pasted import?', 'leadsforward-core')); ?>');"><?php esc_html_e('Apply to this page', 'leadsforward-core'); ?></button>
 	</p>
 	<?php
 	$notice = get_post_meta($post->ID, '_lf_pci_last_notice', true);
