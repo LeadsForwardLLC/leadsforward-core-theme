@@ -68,4 +68,38 @@ expect_niche(
 $keys = lf_ai_studio_manifest_niche_match_keys($manifest);
 expect_niche(in_array('foundation-repair', $keys, true), 'match keys include slug');
 
+expect_niche(
+	lf_ai_studio_airtable_email_field(['Domain Email' => 'info@acculevel.com'], 'Domain Email') === 'info@acculevel.com',
+	'plain domain email field'
+);
+expect_niche(
+	lf_ai_studio_airtable_email_field(['Domain Email' => ['email' => 'hello@client.com']], 'Domain Email') === 'hello@client.com',
+	'collaborator-style email field'
+);
+
+$merged = lf_ai_studio_airtable_merge_live_business_contact_fields(
+	['email' => 'lead@example.com'],
+	['Domain Email' => 'info@acculevel.com', 'Root Domain' => 'acculevel.com'],
+	['email' => 'Domain Email', 'root_domain' => 'Root Domain']
+);
+expect_niche(($merged['domain_email'] ?? '') === 'info@acculevel.com', 'merge overlays domain email');
+expect_niche(($merged['email'] ?? '') === 'info@acculevel.com', 'merge replaces placeholder email');
+
+$normalized = lf_ai_studio_normalize_manifest([
+	'business' => [
+		'name' => 'Test Co',
+		'domain_email' => 'info@acculevel.com',
+		'root_domain' => 'acculevel.com',
+		'email' => 'info@acculevel.com',
+		'address' => ['street' => '', 'city' => '', 'state' => '', 'zip' => ''],
+	],
+	'homepage' => [],
+	'services' => [],
+	'service_areas' => [],
+]);
+expect_niche(
+	(string) ($normalized['business']['domain_email'] ?? '') === 'info@acculevel.com',
+	'normalize manifest preserves domain_email'
+);
+
 echo "PASS\n";

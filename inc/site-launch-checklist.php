@@ -164,16 +164,21 @@ function lf_launch_checklist_logo(): array {
 }
 
 function lf_launch_checklist_business_email(): array {
-	$nap = function_exists('lf_nap_data') ? lf_nap_data() : ['email' => ''];
-	$email = trim((string) ($nap['email'] ?? ''));
-	$pass = $email !== '' && is_email($email);
+	$stored = function_exists('lf_get_business_info_value')
+		? trim((string) lf_get_business_info_value('lf_business_email', ''))
+		: '';
+	if ($stored === '' && function_exists('lf_business_entity_get')) {
+		$entity = lf_business_entity_get();
+		$stored = trim((string) ($entity['email_stored'] ?? ''));
+	}
+	$pass = $stored !== '' && is_email($stored) && !str_ends_with(strtolower($stored), '@example.com');
 
 	return lf_launch_checklist_finalize_row([
 		'id' => 'business-email',
 		'label' => __('Business email', 'leadsforward-core'),
 		'description' => $pass
-			? $email
-			: __('Set a public contact email in Global Settings (used in schema and contact surfaces).', 'leadsforward-core'),
+			? $stored
+			: __('Set a public contact email in Global Settings (synced from Airtable Domain Email on import).', 'leadsforward-core'),
 		'status' => $pass ? lf_health_status_pass() : lf_health_status_warning(),
 		'fix_link' => admin_url('admin.php?page=lf-ops'),
 		'auto' => true,
