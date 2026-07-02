@@ -1082,6 +1082,7 @@ function lf_sections_defaults_for(string $section_id, string $niche_slug = ''): 
 function lf_sections_service_details_alias_layouts(): array {
 	return [
 		'service_details' => 'content_media',
+		'service_details__2' => 'media_content',
 		'content_image' => 'content_media',
 		'content_image_a' => 'content_media',
 		'content_image_c' => 'content_media',
