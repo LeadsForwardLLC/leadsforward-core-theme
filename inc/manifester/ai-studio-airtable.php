@@ -319,9 +319,9 @@ function lf_ai_studio_airtable_build_site(): void {
 		], 400);
 	}
 
-	$redirect = function_exists('lf_ai_studio_manifest_admin_url')
-		? lf_ai_studio_manifest_admin_url(['built' => '1'])
-		: admin_url('admin.php?page=lf-manifest&built=1');
+	$redirect = function_exists('lf_ai_studio_site_setup_admin_url')
+		? lf_ai_studio_site_setup_admin_url(['built' => '1'])
+		: admin_url('admin.php?page=lf-site-setup&built=1');
 	wp_send_json_success([
 		'redirect' => $redirect,
 		'summary' => $run['summary'] ?? [],
@@ -347,9 +347,9 @@ function lf_ai_studio_airtable_generate(): void {
 		], 400);
 	}
 
-	$redirect = function_exists('lf_ai_studio_manifest_admin_url')
-		? lf_ai_studio_manifest_admin_url(['manifest' => '1'])
-		: admin_url('admin.php?page=lf-manifest&manifest=1');
+	$redirect = function_exists('lf_ai_studio_site_setup_admin_url')
+		? lf_ai_studio_site_setup_admin_url(['manifest' => '1'])
+		: admin_url('admin.php?page=lf-site-setup&manifest=1');
 	if (!empty($run['job_id'])) {
 		$redirect = add_query_arg('job', (string) $run['job_id'], $redirect);
 	}

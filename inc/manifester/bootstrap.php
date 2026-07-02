@@ -28,3 +28,7 @@ require_once LF_MANIFESTER_DIR . '/ai-studio-wiring.php';
 require_once LF_MANIFESTER_DIR . '/ai-studio-rest.php';
 require_once LF_MANIFESTER_DIR . '/ai-studio-airtable.php';
 require_once LF_MANIFESTER_DIR . '/admin-menu.php';
+
+if (is_admin()) {
+	require_once LF_THEME_DIR . '/inc/site-setup-admin.php';
+}
