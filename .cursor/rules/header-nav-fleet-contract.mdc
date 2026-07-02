@@ -26,7 +26,7 @@ Never top-level: Contact, Reviews, Blog, Why Choose Us, Financing, FAQ, Projects
 ## When changing nav code
 
 1. Bump `LF_HEADER_MENU_STRUCTURE_VERSION` so stored menus re-repair.
-2. Do **not** reintroduce "gate" logic that disables More when secondary pages exist.
+2. Do **not** gate More off published child pages — `lf_header_menu_more_is_enabled()` defaults **true** when `header_menu` exists.
 3. Do **not** put Service Areas under More.
 4. `lf_sitemap_sync_reorder_header_menu_top_level()` must run **after** `lf_header_menu_consolidate_secondary_into_more()` and must not re-promote More children to top level.
 5. Verify launch checklist: **LeadsForward → Launch Checklist → Header fleet navigation** passes.
