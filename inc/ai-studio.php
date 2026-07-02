@@ -8662,7 +8662,7 @@ function lf_ai_studio_ensure_process_group_term(string $slug): int {
  * @param array<int,array{title:string,body:string}> $steps
  * @return int[] Ordered post IDs
  */
-function lf_ai_studio_upsert_process_steps(array $steps, string $group_slug): array {
+function lf_ai_studio_upsert_process_steps(array $steps, string $group_slug, bool $overwrite_bodies = false): array {
 	if (empty($steps) || !post_type_exists('lf_process_step')) {
 		return [];
 	}
@@ -8709,12 +8709,12 @@ function lf_ai_studio_upsert_process_steps(array $steps, string $group_slug): ar
 		$key = strtolower($title);
 		$existing_id = !empty($title_map[$key]) ? absint($title_map[$key]) : 0;
 		if ($existing_id > 0) {
-			// Only fill empty content to avoid clobbering manual edits.
 			$current_content = trim((string) get_post_field('post_content', $existing_id));
-			if ($current_content === '' && $body !== '') {
+			if ($body !== '' && ($overwrite_bodies || $current_content === '')) {
 				wp_update_post([
 					'ID' => $existing_id,
 					'post_content' => $body,
+					'post_title' => $title,
 				]);
 			}
 			wp_update_post([
