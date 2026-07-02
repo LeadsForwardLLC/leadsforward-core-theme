@@ -144,6 +144,18 @@ function lf_ai_studio_airtable_get_settings(): array {
 		}
 	}
 
+	$email_aliases = [
+		'Email' => 'Domain Email',
+		'Business Email' => 'Domain Email',
+		'Contact Email' => 'Domain Email',
+		'Domain email' => 'Domain Email',
+		'Public Email' => 'Domain Email',
+	];
+	$current_email = $normalized_map['email'] ?? '';
+	if ($current_email !== '' && isset($email_aliases[$current_email])) {
+		$normalized_map['email'] = $email_aliases[$current_email];
+	}
+
 	$table = (string) get_option('lf_ai_airtable_table', 'Business Info');
 	$view = (string) get_option('lf_ai_airtable_view', 'Global Sync View (ACTIVE)');
 	$review_table = (string) get_option('lf_ai_airtable_reviews_table', 'Reviews');
@@ -1763,6 +1775,11 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 			if ($live_niche['project_type'] !== '') {
 				$decoded['business']['project_type'] = $live_niche['project_type'];
 			}
+			$decoded['business'] = lf_ai_studio_airtable_merge_live_business_contact_fields(
+				$decoded['business'],
+				$fields,
+				$map
+			);
 			if (function_exists('lf_ai_studio_normalize_manifest')) {
 				$decoded = lf_ai_studio_normalize_manifest($decoded);
 			}
@@ -1775,7 +1792,7 @@ function lf_ai_studio_airtable_record_to_manifest(array $record, array $settings
 	$legal_name = $business_name;
 	$phone = lf_ai_studio_airtable_string_field($fields, $map['phone'] ?? '');
 	// Public site / schema email: mapped column only (default "Domain Email"). Do not fall back to Google Account or Gmails — those are often personal client inboxes.
-	$domain_email_only = lf_ai_studio_airtable_string_field($fields, $map['email'] ?? '');
+	$domain_email_only = lf_ai_studio_airtable_email_field($fields, $map['email'] ?? 'Domain Email');
 	$root_domain_host = function_exists('lf_business_entity_normalize_domain_host')
 		? lf_business_entity_normalize_domain_host(lf_ai_studio_airtable_string_field($fields, $map['root_domain'] ?? ''))
 		: strtolower(trim(lf_ai_studio_airtable_string_field($fields, $map['root_domain'] ?? '')));
@@ -2353,6 +2370,74 @@ function lf_ai_studio_airtable_resolve_niche_from_fields(array $fields, array $m
 		'project_type' => $project_type,
 		'resolved_slug' => $resolved_slug,
 	];
+}
+
+function lf_ai_studio_airtable_email_field(array $fields, string $key): string {
+	$resolved_key = lf_ai_studio_airtable_resolve_field_key($fields, $key);
+	if ($resolved_key === '') {
+		return '';
+	}
+	$value = $fields[$resolved_key];
+	if (is_string($value)) {
+		$email = lf_ai_studio_airtable_first_email($value);
+		return $email !== '' && is_email($email) ? $email : '';
+	}
+	if (is_array($value)) {
+		if (isset($value['email']) && is_string($value['email'])) {
+			$email = lf_ai_studio_airtable_first_email($value['email']);
+			if ($email !== '' && is_email($email)) {
+				return $email;
+			}
+		}
+		foreach ($value as $item) {
+			if (is_array($item) && isset($item['email']) && is_string($item['email'])) {
+				$email = lf_ai_studio_airtable_first_email($item['email']);
+				if ($email !== '' && is_email($email)) {
+					return $email;
+				}
+			}
+			if (is_scalar($item)) {
+				$email = lf_ai_studio_airtable_first_email((string) $item);
+				if ($email !== '' && is_email($email)) {
+					return $email;
+				}
+			}
+		}
+	}
+
+	$email = lf_ai_studio_airtable_first_email(trim((string) $value));
+	return $email !== '' && is_email($email) ? $email : '';
+}
+
+/**
+ * Overlay live Airtable contact columns onto manifest business (Manifest JSON path).
+ *
+ * @param array<string, mixed> $business
+ * @param array<string, mixed> $fields
+ * @param array<string, string> $map
+ * @return array<string, mixed>
+ */
+function lf_ai_studio_airtable_merge_live_business_contact_fields(array $business, array $fields, array $map): array {
+	$domain_email = lf_ai_studio_airtable_email_field($fields, $map['email'] ?? 'Domain Email');
+	if ($domain_email !== '') {
+		$business['domain_email'] = $domain_email;
+		$existing = trim((string) ($business['email'] ?? ''));
+		if ($existing === '' || str_ends_with(strtolower($existing), '@example.com')) {
+			$business['email'] = $domain_email;
+		}
+	}
+
+	$root_domain = lf_ai_studio_airtable_string_field($fields, $map['root_domain'] ?? '');
+	if ($root_domain !== '') {
+		$business['root_domain'] = $root_domain;
+	}
+
+	$phone = lf_ai_studio_airtable_string_field($fields, $map['phone'] ?? '');
+	if ($phone !== '' && trim((string) ($business['phone'] ?? '')) === '') {
+		$business['phone'] = $phone;
+	}
+
+	return $business;
 }
 
 function lf_ai_studio_airtable_string_field(array $fields, string $key): string {

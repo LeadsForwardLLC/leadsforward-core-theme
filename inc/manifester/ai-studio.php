@@ -5645,7 +5645,9 @@ function lf_ai_studio_normalize_manifest(array $manifest): array {
 			'name' => sanitize_text_field((string) ($business['name'] ?? '')),
 			'legal_name' => sanitize_text_field((string) ($business['legal_name'] ?? '')),
 			'phone' => sanitize_text_field((string) ($business['phone'] ?? '')),
-			'email' => sanitize_text_field((string) ($business['email'] ?? '')),
+			'email' => sanitize_email((string) ($business['email'] ?? '')),
+			'domain_email' => sanitize_email((string) ($business['domain_email'] ?? '')),
+			'root_domain' => sanitize_text_field((string) ($business['root_domain'] ?? '')),
 			'address' => [
 				'street' => sanitize_text_field((string) ($address['street'] ?? '')),
 				'city' => sanitize_text_field((string) ($address['city'] ?? '')),

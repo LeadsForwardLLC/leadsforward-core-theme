@@ -880,6 +880,53 @@ function lf_ops_handle_global_settings_save(): void {
 }
 
 /**
+ * Backfill business email from the linked Airtable Business Info record when WP is empty.
+ */
+function lf_ops_hydrate_business_email_from_airtable(): void {
+	if (!function_exists('lf_get_business_info_value') || !function_exists('lf_update_business_info_value')) {
+		return;
+	}
+	$stored = trim((string) lf_get_business_info_value('lf_business_email', ''));
+	if ($stored !== '' && is_email($stored) && !str_ends_with(strtolower($stored), '@example.com')) {
+		return;
+	}
+	if (!function_exists('lf_ai_studio_airtable_get_settings') || !function_exists('lf_ai_studio_airtable_fetch_record')) {
+		return;
+	}
+	$settings = lf_ai_studio_airtable_get_settings();
+	if (empty($settings['enabled']) || trim((string) ($settings['pat'] ?? '')) === '') {
+		return;
+	}
+	$record_id = trim((string) get_option('lf_ai_airtable_project_record_id', ''));
+	if ($record_id === '') {
+		return;
+	}
+	$result = lf_ai_studio_airtable_fetch_record($record_id);
+	if (empty($result['ok']) || !is_array($result['record'] ?? null)) {
+		return;
+	}
+	$fields = is_array($result['record']['fields'] ?? null) ? $result['record']['fields'] : [];
+	$map = is_array($settings['fields'] ?? null) ? $settings['fields'] : [];
+	$email = function_exists('lf_ai_studio_airtable_email_field')
+		? lf_ai_studio_airtable_email_field($fields, (string) ($map['email'] ?? 'Domain Email'))
+		: '';
+	if ($email === '' || !is_email($email)) {
+		return;
+	}
+	lf_update_business_info_value('lf_business_email', $email);
+
+	$manifest = get_option('lf_site_manifest', []);
+	if (is_array($manifest) && isset($manifest['business']) && is_array($manifest['business'])) {
+		$manifest['business']['domain_email'] = $email;
+		if (trim((string) ($manifest['business']['email'] ?? '')) === ''
+			|| str_ends_with(strtolower((string) ($manifest['business']['email'] ?? '')), '@example.com')) {
+			$manifest['business']['email'] = $email;
+		}
+		update_option('lf_site_manifest', $manifest, false);
+	}
+}
+
+/**
  * Backfill niche/email/social/root domain from stored site manifest when generation missed fields.
  */
 function lf_ops_hydrate_business_entity_from_manifest(): void {
@@ -918,8 +965,15 @@ function lf_ops_hydrate_business_entity_from_manifest(): void {
 	if ($domain_email === '' || !is_email($domain_email)) {
 		$domain_email = trim((string) ($business['email'] ?? ''));
 	}
-	if ($domain_email !== '' && is_email($domain_email) && (string) lf_get_business_info_value('lf_business_email', '') === '') {
+	$stored_email = trim((string) lf_get_business_info_value('lf_business_email', ''));
+	$needs_email = $stored_email === ''
+		|| !is_email($stored_email)
+		|| str_ends_with(strtolower($stored_email), '@example.com');
+	if ($domain_email !== '' && is_email($domain_email) && $needs_email) {
 		lf_update_business_info_value('lf_business_email', $domain_email);
+	}
+	if (function_exists('lf_ops_hydrate_business_email_from_airtable')) {
+		lf_ops_hydrate_business_email_from_airtable();
 	}
 	$social_manifest = is_array($business['social'] ?? null) ? $business['social'] : [];
 	$same_as = is_array($business['same_as'] ?? null) ? $business['same_as'] : [];
