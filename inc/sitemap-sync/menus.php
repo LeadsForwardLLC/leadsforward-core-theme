@@ -271,15 +271,23 @@ function lf_sitemap_sync_reorder_header_menu_top_level(int $menu_id, array $labe
 
 	$remaining_non_cta = [];
 	$remaining_cta = [];
-	foreach ($pool as $item) {
+	$remaining_more = [];
+	foreach ($pool as $id => $item) {
 		if (!$item instanceof WP_Post) {
 			continue;
 		}
 		if (lf_nav_menu_item_is_sync_preserved_cta($item)) {
 			$remaining_cta[] = $item;
-		} else {
-			$remaining_non_cta[] = $item;
+			continue;
 		}
+		$is_more = lf_nav_menu_item_has_class($item, 'lf-menu-more')
+			|| (function_exists('lf_header_menu_normalize_more_label')
+				&& lf_header_menu_normalize_more_label((string) ($item->title ?? '')) === 'more');
+		if ($is_more) {
+			$remaining_more[] = $item;
+			continue;
+		}
+		$remaining_non_cta[] = $item;
 	}
 	usort(
 		$remaining_non_cta,
@@ -289,8 +297,12 @@ function lf_sitemap_sync_reorder_header_menu_top_level(int $menu_id, array $labe
 		$remaining_cta,
 		static fn ($a, $b): int => ((int) ($a->menu_order ?? 0)) <=> ((int) ($b->menu_order ?? 0))
 	);
+	usort(
+		$remaining_more,
+		static fn ($a, $b): int => ((int) ($a->menu_order ?? 0)) <=> ((int) ($b->menu_order ?? 0))
+	);
 
-	$ordered = array_merge($ordered, $remaining_non_cta, $remaining_cta);
+	$ordered = array_merge($ordered, $remaining_non_cta, $remaining_cta, $remaining_more);
 
 	$pos = 0;
 	foreach ($ordered as $item) {
@@ -1816,6 +1828,7 @@ function lf_header_menu_repair_nav_structure(int $menu_id, bool $apply_preferred
 	lf_nav_menu_remove_duplicate_group_overview_links($menu_id);
 	lf_nav_menu_repair_group_dropdown_children($menu_id);
 	lf_nav_menu_dedupe_duplicate_cta_items($menu_id);
+	lf_header_menu_dedupe_duplicate_about_menu_items($menu_id);
 	lf_header_menu_append_missing_core_top_levels($menu_id);
 	lf_nav_menu_dedupe_duplicate_cta_items($menu_id);
 
@@ -1824,7 +1837,7 @@ function lf_header_menu_repair_nav_structure(int $menu_id, bool $apply_preferred
 	}
 
 	if ($apply_preferred_order) {
-		lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'Service Areas', 'About', 'More']);
+		lf_sitemap_sync_reorder_header_menu_top_level($menu_id, ['Home', 'Services', 'About']);
 	}
 }
 

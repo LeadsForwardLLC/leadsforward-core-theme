@@ -11,13 +11,18 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+/** Runtime-only nav item IDs (negative; never persisted). */
+const LF_HEADER_MENU_SYNTH_HOME_ID = -5100;
+const LF_HEADER_MENU_SYNTH_ABOUT_ID = -5200;
+const LF_HEADER_MENU_SYNTH_MORE_ID = -5400;
+
 /**
  * About page slugs — always top-level (never under More).
  *
  * @return list<string>
  */
 function lf_header_menu_about_page_slugs(): array {
-	$slugs = ['about-us', 'about'];
+	$slugs = ['about-us'];
 
 	return (array) apply_filters('lf_header_menu_about_page_slugs', $slugs);
 }
@@ -40,6 +45,7 @@ function lf_header_menu_more_gate_page_slugs(): array {
  */
 function lf_header_menu_more_child_page_slugs(): array {
 	$slugs = [
+		'service-areas',
 		'why-choose-us',
 		'contact',
 		'blog',
@@ -87,6 +93,7 @@ function lf_header_menu_more_page_titles_normalized(): array {
  */
 function lf_header_menu_more_title_hints(): array {
 	$hints = [
+		'service areas'  => 'service-areas',
 		'why choose us'  => 'why-choose-us',
 		'contact'        => 'contact',
 		'blog'           => 'blog',
@@ -325,9 +332,12 @@ function lf_header_menu_item_belongs_in_more(\WP_Post $item): bool {
 		return false;
 	}
 	if (lf_header_menu_item_has_class($item, 'lf-menu-services-parent')
-		|| lf_header_menu_item_has_class($item, 'lf-menu-areas-parent')
 		|| lf_header_menu_item_has_class($item, 'lf-menu-group-parent')) {
 		return false;
+	}
+	if (lf_header_menu_item_has_class($item, 'lf-menu-areas-parent')
+		|| (function_exists('lf_header_menu_item_is_areas_parent') && lf_header_menu_item_is_areas_parent($item))) {
+		return (int) ($item->menu_item_parent ?? 0) === 0;
 	}
 
 	$page = lf_header_menu_resolve_menu_item_page($item);
@@ -401,11 +411,11 @@ function lf_header_menu_objects_apply_nav_rules(array $items, $args): array {
 			if ($is_more_parent && $parent === 0) {
 				continue;
 			}
-			if ($more_parent_id > 0 && $parent === $more_parent_id) {
+			if ($more_parent_id !== 0 && $parent === $more_parent_id) {
 				continue;
 			}
 		}
-		if ($more_parent_id > 0 && $parent === $more_parent_id && lf_header_menu_item_is_about($item)) {
+		if ($more_parent_id !== 0 && $parent === $more_parent_id && lf_header_menu_item_is_about($item)) {
 			$item->menu_item_parent = 0;
 		}
 		$filtered[] = $item;
@@ -437,7 +447,7 @@ function lf_header_menu_objects_apply_nav_rules(array $items, $args): array {
 		}
 		$home_item = lf_header_menu_synthetic_child(
 			0,
-			-5100,
+			LF_HEADER_MENU_SYNTH_HOME_ID,
 			$home_title,
 			$home_url,
 			['menu-item', 'lf-menu-home']
@@ -460,7 +470,7 @@ function lf_header_menu_objects_apply_nav_rules(array $items, $args): array {
 		if (!lf_header_menu_menu_has_page($items, (int) $about_page->ID)) {
 			$about_item = lf_header_menu_synthetic_child(
 				0,
-				-5200,
+				LF_HEADER_MENU_SYNTH_ABOUT_ID,
 				lf_header_menu_about_nav_label(),
 				(string) get_permalink($about_page),
 				['menu-item', 'lf-menu-about']
@@ -485,6 +495,23 @@ function lf_header_menu_objects_apply_nav_rules(array $items, $args): array {
 			$item->title = lf_header_menu_about_nav_label();
 		}
 	}
+
+	// Keep a single top-level About link (about-us wins over legacy /about duplicates).
+	$about_kept = false;
+	$deduped = [];
+	foreach ($items as $item) {
+		if (!$item instanceof \WP_Post) {
+			continue;
+		}
+		if (lf_header_menu_item_is_about($item) && (int) ($item->menu_item_parent ?? 0) === 0) {
+			if ($about_kept) {
+				continue;
+			}
+			$about_kept = true;
+		}
+		$deduped[] = $item;
+	}
+	$items = $deduped;
 
 	if (!$more_enabled) {
 		return $items;
@@ -517,7 +544,7 @@ function lf_header_menu_objects_apply_nav_rules(array $items, $args): array {
 		if (!lf_header_menu_item_belongs_in_more($item)) {
 			continue;
 		}
-		if ($more_parent_id > 0 && (int) ($item->menu_item_parent ?? 0) === $more_parent_id) {
+		if ($more_parent_id !== 0 && (int) ($item->menu_item_parent ?? 0) === $more_parent_id) {
 			continue;
 		}
 		if ((int) ($item->menu_item_parent ?? 0) !== 0) {
@@ -580,7 +607,7 @@ function lf_header_menu_objects_apply_nav_rules(array $items, $args): array {
 
 	if ($candidates === []) {
 		// Remove orphan More parent.
-		if ($more_parent_id > 0) {
+		if ($more_parent_id !== 0) {
 			$items = array_values(array_filter(
 				$items,
 				static fn ($item): bool => $item instanceof \WP_Post && (int) ($item->ID ?? 0) !== $more_parent_id
@@ -590,7 +617,7 @@ function lf_header_menu_objects_apply_nav_rules(array $items, $args): array {
 	}
 
 	if ($more_parent_id <= 0) {
-		$more_parent_id = -5100;
+		$more_parent_id = LF_HEADER_MENU_SYNTH_MORE_ID;
 		$more_item = lf_header_menu_synthetic_child(
 			0,
 			$more_parent_id,
@@ -618,7 +645,7 @@ function lf_header_menu_objects_apply_nav_rules(array $items, $args): array {
 
 	// Drop orphan More parent when nothing renders underneath it.
 	$more_parent_id = lf_header_menu_find_more_parent_id($items);
-	if ($more_parent_id > 0) {
+	if ($more_parent_id !== 0) {
 		$more_children = 0;
 		foreach ($items as $item) {
 			if (!$item instanceof \WP_Post) {
@@ -640,6 +667,65 @@ function lf_header_menu_objects_apply_nav_rules(array $items, $args): array {
 }
 
 /**
+ * Remove duplicate top-level About links from a stored menu (keeps about-us over legacy /about).
+ */
+function lf_header_menu_dedupe_duplicate_about_menu_items(int $menu_id): void {
+	if ($menu_id <= 0 || !function_exists('wp_get_nav_menu_items') || !function_exists('wp_delete_post')) {
+		return;
+	}
+
+	$items = wp_get_nav_menu_items($menu_id);
+	if (!is_array($items) || $items === []) {
+		return;
+	}
+
+	$preferred_id = 0;
+	foreach (lf_header_menu_about_page_slugs() as $slug) {
+		$page = lf_header_menu_published_page_for_slug($slug);
+		if ($page instanceof \WP_Post) {
+			$preferred_id = (int) $page->ID;
+			break;
+		}
+	}
+
+	$keeper_id = 0;
+	$duplicates = [];
+	foreach ($items as $item) {
+		if (!$item instanceof \WP_Post || (int) ($item->menu_item_parent ?? 0) !== 0) {
+			continue;
+		}
+		if (!lf_header_menu_item_is_about($item)) {
+			continue;
+		}
+		$page = lf_header_menu_resolve_menu_item_page($item);
+		$item_page_id = $page instanceof \WP_Post ? (int) $page->ID : 0;
+		if ($keeper_id <= 0) {
+			$keeper_id = (int) $item->ID;
+			if ($preferred_id > 0 && $item_page_id === $preferred_id) {
+				continue;
+			}
+			if ($preferred_id > 0 && $item_page_id !== $preferred_id) {
+				$duplicates[] = (int) $item->ID;
+				$keeper_id = 0;
+			}
+			continue;
+		}
+		if ($preferred_id > 0 && $item_page_id === $preferred_id) {
+			$duplicates[] = $keeper_id;
+			$keeper_id = (int) $item->ID;
+			continue;
+		}
+		$duplicates[] = (int) $item->ID;
+	}
+
+	foreach (array_unique($duplicates) as $dup_id) {
+		if ($dup_id > 0 && $dup_id !== $keeper_id) {
+			wp_delete_post($dup_id, true);
+		}
+	}
+}
+
+/**
  * Move published secondary pages from top-level into More; remove empty More parent.
  */
 function lf_header_menu_consolidate_secondary_into_more(int $menu_id): void {
@@ -653,7 +739,7 @@ function lf_header_menu_consolidate_secondary_into_more(int $menu_id): void {
 			return;
 		}
 		$more_parent_id = lf_header_menu_find_more_parent_id($items);
-		if ($more_parent_id > 0) {
+		if ($more_parent_id !== 0) {
 			wp_delete_post($more_parent_id, true);
 		}
 		return;
@@ -720,7 +806,7 @@ function lf_header_menu_consolidate_secondary_into_more(int $menu_id): void {
 		if (!lf_header_menu_item_belongs_in_more($item)) {
 			continue;
 		}
-		if ($more_parent_id > 0 && (int) ($item->menu_item_parent ?? 0) === $more_parent_id) {
+		if ($more_parent_id !== 0 && (int) ($item->menu_item_parent ?? 0) === $more_parent_id) {
 			continue;
 		}
 		if ((int) ($item->menu_item_parent ?? 0) !== 0) {
@@ -925,6 +1011,8 @@ function lf_header_menu_maybe_persist_more_consolidation(): void {
 		if ($more_children === 0) {
 			$needs_repair = true;
 		}
+	} elseif (lf_header_menu_more_is_enabled()) {
+		$needs_repair = true;
 	}
 
 	if ($needs_repair) {

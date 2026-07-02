@@ -140,9 +140,66 @@ function lf_header_menu_objects_consolidate_more(array $items, $args): array {
 }
 add_filter('wp_nav_menu_objects', 'lf_header_menu_objects_consolidate_more', 18, 2);
 
-const LF_HEADER_MENU_STRUCTURE_VERSION = 'header-nav-v8';
+const LF_HEADER_MENU_STRUCTURE_VERSION = 'header-nav-v9';
 const LF_HEADER_MENU_DEFERRED_REPAIR_HOOK = 'lf_header_menu_deferred_structure_repair';
 const LF_HEADER_MENU_REPAIR_LOCK = 'lf_header_menu_repair_lock';
+
+/**
+ * Whether the stored header menu still violates fleet nav rules.
+ */
+function lf_header_menu_structure_needs_repair(int $menu_id): bool {
+	if ($menu_id <= 0 || !function_exists('wp_get_nav_menu_items')) {
+		return false;
+	}
+
+	$items = wp_get_nav_menu_items($menu_id);
+	if (!is_array($items) || $items === []) {
+		return false;
+	}
+
+	$top_about = 0;
+	$more_parent_id = function_exists('lf_header_menu_find_more_parent_id')
+		? lf_header_menu_find_more_parent_id($items)
+		: 0;
+	$more_children = 0;
+	$services_parent_ok = false;
+
+	foreach ($items as $item) {
+		if (!$item instanceof \WP_Post) {
+			continue;
+		}
+		$parent = (int) ($item->menu_item_parent ?? 0);
+		if ($parent === 0 && function_exists('lf_header_menu_item_is_services_parent')
+			&& lf_header_menu_item_is_services_parent($item)) {
+			$services_parent_ok = lf_header_menu_item_has_class($item, 'lf-menu-services-parent');
+		}
+		if ($parent === 0 && function_exists('lf_header_menu_item_is_about') && lf_header_menu_item_is_about($item)) {
+			++$top_about;
+		}
+		if ($parent === 0 && function_exists('lf_header_menu_item_belongs_in_more')
+			&& lf_header_menu_item_belongs_in_more($item)) {
+			return true;
+		}
+		if ($more_parent_id !== 0 && $parent === $more_parent_id) {
+			++$more_children;
+		}
+	}
+
+	if ($top_about > 1) {
+		return true;
+	}
+	if (!$services_parent_ok && function_exists('lf_header_menu_cpt_nav_dropdown_enabled')
+		&& lf_header_menu_cpt_nav_dropdown_enabled('services')) {
+		return true;
+	}
+	if (function_exists('lf_header_menu_more_is_enabled') && lf_header_menu_more_is_enabled()) {
+		if ($more_parent_id <= 0 || $more_children === 0) {
+			return true;
+		}
+	}
+
+	return false;
+}
 
 /**
  * Repair stored menu when secondary pages are still saved at top level.
@@ -160,7 +217,7 @@ function lf_header_menu_force_structure_repair(): void {
 	}
 
 	$stored = (string) get_option('lf_header_menu_structure_version', '');
-	if ($stored === LF_HEADER_MENU_STRUCTURE_VERSION) {
+	if ($stored === LF_HEADER_MENU_STRUCTURE_VERSION && !lf_header_menu_structure_needs_repair($menu_id)) {
 		return;
 	}
 
@@ -186,7 +243,9 @@ function lf_header_menu_run_deferred_structure_repair(int $menu_id): void {
 			@set_time_limit(300);
 		}
 		lf_header_menu_repair_nav_structure($menu_id);
-		update_option('lf_header_menu_structure_version', LF_HEADER_MENU_STRUCTURE_VERSION, false);
+		if (!lf_header_menu_structure_needs_repair($menu_id)) {
+			update_option('lf_header_menu_structure_version', LF_HEADER_MENU_STRUCTURE_VERSION, false);
+		}
 	} catch (\Throwable $e) {
 		if (function_exists('error_log')) {
 			error_log('LF header menu deferred repair failed: ' . $e->getMessage());
