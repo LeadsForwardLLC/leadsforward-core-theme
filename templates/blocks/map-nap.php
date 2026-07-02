@@ -151,12 +151,13 @@ if (is_string($place_id) && $place_id !== '') {
 
 $areas_query = new WP_Query([
 	'post_type'      => 'lf_service_area',
-	'posts_per_page' => 8,
+	'posts_per_page' => -1,
 	'orderby'        => 'menu_order title',
 	'order'          => 'ASC',
-	'post_status'    => 'publish',
+	'post_status'    => function_exists('lf_cpt_card_query_post_statuses') ? lf_cpt_card_query_post_statuses() : ['publish', 'future', 'draft', 'pending'],
 	'no_found_rows'  => true,
 ]);
+$show_editor_status = !is_admin() && current_user_can('edit_theme_options');
 ?>
 <section class="lf-block lf-block-map-nap <?php echo esc_attr($surface['class'] ?: 'lf-surface-light'); ?> lf-block-map-nap--<?php echo esc_attr($variant); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>"<?php echo $section_surface_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<div class="lf-block-map-nap__inner">
@@ -221,13 +222,24 @@ $areas_query = new WP_Query([
 						<?php endif; ?>
 					</div>
 				<?php elseif ($areas_query->have_posts()) : ?>
-					<ul class="lf-block-map-nap__areas-list" role="list">
+					<ul class="lf-block-map-nap__areas-list lf-cpt-driven-links" role="list">
 						<?php
-						while ($areas_query->have_posts()) : $areas_query->the_post();
+						while ($areas_query->have_posts()) :
+							$areas_query->the_post();
+							$area_post = get_post();
 							$label = get_the_title();
+							$area_url = ($area_post instanceof \WP_Post && function_exists('lf_cpt_card_permalink'))
+								? lf_cpt_card_permalink($area_post)
+								: (string) get_permalink();
+							$status_meta = ($area_post instanceof \WP_Post && function_exists('lf_cpt_editor_status_meta'))
+								? lf_cpt_editor_status_meta($area_post)
+								: ['status' => 'publish', 'status_label' => '', 'is_live' => true];
 						?>
-							<li class="lf-block-map-nap__areas-item">
-								<a href="<?php the_permalink(); ?>" class="lf-block-map-nap__areas-link">
+							<li class="lf-block-map-nap__areas-item" data-area-status="<?php echo esc_attr(sanitize_key((string) ($status_meta['status'] ?? 'publish'))); ?>">
+								<?php if ($show_editor_status && ($status_meta['status_label'] ?? '') !== '') : ?>
+									<span class="lf-ai-area-status-badge lf-ai-faq-picker__status lf-ai-faq-picker__status--<?php echo esc_attr(sanitize_key((string) ($status_meta['status'] ?? 'publish'))); ?>"><?php echo esc_html((string) $status_meta['status_label']); ?></span>
+								<?php endif; ?>
+								<a href="<?php echo esc_url($area_url); ?>" class="lf-block-map-nap__areas-link">
 									<?php if ($list_icon) : ?><span class="lf-block-map-nap__icon"><?php echo $list_icon; ?></span><?php endif; ?>
 									<span><?php echo esc_html($label); ?></span>
 								</a>
