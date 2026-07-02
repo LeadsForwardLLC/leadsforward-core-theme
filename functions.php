@@ -37,6 +37,7 @@ function lf_load_inc(string $path): void {
 lf_load_inc('setup.php');
 lf_load_inc('menus-service-categories.php');
 lf_load_inc('header-menu-more.php');
+lf_load_inc('header-nav-policy.php');
 lf_load_inc('header-menu-fixup.php');
 lf_load_inc('header-menu-cpt-dropdowns.php');
 lf_load_inc('menus-mega.php');
@@ -65,6 +66,8 @@ lf_load_inc('blog.php');
 lf_load_inc('headings.php');
 // Deterministic media indexing + matching engine.
 lf_load_inc('image-intelligence.php');
+lf_load_inc('image-slot-registry.php');
+lf_load_inc('n8n-page-events.php');
 // Manifest launch scheduling (service/area/blog publish windows).
 lf_load_inc('launch-schedule.php');
 lf_load_inc('publish-schedule.php');

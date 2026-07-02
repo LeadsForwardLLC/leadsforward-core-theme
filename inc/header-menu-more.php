@@ -45,7 +45,6 @@ function lf_header_menu_more_gate_page_slugs(): array {
  */
 function lf_header_menu_more_child_page_slugs(): array {
 	$slugs = [
-		'service-areas',
 		'why-choose-us',
 		'contact',
 		'blog',
@@ -93,7 +92,6 @@ function lf_header_menu_more_page_titles_normalized(): array {
  */
 function lf_header_menu_more_title_hints(): array {
 	$hints = [
-		'service areas'  => 'service-areas',
 		'why choose us'  => 'why-choose-us',
 		'contact'        => 'contact',
 		'blog'           => 'blog',
@@ -328,16 +326,16 @@ function lf_header_menu_item_belongs_in_more(\WP_Post $item): bool {
 	if (lf_header_menu_item_is_about($item)) {
 		return false;
 	}
+	if (function_exists('lf_header_menu_item_must_stay_top_level') && lf_header_menu_item_must_stay_top_level($item)) {
+		return false;
+	}
 	if (lf_header_menu_item_has_class($item, 'lf-menu-more')) {
 		return false;
 	}
 	if (lf_header_menu_item_has_class($item, 'lf-menu-services-parent')
+		|| lf_header_menu_item_has_class($item, 'lf-menu-areas-parent')
 		|| lf_header_menu_item_has_class($item, 'lf-menu-group-parent')) {
 		return false;
-	}
-	if (lf_header_menu_item_has_class($item, 'lf-menu-areas-parent')
-		|| (function_exists('lf_header_menu_item_is_areas_parent') && lf_header_menu_item_is_areas_parent($item))) {
-		return (int) ($item->menu_item_parent ?? 0) === 0;
 	}
 
 	$page = lf_header_menu_resolve_menu_item_page($item);
@@ -810,6 +808,9 @@ function lf_header_menu_consolidate_secondary_into_more(int $menu_id): void {
 			continue;
 		}
 		if ((int) ($item->menu_item_parent ?? 0) !== 0) {
+			continue;
+		}
+		if (function_exists('lf_header_menu_item_must_stay_top_level') && lf_header_menu_item_must_stay_top_level($item)) {
 			continue;
 		}
 		$to_move[] = $item;

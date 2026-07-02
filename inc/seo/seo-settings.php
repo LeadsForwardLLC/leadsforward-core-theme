@@ -274,6 +274,7 @@ function lf_seo_render_settings_page(): void {
 		<?php if ($saved) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php esc_html_e('SEO settings saved.', 'leadsforward-core'); ?></p></div>
 		<?php endif; ?>
+		<p class="description" style="max-width:720px;margin-bottom:1rem;"><?php esc_html_e('Core SEO lives here. Per-page keywords and scores are on each page editor. Site health, coverage, and link maps are separate tabs.', 'leadsforward-core'); ?></p>
 		<form method="post" class="lf-seo-settings-form">
 			<?php wp_nonce_field('lf_seo_settings', 'lf_seo_settings_nonce'); ?>
 
@@ -521,7 +522,9 @@ function lf_seo_render_settings_page(): void {
 					form.insertBefore(panel, h2);
 					h2.remove();
 
-					var startOpen = !!saved[panelId];
+					var startOpen = Object.prototype.hasOwnProperty.call(saved, panelId)
+						? !!saved[panelId]
+						: ['general', 'indexing', 'social', 'schema', 'sitemap', 'scripts'].indexOf(panelId) !== -1;
 					panel.classList.toggle('is-open', startOpen);
 					body.hidden = !startOpen;
 					header.setAttribute('aria-expanded', startOpen ? 'true' : 'false');

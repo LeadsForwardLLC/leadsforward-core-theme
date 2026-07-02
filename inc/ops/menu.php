@@ -546,6 +546,7 @@ function lf_ops_handle_global_settings_save(): void {
 	if ($can_sensitive) {
 		update_option('lf_ai_studio_enabled', isset($_POST['lf_ai_studio_enabled']) ? '1' : '0');
 		update_option('lf_ai_studio_webhook', isset($_POST['lf_ai_studio_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_ai_studio_webhook'])) : '');
+		update_option('lf_n8n_page_events_webhook', isset($_POST['lf_n8n_page_events_webhook']) ? esc_url_raw(wp_unslash($_POST['lf_n8n_page_events_webhook'])) : '');
 		update_option('lf_ai_studio_secret', isset($_POST['lf_ai_studio_secret']) ? trim(sanitize_text_field(wp_unslash($_POST['lf_ai_studio_secret']))) : '');
 		$callback_raw = isset($_POST['lf_ai_studio_callback_url']) ? trim(wp_unslash((string) $_POST['lf_ai_studio_callback_url'])) : '';
 		// Reject placeholder / garbage so WordPress falls back to rest_url() via lf_ai_studio_build_callback_url().
@@ -1172,6 +1173,7 @@ function lf_ops_render_global_settings_page(): void {
 	}
 	$manifester_enabled = get_option('lf_ai_studio_enabled', '1') === '1';
 	$manifester_webhook = (string) get_option('lf_ai_studio_webhook', '');
+	$n8n_page_events_webhook = (string) get_option('lf_n8n_page_events_webhook', '');
 	$manifester_secret = (string) get_option('lf_ai_studio_secret', '');
 	$manifester_callback = (string) get_option('lf_ai_studio_callback_url', '');
 	$manifester_auto_requeue = get_option('lf_ai_studio_auto_requeue', '0') === '1';
@@ -1364,6 +1366,13 @@ function lf_ops_render_global_settings_page(): void {
 							<tr>
 								<th scope="row"><label for="lf_ai_studio_webhook_global"><?php esc_html_e('Orchestrator Webhook URL', 'leadsforward-core'); ?></label></th>
 								<td><input type="url" class="large-text" name="lf_ai_studio_webhook" id="lf_ai_studio_webhook_global" value="<?php echo esc_attr($can_sensitive ? $manifester_webhook : ''); ?>" placeholder="<?php echo esc_attr($can_sensitive ? 'https://n8n.example.com/webhook/...' : __('Admins only', 'leadsforward-core')); ?>" <?php disabled(!$can_sensitive); ?> required /></td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="lf_n8n_page_events_webhook"><?php esc_html_e('Page publish webhook (images)', 'leadsforward-core'); ?></label></th>
+								<td>
+									<input type="url" class="large-text" name="lf_n8n_page_events_webhook" id="lf_n8n_page_events_webhook" value="<?php echo esc_attr($can_sensitive ? $n8n_page_events_webhook : ''); ?>" placeholder="<?php echo esc_attr($can_sensitive ? 'https://n8n.example.com/webhook/page-published' : __('Admins only', 'leadsforward-core')); ?>" <?php disabled(!$can_sensitive); ?> />
+									<p class="description"><?php esc_html_e('Fires when a page/service/area is published. Payload includes per-section image slots for n8n placement. Falls back to orchestrator URL if empty.', 'leadsforward-core'); ?></p>
+								</td>
 							</tr>
 							<tr>
 								<th scope="row"><label for="lf_ai_studio_secret_global"><?php esc_html_e('Orchestrator Shared Secret', 'leadsforward-core'); ?></label></th>

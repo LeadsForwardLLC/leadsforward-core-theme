@@ -890,7 +890,17 @@ function lf_ai_studio_rest_orchestrator(\WP_REST_Request $request): \WP_REST_Res
 		]), 200);
 	}
 
-	$apply_result = lf_apply_orchestrator_updates($apply_payload, ['force_apply' => $force_apply]);
+	$image_placement_only = !empty($apply_payload['image_placement_only']) || !empty($payload['image_placement_only']);
+	if ($image_placement_only && function_exists('lf_n8n_begin_image_apply_lock')) {
+		lf_n8n_begin_image_apply_lock();
+	}
+	$apply_result = lf_apply_orchestrator_updates($apply_payload, [
+		'force_apply' => $force_apply,
+		'image_placement_only' => $image_placement_only,
+	]);
+	if ($image_placement_only && function_exists('lf_n8n_end_image_apply_lock')) {
+		lf_n8n_end_image_apply_lock();
+	}
 	if (function_exists('lf_ai_studio_error_log')) {
 		lf_ai_studio_error_log('orchestrator: apply_result', !empty($apply_result['success']) ? 'INFO' : 'ERROR', [
 			'job_id' => $job_id,
