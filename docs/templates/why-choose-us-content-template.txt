@@ -11,9 +11,10 @@ Eyebrow: Licensed • Insured • Local Specialists
 Heading: What sets us apart
 Intro: Homeowners choose us when they want structural work explained clearly — and executed to plan.
 Items:
-Engineered repair plans || Every recommendation is tied to measurements, photos, and soil conditions — not sales pressure.
+Engineered repair plans || Every recommendation ties to measurements, soil conditions, and structural load — not sales pressure.
 Licensed, insured crews || Vetted installers with proper coverage and workmanship standards you can document.
 Responsive project leadership || A single point of contact from inspection through warranty paperwork.
+Protected job sites || Tarps, access paths, and daily cleanup treated with the same care we give our own homes.
 
 === STORY ===
 Heading: More than a quick patch
@@ -26,8 +27,8 @@ Intro: Inspectors, project managers, and installers aligned on the same repair p
 Body: Your project is coordinated by a manager who owns scheduling, permits, and daily site communication. Field crews follow written scopes — not improvised fixes — and leave your property clean at the end of each day.
 
 === FAQ ===
-Heading: Questions about working with us
-Intro: Timelines, warranties, inspections, and what to expect before crews arrive.
+Heading: Frequently Asked Questions
+Intro: Quick answers about how we work and what sets us apart.
 (Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
 
 === CTA ===

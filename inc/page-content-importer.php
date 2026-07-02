@@ -926,6 +926,8 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 	$order = is_array($schema['order'] ?? null) ? $schema['order'] : [];
 	$has_process = in_array('process', $order, true);
 	$has_faq = in_array('faq_accordion', $order, true);
+	$page_slug = (string) ($schema['slug'] ?? '');
+	$is_faq_hub = !empty($schema['faq_hub']) || (function_exists('lf_page_template_is_faq_hub') && lf_page_template_is_faq_hub($page_slug));
 
 	if ($has_process && $process_steps === [] && !empty($library['process'])) {
 		$process_steps = $library['process'];
@@ -934,6 +936,13 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 	if ($has_faq && $faqs === [] && !empty($library['faqs'])) {
 		$faqs = $library['faqs'];
 		$result['faq_source'] = 'library';
+	}
+	if ($is_faq_hub && $has_faq && $faqs === [] && function_exists('lf_niche_seed_about_content')) {
+		$seeded = lf_niche_seed_about_content($niche_slug, $vars, false);
+		if (!empty($seeded['faq_ids'])) {
+			$result['faq_ids'] = array_values(array_filter(array_map('absint', $seeded['faq_ids'])));
+			$result['faq_source'] = 'library';
+		}
 	}
 
 	$sync_mode = (string) ($options['sync_mode'] ?? 'force');
@@ -961,14 +970,37 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 		$result['process_ids'] = lf_niche_upsert_process_steps($process_steps, $process_group, $vars, $overwrite_process);
 	}
 	if ($has_faq && $faqs !== [] && function_exists('lf_niche_upsert_context_faqs')) {
-		$result['faq_ids'] = lf_niche_upsert_context_faqs($faqs, $faq_context, $vars, $overwrite_faq);
+		$upsert_context = $faq_context;
+		if ($is_faq_hub && $result['faq_source'] === 'library') {
+			$upsert_context = defined('LF_NICHE_ABOUT_FAQ_CONTEXT') ? LF_NICHE_ABOUT_FAQ_CONTEXT : 'about_company';
+		}
+		$result['faq_ids'] = lf_niche_upsert_context_faqs($faqs, $upsert_context, $vars, $overwrite_faq);
 	}
 
 	if (!empty($result['process_ids']) && function_exists('lf_niche_ids_to_lines')) {
 		$sections['process']['process_selected_ids'] = lf_niche_ids_to_lines($result['process_ids']);
 	}
-	if (!empty($result['faq_ids']) && function_exists('lf_niche_ids_to_lines')) {
+
+	if ($has_faq && $is_faq_hub) {
+		$hub_defaults = function_exists('lf_page_template_faq_hub_accordion_settings')
+			? lf_page_template_faq_hub_accordion_settings()
+			: ['faq_max_items' => -1, 'faq_selected_ids' => ''];
+		if (!is_array($sections['faq_accordion'] ?? null)) {
+			$sections['faq_accordion'] = [];
+		}
+		foreach (['section_heading', 'section_intro'] as $faq_key) {
+			if (trim((string) ($sections['faq_accordion'][$faq_key] ?? '')) === '' && isset($hub_defaults[$faq_key])) {
+				$sections['faq_accordion'][$faq_key] = (string) $hub_defaults[$faq_key];
+			}
+		}
+		$sections['faq_accordion']['faq_max_items'] = -1;
+		$sections['faq_accordion']['faq_selected_ids'] = '';
+	} elseif (!empty($result['faq_ids']) && function_exists('lf_niche_ids_to_lines')) {
 		$sections['faq_accordion']['faq_selected_ids'] = lf_niche_ids_to_lines($result['faq_ids']);
+		$max = (int) ($sections['faq_accordion']['faq_max_items'] ?? 0);
+		if ($max <= 0 && function_exists('lf_page_template_faq_max_items_for_slug')) {
+			$sections['faq_accordion']['faq_max_items'] = lf_page_template_faq_max_items_for_slug($page_slug);
+		}
 	}
 
 	if (!function_exists('lf_sections_defaults_for') || !function_exists('lf_pb_instance_id')) {
@@ -1397,8 +1429,8 @@ Intro: A documented path from inspection to warranty — so you always know what
 (Leave steps blank — auto-filled from LeadsForward → Niche Content Library on import.)
 
 === FAQ ===
-Heading: About our foundation repair team
-Intro: Honest answers about inspections, warranties, crews, and what to expect on your property.
+Heading: Frequently Asked Questions
+Intro: Quick answers about our company, process, and what to expect.
 (Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
 
 === CTA ===
