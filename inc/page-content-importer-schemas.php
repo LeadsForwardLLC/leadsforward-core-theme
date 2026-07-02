@@ -64,6 +64,8 @@ function lf_pci_common_section_aliases(): array {
  * @param array{
  *   locked?: list<string>,
  *   storage?: string,
+ *   post_type?: string,
+ *   downloadable?: bool,
  *   hero_variant?: string,
  *   process_group?: string,
  *   faq_context?: string,
@@ -90,6 +92,8 @@ function lf_pci_build_schema(string $slug, string $label, array $order, array $o
 		'locked' => $locked,
 		'importable' => $importable,
 		'storage' => $options['storage'] ?? 'page_builder',
+		'post_type' => $options['post_type'] ?? 'page',
+		'downloadable' => array_key_exists('downloadable', $options) ? (bool) $options['downloadable'] : true,
 		'hero_variant' => $options['hero_variant'] ?? 'internal',
 		'process_group' => $options['process_group'] ?? (defined('LF_NICHE_ABOUT_PROCESS_GROUP') ? LF_NICHE_ABOUT_PROCESS_GROUP : 'about-company'),
 		'faq_context' => $options['faq_context'] ?? (defined('LF_NICHE_ABOUT_FAQ_CONTEXT') ? LF_NICHE_ABOUT_FAQ_CONTEXT : 'about_company'),
@@ -123,7 +127,24 @@ function lf_pci_section_is_locked(string $section_key, array $schema): bool {
 }
 
 /**
- * Registered page templates keyed by WordPress page slug.
+ * Page Builder section keys for a context (service_details__2 for duplicates).
+ *
+ * @return list<string>
+ */
+function lf_pci_section_order_for_context(string $context): array {
+	if (function_exists('lf_ai_pb_default_section_keys_for_context')) {
+		$keys = lf_ai_pb_default_section_keys_for_context($context);
+		if ($keys !== []) {
+			return $keys;
+		}
+	}
+	return function_exists('lf_sections_default_order')
+		? lf_sections_default_order($context)
+		: [];
+}
+
+/**
+ * Registered import templates keyed by template slug (page slug or `service` for CPT).
  *
  * @return array<string, array<string, mixed>>
  */
@@ -192,10 +213,6 @@ function lf_pci_registry(): array {
 			'locked' => ['trust_reviews'],
 			'required' => ['hero', 'cta'],
 		]),
-		lf_pci_build_schema('blog', __('Blog', 'leadsforward-core'), ['hero', 'blog_posts', 'cta'], [
-			'locked' => ['blog_posts'],
-			'required' => ['hero', 'cta'],
-		]),
 		lf_pci_build_schema('faq', __('FAQ', 'leadsforward-core'), ['hero', 'faq_accordion', 'cta'], [
 			'required' => ['hero', 'faq_accordion', 'cta'],
 		]),
@@ -203,24 +220,59 @@ function lf_pci_registry(): array {
 			'locked' => ['map_nap'],
 			'required' => ['hero', 'cta'],
 		]),
-		lf_pci_build_schema('sitemap', __('Sitemap', 'leadsforward-core'), ['hero', 'sitemap_links'], [
-			'locked' => ['sitemap_links'],
-			'required' => ['hero'],
-		]),
-		lf_pci_build_schema('privacy-policy', __('Privacy Policy', 'leadsforward-core'), ['hero', 'content'], [
-			'required' => ['hero', 'content'],
-		]),
-		lf_pci_build_schema('terms-of-service', __('Terms of Service', 'leadsforward-core'), ['hero', 'content'], [
-			'required' => ['hero', 'content'],
-		]),
 		lf_pci_build_schema('thank-you', __('Thank You', 'leadsforward-core'), ['hero', 'content'], [
 			'required' => ['hero', 'content'],
+		]),
+		lf_pci_build_schema('service', __('Service Page', 'leadsforward-core'), lf_pci_section_order_for_context('service'), [
+			'post_type' => 'lf_service',
+			'required' => ['hero', 'service_details', 'cta'],
 		]),
 	];
 
 	$out = [];
 	foreach ($schemas as $schema) {
 		$out[(string) $schema['slug']] = $schema;
+	}
+	return $out;
+}
+
+/**
+ * Writer-facing .docx templates (grouped for admin UI).
+ *
+ * @return array<string, list<array{key: string, label: string, group: string}>>
+ */
+function lf_pci_writer_template_groups(): array {
+	$groups = [
+		'site_pages' => [
+			'label' => __('Site pages', 'leadsforward-core'),
+			'keys' => ['home', 'about-us', 'why-choose-us', 'services', 'service-areas', 'reviews', 'faq', 'contact', 'thank-you'],
+		],
+		'service_posts' => [
+			'label' => __('Service posts', 'leadsforward-core'),
+			'keys' => ['service'],
+		],
+	];
+	$registry = lf_pci_registry();
+	$out = [];
+	foreach ($groups as $group_id => $group) {
+		$items = [];
+		foreach ($group['keys'] as $key) {
+			$schema = $registry[$key] ?? null;
+			if (!is_array($schema) || empty($schema['downloadable'])) {
+				continue;
+			}
+			$items[] = [
+				'key' => $key,
+				'label' => (string) ($schema['label'] ?? $key),
+				'group' => $group_id,
+			];
+		}
+		if ($items !== []) {
+			$out[$group_id] = [
+				'label' => (string) $group['label'],
+				'items' => $items,
+			];
+		}
 	}
 	return $out;
 }
@@ -235,8 +287,7 @@ function lf_pci_registry_slug_aliases(): array {
 		'homepage' => 'home',
 		'front-page' => 'home',
 		'service_areas' => 'service-areas',
-		'privacy' => 'privacy-policy',
-		'terms' => 'terms-of-service',
 		'thankyou' => 'thank-you',
+		'lf_service' => 'service',
 	];
 }
