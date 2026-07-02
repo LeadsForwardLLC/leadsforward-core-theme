@@ -392,6 +392,27 @@ function lf_pci_parse_bullet_list(string $text): array {
  */
 function lf_pci_parse_process_steps(string $block): array {
 	$steps = [];
+	$line_steps = [];
+	foreach (explode("\n", trim($block)) as $line) {
+		$line = trim($line);
+		if ($line === '' || !preg_match('/^Step:\s*(.+)$/i', $line, $m)) {
+			continue;
+		}
+		$rest = trim((string) ($m[1] ?? ''));
+		if ($rest === '') {
+			continue;
+		}
+		if (strpos($rest, '||') !== false) {
+			[$title, $body] = array_pad(explode('||', $rest, 2), 2, '');
+			$line_steps[] = ['title' => trim($title), 'body' => trim($body)];
+			continue;
+		}
+		$line_steps[] = ['title' => $rest, 'body' => ''];
+	}
+	if ($line_steps !== []) {
+		return $line_steps;
+	}
+
 	$chunks = preg_split('/\n\s*\n/', trim($block)) ?: [];
 	foreach ($chunks as $chunk) {
 		$chunk = trim($chunk);
@@ -484,6 +505,116 @@ function lf_pci_parse_content_block(string $block, bool $with_checklist = true):
 }
 
 /**
+ * @return list<string>
+ */
+function lf_pci_parse_list_lines(string $raw): array {
+	$lines = [];
+	foreach (explode("\n", trim($raw)) as $line) {
+		$line = trim($line);
+		if ($line === '') {
+			continue;
+		}
+		$line = preg_replace('/^[-*•]\s+/', '', $line) ?? $line;
+		$line = trim($line);
+		if ($line !== '') {
+			$lines[] = $line;
+		}
+	}
+	return $lines;
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function lf_pci_parse_hero_block(string $block, string $hero_variant): array {
+	$f = lf_pci_parse_fields($block, [
+		'subheadline',
+		'left_pills',
+		'chip_bullets',
+		'hero_chip_bullets',
+		'proof_bullets',
+		'hero_proof_bullets',
+	]);
+	$eyebrow = trim((string) ($f['eyebrow'] ?? $f['eyebrow_text'] ?? $f['trust_badge'] ?? ''));
+	$chip_raw = $f['left_pills'] ?? $f['chip_bullets'] ?? $f['hero_chip_bullets'] ?? '';
+	if ($chip_raw === '' && preg_match('/(?:Left pills|Chip bullets)\s*:\s*([\s\S]+?)(?=\n[A-Za-z][A-Za-z0-9 _\/-]{0,40}:|\z)/i', $block, $m)) {
+		$chip_raw = trim($m[1]);
+	}
+	$proof_raw = $f['proof_bullets'] ?? $f['hero_proof_bullets'] ?? '';
+	if ($proof_raw === '' && preg_match('/Proof bullets\s*:\s*([\s\S]+?)(?=\n[A-Za-z][A-Za-z0-9 _\/-]{0,40}:|\z)/i', $block, $m)) {
+		$proof_raw = trim($m[1]);
+	}
+	$chip_lines = lf_pci_parse_list_lines((string) $chip_raw);
+	$proof_lines = lf_pci_parse_list_lines((string) $proof_raw);
+
+	return array_filter([
+		'variant' => $hero_variant,
+		'hero_headline' => $f['headline'] ?? $f['hero_headline'] ?? '',
+		'hero_subheadline' => $f['subheadline'] ?? $f['hero_subheadline'] ?? '',
+		'hero_eyebrow_text' => $eyebrow,
+		'hero_eyebrow_enabled' => $eyebrow !== '' ? '1' : '',
+		'hero_proof_title' => $f['proof_card_title'] ?? $f['proof_title'] ?? $f['hero_proof_title'] ?? '',
+		'hero_chip_bullets' => $chip_lines !== [] ? implode("\n", $chip_lines) : '',
+		'hero_proof_bullets' => $proof_lines !== [] ? implode("\n", $proof_lines) : '',
+		'cta_primary_override' => $f['primary_cta'] ?? $f['cta_primary_override'] ?? $f['primary_cta_label'] ?? '',
+		'cta_secondary_override' => $f['secondary_cta'] ?? $f['cta_secondary_override'] ?? $f['secondary_cta_label'] ?? '',
+	]);
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function lf_pci_parse_cta_block(string $block): array {
+	$f = lf_pci_parse_fields($block, ['subheadline', 'bullets']);
+	$bullets_raw = $f['bullets'] ?? $f['cta_bullets'] ?? '';
+	if ($bullets_raw === '' && preg_match('/Bullets\s*:\s*([\s\S]+?)(?=\n[A-Za-z][A-Za-z0-9 _\/-]{0,40}:|\z)/i', $block, $m)) {
+		$bullets_raw = trim($m[1]);
+	}
+	$bullet_lines = lf_pci_parse_list_lines((string) $bullets_raw);
+
+	return array_filter([
+		'cta_headline' => $f['headline'] ?? $f['cta_headline'] ?? '',
+		'cta_subheadline' => $f['subheadline'] ?? $f['cta_subheadline'] ?? '',
+		'cta_bullets' => $bullet_lines !== [] ? implode("\n", $bullet_lines) : '',
+		'cta_primary_override' => $f['primary_cta'] ?? $f['cta_primary_override'] ?? $f['primary_cta_label'] ?? '',
+		'cta_secondary_override' => $f['secondary_cta'] ?? $f['cta_secondary_override'] ?? $f['secondary_cta_label'] ?? '',
+	]);
+}
+
+/**
+ * @param array<string, mixed> $merged
+ * @param array<string, mixed> $schema
+ * @param array<string, mixed> $existing
+ * @return array<string, mixed>
+ */
+function lf_pci_apply_preserved_keys(array $merged, string $type, array $schema, array $existing): array {
+	$preserve = is_array($schema['preserve_keys'][$type] ?? null) ? $schema['preserve_keys'][$type] : [];
+	if ($preserve === [] || !isset($existing[$type]) || !is_array($existing[$type])) {
+		return $merged;
+	}
+	foreach ($preserve as $key) {
+		if (array_key_exists($key, $existing[$type])) {
+			$merged[$key] = $existing[$type][$key];
+		}
+	}
+	return $merged;
+}
+
+/**
+ * Normalize key for service-details layout (supports service_details__2).
+ */
+function lf_pci_normalize_section_settings(string $type, string $base_type, array $settings): array {
+	if (!function_exists('lf_sections_normalize_service_details_settings')) {
+		return $settings;
+	}
+	$normalize_id = $type;
+	if ($base_type === 'service_details' && !isset(lf_sections_service_details_alias_layouts()[$type])) {
+		$normalize_id = $base_type;
+	}
+	return lf_sections_normalize_service_details_settings($normalize_id, $settings);
+}
+
+/**
  * Parse a doc for a registered page template schema.
  *
  * @return array{
@@ -539,13 +670,7 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 
 	// Hero
 	if (!empty($split['hero'])) {
-		$f = lf_pci_parse_fields($split['hero'], ['subheadline']);
-		$sections['hero'] = array_filter([
-			'variant' => $hero_variant,
-			'hero_headline' => $f['headline'] ?? $f['hero_headline'] ?? '',
-			'hero_subheadline' => $f['subheadline'] ?? $f['hero_subheadline'] ?? '',
-			'hero_eyebrow_text' => $f['eyebrow'] ?? $f['eyebrow_text'] ?? $f['trust_badge'] ?? '',
-		]);
+		$sections['hero'] = lf_pci_parse_hero_block($split['hero'], $hero_variant);
 	}
 
 	// Trust bar
@@ -559,6 +684,33 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 		$sections['trust_bar'] = array_filter([
 			'trust_heading' => $f['heading'] ?? $f['trust_heading'] ?? '',
 			'trust_badges' => implode("\n", $badge_lines),
+		]);
+	}
+
+	// Service intro (homepage service cards header — cards stay from Services CPT)
+	if (!empty($split['service_intro'])) {
+		$f = lf_pci_parse_fields($split['service_intro'], ['intro']);
+		$sections['service_intro'] = array_filter([
+			'section_heading' => $f['heading'] ?? $f['section_heading'] ?? '',
+			'section_intro' => $f['intro'] ?? $f['section_intro'] ?? '',
+			'service_intro_view_all_label' => $f['view_all'] ?? $f['view_all_label'] ?? $f['service_intro_view_all_label'] ?? '',
+		]);
+	}
+
+	// Reviews section header (review cards stay from Reviews CPT)
+	if (!empty($split['trust_reviews'])) {
+		$f = lf_pci_parse_fields($split['trust_reviews'], []);
+		$sections['trust_reviews'] = array_filter([
+			'trust_heading' => $f['heading'] ?? $f['trust_heading'] ?? '',
+		]);
+	}
+
+	// Map / NAP section header (address + map iframe stay in Global Settings)
+	if (!empty($split['map_nap'])) {
+		$f = lf_pci_parse_fields($split['map_nap'], ['intro']);
+		$sections['map_nap'] = array_filter([
+			'section_heading' => $f['heading'] ?? $f['section_heading'] ?? '',
+			'section_intro' => $f['intro'] ?? $f['section_intro'] ?? '',
 		]);
 	}
 
@@ -638,11 +790,7 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 
 	// CTA
 	if (!empty($split['cta'])) {
-		$f = lf_pci_parse_fields($split['cta'], ['subheadline']);
-		$sections['cta'] = array_filter([
-			'cta_headline' => $f['headline'] ?? $f['cta_headline'] ?? '',
-			'cta_subheadline' => $f['subheadline'] ?? $f['cta_subheadline'] ?? '',
-		]);
+		$sections['cta'] = lf_pci_parse_cta_block($split['cta']);
 	}
 
 	// SEO
@@ -858,11 +1006,12 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 		}
 		$merged = array_merge($defaults, $imported);
 		if (function_exists('lf_sections_normalize_service_details_settings')) {
-			$merged = lf_sections_normalize_service_details_settings($base_type, $merged);
+			$merged = lf_pci_normalize_section_settings($type, $base_type, $merged);
 		}
 		if ($base_type === 'benefits') {
 			$merged = lf_pci_normalize_benefits_settings($merged);
 		}
+		$merged = lf_pci_apply_preserved_keys($merged, $type, $schema, $existing_sections);
 		$pb_sections[$instance_id] = [
 			'type' => $base_type,
 			'enabled' => true,
@@ -1005,11 +1154,12 @@ function lf_pci_apply_to_homepage(array $schema, array $sections, array $process
 		$merged = array_merge($defaults, $imported);
 		$merged['enabled'] = true;
 		if (function_exists('lf_sections_normalize_service_details_settings')) {
-			$merged = lf_sections_normalize_service_details_settings($base_type, $merged);
+			$merged = lf_pci_normalize_section_settings($type, $base_type, $merged);
 		}
 		if ($base_type === 'benefits') {
 			$merged = lf_pci_normalize_benefits_settings($merged);
 		}
+		$merged = lf_pci_apply_preserved_keys($merged, $type, $schema, $existing);
 		$config[$type] = $merged;
 		$result['sections_updated'][] = $type;
 	}
@@ -1119,6 +1269,41 @@ function lf_pci_template_for_slug(string $slug, bool $include_legend = true): st
 }
 
 /**
+ * Blank section blocks for generated .docx templates.
+ *
+ * @return array<string, string>
+ */
+function lf_pci_section_doc_templates(string $template_slug = ''): array {
+	$hero = "=== HERO ===\nHeadline: \nSubheadline: \nEyebrow: ";
+	if ($template_slug === 'home') {
+		$hero = "=== HERO ===\nHeadline: \nSubheadline: \nEyebrow: \nLeft pills:\n- \nProof card title: \nProof bullets:\n- \nPrimary CTA: \nSecondary CTA: ";
+	}
+
+	$cta = "=== CTA ===\nHeadline: \nSubheadline: ";
+	if ($template_slug === 'home') {
+		$cta = "=== CTA ===\nHeadline: \nSubheadline: \nPrimary CTA: \nSecondary CTA: ";
+	}
+
+	return [
+		'hero' => $hero,
+		'trust_bar' => "=== TRUST BAR ===\nHeading: \nBadges:\n- Licensed & Insured\n- 5-Star Rated",
+		'service_intro' => "=== SERVICES ===\nHeading: \nIntro: \nView all label: ",
+		'trust_reviews' => "=== REVIEWS ===\nHeading: ",
+		'map_nap' => "=== MAP ===\nHeading: \nIntro: ",
+		'content_image' => "=== STORY ===\nHeading: \nIntro: \nBody: \nChecklist:\n- ",
+		'benefits' => "=== BENEFITS ===\nHeading: \nIntro: \nItems:\nBenefit one title || Benefit one body.\nBenefit two title || Benefit two body.\nBenefit three title || Benefit three body.",
+		'image_content' => "=== TEAM ===\nHeading: \nIntro: \nBody: ",
+		'service_details' => "=== SERVICE DETAILS ===\nHeading: \nIntro: \nBody: \nChecklist:\n- ",
+		'service_details__2' => "=== SERVICE DETAILS 2 ===\nHeading: \nIntro: \nBody: ",
+		'process' => "=== PROCESS ===\nHeading: \nIntro: \nStep: Step title || Step body.",
+		'faq_accordion' => "=== FAQ ===\nHeading: \nIntro: \nQ: Question?\nA: Answer.",
+		'cta' => $cta,
+		'content' => "=== CONTENT ===\nHeading: \nBody: ",
+		'seo' => "=== SEO ===\nTitle: \nDescription: ",
+	];
+}
+
+/**
  * @param array<string, mixed> $schema
  */
 function lf_pci_template_fallback_for_schema(array $schema): string {
@@ -1141,20 +1326,7 @@ function lf_pci_template_fallback_for_schema(array $schema): string {
 		$lines[] = '';
 	}
 
-	$section_docs = [
-		'hero' => "=== HERO ===\nHeadline: \nSubheadline: \nEyebrow: ",
-		'trust_bar' => "=== TRUST BAR ===\nHeading: \nBadges:\n- Licensed & Insured\n- 5-Star Rated",
-		'content_image' => "=== STORY ===\nHeading: \nIntro: \nBody: \nChecklist:\n- ",
-		'benefits' => "=== BENEFITS ===\nHeading: \nIntro: \nItems:\nBenefit one title || Benefit one body.\nBenefit two title || Benefit two body.\nBenefit three title || Benefit three body.",
-		'image_content' => "=== TEAM ===\nHeading: \nIntro: \nBody: ",
-		'service_details' => "=== SERVICE DETAILS ===\nHeading: \nIntro: \nBody: ",
-		'service_details__2' => "=== SERVICE DETAILS 2 ===\nHeading: \nIntro: \nBody: ",
-		'process' => "=== PROCESS ===\nHeading: \nIntro: \n(Leave steps blank — Niche Content Library on import.)",
-		'faq_accordion' => "=== FAQ ===\nHeading: \nIntro: \n(Leave Q&A blank — Niche Content Library on import.)",
-		'cta' => "=== CTA ===\nHeadline: \nSubheadline: ",
-		'content' => "=== CONTENT ===\nHeading: \nBody: ",
-		'seo' => "=== SEO ===\nTitle: \nDescription: ",
-	];
+	$section_docs = lf_pci_section_doc_templates((string) ($schema['slug'] ?? ''));
 	foreach ((array) ($schema['order'] ?? []) as $type) {
 		if (lf_pci_section_is_locked($type, $schema)) {
 			continue;

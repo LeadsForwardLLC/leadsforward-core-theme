@@ -1,12 +1,23 @@
 === PAGE ===
 Slug: home
 Name: Homepage
-Notes: Service cards, reviews carousel, and map are theme-controlled — do not add === SERVICES ===, === REVIEWS ===, or === MAP === blocks.
+Notes: Service card titles/descriptions, review quotes, map pins, and images come from the site (Services CPT, Reviews, Global Settings). This doc controls every writer-editable headline and body on the homepage.
 
 === HERO ===
 Headline: Foundation Repair in {city}
 Subheadline: Local specialists for settlement, cracks, and long-term structural stability{city_line}.
 Eyebrow: Licensed • Insured • Engineered Repairs
+Left pills:
+- Free structural inspections
+- Engineered repair plans
+- Transferable warranties
+Proof card title: Why homeowners call {business}
+Proof bullets:
+- Licensed, insured structural crews
+- Clear scopes before work starts
+- Local project managers{city_line}
+Primary CTA: Get a Free Estimate
+Secondary CTA: Call Now
 
 === TRUST BAR ===
 Heading: Trusted by local homeowners
@@ -15,6 +26,11 @@ Badges:
 - Engineered Repair Plans
 - Transferable Warranties
 - Fast Inspection Scheduling
+
+=== SERVICES ===
+Heading: Foundation repair services for {city} homeowners
+Intro: Explore our core structural and waterproofing services — each scoped clearly before work starts.
+View all label: View all services
 
 === BENEFITS ===
 Heading: Why homeowners choose {business}
@@ -42,16 +58,30 @@ Body: Our inspectors measure movement, document conditions with photos, and expl
 === PROCESS ===
 Heading: How foundation repair works with us
 Intro: A documented path from inspection to warranty — so you always know what happens next.
-(Leave steps blank — auto-filled from LeadsForward → Niche Content Library on import.)
+Step: Schedule an inspection || We review cracks, settlement, and moisture signs and document findings with photos.
+Step: Review your repair plan || You receive engineered options, pricing, and timelines before crews mobilize.
+Step: Structural repair & warranty || Licensed crews complete the scope and leave you with transferable warranty paperwork.
 
 === FAQ ===
 Heading: Foundation repair questions, answered
 Intro: Straight answers about inspections, warranties, timelines, and what to expect on your property.
-(Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
+Q: How do I know if I need foundation repair?
+A: Warning signs include drywall cracks, sticking doors, sloping floors, and gaps around windows. We confirm movement with measurements — not guesses.
+Q: Do you offer warranties on foundation work?
+A: Yes. We document warranty coverage in writing before work starts so you know what is protected.
+
+=== REVIEWS ===
+Heading: What homeowners say about {business}
+
+=== MAP ===
+Heading: Foundation repair service areas{city_line}
+Intro: Local crews serving {city} and nearby neighborhoods — fast inspections and engineered repairs.
 
 === CTA ===
 Headline: Schedule a foundation inspection with {business}
 Subheadline: Request a free structural inspection and get a clear repair plan.
+Primary CTA: Get a Free Estimate
+Secondary CTA: Call Now
 
 === SEO ===
 Title: Foundation Repair {city} | {business}
