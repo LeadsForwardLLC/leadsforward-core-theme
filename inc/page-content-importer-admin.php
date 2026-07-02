@@ -141,10 +141,7 @@ function lf_pci_admin_render(): void {
 					(array) ($parsed['process_steps'] ?? []),
 					(array) ($parsed['faqs'] ?? []),
 					(array) ($parsed['seo'] ?? ['title' => '', 'description' => '']),
-					[
-						'update_library' => !empty($_POST['lf_pci_update_library']),
-						'sync_mode' => 'force',
-					]
+					['sync_mode' => 'force']
 				);
 				if (!empty($apply_result['success'])) {
 					$edit_url = get_edit_post_link($page_id, 'raw');
@@ -159,20 +156,25 @@ function lf_pci_admin_render(): void {
 					}
 					echo '</p></div>';
 					if (!empty($apply_result['process_ids'])) {
+						$src = ($apply_result['process_source'] ?? '') === 'library'
+							? __('from Niche Content Library', 'leadsforward-core')
+							: __('from your doc', 'leadsforward-core');
 						echo '<div class="notice notice-info"><p>' . esc_html(sprintf(
-							/* translators: %d: number of posts */
-							__('Created/updated %d process step posts.', 'leadsforward-core'),
-							count((array) $apply_result['process_ids'])
+							/* translators: 1: count, 2: source label */
+							__('Process: %1$d steps wired (%2$s).', 'leadsforward-core'),
+							count((array) $apply_result['process_ids']),
+							$src
 						)) . '</p></div>';
 					}
-					if (!empty($apply_result['library_updated'])) {
-						echo '<div class="notice notice-info"><p>' . esc_html__('Process + FAQ blueprint saved to Niche Content Library for this niche.', 'leadsforward-core') . '</p></div>';
-					}
 					if (!empty($apply_result['faq_ids'])) {
+						$src = ($apply_result['faq_source'] ?? '') === 'library'
+							? __('from Niche Content Library', 'leadsforward-core')
+							: __('from your doc', 'leadsforward-core');
 						echo '<div class="notice notice-info"><p>' . esc_html(sprintf(
-							/* translators: %d: number of posts */
-							__('Created/updated %d FAQ posts (synced from import).', 'leadsforward-core'),
-							count((array) $apply_result['faq_ids'])
+							/* translators: 1: count, 2: source label */
+							__('FAQs: %1$d items wired (%2$s).', 'leadsforward-core'),
+							count((array) $apply_result['faq_ids']),
+							$src
 						)) . '</p></div>';
 					}
 				} elseif (!empty($apply_result['error'])) {
@@ -191,15 +193,15 @@ function lf_pci_admin_render(): void {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Import Page Content', 'leadsforward-core'); ?></h1>
-		<p><?php esc_html_e('Paste formatted content from Google Docs (or download our template, fill it in, and paste). The theme maps each section to the global About Us template and creates Process + FAQ posts automatically.', 'leadsforward-core'); ?></p>
+		<p><?php esc_html_e('Paste page copy for the About Us template. Process steps and FAQs are optional in the doc — leave those sections blank and they pull from Niche Content Library automatically.', 'leadsforward-core'); ?></p>
 
 		<div style="margin:1rem 0;padding:1rem;background:#fff;border:1px solid #c3c4c7;border-radius:4px;max-width:900px;">
-			<h2 style="margin-top:0;"><?php esc_html_e('About Us — quick start', 'leadsforward-core'); ?></h2>
+			<h2 style="margin-top:0;"><?php esc_html_e('About Us — one clean workflow', 'leadsforward-core'); ?></h2>
 			<ol>
-				<li><?php esc_html_e('Download the template or duplicate it in Google Docs.', 'leadsforward-core'); ?></li>
-				<li><?php esc_html_e('Replace tokens like {business} and {city} — or leave them to auto-fill from Business Info.', 'leadsforward-core'); ?></li>
-				<li><?php esc_html_e('Use section headings exactly: === HERO ===, === STORY ===, === BENEFITS ===, === TEAM ===, === PROCESS ===, === FAQ ===, === CTA ===, === SEO ===', 'leadsforward-core'); ?></li>
-				<li><?php esc_html_e('Preview parse, then Apply to populate the About page.', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('Edit shared process steps + FAQs once per niche in LeadsForward → Niche Content Library.', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('Writers paste hero, story, benefits, team, CTA, and SEO here (Google Doc template).', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('PROCESS and FAQ sections only need headings/intros — steps and Q&A come from the library unless you paste overrides.', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('Preview parse → Apply to populate the About page and wire CPTs.', 'leadsforward-core'); ?></li>
 			</ol>
 			<p>
 				<a class="button button-secondary" href="<?php echo esc_url($download_url); ?>"><?php esc_html_e('Download About Us template (.txt)', 'leadsforward-core'); ?></a>
@@ -227,13 +229,6 @@ function lf_pci_admin_render(): void {
 				<label for="lf-pci-content"><strong><?php esc_html_e('Paste content', 'leadsforward-core'); ?></strong></label>
 			</p>
 			<textarea id="lf-pci-content" name="lf_pci_content" rows="22" class="large-text code" style="font-family:monospace;max-width:900px;"><?php echo esc_textarea($raw !== '' ? $raw : ''); ?></textarea>
-
-			<p>
-				<label>
-					<input type="checkbox" name="lf_pci_update_library" value="1" checked="checked" />
-					<?php esc_html_e('Also save PROCESS + FAQ blocks to Niche Content Library (master blueprint for this niche)', 'leadsforward-core'); ?>
-				</label>
-			</p>
 
 			<p class="submit" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
 				<button type="submit" name="lf_pci_action" value="preview" class="button button-secondary"><?php esc_html_e('Preview parse', 'leadsforward-core'); ?></button>

@@ -412,10 +412,10 @@ function lf_pci_parse_about_us(string $raw): array {
 		}
 	}
 	if ($process_steps === []) {
-		$warnings[] = __('No process steps parsed — existing library steps will be kept if present.', 'leadsforward-core');
+		$warnings[] = __('No process steps in doc — Niche Content Library defaults will be used on apply.', 'leadsforward-core');
 	}
 	if ($faqs === []) {
-		$warnings[] = __('No FAQs parsed — existing library FAQs will be kept if present.', 'leadsforward-core');
+		$warnings[] = __('No FAQs in doc — Niche Content Library defaults will be used on apply.', 'leadsforward-core');
 	}
 
 	$all_text = $raw;
@@ -439,43 +439,37 @@ function lf_pci_parse_about_us(string $raw): array {
  * @param list<array{title:string,body:string}> $process_steps
  * @param list<array{question:string,answer:string}> $faqs
  * @param array{title: string, description: string} $seo
- * @param array{update_library?: bool, sync_mode?: string} $options
+ * @param array{sync_mode?: string} $options
  */
 function lf_pci_apply_about_us(int $page_id, array $sections, array $process_steps, array $faqs, array $seo, array $options = []): array {
 	$schema = lf_pci_about_us_schema();
 	$vars = lf_pci_template_vars();
-	$result = ['page_id' => $page_id, 'process_ids' => [], 'faq_ids' => [], 'sections_updated' => [], 'library_updated' => false];
-	$update_library = !array_key_exists('update_library', $options) || !empty($options['update_library']);
-	$sync_mode = (string) ($options['sync_mode'] ?? 'force');
-	$overwrite = ($sync_mode === 'force');
+	$result = [
+		'page_id' => $page_id,
+		'process_ids' => [],
+		'faq_ids' => [],
+		'sections_updated' => [],
+		'process_source' => 'import',
+		'faq_source' => 'import',
+	];
 
-	// Save process + FAQ blueprint to niche library (tokens preserved) before site-specific fill.
-	if ($update_library && ($process_steps !== [] || $faqs !== []) && function_exists('lf_niche_save_about_library_entries')) {
-		$niche_slug = (string) get_option('lf_homepage_niche_slug', 'foundation-repair');
-		$lib_process = [];
-		foreach ($process_steps as $row) {
-			if (!is_array($row)) {
-				continue;
-			}
-			$lib_process[] = [
-				'title' => sanitize_text_field((string) ($row['title'] ?? '')),
-				'body' => sanitize_textarea_field((string) ($row['body'] ?? '')),
-			];
-		}
-		$lib_faqs = [];
-		foreach ($faqs as $row) {
-			if (!is_array($row)) {
-				continue;
-			}
-			$lib_faqs[] = [
-				'question' => sanitize_text_field((string) ($row['question'] ?? '')),
-				'answer' => wp_kses_post((string) ($row['answer'] ?? '')),
-			];
-		}
-		if ($lib_process !== [] || $lib_faqs !== []) {
-			$result['library_updated'] = lf_niche_save_about_library_entries($niche_slug, $lib_process, $lib_faqs);
-		}
+	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'foundation-repair');
+	$library = function_exists('lf_niche_content_library_get_for_niche')
+		? lf_niche_content_library_get_for_niche($niche_slug)
+		: ['process' => [], 'faqs' => []];
+
+	if ($process_steps === [] && !empty($library['process'])) {
+		$process_steps = $library['process'];
+		$result['process_source'] = 'library';
 	}
+	if ($faqs === [] && !empty($library['faqs'])) {
+		$faqs = $library['faqs'];
+		$result['faq_source'] = 'library';
+	}
+
+	$sync_mode = (string) ($options['sync_mode'] ?? 'force');
+	$overwrite_process = $result['process_source'] === 'import' && $sync_mode === 'force';
+	$overwrite_faq = $result['faq_source'] === 'import' && $sync_mode === 'force';
 
 	// Fill tokens in all string fields.
 	foreach ($sections as $type => $settings) {
@@ -492,10 +486,10 @@ function lf_pci_apply_about_us(int $page_id, array $sections, array $process_ste
 	$faq_context = defined('LF_NICHE_ABOUT_FAQ_CONTEXT') ? LF_NICHE_ABOUT_FAQ_CONTEXT : 'about_company';
 
 	if ($process_steps !== [] && function_exists('lf_niche_upsert_process_steps')) {
-		$result['process_ids'] = lf_niche_upsert_process_steps($process_steps, $process_group, $vars, $overwrite);
+		$result['process_ids'] = lf_niche_upsert_process_steps($process_steps, $process_group, $vars, $overwrite_process);
 	}
 	if ($faqs !== [] && function_exists('lf_niche_upsert_context_faqs')) {
-		$result['faq_ids'] = lf_niche_upsert_context_faqs($faqs, $faq_context, $vars, $overwrite);
+		$result['faq_ids'] = lf_niche_upsert_context_faqs($faqs, $faq_context, $vars, $overwrite_faq);
 	}
 
 	if (!empty($result['process_ids']) && function_exists('lf_niche_ids_to_lines')) {
@@ -606,31 +600,12 @@ Body: At {business}, your project is led by a dedicated manager who coordinates 
 === PROCESS ===
 Heading: How foundation repair works with us
 Intro: A documented path from inspection to warranty — so you always know what happens next.
-
-Step: Free structural inspection
-Body: A certified evaluator documents cracks, settlement signs, moisture, and drainage patterns. You receive photos, measurements, and a plain-language explanation.
-
-Step: Engineered repair plan
-Body: We size piers, wall anchors, or waterproofing to your soil and load conditions. Scope, timeline, and pricing are documented before work begins.
-
-Step: Protected installation
-Body: Crews stage materials, protect landscaping, and maintain clean access paths with daily updates.
-
-Step: Final walkthrough & warranty
-Body: We review monitoring points, drainage improvements, and transferable warranty coverage.
+(Leave steps blank — auto-filled from LeadsForward → Niche Content Library on import.)
 
 === FAQ ===
 Heading: About our foundation repair team
 Intro: Honest answers about inspections, warranties, crews, and what to expect on your property.
-
-Q: Are you licensed and insured for foundation work?
-A: Yes. {business} carries general liability and workers' compensation coverage{city_line}. We provide proof of insurance on request before work begins.
-
-Q: Do you offer free foundation inspections?
-A: We provide complimentary structural evaluations for homeowners concerned about cracks, sticking doors, sloping floors, or basement moisture.
-
-Q: What warranty do you provide on foundation repairs?
-A: Every project includes written warranty documentation. We explain what is covered, for how long, and what maintenance keeps protection valid.
+(Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
 
 === CTA ===
 Headline: Schedule a foundation inspection with {business}
