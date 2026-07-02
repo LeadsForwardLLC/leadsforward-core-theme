@@ -4554,6 +4554,7 @@ function lf_ai_studio_manifest_niche_slug(array $business, array $manifest = [])
 			'business_name' => (string) ($business['name'] ?? ''),
 			'primary_keyword' => (string) (($manifest['homepage']['primary_keyword'] ?? '')),
 			'category' => (string) ($business['category'] ?? ''),
+			'project_type' => (string) ($business['project_type'] ?? ''),
 			'services' => $manifest['services'] ?? [],
 		];
 		$resolved = lf_resolve_niche_slug(
@@ -4579,6 +4580,131 @@ function lf_ai_studio_manifest_niche_slug(array $business, array $manifest = [])
 		return $derived;
 	}
 	return new \WP_Error('invalid_niche_slug', 'Invalid niche slug in manifest.');
+}
+
+/**
+ * Equivalent niche keys for sitemap row matching (slug + human label).
+ *
+ * @param array<string, mixed> $manifest
+ * @return list<string>
+ */
+function lf_ai_studio_manifest_niche_match_keys(array $manifest): array {
+	$business = is_array($manifest['business'] ?? null) ? $manifest['business'] : [];
+	$slug = '';
+	$resolved = lf_ai_studio_manifest_niche_slug($business, $manifest);
+	if (!is_wp_error($resolved) && $resolved !== '') {
+		$slug = $resolved;
+	}
+	if ($slug === '') {
+		$slug = sanitize_title((string) ($business['niche_slug'] ?? ''));
+	}
+	if ($slug === '') {
+		$slug = sanitize_title((string) ($business['niche'] ?? ''));
+	}
+	$keys = [];
+	if ($slug !== '') {
+		$keys[] = $slug;
+		if (function_exists('lf_get_niche')) {
+			$entry = lf_get_niche($slug);
+			if (is_array($entry) && !empty($entry['name'])) {
+				$keys[] = sanitize_title((string) $entry['name']);
+			}
+		}
+	}
+	$label_key = sanitize_title((string) ($business['niche'] ?? ''));
+	if ($label_key !== '') {
+		$keys[] = $label_key;
+	}
+	return array_values(array_unique(array_filter($keys)));
+}
+
+/**
+ * Resolve manifest business niche label + registry slug from Airtable hints.
+ *
+ * @param array<string, mixed> $manifest
+ * @return array<string, mixed>
+ */
+function lf_ai_studio_manifest_resolve_business_niche(array $manifest): array {
+	$business = is_array($manifest['business'] ?? null) ? $manifest['business'] : [];
+	$niche_label = sanitize_text_field((string) ($business['niche'] ?? ''));
+	$niche_slug_raw = sanitize_text_field((string) ($business['niche_slug'] ?? ''));
+	if (function_exists('lf_ai_studio_airtable_sanitize_niche_token')) {
+		$niche_label = lf_ai_studio_airtable_sanitize_niche_token($niche_label);
+		$niche_slug_raw = lf_ai_studio_airtable_sanitize_niche_token($niche_slug_raw);
+	} elseif (preg_match('/^rec[a-zA-Z0-9]{10,}$/', $niche_label) === 1) {
+		$niche_label = '';
+	}
+
+	$resolved_slug = lf_ai_studio_manifest_niche_slug($business, $manifest);
+	if (is_wp_error($resolved_slug)) {
+		return $manifest;
+	}
+	if ($resolved_slug === '') {
+		return $manifest;
+	}
+
+	if (!isset($manifest['business']) || !is_array($manifest['business'])) {
+		$manifest['business'] = [];
+	}
+	$manifest['business']['niche_slug'] = $resolved_slug;
+	if ($niche_label === '' && function_exists('lf_get_niche')) {
+		$entry = lf_get_niche($resolved_slug);
+		if (is_array($entry) && !empty($entry['name'])) {
+			$manifest['business']['niche'] = sanitize_text_field((string) $entry['name']);
+		}
+	} elseif ($niche_label !== '') {
+		$manifest['business']['niche'] = $niche_label;
+	}
+
+	return $manifest;
+}
+
+/**
+ * Persist resolved niche across Global Settings, homepage, quote builder, and icons.
+ *
+ * @param array<string, mixed> $manifest
+ * @param array<string, mixed>|null $setup_data
+ */
+function lf_ai_studio_apply_niche_across_site(string $niche_slug, array $manifest = [], ?array $setup_data = null): void {
+	$niche_slug = sanitize_title($niche_slug);
+	if ($niche_slug === '') {
+		return;
+	}
+
+	if (defined('LF_HOMEPAGE_NICHE_OPTION')) {
+		update_option(LF_HOMEPAGE_NICHE_OPTION, $niche_slug, false);
+	} else {
+		update_option('lf_homepage_niche_slug', $niche_slug, false);
+	}
+	update_option('lf_active_icon_pack', $niche_slug, false);
+
+	$niche = function_exists('lf_get_niche') ? lf_get_niche($niche_slug) : null;
+	if (function_exists('update_field') && is_array($niche)) {
+		update_field('lf_cta_primary_text', $niche['cta_primary_default'] ?? '', 'option');
+		update_field('lf_cta_secondary_text', $niche['cta_secondary_default'] ?? '', 'option');
+		$profile = $niche['variation_profile'] ?? 'a';
+		update_field('variation_profile', $profile, 'option');
+		update_field('lf_schema_review', !empty($niche['schema_review_enabled']), 'option');
+	}
+
+	$data = $setup_data;
+	if (!is_array($data) && $manifest !== [] && function_exists('lf_ai_studio_manifest_to_setup_data')) {
+		$candidate = lf_ai_studio_manifest_to_setup_data($manifest);
+		if (is_array($candidate) && empty($candidate['error'])) {
+			$data = $candidate;
+		}
+	}
+	if (!is_array($data)) {
+		$data = ['niche_slug' => $niche_slug];
+	}
+	$data['niche_slug'] = $niche_slug;
+
+	if (function_exists('lf_homepage_apply_niche_config')) {
+		lf_homepage_apply_niche_config($niche_slug, $data);
+	}
+	if (function_exists('lf_quote_builder_apply_niche_config')) {
+		lf_quote_builder_apply_niche_config($niche_slug);
+	}
 }
 
 /**
@@ -4703,11 +4829,8 @@ function lf_ai_studio_apply_manifest_to_site_options(array $manifest, ?array $se
 		update_option('options_lf_header_cta_label', '');
 		update_option('options_lf_header_cta_url', '');
 	}
-	if (defined('LF_HOMEPAGE_NICHE_OPTION')) {
-		update_option(LF_HOMEPAGE_NICHE_OPTION, $data['niche_slug'], true);
-	}
 	if (!empty($data['niche_slug'])) {
-		update_option('lf_active_icon_pack', (string) $data['niche_slug'], true);
+		lf_ai_studio_apply_niche_across_site((string) $data['niche_slug'], $manifest, $data);
 	}
 	update_option('lf_homepage_city', (string) ($business['primary_city'] ?? $address_city), true);
 	$secondary_kw = $manifest['homepage']['secondary_keywords'] ?? [];
@@ -5517,7 +5640,7 @@ function lf_ai_studio_normalize_manifest(array $manifest): array {
 		}
 		$normalized_services[] = $normalized;
 	}
-	return [
+	$out = [
 		'business' => [
 			'name' => sanitize_text_field((string) ($business['name'] ?? '')),
 			'legal_name' => sanitize_text_field((string) ($business['legal_name'] ?? '')),
@@ -5532,6 +5655,7 @@ function lf_ai_studio_normalize_manifest(array $manifest): array {
 			'primary_city' => sanitize_text_field((string) ($business['primary_city'] ?? ($address['city'] ?? ''))),
 			'niche' => sanitize_text_field((string) ($business['niche'] ?? '')),
 			'niche_slug' => sanitize_title((string) ($business['niche_slug'] ?? '')),
+			'project_type' => sanitize_text_field((string) ($business['project_type'] ?? '')),
 			'site_style' => sanitize_text_field((string) ($business['site_style'] ?? '')),
 			'variation_seed' => sanitize_text_field((string) ($business['variation_seed'] ?? '')),
 			'website_url' => esc_url_raw((string) ($business['website_url'] ?? '')),
@@ -5566,6 +5690,7 @@ function lf_ai_studio_normalize_manifest(array $manifest): array {
 			'launch_schedule' => lf_launch_schedule_normalize($launch_schedule_in),
 		],
 	];
+	return lf_ai_studio_manifest_resolve_business_niche($out);
 }
 
 function lf_ai_studio_manifest_business_entity(array $manifest, array $fallback = []): array {
