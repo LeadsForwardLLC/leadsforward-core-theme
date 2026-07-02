@@ -143,6 +143,7 @@ lf_load_inc('variation-copy.php');
 // Niche registry and setup flow.
 lf_load_inc('niches/leadgen-pages.php');
 lf_load_inc('niches/registry.php');
+lf_load_inc('niches/content-library.php');
 lf_load_inc('niches/setup-runner.php');
 lf_load_inc('niches/wizard.php');
 
@@ -167,6 +168,7 @@ lf_load_inc('ai-assistant.php');
 if (is_admin()) {
 	// Homepage controller admin UI (must load before ops menu).
 	lf_load_inc('homepage-admin.php');
+	lf_load_inc('niches/content-library-admin.php');
 	// Bulk-safe ops: export/import config, bulk actions, audit log.
 	lf_load_inc('ops.php');
 	// Site health: dashboard, pre-launch checks, QA audit trail.

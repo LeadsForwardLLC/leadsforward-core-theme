@@ -6598,8 +6598,7 @@ function lf_ai_studio_ensure_core_page_sections(array $manifest = [], bool $forc
 			: (!is_array($existing_config) || empty($existing_config));
 		$force_reseed = $force_reseed_all;
 		if ($slug === 'about-us') {
-			// About should be content-dense (similar to Why Choose Us), but does not require a Process section.
-			$force_reseed = $force_reseed || !lf_ai_studio_config_has_section_types($existing_config, ['content_image', 'image_content', 'benefits', 'faq_accordion']);
+			$force_reseed = $force_reseed || !lf_ai_studio_config_has_section_types($existing_config, ['content_image', 'benefits', 'image_content', 'process', 'faq_accordion']);
 		}
 		if ($slug === 'services') {
 			$has_new = lf_ai_studio_config_has_section_types($existing_config, ['service_intro', 'faq_accordion', 'cta']);

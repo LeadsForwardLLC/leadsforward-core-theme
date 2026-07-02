@@ -819,42 +819,26 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 	]));
 
 	return [
-		'about-us' => [
-			'order' => ['hero', 'content_image', 'benefits', 'image_content', 'faq_accordion', 'cta'],
-			'overrides' => [
-				'hero' => [
-					'hero_headline' => 'About ' . $business,
-					'hero_subheadline' => 'Local home-service professionals' . $city_line . ' focused on quality, communication, and a clean job site.',
+		'about-us' => function_exists('lf_niche_build_about_page_blueprint')
+			? lf_niche_build_about_page_blueprint($data, $niche)
+			: [
+				'order' => ['hero', 'content_image', 'benefits', 'image_content', 'process', 'faq_accordion', 'cta'],
+				'overrides' => [
+					'hero' => [
+						'variant' => 'internal',
+						'hero_headline' => 'About ' . $business,
+						'hero_subheadline' => 'Local home-service professionals' . $city_line . ' focused on quality, communication, and a clean job site.',
+					],
+					'cta' => [
+						'cta_headline' => $cta_headline,
+						'cta_subheadline' => 'Request a free estimate and get a clear next step.',
+					],
 				],
-				'content_image' => [
-					'section_heading' => 'Our story',
-					'section_intro' => 'Built for homeowners who want clear pricing and reliable service.',
-					'section_body' => 'We started ' . $business . ' to make home services simple and dependable. Our team shows up on time, keeps you informed, and treats your home with care from start to finish.',
-				],
-				'benefits' => [
-					'section_heading' => 'Why homeowners choose us',
-					'section_intro' => 'Clear communication, honest pricing, and consistent results.',
-					'benefits_items' => 'Licensed and insured professionals' . "\n" . 'Upfront pricing before work starts' . "\n" . 'Respectful, clean crews',
-				],
-				'image_content' => [
-					'section_heading' => 'How we work',
-					'section_intro' => 'A straightforward process built to protect your property and deliver consistent results.',
-					'section_body' => 'From the first inspection to the final walkthrough, we follow a clear, documented process so you always know what’s happening next. Expect careful staging, clean daily work areas, and communication that keeps surprises to a minimum.',
-				],
-				'faq_accordion' => [
-					'section_heading' => 'About us FAQs',
-					'section_intro' => 'Quick answers about our team, process, and what to expect.',
-				],
-				'cta' => [
-					'cta_headline' => $cta_headline,
-					'cta_subheadline' => 'Request a free estimate and get a clear next step.',
+				'seo' => [
+					'title' => $business ? 'About ' . $business . ($city ? ' | ' . $city : '') : 'About Us',
+					'description' => 'Learn about our team, process, and what makes us the trusted local choice' . $city_line . '.',
 				],
 			],
-			'seo' => [
-				'title' => $business ? 'About ' . $business . ($city ? ' | ' . $city : '') : 'About Us',
-				'description' => 'Learn about our team, process, and what makes us the trusted local choice' . $city_line . '.',
-			],
-		],
 		'why-choose-us' => [
 			'order' => ['hero', 'benefits', 'content_image', 'image_content', 'faq_accordion', 'cta'],
 			'overrides' => [
