@@ -40,7 +40,20 @@ function lf_niche_content_library_admin_render(): void {
 		$posted_slug = sanitize_title((string) ($_POST['niche_slug'] ?? ''));
 		$action = sanitize_key((string) ($_POST['lf_ncl_action'] ?? 'save'));
 
-		if ($posted_slug !== '' && $action === 'sync_only' && function_exists('lf_niche_sync_about_library_to_site')) {
+		if ($posted_slug !== '' && $action === 'dedupe_only') {
+			$trashed_process = function_exists('lf_process_step_dedupe_group')
+				? lf_process_step_dedupe_group(defined('LF_NICHE_ABOUT_PROCESS_GROUP') ? LF_NICHE_ABOUT_PROCESS_GROUP : 'about-company')
+				: 0;
+			$trashed_faq = function_exists('lf_faq_dedupe_context')
+				? lf_faq_dedupe_context(defined('LF_NICHE_ABOUT_FAQ_CONTEXT') ? LF_NICHE_ABOUT_FAQ_CONTEXT : 'about_company')
+				: 0;
+			$niche_slug = $posted_slug;
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(sprintf(
+				__('Removed %1$d duplicate process steps and %2$d duplicate FAQs (trashed).', 'leadsforward-core'),
+				$trashed_process,
+				$trashed_faq
+			)) . '</p></div>';
+		} elseif ($posted_slug !== '' && $action === 'sync_only' && function_exists('lf_niche_sync_about_library_to_site')) {
 			$mode = !empty($_POST['lf_ncl_sync_force']) ? 'force' : 'fill_empty';
 			$synced = lf_niche_sync_about_library_to_site($posted_slug, [], $mode, true);
 			$niche_slug = $posted_slug;
@@ -50,6 +63,13 @@ function lf_niche_content_library_admin_render(): void {
 				count((array) ($synced['process_ids'] ?? [])),
 				count((array) ($synced['faq_ids'] ?? []))
 			)) . '</p></div>';
+			if (!empty($synced['trashed_process']) || !empty($synced['trashed_faq'])) {
+				echo '<div class="notice notice-info"><p>' . esc_html(sprintf(
+					__('Removed duplicates: %1$d process steps, %2$d FAQs (trashed).', 'leadsforward-core'),
+					(int) ($synced['trashed_process'] ?? 0),
+					(int) ($synced['trashed_faq'] ?? 0)
+				)) . '</p></div>';
+			}
 		} elseif ($posted_slug !== '') {
 			$process = [];
 			$titles = (array) ($_POST['process_title'] ?? []);
@@ -85,6 +105,13 @@ function lf_niche_content_library_admin_render(): void {
 					count((array) ($synced['process_ids'] ?? [])),
 					count((array) ($synced['faq_ids'] ?? []))
 				)) . '</p></div>';
+				if (!empty($synced['trashed_process']) || !empty($synced['trashed_faq'])) {
+					echo '<div class="notice notice-info"><p>' . esc_html(sprintf(
+						__('Removed duplicates: %1$d process steps, %2$d FAQs (trashed).', 'leadsforward-core'),
+						(int) ($synced['trashed_process'] ?? 0),
+						(int) ($synced['trashed_faq'] ?? 0)
+					)) . '</p></div>';
+				}
 			}
 		}
 	}
@@ -188,6 +215,7 @@ function lf_niche_content_library_admin_render(): void {
 			<p class="submit" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
 				<button type="submit" name="lf_ncl_action" value="save" class="button button-primary"><?php esc_html_e('Save library', 'leadsforward-core'); ?></button>
 				<button type="submit" name="lf_ncl_action" value="sync_only" class="button button-secondary"><?php esc_html_e('Sync to site CPTs (no save)', 'leadsforward-core'); ?></button>
+				<button type="submit" name="lf_ncl_action" value="dedupe_only" class="button button-secondary" onclick="return confirm('<?php echo esc_js(__('Trash duplicate About process steps and FAQs on this site?', 'leadsforward-core')); ?>');"><?php esc_html_e('Clean up duplicates', 'leadsforward-core'); ?></button>
 			</p>
 		</form>
 	</div>

@@ -260,6 +260,12 @@ function lf_niche_sync_about_library_to_site(string $niche_slug, array $vars = [
 	}
 	$overwrite = ($mode === 'force');
 	$seeded = lf_niche_seed_about_content($niche_slug, $vars, $overwrite);
+	$trashed_process = function_exists('lf_process_step_dedupe_group')
+		? lf_process_step_dedupe_group(LF_NICHE_ABOUT_PROCESS_GROUP, $seeded['process_ids'])
+		: 0;
+	$trashed_faq = function_exists('lf_faq_dedupe_context')
+		? lf_faq_dedupe_context(LF_NICHE_ABOUT_FAQ_CONTEXT, $seeded['faq_ids'])
+		: 0;
 	$wired = false;
 	if ($wire_page && ($seeded['process_ids'] !== [] || $seeded['faq_ids'] !== [])) {
 		$wired = lf_niche_wire_about_page_cpt_ids($seeded['process_ids'], $seeded['faq_ids']);
@@ -268,6 +274,8 @@ function lf_niche_sync_about_library_to_site(string $niche_slug, array $vars = [
 		'process_ids' => $seeded['process_ids'],
 		'faq_ids' => $seeded['faq_ids'],
 		'wired' => $wired,
+		'trashed_process' => $trashed_process,
+		'trashed_faq' => $trashed_faq,
 	];
 }
 
@@ -331,21 +339,36 @@ function lf_niche_seed_about_content(string $niche_slug, array $vars, bool $over
 		if (!is_array($row)) {
 			continue;
 		}
+		$raw_title = trim((string) ($row['title'] ?? ''));
 		$filled = lf_niche_content_library_fill_row($row, $vars);
 		$title = trim((string) ($filled['title'] ?? ''));
 		$body = trim((string) ($filled['body'] ?? ''));
 		if ($title === '') {
 			continue;
 		}
-		$process_steps[] = ['title' => $title, 'body' => $body];
+		$key = function_exists('lf_process_step_canonical_key')
+			? lf_process_step_canonical_key(LF_NICHE_ABOUT_PROCESS_GROUP, $raw_title)
+			: '';
+		$process_steps[] = ['title' => $title, 'body' => $body, 'key' => $key];
 	}
 	$process_ids = lf_niche_upsert_process_steps($process_steps, LF_NICHE_ABOUT_PROCESS_GROUP, $vars, $overwrite_bodies);
 
 	$faq_rows = [];
 	foreach ($library['faqs'] as $row) {
-		if (is_array($row)) {
-			$faq_rows[] = $row;
+		if (!is_array($row)) {
+			continue;
 		}
+		$raw_question = trim((string) ($row['question'] ?? ''));
+		$filled = lf_niche_content_library_fill_row($row, $vars);
+		$question = sanitize_text_field((string) ($filled['question'] ?? ''));
+		$answer = wp_kses_post((string) ($filled['answer'] ?? ''));
+		if ($question === '') {
+			continue;
+		}
+		$key = function_exists('lf_faq_canonical_key')
+			? lf_faq_canonical_key(LF_NICHE_ABOUT_FAQ_CONTEXT, $raw_question)
+			: '';
+		$faq_rows[] = ['question' => $question, 'answer' => $answer, 'key' => $key];
 	}
 	$faq_ids = lf_niche_upsert_context_faqs($faq_rows, LF_NICHE_ABOUT_FAQ_CONTEXT, $vars, $overwrite_bodies);
 
@@ -362,82 +385,30 @@ function lf_niche_seed_about_content(string $niche_slug, array $vars, bool $over
  * @return list<int>
  */
 function lf_niche_upsert_context_faqs(array $faqs, string $context, array $vars = [], bool $overwrite_bodies = false): array {
-	$context = sanitize_key($context);
-	if ($context === '' || !post_type_exists('lf_faq')) {
+	if ($faqs === [] || !function_exists('lf_faq_upsert_batch')) {
 		return [];
 	}
+	$context = sanitize_key($context);
 	$vars = lf_niche_content_library_fill_vars($vars);
-	$faq_ids = [];
+	$batch = [];
 	foreach ($faqs as $row) {
 		if (!is_array($row)) {
 			continue;
 		}
+		$raw_question = trim((string) ($row['question'] ?? ''));
 		$filled = lf_niche_content_library_fill_row($row, $vars);
 		$question = sanitize_text_field((string) ($filled['question'] ?? ''));
 		$answer = wp_kses_post((string) ($filled['answer'] ?? ''));
 		if ($question === '') {
 			continue;
 		}
-		$existing = get_posts([
-			'post_type' => 'lf_faq',
-			'post_status' => ['publish', 'draft', 'pending', 'private'],
-			'posts_per_page' => 1,
-			'fields' => 'ids',
-			'no_found_rows' => true,
-			'meta_query' => [
-				'relation' => 'AND',
-				[
-					'key' => '_lf_faq_context',
-					'value' => $context,
-				],
-				[
-					'key' => 'lf_faq_question',
-					'value' => $question,
-				],
-			],
-		]);
-		$faq_id = !empty($existing[0]) ? (int) $existing[0] : 0;
-		if ($faq_id <= 0) {
-			$faq_id = (int) wp_insert_post([
-				'post_type' => 'lf_faq',
-				'post_status' => 'publish',
-				'post_title' => $question,
-				'post_content' => $answer,
-			], true);
-			if (is_wp_error($faq_id) || $faq_id <= 0) {
-				continue;
-			}
-		} else {
-			$update = ['ID' => $faq_id, 'post_title' => $question];
-			if ($answer !== '') {
-				$current = trim((string) get_post_field('post_content', $faq_id));
-				if ($overwrite_bodies || $current === '') {
-					$update['post_content'] = $answer;
-				}
-			}
-			wp_update_post($update);
+		$key = trim((string) ($row['key'] ?? ''));
+		if ($key === '' && function_exists('lf_faq_canonical_key')) {
+			$key = lf_faq_canonical_key($context, $raw_question !== '' ? $raw_question : $question);
 		}
-		if (function_exists('update_field')) {
-			update_field('lf_faq_question', $question, $faq_id);
-			if ($answer !== '') {
-				$current_acf = trim((string) get_field('lf_faq_answer', $faq_id));
-				if ($overwrite_bodies || $current_acf === '') {
-					update_field('lf_faq_answer', $answer, $faq_id);
-				}
-			}
-		} else {
-			update_post_meta($faq_id, 'lf_faq_question', $question);
-			if ($answer !== '') {
-				$current_meta = trim((string) get_post_meta($faq_id, 'lf_faq_answer', true));
-				if ($overwrite_bodies || $current_meta === '') {
-					update_post_meta($faq_id, 'lf_faq_answer', $answer);
-				}
-			}
-		}
-		update_post_meta($faq_id, '_lf_faq_context', $context);
-		$faq_ids[] = $faq_id;
+		$batch[] = ['question' => $question, 'answer' => $answer, 'key' => $key];
 	}
-	return array_values(array_filter(array_map('absint', $faq_ids)));
+	return lf_faq_upsert_batch($context, $batch, $overwrite_bodies);
 }
 
 /**
@@ -445,24 +416,30 @@ function lf_niche_upsert_context_faqs(array $faqs, string $context, array $vars 
  * @return list<int>
  */
 function lf_niche_upsert_process_steps(array $steps, string $group_slug, array $vars = [], bool $overwrite_bodies = false): array {
-	if ($steps === [] || !function_exists('lf_ai_studio_upsert_process_steps')) {
+	if ($steps === [] || !function_exists('lf_process_step_upsert_batch')) {
 		return [];
 	}
+	$group_slug = sanitize_title($group_slug);
 	$vars = lf_niche_content_library_fill_vars($vars);
-	$filled_steps = [];
+	$batch = [];
 	foreach ($steps as $row) {
 		if (!is_array($row)) {
 			continue;
 		}
+		$raw_title = trim((string) ($row['title'] ?? ''));
 		$filled = lf_niche_content_library_fill_row($row, $vars);
 		$title = trim((string) ($filled['title'] ?? ''));
 		$body = trim((string) ($filled['body'] ?? ''));
 		if ($title === '') {
 			continue;
 		}
-		$filled_steps[] = ['title' => $title, 'body' => $body];
+		$key = trim((string) ($row['key'] ?? ''));
+		if ($key === '' && function_exists('lf_process_step_canonical_key')) {
+			$key = lf_process_step_canonical_key($group_slug, $raw_title !== '' ? $raw_title : $title);
+		}
+		$batch[] = ['title' => $title, 'body' => $body, 'key' => $key];
 	}
-	return lf_ai_studio_upsert_process_steps($filled_steps, $group_slug, $overwrite_bodies);
+	return lf_process_step_upsert_batch($group_slug, $batch, $overwrite_bodies);
 }
 
 function lf_niche_ids_to_lines(array $ids): string {

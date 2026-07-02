@@ -8666,6 +8666,28 @@ function lf_ai_studio_upsert_process_steps(array $steps, string $group_slug, boo
 	if (empty($steps) || !post_type_exists('lf_process_step')) {
 		return [];
 	}
+	if (function_exists('lf_process_step_upsert_batch')) {
+		$batch = [];
+		foreach ($steps as $row) {
+			if (!is_array($row)) {
+				continue;
+			}
+			$title = trim((string) ($row['title'] ?? ''));
+			if ($title === '') {
+				continue;
+			}
+			$key = trim((string) ($row['key'] ?? ''));
+			if ($key === '' && function_exists('lf_process_step_canonical_key')) {
+				$key = lf_process_step_canonical_key($group_slug, $title);
+			}
+			$batch[] = [
+				'title' => $title,
+				'body' => trim((string) ($row['body'] ?? '')),
+				'key' => $key,
+			];
+		}
+		return lf_process_step_upsert_batch($group_slug, $batch, $overwrite_bodies);
+	}
 	$group_slug = sanitize_title($group_slug !== '' ? $group_slug : 'homepage-primary');
 	$term_id = lf_ai_studio_ensure_process_group_term($group_slug);
 
