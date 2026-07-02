@@ -696,31 +696,8 @@ function lf_pb_cleanup_post_config(int $post_id, string $context, array $desired
  * Force FAQ hub accordion to expose the entire published library (runs after template cleanup migration).
  */
 function lf_pb_normalize_faq_hub_sections(int $page_id): void {
-	$config = lf_pb_get_post_config($page_id, 'page');
-	if (!is_array($config) || empty($config['sections'])) {
-		return;
-	}
-	$sections = is_array($config['sections']) ? $config['sections'] : [];
-	$dirty = false;
-	foreach ($sections as $instance_id => $row) {
-		if (!is_array($row) || ($row['type'] ?? '') !== 'faq_accordion') {
-			continue;
-		}
-		$cfg = $row['settings'] ?? [];
-		if (!is_array($cfg)) {
-			$cfg = [];
-		}
-		$cfg['faq_max_items'] = -1;
-		$cfg['faq_selected_ids'] = '';
-		$cfg['section_heading'] = __('Frequently Asked Questions', 'leadsforward-core');
-		$sections[$instance_id]['settings'] = $cfg;
-		$sections[$instance_id]['enabled'] = true;
-		$dirty = true;
-		break;
-	}
-	if ($dirty) {
-		$config['sections'] = $sections;
-		update_post_meta($page_id, LF_PB_META_KEY, $config);
+	if (function_exists('lf_page_template_apply_faq_hub_to_page')) {
+		lf_page_template_apply_faq_hub_to_page($page_id);
 	}
 }
 

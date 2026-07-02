@@ -9,8 +9,8 @@ Subheadline: Local crews serving {city} and surrounding neighborhoods with fast 
 Eyebrow: Local • Responsive • Licensed
 
 === FAQ ===
-Heading: Service area questions
-Intro: Coverage, response times, and what to expect when you request an inspection.
+Heading: Service Area FAQs
+Intro: Quick answers about coverage, response times, and scheduling in your area.
 (Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
 
 === CTA ===

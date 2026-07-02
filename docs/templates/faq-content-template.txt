@@ -1,6 +1,7 @@
 === PAGE ===
 Slug: faq
 Name: FAQ
+Notes: The FAQ accordion lists your full published FAQ library. Leave Q&A blank to auto-fill from LeadsForward → Niche Content Library on import.
 
 === HERO ===
 Headline: Foundation Repair FAQ
@@ -8,9 +9,9 @@ Subheadline: Straight answers about inspections, repair methods, timelines, and 
 Eyebrow: Clear Answers • No Jargon
 
 === FAQ ===
-Heading: Common foundation repair questions
-Intro: If you do not see your question here, contact us — we are happy to walk through your situation.
-(Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
+Heading: Our FAQs
+Intro: Browse answers to common questions about our team, services, and scheduling. If you do not see your question here, contact us — we are happy to walk through your situation.
+(Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import. The FAQ page displays your entire published FAQ library.)
 
 === CTA ===
 Headline: Still have questions?

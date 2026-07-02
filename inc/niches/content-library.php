@@ -565,14 +565,18 @@ function lf_niche_build_about_page_blueprint(array $data, array $niche): array {
 					: __('Simple, clear steps from first call to completion.', 'leadsforward-core'),
 				'process_selected_ids' => $process_ids_line,
 			],
-			'faq_accordion' => [
-				'section_heading' => $is_foundation ? __('About our foundation repair team', 'leadsforward-core') : __('About us FAQs', 'leadsforward-core'),
-				'section_intro' => $is_foundation
-					? __('Honest answers about inspections, warranties, crews, and what to expect on your property.', 'leadsforward-core')
-					: __('Quick answers about our team, process, and what to expect.', 'leadsforward-core'),
-				'faq_selected_ids' => $faq_ids_line,
-				'faq_max_items' => 8,
-			],
+			'faq_accordion' => array_merge(
+				function_exists('lf_page_template_faq_section_defaults')
+					? lf_page_template_faq_section_defaults('about-us')
+					: [
+						'section_heading' => __('Frequently Asked Questions', 'leadsforward-core'),
+						'section_intro' => __('Quick answers about our company, process, and what to expect.', 'leadsforward-core'),
+					],
+				[
+					'faq_selected_ids' => $faq_ids_line,
+					'faq_max_items' => 8,
+				]
+			),
 			'cta' => [
 				'cta_headline' => $cta_headline,
 				'cta_subheadline' => $is_foundation

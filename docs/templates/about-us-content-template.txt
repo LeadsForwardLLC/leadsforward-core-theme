@@ -24,6 +24,7 @@ Items:
 Engineered solutions || Piers, anchors, and waterproofing sized to your soil — not one-size-fits-all kits.
 Plain-language inspections || Photos, measurements, and options explained so you can make an informed decision.
 Local accountability || Project managers who answer the phone and stand behind the work{city_line}.
+Protected job sites || Landscaping, floors, and access paths treated with the same care we give our own homes.
 
 === TEAM ===
 Heading: Meet the team behind your project
@@ -36,8 +37,8 @@ Intro: A documented path from inspection to warranty — so you always know what
 (Leave steps blank — auto-filled from LeadsForward → Niche Content Library on import.)
 
 === FAQ ===
-Heading: About our foundation repair team
-Intro: Honest answers about inspections, warranties, crews, and what to expect on your property.
+Heading: Frequently Asked Questions
+Intro: Quick answers about our company, process, and what to expect.
 (Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
 
 === CTA ===

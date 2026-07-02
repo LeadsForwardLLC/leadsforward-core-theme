@@ -47,8 +47,8 @@ Intro: A documented path from inspection to warranty.
 (Leave steps blank — auto-filled from Niche Content Library on import.)
 
 === FAQ ===
-Heading: Foundation piering questions
-Intro: Timelines, warranties, soil conditions, and what to expect during installation.
+Heading: Service FAQs
+Intro: Common questions about this service, timelines, and what is included.
 (Leave Q&A blank — auto-filled from Niche Content Library on import.)
 
 === CTA ===

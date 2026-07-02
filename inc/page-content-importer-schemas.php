@@ -235,6 +235,8 @@ function lf_pci_registry(): array {
 		]),
 		lf_pci_build_schema('faq', __('FAQ', 'leadsforward-core'), ['hero', 'faq_accordion', 'cta'], [
 			'required' => ['hero', 'faq_accordion', 'cta'],
+			'faq_hub' => true,
+			'faq_context' => defined('LF_NICHE_FAQ_PAGE_CONTEXT') ? LF_NICHE_FAQ_PAGE_CONTEXT : 'faq_page',
 		]),
 		lf_pci_build_schema('contact', __('Contact', 'leadsforward-core'), ['hero', 'map_nap', 'cta'], [
 			'locked' => ['map_nap'],

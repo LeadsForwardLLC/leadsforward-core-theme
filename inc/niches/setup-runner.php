@@ -304,6 +304,12 @@ function lf_run_setup(array $data): array {
 		lf_wizard_seed_page_pb_config((int) $page_id, $slug, $data, $niche, $created_pages);
 	}
 
+	// 6c. Niche library → CPTs + wire About / FAQ hub pages.
+	if (function_exists('lf_niche_sync_site_content_library')) {
+		$library_vars = lf_wizard_template_vars($data);
+		lf_niche_sync_site_content_library((string) ($data['niche_slug'] ?? ''), $library_vars, 'fill_empty');
+	}
+
 	// 7. Menus
 	$menu_result = lf_wizard_create_menus($created_pages, $created_services, $created_areas, $data);
 	$log['created']['menus'] = $menu_result['created'] ?? [];
@@ -1098,40 +1104,7 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 		$st = (string) ( $copy['seo_title'] ?? '' );
 		$sd = (string) ( $copy['seo_description'] ?? '' );
 		if ($lg_slug === 'faq') {
-			$blueprints['faq'] = [
-				'order' => ['hero', 'content_centered', 'faq_accordion', 'cta'],
-				'overrides' => [
-					'hero' => [
-						'hero_headline' => $h,
-						'hero_subheadline' => $s,
-					],
-					'content_centered' => [
-						'section_heading' => __('Questions & answers', 'leadsforward-core'),
-						'optional_subheading' => '',
-						'supporting_text' => $contact_line !== ''
-							? sprintf(
-								/* translators: %s: phone or contact line */
-								__('Below you will find answers to common questions. Still unsure? %s', 'leadsforward-core'),
-								$contact_line
-							)
-							: __('Below you will find answers to common questions. Reach out anytime and we will point you in the right direction.', 'leadsforward-core'),
-					],
-					'faq_accordion' => [
-						'section_heading' => __('All FAQs', 'leadsforward-core'),
-						'section_intro' => '',
-						'faq_max_items' => -1,
-						'faq_selected_ids' => '',
-					],
-					'cta' => [
-						'cta_headline' => $cta_headline,
-						'cta_subheadline' => __('Tell us about your project — we respond quickly.', 'leadsforward-core'),
-					],
-				],
-				'seo' => [
-					'title' => $st,
-					'description' => $sd,
-				],
-			];
+			// FAQ hub blueprint is defined in lf_page_template_enhanced_blueprints(); skip leadgen stub.
 			continue;
 		}
 		if ($lg_slug === 'financing') {
@@ -1227,6 +1200,10 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 	}
 
 	unset($blueprints['privacy-policy'], $blueprints['terms-of-service']);
+
+	if (function_exists('lf_page_template_merge_enhanced_blueprints')) {
+		lf_page_template_merge_enhanced_blueprints($blueprints, $vars, $niche);
+	}
 
 	return $blueprints;
 }

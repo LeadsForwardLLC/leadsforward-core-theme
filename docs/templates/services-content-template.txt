@@ -19,8 +19,8 @@ Checklist:
 - Crawl space encapsulation
 
 === FAQ ===
-Heading: Questions about our services
-Intro: Straight answers about scopes, timelines, and what each repair includes.
+Heading: Service FAQs
+Intro: Answers to common questions about our services, scopes, and scheduling.
 (Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
 
 === CTA ===
