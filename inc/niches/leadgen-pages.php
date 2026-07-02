@@ -46,15 +46,32 @@ function lf_leadgen_cross_niche_page_slugs(): array {
 }
 
 /**
+ * Core pages published on initial site setup (standard lead-gen fleet pages).
+ *
+ * @return list<string>
+ */
+function lf_wizard_default_publish_page_slugs(): array {
+	return [
+		'home',
+		'about-us',
+		'why-choose-us',
+		'services',
+		'service-areas',
+		'reviews',
+		'faq',
+		'contact',
+	];
+}
+
+/**
  * Extra landing pages keyed by niche slug (1–2 high-intent URLs each).
  *
  * @return array<string, list<string>>
  */
 function lf_niche_extra_leadgen_page_slugs_map(): array {
 	return [
-		'foundation-repair' => [
-			'foundation-warning-signs',
-		],
+		// Niche landing extras are manifest/Airtable-driven — not auto-created on setup.
+		'foundation-repair' => [],
 		'roofing' => [
 			'storm-damage-roofing',
 		],

@@ -59,7 +59,9 @@ function lf_run_setup(array $data): array {
 			continue;
 		}
 		$content = lf_wizard_placeholder_content($slug, $title, $data);
-		$publish_pages = ['home', 'services', 'service-areas', 'contact'];
+		$publish_pages = function_exists('lf_wizard_default_publish_page_slugs')
+			? lf_wizard_default_publish_page_slugs()
+			: ['home', 'services', 'service-areas', 'contact'];
 		$page_status = in_array($slug, $publish_pages, true) ? 'publish' : 'draft';
 		$pid = wp_insert_post([
 			'post_title'   => $title,
@@ -1370,7 +1372,7 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	$sitemap_id = $created_pages['sitemap'] ?? null;
 	$privacy_id = $created_pages['privacy-policy'] ?? null;
 	$terms_id = $created_pages['terms-of-service'] ?? null;
-	$services_page_id = $created_pages['our-services'] ?? null;
+	$services_page_id = $created_pages['services'] ?? $created_pages['our-services'] ?? null;
 	$areas_page_id = $created_pages['service-areas'] ?? null;
 	$has_projects = false;
 	if (post_type_exists('lf_project')) {
@@ -1495,24 +1497,36 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	}
 
 	$more_children = [];
-	if ($why_choose_id) $more_children[] = ['type' => 'page', 'object_id' => $why_choose_id];
-	if ($financing_id) $more_children[] = ['type' => 'page', 'object_id' => $financing_id];
-	if ($faq_page_id) $more_children[] = ['type' => 'page', 'object_id' => $faq_page_id];
-	if ($blog_id) $more_children[] = ['type' => 'page', 'object_id' => $blog_id];
-	$project_archive = $has_projects ? get_post_type_archive_link('lf_project') : '';
-	if ($project_archive) $more_children[] = ['type' => 'custom', 'url' => $project_archive, 'title' => __('Projects', 'leadsforward-core')];
-	if ($contact_id) $more_children[] = ['type' => 'page', 'object_id' => $contact_id];
-	if ($reviews_id) $more_children[] = ['type' => 'page', 'object_id' => $reviews_id];
-	$more_gate = ($blog_id || $reviews_id || $contact_id);
-	if ($more_gate && !empty($more_children)) {
-		$header_items[] = [
-			'type' => 'custom',
-			'url' => '#',
-			'title' => __('More', 'leadsforward-core'),
-			'classes' => 'lf-menu-more',
-			'children' => $more_children,
-		];
+	if ($why_choose_id) {
+		$more_children[] = ['type' => 'page', 'object_id' => $why_choose_id];
 	}
+	if ($reviews_id) {
+		$more_children[] = ['type' => 'page', 'object_id' => $reviews_id];
+	}
+	if ($faq_page_id) {
+		$more_children[] = ['type' => 'page', 'object_id' => $faq_page_id];
+	}
+	if ($blog_id) {
+		$more_children[] = ['type' => 'page', 'object_id' => $blog_id];
+	}
+	if ($contact_id) {
+		$more_children[] = ['type' => 'page', 'object_id' => $contact_id];
+	}
+	if ($financing_id) {
+		$more_children[] = ['type' => 'page', 'object_id' => $financing_id];
+	}
+	$project_archive = $has_projects ? get_post_type_archive_link('lf_project') : '';
+	if ($project_archive) {
+		$more_children[] = ['type' => 'custom', 'url' => $project_archive, 'title' => __('Projects', 'leadsforward-core')];
+	}
+	// Fleet contract: More is always present on the header menu (children appear when pages publish).
+	$header_items[] = [
+		'type' => 'custom',
+		'url' => '#',
+		'title' => __('More', 'leadsforward-core'),
+		'classes' => 'lf-menu-more',
+		'children' => $more_children,
+	];
 	$phone_raw = (string) ($data['business_phone'] ?? (function_exists('lf_get_option') ? lf_get_option('lf_business_phone', 'option') : ''));
 	$phone_href = $phone_raw !== '' ? 'tel:' . preg_replace('/\s+/', '', $phone_raw) : '#';
 	$header_items[] = [

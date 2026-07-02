@@ -202,7 +202,7 @@ function lf_header_menu_objects_enforce_fleet_contract_final(array $items, $args
 }
 add_filter('wp_nav_menu_objects', 'lf_header_menu_objects_enforce_fleet_contract_final', 31, 2);
 
-const LF_HEADER_MENU_STRUCTURE_VERSION = 'header-nav-v12';
+const LF_HEADER_MENU_STRUCTURE_VERSION = 'header-nav-v13';
 const LF_HEADER_MENU_DEFERRED_REPAIR_HOOK = 'lf_header_menu_deferred_structure_repair';
 const LF_HEADER_MENU_REPAIR_LOCK = 'lf_header_menu_repair_lock';
 
