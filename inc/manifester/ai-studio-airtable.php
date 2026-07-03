@@ -260,6 +260,12 @@ function lf_ai_studio_airtable_run_reviews_sync(): void {
 	if (empty($result['error'])) {
 		update_option('lf_ai_airtable_reviews_last_sync', time(), false);
 	}
+	if (function_exists('lf_fleet_sync_reviews_page_status')) {
+		lf_fleet_sync_reviews_page_status();
+	}
+	if (function_exists('lf_header_menu_force_structure_repair')) {
+		lf_header_menu_force_structure_repair();
+	}
 }
 
 function lf_ai_studio_airtable_get_project_name_for_reviews(array $settings): string {

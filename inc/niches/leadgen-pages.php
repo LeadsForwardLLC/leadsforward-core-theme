@@ -56,7 +56,6 @@ function lf_wizard_default_publish_page_slugs(): array {
 		'services',
 		'service-areas',
 		'about-us',
-		'reviews',
 		'why-choose-us',
 		'faq',
 		'contact',

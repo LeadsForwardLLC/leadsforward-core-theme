@@ -323,6 +323,10 @@ function lf_run_setup(array $data): array {
 		lf_niche_sync_site_content_library((string) ($data['niche_slug'] ?? ''), $library_vars, 'fill_empty');
 	}
 
+	if (function_exists('lf_fleet_sync_reviews_page_status')) {
+		lf_fleet_sync_reviews_page_status();
+	}
+
 	// 7. Menus
 	$menu_result = lf_wizard_create_menus($created_pages, $created_services, $created_areas, $data);
 	$log['created']['menus'] = $menu_result['created'] ?? [];

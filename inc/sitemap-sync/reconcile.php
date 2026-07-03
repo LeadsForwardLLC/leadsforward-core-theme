@@ -91,7 +91,6 @@ function lf_sitemap_sync_is_core_hub(string $resolved_slug, string $slug_templat
 		'/about/' => true,
 		'/why/' => true,
 		'/why-us/' => true,
-		'/reviews/' => true,
 		'/faq/' => true,
 	];
 
@@ -181,6 +180,10 @@ function lf_sitemap_sync_upsert_page(array $spec): array {
 			$existing = get_page_by_path($post_name, OBJECT, 'page');
 		}
 		$post_id = $existing instanceof WP_Post ? (int) $existing->ID : 0;
+	}
+
+	if ($canonical_slug === 'reviews' && function_exists('lf_fleet_reviews_page_target_status')) {
+		$status = lf_fleet_reviews_page_target_status();
 	}
 
 	$payload = [
