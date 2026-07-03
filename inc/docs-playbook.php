@@ -23,7 +23,7 @@ function lf_docs_render_playbook_sections(): void {
 				<p><?php esc_html_e('Open common screens directly (requires permission to manage theme options):', 'leadsforward-core'); ?></p>
 				<ul>
 					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-ops')); ?>"><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></a></li>
-					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-import-page-content')); ?>"><?php esc_html_e('Import Page Content', 'leadsforward-core'); ?></a> — <?php esc_html_e('paste Google Doc → Page Builder sections', 'leadsforward-core'); ?></li>
+					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-import-page-content')); ?>"><?php esc_html_e('Import Page Content', 'leadsforward-core'); ?></a> — <?php esc_html_e('.docx templates for all fleet pages and services', 'leadsforward-core'); ?></li>
 					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-niche-content-library')); ?>"><?php esc_html_e('Niche Content Library', 'leadsforward-core'); ?></a> — <?php esc_html_e('shared process steps & FAQs', 'leadsforward-core'); ?></li>
 					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-seo&tab=settings')); ?>"><?php esc_html_e('SEO & Performance', 'leadsforward-core'); ?></a></li>
 					<li><a href="<?php echo esc_url(admin_url('admin.php?page=lf-sitemap-sync')); ?>"><?php esc_html_e('Sitemap Sync', 'leadsforward-core'); ?></a></li>
@@ -46,7 +46,7 @@ function lf_docs_render_playbook_sections(): void {
 					<li><?php esc_html_e('Settings → General: site title, tagline, timezone, admin email.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Settings → Permalinks: choose “Post name” and click Save (also fixes pretty URLs for /theme-docs/ if that page 404s).', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Settings → Reading: set “Your homepage displays” to A static page; pick your Home page and (optionally) a Posts page for the blog index.', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('Appearance → Menus: assign your primary menu to the theme location the preview uses; include Home, Services hub, Contact, and other pillars.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Appearance → Menus: assign your primary menu to Header Menu. Top level must stay Home → Services → Service Areas → About → Call → Free Estimate → More—see Header navigation.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Visit the site while logged in: use the front-end editor (below) for fast copy and layout tweaks; use wp-admin for heavy structure, SEO meta, and bulk tools.', 'leadsforward-core'); ?></li>
 				</ol>
 			</section>
@@ -56,12 +56,138 @@ function lf_docs_render_playbook_sections(): void {
 				<p><?php esc_html_e('Use this when the site structure already exists (services, areas, About page shell). You do not need the AI Manifester for day-to-day copy.', 'leadsforward-core'); ?></p>
 				<ol>
 					<li><strong><?php esc_html_e('Niche Content Library', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Edit shared process steps and FAQs once per niche (tokens like {business}, {city}). Sync to site CPTs when ready.', 'leadsforward-core'); ?></li>
-					<li><strong><?php esc_html_e('Import Page Content', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Paste the Google Doc template into About Us (and future page types). Process/FAQ sections pull from the library automatically when left blank.', 'leadsforward-core'); ?></li>
+					<li><strong><?php esc_html_e('Import Page Content', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Download .docx per page (Home, About, Services, FAQ, Contact, each service); paste or upload to map sections.', 'leadsforward-core'); ?></li>
 					<li><strong><?php esc_html_e('Page Builder', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Fine-tune sections on any page: reorder, add blocks from the Section Library, set SEO meta on each URL.', 'leadsforward-core'); ?></li>
 					<li><strong><?php esc_html_e('Front-end editor', 'leadsforward-core'); ?></strong> — <?php esc_html_e('View the live site while logged in; edit copy, images, and section order without opening every meta box.', 'leadsforward-core'); ?></li>
 					<li><strong><?php esc_html_e('SEO & Performance → Coverage', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Refresh the report and fix advisory items before launch.', 'leadsforward-core'); ?></li>
 				</ol>
-				<p class="description"><?php esc_html_e('Template file: docs/templates/about-us-content-template.txt in the theme repo.', 'leadsforward-core'); ?></p>
+				<p class="description"><?php esc_html_e('Download .docx templates from LeadsForward → Import Page Content. See the Import Page Content section below for every page type.', 'leadsforward-core'); ?></p>
+			</section>
+
+			<section id="import-page-content" class="lf-docs__section">
+				<h2><?php esc_html_e('Import Page Content (writer .docx workflow)', 'leadsforward-core'); ?></h2>
+				<p><?php esc_html_e('LeadsForward → Import Page Content is the primary writer path after site setup. Download the .docx for each page, write in Google Docs or Word using the section headings, then upload or paste the text back. The importer maps blocks to Page Builder fields.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Downloadable page templates', 'leadsforward-core'); ?></h3>
+				<ul>
+					<li><?php esc_html_e('Site pages: Home, About Us, Why Choose Us, Services Overview, Service Areas Overview, Reviews, FAQ, Contact, Thank You.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Service posts: one template per lf_service CPT (set Slug in the === PAGE === block to match the service permalink).', 'leadsforward-core'); ?></li>
+				</ul>
+				<h3><?php esc_html_e('Locked vs editable sections', 'leadsforward-core'); ?></h3>
+				<ul>
+					<li><?php esc_html_e('Services Overview: the service cards grid is theme-controlled (from your Services CPT)—do not add a SERVICES block in the doc.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Service Areas Overview: map and area cards are theme-controlled.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Reviews: the reviews carousel reads published lf_testimonial posts—do not add a REVIEWS block.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Contact: map + NAP block is theme-controlled.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('FAQ hub page: the accordion lists your full published FAQ library; leave Q&A blank in the doc to pull from Niche Content Library on import.', 'leadsforward-core'); ?></li>
+				</ul>
+				<h3><?php esc_html_e('Process & FAQ sections', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('When a template includes PROCESS or FAQ sections, you may leave steps/Q&A blank. On import, the theme fills from LeadsForward → Niche Content Library (process steps → lf_process_step CPT, FAQs → lf_faq CPT) and wires IDs into Page Builder. Custom copy in the doc always wins over the library.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('Built-in Page Builder defaults use generic FAQ headings (e.g. “Our FAQs”, “Frequently Asked Questions”). Your imported Heading and Intro overwrite those placeholders.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Tokens', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('Use {business}, {city}, and {city_line} in docs for local SEO; the importer replaces them with live business entity data.', 'leadsforward-core'); ?></p>
+			</section>
+
+			<section id="fleet-page-templates" class="lf-docs__section">
+				<h2><?php esc_html_e('Fleet page templates (what each URL is for)', 'leadsforward-core'); ?></h2>
+				<p><?php esc_html_e('Core marketing pages share a consistent Page Builder structure. Template build, Site Setup, and Import Page Content all target the same section order per slug.', 'leadsforward-core'); ?></p>
+				<table class="widefat striped" style="max-width:960px;margin:1em 0;">
+					<thead>
+						<tr>
+							<th><?php esc_html_e('Page slug', 'leadsforward-core'); ?></th>
+							<th><?php esc_html_e('Sections (in order)', 'leadsforward-core'); ?></th>
+							<th><?php esc_html_e('Publish on build?', 'leadsforward-core'); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr><td>home</td><td><?php esc_html_e('Hero, trust, services, benefits, details, process, FAQ, reviews, map, CTA', 'leadsforward-core'); ?></td><td><?php esc_html_e('Yes', 'leadsforward-core'); ?></td></tr>
+						<tr><td>about-us</td><td><?php esc_html_e('Hero, story, benefits, team, process, FAQ, CTA', 'leadsforward-core'); ?></td><td><?php esc_html_e('Yes', 'leadsforward-core'); ?></td></tr>
+						<tr><td>why-choose-us</td><td><?php esc_html_e('Hero, benefits, story, team, FAQ, CTA', 'leadsforward-core'); ?></td><td><?php esc_html_e('Yes', 'leadsforward-core'); ?></td></tr>
+						<tr><td>services</td><td><?php esc_html_e('Hero, service grid (locked), story, FAQ, CTA', 'leadsforward-core'); ?></td><td><?php esc_html_e('Yes', 'leadsforward-core'); ?></td></tr>
+						<tr><td>service-areas</td><td><?php esc_html_e('Hero, areas map (locked), FAQ, CTA', 'leadsforward-core'); ?></td><td><?php esc_html_e('Yes', 'leadsforward-core'); ?></td></tr>
+						<tr><td>reviews</td><td><?php esc_html_e('Hero, reviews carousel (locked), CTA', 'leadsforward-core'); ?></td><td><?php esc_html_e('Only when ≥1 published review exists', 'leadsforward-core'); ?></td></tr>
+						<tr><td>faq</td><td><?php esc_html_e('Hero, FAQ accordion (full library), CTA', 'leadsforward-core'); ?></td><td><?php esc_html_e('Yes', 'leadsforward-core'); ?></td></tr>
+						<tr><td>contact</td><td><?php esc_html_e('Hero, map/NAP (locked), CTA', 'leadsforward-core'); ?></td><td><?php esc_html_e('Yes', 'leadsforward-core'); ?></td></tr>
+						<tr><td>blog, financing, sitemap, legal, thank-you</td><td><?php esc_html_e('Varies', 'leadsforward-core'); ?></td><td><?php esc_html_e('Draft unless you publish manually', 'leadsforward-core'); ?></td></tr>
+					</tbody>
+				</table>
+				<h3><?php esc_html_e('Reviews page gating', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('The Reviews page stays draft until at least one lf_testimonial post is published. When Airtable sync imports reviews—or you publish a testimonial manually—the theme publishes the Reviews page and adds it under the More menu. If all testimonials are removed or trashed, the page returns to draft and drops out of navigation.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Duplicate pages (about vs about-us)', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('Setup uses canonical slugs (about-us, why-choose-us, services). Airtable sitemaps may use shorter paths (/about/, /why/). The theme maps those to the same canonical pages so you do not get two “About Us” entries. If duplicates already exist, trash the short-slug copies and keep about-us / why-choose-us. Niche landing pages (e.g. old “Signs of Foundation Problems”) are not auto-created on new builds—delete drafts you do not need.', 'leadsforward-core'); ?></p>
+			</section>
+
+			<section id="header-navigation" class="lf-docs__section">
+				<h2><?php esc_html_e('Header navigation (fleet contract)', 'leadsforward-core'); ?></h2>
+				<p><?php esc_html_e('The primary header follows a fixed top-level order. Do not manually add secondary pages at the top level in Appearance → Menus—the theme repairs structure automatically when possible.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Top level (left to right)', 'leadsforward-core'); ?></h3>
+				<ol>
+					<li><?php esc_html_e('Home', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Services (mega menu + search, links to service CPTs)', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Service Areas (dropdown of area CPTs)', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('About', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Call (tel: link)', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Free Estimate (CTA)', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('More (dropdown)', 'leadsforward-core'); ?></li>
+				</ol>
+				<h3><?php esc_html_e('Under More (when published)', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('Typical order: Why Choose Us, Reviews (only when reviews exist), FAQ, Blog, Contact, Financing (if published), Projects (if project CPTs exist). Contact is never top-level—it belongs under More.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('If navigation looks wrong', 'leadsforward-core'); ?></h3>
+				<ul>
+					<li><?php esc_html_e('Confirm Appearance → Menus → Manage Locations assigns your menu to Header Menu.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Visit any wp-admin screen once after a theme update so background menu repair can run.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Run Sitemap Sync → Sync now if Airtable changed menu groups.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('LeadsForward → Launch Checklist → Header fleet navigation should pass when structure is correct.', 'leadsforward-core'); ?></li>
+				</ul>
+			</section>
+
+			<section id="airtable-live-sync" class="lf-docs__section">
+				<h2><?php esc_html_e('Airtable live sync (living site)', 'leadsforward-core'); ?></h2>
+				<p><?php esc_html_e('When Airtable is configured in Global Settings, the theme periodically pulls changes so WordPress stays aligned with your base. This is WordPress pseudo-cron: jobs run on scheduled intervals when the site receives HTTP traffic, unless you configure system cron to hit wp-cron.php on a fixed schedule (recommended for production).', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Scheduled jobs', 'leadsforward-core'); ?></h3>
+				<table class="widefat striped" style="max-width:960px;margin:1em 0;">
+					<thead>
+						<tr>
+							<th><?php esc_html_e('Job', 'leadsforward-core'); ?></th>
+							<th><?php esc_html_e('Interval', 'leadsforward-core'); ?></th>
+							<th><?php esc_html_e('What it updates', 'leadsforward-core'); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td><?php esc_html_e('Airtable reviews sync', 'leadsforward-core'); ?></td>
+							<td><?php esc_html_e('Hourly (when reviews table configured)', 'leadsforward-core'); ?></td>
+							<td><?php esc_html_e('lf_testimonial CPTs from your Reviews table; publishes/unpublishes Reviews page; refreshes More menu', 'leadsforward-core'); ?></td>
+						</tr>
+						<tr>
+							<td><?php esc_html_e('Sitemap sync', 'leadsforward-core'); ?></td>
+							<td><?php esc_html_e('Hourly (when enabled)', 'leadsforward-core'); ?></td>
+							<td><?php esc_html_e('Pages, keywords, sitemap cache, header menu from Airtable Sitemaps table', 'leadsforward-core'); ?></td>
+						</tr>
+						<tr>
+							<td><?php esc_html_e('AI generation reconcile', 'leadsforward-core'); ?></td>
+							<td><?php esc_html_e('Hourly (when AI autonomy on)', 'leadsforward-core'); ?></td>
+							<td><?php esc_html_e('Queued manifest / generation jobs', 'leadsforward-core'); ?></td>
+						</tr>
+						<tr>
+							<td><?php esc_html_e('Fleet theme updates', 'leadsforward-core'); ?></td>
+							<td><?php esc_html_e('~15 minutes', 'leadsforward-core'); ?></td>
+							<td><?php esc_html_e('Private theme update channel only—not content', 'leadsforward-core'); ?></td>
+						</tr>
+					</tbody>
+				</table>
+				<h3><?php esc_html_e('Reviews sync requirements', 'leadsforward-core'); ?></h3>
+				<ul>
+					<li><?php esc_html_e('Global Settings: Airtable enabled, PAT, base ID, and Reviews table name configured.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Project name must match the business/project filter in Airtable (stored when you run Site Setup or AI Studio import).', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('After sync, check LeadsForward → Reviews (lf_testimonial) and confirm the Reviews page status under Pages.', 'leadsforward-core'); ?></li>
+				</ul>
+				<h3><?php esc_html_e('Manual sync', 'leadsforward-core'); ?></h3>
+				<ul>
+					<li><?php esc_html_e('LeadsForward → Sitemap Sync → Sync now (pages + menu + keywords).', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('AI Studio / Site Setup import also triggers review import when a business record is pulled.', 'leadsforward-core'); ?></li>
+				</ul>
+				<h3><?php esc_html_e('Production tip: reliable cron', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('Low-traffic staging sites may not run hourly jobs until someone visits. For predictable updates, add a server cron job that curls wp-cron.php every 15–60 minutes, or use a managed host that runs WP-Cron reliably.', 'leadsforward-core'); ?></p>
 			</section>
 
 			<section id="roadmap" class="lf-docs__section">
@@ -70,8 +196,10 @@ function lf_docs_render_playbook_sections(): void {
 					<li><?php esc_html_e('Install and activate Advanced Custom Fields (ACF) or ACF Pro.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Global Settings: logo, business entity (NAP), branding, OpenAI key (for front-end assistant).', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Scaffold the site: template build or AI Manifester (n8n) from Airtable—one path only for initial baseline.', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('Writer workflow: Niche Content Library → Import Page Content → Page Builder / front-end editor.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Writer workflow: Niche Content Library → Import Page Content (all fleet pages) → Page Builder / front-end editor.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Confirm fleet pages published per template rules (Reviews only when testimonials exist).', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Sitemap Sync (if using Airtable sitemaps) for keywords and header menu.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Verify Airtable live sync: reviews table configured; optional system cron for wp-cron.php on production.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('SEO & Performance: meta templates, GTM in header scripts, pre-launch check.', 'leadsforward-core'); ?></li>
 				</ol>
 			</section>
@@ -82,7 +210,7 @@ function lf_docs_render_playbook_sections(): void {
 				<ul>
 					<li><strong><?php esc_html_e('Global Settings', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Business entity, logo, branding, design tokens, OpenAI assistant key, Airtable credentials.', 'leadsforward-core'); ?></li>
 					<li><strong><?php esc_html_e('Site Setup', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Airtable project picker, scope, template build (no n8n).', 'leadsforward-core'); ?></li>
-					<li><strong><?php esc_html_e('Import Page Content', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Paste Google Docs into homepage and core pages.', 'leadsforward-core'); ?></li>
+					<li><strong><?php esc_html_e('Import Page Content', 'leadsforward-core'); ?></strong> — <?php esc_html_e('.docx download/upload for Home, About, Services, FAQ, Contact, and every service CPT.', 'leadsforward-core'); ?></li>
 					<li><strong><?php esc_html_e('Niche Content Library', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Master process steps + FAQs per niche; sync to CPTs.', 'leadsforward-core'); ?></li>
 					<li><strong><?php esc_html_e('Quote Builder / Contact Form', 'leadsforward-core'); ?></strong> — <?php esc_html_e('Lead capture.', 'leadsforward-core'); ?></li>
 					<li><strong><?php esc_html_e('SEO & Performance', 'leadsforward-core'); ?></strong> — <?php esc_html_e('SEO settings, site health, coverage, internal link map.', 'leadsforward-core'); ?></li>
@@ -186,8 +314,19 @@ function lf_docs_render_playbook_sections(): void {
 
 			<section id="projects-reviews" class="lf-docs__section">
 				<h2><?php esc_html_e('Projects, reviews, FAQs, process steps', 'leadsforward-core'); ?></h2>
-					<p><?php esc_html_e('Projects power gallery sections; testimonials feed trust blocks and review schema. FAQs can be generated and surfaced in accordion sections via faq_selected_ids. Process steps are reusable posts: use Assigned services on each step for organization and auto-loading on service pages, plus Process context terms (e.g. homepage-primary) when needed. You can still pin steps with process_selected_ids; plain process_steps lines remain a fallback.', 'leadsforward-core'); ?></p>
-				<p><?php esc_html_e('Sync reviews from Airtable when Global Settings lists the reviews table.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Projects (lf_project)', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('Optional portfolio CPT. Published projects can add a Projects link under More. Not imported from the Airtable reviews table.', 'leadsforward-core'); ?></p>
+				<h3><?php esc_html_e('Reviews (lf_testimonial)', 'leadsforward-core'); ?></h3>
+				<ul>
+					<li><?php esc_html_e('Source of truth for the Reviews page carousel and trust/review schema sitewide.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Airtable Reviews table syncs hourly when configured in Global Settings.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('/reviews/ publishes automatically when ≥1 testimonial is published; drafts when none remain.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Saving, publishing, or trashing a testimonial updates the Reviews page immediately—no need to wait for cron.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Reviews appears under More only while the page is published.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Import Page Content Reviews template is for hero/CTA copy only—not individual review text.', 'leadsforward-core'); ?></li>
+				</ul>
+				<h3><?php esc_html_e('FAQs & process steps', 'leadsforward-core'); ?></h3>
+				<p><?php esc_html_e('FAQs (lf_faq) power accordion sections via faq_selected_ids or the FAQ hub (all published FAQs). Process steps (lf_process_step) load on service pages by assignment or process_selected_ids. Niche Content Library is the master list; sync to CPTs before import for auto-fill.', 'leadsforward-core'); ?></p>
 			</section>
 
 			<section id="seo-health" class="lf-docs__section">
@@ -280,7 +419,11 @@ function lf_docs_render_playbook_sections(): void {
 					<li><?php esc_html_e('Map missing on contact/home: paste the iframe under Global Settings → Business entity; confirm the Map + NAP section is enabled on that template.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('“Add to header menu” missing or service link lands top-level: assign a menu to Header Menu; you need edit theme options; if already in menu the checkbox hides. For Services/Areas submenus, the parent items need the wizard menu classes—fix under Appearance → Menus.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Fleet update never arrives: confirm rollout on the controller, run Check now or a controller Push update, and ensure WP-Cron still runs for routine pulls and heartbeats. If manual update says download failed, verify controller rewrites and try again after a fresh check.', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('Header nav missing after an update: Appearance → Menus → Manage Locations → assign your menu to Header Menu.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Header nav wraps to two rows or Contact/Reviews/Blog are top-level: remove manual top-level secondary links; load wp-admin once after deploy; run Sitemap Sync; see Header navigation.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Duplicate About or Why Choose Us: keep about-us and why-choose-us; trash short-slug duplicates (about, why).', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Reviews page stuck in draft: publish at least one lf_testimonial or confirm Airtable reviews table + project name in Global Settings.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('FAQ page missing or draft: visit wp-admin after theme update for page-template repair, or publish the faq slug from Pages.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Airtable changes not appearing on staging: low traffic may delay WP-Cron—use Sync now or add system cron for wp-cron.php.', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('Rich Text Insert icon does nothing: click inside the paragraph first so the caret is in the prose, then open the picker.', 'leadsforward-core'); ?></li>
 				</ul>
 			</section>

@@ -226,3 +226,39 @@ function lf_fleet_sync_reviews_page_status(): string {
 	]);
 	return $target;
 }
+
+/**
+ * Sync Reviews page visibility and refresh header menu when testimonial inventory changes.
+ *
+ * @return 'missing'|'unchanged'|'publish'|'draft'
+ */
+function lf_fleet_sync_reviews_page_status_and_menu(): string {
+	$result = lf_fleet_sync_reviews_page_status();
+	if ($result === 'publish' || $result === 'draft') {
+		if (function_exists('lf_header_menu_force_structure_repair')) {
+			lf_header_menu_force_structure_repair();
+		}
+	}
+	return $result;
+}
+
+/**
+ * React to testimonial CPT saves (publish, draft, trash) so Reviews page + nav stay in sync without waiting for cron.
+ */
+function lf_fleet_on_testimonial_lifecycle_change(int $post_id): void {
+	if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
+		return;
+	}
+	$post = get_post($post_id);
+	if (!$post instanceof \WP_Post || $post->post_type !== 'lf_testimonial') {
+		return;
+	}
+	lf_fleet_sync_reviews_page_status_and_menu();
+}
+
+function lf_fleet_register_reviews_page_hooks(): void {
+	add_action('save_post_lf_testimonial', 'lf_fleet_on_testimonial_lifecycle_change', 25);
+	add_action('trashed_post', 'lf_fleet_on_testimonial_lifecycle_change');
+	add_action('untrashed_post', 'lf_fleet_on_testimonial_lifecycle_change');
+}
+add_action('init', 'lf_fleet_register_reviews_page_hooks');

@@ -201,7 +201,8 @@ function lf_ai_studio_airtable_schedule_reviews_sync(): void {
 		return;
 	}
 	if (!$next) {
-		wp_schedule_event(time() + 300, 'hourly', $hook);
+		$recurrence = (string) apply_filters('lf_airtable_reviews_sync_cron_recurrence', 'hourly');
+		wp_schedule_event(time() + 300, $recurrence, $hook);
 	}
 }
 
@@ -260,11 +261,13 @@ function lf_ai_studio_airtable_run_reviews_sync(): void {
 	if (empty($result['error'])) {
 		update_option('lf_ai_airtable_reviews_last_sync', time(), false);
 	}
-	if (function_exists('lf_fleet_sync_reviews_page_status')) {
+	if (function_exists('lf_fleet_sync_reviews_page_status_and_menu')) {
+		lf_fleet_sync_reviews_page_status_and_menu();
+	} elseif (function_exists('lf_fleet_sync_reviews_page_status')) {
 		lf_fleet_sync_reviews_page_status();
 	}
-	if (function_exists('lf_header_menu_force_structure_repair')) {
-		lf_header_menu_force_structure_repair();
+	if (function_exists('spawn_cron')) {
+		spawn_cron();
 	}
 }
 
