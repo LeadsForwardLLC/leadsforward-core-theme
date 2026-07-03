@@ -179,3 +179,50 @@ function lf_fleet_publish_build_pages(): array {
 
 	return $published;
 }
+
+/**
+ * Whether at least one published review/testimonial exists on this site.
+ */
+function lf_fleet_has_published_testimonials(): bool {
+	if (!post_type_exists('lf_testimonial')) {
+		return false;
+	}
+	$ids = get_posts([
+		'post_type' => 'lf_testimonial',
+		'post_status' => 'publish',
+		'posts_per_page' => 1,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+		'update_post_meta_cache' => false,
+		'update_post_term_cache' => false,
+	]);
+	return is_array($ids) && $ids !== [];
+}
+
+/**
+ * Target WP status for the Reviews fleet page (publish only when review CPTs exist).
+ */
+function lf_fleet_reviews_page_target_status(): string {
+	return lf_fleet_has_published_testimonials() ? 'publish' : 'draft';
+}
+
+/**
+ * Publish or unpublish the Reviews page based on available testimonial CPT rows.
+ *
+ * @return 'missing'|'unchanged'|'publish'|'draft'
+ */
+function lf_fleet_sync_reviews_page_status(): string {
+	$page = lf_fleet_find_page_by_slug('reviews');
+	if (!$page instanceof \WP_Post) {
+		return 'missing';
+	}
+	$target = lf_fleet_reviews_page_target_status();
+	if ((string) $page->post_status === $target) {
+		return 'unchanged';
+	}
+	wp_update_post([
+		'ID' => (int) $page->ID,
+		'post_status' => $target,
+	]);
+	return $target;
+}

@@ -588,7 +588,7 @@ function lf_core_pages_ensure_standard_pages(): array {
 	$result = ['created' => [], 'published' => []];
 	$publish_slugs = function_exists('lf_wizard_default_publish_page_slugs')
 		? lf_wizard_default_publish_page_slugs()
-		: ['home', 'about-us', 'why-choose-us', 'services', 'service-areas', 'reviews', 'faq', 'contact'];
+		: ['home', 'about-us', 'why-choose-us', 'services', 'service-areas', 'faq', 'contact'];
 	$titles = function_exists('lf_wizard_default_page_titles') ? lf_wizard_default_page_titles() : [];
 	$extended = function_exists('lf_wizard_extended_page_titles') ? lf_wizard_extended_page_titles() : [];
 	$titles = array_merge($titles, $extended);
@@ -647,7 +647,7 @@ function lf_page_template_repair_core_pages_once(): void {
 	if (!is_admin() || !current_user_can('edit_theme_options')) {
 		return;
 	}
-	if (get_option('lf_page_template_repair_v3', '0') === '1') {
+	if (get_option('lf_page_template_repair_v4', '0') === '1') {
 		return;
 	}
 	if (function_exists('lf_fleet_dedupe_alias_pages')) {
@@ -655,6 +655,9 @@ function lf_page_template_repair_core_pages_once(): void {
 	}
 	if (function_exists('lf_fleet_publish_build_pages')) {
 		lf_fleet_publish_build_pages();
+	}
+	if (function_exists('lf_fleet_sync_reviews_page_status')) {
+		lf_fleet_sync_reviews_page_status();
 	}
 	lf_core_pages_ensure_standard_pages();
 	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'foundation-repair');
@@ -675,7 +678,7 @@ function lf_page_template_repair_core_pages_once(): void {
 			lf_page_template_apply_faq_defaults_to_page($page_id, $slug);
 		}
 	}
-	update_option('lf_page_template_repair_v3', '1', true);
+	update_option('lf_page_template_repair_v4', '1', true);
 
 	if (function_exists('lf_header_menu_force_structure_repair')) {
 		delete_option('lf_header_menu_structure_version');
