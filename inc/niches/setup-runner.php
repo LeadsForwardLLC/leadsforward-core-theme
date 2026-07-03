@@ -323,7 +323,9 @@ function lf_run_setup(array $data): array {
 		lf_niche_sync_site_content_library((string) ($data['niche_slug'] ?? ''), $library_vars, 'fill_empty');
 	}
 
-	if (function_exists('lf_fleet_sync_reviews_page_status')) {
+	if (function_exists('lf_fleet_sync_reviews_page_status_and_menu')) {
+		lf_fleet_sync_reviews_page_status_and_menu();
+	} elseif (function_exists('lf_fleet_sync_reviews_page_status')) {
 		lf_fleet_sync_reviews_page_status();
 	}
 

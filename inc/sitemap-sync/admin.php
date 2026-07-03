@@ -81,7 +81,9 @@ add_action('init', 'lf_sitemap_sync_schedule_cron');
  */
 function lf_sitemap_sync_run_all(string $mode = 'manual'): array {
 	$reconcile = function_exists('lf_sitemap_sync_reconcile_run') ? lf_sitemap_sync_reconcile_run() : ['ok' => false, 'errors' => ['missing_reconcile']];
-	if (function_exists('lf_fleet_sync_reviews_page_status')) {
+	if (function_exists('lf_fleet_sync_reviews_page_status_and_menu')) {
+		lf_fleet_sync_reviews_page_status_and_menu();
+	} elseif (function_exists('lf_fleet_sync_reviews_page_status')) {
 		lf_fleet_sync_reviews_page_status();
 	}
 	$menu = function_exists('lf_sitemap_sync_build_header_menu') ? lf_sitemap_sync_build_header_menu() : ['ok' => false, 'error' => 'missing_menu_builder'];
