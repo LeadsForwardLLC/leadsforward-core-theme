@@ -599,7 +599,9 @@ function lf_core_pages_ensure_standard_pages(): array {
 		if ($slug === '') {
 			continue;
 		}
-		$page = get_page_by_path($slug);
+		$page = function_exists('lf_fleet_find_page_by_slug')
+			? lf_fleet_find_page_by_slug($slug)
+			: get_page_by_path($slug);
 		if (!$page instanceof \WP_Post) {
 			$title = (string) ($titles[$slug] ?? ucwords(str_replace('-', ' ', $slug)));
 			$content = function_exists('lf_wizard_placeholder_content')
@@ -639,14 +641,20 @@ function lf_core_pages_ensure_standard_pages(): array {
 }
 
 /**
- * One-time repair: ensure FAQ + standard pages, re-sync nav under More.
+ * One-time repair: dedupe alias pages, publish FAQ/Why Choose Us/Contact, fix nav.
  */
 function lf_page_template_repair_core_pages_once(): void {
 	if (!is_admin() || !current_user_can('edit_theme_options')) {
 		return;
 	}
-	if (get_option('lf_page_template_repair_v2', '0') === '1') {
+	if (get_option('lf_page_template_repair_v3', '0') === '1') {
 		return;
+	}
+	if (function_exists('lf_fleet_dedupe_alias_pages')) {
+		lf_fleet_dedupe_alias_pages();
+	}
+	if (function_exists('lf_fleet_publish_build_pages')) {
+		lf_fleet_publish_build_pages();
 	}
 	lf_core_pages_ensure_standard_pages();
 	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'foundation-repair');
@@ -667,7 +675,7 @@ function lf_page_template_repair_core_pages_once(): void {
 			lf_page_template_apply_faq_defaults_to_page($page_id, $slug);
 		}
 	}
-	update_option('lf_page_template_repair_v2', '1', true);
+	update_option('lf_page_template_repair_v3', '1', true);
 
 	if (function_exists('lf_header_menu_force_structure_repair')) {
 		delete_option('lf_header_menu_structure_version');

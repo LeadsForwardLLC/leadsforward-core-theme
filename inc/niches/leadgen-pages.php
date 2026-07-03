@@ -53,11 +53,11 @@ function lf_leadgen_cross_niche_page_slugs(): array {
 function lf_wizard_default_publish_page_slugs(): array {
 	return [
 		'home',
-		'about-us',
-		'why-choose-us',
 		'services',
 		'service-areas',
+		'about-us',
 		'reviews',
+		'why-choose-us',
 		'faq',
 		'contact',
 	];

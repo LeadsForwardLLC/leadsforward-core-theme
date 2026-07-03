@@ -92,6 +92,7 @@ function lf_sitemap_sync_is_core_hub(string $resolved_slug, string $slug_templat
 		'/why/' => true,
 		'/why-us/' => true,
 		'/reviews/' => true,
+		'/faq/' => true,
 	];
 
 	return !empty($core[$resolved_slug]) || !empty($core[$template_path]);
@@ -158,9 +159,12 @@ function lf_sitemap_sync_upsert_page(array $spec): array {
 	}
 
 	$resolved_slug = function_exists('lf_sitemap_normalize_slug_path') ? lf_sitemap_normalize_slug_path($resolved_slug) : ('/' . trim($resolved_slug, '/') . '/');
+	$canonical_slug = function_exists('lf_fleet_canonical_slug_from_sitemap')
+		? lf_fleet_canonical_slug_from_sitemap($resolved_slug, $slug_template)
+		: sanitize_title((string) basename(trim($resolved_slug, '/')));
 	$path = trim($resolved_slug, '/');
-	$is_home = $path === '';
-	$post_name = $is_home ? '' : sanitize_title((string) basename($path));
+	$is_home = $canonical_slug === 'home' || $path === '';
+	$post_name = $is_home ? '' : $canonical_slug;
 	$post_parent = $is_home ? 0 : lf_sitemap_sync_find_page_parent_id($resolved_slug);
 
 	$post_id = lf_sitemap_sync_find_page_by_key($key);
@@ -169,7 +173,13 @@ function lf_sitemap_sync_upsert_page(array $spec): array {
 		$existing = get_post($post_id);
 	}
 	if (!$existing instanceof WP_Post) {
-		$existing = $is_home ? get_post((int) get_option('page_on_front')) : get_page_by_path($path, OBJECT, 'page');
+		if ($is_home) {
+			$existing = get_post((int) get_option('page_on_front'));
+		} elseif (function_exists('lf_fleet_find_page_by_slug')) {
+			$existing = lf_fleet_find_page_by_slug($canonical_slug);
+		} else {
+			$existing = get_page_by_path($post_name, OBJECT, 'page');
+		}
 		$post_id = $existing instanceof WP_Post ? (int) $existing->ID : 0;
 	}
 
