@@ -4,7 +4,7 @@ Historical release notes, implementation plans, design specs, and audit reports.
 
 Use for archaeology only. For current behavior:
 
-- Operators → wp-admin **LeadsForward → Theme Docs**
+- Operators → wp-admin **LeadsForward → Theme Documentation**
 - Developers → [`../DOCUMENTATION_MAP.md`](../DOCUMENTATION_MAP.md)
 - Active SEO/AI hardening spec → [`../SEO_AI_WORKFLOW_HARDENING.md`](../SEO_AI_WORKFLOW_HARDENING.md) (promoted from superpowers)
 

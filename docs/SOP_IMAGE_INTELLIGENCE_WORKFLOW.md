@@ -307,5 +307,6 @@ This SOP preserves:
 ## Related Docs
 
 - `docs/AI_CONTEXT.md` (Image Naming Strategy)
-- `docs/02_N8N_WORKFLOW_ARCHITECTURE.md`
+- `inc/manifester/docs/02_N8N_WORKFLOW_ARCHITECTURE.md`
 - `docs/05_THEME_INTEGRATION.md`
+- `docs/10_SITEMAP_SYNC.md`

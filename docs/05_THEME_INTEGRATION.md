@@ -67,12 +67,6 @@ Server logs for the check use keys `business_expected`, `business_incoming`, and
 
 Fleet sites can connect to `theme.leadsforward.com` to receive **controller-approved automatic theme updates** without logging into each site.
 
-## Sitemap Sync (Airtable Sitemaps → WordPress)
-
-The theme can also sync an Airtable-driven sitemap into WordPress Pages, generate the Header Menu from that sitemap, and enforce internal-link allowlists so AI/content never links to unpublished pages.
-
-See: `docs/09_SITEMAP_SYNC.md`.
-
 ### Connect a site
 
 In wp-admin:
@@ -130,6 +124,12 @@ Cron and **Check now** remain the primary paths for sites that never receive a p
 - Theme zips are verified before install:
   - If signature or checksum fails, the update is refused.
 - The only inbound fleet trigger is **`POST /wp-json/lf/v1/fleet/push`**, and it requires a valid signature for that site’s token.
+
+## Sitemap Sync (Airtable Sitemaps → WordPress)
+
+The theme can sync an Airtable-driven sitemap into WordPress pages, generate the header menu from that sitemap, push primary keywords into SEO meta, and enforce internal-link allowlists so AI/content never links to unpublished pages.
+
+See: `docs/10_SITEMAP_SYNC.md`. Operators: wp-admin playbook section **Airtable live sync** and **LeadsForward → Sitemap Sync**.
 
 ## Site header layout (global)
 

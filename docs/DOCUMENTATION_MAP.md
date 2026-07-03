@@ -10,7 +10,7 @@ Use this page to find the **one** place to read or edit for each topic. Avoid du
 | **Developer markdown** | `docs/*.md` | Engineers | Architecture, contracts, integration, SEO system |
 | **Manifester / n8n** | `inc/manifester/docs/` | Orchestration engineers | Webhook payload, n8n JSON, manifest schema |
 
-Public route: `/theme-docs/` renders the same playbook as wp-admin **LeadsForward → Theme Docs**.
+Public route: `/theme-docs/` renders the same playbook as wp-admin **LeadsForward → Theme Documentation**.
 
 ## Topic → canonical source
 
@@ -19,7 +19,7 @@ Public route: `/theme-docs/` renders the same playbook as wp-admin **LeadsForwar
 | Writer import workflow | Playbook `#import-page-content` + `docs/templates/*.txt` |
 | Fleet page templates & publish rules | Playbook `#fleet-page-templates` + `inc/page-template-defaults.php` |
 | Header nav fleet contract | `.cursor/rules/header-nav-fleet-contract.mdc` + playbook `#header-navigation` + `inc/header-nav-policy.php` |
-| Airtable cron & living site | Playbook `#airtable-live-sync` + `docs/09_SITEMAP_SYNC.md` |
+| Airtable cron & living site | Playbook `#airtable-live-sync` + `docs/10_SITEMAP_SYNC.md` |
 | Reviews page gating | Playbook `#projects-reviews` + `inc/fleet-pages.php` |
 | Section fields & rendering | `docs/04_SECTION_SCHEMA.md` + `inc/sections.php` |
 | Page Builder meta & AI creation JSON | `docs/09_PAGE_BUILDER_MAPS_NAV_AI.md` |
@@ -44,6 +44,7 @@ Public route: `/theme-docs/` renders the same playbook as wp-admin **LeadsForwar
 | `inc/ai-studio.php` | Deprecated re-export → use `inc/manifester/` |
 | `docs/archive/` | Historical plans; do not update for current behavior |
 | `templates/lf-docs.php` | **Removed** — use `templates/lf-docs-standalone.php` |
+| `docs/09_SITEMAP_SYNC.md` | **Renamed** → `docs/10_SITEMAP_SYNC.md` |
 
 ## Version alignment
 

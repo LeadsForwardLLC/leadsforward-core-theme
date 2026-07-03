@@ -2,7 +2,7 @@
 
 Ultra-lightweight, SEO-first WordPress theme for local lead-gen sites at fleet scale. Page layouts use a **theme-native Page Builder** (section registry + `lf_pb_config`) alongside the block editor where needed—not a third-party page builder plugin.
 
-- **Version:** 0.1.177 (`LF_THEME_VERSION` in `functions.php`; keep `style.css` in sync)
+- **Version:** 0.1.178 (`LF_THEME_VERSION` in `functions.php`; keep `style.css` in sync)
 - **Text domain:** `leadsforward-core`
 - **Requires:** WordPress 6.0+, PHP 8.0+, Advanced Custom Fields (ACF)
 
@@ -12,7 +12,7 @@ Ultra-lightweight, SEO-first WordPress theme for local lead-gen sites at fleet s
 
 | Audience | Start here |
 |----------|------------|
-| **Writers & operators** | wp-admin **LeadsForward → Theme Docs** (live playbook) or `/theme-docs/` on the site |
+| **Writers & operators** | wp-admin **LeadsForward → Theme Documentation** (live playbook) or `/theme-docs/` on the site |
 | **Developers** | [`docs/README.md`](docs/README.md) and [`docs/DOCUMENTATION_MAP.md`](docs/DOCUMENTATION_MAP.md) |
 | **Team AI/SEO review** | [`docs/LF-TEAM-AI-SEO-REVIEW-PACK.md`](docs/LF-TEAM-AI-SEO-REVIEW-PACK.md) |
 | **n8n / manifester** | [`inc/manifester/docs/`](inc/manifester/docs/) (canonical orchestration docs) |
@@ -63,6 +63,7 @@ leadsforward-core-theme/
 
 Read in order for orchestration and integration:
 
+0. [`docs/00_PRODUCTION_READINESS.md`](docs/00_PRODUCTION_READINESS.md) — pre-launch checklist
 1. [`docs/01_SYSTEM_OVERVIEW.md`](docs/01_SYSTEM_OVERVIEW.md)
 2. [`docs/02_N8N_WORKFLOW_ARCHITECTURE.md`](docs/02_N8N_WORKFLOW_ARCHITECTURE.md) → stub; canonical copy in `inc/manifester/docs/`
 3. [`docs/03_MANIFEST_SCHEMA.md`](docs/03_MANIFEST_SCHEMA.md) → stub; canonical copy in `inc/manifester/docs/`
@@ -72,7 +73,7 @@ Read in order for orchestration and integration:
 7. [`docs/07_ICON_SYSTEM.md`](docs/07_ICON_SYSTEM.md)
 8. [`docs/08_FRONTEND_EDITOR.md`](docs/08_FRONTEND_EDITOR.md)
 9. [`docs/09_PAGE_BUILDER_MAPS_NAV_AI.md`](docs/09_PAGE_BUILDER_MAPS_NAV_AI.md)
-10. [`docs/09_SITEMAP_SYNC.md`](docs/09_SITEMAP_SYNC.md)
+10. [`docs/10_SITEMAP_SYNC.md`](docs/10_SITEMAP_SYNC.md)
 
 Release notes for operators: [`docs/TEAM_CHANGELOG.md`](docs/TEAM_CHANGELOG.md).
 

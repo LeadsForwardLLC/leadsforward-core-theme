@@ -1,6 +1,6 @@
 <?php
 /**
- * Long-form Theme Docs playbook (start-to-finish). Loaded after docs-content.php.
+ * Long-form Theme Documentation playbook (start-to-finish). Loaded after docs-content.php.
  *
  * @package LeadsForward_Core
  */
@@ -178,16 +178,17 @@ function lf_docs_render_playbook_sections(): void {
 				<h3><?php esc_html_e('Reviews sync requirements', 'leadsforward-core'); ?></h3>
 				<ul>
 					<li><?php esc_html_e('Global Settings: Airtable enabled, PAT, base ID, and Reviews table name configured.', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('Project name must match the business/project filter in Airtable (stored when you run Site Setup or AI Studio import).', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Project name must match the business/project filter in Airtable (stored when you run Site Setup or AI Manifester import).', 'leadsforward-core'); ?></li>
 					<li><?php esc_html_e('After sync, check LeadsForward → Reviews (lf_testimonial) and confirm the Reviews page status under Pages.', 'leadsforward-core'); ?></li>
 				</ul>
 				<h3><?php esc_html_e('Manual sync', 'leadsforward-core'); ?></h3>
 				<ul>
 					<li><?php esc_html_e('LeadsForward → Sitemap Sync → Sync now (pages + menu + keywords).', 'leadsforward-core'); ?></li>
-					<li><?php esc_html_e('AI Studio / Site Setup import also triggers review import when a business record is pulled.', 'leadsforward-core'); ?></li>
+					<li><?php esc_html_e('Site Setup / AI Manifester import also triggers review import when a business record is pulled.', 'leadsforward-core'); ?></li>
 				</ul>
 				<h3><?php esc_html_e('Production tip: reliable cron', 'leadsforward-core'); ?></h3>
 				<p><?php esc_html_e('Low-traffic staging sites may not run hourly jobs until someone visits. For predictable updates, add a server cron job that curls wp-cron.php every 15–60 minutes, or use a managed host that runs WP-Cron reliably.', 'leadsforward-core'); ?></p>
+				<p class="description"><?php esc_html_e('Developer reference: docs/10_SITEMAP_SYNC.md (sitemap table fields, menu groups, keyword push).', 'leadsforward-core'); ?></p>
 			</section>
 
 			<section id="roadmap" class="lf-docs__section">
@@ -343,7 +344,7 @@ function lf_docs_render_playbook_sections(): void {
 					<li><?php esc_html_e('Blog posts are not created from the sitemap sync path the same way as marketing pages; assign keywords via the SEO meta box, manifest/AI flows, or the keyword engine so posts stay in the same SEO system.', 'leadsforward-core'); ?></li>
 				</ul>
 				<h3><?php esc_html_e('On-page depth checklist (advisory, no auto-edits)', 'leadsforward-core'); ?></h3>
-				<p><?php esc_html_e('In the SEO meta box, the checklist scores alignment of the primary keyword with opening copy, internal links, image alt attributes in stored HTML, featured images, and—after theme updates—meta title/description, visible H1, H2 coverage, and (for local/transactional URLs) the primary city in the opening text. It does not rewrite headings, slugs, or body copy; it only highlights gaps so you or AI Studio can fix them deliberately.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('In the SEO meta box, the checklist scores alignment of the primary keyword with opening copy, internal links, image alt attributes in stored HTML, featured images, and—after theme updates—meta title/description, visible H1, H2 coverage, and (for local/transactional URLs) the primary city in the opening text. It does not rewrite headings, slugs, or body copy; it only highlights gaps so you or the AI assistant can fix them deliberately.', 'leadsforward-core'); ?></p>
 				<h3><?php esc_html_e('Internal links and broken hrefs', 'leadsforward-core'); ?></h3>
 				<p><?php esc_html_e('AI output is scrubbed so internal links do not point at missing or unpublished posts when sitemap enforcement is on. For strategic coverage (which pages should link to which), use LeadsForward → SEO & Performance → Internal Link Map: it scans content and Page Builder HTML and can apply a suggested link when you approve it.', 'leadsforward-core'); ?></p>
 				<h3><?php esc_html_e('URLs, slugs, and headings', 'leadsforward-core'); ?></h3>
@@ -360,7 +361,7 @@ function lf_docs_render_playbook_sections(): void {
 				<h3><?php esc_html_e('Creating new pages, services, posts, or CPT drafts', 'leadsforward-core'); ?></h3>
 				<p><?php esc_html_e('When you ask for a new service page, blog post, etc., the assistant returns structured JSON. For types that use Page Builder, the model should fill a page_builder object: one key per default section slot (hero, service_details, benefits, …) with copy fields inside each. The theme merges that into lf_pb_config and clears the main editor when successful. If the model only returns a long content string, the theme maps it into the first appropriate body field (e.g. service_details_body) as a fallback. See repo doc docs/09_PAGE_BUILDER_MAPS_NAV_AI.md for the exact contract.', 'leadsforward-core'); ?></p>
 				<h3><?php esc_html_e('Rollback', 'leadsforward-core'); ?></h3>
-				<p><?php esc_html_e('Recent AI-applied changes can be rolled back from the assistant / AI editing UI where exposed; full-site runs are tracked via AI Studio jobs.', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('Recent AI-applied changes can be rolled back from the assistant / AI editing UI where exposed; full-site runs are tracked via AI Manifester jobs.', 'leadsforward-core'); ?></p>
 			</section>
 
 			<section id="fleet-updates" class="lf-docs__section">
@@ -399,7 +400,12 @@ function lf_docs_render_playbook_sections(): void {
 					<li><code>docs/05_THEME_INTEGRATION.md</code> — <?php esc_html_e('WordPress apply path, identity guard, SEO', 'leadsforward-core'); ?></li>
 					<li><code>docs/06_AI_PROMPT_ENGINE.md</code> — <?php esc_html_e('orchestrator LLM blueprint rules', 'leadsforward-core'); ?></li>
 					<li><code>docs/08_FRONTEND_EDITOR.md</code> — <?php esc_html_e('inline editing and assistant UI', 'leadsforward-core'); ?></li>
+					<li><code>docs/07_ICON_SYSTEM.md</code> — <?php esc_html_e('Tabler icon runtime', 'leadsforward-core'); ?></li>
 					<li><code>docs/09_PAGE_BUILDER_MAPS_NAV_AI.md</code> — <?php esc_html_e('lf_pb_config, map iframe, header menu checkbox, AI page_builder JSON', 'leadsforward-core'); ?></li>
+					<li><code>docs/10_SITEMAP_SYNC.md</code> — <?php esc_html_e('Airtable sitemap → pages, keywords, menu', 'leadsforward-core'); ?></li>
+					<li><code>docs/LF-TEAM-AI-SEO-REVIEW-PACK.md</code> — <?php esc_html_e('team AI/SEO orientation (no code)', 'leadsforward-core'); ?></li>
+					<li><code>docs/SEO_AI_WORKFLOW_HARDENING.md</code> — <?php esc_html_e('SEO/AI remediation phases', 'leadsforward-core'); ?></li>
+					<li><code>inc/manifester/docs/</code> — <?php esc_html_e('n8n workflow JSON, manifest schema, vision spec', 'leadsforward-core'); ?></li>
 				</ul>
 			</section>
 

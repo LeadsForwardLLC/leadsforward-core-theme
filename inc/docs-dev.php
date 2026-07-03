@@ -24,11 +24,11 @@ function lf_docs_render_dev_sections(): void {
 		<h2><?php esc_html_e('Recent changes (high level)', 'leadsforward-core'); ?></h2>
 		<p><?php esc_html_e('Full release notes live in docs/TEAM_CHANGELOG.md in the theme repo. Highlights for recent fleet work:', 'leadsforward-core'); ?></p>
 		<ul>
-			<li><?php esc_html_e('v0.1.176: Fleet page templates, header nav contract, canonical slugs, reviews page gating, expanded wp-admin playbook (import, Airtable sync, troubleshooting).', 'leadsforward-core'); ?></li>
+			<li><?php esc_html_e('v0.1.178: Full documentation audit — DOCUMENTATION_MAP, 10_SITEMAP_SYNC renumber, Theme Documentation label aligned, 05_THEME_INTEGRATION structure fix.', 'leadsforward-core'); ?></li>
+			<li><?php esc_html_e('v0.1.177: Documentation cleanup — archived superpowers, slim README, path fixes, removed orphan lf-docs.php.', 'leadsforward-core'); ?></li>
+			<li><?php esc_html_e('v0.1.176: Fleet page templates, header nav contract, canonical slugs, reviews gating, expanded wp-admin playbook.', 'leadsforward-core'); ?></li>
 			<li><?php esc_html_e('v0.1.176: Testimonial save/trash immediately publishes or drafts the Reviews page and refreshes the More menu.', 'leadsforward-core'); ?></li>
-			<li><?php esc_html_e('Documentation cleanup: docs/DOCUMENTATION_MAP.md is the SSOT index; historical superpowers plans moved to docs/archive/.', 'leadsforward-core'); ?></li>
-			<li><?php esc_html_e('v0.1.46: Header layouts, promo top bar color, Service Intro empty-state, Layout History preview, front-end assistant boot hardening.', 'leadsforward-core'); ?></li>
-			<li><?php esc_html_e('Fleet controller push: POST to /wp-json/lf/v1/fleet/push for immediate check-and-install; see docs/05_THEME_INTEGRATION.md.', 'leadsforward-core'); ?></li>
+			<li><?php esc_html_e('Fleet controller push: POST to /wp-json/lf/v1/fleet/push; see docs/05_THEME_INTEGRATION.md.', 'leadsforward-core'); ?></li>
 		</ul>
 	</section>
 

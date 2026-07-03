@@ -113,9 +113,9 @@ Adding items uses `wp_update_nav_menu_item()` → requires **`edit_theme_options
 
 - Suggests edits from plain English; **URLs, slugs, and schema** are not modified by policy (see on-screen disclaimer).
 
-### Orchestrator / AI Studio
+### Orchestrator / AI Manifester
 
-- Full-site generation and n8n callbacks are **separate** from the metabox assistant; see `05_THEME_INTEGRATION.md` and `06_AI_PROMPT_ENGINE.md`.
+- Full-site generation and n8n callbacks are **separate** from the metabox assistant; see `docs/05_THEME_INTEGRATION.md` and `docs/06_AI_PROMPT_ENGINE.md`.
 
 ---
 

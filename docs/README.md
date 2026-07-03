@@ -1,18 +1,19 @@
 # LeadsForward Docs Index
 
-Starting point for **developers** and orchestration engineers. Operators should use wp-admin **LeadsForward → Theme Docs** (or `/theme-docs/`) — that playbook is more current for day-to-day workflows.
+Starting point for **developers** and orchestration engineers. Operators should use wp-admin **LeadsForward → Theme Documentation** (or `/theme-docs/`) — that playbook is more current for day-to-day workflows.
 
 **Documentation map:** [`DOCUMENTATION_MAP.md`](DOCUMENTATION_MAP.md) — which file is canonical for each topic.
 
-**Theme version:** 0.1.177 (see `LF_THEME_VERSION` in `functions.php`).
+**Theme version:** 0.1.178 (see `LF_THEME_VERSION` in `functions.php`).
 
-## Recent fleet highlights (0.1.176 area)
+## Recent fleet highlights (0.1.177–0.1.178)
 
 - Fleet page templates finalized for all core marketing URLs; writer templates in `docs/templates/`.
 - Header nav fleet contract enforced (Home → Services → Service Areas → About → Call → Free Estimate → More).
 - Canonical page slugs (`about-us`, `why-choose-us`, `services`) prevent duplicate pages from setup vs Airtable.
 - Reviews page publishes only when ≥1 published `lf_testimonial`; immediate sync on testimonial save/trash.
 - Operator playbook expanded: import workflow, fleet templates, header nav, Airtable live sync.
+- Documentation audit: `DOCUMENTATION_MAP.md`, `10_SITEMAP_SYNC.md`, canonical manifester paths, archived historical plans.
 
 Full release notes: [`TEAM_CHANGELOG.md`](TEAM_CHANGELOG.md).
 
@@ -52,7 +53,7 @@ Full release notes: [`TEAM_CHANGELOG.md`](TEAM_CHANGELOG.md).
 |-----|---------|
 | [`08_FRONTEND_EDITOR.md`](08_FRONTEND_EDITOR.md) | Front-end editor, shortcuts, history |
 | [`09_PAGE_BUILDER_MAPS_NAV_AI.md`](09_PAGE_BUILDER_MAPS_NAV_AI.md) | `lf_pb_config`, maps, menu assist, AI `page_builder` JSON |
-| [`09_SITEMAP_SYNC.md`](09_SITEMAP_SYNC.md) | Airtable sitemap → pages, keywords, menu |
+| [`10_SITEMAP_SYNC.md`](10_SITEMAP_SYNC.md) | Airtable sitemap → pages, keywords, menu |
 | [`07_ICON_SYSTEM.md`](07_ICON_SYSTEM.md) | Tabler icon runtime |
 | [`PERFORMANCE_SEO_CONVERSION_ROADMAP.md`](PERFORMANCE_SEO_CONVERSION_ROADMAP.md) | Backlog (not shipped spec) |
 
