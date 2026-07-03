@@ -1,60 +1,89 @@
 # LeadsForward Docs Index
 
-Use this page as the starting point for architecture, operations, and troubleshooting.
+Starting point for **developers** and orchestration engineers. Operators should use wp-admin **LeadsForward → Theme Docs** (or `/theme-docs/`) — that playbook is more current for day-to-day workflows.
 
-## Theme v0.1.46 (highlights)
+**Documentation map:** [`DOCUMENTATION_MAP.md`](DOCUMENTATION_MAP.md) — which file is canonical for each topic.
 
-- **Header controls that actually work:** Modern/Centered layouts now have real styling, and the promo top bar stays visible based on enabled + text (not layout).
-- **Promo top bar color:** Add a global top bar background color (brand swatches + custom input) from the front-end Header panel.
-- **Service Intro empty-state saving:** “+ Add service” remains available when empty, and an empty selection can be saved intentionally.
-- **Revision History preview:** Preview a restore point non-destructively before you restore it.
-- **AI assistant boot hardening:** Front-end assistant avoids wp-i18n dependency issues and prevents early i18n inlines from breaking boot.
+**Theme version:** 0.1.177 (see `LF_THEME_VERSION` in `functions.php`).
 
-## Start Here
-- `00_PRODUCTION_READINESS.md` - pre-launch checklist, fleet/cron notes, version alignment.
-- `01_SYSTEM_OVERVIEW.md` - high-level system map and execution phases.
-- `05_THEME_INTEGRATION.md` - WordPress integration points, callback/apply path, repair safeguards.
-- `02_N8N_WORKFLOW_ARCHITECTURE.md` - n8n node flow, quality gates, callback/progress contract.
-- `LF-TEAM-AI-SEO-REVIEW-PACK.md` - team-facing review pack (no code reading): instruction stack, webhook payload, checklist, known contradictions.
-- `superpowers/specs/2026-05-06-seo-ai-workflow-hardening-design.md` - hardening plan and phased improvements.
-- **LeadsForward → Theme Docs (in-dashboard playbook)** — operator-facing SEO rundown: Airtable sitemap → primary keywords/meta, advisory on-page checklist in the SEO meta box, Internal Link Map, slug vs keyword expectations (section *SEO, performance, and launch*).
+## Recent fleet highlights (0.1.176 area)
 
-## Data Contracts
-- `03_MANIFEST_SCHEMA.md` - canonical manifest input structure.
-- `04_SECTION_SCHEMA.md` - section definitions and allowed field behavior.
-- `06_AI_PROMPT_ENGINE.md` - prompt and generation constraints.
+- Fleet page templates finalized for all core marketing URLs; writer templates in `docs/templates/`.
+- Header nav fleet contract enforced (Home → Services → Service Areas → About → Call → Free Estimate → More).
+- Canonical page slugs (`about-us`, `why-choose-us`, `services`) prevent duplicate pages from setup vs Airtable.
+- Reviews page publishes only when ≥1 published `lf_testimonial`; immediate sync on testimonial save/trash.
+- Operator playbook expanded: import workflow, fleet templates, header nav, Airtable live sync.
+
+Full release notes: [`TEAM_CHANGELOG.md`](TEAM_CHANGELOG.md).
+
+## Start here
+
+| Doc | Purpose |
+|-----|---------|
+| [`00_PRODUCTION_READINESS.md`](00_PRODUCTION_READINESS.md) | Pre-launch checklist, version alignment, cron |
+| [`01_SYSTEM_OVERVIEW.md`](01_SYSTEM_OVERVIEW.md) | System map, orchestrator phases, storage keys |
+| [`05_THEME_INTEGRATION.md`](05_THEME_INTEGRATION.md) | WP apply path, fleet updates, repair safeguards |
+| [`LF-TEAM-AI-SEO-REVIEW-PACK.md`](LF-TEAM-AI-SEO-REVIEW-PACK.md) | Team-facing AI/SEO review (no code required) |
+| [`SEO_AI_WORKFLOW_HARDENING.md`](SEO_AI_WORKFLOW_HARDENING.md) | SEO/AI remediation phases (engineering) |
+
+## Data contracts
+
+| Doc | Purpose |
+|-----|---------|
+| [`03_MANIFEST_SCHEMA.md`](03_MANIFEST_SCHEMA.md) | Stub → **`inc/manifester/docs/03_MANIFEST_SCHEMA.md`** |
+| [`04_SECTION_SCHEMA.md`](04_SECTION_SCHEMA.md) | Section registry and field behavior |
+| [`06_AI_PROMPT_ENGINE.md`](06_AI_PROMPT_ENGINE.md) | Orchestrator prompt constraints |
+
+## n8n / manifester (canonical paths)
+
+| Asset | Path |
+|-------|------|
+| Workflow export | **`inc/manifester/docs/n8n-workflow.json`** |
+| Architecture | **`inc/manifester/docs/02_N8N_WORKFLOW_ARCHITECTURE.md`** |
+| Manifest schema | **`inc/manifester/docs/03_MANIFEST_SCHEMA.md`** |
+| Vision step spec | **`inc/manifester/docs/N8N_VISION_STEP_SPEC.md`** |
+| PHP implementation | **`inc/manifester/ai-studio.php`** (package: `inc/manifester/`) |
+
+`docs/02_*` and `docs/03_*` are redirect stubs only — do not duplicate content there.
 
 ## Frontend / UX
-- `PERFORMANCE_SEO_CONVERSION_ROADMAP.md` - prioritized performance, technical SEO, and conversion backlog (instrumentation through fleet ops).
-- `08_FRONTEND_EDITOR.md` - sidepanel/assistant editing, layout history, rich-text icon shortcodes, shortcuts.
-- `09_PAGE_BUILDER_MAPS_NAV_AI.md` - Page Builder meta (`lf_pb_config`), map iframe vs optional Maps API key, header menu “add on save”, AI creation `page_builder` JSON contract.
-- `07_ICON_SYSTEM.md` - icon picker and icon taxonomy usage.
-- `TEAM_CHANGELOG.md` - internal changelog for the team (ops-focused summaries).
 
-## Deploy / updates
-- `05_THEME_INTEGRATION.md` - includes **Fleet theme updates** (private controller channel, HMAC, signed zips, WP-Cron behavior, optional **controller push** to `POST /wp-json/lf/v1/fleet/push` on each client).
-- **Push trigger / force install:** Operators use **LeadsForward → Theme Docs** (playbook) for *Push update* steps and the optional **force install** control (sends `override: true`, same idea as rollout override on *Check now*—only when you mean to bypass gating). API/body details: `05_THEME_INTEGRATION.md`.
+| Doc | Purpose |
+|-----|---------|
+| [`08_FRONTEND_EDITOR.md`](08_FRONTEND_EDITOR.md) | Front-end editor, shortcuts, history |
+| [`09_PAGE_BUILDER_MAPS_NAV_AI.md`](09_PAGE_BUILDER_MAPS_NAV_AI.md) | `lf_pb_config`, maps, menu assist, AI `page_builder` JSON |
+| [`09_SITEMAP_SYNC.md`](09_SITEMAP_SYNC.md) | Airtable sitemap → pages, keywords, menu |
+| [`07_ICON_SYSTEM.md`](07_ICON_SYSTEM.md) | Tabler icon runtime |
+| [`PERFORMANCE_SEO_CONVERSION_ROADMAP.md`](PERFORMANCE_SEO_CONVERSION_ROADMAP.md) | Backlog (not shipped spec) |
 
-## Theme CPTs (quick reference)
-- **`lf_faq`** — FAQ accordion selections (`faq_selected_ids`).
-- **`lf_process_step`** — reusable process steps; homepage/Page Builder process section can reference IDs in `process_selected_ids` (see `inc/sections.php` and `04_SECTION_SCHEMA.md`).
-The in-dashboard **LeadsForward → Theme Docs** playbook is the most up-to-date operator guide for admin URLs and workflows; repo markdown here is for developers and orchestration.
+## Image intelligence
 
-## Image Intelligence
-- `SOP_IMAGE_INTELLIGENCE_WORKFLOW.md` - operational SOP for image upload/matching/assignment.
-- `N8N_VISION_STEP_SPEC.md` - optional n8n vision annotation contract.
-- `AI_CONTEXT.md` - image naming strategy and editor context notes.
+| Doc | Purpose |
+|-----|---------|
+| [`SOP_IMAGE_INTELLIGENCE_WORKFLOW.md`](SOP_IMAGE_INTELLIGENCE_WORKFLOW.md) | Operational SOP |
+| [`inc/manifester/docs/N8N_VISION_STEP_SPEC.md`](../inc/manifester/docs/N8N_VISION_STEP_SPEC.md) | Vision annotation contract |
+| [`AI_CONTEXT.md`](AI_CONTEXT.md) | Naming and editor context |
 
-## Operational Truths (Current)
-- A clean run may execute once (`initial`) or twice (`initial` + single `repair`).
-- More than one repair pass is intentionally blocked.
-- n8n progress/callback payloads should include `run_phase` for easier debugging.
-- WordPress callback binding is validated via `job_id` + `request_id` + payload idempotency checks.
-- Production callback auth should use header/HMAC flows; query token auth is disabled by default in production.
-- Builder niche UX is intentionally constrained to: foundation-repair (default), roofing, pressure-washing, tree-service, hvac, windows-doors, remodeling, paving.
+## Writer templates (runtime)
 
-## Quick Troubleshooting
-1. If you see two executions: check whether second payload has `run_phase: repair` or `repair_only: true`.
-2. If content did not apply: verify callback returned `success: true` and dry-run is disabled.
-3. If repeated repair loops appear: inspect job meta for `lf_ai_job_parent`, `lf_ai_job_repair`, `lf_ai_job_requeue_count`.
-4. If progress seems ambiguous: inspect `/progress` payload fields including `run_phase`, `step`, and `percent`.
+`docs/templates/*-content-template.txt` — loaded by Import Page Content (`inc/page-content-importer.php`). Not optional copies; keep in sync with page blueprints.
+
+## Archive
+
+[`archive/`](archive/) — superseded release notes and historical superpowers plans/audits. **Do not use for current behavior.**
+
+## Operational truths (orchestrator)
+
+- A clean run may execute once (`initial`) or twice (`initial` + single `repair`); more than one repair pass is blocked.
+- n8n progress/callback payloads should include `run_phase` for debugging.
+- Production callback auth should use header/HMAC; query token auth is disabled by default in production.
+- Builder niche UX is limited to: foundation-repair (default), roofing, pressure-washing, tree-service, hvac, windows-doors, remodeling, paving.
+
+## Quick troubleshooting (orchestrator)
+
+1. Two executions: check whether the second payload has `run_phase: repair` or `repair_only: true`.
+2. Content did not apply: verify callback `success: true` and dry-run is off.
+3. Repair loops: inspect job meta for `lf_ai_job_parent`, `lf_ai_job_repair`, `lf_ai_job_requeue_count`.
+4. Ambiguous progress: inspect `/progress` for `run_phase`, `step`, `percent`.
+
+For site ops (nav, duplicate pages, reviews gating), use the wp-admin playbook troubleshooting section.

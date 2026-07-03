@@ -87,3 +87,20 @@ Version
 
 * Shipped up to **0.1.92**.
 
+---
+
+2026-07-03
+
+What changed
+
+* **Fleet page templates:** All core marketing pages (home, about-us, why-choose-us, services, service-areas, faq, contact, reviews) share finalized Page Builder blueprints; writer templates in `docs/templates/`.
+* **Header navigation:** Fleet contract enforced (Home → Services → Service Areas → About → Call → Free Estimate → More); FAQ under More; Contact never top-level.
+* **Duplicate pages:** Canonical slugs (`about-us`, `why-choose-us`, `services`) with alias dedupe from Airtable sitemap paths.
+* **Reviews gating:** `/reviews/` publishes only when ≥1 published `lf_testimonial`; immediate sync on testimonial save/trash.
+* **wp-admin docs:** Playbook expanded (import workflow, fleet templates, header nav, Airtable live sync, troubleshooting).
+* **Documentation cleanup:** Slim `README.md`; `docs/DOCUMENTATION_MAP.md` added; `docs/superpowers/` archived; broken paths fixed (`inc/manifester/docs/n8n-workflow.json`, `inc/manifester/ai-studio.php`); orphan `templates/lf-docs.php` removed.
+
+Version
+
+* Shipped up to **0.1.177** (PRs #596–#601 area).
+
