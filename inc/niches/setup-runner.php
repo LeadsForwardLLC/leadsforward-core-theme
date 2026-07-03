@@ -42,7 +42,9 @@ function lf_run_setup(array $data): array {
 	$new_pages = [];
 	foreach ($slugs as $slug) {
 		$title = $page_titles[$slug] ?? $slug;
-		$existing = get_page_by_path($slug, OBJECT, 'page');
+		$existing = function_exists('lf_fleet_find_page_by_slug')
+			? lf_fleet_find_page_by_slug($slug)
+			: get_page_by_path($slug, OBJECT, 'page');
 		if (!$existing && $slug === 'terms-of-service') {
 			$legacy = get_page_by_path('terms-of-use', OBJECT, 'page');
 			if ($legacy) {
@@ -55,7 +57,16 @@ function lf_run_setup(array $data): array {
 			}
 		}
 		if ($existing) {
-			$created_pages[$slug] = $existing->ID;
+			$created_pages[$slug] = (int) $existing->ID;
+			$publish_pages = function_exists('lf_wizard_default_publish_page_slugs')
+				? lf_wizard_default_publish_page_slugs()
+				: ['home', 'services', 'service-areas', 'why-choose-us', 'faq', 'contact'];
+			if (in_array($slug, $publish_pages, true) && $existing->post_status !== 'publish') {
+				wp_update_post([
+					'ID' => (int) $existing->ID,
+					'post_status' => 'publish',
+				]);
+			}
 			continue;
 		}
 		$content = lf_wizard_placeholder_content($slug, $title, $data);
