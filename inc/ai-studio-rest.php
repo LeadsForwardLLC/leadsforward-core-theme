@@ -1,5 +1,5 @@
 <?php
 /**
- * @deprecated Loaded by inc/manifester/bootstrap.php.
+ * @deprecated Back-compat stub — use inc/manifester/ai-studio-rest.php (docs/DOCUMENTATION_MAP.md).
  */
 declare(strict_types=1);

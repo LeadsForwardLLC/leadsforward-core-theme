@@ -104,3 +104,19 @@ Version
 
 * Shipped up to **0.1.177** (PRs #596–#601 area).
 
+---
+
+2026-07-03 (documentation audit pass 2)
+
+What changed
+
+* Renamed `docs/09_SITEMAP_SYNC.md` → **`docs/10_SITEMAP_SYNC.md`** (resolves duplicate `09_` numbering with Page Builder doc).
+* Fixed `docs/05_THEME_INTEGRATION.md` heading structure (fleet vs sitemap sections).
+* Standardized wp-admin menu label **Theme Documentation** across README, playbook, and site health.
+* Fixed stale cross-links in LF-TEAM pack, SOP, icon doc, front-end editor doc.
+* Expanded playbook developer-reference and dev-tab recent changes.
+
+Version
+
+* Shipped up to **0.1.178**.
+

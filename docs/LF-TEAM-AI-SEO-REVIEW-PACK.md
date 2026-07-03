@@ -127,7 +127,7 @@ These are **code nodes**, not imagination:
 | **Attach Callback Metadata** | Adds **`media_annotations`** (or fallbacks from filename/alt matching) |
 | **Callback to WP** | POST payload to theme REST **orchestrator** to apply updates |
 
-**Model (from architecture doc):** Page writer and research use **`gpt-5.2-chat-latest`** in the workflow export; token limits are set per node (see `docs/02_N8N_WORKFLOW_ARCHITECTURE.md`).
+**Model (from architecture doc):** Page writer and research use **`gpt-5.2-chat-latest`** in the workflow export; token limits are set per node (see `inc/manifester/docs/02_N8N_WORKFLOW_ARCHITECTURE.md`).
 
 ---
 

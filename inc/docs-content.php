@@ -1,6 +1,6 @@
 <?php
 /**
- * Shared theme documentation markup (admin Theme Docs + public /theme-docs/ page).
+ * Shared theme documentation markup (admin Theme Documentation + public /theme-docs/ page).
  *
  * @package LeadsForward_Core
  */

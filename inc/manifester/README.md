@@ -14,7 +14,7 @@ This folder isolates **orchestrated site generation** (Airtable → manifest →
 | `ai-studio-orchestrator-utils.php` | Split apply, force_apply, repair scopes |
 | `ai-studio-wiring.php` | Dev wiring checks |
 | `assets/` | Manifest Website admin CSS/JS |
-| `docs/` | n8n workflow + manifest schema references |
+| `docs/` | n8n workflow + manifest schema references (canonical — see `docs/DOCUMENTATION_MAP.md`) |
 
 ## Theme builder (stays in theme `inc/`)
 

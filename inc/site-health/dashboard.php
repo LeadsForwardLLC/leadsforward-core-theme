@@ -224,7 +224,7 @@ function lf_health_render_manual_qa_checklist(): void {
 		echo '<li>' . esc_html($text) . '</li>';
 	}
 	echo '</ol>';
-	echo '<p style="margin:16px 0 0;"><a class="button" href="' . esc_url($docs) . '">' . esc_html__('Open Theme Docs', 'leadsforward-core') . '</a> ';
+	echo '<p style="margin:16px 0 0;"><a class="button" href="' . esc_url($docs) . '">' . esc_html__('Open Theme Documentation', 'leadsforward-core') . '</a> ';
 	echo '<a class="button" href="' . esc_url($seo) . '">' . esc_html__('SEO settings', 'leadsforward-core') . '</a></p>';
 	echo '</div>';
 }

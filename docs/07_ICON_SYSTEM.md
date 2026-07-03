@@ -23,7 +23,7 @@ If you need to add or replace icons:
 1. Update alias/pack mappings in:
    - `inc/icons.php`
    - `inc/icons/icon-packs.php`
-3. Use `lf_icon('slug')` in templates/components.
+2. Use `lf_icon('slug')` in templates/components.
 
 ## Important Note
 

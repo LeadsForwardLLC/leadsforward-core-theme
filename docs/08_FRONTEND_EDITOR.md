@@ -108,8 +108,6 @@ SEO is now decoupled from the AI assistant body and launched from its own floati
 - `AI Assistant` and `SEO Health` launchers use a flat LeadsForward purple style (no gradient / no drop shadow).
 - Launcher spacing is dynamically computed on desktop so both buttons stay visually tight and aligned.
 - Structure rail collapsed launcher is positioned higher for faster access while editing.
-- SEO vitals also include request/transfer-size budget signals plus available `Server-Timing` metrics from the current page response.
-- Launchers use a flat purple branded style and dynamic spacing so `SEO Health` sits tighter to `AI Assistant`.
 
 ### Performance Grade Chip
 

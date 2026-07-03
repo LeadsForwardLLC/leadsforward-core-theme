@@ -56,4 +56,4 @@ Expected behavior:
 - Per-post Page Builder: post meta `lf_pb_config` (`order` + `sections`) for services, service areas, pages, posts, and projects — see `09_PAGE_BUILDER_MAPS_NAV_AI.md`
 
 ## Related docs
-- **Operators:** LeadsForward → Theme Docs (playbook in wp-admin) and `09_PAGE_BUILDER_MAPS_NAV_AI.md` for maps, menus, and AI draft creation into sections.
+- **Operators:** LeadsForward → Theme Documentation (playbook in wp-admin) and `docs/09_PAGE_BUILDER_MAPS_NAV_AI.md` for maps, menus, and AI draft creation into sections.
