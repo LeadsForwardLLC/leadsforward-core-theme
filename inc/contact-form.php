@@ -535,8 +535,42 @@ function lf_contact_form_render_admin(): void {
 	<?php
 }
 
+function lf_contact_form_should_enqueue_assets(): bool {
+	if (is_page('contact')) {
+		return true;
+	}
+	if (is_front_page() && function_exists('lf_get_homepage_sections')) {
+		foreach (lf_get_homepage_sections() as $section) {
+			if (($section['section_type'] ?? '') === 'map_nap') {
+				return true;
+			}
+		}
+	}
+	if (!is_singular()) {
+		return false;
+	}
+	$post = get_queried_object();
+	if (!$post instanceof \WP_Post || !function_exists('lf_pb_get_post_config') || !function_exists('lf_pb_get_context_for_post')) {
+		return false;
+	}
+	$context = lf_pb_get_context_for_post($post);
+	if ($context === '') {
+		return false;
+	}
+	$pb = lf_pb_get_post_config((int) $post->ID, $context);
+	foreach ($pb['sections'] ?? [] as $section) {
+		if (!is_array($section)) {
+			continue;
+		}
+		if (($section['type'] ?? '') === 'map_nap' && !empty($section['enabled'])) {
+			return true;
+		}
+	}
+	return false;
+}
+
 function lf_contact_form_enqueue_assets(): void {
-	if (is_admin()) {
+	if (is_admin() || !lf_contact_form_should_enqueue_assets()) {
 		return;
 	}
 	wp_enqueue_script(

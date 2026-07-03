@@ -165,7 +165,14 @@ function lf_seo_get_robots_content(): string {
 	if (!empty($settings['indexing']['noindex_paginated']) && is_paged()) {
 		$noindex = true;
 	}
+	if (is_post_type_archive(['lf_faq', 'lf_process_step'])) {
+		$noindex = true;
+	}
 	if ($post_id) {
+		$post = get_post($post_id);
+		if ($post instanceof \WP_Post && in_array($post->post_type, ['lf_faq', 'lf_process_step'], true)) {
+			$noindex = true;
+		}
 		$noindex = $noindex || (string) get_post_meta($post_id, '_lf_seo_noindex', true) === '1';
 		$nofollow = $nofollow || (string) get_post_meta($post_id, '_lf_seo_nofollow', true) === '1';
 		$pb = lf_seo_get_pb_seo_overrides($post_id);

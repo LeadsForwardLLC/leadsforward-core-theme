@@ -27,7 +27,11 @@ add_filter('wp_generate_attachment_metadata', 'lf_image_intelligence_optimize_up
 add_action('admin_menu', 'lf_image_intelligence_register_debug_page');
 
 function lf_image_intelligence_enqueue_upload_feedback_assets(): void {
-	if (!current_user_can('upload_files')) {
+	if (is_admin()) {
+		if (!current_user_can('upload_files')) {
+			return;
+		}
+	} elseif (!current_user_can('edit_theme_options')) {
 		return;
 	}
 	if (!function_exists('wp_enqueue_media')) {

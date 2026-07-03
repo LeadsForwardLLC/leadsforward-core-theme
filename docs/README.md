@@ -24,6 +24,7 @@ Full release notes: [`TEAM_CHANGELOG.md`](TEAM_CHANGELOG.md).
 | [`00_PRODUCTION_READINESS.md`](00_PRODUCTION_READINESS.md) | Pre-launch checklist, version alignment, cron |
 | [`01_SYSTEM_OVERVIEW.md`](01_SYSTEM_OVERVIEW.md) | System map, orchestrator phases, storage keys |
 | [`05_THEME_INTEGRATION.md`](05_THEME_INTEGRATION.md) | WP apply path, fleet updates, repair safeguards |
+| **Performance / audit** | [`THEME_AUDIT_2026-07-03.md`](THEME_AUDIT_2026-07-03.md) |
 | [`LF-TEAM-AI-SEO-REVIEW-PACK.md`](LF-TEAM-AI-SEO-REVIEW-PACK.md) | Team-facing AI/SEO review (no code required) |
 | [`SEO_AI_WORKFLOW_HARDENING.md`](SEO_AI_WORKFLOW_HARDENING.md) | SEO/AI remediation phases (engineering) |
 

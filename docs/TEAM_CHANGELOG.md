@@ -120,3 +120,19 @@ Version
 
 * Shipped up to **0.1.178**.
 
+---
+
+2026-07-03 (performance + SEO audit)
+
+What changed
+
+* **LCP:** Preload homepage hero background; `lf-hero-l` image size; logo/hero images eager + `fetchpriority="high"` (no lazy above fold).
+* **Performance:** Font preconnect; minimal critical CSS for header/hero shell; contact form JS only on map_nap pages; image-intelligence media stack editors-only on front.
+* **SEO:** Default `noindex` for `lf_faq` and `lf_process_step` singles/archives (fragment CPTs).
+* **Cleanup:** Wired `inc/ai-studio-*.php` stubs; removed unused `templates/parts/cta.php`.
+* **Docs:** `docs/THEME_AUDIT_2026-07-03.md` — full audit + recommendations.
+
+Version
+
+* Shipped up to **0.1.179**.
+

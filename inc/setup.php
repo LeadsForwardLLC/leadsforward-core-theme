@@ -48,6 +48,14 @@ function lf_theme_setup(): void {
 add_action('after_setup_theme', 'lf_theme_setup');
 
 /**
+ * Hero/LCP image size — large enough for full-width backgrounds without always using `full`.
+ */
+function lf_register_theme_image_sizes(): void {
+	add_image_size('lf-hero-l', 1920, 1080, true);
+}
+add_action('after_setup_theme', 'lf_register_theme_image_sizes', 11);
+
+/**
  * Seed default niche on activation for new installs.
  */
 function lf_theme_seed_default_niche(): void {
