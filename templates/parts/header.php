@@ -24,7 +24,12 @@ $logo_id = function_exists('lf_get_global_option') ? lf_get_global_option('lf_gl
 $logo_id = is_numeric($logo_id) ? (int) $logo_id : 0;
 $logo_html = '';
 if ($logo_id) {
-	$logo_html = wp_get_attachment_image($logo_id, 'large', false, ['class' => 'site-header__logo-img', 'loading' => 'lazy']);
+	$logo_html = wp_get_attachment_image(
+		$logo_id,
+		'large',
+		false,
+		function_exists('lf_image_lcp_attrs') ? lf_image_lcp_attrs(['class' => 'site-header__logo-img']) : ['class' => 'site-header__logo-img', 'loading' => 'eager', 'fetchpriority' => 'high']
+	);
 }
 $logo_text = function_exists('lf_get_option') ? (string) lf_get_option('lf_business_name', 'option') : '';
 if ($logo_text === '') {

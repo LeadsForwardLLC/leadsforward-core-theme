@@ -4,3 +4,4 @@
  */
 declare(strict_types=1);
 require_once __DIR__ . '/manifester/ai-studio-orchestrator-utils.php';
+require_once __DIR__ . '/manifester/ai-studio-orchestrator-utils.php';

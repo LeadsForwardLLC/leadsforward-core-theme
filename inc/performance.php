@@ -73,6 +73,58 @@ function lf_remove_head_bloat(): void {
 add_action('init', 'lf_remove_head_bloat');
 
 /**
+ * Preconnect to Google Fonts (theme loads families via CSS @import).
+ *
+ * @param array<int, array<string, string>|string> $urls
+ * @param string $relation_type
+ * @return array<int, array<string, string>|string>
+ */
+function lf_performance_resource_hints(array $urls, string $relation_type): array {
+	if ($relation_type !== 'preconnect' || is_admin()) {
+		return $urls;
+	}
+	$urls[] = [
+		'href' => 'https://fonts.googleapis.com',
+		'crossorigin' => 'anonymous',
+	];
+	$urls[] = [
+		'href' => 'https://fonts.gstatic.com',
+		'crossorigin' => 'anonymous',
+	];
+	return $urls;
+}
+add_filter('wp_resource_hints', 'lf_performance_resource_hints', 10, 2);
+
+/**
+ * Preload homepage hero background (LCP) so the browser discovers it before CSS paints the section.
+ */
+function lf_preload_homepage_hero_lcp(): void {
+	if (is_admin() || !function_exists('lf_resolve_homepage_hero_background_url')) {
+		return;
+	}
+	$url = lf_resolve_homepage_hero_background_url();
+	if ($url === '') {
+		return;
+	}
+	printf(
+		'<link rel="preload" as="image" href="%s" fetchpriority="high" />' . "\n",
+		esc_url($url)
+	);
+}
+add_action('wp_head', 'lf_preload_homepage_hero_lcp', 2);
+
+/**
+ * Minimal critical CSS so hero background shell can paint before the full design-system bundle.
+ */
+function lf_performance_default_critical_css(string $css): string {
+	if ($css !== '' || is_admin()) {
+		return $css;
+	}
+	return '.site-header{position:relative;z-index:100}.lf-block-hero{position:relative;overflow:hidden}.lf-block-hero__bg{position:absolute;inset:0;background-size:cover;background-position:center;background-repeat:no-repeat}';
+}
+add_filter('lf_critical_css', 'lf_performance_default_critical_css');
+
+/**
  * Hook for injecting critical CSS in head. Theme or plugin can output inline critical CSS here.
  */
 function lf_critical_css_placeholder(): void {

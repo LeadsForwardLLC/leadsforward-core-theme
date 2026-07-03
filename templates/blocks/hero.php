@@ -2,7 +2,7 @@
 /**
  * Block: Hero. Section-level overrides from context (homepage); CTA from resolved stack.
  * Layout: H1 → Subheadline → Primary + secondary CTA buttons → Trust row (stars + count).
- * Any image added here must use loading="lazy".
+ * Above-fold hero media uses eager + fetchpriority; below-fold uses lazy loading.
  *
  * @var array $block
  * @var bool  $is_preview
@@ -163,7 +163,7 @@ if ($show_trust_strip) {
 	?>
 	<div class="lf-hero-trust">
 		<span class="lf-hero-trust__icon" aria-hidden="true">
-			<img src="<?php echo esc_url(LF_THEME_URI . '/assets/images/customers.png'); ?>" alt="<?php esc_attr_e('Customers', 'leadsforward-core'); ?>" width="50" height="50" loading="lazy" decoding="async" />
+			<img src="<?php echo esc_url(LF_THEME_URI . '/assets/images/customers.png'); ?>" alt="<?php esc_attr_e('Customers', 'leadsforward-core'); ?>" width="50" height="50" decoding="async" />
 		</span>
 		<span class="lf-hero-trust__badge">
 			<span class="lf-block-hero__stars" aria-hidden="true">
@@ -291,7 +291,7 @@ if ($hero_bg_mode === 'image' && $variant !== 'c') {
 		$hero_bg_id = (int) $placeholder_id;
 	}
 }
-$hero_bg_url = $hero_bg_id ? wp_get_attachment_image_url($hero_bg_id, 'full') : '';
+$hero_bg_url = $hero_bg_id ? wp_get_attachment_image_url($hero_bg_id, function_exists('lf_hero_background_image_size') ? lf_hero_background_image_size() : 'large') : '';
 $hero_bg_class = '';
 $hero_bg_style = '';
 if ($hero_bg_url && $hero_bg_mode === 'image' && $variant !== 'c') {
@@ -329,7 +329,7 @@ $hero_bg_tone = (function_exists('lf_sections_hero_background_is_dark') && lf_se
 <section class="<?php echo esc_attr($hero_outer_class); ?>" id="<?php echo esc_attr($block_id ?: 'block-' . uniqid()); ?>" data-variant="<?php echo esc_attr($variant); ?>" data-lf-hero-bg-tone="<?php echo esc_attr($hero_bg_tone); ?>" data-lf-hero-bg-mode="<?php echo esc_attr($hero_bg_mode); ?>" data-lf-hero-bg-image-id="<?php echo esc_attr((string) $hero_bg_stored_image_id); ?>" data-lf-hero-bg-video-id="<?php echo esc_attr((string) $hero_bg_stored_video_id); ?>" data-lf-hero-trust-strip-setting="<?php echo esc_attr($hero_trust_strip_enabled ? '1' : '0'); ?>"<?php echo $hero_combined_style !== '' ? ' style="' . esc_attr($hero_combined_style) . '"' : ''; ?>>
 	<div class="lf-block-hero__bg" aria-hidden="true">
 		<?php if ($hero_video_url !== '' && $hero_bg_mode === 'video' && $variant !== 'c') : ?>
-			<video class="lf-block-hero__video" autoplay muted loop playsinline>
+			<video class="lf-block-hero__video" autoplay muted loop playsinline preload="none">
 				<source src="<?php echo esc_url($hero_video_url); ?>" type="<?php echo esc_attr($hero_video_mime); ?>" />
 			</video>
 		<?php endif; ?>
@@ -376,7 +376,10 @@ $hero_bg_tone = (function_exists('lf_sections_hero_background_is_dark') && lf_se
 				<?php if ($show_hero_image) : ?>
 					<div class="lf-hero-basic__media">
 						<div class="lf-hero-basic__image">
-							<?php echo wp_get_attachment_image($hero_image_id, 'large', false, ['loading' => 'lazy', 'decoding' => 'async', 'alt' => esc_attr($hero_image_alt)]); ?>
+							<?php
+							$hero_img_attrs = function_exists('lf_image_lcp_attrs') ? lf_image_lcp_attrs(['alt' => esc_attr($hero_image_alt)]) : ['loading' => 'eager', 'fetchpriority' => 'high', 'decoding' => 'async', 'alt' => esc_attr($hero_image_alt)];
+							echo wp_get_attachment_image($hero_image_id, 'large', false, $hero_img_attrs);
+							?>
 						</div>
 					</div>
 				<?php endif; ?>
@@ -521,9 +524,15 @@ $hero_bg_tone = (function_exists('lf_sections_hero_background_is_dark') && lf_se
 				<div class="lf-hero-visual__media">
 					<div class="lf-hero-visual__image">
 						<?php if ($show_hero_image) : ?>
-							<?php echo wp_get_attachment_image($hero_image_id, 'large', false, ['loading' => 'lazy', 'decoding' => 'async', 'alt' => esc_attr($hero_image_alt)]); ?>
+							<?php
+							$hero_img_attrs = function_exists('lf_image_lcp_attrs') ? lf_image_lcp_attrs(['alt' => esc_attr($hero_image_alt)]) : ['loading' => 'eager', 'fetchpriority' => 'high', 'decoding' => 'async', 'alt' => esc_attr($hero_image_alt)];
+							echo wp_get_attachment_image($hero_image_id, 'large', false, $hero_img_attrs);
+							?>
 						<?php elseif ($placeholder_id) : ?>
-							<?php echo wp_get_attachment_image($placeholder_id, 'large', false, ['loading' => 'lazy', 'decoding' => 'async', 'alt' => esc_attr($placeholder_alt)]); ?>
+							<?php
+							$placeholder_attrs = function_exists('lf_image_lcp_attrs') ? lf_image_lcp_attrs(['alt' => esc_attr($placeholder_alt)]) : ['loading' => 'eager', 'fetchpriority' => 'high', 'decoding' => 'async', 'alt' => esc_attr($placeholder_alt)];
+							echo wp_get_attachment_image($placeholder_id, 'large', false, $placeholder_attrs);
+							?>
 						<?php elseif ($latest_testimonial) : ?>
 							<div class="lf-block-hero__quote">
 								<p class="lf-block-hero__quote-text"><?php echo esc_html($latest_testimonial_text); ?></p>

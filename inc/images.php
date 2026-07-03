@@ -286,3 +286,75 @@ function lf_get_placeholder_image_id(): int {
 add_action('after_switch_theme', 'lf_seed_placeholder_image');
 add_action('admin_init', 'lf_seed_placeholder_image');
 add_action('admin_init', 'lf_maybe_fix_placeholder_attachment_seo_meta', 20);
+
+/**
+ * Attachment attrs for above-the-fold / LCP images (hero, logo).
+ *
+ * @param array<string, mixed> $extra
+ * @return array<string, mixed>
+ */
+function lf_image_lcp_attrs(array $extra = []): array {
+	return array_merge(
+		[
+			'loading' => 'eager',
+			'fetchpriority' => 'high',
+			'decoding' => 'async',
+		],
+		$extra
+	);
+}
+
+/**
+ * Attachment attrs for below-the-fold images.
+ *
+ * @param array<string, mixed> $extra
+ * @return array<string, mixed>
+ */
+function lf_image_lazy_attrs(array $extra = []): array {
+	return array_merge(
+		[
+			'loading' => 'lazy',
+			'decoding' => 'async',
+		],
+		$extra
+	);
+}
+
+/**
+ * Best size for hero background URLs (LCP). Falls back to large when custom size missing.
+ */
+function lf_hero_background_image_size(): string {
+	return has_image_size('lf-hero-l') ? 'lf-hero-l' : 'large';
+}
+
+/**
+ * Resolve homepage hero background image URL for preload (front page only).
+ */
+function lf_resolve_homepage_hero_background_url(): string {
+	if (!is_front_page() || !function_exists('lf_get_homepage_sections')) {
+		return '';
+	}
+	foreach (lf_get_homepage_sections() as $section) {
+		if (($section['section_type'] ?? '') !== 'hero') {
+			continue;
+		}
+		$mode = (string) ($section['hero_background_mode'] ?? 'image');
+		$variant = (string) ($section['variant'] ?? 'default');
+		if ($mode !== 'image' || $variant === 'c') {
+			return '';
+		}
+		$attachment_id = (int) ($section['hero_background_image_id'] ?? 0);
+		if ($attachment_id <= 0) {
+			$attachment_id = (int) get_post_thumbnail_id((int) get_queried_object_id());
+		}
+		if ($attachment_id <= 0) {
+			$attachment_id = (int) lf_get_placeholder_image_id();
+		}
+		if ($attachment_id <= 0) {
+			return '';
+		}
+		$url = wp_get_attachment_image_url($attachment_id, lf_hero_background_image_size());
+		return is_string($url) ? $url : '';
+	}
+	return '';
+}
