@@ -24,7 +24,7 @@ Before running this workflow, confirm:
 
 1. Theme includes:
    - `inc/image-intelligence.php`
-   - Manifester image upload step in `inc/ai-studio.php`
+   - Manifester image upload step in `inc/manifester/ai-studio.php`
 2. User has capability to access theme admin pages (`edit_theme_options`).
 3. Website Manifester has required generation inputs (Airtable or Manifest JSON).
 4. Media upload limits are sufficient for intended image set.
@@ -250,7 +250,7 @@ Optional enhancement:
 
 - If desired, n8n can add **vision-based semantic labels** before theme ingest.
 - This is only needed when you want image-content-aware renaming from raw photos that have no descriptive context.
-- Implementation spec: `docs/N8N_VISION_STEP_SPEC.md`
+- Implementation spec: `inc/manifester/docs/N8N_VISION_STEP_SPEC.md`
 
 Optional improvement:
 

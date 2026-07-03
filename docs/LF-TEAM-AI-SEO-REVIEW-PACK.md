@@ -3,7 +3,7 @@
 **Audience:** Shannon, Alex, manifesters, PM — **no code reading required.**  
 **Purpose:** One place to understand *what* instructs the AI, *how* content gets generated, *where* optimization happens, and *what* we are fixing next.
 
-**Related deep-dive:** `docs/superpowers/specs/2026-05-06-seo-ai-workflow-hardening-design.md` (engineering delivery plan and phases).
+**Related deep-dive:** `docs/SEO_AI_WORKFLOW_HARDENING.md` (engineering delivery plan and phases).
 
 ---
 
@@ -11,7 +11,7 @@
 
 | Surface | What it does | Where instructions live |
 |--------|----------------|-------------------------|
-| **A. n8n orchestrator** (“manifester” job) | Webhook receives a **big JSON job** from WordPress → optional “research” JSON → **one LLM call per page blueprint** → strict JSON **updates** sent back to WordPress to apply. | **n8n workflow** (exported as `docs/n8n-workflow.json`) **+** text built in WordPress (`system_message`, strategies, blueprints) |
+| **A. n8n orchestrator** (“manifester” job) | Webhook receives a **big JSON job** from WordPress → optional “research” JSON → **one LLM call per page blueprint** → strict JSON **updates** sent back to WordPress to apply. | **n8n workflow** (exported as `inc/manifester/docs/n8n-workflow.json`) **+** text built in WordPress (`system_message`, strategies, blueprints) |
 | **B. Theme SEO engine** (after content is in WP) | Meta titles/descriptions, keywords, structured output, coverage dashboard, etc. **Not** the same as the n8n story writer. | PHP under `inc/seo/` (engineering); behavior described in Theme Documentation in wp-admin |
 | **C. In-dashboard AI Assistant** | Separate prompts for **inline / draft help** inside the builder UI. Different JSON shape than the orchestrator. | `inc/ai-editing/` — documented in `docs/09_PAGE_BUILDER_MAPS_NAV_AI.md` |
 
@@ -109,7 +109,7 @@ Roughly includes:
 - **`blueprints`**: array of **one blueprint per URL** — each lists **sections** with **`allowed_field_keys`**, intents, FAQs targets, **`post_id`**, **`page_type`** context, etc.
 - Optionally **`research_document`** to bypass research LLM.
 
-Engineering builds this in **`inc/ai-studio.php`** (function that assembles **`build_full_site` ** / manifest payload).
+Engineering builds this in **`inc/manifester/ai-studio.php`** (function that assembles **`build_full_site`** / manifest payload).
 
 ---
 
@@ -249,12 +249,12 @@ When something is broken, tagging helps:
 
 | Asset | Contents |
 |-------|----------|
-| `docs/n8n-workflow.json` | Full workflow + **embedded LLM prompt strings** (Research Generator, Basic LLM Chain, Retry chain) |
-| `inc/ai-studio.php` | Payload assembly + `lf_ai_studio_llm_system_message`, FAQ/CTA strategy, blueprint audit |
+| `inc/manifester/docs/n8n-workflow.json` | Full workflow + **embedded LLM prompt strings** (Research Generator, Basic LLM Chain, Retry chain) |
+| `inc/manifester/ai-studio.php` | Payload assembly + `lf_ai_studio_llm_system_message`, FAQ/CTA strategy, blueprint audit |
 | `docs/06_AI_PROMPT_ENGINE.md` | Narrative explanation of blueprint + prompts |
-| `docs/02_N8N_WORKFLOW_ARCHITECTURE.md` | Pipeline diagram |
+| `inc/manifester/docs/02_N8N_WORKFLOW_ARCHITECTURE.md` | Pipeline diagram |
 | `inc/seo/*.php` | Post-publish meta / SEO tooling |
-| `docs/superpowers/specs/2026-05-06-seo-ai-workflow-hardening-design.md` | Consolidated remediation plan + phased delivery |
+| `docs/SEO_AI_WORKFLOW_HARDENING.md` | Consolidated remediation plan + phased delivery |
 
 ---
 

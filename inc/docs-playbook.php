@@ -389,8 +389,9 @@ function lf_docs_render_playbook_sections(): void {
 
 			<section id="developer-reference" class="lf-docs__section">
 				<h2><?php esc_html_e('Developer documentation (theme repository)', 'leadsforward-core'); ?></h2>
-				<p><?php esc_html_e('This playbook is the operator guide. For architecture, n8n contracts, manifest schema, section registry details, and the Page Builder / maps / menu / AI creation reference, use the Markdown files in the theme’s docs/ folder (same copy shipped with the theme ZIP or Git clone).', 'leadsforward-core'); ?></p>
+				<p><?php esc_html_e('This playbook is the operator guide. For architecture, n8n contracts, manifest schema, section registry details, and the Page Builder / maps / menu / AI creation reference, use the Markdown files in the theme’s docs/ folder (same copy shipped with the theme ZIP or Git clone). Start with docs/DOCUMENTATION_MAP.md to find the canonical file per topic.', 'leadsforward-core'); ?></p>
 				<ul>
+					<li><code>docs/DOCUMENTATION_MAP.md</code> — <?php esc_html_e('source of truth index (read this first)', 'leadsforward-core'); ?></li>
 					<li><code>docs/README.md</code> — <?php esc_html_e('index of all topics', 'leadsforward-core'); ?></li>
 					<li><code>docs/00_PRODUCTION_READINESS.md</code> — <?php esc_html_e('pre-launch checklist and fleet notes', 'leadsforward-core'); ?></li>
 					<li><code>docs/01_SYSTEM_OVERVIEW.md</code> — <?php esc_html_e('orchestrator phases, template defaults, storage keys', 'leadsforward-core'); ?></li>
