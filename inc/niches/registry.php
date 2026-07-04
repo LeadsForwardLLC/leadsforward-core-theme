@@ -221,8 +221,17 @@ function lf_niche_build_entry(
  * Niche registry. Each niche: name, slug, services, section_enabled (optional), hero copy defaults, CTA, schema.
  */
 function lf_get_niche_registry(): array {
+	static $registry = null;
+	static $building = false;
+	if (is_array($registry)) {
+		return $registry;
+	}
+	if ($building) {
+		return [];
+	}
+	$building = true;
 	$project_profile = 'project-heavy';
-	return [
+	$registry = [
 		'roofing' => lf_niche_build_entry(
 			__('Roofing', 'leadsforward-core'),
 			'roofing',
@@ -777,6 +786,8 @@ function lf_get_niche_registry(): array {
 			]
 		),
 	];
+	$building = false;
+	return $registry;
 }
 
 /**

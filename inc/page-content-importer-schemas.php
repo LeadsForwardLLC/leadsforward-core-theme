@@ -157,8 +157,11 @@ function lf_pci_registry(): array {
 	$areas_order = ['hero', 'service_areas', 'faq_accordion', 'cta'];
 	$home_niche = (string) get_option(
 		defined('LF_HOMEPAGE_NICHE_OPTION') ? LF_HOMEPAGE_NICHE_OPTION : 'lf_homepage_niche_slug',
-		function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair'
+		''
 	);
+	if ($home_niche === '') {
+		$home_niche = 'foundation-repair';
+	}
 	$home_order = function_exists('lf_niche_homepage_blueprint_order')
 		? lf_niche_homepage_blueprint_order($home_niche)
 		: (function_exists('lf_sections_default_order')
