@@ -199,14 +199,31 @@ if ($proof_items === []) {
 }
 if (array_key_exists('hero_chip_bullets', $section)) {
 	$chip_raw = (string) ($section['hero_chip_bullets'] ?? '');
+	$chip_lines = function_exists('lf_sections_parse_chip_lines')
+		? lf_sections_parse_chip_lines($chip_raw)
+		: [];
+} else {
+	$chip_lines = [];
+}
+$chip_items = array_column($chip_lines, 'label');
+if ($chip_items === []) {
+	$chip_raw = (string) ($section['hero_chip_bullets'] ?? '');
 	$chip_items = function_exists('lf_sections_parse_lines')
 		? lf_sections_parse_lines($chip_raw)
 		: preg_split('/\r\n|\r|\n/', $chip_raw);
 	$chip_items = array_values(array_filter(array_map('trim', is_array($chip_items) ? $chip_items : [])));
-} else {
-	$chip_items = $proof_items;
+	if ($chip_items === []) {
+		$chip_items = $proof_items;
+	}
+	$chip_lines = array_map(static function (string $label, int $i): array {
+		$icons = ['shield-check', 'star', 'calendar', 'certificate'];
+		return [
+			'label' => $label,
+			'icon'  => $icons[$i % count($icons)] ?? 'check',
+		];
+	}, $chip_items, array_keys($chip_items));
 }
-$check_items = $variant === 'page' ? [] : array_slice($chip_items !== [] ? $chip_items : $proof_items, 0, 5);
+$check_items = $variant === 'page' ? [] : array_slice($chip_lines, 0, 5);
 
 if (!$primary_enabled) {
 	$cta_text = '';
@@ -259,7 +276,7 @@ $hero_bg_url = $hero_bg_id ? wp_get_attachment_image_url($hero_bg_id, function_e
 $hero_bg_class = '';
 $hero_bg_style = '';
 if ($hero_bg_url && $hero_bg_mode === 'image' && $variant === 'conversion') {
-	$hero_bg_overlay = '0.55';
+	$hero_bg_overlay = '0.68';
 	$hero_bg_class = ' lf-block-hero--has-bg';
 	$hero_bg_style = sprintf(
 		'--lf-hero-bg-image: url(\'%s\'); --lf-hero-bg-overlay-opacity: %s;',
@@ -282,6 +299,13 @@ $hero_video_overlay_css = '';
 if ($hero_video_url !== '' && $hero_bg_mode === 'video' && $variant === 'conversion') {
 	$hero_video_overlay_css = '--lf-hero-bg-overlay-opacity: 0.55;';
 }
+$eyebrow_html = $eyebrow !== '' && function_exists('lf_sections_render_accent_text')
+	? lf_sections_render_accent_text((string) $eyebrow)
+	: esc_html((string) $eyebrow);
+$heading_html = function_exists('lf_sections_render_accent_text')
+	? lf_sections_render_accent_text((string) $heading)
+	: esc_html((string) $heading);
+
 $hero_outer_class = trim('lf-block lf-block-hero ' . ($surface['class'] ?? '') . ' lf-block-hero--' . $variant . $hero_bg_class . $hero_video_class);
 $hero_combined_style = trim(
 	($surface['style'] ?? '')
@@ -353,7 +377,7 @@ $placeholder_attrs = function_exists('lf_image_lcp_attrs')
 			</div>
 		<?php else : ?>
 			<?php
-			$badge_items = array_slice($proof_items, 0, 4);
+			$badge_items = array_slice($chip_lines, 0, 4);
 			$primary_label = $cta_text !== '' ? $cta_text : __('Get a Free Inspection', 'leadsforward-core');
 			$mobile_trust_bits = [];
 			if ($review_count > 0) {
@@ -367,28 +391,42 @@ $placeholder_attrs = function_exists('lf_image_lcp_attrs')
 			<div class="lf-hero-conversion">
 				<div class="lf-hero-conversion__content">
 					<?php if ($eyebrow !== '') : ?>
-						<p class="lf-hero-conversion__eyebrow"><?php echo esc_html($eyebrow); ?></p>
+						<p class="lf-hero-conversion__eyebrow"><?php echo $eyebrow_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></p>
 					<?php endif; ?>
 					<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
 					<?php if ($icon_left) : ?>
 						<div class="lf-heading-row">
 							<span class="lf-heading-icon lf-heading-icon--left"><?php echo $icon_left; ?></span>
-							<<?php echo esc_html($heading_tag); ?> class="lf-hero-conversion__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
+							<<?php echo esc_html($heading_tag); ?> class="lf-hero-conversion__title"><?php echo $heading_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></<?php echo esc_html($heading_tag); ?>>
 						</div>
 					<?php else : ?>
-						<<?php echo esc_html($heading_tag); ?> class="lf-hero-conversion__title"><?php echo esc_html($heading); ?></<?php echo esc_html($heading_tag); ?>>
+						<<?php echo esc_html($heading_tag); ?> class="lf-hero-conversion__title"><?php echo $heading_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></<?php echo esc_html($heading_tag); ?>>
 					<?php endif; ?>
 					<?php if ($subheading !== '') : ?>
 						<p class="lf-hero-conversion__subtitle"><?php echo $subheading_html; ?></p>
 					<?php endif; ?>
 					<?php if (!empty($badge_items)) : ?>
-						<ul class="lf-hero-conversion__badges" role="list">
-							<?php foreach ($badge_items as $badge_item) : ?>
-								<li class="lf-hero-conversion__badge">
+						<ul class="lf-hero-conversion__badges lf-hero-chips" role="list">
+							<?php foreach ($badge_items as $chip_row) : ?>
+								<?php
+								$chip_label = is_array($chip_row) ? (string) ($chip_row['label'] ?? '') : (string) $chip_row;
+								$chip_icon = is_array($chip_row) ? (string) ($chip_row['icon'] ?? 'check') : 'check';
+								if ($chip_label === '') {
+									continue;
+								}
+								$chip_icon_html = function_exists('lf_icon')
+									? lf_icon($chip_icon, ['class' => 'lf-hero-conversion__badge-icon-svg'])
+									: '';
+								?>
+								<li class="lf-hero-conversion__badge lf-hero-chip" data-lf-chip-icon="<?php echo esc_attr($chip_icon); ?>">
 									<span class="lf-hero-conversion__badge-icon" aria-hidden="true">
-										<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+										<?php if ($chip_icon_html !== '') : ?>
+											<?php echo $chip_icon_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+										<?php else : ?>
+											<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+										<?php endif; ?>
 									</span>
-									<span class="lf-hero-conversion__badge-text"><?php echo esc_html($badge_item); ?></span>
+									<span class="lf-hero-conversion__badge-text" data-lf-hero-pill-text="1"><?php echo esc_html($chip_label); ?></span>
 								</li>
 							<?php endforeach; ?>
 						</ul>

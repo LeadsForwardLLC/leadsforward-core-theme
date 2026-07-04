@@ -28,23 +28,23 @@ function lf_niche_homepage_blueprint_registry(): array {
 		]
 	);
 
-	$foundation_trust_metrics = implode(
+	$foundation_trust_stats = implode(
 		"\n",
 		[
-			__('15+ Years in Business', 'leadsforward-core'),
-			__('2,500+ Foundations Repaired', 'leadsforward-core'),
-			__('5.0 Google Rating', 'leadsforward-core'),
-			__('Licensed & Insured', 'leadsforward-core'),
+			'15+ || ' . __('Years in Business', 'leadsforward-core') . ' || hammer',
+			'2,500+ || ' . __('Foundations Repaired', 'leadsforward-core') . ' || home',
+			'5.0 || ' . __('500+ Google Reviews', 'leadsforward-core') . ' || star || stars',
+			'A+ || ' . __('BBB Rating', 'leadsforward-core') . ' || building-bank || bbb',
 		]
 	);
 
-	$contractor_trust_metrics = implode(
+	$contractor_trust_stats = implode(
 		"\n",
 		[
-			__('10+ Years in Business', 'leadsforward-core'),
-			__('1,000+ Projects Completed', 'leadsforward-core'),
-			__('5.0 Google Rating', 'leadsforward-core'),
-			__('A+ BBB Rating', 'leadsforward-core'),
+			'10+ || ' . __('Years in Business', 'leadsforward-core') . ' || hammer',
+			'1,000+ || ' . __('Projects Completed', 'leadsforward-core') . ' || home',
+			'5.0 || ' . __('320+ Google Reviews', 'leadsforward-core') . ' || star || stars',
+			'A+ || ' . __('BBB Rating', 'leadsforward-core') . ' || building-bank || bbb',
 		]
 	);
 
@@ -75,16 +75,16 @@ function lf_niche_homepage_blueprint_registry(): array {
 				'content_image_c' => false,
 			],
 			'hero' => [
-				'hero_eyebrow_text' => __('Foundation Repair Experts in [Your City]', 'leadsforward-core'),
-				'hero_headline' => __('Foundation Repair That Protects Your Home for Good', 'leadsforward-core'),
+				'hero_eyebrow_text' => __('Quality Work. Honest Service. **Built to Last.**', 'leadsforward-core'),
+				'hero_headline' => __('Expert Craftsmanship. **Built Around You.**', 'leadsforward-core'),
 				'hero_subheadline' => __('We inspect, diagnose, and repair foundation issues with proven solutions, clear pricing, and workmanship you can trust.', 'leadsforward-core'),
 				'hero_chip_bullets' => implode(
 					"\n",
 					[
-						__('Licensed & Insured', 'leadsforward-core'),
-						__('5-Star Rated', 'leadsforward-core'),
-						__('Workmanship Warranty', 'leadsforward-core'),
-						__('Financing Available', 'leadsforward-core'),
+						__('Licensed & Insured || shield-check', 'leadsforward-core'),
+						__('5-Star Rated || star', 'leadsforward-core'),
+						__('Workmanship Warranty || certificate', 'leadsforward-core'),
+						__('Financing Available || calendar', 'leadsforward-core'),
 					]
 				),
 				'hero_proof_title' => __('Why homeowners choose us', 'leadsforward-core'),
@@ -103,8 +103,9 @@ function lf_niche_homepage_blueprint_registry(): array {
 			],
 			'trust_bar' => [
 				'trust_heading' => '',
-				'trust_badges' => $foundation_trust_metrics,
-				'trust_bar_layout' => 'minimal_strip',
+				'trust_stats_items' => $foundation_trust_stats,
+				'trust_bar_layout' => 'stats_grid',
+				'section_background' => 'soft',
 			],
 			'service_details' => [
 				'section_intent' => 'problem',
@@ -204,24 +205,25 @@ function lf_niche_homepage_blueprint_registry(): array {
 				'pricing' => true,
 			],
 			'hero' => [
-				'hero_eyebrow_text' => __('Trusted Home-Service Contractors in [Your City]', 'leadsforward-core'),
-				'hero_headline' => __('Quality Work. Honest Service. Built to Last.', 'leadsforward-core'),
+				'hero_eyebrow_text' => __('Quality Work. Honest Service. **Built to Last.**', 'leadsforward-core'),
+				'hero_headline' => __('Expert Craftsmanship. **Built Around You.**', 'leadsforward-core'),
 				'hero_subheadline' => __('From small repairs to full projects, our licensed team delivers high-quality work with clear communication from start to finish.', 'leadsforward-core'),
 				'hero_chip_bullets' => implode(
 					"\n",
 					[
-						__('Licensed & Insured', 'leadsforward-core'),
-						__('5-Star Rated', 'leadsforward-core'),
-						__('Financing Available', 'leadsforward-core'),
-						__('Warranty-Backed Work', 'leadsforward-core'),
+						__('Licensed & Insured || shield-check', 'leadsforward-core'),
+						__('5-Star Rated || star', 'leadsforward-core'),
+						__('On Time & On Budget || calendar', 'leadsforward-core'),
+						__('Workmanship Warranty || certificate', 'leadsforward-core'),
 					]
 				),
 				'cta_primary_override' => __('Get a Free Inspection', 'leadsforward-core'),
 				'cta_secondary_override' => __('See Our Work', 'leadsforward-core'),
 			],
 			'trust_bar' => [
-				'trust_badges' => $contractor_trust_metrics,
-				'trust_bar_layout' => 'minimal_strip',
+				'trust_stats_items' => $contractor_trust_stats,
+				'trust_bar_layout' => 'stats_grid',
+				'section_background' => 'soft',
 			],
 			'pricing' => [
 				'enabled' => true,
