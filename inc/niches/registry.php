@@ -437,10 +437,10 @@ function lf_get_niche_registry(): array {
 			'core',
 			'c',
 			[
-				'cta_primary_default' => __('Schedule a Foundation Inspection', 'leadsforward-core'),
-				'cta_secondary_default' => __('Get a Structural Estimate', 'leadsforward-core'),
-				'hero_headline_default' => __('Foundation Repair in [Your City]', 'leadsforward-core'),
-				'hero_subheadline_default' => __('Local specialists for settlement, cracks, and long-term structural stability.', 'leadsforward-core'),
+				'cta_primary_default' => __('Get a Free Inspection', 'leadsforward-core'),
+				'cta_secondary_default' => __('See Our Work', 'leadsforward-core'),
+				'hero_headline_default' => __('Foundation Repair That Protects Your Home for Good', 'leadsforward-core'),
+				'hero_subheadline_default' => __('We inspect, diagnose, and repair foundation issues with proven solutions, clear pricing, and workmanship you can trust.', 'leadsforward-core'),
 			]
 		),
 		'gutter-services' => lf_niche_build_entry(
@@ -856,6 +856,12 @@ function lf_wizard_default_section_order(): array {
  * Homepage section order for niche (array of section_type). Used when seeding ACF or defaults.
  */
 function lf_niche_homepage_section_order(string $niche_slug): array {
+	if (function_exists('lf_niche_homepage_blueprint_order')) {
+		$order = lf_niche_homepage_blueprint_order($niche_slug);
+		if ($order !== []) {
+			return $order;
+		}
+	}
 	$niche = lf_get_niche($niche_slug);
 	if (!$niche || empty($niche['homepage_section_order'])) {
 		return lf_wizard_default_section_order();

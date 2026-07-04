@@ -1,86 +1,116 @@
 === PAGE ===
 Slug: home
 Name: Homepage
-Notes: Service card titles/descriptions, review quotes, map pins, and images come from the site (Services CPT, Reviews, Global Settings). This doc controls every writer-editable headline and body on the homepage.
+Notes: Service card titles/descriptions, review quotes, map pins, project gallery images, and hero media come from the site (Services CPT, Reviews, Projects, Global Settings). This doc controls every writer-editable headline and body on the homepage. Section order follows the niche blueprint (foundation-repair = calm conversion layout).
 
 === HERO ===
-Headline: Foundation Repair in {city}
-Subheadline: Local specialists for settlement, cracks, and long-term structural stability{city_line}.
-Eyebrow: Licensed • Insured • Engineered Repairs
-Left pills:
-- Free structural inspections
-- Engineered repair plans
-- Transferable warranties
-Proof card title: Why homeowners call {business}
+Headline: Foundation Repair That Protects Your Home for Good
+Subheadline: We inspect, diagnose, and repair foundation issues with proven solutions, clear pricing, and workmanship you can trust{city_line}.
+Eyebrow: Foundation Repair Experts in {city}
+Chip bullets:
+- Licensed & Insured
+- 5-Star Rated
+- Workmanship Warranty
+- Financing Available
+Proof card title: Why homeowners choose {business}
 Proof bullets:
-- Licensed, insured structural crews
-- Clear scopes before work starts
-- Local project managers{city_line}
-Primary CTA: Get a Free Estimate
-Secondary CTA: Call Now
+- Local foundation specialists
+- Clear inspection process
+- No high-pressure sales tactics
+Primary CTA: Get a Free Inspection
+Secondary CTA: See Our Work
+Inline form title: Get Your Free Foundation Inspection
+Inline form subtext: Tell us what’s going on. We’ll follow up quickly.
+Inline form button: Schedule My Free Inspection
 
 === TRUST BAR ===
-Heading: Trusted by local homeowners
+Heading:
 Badges:
+- 15+ Years in Business
+- 2,500+ Foundations Repaired
+- 5.0 Google Rating
 - Licensed & Insured
-- Engineered Repair Plans
-- Transferable Warranties
-- Fast Inspection Scheduling
+
+=== SERVICE DETAILS ===
+Heading: Foundation Problems Don’t Fix Themselves
+Intro: Small warning signs can turn into expensive structural issues if they’re ignored.
+Checklist:
+- Cracks in walls or brick
+- Uneven or sloping floors
+- Doors and windows sticking
+- Gaps around trim or cabinets
+- Water pooling near foundation
+- Bowing or settling foundation
+
+=== MENTOR ===
+Heading: We Help Homeowners Fix the Problem Without the Guesswork
+Intro: Foundation issues are stressful because most homeowners don’t know how serious the damage is, what repairs should cost, or who to trust. Our inspection process gives you clear answers, honest recommendations, and a repair plan built around your home.
+Checklist:
+- Local foundation specialists
+- Clear inspection process
+- No high-pressure sales tactics
+- Financing options available
+- Workmanship warranty
 
 === SERVICES ===
-Heading: Foundation repair services for {city} homeowners
-Intro: Explore our core structural and waterproofing services — each scoped clearly before work starts.
+Heading: Foundation Repair Services Built for Long-Term Stability
+Intro: Engineered solutions for settlement, moisture, and structural movement — scoped clearly before work starts.
 View all label: View all services
 
+=== PROJECT GALLERY ===
+Heading: Real Repairs. Real Homes. Real Results.
+Intro: See how we’ve helped homeowners protect their homes across {city} and nearby communities.
+
+=== PROCESS ===
+Heading: A Simple Process From Inspection to Repair
+Intro: Know what happens next — no surprises.
+Step: Schedule Your Free Inspection || Tell us what you’re seeing and we’ll set a time to inspect your home.
+Step: Get a Clear Repair Plan || We diagnose the issue, explain your options, and give you straightforward recommendations.
+Step: Protect Your Home || Our team completes the repair and leaves you with a stronger, safer home.
+
+=== REVIEWS ===
+Heading: Homeowners Trust Us When It Matters Most
+
+=== PRICING ===
+Heading: Foundation Repair Is a Big Decision. We Make It Easier.
+Intro: Every home is different, which is why we start with a clear inspection and repair plan. We’ll explain what needs attention now, what can be monitored, and what financing options may be available.
+Financing text: Financing options may be available for qualified homeowners.
+CTA: Ask About Financing
+
 === BENEFITS ===
-Heading: Why homeowners choose {business}
-Intro: Structural decisions deserve clarity, engineering, and a crew that shows up prepared.
+Heading: Why Homeowners Choose {business}
+Intro: Calm, clear guidance from inspection through warranty — without pressure.
 Items:
 Engineered solutions || Piers, anchors, and waterproofing sized to your soil — not one-size-fits-all kits.
 Plain-language inspections || Photos, measurements, and options explained so you can make an informed decision.
 Local accountability || Project managers who answer the phone and stand behind the work{city_line}.
 
-=== SERVICE DETAILS ===
-Heading: Foundation repair services that protect your home long-term
-Intro: From crack repair to piering and waterproofing, we document every step before work starts.
-Body: {business} handles settlement, bowing walls, slab issues, and moisture problems with engineered plans — not guesswork. Every project starts with a structural inspection, clear scope, and pricing you can review before crews mobilize.
-Checklist:
-- Crack repair & epoxy injection
-- Piering & underpinning
-- Bowing wall stabilization
-- Basement waterproofing
-
-=== SERVICE DETAILS 2 ===
-Heading: Inspections built for peace of mind
-Intro: Know what you are buying — and what you are fixing — before you commit.
-Body: Our inspectors measure movement, document conditions with photos, and explain repair options in plain language. You receive a written plan with timelines, warranty details, and next steps — whether you move forward now or need time to decide.
-
-=== PROCESS ===
-Heading: How foundation repair works with us
-Intro: A documented path from inspection to warranty — so you always know what happens next.
-Step: Schedule an inspection || We review cracks, settlement, and moisture signs and document findings with photos.
-Step: Review your repair plan || You receive engineered options, pricing, and timelines before crews mobilize.
-Step: Structural repair & warranty || Licensed crews complete the scope and leave you with transferable warranty paperwork.
+=== MAP ===
+Heading: Foundation Repair Across {city}
+Intro: Local crews serving homeowners throughout the region with fast inspections and engineered repairs.
 
 === FAQ ===
-Heading: Foundation repair questions, answered
+Heading: Foundation Repair Questions, Answered
 Intro: Straight answers about inspections, warranties, timelines, and what to expect on your property.
 Q: How do I know if I need foundation repair?
-A: Warning signs include drywall cracks, sticking doors, sloping floors, and gaps around windows. We confirm movement with measurements — not guesses.
-Q: Do you offer warranties on foundation work?
-A: Yes. We document warranty coverage in writing before work starts so you know what is protected.
-
-=== REVIEWS ===
-Heading: What homeowners say about {business}
-
-=== MAP ===
-Heading: Foundation repair service areas{city_line}
-Intro: Local crews serving {city} and nearby neighborhoods — fast inspections and engineered repairs.
+A: Look for cracks, uneven floors, sticking doors, gaps around trim, or water near your foundation. The safest next step is a professional inspection.
+Q: Is the inspection really free?
+A: Yes. We inspect the issue, explain what we find, and recommend next steps.
+Q: How much does foundation repair cost?
+A: It depends on the cause, severity, soil conditions, and repair method. After inspection, we provide a clear estimate.
+Q: Do you offer financing?
+A: Yes. Financing options may be available for qualified homeowners.
+Q: How long does foundation repair take?
+A: Many repairs can be completed in a few days, but timing depends on the scope of work.
+Q: Will foundation repair damage my landscaping?
+A: We take care to minimize disruption and explain what to expect before work begins.
+Q: Do you warranty your work?
+A: Yes. Warranty details depend on the repair type and will be explained before work begins.
 
 === CTA ===
-Headline: Schedule a foundation inspection with {business}
-Subheadline: Request a free structural inspection and get a clear repair plan.
-Primary CTA: Get a Free Estimate
+Headline: Worried About Your Foundation? Get Clear Answers Today.
+Subheadline: Schedule a free inspection and find out what’s really happening with your home.
+Primary CTA: Get a Free Inspection
 Secondary CTA: Call Now
 
 === SEO ===

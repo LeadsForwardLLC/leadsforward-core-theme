@@ -22,6 +22,7 @@ Public route: `/theme-docs/` renders the same playbook as wp-admin **LeadsForwar
 | Airtable cron & living site | Playbook `#airtable-live-sync` + `docs/10_SITEMAP_SYNC.md` |
 | Reviews page gating | Playbook `#projects-reviews` + `inc/fleet-pages.php` |
 | Section fields & rendering | `docs/04_SECTION_SCHEMA.md` + `inc/sections.php` |
+| Homepage niche layouts | `docs/HOMEPAGE_NICHE_BLUEPRINTS.md` + `inc/niches/homepage-blueprints.php` |
 | Page Builder meta & AI creation JSON | `docs/09_PAGE_BUILDER_MAPS_NAV_AI.md` |
 | WordPress apply path & fleet updates | `docs/05_THEME_INTEGRATION.md` |
 | n8n workflow export | **`inc/manifester/docs/n8n-workflow.json`** (only copy in repo) |
