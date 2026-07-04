@@ -228,14 +228,11 @@ function lf_wizard_handle_post(): void {
 				lf_update_business_info_value('lf_business_map_embed', $data['business_map_embed'] ?? '');
 			}
 			// Homepage config is applied during setup runner.
-			if ($hero_variant !== '' && function_exists('lf_sections_hero_variant_options')) {
-				$variants = array_keys(lf_sections_hero_variant_options());
-				if (in_array($hero_variant, $variants, true)) {
-					$config = function_exists('lf_get_homepage_section_config') ? lf_get_homepage_section_config() : [];
-					if (!empty($config['hero']) && is_array($config['hero'])) {
-						$config['hero']['variant'] = $hero_variant;
-						update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
-					}
+			if (function_exists('lf_get_homepage_section_config')) {
+				$config = lf_get_homepage_section_config();
+				if (!empty($config['hero']) && is_array($config['hero'])) {
+					$config['hero']['variant'] = 'conversion';
+					update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 				}
 			}
 			if (!$manifest_active) {
@@ -779,11 +776,6 @@ function lf_wizard_render_page(): void {
 		echo '<table class="form-table"><tr><th scope="row">' . esc_html__('Site style', 'leadsforward-core') . '</th><td><select name="lf_variation_profile">';
 		foreach ($profiles as $key => $label) {
 			echo '<option value="' . esc_attr($key) . '"' . selected($rec, $key, false) . '>' . esc_html($label) . '</option>';
-		}
-		echo '</select></td></tr>';
-		echo '<tr><th scope="row"><label for="lf_homepage_hero_variant">' . esc_html__('Homepage hero layout', 'leadsforward-core') . '</label></th><td><select id="lf_homepage_hero_variant" name="lf_homepage_hero_variant">';
-		foreach ($hero_variants as $variant_key => $label) {
-			echo '<option value="' . esc_attr($variant_key) . '"' . selected($hero_variant, $variant_key, false) . '>' . esc_html($label) . '</option>';
 		}
 		echo '</select></td></tr>';
 		$keyword_attr = $manifest_active ? ' readonly disabled' : '';

@@ -1374,7 +1374,10 @@ function lf_ai_ajax_update_hero_settings(): void {
 	$context_type = isset($_POST['context_type']) ? sanitize_text_field(wp_unslash($_POST['context_type'])) : '';
 	$context_id = isset($_POST['context_id']) ? sanitize_text_field(wp_unslash($_POST['context_id'])) : '';
 	$section_id = isset($_POST['section_id']) ? sanitize_text_field(wp_unslash($_POST['section_id'])) : '';
-	$hero_variant_raw = isset($_POST['hero_variant']) ? sanitize_key(wp_unslash((string) $_POST['hero_variant'])) : '';
+	$hero_variant_raw = isset($_POST['hero_variant']) ? sanitize_key(wp_unslash((string) $_POST['hero_variant'])) : 'conversion';
+	$hero_variant_raw = function_exists('lf_sections_normalize_hero_variant')
+		? lf_sections_normalize_hero_variant($hero_variant_raw, $context_type === 'homepage' || $context_id === 'homepage')
+		: 'conversion';
 	$hero_background_mode = isset($_POST['hero_background_mode']) ? sanitize_key(wp_unslash((string) $_POST['hero_background_mode'])) : 'image';
 	$hero_background_image_id = isset($_POST['hero_background_image_id']) ? (int) $_POST['hero_background_image_id'] : 0;
 	$hero_background_video_id = isset($_POST['hero_background_video_id']) ? (int) $_POST['hero_background_video_id'] : 0;
@@ -1383,11 +1386,6 @@ function lf_ai_ajax_update_hero_settings(): void {
 		wp_send_json_error(['message' => __('Invalid hero settings payload.', 'leadsforward-core')]);
 	}
 
-	$variants = function_exists('lf_sections_hero_variant_options') ? lf_sections_hero_variant_options() : [];
-	$variant_keys = array_keys($variants);
-	if (!in_array($hero_variant_raw, $variant_keys, true)) {
-		wp_send_json_error(['message' => __('That hero layout is not allowed.', 'leadsforward-core')]);
-	}
 	$modes = ['color', 'image', 'video'];
 	if (!in_array($hero_background_mode, $modes, true)) {
 		wp_send_json_error(['message' => __('That hero background mode is not allowed.', 'leadsforward-core')]);

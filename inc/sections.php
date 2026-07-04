@@ -86,12 +86,23 @@ function lf_sections_bg_options(): array {
 
 function lf_sections_hero_variant_options(): array {
 	return [
-		'internal' => __('Basic Internal Hero', 'leadsforward-core'),
-		'default'  => __('Authority Split (Recommended)', 'leadsforward-core'),
-		'a'        => __('Conversion Stack', 'leadsforward-core'),
-		'b'        => __('Form First', 'leadsforward-core'),
-		'c'        => __('Visual Proof', 'leadsforward-core'),
+		'conversion' => __('Conversion Hero', 'leadsforward-core'),
+		'page'       => __('Page Hero (Interior)', 'leadsforward-core'),
 	];
+}
+
+/**
+ * Map stored hero variants to the two supported layouts.
+ */
+function lf_sections_normalize_hero_variant(string $variant, bool $force_conversion = false): string {
+	if ($force_conversion) {
+		return 'conversion';
+	}
+	$variant = sanitize_key($variant);
+	if (in_array($variant, ['page', 'internal'], true)) {
+		return 'page';
+	}
+	return 'conversion';
 }
 
 function lf_sections_hero_media_options(): array {
@@ -401,7 +412,7 @@ function lf_sections_registry(): array {
 				]],
 				['key' => 'hero_background_image_id', 'label' => __('Hero background image', 'leadsforward-core'), 'type' => 'image', 'default' => 0],
 				['key' => 'hero_background_video_id', 'label' => __('Hero background video (MP4)', 'leadsforward-core'), 'type' => 'image', 'default' => 0],
-				['key' => 'variant', 'label' => __('Hero layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'default', 'options' => lf_sections_hero_variant_options()],
+				['key' => 'variant', 'label' => __('Hero layout', 'leadsforward-core'), 'type' => 'hidden', 'default' => 'conversion'],
 				['key' => 'hero_headline', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_subheadline', 'label' => __('Subheadline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_proof_title', 'label' => __('Proof card title', 'leadsforward-core'), 'type' => 'text', 'default' => __('Why homeowners choose us', 'leadsforward-core')],
@@ -418,7 +429,7 @@ function lf_sections_registry(): array {
 				['key' => 'hero_guarantee_text', 'label' => __('Guarantee text', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_eyebrow_enabled', 'label' => __('Trust badge enabled', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
 				['key' => 'hero_eyebrow_text', 'label' => __('Trust badge text', 'leadsforward-core'), 'type' => 'text', 'default' => __('Licensed • Insured • Local', 'leadsforward-core')],
-				['key' => 'hero_media', 'label' => __('Hero media', 'leadsforward-core'), 'type' => 'select', 'default' => 'none', 'options' => lf_sections_hero_media_options()],
+				['key' => 'hero_media', 'label' => __('Hero media', 'leadsforward-core'), 'type' => 'select', 'default' => 'image', 'options' => lf_sections_hero_media_options()],
 				['key' => 'hero_image_id', 'label' => __('Hero image', 'leadsforward-core'), 'type' => 'image', 'default' => 0],
 				['key' => 'cta_primary_enabled', 'label' => __('Primary CTA enabled', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
 				['key' => 'cta_secondary_enabled', 'label' => __('Secondary CTA enabled', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
@@ -2567,7 +2578,10 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 		$hero_rendered = true;
 	}
 	$section = lf_sections_hero_block_section($settings);
-	$variant = $settings['variant'] ?? 'default';
+	$variant = lf_sections_normalize_hero_variant(
+		(string) ($settings['variant'] ?? 'conversion'),
+		$context === 'homepage'
+	);
 	$block = [
 		'id'         => 'lf-hero',
 		'variant'    => $variant,

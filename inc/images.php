@@ -339,8 +339,10 @@ function lf_resolve_homepage_hero_background_url(): string {
 			continue;
 		}
 		$mode = (string) ($section['hero_background_mode'] ?? 'image');
-		$variant = (string) ($section['variant'] ?? 'default');
-		if ($mode !== 'image' || $variant === 'c') {
+		$variant = function_exists('lf_sections_normalize_hero_variant')
+			? lf_sections_normalize_hero_variant((string) ($section['variant'] ?? 'conversion'), true)
+			: 'conversion';
+		if ($mode !== 'image' || $variant === 'page') {
 			return '';
 		}
 		$attachment_id = (int) ($section['hero_background_image_id'] ?? 0);

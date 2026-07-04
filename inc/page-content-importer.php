@@ -640,7 +640,10 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 	$faqs = [];
 	$seo = ['title' => '', 'description' => ''];
 	$order = is_array($schema['order'] ?? null) ? $schema['order'] : [];
-	$hero_variant = (string) ($schema['hero_variant'] ?? 'internal');
+	$hero_variant = (string) ($schema['hero_variant'] ?? 'page');
+	$hero_variant = function_exists('lf_sections_normalize_hero_variant')
+		? lf_sections_normalize_hero_variant($hero_variant, false)
+		: (in_array($hero_variant, ['page', 'internal'], true) ? 'page' : 'conversion');
 
 	foreach (array_keys($split) as $section_key) {
 		if (lf_pci_section_is_locked($section_key, $schema)) {
@@ -1011,7 +1014,10 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 	$existing_sections = is_array($existing_pb) && is_array($existing_pb['sections'] ?? null)
 		? $existing_pb['sections']
 		: [];
-	$hero_variant = (string) ($schema['hero_variant'] ?? 'internal');
+	$hero_variant = (string) ($schema['hero_variant'] ?? 'page');
+	$hero_variant = function_exists('lf_sections_normalize_hero_variant')
+		? lf_sections_normalize_hero_variant($hero_variant, false)
+		: (in_array($hero_variant, ['page', 'internal'], true) ? 'page' : 'conversion');
 
 	$pb_sections = [];
 	foreach ($order as $type) {
@@ -1161,7 +1167,10 @@ function lf_pci_apply_to_homepage(array $schema, array $sections, array $process
 	$existing = function_exists('lf_get_homepage_section_config')
 		? lf_get_homepage_section_config()
 		: (array) get_option(LF_HOMEPAGE_CONFIG_OPTION, []);
-	$hero_variant = (string) ($schema['hero_variant'] ?? 'default');
+	$hero_variant = (string) ($schema['hero_variant'] ?? 'conversion');
+	$hero_variant = function_exists('lf_sections_normalize_hero_variant')
+		? lf_sections_normalize_hero_variant($hero_variant, true)
+		: 'conversion';
 	$config = [];
 
 	foreach ($order as $type) {

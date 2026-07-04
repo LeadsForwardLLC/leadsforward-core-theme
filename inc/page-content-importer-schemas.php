@@ -96,7 +96,7 @@ function lf_pci_build_schema(string $slug, string $label, array $order, array $o
 		'post_type' => $options['post_type'] ?? 'page',
 		'downloadable' => array_key_exists('downloadable', $options) ? (bool) $options['downloadable'] : true,
 		'preserve_keys' => is_array($options['preserve_keys'] ?? null) ? $options['preserve_keys'] : [],
-		'hero_variant' => $options['hero_variant'] ?? 'internal',
+		'hero_variant' => $options['hero_variant'] ?? 'page',
 		'process_group' => $options['process_group'] ?? (defined('LF_NICHE_ABOUT_PROCESS_GROUP') ? LF_NICHE_ABOUT_PROCESS_GROUP : 'about-company'),
 		'faq_context' => $options['faq_context'] ?? (defined('LF_NICHE_ABOUT_FAQ_CONTEXT') ? LF_NICHE_ABOUT_FAQ_CONTEXT : 'about_company'),
 		'required' => $options['required'] ?? ['hero', 'cta'],
@@ -174,7 +174,7 @@ function lf_pci_registry(): array {
 	$schemas = [
 		lf_pci_build_schema('home', __('Homepage', 'leadsforward-core'), $home_order, [
 			'storage' => 'homepage',
-			'hero_variant' => 'default',
+			'hero_variant' => 'conversion',
 			'locked' => [],
 			'required' => ['hero', 'benefits', 'cta'],
 			'preserve_keys' => [
