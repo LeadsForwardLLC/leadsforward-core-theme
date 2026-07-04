@@ -279,12 +279,17 @@ function lf_niche_homepage_blueprint_order(string $niche_slug): array {
  * @return array<string, mixed>
  */
 function lf_niche_homepage_inline_form_args(string $niche_slug = ''): array {
-	$niche_slug = $niche_slug !== '' ? $niche_slug : (string) get_option(
-		defined('LF_HOMEPAGE_NICHE_OPTION') ? LF_HOMEPAGE_NICHE_OPTION : 'lf_homepage_niche_slug',
-		function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair'
-	);
+	if ($niche_slug === '') {
+		$niche_slug = (string) get_option(
+			defined('LF_HOMEPAGE_NICHE_OPTION') ? LF_HOMEPAGE_NICHE_OPTION : 'lf_homepage_niche_slug',
+			''
+		);
+	}
+	if ($niche_slug === '') {
+		$niche_slug = 'foundation-repair';
+	}
 	$blueprint = lf_niche_get_homepage_blueprint($niche_slug);
-	$inline = is_array($blueprint['inline_form'] ?? null) ? $blueprint['inline_form'] : [];
+	$inline = (is_array($blueprint) && is_array($blueprint['inline_form'] ?? null)) ? $blueprint['inline_form'] : [];
 	return array_merge(
 		[
 			'form_id' => 'lf-hero-inline-form',

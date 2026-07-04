@@ -49,8 +49,11 @@ const LF_HOMEPAGE_SECTION_ID_MIGRATED_OPTION = 'lf_homepage_section_id_migrated'
 function lf_homepage_default_order(): array {
 	$niche_slug = (string) get_option(
 		defined('LF_HOMEPAGE_NICHE_OPTION') ? LF_HOMEPAGE_NICHE_OPTION : 'lf_homepage_niche_slug',
-		function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : ''
+		''
 	);
+	if ($niche_slug === '') {
+		$niche_slug = 'foundation-repair';
+	}
 	if ($niche_slug !== '' && function_exists('lf_niche_homepage_blueprint_order')) {
 		$niche_order = lf_niche_homepage_blueprint_order($niche_slug);
 		if ($niche_order !== []) {

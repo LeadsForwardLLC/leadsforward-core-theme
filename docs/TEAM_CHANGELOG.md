@@ -2,6 +2,19 @@
 
 ---
 
+2026-07-04 (hotfix: niche registry recursion 500)
+
+What changed
+
+* **Critical fix:** `lf_homepage_default_order()` no longer calls `lf_default_niche_slug()` inside `get_option()` default — that re-entered `lf_get_niche_registry()` during init and caused stack overflow / HTTP 500 on all front-end pages.
+* Niche registry is now cached; null-safe blueprint inline form args.
+
+Version
+
+* Shipped **0.1.184**.
+
+---
+
 2026-07-04 (mobile app nav + call icon)
 
 What changed
