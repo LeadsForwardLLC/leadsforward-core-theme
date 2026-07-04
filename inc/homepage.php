@@ -47,6 +47,16 @@ const LF_HOMEPAGE_SECTION_ID_MIGRATED_OPTION = 'lf_homepage_section_id_migrated'
  * @return string[]
  */
 function lf_homepage_default_order(): array {
+	$niche_slug = (string) get_option(
+		defined('LF_HOMEPAGE_NICHE_OPTION') ? LF_HOMEPAGE_NICHE_OPTION : 'lf_homepage_niche_slug',
+		function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : ''
+	);
+	if ($niche_slug !== '' && function_exists('lf_niche_homepage_blueprint_order')) {
+		$niche_order = lf_niche_homepage_blueprint_order($niche_slug);
+		if ($niche_order !== []) {
+			return $niche_order;
+		}
+	}
 	return lf_sections_default_order('homepage');
 }
 
@@ -330,6 +340,9 @@ function lf_homepage_default_config(?string $niche_slug = null): array {
 	if (isset($config['map_nap'])) {
 		$config['map_nap']['enabled'] = true;
 	}
+	if ($niche_slug !== null && $niche_slug !== '' && function_exists('lf_niche_apply_homepage_blueprint_config')) {
+		$config = lf_niche_apply_homepage_blueprint_config($config, $niche_slug);
+	}
 	return $config;
 }
 
@@ -409,11 +422,25 @@ function lf_homepage_apply_niche_config(string $niche_slug, ?array $wizard_data 
 			}
 		}
 	}
+	$blueprint_order = function_exists('lf_niche_homepage_blueprint_order')
+		? lf_niche_homepage_blueprint_order($niche_slug)
+		: [];
+	if ($blueprint_order !== []) {
+		update_option(LF_HOMEPAGE_ORDER_OPTION, $blueprint_order, true);
+	}
+	if ($first_area_name !== '' && function_exists('lf_niche_apply_homepage_blueprint_config')) {
+		$config = lf_niche_apply_homepage_blueprint_config($config, $niche_slug, $first_area_name);
+	} elseif (function_exists('lf_niche_apply_homepage_blueprint_config')) {
+		$config = lf_niche_apply_homepage_blueprint_config($config, $niche_slug);
+	}
 	if ($first_area_name !== '' && isset($config['hero']['hero_headline'])) {
-		$config['hero']['hero_headline'] = str_replace($city_placeholder, $first_area_name, $config['hero']['hero_headline']);
+		$config['hero']['hero_headline'] = str_replace($city_placeholder, $first_area_name, (string) $config['hero']['hero_headline']);
 	}
 	if ($first_area_name !== '' && isset($config['hero']['hero_subheadline'])) {
-		$config['hero']['hero_subheadline'] = str_replace($city_placeholder, $first_area_name, $config['hero']['hero_subheadline']);
+		$config['hero']['hero_subheadline'] = str_replace($city_placeholder, $first_area_name, (string) $config['hero']['hero_subheadline']);
+	}
+	if (function_exists('lf_niche_apply_homepage_topbar_defaults')) {
+		lf_niche_apply_homepage_topbar_defaults($niche_slug, $first_area_name !== '' ? $first_area_name : null);
 	}
 	update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
 	update_option(LF_HOMEPAGE_NICHE_OPTION, $niche_slug, true);

@@ -155,9 +155,15 @@ function lf_pci_registry(): array {
 	$why_order = ['hero', 'benefits', 'content_image', 'image_content', 'faq_accordion', 'cta'];
 	$services_order = ['hero', 'service_intro', 'content_image', 'faq_accordion', 'cta'];
 	$areas_order = ['hero', 'service_areas', 'faq_accordion', 'cta'];
-	$home_order = function_exists('lf_sections_default_order')
-		? lf_sections_default_order('homepage')
-		: [
+	$home_niche = (string) get_option(
+		defined('LF_HOMEPAGE_NICHE_OPTION') ? LF_HOMEPAGE_NICHE_OPTION : 'lf_homepage_niche_slug',
+		function_exists('lf_default_niche_slug') ? lf_default_niche_slug() : 'foundation-repair'
+	);
+	$home_order = function_exists('lf_niche_homepage_blueprint_order')
+		? lf_niche_homepage_blueprint_order($home_niche)
+		: (function_exists('lf_sections_default_order')
+			? lf_sections_default_order('homepage')
+			: [
 			'hero',
 			'trust_bar',
 			'service_intro',
@@ -169,7 +175,7 @@ function lf_pci_registry(): array {
 			'trust_reviews',
 			'map_nap',
 			'cta',
-		];
+		]);
 
 	$schemas = [
 		lf_pci_build_schema('home', __('Homepage', 'leadsforward-core'), $home_order, [
@@ -197,6 +203,17 @@ function lf_pci_registry(): array {
 				'service intro' => 'service_intro',
 				'service intro boxes' => 'service_intro',
 				'service_intro' => 'service_intro',
+				'problem' => 'service_details',
+				'problem signs' => 'service_details',
+				'pain points' => 'service_details',
+				'mentor' => 'image_content_b',
+				'authority' => 'image_content_b',
+				'owner intro' => 'image_content_b',
+				'projects' => 'project_gallery',
+				'before after' => 'project_gallery',
+				'project gallery' => 'project_gallery',
+				'financing' => 'pricing',
+				'cost reassurance' => 'pricing',
 				'reviews' => 'trust_reviews',
 				'trust reviews' => 'trust_reviews',
 				'customer reviews' => 'trust_reviews',

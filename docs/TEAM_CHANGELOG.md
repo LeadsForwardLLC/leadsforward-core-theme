@@ -1,4 +1,22 @@
 # LeadsForward Core Theme — Team Changelog
+
+---
+
+2026-07-04 (homepage niche blueprints)
+
+What changed
+
+* **Niche-driven homepage:** `inc/niches/homepage-blueprints.php` defines section order and copy per niche (foundation-repair full calm conversion layout; other niches fall back to core-contractor).
+* **Setup wiring:** `lf_homepage_apply_niche_config()` applies blueprint order, section defaults, utility bar text, and hero inline form copy from Airtable niche slug.
+* **Writer alignment:** `docs/templates/home-content-template.txt` expanded to match foundation blueprint; PCI aliases for MENTOR, PROJECT GALLERY, PRICING.
+* **Docs:** `docs/HOMEPAGE_NICHE_BLUEPRINTS.md` + `DOCUMENTATION_MAP.md` entry.
+
+Version
+
+* Shipped **0.1.182**.
+
+---
+
 2026-04-20
 
 What changed

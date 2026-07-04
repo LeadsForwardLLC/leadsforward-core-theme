@@ -426,7 +426,12 @@ $placeholder_attrs = function_exists('lf_image_lcp_attrs')
 				</div>
 				<div class="lf-hero-conversion__aside lf-hero-conversion__aside--form">
 					<?php if (function_exists('lf_quote_builder_render_inline_form_card')) : ?>
-						<?php lf_quote_builder_render_inline_form_card(['form_id' => 'lf-hero-inline-form']); ?>
+						<?php
+						$inline_form_args = function_exists('lf_niche_homepage_inline_form_args')
+							? lf_niche_homepage_inline_form_args()
+							: ['form_id' => 'lf-hero-inline-form'];
+						lf_quote_builder_render_inline_form_card($inline_form_args);
+						?>
 					<?php endif; ?>
 				</div>
 			</div>
