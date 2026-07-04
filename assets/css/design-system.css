@@ -2365,10 +2365,13 @@ article a:not(.lf-btn):hover {
 
 .site-header__toggle {
 	display: none;
-	background: var(--lf-surface-soft);
-	border: 1px solid var(--lf-neutral-300);
+	--lf-header-chrome-size: 42px;
+	--lf-header-chrome-border: 1px solid var(--lf-neutral-300);
+	--lf-header-chrome-bg: var(--lf-surface-soft);
+	background: var(--lf-header-chrome-bg);
+	border: var(--lf-header-chrome-border);
 	border-radius: 999px;
-	height: 42px;
+	height: var(--lf-header-chrome-size);
 	padding: 0 0.9rem;
 	align-items: center;
 	justify-content: center;
@@ -2390,8 +2393,8 @@ article a:not(.lf-btn):hover {
 	flex: 0 0 auto;
 	padding: 0;
 	border-radius: 50%;
-	background: var(--lf-surface-soft);
-	border: 1px solid var(--lf-neutral-300);
+	background: var(--lf-header-chrome-bg, var(--lf-surface-soft));
+	border: var(--lf-header-chrome-border, 1px solid var(--lf-neutral-300));
 	color: var(--lf-text-primary);
 	font-weight: 700;
 	text-decoration: none;
@@ -2607,6 +2610,9 @@ article a:not(.lf-btn):hover {
 		display: grid;
 		grid-template-columns: auto auto 1fr;
 		align-items: center;
+		--lf-header-chrome-size: 42px;
+		--lf-header-chrome-border: 1px solid var(--lf-neutral-300);
+		--lf-header-chrome-bg: var(--lf-surface-soft);
 		position: fixed;
 		left: 0;
 		right: 0;

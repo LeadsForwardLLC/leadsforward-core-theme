@@ -57,6 +57,7 @@ body .site-header .lf-menu-call__label {
 	line-height: 1 !important;
 }
 
+/* Inline call link with visible label — optical nudge for text baseline alignment. */
 body .site-header .lf-call__icon-wrap {
 	display: inline-flex !important;
 	align-items: center !important;
@@ -95,37 +96,84 @@ body .site-header .site-header__phone-text {
 	line-height: inherit;
 }
 
-/* Icon-only circular call control (desktop nav + mobile app bar). */
+/* Icon-only circular call — matches menu toggle chrome exactly. */
 body .site-header .lf-call-btn--icon,
 body .site-header ul.site-header__menu > li.menu-item.lf-menu-call > a.lf-menu-call__link,
 body .site-header ul.site-header__menu > li.lf-menu-call > a,
 body .site-header .site-header__phone,
 body .site-header .site-header__mobile-call {
-	--lf-call-circle-size: 42px;
+	--lf-header-chrome-size: 42px;
+	--lf-header-chrome-border: 1px solid var(--lf-neutral-300);
+	--lf-header-chrome-bg: var(--lf-surface-soft);
+	--lf-call-circle-icon: 20px;
 	display: inline-flex !important;
 	align-items: center !important;
 	justify-content: center !important;
-	width: var(--lf-call-circle-size) !important;
-	height: var(--lf-call-circle-size) !important;
-	min-width: var(--lf-call-circle-size) !important;
-	min-height: var(--lf-call-circle-size) !important;
+	width: var(--lf-header-chrome-size) !important;
+	height: var(--lf-header-chrome-size) !important;
+	min-width: var(--lf-header-chrome-size) !important;
+	min-height: var(--lf-header-chrome-size) !important;
 	padding: 0 !important;
 	border-radius: 50% !important;
 	gap: 0 !important;
-	background: var(--lf-surface-soft);
-	border: 1px solid var(--lf-neutral-300, rgba(15, 23, 42, 0.12));
+	background: var(--lf-header-chrome-bg) !important;
+	border: var(--lf-header-chrome-border) !important;
 	box-sizing: border-box;
 	flex: 0 0 auto !important;
 	text-decoration: none !important;
 	color: var(--lf-text-primary);
+	line-height: 0 !important;
 }
 
 body .site-header .lf-call-btn--icon:hover,
-body .site-header ul.site-header__menu > li.lf-menu-call > a:hover,
+body .site-header ul.site-header__menu > li.menu-item.lf-menu-call > a:hover,
 body .site-header .site-header__phone:hover,
 body .site-header .site-header__mobile-call:hover {
-	background: color-mix(in srgb, var(--lf-surface-soft) 82%, var(--lf-primary) 18%);
-	border-color: color-mix(in srgb, var(--lf-neutral-300, #cbd5e1) 70%, var(--lf-primary) 30%);
+	background: var(--lf-header-chrome-bg) !important;
+	border: var(--lf-header-chrome-border) !important;
+}
+
+/* Perfect geometric center — no baseline nudges inside circles. */
+body .site-header .lf-call-btn--icon .lf-call__icon-wrap,
+body .site-header .site-header__mobile-call .lf-call__icon-wrap,
+body .site-header .site-header__mobile-call-icon {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: var(--lf-call-circle-icon) !important;
+	height: var(--lf-call-circle-icon) !important;
+	min-width: var(--lf-call-circle-icon) !important;
+	min-height: var(--lf-call-circle-icon) !important;
+	flex-shrink: 0;
+	line-height: 0;
+	transform: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+body .site-header .lf-call-btn--icon .lf-call__icon-wrap .lf-icon,
+body .site-header .site-header__mobile-call .lf-call__icon-wrap .lf-icon,
+body .site-header .site-header__mobile-call-icon .lf-icon {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: var(--lf-call-circle-icon) !important;
+	height: var(--lf-call-circle-icon) !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+body .site-header .lf-call-btn--icon .lf-call__icon-wrap svg,
+body .site-header .site-header__mobile-call .lf-call__icon-wrap svg,
+body .site-header .site-header__mobile-call-icon svg,
+body .site-header .lf-call-btn--icon .lf-call__icon-wrap .lf-icon > svg {
+	width: var(--lf-call-circle-icon) !important;
+	height: var(--lf-call-circle-icon) !important;
+	display: block !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	transform: none !important;
+	overflow: visible;
 }
 
 body .site-header .lf-menu-call__label,
@@ -140,14 +188,6 @@ body .site-header .site-header__mobile-call-text {
 	clip: rect(0, 0, 0, 0) !important;
 	white-space: nowrap !important;
 	border: 0 !important;
-}
-
-@media (min-width: 901px) {
-	body .site-header ul.site-header__menu > li.menu-item.lf-menu-call > a .lf-call__icon-wrap,
-	body .site-header .site-header__phone .lf-call__icon-wrap {
-		--lf-call-icon-size: 1.05em;
-		transform: none !important;
-	}
 }
 
 /* Mobile slide-out menu keeps a full-width call row when present. */
@@ -166,5 +206,12 @@ body .site-header .site-header__mobile-call-text {
 		overflow: visible !important;
 		clip: auto !important;
 		white-space: normal !important;
+	}
+	body .site-header__panel .site-header__menu .lf-menu-call > a .lf-call__icon-wrap,
+	body .site-header__panel .site-header__menu .lf-menu-call > a .lf-call__icon-wrap svg {
+		transform: translateY(var(--lf-call-icon-nudge, -0.06em)) !important;
+	}
+	body .site-header__panel .site-header__menu .lf-menu-call > a .lf-call__icon-wrap svg {
+		transform: translateY(var(--lf-call-svg-art-shift, -22%)) !important;
 	}
 }
