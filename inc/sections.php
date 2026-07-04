@@ -186,7 +186,7 @@ function lf_sections_registry(): array {
 	$bg_dark = $bg_field;
 	$bg_dark['default'] = 'dark';
 	$trust_bar_bg = $bg_field;
-	$trust_bar_bg['default'] = 'dark';
+	$trust_bar_bg['default'] = 'soft';
 	$media_fields = [
 		$bg_field,
 		['key' => 'section_heading', 'label' => __('Section title', 'leadsforward-core'), 'type' => 'text', 'default' => __('Designed for busy homeowners', 'leadsforward-core')],
@@ -451,18 +451,13 @@ function lf_sections_registry(): array {
 			'contexts' => ['homepage', 'service', 'service_area', 'page'],
 			'fields' => [
 				$trust_bar_bg,
-				['key' => 'trust_bar_layout', 'label' => __('Layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'brand_band', 'options' => [
-					'brand_band'    => __('Brand band (full-width strip)', 'leadsforward-core'),
-					'split'         => __('Split (heading left, proof right)', 'leadsforward-core'),
-					'grid'          => __('Grid badges', 'leadsforward-core'),
-					'minimal_strip' => __('Minimal strip', 'leadsforward-core'),
-					'classic'       => __('Classic centered pill', 'leadsforward-core'),
+				['key' => 'trust_bar_layout', 'label' => __('Layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'stats_grid', 'options' => [
+					'stats_grid' => __('Stats grid (icon + value + label)', 'leadsforward-core'),
 				]],
 				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'authority'],
-				['key' => 'trust_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Trusted by local homeowners', 'leadsforward-core')],
-				['key' => 'trust_badges', 'label' => __('Badges (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Licensed & Insured' . "\n" . '5-Star Rated' . "\n" . 'Fast Response', 'leadsforward-core')],
-				['key' => 'trust_rating', 'label' => __('Rating override (optional)', 'leadsforward-core'), 'type' => 'number', 'default' => ''],
-				['key' => 'trust_review_count', 'label' => __('Review count override (optional)', 'leadsforward-core'), 'type' => 'number', 'default' => ''],
+				['key' => 'trust_heading', 'label' => __('Heading (optional)', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
+				['key' => 'trust_stats_items', 'label' => __('Stats (one per line: value || label || icon || variant)', 'leadsforward-core'), 'type' => 'list', 'default' => lf_sections_default_trust_stats_items()],
+				['key' => 'trust_badges', 'label' => __('Legacy badges (deprecated)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 			],
 			'render' => 'lf_sections_render_trust_bar',
 		],
@@ -1641,6 +1636,138 @@ function lf_sections_parse_lines($value): array {
 }
 
 /**
+ * Default Summit-style stats bar content (value || label || icon || variant).
+ */
+function lf_sections_default_trust_stats_items(): string {
+	return implode(
+		"\n",
+		[
+			'10+ || ' . __('Years in Business', 'leadsforward-core') . ' || hammer',
+			'1,000+ || ' . __('Projects Completed', 'leadsforward-core') . ' || home',
+			'5.0 || ' . __('320+ Google Reviews', 'leadsforward-core') . ' || star || stars',
+			'A+ || ' . __('BBB Rating', 'leadsforward-core') . ' || building-bank || bbb',
+		]
+	);
+}
+
+/**
+ * @return array<int, array{value:string,label:string,icon:string,variant:string}>
+ */
+function lf_sections_parse_trust_stats_items(string $value): array {
+	$lines = lf_sections_parse_lines($value);
+	$items = [];
+	foreach ($lines as $line) {
+		$parts = array_map('trim', explode('||', (string) $line));
+		if (count($parts) < 2) {
+			continue;
+		}
+		$icon = sanitize_title($parts[2] ?? 'star');
+		$items[] = [
+			'value'   => $parts[0],
+			'label'   => $parts[1],
+			'icon'    => $icon !== '' ? $icon : 'star',
+			'variant' => sanitize_key($parts[3] ?? 'default') ?: 'default',
+		];
+	}
+	return $items;
+}
+
+/**
+ * @param array<int, string> $badges
+ * @return array<int, array{value:string,label:string,icon:string,variant:string}>
+ */
+function lf_sections_migrate_trust_badges_to_stats(array $badges): array {
+	$icon_cycle = ['hammer', 'home', 'star', 'building-bank'];
+	$variants = ['default', 'default', 'stars', 'bbb'];
+	$items = [];
+	foreach ($badges as $i => $badge) {
+		$badge = trim((string) $badge);
+		if ($badge === '') {
+			continue;
+		}
+		$icon = $icon_cycle[$i % count($icon_cycle)] ?? 'star';
+		$variant = $variants[$i % count($variants)] ?? 'default';
+		if (preg_match('/^(.{1,14}?)\s+(.+)$/u', $badge, $m)) {
+			$items[] = [
+				'value'   => trim($m[1]),
+				'label'   => trim($m[2]),
+				'icon'    => $icon,
+				'variant' => $variant,
+			];
+		} else {
+			$items[] = [
+				'value'   => '',
+				'label'   => $badge,
+				'icon'    => $icon,
+				'variant' => 'default',
+			];
+		}
+	}
+	return $items;
+}
+
+/**
+ * @param array<string, mixed> $settings
+ * @return array<int, array{value:string,label:string,icon:string,variant:string}>
+ */
+function lf_sections_resolve_trust_stats_items(array $settings): array {
+	$raw = trim((string) ($settings['trust_stats_items'] ?? ''));
+	if ($raw !== '') {
+		$items = lf_sections_parse_trust_stats_items($raw);
+		if ($items !== []) {
+			return $items;
+		}
+	}
+	$badges = lf_sections_parse_lines((string) ($settings['trust_badges'] ?? ''));
+	if ($badges !== []) {
+		return lf_sections_migrate_trust_badges_to_stats($badges);
+	}
+	return lf_sections_parse_trust_stats_items(lf_sections_default_trust_stats_items());
+}
+
+/**
+ * Render inline **accent** spans in headings and eyebrows.
+ */
+function lf_sections_render_accent_text(string $text): string {
+	if ($text === '' || strpos($text, '**') === false) {
+		return esc_html($text);
+	}
+	$out = '';
+	$remaining = $text;
+	while (preg_match('/^(.*?)\*\*(.+?)\*\*(.*)$/s', $remaining, $m)) {
+		$out .= esc_html($m[1]);
+		$out .= '<span class="lf-text-accent">' . esc_html($m[2]) . '</span>';
+		$remaining = $m[3];
+	}
+	$out .= esc_html($remaining);
+	return wp_kses($out, ['span' => ['class' => []]]);
+}
+
+/**
+ * Hero trust chips: label || icon_slug (one per line).
+ *
+ * @return array<int, array{label:string,icon:string}>
+ */
+function lf_sections_parse_chip_lines(string $value): array {
+	$lines = lf_sections_parse_lines($value);
+	$default_icons = ['shield-check', 'star', 'calendar', 'certificate'];
+	$items = [];
+	foreach ($lines as $i => $line) {
+		$parts = array_map('trim', explode('||', (string) $line));
+		$label = $parts[0] ?? '';
+		if ($label === '') {
+			continue;
+		}
+		$icon = isset($parts[1]) && $parts[1] !== '' ? sanitize_title($parts[1]) : ($default_icons[$i % count($default_icons)] ?? 'check');
+		$items[] = [
+			'label' => $label,
+			'icon'  => $icon !== '' ? $icon : 'check',
+		];
+	}
+	return $items;
+}
+
+/**
  * Remove leading "1." / "2)" style prefixes when steps also show visual numbers (AI or pasted lists).
  */
 function lf_sections_strip_inline_process_step_prefix(string $title): string {
@@ -2592,68 +2719,60 @@ function lf_sections_render_hero(string $context, array $settings, \WP_Post $pos
 }
 
 function lf_sections_render_trust_bar(string $context, array $settings, \WP_Post $post): void {
-	$rating = (float) ($settings['trust_rating'] ?? 0);
-	$count = (int) ($settings['trust_review_count'] ?? 0);
-	if ($rating <= 0 || $count <= 0) {
-		$query = new WP_Query([
-			'post_type'      => 'lf_testimonial',
-			'posts_per_page' => -1,
-			'no_found_rows'  => true,
-			'post_status'    => 'publish',
-		]);
-		$ratings_total = 0;
-		$ratings_count = 0;
-		foreach ($query->posts as $p) {
-			$r = function_exists('get_field') ? (int) get_field('lf_testimonial_rating', $p->ID) : 5;
-			if ($r <= 1) {
-				continue;
-			}
-			$ratings_total += $r;
-			$ratings_count++;
-		}
-		$computed_rating = $ratings_count > 0 ? round($ratings_total / $ratings_count, 1) : 5.0;
-		$computed_count = $ratings_count > 0 ? $ratings_count : 0;
-		if ($rating <= 0) {
-			$rating = $computed_rating;
-		}
-		if ($count <= 0) {
-			$count = $computed_count;
-		}
+	$items = lf_sections_resolve_trust_stats_items($settings);
+	$count = count($items);
+	if ($count < 1) {
+		return;
 	}
-	$badges = lf_sections_parse_lines((string) ($settings['trust_badges'] ?? ''));
-	if (empty($badges)) {
-		$badges = [__('Licensed & Insured', 'leadsforward-core'), __('5-Star Rated', 'leadsforward-core')];
-	}
-	$title = $settings['trust_heading'] ?? '';
-	$badge_icon = function_exists('lf_section_icon_markup') ? lf_section_icon_markup($settings, 'trust_bar', 'list', 'lf-trust-bar__badge-icon') : '';
-	$layout = sanitize_key((string) ($settings['trust_bar_layout'] ?? 'brand_band'));
-	$layout_allowed = ['brand_band', 'split', 'grid', 'minimal_strip', 'classic'];
-	if (!in_array($layout, $layout_allowed, true)) {
-		$layout = 'brand_band';
-	}
-	$bg = (string) ($settings['section_background'] ?? 'dark');
-	$shell_extra = 'lf-trust-bar-section lf-trust-bar-section--layout-' . $layout;
+	$title = trim((string) ($settings['trust_heading'] ?? ''));
+	$bg = (string) ($settings['section_background'] ?? 'soft');
+	$shell_extra = 'lf-stats-bar-section';
 	lf_sections_render_shell_open('trust-bar', $title, '', $bg, $settings, $shell_extra);
+	$grid_style = '--lf-stats-cols: ' . (int) $count . ';';
 	?>
-	<div class="lf-trust-bar lf-trust-bar--layout-<?php echo esc_attr($layout); ?>">
-		<div class="lf-trust-bar__panel">
-			<div class="lf-trust-bar__rating">
-				<span class="lf-trust-bar__stars" aria-hidden="true">
-					<?php for ($i = 0; $i < 5; $i++) : ?>
-						<svg class="lf-trust-bar__star" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-					<?php endfor; ?>
-				</span>
-				<?php if ($rating) : ?><span class="lf-trust-bar__score"><?php echo esc_html(number_format($rating, 1)); ?></span><?php endif; ?>
-				<?php if ($count) : ?><span class="lf-trust-bar__count"><?php echo esc_html(sprintf(_n('%d review', '%d reviews', $count, 'leadsforward-core'), $count)); ?></span><?php endif; ?>
-			</div>
-			<div class="lf-trust-bar__badges">
-				<?php foreach ($badges as $badge) : ?>
-					<span class="lf-trust-bar__badge">
-						<?php if ($badge_icon) : ?><span class="lf-trust-bar__badge-icon"><?php echo $badge_icon; ?></span><?php endif; ?>
-						<?php echo esc_html($badge); ?>
-					</span>
-				<?php endforeach; ?>
-			</div>
+	<div class="lf-stats-bar" style="<?php echo esc_attr($grid_style); ?>">
+		<div class="lf-stats-bar__grid" role="list">
+			<?php foreach ($items as $item) : ?>
+				<?php
+				$variant = $item['variant'] ?? 'default';
+				$icon_slug = $item['icon'] ?? 'star';
+				$icon_html = function_exists('lf_icon')
+					? lf_icon($icon_slug, ['class' => 'lf-stats-bar__icon-svg'])
+					: '';
+				$item_classes = 'lf-stats-bar__item lf-stats-bar__item--' . sanitize_html_class($variant);
+				?>
+				<div
+					class="<?php echo esc_attr($item_classes); ?>"
+					role="listitem"
+					data-lf-stat-icon="<?php echo esc_attr($icon_slug); ?>"
+					data-lf-stat-variant="<?php echo esc_attr($variant); ?>"
+				>
+					<div class="lf-stats-bar__icon-wrap" aria-hidden="true">
+						<?php if ($variant === 'stars') : ?>
+							<span class="lf-stats-bar__brand lf-stats-bar__brand--google">G</span>
+						<?php elseif ($variant === 'bbb') : ?>
+							<span class="lf-stats-bar__brand lf-stats-bar__brand--bbb">BBB</span>
+						<?php elseif ($icon_html !== '') : ?>
+							<span class="lf-stats-bar__icon"><?php echo $icon_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+						<?php endif; ?>
+					</div>
+					<div class="lf-stats-bar__body">
+						<?php if (($item['value'] ?? '') !== '') : ?>
+							<span class="lf-stats-bar__value" data-lf-inline-editable="1"><?php echo esc_html($item['value']); ?></span>
+						<?php endif; ?>
+						<?php if ($variant === 'stars') : ?>
+							<span class="lf-stats-bar__stars" aria-hidden="true">
+								<?php for ($i = 0; $i < 5; $i++) : ?>
+									<svg class="lf-stats-bar__star" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+								<?php endfor; ?>
+							</span>
+						<?php endif; ?>
+						<?php if (($item['label'] ?? '') !== '') : ?>
+							<span class="lf-stats-bar__label" data-lf-inline-editable="1"><?php echo esc_html($item['label']); ?></span>
+						<?php endif; ?>
+					</div>
+				</div>
+			<?php endforeach; ?>
 		</div>
 	</div>
 	<?php

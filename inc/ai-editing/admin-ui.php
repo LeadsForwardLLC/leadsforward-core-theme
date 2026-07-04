@@ -4379,7 +4379,7 @@ function lf_ai_allowed_line_fields_for_section_type(string $section_type): array
 	$type = sanitize_text_field($section_type);
 	$map = [
 		'hero' => ['hero_proof_bullets', 'hero_chip_bullets'],
-		'trust_bar' => ['trust_badges'],
+		'trust_bar' => ['trust_stats_items', 'trust_badges'],
 		'benefits' => ['benefits_icon_overrides', 'benefits_icon_bg_overrides', 'benefits_items'],
 		'service_intro' => ['service_intro_service_ids'],
 		'service_areas' => ['service_areas_area_ids'],
@@ -4657,8 +4657,12 @@ function lf_ai_ajax_update_section_lines(): void {
 			$value = lf_ai_sanitize_inline_dom_html($raw);
 		} elseif ($field_key === 'service_details_proof_badges') {
 			$value = sanitize_text_field(wp_strip_all_tags(html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
-		} elseif (in_array($field_key, ['hero_proof_bullets', 'hero_chip_bullets', 'trust_badges'], true) && function_exists('lf_ai_sanitize_inline_dom_html')) {
-			$value = lf_ai_sanitize_inline_dom_html($raw);
+		} elseif (in_array($field_key, ['hero_proof_bullets', 'hero_chip_bullets', 'trust_badges', 'trust_stats_items'], true) && function_exists('lf_ai_sanitize_inline_dom_html')) {
+			if ($field_key === 'trust_stats_items') {
+				$value = sanitize_text_field(wp_strip_all_tags(html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+			} else {
+				$value = lf_ai_sanitize_inline_dom_html($raw);
+			}
 		} else {
 			$value = trim(sanitize_text_field($raw));
 		}

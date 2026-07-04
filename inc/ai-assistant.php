@@ -4287,7 +4287,7 @@ function lf_ai_assistant_widget_js(): string {
 			if (node.closest(".site-header, .site-footer, #masthead, #colophon")) return false;
 			if (node.closest("button, a, label, script, style, noscript")) return false;
 			// Managed lists/pills use dedicated controls; block generic inline on containers except linkable text spans.
-			if (node.closest(".lf-hero-chips,.lf-trust-bar__badges,.lf-process,.lf-block-faq-accordion__list,.lf-related-links,.lf-cpt-driven-links")) return false;
+			if (node.closest(".lf-hero-chips,.lf-hero-conversion__badges,.lf-stats-bar__grid,.lf-trust-bar__badges,.lf-process,.lf-block-faq-accordion__list,.lf-related-links,.lf-cpt-driven-links")) return false;
 			if (node.closest(".lf-block-hero__card-list") && !node.classList.contains("lf-block-hero__card-item-text")) return false;
 			if (node.closest(".lf-service-details__checklist") && !node.classList.contains("lf-service-details__text")) return false;
 			if (node.closest(".lf-service-details__micro")) return false;
@@ -5563,17 +5563,20 @@ function lf_ai_assistant_widget_js(): string {
 			});
 		}
 		function heroPillsFromWrap(wrap) {
-			var list = wrap ? wrap.querySelector(".lf-hero-chips") : null;
+			var list = wrap ? (wrap.querySelector(".lf-hero-chips") || wrap.querySelector(".lf-hero-conversion__badges")) : null;
 			if (!list) return [];
 			function cleanPillText(raw) {
 				var text = String(raw || "").replace(/\s+/g, " ").trim();
 				text = text.replace(/\s*[xX×]\s*$/, "").trim();
 				return text;
 			}
-			return Array.prototype.slice.call(list.querySelectorAll(".lf-hero-chip")).map(function(chip){
+			return Array.prototype.slice.call(list.querySelectorAll(".lf-hero-chip, .lf-hero-conversion__badge")).map(function(chip){
 				var textNode = chip.querySelector("[data-lf-hero-pill-text]");
 				var raw = textNode ? String(textNode.textContent || "") : String(chip.textContent || "");
-				return cleanPillText(raw);
+				var label = cleanPillText(raw);
+				var icon = String(chip.getAttribute("data-lf-chip-icon") || "").trim();
+				if (!label) return "";
+				return icon ? (label + " || " + icon) : label;
 			}).filter(function(value){ return value !== ""; });
 		}
 		function persistHeroPills(wrap) {
@@ -5917,13 +5920,13 @@ function lf_ai_assistant_widget_js(): string {
 				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 				var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
 				if (baseSectionType(sectionType, sectionId) !== "hero") return;
-				var list = wrap.querySelector(".lf-hero-chips");
+				var list = wrap.querySelector(".lf-hero-chips") || wrap.querySelector(".lf-hero-conversion__badges");
 				if (!list) return;
-				Array.prototype.slice.call(list.querySelectorAll(".lf-hero-chip,[data-lf-hero-pill-text]")).forEach(function(node){
+				Array.prototype.slice.call(list.querySelectorAll(".lf-hero-chip,[data-lf-hero-pill-text],.lf-hero-conversion__badge")).forEach(function(node){
 					node.removeAttribute("data-lf-inline-editable");
 					node.removeAttribute("data-lf-inline-selector");
 				});
-				Array.prototype.slice.call(list.querySelectorAll(".lf-hero-chip")).forEach(function(chip){
+				Array.prototype.slice.call(list.querySelectorAll(".lf-hero-chip, .lf-hero-conversion__badge")).forEach(function(chip){
 					var textNode = heroPillTextNodeFromChip(chip);
 					Array.prototype.slice.call(chip.childNodes || []).forEach(function(child){
 						if (!child || child === textNode) return;
@@ -6198,55 +6201,140 @@ function lf_ai_assistant_widget_js(): string {
 				trustHost.appendChild(controls);
 			});
 		}
-		function buildTrustBadgePillsControls() {
+		function trustStatsLinesFromGrid(grid) {
+			if (!grid) return [];
+			return Array.prototype.slice.call(grid.querySelectorAll(".lf-stats-bar__item")).map(function(item){
+				var valueEl = item.querySelector(".lf-stats-bar__value");
+				var labelEl = item.querySelector(".lf-stats-bar__label");
+				var value = valueEl ? String(valueEl.textContent || "").trim() : "";
+				var label = labelEl ? String(labelEl.textContent || "").trim() : "";
+				var icon = String(item.getAttribute("data-lf-stat-icon") || "star").trim() || "star";
+				var variant = String(item.getAttribute("data-lf-stat-variant") || "default").trim() || "default";
+				if (label === "" && value === "") return "";
+				var line = value + " || " + label + " || " + icon;
+				if (variant && variant !== "default") line += " || " + variant;
+				return line;
+			}).filter(function(line){ return line !== ""; });
+		}
+		function syncTrustStatsGridCols(wrap) {
+			if (!wrap) return;
+			var bar = wrap.querySelector(".lf-stats-bar");
+			var grid = wrap ? wrap.querySelector(".lf-stats-bar__grid") : null;
+			if (!bar || !grid) return;
+			var count = grid.querySelectorAll(".lf-stats-bar__item").length || 1;
+			bar.style.setProperty("--lf-stats-cols", String(count));
+		}
+		function persistTrustStats(wrap) {
+			var grid = wrap ? wrap.querySelector(".lf-stats-bar__grid") : null;
+			if (!grid) return;
+			syncTrustStatsGridCols(wrap);
+			persistSectionLineItems(wrap, "trust_stats_items", trustStatsLinesFromGrid(grid), "Saving stats...");
+		}
+		function buildTrustStatsControls() {
 			collectSectionWrappers().forEach(function(wrap){
 				if (!wrap || wrap.closest(".lf-ai-float")) return;
 				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
 				if (sectionType !== "trust_bar") return;
-				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-trust-pill-controls=\"1\"],[data-lf-ai-list-remove=\"1\"]")).forEach(function(node){
+				Array.prototype.slice.call(wrap.querySelectorAll("[data-lf-ai-trust-stat-controls=\"1\"],[data-lf-ai-list-remove=\"1\"]")).forEach(function(node){
 					if (node && node.parentNode) node.parentNode.removeChild(node);
 				});
-				var list = wrap.querySelector(".lf-trust-bar__badges");
-				if (!list) return;
-				Array.prototype.slice.call(list.querySelectorAll(".lf-trust-bar__badge")).forEach(function(node){
-					node.removeAttribute("data-lf-inline-editable");
-					node.removeAttribute("data-lf-inline-selector");
-				});
-				Array.prototype.slice.call(list.querySelectorAll(".lf-trust-bar__badge")).forEach(function(badge){
+				var grid = wrap.querySelector(".lf-stats-bar__grid");
+				if (!grid) return;
+				function bindStatField(el) {
+					if (!el) return;
+					el.removeAttribute("data-lf-inline-editable");
+					el.removeAttribute("data-lf-inline-selector");
+					el.classList.add("lf-ai-inline-editor-ignore");
+					el.setAttribute("title", "Click to edit");
+					el.onmousedown = function(e){ if (e) e.stopPropagation(); };
+					el.onclick = function(e){
+						if (!editingEnabled) return;
+						if (e) { e.preventDefault(); e.stopPropagation(); }
+						if (String(el.getAttribute("data-lf-ai-editing") || "0") === "1") return;
+						el.setAttribute("data-lf-ai-original-text", String(el.textContent || "").trim());
+						el.setAttribute("data-lf-ai-editing", "1");
+						el.setAttribute("contenteditable", "true");
+						el.setAttribute("spellcheck", "true");
+						try { el.focus(); } catch (err) {}
+					};
+					el.onblur = function(){
+						el.removeAttribute("contenteditable");
+						el.removeAttribute("spellcheck");
+						el.removeAttribute("data-lf-ai-editing");
+						var original = String(el.getAttribute("data-lf-ai-original-text") || "");
+						el.removeAttribute("data-lf-ai-original-text");
+						var next = String(el.textContent || "").trim();
+						if (next !== original) persistTrustStats(wrap);
+					};
+				}
+				Array.prototype.slice.call(grid.querySelectorAll(".lf-stats-bar__item")).forEach(function(item){
+					bindStatField(item.querySelector(".lf-stats-bar__value"));
+					bindStatField(item.querySelector(".lf-stats-bar__label"));
 					var btn = createGenericRemoveButton(function(){
-						if (badge && badge.parentNode) badge.parentNode.removeChild(badge);
-						persistSectionLineItems(wrap, "trust_badges", simpleListItemsFromContainer(list, ".lf-trust-bar__badge"), "Saving badges...");
+						if (item && item.parentNode) item.parentNode.removeChild(item);
+						persistTrustStats(wrap);
 					});
-					badge.appendChild(btn);
+					item.appendChild(btn);
 				});
 				var controls = document.createElement("div");
 				controls.className = "lf-ai-hero-pills-controls lf-ai-inline-editor-ignore";
-				controls.setAttribute("data-lf-ai-trust-pill-controls", "1");
+				controls.setAttribute("data-lf-ai-trust-stat-controls", "1");
 				var addBtn = document.createElement("button");
 				addBtn.type = "button";
 				addBtn.className = "lf-ai-hero-pill-add lf-ai-inline-editor-ignore";
-				addBtn.textContent = "+ Add pill";
+				addBtn.textContent = "+ Add stat";
 				addBtn.addEventListener("click", function(e){
 					e.preventDefault();
 					e.stopPropagation();
-					var text = "";
-					try { text = String(window.prompt("New badge text:", "") || "").trim(); } catch (err) { text = ""; }
-					if (!text) return;
-					var badge = document.createElement("span");
-					badge.className = "lf-trust-bar__badge";
-					badge.textContent = text;
-					badge.appendChild(createGenericRemoveButton(function(){
-						if (badge && badge.parentNode) badge.parentNode.removeChild(badge);
-						persistSectionLineItems(wrap, "trust_badges", simpleListItemsFromContainer(list, ".lf-trust-bar__badge"), "Saving badges...");
+					var value = "";
+					var label = "";
+					var icon = "star";
+					try { value = String(window.prompt("Stat value (e.g. 10+):", "") || "").trim(); } catch (err) { value = ""; }
+					if (!value) return;
+					try { label = String(window.prompt("Stat label (e.g. Years in Business):", "") || "").trim(); } catch (err2) { label = ""; }
+					if (!label) return;
+					try { icon = String(window.prompt("Icon slug (optional, e.g. hammer):", "star") || "star").trim() || "star"; } catch (err3) { icon = "star"; }
+					var item = document.createElement("div");
+					item.className = "lf-stats-bar__item lf-stats-bar__item--default";
+					item.setAttribute("role", "listitem");
+					item.setAttribute("data-lf-stat-icon", icon);
+					item.setAttribute("data-lf-stat-variant", "default");
+					var iconWrap = document.createElement("div");
+					iconWrap.className = "lf-stats-bar__icon-wrap";
+					iconWrap.setAttribute("aria-hidden", "true");
+					var iconSpan = document.createElement("span");
+					iconSpan.className = "lf-stats-bar__icon";
+					iconWrap.appendChild(iconSpan);
+					var body = document.createElement("div");
+					body.className = "lf-stats-bar__body";
+					var valueEl = document.createElement("span");
+					valueEl.className = "lf-stats-bar__value";
+					valueEl.textContent = value;
+					var labelEl = document.createElement("span");
+					labelEl.className = "lf-stats-bar__label";
+					labelEl.textContent = label;
+					body.appendChild(valueEl);
+					body.appendChild(labelEl);
+					item.appendChild(iconWrap);
+					item.appendChild(body);
+					item.appendChild(createGenericRemoveButton(function(){
+						if (item && item.parentNode) item.parentNode.removeChild(item);
+						persistTrustStats(wrap);
 					}));
-					list.appendChild(badge);
-					persistSectionLineItems(wrap, "trust_badges", simpleListItemsFromContainer(list, ".lf-trust-bar__badge"), "Saving badges...");
+					grid.appendChild(item);
+					bindStatField(valueEl);
+					bindStatField(labelEl);
+					persistTrustStats(wrap);
 				});
 				controls.appendChild(addBtn);
-				if (list.parentNode) {
-					list.parentNode.appendChild(controls);
+				if (grid.parentNode) {
+					grid.parentNode.appendChild(controls);
 				}
+				syncTrustStatsGridCols(wrap);
 			});
+		}
+		function buildTrustBadgePillsControls() {
+			buildTrustStatsControls();
 		}
 		function processStepValueFromLi(li) {
 			if (!li) return "";
