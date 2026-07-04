@@ -69,7 +69,32 @@ if ($show_topbar) {
 				<span class="site-header__logo-text"><?php echo esc_html($logo_text ?: __('LeadsForward', 'leadsforward-core')); ?></span>
 			<?php endif; ?>
 		</a>
-		<button class="site-header__toggle" type="button" aria-expanded="false" aria-controls="site-header-panel">
+		<?php
+		$header_quote_label = $cta_label !== '' ? $cta_label : ($cta_text !== '' ? $cta_text : __('Free Inspection', 'leadsforward-core'));
+		$header_phone_href = $cta_phone !== '' ? 'tel:' . preg_replace('/\s+/', '', $cta_phone) : '';
+		?>
+		<div class="site-header__mobile-bar">
+			<button class="site-header__toggle site-header__toggle--mobile" type="button" aria-expanded="false" aria-controls="site-header-panel">
+				<span class="site-header__toggle-icon" aria-hidden="true">☰</span>
+				<span class="site-header__toggle-label"><?php esc_html_e('Menu', 'leadsforward-core'); ?></span>
+			</button>
+			<?php if ($header_phone_href !== '') : ?>
+				<a href="<?php echo esc_attr($header_phone_href); ?>" class="site-header__mobile-call">
+					<?php if (function_exists('lf_icon')) : ?>
+						<span class="site-header__mobile-call-icon" aria-hidden="true"><?php echo lf_icon('phone', ['class' => 'lf-icon lf-icon--inherit']); ?></span>
+					<?php endif; ?>
+					<span class="site-header__mobile-call-text"><?php esc_html_e('Call', 'leadsforward-core'); ?></span>
+				</a>
+			<?php endif; ?>
+			<?php if ($show_cta) : ?>
+				<?php if ($cta_url !== '') : ?>
+					<a class="site-header__mobile-quote lf-btn lf-btn--primary" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($header_quote_label); ?></a>
+				<?php else : ?>
+					<button type="button" class="site-header__mobile-quote lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="header-mobile"><?php echo esc_html($header_quote_label); ?></button>
+				<?php endif; ?>
+			<?php endif; ?>
+		</div>
+		<button class="site-header__toggle site-header__toggle--desktop" type="button" aria-expanded="false" aria-controls="site-header-panel">
 			<span class="site-header__toggle-icon" aria-hidden="true">☰</span>
 			<span class="site-header__toggle-label"><?php esc_html_e('Menu', 'leadsforward-core'); ?></span>
 		</button>
@@ -131,7 +156,7 @@ if ($show_topbar) {
 		if (!header) return;
 		var spacer = document.querySelector('.site-header__spacer');
 		// Header height is stable (sticky visuals only), so no dynamic min-height needed.
-		var toggle = header.querySelector('.site-header__toggle');
+		var toggle = header.querySelector('.site-header__toggle--mobile') || header.querySelector('.site-header__toggle');
 		var panel = header.querySelector('.site-header__panel');
 		var closeBtn = header.querySelector('.site-header__close');
 		var submenuToggles = [];

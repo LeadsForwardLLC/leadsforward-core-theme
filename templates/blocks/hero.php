@@ -352,6 +352,18 @@ $placeholder_attrs = function_exists('lf_image_lcp_attrs')
 				<?php endif; ?>
 			</div>
 		<?php else : ?>
+			<?php
+			$badge_items = array_slice($proof_items, 0, 4);
+			$primary_label = $cta_text !== '' ? $cta_text : __('Get a Free Inspection', 'leadsforward-core');
+			$mobile_trust_bits = [];
+			if ($review_count > 0) {
+				$mobile_trust_bits[] = sprintf(__('%s Google Rating', 'leadsforward-core'), $rating_display);
+			}
+			if ($eyebrow !== '') {
+				$mobile_trust_bits[] = __('Licensed & Insured', 'leadsforward-core');
+			}
+			$mobile_trust_bits[] = __('Free Inspection', 'leadsforward-core');
+			?>
 			<div class="lf-hero-conversion">
 				<div class="lf-hero-conversion__content">
 					<?php if ($eyebrow !== '') : ?>
@@ -369,88 +381,53 @@ $placeholder_attrs = function_exists('lf_image_lcp_attrs')
 					<?php if ($subheading !== '') : ?>
 						<p class="lf-hero-conversion__subtitle"><?php echo $subheading_html; ?></p>
 					<?php endif; ?>
-					<?php if (!empty($check_items)) : ?>
-						<ul class="lf-hero-conversion__checks" role="list">
-							<?php foreach ($check_items as $check_item) : ?>
-								<li class="lf-hero-conversion__check">
-									<svg class="lf-hero-conversion__check-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-									<span><?php echo esc_html($check_item); ?></span>
+					<?php if (!empty($badge_items)) : ?>
+						<ul class="lf-hero-conversion__badges" role="list">
+							<?php foreach ($badge_items as $badge_item) : ?>
+								<li class="lf-hero-conversion__badge">
+									<span class="lf-hero-conversion__badge-icon" aria-hidden="true">
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+									</span>
+									<span class="lf-hero-conversion__badge-text"><?php echo esc_html($badge_item); ?></span>
 								</li>
 							<?php endforeach; ?>
 						</ul>
 					<?php endif; ?>
-					<?php if ($show_cta_group) : ?>
+					<?php if ($show_cta_group || $primary_label !== '') : ?>
 						<div class="lf-hero-conversion__actions">
-							<?php if ($cta_text) : ?>
-								<?php if ($use_phone_link) : ?>
-									<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="<?php echo esc_attr($h_pri); ?>"<?php echo $h_pri_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($cta_text); ?></a>
-								<?php elseif ($cta_action === 'quote') : ?>
-									<button type="button" class="<?php echo esc_attr($h_pri); ?>" data-lf-quote-trigger="1" data-lf-quote-source="hero-conversion"<?php echo $h_pri_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($cta_text); ?></button>
-								<?php elseif ($cta_url !== '') : ?>
-									<a href="<?php echo esc_url($cta_url); ?>" class="<?php echo esc_attr($h_pri); ?>"<?php echo $h_pri_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($cta_text); ?></a>
-								<?php endif; ?>
+							<?php if ($use_phone_link) : ?>
+								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="<?php echo esc_attr($h_pri); ?>"<?php echo $h_pri_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($primary_label); ?></a>
+							<?php elseif ($cta_action === 'quote' || $cta_text !== '') : ?>
+								<button type="button" class="<?php echo esc_attr($h_pri); ?>" data-lf-hero-form-focus="1" data-lf-quote-trigger="1" data-lf-quote-source="hero-primary"<?php echo $h_pri_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($primary_label); ?></button>
+							<?php elseif ($cta_url !== '') : ?>
+								<a href="<?php echo esc_url($cta_url); ?>" class="<?php echo esc_attr($h_pri); ?>"<?php echo $h_pri_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($primary_label); ?></a>
 							<?php endif; ?>
 							<?php if ($secondary_text !== '') : ?>
 								<?php if ($secondary_action === 'quote') : ?>
-									<button type="button" class="<?php echo esc_attr($h_sec); ?>" data-lf-quote-trigger="1" data-lf-quote-source="hero-conversion-secondary"<?php echo $h_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($secondary_text); ?></button>
+									<button type="button" class="<?php echo esc_attr($h_sec); ?>" data-lf-quote-trigger="1" data-lf-quote-source="hero-secondary"<?php echo $h_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($secondary_text); ?></button>
 								<?php elseif ($secondary_action === 'call' && $cta_phone) : ?>
 									<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="<?php echo esc_attr($h_sec); ?>"<?php echo $h_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($secondary_text); ?></a>
 								<?php elseif ($secondary_action === 'link' && $secondary_url !== '') : ?>
 									<a href="<?php echo esc_url($secondary_url); ?>" class="<?php echo esc_attr($h_sec); ?>"<?php echo $h_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($secondary_text); ?></a>
 								<?php endif; ?>
+							<?php elseif ($cta_phone && !$use_phone_link) : ?>
+								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="<?php echo esc_attr($h_sec); ?> lf-hero-conversion__cta-call"<?php echo $h_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php esc_html_e('Call Now', 'leadsforward-core'); ?></a>
 							<?php endif; ?>
 						</div>
 					<?php endif; ?>
 					<?php if ($trust_strip_html !== '') : ?>
-						<div class="lf-hero-conversion__trust" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
+						<div class="lf-hero-conversion__trust lf-hero-conversion__trust--desktop" role="group" aria-label="<?php esc_attr_e('Trust', 'leadsforward-core'); ?>">
 							<?php echo $trust_strip_html; ?>
 						</div>
 					<?php endif; ?>
-				</div>
-				<div class="lf-hero-conversion__aside">
-					<?php if ($show_hero_image || $placeholder_id) : ?>
-						<div class="lf-hero-conversion__visual">
-							<div class="lf-hero-conversion__image">
-								<?php if ($show_hero_image) : ?>
-									<?php echo wp_get_attachment_image($hero_image_id, 'large', false, $hero_img_attrs); ?>
-								<?php else : ?>
-									<?php echo wp_get_attachment_image($placeholder_id, 'large', false, $placeholder_attrs); ?>
-								<?php endif; ?>
-							</div>
-							<?php if ($review_count > 0) : ?>
-								<div class="lf-hero-conversion__rating-badge" aria-label="<?php echo esc_attr(sprintf(__('%1$s stars from %2$s reviews', 'leadsforward-core'), $rating_display, $reviews_display)); ?>">
-									<span class="lf-block-hero__stars" aria-hidden="true">
-										<?php for ($i = 0; $i < 5; $i++) : ?>
-											<svg class="lf-block-hero__star" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-										<?php endfor; ?>
-									</span>
-									<span class="lf-hero-conversion__rating-text"><?php echo esc_html($rating_display); ?> · <?php echo esc_html(sprintf(_n('%d review', '%d reviews', $review_count, 'leadsforward-core'), $review_count)); ?></span>
-								</div>
-							<?php endif; ?>
-						</div>
+					<?php if (!empty($mobile_trust_bits)) : ?>
+						<p class="lf-hero-conversion__trust-mobile"><?php echo esc_html(implode(' · ', $mobile_trust_bits)); ?></p>
 					<?php endif; ?>
-					<div class="lf-hero-conversion__lead-card">
-						<p class="lf-hero-conversion__lead-title"><?php echo esc_html($proof_title ?: __('Get a Free Estimate', 'leadsforward-core')); ?></p>
-						<p class="lf-hero-conversion__lead-text"><?php esc_html_e('Fast response with clear pricing and next steps.', 'leadsforward-core'); ?></p>
-						<?php if ($cta_action === 'quote' || $cta_text === '') : ?>
-							<button type="button" class="<?php echo esc_attr($h_pri_lead); ?>" data-lf-quote-trigger="1" data-lf-quote-source="hero-lead-card"<?php echo $h_pri_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($lead_cta_label); ?></button>
-						<?php elseif ($use_phone_link) : ?>
-							<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="<?php echo esc_attr($h_pri_lead); ?>"<?php echo $h_pri_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($lead_cta_label); ?></a>
-						<?php elseif ($cta_url !== '') : ?>
-							<a href="<?php echo esc_url($cta_url); ?>" class="<?php echo esc_attr($h_pri_lead); ?>"<?php echo $h_pri_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($lead_cta_label); ?></a>
-						<?php endif; ?>
-						<?php if ($cta_phone && $secondary_text !== '') : ?>
-							<?php if ($secondary_action === 'call') : ?>
-								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="<?php echo esc_attr($h_sec_lead); ?>"<?php echo $h_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($secondary_text); ?></a>
-							<?php elseif ($secondary_action === 'quote') : ?>
-								<button type="button" class="<?php echo esc_attr($h_sec_lead); ?>" data-lf-quote-trigger="1" data-lf-quote-source="hero-lead-card-secondary"<?php echo $h_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($secondary_text); ?></button>
-							<?php elseif ($secondary_action === 'link' && $secondary_url !== '') : ?>
-								<a href="<?php echo esc_url($secondary_url); ?>" class="<?php echo esc_attr($h_sec_lead); ?>"<?php echo $h_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($secondary_text); ?></a>
-							<?php endif; ?>
-						<?php elseif ($cta_phone) : ?>
-							<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="lf-hero-conversion__lead-call lf-hero-conversion__lead-call--plain"><?php esc_html_e('Or call now', 'leadsforward-core'); ?></a>
-						<?php endif; ?>
-					</div>
+				</div>
+				<div class="lf-hero-conversion__aside lf-hero-conversion__aside--form">
+					<?php if (function_exists('lf_quote_builder_render_inline_form_card')) : ?>
+						<?php lf_quote_builder_render_inline_form_card(['form_id' => 'lf-hero-inline-form']); ?>
+					<?php endif; ?>
 				</div>
 			</div>
 		<?php endif; ?>

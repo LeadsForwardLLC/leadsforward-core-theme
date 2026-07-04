@@ -31,6 +31,7 @@ add_action('admin_init', 'lf_quote_builder_redirect_legacy_pages');
 add_action('admin_init', 'lf_quote_builder_handle_reset_analytics');
 add_action('wp_enqueue_scripts', 'lf_quote_builder_enqueue_assets');
 add_action('wp_footer', 'lf_quote_builder_render_modal', 20);
+add_action('wp_footer', 'lf_quote_builder_render_mobile_cta_bar', 25);
 add_action('wp_ajax_lf_quote_builder_submit', 'lf_quote_builder_handle_submit');
 add_action('wp_ajax_nopriv_lf_quote_builder_submit', 'lf_quote_builder_handle_submit');
 add_action('wp_ajax_lf_quote_builder_event', 'lf_quote_builder_handle_event');
@@ -1418,6 +1419,137 @@ function lf_quote_builder_get_review_previews(int $limit = 3): array {
 	return $out;
 }
 
+/**
+ * Hero / embedded lead form fields (max 4 — shared with quote builder submit).
+ *
+ * @return list<array<string, mixed>>
+ */
+function lf_quote_builder_hero_inline_fields(): array {
+	$niche_slug = lf_quote_builder_resolve_niche_slug(null);
+	$service_options = lf_quote_builder_service_options($niche_slug);
+	return [
+		[
+			'key'         => 'full_name',
+			'label'       => __('Full Name', 'leadsforward-core'),
+			'type'        => 'text',
+			'required'    => true,
+			'placeholder' => __('Full Name', 'leadsforward-core'),
+			'autocomplete' => 'name',
+		],
+		[
+			'key'         => 'phone',
+			'label'       => __('Phone Number', 'leadsforward-core'),
+			'type'        => 'tel',
+			'required'    => true,
+			'placeholder' => __('Phone Number', 'leadsforward-core'),
+			'autocomplete' => 'tel',
+		],
+		[
+			'key'         => 'address_zip',
+			'label'       => __('ZIP / Project Address', 'leadsforward-core'),
+			'type'        => 'text',
+			'required'    => true,
+			'placeholder' => __('ZIP or project address', 'leadsforward-core'),
+			'autocomplete' => 'postal-code',
+		],
+		[
+			'key'         => 'service_type',
+			'label'       => __('Service Needed', 'leadsforward-core'),
+			'type'        => 'select',
+			'required'    => true,
+			'placeholder' => __('Select Service', 'leadsforward-core'),
+			'options'     => $service_options,
+		],
+	];
+}
+
+/**
+ * Render compact hero / page-embedded quote form card.
+ *
+ * @param array{
+ *   form_id?: string,
+ *   title?: string,
+ *   subtext?: string,
+ *   button_label?: string,
+ *   microcopy?: string,
+ *   source?: string,
+ * } $args
+ */
+function lf_quote_builder_render_inline_form_card(array $args = []): void {
+	$fields = lf_quote_builder_hero_inline_fields();
+	if ($fields === []) {
+		return;
+	}
+	$form_id = $args['form_id'] ?? 'lf-hero-inline-form';
+	$title = $args['title'] ?? __('Get Your Free Inspection', 'leadsforward-core');
+	$subtext = $args['subtext'] ?? __('No pressure. No obligation. Just honest answers.', 'leadsforward-core');
+	$button_label = $args['button_label'] ?? __('Schedule My Free Inspection', 'leadsforward-core');
+	$microcopy = $args['microcopy'] ?? __('Your information is secure. We respond quickly during business hours.', 'leadsforward-core');
+	$source = $args['source'] ?? 'hero_inline';
+	$context = lf_quote_builder_get_page_context_data();
+	?>
+	<div class="lf-quote-inline-card" id="<?php echo esc_attr($form_id); ?>">
+		<div class="lf-quote-inline-card__head">
+			<p class="lf-quote-inline-card__title"><?php echo esc_html($title); ?></p>
+			<?php if ($subtext !== '') : ?>
+				<p class="lf-quote-inline-card__subtext"><?php echo esc_html($subtext); ?></p>
+			<?php endif; ?>
+		</div>
+		<form class="lf-quote-inline-form" data-lf-quote-inline="1" novalidate>
+			<input type="hidden" name="lf_quote[source]" value="<?php echo esc_attr($source); ?>" />
+			<input type="hidden" name="lf_quote[page_context]" value="<?php echo esc_attr($context['context']); ?>" />
+			<input type="hidden" name="lf_quote[page_id]" value="<?php echo esc_attr((string) $context['page_id']); ?>" />
+			<input type="hidden" name="lf_quote[page_title]" value="<?php echo esc_attr($context['page_title']); ?>" />
+			<input type="hidden" name="lf_quote[page_url]" value="<?php echo esc_attr($context['page_url']); ?>" />
+			<input type="hidden" name="lf_quote[device]" value="" data-lf-quote-inline-device />
+			<input type="hidden" name="lf_quote[submission_id]" value="" data-lf-quote-inline-submission />
+			<input type="text" name="lf_quote[website]" value="" tabindex="-1" autocomplete="off" class="lf-quote-inline-form__honeypot" aria-hidden="true" />
+			<div class="lf-quote-inline-form__fields">
+				<?php foreach ($fields as $field) :
+					$key = (string) ($field['key'] ?? '');
+					$type = (string) ($field['type'] ?? 'text');
+					$label = (string) ($field['label'] ?? '');
+					$required = !empty($field['required']);
+					$placeholder = (string) ($field['placeholder'] ?? $label);
+					$name = 'lf_quote[' . $key . ']';
+					$autocomplete = (string) ($field['autocomplete'] ?? '');
+					$field_id = $form_id . '-' . $key;
+					?>
+					<div class="lf-quote-inline-form__field lf-quote-inline-form__field--<?php echo esc_attr($type); ?>">
+						<label class="screen-reader-text" for="<?php echo esc_attr($field_id); ?>"><?php echo esc_html($label); ?><?php if ($required) : ?><span aria-hidden="true"> *</span><?php endif; ?></label>
+						<?php if ($type === 'select') : ?>
+							<select id="<?php echo esc_attr($field_id); ?>" name="<?php echo esc_attr($name); ?>" <?php echo $required ? 'required' : ''; ?>>
+								<option value=""><?php echo esc_html($placeholder); ?></option>
+								<?php foreach (($field['options'] ?? []) as $option) :
+									$option_value = is_string($option) ? $option : '';
+									if ($option_value === '') {
+										continue;
+									}
+									?>
+									<option value="<?php echo esc_attr($option_value); ?>"><?php echo esc_html($option_value); ?></option>
+								<?php endforeach; ?>
+							</select>
+						<?php else : ?>
+							<input
+								id="<?php echo esc_attr($field_id); ?>"
+								type="<?php echo esc_attr($type); ?>"
+								name="<?php echo esc_attr($name); ?>"
+								placeholder="<?php echo esc_attr($placeholder); ?>"
+								<?php echo $required ? 'required' : ''; ?>
+								<?php echo $autocomplete !== '' ? 'autocomplete="' . esc_attr($autocomplete) . '"' : ''; ?>
+							/>
+						<?php endif; ?>
+					</div>
+				<?php endforeach; ?>
+			</div>
+			<button type="submit" class="lf-btn lf-btn--primary lf-quote-inline-form__submit"><?php echo esc_html($button_label); ?></button>
+			<p class="lf-quote-inline-form__microcopy" role="note"><?php echo esc_html($microcopy); ?></p>
+			<p class="lf-quote-inline-form__status" role="status" aria-live="polite"></p>
+		</form>
+	</div>
+	<?php
+}
+
 function lf_quote_builder_render_review_preview(array $review, bool $compact = false): void {
 	if (empty($review)) {
 		return;
@@ -1557,6 +1689,42 @@ function lf_quote_builder_render_modal(): void {
 				<div class="lf-quote-modal__status" role="status" aria-live="polite"></div>
 			</form>
 		</div>
+	</div>
+	<?php
+}
+
+/**
+ * Sticky mobile bottom bar: Call + open full quote flow.
+ */
+function lf_quote_builder_render_mobile_cta_bar(): void {
+	if (is_admin()) {
+		return;
+	}
+	$config = lf_quote_builder_get_config();
+	$steps = array_values(array_filter($config['steps'] ?? [], static function ($step) {
+		return !empty($step['enabled']);
+	}));
+	if (empty($steps)) {
+		return;
+	}
+	$cta_phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
+	$cta_label = function_exists('lf_get_global_option') ? (string) lf_get_global_option('lf_header_cta_label', '') : '';
+	$cta_text = function_exists('lf_get_option') ? (string) lf_get_option('lf_cta_primary_text', 'option') : '';
+	$quote_label = $cta_label !== '' ? $cta_label : ($cta_text !== '' ? $cta_text : __('Free Inspection', 'leadsforward-core'));
+	$phone_href = $cta_phone !== '' ? 'tel:' . preg_replace('/\s+/', '', $cta_phone) : '';
+	?>
+	<div class="lf-mobile-cta-bar" aria-hidden="false">
+		<?php if ($phone_href !== '') : ?>
+			<a href="<?php echo esc_attr($phone_href); ?>" class="lf-mobile-cta-bar__call">
+				<?php if (function_exists('lf_icon')) : ?>
+					<span class="lf-mobile-cta-bar__icon" aria-hidden="true"><?php echo lf_icon('phone', ['class' => 'lf-icon lf-icon--inherit']); ?></span>
+				<?php endif; ?>
+				<span><?php esc_html_e('Call Now', 'leadsforward-core'); ?></span>
+			</a>
+		<?php endif; ?>
+		<button type="button" class="lf-mobile-cta-bar__quote lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="mobile-sticky">
+			<?php echo esc_html($quote_label); ?>
+		</button>
 	</div>
 	<?php
 }
@@ -1764,10 +1932,12 @@ function lf_quote_builder_handle_submit(): void {
 	}
 	$allowed = array_unique($allowed);
 	$required = array_unique($required);
-	$meta_keys = ['page_context', 'page_id', 'page_title', 'page_url', 'device', 'returning', 'submission_id', 'pages_path'];
+	$meta_keys = ['page_context', 'page_id', 'page_title', 'page_url', 'device', 'returning', 'submission_id', 'pages_path', 'source'];
 	$allowed = array_unique(array_merge($allowed, $meta_keys));
-	$meta_keys = ['page_context', 'page_id', 'page_title', 'page_url'];
-	$allowed = array_unique(array_merge($allowed, $meta_keys));
+	$source = isset($payload['source']) ? sanitize_key(wp_unslash((string) $payload['source'])) : '';
+	if ($source === 'hero_inline') {
+		$required = ['full_name', 'phone', 'address_zip', 'service_type'];
+	}
 	$clean = [];
 	foreach ($allowed as $key) {
 		if (!isset($payload[$key])) {
