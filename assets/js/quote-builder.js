@@ -393,6 +393,25 @@
 	function bindEvents() {
 		updatePagePath();
 		document.addEventListener('click', function (e) {
+			var heroFocus = e.target.closest('[data-lf-hero-form-focus]');
+			if (heroFocus) {
+				var isDesktop = window.matchMedia('(min-width: 901px)').matches;
+				if (isDesktop) {
+					e.preventDefault();
+					var formCard = document.getElementById('lf-hero-inline-form');
+					var inlineForm = formCard ? formCard.querySelector('.lf-quote-inline-form') : null;
+					if (formCard) {
+						formCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+					}
+					if (inlineForm) {
+						var first = inlineForm.querySelector('input, select, textarea, button');
+						if (first) {
+							setTimeout(function () { first.focus(); }, 320);
+						}
+					}
+					return;
+				}
+			}
 			var trigger = e.target.closest('[data-lf-quote-trigger]');
 			if (trigger) {
 				e.preventDefault();
@@ -431,6 +450,75 @@
 			group.querySelectorAll('.lf-quote-choice__card').forEach(function (card) {
 				var radio = card.querySelector('input[type="radio"]');
 				card.classList.toggle('is-selected', !!(radio && radio.checked));
+			});
+		});
+
+		document.querySelectorAll('.lf-quote-inline-form').forEach(function (inlineForm) {
+			inlineForm.addEventListener('submit', function (e) {
+				e.preventDefault();
+				if (!window.lfQuoteBuilder || !window.lfQuoteBuilder.ajax_url) {
+					return;
+				}
+				var statusEl = inlineForm.querySelector('.lf-quote-inline-form__status');
+				var submitBtn = inlineForm.querySelector('.lf-quote-inline-form__submit');
+				var deviceInput = inlineForm.querySelector('[data-lf-quote-inline-device]');
+				var submissionInput = inlineForm.querySelector('[data-lf-quote-inline-submission]');
+				if (deviceInput) {
+					deviceInput.value = getDeviceType();
+				}
+				if (submissionInput && !submissionInput.value) {
+					submissionInput.value = 'qb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+				}
+				var required = inlineForm.querySelectorAll('[required]');
+				var ok = true;
+				required.forEach(function (field) {
+					field.classList.remove('is-invalid');
+					if (!field.value || String(field.value).trim() === '') {
+						ok = false;
+						field.classList.add('is-invalid');
+					}
+				});
+				if (!ok) {
+					if (statusEl) {
+						statusEl.textContent = 'Please complete the required fields.';
+						statusEl.classList.add('is-error');
+					}
+					return;
+				}
+				if (submitBtn) submitBtn.disabled = true;
+				if (statusEl) {
+					statusEl.textContent = 'Submitting…';
+					statusEl.classList.remove('is-error');
+				}
+				var data = new FormData(inlineForm);
+				data.append('action', 'lf_quote_builder_submit');
+				data.append('nonce', window.lfQuoteBuilder.nonce || '');
+				fetch(window.lfQuoteBuilder.ajax_url, {
+					method: 'POST',
+					body: data,
+					credentials: 'same-origin',
+				}).then(function (res) { return res.json(); }).then(function (json) {
+					if (submitBtn) submitBtn.disabled = false;
+					if (json && json.success) {
+						if (statusEl) {
+							statusEl.textContent = 'Thanks! We will be in touch shortly.';
+							statusEl.classList.remove('is-error');
+						}
+						inlineForm.reset();
+						return;
+					}
+					var msg = (json && json.data && json.data.message) ? json.data.message : 'Something went wrong. Please try again.';
+					if (statusEl) {
+						statusEl.textContent = msg;
+						statusEl.classList.add('is-error');
+					}
+				}).catch(function () {
+					if (submitBtn) submitBtn.disabled = false;
+					if (statusEl) {
+						statusEl.textContent = 'Something went wrong. Please try again.';
+						statusEl.classList.add('is-error');
+					}
+				});
 			});
 		});
 	}
