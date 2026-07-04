@@ -79,11 +79,11 @@ if ($show_topbar) {
 				<span class="site-header__toggle-label"><?php esc_html_e('Menu', 'leadsforward-core'); ?></span>
 			</button>
 			<?php if ($header_phone_href !== '') : ?>
-				<a href="<?php echo esc_attr($header_phone_href); ?>" class="site-header__mobile-call">
+				<a href="<?php echo esc_attr($header_phone_href); ?>" class="site-header__mobile-call lf-call-btn lf-call-btn--icon" aria-label="<?php esc_attr_e('Call', 'leadsforward-core'); ?>">
 					<?php if (function_exists('lf_icon')) : ?>
-						<span class="site-header__mobile-call-icon" aria-hidden="true"><?php echo lf_icon('phone', ['class' => 'lf-icon lf-icon--inherit']); ?></span>
+						<span class="site-header__mobile-call-icon lf-call__icon-wrap" aria-hidden="true"><?php echo lf_icon('phone', ['class' => 'lf-call__icon lf-icon lf-icon--inherit']); ?></span>
 					<?php endif; ?>
-					<span class="site-header__mobile-call-text"><?php esc_html_e('Call', 'leadsforward-core'); ?></span>
+					<span class="site-header__mobile-call-text screen-reader-text"><?php esc_html_e('Call', 'leadsforward-core'); ?></span>
 				</a>
 			<?php endif; ?>
 			<?php if ($show_cta) : ?>
@@ -116,11 +116,11 @@ if ($show_topbar) {
 			<?php if ($show_actions) : ?>
 				<div class="site-header__actions">
 					<?php if ($cta_phone) : ?>
-						<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $cta_phone)); ?>" class="site-header__phone">
+						<a href="tel:<?php echo esc_attr(preg_replace('/\s+/', '', $cta_phone)); ?>" class="site-header__phone lf-call-btn lf-call-btn--icon" aria-label="<?php esc_attr_e('Call', 'leadsforward-core'); ?>">
 							<?php if (function_exists('lf_icon')) : ?>
 								<span class="lf-call__icon-wrap" aria-hidden="true"><?php echo lf_icon('phone', ['class' => 'lf-call__icon lf-icon lf-icon--inherit']); ?></span>
 							<?php endif; ?>
-							<span class="site-header__phone-text"><?php esc_html_e('Call', 'leadsforward-core'); ?></span>
+							<span class="site-header__phone-text screen-reader-text"><?php esc_html_e('Call', 'leadsforward-core'); ?></span>
 						</a>
 					<?php endif; ?>
 					<?php if ($show_cta) : ?>

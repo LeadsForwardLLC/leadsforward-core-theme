@@ -1697,36 +1697,7 @@ function lf_quote_builder_render_modal(): void {
  * Sticky mobile bottom bar: Call + open full quote flow.
  */
 function lf_quote_builder_render_mobile_cta_bar(): void {
-	if (is_admin()) {
-		return;
-	}
-	$config = lf_quote_builder_get_config();
-	$steps = array_values(array_filter($config['steps'] ?? [], static function ($step) {
-		return !empty($step['enabled']);
-	}));
-	if (empty($steps)) {
-		return;
-	}
-	$cta_phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
-	$cta_label = function_exists('lf_get_global_option') ? (string) lf_get_global_option('lf_header_cta_label', '') : '';
-	$cta_text = function_exists('lf_get_option') ? (string) lf_get_option('lf_cta_primary_text', 'option') : '';
-	$quote_label = $cta_label !== '' ? $cta_label : ($cta_text !== '' ? $cta_text : __('Free Inspection', 'leadsforward-core'));
-	$phone_href = $cta_phone !== '' ? 'tel:' . preg_replace('/\s+/', '', $cta_phone) : '';
-	?>
-	<div class="lf-mobile-cta-bar" aria-hidden="false">
-		<?php if ($phone_href !== '') : ?>
-			<a href="<?php echo esc_attr($phone_href); ?>" class="lf-mobile-cta-bar__call">
-				<?php if (function_exists('lf_icon')) : ?>
-					<span class="lf-mobile-cta-bar__icon" aria-hidden="true"><?php echo lf_icon('phone', ['class' => 'lf-icon lf-icon--inherit']); ?></span>
-				<?php endif; ?>
-				<span><?php esc_html_e('Call Now', 'leadsforward-core'); ?></span>
-			</a>
-		<?php endif; ?>
-		<button type="button" class="lf-mobile-cta-bar__quote lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="mobile-sticky">
-			<?php echo esc_html($quote_label); ?>
-		</button>
-	</div>
-	<?php
+	// Unified bottom app nav lives in site-header__mobile-bar (header.php).
 }
 
 function lf_quote_builder_log_ghl_error(string $message, array $context = []): void {

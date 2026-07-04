@@ -154,7 +154,8 @@ function lf_header_menu_link_attributes(array $atts, \WP_Post $item, $args, int 
 	if (in_array('lf-menu-call', $classes, true)) {
 		$phone = function_exists('lf_get_cta_phone') ? (string) lf_get_cta_phone() : '';
 		$atts['href'] = $phone !== '' ? 'tel:' . esc_attr($phone) : '#';
-		$atts['class'] = trim(($atts['class'] ?? '') . ' lf-menu-call__link');
+		$atts['class'] = trim(($atts['class'] ?? '') . ' lf-menu-call__link lf-call-btn lf-call-btn--icon');
+		$atts['aria-label'] = __('Call', 'leadsforward-core');
 	}
 	return $atts;
 }
@@ -202,7 +203,7 @@ function lf_header_menu_item_output(string $item_output, \WP_Post $item, int $de
 	if (in_array('lf-menu-call', $classes, true) && function_exists('lf_icon')) {
 		$icon = lf_icon('phone', ['class' => 'lf-call__icon lf-icon lf-icon--inherit', 'aria-hidden' => 'true']);
 		$icon = '<span class="lf-call__icon-wrap" aria-hidden="true">' . $icon . '</span>';
-		$item_output = preg_replace('/(<a[^>]*>)(.*?)(<\/a>)/', '$1' . $icon . '<span class="lf-menu-call__label">$2</span>$3', $item_output, 1);
+		$item_output = preg_replace('/(<a[^>]*>)(.*?)(<\/a>)/', '$1' . $icon . '<span class="lf-menu-call__label screen-reader-text">$2</span>$3', $item_output, 1);
 	}
 	if (in_array('lf-menu-more', $classes, true)) {
 		$title = apply_filters('nav_menu_item_title', $item->title, $item, $args, $depth);

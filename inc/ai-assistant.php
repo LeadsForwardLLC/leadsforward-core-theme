@@ -1494,6 +1494,33 @@ function lf_ai_assistant_widget_css(): string {
 		.lf-ai-inline-link__empty { font-size:12px; color:#64748b; margin:0; padding:6px; }
 		.lf-ai-inline-link { pointer-events:none; }
 		.lf-ai-inline-link__toolbar, .lf-ai-inline-link__panel, .lf-ai-inline-link__backdrop, .lf-ai-inline-rewrite { pointer-events:auto; }
+		@media (max-width: 900px) {
+			.lf-ai-float,
+			.lf-ai-float--seo,
+			.lf-ai-float--history,
+			.lf-ai-float--header,
+			.lf-ai-rail,
+			.lf-ai-section-controls,
+			.lf-ai-section-insert,
+			.lf-ai-card-remove,
+			.lf-ai-checklist-controls,
+			.lf-ai-checklist-add,
+			.lf-ai-checklist-remove,
+			.lf-ai-inline-link__toolbar,
+			.lf-ai-command,
+			.lf-ai-media-add-wrap,
+			.lf-ai-service-status-badge,
+			.lf-ai-area-status-badge,
+			.lf-fe-preview-banner { display:none !important; }
+			[data-lf-section-wrap="1"] { outline:none !important; cursor:default !important; box-shadow:none !important; }
+			[data-lf-section-wrap="1"]:hover { outline:none !important; }
+			[data-lf-inline-editable="1"],
+			[data-lf-inline-image="1"] { cursor:default !important; }
+			[data-lf-inline-editable="1"]:hover,
+			[data-lf-inline-active="1"],
+			[data-lf-inline-image="1"]:hover,
+			[data-lf-inline-image-active="1"] { outline:none !important; background:transparent !important; box-shadow:none !important; }
+		}
 	';
 }
 
