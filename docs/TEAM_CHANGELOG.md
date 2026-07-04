@@ -2,6 +2,21 @@
 
 ---
 
+2026-07-04 (mobile app nav + call icon)
+
+What changed
+
+* **Call button:** Phone control is icon-only in a circle on desktop nav and mobile app bar (accessible `aria-label` retained).
+* **Mobile app nav:** Menu + call + quote bar fixed to bottom; logo stays in top header.
+* **Editor chrome:** AI assistant, structure rail, section controls, and inline editor UI hidden on viewports ≤900px.
+* Removed duplicate `lf-mobile-cta-bar` footer render (unified into header mobile bar).
+
+Version
+
+* Shipped **0.1.183**.
+
+---
+
 2026-07-04 (homepage niche blueprints)
 
 What changed

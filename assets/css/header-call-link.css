@@ -94,3 +94,77 @@ body .site-header .site-header__phone-text {
 	display: inline-block;
 	line-height: inherit;
 }
+
+/* Icon-only circular call control (desktop nav + mobile app bar). */
+body .site-header .lf-call-btn--icon,
+body .site-header ul.site-header__menu > li.menu-item.lf-menu-call > a.lf-menu-call__link,
+body .site-header ul.site-header__menu > li.lf-menu-call > a,
+body .site-header .site-header__phone,
+body .site-header .site-header__mobile-call {
+	--lf-call-circle-size: 42px;
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: var(--lf-call-circle-size) !important;
+	height: var(--lf-call-circle-size) !important;
+	min-width: var(--lf-call-circle-size) !important;
+	min-height: var(--lf-call-circle-size) !important;
+	padding: 0 !important;
+	border-radius: 50% !important;
+	gap: 0 !important;
+	background: var(--lf-surface-soft);
+	border: 1px solid var(--lf-neutral-300, rgba(15, 23, 42, 0.12));
+	box-sizing: border-box;
+	flex: 0 0 auto !important;
+	text-decoration: none !important;
+	color: var(--lf-text-primary);
+}
+
+body .site-header .lf-call-btn--icon:hover,
+body .site-header ul.site-header__menu > li.lf-menu-call > a:hover,
+body .site-header .site-header__phone:hover,
+body .site-header .site-header__mobile-call:hover {
+	background: color-mix(in srgb, var(--lf-surface-soft) 82%, var(--lf-primary) 18%);
+	border-color: color-mix(in srgb, var(--lf-neutral-300, #cbd5e1) 70%, var(--lf-primary) 30%);
+}
+
+body .site-header .lf-menu-call__label,
+body .site-header .site-header__phone-text,
+body .site-header .site-header__mobile-call-text {
+	position: absolute !important;
+	width: 1px !important;
+	height: 1px !important;
+	padding: 0 !important;
+	margin: -1px !important;
+	overflow: hidden !important;
+	clip: rect(0, 0, 0, 0) !important;
+	white-space: nowrap !important;
+	border: 0 !important;
+}
+
+@media (min-width: 901px) {
+	body .site-header ul.site-header__menu > li.menu-item.lf-menu-call > a .lf-call__icon-wrap,
+	body .site-header .site-header__phone .lf-call__icon-wrap {
+		--lf-call-icon-size: 1.05em;
+		transform: none !important;
+	}
+}
+
+/* Mobile slide-out menu keeps a full-width call row when present. */
+@media (max-width: 900px) {
+	body .site-header__panel .site-header__menu .lf-menu-call > a {
+		width: 100% !important;
+		height: auto !important;
+		min-height: 48px !important;
+		border-radius: 12px !important;
+	}
+	body .site-header__panel .site-header__menu .lf-menu-call .lf-menu-call__label {
+		position: static !important;
+		width: auto !important;
+		height: auto !important;
+		margin: 0 !important;
+		overflow: visible !important;
+		clip: auto !important;
+		white-space: normal !important;
+	}
+}
