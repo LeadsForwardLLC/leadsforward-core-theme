@@ -224,8 +224,9 @@ function lf_homepage_default_section_config(string $section_type, string $niche_
 			$config['enabled'] = false;
 		}
 		if ($section_type === 'hero') {
-			$config['hero_headline'] = __('Trusted Local Home Services in [Your City]', 'leadsforward-core');
-			$config['hero_subheadline'] = __('Fast response times, clear pricing, and workmanship backed by warranty. Get expert help from a local team you can rely on.', 'leadsforward-core');
+			$config['variant'] = 'conversion';
+			$config['hero_headline'] = __('Fast, Reliable Home Services in [Your City]', 'leadsforward-core');
+			$config['hero_subheadline'] = __('Licensed, insured, and local. Free estimates, clear pricing, and work backed by warranty — book online or call today.', 'leadsforward-core');
 			$config['cta_primary_override'] = '';
 			$config['cta_secondary_override'] = '';
 			$config['cta_primary_action'] = '';
@@ -244,8 +245,9 @@ function lf_homepage_default_section_config(string $section_type, string $niche_
 	switch ($section_type) {
 		case 'hero':
 			return array_merge($base, [
-				'hero_headline'     => __('Trusted Local Home Services in [Your City]', 'leadsforward-core'),
-				'hero_subheadline'  => __('Fast response times, clear pricing, and workmanship backed by warranty. Get expert help from a local team you can rely on.', 'leadsforward-core'),
+				'variant'           => 'conversion',
+				'hero_headline'     => __('Fast, Reliable Home Services in [Your City]', 'leadsforward-core'),
+				'hero_subheadline'  => __('Licensed, insured, and local. Free estimates, clear pricing, and work backed by warranty — book online or call today.', 'leadsforward-core'),
 				'cta_primary_override' => '',
 				'cta_secondary_override' => '',
 				'cta_primary_action'   => '',

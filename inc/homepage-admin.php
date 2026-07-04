@@ -100,8 +100,7 @@ function lf_homepage_admin_save(): void {
 		$key_variant = 'lf_hp_variant_' . $type;
 		$config[$type]['enabled'] = !empty($_POST[$key_enabled]);
 		if ($type === 'hero') {
-			$v = isset($_POST[$key_variant]) && in_array($_POST[$key_variant], $allowed_variants, true) ? $_POST[$key_variant] : 'default';
-			$config[$type]['variant'] = $v;
+			$config[$type]['variant'] = 'conversion';
 		} else {
 			$config[$type]['variant'] = 'default';
 		}
@@ -652,13 +651,7 @@ function lf_homepage_admin_render(): void {
 							<strong><?php echo esc_html($label); ?></strong>
 							<label><input type="checkbox" name="lf_hp_enabled_<?php echo esc_attr($type); ?>" id="lf_hp_enabled_<?php echo esc_attr($type); ?>" value="1" <?php checked($enabled); ?> /> <?php esc_html_e('Show this section', 'leadsforward-core'); ?></label>
 							<?php if ($type === 'hero') : ?>
-								<label><?php esc_html_e('Variant', 'leadsforward-core'); ?>
-									<select name="lf_hp_variant_<?php echo esc_attr($type); ?>">
-										<?php foreach ($variants as $v => $vlabel) : ?>
-											<option value="<?php echo esc_attr($v); ?>" <?php selected($variant, $v); ?>><?php echo esc_html($vlabel); ?></option>
-										<?php endforeach; ?>
-									</select>
-								</label>
+								<input type="hidden" name="lf_hp_variant_<?php echo esc_attr($type); ?>" value="conversion" />
 							<?php endif; ?>
 							<button type="button" class="lf-homepage-toggle" data-target="<?php echo esc_attr($type); ?>" aria-expanded="true">
 								<span class="lf-homepage-toggle-icon">▾</span>

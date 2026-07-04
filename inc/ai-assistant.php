@@ -1717,7 +1717,7 @@ function lf_ai_assistant_widget_js(): string {
 		var benefitsCtaPickerButtonNode = null;
 		var heroSettingsPickerEl = null;
 		var heroSettingsPickerWrap = null;
-		var heroSettingsState = { variant: "default", mode: "image", imageId: 0, videoId: 0 };
+		var heroSettingsState = { variant: "conversion", mode: "image", imageId: 0, videoId: 0 };
 		var railLibraryOpen = false;
 		var suppressInlineClickUntil = 0;
 		var iconSlugs = Array.isArray(lfAiFloating.icon_slugs) ? lfAiFloating.icon_slugs : [];
@@ -9601,15 +9601,20 @@ function lf_ai_assistant_widget_js(): string {
 			if (!heroSettingsPickerEl) return;
 			var vRow = heroSettingsPickerEl.querySelector("[data-lf-hero-variant-row]");
 			var mRow = heroSettingsPickerEl.querySelector("[data-lf-hero-mode-row]");
-			var modesAllowedForVariant = function(variant) {
-				var v = String(variant || "default");
-				// Visual Proof (c) is designed as a color-only hero.
-				if (v === "c") return ["color"];
+			var modesAllowedForVariant = function() {
 				return ["color", "image", "video"];
 			};
 			if (vRow) {
 				vRow.innerHTML = "";
 				var vars = Array.isArray(lfAiFloating.hero_variants) ? lfAiFloating.hero_variants : [];
+				var variantLabel = heroSettingsPickerEl.querySelector(".lf-ai-hero-settings__label-variant");
+				if (vars.length <= 1) {
+					if (variantLabel) variantLabel.style.display = "none";
+					vRow.style.display = "none";
+				} else {
+					if (variantLabel) variantLabel.style.display = "";
+					vRow.style.display = "";
+				}
 				vars.forEach(function(entry){
 					var val = String(entry.value || "");
 					if (!val) return;
@@ -9697,7 +9702,7 @@ function lf_ai_assistant_widget_js(): string {
 			head.appendChild(title);
 			head.appendChild(closeHead);
 			var lv = document.createElement("p");
-			lv.className = "lf-ai-hero-settings__label";
+			lv.className = "lf-ai-hero-settings__label lf-ai-hero-settings__label-variant";
 			lv.textContent = "Layout variant";
 			var vRow = document.createElement("div");
 			vRow.className = "lf-ai-section-bg-picker__swatches";

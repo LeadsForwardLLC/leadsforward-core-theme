@@ -687,3 +687,73 @@ function lf_page_template_repair_core_pages_once(): void {
 }
 
 add_action('admin_init', 'lf_page_template_repair_core_pages_once', 25);
+
+/**
+ * One-time migration: collapse legacy hero variants (default/a/b/c) to conversion.
+ */
+function lf_hero_normalize_variants_once(): void {
+	if (!is_admin() || !current_user_can('edit_theme_options')) {
+		return;
+	}
+	if (get_option('lf_hero_normalize_variants_v1', '0') === '1') {
+		return;
+	}
+	if (defined('LF_HOMEPAGE_CONFIG_OPTION')) {
+		$config = get_option(LF_HOMEPAGE_CONFIG_OPTION, []);
+		if (is_array($config) && isset($config['hero']) && is_array($config['hero'])) {
+			$config['hero']['variant'] = 'conversion';
+			if (($config['hero']['hero_media'] ?? 'none') === 'none') {
+				$config['hero']['hero_media'] = 'image';
+			}
+			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		}
+	}
+	if (defined('LF_PB_META_KEY')) {
+		$post_types = ['page', 'lf_service', 'lf_service_area', 'post'];
+		foreach ($post_types as $post_type) {
+			$post_ids = get_posts([
+				'post_type' => $post_type,
+				'post_status' => 'any',
+				'posts_per_page' => -1,
+				'fields' => 'ids',
+				'no_found_rows' => true,
+			]);
+			if (!is_array($post_ids)) {
+				continue;
+			}
+			foreach ($post_ids as $post_id) {
+				$pb_config = get_post_meta((int) $post_id, LF_PB_META_KEY, true);
+				if (!is_array($pb_config) || empty($pb_config['sections']) || !is_array($pb_config['sections'])) {
+					continue;
+				}
+				$dirty = false;
+				foreach ($pb_config['sections'] as $instance_id => $row) {
+					if (!is_array($row) || ($row['type'] ?? '') !== 'hero') {
+						continue;
+					}
+					$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+					$old_variant = (string) ($settings['variant'] ?? 'default');
+					$new_variant = function_exists('lf_sections_normalize_hero_variant')
+						? lf_sections_normalize_hero_variant($old_variant, false)
+						: (in_array($old_variant, ['page', 'internal'], true) ? 'page' : 'conversion');
+					if ($new_variant !== $old_variant) {
+						$settings['variant'] = $new_variant;
+						$pb_config['sections'][$instance_id]['settings'] = $settings;
+						$dirty = true;
+					}
+					if ($new_variant === 'conversion' && ($settings['hero_media'] ?? 'none') === 'none') {
+						$settings['hero_media'] = 'image';
+						$pb_config['sections'][$instance_id]['settings'] = $settings;
+						$dirty = true;
+					}
+				}
+				if ($dirty) {
+					update_post_meta((int) $post_id, LF_PB_META_KEY, $pb_config);
+				}
+			}
+		}
+	}
+	update_option('lf_hero_normalize_variants_v1', '1', true);
+}
+
+add_action('admin_init', 'lf_hero_normalize_variants_once', 26);

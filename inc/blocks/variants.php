@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
  */
 function lf_get_allowed_block_variants(): array {
 	return [
-		'hero'           => ['default', 'a', 'b', 'c'],
+		'hero'           => ['conversion', 'page'],
 		'trust-reviews'  => ['default', 'a', 'b', 'c'],
 		'service-grid'   => ['default', 'a', 'b', 'c'],
 		'service-areas'  => ['default', 'a', 'b', 'c'],
@@ -30,11 +30,11 @@ function lf_get_allowed_block_variants(): array {
 
 /**
  * Profile-based default variant per block. When no override, use this.
- * Variants: default = Authority Split, a = Conversion Stack, b = Form First, c = Visual Proof.
+ * Hero uses a single conversion layout; interior pages use the compact page hero.
  */
 function lf_get_profile_block_defaults(string $profile): array {
 	$defaults = [
-		'hero'           => 'default',
+		'hero'           => 'conversion',
 		'trust-reviews'  => 'default',
 		'service-grid'   => 'default',
 		'service-areas'  => 'default',
@@ -44,25 +44,20 @@ function lf_get_profile_block_defaults(string $profile): array {
 	];
 	switch ($profile) {
 		case 'a': // Clean + Minimal
-			$defaults['hero'] = 'default';
 			$defaults['cta']  = 'default';
 			break;
 		case 'b': // Bold + High Contrast
-			$defaults['hero'] = 'a';
 			$defaults['cta']  = 'a';
 			break;
-		case 'c': // Trust Heavy — hero variant with review snippet, testimonial early
-			$defaults['hero'] = 'c';
+		case 'c': // Trust Heavy — testimonial early
 			$defaults['trust-reviews'] = 'a';
 			$defaults['cta'] = 'default';
 			break;
 		case 'd': // Service Heavy — service grid earlier, more internal links
-			$defaults['hero'] = 'default';
 			$defaults['service-grid'] = 'a';
 			$defaults['cta'] = 'default';
 			break;
 		case 'e': // Offer/Promo Heavy
-			$defaults['hero'] = 'b';
 			$defaults['cta']  = 'b';
 			break;
 	}
@@ -86,7 +81,7 @@ function lf_get_block_variant(string $block_name, ?string $override_variant = nu
 	if (in_array($profile_variant, $block_variants, true)) {
 		return $profile_variant;
 	}
-	return 'default';
+	return 'conversion';
 }
 
 /**

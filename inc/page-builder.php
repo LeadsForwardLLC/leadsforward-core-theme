@@ -199,9 +199,11 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 				$settings = lf_sections_normalize_service_details_settings($type, $settings);
 			}
 			if ($type === 'hero' && in_array($context, ['page', 'post', 'service', 'service_area'], true)) {
-				$variant = $settings['variant'] ?? 'default';
-				if ($variant === '' || $variant === 'default') {
-					$settings['variant'] = 'internal';
+				$settings['variant'] = function_exists('lf_sections_normalize_hero_variant')
+					? lf_sections_normalize_hero_variant((string) ($settings['variant'] ?? ''), false)
+					: 'page';
+				if ($settings['variant'] !== 'page') {
+					$settings['variant'] = 'page';
 				}
 			}
 			$sections_out[$instance_id] = [
@@ -227,9 +229,11 @@ function lf_pb_get_post_config(int $post_id, string $context): array {
 				$settings = lf_sections_normalize_service_details_settings($type, $settings);
 			}
 			if ($type === 'hero' && in_array($context, ['page', 'post', 'service', 'service_area'], true)) {
-				$variant = $settings['variant'] ?? 'default';
-				if ($variant === '' || $variant === 'default') {
-					$settings['variant'] = 'internal';
+				$settings['variant'] = function_exists('lf_sections_normalize_hero_variant')
+					? lf_sections_normalize_hero_variant((string) ($settings['variant'] ?? ''), false)
+					: 'page';
+				if ($settings['variant'] !== 'page') {
+					$settings['variant'] = 'page';
 				}
 			}
 			$sections_out[$instance_id] = [
