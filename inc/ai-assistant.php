@@ -5814,14 +5814,21 @@ function lf_ai_assistant_widget_js(): string {
 			function heroPillTextNodeFromChip(chip) {
 				if (!chip) return null;
 				var textNode = chip.querySelector("[data-lf-hero-pill-text]");
-				var normalized = textFromNodeWithoutAiControls(chip);
 				if (!textNode) {
+					textNode = chip.querySelector(".lf-hero-conversion__badge-text");
+					if (textNode) {
+						textNode.setAttribute("data-lf-hero-pill-text", "1");
+					}
+				}
+				if (!textNode) {
+					var normalized = textFromNodeWithoutAiControls(chip);
 					textNode = document.createElement("span");
+					textNode.className = "lf-hero-conversion__badge-text";
 					textNode.setAttribute("data-lf-hero-pill-text", "1");
-					chip.textContent = "";
+					textNode.textContent = normalized || "New pill";
 					chip.appendChild(textNode);
 				}
-				textNode.textContent = normalized || String(textNode.textContent || "").trim();
+				textNode.textContent = String(textNode.textContent || "").replace(/\s+/g, " ").trim() || String(textNode.textContent || "").trim();
 				textNode.removeAttribute("data-lf-inline-editable");
 				textNode.removeAttribute("data-lf-inline-selector");
 				chip.removeAttribute("data-lf-inline-editable");
@@ -5841,7 +5848,7 @@ function lf_ai_assistant_widget_js(): string {
 					return;
 				}
 				if (next === "") {
-					var chip = textNode.closest(".lf-hero-chip");
+					var chip = textNode.closest(".lf-hero-conversion__badge") || textNode.closest(".lf-hero-chip");
 					if (chip && chip.parentNode) {
 						chip.parentNode.removeChild(chip);
 					}
@@ -5972,11 +5979,30 @@ function lf_ai_assistant_widget_js(): string {
 					if (!text) return;
 					var tag = list.tagName && list.tagName.toLowerCase() === "ul" ? "li" : "span";
 					var chip = document.createElement(tag);
-					chip.className = "lf-hero-chip";
-					var textNode = document.createElement("span");
-					textNode.setAttribute("data-lf-hero-pill-text", "1");
-					textNode.textContent = text;
-					chip.appendChild(textNode);
+					var isConversionBadges = list.classList && list.classList.contains("lf-hero-conversion__badges");
+					if (isConversionBadges) {
+						chip.className = "lf-hero-conversion__badge";
+						chip.setAttribute("data-lf-chip-icon", "check");
+						var iconWrap = document.createElement("span");
+						iconWrap.className = "lf-hero-conversion__badge-icon";
+						iconWrap.setAttribute("aria-hidden", "true");
+						var graphic = document.createElement("span");
+						graphic.className = "lf-hero-conversion__badge-icon-graphic";
+						graphic.innerHTML = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\"><path d=\"M20 6L9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>";
+						iconWrap.appendChild(graphic);
+						chip.appendChild(iconWrap);
+						var textNode = document.createElement("span");
+						textNode.className = "lf-hero-conversion__badge-text";
+						textNode.setAttribute("data-lf-hero-pill-text", "1");
+						textNode.textContent = text;
+						chip.appendChild(textNode);
+					} else {
+						chip.className = "lf-hero-chip";
+						var textNode = document.createElement("span");
+						textNode.setAttribute("data-lf-hero-pill-text", "1");
+						textNode.textContent = text;
+						chip.appendChild(textNode);
+					}
 					var removeBtn = document.createElement("button");
 					removeBtn.type = "button";
 					removeBtn.className = "lf-ai-hero-pill-remove lf-ai-inline-editor-ignore";
