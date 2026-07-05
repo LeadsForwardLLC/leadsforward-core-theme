@@ -99,6 +99,31 @@ function lf_acf_add_options_branding_fields(): void {
 				'type'  => 'color_picker',
 				'default_value' => '#2563eb',
 			],
+			[
+				'key'   => 'field_lf_button_text_case',
+				'label' => __('Button text case', 'leadsforward-core'),
+				'name'  => 'lf_button_text_case',
+				'type'  => 'select',
+				'choices' => [
+					'uppercase' => __('Uppercase (default)', 'leadsforward-core'),
+					'normal'    => __('Mixed case (as typed)', 'leadsforward-core'),
+				],
+				'default_value' => 'uppercase',
+				'instructions'  => __('Applies to all .lf-btn buttons site-wide.', 'leadsforward-core'),
+			],
+			[
+				'key'   => 'field_lf_button_default_size',
+				'label' => __('Default section button size', 'leadsforward-core'),
+				'name'  => 'lf_button_default_size',
+				'type'  => 'select',
+				'choices' => [
+					'lg' => __('Large', 'leadsforward-core'),
+					'md' => __('Medium', 'leadsforward-core'),
+					'sm' => __('Small', 'leadsforward-core'),
+				],
+				'default_value' => 'lg',
+				'instructions'  => __('Per-section settings can override. Nav and hero form buttons use Small.', 'leadsforward-core'),
+			],
 		],
 		'location' => [
 			[

@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('LF_THEME_VERSION', '0.1.189');
+define('LF_THEME_VERSION', '0.1.190');
 define('LF_THEME_DIR', get_template_directory());
 define('LF_THEME_URI', get_template_directory_uri());
 /** Admin page slug for LeadsForward → Site Setup (Airtable sync + template build). */
@@ -54,6 +54,7 @@ lf_load_inc('security.php');
 lf_load_inc('business-entity.php');
 // Icon system (inline SVGs).
 lf_load_inc('icons.php');
+lf_load_inc('buttons.php');
 lf_load_inc('legal-pages.php');
 lf_load_inc('duplicate-post.php');
 

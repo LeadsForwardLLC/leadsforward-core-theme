@@ -215,6 +215,7 @@ function lf_sections_registry(): array {
 		]],
 		['key' => 'section_cta_style', 'label' => __('Button fill', 'leadsforward-core'), 'type' => 'select', 'default' => 'solid', 'options' => lf_sections_button_style_options()],
 		['key' => 'section_cta_tone', 'label' => __('Button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'primary', 'options' => lf_sections_button_tone_options()],
+		['key' => 'section_cta_size', 'label' => __('Button size', 'leadsforward-core'), 'type' => 'select', 'default' => 'md', 'options' => lf_sections_button_size_options()],
 		['key' => 'image_id', 'label' => __('Image', 'leadsforward-core'), 'type' => 'image', 'default' => function_exists('lf_get_placeholder_image_id') ? lf_get_placeholder_image_id() : 0],
 		['key' => 'image_alt', 'label' => __('Image alt text (optional)', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 		['key' => 'image_position', 'label' => __('Image focal point', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
@@ -443,6 +444,8 @@ function lf_sections_registry(): array {
 				['key' => 'hero_cta_primary_tone', 'label' => __('Primary button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'primary', 'options' => lf_sections_button_tone_options()],
 				['key' => 'hero_cta_secondary_style', 'label' => __('Secondary button fill', 'leadsforward-core'), 'type' => 'select', 'default' => 'outline', 'options' => lf_sections_button_style_options()],
 				['key' => 'hero_cta_secondary_tone', 'label' => __('Secondary button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'primary', 'options' => lf_sections_button_tone_options()],
+				['key' => 'hero_cta_primary_size', 'label' => __('Primary button size', 'leadsforward-core'), 'type' => 'select', 'default' => 'lg', 'options' => lf_sections_button_size_options()],
+				['key' => 'hero_cta_secondary_size', 'label' => __('Secondary button size', 'leadsforward-core'), 'type' => 'select', 'default' => 'lg', 'options' => lf_sections_button_size_options()],
 			],
 			'render' => 'lf_sections_render_hero',
 		],
@@ -499,6 +502,7 @@ function lf_sections_registry(): array {
 				]],
 				['key' => 'benefits_cta_style', 'label' => __('CTA button fill', 'leadsforward-core'), 'type' => 'select', 'default' => 'solid', 'options' => lf_sections_button_style_options()],
 				['key' => 'benefits_cta_tone', 'label' => __('CTA button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'primary', 'options' => lf_sections_button_tone_options()],
+				['key' => 'benefits_cta_size', 'label' => __('CTA button size', 'leadsforward-core'), 'type' => 'select', 'default' => 'md', 'options' => lf_sections_button_size_options()],
 				['key' => 'benefits_grid_columns', 'label' => __('Card columns (desktop)', 'leadsforward-core'), 'type' => 'select', 'default' => '3', 'options' => [
 					'2' => __('2 columns', 'leadsforward-core'),
 					'3' => __('3 columns', 'leadsforward-core'),
@@ -546,12 +550,12 @@ function lf_sections_registry(): array {
 		'content_centered' => [
 			'label' => __('Centered Content', 'leadsforward-core'),
 			'contexts' => ['page'],
-			'fields' => [
+			'fields' => array_merge([
 				$bg_field,
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Clear next steps', 'leadsforward-core')],
 				['key' => 'optional_subheading', 'label' => __('Optional subheading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Everything you need before you reach out', 'leadsforward-core')],
 				['key' => 'supporting_text', 'label' => __('Supporting text', 'leadsforward-core'), 'type' => 'richtext', 'default' => __('Use this space to set expectations, outline what happens next, or answer quick pre-contact questions. Keep it concise and homeowner-friendly.', 'leadsforward-core')],
-			],
+			], lf_sections_optional_cta_field_defs()),
 			'render' => 'lf_sections_render_content_centered',
 		],
 		'rich_content' => [
@@ -612,6 +616,7 @@ function lf_sections_registry(): array {
 				['key' => 'cta_primary_url', 'label' => __('URL (if Link)', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
 				['key' => 'cta_primary_style', 'label' => __('Button fill', 'leadsforward-core'), 'type' => 'select', 'default' => 'solid', 'options' => lf_sections_button_style_options()],
 				['key' => 'cta_primary_tone', 'label' => __('Button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'primary', 'options' => lf_sections_button_tone_options()],
+				['key' => 'cta_primary_size', 'label' => __('Button size', 'leadsforward-core'), 'type' => 'select', 'default' => 'md', 'options' => lf_sections_button_size_options()],
 				['key' => 'section_header_align', 'label' => __('Alignment', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
 					'left' => __('Left', 'leadsforward-core'),
 					'center' => __('Center', 'leadsforward-core'),
@@ -623,7 +628,7 @@ function lf_sections_registry(): array {
 		'content' => [
 			'label' => __('Content', 'leadsforward-core'),
 			'contexts' => ['service', 'service_area', 'page', 'post'],
-			'fields' => [
+			'fields' => array_merge([
 				$bg_field,
 				['key' => 'content_layout', 'label' => __('Layout', 'leadsforward-core'), 'type' => 'select', 'default' => 'single', 'options' => [
 					'single' => __('Single column', 'leadsforward-core'),
@@ -635,34 +640,32 @@ function lf_sections_registry(): array {
 				['key' => 'section_body_secondary', 'label' => __('Expanded body', 'leadsforward-core'), 'type' => 'richtext', 'default' => ''],
 				['key' => 'section_body_left', 'label' => __('Left column body (two-column layout)', 'leadsforward-core'), 'type' => 'richtext', 'default' => ''],
 				['key' => 'section_body_right', 'label' => __('Right column body (two-column layout)', 'leadsforward-core'), 'type' => 'richtext', 'default' => ''],
-			],
+			], lf_sections_optional_cta_field_defs()),
 			'render' => 'lf_sections_render_content',
 		],
 		'process' => [
 			'label' => __('Process', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area', 'page'],
-			'fields' => [
+			'fields' => array_merge([
 				$bg_field,
 				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'process'],
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Our Process', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Simple, clear steps from first call to completion.', 'leadsforward-core')],
-				// Added for density expansion – vNext
 				['key' => 'section_intro_secondary', 'label' => __('Secondary intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				['key' => 'process_selected_ids', 'label' => __('Selected process step IDs (one per line). Leave empty to auto-load by Assigned services or Process context.', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 				['key' => 'process_steps', 'label' => __('Steps (one per line, fallback if IDs empty)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Tell us what you need' . "\n" . 'Get a fast, clear estimate' . "\n" . 'Schedule and complete the work', 'leadsforward-core')],
 				['key' => 'process_expectations', 'label' => __('Expectations text', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
-			],
+			], lf_sections_optional_cta_field_defs()),
 			'render' => 'lf_sections_render_process',
 		],
 		'faq_accordion' => [
 			'label' => __('FAQ', 'leadsforward-core'),
 			'contexts' => ['homepage', 'service', 'service_area', 'page'],
-			'fields' => [
+			'fields' => array_merge([
 				$bg_field,
 				['key' => 'section_intent', 'label' => __('Section intent', 'leadsforward-core'), 'type' => 'text', 'default' => 'objection_handling'],
 				['key' => 'section_heading', 'label' => __('Heading', 'leadsforward-core'), 'type' => 'text', 'default' => __('Frequently Asked Questions', 'leadsforward-core')],
 				['key' => 'section_intro', 'label' => __('Intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => __('Answers to common questions about scheduling and service.', 'leadsforward-core')],
-				// Added for density expansion – vNext
 				['key' => 'section_intro_secondary', 'label' => __('Secondary intro', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
 				['key' => 'faq_columns', 'label' => __('Columns (desktop)', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => [
 					'1' => __('1 column', 'leadsforward-core'),
@@ -671,9 +674,8 @@ function lf_sections_registry(): array {
 				['key' => 'faq_schema_enabled', 'label' => __('FAQ schema (SEO)', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
 				['key' => 'faq_max_items', 'label' => __('Max items', 'leadsforward-core'), 'type' => 'number', 'default' => '6'],
 				['key' => 'faq_selected_ids', 'label' => __('Selected FAQ IDs (one ID per line, optional)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
-				// Added for density expansion – vNext
 				['key' => 'faq_trust_block', 'label' => __('Trust / credibility block', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
-			],
+			], lf_sections_optional_cta_field_defs()),
 			'render' => 'lf_sections_render_faq',
 		],
 		'cta' => [
@@ -714,6 +716,8 @@ function lf_sections_registry(): array {
 				['key' => 'cta_primary_tone', 'label' => __('Primary button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'primary', 'options' => lf_sections_button_tone_options()],
 				['key' => 'cta_secondary_style', 'label' => __('Secondary button fill', 'leadsforward-core'), 'type' => 'select', 'default' => 'outline', 'options' => lf_sections_button_style_options()],
 				['key' => 'cta_secondary_tone', 'label' => __('Secondary button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'secondary', 'options' => lf_sections_button_tone_options()],
+				['key' => 'cta_primary_size', 'label' => __('Primary button size', 'leadsforward-core'), 'type' => 'select', 'default' => 'lg', 'options' => lf_sections_button_size_options()],
+				['key' => 'cta_secondary_size', 'label' => __('Secondary button size', 'leadsforward-core'), 'type' => 'select', 'default' => 'lg', 'options' => lf_sections_button_size_options()],
 			],
 			'render' => 'lf_sections_render_cta_band',
 		],
@@ -851,6 +855,7 @@ function lf_sections_registry(): array {
 				['key' => 'pricing_cta_url', 'label' => __('CTA URL (if Link)', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
 				['key' => 'pricing_cta_style', 'label' => __('CTA button fill', 'leadsforward-core'), 'type' => 'select', 'default' => 'solid', 'options' => lf_sections_button_style_options()],
 				['key' => 'pricing_cta_tone', 'label' => __('CTA button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'primary', 'options' => lf_sections_button_tone_options()],
+				['key' => 'pricing_cta_size', 'label' => __('CTA button size', 'leadsforward-core'), 'type' => 'select', 'default' => 'md', 'options' => lf_sections_button_size_options()],
 				['key' => 'section_header_align', 'label' => __('Header alignment', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
 					'left' => __('Left', 'leadsforward-core'),
 					'center' => __('Center', 'leadsforward-core'),
@@ -2405,6 +2410,52 @@ function lf_sections_button_tone_options(): array {
 	];
 }
 
+/**
+ * @return array<string, string>
+ */
+function lf_sections_button_size_options(): array {
+	return [
+		'lg' => __('Large', 'leadsforward-core'),
+		'md' => __('Medium', 'leadsforward-core'),
+		'sm' => __('Small', 'leadsforward-core'),
+	];
+}
+
+function lf_sections_sanitize_button_size(string $v): string {
+	return in_array($v, ['lg', 'md', 'sm'], true) ? $v : 'md';
+}
+
+function lf_sections_button_size_class(string $size_in, string $default = 'md'): string {
+	$size = $size_in === '' ? $default : lf_sections_sanitize_button_size($size_in);
+	return function_exists('lf_btn_size_class') ? lf_btn_size_class($size) : 'lf-btn--' . $size;
+}
+
+/**
+ * Optional CTA fields for content sections (toggle + label + style/size).
+ *
+ * @return list<array<string, mixed>>
+ */
+function lf_sections_optional_cta_field_defs(): array {
+	return [
+		['key' => 'cta_primary_enabled', 'label' => __('Show section button', 'leadsforward-core'), 'type' => 'select', 'default' => '0', 'options' => lf_sections_toggle_options()],
+		['key' => 'cta_primary_override', 'label' => __('Button label', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
+		['key' => 'cta_primary_action', 'label' => __('Button action', 'leadsforward-core'), 'type' => 'select', 'default' => 'quote', 'options' => [
+			'quote' => __('Open Quote Builder', 'leadsforward-core'),
+			'call'  => __('Call now', 'leadsforward-core'),
+			'link'  => __('Link', 'leadsforward-core'),
+		]],
+		['key' => 'cta_primary_url', 'label' => __('Button URL (if Link)', 'leadsforward-core'), 'type' => 'url', 'default' => ''],
+		['key' => 'section_cta_style', 'label' => __('Button fill', 'leadsforward-core'), 'type' => 'select', 'default' => 'solid', 'options' => lf_sections_button_style_options()],
+		['key' => 'section_cta_tone', 'label' => __('Button color', 'leadsforward-core'), 'type' => 'select', 'default' => 'primary', 'options' => lf_sections_button_tone_options()],
+		['key' => 'section_cta_size', 'label' => __('Button size', 'leadsforward-core'), 'type' => 'select', 'default' => 'md', 'options' => lf_sections_button_size_options()],
+		['key' => 'section_actions_align', 'label' => __('Button alignment', 'leadsforward-core'), 'type' => 'select', 'default' => 'center', 'options' => [
+			'left'   => __('Left', 'leadsforward-core'),
+			'center' => __('Center', 'leadsforward-core'),
+			'right'  => __('Right', 'leadsforward-core'),
+		]],
+	];
+}
+
 function lf_sections_sanitize_button_style(string $v): string {
 	return in_array($v, ['solid', 'outline'], true) ? $v : 'solid';
 }
@@ -2439,7 +2490,9 @@ function lf_sections_hero_cta_button_classes(array $section, string $slot, strin
 	$tone_in = array_key_exists($t_key, $section) ? (string) $section[ $t_key ] : '';
 	$default_style = $slot === 'secondary' ? 'outline' : 'solid';
 	list($style, $tone) = lf_sections_resolve_button_style_tone($style_in, $tone_in, $default_style, 'primary');
-	$out = 'lf-btn ' . lf_sections_button_visual_classes($style, $tone);
+	$size_key = $slot === 'secondary' ? 'hero_cta_secondary_size' : 'hero_cta_primary_size';
+	$size_in = array_key_exists($size_key, $section) ? (string) $section[ $size_key ] : '';
+	$out = 'lf-btn ' . lf_sections_button_visual_classes($style, $tone) . ' ' . lf_sections_button_size_class($size_in, 'lg');
 	$extra_class = trim(preg_replace('/[^a-z0-9 _-]/i', '', $extra_class));
 	if ($extra_class !== '') {
 		$out .= ' ' . $extra_class;
@@ -2482,7 +2535,9 @@ function lf_sections_cta_band_cta_button_classes(array $section, string $slot, s
 	$default_style = $slot === 'secondary' ? 'outline' : 'solid';
 	$default_tone = $slot === 'secondary' ? 'secondary' : 'primary';
 	list($style, $tone) = lf_sections_resolve_button_style_tone($style_in, $tone_in, $default_style, $default_tone);
-	$out = 'lf-btn ' . lf_sections_button_visual_classes($style, $tone);
+	$size_key = $slot === 'secondary' ? 'cta_secondary_size' : 'cta_primary_size';
+	$size_in = array_key_exists($size_key, $section) ? (string) $section[ $size_key ] : '';
+	$out = 'lf-btn ' . lf_sections_button_visual_classes($style, $tone) . ' ' . lf_sections_button_size_class($size_in, 'lg');
 	$extra_class = trim(preg_replace('/[^a-z0-9 _-]/i', '', $extra_class));
 	if ($extra_class !== '') {
 		$out .= ' ' . $extra_class;
@@ -2519,7 +2574,8 @@ function lf_sections_pricing_cta_button_classes(array $section, string $extra_cl
 	$style_in = array_key_exists('pricing_cta_style', $section) ? (string) $section['pricing_cta_style'] : '';
 	$tone_in = array_key_exists('pricing_cta_tone', $section) ? (string) $section['pricing_cta_tone'] : '';
 	list($style, $tone) = lf_sections_resolve_button_style_tone($style_in, $tone_in, 'solid', 'primary');
-	$out = 'lf-btn ' . lf_sections_button_visual_classes($style, $tone);
+	$size_in = (string) ($section['pricing_cta_size'] ?? '');
+	$out = 'lf-btn ' . lf_sections_button_visual_classes($style, $tone) . ' ' . lf_sections_button_size_class($size_in, 'md');
 	$extra_class = trim(preg_replace('/[^a-z0-9 _-]/i', '', $extra_class));
 	if ($extra_class !== '') {
 		$out .= ' ' . $extra_class;
@@ -2548,7 +2604,8 @@ function lf_sections_benefits_cta_button_classes(array $settings): string {
 	$style_in = (string) ($settings['benefits_cta_style'] ?? '');
 	$tone_in = (string) ($settings['benefits_cta_tone'] ?? '');
 	list($style, $tone) = lf_sections_resolve_button_style_tone($style_in, $tone_in, 'solid', 'primary');
-	return 'lf-btn ' . lf_sections_button_visual_classes($style, $tone);
+	$size_in = (string) ($settings['benefits_cta_size'] ?? '');
+	return 'lf-btn ' . lf_sections_button_visual_classes($style, $tone) . ' ' . lf_sections_button_size_class($size_in, 'md');
 }
 
 /**
@@ -2558,7 +2615,8 @@ function lf_sections_media_cta_button_classes(array $settings): string {
 	$style_in = (string) ($settings['section_cta_style'] ?? '');
 	$tone_in = (string) ($settings['section_cta_tone'] ?? '');
 	list($style, $tone) = lf_sections_resolve_button_style_tone($style_in, $tone_in, 'solid', 'primary');
-	return 'lf-btn ' . lf_sections_button_visual_classes($style, $tone);
+	$size_in = (string) ($settings['section_cta_size'] ?? '');
+	return 'lf-btn ' . lf_sections_button_visual_classes($style, $tone) . ' ' . lf_sections_button_size_class($size_in, 'md');
 }
 
 function lf_sections_row_uses_media_content_layout(string $section_id): bool {
@@ -3454,6 +3512,7 @@ function lf_sections_render_content(string $context, array $settings, \WP_Post $
 		<?php endif; ?>
 	</div>
 	<?php
+	lf_sections_render_optional_cta($settings, 'content');
 	lf_sections_render_shell_close();
 }
 
@@ -3465,7 +3524,52 @@ function lf_sections_render_content_centered(string $context, array $settings, \
 	if ($body !== '') {
 		echo '<div class="lf-content-centered__body">' . wpautop(wp_kses_post((string) $body)) . '</div>';
 	}
+	lf_sections_render_optional_cta($settings, 'content-centered');
 	lf_sections_render_shell_close();
+}
+
+/**
+ * Optional single-button row for sections that support cta_primary_enabled.
+ *
+ * @param array<string, mixed> $settings
+ */
+function lf_sections_render_optional_cta(array $settings, string $source = 'section'): void {
+	if ((string) ($settings['cta_primary_enabled'] ?? '0') !== '1') {
+		return;
+	}
+	$cta_section = [
+		'cta_primary_override' => $settings['cta_primary_override'] ?? '',
+		'cta_primary_action'   => $settings['cta_primary_action'] ?? 'quote',
+		'cta_primary_url'      => $settings['cta_primary_url'] ?? '',
+	];
+	$resolved = function_exists('lf_resolve_cta')
+		? lf_resolve_cta(['homepage' => true], $cta_section, [])
+		: [];
+	$label = trim((string) ($resolved['primary_text'] ?? $cta_section['cta_primary_override'] ?? ''));
+	if ($label === '') {
+		return;
+	}
+	$action = (string) ($resolved['primary_action'] ?? $cta_section['cta_primary_action'] ?? 'quote');
+	$url = trim((string) ($resolved['primary_url'] ?? $cta_section['cta_primary_url'] ?? ''));
+	$phone = function_exists('lf_get_cta_phone') ? lf_get_cta_phone() : '';
+	$align_raw = (string) ($settings['section_actions_align'] ?? 'center');
+	$align = in_array($align_raw, ['left', 'center', 'right'], true) ? $align_raw : 'center';
+	$btn_class = lf_sections_media_cta_button_classes($settings);
+	list($st, $tn) = lf_sections_resolve_button_style_tone(
+		(string) ($settings['section_cta_style'] ?? ''),
+		(string) ($settings['section_cta_tone'] ?? ''),
+		'solid',
+		'primary'
+	);
+	echo '<div class="lf-section__actions lf-section__actions--align-' . esc_attr($align) . '">';
+	if ($action === 'call' && $phone !== '') {
+		echo '<a class="' . esc_attr($btn_class) . '" href="tel:' . esc_attr($phone) . '" data-lf-quote-source="' . esc_attr($source) . '" data-lf-cta-slot="primary" data-lf-btn-style="' . esc_attr($st) . '" data-lf-btn-tone="' . esc_attr($tn) . '">' . esc_html($label) . '</a>';
+	} elseif ($action === 'link' && $url !== '') {
+		echo '<a class="' . esc_attr($btn_class) . '" href="' . esc_url($url) . '" data-lf-cta-slot="primary" data-lf-btn-style="' . esc_attr($st) . '" data-lf-btn-tone="' . esc_attr($tn) . '">' . esc_html($label) . '</a>';
+	} else {
+		echo '<button type="button" class="' . esc_attr($btn_class) . '" data-lf-quote-trigger="1" data-lf-quote-source="' . esc_attr($source) . '" data-lf-cta-slot="primary" data-lf-btn-style="' . esc_attr($st) . '" data-lf-btn-tone="' . esc_attr($tn) . '">' . esc_html($label) . '</button>';
+	}
+	echo '</div>';
 }
 
 function lf_sections_render_rich_content(string $context, array $settings, \WP_Post $post): void {
@@ -3644,6 +3748,7 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 		<p class="lf-process__expectations"><?php echo esc_html($expectations_text); ?></p>
 	<?php endif; ?>
 	<?php
+	lf_sections_render_optional_cta($settings, 'process');
 	lf_sections_render_shell_close();
 }
 
@@ -3679,6 +3784,7 @@ function lf_sections_render_faq(string $context, array $settings, \WP_Post $post
 			'context'    => ['homepage' => ($context === 'homepage'), 'section' => $section],
 		];
 		lf_render_block_template('faq-accordion', $block, false, $block['context']);
+		lf_sections_render_optional_cta($settings, 'faq');
 	}
 }
 
