@@ -80,7 +80,18 @@ function lf_icon(string $name, array $args = []): string {
 		$wrapper_attrs .= ' style="' . esc_attr($style) . '"';
 	}
 
-	$svg = preg_replace('/<svg\b[^>]*>/i', '<svg focusable="false" aria-hidden="true">', $svg_raw, 1);
+	$view_box = '0 0 24 24';
+	if (preg_match('/\bviewBox=["\']([^"\']+)["\']/i', $svg_raw, $view_box_match)) {
+		$candidate = trim((string) preg_replace('/[^0-9.\s]/', '', $view_box_match[1]));
+		if ($candidate !== '') {
+			$view_box = $candidate;
+		}
+	}
+	$svg_open = sprintf(
+		'<svg focusable="false" aria-hidden="true" viewBox="%s" preserveAspectRatio="xMidYMid meet">',
+		esc_attr($view_box)
+	);
+	$svg = preg_replace('/<svg\b[^>]*>/i', $svg_open, $svg_raw, 1);
 	if (!is_string($svg) || $svg === '') {
 		return '';
 	}
@@ -96,8 +107,13 @@ function lf_icon(string $name, array $args = []): string {
  * Remove Tabler's invisible full-canvas path so stroke icons center in circles/tiles.
  */
 function lf_icon_clean_tabler_svg(string $svg_raw): string {
+	$svg_raw = (string) preg_replace(
+		'/<path[^>]*\bd=["\']M0 0h24v24H0z["\'][^>]*\/?>\s*/i',
+		'',
+		$svg_raw
+	);
 	return (string) preg_replace(
-		'/<path[^>]*\bstroke="none"[^>]*\bd="M0 0h24v24H0z"[^>]*\/?>\s*/i',
+		'/<path[^>]*\bstroke=["\']none["\'][^>]*\bd=["\']M0 0h24v24H0z["\'][^>]*\/?>\s*/i',
 		'',
 		$svg_raw
 	);
@@ -111,7 +127,7 @@ function lf_icon_clean_tabler_svg(string $svg_raw): string {
 function lf_icon_ring(string $name, array $args = []): string {
 	$icon_html = lf_icon($name, ['class' => 'lf-icon-ring__icon']);
 	if ($icon_html === '') {
-		$icon_html = '<span class="lf-icon lf-icon-ring__icon" aria-hidden="true"><svg focusable="false" aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+		$icon_html = '<span class="lf-icon lf-icon-ring__icon" aria-hidden="true"><svg focusable="false" aria-hidden="true" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
 	}
 	$size = isset($args['size']) && in_array($args['size'], ['sm', 'md', 'lg'], true) ? $args['size'] : 'md';
 	$classes = 'lf-icon-ring lf-icon-ring--' . $size;
