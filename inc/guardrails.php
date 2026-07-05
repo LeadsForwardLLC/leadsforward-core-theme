@@ -277,6 +277,28 @@ function lf_maybe_migrate_hero_default_image_v194(): void {
 add_action('init', 'lf_maybe_migrate_hero_default_image_v194', 22);
 
 /**
+ * One-time: force homepage hero back to bundled default (v0.1.195).
+ */
+function lf_maybe_migrate_hero_default_image_v195(): void {
+	if (get_option('lf_hero_default_image_v195', '0') === '1') {
+		return;
+	}
+	delete_option('lf_section_default_image_hero');
+
+	if (defined('LF_HOMEPAGE_CONFIG_OPTION') && function_exists('lf_get_homepage_section_config')) {
+		$config = lf_get_homepage_section_config();
+		if (is_array($config['hero'] ?? null)) {
+			$config['hero']['hero_background_image_id'] = 0;
+			$config['hero']['hero_background_mode'] = 'image';
+			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		}
+	}
+
+	update_option('lf_hero_default_image_v195', '1');
+}
+add_action('init', 'lf_maybe_migrate_hero_default_image_v195', 23);
+
+/**
  * Hide the main editor for core pages (builder-managed).
  */
 function lf_pb_config_has_section(int $post_id, string $type): bool {

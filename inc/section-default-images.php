@@ -52,7 +52,8 @@ function lf_get_section_default_image_url(string $context = 'general'): string {
 
 	return (string) (defined('LF_THEME_URI') ? LF_THEME_URI : get_template_directory_uri())
 		. LF_SECTION_DEFAULT_IMAGES_DIR
-		. rawurlencode($file);
+		. rawurlencode($file)
+		. (defined('LF_THEME_VERSION') ? '?ver=' . rawurlencode((string) LF_THEME_VERSION) : '');
 }
 
 /**
