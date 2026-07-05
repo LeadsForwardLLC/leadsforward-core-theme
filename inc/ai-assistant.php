@@ -5984,11 +5984,12 @@ function lf_ai_assistant_widget_js(): string {
 						chip.className = "lf-hero-conversion__badge";
 						chip.setAttribute("data-lf-chip-icon", "check");
 						var iconWrap = document.createElement("span");
-						iconWrap.className = "lf-hero-conversion__badge-icon";
+						iconWrap.className = "lf-icon-ring lf-icon-ring--md lf-hero-conversion__badge-icon";
 						iconWrap.setAttribute("aria-hidden", "true");
 						var graphic = document.createElement("span");
-						graphic.className = "lf-hero-conversion__badge-icon-graphic";
-						graphic.innerHTML = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\"><path d=\"M20 6L9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>";
+						graphic.className = "lf-icon lf-icon-ring__icon";
+						graphic.setAttribute("aria-hidden", "true");
+						graphic.innerHTML = "<svg focusable=\"false\" aria-hidden=\"true\" viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6L9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>";
 						iconWrap.appendChild(graphic);
 						chip.appendChild(iconWrap);
 						var textNode = document.createElement("span");

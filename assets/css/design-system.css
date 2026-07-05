@@ -164,12 +164,27 @@
 	--lf-fw-bold: var(--wp--preset--font-weight--bold, 700);
 
 	/* 4) BUTTON HIERARCHY — primary dominant, secondary clear */
-	--lf-btn-pad-y: 0.9rem;
-	--lf-btn-pad-x: 2rem;
+	--lf-btn-text-transform: uppercase;
+	--lf-btn-letter-spacing: 0.04em;
+	--lf-btn-pad-y-lg: 0.9rem;
+	--lf-btn-pad-x-lg: 2rem;
+	--lf-btn-min-height-lg: 3.25rem;
+	--lf-btn-font-size-lg: var(--lf-fs-body);
+	--lf-btn-pad-y-md: 0.72rem;
+	--lf-btn-pad-x-md: 1.35rem;
+	--lf-btn-min-height-md: 2.875rem;
+	--lf-btn-font-size-md: calc(var(--lf-fs-body) - 0.0625rem);
+	--lf-btn-pad-y-sm: 0.55rem;
+	--lf-btn-pad-x-sm: 1rem;
+	--lf-btn-min-height-sm: 2.5rem;
+	--lf-btn-font-size-sm: 0.8125rem;
+	/* Legacy aliases (large = default) */
+	--lf-btn-pad-y: var(--lf-btn-pad-y-lg);
+	--lf-btn-pad-x: var(--lf-btn-pad-x-lg);
 	--lf-btn-pad-x-lg: 2.25rem;
 	--lf-btn-primary-shadow: none;
 	--lf-btn-primary-shadow-hover: none;
-	--lf-btn-min-height: 3.25rem;
+	--lf-btn-min-height: var(--lf-btn-min-height-lg);
 	--lf-block-gap: var(--wp--preset--spacing--70, 2rem);
 	--lf-homepage-section-gap: var(--lf-space-section);
 	--lf-gap-30: var(--wp--preset--spacing--30, 0.75rem);
@@ -196,10 +211,18 @@
 
 @media (max-width: 900px) {
 	:root {
-		--lf-btn-pad-y: 0.72rem;
-		--lf-btn-pad-x: 1.15rem;
-		--lf-btn-pad-x-lg: 1.35rem;
-		--lf-btn-min-height: 2.75rem;
+		--lf-btn-pad-y-lg: 0.72rem;
+		--lf-btn-pad-x-lg: 1.15rem;
+		--lf-btn-min-height-lg: 2.75rem;
+		--lf-btn-pad-y-md: 0.62rem;
+		--lf-btn-pad-x-md: 1rem;
+		--lf-btn-min-height-md: 2.5rem;
+		--lf-btn-pad-y-sm: 0.5rem;
+		--lf-btn-pad-x-sm: 0.85rem;
+		--lf-btn-min-height-sm: 2.35rem;
+		--lf-btn-pad-y: var(--lf-btn-pad-y-lg);
+		--lf-btn-pad-x: var(--lf-btn-pad-x-lg);
+		--lf-btn-min-height: var(--lf-btn-min-height-lg);
 		--lf-fs-body: 0.9375rem;
 		--lf-hero-cta-primary-size: 0.9375rem;
 		--lf-hero-cta-primary-pad-y: 0.75rem;
@@ -289,17 +312,42 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	padding: var(--lf-btn-pad-y) var(--lf-btn-pad-x);
-	min-height: var(--lf-btn-min-height);
+	padding: var(--lf-btn-pad-y-lg) var(--lf-btn-pad-x-lg);
+	min-height: var(--lf-btn-min-height-lg);
 	box-sizing: border-box;
 	border-radius: var(--lf-button-radius);
 	font-family: var(--lf-font-system);
-	font-size: var(--lf-fs-body);
+	font-size: var(--lf-btn-font-size-lg);
 	font-weight: var(--lf-fw-semibold);
 	line-height: 1.25;
 	text-decoration: none;
+	text-transform: var(--lf-btn-text-transform, uppercase);
+	letter-spacing: var(--lf-btn-letter-spacing, 0.04em);
 	border: none;
 	cursor: pointer;
+}
+
+.lf-btn--lg {
+	padding: var(--lf-btn-pad-y-lg) var(--lf-btn-pad-x-lg);
+	min-height: var(--lf-btn-min-height-lg);
+	font-size: var(--lf-btn-font-size-lg);
+}
+
+.lf-btn--md {
+	padding: var(--lf-btn-pad-y-md) var(--lf-btn-pad-x-md);
+	min-height: var(--lf-btn-min-height-md);
+	font-size: var(--lf-btn-font-size-md);
+}
+
+.lf-btn--sm {
+	padding: var(--lf-btn-pad-y-sm) var(--lf-btn-pad-x-sm);
+	min-height: var(--lf-btn-min-height-sm);
+	font-size: var(--lf-btn-font-size-sm);
+}
+
+body.lf-btn-text-normal {
+	--lf-btn-text-transform: none;
+	--lf-btn-letter-spacing: normal;
 }
 
 .lf-btn:focus-visible {
@@ -596,14 +644,24 @@ button:focus-visible,
 }
 
 .lf-icon {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
+	display: grid;
+	place-items: center;
 	width: 1em;
 	height: 1em;
-	overflow: visible;
+	line-height: 0;
+	flex-shrink: 0;
+	overflow: hidden;
 	vertical-align: middle;
+	color: inherit;
+}
+
+.lf-icon svg {
+	display: block;
+	width: 72%;
+	height: 72%;
+	max-width: 72%;
+	max-height: 72%;
+	overflow: visible;
 	stroke: currentColor;
 	fill: none;
 	stroke-width: var(--lf-icon-stroke, 2);
@@ -611,27 +669,56 @@ button:focus-visible,
 	stroke-linejoin: round;
 }
 
-.lf-icon svg {
-	display: block;
+.lf-icon--fit {
+	display: grid;
+	place-items: center;
+	line-height: 0;
+	overflow: hidden;
+}
+
+/* Circular icon ring — hero trust chips, etc. */
+.lf-icon-ring {
+	--lf-icon-ring-size: 2rem;
+	--lf-icon-ring-color: var(--lf-accent, #fbbf24);
+	display: grid;
+	place-items: center;
+	width: var(--lf-icon-ring-size);
+	height: var(--lf-icon-ring-size);
+	border-radius: 50%;
+	border: 1.5px solid var(--lf-icon-ring-color);
+	color: var(--lf-icon-ring-color);
+	flex-shrink: 0;
+	line-height: 0;
+	box-sizing: border-box;
+	background: transparent;
+	overflow: hidden;
+}
+
+.lf-icon-ring--sm {
+	--lf-icon-ring-size: 1.75rem;
+}
+
+.lf-icon-ring--md {
+	--lf-icon-ring-size: 2rem;
+}
+
+.lf-icon-ring--lg {
+	--lf-icon-ring-size: 2.35rem;
+}
+
+.lf-icon-ring .lf-icon,
+.lf-icon-ring__icon {
+	font-size: calc(var(--lf-icon-ring-size) * 0.46);
+	width: calc(var(--lf-icon-ring-size) * 0.46);
+	height: calc(var(--lf-icon-ring-size) * 0.46);
+}
+
+.lf-icon-ring .lf-icon svg {
 	width: 100%;
 	height: 100%;
 	max-width: 100%;
 	max-height: 100%;
-	overflow: visible;
-}
-
-.lf-icon--fit {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	line-height: 0;
-	overflow: visible;
-}
-
-.lf-icon--fit svg,
-svg.lf-icon--fit {
-	transform: scale(0.78);
-	transform-origin: 50% 50%;
+	transform: none;
 }
 
 /* Legacy markup: classes on the root svg element. */
@@ -813,20 +900,26 @@ svg.lf-icon {
 
 .lf-stats-bar__icon-wrap {
 	flex-shrink: 0;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
+	display: grid;
+	place-items: center;
 	width: 2.35rem;
 	height: 2.35rem;
-	overflow: visible;
+	overflow: hidden;
+	line-height: 0;
 }
 
 .lf-stats-bar__icon {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
+	display: grid;
+	place-items: center;
 	color: var(--lf-primary);
-	overflow: visible;
+	overflow: hidden;
+	line-height: 0;
+}
+
+.lf-stats-bar__icon .lf-icon {
+	font-size: 1.5rem;
+	width: 1.5rem;
+	height: 1.5rem;
 }
 
 .lf-stats-bar__icon-svg {
@@ -1012,31 +1105,32 @@ svg.lf-icon {
 }
 
 .lf-benefits__icon {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 56px;
-	height: 56px;
-	border-radius: 18px;
+	display: grid;
+	place-items: center;
+	width: 3.5rem;
+	height: 3.5rem;
+	border-radius: 1.125rem;
 	background: rgba(59, 130, 246, 0.12);
 	color: var(--lf-primary);
 	box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.22);
 	margin-top: 0.35rem;
-	overflow: visible;
+	overflow: hidden;
+	line-height: 0;
 }
 
 .lf-benefits__icon .lf-icon {
-	width: 26px;
-	height: 26px;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
+	font-size: 1.5rem;
+	width: 1.5rem;
+	height: 1.5rem;
 }
 
 .lf-benefits__icon .lf-icon svg,
 .lf-benefits__icon svg.lf-icon {
 	width: 100%;
 	height: 100%;
+	max-width: 100%;
+	max-height: 100%;
+	transform: none;
 }
 
 .lf-benefits__icon--empty {
@@ -1087,6 +1181,25 @@ svg.lf-icon {
 }
 
 .lf-benefits__actions--align-right {
+	justify-content: flex-end;
+}
+
+.lf-section__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	margin-top: 1.25rem;
+}
+
+.lf-section__actions--align-left {
+	justify-content: flex-start;
+}
+
+.lf-section__actions--align-center {
+	justify-content: center;
+}
+
+.lf-section__actions--align-right {
 	justify-content: flex-end;
 }
 
@@ -2492,12 +2605,9 @@ article a:not(.lf-btn):hover {
 	gap: 0.75rem;
 }
 
-.site-header__cta {
-	padding: calc(var(--lf-btn-pad-y) - 2px) calc(var(--lf-btn-pad-x) - 6px);
-	min-height: calc(var(--lf-btn-min-height) - 6px);
-	border-radius: var(--lf-button-radius);
-	box-shadow: none;
-	font-size: calc(var(--lf-fs-body) - 1px);
+.site-header__cta.lf-btn--sm,
+.site-header__mobile-quote.lf-btn--sm {
+	white-space: nowrap;
 }
 
 .site-header__cta.lf-btn--primary:hover {
@@ -5139,54 +5249,11 @@ article a:not(.lf-btn):hover {
 	justify-content: flex-start;
 }
 
-.lf-hero-conversion__badge-icon {
+.lf-hero-conversion__badge .lf-icon-ring.lf-hero-conversion__badge-icon,
+.lf-hero-conversion__badge-icon.lf-icon-ring {
 	flex-shrink: 0;
-	width: 2rem;
-	height: 2rem;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	padding: 0;
-	box-sizing: border-box;
-	background: transparent;
-	border: 1.5px solid var(--lf-accent, #fbbf24);
+	--lf-icon-ring-color: var(--lf-accent, #fbbf24);
 	color: var(--lf-accent, #fbbf24);
-	overflow: visible;
-	line-height: 0;
-}
-
-.lf-hero-conversion__badge-icon-graphic {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 1rem;
-	height: 1rem;
-	flex-shrink: 0;
-	line-height: 0;
-}
-
-.lf-hero-conversion__badge-icon-graphic .lf-icon,
-.lf-hero-conversion__badge-icon-graphic .lf-hero-conversion__badge-icon-svg,
-.lf-hero-conversion__badge-icon-graphic svg {
-	width: 1rem !important;
-	height: 1rem !important;
-	display: flex !important;
-	align-items: center;
-	justify-content: center;
-	margin: 0;
-}
-
-.lf-hero-conversion__badge-icon-graphic .lf-icon svg {
-	width: 100% !important;
-	height: 100% !important;
-	transform: scale(0.72);
-	transform-origin: 50% 50%;
-}
-
-.lf-hero-conversion__badge-icon-graphic svg.lf-icon--fit {
-	transform: scale(0.72);
-	transform-origin: 50% 50%;
 }
 
 .lf-hero-conversion__badge-text {

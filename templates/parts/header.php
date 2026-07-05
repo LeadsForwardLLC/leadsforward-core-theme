@@ -88,9 +88,9 @@ if ($show_topbar) {
 			<?php endif; ?>
 			<?php if ($show_cta) : ?>
 				<?php if ($cta_url !== '') : ?>
-					<a class="site-header__mobile-quote lf-btn lf-btn--primary" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($header_quote_label); ?></a>
+					<a class="site-header__mobile-quote lf-btn lf-btn--primary lf-btn--sm" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($header_quote_label); ?></a>
 				<?php else : ?>
-					<button type="button" class="site-header__mobile-quote lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="header-mobile"><?php echo esc_html($header_quote_label); ?></button>
+					<button type="button" class="site-header__mobile-quote lf-btn lf-btn--primary lf-btn--sm" data-lf-quote-trigger="1" data-lf-quote-source="header-mobile"><?php echo esc_html($header_quote_label); ?></button>
 				<?php endif; ?>
 			<?php endif; ?>
 		</div>
@@ -128,9 +128,9 @@ if ($show_topbar) {
 					$label = $cta_label !== '' ? $cta_label : ($cta_text ?: __('Free Inspection', 'leadsforward-core'));
 					?>
 					<?php if ($cta_url !== '') : ?>
-						<a class="site-header__cta lf-btn lf-btn--primary" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($label); ?></a>
+						<a class="site-header__cta lf-btn lf-btn--primary lf-btn--sm" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($label); ?></a>
 					<?php else : ?>
-						<button type="button" class="site-header__cta lf-btn lf-btn--primary" data-lf-quote-trigger="1" data-lf-quote-source="header"><?php echo esc_html($label); ?></button>
+						<button type="button" class="site-header__cta lf-btn lf-btn--primary lf-btn--sm" data-lf-quote-trigger="1" data-lf-quote-source="header"><?php echo esc_html($label); ?></button>
 					<?php endif; ?>
 					<?php endif; ?>
 				</div>
