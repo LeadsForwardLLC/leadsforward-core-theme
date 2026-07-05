@@ -2308,6 +2308,15 @@ function lf_sections_relative_luminance_from_hex(string $hex): ?float {
  * @param array<string, mixed> $section Hero block context section settings.
  */
 function lf_sections_hero_background_is_dark(array $section): bool {
+	$variant = function_exists('lf_sections_normalize_hero_variant')
+		? lf_sections_normalize_hero_variant((string) ($section['variant'] ?? 'conversion'), !empty($section['is_homepage']))
+		: (in_array((string) ($section['variant'] ?? ''), ['page', 'internal'], true) ? 'page' : 'conversion');
+	if ($variant === 'conversion') {
+		$mode = sanitize_key((string) ($section['hero_background_mode'] ?? 'image'));
+		if ($mode === 'image' || $mode === 'video') {
+			return true;
+		}
+	}
 	$custom = lf_sections_sanitize_custom_background((string) ($section['section_background_custom'] ?? ''));
 	if ($custom !== '') {
 		$hex = lf_sections_css_color_to_hex($custom);
@@ -2724,10 +2733,9 @@ function lf_sections_render_trust_bar(string $context, array $settings, \WP_Post
 	if ($count < 1) {
 		return;
 	}
-	$title = trim((string) ($settings['trust_heading'] ?? ''));
-	$bg = (string) ($settings['section_background'] ?? 'soft');
-	$shell_extra = 'lf-stats-bar-section';
-	lf_sections_render_shell_open('trust-bar', $title, '', $bg, $settings, $shell_extra);
+	$bg = 'soft';
+	$shell_extra = 'lf-stats-bar-section lf-stats-bar-section--no-heading';
+	lf_sections_render_shell_open('trust-bar', '', '', $bg, $settings, $shell_extra);
 	$grid_style = '--lf-stats-cols: ' . (int) $count . ';';
 	?>
 	<div class="lf-stats-bar" style="<?php echo esc_attr($grid_style); ?>">
