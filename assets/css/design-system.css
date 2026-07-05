@@ -2702,8 +2702,27 @@ article a:not(.lf-btn):hover {
 	}
 	.site-header__logo {
 		display: flex;
-		flex: 1 1 auto;
+		flex: 0 1 auto;
+		justify-content: center;
+		align-items: center;
 		min-width: 0;
+		margin-left: auto;
+		margin-right: auto;
+		text-align: center;
+	}
+	.site-header__logo-text {
+		text-align: center;
+	}
+	.site-header__logo-img {
+		height: 56px;
+		margin-left: auto;
+		margin-right: auto;
+	}
+	.site-header__inner {
+		flex-wrap: nowrap;
+		justify-content: center;
+		gap: 0.5rem;
+		padding: 0.55rem 0.75rem;
 	}
 	.site-header__mobile-bar {
 		display: grid;
@@ -2747,11 +2766,6 @@ article a:not(.lf-btn):hover {
 	.site-header__toggle--mobile {
 		display: inline-flex;
 		flex: 0 0 auto;
-	}
-	.site-header__inner {
-		flex-wrap: nowrap;
-		gap: 0.5rem;
-		padding: 0.55rem 0.75rem;
 	}
 	.site-header__toggle {
 		display: inline-flex;

@@ -88,6 +88,28 @@ function lf_acf_add_options_global_fields(): void {
 				],
 			],
 			[
+				'key'   => 'field_lf_header_topbar_enabled',
+				'label' => __('Show promo top bar', 'leadsforward-core'),
+				'name'  => 'lf_header_topbar_enabled',
+				'type'  => 'true_false',
+				'ui'    => 1,
+				'default_value' => 0,
+			],
+			[
+				'key'   => 'field_lf_header_topbar_text',
+				'label' => __('Promo top bar text', 'leadsforward-core'),
+				'name'  => 'lf_header_topbar_text',
+				'type'  => 'text',
+				'instructions' => __('Thin announcement strip above the main header (e.g. “Free estimates · Same-day response”).', 'leadsforward-core'),
+			],
+			[
+				'key'   => 'field_lf_header_topbar_color',
+				'label' => __('Promo top bar background', 'leadsforward-core'),
+				'name'  => 'lf_header_topbar_color',
+				'type'  => 'text',
+				'instructions' => __('Optional hex or rgba(), e.g. #0f172a', 'leadsforward-core'),
+			],
+			[
 				'key'   => 'field_lf_menu_autobuild_include_services',
 				'label' => __('Menu: include these Services', 'leadsforward-core'),
 				'name'  => 'lf_menu_autobuild_include_services',
