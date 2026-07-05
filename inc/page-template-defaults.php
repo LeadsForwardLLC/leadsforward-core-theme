@@ -53,6 +53,22 @@ function lf_page_template_faq_section_defaults(string $page_slug): array {
 			'section_heading' => __('Our FAQs', 'leadsforward-core'),
 			'section_intro' => __('Browse answers to common questions about our team, services, and scheduling.', 'leadsforward-core'),
 		],
+		'reviews' => [
+			'section_heading' => __('Review FAQs', 'leadsforward-core'),
+			'section_intro' => __('Common questions about our reviews, ratings, and what customers can expect.', 'leadsforward-core'),
+		],
+		'contact' => [
+			'section_heading' => __('Contact FAQs', 'leadsforward-core'),
+			'section_intro' => __('Quick answers about reaching our team, response times, and scheduling.', 'leadsforward-core'),
+		],
+		'blog' => [
+			'section_heading' => __('Resource FAQs', 'leadsforward-core'),
+			'section_intro' => __('Answers about our articles, updates, and how to get help with your project.', 'leadsforward-core'),
+		],
+		'thank-you' => [
+			'section_heading' => __('What happens next', 'leadsforward-core'),
+			'section_intro' => __('Answers about follow-up timing, inspections, and what to prepare.', 'leadsforward-core'),
+		],
 		'about-us' => [
 			'section_heading' => __('Frequently Asked Questions', 'leadsforward-core'),
 			'section_intro' => __('Quick answers about our company, process, and what to expect.', 'leadsforward-core'),
@@ -468,6 +484,10 @@ function lf_page_template_enhanced_blueprints(array $vars, array $niche): array 
 					'trust_heading' => __('What customers are saying', 'leadsforward-core'),
 					'trust_max_items' => 6,
 				],
+				'faq_accordion' => array_merge(
+					lf_page_template_faq_section_defaults('reviews'),
+					['faq_max_items' => 6]
+				),
 				'cta' => [
 					'cta_headline' => $is_foundation
 						? __('Ready to join our happy customers?', 'leadsforward-core')
@@ -495,6 +515,10 @@ function lf_page_template_enhanced_blueprints(array $vars, array $niche): array 
 					'section_heading' => __('Get in touch', 'leadsforward-core'),
 					'section_intro' => __('Share a few details and we will reply with next steps.', 'leadsforward-core'),
 				],
+				'faq_accordion' => array_merge(
+					lf_page_template_faq_section_defaults('contact'),
+					['faq_max_items' => 6]
+				),
 				'cta' => [
 					'cta_headline' => $is_foundation
 						? __('Get a free foundation inspection', 'leadsforward-core')

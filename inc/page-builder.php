@@ -544,7 +544,7 @@ function lf_pb_cleanup_templates_once(): void {
 	if (!is_admin() || !current_user_can('edit_theme_options')) {
 		return;
 	}
-	if (get_option('lf_pb_template_cleanup_v4', '0') === '1') {
+	if (get_option('lf_pb_template_cleanup_v5', '0') === '1') {
 		return;
 	}
 	if (function_exists('lf_homepage_cleanup_sections_once')) {
@@ -557,14 +557,14 @@ function lf_pb_cleanup_templates_once(): void {
 		'why-choose-us' => ['hero', 'benefits', 'content_image', 'image_content', 'faq_accordion', 'cta'],
 		'services' => ['hero', 'service_intro', 'content_image', 'faq_accordion', 'cta'],
 		'service-areas' => ['hero', 'service_areas', 'faq_accordion', 'cta'],
-		'reviews' => ['hero', 'trust_reviews', 'cta'],
-		'blog' => ['hero', 'blog_posts', 'cta'],
+		'reviews' => ['hero', 'trust_reviews', 'faq_accordion', 'cta'],
+		'blog' => ['hero', 'blog_posts', 'faq_accordion', 'cta'],
 		'faq' => ['hero', 'faq_accordion', 'cta'],
-		'contact' => ['hero', 'map_nap', 'cta'],
+		'contact' => ['hero', 'map_nap', 'faq_accordion', 'cta'],
 		'sitemap' => ['hero', 'sitemap_links'],
 		'privacy-policy' => ['hero', 'content'],
 		'terms-of-service' => ['hero', 'content'],
-		'thank-you' => ['hero', 'content'],
+		'thank-you' => ['hero', 'content', 'faq_accordion'],
 	];
 
 	$page_ids = get_posts([
@@ -630,8 +630,8 @@ function lf_pb_cleanup_templates_once(): void {
 		}
 	}
 
-	update_option('lf_pb_template_cleanup_v4', '1', true);
-	update_option('lf_pb_template_cleanup_v4_count', (int) $updated, false);
+	update_option('lf_pb_template_cleanup_v5', '1', true);
+	update_option('lf_pb_template_cleanup_v5_count', (int) $updated, false);
 }
 
 function lf_pb_cleanup_post_config(int $post_id, string $context, array $desired_types): bool {

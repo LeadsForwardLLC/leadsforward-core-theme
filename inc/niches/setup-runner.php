@@ -991,7 +991,7 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'reviews' => [
-			'order' => ['hero', 'trust_reviews', 'cta'],
+			'order' => ['hero', 'trust_reviews', 'faq_accordion', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Customer reviews',
@@ -1001,6 +1001,12 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'trust_heading' => 'What customers are saying',
 					'trust_max_items' => 6,
 				],
+				'faq_accordion' => array_merge(
+					function_exists('lf_page_template_faq_section_defaults')
+						? lf_page_template_faq_section_defaults('reviews')
+						: ['section_heading' => 'Review FAQs', 'section_intro' => ''],
+					['faq_max_items' => 6]
+				),
 				'cta' => [
 					'cta_headline' => $cta_headline,
 					'cta_subheadline' => 'Join our list of happy customers.',
@@ -1012,7 +1018,7 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'blog' => [
-			'order' => ['hero', 'blog_posts', 'cta'],
+			'order' => ['hero', 'blog_posts', 'faq_accordion', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Home service tips & updates',
@@ -1023,6 +1029,12 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'section_intro' => 'Helpful resources from our team.',
 					'posts_per_page' => 6,
 				],
+				'faq_accordion' => array_merge(
+					function_exists('lf_page_template_faq_section_defaults')
+						? lf_page_template_faq_section_defaults('blog')
+						: ['section_heading' => 'Resource FAQs', 'section_intro' => ''],
+					['faq_max_items' => 6]
+				),
 				'cta' => [
 					'cta_headline' => $cta_headline,
 					'cta_subheadline' => 'Ready for a quote? We’re here to help.',
@@ -1051,7 +1063,7 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'contact' => [
-			'order' => ['hero', 'map_nap', 'cta'],
+			'order' => ['hero', 'map_nap', 'faq_accordion', 'cta'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Contact ' . $business,
@@ -1062,6 +1074,12 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 					'section_heading' => 'Get in touch',
 					'section_intro' => 'Share a few details and we will reply with next steps.',
 				],
+				'faq_accordion' => array_merge(
+					function_exists('lf_page_template_faq_section_defaults')
+						? lf_page_template_faq_section_defaults('contact')
+						: ['section_heading' => 'Contact FAQs', 'section_intro' => ''],
+					['faq_max_items' => 6]
+				),
 				'cta' => [
 					'cta_headline' => $cta_headline,
 					'cta_subheadline' => 'Prefer a quick estimate? Start here.',
@@ -1099,12 +1117,18 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'thank-you' => [
-			'order' => ['hero', 'content'],
+			'order' => ['hero', 'content', 'faq_accordion'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Thanks — we received your request',
 					'hero_subheadline' => 'A local specialist will follow up soon with next steps.',
 				],
+				'faq_accordion' => array_merge(
+					function_exists('lf_page_template_faq_section_defaults')
+						? lf_page_template_faq_section_defaults('thank-you')
+						: ['section_heading' => 'What happens next', 'section_intro' => ''],
+					['faq_max_items' => 6]
+				),
 			],
 			'seo' => [
 				'title' => $business ? 'Thank You | ' . $business : 'Thank You',

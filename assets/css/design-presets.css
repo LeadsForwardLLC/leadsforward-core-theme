@@ -81,6 +81,7 @@
 	--lf-hero-cta-primary-pad-y: 1.15rem;
 	--lf-hero-cta-primary-pad-x: 2.6rem;
 	--lf-space-section: 2.6rem;
+	--lf-space-section-sm: 1.45rem;
 	--lf-font-heading: 'Oswald', 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
 	--lf-font-system: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 	--lf-hero-eyebrow-bg: rgba(255, 255, 255, 0.12);
@@ -134,6 +135,7 @@
 	--lf-hero-panel-offset: 8px;
 	--lf-hero-title-size: clamp(2.2rem, 5.3vw, 3.7rem);
 	--lf-space-section: 2.6rem;
+	--lf-space-section-sm: 1.45rem;
 	--lf-heading-weight: 600;
 	--lf-font-heading: 'Playfair Display', 'Outfit', -apple-system, BlinkMacSystemFont, serif;
 	--lf-font-system: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -190,6 +192,7 @@
 	--lf-hero-cta-primary-pad-y: 1.35rem;
 	--lf-hero-cta-primary-pad-x: 3rem;
 	--lf-space-section: 2.35rem;
+	--lf-space-section-sm: 1.4rem;
 	--lf-font-heading: 'Space Grotesk', 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
 	--lf-font-system: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 	--lf-hero-eyebrow-bg: #0b0b0b;
@@ -238,6 +241,7 @@
 	--lf-hero-media-offset: -10px;
 	--lf-hero-media-offset-x: 12px;
 	--lf-space-section: 2.9rem;
+	--lf-space-section-sm: 1.5rem;
 	--lf-heading-weight: 700;
 	--lf-font-heading: 'Space Grotesk', 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
 	--lf-font-system: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -288,6 +292,7 @@
 	--lf-hero-proof-offset: 0px;
 	--lf-hero-panel-offset: 0px;
 	--lf-space-section: 1.9rem;
+	--lf-space-section-sm: 1.2rem;
 	--lf-font-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 	--lf-font-system: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 	--lf-hero-eyebrow-bg: #ffffff;
@@ -313,4 +318,16 @@
 	--lf-hero-stack-shadow: none;
 	--lf-card-accent-left: 4px solid var(--lf-color-primary);
 	--lf-hero-media-shell: rgba(255, 255, 255, 0.85);
+}
+
+/* Consistent mobile rhythm across all Global Design presets. */
+@media (max-width: 900px) {
+	body[class*="lf-design-"] {
+		--lf-space-section: var(--lf-space-section-sm, 1.35rem);
+		--lf-hero-title-size: clamp(1.85rem, 7.5vw, 2.65rem);
+		--lf-btn-font-size: 0.72rem;
+		--lf-btn-pad-y: 0.72rem;
+		--lf-btn-pad-x: 1.15rem;
+		--lf-btn-min-height: 2.75rem;
+	}
 }

@@ -12,6 +12,11 @@ Eyebrow: Fast Response • Local Team
 Headline: Get a free foundation inspection
 Subheadline: Tell us what you are seeing and we will schedule a visit with a clear next step.
 
+=== FAQ ===
+Heading: Contact FAQs
+Intro: Quick answers about reaching our team, response times, and scheduling.
+(Leave Q&A blank — Niche Content Library on import.)
+
 === SEO ===
 Title: Contact {business}{city_line}
 Description: Contact {business} for foundation repair{city_line}. Schedule an inspection, call our team, or send a message today.
