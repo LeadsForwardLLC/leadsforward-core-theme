@@ -5109,10 +5109,10 @@ article a:not(.lf-btn):hover {
 .lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-block-hero__bg::before {
 	background: linear-gradient(
 		105deg,
-		rgba(10, 15, 28, 0.94) 0%,
-		rgba(10, 15, 28, 0.86) 36%,
-		rgba(10, 15, 28, 0.52) 58%,
-		rgba(10, 15, 28, 0.18) 100%
+		rgba(10, 15, 28, 0.82) 0%,
+		rgba(10, 15, 28, 0.7) 34%,
+		rgba(10, 15, 28, 0.36) 56%,
+		rgba(10, 15, 28, 0.06) 100%
 	);
 	opacity: 1;
 }
