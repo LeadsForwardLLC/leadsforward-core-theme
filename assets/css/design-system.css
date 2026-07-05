@@ -3159,6 +3159,17 @@ article a:not(.lf-btn):hover {
 		outline: none;
 		box-shadow: none;
 	}
+	/* Open panel: More follows primary links; Call + CTA stay below */
+	.site-header--open .site-header__panel .site-header__menu > .lf-menu-more {
+		order: 5;
+		margin-left: 0;
+	}
+	.site-header--open .site-header__panel .site-header__menu > .lf-menu-call {
+		order: 10;
+	}
+	.site-header--open .site-header__panel .site-header__menu > .lf-menu-cta {
+		order: 11;
+	}
 	/* Call Now + CTA: full-width block */
 	.site-header__menu .lf-menu-call {
 		margin-top: 1rem;
