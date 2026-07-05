@@ -421,7 +421,7 @@ $placeholder_attrs = function_exists('lf_image_lcp_attrs')
 						<p class="lf-hero-conversion__subtitle"><?php echo $subheading_html; ?></p>
 					<?php endif; ?>
 					<?php if (!empty($badge_items)) : ?>
-						<ul class="lf-hero-conversion__badges lf-hero-chips" role="list">
+						<ul class="lf-hero-conversion__badges" role="list">
 							<?php foreach ($badge_items as $chip_row) : ?>
 								<?php
 								$chip_label = is_array($chip_row) ? (string) ($chip_row['label'] ?? '') : (string) $chip_row;
@@ -433,13 +433,15 @@ $placeholder_attrs = function_exists('lf_image_lcp_attrs')
 									? lf_icon($chip_icon, ['class' => 'lf-hero-conversion__badge-icon-svg'])
 									: '';
 								?>
-								<li class="lf-hero-conversion__badge lf-hero-chip" data-lf-chip-icon="<?php echo esc_attr($chip_icon); ?>">
+								<li class="lf-hero-conversion__badge" data-lf-chip-icon="<?php echo esc_attr($chip_icon); ?>">
 									<span class="lf-hero-conversion__badge-icon" aria-hidden="true">
-										<?php if ($chip_icon_html !== '') : ?>
-											<?php echo $chip_icon_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-										<?php else : ?>
-											<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-										<?php endif; ?>
+										<span class="lf-hero-conversion__badge-icon-graphic">
+											<?php if ($chip_icon_html !== '') : ?>
+												<?php echo $chip_icon_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+											<?php else : ?>
+												<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+											<?php endif; ?>
+										</span>
 									</span>
 									<span class="lf-hero-conversion__badge-text" data-lf-hero-pill-text="1"><?php echo esc_html($chip_label); ?></span>
 								</li>

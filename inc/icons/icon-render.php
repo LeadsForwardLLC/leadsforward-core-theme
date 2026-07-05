@@ -56,9 +56,10 @@ function lf_icon(string $name, array $args = []): string {
 	if ($svg_raw === '') {
 		return '';
 	}
-	$class = 'lf-icon lf-icon--fit';
+	// Classes and a11y live on a wrapper; inner SVG is sized by CSS only.
+	$wrapper_class = 'lf-icon lf-icon--fit';
 	if (!empty($args['class'])) {
-		$class .= ' ' . trim((string) $args['class']);
+		$wrapper_class .= ' ' . trim((string) $args['class']);
 	}
 	$aria_label = isset($args['aria_label']) ? trim((string) $args['aria_label']) : '';
 	$role = $aria_label !== '' ? 'img' : 'presentation';
@@ -70,23 +71,22 @@ function lf_icon(string $name, array $args = []): string {
 		$style = trim('--lf-icon-stroke:' . $stroke_width . '; ' . $style);
 	}
 
-	// Inject class/aria while keeping Tabler paths intact. Remove width/height so CSS can size via em.
-	$attrs = 'class="' . esc_attr($class) . '" role="' . esc_attr($role) . '" aria-hidden="' . esc_attr($aria_hidden) . '" focusable="false"';
+	$wrapper_attrs = 'class="' . esc_attr($wrapper_class) . '" role="' . esc_attr($role) . '" aria-hidden="' . esc_attr($aria_hidden) . '"';
 	if ($aria_label !== '') {
-		$attrs .= ' aria-label="' . esc_attr($aria_label) . '"';
+		$wrapper_attrs .= ' aria-label="' . esc_attr($aria_label) . '"';
 	}
 	if ($style !== '') {
-		$attrs .= ' style="' . esc_attr($style) . '"';
+		$wrapper_attrs .= ' style="' . esc_attr($style) . '"';
 	}
-	$title_markup = $title !== '' ? '<title>' . esc_html($title) . '</title>' : '';
 
-	$svg = preg_replace('/<svg\b[^>]*>/i', '<svg ' . $attrs . '>', $svg_raw, 1);
+	$svg = preg_replace('/<svg\b[^>]*>/i', '<svg focusable="false" aria-hidden="true">', $svg_raw, 1);
 	if (!is_string($svg) || $svg === '') {
 		return '';
 	}
-	$svg = preg_replace('/\s(width|height)="[^"]*"/i', '', $svg);
+	$svg = preg_replace('/\s(width|height|class|role|aria-hidden|focusable)="[^"]*"/i', '', $svg);
+	$title_markup = $title !== '' ? '<title>' . esc_html($title) . '</title>' : '';
 	if ($title_markup !== '') {
 		$svg = preg_replace('/<svg\b([^>]*)>/i', '<svg$1>' . $title_markup, $svg, 1);
 	}
-	return $svg;
+	return '<span ' . $wrapper_attrs . '>' . $svg . '</span>';
 }
