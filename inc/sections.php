@@ -417,7 +417,7 @@ function lf_sections_registry(): array {
 				['key' => 'hero_headline', 'label' => __('Headline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_subheadline', 'label' => __('Subheadline', 'leadsforward-core'), 'type' => 'text', 'default' => ''],
 				['key' => 'hero_proof_title', 'label' => __('Proof card title', 'leadsforward-core'), 'type' => 'text', 'default' => __('Why homeowners choose us', 'leadsforward-core')],
-				['key' => 'hero_chip_bullets', 'label' => __('Hero pills (one per line, left column)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
+				['key' => 'hero_chip_bullets', 'label' => __('Hero pills (one per line: Label || icon-slug)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 				['key' => 'hero_proof_bullets', 'label' => __('Proof card bullets (one per line, right card)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Fast response and clear pricing' . "\n" . 'Licensed, insured, and local' . "\n" . 'Clean work backed by warranty', 'leadsforward-core')],
 				['key' => 'hero_trust_strip_enabled', 'label' => __('Show homeowner trust row under CTAs', 'leadsforward-core'), 'type' => 'select', 'default' => '1', 'options' => lf_sections_toggle_options()],
 				// Added for density expansion – vNext

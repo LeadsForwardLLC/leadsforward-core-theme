@@ -938,13 +938,21 @@ add_action('wp_ajax_lf_ai_icon_markup', 'lf_ai_ajax_icon_markup');
 /**
  * Inline SVG markup for a Tabler icon slug (Rich Text / AI toolbar insertion).
  */
-function lf_ai_icon_markup_for_slug(string $slug, string $size = ''): string {
+function lf_ai_icon_markup_for_slug(string $slug, string $size = '', string $style = 'inline'): string {
 	$slug = sanitize_title($slug);
 	if ($slug === '') {
 		return '';
 	}
 	$size = sanitize_key($size);
 	$allowed = ['sm', 'md', 'lg'];
+	$style = sanitize_key($style);
+	if ($style === 'ring' && function_exists('lf_icon_ring')) {
+		$ring_size = in_array($size, $allowed, true) ? $size : 'sm';
+		return lf_icon_ring($slug, [
+			'size'  => $ring_size,
+			'class' => 'lf-hero-conversion__badge-icon',
+		]);
+	}
 	$size_class = in_array($size, $allowed, true) ? ' lf-icon--' . $size : '';
 	return function_exists('lf_icon')
 		? lf_icon($slug, ['class' => 'lf-icon lf-icon--inline' . $size_class])
@@ -958,7 +966,8 @@ function lf_ai_ajax_icon_markup(): void {
 	}
 	$slug = isset($_POST['slug']) ? (string) wp_unslash($_POST['slug']) : '';
 	$size = isset($_POST['size']) ? (string) wp_unslash($_POST['size']) : '';
-	$markup = lf_ai_icon_markup_for_slug($slug, $size);
+	$style = isset($_POST['style']) ? (string) wp_unslash($_POST['style']) : 'inline';
+	$markup = lf_ai_icon_markup_for_slug($slug, $size, $style);
 	wp_send_json_success(['markup' => $markup]);
 }
 

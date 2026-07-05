@@ -430,14 +430,14 @@ $placeholder_attrs = function_exists('lf_image_lcp_attrs')
 									continue;
 								}
 								$chip_icon_html = function_exists('lf_icon_ring')
-									? lf_icon_ring($chip_icon, ['size' => 'md', 'class' => 'lf-hero-conversion__badge-icon'])
+									? lf_icon_ring($chip_icon, ['size' => 'sm', 'class' => 'lf-hero-conversion__badge-icon'])
 									: (function_exists('lf_icon') ? lf_icon($chip_icon, ['class' => 'lf-hero-conversion__badge-icon-svg']) : '');
 								?>
 								<li class="lf-hero-conversion__badge" data-lf-chip-icon="<?php echo esc_attr($chip_icon); ?>">
 									<?php if ($chip_icon_html !== '') : ?>
 										<?php echo $chip_icon_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 									<?php else : ?>
-										<span class="lf-icon-ring lf-icon-ring--md lf-hero-conversion__badge-icon" aria-hidden="true">
+										<span class="lf-icon-ring lf-icon-ring--sm lf-hero-conversion__badge-icon" aria-hidden="true">
 											<span class="lf-icon lf-icon-ring__icon" aria-hidden="true">
 												<svg focusable="false" aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
 											</span>
