@@ -346,6 +346,18 @@ function lf_resolve_homepage_hero_background_url(): string {
 			return '';
 		}
 		$attachment_id = (int) ($section['hero_background_image_id'] ?? 0);
+		if ($attachment_id > 0) {
+			$url = wp_get_attachment_image_url($attachment_id, lf_hero_background_image_size());
+			if (is_string($url) && $url !== '') {
+				return $url;
+			}
+		}
+		if (function_exists('lf_get_section_default_image_url')) {
+			$url = lf_get_section_default_image_url('hero');
+			if ($url !== '') {
+				return $url;
+			}
+		}
 		if ($attachment_id <= 0) {
 			$attachment_id = (int) get_post_thumbnail_id((int) get_queried_object_id());
 		}

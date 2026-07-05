@@ -2543,13 +2543,51 @@ article a:not(.lf-btn):hover {
 	}
 }
 
-.site-header__menu a,
-.site-header__utility-menu a {
+.site-header__menu a:not(.lf-btn),
+.site-header__utility-menu a:not(.lf-btn) {
 	text-decoration: none;
 	color: var(--lf-text-primary);
 	font-weight: 600;
 	padding: 0.35rem 0.6rem;
 	border-radius: 999px;
+}
+
+/* Nav CTA: scaled primary button — must beat generic menu link styles above */
+.site-header__menu .lf-menu-cta > a.lf-btn,
+.site-header__cta.lf-btn,
+.site-header__mobile-quote.lf-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--lf-btn-pad-y-sm) var(--lf-btn-pad-x-sm);
+	min-height: var(--lf-btn-min-height-sm);
+	font-size: var(--lf-btn-font-size-sm);
+	font-weight: var(--lf-btn-font-weight);
+	line-height: 1.15;
+	letter-spacing: var(--lf-btn-letter-spacing, 0.03em);
+	text-transform: var(--lf-btn-text-transform, uppercase);
+	border-radius: var(--lf-button-radius);
+	color: #fff;
+	background-color: var(--lf-primary);
+	border: 2px solid var(--lf-primary);
+	box-shadow: none;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.site-header__menu .lf-menu-cta > a.lf-btn {
+	white-space: nowrap;
+}
+
+.site-header__menu .lf-menu-cta > a.lf-btn:hover,
+.site-header__menu .lf-menu-cta > a.lf-btn:focus-visible,
+.site-header__cta.lf-btn--primary:hover,
+.site-header__cta.lf-btn--primary:focus-visible,
+.site-header__mobile-quote.lf-btn--primary:hover,
+.site-header__mobile-quote.lf-btn--primary:focus-visible {
+	background-color: color-mix(in srgb, var(--lf-primary) 88%, #000);
+	border-color: color-mix(in srgb, var(--lf-primary) 88%, #000);
+	color: #fff;
 }
 
 .site-header__submenu-toggle {
@@ -2611,8 +2649,8 @@ article a:not(.lf-btn):hover {
 	text-decoration: none;
 }
 
-.site-header__menu a:hover,
-.site-header__utility-menu a:hover {
+.site-header__menu a:not(.lf-btn):hover,
+.site-header__utility-menu a:not(.lf-btn):hover {
 	background: var(--lf-surface-soft);
 }
 
@@ -2809,8 +2847,8 @@ article a:not(.lf-btn):hover {
 		max-width: 100%;
 	}
 	/* All menu links: consistent tap targets, no overflow */
-	.site-header__menu a,
-	.site-header__utility-menu a {
+	.site-header__menu a:not(.lf-btn),
+	.site-header__utility-menu a:not(.lf-btn) {
 		display: block;
 		font-size: 1.05rem;
 		font-weight: 600;
@@ -2827,8 +2865,8 @@ article a:not(.lf-btn):hover {
 		overflow-wrap: break-word;
 		word-wrap: break-word;
 	}
-	.site-header__menu a:hover,
-	.site-header__utility-menu a:hover {
+	.site-header__menu a:not(.lf-btn):hover,
+	.site-header__utility-menu a:not(.lf-btn):hover {
 		background: var(--lf-surface-soft);
 	}
 	/* Menu items with separators */
