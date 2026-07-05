@@ -2492,7 +2492,7 @@ function lf_sections_hero_cta_button_classes(array $section, string $slot, strin
 	list($style, $tone) = lf_sections_resolve_button_style_tone($style_in, $tone_in, $default_style, 'primary');
 	$size_key = $slot === 'secondary' ? 'hero_cta_secondary_size' : 'hero_cta_primary_size';
 	$size_in = array_key_exists($size_key, $section) ? (string) $section[ $size_key ] : '';
-	$out = 'lf-btn ' . lf_sections_button_visual_classes($style, $tone) . ' ' . lf_sections_button_size_class($size_in, 'lg');
+	$out = 'lf-btn ' . lf_sections_button_visual_classes($style, $tone) . ' ' . lf_sections_button_size_class($size_in, 'md');
 	$extra_class = trim(preg_replace('/[^a-z0-9 _-]/i', '', $extra_class));
 	if ($extra_class !== '') {
 		$out .= ' ' . $extra_class;
@@ -2537,7 +2537,7 @@ function lf_sections_cta_band_cta_button_classes(array $section, string $slot, s
 	list($style, $tone) = lf_sections_resolve_button_style_tone($style_in, $tone_in, $default_style, $default_tone);
 	$size_key = $slot === 'secondary' ? 'cta_secondary_size' : 'cta_primary_size';
 	$size_in = array_key_exists($size_key, $section) ? (string) $section[ $size_key ] : '';
-	$out = 'lf-btn ' . lf_sections_button_visual_classes($style, $tone) . ' ' . lf_sections_button_size_class($size_in, 'lg');
+	$out = 'lf-btn ' . lf_sections_button_visual_classes($style, $tone) . ' ' . lf_sections_button_size_class($size_in, 'md');
 	$extra_class = trim(preg_replace('/[^a-z0-9 _-]/i', '', $extra_class));
 	if ($extra_class !== '') {
 		$out .= ' ' . $extra_class;

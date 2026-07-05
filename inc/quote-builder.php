@@ -1542,7 +1542,7 @@ function lf_quote_builder_render_inline_form_card(array $args = []): void {
 					</div>
 				<?php endforeach; ?>
 			</div>
-			<button type="submit" class="lf-btn lf-btn--primary lf-btn--sm lf-quote-inline-form__submit"><?php echo esc_html($button_label); ?></button>
+			<button type="submit" class="lf-btn lf-btn--primary lf-btn--md lf-quote-inline-form__submit"><?php echo esc_html($button_label); ?></button>
 			<p class="lf-quote-inline-form__microcopy" role="note"><?php echo esc_html($microcopy); ?></p>
 			<p class="lf-quote-inline-form__status" role="status" aria-live="polite"></p>
 		</form>

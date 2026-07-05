@@ -169,22 +169,21 @@
 	--lf-btn-pad-y-lg: 0.9rem;
 	--lf-btn-pad-x-lg: 2rem;
 	--lf-btn-min-height-lg: 3.25rem;
-	--lf-btn-font-size-lg: var(--lf-fs-body);
-	--lf-btn-pad-y-md: 0.72rem;
-	--lf-btn-pad-x-md: 1.35rem;
-	--lf-btn-min-height-md: 2.875rem;
-	--lf-btn-font-size-md: calc(var(--lf-fs-body) - 0.0625rem);
+	--lf-btn-font-size-lg: 0.9375rem;
+	--lf-btn-pad-y-md: 0.7rem;
+	--lf-btn-pad-x-md: 1.25rem;
+	--lf-btn-min-height-md: 2.75rem;
+	--lf-btn-font-size-md: 0.9375rem;
 	--lf-btn-pad-y-sm: 0.55rem;
 	--lf-btn-pad-x-sm: 1rem;
 	--lf-btn-min-height-sm: 2.5rem;
 	--lf-btn-font-size-sm: 0.8125rem;
 	/* Legacy aliases (large = default) */
-	--lf-btn-pad-y: var(--lf-btn-pad-y-lg);
-	--lf-btn-pad-x: var(--lf-btn-pad-x-lg);
-	--lf-btn-pad-x-lg: 2.25rem;
+	--lf-btn-pad-y: var(--lf-btn-pad-y-md);
+	--lf-btn-pad-x: var(--lf-btn-pad-x-md);
 	--lf-btn-primary-shadow: none;
 	--lf-btn-primary-shadow-hover: none;
-	--lf-btn-min-height: var(--lf-btn-min-height-lg);
+	--lf-btn-min-height: var(--lf-btn-min-height-md);
 	--lf-block-gap: var(--wp--preset--spacing--70, 2rem);
 	--lf-homepage-section-gap: var(--lf-space-section);
 	--lf-gap-30: var(--wp--preset--spacing--30, 0.75rem);
@@ -220,9 +219,9 @@
 		--lf-btn-pad-y-sm: 0.5rem;
 		--lf-btn-pad-x-sm: 0.85rem;
 		--lf-btn-min-height-sm: 2.35rem;
-		--lf-btn-pad-y: var(--lf-btn-pad-y-lg);
-		--lf-btn-pad-x: var(--lf-btn-pad-x-lg);
-		--lf-btn-min-height: var(--lf-btn-min-height-lg);
+		--lf-btn-pad-y: var(--lf-btn-pad-y-md);
+		--lf-btn-pad-x: var(--lf-btn-pad-x-md);
+		--lf-btn-min-height: var(--lf-btn-min-height-md);
 		--lf-fs-body: 0.9375rem;
 		--lf-hero-cta-primary-size: 0.9375rem;
 		--lf-hero-cta-primary-pad-y: 0.75rem;
@@ -312,19 +311,20 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	padding: var(--lf-btn-pad-y-lg) var(--lf-btn-pad-x-lg);
-	min-height: var(--lf-btn-min-height-lg);
+	padding: var(--lf-btn-pad-y-md) var(--lf-btn-pad-x-md);
+	min-height: var(--lf-btn-min-height-md);
 	box-sizing: border-box;
 	border-radius: var(--lf-button-radius);
 	font-family: var(--lf-font-system);
-	font-size: var(--lf-btn-font-size-lg);
-	font-weight: var(--lf-fw-semibold);
-	line-height: 1.25;
+	font-size: var(--lf-btn-font-size-md);
+	font-weight: var(--lf-fw-bold);
+	line-height: 1.2;
 	text-decoration: none;
 	text-transform: var(--lf-btn-text-transform, uppercase);
 	letter-spacing: var(--lf-btn-letter-spacing, 0.04em);
-	border: none;
+	border: 2px solid transparent;
 	cursor: pointer;
+	-webkit-font-smoothing: antialiased;
 }
 
 .lf-btn--lg {
@@ -644,23 +644,22 @@ button:focus-visible,
 }
 
 .lf-icon {
-	display: grid;
-	place-items: center;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
 	width: 1em;
 	height: 1em;
 	line-height: 0;
-	flex-shrink: 0;
-	overflow: hidden;
+	overflow: visible;
 	vertical-align: middle;
 	color: inherit;
 }
 
 .lf-icon svg {
 	display: block;
-	width: 72%;
-	height: 72%;
-	max-width: 72%;
-	max-height: 72%;
+	width: 1em;
+	height: 1em;
 	overflow: visible;
 	stroke: currentColor;
 	fill: none;
@@ -670,18 +669,21 @@ button:focus-visible,
 }
 
 .lf-icon--fit {
-	display: grid;
-	place-items: center;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	line-height: 0;
-	overflow: hidden;
+	overflow: visible;
 }
 
 /* Circular icon ring — hero trust chips, etc. */
 .lf-icon-ring {
 	--lf-icon-ring-size: 2rem;
+	--lf-icon-ring-glyph: 0.875rem;
 	--lf-icon-ring-color: var(--lf-accent, #fbbf24);
-	display: grid;
-	place-items: center;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	width: var(--lf-icon-ring-size);
 	height: var(--lf-icon-ring-size);
 	border-radius: 50%;
@@ -691,34 +693,41 @@ button:focus-visible,
 	line-height: 0;
 	box-sizing: border-box;
 	background: transparent;
-	overflow: hidden;
+	overflow: visible;
 }
 
 .lf-icon-ring--sm {
 	--lf-icon-ring-size: 1.75rem;
+	--lf-icon-ring-glyph: 0.75rem;
 }
 
 .lf-icon-ring--md {
 	--lf-icon-ring-size: 2rem;
+	--lf-icon-ring-glyph: 0.875rem;
 }
 
 .lf-icon-ring--lg {
 	--lf-icon-ring-size: 2.35rem;
+	--lf-icon-ring-glyph: 1rem;
 }
 
-.lf-icon-ring .lf-icon,
-.lf-icon-ring__icon {
-	font-size: calc(var(--lf-icon-ring-size) * 0.46);
-	width: calc(var(--lf-icon-ring-size) * 0.46);
-	height: calc(var(--lf-icon-ring-size) * 0.46);
+.lf-icon-ring > .lf-icon,
+.lf-icon-ring > .lf-icon-ring__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--lf-icon-ring-glyph);
+	height: var(--lf-icon-ring-glyph);
+	font-size: var(--lf-icon-ring-glyph);
+	overflow: visible;
 }
 
-.lf-icon-ring .lf-icon svg {
-	width: 100%;
-	height: 100%;
-	max-width: 100%;
-	max-height: 100%;
-	transform: none;
+.lf-icon-ring > .lf-icon svg,
+.lf-icon-ring > .lf-icon-ring__icon svg {
+	width: var(--lf-icon-ring-glyph);
+	height: var(--lf-icon-ring-glyph);
+	display: block;
+	margin: 0;
 }
 
 /* Legacy markup: classes on the root svg element. */
@@ -900,26 +909,33 @@ svg.lf-icon {
 
 .lf-stats-bar__icon-wrap {
 	flex-shrink: 0;
-	display: grid;
-	place-items: center;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	width: 2.35rem;
 	height: 2.35rem;
-	overflow: hidden;
+	overflow: visible;
 	line-height: 0;
 }
 
 .lf-stats-bar__icon {
-	display: grid;
-	place-items: center;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	color: var(--lf-primary);
-	overflow: hidden;
+	overflow: visible;
 	line-height: 0;
 }
 
 .lf-stats-bar__icon .lf-icon {
-	font-size: 1.5rem;
-	width: 1.5rem;
-	height: 1.5rem;
+	font-size: 1.375rem;
+	width: 1.375rem;
+	height: 1.375rem;
+}
+
+.lf-stats-bar__icon .lf-icon svg {
+	width: 1.375rem;
+	height: 1.375rem;
 }
 
 .lf-stats-bar__icon-svg {
@@ -1105,8 +1121,9 @@ svg.lf-icon {
 }
 
 .lf-benefits__icon {
-	display: grid;
-	place-items: center;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	width: 3.5rem;
 	height: 3.5rem;
 	border-radius: 1.125rem;
@@ -1114,23 +1131,21 @@ svg.lf-icon {
 	color: var(--lf-primary);
 	box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.22);
 	margin-top: 0.35rem;
-	overflow: hidden;
+	overflow: visible;
 	line-height: 0;
 }
 
 .lf-benefits__icon .lf-icon {
-	font-size: 1.5rem;
-	width: 1.5rem;
-	height: 1.5rem;
+	font-size: 1.375rem;
+	width: 1.375rem;
+	height: 1.375rem;
 }
 
 .lf-benefits__icon .lf-icon svg,
 .lf-benefits__icon svg.lf-icon {
-	width: 100%;
-	height: 100%;
-	max-width: 100%;
-	max-height: 100%;
-	transform: none;
+	width: 1.375rem;
+	height: 1.375rem;
+	display: block;
 }
 
 .lf-benefits__icon--empty {
@@ -2578,16 +2593,20 @@ article a:not(.lf-btn):hover {
 
 /* Header Call link + icon: assets/css/header-call-link.css (enqueued after design-presets). */
 
-.site-header__menu .lf-menu-cta > a {
-	padding: calc(var(--lf-btn-pad-y) - 3px) calc(var(--lf-btn-pad-x) - 8px);
-	min-height: calc(var(--lf-btn-min-height) - 8px);
+.site-header__menu .lf-menu-cta > a.lf-btn {
+	white-space: nowrap;
+}
+
+.site-header__menu .lf-menu-cta > a:not(.lf-btn) {
+	padding: var(--lf-btn-pad-y-sm) var(--lf-btn-pad-x-sm);
+	min-height: var(--lf-btn-min-height-sm);
 	border-radius: var(--lf-button-radius);
 	box-shadow: none;
 	white-space: nowrap;
 	background-color: var(--lf-primary);
 	color: #fff;
 	border: 2px solid var(--lf-primary);
-	font-weight: var(--lf-fw-semibold);
+	font-weight: var(--lf-fw-bold);
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -2605,8 +2624,8 @@ article a:not(.lf-btn):hover {
 	gap: 0.75rem;
 }
 
-.site-header__cta.lf-btn--sm,
-.site-header__mobile-quote.lf-btn--sm {
+.site-header__cta.lf-btn--md,
+.site-header__mobile-quote.lf-btn--md {
 	white-space: nowrap;
 }
 
@@ -3108,8 +3127,7 @@ article a:not(.lf-btn):hover {
 		width: 100%;
 		max-width: 100%;
 		min-width: 0;
-		padding: 0.9rem 1rem;
-		border-radius: 12px;
+		border-radius: var(--lf-button-radius);
 		box-sizing: border-box;
 		overflow-wrap: break-word;
 	}
@@ -3117,7 +3135,7 @@ article a:not(.lf-btn):hover {
 		background: var(--lf-surface-soft);
 		border: 1px solid rgba(15, 23, 42, 0.08);
 	}
-	.site-header__menu .lf-menu-cta > a {
+	.site-header__menu .lf-menu-cta > a.lf-btn {
 		background: var(--lf-primary);
 		color: #fff;
 		border: 2px solid var(--lf-primary);
@@ -3149,10 +3167,8 @@ article a:not(.lf-btn):hover {
 		color: var(--lf-text-primary);
 		box-sizing: border-box;
 	}
-	.site-header__cta {
+	.site-header__cta.lf-btn {
 		width: 100%;
-		padding: calc(var(--lf-btn-pad-y) + 0.1rem) var(--lf-btn-pad-x);
-		border-radius: 12px;
 		text-align: center;
 		box-sizing: border-box;
 	}
@@ -5285,13 +5301,6 @@ article a:not(.lf-btn):hover {
 	margin-top: 0.25rem;
 }
 
-.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__actions .lf-btn {
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	font-weight: 800;
-	font-size: 0.8125rem;
-}
-
 .lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__actions .lf-btn--primary {
 	box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
 }
@@ -5403,12 +5412,6 @@ article a:not(.lf-btn):hover {
 	flex-wrap: wrap;
 	gap: 0.75rem;
 	margin-top: 0.35rem;
-}
-
-.lf-hero-conversion__actions .lf-btn {
-	font-size: var(--lf-hero-cta-primary-size);
-	padding: var(--lf-hero-cta-primary-pad-y) var(--lf-hero-cta-primary-pad-x);
-	min-height: var(--lf-btn-min-height);
 }
 
 @media (max-width: 900px) {

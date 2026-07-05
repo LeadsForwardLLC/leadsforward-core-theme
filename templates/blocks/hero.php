@@ -244,12 +244,12 @@ if (function_exists('lf_sections_hero_cta_button_classes') && function_exists('l
 	$h_pri_attr = lf_sections_hero_cta_data_attrs($section, 'primary');
 	$h_sec_attr = lf_sections_hero_cta_data_attrs($section, 'secondary');
 } else {
-	$h_pri = 'lf-btn lf-btn--primary lf-hero-conversion__cta-primary';
-	$h_sec = 'lf-btn lf-btn--secondary lf-hero-conversion__cta-secondary';
-	$h_pri_page = 'lf-btn lf-btn--primary';
-	$h_sec_page = 'lf-btn lf-btn--secondary';
-	$h_pri_lead = 'lf-btn lf-btn--primary lf-hero-conversion__lead-button';
-	$h_sec_lead = 'lf-btn lf-btn--secondary lf-hero-conversion__lead-call';
+	$h_pri = 'lf-btn lf-btn--primary lf-btn--md lf-hero-conversion__cta-primary';
+	$h_sec = 'lf-btn lf-btn--secondary lf-btn--md lf-hero-conversion__cta-secondary';
+	$h_pri_page = 'lf-btn lf-btn--primary lf-btn--md';
+	$h_sec_page = 'lf-btn lf-btn--secondary lf-btn--md';
+	$h_pri_lead = 'lf-btn lf-btn--primary lf-btn--md lf-hero-conversion__lead-button';
+	$h_sec_lead = 'lf-btn lf-btn--secondary lf-btn--md lf-hero-conversion__lead-call';
 	$h_pri_attr = ' data-lf-cta-slot="primary" data-lf-btn-style="solid" data-lf-btn-tone="primary"';
 	$h_sec_attr = ' data-lf-cta-slot="secondary" data-lf-btn-style="outline" data-lf-btn-tone="primary"';
 }
