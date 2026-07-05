@@ -142,7 +142,7 @@ function lf_site_builder_example_for_field(
 		if (strpos($field_key, 'url') !== false || strpos($field_key, 'action') !== false) {
 			return '';
 		}
-		return __('Get a Free Estimate', 'leadsforward-core');
+		return __('Get a Free Inspection', 'leadsforward-core');
 	}
 
 	if ($field_key === 'hero_chip_bullets') {

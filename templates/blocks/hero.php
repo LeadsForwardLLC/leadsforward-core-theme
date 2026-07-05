@@ -232,7 +232,7 @@ if (!$secondary_enabled) {
 	$secondary_text = '';
 }
 $show_cta_group = ($cta_text !== '' || $secondary_text !== '');
-$lead_cta_label = $cta_text !== '' ? $cta_text : __('Get a Free Estimate', 'leadsforward-core');
+$lead_cta_label = $cta_text !== '' ? $cta_text : __('Get a Free Inspection', 'leadsforward-core');
 
 if (function_exists('lf_sections_hero_cta_button_classes') && function_exists('lf_sections_hero_cta_data_attrs')) {
 	$h_pri = lf_sections_hero_cta_button_classes($section, 'primary', 'lf-hero-conversion__cta-primary');

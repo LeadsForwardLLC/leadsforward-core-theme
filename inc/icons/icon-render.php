@@ -56,7 +56,7 @@ function lf_icon(string $name, array $args = []): string {
 	if ($svg_raw === '') {
 		return '';
 	}
-	$class = 'lf-icon';
+	$class = 'lf-icon lf-icon--fit';
 	if (!empty($args['class'])) {
 		$class .= ' ' . trim((string) $args['class']);
 	}

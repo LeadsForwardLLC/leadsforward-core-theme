@@ -1555,7 +1555,7 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 	$header_items[] = [
 		'type' => 'custom',
 		'url' => '#',
-		'title' => __('Free Estimate', 'leadsforward-core'),
+		'title' => __('Free Inspection', 'leadsforward-core'),
 		'classes' => 'lf-menu-cta',
 	];
 
