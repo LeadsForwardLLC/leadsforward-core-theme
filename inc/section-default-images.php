@@ -23,7 +23,7 @@ function lf_section_default_image_registry(): array {
 	$registry = [
 		'service'       => ['file' => 'service.png', 'label' => 'Default service image'],
 		'service_area'  => ['file' => 'service-area.png', 'label' => 'Default service area image'],
-		'hero'          => ['file' => 'hero.png', 'label' => 'Default hero image'],
+		'hero'          => ['file' => 'hero.jpg', 'label' => 'Homepage hero — contractor at customer home'],
 		'content'       => ['file' => 'content.png', 'label' => 'Default content image'],
 		'general'       => ['file' => 'general.png', 'label' => 'Default image'],
 		'blog'          => ['file' => 'blog.png', 'label' => 'Default blog image'],

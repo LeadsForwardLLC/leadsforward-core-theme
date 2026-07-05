@@ -265,6 +265,9 @@ $hero_bg_stored_video_id = isset($section['hero_background_video_id']) ? (int) $
 $hero_bg_id = 0;
 if ($hero_bg_mode === 'image' && $variant === 'conversion') {
 	$hero_bg_id = $hero_bg_stored_image_id;
+	if ($hero_bg_id === 0 && function_exists('lf_get_section_default_image_id')) {
+		$hero_bg_id = (int) lf_get_section_default_image_id('hero');
+	}
 	if ($hero_bg_id === 0) {
 		$hero_bg_id = (int) get_post_thumbnail_id(get_queried_object_id());
 	}
@@ -273,15 +276,16 @@ if ($hero_bg_mode === 'image' && $variant === 'conversion') {
 	}
 }
 $hero_bg_url = $hero_bg_id ? wp_get_attachment_image_url($hero_bg_id, function_exists('lf_hero_background_image_size') ? lf_hero_background_image_size() : 'large') : '';
+if ($hero_bg_url === '' && $hero_bg_mode === 'image' && $variant === 'conversion' && function_exists('lf_get_section_default_image_url')) {
+	$hero_bg_url = lf_get_section_default_image_url('hero');
+}
 $hero_bg_class = '';
 $hero_bg_style = '';
 if ($hero_bg_url && $hero_bg_mode === 'image' && $variant === 'conversion') {
-	$hero_bg_overlay = '0.68';
-	$hero_bg_class = ' lf-block-hero--has-bg';
+	$hero_bg_class = ' lf-block-hero--has-bg lf-block-hero--has-canvas-bg';
 	$hero_bg_style = sprintf(
-		'--lf-hero-bg-image: url(\'%s\'); --lf-hero-bg-overlay-opacity: %s;',
-		esc_url($hero_bg_url),
-		$hero_bg_overlay
+		'--lf-hero-bg-image: url(\'%s\'); --lf-hero-bg-overlay-opacity: 1;',
+		esc_url($hero_bg_url)
 	);
 }
 $hero_video_url = '';
@@ -379,6 +383,17 @@ $placeholder_attrs = function_exists('lf_image_lcp_attrs')
 			<?php
 			$badge_items = array_slice($chip_lines, 0, 4);
 			$primary_label = $cta_text !== '' ? $cta_text : __('Get a Free Inspection', 'leadsforward-core');
+			$secondary_is_redundant = $secondary_text !== '' && $primary_label !== ''
+				&& (
+					strtolower(trim($secondary_text)) === strtolower(trim($primary_label))
+					|| (
+						preg_match('/inspect|estimate|quote/i', $primary_label)
+						&& preg_match('/inspect|estimate|quote/i', $secondary_text)
+					)
+				);
+			if ($secondary_is_redundant) {
+				$secondary_text = '';
+			}
 			$mobile_trust_bits = [];
 			if ($review_count > 0) {
 				$mobile_trust_bits[] = sprintf(__('%s Google Rating', 'leadsforward-core'), $rating_display);
@@ -447,6 +462,8 @@ $placeholder_attrs = function_exists('lf_image_lcp_attrs')
 									<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="<?php echo esc_attr($h_sec); ?>"<?php echo $h_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($secondary_text); ?></a>
 								<?php elseif ($secondary_action === 'link' && $secondary_url !== '') : ?>
 									<a href="<?php echo esc_url($secondary_url); ?>" class="<?php echo esc_attr($h_sec); ?>"<?php echo $h_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($secondary_text); ?></a>
+								<?php elseif ($secondary_action === 'link' && $secondary_url === '') : ?>
+									<a href="#lf-project-gallery" class="<?php echo esc_attr($h_sec); ?> lf-hero-conversion__cta-portfolio"<?php echo $h_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($secondary_text); ?></a>
 								<?php endif; ?>
 							<?php elseif ($cta_phone && !$use_phone_link) : ?>
 								<a href="tel:<?php echo esc_attr($cta_phone); ?>" class="<?php echo esc_attr($h_sec); ?> lf-hero-conversion__cta-call"<?php echo $h_sec_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php esc_html_e('Call Now', 'leadsforward-core'); ?></a>

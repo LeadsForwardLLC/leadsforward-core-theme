@@ -75,8 +75,9 @@ function lf_niche_homepage_blueprint_registry(): array {
 				'content_image_c' => false,
 			],
 			'hero' => [
+				'hero_background_mode' => 'image',
 				'hero_eyebrow_text' => __('Quality Work. Honest Service. **Built to Last.**', 'leadsforward-core'),
-				'hero_headline' => __('Expert Craftsmanship. **Built Around You.**', 'leadsforward-core'),
+				'hero_headline' => __('Expert Foundation Repair. **Built Around You.**', 'leadsforward-core'),
 				'hero_subheadline' => __('We inspect, diagnose, and repair foundation issues with proven solutions, clear pricing, and workmanship you can trust.', 'leadsforward-core'),
 				'hero_chip_bullets' => implode(
 					"\n",
@@ -205,6 +206,7 @@ function lf_niche_homepage_blueprint_registry(): array {
 				'pricing' => true,
 			],
 			'hero' => [
+				'hero_background_mode' => 'image',
 				'hero_eyebrow_text' => __('Quality Work. Honest Service. **Built to Last.**', 'leadsforward-core'),
 				'hero_headline' => __('Expert Craftsmanship. **Built Around You.**', 'leadsforward-core'),
 				'hero_subheadline' => __('From small repairs to full projects, our licensed team delivers high-quality work with clear communication from start to finish.', 'leadsforward-core'),
@@ -219,6 +221,8 @@ function lf_niche_homepage_blueprint_registry(): array {
 				),
 				'cta_primary_override' => __('Get a Free Inspection', 'leadsforward-core'),
 				'cta_secondary_override' => __('See Our Work', 'leadsforward-core'),
+				'cta_primary_action' => 'quote',
+				'cta_secondary_action' => 'link',
 			],
 			'trust_bar' => [
 				'trust_stats_items' => $contractor_trust_stats,

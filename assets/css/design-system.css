@@ -696,6 +696,11 @@ button:focus-visible,
 	position: relative;
 }
 
+.lf-stats-bar-section--no-heading .lf-section__inner {
+	padding-top: 0;
+	padding-bottom: 0;
+}
+
 .lf-stats-bar-section .lf-section__body {
 	width: 100%;
 }
@@ -724,11 +729,20 @@ button:focus-visible,
 	position: relative;
 	display: flex;
 	align-items: center;
-	justify-content: center;
+	justify-content: flex-start;
 	gap: 0.85rem;
-	padding: clamp(1.1rem, 2.5vw, 1.65rem) clamp(0.85rem, 2vw, 1.35rem);
+	padding: clamp(1.15rem, 2.5vw, 1.75rem) clamp(1rem, 2vw, 1.5rem);
 	text-align: left;
 	min-width: 0;
+	min-height: 5.5rem;
+}
+
+.lf-stats-bar__item .lf-ai-list-remove {
+	position: absolute;
+	top: 0.4rem;
+	right: 0.4rem;
+	margin: 0;
+	z-index: 2;
 }
 
 .lf-stats-bar__item:not(:last-child)::after {
@@ -3804,6 +3818,14 @@ article a:not(.lf-btn):hover {
 	opacity: 0;
 }
 
+.lf-block-hero.lf-block-hero--has-canvas-bg .lf-block-hero__bg {
+	background-image: var(--lf-hero-bg-image, none);
+	background-size: cover !important;
+	background-position: center;
+	background-repeat: no-repeat !important;
+	opacity: 1;
+}
+
 /*
  * Hero canvas contrast: data-lf-hero-bg-tone is set from PHP (luminance of preset or custom BG).
  * Light panels (.lf-hero-stack, form panel, visual content card, split content frosted panel) override below.
@@ -4882,17 +4904,75 @@ article a:not(.lf-btn):hover {
 }
 
 /* Conversion hero — single high-converting layout */
+.lf-block-hero--conversion {
+	position: relative;
+	min-height: clamp(540px, 78vh, 820px);
+	display: flex;
+	align-items: center;
+	padding: clamp(2.5rem, 5vw, 4.5rem) var(--lf-section-padding-x);
+}
+
+.lf-block-hero--conversion .lf-block-hero__inner {
+	width: 100%;
+}
+
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-block-hero__bg::before {
+	background: linear-gradient(
+		105deg,
+		rgba(10, 15, 28, 0.94) 0%,
+		rgba(10, 15, 28, 0.86) 36%,
+		rgba(10, 15, 28, 0.52) 58%,
+		rgba(10, 15, 28, 0.18) 100%
+	);
+	opacity: 1;
+}
+
 .lf-hero-conversion {
 	display: grid;
-	grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-	gap: var(--lf-gap-loose);
+	grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+	gap: clamp(1.75rem, 4vw, 3rem);
 	align-items: center;
 }
 
 .lf-hero-conversion__content {
 	display: flex;
 	flex-direction: column;
-	gap: var(--lf-gap-tight);
+	gap: 1.1rem;
+	max-width: 38rem;
+}
+
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__eyebrow {
+	display: block;
+	align-self: flex-start;
+	padding: 0;
+	border-radius: 0;
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	background: transparent;
+	border: none;
+	color: rgba(255, 255, 255, 0.9);
+	line-height: 1.4;
+}
+
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__title {
+	font-size: clamp(2rem, 4.5vw, 3.35rem);
+	font-weight: 800;
+	line-height: 1.02;
+	letter-spacing: -0.03em;
+	margin: 0;
+	color: #ffffff;
+	text-transform: uppercase;
+}
+
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__subtitle {
+	margin: 0;
+	font-size: clamp(1rem, 1.6vw, 1.2rem);
+	color: rgba(255, 255, 255, 0.9);
+	font-weight: 500;
+	line-height: 1.6;
+	max-width: 34em;
 }
 
 .lf-hero-conversion__eyebrow {
@@ -4938,35 +5018,37 @@ article a:not(.lf-btn):hover {
 
 .lf-hero-conversion__badges {
 	list-style: none;
-	margin: 0.35rem 0 0;
+	margin: 0.15rem 0 0;
 	padding: 0;
 	display: grid;
-	grid-template-columns: repeat(4, minmax(0, 1fr));
-	gap: 0.75rem 1rem;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.85rem 1.25rem;
 }
 
 .lf-hero-conversion__badge {
 	display: flex;
 	align-items: center;
-	gap: 0.55rem;
-	font-size: 0.8125rem;
+	gap: 0.65rem;
+	font-size: 0.78rem;
 	font-weight: 700;
 	line-height: 1.35;
-	color: var(--lf-text-primary);
+	color: #ffffff;
 	min-width: 0;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
 }
 
 .lf-hero-conversion__badge-icon {
 	flex-shrink: 0;
-	width: 2.15rem;
-	height: 2.15rem;
+	width: 2.35rem;
+	height: 2.35rem;
 	border-radius: 999px;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	background: rgba(255, 255, 255, 0.92);
-	border: 1px solid rgba(15, 23, 42, 0.08);
-	color: var(--lf-primary);
+	background: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.22);
+	color: var(--lf-accent, #fbbf24);
 }
 
 .lf-hero-conversion__badge-icon-svg {
@@ -4974,19 +5056,16 @@ article a:not(.lf-btn):hover {
 	height: 1.15rem;
 }
 
+.lf-hero-conversion__badge-text {
+	min-width: 0;
+}
+
 .lf-text-accent {
-	color: var(--lf-accent, var(--lf-primary));
+	color: var(--lf-accent, #fbbf24);
 }
 
-.lf-block-hero--conversion.lf-block-hero--has-bg:not([data-lf-hero-bg-tone="dark"]) .lf-hero-conversion__content {
-	background: rgba(255, 255, 255, 0.88);
-	border-radius: 1.25rem;
-	padding: 1.75rem 2rem;
-	backdrop-filter: blur(8px);
-	box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
-}
-
-.lf-block-hero--conversion.lf-block-hero--has-bg[data-lf-hero-bg-tone="dark"] .lf-hero-conversion__content {
+.lf-block-hero--conversion.lf-block-hero--has-bg .lf-hero-conversion__content,
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__content {
 	background: transparent;
 	border-radius: 0;
 	padding: 0;
@@ -4994,48 +5073,58 @@ article a:not(.lf-btn):hover {
 	box-shadow: none;
 }
 
-.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--conversion .lf-hero-conversion__title,
-.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--conversion .lf-hero-conversion__check,
-.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--conversion .lf-heading-icon,
-.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--conversion .lf-hero-conversion__badge {
+.lf-block-hero--conversion .lf-hero-conversion__actions {
+	margin-top: 0.25rem;
+}
+
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__actions .lf-btn--primary {
+	box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+}
+
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__badge {
 	color: #ffffff;
-}
-
-.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--conversion .lf-hero-conversion__subtitle,
-.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--conversion .lf-hero-conversion__trust,
-.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--conversion .lf-hero-conversion__trust-mobile {
-	color: rgba(255, 255, 255, 0.88);
-}
-
-.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--conversion .lf-hero-conversion__eyebrow {
-	background: transparent;
-	border: none;
-	padding: 0;
-	font-size: 0.75rem;
-	font-weight: 700;
-	letter-spacing: 0.1em;
+	font-size: 0.78rem;
+	letter-spacing: 0.02em;
 	text-transform: uppercase;
-	color: rgba(255, 255, 255, 0.92);
 }
 
-.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--conversion .lf-hero-conversion__badge-icon {
-	background: rgba(255, 255, 255, 0.12);
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__badge-icon {
+	background: rgba(255, 255, 255, 0.1);
 	border-color: rgba(255, 255, 255, 0.22);
 	color: var(--lf-accent, #fbbf24);
 }
 
-.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--conversion .lf-text-accent {
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-text-accent {
 	color: var(--lf-accent, #fbbf24);
 }
 
-.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--conversion .lf-btn--secondary,
-.lf-block-hero[data-lf-hero-bg-tone="dark"].lf-block-hero--conversion .lf-hero-conversion__cta-secondary {
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__subtitle,
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__trust,
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__trust-mobile {
+	color: rgba(255, 255, 255, 0.9);
+}
+
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-btn--secondary,
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__cta-secondary,
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__cta-portfolio {
 	background: transparent;
-	border-color: rgba(255, 255, 255, 0.72);
+	border: 2px solid rgba(255, 255, 255, 0.78);
+	color: #fff;
+}
+
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-btn--secondary:hover,
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__cta-secondary:hover,
+.lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__cta-portfolio:hover {
+	background: rgba(255, 255, 255, 0.1);
+	border-color: #fff;
 	color: #fff;
 }
 
 @media (max-width: 56rem) {
+	.lf-hero-conversion {
+		grid-template-columns: 1fr;
+	}
+
 	.lf-hero-conversion__badges {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}

@@ -349,6 +349,9 @@ function lf_resolve_homepage_hero_background_url(): string {
 		if ($attachment_id <= 0) {
 			$attachment_id = (int) get_post_thumbnail_id((int) get_queried_object_id());
 		}
+		if ($attachment_id <= 0 && function_exists('lf_get_section_default_image_id')) {
+			$attachment_id = (int) lf_get_section_default_image_id('hero');
+		}
 		if ($attachment_id <= 0) {
 			$attachment_id = (int) lf_get_placeholder_image_id();
 		}
