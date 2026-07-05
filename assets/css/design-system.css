@@ -75,9 +75,6 @@
 	--lf-hero-stack-after-title: 1rem;
 	--lf-hero-stack-after-subtitle: 1.5rem;
 	--lf-hero-stack-after-cta: 1.75rem;
-	--lf-hero-cta-primary-size: 1.25rem;
-	--lf-hero-cta-primary-pad-y: 1.125rem;
-	--lf-hero-cta-primary-pad-x: 2.5rem;
 	--lf-hero-trust-gap: 0.75rem;
 	--lf-hero-min-height: 28rem;
 	--lf-hero-title-size: clamp(2.25rem, 6vw, 4rem);
@@ -163,27 +160,32 @@
 	--lf-fw-semibold: var(--wp--preset--font-weight--semibold, 600);
 	--lf-fw-bold: var(--wp--preset--font-weight--bold, 700);
 
-	/* 4) BUTTON HIERARCHY — primary dominant, secondary clear */
+	/* 4) BUTTON HIERARCHY — single hero-style system site-wide */
 	--lf-btn-text-transform: uppercase;
-	--lf-btn-letter-spacing: 0.04em;
-	--lf-btn-pad-y-lg: 0.9rem;
-	--lf-btn-pad-x-lg: 2rem;
-	--lf-btn-min-height-lg: 3.25rem;
-	--lf-btn-font-size-lg: 0.9375rem;
-	--lf-btn-pad-y-md: 0.7rem;
-	--lf-btn-pad-x-md: 1.25rem;
-	--lf-btn-min-height-md: 2.75rem;
-	--lf-btn-font-size-md: 0.9375rem;
-	--lf-btn-pad-y-sm: 0.55rem;
-	--lf-btn-pad-x-sm: 1rem;
-	--lf-btn-min-height-sm: 2.5rem;
-	--lf-btn-font-size-sm: 0.8125rem;
-	/* Legacy aliases (large = default) */
-	--lf-btn-pad-y: var(--lf-btn-pad-y-md);
-	--lf-btn-pad-x: var(--lf-btn-pad-x-md);
+	--lf-btn-font-size: 0.75rem;
+	--lf-btn-letter-spacing: 0.03em;
+	--lf-btn-font-weight: 800;
+	--lf-btn-pad-y: 0.9rem;
+	--lf-btn-pad-x: 1.85rem;
+	--lf-btn-min-height: 3.125rem;
 	--lf-btn-primary-shadow: none;
 	--lf-btn-primary-shadow-hover: none;
-	--lf-btn-min-height: var(--lf-btn-min-height-md);
+	--lf-hero-cta-primary-size: var(--lf-btn-font-size);
+	--lf-hero-cta-primary-pad-y: var(--lf-btn-pad-y);
+	--lf-hero-cta-primary-pad-x: var(--lf-btn-pad-x);
+	/* Legacy size aliases — all map to the same hero tokens */
+	--lf-btn-font-size-lg: var(--lf-btn-font-size);
+	--lf-btn-font-size-md: var(--lf-btn-font-size);
+	--lf-btn-font-size-sm: var(--lf-btn-font-size);
+	--lf-btn-pad-y-lg: var(--lf-btn-pad-y);
+	--lf-btn-pad-y-md: var(--lf-btn-pad-y);
+	--lf-btn-pad-y-sm: var(--lf-btn-pad-y);
+	--lf-btn-pad-x-lg: var(--lf-btn-pad-x);
+	--lf-btn-pad-x-md: var(--lf-btn-pad-x);
+	--lf-btn-pad-x-sm: var(--lf-btn-pad-x);
+	--lf-btn-min-height-lg: var(--lf-btn-min-height);
+	--lf-btn-min-height-md: var(--lf-btn-min-height);
+	--lf-btn-min-height-sm: var(--lf-btn-min-height);
 	--lf-block-gap: var(--wp--preset--spacing--70, 2rem);
 	--lf-homepage-section-gap: var(--lf-space-section);
 	--lf-gap-30: var(--wp--preset--spacing--30, 0.75rem);
@@ -210,22 +212,14 @@
 
 @media (max-width: 900px) {
 	:root {
-		--lf-btn-pad-y-lg: 0.72rem;
-		--lf-btn-pad-x-lg: 1.15rem;
-		--lf-btn-min-height-lg: 2.75rem;
-		--lf-btn-pad-y-md: 0.62rem;
-		--lf-btn-pad-x-md: 1rem;
-		--lf-btn-min-height-md: 2.5rem;
-		--lf-btn-pad-y-sm: 0.5rem;
-		--lf-btn-pad-x-sm: 0.85rem;
-		--lf-btn-min-height-sm: 2.35rem;
-		--lf-btn-pad-y: var(--lf-btn-pad-y-md);
-		--lf-btn-pad-x: var(--lf-btn-pad-x-md);
-		--lf-btn-min-height: var(--lf-btn-min-height-md);
+		--lf-btn-font-size: 0.75rem;
+		--lf-btn-pad-y: 0.78rem;
+		--lf-btn-pad-x: 1.25rem;
+		--lf-btn-min-height: 2.875rem;
 		--lf-fs-body: 0.9375rem;
-		--lf-hero-cta-primary-size: 0.9375rem;
-		--lf-hero-cta-primary-pad-y: 0.75rem;
-		--lf-hero-cta-primary-pad-x: 1.15rem;
+		--lf-hero-cta-primary-size: var(--lf-btn-font-size);
+		--lf-hero-cta-primary-pad-y: var(--lf-btn-pad-y);
+		--lf-hero-cta-primary-pad-x: var(--lf-btn-pad-x);
 	}
 }
 
@@ -311,38 +305,30 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	padding: var(--lf-btn-pad-y-md) var(--lf-btn-pad-x-md);
-	min-height: var(--lf-btn-min-height-md);
+	padding: var(--lf-btn-pad-y) var(--lf-btn-pad-x);
+	min-height: var(--lf-btn-min-height);
 	box-sizing: border-box;
 	border-radius: var(--lf-button-radius);
 	font-family: var(--lf-font-system);
-	font-size: var(--lf-btn-font-size-md);
-	font-weight: var(--lf-fw-bold);
-	line-height: 1.2;
+	font-size: var(--lf-btn-font-size);
+	font-weight: var(--lf-btn-font-weight);
+	line-height: 1.15;
 	text-decoration: none;
 	text-transform: var(--lf-btn-text-transform, uppercase);
-	letter-spacing: var(--lf-btn-letter-spacing, 0.04em);
+	letter-spacing: var(--lf-btn-letter-spacing, 0.03em);
 	border: 2px solid transparent;
 	cursor: pointer;
 	-webkit-font-smoothing: antialiased;
 }
 
-.lf-btn--lg {
-	padding: var(--lf-btn-pad-y-lg) var(--lf-btn-pad-x-lg);
-	min-height: var(--lf-btn-min-height-lg);
-	font-size: var(--lf-btn-font-size-lg);
-}
-
-.lf-btn--md {
-	padding: var(--lf-btn-pad-y-md) var(--lf-btn-pad-x-md);
-	min-height: var(--lf-btn-min-height-md);
-	font-size: var(--lf-btn-font-size-md);
-}
-
+.lf-btn--lg,
+.lf-btn--md,
 .lf-btn--sm {
-	padding: var(--lf-btn-pad-y-sm) var(--lf-btn-pad-x-sm);
-	min-height: var(--lf-btn-min-height-sm);
-	font-size: var(--lf-btn-font-size-sm);
+	padding: var(--lf-btn-pad-y) var(--lf-btn-pad-x);
+	min-height: var(--lf-btn-min-height);
+	font-size: var(--lf-btn-font-size);
+	font-weight: var(--lf-btn-font-weight);
+	letter-spacing: var(--lf-btn-letter-spacing, 0.03em);
 }
 
 body.lf-btn-text-normal {
@@ -2598,15 +2584,17 @@ article a:not(.lf-btn):hover {
 }
 
 .site-header__menu .lf-menu-cta > a:not(.lf-btn) {
-	padding: var(--lf-btn-pad-y-sm) var(--lf-btn-pad-x-sm);
-	min-height: var(--lf-btn-min-height-sm);
+	padding: var(--lf-btn-pad-y) var(--lf-btn-pad-x);
+	min-height: var(--lf-btn-min-height);
+	font-size: var(--lf-btn-font-size);
+	font-weight: var(--lf-btn-font-weight);
+	letter-spacing: var(--lf-btn-letter-spacing, 0.03em);
 	border-radius: var(--lf-button-radius);
 	box-shadow: none;
 	white-space: nowrap;
 	background-color: var(--lf-primary);
 	color: #fff;
 	border: 2px solid var(--lf-primary);
-	font-weight: var(--lf-fw-bold);
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -5299,6 +5287,14 @@ article a:not(.lf-btn):hover {
 
 .lf-block-hero--conversion .lf-hero-conversion__actions {
 	margin-top: 0.25rem;
+}
+
+.lf-hero-conversion__actions .lf-btn {
+	font-size: var(--lf-btn-font-size);
+	padding: var(--lf-btn-pad-y) var(--lf-btn-pad-x);
+	min-height: var(--lf-btn-min-height);
+	font-weight: var(--lf-btn-font-weight);
+	letter-spacing: var(--lf-btn-letter-spacing, 0.03em);
 }
 
 .lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__actions .lf-btn--primary {

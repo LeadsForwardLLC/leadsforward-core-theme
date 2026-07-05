@@ -46,7 +46,7 @@ function lf_button_branding_css(): string {
 	$normal = lf_button_text_case() === 'normal';
 	return ':root{'
 		. '--lf-btn-text-transform:' . ($normal ? 'none' : 'uppercase') . ';'
-		. '--lf-btn-letter-spacing:' . ($normal ? 'normal' : '0.04em') . ';'
+		. '--lf-btn-letter-spacing:' . ($normal ? 'normal' : '0.03em') . ';'
 		. '}';
 }
 
