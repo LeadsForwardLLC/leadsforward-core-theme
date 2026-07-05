@@ -249,7 +249,7 @@ function lf_pci_registry(): array {
 				'map' => 'service_areas',
 			],
 		]),
-		lf_pci_build_schema('reviews', __('Reviews', 'leadsforward-core'), ['hero', 'trust_reviews', 'cta'], [
+		lf_pci_build_schema('reviews', __('Reviews', 'leadsforward-core'), ['hero', 'trust_reviews', 'faq_accordion', 'cta'], [
 			'locked' => ['trust_reviews'],
 			'required' => ['hero', 'cta'],
 		]),
@@ -258,11 +258,11 @@ function lf_pci_registry(): array {
 			'faq_hub' => true,
 			'faq_context' => defined('LF_NICHE_FAQ_PAGE_CONTEXT') ? LF_NICHE_FAQ_PAGE_CONTEXT : 'faq_page',
 		]),
-		lf_pci_build_schema('contact', __('Contact', 'leadsforward-core'), ['hero', 'map_nap', 'cta'], [
+		lf_pci_build_schema('contact', __('Contact', 'leadsforward-core'), ['hero', 'map_nap', 'faq_accordion', 'cta'], [
 			'locked' => ['map_nap'],
 			'required' => ['hero', 'cta'],
 		]),
-		lf_pci_build_schema('thank-you', __('Thank You', 'leadsforward-core'), ['hero', 'content'], [
+		lf_pci_build_schema('thank-you', __('Thank You', 'leadsforward-core'), ['hero', 'content', 'faq_accordion'], [
 			'required' => ['hero', 'content'],
 		]),
 		lf_pci_build_schema('service', __('Service Page', 'leadsforward-core'), lf_pci_section_order_for_context('service'), [

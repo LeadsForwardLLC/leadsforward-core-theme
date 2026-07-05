@@ -1134,7 +1134,7 @@ function lf_ai_assistant_widget_css(): string {
 		[data-lf-section-wrap="1"] { position:relative; cursor:grab; transition:outline-color .15s ease, box-shadow .15s ease; }
 		[data-lf-section-wrap="1"]:hover { outline:2px dashed rgba(131,72,249,.35); outline-offset:3px; }
 		[data-lf-section-wrap="1"].is-dragging { opacity:.55; outline:2px solid #8348f9 !important; outline-offset:3px; cursor:grabbing; }
-		.lf-ai-section-controls { position:absolute; top:8px; right:8px; display:flex; flex-wrap:wrap; justify-content:flex-end; max-width:calc(100% - 16px); gap:6px; z-index:4; opacity:0.38; transition:opacity .15s ease; }
+		.lf-ai-section-controls { position:absolute; top:8px; right:8px; display:flex; flex-wrap:wrap; justify-content:flex-end; max-width:calc(100% - 16px); gap:6px; z-index:10; opacity:0.38; transition:opacity .15s ease; }
 		[data-lf-section-wrap="1"]:hover .lf-ai-section-controls, [data-lf-section-wrap="1"].lf-ai-section-is-hidden .lf-ai-section-controls, [data-lf-section-wrap="1"].lf-ai-section-active .lf-ai-section-controls { opacity:1; }
 		@media (hover: none), (pointer: coarse) {
 			.lf-ai-section-controls { opacity:1; }
@@ -10071,36 +10071,25 @@ function lf_ai_assistant_widget_js(): string {
 					controls = document.createElement("div");
 					controls.className = "lf-ai-section-controls lf-ai-inline-editor-ignore";
 					wrap.appendChild(controls);
-				}
-				var genBtn = controls.querySelector("[data-lf-section-generate]");
-				if (!genBtn) {
-					genBtn = document.createElement("button");
-					genBtn.type = "button";
-					genBtn.className = "lf-ai-section-btn lf-ai-section-btn--primary";
-					genBtn.setAttribute("data-lf-section-generate", "1");
-					genBtn.textContent = (lfAiFloating.i18n && lfAiFloating.i18n.inspectorGenerate) ? lfAiFloating.i18n.inspectorGenerate : "Generate";
-					genBtn.setAttribute("title", "Generate AI copy for this section");
-					genBtn.setAttribute("aria-label", "Generate this section with AI");
-					genBtn.addEventListener("click", function(e){
-						e.preventDefault();
-						e.stopPropagation();
-						triggerSectionGenerate(wrap);
-					});
-					controls.insertBefore(genBtn, controls.firstChild || null);
+				} else {
+					controls.innerHTML = "";
 				}
 				var sectionType = String(wrap.getAttribute("data-lf-section-type") || "");
-				var ensureBtn = function(text, title, ariaLabel, onClick) {
+				var ensureBtn = function(text, title, ariaLabel, onClick, extra) {
 					if (!controls) return null;
-					var btns = controls.querySelectorAll("button");
-					for (var i = 0; i < btns.length; i++) {
-						if (String(btns[i].textContent || "").trim() === text) return btns[i];
-					}
+					extra = extra || {};
 					var btn = document.createElement("button");
 					btn.type = "button";
-					btn.className = "lf-ai-section-btn";
+					btn.className = extra.className || "lf-ai-section-btn";
 					btn.textContent = text;
+					if (extra.actionKey) {
+						btn.setAttribute("data-lf-section-action", extra.actionKey);
+					}
 					if (title) btn.setAttribute("title", title);
 					if (ariaLabel) btn.setAttribute("aria-label", ariaLabel);
+					if (extra.toggle) {
+						btn.setAttribute("data-lf-section-toggle", "1");
+					}
 					btn.addEventListener("click", function(e){
 						e.preventDefault();
 						e.stopPropagation();
@@ -10109,134 +10098,70 @@ function lf_ai_assistant_widget_js(): string {
 					controls.appendChild(btn);
 					return btn;
 				};
+				ensureBtn(
+					(lfAiFloating.i18n && lfAiFloating.i18n.inspectorGenerate) ? lfAiFloating.i18n.inspectorGenerate : "Generate",
+					"Generate AI copy for this section",
+					"Generate this section with AI",
+					function(){ triggerSectionGenerate(wrap); },
+					{ className: "lf-ai-section-btn lf-ai-section-btn--primary", actionKey: "generate" }
+				);
 				ensureBtn("BG", "Choose section background (theme presets or custom color)", "Choose section background", function(){
 					openSectionBgPicker(wrap);
-				});
+				}, { actionKey: "bg" });
 				if (sectionSupportsContentMediaBlocks(sectionType)) {
 					ensureBtn("Fields", "Show or hide subtitle, body text, and checklist", "Content block visibility", function(){
 						openContentMediaFieldsPicker(wrap);
-					});
+					}, { actionKey: "fields" });
 				}
 				if (sectionType === "trust_reviews") {
 					ensureBtn("Layout", "Cycle review layout: slider → masonry → grid", "Cycle review layout", function(){
 						persistTrustLayout(wrap);
-					});
+					}, { actionKey: "layout" });
 				}
 				if (sectionType === "hero") {
-					var heroBtn = document.createElement("button");
-					heroBtn.type = "button";
-					heroBtn.className = "lf-ai-section-btn";
-					heroBtn.textContent = "Hero";
-					heroBtn.setAttribute("title", "Hero layout variant and background (image, color, or video)");
-					heroBtn.setAttribute("aria-label", "Hero layout and background");
-					heroBtn.addEventListener("click", function(e){
-						e.preventDefault();
-						e.stopPropagation();
+					ensureBtn("Hero", "Hero layout variant and background (image, color, or video)", "Hero layout and background", function(){
 						openHeroSettingsPicker(wrap);
-					});
-					controls.appendChild(heroBtn);
+					}, { actionKey: "hero" });
 				}
 				if (sectionSupportsHeaderAlign(wrap)) {
-					var alignBtn = document.createElement("button");
-					alignBtn.type = "button";
-					alignBtn.className = "lf-ai-section-btn";
-					alignBtn.textContent = "Align";
-					alignBtn.setAttribute("title", "Header alignment; for benefits sections, also button row alignment");
-					alignBtn.setAttribute("aria-label", "Set section header alignment");
-					alignBtn.addEventListener("click", function(e){
-						e.preventDefault();
-						e.stopPropagation();
+					ensureBtn("Align", "Header alignment; for benefits sections, also button row alignment", "Set section header alignment", function(){
 						openSectionAlignPicker(wrap);
-					});
-					controls.appendChild(alignBtn);
+					}, { actionKey: "align" });
 				}
 				if (sectionType === "benefits") {
 					ensureBtn("Grid", "Card columns: 2, 3, or 4 on desktop", "Set benefit columns", function(){
 						openSectionGridPicker(wrap);
-					});
+					}, { actionKey: "grid" });
 					ensureBtn("CTA", "Add or edit the optional benefits button", "Benefits button", function(){
 						openBenefitsCtaPicker(wrap, null);
-					});
+					}, { actionKey: "cta" });
 				}
 				if (sectionType === "service_intro") {
 					ensureBtn("Grid", "Service cards per row: 2, 3, or 4 on desktop", "Set service grid columns", function(){
 						openSectionGridPicker(wrap);
-					});
+					}, { actionKey: "grid" });
 				}
 				if (sectionSupportsColumnSwap(sectionType)) {
-					var swapBtn = document.createElement("button");
-					swapBtn.type = "button";
-					swapBtn.className = "lf-ai-section-btn";
-					swapBtn.textContent = "⇆";
-					swapBtn.setAttribute("title", "Reverse image/content columns");
-					swapBtn.setAttribute("aria-label", "Reverse image/content columns");
-					swapBtn.addEventListener("click", function(e){
-						e.preventDefault();
-						e.stopPropagation();
+					ensureBtn("⇆", "Reverse image/content columns", "Reverse image/content columns", function(){
 						persistSectionColumnSwap(wrap);
-					});
-					controls.appendChild(swapBtn);
+					}, { actionKey: "swap" });
 				}
-				var upBtn = document.createElement("button");
-				upBtn.type = "button";
-				upBtn.className = "lf-ai-section-btn";
-				upBtn.textContent = "↑";
-				upBtn.setAttribute("title", "Move this block up on the page (or drag the section / use the Structure panel)");
-				upBtn.setAttribute("aria-label", "Move section up");
-				upBtn.addEventListener("click", function(e){
-					e.preventDefault();
-					e.stopPropagation();
+				ensureBtn("↑", "Move this block up on the page (or drag the section / use the Structure panel)", "Move section up", function(){
 					moveSectionByStep(wrap, -1);
-				});
-				controls.appendChild(upBtn);
-				var downBtn = document.createElement("button");
-				downBtn.type = "button";
-				downBtn.className = "lf-ai-section-btn";
-				downBtn.textContent = "↓";
-				downBtn.setAttribute("title", "Move this block down on the page (or drag the section / use the Structure panel)");
-				downBtn.setAttribute("aria-label", "Move section down");
-				downBtn.addEventListener("click", function(e){
-					e.preventDefault();
-					e.stopPropagation();
+				}, { actionKey: "up" });
+				ensureBtn("↓", "Move this block down on the page (or drag the section / use the Structure panel)", "Move section down", function(){
 					moveSectionByStep(wrap, 1);
-				});
-				controls.appendChild(downBtn);
+				}, { actionKey: "down" });
 				if (sectionSupportsDuplicate(sectionType, String(wrap.getAttribute("data-lf-section-id") || ""))) {
-					var dupBtn = document.createElement("button");
-					dupBtn.type = "button";
-					dupBtn.className = "lf-ai-section-btn";
-					dupBtn.textContent = "Dup";
-					dupBtn.setAttribute("title", "Duplicate section");
-					dupBtn.setAttribute("aria-label", "Duplicate section");
-					dupBtn.addEventListener("click", function(e){
-						e.preventDefault();
-						e.stopPropagation();
+					ensureBtn("Dup", "Duplicate section", "Duplicate section", function(){
 						persistSectionDuplicate(wrap);
-					});
-					controls.appendChild(dupBtn);
+					}, { actionKey: "dup" });
 				}
-				var toggleBtn = document.createElement("button");
-				toggleBtn.type = "button";
-				toggleBtn.className = "lf-ai-section-btn";
-				toggleBtn.setAttribute("data-lf-section-toggle", "1");
-				toggleBtn.textContent = "Hide";
-				toggleBtn.setAttribute("title", "Hide or show section");
-				toggleBtn.addEventListener("click", function(e){
-					e.preventDefault();
-					e.stopPropagation();
+				var toggleBtn = ensureBtn("Hide", "Hide or show section", "Hide or show section", function(){
 					var isVisible = String(wrap.getAttribute("data-lf-section-visible") || "1") !== "0";
 					persistSectionVisibility(wrap, !isVisible);
-				});
-				controls.appendChild(toggleBtn);
-				var deleteBtn = document.createElement("button");
-				deleteBtn.type = "button";
-				deleteBtn.className = "lf-ai-section-btn lf-ai-section-btn--danger";
-				deleteBtn.textContent = "Del";
-				deleteBtn.setAttribute("title", "Delete section");
-				deleteBtn.setAttribute("aria-label", "Delete section");
-				deleteBtn.addEventListener("click", function(e){
-					e.preventDefault();
-					e.stopPropagation();
+				}, { actionKey: "hide", toggle: true });
+				ensureBtn("Del", "Delete section", "Delete section", function(){
 					var ok = false;
 					try {
 						ok = window.confirm("Delete this section? You can undo after deleting.");
@@ -10246,12 +10171,7 @@ function lf_ai_assistant_widget_js(): string {
 					if (ok) {
 						persistSectionDelete(wrap);
 					}
-				});
-				controls.appendChild(deleteBtn);
-				// If controls existed already, we only ensure missing buttons above.
-				if (!wrap.querySelector(".lf-ai-section-controls")) {
-					wrap.appendChild(controls);
-				}
+				}, { className: "lf-ai-section-btn lf-ai-section-btn--danger", actionKey: "del" });
 				applySectionVisibilityUi(wrap, String(wrap.getAttribute("data-lf-section-visible") || "1") !== "0");
 			});
 		}
