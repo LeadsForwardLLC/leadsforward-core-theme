@@ -149,7 +149,7 @@ function lf_header_menu_link_attributes(array $atts, \WP_Post $item, $args, int 
 			$atts['data-lf-quote-trigger'] = '1';
 			$atts['data-lf-quote-source'] = 'header-menu';
 		}
-		$atts['class'] = trim(($atts['class'] ?? '') . ' lf-btn lf-btn--primary lf-btn--md');
+		$atts['class'] = trim(($atts['class'] ?? '') . ' lf-btn lf-btn--primary lf-btn--sm');
 	}
 	if (in_array('lf-menu-call', $classes, true)) {
 		$phone = function_exists('lf_get_cta_phone') ? (string) lf_get_cta_phone() : '';

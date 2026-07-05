@@ -251,6 +251,32 @@ function lf_maybe_migrate_hero_default_image_v191(): void {
 add_action('init', 'lf_maybe_migrate_hero_default_image_v191', 21);
 
 /**
+ * One-time: refresh bundled homepage hero default (v0.1.194 homepage-hero.jpg).
+ */
+function lf_maybe_migrate_hero_default_image_v194(): void {
+	if (get_option('lf_hero_default_image_v194', '0') === '1') {
+		return;
+	}
+	$old_default_id = (int) get_option('lf_section_default_image_hero', 0);
+	delete_option('lf_section_default_image_hero');
+
+	if (defined('LF_HOMEPAGE_CONFIG_OPTION') && function_exists('lf_get_homepage_section_config')) {
+		$config = lf_get_homepage_section_config();
+		if (is_array($config['hero'] ?? null)) {
+			$saved_id = (int) ($config['hero']['hero_background_image_id'] ?? 0);
+			if ($old_default_id > 0 && $saved_id === $old_default_id) {
+				$config['hero']['hero_background_image_id'] = 0;
+				$config['hero']['hero_background_mode'] = 'image';
+				update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+			}
+		}
+	}
+
+	update_option('lf_hero_default_image_v194', '1');
+}
+add_action('init', 'lf_maybe_migrate_hero_default_image_v194', 22);
+
+/**
  * Hide the main editor for core pages (builder-managed).
  */
 function lf_pb_config_has_section(int $post_id, string $type): bool {

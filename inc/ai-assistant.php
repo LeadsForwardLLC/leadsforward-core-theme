@@ -5883,6 +5883,53 @@ function lf_ai_assistant_widget_js(): string {
 					} catch (e2) {}
 				}
 			}
+			function bindHeroPillIconEditor(chip, wrap) {
+				if (!chip || !wrap) return;
+				var iconNode = chip.querySelector(".lf-hero-conversion__badge-icon, .lf-icon-ring");
+				if (!iconNode) return;
+				iconNode.classList.add("lf-ai-inline-editor-ignore");
+				iconNode.setAttribute("title", "Click to change icon");
+				iconNode.onclick = function(e){
+					if (!editingEnabled || !iconSlugs.length) return;
+					if (e) {
+						e.preventDefault();
+						e.stopPropagation();
+					}
+					var current = String(chip.getAttribute("data-lf-chip-icon") || "check");
+					openIconPicker(current, function(selectedSlug){
+						var slug = String(selectedSlug || "check").trim() || "check";
+						if (!lfAiFloating || !lfAiFloating.ajax_url || !lfAiFloating.nonce) {
+							chip.setAttribute("data-lf-chip-icon", slug);
+							persistHeroPills(wrap);
+							return;
+						}
+						$.post(lfAiFloating.ajax_url, {
+							action: "lf_ai_icon_markup",
+							slug: slug,
+							size: "sm",
+							style: "ring",
+							nonce: lfAiFloating.nonce
+						}).done(function(res){
+							if (res && res.success && res.data && res.data.markup) {
+								chip.setAttribute("data-lf-chip-icon", slug);
+								var holder = document.createElement("div");
+								holder.innerHTML = String(res.data.markup);
+								var newIcon = holder.firstElementChild;
+								if (newIcon && iconNode.parentNode) {
+									iconNode.parentNode.replaceChild(newIcon, iconNode);
+								}
+							} else {
+								chip.setAttribute("data-lf-chip-icon", slug);
+							}
+							persistHeroPills(wrap);
+							buildHeroPillsControls();
+						}).fail(function(){
+							chip.setAttribute("data-lf-chip-icon", slug);
+							persistHeroPills(wrap);
+						});
+					});
+				};
+			}
 			function bindHeroPillEditor(chip, wrap) {
 				if (!chip || !wrap) return;
 				var textNode = heroPillTextNodeFromChip(chip);
@@ -5959,6 +6006,7 @@ function lf_ai_assistant_widget_js(): string {
 						chip.appendChild(removeBtn);
 					}
 					bindHeroPillEditor(chip, wrap);
+					bindHeroPillIconEditor(chip, wrap);
 				});
 				var controls = document.createElement("div");
 				controls.className = "lf-ai-hero-pills-controls lf-ai-inline-editor-ignore";
@@ -5984,7 +6032,7 @@ function lf_ai_assistant_widget_js(): string {
 						chip.className = "lf-hero-conversion__badge";
 						chip.setAttribute("data-lf-chip-icon", "check");
 						var iconWrap = document.createElement("span");
-						iconWrap.className = "lf-icon-ring lf-icon-ring--md lf-hero-conversion__badge-icon";
+						iconWrap.className = "lf-icon-ring lf-icon-ring--sm lf-hero-conversion__badge-icon";
 						iconWrap.setAttribute("aria-hidden", "true");
 						var graphic = document.createElement("span");
 						graphic.className = "lf-icon lf-icon-ring__icon";
@@ -6020,6 +6068,7 @@ function lf_ai_assistant_widget_js(): string {
 					});
 					chip.appendChild(removeBtn);
 					bindHeroPillEditor(chip, wrap);
+					bindHeroPillIconEditor(chip, wrap);
 					list.appendChild(chip);
 					persistHeroPills(wrap);
 					startHeroPillTextEdit(textNode, wrap);
