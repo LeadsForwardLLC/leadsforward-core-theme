@@ -688,6 +688,18 @@ function lf_ops_handle_global_settings_save(): void {
 		: 'dropdown';
 	$more_mode_save = in_array($more_mode_save, ['dropdown', 'slideout'], true) ? $more_mode_save : 'dropdown';
 	update_option('options_lf_header_more_mode', $more_mode_save);
+	$topbar_enabled_save = !empty($_POST['lf_header_topbar_enabled']) ? '1' : '0';
+	$topbar_text_save = isset($_POST['lf_header_topbar_text'])
+		? sanitize_text_field((string) wp_unslash($_POST['lf_header_topbar_text']))
+		: '';
+	$topbar_color_save = isset($_POST['lf_header_topbar_color'])
+		? (function_exists('lf_header_topbar_color_sanitize')
+			? lf_header_topbar_color_sanitize((string) wp_unslash($_POST['lf_header_topbar_color']))
+			: sanitize_text_field((string) wp_unslash($_POST['lf_header_topbar_color'])))
+		: '';
+	update_option('options_lf_header_topbar_enabled', $topbar_enabled_save);
+	update_option('options_lf_header_topbar_text', $topbar_text_save);
+	update_option('options_lf_header_topbar_color', $topbar_color_save);
 	// Menu autobuild + heading case.
 	update_option('options_lf_menu_autobuild_enabled', !empty($_POST['lf_menu_autobuild_enabled']) ? '1' : '0');
 	$heading_case_mode = isset($_POST['lf_heading_case_mode']) ? sanitize_key((string) wp_unslash($_POST['lf_heading_case_mode'])) : 'normal';
@@ -863,6 +875,9 @@ function lf_ops_handle_global_settings_save(): void {
 		update_field('lf_header_layout', $header_layout_save, $acf_option);
 		update_field('lf_header_nav_width', $nav_width_save, $acf_option);
 		update_field('lf_header_more_mode', $more_mode_save, $acf_option);
+		update_field('lf_header_topbar_enabled', $topbar_enabled_save === '1' ? 1 : 0, $acf_option);
+		update_field('lf_header_topbar_text', $topbar_text_save, $acf_option);
+		update_field('lf_header_topbar_color', $topbar_color_save, $acf_option);
 		update_field('lf_footer_address_link_auto', !empty($_POST['lf_footer_address_link_auto']) ? 1 : 0, $acf_option);
 		update_field('lf_footer_address_link_url', isset($_POST['lf_footer_address_link_url']) ? esc_url_raw(wp_unslash((string) $_POST['lf_footer_address_link_url'])) : '', $acf_option);
 		foreach ($keys as $key) {
@@ -1185,6 +1200,9 @@ function lf_ops_render_global_settings_page(): void {
 	$header_layout_ui = function_exists('lf_header_layout') ? lf_header_layout() : 'modern';
 	$header_nav_width_ui = function_exists('lf_header_nav_width') ? lf_header_nav_width() : 'contained';
 	$header_more_mode_ui = function_exists('lf_header_more_mode') ? lf_header_more_mode() : 'dropdown';
+	$header_topbar_enabled_ui = function_exists('lf_header_topbar_enabled') ? lf_header_topbar_enabled() : false;
+	$header_topbar_text_ui = function_exists('lf_header_topbar_text') ? lf_header_topbar_text() : '';
+	$header_topbar_color_ui = function_exists('lf_header_topbar_color') ? lf_header_topbar_color() : '';
 	$footer_addr_auto = (string) get_option('options_lf_footer_address_link_auto', '1') === '1';
 	$footer_addr_override = (string) get_option('options_lf_footer_address_link_url', '');
 	$all_services = [];
@@ -2012,7 +2030,21 @@ function lf_ops_render_global_settings_page(): void {
 									<option value="centered" <?php selected($header_layout_ui === 'centered'); ?>><?php esc_html_e('Centered logo and menu', 'leadsforward-core'); ?></option>
 									<option value="topbar" <?php selected($header_layout_ui === 'topbar'); ?>><?php esc_html_e('Promo strip above main bar', 'leadsforward-core'); ?></option>
 								</select>
-								<p class="description"><?php esc_html_e('Controls logo alignment and how the primary row is structured. Choosing “Promo strip above main bar” always shows the top promo row; add its text and color under Business location or in the front-end Site header panel.', 'leadsforward-core'); ?></p>
+								<p class="description"><?php esc_html_e('Controls logo alignment and how the primary row is structured. Choosing “Promo strip above main bar” always shows the top promo row (configure text below).', 'leadsforward-core'); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e('Promo top bar', 'leadsforward-core'); ?></th>
+							<td>
+								<label style="display:block; margin-bottom:8px;">
+									<input type="checkbox" name="lf_header_topbar_enabled" value="1" <?php checked($header_topbar_enabled_ui); ?> />
+									<?php esc_html_e('Show promo strip above the main header', 'leadsforward-core'); ?>
+								</label>
+								<label for="lf_header_topbar_text" style="display:block; font-weight:600; margin-bottom:4px;"><?php esc_html_e('Top bar text', 'leadsforward-core'); ?></label>
+								<input type="text" class="regular-text" name="lf_header_topbar_text" id="lf_header_topbar_text" value="<?php echo esc_attr($header_topbar_text_ui); ?>" placeholder="<?php esc_attr_e('e.g. Free estimates · Same-day response', 'leadsforward-core'); ?>" />
+								<p class="description" style="margin-top:6px;"><?php esc_html_e('Also editable from the front-end Header panel while logged in.', 'leadsforward-core'); ?></p>
+								<label for="lf_header_topbar_color" style="display:block; font-weight:600; margin:10px 0 4px;"><?php esc_html_e('Top bar background', 'leadsforward-core'); ?></label>
+								<input type="text" class="regular-text" name="lf_header_topbar_color" id="lf_header_topbar_color" value="<?php echo esc_attr($header_topbar_color_ui); ?>" placeholder="#0f172a or rgba(...)" />
 							</td>
 						</tr>
 						<tr>
