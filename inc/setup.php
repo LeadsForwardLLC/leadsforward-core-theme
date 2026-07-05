@@ -102,7 +102,7 @@ function lf_header_menu_item_title(string $title, \WP_Post $item, $args, int $de
 		if ($label === '' && function_exists('lf_get_option')) {
 			$label = (string) lf_get_option('lf_cta_primary_text', 'option');
 		}
-		return $label !== '' ? $label : __('Free Estimate', 'leadsforward-core');
+		return $label !== '' ? $label : __('Free Inspection', 'leadsforward-core');
 	}
 	if (in_array('lf-menu-call', $classes, true)) {
 		return __('Call', 'leadsforward-core');

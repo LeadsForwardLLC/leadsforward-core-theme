@@ -171,12 +171,12 @@ function lf_maybe_migrate_cta_defaults(): void {
 	$secondary = lf_get_option('lf_cta_secondary_text', 'option', '');
 	$header_label = function_exists('lf_get_global_option') ? (string) lf_get_global_option('lf_header_cta_label', '') : '';
 
-	$new_primary = __('Get a free estimate', 'leadsforward-core');
+	$new_primary = __('Get a Free Inspection', 'leadsforward-core');
 	$new_secondary = __('Call now', 'leadsforward-core');
-	$new_header = __('Free Estimate', 'leadsforward-core');
+	$new_header = __('Free Inspection', 'leadsforward-core');
 	$did = false;
 
-	if ($primary === '' || strcasecmp($primary, 'Contact Us') === 0 || strcasecmp($primary, 'Get a Quote') === 0) {
+	if ($primary === '' || strcasecmp($primary, 'Contact Us') === 0 || strcasecmp($primary, 'Get a Quote') === 0 || strcasecmp($primary, 'Get a free estimate') === 0 || strcasecmp($primary, 'Get a Free Estimate') === 0) {
 		lf_update_cta_option_value('lf_cta_primary_text', $new_primary);
 		$did = true;
 	}
@@ -184,7 +184,7 @@ function lf_maybe_migrate_cta_defaults(): void {
 		lf_update_cta_option_value('lf_cta_secondary_text', $new_secondary);
 		$did = true;
 	}
-	if ($header_label === '' || strcasecmp($header_label, 'Contact Us') === 0 || strcasecmp($header_label, 'Get a Quote') === 0) {
+	if ($header_label === '' || strcasecmp($header_label, 'Contact Us') === 0 || strcasecmp($header_label, 'Get a Quote') === 0 || strcasecmp($header_label, 'Free Estimate') === 0) {
 		lf_update_global_option_value('lf_header_cta_label', $new_header);
 		$did = true;
 	}
@@ -194,6 +194,35 @@ function lf_maybe_migrate_cta_defaults(): void {
 	}
 }
 add_action('init', 'lf_maybe_migrate_cta_defaults', 20);
+
+/**
+ * One-time: normalize redundant homepage hero CTA copy (inspection/estimate duplicates).
+ */
+function lf_maybe_migrate_homepage_hero_inspection_cta(): void {
+	if (get_option('lf_homepage_hero_cta_inspection_migrated')) {
+		return;
+	}
+	if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config')) {
+		return;
+	}
+	$config = lf_get_homepage_section_config();
+	if (!is_array($config['hero'] ?? null)) {
+		update_option('lf_homepage_hero_cta_inspection_migrated', '1');
+		return;
+	}
+	$inspection = __('Get a Free Inspection', 'leadsforward-core');
+	$primary = trim((string) ($config['hero']['cta_primary_override'] ?? ''));
+	$changed = false;
+	if ($primary !== '' && preg_match('/\b(foundation|structural)\b.*\b(inspection|estimate)\b/i', $primary)) {
+		$config['hero']['cta_primary_override'] = $inspection;
+		$changed = true;
+	}
+	if ($changed) {
+		update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+	}
+	update_option('lf_homepage_hero_cta_inspection_migrated', '1');
+}
+add_action('init', 'lf_maybe_migrate_homepage_hero_inspection_cta', 21);
 
 /**
  * Hide the main editor for core pages (builder-managed).

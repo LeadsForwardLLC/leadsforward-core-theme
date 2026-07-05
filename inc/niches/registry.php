@@ -203,7 +203,7 @@ function lf_niche_build_entry(
 		'homepage_section_order' => $profile['homepage'] ?? lf_wizard_default_section_order(),
 		'section_enabled' => array_merge($default_sections, $profile['section_enabled'] ?? []),
 		'variation_profile' => $variation_profile,
-		'cta_primary_default' => __('Get a Free Estimate', 'leadsforward-core'),
+		'cta_primary_default' => __('Get a Free Inspection', 'leadsforward-core'),
 		'cta_secondary_default' => __('Call Now', 'leadsforward-core'),
 		'hero_headline_default' => sprintf(__('%s in [Your City]', 'leadsforward-core'), $name),
 		'hero_subheadline_default' => sprintf(__('Trusted local %s services with clear timelines and quality work.', 'leadsforward-core'), $name),
@@ -282,7 +282,7 @@ function lf_get_niche_registry(): array {
 			'd',
 			[
 				'cta_primary_default' => __('Request HVAC Service', 'leadsforward-core'),
-				'cta_secondary_default' => __('Get a Free Estimate', 'leadsforward-core'),
+				'cta_secondary_default' => __('See Our Work', 'leadsforward-core'),
 				'hero_headline_default' => __('HVAC Repair & Installation in [Your City]', 'leadsforward-core'),
 				'hero_subheadline_default' => __('Heating, cooling, and maintenance.', 'leadsforward-core'),
 			]

@@ -125,7 +125,7 @@ if ($show_topbar) {
 					<?php endif; ?>
 					<?php if ($show_cta) : ?>
 						<?php
-					$label = $cta_label !== '' ? $cta_label : ($cta_text ?: __('Free Estimate', 'leadsforward-core'));
+					$label = $cta_label !== '' ? $cta_label : ($cta_text ?: __('Free Inspection', 'leadsforward-core'));
 					?>
 					<?php if ($cta_url !== '') : ?>
 						<a class="site-header__cta lf-btn lf-btn--primary" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($label); ?></a>
