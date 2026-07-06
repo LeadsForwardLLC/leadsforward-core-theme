@@ -257,7 +257,7 @@ function lf_pci_admin_read_uploaded_files(): array {
 			);
 			continue;
 		}
-		$parsed = lf_pci_parse_document($raw);
+		$parsed = lf_pci_parse_document($raw, null, $filename);
 		$items[] = [
 			'filename' => $filename,
 			'parsed' => $parsed,
@@ -495,7 +495,7 @@ function lf_pci_admin_render(): void {
 			<?php wp_nonce_field('lf_pci_import', 'lf_pci_nonce'); ?>
 			<h2><?php esc_html_e('Upload finished .docx files', 'leadsforward-core'); ?></h2>
 			<p class="description">
-				<?php esc_html_e('Each file needs its own === PAGE === block (Slug: for site pages, or Template: service + Slug: for service posts). Select multiple files for a bulk import.', 'leadsforward-core'); ?>
+				<?php esc_html_e('Each file needs its own === PAGE === block (Slug: for site pages, or Template: service + Slug: for service posts). If GPT removed PAGE, name files like about-us-filled.docx or basement-waterproofing-filled.docx so the importer can infer the target. Select multiple files for a bulk import.', 'leadsforward-core'); ?>
 				<?php if ($max_file_uploads > 0) : ?>
 					<?php
 					echo ' ';

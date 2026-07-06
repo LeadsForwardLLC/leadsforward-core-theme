@@ -130,6 +130,157 @@ function lf_pci_extract_page_header(string $raw): array {
 }
 
 /**
+ * Normalize upload basename to a slug (strips -filled, -content-template, etc.).
+ */
+function lf_pci_normalize_upload_basename(string $filename): string {
+	$base = pathinfo(sanitize_file_name($filename), PATHINFO_FILENAME);
+	$base = preg_replace('/-(filled|content-template)$/i', '', (string) $base) ?? (string) $base;
+	$base = preg_replace('/-content-template$/i', '', $base) ?? $base;
+
+	return sanitize_title($base);
+}
+
+/**
+ * Loose Slug:/Template: lines GPT sometimes leaves in the body.
+ *
+ * @return array{template: string, slug: string}
+ */
+function lf_pci_extract_loose_target_fields(string $raw): array {
+	$template = '';
+	$slug = '';
+	if (preg_match('/\bTemplate:\s*([^\n\r]+)/i', $raw, $m)) {
+		$template = sanitize_title(trim($m[1]));
+	}
+	if (preg_match('/\bSlug:\s*([^\n\r]+)/i', $raw, $m)) {
+		$slug = sanitize_title(trim($m[1]));
+	}
+
+	return ['template' => $template, 'slug' => $slug];
+}
+
+/**
+ * When a generic service/area template filename is used, pick slug if exactly one CPT exists.
+ */
+function lf_pci_infer_single_cpt_slug(string $post_type): string {
+	$post_type = sanitize_key($post_type);
+	if ($post_type === '') {
+		return '';
+	}
+	$posts = get_posts([
+		'post_type' => $post_type,
+		'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
+		'posts_per_page' => 2,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	]);
+	if (count($posts) !== 1) {
+		return '';
+	}
+	$post = get_post((int) $posts[0]);
+
+	return $post instanceof \WP_Post ? sanitize_title($post->post_name) : '';
+}
+
+/**
+ * Infer import target from a writer filename (e.g. about-us-filled.docx).
+ *
+ * @return array{template: string, slug: string, label: string}
+ */
+function lf_pci_infer_target_from_filename(string $filename): array {
+	$slug = lf_pci_normalize_upload_basename($filename);
+	if ($slug === '') {
+		return ['template' => '', 'slug' => '', 'label' => ''];
+	}
+
+	if (lf_pci_schema_for_slug($slug) !== null) {
+		return ['template' => $slug, 'slug' => $slug, 'label' => ''];
+	}
+
+	$aliases = function_exists('lf_pci_registry_slug_aliases') ? lf_pci_registry_slug_aliases() : [];
+	if (isset($aliases[$slug])) {
+		$key = (string) $aliases[$slug];
+
+		return ['template' => $key, 'slug' => $key, 'label' => ''];
+	}
+
+	if (function_exists('lf_fleet_canonical_page_slug')) {
+		$canonical = lf_fleet_canonical_page_slug($slug);
+		if ($canonical !== $slug && lf_pci_schema_for_slug($canonical) !== null) {
+			return ['template' => $canonical, 'slug' => $canonical, 'label' => ''];
+		}
+	}
+
+	if ($slug === 'our-services') {
+		return ['template' => 'services', 'slug' => 'services', 'label' => ''];
+	}
+
+	if (in_array($slug, ['service', 'service-page'], true)) {
+		$single = lf_pci_infer_single_cpt_slug('lf_service');
+
+		return ['template' => 'service', 'slug' => $single, 'label' => ''];
+	}
+	if (in_array($slug, ['service-area', 'service-area-page', 'service-areas-page'], true)) {
+		$single = lf_pci_infer_single_cpt_slug('lf_service_area');
+
+		return ['template' => 'service-area', 'slug' => $single, 'label' => ''];
+	}
+
+	foreach (['lf_service' => 'service', 'lf_service_area' => 'service-area'] as $post_type => $template) {
+		$posts = get_posts([
+			'post_type' => $post_type,
+			'name' => $slug,
+			'post_status' => 'any',
+			'posts_per_page' => 1,
+			'fields' => 'ids',
+			'no_found_rows' => true,
+		]);
+		if (!empty($posts[0])) {
+			return ['template' => $template, 'slug' => $slug, 'label' => ''];
+		}
+	}
+
+	$page = get_page_by_path($slug, OBJECT, 'page');
+	if ($page instanceof \WP_Post) {
+		$key = lf_pci_post_template_key($page);
+
+		return [
+			'template' => $key !== '' ? $key : sanitize_title($page->post_name),
+			'slug' => sanitize_title($page->post_name),
+			'label' => (string) $page->post_title,
+		];
+	}
+
+	return ['template' => '', 'slug' => '', 'label' => ''];
+}
+
+/**
+ * Remove WRITER NOTES brief (with or without a following PAGE block).
+ */
+function lf_pci_strip_writer_notes(string $raw): string {
+	if (!preg_match('/=== WRITER NOTES ===/i', $raw)) {
+		return $raw;
+	}
+	$stripped = preg_replace('/=== WRITER NOTES ===[\s\S]*?(?==== PAGE ===)/i', '', $raw, 1);
+	if (is_string($stripped) && $stripped !== $raw) {
+		return $stripped;
+	}
+	$stripped = preg_replace('/=== WRITER NOTES ===[\s\S]*?(?==== (?!WRITER NOTES)[^\n=]+===)/i', '', $raw, 1);
+
+	return is_string($stripped) ? $stripped : $raw;
+}
+
+/**
+ * Put GPT/Docs-inline section headers on their own lines for the splitter.
+ */
+function lf_pci_normalize_section_headers(string $raw): string {
+	$raw = preg_replace('/\s*(=== [^=\n]+ ===)\s*/', "\n$1\n", $raw) ?? $raw;
+	$raw = preg_replace('/(=== [^=\n]+ ===)\n*([A-Za-z][A-Za-z0-9 _-]*:)/', "$1\n$2", $raw) ?? $raw;
+	$raw = preg_replace("/\n{3,}/", "\n\n", $raw) ?? $raw;
+
+	return trim($raw);
+}
+
+/**
  * Whether this post supports paste import.
  */
 function lf_pci_post_supports_import(\WP_Post $post): bool {
@@ -358,7 +509,8 @@ function lf_pci_normalize_raw(string $raw): string {
 	$raw = preg_replace_callback('/^#{1,3}\s+(.+?)\s*$/m', static function (array $m): string {
 		return '=== ' . strtoupper(trim($m[1])) . ' ===';
 	}, $raw) ?? $raw;
-	return trim($raw);
+
+	return lf_pci_normalize_section_headers(trim($raw));
 }
 
 /**
@@ -981,17 +1133,58 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 }
 
 /**
- * Parse doc; resolves target page from === PAGE === or optional override (page editor).
+ * Parse doc; resolves target page from === PAGE ===, filename, or optional override.
  *
  * @return array<string, mixed>
  */
-function lf_pci_parse_document(string $raw, ?string $force_template = null): array {
+function lf_pci_parse_document(string $raw, ?string $force_template = null, string $source_filename = ''): array {
 	$raw = lf_pci_normalize_raw($raw);
-	$raw = preg_replace('/=== WRITER NOTES ===[\s\S]*?(?==== PAGE ===)/', '', $raw, 1) ?? $raw;
+	$raw = lf_pci_strip_writer_notes($raw);
 	$header = lf_pci_extract_page_header($raw);
-	$template_key = $force_template !== null && $force_template !== ''
-		? sanitize_title($force_template)
-		: ($header['template'] !== '' ? $header['template'] : $header['slug']);
+	$parse_warnings = [];
+
+	$template_key = '';
+	$target_slug = $header['slug'];
+	if ($force_template !== null && $force_template !== '') {
+		$template_key = sanitize_title($force_template);
+	} else {
+		$template_key = $header['template'] !== '' ? $header['template'] : $header['slug'];
+	}
+
+	if ($template_key === '' || lf_pci_schema_for_slug($template_key) === null) {
+		$inferred = $source_filename !== '' ? lf_pci_infer_target_from_filename($source_filename) : [];
+		if ($inferred !== [] && ($inferred['template'] ?? '') !== '') {
+			$template_key = (string) $inferred['template'];
+			if ($target_slug === '' && ($inferred['slug'] ?? '') !== '') {
+				$target_slug = (string) $inferred['slug'];
+			}
+			if ($header['label'] === '' && ($inferred['label'] ?? '') !== '') {
+				$header['label'] = (string) $inferred['label'];
+			}
+			$parse_warnings[] = sprintf(
+				/* translators: %s: filename */
+				__('Page target inferred from filename (%s). GPT often deletes the === PAGE === block — keep it in future docs.', 'leadsforward-core'),
+				sanitize_file_name($source_filename)
+			);
+		}
+	}
+
+	$loose = lf_pci_extract_loose_target_fields($raw);
+	if ($loose['template'] !== '' && lf_pci_schema_for_slug($loose['template']) !== null) {
+		$template_key = $loose['template'];
+	}
+	if ($loose['slug'] !== '') {
+		$target_slug = $loose['slug'];
+	}
+
+	if (
+		in_array($template_key, ['service', 'service-area'], true)
+		&& $target_slug === ''
+	) {
+		$post_type = $template_key === 'service-area' ? 'lf_service_area' : 'lf_service';
+		$target_slug = lf_pci_infer_single_cpt_slug($post_type);
+	}
+
 	$schema = lf_pci_schema_for_slug($template_key);
 	if ($schema === null) {
 		$hint = $template_key !== ''
@@ -1000,28 +1193,48 @@ function lf_pci_parse_document(string $raw, ?string $force_template = null): arr
 				__('No import template registered for "%s".', 'leadsforward-core'),
 				$template_key
 			)
-			: __('Missing page target. Add a === PAGE === block with Slug: (pages) or Template: service + Slug: (service posts).', 'leadsforward-core');
+			: __('Missing page target. Add a === PAGE === block with Slug: (pages) or Template: service + Slug: (service posts), or name files like about-us-filled.docx.', 'leadsforward-core');
+		if (
+			in_array($template_key, ['service', 'service-area'], true)
+			&& $target_slug === ''
+		) {
+			$hint = __('Missing service/area slug. Add === PAGE === with Template: service + Slug: your-slug, or rename the file to {post-slug}-filled.docx.', 'leadsforward-core');
+		}
 		return [
 			'template_key' => $template_key,
-			'page_slug' => $header['slug'],
+			'page_slug' => $target_slug,
 			'page_label' => $header['label'],
 			'post_type' => 'page',
 			'sections' => [],
 			'process_steps' => [],
 			'faqs' => [],
 			'seo' => ['title' => '', 'description' => ''],
-			'warnings' => [],
+			'warnings' => $parse_warnings,
 			'errors' => [$hint],
 			'found_sections' => [],
 		];
 	}
 	$parsed = lf_pci_parse_with_schema($header['content'], $schema);
 	$parsed['template_key'] = $template_key;
-	$parsed['page_slug'] = $header['slug'] !== '' ? $header['slug'] : (string) ($schema['slug'] ?? '');
-	$parsed['post_type'] = (string) ($schema['post_type'] ?? 'page');
+	$post_type = (string) ($schema['post_type'] ?? 'page');
+	if ($target_slug !== '') {
+		$parsed['page_slug'] = $target_slug;
+	} elseif ($post_type === 'page') {
+		$parsed['page_slug'] = (string) ($schema['slug'] ?? '');
+	} else {
+		$parsed['page_slug'] = '';
+	}
+	$parsed['post_type'] = $post_type;
 	if ($header['label'] !== '') {
 		$parsed['page_label'] = $header['label'];
 	}
+	if ($parse_warnings !== []) {
+		$parsed['warnings'] = array_values(array_unique(array_merge(
+			is_array($parsed['warnings'] ?? null) ? $parsed['warnings'] : [],
+			$parse_warnings
+		)));
+	}
+
 	return $parsed;
 }
 
@@ -1660,7 +1873,8 @@ Confident, calm, specific. Short sentences. Real trade language. No hype, no "In
 
 {$kw_block}
 FORMAT RULES
-- Keep every === SECTION === header and Key: value line exactly as written.
+- Never delete the === PAGE === block (Slug: / Template: + Slug:). The importer needs it — or use filenames like about-us-filled.docx.
+- Keep every other === SECTION === header and Key: value line exactly as written.
 - Benefits / process steps: Title || body on one line per item.
 - FAQs: Q: / A: pairs unless the section says to leave blank.
 - Process + FAQ on service pages: leave blank when noted — theme fills from Niche Content Library.
