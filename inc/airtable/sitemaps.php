@@ -75,7 +75,7 @@ function lf_airtable_sitemaps_keywords_field(array $fields, $key_or_aliases): ar
 			}
 			$merged = array_merge($merged, lf_ai_studio_airtable_keywords_field($fields, $key));
 		}
-		return array_values(array_unique(array_filter($merged)));
+		return lf_airtable_sitemaps_normalize_keyword_list($merged);
 	}
 
 	$raw = lf_airtable_sitemaps_string_field($fields, $key_or_aliases);
@@ -83,7 +83,34 @@ function lf_airtable_sitemaps_keywords_field(array $fields, $key_or_aliases): ar
 		return [];
 	}
 	$parts = preg_split('/\r\n|\r|\n|,/', $raw) ?: [];
-	return array_values(array_unique(array_filter(array_map('sanitize_text_field', array_map('trim', $parts)))));
+	return lf_airtable_sitemaps_normalize_keyword_list($parts);
+}
+
+/**
+ * Coerce mixed Airtable keyword values into a unique string list.
+ *
+ * @param mixed $keywords
+ * @return list<string>
+ */
+function lf_airtable_sitemaps_normalize_keyword_list($keywords): array {
+	if (!is_array($keywords)) {
+		$keywords = $keywords === null || $keywords === '' ? [] : [$keywords];
+	}
+	$out = [];
+	foreach ($keywords as $keyword) {
+		if (is_array($keyword)) {
+			$out = array_merge($out, lf_airtable_sitemaps_normalize_keyword_list($keyword));
+			continue;
+		}
+		if (!is_scalar($keyword)) {
+			continue;
+		}
+		$text = trim(sanitize_text_field((string) $keyword));
+		if ($text !== '') {
+			$out[] = $text;
+		}
+	}
+	return array_values(array_unique($out));
 }
 
 /**
@@ -277,7 +304,10 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 			$primary_lc = strtolower(trim($primary_keyword));
 			$secondary_keywords = array_values(array_filter(
 				$secondary_keywords,
-				static fn(string $kw): bool => strtolower(trim($kw)) !== $primary_lc && trim($kw) !== ''
+				static function ($kw) use ($primary_lc): bool {
+					$kw = strtolower(trim((string) $kw));
+					return $kw !== '' && $kw !== $primary_lc;
+				}
 			));
 		}
 		$menu_group_raw = lf_airtable_sitemaps_string_field($row, ['Menu Group', 'menu group']);
