@@ -5251,6 +5251,42 @@ article a:not(.lf-btn):hover {
 	opacity: 1;
 }
 
+.lf-block-hero--page.lf-block-hero--has-canvas-bg .lf-block-hero__bg::before {
+	background: linear-gradient(
+		105deg,
+		rgba(10, 15, 28, 0.84) 0%,
+		rgba(10, 15, 28, 0.72) 40%,
+		rgba(10, 15, 28, 0.42) 100%
+	);
+	opacity: 1;
+}
+
+.lf-block-hero--page.lf-block-hero--has-canvas-bg .lf-hero-basic__title,
+.lf-block-hero--page.lf-block-hero--has-canvas-bg .lf-hero-basic__subtitle,
+.lf-block-hero--page.lf-block-hero--has-canvas-bg .lf-hero-basic__content .lf-heading-icon {
+	color: var(--lf-text-inverse) !important;
+}
+
+.lf-block-hero--page.lf-block-hero--has-canvas-bg .lf-hero-basic__subtitle {
+	color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.lf-block-hero--page.lf-block-hero--has-canvas-bg .lf-breadcrumbs__list {
+	color: rgba(255, 255, 255, 0.78);
+}
+
+.lf-block-hero--page.lf-block-hero--has-canvas-bg .lf-breadcrumbs__link {
+	color: #bae6fd;
+}
+
+.lf-block-hero--page.lf-block-hero--has-canvas-bg .lf-breadcrumbs__current {
+	color: rgba(255, 255, 255, 0.72);
+}
+
+.lf-block-hero--page.lf-block-hero--has-canvas-bg .lf-breadcrumbs__item + .lf-breadcrumbs__item::before {
+	color: rgba(255, 255, 255, 0.45);
+}
+
 .lf-hero-conversion {
 	display: grid;
 	grid-template-columns: minmax(0, 1.22fr) minmax(280px, 0.78fr);

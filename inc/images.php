@@ -328,6 +328,60 @@ function lf_hero_background_image_size(): string {
 }
 
 /**
+ * Resolve hero background image URL for conversion + interior page heroes.
+ *
+ * @param array<string, mixed> $section Hero section settings.
+ * @param string             $variant Normalized hero variant (conversion|page).
+ * @param int                $post_id Context post ID for featured image fallback.
+ */
+function lf_resolve_hero_section_background_url(array $section, string $variant = 'conversion', int $post_id = 0): string {
+	$mode = (string) ($section['hero_background_mode'] ?? 'image');
+	if ($mode !== 'image') {
+		return '';
+	}
+	$size = lf_hero_background_image_size();
+	$stored_id = (int) ($section['hero_background_image_id'] ?? 0);
+	if ($stored_id > 0) {
+		$url = wp_get_attachment_image_url($stored_id, $size);
+		if (is_string($url) && $url !== '') {
+			return $url;
+		}
+	}
+	if ($variant === 'conversion' && function_exists('lf_get_section_default_image_url')) {
+		$url = (string) lf_get_section_default_image_url('hero');
+		if ($url !== '') {
+			return $url;
+		}
+	}
+	if ($post_id <= 0) {
+		$post_id = (int) get_queried_object_id();
+	}
+	if ($post_id > 0) {
+		$thumb_id = (int) get_post_thumbnail_id($post_id);
+		if ($thumb_id > 0) {
+			$url = wp_get_attachment_image_url($thumb_id, $size);
+			if (is_string($url) && $url !== '') {
+				return $url;
+			}
+		}
+	}
+	if (function_exists('lf_get_section_default_image_url')) {
+		$url = (string) lf_get_section_default_image_url('hero');
+		if ($url !== '') {
+			return $url;
+		}
+	}
+	$placeholder_id = function_exists('lf_get_placeholder_image_id') ? (int) lf_get_placeholder_image_id() : 0;
+	if ($placeholder_id > 0) {
+		$url = wp_get_attachment_image_url($placeholder_id, $size);
+		if (is_string($url) && $url !== '') {
+			return $url;
+		}
+	}
+	return '';
+}
+
+/**
  * Resolve homepage hero background image URL for preload (front page only).
  */
 function lf_resolve_homepage_hero_background_url(): string {

@@ -299,6 +299,21 @@ function lf_maybe_migrate_hero_default_image_v195(): void {
 add_action('init', 'lf_maybe_migrate_hero_default_image_v195', 23);
 
 /**
+ * Repair fleet page section order on front-end (v7: contact CTA before FAQ, etc.).
+ */
+function lf_maybe_migrate_fleet_page_order_v7(): void {
+	if (get_option('lf_pb_template_cleanup_v7', '0') === '1') {
+		return;
+	}
+	if (!function_exists('lf_pb_repair_fleet_templates')) {
+		return;
+	}
+	lf_pb_repair_fleet_templates();
+	update_option('lf_pb_template_cleanup_v7', '1', true);
+}
+add_action('init', 'lf_maybe_migrate_fleet_page_order_v7', 24);
+
+/**
  * Hide the main editor for core pages (builder-managed).
  */
 function lf_pb_config_has_section(int $post_id, string $type): bool {

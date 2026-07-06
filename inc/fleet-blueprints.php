@@ -51,7 +51,7 @@ function lf_fleet_page_section_orders(): array {
 		'reviews' => ['hero', 'trust_reviews', 'faq_accordion', 'cta'],
 		'blog' => ['hero', 'blog_posts', 'faq_accordion', 'cta'],
 		'faq' => ['hero', 'faq_accordion', 'cta'],
-		'contact' => ['hero', 'map_nap', 'faq_accordion', 'cta'],
+		'contact' => ['hero', 'map_nap', 'cta', 'faq_accordion'],
 		'sitemap' => ['hero', 'sitemap_links'],
 		'privacy-policy' => ['hero', 'content'],
 		'terms-of-service' => ['hero', 'content'],
@@ -59,6 +59,9 @@ function lf_fleet_page_section_orders(): array {
 	];
 
 	foreach ($templates as $slug => $order) {
+		if ($slug === 'contact') {
+			continue;
+		}
 		$templates[$slug] = lf_fleet_ensure_faq_before_final_cta($order);
 	}
 

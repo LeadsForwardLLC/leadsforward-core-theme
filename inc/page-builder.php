@@ -540,33 +540,14 @@ function lf_pb_sanitize_order(array $order, array $allowed): array {
 	return $clean;
 }
 
-function lf_pb_cleanup_templates_once(): void {
-	if (!is_admin() || !current_user_can('edit_theme_options')) {
-		return;
-	}
-	if (get_option('lf_pb_template_cleanup_v6', '0') === '1') {
-		return;
-	}
-	if (function_exists('lf_homepage_cleanup_sections_once')) {
-		lf_homepage_cleanup_sections_once();
-	}
+/**
+ * Repair fleet page / CPT section order from canonical blueprints.
+ */
+function lf_pb_repair_fleet_templates(): int {
 	$updated = 0;
 	$page_templates = function_exists('lf_fleet_page_section_orders')
 		? lf_fleet_page_section_orders()
-		: [
-		'about-us' => ['hero', 'content_image', 'benefits', 'image_content', 'process', 'faq_accordion', 'cta'],
-		'why-choose-us' => ['hero', 'benefits', 'content_image', 'image_content', 'faq_accordion', 'cta'],
-		'services' => ['hero', 'service_intro', 'content_image', 'faq_accordion', 'cta'],
-		'service-areas' => ['hero', 'service_areas', 'faq_accordion', 'cta'],
-		'reviews' => ['hero', 'trust_reviews', 'faq_accordion', 'cta'],
-		'blog' => ['hero', 'blog_posts', 'faq_accordion', 'cta'],
-		'faq' => ['hero', 'faq_accordion', 'cta'],
-		'contact' => ['hero', 'map_nap', 'faq_accordion', 'cta'],
-		'sitemap' => ['hero', 'sitemap_links'],
-		'privacy-policy' => ['hero', 'content'],
-		'terms-of-service' => ['hero', 'content'],
-		'thank-you' => ['hero', 'content', 'faq_accordion'],
-	];
+		: [];
 
 	$page_ids = get_posts([
 		'post_type' => 'page',
@@ -577,10 +558,7 @@ function lf_pb_cleanup_templates_once(): void {
 	]);
 	foreach ($page_ids as $page_id) {
 		$post = get_post((int) $page_id);
-		if (!$post instanceof \WP_Post) {
-			continue;
-		}
-		if ($post->post_name === 'home') {
+		if (!$post instanceof \WP_Post || $post->post_name === 'home') {
 			continue;
 		}
 		$desired = $page_templates[$post->post_name] ?? ['hero', 'content'];
@@ -592,6 +570,7 @@ function lf_pb_cleanup_templates_once(): void {
 		}
 	}
 
+	$cpt_orders = function_exists('lf_fleet_cpt_section_orders') ? lf_fleet_cpt_section_orders() : [];
 	$service_ids = get_posts([
 		'post_type' => 'lf_service',
 		'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
@@ -599,7 +578,6 @@ function lf_pb_cleanup_templates_once(): void {
 		'fields' => 'ids',
 		'no_found_rows' => true,
 	]);
-	$cpt_orders = function_exists('lf_fleet_cpt_section_orders') ? lf_fleet_cpt_section_orders() : [];
 	foreach ($service_ids as $service_id) {
 		$desired = $cpt_orders['service'] ?? ['hero', 'trust_bar', 'service_details', 'service_details', 'benefits', 'process', 'faq_accordion', 'cta'];
 		if (lf_pb_cleanup_post_config((int) $service_id, 'service', $desired)) {
@@ -635,8 +613,22 @@ function lf_pb_cleanup_templates_once(): void {
 		}
 	}
 
-	update_option('lf_pb_template_cleanup_v6', '1', true);
-	update_option('lf_pb_template_cleanup_v6_count', (int) $updated, false);
+	return $updated;
+}
+
+function lf_pb_cleanup_templates_once(): void {
+	if (!is_admin() || !current_user_can('edit_theme_options')) {
+		return;
+	}
+	if (get_option('lf_pb_template_cleanup_v7', '0') === '1') {
+		return;
+	}
+	if (function_exists('lf_homepage_cleanup_sections_once')) {
+		lf_homepage_cleanup_sections_once();
+	}
+	$updated = lf_pb_repair_fleet_templates();
+	update_option('lf_pb_template_cleanup_v7', '1', true);
+	update_option('lf_pb_template_cleanup_v7_count', (int) $updated, false);
 }
 
 function lf_pb_cleanup_post_config(int $post_id, string $context, array $desired_types): bool {
