@@ -2020,16 +2020,14 @@ function lf_pci_template_keyword_targets_block(array $ctx): string {
 }
 
 /**
- * Token legend prepended to downloadable writer templates.
+ * Core AI copy brief (shared by downloadable templates and admin UI).
  *
  * @param array{primary_keyword?: string, secondary_keywords?: string, serp_intent?: string} $keyword_ctx
  */
-function lf_pci_template_token_legend(array $keyword_ctx = []): string {
+function lf_pci_ai_prompt_body(array $keyword_ctx = []): string {
 	$kw_block = lf_pci_template_keyword_targets_block($keyword_ctx);
-	return <<<LEGEND
-=== WRITER NOTES ===
-(Removed automatically on import — paste this entire block into your AI as the system brief.)
 
+	return <<<PROMPT
 ROLE
 You are a senior local SEO copywriter for contractor and home-service companies ({business} in {city}). Write highly engaging, conversion-focused, SEO-smart copy that sounds human — never generic AI filler.
 
@@ -2039,20 +2037,50 @@ Homeowners who need trust fast: licensed crews, clear process, honest pricing, l
 VOICE
 Confident, calm, specific. Short sentences. Real trade language. No hype, no "In today's world", no em-dash spam, no bullet-only pages.
 
-{$kw_block}
-FORMAT RULES
-- Never delete the === PAGE === block (Slug: / Template: + Slug:). The importer needs it — or use filenames like about-us-filled.docx.
-- Keep every other === SECTION === header on its own line with one Key: value per line (never merge Headline/Subheadline/Intro onto one line).
+{$kw_block}FORMAT RULES
+- Never delete the === PAGE === block (Slug: for site pages, or Template: service + Slug: for service/area posts). The importer needs it — or name finished files like about-us-filled.docx.
+- Keep every === SECTION === header on its own line.
+- Put one Key: value per line — never merge Headline, Subheadline, Intro, Body, or Items onto a single line.
 - Benefits: Title || body on one line per item.
-- Do not include === PROCESS === or === FAQ === sections — those are added from Niche Content Library after site build.
+- Do not add === PROCESS === or === FAQ === sections — those are managed in LeadsForward → Niche Content Library after site build.
 
 WORKFLOW
-1. Fill every writer-editable field below for this URL.
-2. Upload the finished .docx at LeadsForward → Import Page Content.
+1. Download the .docx template for one page (or the full ZIP).
+2. Paste this entire AI Prompt as the system/custom instructions in your AI tool.
+3. Paste the template body and ask the AI to fill every writer-editable field for that URL.
+4. Export from Google Docs as Microsoft Word (.docx) — not PDF.
+5. Upload finished .docx files at LeadsForward → Import Page Content.
+
+BATCH TIPS
+- Work in groups (~10 site pages, then services, then service areas).
+- Keep the original === SECTION === headers exactly as written; only fill values below each Key: line.
+- Use {business}, {city}, and {city_line} tokens where the template shows them — they auto-fill on import.
+
 Tokens auto-filled on import: {business}, {city}, {city_line}, {niche}, {phone}, {primary_keyword}
 Process + FAQ: managed in LeadsForward → Niche Content Library (not in writer templates).
+PROMPT;
+}
 
-LEGEND;
+/**
+ * Site-filled AI prompt for admin UI and writer handoff.
+ *
+ * @param array<string, string>|null $vars
+ * @param array{primary_keyword?: string, secondary_keywords?: string, serp_intent?: string} $keyword_ctx
+ */
+function lf_pci_ai_prompt_text(?array $vars = null, array $keyword_ctx = []): string {
+	$vars = $vars ?? lf_pci_template_vars();
+
+	return lf_pci_fill_tokens(lf_pci_ai_prompt_body($keyword_ctx), $vars);
+}
+
+/**
+ * Token legend prepended to downloadable writer templates.
+ *
+ * @param array{primary_keyword?: string, secondary_keywords?: string, serp_intent?: string} $keyword_ctx
+ */
+function lf_pci_template_token_legend(array $keyword_ctx = []): string {
+	return "=== WRITER NOTES ===\n(Removed automatically on import — paste this entire block into your AI as the system brief.)\n\n"
+		. lf_pci_ai_prompt_body($keyword_ctx);
 }
 
 /**

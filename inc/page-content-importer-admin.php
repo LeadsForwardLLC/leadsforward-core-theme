@@ -278,6 +278,74 @@ function lf_pci_admin_read_uploaded_files(): array {
 	return ['items' => $items, 'notices' => $notices];
 }
 
+function lf_pci_admin_render_ai_prompt(array $vars): void {
+	$home_post_id = function_exists('lf_pci_resolve_post_id_for_template')
+		? lf_pci_resolve_post_id_for_template('home', 0)
+		: 0;
+	$keyword_ctx = function_exists('lf_pci_writer_keyword_context')
+		? lf_pci_writer_keyword_context($home_post_id > 0 ? $home_post_id : null, 'home')
+		: [];
+	$prompt = function_exists('lf_pci_ai_prompt_text')
+		? lf_pci_ai_prompt_text($vars, $keyword_ctx)
+		: '';
+	if ($prompt === '') {
+		return;
+	}
+	?>
+	<div class="lf-pci-ai-prompt" style="margin:1rem 0 1.5rem;padding:1.25rem;background:#f0f6fc;border:1px solid #72aee6;border-radius:4px;max-width:960px;">
+		<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+			<h2 style="margin:0;"><?php esc_html_e('AI Prompt', 'leadsforward-core'); ?></h2>
+			<button type="button" class="button button-secondary" id="lf-pci-copy-ai-prompt">
+				<?php esc_html_e('Copy AI Prompt', 'leadsforward-core'); ?>
+			</button>
+		</div>
+		<p class="description" style="margin-top:0;">
+			<?php esc_html_e('Copy this entire prompt into your AI tool (custom instructions / system prompt), then paste a downloaded template and ask it to fill every section. The same brief is included at the top of each downloadable .docx as WRITER NOTES.', 'leadsforward-core'); ?>
+		</p>
+		<textarea id="lf-pci-ai-prompt-text" readonly rows="22" class="large-text code" style="font-family:monospace;width:100%;max-width:100%;background:#fff;"><?php echo esc_textarea($prompt); ?></textarea>
+	</div>
+	<script>
+	(function () {
+		var btn = document.getElementById('lf-pci-copy-ai-prompt');
+		var field = document.getElementById('lf-pci-ai-prompt-text');
+		if (!btn || !field) {
+			return;
+		}
+		btn.addEventListener('click', function () {
+			var text = field.value || '';
+			if (!text) {
+				return;
+			}
+			function copied() {
+				var original = btn.textContent;
+				btn.textContent = <?php echo wp_json_encode(__('Copied!', 'leadsforward-core')); ?>;
+				window.setTimeout(function () {
+					btn.textContent = original;
+				}, 2000);
+			}
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(text).then(copied).catch(function () {
+					field.focus();
+					field.select();
+					document.execCommand('copy');
+					copied();
+				});
+				return;
+			}
+			field.focus();
+			field.select();
+			try {
+				document.execCommand('copy');
+				copied();
+			} catch (e) {
+				window.prompt(<?php echo wp_json_encode(__('Copy this AI Prompt:', 'leadsforward-core')); ?>, text);
+			}
+		});
+	})();
+	</script>
+	<?php
+}
+
 function lf_pci_admin_render_apply_notice(array $apply_result, int $page_id): void {
 	if (!empty($apply_result['success'])) {
 		$edit_url = get_edit_post_link($page_id, 'raw');
@@ -384,12 +452,14 @@ function lf_pci_admin_render(): void {
 		<h1><?php esc_html_e('Import Page Content', 'leadsforward-core'); ?></h1>
 		<p><?php esc_html_e('Download a keyword-aware .docx template, use AI to fill it, then upload the finished file here. Each doc must include a === PAGE === header so the importer knows which page or service post to update.', 'leadsforward-core'); ?></p>
 
+		<?php lf_pci_admin_render_ai_prompt($vars); ?>
+
 		<div style="margin:1rem 0;padding:1.25rem;background:#fff;border:1px solid #c3c4c7;border-radius:4px;max-width:960px;">
 			<h2 style="margin-top:0;"><?php esc_html_e('Writer workflow', 'leadsforward-core'); ?></h2>
 			<ol style="margin-left:1.25rem;">
 				<li><?php esc_html_e('Assign keywords in SEO & Performance → Keywords (or per-post SEO box / Airtable Sitemap Sync).', 'leadsforward-core'); ?></li>
 				<li><?php esc_html_e('Download templates (.docx) — use Download all for the full site pack, or grab individual pages below.', 'leadsforward-core'); ?></li>
-				<li><?php esc_html_e('Paste the WRITER NOTES block into your AI, then ask it to fill every section using the exact === SECTION === headers.', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('Copy the AI Prompt above into your AI tool, then ask it to fill the template using the exact === SECTION === headers.', 'leadsforward-core'); ?></li>
 				<li><?php esc_html_e('Upload one or more finished .docx files below (batch) — or paste a single doc for preview.', 'leadsforward-core'); ?></li>
 			</ol>
 
@@ -416,7 +486,7 @@ function lf_pci_admin_render(): void {
 			</p>
 
 			<p class="description" style="margin-bottom:1rem;">
-				<?php esc_html_e('Privacy Policy, Terms, Sitemap, and Blog are theme-controlled — no writer templates. Process + FAQ sections can stay blank; they pull from Niche Content Library on import.', 'leadsforward-core'); ?>
+				<?php esc_html_e('Privacy Policy, Terms, Sitemap, and Blog are theme-controlled — no writer templates. Process steps and FAQs are managed in Niche Content Library (not in writer templates).', 'leadsforward-core'); ?>
 			</p>
 
 			<?php foreach ($groups as $group) : ?>
