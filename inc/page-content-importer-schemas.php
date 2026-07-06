@@ -40,6 +40,12 @@ function lf_pci_common_section_aliases(): array {
 		'faqs' => 'faq_accordion',
 		'faq accordion' => 'faq_accordion',
 		'faq_accordion' => 'faq_accordion',
+		'services here' => 'services_offered_here',
+		'services_offered_here' => 'services_offered_here',
+		'nearby areas' => 'nearby_areas',
+		'nearby_areas' => 'nearby_areas',
+		'related links' => 'related_links',
+		'related_links' => 'related_links',
 		'cta' => 'cta',
 		'call to action' => 'cta',
 		'seo' => 'seo',
@@ -273,6 +279,10 @@ function lf_pci_registry(): array {
 			'post_type' => 'lf_service',
 			'required' => ['hero', 'service_details', 'cta'],
 		]),
+		lf_pci_build_schema('service-area', __('Service Area Page', 'leadsforward-core'), lf_pci_section_order_for_context('service_area'), [
+			'post_type' => 'lf_service_area',
+			'required' => ['hero', 'cta'],
+		]),
 	];
 
 	$out = [];
@@ -296,6 +306,10 @@ function lf_pci_writer_template_groups(): array {
 		'service_posts' => [
 			'label' => __('Service posts', 'leadsforward-core'),
 			'keys' => ['service'],
+		],
+		'service_area_posts' => [
+			'label' => __('Service area posts', 'leadsforward-core'),
+			'keys' => ['service-area'],
 		],
 	];
 	$registry = lf_pci_registry();
@@ -335,5 +349,7 @@ function lf_pci_registry_slug_aliases(): array {
 		'service_areas' => 'service-areas',
 		'thankyou' => 'thank-you',
 		'lf_service' => 'service',
+		'lf_service_area' => 'service-area',
+		'service_area' => 'service-area',
 	];
 }

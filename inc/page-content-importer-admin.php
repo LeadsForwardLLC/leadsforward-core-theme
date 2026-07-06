@@ -331,6 +331,28 @@ function lf_pci_admin_render(): void {
 				</p>
 			<?php endif; ?>
 
+			<?php
+			$area_posts = get_posts([
+				'post_type' => 'lf_service_area',
+				'post_status' => 'publish',
+				'posts_per_page' => 200,
+				'orderby' => 'title',
+				'order' => 'ASC',
+				'no_found_rows' => true,
+			]);
+			if ($area_posts !== []) :
+				?>
+				<h3 style="margin:1.25rem 0 0.5rem;font-size:14px;"><?php esc_html_e('Per-service-area templates (keyword-aware)', 'leadsforward-core'); ?></h3>
+				<p class="description" style="margin:0 0 0.5rem;"><?php esc_html_e('Each download pre-fills slug, area name, and keyword targets from SEO assignments.', 'leadsforward-core'); ?></p>
+				<p style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 0.5rem;">
+					<?php foreach ($area_posts as $area_post) : ?>
+						<a class="button button-secondary" href="<?php echo esc_url(lf_pci_admin_template_download_url('service-area', (int) $area_post->ID)); ?>">
+							<?php echo esc_html((string) $area_post->post_title); ?>
+						</a>
+					<?php endforeach; ?>
+				</p>
+			<?php endif; ?>
+
 			<p class="description" style="margin-top:1rem;">
 				<?php
 				printf(

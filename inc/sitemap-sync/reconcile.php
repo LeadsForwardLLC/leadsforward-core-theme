@@ -149,6 +149,7 @@ function lf_sitemap_sync_upsert_page(array $spec): array {
 	$resolved_slug = (string) ($spec['slug_resolved'] ?? '/');
 	$status = sanitize_key((string) ($spec['post_status'] ?? 'draft'));
 	$keyword = sanitize_text_field((string) ($spec['primary_keyword'] ?? ''));
+	$secondary_keywords = is_array($spec['secondary_keywords'] ?? null) ? $spec['secondary_keywords'] : [];
 	if ($keyword !== '' && function_exists('lf_seo_normalize_airtable_keyword_for_storage')) {
 		$keyword = lf_seo_normalize_airtable_keyword_for_storage($keyword, $title);
 	}
@@ -216,17 +217,34 @@ function lf_sitemap_sync_upsert_page(array $spec): array {
 
 	update_post_meta($post_id, '_lf_sitemap_key', $key);
 	update_post_meta($post_id, '_lf_sitemap_slug_template', $slug_template);
-	if ($keyword !== '') {
-		update_post_meta($post_id, '_lf_seo_primary_keyword', $keyword);
-		if (function_exists('lf_seo_register_keyword_map_for_post')) {
-			lf_seo_register_keyword_map_for_post($post_id, $keyword);
-		}
-		if (function_exists('lf_seo_maybe_populate_generated_meta')) {
-			lf_seo_maybe_populate_generated_meta((int) $post_id, $keyword, '', true);
-		}
+	if ($keyword !== '' || $secondary_keywords !== []) {
+		lf_sitemap_sync_store_seo_keywords((int) $post_id, $keyword, $secondary_keywords, true);
 	}
 
 	return ['ok' => true, 'post_id' => $post_id, 'created' => $created, 'updated' => $updated, 'skipped' => false, 'error' => ''];
+}
+
+/**
+ * @param list<string> $secondary_keywords
+ */
+function lf_sitemap_sync_store_seo_keywords(int $post_id, string $primary, array $secondary_keywords = [], bool $airtable_authoritative = true): void {
+	if ($post_id <= 0) {
+		return;
+	}
+	$primary = trim($primary);
+	$secondary_keywords = array_values(array_unique(array_filter(array_map('sanitize_text_field', $secondary_keywords))));
+	if ($primary !== '') {
+		update_post_meta($post_id, '_lf_seo_primary_keyword', $primary);
+		if (function_exists('lf_seo_register_keyword_map_for_post')) {
+			lf_seo_register_keyword_map_for_post($post_id, $primary);
+		}
+	}
+	if ($secondary_keywords !== []) {
+		update_post_meta($post_id, '_lf_seo_secondary_keywords', implode(', ', $secondary_keywords));
+	}
+	if ($primary !== '' && function_exists('lf_seo_maybe_populate_generated_meta')) {
+		lf_seo_maybe_populate_generated_meta($post_id, $primary, implode(', ', $secondary_keywords), $airtable_authoritative);
+	}
 }
 
 /**
@@ -238,7 +256,8 @@ function lf_sitemap_sync_apply_keyword_to_detail_cpt(array $spec): void {
 		return;
 	}
 	$keyword = sanitize_text_field((string) ($spec['primary_keyword'] ?? ''));
-	if ($keyword === '') {
+	$secondary = is_array($spec['secondary_keywords'] ?? null) ? $spec['secondary_keywords'] : [];
+	if ($keyword === '' && $secondary === []) {
 		return;
 	}
 	$page_title = sanitize_text_field((string) ($spec['title'] ?? ''));
@@ -272,17 +291,11 @@ function lf_sitemap_sync_apply_keyword_to_detail_cpt(array $spec): void {
 	if ($post_id <= 0) {
 		return;
 	}
-	update_post_meta($post_id, '_lf_seo_primary_keyword', $keyword);
+	lf_sitemap_sync_store_seo_keywords($post_id, $keyword, $secondary, true);
 	if ($key !== '') {
 		update_post_meta($post_id, '_lf_sitemap_key', $key);
 	}
 	update_post_meta($post_id, '_lf_sitemap_slug_template', (string) ($spec['slug_template'] ?? ''));
-	if (function_exists('lf_seo_register_keyword_map_for_post')) {
-		lf_seo_register_keyword_map_for_post($post_id, $keyword);
-	}
-	if (function_exists('lf_seo_maybe_populate_generated_meta')) {
-		lf_seo_maybe_populate_generated_meta($post_id, $keyword, '', true);
-	}
 }
 
 /**
