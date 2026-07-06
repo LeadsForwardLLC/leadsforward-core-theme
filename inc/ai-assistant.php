@@ -6306,7 +6306,16 @@ function lf_ai_assistant_widget_js(): string {
 			var bar = wrap.querySelector(".lf-stats-bar");
 			var grid = wrap ? wrap.querySelector(".lf-stats-bar__grid") : null;
 			if (!bar || !grid) return;
-			var count = grid.querySelectorAll(".lf-stats-bar__item").length || 1;
+			var count = 0;
+			Array.prototype.slice.call(grid.querySelectorAll(".lf-stats-bar__item")).forEach(function(item){
+				if (!item) return;
+				var valueEl = item.querySelector(".lf-stats-bar__value");
+				var labelEl = item.querySelector(".lf-stats-bar__label");
+				var value = valueEl ? String(valueEl.textContent || "").trim() : "";
+				var label = labelEl ? String(labelEl.textContent || "").trim() : "";
+				if (value !== "" || label !== "") count += 1;
+			});
+			if (count < 1) count = 1;
 			bar.style.setProperty("--lf-stats-cols", String(count));
 		}
 		function persistTrustStats(wrap) {
