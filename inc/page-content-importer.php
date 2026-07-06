@@ -341,6 +341,19 @@ function lf_pci_personalize_template_page_header(string $body, int $post_id): st
 function lf_pci_normalize_raw(string $raw): string {
 	$raw = str_replace(["\r\n", "\r"], "\n", $raw);
 	$raw = preg_replace('/\x{00A0}/u', ' ', $raw) ?? $raw;
+	$raw = strtr($raw, [
+		"\u{2018}" => "'",
+		"\u{2019}" => "'",
+		"\u{201C}" => '"',
+		"\u{201D}" => '"',
+		"\u{2013}" => '-',
+		"\u{2014}" => '-',
+		"\u{2026}" => '...',
+		"\u{200B}" => '',
+		"\u{FEFF}" => '',
+	]);
+	// Google Docs / Word sometimes space out === markers.
+	$raw = preg_replace('/=\s{1,3}=\s{1,3}=/', '===', $raw) ?? $raw;
 	// Markdown ## Section → === SECTION ===
 	$raw = preg_replace_callback('/^#{1,3}\s+(.+?)\s*$/m', static function (array $m): string {
 		return '=== ' . strtoupper(trim($m[1])) . ' ===';
@@ -973,6 +986,7 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
  * @return array<string, mixed>
  */
 function lf_pci_parse_document(string $raw, ?string $force_template = null): array {
+	$raw = lf_pci_normalize_raw($raw);
 	$raw = preg_replace('/=== WRITER NOTES ===[\s\S]*?(?==== PAGE ===)/', '', $raw, 1) ?? $raw;
 	$header = lf_pci_extract_page_header($raw);
 	$template_key = $force_template !== null && $force_template !== ''
@@ -1760,4 +1774,153 @@ function lf_pci_read_upload_file_contents(string $path, string $filename): strin
 	}
 
 	return (string) file_get_contents($path);
+}
+
+/**
+ * Jobs for single or bulk template downloads.
+ *
+ * @return list<array{key: string, post_id: int, filename: string, zip_path: string}>
+ */
+function lf_pci_collect_downloadable_template_jobs(): array {
+	$jobs = [];
+	$used_names = [];
+	$groups = function_exists('lf_pci_writer_template_groups') ? lf_pci_writer_template_groups() : [];
+
+	foreach ($groups as $group) {
+		foreach ((array) ($group['items'] ?? []) as $item) {
+			$key = sanitize_title((string) ($item['key'] ?? ''));
+			if ($key === '' || in_array($key, ['service', 'service-area'], true)) {
+				continue;
+			}
+			$filename = sanitize_file_name($key . '-content-template.docx');
+			$zip_path = 'site-pages/' . $filename;
+			$jobs[] = [
+				'key' => $key,
+				'post_id' => 0,
+				'filename' => $filename,
+				'zip_path' => $zip_path,
+			];
+			$used_names[ $zip_path ] = true;
+		}
+	}
+
+	foreach ($groups as $group_id => $group) {
+		foreach ((array) ($group['items'] ?? []) as $item) {
+			$key = sanitize_title((string) ($item['key'] ?? ''));
+			if (!in_array($key, ['service', 'service-area'], true)) {
+				continue;
+			}
+			$filename = sanitize_file_name($key . '-content-template.docx');
+			$zip_path = $group_id . '/' . $filename;
+			if (!isset($used_names[ $zip_path ])) {
+				$jobs[] = [
+					'key' => $key,
+					'post_id' => 0,
+					'filename' => $filename,
+					'zip_path' => $zip_path,
+				];
+				$used_names[ $zip_path ] = true;
+			}
+		}
+	}
+
+	$service_posts = get_posts([
+		'post_type' => 'lf_service',
+		'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
+		'posts_per_page' => 500,
+		'orderby' => 'title',
+		'order' => 'ASC',
+		'no_found_rows' => true,
+	]);
+	foreach ($service_posts as $post) {
+		if (!$post instanceof \WP_Post || $post->post_name === '') {
+			continue;
+		}
+		$filename = sanitize_file_name($post->post_name . '-content-template.docx');
+		$zip_path = 'services/' . $filename;
+		$jobs[] = [
+			'key' => 'service',
+			'post_id' => (int) $post->ID,
+			'filename' => $filename,
+			'zip_path' => $zip_path,
+		];
+	}
+
+	$area_posts = get_posts([
+		'post_type' => 'lf_service_area',
+		'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
+		'posts_per_page' => 500,
+		'orderby' => 'title',
+		'order' => 'ASC',
+		'no_found_rows' => true,
+	]);
+	foreach ($area_posts as $post) {
+		if (!$post instanceof \WP_Post || $post->post_name === '') {
+			continue;
+		}
+		$filename = sanitize_file_name($post->post_name . '-content-template.docx');
+		$zip_path = 'service-areas/' . $filename;
+		$jobs[] = [
+			'key' => 'service-area',
+			'post_id' => (int) $post->ID,
+			'filename' => $filename,
+			'zip_path' => $zip_path,
+		];
+	}
+
+	return $jobs;
+}
+
+/**
+ * Build a ZIP archive of every downloadable writer template.
+ */
+function lf_pci_build_templates_zip_bytes(): string {
+	if (!class_exists('ZipArchive')) {
+		return '';
+	}
+	$jobs = lf_pci_collect_downloadable_template_jobs();
+	if ($jobs === []) {
+		return '';
+	}
+	$tmp = wp_tempnam('pci-all-templates.zip');
+	if ($tmp === '') {
+		return '';
+	}
+	$zip = new ZipArchive();
+	if ($zip->open($tmp, ZipArchive::OVERWRITE) !== true) {
+		@unlink($tmp);
+		return '';
+	}
+	$readme = implode("\n", [
+		'LeadsForward writer templates',
+		'',
+		'1. Fill each .docx (Google Docs: upload, edit, then File → Download → Microsoft Word).',
+		'2. Keep every === SECTION === header and Key: line exactly as written.',
+		'3. Bulk-upload finished .docx files at LeadsForward → Import Page Content.',
+		'',
+		'Folders:',
+		'- site-pages/ — Homepage, About, Contact, etc.',
+		'- services/ — one file per service CPT post',
+		'- service-areas/ — one file per service area CPT post',
+	]);
+	$zip->addFromString('README.txt', $readme);
+
+	foreach ($jobs as $job) {
+		$post_id = (int) ($job['post_id'] ?? 0);
+		$key = (string) ($job['key'] ?? '');
+		$body = lf_pci_template_for_slug($key, true, $post_id > 0 ? $post_id : null);
+		if ($body === '') {
+			continue;
+		}
+		$bytes = lf_pci_build_docx_bytes($body);
+		if ($bytes === '') {
+			continue;
+		}
+		$zip->addFromString((string) ($job['zip_path'] ?? $job['filename'] ?? 'template.docx'), $bytes);
+	}
+	$zip->close();
+	$out = (string) file_get_contents($tmp);
+	@unlink($tmp);
+
+	return $out;
 }

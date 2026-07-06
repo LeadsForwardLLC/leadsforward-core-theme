@@ -35,12 +35,32 @@ function lf_pci_admin_template_download_url(string $template_key, int $post_id =
 	return wp_nonce_url(admin_url(add_query_arg($args, 'admin.php')), 'lf_pci_download_template');
 }
 
+function lf_pci_admin_template_download_all_url(): string {
+	return wp_nonce_url(
+		admin_url('admin.php?page=lf-import-page-content&lf_pci_download_all=1'),
+		'lf_pci_download_template'
+	);
+}
+
+function lf_pci_admin_upload_error_message(int $code): string {
+	return match ($code) {
+		UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => __('File exceeds server upload size limit.', 'leadsforward-core'),
+		UPLOAD_ERR_PARTIAL => __('File was only partially uploaded — try again.', 'leadsforward-core'),
+		UPLOAD_ERR_NO_FILE => __('No file received.', 'leadsforward-core'),
+		UPLOAD_ERR_NO_TMP_DIR => __('Server temp folder missing.', 'leadsforward-core'),
+		UPLOAD_ERR_CANT_WRITE => __('Server could not write uploaded file.', 'leadsforward-core'),
+		UPLOAD_ERR_EXTENSION => __('Upload blocked by server extension.', 'leadsforward-core'),
+		default => __('Upload failed.', 'leadsforward-core'),
+	};
+}
+
 function lf_pci_admin_handle_download(): void {
 	if (!isset($_GET['page']) || $_GET['page'] !== 'lf-import-page-content') {
 		return;
 	}
+	$download_all = isset($_GET['lf_pci_download_all']) && (string) wp_unslash((string) $_GET['lf_pci_download_all']) === '1';
 	$slug = isset($_GET['lf_pci_template_slug']) ? sanitize_title((string) $_GET['lf_pci_template_slug']) : '';
-	if ($slug === '') {
+	if (!$download_all && $slug === '') {
 		return;
 	}
 	if (!current_user_can(defined('LF_OPS_CAP') ? LF_OPS_CAP : 'manage_options')) {
@@ -50,6 +70,27 @@ function lf_pci_admin_handle_download(): void {
 
 	if (!function_exists('lf_pci_template_for_slug') || !function_exists('lf_pci_build_docx_bytes')) {
 		wp_die(esc_html__('Template builder is not available.', 'leadsforward-core'));
+	}
+
+	if ($download_all) {
+		if (!function_exists('lf_pci_build_templates_zip_bytes')) {
+			wp_die(esc_html__('Bulk template download is not available.', 'leadsforward-core'));
+		}
+		$bytes = lf_pci_build_templates_zip_bytes();
+		if ($bytes === '') {
+			wp_die(esc_html__('Could not build template ZIP on this server (ZipArchive required).', 'leadsforward-core'));
+		}
+		$vars = function_exists('lf_pci_template_vars') ? lf_pci_template_vars() : [];
+		$business = sanitize_file_name((string) ($vars['business'] ?? 'site'));
+		if ($business === '') {
+			$business = 'site';
+		}
+		$filename = $business . '-writer-templates.zip';
+		header('Content-Type: application/zip');
+		header('Content-Disposition: attachment; filename="' . $filename . '"');
+		header('Content-Length: ' . (string) strlen($bytes));
+		echo $bytes;
+		exit;
 	}
 
 	$post_id = isset($_GET['lf_pci_post_id']) ? (int) $_GET['lf_pci_post_id'] : 0;
@@ -159,42 +200,82 @@ function lf_pci_admin_render_preview(array $parsed): void {
 }
 
 /**
- * @return list<array{filename: string, parsed: array<string, mixed>}>
+ * @return array{items: list<array{filename: string, parsed: array<string, mixed>}>, notices: list<string>}
  */
 function lf_pci_admin_read_uploaded_files(): array {
+	$notices = [];
+	$items = [];
 	if (empty($_FILES['lf_pci_files']) || !is_array($_FILES['lf_pci_files'])) {
-		return [];
+		return ['items' => [], 'notices' => []];
 	}
 	$files = $_FILES['lf_pci_files'];
 	$names = is_array($files['name'] ?? null) ? $files['name'] : [];
 	$tmp = is_array($files['tmp_name'] ?? null) ? $files['tmp_name'] : [];
 	$errors = is_array($files['error'] ?? null) ? $files['error'] : [];
-	$out = [];
+	$attempted = 0;
 	foreach ($names as $i => $name) {
-		if ((int) ($errors[$i] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+		$filename = sanitize_file_name((string) $name);
+		if ($filename === '') {
+			continue;
+		}
+		++$attempted;
+		$upload_err = (int) ($errors[$i] ?? UPLOAD_ERR_NO_FILE);
+		if ($upload_err !== UPLOAD_ERR_OK) {
+			$notices[] = sprintf(
+				/* translators: 1: filename, 2: error message */
+				__('%1$s: %2$s', 'leadsforward-core'),
+				$filename,
+				lf_pci_admin_upload_error_message($upload_err)
+			);
 			continue;
 		}
 		$path = (string) ($tmp[$i] ?? '');
 		if ($path === '' || !is_readable($path)) {
+			$notices[] = sprintf(
+				/* translators: %s: filename */
+				__('%s: could not read uploaded file.', 'leadsforward-core'),
+				$filename
+			);
 			continue;
 		}
-		$filename = sanitize_file_name((string) $name);
 		if (!str_ends_with(strtolower($filename), '.docx')) {
+			$notices[] = sprintf(
+				/* translators: %s: filename */
+				__('%s: skipped (only .docx files are supported — export from Google Docs as Microsoft Word).', 'leadsforward-core'),
+				$filename
+			);
 			continue;
 		}
 		$raw = function_exists('lf_pci_read_upload_file_contents')
 			? lf_pci_read_upload_file_contents($path, $filename)
 			: '';
 		if ($raw === '') {
+			$notices[] = sprintf(
+				/* translators: %s: filename */
+				__('%s: no readable text found (re-export as .docx from Google Docs or Word).', 'leadsforward-core'),
+				$filename
+			);
 			continue;
 		}
 		$parsed = lf_pci_parse_document($raw);
-		$out[] = [
+		$items[] = [
 			'filename' => $filename,
 			'parsed' => $parsed,
 		];
 	}
-	return $out;
+	if ($attempted > 0 && $items === [] && $notices === []) {
+		$notices[] = __('No .docx files could be processed. Export finished docs as Microsoft Word (.docx), not PDF.', 'leadsforward-core');
+	}
+	$max_uploads = (int) ini_get('max_file_uploads');
+	if ($max_uploads > 0 && $attempted >= $max_uploads) {
+		$notices[] = sprintf(
+			/* translators: %d: PHP max_file_uploads */
+			__('Server limit: max %d files per upload. Import in batches if you have more.', 'leadsforward-core'),
+			$max_uploads
+		);
+	}
+
+	return ['items' => $items, 'notices' => $notices];
 }
 
 function lf_pci_admin_render_apply_notice(array $apply_result, int $page_id): void {
@@ -223,6 +304,7 @@ function lf_pci_admin_render(): void {
 	$raw = '';
 	$parsed = null;
 	$batch = [];
+	$batch_notices = [];
 	$action = '';
 	$target_slug = '';
 
@@ -233,24 +315,44 @@ function lf_pci_admin_render(): void {
 		$target_slug = sanitize_title((string) wp_unslash($_POST['lf_pci_target_slug'] ?? ''));
 
 		if (!empty($_FILES['lf_pci_files']['name'][0] ?? '')) {
-			$batch = lf_pci_admin_read_uploaded_files();
+			$batch_result = lf_pci_admin_read_uploaded_files();
+			$batch = (array) ($batch_result['items'] ?? []);
+			$batch_notices = (array) ($batch_result['notices'] ?? []);
 		} elseif ($raw !== '' && function_exists('lf_pci_parse_document')) {
 			$parsed = lf_pci_parse_document($raw, $target_slug !== '' ? $target_slug : null);
 		}
 
 		if ($action === 'apply' && $batch !== []) {
+			$imported = 0;
+			$failed = 0;
 			foreach ($batch as $item) {
 				$p = (array) ($item['parsed'] ?? []);
 				if (!empty($p['errors'])) {
+					++$failed;
 					echo '<div class="notice notice-error"><p><strong>' . esc_html((string) ($item['filename'] ?? 'file')) . ':</strong> ' . esc_html((string) $p['errors'][0]) . '</p></div>';
 					continue;
 				}
 				$result = lf_pci_apply_parsed($p, ['sync_mode' => 'force']);
 				$target = (string) ($p['page_slug'] ?? $p['template_key'] ?? '');
+				if (!empty($result['success'])) {
+					++$imported;
+				} else {
+					++$failed;
+				}
 				echo '<div class="notice ' . (!empty($result['success']) ? 'notice-success' : 'notice-error') . '"><p><strong>' . esc_html((string) ($item['filename'] ?? 'file')) . ' → ' . esc_html($target) . ':</strong> ';
 				echo esc_html(!empty($result['success']) ? __('Imported', 'leadsforward-core') : (string) ($result['error'] ?? __('Failed', 'leadsforward-core')));
 				echo '</p></div>';
 			}
+			$summary_class = $failed === 0 ? 'notice-success' : ($imported > 0 ? 'notice-warning' : 'notice-error');
+			echo '<div class="notice ' . esc_attr($summary_class) . ' is-dismissible"><p><strong>' . esc_html__('Batch import complete', 'leadsforward-core') . ':</strong> ';
+			echo esc_html(sprintf(
+				/* translators: 1: imported count, 2: failed count, 3: total count */
+				__('%1$d imported, %2$d failed (%3$d files).', 'leadsforward-core'),
+				$imported,
+				$failed,
+				count($batch)
+			));
+			echo '</p></div>';
 		} elseif ($action === 'apply' && is_array($parsed) && empty($parsed['errors'])) {
 			$result = lf_pci_apply_parsed($parsed, ['sync_mode' => 'force']);
 			$page_id = (int) ($result['page_id'] ?? 0);
@@ -275,6 +377,8 @@ function lf_pci_admin_render(): void {
 
 	$vars = function_exists('lf_pci_template_vars') ? lf_pci_template_vars() : [];
 	$groups = function_exists('lf_pci_writer_template_groups') ? lf_pci_writer_template_groups() : [];
+	$template_jobs = function_exists('lf_pci_collect_downloadable_template_jobs') ? lf_pci_collect_downloadable_template_jobs() : [];
+	$max_file_uploads = (int) ini_get('max_file_uploads');
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Import Page Content', 'leadsforward-core'); ?></h1>
@@ -284,10 +388,33 @@ function lf_pci_admin_render(): void {
 			<h2 style="margin-top:0;"><?php esc_html_e('Writer workflow', 'leadsforward-core'); ?></h2>
 			<ol style="margin-left:1.25rem;">
 				<li><?php esc_html_e('Assign keywords in SEO & Performance → Keywords (or per-post SEO box / Airtable Sitemap Sync).', 'leadsforward-core'); ?></li>
-				<li><?php esc_html_e('Download the .docx for the page or service — templates include keyword targets and an AI writer brief at the top.', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('Download templates (.docx) — use Download all for the full site pack, or grab individual pages below.', 'leadsforward-core'); ?></li>
 				<li><?php esc_html_e('Paste the WRITER NOTES block into your AI, then ask it to fill every section using the exact === SECTION === headers.', 'leadsforward-core'); ?></li>
 				<li><?php esc_html_e('Upload one or more finished .docx files below (batch) — or paste a single doc for preview.', 'leadsforward-core'); ?></li>
 			</ol>
+
+			<h3 style="margin:1.25rem 0 0.5rem;font-size:14px;"><?php esc_html_e('Google Docs workflow', 'leadsforward-core'); ?></h3>
+			<ol style="margin:0 0 1rem 1.25rem;">
+				<li><?php esc_html_e('Download all templates (ZIP) or individual .docx files.', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('Upload each .docx to Google Drive → Open with Google Docs (or drag into a shared writer folder).', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('Writers edit in Google Docs — do not remove or restyle the === PAGE === and === SECTION === lines.', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('When done: File → Download → Microsoft Word (.docx). Do not use PDF.', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('Select all finished .docx files and Apply import in one batch below.', 'leadsforward-core'); ?></li>
+			</ol>
+
+			<p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 1rem;">
+				<a class="button button-primary" href="<?php echo esc_url(lf_pci_admin_template_download_all_url()); ?>">
+					<?php
+					printf(
+						/* translators: %d: template count */
+						esc_html__('Download all templates (%d)', 'leadsforward-core'),
+						count($template_jobs)
+					);
+					?>
+				</a>
+				<span class="description"><?php esc_html_e('ZIP includes site pages, every service, and every service area — with keyword targets pre-filled.', 'leadsforward-core'); ?></span>
+			</p>
+
 			<p class="description" style="margin-bottom:1rem;">
 				<?php esc_html_e('Privacy Policy, Terms, Sitemap, and Blog are theme-controlled — no writer templates. Process + FAQ sections can stay blank; they pull from Niche Content Library on import.', 'leadsforward-core'); ?>
 			</p>
@@ -312,7 +439,7 @@ function lf_pci_admin_render(): void {
 			<?php
 			$service_posts = get_posts([
 				'post_type' => 'lf_service',
-				'post_status' => 'publish',
+				'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
 				'posts_per_page' => 200,
 				'orderby' => 'title',
 				'order' => 'ASC',
@@ -334,7 +461,7 @@ function lf_pci_admin_render(): void {
 			<?php
 			$area_posts = get_posts([
 				'post_type' => 'lf_service_area',
-				'post_status' => 'publish',
+				'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
 				'posts_per_page' => 200,
 				'orderby' => 'title',
 				'order' => 'ASC',
@@ -367,7 +494,19 @@ function lf_pci_admin_render(): void {
 		<form method="post" enctype="multipart/form-data">
 			<?php wp_nonce_field('lf_pci_import', 'lf_pci_nonce'); ?>
 			<h2><?php esc_html_e('Upload finished .docx files', 'leadsforward-core'); ?></h2>
-			<p class="description"><?php esc_html_e('Each file needs its own === PAGE === block (Slug: for site pages, or Template: service + Slug: for service posts).', 'leadsforward-core'); ?></p>
+			<p class="description">
+				<?php esc_html_e('Each file needs its own === PAGE === block (Slug: for site pages, or Template: service + Slug: for service posts). Select multiple files for a bulk import.', 'leadsforward-core'); ?>
+				<?php if ($max_file_uploads > 0) : ?>
+					<?php
+					echo ' ';
+					printf(
+						/* translators: %d: PHP max_file_uploads */
+						esc_html__('Server allows up to %d files per upload.', 'leadsforward-core'),
+						$max_file_uploads
+					);
+					?>
+				<?php endif; ?>
+			</p>
 			<input type="file" name="lf_pci_files[]" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple />
 
 			<h2 style="margin-top:2rem;"><?php esc_html_e('Or paste a single doc', 'leadsforward-core'); ?></h2>
@@ -385,6 +524,9 @@ function lf_pci_admin_render(): void {
 		</form>
 
 		<?php
+		foreach ($batch_notices as $notice) {
+			echo '<div class="notice notice-warning"><p>' . esc_html((string) $notice) . '</p></div>';
+		}
 		if ($batch !== [] && $action === 'preview') {
 			foreach ($batch as $item) {
 				$p = (array) ($item['parsed'] ?? []);
