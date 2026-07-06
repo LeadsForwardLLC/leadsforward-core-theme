@@ -4024,6 +4024,134 @@ function lf_ai_ajax_update_section_cta(): void {
 		]);
 	}
 
+	if ($cta_target === 'optional') {
+		if (!in_array($cta_action, ['quote', 'call', 'link'], true)) {
+			$cta_action = 'quote';
+		}
+		if ($cta_action !== 'link') {
+			$url = '';
+		}
+		$remove = isset($_POST['section_cta_remove']) && (string) wp_unslash((string) ($_POST['section_cta_remove'] ?? '')) === '1';
+		$section_cta_align = isset($_POST['section_actions_align']) ? sanitize_key(wp_unslash((string) $_POST['section_actions_align'])) : $benefits_cta_align;
+		if (!in_array($section_cta_align, ['left', 'center', 'right'], true)) {
+			$section_cta_align = 'center';
+		}
+		$section_cta_style = isset($_POST['section_cta_style']) && function_exists('lf_sections_sanitize_button_style')
+			? lf_sections_sanitize_button_style(sanitize_key(wp_unslash((string) $_POST['section_cta_style'])))
+			: 'solid';
+		$section_cta_tone = isset($_POST['section_cta_tone']) && function_exists('lf_sections_sanitize_button_tone')
+			? lf_sections_sanitize_button_tone(sanitize_key(wp_unslash((string) $_POST['section_cta_tone'])))
+			: 'primary';
+		$text = trim($text);
+		if ($context_type === 'homepage' || $context_id_use === 'homepage') {
+			if (!defined('LF_HOMEPAGE_CONFIG_OPTION') || !function_exists('lf_get_homepage_section_config') || !function_exists('lf_homepage_base_section_type')) {
+				wp_send_json_error(['message' => __('Homepage section settings are unavailable.', 'leadsforward-core')]);
+			}
+			$config = lf_get_homepage_section_config();
+			$resolved_section_id = lf_ai_homepage_resolve_section_id($section_id);
+			$old_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
+			if (empty($old_row)) {
+				wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+			}
+			$base_type = lf_homepage_base_section_type((string) $resolved_section_id);
+			if (!function_exists('lf_sections_optional_cta_section_types') || !in_array($base_type, lf_sections_optional_cta_section_types(), true)) {
+				wp_send_json_error(['message' => __('This section does not support an optional button.', 'leadsforward-core')]);
+			}
+			if ($remove) {
+				$config[$resolved_section_id]['cta_primary_enabled'] = '0';
+				$config[$resolved_section_id]['cta_primary_override'] = '';
+				$config[$resolved_section_id]['cta_primary_action'] = 'quote';
+				$config[$resolved_section_id]['cta_primary_url'] = '';
+			} else {
+				if ($text !== '' && $cta_action === 'link' && $url === '') {
+					wp_send_json_error(['message' => __('Link URL is required when action is Link.', 'leadsforward-core')]);
+				}
+				if ($text !== '' && $cta_action === 'call' && (!function_exists('lf_get_cta_phone') || lf_get_cta_phone() === '')) {
+					wp_send_json_error(['message' => __('Add a phone number in Business Info before using Call.', 'leadsforward-core')]);
+				}
+				$config[$resolved_section_id]['cta_primary_enabled'] = '1';
+				$config[$resolved_section_id]['cta_primary_override'] = $text;
+				$config[$resolved_section_id]['cta_primary_action'] = $cta_action;
+				$config[$resolved_section_id]['cta_primary_url'] = $url;
+				$config[$resolved_section_id]['section_actions_align'] = $section_cta_align;
+				$config[$resolved_section_id]['section_cta_style'] = $section_cta_style;
+				$config[$resolved_section_id]['section_cta_tone'] = $section_cta_tone;
+			}
+			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+			$new_row = is_array($config[$resolved_section_id] ?? null) ? $config[$resolved_section_id] : [];
+			$log_id = function_exists('lf_ai_log_action')
+				? lf_ai_log_action(
+					$context_type,
+					$context_id_use,
+					['__homepage_section_row::' . $resolved_section_id => $old_row],
+					['__homepage_section_row::' . $resolved_section_id => $new_row],
+					'Inline optional section CTA edit'
+				)
+				: '';
+			wp_send_json_success([
+				'message' => $remove ? __('Button removed.', 'leadsforward-core') : __('Button updated.', 'leadsforward-core'),
+				'reload' => true,
+				'log_id' => $log_id,
+			]);
+		}
+		$pid = (int) $context_id_use;
+		$post = get_post($pid);
+		if (!$post instanceof \WP_Post || !defined('LF_PB_META_KEY') || !function_exists('lf_pb_get_post_config')) {
+			wp_send_json_error(['message' => __('Section settings are unavailable for this target.', 'leadsforward-core')]);
+		}
+		$pb_context = function_exists('lf_ai_pb_context_for_post') ? lf_ai_pb_context_for_post($post) : '';
+		if ($pb_context === '') {
+			wp_send_json_error(['message' => __('This target does not support button editing.', 'leadsforward-core')]);
+		}
+		$config = lf_pb_get_post_config($pid, $pb_context);
+		$old_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+		if (empty($old_row)) {
+			wp_send_json_error(['message' => __('Section not found for this page.', 'leadsforward-core')]);
+		}
+		$pb_type = (string) ($old_row['type'] ?? '');
+		if (!function_exists('lf_sections_optional_cta_section_types') || !in_array($pb_type, lf_sections_optional_cta_section_types(), true)) {
+			wp_send_json_error(['message' => __('This section does not support an optional button.', 'leadsforward-core')]);
+		}
+		$settings = is_array($old_row['settings'] ?? null) ? $old_row['settings'] : [];
+		if ($remove) {
+			$settings['cta_primary_enabled'] = '0';
+			$settings['cta_primary_override'] = '';
+			$settings['cta_primary_action'] = 'quote';
+			$settings['cta_primary_url'] = '';
+		} else {
+			if ($text !== '' && $cta_action === 'link' && $url === '') {
+				wp_send_json_error(['message' => __('Link URL is required when action is Link.', 'leadsforward-core')]);
+			}
+			if ($text !== '' && $cta_action === 'call' && (!function_exists('lf_get_cta_phone') || lf_get_cta_phone() === '')) {
+				wp_send_json_error(['message' => __('Add a phone number in Business Info before using Call.', 'leadsforward-core')]);
+			}
+			$settings['cta_primary_enabled'] = '1';
+			$settings['cta_primary_override'] = $text;
+			$settings['cta_primary_action'] = $cta_action;
+			$settings['cta_primary_url'] = $url;
+			$settings['section_actions_align'] = $section_cta_align;
+			$settings['section_cta_style'] = $section_cta_style;
+			$settings['section_cta_tone'] = $section_cta_tone;
+		}
+		$config['sections'][$section_id]['settings'] = $settings;
+		update_post_meta($pid, LF_PB_META_KEY, $config);
+		$new_row = is_array($config['sections'][$section_id] ?? null) ? $config['sections'][$section_id] : [];
+		$log_id = function_exists('lf_ai_log_action')
+			? lf_ai_log_action(
+				$context_type,
+				$context_id_use,
+				['__section_record::' . $section_id => $old_row],
+				['__section_record::' . $section_id => $new_row],
+				'Inline optional section CTA edit'
+			)
+			: '';
+		wp_send_json_success([
+			'message' => $remove ? __('Button removed.', 'leadsforward-core') : __('Button updated.', 'leadsforward-core'),
+			'reload' => true,
+			'log_id' => $log_id,
+		]);
+	}
+
 	if ($cta_target === 'pricing') {
 		if (!in_array($cta_action, ['quote', 'call', 'link'], true)) {
 			$cta_action = 'quote';

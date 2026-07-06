@@ -332,6 +332,7 @@ function lf_ai_assistant_assets(string $hook = ''): void {
 		'labels' => $editable,
 		'section_library' => lf_ai_assistant_section_library($context),
 		'section_inspector' => lf_ai_assistant_section_inspector_config(),
+		'optional_cta_sections' => function_exists('lf_sections_optional_cta_section_types') ? lf_sections_optional_cta_section_types() : [],
 		'icon_slugs' => function_exists('lf_icon_list') ? array_values(array_map('sanitize_text_field', lf_icon_list())) : [],
 		'bg_palette' => $bg_palette,
 		'brand_settings_url' => admin_url('admin.php?page=lf-ops'),
@@ -1740,7 +1741,7 @@ function lf_ai_assistant_widget_js(): string {
 		var sectionInsertBeforeId = "";
 		var benefitsCtaPickerEl = null;
 		var benefitsCtaPickerWrap = null;
-		var benefitsCtaPickerIsBenefits = true;
+		var benefitsCtaPickerMode = "benefits";
 		var benefitsCtaPickerButtonNode = null;
 		var heroSettingsPickerEl = null;
 		var heroSettingsPickerWrap = null;
@@ -5184,6 +5185,14 @@ function lf_ai_assistant_widget_js(): string {
 			if (heroLike(type) || heroLike(id)) return "hero";
 			return type !== "" ? type : id;
 		}
+		function sectionSupportsOptionalCta(sectionType) {
+			var type = String(sectionType || "");
+			if (type === "benefits" || type === "hero" || type === "cta" || type === "layout_button" || type === "process" || type === "map_nap" || type === "pricing") {
+				return false;
+			}
+			var allowed = Array.isArray(lfAiFloating.optional_cta_sections) ? lfAiFloating.optional_cta_sections : [];
+			return allowed.indexOf(type) !== -1;
+		}
 		function sectionSupportsColumnSwap(sectionType) {
 			var type = String(sectionType || "");
 			return ["service_details", "content_image", "content_image_a", "image_content", "image_content_b", "content_image_c"].indexOf(type) !== -1;
@@ -8599,7 +8608,11 @@ function lf_ai_assistant_widget_js(): string {
 				openBenefitsCtaPicker(wrap, node);
 				return;
 			}
-			openSectionCtaPicker(wrap, node, false);
+			if (node.closest && node.closest(".lf-section__actions")) {
+				openOptionalSectionCtaPicker(wrap, node);
+				return;
+			}
+			openSectionCtaPicker(wrap, node, "inline");
 		}
 		function buildSectionButtonEditors() {
 			if (!editingEnabled) return;
@@ -9220,7 +9233,7 @@ function lf_ai_assistant_widget_js(): string {
 			if (benefitsCtaPickerEl) benefitsCtaPickerEl.hidden = true;
 			benefitsCtaPickerWrap = null;
 			benefitsCtaPickerButtonNode = null;
-			benefitsCtaPickerIsBenefits = true;
+			benefitsCtaPickerMode = "benefits";
 		}
 		function closeSectionInsertPicker() {
 			if (sectionInsertPickerEl) sectionInsertPickerEl.hidden = true;
@@ -9351,10 +9364,16 @@ function lf_ai_assistant_widget_js(): string {
 			removeBtn.textContent = "Remove button";
 			removeBtn.addEventListener("click", function(e){
 				e.preventDefault();
-				if (!benefitsCtaPickerIsBenefits) return;
 				var w = benefitsCtaPickerWrap;
-				closeBenefitsCtaPicker();
-				if (w) persistBenefitsSectionCta(w, "", "quote", "", alignState.value, "solid", "primary", true);
+				if (benefitsCtaPickerMode === "benefits") {
+					closeBenefitsCtaPicker();
+					if (w) persistBenefitsSectionCta(w, "", "quote", "", alignState.value, "solid", "primary", true);
+					return;
+				}
+				if (benefitsCtaPickerMode === "optional") {
+					closeBenefitsCtaPicker();
+					if (w) persistOptionalSectionCta(w, "", "quote", "", alignState.value, "solid", "primary", true);
+				}
 			});
 			var saveBtn = document.createElement("button");
 			saveBtn.type = "button";
@@ -9368,7 +9387,7 @@ function lf_ai_assistant_widget_js(): string {
 				var t = String(textInp.value || "").trim();
 				var act = String(actSel.value || "quote");
 				var u = String(urlInp.value || "").trim();
-				if (benefitsCtaPickerIsBenefits) {
+				if (benefitsCtaPickerMode === "benefits") {
 					var storedTxt = "";
 					if (w) {
 						var actEl = w.querySelector(".lf-benefits__actions");
@@ -9377,6 +9396,11 @@ function lf_ai_assistant_widget_js(): string {
 					if (t === "" && storedTxt !== "") t = storedTxt;
 					closeBenefitsCtaPicker();
 					if (w) persistBenefitsSectionCta(w, t, act, u, alignState.value, st, tn, false);
+					return;
+				}
+				if (benefitsCtaPickerMode === "optional") {
+					closeBenefitsCtaPicker();
+					if (w) persistOptionalSectionCta(w, t, act, u, alignState.value, st, tn, false);
 					return;
 				}
 				if (t === "") {
@@ -9431,11 +9455,13 @@ function lf_ai_assistant_widget_js(): string {
 			benefitsCtaPickerEl = root;
 			return root;
 		}
-		function openSectionCtaPicker(wrap, buttonNode, isBenefits) {
+		function openSectionCtaPicker(wrap, buttonNode, mode) {
 			ensureBenefitsCtaPicker();
 			benefitsCtaPickerWrap = wrap;
-			benefitsCtaPickerIsBenefits = !!isBenefits;
+			benefitsCtaPickerMode = mode === "optional" ? "optional" : (mode === "benefits" ? "benefits" : "inline");
 			benefitsCtaPickerButtonNode = buttonNode || null;
+			var isBenefits = benefitsCtaPickerMode === "benefits";
+			var isOptional = benefitsCtaPickerMode === "optional";
 			var titleEl = benefitsCtaPickerEl.querySelector("[data-lf-section-cta-title]");
 			var textLab = benefitsCtaPickerEl.querySelector("[data-lf-section-cta-text-label]");
 			var alignWrap = benefitsCtaPickerEl.querySelector("[data-lf-section-cta-align-wrap]");
@@ -9444,6 +9470,11 @@ function lf_ai_assistant_widget_js(): string {
 			if (isBenefits) {
 				if (titleEl) titleEl.textContent = "Benefits button";
 				if (textLabCopy) textLabCopy.textContent = "Button text (use Remove to delete)";
+				if (alignWrap) alignWrap.hidden = false;
+				if (removeBtn) removeBtn.hidden = false;
+			} else if (isOptional) {
+				if (titleEl) titleEl.textContent = "Section button";
+				if (textLabCopy) textLabCopy.textContent = "Button text (leave empty for global label; use Remove to hide)";
 				if (alignWrap) alignWrap.hidden = false;
 				if (removeBtn) removeBtn.hidden = false;
 			} else {
@@ -9457,13 +9488,14 @@ function lf_ai_assistant_widget_js(): string {
 			var lookWrap = benefitsCtaPickerEl.querySelector("[data-lf-section-cta-look-wrap]");
 			var styleSelPick = benefitsCtaPickerEl.__lfCtaStyleSel;
 			var toneSelPick = benefitsCtaPickerEl.__lfCtaToneSel;
-			var showLook = isBenefits || !!(buttonNode && (buttonNode.closest(".lf-block-hero") || buttonNode.closest(".lf-media-section__actions") || buttonNode.closest(".lf-block-cta") || buttonNode.closest(".lf-block-pricing")));
+			var showLook = isBenefits || isOptional || !!(buttonNode && (buttonNode.closest(".lf-block-hero") || buttonNode.closest(".lf-media-section__actions") || buttonNode.closest(".lf-block-cta") || buttonNode.closest(".lf-block-pricing")));
 			if (lookWrap) lookWrap.hidden = !showLook;
 			var textInp = benefitsCtaPickerEl.querySelector("[data-lf-benefits-cta-text]");
 			var actSel = benefitsCtaPickerEl.querySelector("[data-lf-benefits-cta-action]");
 			var urlInp = benefitsCtaPickerEl.querySelector("[data-lf-benefits-cta-url]");
 			var actionsEl = wrap ? wrap.querySelector(".lf-benefits__actions") : null;
-			var btn = isBenefits ? (buttonNode || (actionsEl ? actionsEl.querySelector("a.lf-btn,button.lf-btn") : null)) : buttonNode;
+			var sectionActionsEl = wrap ? wrap.querySelector(".lf-section__actions") : null;
+			var btn = isBenefits ? (buttonNode || (actionsEl ? actionsEl.querySelector("a.lf-btn,button.lf-btn") : null)) : (buttonNode || (sectionActionsEl ? sectionActionsEl.querySelector("a.lf-btn,button.lf-btn") : null));
 			var curText = btn ? String(btn.textContent || "").trim() : "";
 			if (isBenefits && actionsEl && curText === "") {
 				var st0 = String(actionsEl.getAttribute("data-lf-benefits-cta-stored-text") || "").trim();
@@ -9479,6 +9511,9 @@ function lf_ai_assistant_widget_js(): string {
 			if (isBenefits && actionsEl && actionsEl.className) {
 				var m = String(actionsEl.className || "").match(/\blf-benefits__actions--align-(left|center|right)\b/);
 				if (m && m[1]) curAlign = m[1];
+			} else if (isOptional && sectionActionsEl && sectionActionsEl.className) {
+				var m2 = String(sectionActionsEl.className || "").match(/\blf-section__actions--align-(left|center|right)\b/);
+				if (m2 && m2[1]) curAlign = m2[1];
 			}
 			if (textInp) textInp.value = curText;
 			if (actSel) {
@@ -9509,7 +9544,43 @@ function lf_ai_assistant_widget_js(): string {
 			benefitsCtaPickerEl.hidden = false;
 		}
 		function openBenefitsCtaPicker(wrap, buttonNode) {
-			openSectionCtaPicker(wrap, buttonNode, true);
+			openSectionCtaPicker(wrap, buttonNode, "benefits");
+		}
+		function openOptionalSectionCtaPicker(wrap, buttonNode) {
+			openSectionCtaPicker(wrap, buttonNode, "optional");
+		}
+		function persistOptionalSectionCta(wrap, text, action, url, align, buttonStyle, buttonTone, isRemove) {
+			if (!wrap) return;
+			var sectionId = String(wrap.getAttribute("data-lf-section-id") || "");
+			if (!sectionId) return;
+			var ctx = persistContextFromWrap(wrap);
+			setStatus("Saving button...", false);
+			var payload = {
+				action: "lf_ai_update_section_cta",
+				nonce: lfAiFloating.nonce,
+				context_type: ctx.context_type,
+				context_id: ctx.context_id,
+				section_id: sectionId,
+				cta_target: "optional",
+				text: String(text || ""),
+				cta_action: String(action || "quote"),
+				url: String(url || ""),
+				section_actions_align: String(align || "center"),
+				section_cta_style: String(buttonStyle || "solid"),
+				section_cta_tone: String(buttonTone || "primary")
+			};
+			if (isRemove) payload.section_cta_remove = "1";
+			$.post(lfAiFloating.ajax_url, payload).done(function(res){
+				if (res && res.success) {
+					setStatus((res.data && res.data.message) ? res.data.message : "Saved.", false);
+					if (res.data && res.data.reload) window.location.reload();
+				} else {
+					setStatus((res && res.data && res.data.message) ? res.data.message : "Save failed.", true);
+				}
+			}).fail(function(xhr){
+				var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : "Save failed.";
+				setStatus(msg, true);
+			});
 		}
 		function persistBenefitsSectionCta(wrap, text, action, url, align, buttonStyle, buttonTone, isRemove) {
 			if (!wrap) return;
@@ -10134,6 +10205,10 @@ function lf_ai_assistant_widget_js(): string {
 					}, { actionKey: "grid" });
 					ensureBtn("CTA", "Add or edit the optional benefits button", "Benefits button", function(){
 						openBenefitsCtaPicker(wrap, null);
+					}, { actionKey: "cta" });
+				} else if (sectionSupportsOptionalCta(sectionType)) {
+					ensureBtn("CTA", "Add or edit the optional section button", "Section button", function(){
+						openOptionalSectionCtaPicker(wrap, null);
 					}, { actionKey: "cta" });
 				}
 				if (sectionType === "service_intro") {
