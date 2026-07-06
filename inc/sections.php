@@ -1813,6 +1813,114 @@ function lf_sections_process_step_splitters(): array {
 }
 
 /**
+ * Process group slugs to try for auto-loading CPT steps (first match wins).
+ *
+ * @return list<string>
+ */
+function lf_sections_process_group_candidates_for_post(?\WP_Post $post = null): array {
+	$candidates = [];
+	if ($post instanceof \WP_Post && $post->post_type === 'lf_service') {
+		$candidates[] = sanitize_title($post->post_name);
+	}
+	if ($post instanceof \WP_Post && $post->post_type === 'lf_service_area') {
+		$service_slug = '';
+		if (function_exists('get_field')) {
+			$services = get_field('lf_service_area_services', $post->ID);
+			if (is_array($services) && !empty($services[0])) {
+				$first = $services[0];
+				if ($first instanceof \WP_Post) {
+					$service_slug = sanitize_title($first->post_name);
+				} elseif (is_numeric($first)) {
+					$first_post = get_post((int) $first);
+					if ($first_post instanceof \WP_Post) {
+						$service_slug = sanitize_title($first_post->post_name);
+					}
+				}
+			}
+		}
+		if ($service_slug !== '') {
+			$candidates[] = $service_slug;
+		}
+	}
+	if ($post instanceof \WP_Post && $post->post_type === 'page' && in_array($post->post_name, ['about-us', 'about'], true)) {
+		$candidates[] = defined('LF_NICHE_ABOUT_PROCESS_GROUP') ? LF_NICHE_ABOUT_PROCESS_GROUP : 'about-company';
+	}
+	if (is_front_page() || ($post instanceof \WP_Post && (int) get_option('page_on_front', 0) === (int) $post->ID)) {
+		$candidates[] = 'homepage-primary';
+	}
+	$candidates[] = defined('LF_NICHE_ABOUT_PROCESS_GROUP') ? LF_NICHE_ABOUT_PROCESS_GROUP : 'about-company';
+
+	$out = [];
+	foreach ($candidates as $slug) {
+		$slug = sanitize_title($slug);
+		if ($slug !== '' && !in_array($slug, $out, true)) {
+			$out[] = $slug;
+		}
+	}
+	return $out;
+}
+
+/**
+ * Load published process steps from CPT for the first matching group.
+ *
+ * @return list<\WP_Post>
+ */
+function lf_sections_load_process_cpt_posts(?\WP_Post $post = null, int $service_post_id = 0): array {
+	if ($service_post_id > 0 && function_exists('lf_sections_query_process_steps_auto')) {
+		$by_service = lf_sections_query_process_steps_auto('', $service_post_id);
+		if ($by_service !== []) {
+			return $by_service;
+		}
+	}
+	if (!function_exists('lf_process_step_published_ids_for_group')) {
+		return [];
+	}
+	foreach (lf_sections_process_group_candidates_for_post($post) as $group_slug) {
+		$ids = lf_process_step_published_ids_for_group($group_slug);
+		if ($ids === []) {
+			continue;
+		}
+		$posts = [];
+		foreach ($ids as $id) {
+			$step_post = get_post((int) $id);
+			if ($step_post instanceof \WP_Post) {
+				$posts[] = $step_post;
+			}
+		}
+		if ($posts !== []) {
+			return $posts;
+		}
+	}
+	return [];
+}
+
+/**
+ * @param list<\WP_Post> $posts
+ * @return list<array{id:int,title:string,body:string}>
+ */
+function lf_sections_process_steps_from_posts(array $posts): array {
+	$steps = [];
+	foreach ($posts as $step_post) {
+		if (!$step_post instanceof \WP_Post) {
+			continue;
+		}
+		$id = (int) $step_post->ID;
+		$title = trim((string) get_the_title($step_post));
+		if ($title === '' || (function_exists('lf_process_step_title_looks_like_import_junk') && lf_process_step_title_looks_like_import_junk($title))) {
+			continue;
+		}
+		$body = wp_strip_all_tags((string) get_post_field('post_content', $id));
+		$body = preg_replace('/\s+/', ' ', trim((string) $body));
+		$steps[] = [
+			'id' => $id,
+			'title' => $title,
+			'body' => (string) $body,
+		];
+	}
+	return $steps;
+}
+
+/**
  * Auto-resolve process steps from taxonomy context and/or “Assigned services” (post meta CSV).
  *
  * @return list<\WP_Post>
@@ -1892,8 +2000,8 @@ function lf_sections_query_process_steps_auto(string $term_slug, int $service_po
  */
 function lf_sections_process_steps_for_render(array $settings, ?\WP_Post $post = null): array {
 	$ids_raw = trim((string) ($settings['process_selected_ids'] ?? ''));
+	$steps = [];
 	if ($ids_raw !== '') {
-		$steps = [];
 		foreach (preg_split('/\r\n|\r|\n/', $ids_raw) as $line) {
 			$id = absint(trim($line));
 			if ($id <= 0) {
@@ -1905,7 +2013,7 @@ function lf_sections_process_steps_for_render(array $settings, ?\WP_Post $post =
 			}
 			$title = (string) get_the_title($step_post);
 			$title = trim($title);
-			if ($title === '') {
+			if ($title === '' || (function_exists('lf_process_step_title_looks_like_import_junk') && lf_process_step_title_looks_like_import_junk($title))) {
 				continue;
 			}
 			$body = wp_strip_all_tags((string) get_post_field('post_content', $step_post));
@@ -1921,67 +2029,51 @@ function lf_sections_process_steps_for_render(array $settings, ?\WP_Post $post =
 		}
 	}
 
-	// Auto-pick: taxonomy context + steps assigned to this service (ACF / meta CSV).
-	if ($ids_raw === '') {
-		$term_slug = '';
-		$service_post_id = 0;
-		if ($post instanceof \WP_Post && $post->post_type === 'lf_service') {
-			$term_slug = (string) $post->post_name;
-			$service_post_id = (int) $post->ID;
-		} elseif ($post instanceof \WP_Post && $post->post_type === 'lf_service_area') {
-			$service_slug = '';
-			if (function_exists('get_field')) {
-				$services = get_field('lf_service_area_services', $post->ID);
-				if (is_array($services) && !empty($services[0])) {
-					$first = $services[0];
-					if ($first instanceof \WP_Post) {
-						$service_slug = (string) $first->post_name;
-						$service_post_id = (int) $first->ID;
-					} elseif (is_numeric($first)) {
-						$first_post = get_post((int) $first);
-						if ($first_post instanceof \WP_Post) {
-							$service_slug = (string) $first_post->post_name;
-							$service_post_id = (int) $first_post->ID;
-						}
-					}
-				}
-			}
-			$term_slug = $service_slug;
-		} elseif ($post instanceof \WP_Post && $post->post_type === 'page' && in_array($post->post_name, ['about-us', 'about'], true)) {
-			$term_slug = LF_NICHE_ABOUT_PROCESS_GROUP;
-		} elseif (is_front_page()) {
-			$term_slug = 'homepage-primary';
-		}
-		$term_slug = sanitize_title($term_slug);
-		if ($term_slug !== '' || $service_post_id > 0) {
-			$auto_posts = lf_sections_query_process_steps_auto($term_slug, $service_post_id);
-			if ($auto_posts !== []) {
-				$steps = [];
-				foreach ($auto_posts as $step_post) {
-					if (!$step_post instanceof \WP_Post) {
-						continue;
-					}
-					$id = (int) $step_post->ID;
-					$title = trim((string) get_the_title($step_post));
-					if ($title === '') {
-						continue;
-					}
-					$body = wp_strip_all_tags((string) get_post_field('post_content', $id));
-					$body = preg_replace('/\s+/', ' ', trim((string) $body));
-					$steps[] = [
-						'id'    => $id,
-						'title' => $title,
-						'body'  => (string) $body,
-					];
-				}
-				if ($steps !== []) {
-					return $steps;
-				}
+	// Auto-pick from CPT when IDs are empty or stale (do not fall back to generic line defaults).
+	$service_post_id = 0;
+	if ($post instanceof \WP_Post && $post->post_type === 'lf_service') {
+		$service_post_id = (int) $post->ID;
+	} elseif ($post instanceof \WP_Post && $post->post_type === 'lf_service_area' && function_exists('get_field')) {
+		$services = get_field('lf_service_area_services', $post->ID);
+		if (is_array($services) && !empty($services[0])) {
+			$first = $services[0];
+			if ($first instanceof \WP_Post) {
+				$service_post_id = (int) $first->ID;
+			} elseif (is_numeric($first)) {
+				$service_post_id = (int) $first;
 			}
 		}
 	}
+	$cpt_posts = lf_sections_load_process_cpt_posts($post, $service_post_id);
+	if ($cpt_posts !== []) {
+		$steps = lf_sections_process_steps_from_posts($cpt_posts);
+		if ($steps !== []) {
+			return $steps;
+		}
+	}
 
-	// Fallback: parse plain lines.
+	// Legacy taxonomy query (service slug / homepage-primary term).
+	$term_slug = '';
+	if ($post instanceof \WP_Post && $post->post_type === 'lf_service') {
+		$term_slug = (string) $post->post_name;
+	} elseif ($post instanceof \WP_Post && $post->post_type === 'lf_service_area' && $service_post_id > 0) {
+		$svc = get_post($service_post_id);
+		$term_slug = $svc instanceof \WP_Post ? (string) $svc->post_name : '';
+	} elseif ($post instanceof \WP_Post && $post->post_type === 'page' && in_array($post->post_name, ['about-us', 'about'], true)) {
+		$term_slug = defined('LF_NICHE_ABOUT_PROCESS_GROUP') ? LF_NICHE_ABOUT_PROCESS_GROUP : 'about-company';
+	} elseif (is_front_page()) {
+		$term_slug = 'homepage-primary';
+	}
+	$term_slug = sanitize_title($term_slug);
+	if ($term_slug !== '' || $service_post_id > 0) {
+		$auto_posts = lf_sections_query_process_steps_auto($term_slug, $service_post_id);
+		$steps = lf_sections_process_steps_from_posts($auto_posts);
+		if ($steps !== []) {
+			return $steps;
+		}
+	}
+
+	// Last resort: parse plain lines (editor-entered fallback only).
 	$lines = lf_sections_parse_lines((string) ($settings['process_steps'] ?? ''));
 	$steps = [];
 	foreach ($lines as $line) {

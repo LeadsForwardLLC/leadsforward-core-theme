@@ -393,6 +393,144 @@ function lf_pci_section_is_library_wired(string $section_key, array $schema): bo
 }
 
 /**
+ * Resolve published Process Step CPT IDs for a page/import schema.
+ *
+ * @return list<int>
+ */
+function lf_pci_resolve_process_cpt_ids(array $schema, int $page_id = 0): array {
+	if (function_exists('lf_process_step_trash_import_junk')) {
+		lf_process_step_trash_import_junk();
+	}
+
+	$post = $page_id > 0 ? get_post($page_id) : null;
+	$process_group = (string) ($schema['process_group'] ?? (defined('LF_NICHE_ABOUT_PROCESS_GROUP') ? LF_NICHE_ABOUT_PROCESS_GROUP : 'about-company'));
+	$groups = [$process_group];
+	if ($post instanceof \WP_Post && function_exists('lf_sections_process_group_candidates_for_post')) {
+		foreach (lf_sections_process_group_candidates_for_post($post) as $candidate) {
+			if (!in_array($candidate, $groups, true)) {
+				$groups[] = $candidate;
+			}
+		}
+	}
+
+	$ids = [];
+	if (function_exists('lf_process_step_published_ids_for_group')) {
+		foreach ($groups as $group_slug) {
+			$ids = lf_process_step_published_ids_for_group($group_slug);
+			if ($ids !== []) {
+				break;
+			}
+		}
+	}
+	if ($ids !== []) {
+		return $ids;
+	}
+
+	$niche_slug = (string) get_option('lf_homepage_niche_slug', 'foundation-repair');
+	if (function_exists('lf_niche_seed_about_content')) {
+		$vars = lf_pci_template_vars();
+		$seeded = lf_niche_seed_about_content($niche_slug, $vars, false);
+		$ids = array_values(array_filter(array_map('absint', (array) ($seeded['process_ids'] ?? []))));
+	}
+	return $ids;
+}
+
+/**
+ * Wire process section settings to Process Step CPT IDs (never generic line fallbacks).
+ *
+ * @return array<string, mixed>
+ */
+function lf_pci_process_section_cpt_settings(array $schema, int $page_id = 0, array $existing = []): array {
+	$ids = lf_pci_resolve_process_cpt_ids($schema, $page_id);
+	$settings = $existing;
+	if ($ids !== [] && function_exists('lf_niche_ids_to_lines')) {
+		$settings['process_selected_ids'] = lf_niche_ids_to_lines($ids);
+		$settings['process_steps'] = '';
+	}
+	return $settings;
+}
+
+/**
+ * Rewire every process section to published Process Step CPT IDs.
+ */
+function lf_pci_rewire_all_process_sections_from_cpt(): int {
+	if (!function_exists('lf_pci_process_section_cpt_settings')) {
+		return 0;
+	}
+	$wired = 0;
+
+	$front_page_id = (int) get_option('page_on_front', 0);
+	if (defined('LF_HOMEPAGE_CONFIG_OPTION')) {
+		$schema = lf_pci_schema_for_slug('home');
+		$config = get_option(LF_HOMEPAGE_CONFIG_OPTION, []);
+		if (is_array($schema) && is_array($config) && isset($config['process']) && is_array($config['process'])) {
+			$next = lf_pci_process_section_cpt_settings($schema, $front_page_id, $config['process']);
+			if (($next['process_selected_ids'] ?? '') !== ($config['process']['process_selected_ids'] ?? '')) {
+				$config['process'] = array_merge($config['process'], $next);
+				update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, false);
+				$wired++;
+			}
+		}
+	}
+
+	if (!defined('LF_PB_META_KEY')) {
+		return $wired;
+	}
+
+	$pages = get_posts([
+		'post_type' => 'page',
+		'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
+		'posts_per_page' => 500,
+		'no_found_rows' => true,
+		'meta_query' => [
+			[
+				'key' => LF_PB_META_KEY,
+				'compare' => 'EXISTS',
+			],
+		],
+	]);
+	foreach ($pages as $page) {
+		if (!$page instanceof \WP_Post) {
+			continue;
+		}
+		$schema = lf_pci_schema_for_slug($page->post_name);
+		if ($schema === null || !in_array('process', (array) ($schema['order'] ?? []), true)) {
+			continue;
+		}
+		$config = get_post_meta((int) $page->ID, LF_PB_META_KEY, true);
+		if (!is_array($config) || !is_array($config['sections'] ?? null)) {
+			continue;
+		}
+		$sections = $config['sections'];
+		$changed = false;
+		foreach ($sections as $instance_id => $row) {
+			if (!is_array($row) || (string) ($row['type'] ?? '') !== 'process') {
+				continue;
+			}
+			$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+			$next = lf_pci_process_section_cpt_settings($schema, (int) $page->ID, $settings);
+			if (($next['process_selected_ids'] ?? '') === ($settings['process_selected_ids'] ?? '')
+				&& ($next['process_steps'] ?? '') === ($settings['process_steps'] ?? '')) {
+				continue;
+			}
+			$sections[$instance_id]['settings'] = array_merge($settings, $next);
+			$changed = true;
+		}
+		if (!$changed) {
+			continue;
+		}
+		update_post_meta((int) $page->ID, LF_PB_META_KEY, [
+			'order' => is_array($config['order'] ?? null) ? $config['order'] : array_keys($sections),
+			'sections' => $sections,
+			'seo' => is_array($config['seo'] ?? null) ? $config['seo'] : ['title' => '', 'description' => ''],
+		]);
+		$wired++;
+	}
+
+	return $wired;
+}
+
+/**
  * Whether this post supports paste import.
  */
 function lf_pci_post_supports_import(\WP_Post $post): bool {
@@ -1456,6 +1594,12 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 
 	if (!empty($result['process_ids']) && function_exists('lf_niche_ids_to_lines')) {
 		$sections['process']['process_selected_ids'] = lf_niche_ids_to_lines($result['process_ids']);
+		$sections['process']['process_steps'] = '';
+	} elseif ($has_process && function_exists('lf_pci_process_section_cpt_settings')) {
+		$sections['process'] = lf_pci_process_section_cpt_settings($schema, $page_id, is_array($sections['process'] ?? null) ? $sections['process'] : []);
+		if (!empty($sections['process']['process_selected_ids'])) {
+			$result['process_source'] = 'cpt';
+		}
 	}
 
 	if ($has_faq && $is_faq_hub) {
@@ -1507,6 +1651,9 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 				$imported = $sections[$base_type];
 			}
 			$merged = array_merge($defaults, $imported);
+			if ($base_type === 'process' && function_exists('lf_pci_process_section_cpt_settings')) {
+				$merged = lf_pci_process_section_cpt_settings($schema, $page_id, $merged);
+			}
 			if (function_exists('lf_sections_normalize_service_details_settings')) {
 				$merged = lf_pci_normalize_section_settings($type, $base_type, $merged);
 			}
@@ -1665,6 +1812,13 @@ function lf_pci_apply_to_homepage(array $schema, array $sections, array $process
 	}
 	if (!empty($result['process_ids']) && function_exists('lf_niche_ids_to_lines')) {
 		$sections['process']['process_selected_ids'] = lf_niche_ids_to_lines($result['process_ids']);
+		$sections['process']['process_steps'] = '';
+	} elseif (function_exists('lf_pci_process_section_cpt_settings')) {
+		$home_page_id = (int) ($result['page_id'] ?? 0);
+		$sections['process'] = lf_pci_process_section_cpt_settings($schema, $home_page_id, is_array($sections['process'] ?? null) ? $sections['process'] : []);
+		if (!empty($sections['process']['process_selected_ids'])) {
+			$result['process_source'] = 'cpt';
+		}
 	}
 	if (!empty($result['faq_ids']) && function_exists('lf_niche_ids_to_lines')) {
 		$sections['faq_accordion']['faq_selected_ids'] = lf_niche_ids_to_lines($result['faq_ids']);
@@ -1691,6 +1845,10 @@ function lf_pci_apply_to_homepage(array $schema, array $sections, array $process
 			}
 			$merged = array_merge($defaults, $imported);
 			$merged['enabled'] = true;
+			if ($base_type === 'process' && function_exists('lf_pci_process_section_cpt_settings')) {
+				$home_page_id = (int) ($result['page_id'] ?? 0);
+				$merged = lf_pci_process_section_cpt_settings($schema, $home_page_id, $merged);
+			}
 			if (function_exists('lf_sections_normalize_service_details_settings')) {
 				$merged = lf_pci_normalize_section_settings($type, $base_type, $merged);
 			}
