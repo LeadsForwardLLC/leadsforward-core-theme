@@ -48,6 +48,15 @@ function lf_publish_schedule_page_labels(): array {
 }
 
 /**
+ * Default timing for the Reviews fleet page (publish only when testimonials exist).
+ */
+function lf_publish_schedule_reviews_default_timing(): string {
+	return function_exists('lf_fleet_has_published_testimonials') && lf_fleet_has_published_testimonials()
+		? 'now'
+		: 'draft';
+}
+
+/**
  * Built-in publish timing for core pages (used when no per-key override is saved).
  *
  * @return array<string, array{timing:string,date:string}>
@@ -58,9 +67,9 @@ function lf_publish_schedule_default_items(): array {
 		'page:services' => ['timing' => 'now', 'date' => ''],
 		'page:service-areas' => ['timing' => 'now', 'date' => ''],
 		'page:contact' => ['timing' => 'now', 'date' => ''],
-		'page:about' => ['timing' => 'draft', 'date' => ''],
-		'page:why-choose-us' => ['timing' => 'draft', 'date' => ''],
-		'page:reviews' => ['timing' => 'draft', 'date' => ''],
+		'page:about' => ['timing' => 'now', 'date' => ''],
+		'page:why-choose-us' => ['timing' => 'now', 'date' => ''],
+		'page:reviews' => ['timing' => lf_publish_schedule_reviews_default_timing(), 'date' => ''],
 		'page:blog' => ['timing' => 'draft', 'date' => ''],
 	];
 }
@@ -71,6 +80,9 @@ function lf_publish_schedule_default_items(): array {
  * @return array{timing:string,date:string}|null
  */
 function lf_publish_schedule_default_item_for_key(string $schedule_key): ?array {
+	if ($schedule_key === 'page:reviews') {
+		return ['timing' => lf_publish_schedule_reviews_default_timing(), 'date' => ''];
+	}
 	$defaults = lf_publish_schedule_default_items();
 	if (isset($defaults[$schedule_key])) {
 		return $defaults[$schedule_key];
@@ -104,7 +116,7 @@ function lf_publish_schedule_resolved_item(string $schedule_key): array {
  * Reset publish timing to built-in page defaults (drops per-CPT overrides).
  */
 function lf_publish_schedule_reset_to_defaults(): void {
-	update_option(LF_PUBLISH_SCHEDULE_OPTION, ['items' => lf_publish_schedule_default_items()], false);
+	update_option(LF_PUBLISH_SCHEDULE_OPTION, ['items' => []], false);
 }
 
 /**
@@ -150,7 +162,7 @@ function lf_publish_schedule_seed_defaults_if_empty(): void {
 			return;
 		}
 	}
-	update_option(LF_PUBLISH_SCHEDULE_OPTION, ['items' => lf_publish_schedule_default_items()], false);
+	update_option(LF_PUBLISH_SCHEDULE_OPTION, ['items' => []], false);
 }
 
 /**
@@ -273,6 +285,48 @@ function lf_publish_schedule_maybe_migrate_cpt_defaults(): void {
 add_action('admin_init', 'lf_publish_schedule_maybe_migrate_cpt_defaults', 20);
 
 /**
+ * One-time: drop legacy draft overrides for About / Why Choose Us / Reviews so new publish-now defaults apply.
+ */
+function lf_publish_schedule_maybe_migrate_page_defaults_v4(): void {
+	if (!is_admin() || !current_user_can('edit_theme_options')) {
+		return;
+	}
+	$page = isset($_GET['page']) ? sanitize_key((string) wp_unslash((string) $_GET['page'])) : '';
+	$manifest_slug = defined('LF_MANIFEST_ADMIN_SLUG') ? LF_MANIFEST_ADMIN_SLUG : 'lf-manifest';
+	if ($page !== $manifest_slug) {
+		return;
+	}
+	if (get_option('lf_publish_schedule_page_defaults_migrated') === '4') {
+		return;
+	}
+	$raw = get_option(LF_PUBLISH_SCHEDULE_OPTION, []);
+	if (!is_array($raw)) {
+		update_option('lf_publish_schedule_page_defaults_migrated', '4', false);
+		return;
+	}
+	$items = isset($raw['items']) && is_array($raw['items']) ? $raw['items'] : $raw;
+	if (!is_array($items)) {
+		update_option('lf_publish_schedule_page_defaults_migrated', '4', false);
+		return;
+	}
+	$changed = false;
+	foreach (['page:about', 'page:why-choose-us', 'page:reviews'] as $key) {
+		if (!isset($items[$key]) || !is_array($items[$key])) {
+			continue;
+		}
+		if (sanitize_key((string) ($items[$key]['timing'] ?? '')) === 'draft') {
+			unset($items[$key]);
+			$changed = true;
+		}
+	}
+	if ($changed) {
+		update_option(LF_PUBLISH_SCHEDULE_OPTION, ['items' => $items], false);
+	}
+	update_option('lf_publish_schedule_page_defaults_migrated', '4', false);
+}
+add_action('admin_init', 'lf_publish_schedule_maybe_migrate_page_defaults_v4', 21);
+
+/**
  * @param array<string, mixed> $raw_post
  */
 function lf_publish_schedule_save_from_post(array $raw_post): void {
@@ -366,6 +420,16 @@ function lf_publish_schedule_datetime_local_min(): string {
  * @return array<string, string>|array{}
  */
 function lf_publish_schedule_status_args(string $schedule_key): array {
+	if (
+		$schedule_key === 'page:reviews'
+		&& function_exists('lf_fleet_has_published_testimonials')
+		&& !lf_fleet_has_published_testimonials()
+	) {
+		return [
+			'post_status' => 'draft',
+		];
+	}
+
 	$items = lf_publish_schedule_get_items();
 	$has_saved = isset($items[$schedule_key]) && is_array($items[$schedule_key]);
 	$item = $has_saved ? $items[$schedule_key] : lf_publish_schedule_default_item_for_key($schedule_key);
@@ -637,7 +701,7 @@ function lf_publish_schedule_render_page_types_panel(): void {
 	<details class="lf-publish-schedule-panel">
 		<summary class="lf-publish-schedule-panel__summary"><?php esc_html_e('Publish timing', 'leadsforward-core'); ?></summary>
 		<div class="lf-publish-schedule-panel__body">
-			<p class="description lf-publish-schedule-panel__lead"><?php esc_html_e('Publish now, schedule a date (WordPress auto-publishes), or keep as draft.', 'leadsforward-core'); ?></p>
+			<p class="description lf-publish-schedule-panel__lead"><?php esc_html_e('Publish now, schedule a date (WordPress auto-publishes), or keep as draft. Reviews defaults to Publish now only when at least one testimonial exists (e.g. from Airtable).', 'leadsforward-core'); ?></p>
 			<div class="lf-publish-schedule-panel__table" role="group" aria-label="<?php esc_attr_e('Page publish timing', 'leadsforward-core'); ?>">
 				<?php foreach (lf_publish_schedule_page_keys() as $key) : ?>
 					<div class="lf-publish-schedule-panel__row">
