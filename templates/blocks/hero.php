@@ -262,46 +262,17 @@ if (!in_array($hero_bg_mode, ['color', 'image', 'video'], true)) {
 }
 $hero_bg_stored_image_id = isset($section['hero_background_image_id']) ? (int) $section['hero_background_image_id'] : 0;
 $hero_bg_stored_video_id = isset($section['hero_background_video_id']) ? (int) $section['hero_background_video_id'] : 0;
+$hero_post_id = is_singular() ? (int) get_queried_object_id() : 0;
 $hero_bg_id = 0;
 $hero_bg_url = '';
-if ($hero_bg_mode === 'image' && $variant === 'conversion') {
-	if ($hero_bg_stored_image_id > 0) {
-		$hero_bg_url = (string) wp_get_attachment_image_url(
-			$hero_bg_stored_image_id,
-			function_exists('lf_hero_background_image_size') ? lf_hero_background_image_size() : 'large'
-		);
-	}
-	if ($hero_bg_url === '' && function_exists('lf_get_section_default_image_url')) {
-		$hero_bg_url = (string) lf_get_section_default_image_url('hero');
-	}
-	if ($hero_bg_url === '' && $hero_bg_stored_image_id === 0 && function_exists('lf_get_section_default_image_id')) {
-		$hero_bg_id = (int) lf_get_section_default_image_id('hero');
-		if ($hero_bg_id > 0) {
-			$hero_bg_url = (string) wp_get_attachment_image_url(
-				$hero_bg_id,
-				function_exists('lf_hero_background_image_size') ? lf_hero_background_image_size() : 'large'
-			);
-		}
-	}
-	if ($hero_bg_url === '') {
-		$hero_bg_id = (int) get_post_thumbnail_id(get_queried_object_id());
-		if ($hero_bg_id > 0) {
-			$hero_bg_url = (string) wp_get_attachment_image_url(
-				$hero_bg_id,
-				function_exists('lf_hero_background_image_size') ? lf_hero_background_image_size() : 'large'
-			);
-		}
-	}
-	if ($hero_bg_url === '' && $placeholder_id > 0) {
-		$hero_bg_url = (string) wp_get_attachment_image_url(
-			(int) $placeholder_id,
-			function_exists('lf_hero_background_image_size') ? lf_hero_background_image_size() : 'large'
-		);
-	}
+if ($hero_bg_mode === 'image') {
+	$hero_bg_url = function_exists('lf_resolve_hero_section_background_url')
+		? (string) lf_resolve_hero_section_background_url($section, $variant, $hero_post_id)
+		: '';
 }
 $hero_bg_class = '';
 $hero_bg_style = '';
-if ($hero_bg_url && $hero_bg_mode === 'image' && $variant === 'conversion') {
+if ($hero_bg_url !== '' && $hero_bg_mode === 'image') {
 	$hero_bg_class = ' lf-block-hero--has-bg lf-block-hero--has-canvas-bg';
 	$hero_bg_style = sprintf(
 		'--lf-hero-bg-image: url(\'%s\'); --lf-hero-bg-overlay-opacity: 1;',
@@ -337,6 +308,9 @@ $hero_combined_style = trim(
 	. ($hero_video_overlay_css !== '' ? ' ' . $hero_video_overlay_css : '')
 );
 $hero_bg_tone = (function_exists('lf_sections_hero_background_is_dark') && lf_sections_hero_background_is_dark($section)) ? 'dark' : 'light';
+if ($hero_bg_url !== '' && $hero_bg_mode === 'image') {
+	$hero_bg_tone = 'dark';
+}
 if ($variant === 'page' && $hero_bg_tone === 'light') {
 	$surface_slug = sanitize_key((string) ($section['section_background'] ?? 'light'));
 	if (in_array($surface_slug, ['light', 'white', 'soft', 'card', ''], true)) {

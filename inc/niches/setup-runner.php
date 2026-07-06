@@ -1063,7 +1063,7 @@ function lf_wizard_get_page_blueprints(array $data, array $niche, array $created
 			],
 		],
 		'contact' => [
-			'order' => ['hero', 'map_nap', 'faq_accordion', 'cta'],
+			'order' => ['hero', 'map_nap', 'cta', 'faq_accordion'],
 			'overrides' => [
 				'hero' => [
 					'hero_headline' => 'Contact ' . $business,

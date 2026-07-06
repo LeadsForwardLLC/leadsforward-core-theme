@@ -2322,6 +2322,16 @@ function lf_sections_hero_background_is_dark(array $section): bool {
 			return true;
 		}
 	}
+	if ($variant === 'page') {
+		$mode = sanitize_key((string) ($section['hero_background_mode'] ?? 'image'));
+		if ($mode === 'image' && function_exists('lf_resolve_hero_section_background_url')) {
+			$post_id = is_singular() ? (int) get_queried_object_id() : 0;
+			$url = lf_resolve_hero_section_background_url($section, 'page', $post_id);
+			if ($url !== '') {
+				return true;
+			}
+		}
+	}
 	$custom = lf_sections_sanitize_custom_background((string) ($section['section_background_custom'] ?? ''));
 	if ($custom !== '') {
 		$hex = lf_sections_css_color_to_hex($custom);

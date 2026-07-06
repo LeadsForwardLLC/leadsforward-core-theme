@@ -9666,7 +9666,7 @@ function lf_ai_assistant_widget_js(): string {
 			if (imgEl) {
 				imgEl.textContent = heroSettingsState.imageId > 0
 					? ("Image attachment ID: " + String(heroSettingsState.imageId))
-					: "No custom image (featured image can still show when overlay mode is on).";
+					: "No custom image — uses featured image, then the global hero default.";
 			}
 			if (vidEl) {
 				vidEl.textContent = heroSettingsState.videoId > 0
