@@ -173,6 +173,7 @@ function lf_niche_homepage_blueprint_registry(): array {
 				'cta_headline' => __('Worried About Your Foundation? Get Clear Answers Today.', 'leadsforward-core'),
 				'cta_subheadline' => __('Schedule a free inspection and find out what’s really happening with your home.', 'leadsforward-core'),
 				'cta_primary_override' => __('Get a Free Inspection', 'leadsforward-core'),
+				'section_background' => 'dark',
 			],
 			'inline_form' => [
 				'title' => __('Get Your Free Foundation Inspection', 'leadsforward-core'),

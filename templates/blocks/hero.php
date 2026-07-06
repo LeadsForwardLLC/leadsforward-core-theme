@@ -337,6 +337,12 @@ $hero_combined_style = trim(
 	. ($hero_video_overlay_css !== '' ? ' ' . $hero_video_overlay_css : '')
 );
 $hero_bg_tone = (function_exists('lf_sections_hero_background_is_dark') && lf_sections_hero_background_is_dark($section)) ? 'dark' : 'light';
+if ($variant === 'page' && $hero_bg_tone === 'light') {
+	$surface_slug = sanitize_key((string) ($section['section_background'] ?? 'light'));
+	if (in_array($surface_slug, ['light', 'white', 'soft', 'card', ''], true)) {
+		$hero_bg_tone = 'light';
+	}
+}
 $hero_img_attrs = function_exists('lf_image_lcp_attrs')
 	? lf_image_lcp_attrs(['alt' => esc_attr($hero_image_alt)])
 	: ['loading' => 'eager', 'fetchpriority' => 'high', 'decoding' => 'async', 'alt' => esc_attr($hero_image_alt)];
@@ -356,6 +362,9 @@ $placeholder_attrs = function_exists('lf_image_lcp_attrs')
 		<?php if ($variant === 'page') : ?>
 			<div class="lf-hero-basic<?php echo $show_hero_image ? ' lf-hero-basic--media' : ''; ?>">
 				<div class="lf-hero-basic__content">
+					<?php if (function_exists('lf_render_breadcrumb_trail')) : ?>
+						<?php lf_render_breadcrumb_trail(); ?>
+					<?php endif; ?>
 					<?php if ($icon_above) : ?><span class="lf-heading-icon lf-heading-icon--above"><?php echo $icon_above; ?></span><?php endif; ?>
 					<?php if ($icon_left) : ?>
 						<div class="lf-heading-row">

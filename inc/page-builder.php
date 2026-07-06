@@ -544,15 +544,16 @@ function lf_pb_cleanup_templates_once(): void {
 	if (!is_admin() || !current_user_can('edit_theme_options')) {
 		return;
 	}
-	if (get_option('lf_pb_template_cleanup_v5', '0') === '1') {
+	if (get_option('lf_pb_template_cleanup_v6', '0') === '1') {
 		return;
 	}
 	if (function_exists('lf_homepage_cleanup_sections_once')) {
 		lf_homepage_cleanup_sections_once();
 	}
 	$updated = 0;
-	$page_templates = [
-		// About page should be as content-dense as Why Choose Us.
+	$page_templates = function_exists('lf_fleet_page_section_orders')
+		? lf_fleet_page_section_orders()
+		: [
 		'about-us' => ['hero', 'content_image', 'benefits', 'image_content', 'process', 'faq_accordion', 'cta'],
 		'why-choose-us' => ['hero', 'benefits', 'content_image', 'image_content', 'faq_accordion', 'cta'],
 		'services' => ['hero', 'service_intro', 'content_image', 'faq_accordion', 'cta'],
@@ -598,8 +599,10 @@ function lf_pb_cleanup_templates_once(): void {
 		'fields' => 'ids',
 		'no_found_rows' => true,
 	]);
+	$cpt_orders = function_exists('lf_fleet_cpt_section_orders') ? lf_fleet_cpt_section_orders() : [];
 	foreach ($service_ids as $service_id) {
-		if (lf_pb_cleanup_post_config((int) $service_id, 'service', ['hero', 'trust_bar', 'service_details', 'service_details', 'benefits', 'process', 'faq_accordion', 'cta'])) {
+		$desired = $cpt_orders['service'] ?? ['hero', 'trust_bar', 'service_details', 'service_details', 'benefits', 'process', 'faq_accordion', 'cta'];
+		if (lf_pb_cleanup_post_config((int) $service_id, 'service', $desired)) {
 			$updated++;
 		}
 	}
@@ -612,7 +615,8 @@ function lf_pb_cleanup_templates_once(): void {
 		'no_found_rows' => true,
 	]);
 	foreach ($area_ids as $area_id) {
-		if (lf_pb_cleanup_post_config((int) $area_id, 'service_area', ['hero', 'trust_bar', 'content_image', 'benefits', 'content_image', 'image_content', 'process', 'related_links', 'nearby_areas', 'faq_accordion', 'cta'])) {
+		$desired = $cpt_orders['service_area'] ?? ['hero', 'trust_bar', 'content_image', 'benefits', 'content_image', 'image_content', 'process', 'related_links', 'nearby_areas', 'faq_accordion', 'cta'];
+		if (lf_pb_cleanup_post_config((int) $area_id, 'service_area', $desired)) {
 			$updated++;
 		}
 	}
@@ -625,13 +629,14 @@ function lf_pb_cleanup_templates_once(): void {
 		'no_found_rows' => true,
 	]);
 	foreach ($post_ids as $post_id) {
-		if (lf_pb_cleanup_post_config((int) $post_id, 'post', ['hero', 'content', 'related_links', 'cta'])) {
+		$desired = $cpt_orders['post'] ?? ['hero', 'content', 'related_links', 'cta'];
+		if (lf_pb_cleanup_post_config((int) $post_id, 'post', $desired)) {
 			$updated++;
 		}
 	}
 
-	update_option('lf_pb_template_cleanup_v5', '1', true);
-	update_option('lf_pb_template_cleanup_v5_count', (int) $updated, false);
+	update_option('lf_pb_template_cleanup_v6', '1', true);
+	update_option('lf_pb_template_cleanup_v6_count', (int) $updated, false);
 }
 
 function lf_pb_cleanup_post_config(int $post_id, string $context, array $desired_types): bool {
