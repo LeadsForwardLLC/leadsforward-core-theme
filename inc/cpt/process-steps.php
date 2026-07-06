@@ -217,9 +217,6 @@ function lf_process_step_find_by_canonical_key(string $canonical_key): int {
 	return !empty($posts[0]) ? (int) $posts[0] : 0;
 }
 
-/**
- * @return list<int>
- */
 function lf_process_step_ids_for_group(string $group_slug): array {
 	$group_slug = sanitize_title($group_slug);
 	if ($group_slug === '') {
@@ -413,5 +410,76 @@ function lf_process_step_dedupe_group(string $group_slug, array $keeper_ids = []
 		}
 	}
 	return $trashed;
+}
+
+/**
+ * Detect process step titles created by a bad template import (mashed Key: labels).
+ */
+function lf_process_step_title_looks_like_import_junk(string $title): bool {
+	$title = trim(wp_strip_all_tags($title));
+	if ($title === '') {
+		return false;
+	}
+	if (preg_match('/\b(Heading|Intro|Subheadline|Body|Items|Step|Template|Slug):\s*/i', $title)) {
+		return true;
+	}
+	if (preg_match('/\bStep:\s*.+\|\|/i', $title)) {
+		return true;
+	}
+	return strlen($title) > 200;
+}
+
+/**
+ * Trash published process steps whose titles look like mashed import junk.
+ *
+ * @return int Number trashed
+ */
+function lf_process_step_trash_import_junk(): int {
+	if (!post_type_exists('lf_process_step')) {
+		return 0;
+	}
+	$trashed = 0;
+	$posts = get_posts([
+		'post_type' => 'lf_process_step',
+		'post_status' => ['publish', 'draft', 'pending', 'private'],
+		'posts_per_page' => 500,
+		'no_found_rows' => true,
+	]);
+	foreach ($posts as $post) {
+		if (!$post instanceof \WP_Post) {
+			continue;
+		}
+		if (!lf_process_step_title_looks_like_import_junk((string) $post->post_title)) {
+			continue;
+		}
+		if (wp_trash_post((int) $post->ID)) {
+			$trashed++;
+		}
+	}
+	return $trashed;
+}
+
+/**
+ * Published process step IDs for a group, excluding import-junk titles.
+ *
+ * @return list<int>
+ */
+function lf_process_step_published_ids_for_group(string $group_slug): array {
+	$ids = [];
+	foreach (lf_process_step_ids_for_group($group_slug) as $id) {
+		$id = (int) $id;
+		if ($id <= 0) {
+			continue;
+		}
+		$post = get_post($id);
+		if (!$post instanceof \WP_Post || $post->post_type !== 'lf_process_step' || $post->post_status !== 'publish') {
+			continue;
+		}
+		if (lf_process_step_title_looks_like_import_junk((string) $post->post_title)) {
+			continue;
+		}
+		$ids[] = $id;
+	}
+	return $ids;
 }
 

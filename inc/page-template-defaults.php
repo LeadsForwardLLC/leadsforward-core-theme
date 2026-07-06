@@ -735,6 +735,24 @@ function lf_page_template_repair_reviews_publish_v6(): void {
 add_action('admin_init', 'lf_page_template_repair_reviews_publish_v6', 26);
 
 /**
+ * One-time: wire process sections to Process Step CPT (not generic line fallbacks).
+ */
+function lf_page_template_repair_process_cpt_wiring_v7(): void {
+	if (!is_admin() || !current_user_can('edit_theme_options')) {
+		return;
+	}
+	if (get_option('lf_page_template_repair_v7', '0') === '1') {
+		return;
+	}
+	if (function_exists('lf_pci_rewire_all_process_sections_from_cpt')) {
+		lf_pci_rewire_all_process_sections_from_cpt();
+	}
+	update_option('lf_page_template_repair_v7', '1', true);
+}
+
+add_action('admin_init', 'lf_page_template_repair_process_cpt_wiring_v7', 27);
+
+/**
  * One-time migration: collapse legacy hero variants (default/a/b/c) to conversion.
  */
 function lf_hero_normalize_variants_once(): void {
