@@ -83,7 +83,10 @@ function lf_pci_common_section_aliases(): array {
  */
 function lf_pci_build_schema(string $slug, string $label, array $order, array $options = []): array {
 	$aliases = array_merge(lf_pci_common_section_aliases(), $options['section_aliases'] ?? []);
-	$locked = $options['locked'] ?? [];
+	$locked = array_values(array_unique(array_merge(
+		function_exists('lf_pci_library_wired_section_types') ? lf_pci_library_wired_section_types() : ['process', 'faq_accordion'],
+		$options['locked'] ?? []
+	)));
 	$importable = [];
 	foreach ($order as $type) {
 		if (!lf_pci_section_type_is_locked($type, $locked)) {
@@ -260,7 +263,7 @@ function lf_pci_registry(): array {
 			'required' => ['hero', 'cta'],
 		]),
 		lf_pci_build_schema('faq', __('FAQ', 'leadsforward-core'), ['hero', 'faq_accordion', 'cta'], [
-			'required' => ['hero', 'faq_accordion', 'cta'],
+			'required' => ['hero', 'cta'],
 			'faq_hub' => true,
 			'faq_context' => defined('LF_NICHE_FAQ_PAGE_CONTEXT') ? LF_NICHE_FAQ_PAGE_CONTEXT : 'faq_page',
 		]),

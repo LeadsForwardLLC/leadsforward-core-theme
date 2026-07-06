@@ -8,11 +8,6 @@ Headline: {business} Blog
 Subheadline: Practical guidance, project checklists, and seasonal advice{city_line}.
 Eyebrow: Tips & Updates
 
-=== FAQ ===
-Heading: Resource FAQs
-Intro: Answers about our articles, updates, and how to get help with your project.
-(Leave Q&A blank — Niche Content Library on import.)
-
 === CTA ===
 Headline: Ready for a free inspection?
 Subheadline: Tell us what you are seeing and we will schedule a visit with a clear next step.

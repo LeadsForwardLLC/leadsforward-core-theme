@@ -12,11 +12,6 @@ Eyebrow: Real Homeowners • Real Results
 Headline: Ready to join our happy customers?
 Subheadline: Request a foundation inspection and experience the same clear communication our reviewers mention.
 
-=== FAQ ===
-Heading: Review FAQs
-Intro: Common questions about our reviews, ratings, and what customers can expect.
-(Leave Q&A blank — Niche Content Library on import.)
-
 === SEO ===
 Title: Reviews | {business}{city_line}
 Description: Read reviews for {business} — foundation repair specialists{city_line}. Licensed crews, engineered solutions, and responsive service.

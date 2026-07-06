@@ -61,13 +61,6 @@ View all label: View all services
 Heading: Real Repairs. Real Homes. Real Results.
 Intro: See how we’ve helped homeowners protect their homes across {city} and nearby communities.
 
-=== PROCESS ===
-Heading: A Simple Process From Inspection to Repair
-Intro: Know what happens next — no surprises.
-Step: Schedule Your Free Inspection || Tell us what you’re seeing and we’ll set a time to inspect your home.
-Step: Get a Clear Repair Plan || We diagnose the issue, explain your options, and give you straightforward recommendations.
-Step: Protect Your Home || Our team completes the repair and leaves you with a stronger, safer home.
-
 === REVIEWS ===
 Heading: Homeowners Trust Us When It Matters Most
 
@@ -88,24 +81,6 @@ Local accountability || Project managers who answer the phone and stand behind t
 === MAP ===
 Heading: Foundation Repair Across {city}
 Intro: Local crews serving homeowners throughout the region with fast inspections and engineered repairs.
-
-=== FAQ ===
-Heading: Foundation Repair Questions, Answered
-Intro: Straight answers about inspections, warranties, timelines, and what to expect on your property.
-Q: How do I know if I need foundation repair?
-A: Look for cracks, uneven floors, sticking doors, gaps around trim, or water near your foundation. The safest next step is a professional inspection.
-Q: Is the inspection really free?
-A: Yes. We inspect the issue, explain what we find, and recommend next steps.
-Q: How much does foundation repair cost?
-A: It depends on the cause, severity, soil conditions, and repair method. After inspection, we provide a clear estimate.
-Q: Do you offer financing?
-A: Yes. Financing options may be available for qualified homeowners.
-Q: How long does foundation repair take?
-A: Many repairs can be completed in a few days, but timing depends on the scope of work.
-Q: Will foundation repair damage my landscaping?
-A: We take care to minimize disruption and explain what to expect before work begins.
-Q: Do you warranty your work?
-A: Yes. Warranty details depend on the repair type and will be explained before work begins.
 
 === CTA ===
 Headline: Worried About Your Foundation? Get Clear Answers Today.

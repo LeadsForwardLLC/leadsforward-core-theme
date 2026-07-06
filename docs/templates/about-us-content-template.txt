@@ -31,16 +31,6 @@ Heading: Meet the team behind your project
 Intro: Structural repair is a team sport — inspectors, engineers, and installers working from the same plan.
 Body: At {business}, your project is led by a dedicated manager who coordinates inspections, permits, and crew scheduling. Installers are trained on piering, wall stabilization, and waterproofing systems — not general handyman shortcuts.
 
-=== PROCESS ===
-Heading: How foundation repair works with us
-Intro: A documented path from inspection to warranty — so you always know what happens next.
-(Leave steps blank — auto-filled from LeadsForward → Niche Content Library on import.)
-
-=== FAQ ===
-Heading: Frequently Asked Questions
-Intro: Quick answers about our company, process, and what to expect.
-(Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
-
 === CTA ===
 Headline: Schedule a foundation inspection with {business}
 Subheadline: Request a free structural inspection and get a clear repair plan.

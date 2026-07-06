@@ -270,14 +270,126 @@ function lf_pci_strip_writer_notes(string $raw): string {
 }
 
 /**
+ * Writer field labels that may appear mid-line after GPT / Google Docs collapse newlines.
+ *
+ * @return list<string>
+ */
+function lf_pci_field_key_labels(): array {
+	return [
+		'Headline',
+		'Subheadline',
+		'Eyebrow',
+		'Heading',
+		'Intro',
+		'Body',
+		'Checklist',
+		'Items',
+		'Step',
+		'Title',
+		'Description',
+		'Slug',
+		'Name',
+		'Template',
+		'Notes',
+		'Badges',
+		'Bullets',
+		'Question',
+		'Answer',
+		'Primary CTA',
+		'Secondary CTA',
+		'Left pills',
+		'Chip bullets',
+		'Proof card title',
+		'Proof bullets',
+		'Proof title',
+		'View all label',
+		'View all',
+		'Inline form title',
+		'Inline form subtext',
+		'Inline form button',
+		'Financing text',
+		'CTA',
+		'Type',
+		'Page',
+		'Meta title',
+		'Meta description',
+		'SEO title',
+		'Q',
+		'A',
+	];
+}
+
+/**
+ * Regex fragment for inline field-key boundaries (Headline:, Step:, Q:, etc.).
+ */
+function lf_pci_inline_field_key_pattern(): string {
+	static $pattern = null;
+	if ($pattern !== null) {
+		return $pattern;
+	}
+	$quoted = array_map(static fn (string $label): string => preg_quote($label, '/'), lf_pci_field_key_labels());
+	usort($quoted, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+
+	return $pattern = '(?:' . implode('|', $quoted) . ')';
+}
+
+/**
+ * Split collapsed Key: value pairs onto separate lines (GPT often merges an entire section).
+ */
+function lf_pci_split_inline_field_keys(string $text): string {
+	if ($text === '') {
+		return $text;
+	}
+	$labels = lf_pci_field_key_labels();
+	usort($labels, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+	foreach ($labels as $label) {
+		$quoted = preg_quote($label, '/');
+		$text = preg_replace('/(?<=[^a-zA-Z])(?=' . $quoted . ':)/i', "\n", $text) ?? $text;
+		$text = preg_replace('/(?<=[a-z])(?=' . $quoted . ':)/', "\n", $text) ?? $text;
+	}
+
+	return $text;
+}
+
+/**
  * Put GPT/Docs-inline section headers on their own lines for the splitter.
  */
 function lf_pci_normalize_section_headers(string $raw): string {
 	$raw = preg_replace('/\s*(=== [^=\n]+ ===)\s*/', "\n$1\n", $raw) ?? $raw;
+	$raw = preg_replace('/(=== [^=\n]+ ===)(?=[A-Za-z])/', "$1\n", $raw) ?? $raw;
 	$raw = preg_replace('/(=== [^=\n]+ ===)\n*([A-Za-z][A-Za-z0-9 _-]*:)/', "$1\n$2", $raw) ?? $raw;
+	$raw = lf_pci_split_inline_field_keys($raw);
 	$raw = preg_replace("/\n{3,}/", "\n\n", $raw) ?? $raw;
 
 	return trim($raw);
+}
+
+/**
+ * Section types filled from Niche Content Library — never from writer .docx bodies.
+ *
+ * @return list<string>
+ */
+function lf_pci_library_wired_section_types(): array {
+	return ['process', 'faq_accordion'];
+}
+
+function lf_pci_section_is_library_wired(string $section_key, array $schema): bool {
+	if (!in_array($section_key, lf_pci_library_wired_section_types(), true)) {
+		return false;
+	}
+	$order = is_array($schema['order'] ?? null) ? $schema['order'] : [];
+	foreach ($order as $type) {
+		if ($type === $section_key) {
+			return true;
+		}
+		$base = function_exists('lf_homepage_base_section_type')
+			? lf_homepage_base_section_type($type)
+			: $type;
+		if ($base === $section_key) {
+			return true;
+		}
+	}
+	return false;
 }
 
 /**
@@ -546,6 +658,7 @@ function lf_pci_split_sections(string $raw, array $aliases): array {
  * @return array<string, string>
  */
 function lf_pci_parse_fields(string $block, array $multiline_keys = []): array {
+	$block = lf_pci_split_inline_field_keys($block);
 	$lines = explode("\n", $block);
 	$fields = [];
 	$current_key = '';
@@ -938,12 +1051,19 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 		: (in_array($hero_variant, ['page', 'internal'], true) ? 'page' : 'conversion');
 
 	foreach (array_keys($split) as $section_key) {
-		if (lf_pci_section_is_locked($section_key, $schema)) {
-			$warnings[] = sprintf(
-				/* translators: %s: section name */
-				__('Section "%s" is theme-controlled and was ignored in the doc.', 'leadsforward-core'),
-				$section_key
-			);
+		if (lf_pci_section_is_locked($section_key, $schema) || lf_pci_section_is_library_wired($section_key, $schema)) {
+			$label = lf_pci_section_is_library_wired($section_key, $schema)
+				? sprintf(
+					/* translators: %s: section name */
+					__('Section "%s" is filled from Niche Content Library — remove it from writer docs.', 'leadsforward-core'),
+					$section_key
+				)
+				: sprintf(
+					/* translators: %s: section name */
+					__('Section "%s" is theme-controlled and was ignored in the doc.', 'leadsforward-core'),
+					$section_key
+				);
+			$warnings[] = $label;
 			unset($split[$section_key]);
 		}
 	}
@@ -1108,10 +1228,10 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 		}
 	}
 	if (in_array('process', $order, true) && $process_steps === []) {
-		$warnings[] = __('No process steps in doc — Niche Content Library defaults will be used on apply.', 'leadsforward-core');
+		$warnings[] = __('Process steps come from Niche Content Library (not writer templates).', 'leadsforward-core');
 	}
 	if (in_array('faq_accordion', $order, true) && $faqs === []) {
-		$warnings[] = __('No FAQs in doc — Niche Content Library defaults will be used on apply.', 'leadsforward-core');
+		$warnings[] = __('FAQs come from Niche Content Library (not writer templates).', 'leadsforward-core');
 	}
 
 	$all_text = $raw;
@@ -1377,6 +1497,38 @@ function lf_pci_apply_to_page(int $page_id, array $schema, array $sections, arra
 	foreach ($order as $type) {
 		$instance_id = lf_pci_pb_instance_for_order_key($type);
 
+		if (lf_pci_section_is_library_wired($type, $schema)) {
+			$base_type = function_exists('lf_homepage_base_section_type')
+				? lf_homepage_base_section_type($type)
+				: $type;
+			$defaults = lf_sections_defaults_for($base_type);
+			$imported = is_array($sections[$type] ?? null) ? $sections[$type] : [];
+			if ($imported === [] && $type === $base_type && is_array($sections[$base_type] ?? null)) {
+				$imported = $sections[$base_type];
+			}
+			$merged = array_merge($defaults, $imported);
+			if (function_exists('lf_sections_normalize_service_details_settings')) {
+				$merged = lf_pci_normalize_section_settings($type, $base_type, $merged);
+			}
+			$existing_settings = is_array($existing_sections[$instance_id]['settings'] ?? null)
+				? $existing_sections[$instance_id]['settings']
+				: [];
+			foreach (['section_heading', 'section_intro'] as $preserve_key) {
+				$existing_val = trim((string) ($existing_settings[$preserve_key] ?? ''));
+				if ($existing_val !== '') {
+					$merged[$preserve_key] = $existing_settings[$preserve_key];
+				}
+			}
+			$pb_sections[$instance_id] = [
+				'type' => $base_type,
+				'enabled' => true,
+				'deletable' => false,
+				'settings' => $merged,
+			];
+			$result['sections_updated'][] = $type;
+			continue;
+		}
+
 		if (lf_pci_section_is_locked($type, $schema) && isset($existing_sections[$instance_id]) && is_array($existing_sections[$instance_id])) {
 			$pb_sections[$instance_id] = $existing_sections[$instance_id];
 			$pb_sections[$instance_id]['enabled'] = true;
@@ -1528,6 +1680,32 @@ function lf_pci_apply_to_homepage(array $schema, array $sections, array $process
 	$config = [];
 
 	foreach ($order as $type) {
+		if (lf_pci_section_is_library_wired($type, $schema)) {
+			$base_type = function_exists('lf_homepage_base_section_type')
+				? lf_homepage_base_section_type($type)
+				: $type;
+			$defaults = lf_homepage_default_section_config($base_type, $niche_slug);
+			$imported = is_array($sections[$type] ?? null) ? $sections[$type] : [];
+			if ($imported === [] && $type === $base_type && is_array($sections[$base_type] ?? null)) {
+				$imported = $sections[$base_type];
+			}
+			$merged = array_merge($defaults, $imported);
+			$merged['enabled'] = true;
+			if (function_exists('lf_sections_normalize_service_details_settings')) {
+				$merged = lf_pci_normalize_section_settings($type, $base_type, $merged);
+			}
+			$existing_settings = is_array($existing[$type] ?? null) ? $existing[$type] : [];
+			foreach (['section_heading', 'section_intro'] as $preserve_key) {
+				$existing_val = trim((string) ($existing_settings[$preserve_key] ?? ''));
+				if ($existing_val !== '') {
+					$merged[$preserve_key] = $existing_settings[$preserve_key];
+				}
+			}
+			$config[$type] = $merged;
+			$result['sections_updated'][] = $type;
+			continue;
+		}
+
 		if (lf_pci_section_is_locked($type, $schema) && isset($existing[$type]) && is_array($existing[$type])) {
 			$config[$type] = $existing[$type];
 			$config[$type]['enabled'] = true;
@@ -1701,13 +1879,13 @@ function lf_pci_section_doc_templates(string $template_slug = ''): array {
 		'image_content_b' => "=== MENTOR ===\nHeading: \nIntro: \nBody: ",
 		'service_details' => "=== SERVICE DETAILS ===\nHeading: \nIntro: \nBody: \nChecklist:\n- ",
 		'service_details__2' => "=== SERVICE DETAILS 2 ===\nHeading: \nIntro: \nBody: ",
-		'process' => "=== PROCESS ===\nHeading: \nIntro: \nStep: Step title || Step body.",
+		'process' => "=== PROCESS ===\n(Theme-controlled — process steps are added from LeadsForward → Niche Content Library after site build. Do not fill.)",
 		'project_gallery' => "=== PROJECT GALLERY ===\nHeading: \nIntro: ",
 		'services_offered_here' => "=== SERVICES HERE ===\nHeading: \nIntro: ",
 		'nearby_areas' => "=== NEARBY AREAS ===\nHeading: \nIntro: ",
 		'related_links' => "=== RELATED LINKS ===\nHeading: \nIntro: ",
 		'pricing' => "=== PRICING ===\nHeading: \nIntro: \nBody: ",
-		'faq_accordion' => "=== FAQ ===\nHeading: \nIntro: \nQ: Question?\nA: Answer.",
+		'faq_accordion' => "=== FAQ ===\n(Theme-controlled — FAQs are added from LeadsForward → Niche Content Library after site build. Do not fill.)",
 		'blog_posts' => "=== BLOG ===\nHeading: \nIntro: ",
 		'cta' => $cta,
 		'content' => "=== CONTENT ===\nHeading: \nBody: ",
@@ -1744,7 +1922,7 @@ function lf_pci_template_fallback_for_schema(array $schema): string {
 
 	$section_docs = lf_pci_section_doc_templates((string) ($schema['slug'] ?? ''));
 	foreach ((array) ($schema['order'] ?? []) as $type) {
-		if (lf_pci_section_is_locked($type, $schema)) {
+		if (lf_pci_section_is_locked($type, $schema) || lf_pci_section_is_library_wired($type, $schema)) {
 			continue;
 		}
 		$key = $type;
@@ -1807,16 +1985,6 @@ Heading: Meet the team behind your project
 Intro: Structural repair is a team sport — inspectors, engineers, and installers working from the same plan.
 Body: At {business}, your project is led by a dedicated manager who coordinates inspections, permits, and crew scheduling. Installers are trained on piering, wall stabilization, and waterproofing systems — not general handyman shortcuts.
 
-=== PROCESS ===
-Heading: How foundation repair works with us
-Intro: A documented path from inspection to warranty — so you always know what happens next.
-(Leave steps blank — auto-filled from LeadsForward → Niche Content Library on import.)
-
-=== FAQ ===
-Heading: Frequently Asked Questions
-Intro: Quick answers about our company, process, and what to expect.
-(Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
-
 === CTA ===
 Headline: Schedule a foundation inspection with {business}
 Subheadline: Request a free structural inspection and get a clear repair plan.
@@ -1874,16 +2042,15 @@ Confident, calm, specific. Short sentences. Real trade language. No hype, no "In
 {$kw_block}
 FORMAT RULES
 - Never delete the === PAGE === block (Slug: / Template: + Slug:). The importer needs it — or use filenames like about-us-filled.docx.
-- Keep every other === SECTION === header and Key: value line exactly as written.
-- Benefits / process steps: Title || body on one line per item.
-- FAQs: Q: / A: pairs unless the section says to leave blank.
-- Process + FAQ on service pages: leave blank when noted — theme fills from Niche Content Library.
+- Keep every other === SECTION === header on its own line with one Key: value per line (never merge Headline/Subheadline/Intro onto one line).
+- Benefits: Title || body on one line per item.
+- Do not include === PROCESS === or === FAQ === sections — those are added from Niche Content Library after site build.
 
 WORKFLOW
 1. Fill every writer-editable field below for this URL.
 2. Upload the finished .docx at LeadsForward → Import Page Content.
 Tokens auto-filled on import: {business}, {city}, {city_line}, {niche}, {phone}, {primary_keyword}
-Process + FAQ: leave blank → Niche Content Library on import.
+Process + FAQ: managed in LeadsForward → Niche Content Library (not in writer templates).
 
 LEGEND;
 }
