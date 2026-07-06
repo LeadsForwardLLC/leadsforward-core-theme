@@ -2135,6 +2135,7 @@ function lf_pci_build_docx_bytes(string $text): string {
 	if ($tmp === '') {
 		return '';
 	}
+	$text = lf_pci_format_writer_template_text($text);
 	$escaped = htmlspecialchars($text, ENT_XML1 | ENT_QUOTES, 'UTF-8');
 	$paragraphs = '';
 	foreach (preg_split("/\r\n|\n|\r/", $text) ?: [] as $line) {
@@ -2171,6 +2172,34 @@ function lf_pci_build_docx_bytes(string $text): string {
 	@unlink($tmp);
 
 	return $bytes;
+}
+
+/**
+ * Make writer templates readable in Word/Docs.
+ *
+ * - Ensures each Key: label is on its own line (writers often paste/AI merges lines)
+ * - Adds blank lines around === SECTION === headings
+ * - Keeps the output stable for parsing on re-import
+ */
+function lf_pci_format_writer_template_text(string $text): string {
+	$text = str_replace(["\r\n", "\r"], "\n", $text);
+	$text = trim($text);
+	if ($text === '') {
+		return '';
+	}
+
+	// Guarantee section headers are isolated, with breathing room.
+	$text = preg_replace('/\s*(^={3,}\s*[^=\n]+?\s*={3,}\s*$)\s*/m', "\n$1\n\n", $text) ?? $text;
+
+	// Ensure collapsed Key: value pairs become line-separated.
+	if (function_exists('lf_pci_split_inline_field_keys')) {
+		$text = lf_pci_split_inline_field_keys($text);
+	}
+
+	// Normalize big runs of whitespace.
+	$text = preg_replace("/\n{3,}/", "\n\n", $text) ?? $text;
+
+	return trim($text) . "\n";
 }
 
 /**
