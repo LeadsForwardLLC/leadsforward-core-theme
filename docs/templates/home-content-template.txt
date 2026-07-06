@@ -56,6 +56,13 @@ Checklist:
 Heading: Foundation Repair Services Built for Long-Term Stability
 Intro: Engineered solutions for settlement, moisture, and structural movement — scoped clearly before work starts.
 View all label: View all services
+Cards:
+basement-wall-repair | Short overview of basement wall repair and what to expect.
+basement-waterproofing | Short overview of basement waterproofing and what to expect.
+concrete-foundation-repair | Short overview of concrete foundation repair and what to expect.
+crawl-space-encapsulation | Short overview of crawl space encapsulation and what to expect.
+crawl-space-repair | Short overview of crawl space repair and what to expect.
+commercial-foundation-repair | Short overview of commercial foundation repair and what to expect.
 
 === PROJECT GALLERY ===
 Heading: Real Repairs. Real Homes. Real Results.

@@ -60,6 +60,17 @@ function lf_pci_common_section_aliases(): array {
 		'content' => 'content',
 		'page content' => 'content',
 		'legal' => 'content',
+		'pricing' => 'pricing',
+		'project gallery' => 'project_gallery',
+		'project_gallery' => 'project_gallery',
+		'mentor' => 'image_content_b',
+		'image_content_b' => 'image_content_b',
+		'services' => 'service_intro',
+		'service intro' => 'service_intro',
+		'service_intro' => 'service_intro',
+		'map' => 'map_nap',
+		'map nap' => 'map_nap',
+		'reviews' => 'trust_reviews',
 	];
 }
 
@@ -201,7 +212,6 @@ function lf_pci_registry(): array {
 					'service_intro_max_items',
 					'service_intro_show_images',
 					'service_intro_service_ids',
-					'service_intro_card_desc_overrides',
 				],
 				'trust_reviews' => [
 					'trust_layout',

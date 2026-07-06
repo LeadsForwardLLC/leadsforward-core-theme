@@ -304,6 +304,7 @@ function lf_pci_field_key_labels(): array {
 		'Proof title',
 		'View all label',
 		'View all',
+		'Cards',
 		'Inline form title',
 		'Inline form subtext',
 		'Inline form button',
@@ -334,6 +335,28 @@ function lf_pci_inline_field_key_pattern(): string {
 }
 
 /**
+ * Lookbehind guard so short keys (Bullets, Title) do not split compound labels.
+ */
+function lf_pci_field_key_split_guard(string $label): string {
+	if (strcasecmp($label, 'Headline') === 0) {
+		return '(?<!Sub)';
+	}
+	if (strcasecmp($label, 'Bullets') === 0) {
+		return '(?<!chip )(?<!proof )';
+	}
+	if (strcasecmp($label, 'Title') === 0) {
+		return '(?<!card )(?<!meta )(?<!seo )(?<!form )';
+	}
+	if ($label === 'A') {
+		return '(?<!CT)';
+	}
+	if ($label === 'Q') {
+		return '(?<!FA)';
+	}
+	return '';
+}
+
+/**
  * Split collapsed Key: value pairs onto separate lines (GPT often merges an entire section).
  */
 function lf_pci_split_inline_field_keys(string $text): string {
@@ -344,8 +367,9 @@ function lf_pci_split_inline_field_keys(string $text): string {
 	usort($labels, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
 	foreach ($labels as $label) {
 		$quoted = preg_quote($label, '/');
-		$text = preg_replace('/(?<=[^a-zA-Z])(?=' . $quoted . ':)/i', "\n", $text) ?? $text;
-		$text = preg_replace('/(?<=[a-z])(?=' . $quoted . ':)/', "\n", $text) ?? $text;
+		$guard = lf_pci_field_key_split_guard($label);
+		$text = preg_replace('/' . $guard . '(?<=[^a-zA-Z])(?=' . $quoted . ':)/i', "\n", $text) ?? $text;
+		$text = preg_replace('/' . $guard . '(?<=[a-z])(?=' . $quoted . ':)/i', "\n", $text) ?? $text;
 	}
 
 	return $text;
@@ -1050,7 +1074,7 @@ function lf_pci_parse_content_block(string $block, bool $with_checklist = true):
 /**
  * @return list<string>
  */
-function lf_pci_parse_list_lines(string $raw): array {
+function lf_pci_parse_list_lines(string $raw, bool $split_pipe_separators = false): array {
 	$lines = [];
 	foreach (explode("\n", trim($raw)) as $line) {
 		$line = trim($line);
@@ -1063,7 +1087,97 @@ function lf_pci_parse_list_lines(string $raw): array {
 			$lines[] = $line;
 		}
 	}
+	if ($split_pipe_separators && count($lines) === 1) {
+		$line = $lines[0];
+		if (strpos($line, '||') === false && preg_match('/\s\|\s/u', $line)) {
+			$parts = preg_split('/\s\|\s/u', $line);
+			$lines = array_values(array_filter(array_map('trim', is_array($parts) ? $parts : [])));
+		}
+	}
 	return $lines;
+}
+
+/**
+ * Strip proof-card labels GPT often glues onto the last hero chip line.
+ */
+function lf_pci_clean_hero_chip_line(string $line): string {
+	$line = trim($line);
+	if ($line === '') {
+		return '';
+	}
+	$line = preg_replace('/\s*proof\s*card(\s*title)?\s*:?\s*.*$/iu', '', $line) ?? $line;
+	return trim($line);
+}
+
+/**
+ * Hero pills: one per line as "Label || icon-slug" (icons optional).
+ */
+function lf_pci_format_hero_chip_bullets(string $raw): string {
+	$lines = lf_pci_parse_list_lines($raw, true);
+	$default_icons = ['shield-check', 'star', 'calendar', 'certificate', 'check'];
+	$out = [];
+	foreach ($lines as $i => $line) {
+		$line = lf_pci_clean_hero_chip_line($line);
+		if ($line === '') {
+			continue;
+		}
+		if (strpos($line, '||') !== false) {
+			$out[] = $line;
+			continue;
+		}
+		$icon = $default_icons[$i % count($default_icons)] ?? 'check';
+		$out[] = $line . ' || ' . $icon;
+	}
+	return implode("\n", $out);
+}
+
+/**
+ * Service intro card overrides: SERVICE_ID|Description or slug|description per line.
+ */
+function lf_pci_parse_service_intro_card_overrides(string $raw): string {
+	$lines = [];
+	foreach (explode("\n", trim($raw)) as $line) {
+		$line = trim($line);
+		if ($line === '' || preg_match('/^(cards?|descriptions?)\s*:/i', $line)) {
+			continue;
+		}
+		if (preg_match('/^(\d+)\s*[:|]\s*(.+)$/u', $line, $m)) {
+			$sid = (int) ($m[1] ?? 0);
+			$desc = trim((string) ($m[2] ?? ''));
+			if ($sid > 0 && $desc !== '') {
+				$lines[] = $sid . '|' . $desc;
+			}
+			continue;
+		}
+		if (!preg_match('/^([^:|]+)[:|]\s*(.+)$/u', $line, $m)) {
+			continue;
+		}
+		$key = trim((string) ($m[1] ?? ''));
+		$desc = trim((string) ($m[2] ?? ''));
+		if ($key === '' || $desc === '') {
+			continue;
+		}
+		$service_id = 0;
+		if (ctype_digit($key)) {
+			$service_id = (int) $key;
+		} elseif (function_exists('get_posts')) {
+			$slug = sanitize_title($key);
+			$by_slug = get_posts([
+				'post_type' => 'lf_service',
+				'name' => $slug,
+				'posts_per_page' => 1,
+				'post_status' => 'any',
+				'fields' => 'ids',
+			]);
+			if (!empty($by_slug[0])) {
+				$service_id = (int) $by_slug[0];
+			}
+		}
+		if ($service_id > 0) {
+			$lines[] = $service_id . '|' . $desc;
+		}
+	}
+	return implode("\n", $lines);
 }
 
 /**
@@ -1077,6 +1191,7 @@ function lf_pci_parse_hero_block(string $block, string $hero_variant): array {
 		'hero_chip_bullets',
 		'proof_bullets',
 		'hero_proof_bullets',
+		'proof_card_title',
 	]);
 	$eyebrow = trim((string) ($f['eyebrow'] ?? $f['eyebrow_text'] ?? $f['trust_badge'] ?? ''));
 	$chip_raw = $f['left_pills'] ?? $f['chip_bullets'] ?? $f['hero_chip_bullets'] ?? '';
@@ -1087,8 +1202,8 @@ function lf_pci_parse_hero_block(string $block, string $hero_variant): array {
 	if ($proof_raw === '' && preg_match('/Proof bullets\s*:\s*([\s\S]+?)(?=\n[A-Za-z][A-Za-z0-9 _\/-]{0,40}:|\z)/i', $block, $m)) {
 		$proof_raw = trim($m[1]);
 	}
-	$chip_lines = lf_pci_parse_list_lines((string) $chip_raw);
-	$proof_lines = lf_pci_parse_list_lines((string) $proof_raw);
+	$chip_formatted = lf_pci_format_hero_chip_bullets((string) $chip_raw);
+	$proof_lines = lf_pci_parse_list_lines((string) $proof_raw, true);
 
 	return array_filter([
 		'variant' => $hero_variant,
@@ -1097,7 +1212,7 @@ function lf_pci_parse_hero_block(string $block, string $hero_variant): array {
 		'hero_eyebrow_text' => $eyebrow,
 		'hero_eyebrow_enabled' => $eyebrow !== '' ? '1' : '',
 		'hero_proof_title' => $f['proof_card_title'] ?? $f['proof_title'] ?? $f['hero_proof_title'] ?? '',
-		'hero_chip_bullets' => $chip_lines !== [] ? implode("\n", $chip_lines) : '',
+		'hero_chip_bullets' => $chip_formatted,
 		'hero_proof_bullets' => $proof_lines !== [] ? implode("\n", $proof_lines) : '',
 		'cta_primary_override' => $f['primary_cta'] ?? $f['cta_primary_override'] ?? $f['primary_cta_label'] ?? '',
 		'cta_secondary_override' => $f['secondary_cta'] ?? $f['cta_secondary_override'] ?? $f['secondary_cta_label'] ?? '',
@@ -1136,9 +1251,14 @@ function lf_pci_apply_preserved_keys(array $merged, string $type, array $schema,
 		return $merged;
 	}
 	foreach ($preserve as $key) {
-		if (array_key_exists($key, $existing[$type])) {
-			$merged[$key] = $existing[$type][$key];
+		if (!array_key_exists($key, $existing[$type])) {
+			continue;
 		}
+		$imported_val = trim((string) ($merged[$key] ?? ''));
+		if ($imported_val !== '') {
+			continue;
+		}
+		$merged[$key] = $existing[$type][$key];
 	}
 	return $merged;
 }
@@ -1240,13 +1360,19 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 		]);
 	}
 
-	// Service intro (homepage service cards header — cards stay from Services CPT)
+	// Service intro (homepage service cards header — card copy via Cards block)
 	if (!empty($split['service_intro'])) {
-		$f = lf_pci_parse_fields($split['service_intro'], ['intro']);
+		$f = lf_pci_parse_fields($split['service_intro'], ['intro', 'cards', 'card_descriptions']);
+		$cards_raw = $f['cards'] ?? $f['card_descriptions'] ?? $f['service_cards'] ?? '';
+		if ($cards_raw === '' && preg_match('/Cards?\s*:\s*([\s\S]+?)(?=\n[A-Za-z][A-Za-z0-9 _\/-]{0,40}:|\z)/i', $split['service_intro'], $m)) {
+			$cards_raw = trim($m[1]);
+		}
+		$card_overrides = lf_pci_parse_service_intro_card_overrides((string) $cards_raw);
 		$sections['service_intro'] = array_filter([
 			'section_heading' => $f['heading'] ?? $f['section_heading'] ?? '',
 			'section_intro' => $f['intro'] ?? $f['section_intro'] ?? '',
 			'service_intro_view_all_label' => $f['view_all'] ?? $f['view_all_label'] ?? $f['service_intro_view_all_label'] ?? '',
+			'service_intro_card_desc_overrides' => $card_overrides,
 		]);
 	}
 
@@ -1298,6 +1424,41 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 		if (!empty($split[$sd_key])) {
 			$sections[$sd_key] = lf_pci_parse_content_block($split[$sd_key]);
 		}
+	}
+
+	// Homepage media + content variants (MENTOR / authority block, etc.)
+	foreach (['image_content_b', 'image_content_a', 'image_content_c'] as $media_key) {
+		if (!empty($split[$media_key])) {
+			$sections[$media_key] = lf_pci_parse_content_block($split[$media_key]);
+		}
+	}
+
+	// Project gallery header (images stay from Projects CPT)
+	if (!empty($split['project_gallery'])) {
+		$f = lf_pci_parse_fields($split['project_gallery'], ['intro']);
+		$sections['project_gallery'] = array_filter([
+			'section_heading' => $f['heading'] ?? $f['section_heading'] ?? '',
+			'section_intro' => $f['intro'] ?? $f['section_intro'] ?? '',
+		]);
+	}
+
+	// Pricing / financing reassurance
+	if (!empty($split['pricing'])) {
+		$f = lf_pci_parse_fields($split['pricing'], ['intro', 'body', 'factors']);
+		$factors_raw = $f['factors'] ?? $f['cost_factors'] ?? $f['pricing_factors'] ?? '';
+		if ($factors_raw === '' && preg_match('/(?:Factors|Cost factors)\s*:\s*([\s\S]+?)(?=\n[A-Za-z][A-Za-z0-9 _\/-]{0,40}:|\z)/i', $split['pricing'], $m)) {
+			$factors_raw = trim($m[1]);
+		}
+		$factor_lines = lf_pci_parse_list_lines((string) $factors_raw);
+		$financing_text = trim((string) ($f['financing_text'] ?? $f['financing'] ?? ''));
+		$sections['pricing'] = array_filter([
+			'section_heading' => $f['heading'] ?? $f['section_heading'] ?? '',
+			'section_intro' => $f['intro'] ?? $f['section_intro'] ?? $f['body'] ?? '',
+			'financing_text' => $financing_text,
+			'financing_enabled' => $financing_text !== '' ? '1' : '',
+			'pricing_cta_text' => $f['cta'] ?? $f['pricing_cta'] ?? $f['pricing_cta_text'] ?? '',
+			'pricing_factors' => $factor_lines !== [] ? implode("\n", $factor_lines) : '',
+		]);
 	}
 
 	// Simple content (legal / thank-you)
@@ -2025,7 +2186,7 @@ function lf_pci_section_doc_templates(string $template_slug = ''): array {
 	return [
 		'hero' => $hero,
 		'trust_bar' => "=== TRUST BAR ===\nHeading: \nBadges:\n- Licensed & Insured\n- 5-Star Rated",
-		'service_intro' => "=== SERVICES ===\nHeading: \nIntro: \nView all label: ",
+		'service_intro' => "=== SERVICES ===\nHeading: \nIntro: \nView all label: \nCards:\nservice-slug | Short card description for this service.\n",
 		'service_areas' => "=== SERVICE AREAS ===\nHeading: \nIntro: ",
 		'trust_reviews' => "=== REVIEWS ===\nHeading: ",
 		'map_nap' => "=== MAP ===\nHeading: \nIntro: ",
@@ -2034,7 +2195,7 @@ function lf_pci_section_doc_templates(string $template_slug = ''): array {
 		'content_image_c' => "=== STORY C ===\nHeading: \nIntro: \nBody: ",
 		'benefits' => "=== BENEFITS ===\nHeading: \nIntro: \nItems:\nBenefit one title || Benefit one body.\nBenefit two title || Benefit two body.\nBenefit three title || Benefit three body.",
 		'image_content' => "=== TEAM ===\nHeading: \nIntro: \nBody: ",
-		'image_content_b' => "=== MENTOR ===\nHeading: \nIntro: \nBody: ",
+		'image_content_b' => "=== MENTOR ===\nHeading: \nIntro: \nChecklist:\n- ",
 		'service_details' => "=== SERVICE DETAILS ===\nHeading: \nIntro: \nBody: \nChecklist:\n- ",
 		'service_details__2' => "=== SERVICE DETAILS 2 ===\nHeading: \nIntro: \nBody: ",
 		'process' => "=== PROCESS ===\n(Theme-controlled — process steps are added from LeadsForward → Niche Content Library after site build. Do not fill.)",
@@ -2042,7 +2203,7 @@ function lf_pci_section_doc_templates(string $template_slug = ''): array {
 		'services_offered_here' => "=== SERVICES HERE ===\nHeading: \nIntro: ",
 		'nearby_areas' => "=== NEARBY AREAS ===\nHeading: \nIntro: ",
 		'related_links' => "=== RELATED LINKS ===\nHeading: \nIntro: ",
-		'pricing' => "=== PRICING ===\nHeading: \nIntro: \nBody: ",
+		'pricing' => "=== PRICING ===\nHeading: \nIntro: \nFinancing text: \nCTA: ",
 		'faq_accordion' => "=== FAQ ===\n(Theme-controlled — FAQs are added from LeadsForward → Niche Content Library after site build. Do not fill.)",
 		'blog_posts' => "=== BLOG ===\nHeading: \nIntro: ",
 		'cta' => $cta,
