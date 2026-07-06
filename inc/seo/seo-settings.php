@@ -717,7 +717,10 @@ function lf_seo_render_keywords_tab(): void {
 	?>
 	<div class="card" style="max-width: 1100px;">
 		<h2 style="margin-top:0;"><?php esc_html_e('Keyword assignments', 'leadsforward-core'); ?></h2>
-		<p class="description"><?php esc_html_e('Primary keywords are stored per URL in post meta and (optionally) mirrored into lf_keyword_map. Secondary keywords typically come from the manifest and help meta generation and content guidance.', 'leadsforward-core'); ?></p>
+		<p class="description"><?php esc_html_e('Primary keywords are stored per URL in post meta and mirrored into lf_keyword_map. They drive SERP meta templates, the on-page SEO checklist, and writer .docx templates (LeadsForward → Import Page Content). Secondary keywords come from the manifest or the post SEO box.', 'leadsforward-core'); ?></p>
+		<p>
+			<a class="button button-secondary" href="<?php echo esc_url(admin_url('admin.php?page=lf-import-page-content')); ?>"><?php esc_html_e('Import Page Content (.docx)', 'leadsforward-core'); ?></a>
+		</p>
 		<ul style="margin:0 0 1rem;">
 			<li><?php echo esc_html(sprintf(__('Missing primary keywords: %d', 'leadsforward-core'), (int) $missing)); ?></li>
 			<li><?php echo esc_html(sprintf(__('Duplicate primary keywords (counted by lf_keyword_map): %d', 'leadsforward-core'), (int) $dupes)); ?></li>
@@ -744,6 +747,7 @@ function lf_seo_render_keywords_tab(): void {
 					<th><?php esc_html_e('Title', 'leadsforward-core'); ?></th>
 					<th><?php esc_html_e('Primary keyword', 'leadsforward-core'); ?></th>
 					<th><?php esc_html_e('Secondary keywords', 'leadsforward-core'); ?></th>
+					<th><?php esc_html_e('Writer template', 'leadsforward-core'); ?></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -754,6 +758,15 @@ function lf_seo_render_keywords_tab(): void {
 					$sk = $sk_raw !== '' ? preg_split('/\r\n|\r|\n|,/', $sk_raw) : [];
 					$sk = is_array($sk) ? array_values(array_unique(array_filter(array_map('sanitize_text_field', $sk)))) : [];
 					$is_dup = $pk !== '' && (($counts[strtolower($pk)] ?? 0) > 1);
+					$template_key = '';
+					if ($p->post_type === 'lf_service' && function_exists('lf_pci_post_template_key')) {
+						$template_key = lf_pci_post_template_key($p);
+					} elseif ($p->post_type === 'page' && function_exists('lf_pci_page_slug_for_post')) {
+						$template_key = lf_pci_page_slug_for_post($p);
+					}
+					$template_url = ($template_key !== '' && function_exists('lf_pci_admin_template_download_url'))
+						? lf_pci_admin_template_download_url($template_key, (int) $p->ID)
+						: '';
 					?>
 					<tr>
 						<td><?php echo esc_html(strtoupper((string) $p->post_type)); ?></td>
@@ -766,6 +779,13 @@ function lf_seo_render_keywords_tab(): void {
 							<?php endif; ?>
 						</td>
 						<td><?php echo esc_html($sk ? implode(', ', array_slice($sk, 0, 6)) : ''); ?></td>
+						<td>
+							<?php if ($template_url !== '') : ?>
+								<a href="<?php echo esc_url($template_url); ?>"><?php esc_html_e('.docx', 'leadsforward-core'); ?></a>
+							<?php else : ?>
+								<span class="description">—</span>
+							<?php endif; ?>
+						</td>
 					</tr>
 				<?php endforeach; ?>
 			</tbody>

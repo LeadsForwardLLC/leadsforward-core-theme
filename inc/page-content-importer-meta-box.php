@@ -46,7 +46,11 @@ function lf_pci_render_import_meta_box(\WP_Post $post): void {
 	$has_template = $schema !== null;
 	$bulk_url = admin_url('admin.php?page=lf-import-page-content');
 	$download_url = wp_nonce_url(
-		admin_url('admin.php?page=lf-import-page-content&lf_pci_template_slug=' . rawurlencode($template_key)),
+		admin_url(add_query_arg([
+			'page' => 'lf-import-page-content',
+			'lf_pci_template_slug' => $template_key,
+			'lf_pci_post_id' => (int) $post->ID,
+		], 'admin.php')),
 		'lf_pci_download_template'
 	);
 	$is_homepage = ($schema['storage'] ?? '') === 'homepage';
