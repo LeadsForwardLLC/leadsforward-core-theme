@@ -314,6 +314,21 @@ function lf_maybe_migrate_fleet_page_order_v7(): void {
 add_action('init', 'lf_maybe_migrate_fleet_page_order_v7', 24);
 
 /**
+ * Disable legacy optional CTA on process sections (stray global label bubble).
+ */
+function lf_maybe_migrate_process_cta_disable_v8(): void {
+	if (get_option('lf_pb_template_cleanup_v8', '0') === '1') {
+		return;
+	}
+	if (!function_exists('lf_sections_migrate_disable_process_optional_cta')) {
+		return;
+	}
+	lf_sections_migrate_disable_process_optional_cta();
+	update_option('lf_pb_template_cleanup_v8', '1', true);
+}
+add_action('init', 'lf_maybe_migrate_process_cta_disable_v8', 25);
+
+/**
  * Hide the main editor for core pages (builder-managed).
  */
 function lf_pb_config_has_section(int $post_id, string $type): bool {

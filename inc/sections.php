@@ -319,6 +319,7 @@ function lf_sections_registry(): array {
 		['key' => 'service_details_checklist', 'label' => __('Checklist (one per line)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Transparent scope and pricing' . "\n" . 'Clean, respectful crews' . "\n" . 'Work backed by warranty', 'leadsforward-core')],
 		['key' => 'service_details_checklist_secondary', 'label' => __('Checklist column 2 (one per line, optional)', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 	];
+	$service_details_fields = array_merge($service_details_fields, lf_sections_optional_cta_field_defs());
 	$service_details_variant = static function (array $fields, array $overrides): array {
 		foreach ($fields as &$field) {
 			$key = $field['key'] ?? '';
@@ -655,7 +656,7 @@ function lf_sections_registry(): array {
 				['key' => 'process_selected_ids', 'label' => __('Selected process step IDs (one per line). Leave empty to auto-load by Assigned services or Process context.', 'leadsforward-core'), 'type' => 'list', 'default' => ''],
 				['key' => 'process_steps', 'label' => __('Steps (one per line, fallback if IDs empty)', 'leadsforward-core'), 'type' => 'list', 'default' => __('Tell us what you need' . "\n" . 'Get a fast, clear estimate' . "\n" . 'Schedule and complete the work', 'leadsforward-core')],
 				['key' => 'process_expectations', 'label' => __('Expectations text', 'leadsforward-core'), 'type' => 'textarea', 'default' => ''],
-			], lf_sections_optional_cta_field_defs()),
+			]),
 			'render' => 'lf_sections_render_process',
 		],
 		'faq_accordion' => [
@@ -1004,6 +1005,24 @@ function lf_sections_registry(): array {
 	foreach ($sections as $id => $section) {
 		$fields = $section['fields'] ?? [];
 		$sections[$id]['fields'] = array_merge($fields, $icon_fields);
+	}
+	$optional_cta_defs = lf_sections_optional_cta_field_defs();
+	$optional_cta_excluded = lf_sections_optional_cta_excluded_types();
+	foreach ($sections as $id => $section) {
+		if (in_array($id, $optional_cta_excluded, true)) {
+			continue;
+		}
+		$fields = $sections[ $id ]['fields'] ?? [];
+		$has_optional_cta = false;
+		foreach ($fields as $field) {
+			if (($field['key'] ?? '') === 'cta_primary_enabled') {
+				$has_optional_cta = true;
+				break;
+			}
+		}
+		if (!$has_optional_cta) {
+			$sections[ $id ]['fields'] = array_merge($fields, $optional_cta_defs);
+		}
 	}
 	return $sections;
 }
@@ -2466,6 +2485,48 @@ function lf_sections_optional_cta_field_defs(): array {
 	];
 }
 
+/**
+ * Section types that must not get the optional single-button row (hero CTAs, CTA band, etc.).
+ *
+ * @return list<string>
+ */
+function lf_sections_optional_cta_excluded_types(): array {
+	return ['hero', 'cta', 'layout_button', 'benefits', 'process', 'map_nap', 'pricing'];
+}
+
+/**
+ * Section types that expose optional CTA fields in the registry.
+ *
+ * @return list<string>
+ */
+function lf_sections_optional_cta_section_types(): array {
+	static $types = null;
+	if (is_array($types)) {
+		return $types;
+	}
+	$types = [];
+	foreach (lf_sections_registry() as $id => $def) {
+		if (in_array($id, lf_sections_optional_cta_excluded_types(), true)) {
+			continue;
+		}
+		foreach ($def['fields'] ?? [] as $field) {
+			if (($field['key'] ?? '') === 'cta_primary_enabled') {
+				$types[] = $id;
+				break;
+			}
+		}
+	}
+	return $types;
+}
+
+/**
+ * @return array{settings: ?array<string, mixed>, shell_id: string, optional_cta_handled: bool}
+ */
+function &lf_sections_shell_render_state(): array {
+	static $state = ['settings' => null, 'shell_id' => '', 'optional_cta_handled' => false];
+	return $state;
+}
+
 function lf_sections_sanitize_button_style(string $v): string {
 	return in_array($v, ['solid', 'outline'], true) ? $v : 'solid';
 }
@@ -2635,7 +2696,7 @@ function lf_sections_row_uses_media_content_layout(string $section_id): bool {
 		return false;
 	}
 	$cb = (string) ( $reg['render'] ?? '' );
-	return in_array($cb, ['lf_sections_render_content_image', 'lf_sections_render_image_content'], true);
+	return in_array($cb, ['lf_sections_render_content_image', 'lf_sections_render_image_content', 'lf_sections_render_service_details'], true);
 }
 
 function lf_sections_bg_class(?string $value): string {
@@ -2700,6 +2761,10 @@ function lf_sections_render_section(string $section_id, string $context, array $
 }
 
 function lf_sections_render_shell_open(string $id, string $title = '', string $intro = '', string $background = 'light', array $settings = [], string $extra_section_classes = ''): void {
+	$shell_state = &lf_sections_shell_render_state();
+	$shell_state['settings'] = $settings;
+	$shell_state['shell_id'] = $id;
+	$shell_state['optional_cta_handled'] = false;
 	$custom_bg = lf_sections_sanitize_custom_background((string) ($settings['section_background_custom'] ?? ''));
 	$bg_class = $custom_bg !== '' ? 'lf-section--custom-section-bg' : lf_sections_bg_class($background);
 	$section_style = $custom_bg !== '' ? ' style="background-color:' . esc_attr($custom_bg) . ';"' : ''; // safe: esc_attr on color
@@ -2734,11 +2799,18 @@ function lf_sections_render_shell_open(string $id, string $title = '', string $i
 }
 
 function lf_sections_render_shell_close(): void {
+	$shell_state = &lf_sections_shell_render_state();
+	if (!$shell_state['optional_cta_handled'] && is_array($shell_state['settings'])) {
+		lf_sections_render_optional_cta($shell_state['settings'], (string) $shell_state['shell_id']);
+	}
 	?>
 			</div>
 		</div>
 	</section>
 	<?php
+	$shell_state['settings'] = null;
+	$shell_state['shell_id'] = '';
+	$shell_state['optional_cta_handled'] = false;
 }
 
 /**
@@ -3305,6 +3377,7 @@ function lf_sections_render_service_details(string $context, array $settings, \W
 					<?php endif; ?>
 				</div>
 			<?php endif; ?>
+			<?php lf_sections_render_optional_cta($settings, 'content'); ?>
 		</div>
 		<?php if ($show_media && $layout !== 'media_content') : ?>
 			<div class="lf-service-details__media">
@@ -3544,6 +3617,8 @@ function lf_sections_render_content_centered(string $context, array $settings, \
  * @param array<string, mixed> $settings
  */
 function lf_sections_render_optional_cta(array $settings, string $source = 'section'): void {
+	$shell_state = &lf_sections_shell_render_state();
+	$shell_state['optional_cta_handled'] = true;
 	if ((string) ($settings['cta_primary_enabled'] ?? '0') !== '1') {
 		return;
 	}
@@ -3758,7 +3833,6 @@ function lf_sections_render_process(string $context, array $settings, \WP_Post $
 		<p class="lf-process__expectations"><?php echo esc_html($expectations_text); ?></p>
 	<?php endif; ?>
 	<?php
-	lf_sections_render_optional_cta($settings, 'process');
 	lf_sections_render_shell_close();
 }
 
@@ -4484,4 +4558,71 @@ function lf_sections_has_slider_in_sections(array $sections): bool {
 		}
 	}
 	return false;
+}
+
+/**
+ * Clear optional section CTA on process sections (legacy AI seeds enabled global label).
+ */
+function lf_sections_migrate_disable_process_optional_cta(): int {
+	$updated = 0;
+	if (defined('LF_HOMEPAGE_CONFIG_OPTION') && function_exists('lf_get_homepage_section_config')) {
+		$config = lf_get_homepage_section_config();
+		$changed = false;
+		foreach ($config as $section_id => $row) {
+			if (!is_array($row)) {
+				continue;
+			}
+			$base = function_exists('lf_homepage_base_section_type') ? lf_homepage_base_section_type((string) $section_id) : '';
+			if ($base !== 'process') {
+				continue;
+			}
+			if ((string) ($row['cta_primary_enabled'] ?? '0') === '1') {
+				$config[ $section_id ]['cta_primary_enabled'] = '0';
+				$changed = true;
+				++$updated;
+			}
+		}
+		if ($changed) {
+			update_option(LF_HOMEPAGE_CONFIG_OPTION, $config, true);
+		}
+	}
+	if (!defined('LF_PB_META_KEY')) {
+		return $updated;
+	}
+	$post_ids = get_posts([
+		'post_type' => ['page', 'service', 'service_area', 'post'],
+		'post_status' => 'any',
+		'posts_per_page' => -1,
+		'fields' => 'ids',
+		'meta_query' => [
+			[
+				'key' => LF_PB_META_KEY,
+				'compare' => 'EXISTS',
+			],
+		],
+	]);
+	foreach ($post_ids as $post_id) {
+		$post_id = (int) $post_id;
+		$config = get_post_meta($post_id, LF_PB_META_KEY, true);
+		if (!is_array($config) || empty($config['sections']) || !is_array($config['sections'])) {
+			continue;
+		}
+		$changed = false;
+		foreach ($config['sections'] as $section_key => $row) {
+			if (!is_array($row) || (string) ($row['type'] ?? '') !== 'process') {
+				continue;
+			}
+			$settings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
+			if ((string) ($settings['cta_primary_enabled'] ?? '0') !== '1') {
+				continue;
+			}
+			$config['sections'][ $section_key ]['settings']['cta_primary_enabled'] = '0';
+			$changed = true;
+			++$updated;
+		}
+		if ($changed) {
+			update_post_meta($post_id, LF_PB_META_KEY, $config);
+		}
+	}
+	return $updated;
 }
