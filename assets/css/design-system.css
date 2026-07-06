@@ -4067,9 +4067,66 @@ article a:not(.lf-btn):hover {
 .lf-block-hero.lf-surface-dark { --lf-hero-overlay-color: var(--lf-surface-dark); }
 .lf-block-hero.lf-surface-black { --lf-hero-overlay-color: #000000; }
 
-.lf-block-hero--internal {
+.lf-block-hero--internal,
+.lf-block-hero--page {
 	min-height: 0;
-	padding: var(--lf-section-padding-lg) var(--lf-section-padding-x);
+	padding: 2rem var(--lf-section-padding-x) 2.35rem;
+}
+
+.lf-block-hero--page[data-lf-hero-bg-tone="light"] .lf-hero-basic__title,
+.lf-block-hero--internal[data-lf-hero-bg-tone="light"] .lf-hero-basic__title {
+	color: var(--lf-text-primary) !important;
+}
+
+.lf-block-hero--page[data-lf-hero-bg-tone="light"] .lf-hero-basic__subtitle,
+.lf-block-hero--internal[data-lf-hero-bg-tone="light"] .lf-hero-basic__subtitle {
+	color: var(--lf-text-muted) !important;
+}
+
+.lf-block-hero--page[data-lf-hero-bg-tone="light"] .lf-hero-basic__content .lf-heading-icon,
+.lf-block-hero--internal[data-lf-hero-bg-tone="light"] .lf-hero-basic__content .lf-heading-icon {
+	color: var(--lf-text-primary);
+}
+
+.lf-breadcrumbs {
+	margin: 0 0 0.85rem;
+}
+
+.lf-breadcrumbs__list {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.35rem 0.5rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-size: 0.82rem;
+	font-weight: 600;
+	color: var(--lf-text-muted);
+}
+
+.lf-breadcrumbs__item {
+	display: inline-flex;
+	align-items: center;
+}
+
+.lf-breadcrumbs__item + .lf-breadcrumbs__item::before {
+	content: '/';
+	margin-right: 0.5rem;
+	color: rgba(15, 23, 42, 0.35);
+}
+
+.lf-breadcrumbs__link {
+	color: var(--lf-primary);
+	text-decoration: none;
+}
+
+.lf-breadcrumbs__link:hover {
+	text-decoration: underline;
+}
+
+.lf-breadcrumbs__current {
+	color: var(--lf-text-muted);
 }
 
 .lf-block-hero.lf-surface-light .lf-block-hero__bg,
@@ -5601,10 +5658,6 @@ article a:not(.lf-btn):hover {
 
 .lf-hero-conversion__lead-call--plain:hover {
 	color: var(--lf-primary);
-}
-
-.lf-block-hero--page {
-	min-height: var(--lf-hero-min-height--compact);
 }
 
 /* Inline quote form card (hero + mid-page embed) */
@@ -7417,6 +7470,12 @@ article .lf-block-service-areas__link:hover {
 	margin-bottom: 0;
 }
 
+.site-main--homepage .lf-block-cta:not(.lf-surface-light):not(.lf-surface-white):not(.lf-surface-soft):not(.lf-surface-card) .lf-block-cta__inner {
+	max-width: none;
+	padding-top: var(--lf-section-padding-lg);
+	padding-bottom: var(--lf-section-padding-lg);
+}
+
 /* No gap between final CTA and footer on homepage */
 .site-main--homepage + .site-footer {
 	margin-top: 0;
@@ -7430,6 +7489,10 @@ article .lf-block-service-areas__link:hover {
 	max-width: 38rem;
 	margin-left: auto;
 	margin-right: auto;
+}
+
+.lf-block-cta:not(.lf-surface-light):not(.lf-surface-white):not(.lf-surface-soft):not(.lf-surface-card) .lf-block-cta__inner {
+	max-width: none;
 }
 
 .lf-block-cta__content {

@@ -151,10 +151,10 @@ function lf_pci_section_order_for_context(string $context): array {
  * @return array<string, array<string, mixed>>
  */
 function lf_pci_registry(): array {
-	$about_order = ['hero', 'content_image', 'benefits', 'image_content', 'process', 'faq_accordion', 'cta'];
-	$why_order = ['hero', 'benefits', 'content_image', 'image_content', 'faq_accordion', 'cta'];
-	$services_order = ['hero', 'service_intro', 'content_image', 'faq_accordion', 'cta'];
-	$areas_order = ['hero', 'service_areas', 'faq_accordion', 'cta'];
+	$about_order = function_exists('lf_fleet_page_section_order') ? lf_fleet_page_section_order('about-us') : ['hero', 'content_image', 'benefits', 'image_content', 'process', 'faq_accordion', 'cta'];
+	$why_order = function_exists('lf_fleet_page_section_order') ? lf_fleet_page_section_order('why-choose-us') : ['hero', 'benefits', 'content_image', 'image_content', 'faq_accordion', 'cta'];
+	$services_order = function_exists('lf_fleet_page_section_order') ? lf_fleet_page_section_order('services') : ['hero', 'service_intro', 'content_image', 'faq_accordion', 'cta'];
+	$areas_order = function_exists('lf_fleet_page_section_order') ? lf_fleet_page_section_order('service-areas') : ['hero', 'service_areas', 'faq_accordion', 'cta'];
 	$home_niche = (string) get_option(
 		defined('LF_HOMEPAGE_NICHE_OPTION') ? LF_HOMEPAGE_NICHE_OPTION : 'lf_homepage_niche_slug',
 		''
@@ -249,7 +249,7 @@ function lf_pci_registry(): array {
 				'map' => 'service_areas',
 			],
 		]),
-		lf_pci_build_schema('reviews', __('Reviews', 'leadsforward-core'), ['hero', 'trust_reviews', 'faq_accordion', 'cta'], [
+		lf_pci_build_schema('reviews', __('Reviews', 'leadsforward-core'), function_exists('lf_fleet_page_section_order') ? lf_fleet_page_section_order('reviews') : ['hero', 'trust_reviews', 'faq_accordion', 'cta'], [
 			'locked' => ['trust_reviews'],
 			'required' => ['hero', 'cta'],
 		]),
@@ -258,11 +258,15 @@ function lf_pci_registry(): array {
 			'faq_hub' => true,
 			'faq_context' => defined('LF_NICHE_FAQ_PAGE_CONTEXT') ? LF_NICHE_FAQ_PAGE_CONTEXT : 'faq_page',
 		]),
-		lf_pci_build_schema('contact', __('Contact', 'leadsforward-core'), ['hero', 'map_nap', 'faq_accordion', 'cta'], [
+		lf_pci_build_schema('contact', __('Contact', 'leadsforward-core'), function_exists('lf_fleet_page_section_order') ? lf_fleet_page_section_order('contact') : ['hero', 'map_nap', 'faq_accordion', 'cta'], [
 			'locked' => ['map_nap'],
 			'required' => ['hero', 'cta'],
 		]),
-		lf_pci_build_schema('thank-you', __('Thank You', 'leadsforward-core'), ['hero', 'content', 'faq_accordion'], [
+		lf_pci_build_schema('blog', __('Blog', 'leadsforward-core'), function_exists('lf_fleet_page_section_order') ? lf_fleet_page_section_order('blog') : ['hero', 'blog_posts', 'faq_accordion', 'cta'], [
+			'locked' => ['blog_posts'],
+			'required' => ['hero', 'cta'],
+		]),
+		lf_pci_build_schema('thank-you', __('Thank You', 'leadsforward-core'), function_exists('lf_fleet_page_section_order') ? lf_fleet_page_section_order('thank-you') : ['hero', 'content', 'faq_accordion'], [
 			'required' => ['hero', 'content'],
 		]),
 		lf_pci_build_schema('service', __('Service Page', 'leadsforward-core'), lf_pci_section_order_for_context('service'), [
@@ -287,7 +291,7 @@ function lf_pci_writer_template_groups(): array {
 	$groups = [
 		'site_pages' => [
 			'label' => __('Site pages', 'leadsforward-core'),
-			'keys' => ['home', 'about-us', 'why-choose-us', 'services', 'service-areas', 'reviews', 'faq', 'contact', 'thank-you'],
+			'keys' => ['home', 'about-us', 'why-choose-us', 'services', 'service-areas', 'reviews', 'blog', 'faq', 'contact', 'thank-you'],
 		],
 		'service_posts' => [
 			'label' => __('Service posts', 'leadsforward-core'),

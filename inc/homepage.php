@@ -296,6 +296,7 @@ function lf_homepage_default_section_config(string $section_type, string $niche_
 		case 'cta':
 			return array_merge($base, [
 				'cta_headline'          => __('Get Your Fast, No-Obligation Estimate', 'leadsforward-core'),
+				'section_background'    => 'dark',
 				'cta_primary_override'  => '',
 				'cta_secondary_override' => '',
 				'cta_ghl_override'      => '',
@@ -552,7 +553,7 @@ function lf_homepage_cleanup_sections_once(): bool {
 	if (!is_admin() || !current_user_can('edit_theme_options')) {
 		return false;
 	}
-	if (get_option('lf_homepage_cleanup_v2', '0') === '1') {
+	if (get_option('lf_homepage_cleanup_v3', '0') === '1') {
 		return false;
 	}
 	$stored = get_option(LF_HOMEPAGE_CONFIG_OPTION, null);
@@ -562,6 +563,9 @@ function lf_homepage_cleanup_sections_once(): bool {
 	}
 	$stored = wp_unslash($stored);
 	$allowed = lf_homepage_default_order();
+	if (function_exists('lf_fleet_ensure_faq_before_final_cta')) {
+		$allowed = lf_fleet_ensure_faq_before_final_cta($allowed);
+	}
 	$niche = get_option(LF_HOMEPAGE_NICHE_OPTION, '');
 	$defaults = lf_homepage_default_config($niche ?: null);
 	$clean = [];
@@ -574,10 +578,13 @@ function lf_homepage_cleanup_sections_once(): bool {
 		if (isset($clean[$type]['enabled'])) {
 			$clean[$type]['enabled'] = true;
 		}
+		if ($type === 'cta') {
+			$clean[$type]['section_background'] = 'dark';
+		}
 	}
 	update_option(LF_HOMEPAGE_CONFIG_OPTION, $clean, true);
 	update_option(LF_HOMEPAGE_ORDER_OPTION, $allowed, true);
-	update_option('lf_homepage_cleanup_v2', '1', true);
+	update_option('lf_homepage_cleanup_v3', '1', true);
 	return true;
 }
 
