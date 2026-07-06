@@ -397,6 +397,39 @@ function lf_pci_library_wired_section_types(): array {
 	return ['process', 'faq_accordion'];
 }
 
+/**
+ * Global theme sections — not in writer .docx (one edit updates the whole site).
+ *
+ * @return list<string>
+ */
+function lf_pci_theme_global_section_types(): array {
+	return ['trust_bar'];
+}
+
+function lf_pci_section_is_theme_global(string $section_key, array $schema): bool {
+	if (!in_array($section_key, lf_pci_theme_global_section_types(), true)) {
+		return false;
+	}
+	$order = is_array($schema['order'] ?? null) ? $schema['order'] : [];
+	foreach ($order as $type) {
+		if ($type === $section_key) {
+			return true;
+		}
+		$base = function_exists('lf_homepage_base_section_type')
+			? lf_homepage_base_section_type($type)
+			: $type;
+		if ($base === $section_key) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function lf_pci_section_is_writer_excluded(string $section_key, array $schema): bool {
+	return lf_pci_section_is_library_wired($section_key, $schema)
+		|| lf_pci_section_is_theme_global($section_key, $schema);
+}
+
 function lf_pci_section_is_library_wired(string $section_key, array $schema): bool {
 	if (!in_array($section_key, lf_pci_library_wired_section_types(), true)) {
 		return false;
@@ -1309,18 +1342,24 @@ function lf_pci_parse_with_schema(string $raw, array $schema): array {
 		: (in_array($hero_variant, ['page', 'internal'], true) ? 'page' : 'conversion');
 
 	foreach (array_keys($split) as $section_key) {
-		if (lf_pci_section_is_locked($section_key, $schema) || lf_pci_section_is_library_wired($section_key, $schema)) {
+		if (lf_pci_section_is_locked($section_key, $schema) || lf_pci_section_is_writer_excluded($section_key, $schema)) {
 			$label = lf_pci_section_is_library_wired($section_key, $schema)
 				? sprintf(
 					/* translators: %s: section name */
 					__('Section "%s" is filled from Niche Content Library — remove it from writer docs.', 'leadsforward-core'),
 					$section_key
 				)
-				: sprintf(
-					/* translators: %s: section name */
-					__('Section "%s" is theme-controlled and was ignored in the doc.', 'leadsforward-core'),
-					$section_key
-				);
+				: (lf_pci_section_is_theme_global($section_key, $schema)
+					? sprintf(
+						/* translators: %s: section name */
+						__('Section "%s" is managed globally in the theme — remove it from writer docs.', 'leadsforward-core'),
+						$section_key
+					)
+					: sprintf(
+						/* translators: %s: section name */
+						__('Section "%s" is theme-controlled and was ignored in the doc.', 'leadsforward-core'),
+						$section_key
+					));
 			$warnings[] = $label;
 			unset($split[$section_key]);
 		}
@@ -2175,17 +2214,13 @@ function lf_pci_template_for_slug(string $slug, bool $include_legend = true, ?in
 function lf_pci_section_doc_templates(string $template_slug = ''): array {
 	$hero = "=== HERO ===\nHeadline: \nSubheadline: \nEyebrow: ";
 	if ($template_slug === 'home') {
-		$hero = "=== HERO ===\nHeadline: \nSubheadline: \nEyebrow: \nLeft pills:\n- \nProof card title: \nProof bullets:\n- \nPrimary CTA: \nSecondary CTA: ";
+		$hero = "=== HERO ===\nHeadline: \nSubheadline: \nEyebrow: \nChip bullets:\n- \n";
 	}
 
 	$cta = "=== CTA ===\nHeadline: \nSubheadline: ";
-	if ($template_slug === 'home') {
-		$cta = "=== CTA ===\nHeadline: \nSubheadline: \nPrimary CTA: \nSecondary CTA: ";
-	}
 
 	return [
 		'hero' => $hero,
-		'trust_bar' => "=== TRUST BAR ===\nHeading: \nBadges:\n- Licensed & Insured\n- 5-Star Rated",
 		'service_intro' => "=== SERVICES ===\nHeading: \nIntro: \nView all label: \nCards:\nservice-slug | Short card description for this service.\n",
 		'service_areas' => "=== SERVICE AREAS ===\nHeading: \nIntro: ",
 		'trust_reviews' => "=== REVIEWS ===\nHeading: ",
@@ -2203,7 +2238,7 @@ function lf_pci_section_doc_templates(string $template_slug = ''): array {
 		'services_offered_here' => "=== SERVICES HERE ===\nHeading: \nIntro: ",
 		'nearby_areas' => "=== NEARBY AREAS ===\nHeading: \nIntro: ",
 		'related_links' => "=== RELATED LINKS ===\nHeading: \nIntro: ",
-		'pricing' => "=== PRICING ===\nHeading: \nIntro: \nFinancing text: \nCTA: ",
+		'pricing' => "=== PRICING ===\nHeading: \nIntro: \nFinancing text: ",
 		'faq_accordion' => "=== FAQ ===\n(Theme-controlled — FAQs are added from LeadsForward → Niche Content Library after site build. Do not fill.)",
 		'blog_posts' => "=== BLOG ===\nHeading: \nIntro: ",
 		'cta' => $cta,
@@ -2241,7 +2276,7 @@ function lf_pci_template_fallback_for_schema(array $schema): string {
 
 	$section_docs = lf_pci_section_doc_templates((string) ($schema['slug'] ?? ''));
 	foreach ((array) ($schema['order'] ?? []) as $type) {
-		if (lf_pci_section_is_locked($type, $schema) || lf_pci_section_is_library_wired($type, $schema)) {
+		if (lf_pci_section_is_locked($type, $schema) || lf_pci_section_is_writer_excluded($type, $schema)) {
 			continue;
 		}
 		$key = $type;
@@ -2362,6 +2397,9 @@ Confident, calm, specific. Short sentences. Real trade language. No hype, no "In
 - Put one Key: value per line — never merge Headline, Subheadline, Intro, Body, or Items onto a single line.
 - Benefits: Title || body on one line per item.
 - Do not add === PROCESS === or === FAQ === sections — those are managed in LeadsForward → Niche Content Library after site build.
+- Do not add === TRUST BAR === — stats and badges are global site settings (one edit updates every page).
+- Do not add Primary CTA / Secondary CTA labels — button text stays consistent in the theme.
+- Homepage hero: Headline, Subheadline, short Eyebrow (optional), and Chip bullets only — no proof-card fields.
 
 WORKFLOW
 1. Download the .docx template for one page (or the full ZIP).
@@ -2377,6 +2415,7 @@ BATCH TIPS
 
 Tokens auto-filled on import: {business}, {city}, {city_line}, {niche}, {phone}, {primary_keyword}
 Process + FAQ: managed in LeadsForward → Niche Content Library (not in writer templates).
+Trust bar + CTA button labels: theme-controlled (not in writer templates).
 PROMPT;
 }
 
