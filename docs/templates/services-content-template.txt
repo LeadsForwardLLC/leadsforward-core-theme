@@ -18,11 +18,6 @@ Checklist:
 - Basement waterproofing
 - Crawl space encapsulation
 
-=== FAQ ===
-Heading: Service FAQs
-Intro: Answers to common questions about our services, scopes, and scheduling.
-(Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
-
 === CTA ===
 Headline: Get a foundation repair estimate from {business}
 Subheadline: Tell us what you are seeing — we will schedule an inspection and outline options.

@@ -26,11 +26,6 @@ Heading: People behind the work
 Intro: Inspectors, project managers, and installers aligned on the same repair plan.
 Body: Your project is coordinated by a manager who owns scheduling, permits, and daily site communication. Field crews follow written scopes — not improvised fixes — and leave your property clean at the end of each day.
 
-=== FAQ ===
-Heading: Frequently Asked Questions
-Intro: Quick answers about how we work and what sets us apart.
-(Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
-
 === CTA ===
 Headline: See why homeowners trust {business}
 Subheadline: Schedule a foundation inspection and get a clear repair plan.

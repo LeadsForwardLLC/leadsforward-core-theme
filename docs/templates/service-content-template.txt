@@ -41,16 +41,6 @@ Documented lift plans || Photos, measurements, and lift logs so you understand w
 Local project leadership || A manager who schedules inspections, crews, and follow-up visits{city_line}.
 Protected job sites || Tarps, access paths, and cleanup treated with the same care we give our own homes.
 
-=== PROCESS ===
-Heading: How piering works with {business}
-Intro: A documented path from inspection to warranty.
-(Leave steps blank — auto-filled from Niche Content Library on import.)
-
-=== FAQ ===
-Heading: Service FAQs
-Intro: Common questions about this service, timelines, and what is included.
-(Leave Q&A blank — auto-filled from Niche Content Library on import.)
-
 === CTA ===
 Headline: Schedule a piering inspection with {business}
 Subheadline: Request a structural evaluation and get a clear repair plan.

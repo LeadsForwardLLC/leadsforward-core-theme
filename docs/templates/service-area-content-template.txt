@@ -39,11 +39,6 @@ Body: After you reach out, we schedule an on-site inspection, explain findings i
 Heading: Services we provide in {city}
 Intro: Full foundation repair capabilities for homeowners throughout the area.
 
-=== FAQ ===
-Heading: {city} foundation repair FAQs
-Intro: Common questions about inspections, timelines, and what is included locally.
-(Leave Q&A blank — auto-filled from Niche Content Library on import.)
-
 === NEARBY AREAS ===
 Heading: Also serving nearby communities
 Intro: Local crews throughout the region — ask about availability near you.

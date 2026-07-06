@@ -8,11 +8,6 @@ Headline: Foundation Repair Service Areas
 Subheadline: Local crews serving {city} and surrounding neighborhoods with fast inspections and engineered repairs.
 Eyebrow: Local • Responsive • Licensed
 
-=== FAQ ===
-Heading: Service Area FAQs
-Intro: Quick answers about coverage, response times, and scheduling in your area.
-(Leave Q&A blank — auto-filled from LeadsForward → Niche Content Library on import.)
-
 === CTA ===
 Headline: Check if we serve your neighborhood
 Subheadline: Request a foundation inspection — we will confirm coverage and schedule quickly.
