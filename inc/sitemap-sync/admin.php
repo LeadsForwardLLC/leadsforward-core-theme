@@ -117,8 +117,19 @@ function lf_sitemap_sync_admin_handle_sync_now(): void {
 		wp_die(esc_html__('Insufficient permissions.', 'leadsforward-core'));
 	}
 	check_admin_referer('lf_sitemap_sync_now');
-	lf_sitemap_sync_run_all('manual');
-	wp_safe_redirect(admin_url('admin.php?page=lf-sitemap-sync&ran=1'));
+	try {
+		lf_sitemap_sync_run_all('manual');
+		wp_safe_redirect(admin_url('admin.php?page=lf-sitemap-sync&ran=1'));
+	} catch (\Throwable $e) {
+		if (function_exists('error_log')) {
+			error_log('[lf_sitemap_sync] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+		}
+		lf_sitemap_sync_store_last_result('manual', false, [
+			'ok' => false,
+			'errors' => ['fatal: ' . $e->getMessage()],
+		], []);
+		wp_safe_redirect(admin_url('admin.php?page=lf-sitemap-sync&error=fatal'));
+	}
 	exit;
 }
 add_action('admin_post_lf_sitemap_sync_now', 'lf_sitemap_sync_admin_handle_sync_now');
@@ -135,6 +146,13 @@ function lf_sitemap_sync_admin_render_page(): void {
 	echo '<div class="wrap">';
 	echo '<h1>' . esc_html__('Sitemap Sync', 'leadsforward-core') . '</h1>';
 	echo '<p class="description">' . esc_html__('Syncs Airtable Sitemaps into WordPress pages, then builds the Header Menu from the sitemap structure.', 'leadsforward-core') . '</p>';
+
+	if (isset($_GET['error']) && $_GET['error'] === 'fatal') {
+		echo '<div class="notice notice-error"><p>' . esc_html__('Sitemap sync failed with a critical error. Check the Last run errors below and your server error log for [lf_sitemap_sync].', 'leadsforward-core') . '</p></div>';
+	}
+	if (isset($_GET['ran']) && $_GET['ran'] === '1') {
+		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Sitemap sync finished. Review the summary below.', 'leadsforward-core') . '</p></div>';
+	}
 
 	$sync_url = wp_nonce_url(admin_url('admin-post.php?action=lf_sitemap_sync_now'), 'lf_sitemap_sync_now');
 	echo '<p><a class="button button-primary" href="' . esc_url($sync_url) . '">' . esc_html__('Sync now', 'leadsforward-core') . '</a></p>';

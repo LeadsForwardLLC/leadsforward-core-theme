@@ -232,7 +232,11 @@ function lf_sitemap_sync_store_seo_keywords(int $post_id, string $primary, array
 		return;
 	}
 	$primary = trim($primary);
-	$secondary_keywords = array_values(array_unique(array_filter(array_map('sanitize_text_field', $secondary_keywords))));
+	$secondary_keywords = function_exists('lf_airtable_sitemaps_normalize_keyword_list')
+		? lf_airtable_sitemaps_normalize_keyword_list($secondary_keywords)
+		: array_values(array_unique(array_filter(array_map(static function ($kw): string {
+			return sanitize_text_field((string) $kw);
+		}, $secondary_keywords))));
 	if ($primary !== '') {
 		update_post_meta($post_id, '_lf_seo_primary_keyword', $primary);
 		if (function_exists('lf_seo_register_keyword_map_for_post')) {

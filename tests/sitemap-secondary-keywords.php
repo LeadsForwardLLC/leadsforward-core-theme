@@ -12,6 +12,7 @@ function expect($cond, $msg) {
 }
 
 expect(strpos($sitemaps, "'secondary_keywords'") !== false, 'sitemap specs include secondary_keywords');
+expect(strpos($sitemaps, 'lf_airtable_sitemaps_normalize_keyword_list') !== false, 'keyword list normalizer exists');
 expect(strpos($sitemaps, 'KW-Top 10') !== false, 'sitemap reads Airtable secondary keyword fields');
 expect(strpos($reconcile, 'lf_sitemap_sync_store_seo_keywords') !== false, 'reconcile stores secondary keywords');
 expect(strpos($schemas, "'service-area'") !== false, 'PCI registry includes service-area template');
