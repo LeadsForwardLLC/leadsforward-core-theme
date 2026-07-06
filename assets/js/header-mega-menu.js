@@ -84,15 +84,47 @@
 		if (!categories.length) {
 			return;
 		}
+
+		var closeTimer = null;
+
+		function closeAllFlyouts() {
+			Array.prototype.forEach.call(categories, function (peer) {
+				peer.classList.remove('is-flyout-open');
+			});
+		}
+
+		function cancelFlyoutClose() {
+			if (closeTimer) {
+				window.clearTimeout(closeTimer);
+				closeTimer = null;
+			}
+		}
+
+		function scheduleFlyoutClose() {
+			cancelFlyoutClose();
+			closeTimer = window.setTimeout(closeAllFlyouts, 160);
+		}
+
+		function isWithinCategoryTree(category, sub, target) {
+			if (!target) {
+				return false;
+			}
+			return category.contains(target) || (sub && sub.contains(target));
+		}
+
 		categories.forEach(function (category) {
 			if (category.dataset.lfMegaFlyoutBound === '1') {
 				return;
 			}
 			category.dataset.lfMegaFlyoutBound = '1';
+
+			var sub = category.querySelector(':scope > .sub-menu');
+
 			category.addEventListener('mouseenter', function () {
 				if (!isDesktop()) {
 					return;
 				}
+				cancelFlyoutClose();
 				Array.prototype.forEach.call(categories, function (peer) {
 					if (peer !== category) {
 						peer.classList.remove('is-flyout-open');
@@ -100,14 +132,47 @@
 				});
 				category.classList.add('is-flyout-open');
 			});
-			category.addEventListener('mouseleave', function () {
-				category.classList.remove('is-flyout-open');
+
+			category.addEventListener('mouseleave', function (event) {
+				if (!isDesktop()) {
+					return;
+				}
+				if (isWithinCategoryTree(category, sub, event.relatedTarget)) {
+					return;
+				}
+				scheduleFlyoutClose();
 			});
+
+			if (sub) {
+				sub.addEventListener('mouseenter', function () {
+					if (!isDesktop()) {
+						return;
+					}
+					cancelFlyoutClose();
+					category.classList.add('is-flyout-open');
+				});
+
+				sub.addEventListener('mouseleave', function (event) {
+					if (!isDesktop()) {
+						return;
+					}
+					if (isWithinCategoryTree(category, sub, event.relatedTarget)) {
+						return;
+					}
+					scheduleFlyoutClose();
+				});
+			}
 		});
-		panel.addEventListener('mouseleave', function () {
-			Array.prototype.forEach.call(categories, function (category) {
-				category.classList.remove('is-flyout-open');
-			});
+
+		panel.addEventListener('mouseenter', cancelFlyoutClose);
+		panel.addEventListener('mouseleave', function (event) {
+			if (!isDesktop()) {
+				return;
+			}
+			if (event.relatedTarget && panel.contains(event.relatedTarget)) {
+				return;
+			}
+			scheduleFlyoutClose();
 		});
 	}
 

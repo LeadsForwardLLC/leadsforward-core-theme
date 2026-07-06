@@ -10,7 +10,7 @@ function expect($cond, $msg) {
 expect(strpos($ds, '.site-header--sticky') !== false, 'sticky class styles exist');
 expect(strpos($ds, '.site-header__topbar') !== false, 'topbar styles exist');
 expect(strpos($ds, '.site-header--centered') !== false, 'centered header layout styles exist');
-expect(strpos($ds, 'header-call-link.css') !== false, 'design-system points to header-call-link bundle');
+expect(strpos($ds, '.site-header__menu .sub-menu .lf-menu-service-category > .sub-menu::before') !== false, 'service category flyout hover bridge exists');
 expect(
 	strpos($call, 'body .site-header .lf-call__icon-wrap') !== false
 	&& strpos($call, '--lf-call-icon-size') !== false
