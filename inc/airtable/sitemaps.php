@@ -58,6 +58,35 @@ function lf_airtable_sitemaps_string_field(array $fields, $key_or_aliases): stri
 }
 
 /**
+ * Parse a keyword list field from Airtable Sitemaps rows.
+ *
+ * @param array<string,mixed> $fields
+ * @param string|list<string> $key_or_aliases
+ * @return list<string>
+ */
+function lf_airtable_sitemaps_keywords_field(array $fields, $key_or_aliases): array {
+	if (function_exists('lf_ai_studio_airtable_keywords_field')) {
+		$keys = is_array($key_or_aliases) ? array_values($key_or_aliases) : [(string) $key_or_aliases];
+		$merged = [];
+		foreach ($keys as $key) {
+			$key = trim((string) $key);
+			if ($key === '') {
+				continue;
+			}
+			$merged = array_merge($merged, lf_ai_studio_airtable_keywords_field($fields, $key));
+		}
+		return array_values(array_unique(array_filter($merged)));
+	}
+
+	$raw = lf_airtable_sitemaps_string_field($fields, $key_or_aliases);
+	if ($raw === '') {
+		return [];
+	}
+	$parts = preg_split('/\r\n|\r|\n|,/', $raw) ?: [];
+	return array_values(array_unique(array_filter(array_map('sanitize_text_field', array_map('trim', $parts)))));
+}
+
+/**
  * Fetch Airtable rows from the configured Sitemaps table/view.
  *
  * @return array{ok:bool, rows:list<array<string,mixed>>, error:string}
@@ -230,6 +259,27 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 				'SEO keyword',
 			]
 		);
+		$secondary_keywords = lf_airtable_sitemaps_keywords_field(
+			$row,
+			[
+				'KW-Top 10',
+				'KW-All',
+				'KW-Focus',
+				'Secondary Keywords',
+				'Secondary keywords',
+				'Secondary Keyword',
+				'Secondary keyword',
+				'Supporting Keywords',
+				'Supporting keywords',
+			]
+		);
+		if ($primary_keyword !== '') {
+			$primary_lc = strtolower(trim($primary_keyword));
+			$secondary_keywords = array_values(array_filter(
+				$secondary_keywords,
+				static fn(string $kw): bool => strtolower(trim($kw)) !== $primary_lc && trim($kw) !== ''
+			));
+		}
 		$menu_group_raw = lf_airtable_sitemaps_string_field($row, ['Menu Group', 'menu group']);
 		$menu_hierarchy = lf_airtable_sitemaps_string_field($row, ['Menu Hierarchy', 'Menu hiearchy', 'Menu hierarchy']);
 		$slug_template = lf_airtable_sitemaps_string_field($row, ['Slug', 'slug', 'Slug template', 'Slug Template']);
@@ -311,6 +361,7 @@ function lf_sitemap_specs_from_airtable_rows(array $rows): array {
 			'niche' => $niche,
 			'priority' => $priority,
 			'primary_keyword' => $primary_keyword,
+			'secondary_keywords' => $secondary_keywords,
 			'menu_group' => $menu_group,
 			'menu_hierarchy' => $menu_hierarchy,
 			'slug_template' => $slug_template,

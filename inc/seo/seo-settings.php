@@ -60,8 +60,11 @@ function lf_seo_get_settings(): array {
 		],
 		'schema' => [
 			'organization_type' => 'Organization',
+			'enable_organization' => true,
 			'enable_local_business' => true,
 			'enable_service' => true,
+			'enable_faq' => true,
+			'enable_review' => true,
 		],
 		'sitemap' => [
 			'enable' => true,
@@ -96,7 +99,41 @@ function lf_seo_get_settings(): array {
 	if (!is_array($saved)) {
 		$saved = [];
 	}
-	return array_replace_recursive($defaults, $saved);
+	$merged = array_replace_recursive($defaults, $saved);
+	if (function_exists('get_field')) {
+		$legacy_map = [
+			'enable_organization' => 'lf_schema_organization',
+			'enable_local_business' => 'lf_schema_local_business',
+			'enable_faq' => 'lf_schema_faq',
+			'enable_review' => 'lf_schema_review',
+		];
+		foreach ($legacy_map as $seo_key => $acf_key) {
+			if (!array_key_exists($seo_key, $saved['schema'] ?? [])) {
+				$merged['schema'][$seo_key] = (bool) get_field($acf_key, 'option');
+			}
+		}
+	}
+	return $merged;
+}
+
+/**
+ * Keep legacy ACF schema toggles aligned for exports and older tooling.
+ *
+ * @param array<string, mixed> $schema
+ */
+function lf_seo_sync_legacy_schema_toggles(array $schema): void {
+	if (!function_exists('update_field')) {
+		return;
+	}
+	$map = [
+		'enable_organization' => 'lf_schema_organization',
+		'enable_local_business' => 'lf_schema_local_business',
+		'enable_faq' => 'lf_schema_faq',
+		'enable_review' => 'lf_schema_review',
+	];
+	foreach ($map as $seo_key => $acf_key) {
+		update_field($acf_key, !empty($schema[$seo_key]), 'option');
+	}
 }
 
 function lf_seo_get_setting(string $path, $default = '') {
@@ -162,8 +199,11 @@ function lf_seo_handle_save(): void {
 		'LandscapingBusiness',
 	];
 	$settings['schema']['organization_type'] = in_array($org_type, $allowed_org_types, true) ? $org_type : 'Organization';
+	$settings['schema']['enable_organization'] = !empty($_POST['lf_seo_enable_organization']);
 	$settings['schema']['enable_local_business'] = !empty($_POST['lf_seo_enable_local_business']);
 	$settings['schema']['enable_service'] = !empty($_POST['lf_seo_enable_service']);
+	$settings['schema']['enable_faq'] = !empty($_POST['lf_seo_enable_faq']);
+	$settings['schema']['enable_review'] = !empty($_POST['lf_seo_enable_review']);
 
 	$settings['sitemap']['enable'] = !empty($_POST['lf_seo_sitemap_enable']);
 	$settings['sitemap']['include_services'] = !empty($_POST['lf_seo_sitemap_include_services']);
@@ -189,6 +229,7 @@ function lf_seo_handle_save(): void {
 	}
 
 	update_option('lf_seo_settings', $settings);
+	lf_seo_sync_legacy_schema_toggles($settings['schema']);
 	wp_safe_redirect(add_query_arg(['saved' => '1', 'tab' => 'settings'], admin_url('admin.php?page=lf-seo')));
 	exit;
 }
@@ -370,6 +411,7 @@ function lf_seo_render_settings_page(): void {
 			</table>
 
 			<h2><?php esc_html_e('Schema', 'leadsforward-core'); ?></h2>
+			<p class="description" style="max-width:720px;"><?php esc_html_e('Structured data (JSON-LD) helps Google understand your business, services, FAQs, and reviews. For local home-service sites, keep Organization + LocalBusiness + Service + FAQ + Review enabled when you have complete NAP, service pages, FAQs, and testimonials. WebSite and BreadcrumbList output automatically.', 'leadsforward-core'); ?></p>
 			<table class="form-table" role="presentation">
 				<tr>
 					<th scope="row"><label for="lf_seo_organization_type"><?php esc_html_e('Organization Type', 'leadsforward-core'); ?></label></th>
@@ -395,12 +437,24 @@ function lf_seo_render_settings_page(): void {
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e('Enable LocalBusiness schema', 'leadsforward-core'); ?></th>
-					<td><label><input type="checkbox" name="lf_seo_enable_local_business" value="1" <?php checked(!empty($settings['schema']['enable_local_business'])); ?> /> <?php esc_html_e('Output LocalBusiness schema.', 'leadsforward-core'); ?></label></td>
+					<th scope="row"><?php esc_html_e('Organization schema', 'leadsforward-core'); ?></th>
+					<td><label><input type="checkbox" name="lf_seo_enable_organization" value="1" <?php checked(!empty($settings['schema']['enable_organization'])); ?> /> <?php esc_html_e('Brand entity with logo and social profiles (sameAs).', 'leadsforward-core'); ?></label></td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e('Enable Service schema', 'leadsforward-core'); ?></th>
-					<td><label><input type="checkbox" name="lf_seo_enable_service" value="1" <?php checked(!empty($settings['schema']['enable_service'])); ?> /> <?php esc_html_e('Output Service schema on service pages.', 'leadsforward-core'); ?></label></td>
+					<th scope="row"><?php esc_html_e('LocalBusiness schema', 'leadsforward-core'); ?></th>
+					<td><label><input type="checkbox" name="lf_seo_enable_local_business" value="1" <?php checked(!empty($settings['schema']['enable_local_business'])); ?> /> <?php esc_html_e('NAP, geo, hours, and area served — core for local SEO.', 'leadsforward-core'); ?></label></td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e('Service schema', 'leadsforward-core'); ?></th>
+					<td><label><input type="checkbox" name="lf_seo_enable_service" value="1" <?php checked(!empty($settings['schema']['enable_service'])); ?> /> <?php esc_html_e('Per-service pages linked to your business as provider.', 'leadsforward-core'); ?></label></td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e('FAQ schema', 'leadsforward-core'); ?></th>
+					<td><label><input type="checkbox" name="lf_seo_enable_faq" value="1" <?php checked(!empty($settings['schema']['enable_faq'])); ?> /> <?php esc_html_e('FAQPage rich results from FAQ sections and lf_faq posts.', 'leadsforward-core'); ?></label></td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e('Review schema', 'leadsforward-core'); ?></th>
+					<td><label><input type="checkbox" name="lf_seo_enable_review" value="1" <?php checked(!empty($settings['schema']['enable_review'])); ?> /> <?php esc_html_e('AggregateRating + reviews from published testimonials.', 'leadsforward-core'); ?></label></td>
 				</tr>
 			</table>
 
@@ -760,6 +814,8 @@ function lf_seo_render_keywords_tab(): void {
 					$is_dup = $pk !== '' && (($counts[strtolower($pk)] ?? 0) > 1);
 					$template_key = '';
 					if ($p->post_type === 'lf_service' && function_exists('lf_pci_post_template_key')) {
+						$template_key = lf_pci_post_template_key($p);
+					} elseif ($p->post_type === 'lf_service_area' && function_exists('lf_pci_post_template_key')) {
 						$template_key = lf_pci_post_template_key($p);
 					} elseif ($p->post_type === 'page' && function_exists('lf_pci_page_slug_for_post')) {
 						$template_key = lf_pci_page_slug_for_post($p);

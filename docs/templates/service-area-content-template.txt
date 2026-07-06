@@ -1,0 +1,57 @@
+=== PAGE ===
+Template: service-area
+Slug: your-area-slug
+Name: Schaumburg
+Notes: Match Slug to the WordPress service area post slug (Service Areas → edit post → permalink). Service cards and nearby-area links are theme-controlled.
+
+=== HERO ===
+Headline: Foundation Repair in {city}
+Subheadline: Local structural specialists serving homeowners{city_line} with clear inspections and engineered repairs.
+Eyebrow: Licensed • Insured • Local Crews
+
+=== TRUST BAR ===
+Heading: Trusted local foundation repair
+Badges:
+- Licensed & Insured
+- Local Project Managers
+- Engineered Repair Plans
+- Responsive Scheduling
+
+=== BENEFITS ===
+Heading: Why {city} homeowners choose {business}
+Intro: Foundation decisions deserve local accountability, clear scopes, and crews who know the soil and building stock in your area.
+Items:
+Local specialists || Crews who work in {city} regularly — not out-of-town fly-ins for a single job.
+Clear inspections || Photos, measurements, and repair options explained before work starts.
+Accountable follow-up || A project manager who answers the phone and stands behind the work.
+
+=== STORY A ===
+Heading: Foundation repair built for {city} homes
+Intro: Soil, drainage, and foundation type vary block by block.
+Body: {business} helps homeowners in {city} understand what is causing settlement, cracks, or moisture — then installs engineered repairs sized to your structure. Every project starts with a documented inspection and a written scope, so you know what is being stabilized and what warranty covers the work.
+
+=== MENTOR ===
+Heading: What to expect on your property
+Intro: We keep the process calm and predictable from first call through warranty paperwork.
+Body: After you reach out, we schedule an on-site inspection, explain findings in plain language, and outline repair options with clear pricing. Crews protect landscaping and access paths, document lift or stabilization, and leave you with maintenance guidance for your foundation.
+
+=== SERVICES HERE ===
+Heading: Services we provide in {city}
+Intro: Full foundation repair capabilities for homeowners throughout the area.
+
+=== FAQ ===
+Heading: {city} foundation repair FAQs
+Intro: Common questions about inspections, timelines, and what is included locally.
+(Leave Q&A blank — auto-filled from Niche Content Library on import.)
+
+=== NEARBY AREAS ===
+Heading: Also serving nearby communities
+Intro: Local crews throughout the region — ask about availability near you.
+
+=== CTA ===
+Headline: Schedule a foundation inspection in {city}
+Subheadline: Request a structural evaluation and get a clear repair plan from {business}.
+
+=== SEO ===
+Title: Foundation Repair {city_line} | {business}
+Description: {business} provides foundation repair in {city}. Local inspections, engineered solutions, and crews who protect your home.

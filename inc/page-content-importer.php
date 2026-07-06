@@ -136,6 +136,9 @@ function lf_pci_post_supports_import(\WP_Post $post): bool {
 	if ($post->post_type === 'lf_service') {
 		return lf_pci_schema_for_slug('service') !== null;
 	}
+	if ($post->post_type === 'lf_service_area') {
+		return lf_pci_schema_for_slug('service-area') !== null;
+	}
 	if ($post->post_type !== 'page') {
 		return false;
 	}
@@ -156,6 +159,9 @@ function lf_pci_page_supports_import(\WP_Post $post): bool {
 function lf_pci_post_template_key(\WP_Post $post): string {
 	if ($post->post_type === 'lf_service') {
 		return 'service';
+	}
+	if ($post->post_type === 'lf_service_area') {
+		return 'service-area';
 	}
 	if ($post->post_type !== 'page') {
 		return '';
@@ -1470,6 +1476,9 @@ function lf_pci_section_doc_templates(string $template_slug = ''): array {
 		'service_details__2' => "=== SERVICE DETAILS 2 ===\nHeading: \nIntro: \nBody: ",
 		'process' => "=== PROCESS ===\nHeading: \nIntro: \nStep: Step title || Step body.",
 		'project_gallery' => "=== PROJECT GALLERY ===\nHeading: \nIntro: ",
+		'services_offered_here' => "=== SERVICES HERE ===\nHeading: \nIntro: ",
+		'nearby_areas' => "=== NEARBY AREAS ===\nHeading: \nIntro: ",
+		'related_links' => "=== RELATED LINKS ===\nHeading: \nIntro: ",
 		'pricing' => "=== PRICING ===\nHeading: \nIntro: \nBody: ",
 		'faq_accordion' => "=== FAQ ===\nHeading: \nIntro: \nQ: Question?\nA: Answer.",
 		'blog_posts' => "=== BLOG ===\nHeading: \nIntro: ",
@@ -1491,6 +1500,10 @@ function lf_pci_template_fallback_for_schema(array $schema): string {
 	if ($post_type === 'lf_service') {
 		$lines[] = 'Template: service';
 		$lines[] = 'Slug: your-service-slug';
+		$lines[] = 'Name: ' . $label;
+	} elseif ($post_type === 'lf_service_area') {
+		$lines[] = 'Template: service-area';
+		$lines[] = 'Slug: your-area-slug';
 		$lines[] = 'Name: ' . $label;
 	} else {
 		$lines[] = 'Slug: ' . $slug;

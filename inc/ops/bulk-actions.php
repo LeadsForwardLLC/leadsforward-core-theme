@@ -69,25 +69,8 @@ function lf_ops_bulk_handle(): void {
 			lf_ops_audit_log('bulk_cta_sitewide', ['primary' => $primary, 'secondary' => $secondary], $prev);
 			break;
 		case 'schema_toggles':
-			$toggles = [
-				'lf_schema_organization'   => isset($_POST['lf_schema_organization']),
-				'lf_schema_local_business' => isset($_POST['lf_schema_local_business']),
-				'lf_schema_faq'            => isset($_POST['lf_schema_faq']),
-				'lf_schema_review'         => isset($_POST['lf_schema_review']),
-			];
-			$prev = [];
-			if (function_exists('get_field')) {
-				foreach (array_keys($toggles) as $k) {
-					$prev[$k] = get_field($k, 'option');
-				}
-			}
-			if (function_exists('update_field')) {
-				foreach ($toggles as $key => $on) {
-					update_field($key, $on, 'option');
-				}
-			}
-			lf_ops_audit_log('bulk_schema_toggles', $toggles, $prev);
-			break;
+			wp_safe_redirect(admin_url('admin.php?page=lf-seo&tab=settings'));
+			exit;
 		case 'rebuild_linking':
 			$result = lf_ops_bulk_rebuild_linking();
 			lf_ops_audit_log('bulk_rebuild_linking', $result, []);
@@ -218,25 +201,12 @@ function lf_ops_bulk_render(): void {
 	echo '<p><input type="submit" name="lf_ops_bulk_preview" class="button" value="' . esc_attr__('Preview changes', 'leadsforward-core') . '" /> <input type="submit" class="button button-primary" value="' . esc_attr__('Apply', 'leadsforward-core') . '" /></p>';
 	echo '</form></div>';
 
-	// --- Schema toggles ---
-	echo '<div class="card" style="max-width:600px; margin:1em 0;"><h2>' . esc_html__('Toggle schema types site-wide', 'leadsforward-core') . '</h2>';
-	echo '<p>' . esc_html__('Enable or disable schema output per type. No schema content rewritten.', 'leadsforward-core') . '</p>';
-	echo '<form method="post" action="">';
-	wp_nonce_field('lf_ops_bulk', 'lf_ops_bulk_nonce');
-	echo '<input type="hidden" name="lf_ops_bulk_action" value="schema_toggles" />';
-	$schema_labels = ['lf_schema_organization' => __('Organization', 'leadsforward-core'), 'lf_schema_local_business' => __('LocalBusiness', 'leadsforward-core'), 'lf_schema_faq' => __('FAQ', 'leadsforward-core'), 'lf_schema_review' => __('Review', 'leadsforward-core')];
-	echo '<ul style="list-style:none;">';
-	foreach ($schema_labels as $key => $label) {
-		$checked = !empty($schema_current[$key]);
-		echo '<li><label><input type="checkbox" name="' . esc_attr($key) . '" value="1"' . ($checked ? ' checked' : '') . ' /> ' . esc_html($label) . '</label></li>';
-	}
-	echo '</ul>';
-	if ($preview_action === 'schema_toggles') {
-		echo '<p><strong>' . esc_html__('Preview:', 'leadsforward-core') . '</strong> ' . esc_html__('Schema toggles will be updated. No schema content rewritten.', 'leadsforward-core') . '</p>';
-	}
-	echo '<p><label><input type="checkbox" name="lf_ops_bulk_confirm" value="1" required /> ' . esc_html__('I understand this will update schema toggles.', 'leadsforward-core') . '</label></p>';
-	echo '<p><input type="submit" name="lf_ops_bulk_preview" class="button" value="' . esc_attr__('Preview changes', 'leadsforward-core') . '" /> <input type="submit" class="button button-primary" value="' . esc_attr__('Apply', 'leadsforward-core') . '" /></p>';
-	echo '</form></div>';
+	// --- Schema toggles (managed in SEO & Performance) ---
+	$seo_schema_url = admin_url('admin.php?page=lf-seo&tab=settings');
+	echo '<div class="card" style="max-width:600px; margin:1em 0;"><h2>' . esc_html__('Schema toggles', 'leadsforward-core') . '</h2>';
+	echo '<p>' . esc_html__('Schema on/off switches now live in SEO & Performance → SEO settings. Use that screen for Organization, LocalBusiness, Service, FAQ, and Review JSON-LD.', 'leadsforward-core') . '</p>';
+	echo '<p><a class="button button-secondary" href="' . esc_url($seo_schema_url) . '">' . esc_html__('Open SEO schema settings', 'leadsforward-core') . '</a></p>';
+	echo '</div>';
 
 	// --- Rebuild linking ---
 	echo '<div class="card" style="max-width:600px; margin:1em 0;"><h2>' . esc_html__('Rebuild internal linking relationships', 'leadsforward-core') . '</h2>';

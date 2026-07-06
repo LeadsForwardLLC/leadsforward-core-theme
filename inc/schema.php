@@ -97,11 +97,15 @@ function lf_output_schema_json_ld(): void {
  */
 function lf_schema_toggle_on(string $option_name): bool {
 	if (function_exists('lf_seo_get_setting')) {
-		if ($option_name === 'lf_schema_local_business') {
-			return (bool) lf_seo_get_setting('schema.enable_local_business', true);
-		}
-		if ($option_name === 'lf_schema_service') {
-			return (bool) lf_seo_get_setting('schema.enable_service', true);
+		$map = [
+			'lf_schema_organization' => 'schema.enable_organization',
+			'lf_schema_local_business' => 'schema.enable_local_business',
+			'lf_schema_service' => 'schema.enable_service',
+			'lf_schema_faq' => 'schema.enable_faq',
+			'lf_schema_review' => 'schema.enable_review',
+		];
+		if (isset($map[$option_name])) {
+			return (bool) lf_seo_get_setting($map[$option_name], true);
 		}
 	}
 	$val = lf_get_option($option_name, 'option', true);

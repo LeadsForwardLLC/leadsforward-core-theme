@@ -14,12 +14,13 @@ if (!defined('ABSPATH')) {
 add_action('add_meta_boxes', 'lf_pci_register_import_meta_box');
 add_action('save_post_page', 'lf_pci_handle_import_meta_box_apply', 20, 2);
 add_action('save_post_lf_service', 'lf_pci_handle_import_meta_box_apply', 20, 2);
+add_action('save_post_lf_service_area', 'lf_pci_handle_import_meta_box_apply', 20, 2);
 
 function lf_pci_register_import_meta_box(): void {
 	if (!function_exists('lf_pci_post_supports_import')) {
 		return;
 	}
-	foreach (['page', 'lf_service'] as $post_type) {
+	foreach (['page', 'lf_service', 'lf_service_area'] as $post_type) {
 		add_meta_box(
 			'lf-pci-import',
 			__('Import page content', 'leadsforward-core'),
@@ -56,6 +57,7 @@ function lf_pci_render_import_meta_box(\WP_Post $post): void {
 	$is_homepage = ($schema['storage'] ?? '') === 'homepage';
 	$locked = is_array($schema['locked'] ?? null) ? $schema['locked'] : [];
 	$is_service = $post->post_type === 'lf_service';
+	$is_service_area = $post->post_type === 'lf_service_area';
 
 	wp_nonce_field('lf_pci_page_import', 'lf_pci_page_nonce');
 	?>
@@ -68,6 +70,13 @@ function lf_pci_render_import_meta_box(\WP_Post $post): void {
 					__('Upload or paste the Service Page .docx for this post (slug: %1$s). Use LeadsForward → Import Page Content to download the %2$s template.', 'leadsforward-core'),
 					$post->post_name,
 					(string) ($schema['label'] ?? 'service')
+				));
+			} elseif ($is_service_area) {
+				echo esc_html(sprintf(
+					/* translators: 1: area slug, 2: template label */
+					__('Upload or paste the Service Area .docx for this post (slug: %1$s). Use LeadsForward → Import Page Content to download the %2$s template.', 'leadsforward-core'),
+					$post->post_name,
+					(string) ($schema['label'] ?? 'service-area')
 				));
 			} else {
 				echo esc_html(sprintf(
