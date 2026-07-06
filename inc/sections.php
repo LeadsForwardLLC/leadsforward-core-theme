@@ -2905,15 +2905,19 @@ function lf_sections_render_trust_bar(string $context, array $settings, \WP_Post
 						<?php endif; ?>
 					</div>
 					<div class="lf-stats-bar__body">
-						<?php if (($item['value'] ?? '') !== '') : ?>
-							<span class="lf-stats-bar__value" data-lf-inline-editable="1"><?php echo esc_html($item['value']); ?></span>
-						<?php endif; ?>
 						<?php if ($variant === 'stars') : ?>
-							<span class="lf-stats-bar__stars" aria-hidden="true">
-								<?php for ($i = 0; $i < 5; $i++) : ?>
-									<svg class="lf-stats-bar__star" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-								<?php endfor; ?>
-							</span>
+							<div class="lf-stats-bar__metric">
+								<?php if (($item['value'] ?? '') !== '') : ?>
+									<span class="lf-stats-bar__value" data-lf-inline-editable="1"><?php echo esc_html($item['value']); ?></span>
+								<?php endif; ?>
+								<span class="lf-stats-bar__stars" aria-hidden="true">
+									<?php for ($i = 0; $i < 5; $i++) : ?>
+										<svg class="lf-stats-bar__star" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+									<?php endfor; ?>
+								</span>
+							</div>
+						<?php elseif (($item['value'] ?? '') !== '') : ?>
+							<span class="lf-stats-bar__value" data-lf-inline-editable="1"><?php echo esc_html($item['value']); ?></span>
 						<?php endif; ?>
 						<?php if (($item['label'] ?? '') !== '') : ?>
 							<span class="lf-stats-bar__label" data-lf-inline-editable="1"><?php echo esc_html($item['label']); ?></span>
