@@ -420,13 +420,16 @@ function lf_publish_schedule_datetime_local_min(): string {
  * @return array<string, string>|array{}
  */
 function lf_publish_schedule_status_args(string $schedule_key): array {
-	if (
-		$schedule_key === 'page:reviews'
-		&& function_exists('lf_fleet_has_published_testimonials')
-		&& !lf_fleet_has_published_testimonials()
-	) {
+	if ($schedule_key === 'page:reviews' && function_exists('lf_fleet_reviews_page_target_status')) {
+		$target = lf_fleet_reviews_page_target_status();
+		if ($target === 'draft') {
+			return ['post_status' => 'draft'];
+		}
+
 		return [
-			'post_status' => 'draft',
+			'post_status' => 'publish',
+			'post_date' => current_time('mysql'),
+			'post_date_gmt' => current_time('mysql', 1),
 		];
 	}
 
@@ -521,6 +524,9 @@ function lf_publish_schedule_apply_site_pages(): void {
 		$update = array_merge(['ID' => (int) $page->ID], $status_args);
 		wp_update_post($update);
 		update_post_meta((int) $page->ID, 'lf_manifest_schedule_managed', 1);
+	}
+	if (function_exists('lf_fleet_sync_reviews_page_status_and_menu')) {
+		lf_fleet_sync_reviews_page_status_and_menu();
 	}
 }
 

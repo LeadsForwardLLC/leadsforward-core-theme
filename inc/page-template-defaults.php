@@ -717,6 +717,24 @@ function lf_page_template_repair_core_pages_once(): void {
 add_action('admin_init', 'lf_page_template_repair_core_pages_once', 25);
 
 /**
+ * One-time: publish Reviews when testimonials exist (after publish-schedule could leave it draft).
+ */
+function lf_page_template_repair_reviews_publish_v6(): void {
+	if (!is_admin() || !current_user_can('edit_theme_options')) {
+		return;
+	}
+	if (get_option('lf_page_template_repair_v6', '0') === '1') {
+		return;
+	}
+	if (function_exists('lf_fleet_sync_reviews_page_status_and_menu')) {
+		lf_fleet_sync_reviews_page_status_and_menu();
+	}
+	update_option('lf_page_template_repair_v6', '1', true);
+}
+
+add_action('admin_init', 'lf_page_template_repair_reviews_publish_v6', 26);
+
+/**
  * One-time migration: collapse legacy hero variants (default/a/b/c) to conversion.
  */
 function lf_hero_normalize_variants_once(): void {

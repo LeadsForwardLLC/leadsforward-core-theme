@@ -446,6 +446,9 @@ function lf_sitemap_sync_reconcile_run(): array {
 		if (function_exists('lf_fleet_is_always_publish_utility_slug') && lf_fleet_is_always_publish_utility_slug($canonical_for_status)) {
 			$planned_status = 'publish';
 		}
+		if ($canonical_for_status === 'reviews' && function_exists('lf_fleet_reviews_page_target_status')) {
+			$planned_status = lf_fleet_reviews_page_target_status();
+		}
 
 		// Service detail URLs belong to CPTs, not WP Pages.
 		// Keep them in the cache for downstream generators, but do not upsert `page` posts for them.
@@ -516,6 +519,9 @@ function lf_sitemap_sync_reconcile_run(): array {
 	$result['ok'] = empty($errors) && $result['normalized'] > 0;
 	if (function_exists('lf_fleet_publish_utility_pages')) {
 		lf_fleet_publish_utility_pages();
+	}
+	if (function_exists('lf_fleet_sync_reviews_page_status_and_menu')) {
+		lf_fleet_sync_reviews_page_status_and_menu();
 	}
 	return $result;
 }
