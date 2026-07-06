@@ -693,24 +693,47 @@ function lf_publish_schedule_render_controls(string $schedule_key, array $stored
 }
 
 /**
- * Page-type publish timing block (homepage, core pages, overviews).
+ * Scope keys for the Core pages checklist (publish schedule keys minus homepage).
+ *
+ * @return list<string>
  */
-function lf_publish_schedule_render_page_types_panel(): void {
+function lf_publish_schedule_core_scope_keys(): array {
+	return array_values(array_filter(
+		lf_publish_schedule_page_keys(),
+		static fn(string $key): bool => $key !== 'page:home'
+	));
+}
+
+/**
+ * Labels for core page scope rows (schedule key => label).
+ *
+ * @return array<string, string>
+ */
+function lf_publish_schedule_core_scope_labels(): array {
 	$labels = lf_publish_schedule_page_labels();
-	?>
-	<details class="lf-publish-schedule-panel">
-		<summary class="lf-publish-schedule-panel__summary"><?php esc_html_e('Publish timing', 'leadsforward-core'); ?></summary>
-		<div class="lf-publish-schedule-panel__body">
-			<p class="description lf-publish-schedule-panel__lead"><?php esc_html_e('Publish now, schedule a date (WordPress auto-publishes), or keep as draft. Reviews defaults to Publish now only when at least one testimonial exists (e.g. from Airtable).', 'leadsforward-core'); ?></p>
-			<div class="lf-publish-schedule-panel__table" role="group" aria-label="<?php esc_attr_e('Page publish timing', 'leadsforward-core'); ?>">
-				<?php foreach (lf_publish_schedule_page_keys() as $key) : ?>
-					<div class="lf-publish-schedule-panel__row">
-						<span class="lf-publish-schedule-panel__label"><?php echo esc_html($labels[$key] ?? $key); ?></span>
-						<?php lf_publish_schedule_render_controls($key, lf_publish_schedule_resolved_item($key), true); ?>
-					</div>
-				<?php endforeach; ?>
-			</div>
-		</div>
-	</details>
-	<?php
+	$out = [];
+	foreach (lf_publish_schedule_core_scope_keys() as $key) {
+		if (isset($labels[ $key ])) {
+			$out[ $key ] = $labels[ $key ];
+		}
+	}
+
+	return $out;
+}
+
+/**
+ * Map a core scope slug (suffix after page:) to checklist slug => label for scope UI.
+ *
+ * @return array<string, string>
+ */
+function lf_publish_schedule_core_scope_slug_map(): array {
+	$map = [];
+	foreach (lf_publish_schedule_core_scope_labels() as $schedule_key => $label) {
+		$slug = preg_replace('/^page:/', '', $schedule_key);
+		if (is_string($slug) && $slug !== '') {
+			$map[ $slug ] = $label;
+		}
+	}
+
+	return $map;
 }
