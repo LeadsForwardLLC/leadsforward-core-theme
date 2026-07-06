@@ -92,6 +92,9 @@ function lf_sitemap_sync_is_core_hub(string $resolved_slug, string $slug_templat
 		'/why/' => true,
 		'/why-us/' => true,
 		'/faq/' => true,
+		'/sitemap/' => true,
+		'/privacy-policy/' => true,
+		'/terms-of-service/' => true,
 	];
 
 	return !empty($core[$resolved_slug]) || !empty($core[$template_path]);
@@ -185,6 +188,9 @@ function lf_sitemap_sync_upsert_page(array $spec): array {
 
 	if ($canonical_slug === 'reviews' && function_exists('lf_fleet_reviews_page_target_status')) {
 		$status = lf_fleet_reviews_page_target_status();
+	}
+	if (function_exists('lf_fleet_is_always_publish_utility_slug') && lf_fleet_is_always_publish_utility_slug($canonical_slug)) {
+		$status = 'publish';
 	}
 
 	$payload = [
@@ -434,6 +440,12 @@ function lf_sitemap_sync_reconcile_run(): array {
 			$planned_status = $unpublished_mode;
 			$errors[] = sprintf('spec_%d: %s', (int) $i, $resolved_err !== '' ? $resolved_err : 'slug_resolve_failed');
 		}
+		$canonical_for_status = function_exists('lf_fleet_canonical_slug_from_sitemap')
+			? lf_fleet_canonical_slug_from_sitemap($resolved_slug, $slug_template)
+			: sanitize_title((string) basename(trim($resolved_slug, '/')));
+		if (function_exists('lf_fleet_is_always_publish_utility_slug') && lf_fleet_is_always_publish_utility_slug($canonical_for_status)) {
+			$planned_status = 'publish';
+		}
 
 		// Service detail URLs belong to CPTs, not WP Pages.
 		// Keep them in the cache for downstream generators, but do not upsert `page` posts for them.
@@ -502,6 +514,9 @@ function lf_sitemap_sync_reconcile_run(): array {
 	$result['error_codes'] = array_slice($codes, 0, 20);
 	// Consider reconcile "needs attention" if it produced any errors or zero usable specs.
 	$result['ok'] = empty($errors) && $result['normalized'] > 0;
+	if (function_exists('lf_fleet_publish_utility_pages')) {
+		lf_fleet_publish_utility_pages();
+	}
 	return $result;
 }
 
