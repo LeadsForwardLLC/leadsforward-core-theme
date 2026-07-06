@@ -2460,7 +2460,7 @@ function lf_ai_studio_render_admin_page(string $mode = 'manifester'): void {
 		</div>
 		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0; border: 1px solid #f87171;">
 			<h2 style="margin-top:0;"><?php esc_html_e('Reset site (dev only)', 'leadsforward-core'); ?></h2>
-			<p class="description"><?php esc_html_e('Deletes setup-created content. API/Airtable settings and legal pages are preserved.', 'leadsforward-core'); ?></p>
+			<p class="description"><?php esc_html_e('Deletes setup-created content (pages, blog posts, services, service areas, FAQs, process steps, and media). Manifest Website settings (uploaded manifest, API/Airtable config, generation scope) and legal pages are preserved.', 'leadsforward-core'); ?></p>
 			<?php if (current_user_can('manage_options')) : ?>
 				<form method="post">
 					<?php wp_nonce_field('lf_dev_reset', 'lf_dev_reset_nonce'); ?>
