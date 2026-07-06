@@ -61,6 +61,35 @@ function lf_dev_reset_delete_all_terms(string $taxonomy): void {
 }
 
 /**
+ * CPTs removed on dev site reset (generated content only).
+ *
+ * @return list<string>
+ */
+function lf_dev_reset_content_post_types(): array {
+	return [
+		'post',
+		'lf_service',
+		'lf_service_area',
+		'lf_faq',
+		'lf_process_step',
+		'lf_service_category',
+		'lf_project',
+		'lf_testimonial',
+		'lf_ai_job',
+	];
+}
+
+/**
+ * Delete all setup-generated posts for the given types.
+ */
+function lf_dev_reset_delete_content_posts(): void {
+	foreach (lf_dev_reset_content_post_types() as $post_type) {
+		lf_dev_reset_delete_posts_by_type($post_type);
+	}
+	lf_dev_reset_delete_all_terms('lf_process_group');
+}
+
+/**
  * Whether the site URL looks like a dev machine (Local WP, .test, etc.).
  */
 function lf_dev_reset_site_url_looks_local(): bool {
@@ -210,13 +239,7 @@ function lf_dev_reset_run(): void {
 		}
 		wp_delete_post((int) $id, true);
 	}
-	lf_dev_reset_delete_posts_by_type('post');
-	lf_dev_reset_delete_posts_by_type('lf_service');
-	lf_dev_reset_delete_posts_by_type('lf_service_area');
-	lf_dev_reset_delete_posts_by_type('lf_project');
-	lf_dev_reset_delete_posts_by_type('lf_faq');
-	lf_dev_reset_delete_posts_by_type('lf_testimonial');
-	lf_dev_reset_delete_posts_by_type('lf_ai_job');
+	lf_dev_reset_delete_content_posts();
 	lf_dev_reset_delete_all_attachments();
 	lf_dev_reset_delete_all_terms('lf_project_type');
 
@@ -298,10 +321,8 @@ function lf_dev_reset_run(): void {
 		update_field('lf_homepage_cta_primary_type', '', 'option');
 	}
 	delete_option('lf_site_seed');
-	delete_option('lf_site_manifest');
 	delete_option('lf_ai_last_generation_log');
 	delete_option('lf_ai_studio_manifest_errors');
-	delete_option('lf_ai_studio_keywords');
 	delete_option('lf_ai_edit_log');
 	delete_option('lf_ai_inline_dom_overrides_homepage');
 	delete_option('lf_ai_inline_image_overrides_homepage');
@@ -311,18 +332,6 @@ function lf_dev_reset_run(): void {
 	delete_option('lf_homepage_keywords');
 	delete_option('lf_homepage_variation_seed');
 	delete_option('lf_site_builder_last_run');
-	delete_option('lf_ai_scope_service_ids');
-	delete_option('lf_ai_scope_service_area_ids');
-	delete_option('lf_ai_scope_service_slugs');
-	delete_option('lf_ai_scope_service_area_slugs');
-	delete_option('lf_ai_scope_service_slugs_mode');
-	delete_option('lf_ai_scope_service_area_slugs_mode');
-	update_option('lf_ai_gen_homepage', '1', false);
-	update_option('lf_ai_gen_services', '1', false);
-	update_option('lf_ai_gen_service_areas', '1', false);
-	update_option('lf_ai_gen_core_pages', '1', false);
-	update_option('lf_ai_gen_blog_posts', '0', false);
-	update_option('lf_ai_gen_projects', '0', false);
 	if (function_exists('lf_publish_schedule_reset_to_defaults')) {
 		lf_publish_schedule_reset_to_defaults();
 	} elseif (defined('LF_PUBLISH_SCHEDULE_OPTION')) {
@@ -405,7 +414,7 @@ function lf_dev_reset_run(): void {
 		delete_option(LF_QUOTE_BUILDER_SUBMISSIONS);
 	}
 	$post_ids_for_inline_clear = get_posts([
-		'post_type' => ['page', 'post', 'lf_service', 'lf_service_area'],
+		'post_type' => array_merge(['page'], lf_dev_reset_content_post_types()),
 		'post_status' => 'any',
 		'posts_per_page' => -1,
 		'fields' => 'ids',

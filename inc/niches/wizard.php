@@ -977,7 +977,7 @@ function lf_wizard_render_setup_settings_panel(): void {
 	<?php if (function_exists('lf_dev_reset_allowed') && lf_dev_reset_allowed() && current_user_can('manage_options')) : ?>
 		<div class="card" style="max-width: 980px; padding: 16px; margin: 16px 0; border-left: 4px solid #b32d2e;">
 			<h2 style="margin-top:0;"><?php esc_html_e('Reset site (dev only)', 'leadsforward-core'); ?></h2>
-			<p class="description"><?php esc_html_e('Deletes content, menus, and options created by the site setup flow. Available only in local/dev environments.', 'leadsforward-core'); ?></p>
+			<p class="description"><?php esc_html_e('Deletes setup-created content (pages, blog posts, services, service areas, FAQs, process steps, and media). Manifest Website settings and legal pages are preserved. Available only in local/dev environments.', 'leadsforward-core'); ?></p>
 			<form method="post" action="<?php echo esc_url(admin_url('admin.php?page=lf-setup')); ?>">
 				<?php wp_nonce_field('lf_dev_reset', 'lf_dev_reset_nonce'); ?>
 				<input type="hidden" name="lf_dev_reset" value="1" />
