@@ -24,11 +24,15 @@ function lf_pci_admin_register_menu(): void {
 }
 add_action('admin_menu', 'lf_pci_admin_register_menu', 26);
 
-function lf_pci_admin_template_download_url(string $template_key): string {
-	return wp_nonce_url(
-		admin_url('admin.php?page=lf-import-page-content&lf_pci_template_slug=' . rawurlencode($template_key)),
-		'lf_pci_download_template'
-	);
+function lf_pci_admin_template_download_url(string $template_key, int $post_id = 0): string {
+	$args = [
+		'page' => 'lf-import-page-content',
+		'lf_pci_template_slug' => $template_key,
+	];
+	if ($post_id > 0) {
+		$args['lf_pci_post_id'] = $post_id;
+	}
+	return wp_nonce_url(admin_url(add_query_arg($args, 'admin.php')), 'lf_pci_download_template');
 }
 
 function lf_pci_admin_handle_download(): void {
@@ -48,12 +52,19 @@ function lf_pci_admin_handle_download(): void {
 		wp_die(esc_html__('Template builder is not available.', 'leadsforward-core'));
 	}
 
-	$body = lf_pci_template_for_slug($slug);
+	$post_id = isset($_GET['lf_pci_post_id']) ? (int) $_GET['lf_pci_post_id'] : 0;
+	$body = lf_pci_template_for_slug($slug, true, $post_id > 0 ? $post_id : null);
 	if ($body === '') {
 		wp_die(esc_html__('Unknown template.', 'leadsforward-core'));
 	}
 
 	$filename = $slug . '-content-template.docx';
+	if ($post_id > 0) {
+		$post = get_post($post_id);
+		if ($post instanceof \WP_Post && $post->post_name !== '') {
+			$filename = sanitize_file_name($post->post_name . '-content-template.docx');
+		}
+	}
 	$bytes = lf_pci_build_docx_bytes($body);
 	if ($bytes === '') {
 		wp_die(esc_html__('Could not build .docx on this server (ZipArchive required).', 'leadsforward-core'));
@@ -267,14 +278,14 @@ function lf_pci_admin_render(): void {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('Import Page Content', 'leadsforward-core'); ?></h1>
-		<p><?php esc_html_e('Download a .docx template, use AI to fill it, then upload the finished file here. Each doc must include a === PAGE === header so the importer knows which page or service post to update.', 'leadsforward-core'); ?></p>
+		<p><?php esc_html_e('Download a keyword-aware .docx template, use AI to fill it, then upload the finished file here. Each doc must include a === PAGE === header so the importer knows which page or service post to update.', 'leadsforward-core'); ?></p>
 
 		<div style="margin:1rem 0;padding:1.25rem;background:#fff;border:1px solid #c3c4c7;border-radius:4px;max-width:960px;">
 			<h2 style="margin-top:0;"><?php esc_html_e('Writer workflow', 'leadsforward-core'); ?></h2>
 			<ol style="margin-left:1.25rem;">
-				<li><?php esc_html_e('Download the .docx template for the page or service you are writing.', 'leadsforward-core'); ?></li>
-				<li><?php esc_html_e('Open it in Google Drive (or Word) and paste into ChatGPT / your writing AI with client facts and niche notes.', 'leadsforward-core'); ?></li>
-				<li><?php esc_html_e('Ask the AI to fill every section using the exact === SECTION === headers in the doc. The short WRITER NOTES block at the top is stripped on import.', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('Assign keywords in SEO & Performance → Keywords (or per-post SEO box / Airtable Sitemap Sync).', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('Download the .docx for the page or service — templates include keyword targets and an AI writer brief at the top.', 'leadsforward-core'); ?></li>
+				<li><?php esc_html_e('Paste the WRITER NOTES block into your AI, then ask it to fill every section using the exact === SECTION === headers.', 'leadsforward-core'); ?></li>
 				<li><?php esc_html_e('Upload one or more finished .docx files below (batch) — or paste a single doc for preview.', 'leadsforward-core'); ?></li>
 			</ol>
 			<p class="description" style="margin-bottom:1rem;">
@@ -298,10 +309,32 @@ function lf_pci_admin_render(): void {
 				</p>
 			<?php endforeach; ?>
 
+			<?php
+			$service_posts = get_posts([
+				'post_type' => 'lf_service',
+				'post_status' => 'publish',
+				'posts_per_page' => 200,
+				'orderby' => 'title',
+				'order' => 'ASC',
+				'no_found_rows' => true,
+			]);
+			if ($service_posts !== []) :
+				?>
+				<h3 style="margin:1.25rem 0 0.5rem;font-size:14px;"><?php esc_html_e('Per-service templates (keyword-aware)', 'leadsforward-core'); ?></h3>
+				<p class="description" style="margin:0 0 0.5rem;"><?php esc_html_e('Each download pre-fills slug, page name, and keyword targets from SEO assignments.', 'leadsforward-core'); ?></p>
+				<p style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 0.5rem;">
+					<?php foreach ($service_posts as $service_post) : ?>
+						<a class="button button-secondary" href="<?php echo esc_url(lf_pci_admin_template_download_url('service', (int) $service_post->ID)); ?>">
+							<?php echo esc_html((string) $service_post->post_title); ?>
+						</a>
+					<?php endforeach; ?>
+				</p>
+			<?php endif; ?>
+
 			<p class="description" style="margin-top:1rem;">
 				<?php
 				printf(
-					esc_html__('Tokens filled on import: {business} = %1$s, {city} = %2$s', 'leadsforward-core'),
+					esc_html__('Tokens filled on download/import: {business} = %1$s, {city} = %2$s, {primary_keyword} from SEO assignments', 'leadsforward-core'),
 					esc_html((string) ($vars['business'] ?? '')),
 					esc_html((string) ($vars['city'] ?? ''))
 				);

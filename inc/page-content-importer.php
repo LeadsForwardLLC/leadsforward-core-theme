@@ -209,6 +209,127 @@ function lf_pci_fill_tokens(string $text, ?array $vars = null): string {
 }
 
 /**
+ * @return list<string>
+ */
+function lf_pci_parse_secondary_keywords(string $raw): array {
+	if ($raw === '') {
+		return [];
+	}
+	$parts = preg_split('/\r\n|\r|\n|,/', $raw) ?: [];
+	return array_values(array_unique(array_filter(array_map('trim', $parts))));
+}
+
+/**
+ * Keyword context for writer templates (post meta, manifest, or keyword map).
+ *
+ * @return array{primary_keyword: string, secondary_keywords: string, serp_intent: string}
+ */
+function lf_pci_writer_keyword_context(?int $post_id = null, string $slug = ''): array {
+	$primary = '';
+	$secondary = [];
+	$intent = 'transactional';
+	$slug = sanitize_title($slug);
+
+	if ($post_id > 0) {
+		$post = get_post($post_id);
+		if ($post instanceof \WP_Post) {
+			if ($slug === '') {
+				$slug = sanitize_title($post->post_name);
+			}
+			$primary = trim((string) get_post_meta($post_id, '_lf_seo_primary_keyword', true));
+			$secondary = lf_pci_parse_secondary_keywords((string) get_post_meta($post_id, '_lf_seo_secondary_keywords', true));
+			$stored_intent = sanitize_key((string) get_post_meta($post_id, '_lf_seo_serp_intent', true));
+			if ($stored_intent !== '') {
+				$intent = $stored_intent;
+			}
+		}
+	}
+
+	if ($primary === '' && $slug === 'home') {
+		$manifest = get_option('lf_site_manifest', []);
+		if (is_array($manifest)) {
+			$primary = trim((string) ($manifest['homepage']['primary_keyword'] ?? ''));
+			$manifest_secondary = $manifest['homepage']['secondary_keywords'] ?? [];
+			if (is_string($manifest_secondary)) {
+				$manifest_secondary = lf_pci_parse_secondary_keywords($manifest_secondary);
+			}
+			if (is_array($manifest_secondary) && $secondary === []) {
+				$secondary = array_values(array_unique(array_filter(array_map('sanitize_text_field', $manifest_secondary))));
+			}
+		}
+		if ($primary === '' && function_exists('lf_seo_get_keyword_map')) {
+			$map = lf_seo_get_keyword_map();
+			$primary = trim((string) ($map['primary']['homepage'] ?? ''));
+		}
+	}
+
+	if ($primary === '' && $slug !== '' && $post_id <= 0) {
+		$resolved_id = lf_pci_resolve_post_id_for_template($slug, 0);
+		if ($resolved_id > 0) {
+			return lf_pci_writer_keyword_context($resolved_id, $slug);
+		}
+	}
+
+	if ($primary !== '' && function_exists('lf_seo_detect_serp_intent') && $post_id > 0) {
+		$detected = lf_seo_detect_serp_intent($post_id, $primary);
+		if ($detected !== '') {
+			$intent = $detected;
+		}
+	}
+
+	return [
+		'primary_keyword' => $primary,
+		'secondary_keywords' => $secondary !== [] ? implode(', ', $secondary) : '',
+		'serp_intent' => $intent,
+	];
+}
+
+/**
+ * Resolve a post ID for keyword-aware fleet page templates.
+ */
+function lf_pci_resolve_post_id_for_template(string $template_slug, int $post_id = 0): int {
+	if ($post_id > 0) {
+		return $post_id;
+	}
+	$template_slug = sanitize_title($template_slug);
+	$schema = lf_pci_schema_for_slug($template_slug);
+	if ($schema === null) {
+		return 0;
+	}
+	$post_type = (string) ($schema['post_type'] ?? 'page');
+	if ($template_slug === 'home') {
+		$front = (int) get_option('page_on_front', 0);
+		if ($front > 0) {
+			return $front;
+		}
+	}
+	if ($post_type === 'page') {
+		$page = get_page_by_path($template_slug);
+		return $page instanceof \WP_Post ? (int) $page->ID : 0;
+	}
+	return 0;
+}
+
+/**
+ * Replace generic PAGE header slug/name with the target post.
+ */
+function lf_pci_personalize_template_page_header(string $body, int $post_id): string {
+	$post = get_post($post_id);
+	if (!$post instanceof \WP_Post) {
+		return $body;
+	}
+	$slug = sanitize_title($post->post_name);
+	$name = (string) $post->post_title;
+	if ($slug !== '') {
+		$body = preg_replace('/^Slug:\s*.+$/m', 'Slug: ' . $slug, $body, 1) ?? $body;
+	}
+	if ($name !== '') {
+		$body = preg_replace('/^Name:\s*.+$/m', 'Name: ' . $name, $body, 1) ?? $body;
+	}
+	return $body;
+}
+
+/**
  * Normalize pasted doc text (Google Docs, markdown headings, etc.).
  */
 function lf_pci_normalize_raw(string $raw): string {
@@ -1291,7 +1412,7 @@ function lf_pci_get_about_page_id(): int {
 /**
  * Resolve a downloadable paste template for a registered page slug.
  */
-function lf_pci_template_for_slug(string $slug, bool $include_legend = true): string {
+function lf_pci_template_for_slug(string $slug, bool $include_legend = true, ?int $post_id = null): string {
 	$slug = sanitize_title($slug);
 	$schema = lf_pci_schema_for_slug($slug);
 	if ($schema === null) {
@@ -1306,7 +1427,14 @@ function lf_pci_template_for_slug(string $slug, bool $include_legend = true): st
 		$body = lf_pci_template_fallback_for_schema($schema);
 	}
 
-	return lf_pci_prepare_template_body($body, $include_legend);
+	$resolved_post_id = $post_id > 0 ? $post_id : lf_pci_resolve_post_id_for_template($slug, 0);
+	if ($resolved_post_id > 0) {
+		$body = lf_pci_personalize_template_page_header($body, $resolved_post_id);
+	}
+	$keyword_ctx = lf_pci_writer_keyword_context($resolved_post_id > 0 ? $resolved_post_id : null, $slug);
+	$vars = array_merge(lf_pci_template_vars(), $keyword_ctx);
+
+	return lf_pci_prepare_template_body($body, $include_legend, $keyword_ctx, $vars);
 }
 
 /**
@@ -1460,31 +1588,78 @@ TEMPLATE;
 }
 
 /**
- * Token legend prepended to downloadable writer templates.
+ * Keyword brief block inside writer notes (stripped on import).
+ *
+ * @param array{primary_keyword?: string, secondary_keywords?: string, serp_intent?: string} $ctx
  */
-function lf_pci_template_token_legend(): string {
-	return <<<'LEGEND'
+function lf_pci_template_keyword_targets_block(array $ctx): string {
+	$primary = trim((string) ($ctx['primary_keyword'] ?? ''));
+	$secondary = trim((string) ($ctx['secondary_keywords'] ?? ''));
+	$intent = trim((string) ($ctx['serp_intent'] ?? 'transactional'));
+	if ($primary === '' && $secondary === '') {
+		return "KEYWORD TARGETS\nNot assigned yet. Set Primary Target Keyword on the post (or run Airtable Sitemap Sync / manifest assignment), then re-download this template.\n";
+	}
+	$lines = ["KEYWORD TARGETS"];
+	if ($primary !== '') {
+		$lines[] = 'Primary: ' . $primary;
+	}
+	if ($secondary !== '') {
+		$lines[] = 'Secondary: ' . $secondary;
+	}
+	$lines[] = 'SERP intent: ' . ($intent !== '' ? $intent : 'transactional');
+	$lines[] = 'Placement: Work the primary keyword into the hero headline (once, naturally), the first service-details paragraph, and the SEO title. Use secondary terms in subheads and body — never stuff or repeat awkwardly.';
+	return implode("\n", $lines) . "\n";
+}
+
+/**
+ * Token legend prepended to downloadable writer templates.
+ *
+ * @param array{primary_keyword?: string, secondary_keywords?: string, serp_intent?: string} $keyword_ctx
+ */
+function lf_pci_template_token_legend(array $keyword_ctx = []): string {
+	$kw_block = lf_pci_template_keyword_targets_block($keyword_ctx);
+	return <<<LEGEND
 === WRITER NOTES ===
-(Removed automatically on import — for your team / AI only.)
-1. Duplicate this .docx in Google Drive (or download and open in Word).
-2. Paste into ChatGPT or your writing AI with client facts, niche notes, and any source copy.
-3. Ask the AI to fill every section below using the exact === SECTION === headers and Key: value lines.
-4. Upload the finished .docx on LeadsForward → Import Page Content (batch upload supports multiple files).
-Tokens (filled on import): {business}, {city}, {city_line}, {niche}, {phone}
+(Removed automatically on import — paste this entire block into your AI as the system brief.)
+
+ROLE
+You are a senior local SEO copywriter for contractor and home-service companies ({business} in {city}). Write highly engaging, conversion-focused, SEO-smart copy that sounds human — never generic AI filler.
+
+AUDIENCE & GOAL
+Homeowners who need trust fast: licensed crews, clear process, honest pricing, local proof. Every section should reduce anxiety and drive one action (call, form, inspection).
+
+VOICE
+Confident, calm, specific. Short sentences. Real trade language. No hype, no "In today's world", no em-dash spam, no bullet-only pages.
+
+{$kw_block}
+FORMAT RULES
+- Keep every === SECTION === header and Key: value line exactly as written.
+- Benefits / process steps: Title || body on one line per item.
+- FAQs: Q: / A: pairs unless the section says to leave blank.
+- Process + FAQ on service pages: leave blank when noted — theme fills from Niche Content Library.
+
+WORKFLOW
+1. Fill every writer-editable field below for this URL.
+2. Upload the finished .docx at LeadsForward → Import Page Content.
+Tokens auto-filled on import: {business}, {city}, {city_line}, {niche}, {phone}, {primary_keyword}
 Process + FAQ: leave blank → Niche Content Library on import.
 
 LEGEND;
 }
 
 /**
- * @param bool $include_legend
+ * @param array{primary_keyword?: string, secondary_keywords?: string, serp_intent?: string} $keyword_ctx
+ * @param array<string, string>|null $vars
  */
-function lf_pci_prepare_template_body(string $body, bool $include_legend = true): string {
+function lf_pci_prepare_template_body(string $body, bool $include_legend = true, array $keyword_ctx = [], ?array $vars = null): string {
 	$body = trim($body);
+	$vars = $vars ?? array_merge(lf_pci_template_vars(), $keyword_ctx);
+	$body = lf_pci_fill_tokens($body, $vars);
 	if (!$include_legend) {
 		return $body;
 	}
-	return trim(lf_pci_template_token_legend() . "\n" . $body);
+	$legend = lf_pci_fill_tokens(lf_pci_template_token_legend($keyword_ctx), $vars);
+	return trim($legend . "\n" . $body);
 }
 
 /**
