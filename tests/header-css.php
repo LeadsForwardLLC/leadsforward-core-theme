@@ -11,6 +11,7 @@ expect(strpos($ds, '.site-header--sticky') !== false, 'sticky class styles exist
 expect(strpos($ds, '.site-header__topbar') !== false, 'topbar styles exist');
 expect(strpos($ds, '.site-header--centered') !== false, 'centered header layout styles exist');
 expect(strpos($ds, '.site-header__menu .sub-menu .lf-menu-service-category > .sub-menu::before') !== false, 'service category flyout hover bridge exists');
+expect(strpos($ds, '.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-breadcrumbs__link:hover') !== false, 'dark hero breadcrumb hover uses light text');
 expect(
 	strpos($call, 'body .site-header .lf-call__icon-wrap') !== false
 	&& strpos($call, '--lf-call-icon-size') !== false

@@ -5333,6 +5333,30 @@ article a:not(.lf-btn):hover {
 	color: rgba(255, 255, 255, 0.45);
 }
 
+.lf-block-hero--page.lf-block-hero--has-canvas-bg .lf-breadcrumbs__link:hover,
+.lf-block-hero--page.lf-block-hero--has-canvas-bg .lf-breadcrumbs__link:focus-visible,
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-breadcrumbs__link:hover,
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-breadcrumbs__link:focus-visible {
+	color: #fff;
+	text-decoration: underline;
+}
+
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-breadcrumbs__list {
+	color: rgba(255, 255, 255, 0.78);
+}
+
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-breadcrumbs__link {
+	color: #bae6fd;
+}
+
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-breadcrumbs__current {
+	color: rgba(255, 255, 255, 0.72);
+}
+
+.lf-block-hero[data-lf-hero-bg-tone="dark"] .lf-breadcrumbs__item + .lf-breadcrumbs__item::before {
+	color: rgba(255, 255, 255, 0.45);
+}
+
 .lf-hero-conversion {
 	display: grid;
 	grid-template-columns: minmax(0, 1.22fr) minmax(280px, 0.78fr);
