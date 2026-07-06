@@ -1,7 +1,7 @@
 === PAGE ===
 Slug: home
 Name: Homepage
-Notes: Service card titles/descriptions, review quotes, map pins, project gallery images, and hero media come from the site (Services CPT, Reviews, Projects, Global Settings). This doc controls every writer-editable headline and body on the homepage. Section order follows the niche blueprint (foundation-repair = calm conversion layout).
+Notes: Service card titles/descriptions, review quotes, map pins, project gallery images, hero media, and trust bar stats come from the site (Services CPT, Reviews, Projects, Global Settings). This doc controls writer-editable headlines and body copy. Section order follows the niche blueprint (foundation-repair = calm conversion layout). Do not add trust bar, proof-card, or CTA button-label fields.
 
 === HERO ===
 Headline: Foundation Repair That Protects Your Home for Good
@@ -12,24 +12,9 @@ Chip bullets:
 - 5-Star Rated
 - Workmanship Warranty
 - Financing Available
-Proof card title: Why homeowners choose {business}
-Proof bullets:
-- Local foundation specialists
-- Clear inspection process
-- No high-pressure sales tactics
-Primary CTA: Get a Free Inspection
-Secondary CTA: See Our Work
 Inline form title: Get Your Free Foundation Inspection
 Inline form subtext: Tell us what’s going on. We’ll follow up quickly.
 Inline form button: Schedule My Free Inspection
-
-=== TRUST BAR ===
-Heading:
-Badges:
-- 15+ Years in Business
-- 2,500+ Foundations Repaired
-- 5.0 Google Rating
-- Licensed & Insured
 
 === SERVICE DETAILS ===
 Heading: Foundation Problems Don’t Fix Themselves
@@ -75,7 +60,6 @@ Heading: Homeowners Trust Us When It Matters Most
 Heading: Foundation Repair Is a Big Decision. We Make It Easier.
 Intro: Every home is different, which is why we start with a clear inspection and repair plan. We’ll explain what needs attention now, what can be monitored, and what financing options may be available.
 Financing text: Financing options may be available for qualified homeowners.
-CTA: Ask About Financing
 
 === BENEFITS ===
 Heading: Why Homeowners Choose {business}
@@ -92,8 +76,6 @@ Intro: Local crews serving homeowners throughout the region with fast inspection
 === CTA ===
 Headline: Worried About Your Foundation? Get Clear Answers Today.
 Subheadline: Schedule a free inspection and find out what’s really happening with your home.
-Primary CTA: Get a Free Inspection
-Secondary CTA: Call Now
 
 === SEO ===
 Title: Foundation Repair {city} | {business}

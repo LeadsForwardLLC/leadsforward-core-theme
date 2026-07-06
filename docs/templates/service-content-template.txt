@@ -2,20 +2,12 @@
 Template: service
 Slug: your-service-slug
 Name: Foundation Piering
-Notes: Match Slug to the WordPress service post slug (Services → edit post → permalink).
+Notes: Match Slug to the WordPress service post slug (Services → edit post → permalink). Trust bar stats/badges are global theme settings — do not add a trust bar section.
 
 === HERO ===
 Headline: Foundation Piering in {city}
 Subheadline: Engineered piering and underpinning for settlement and structural stability{city_line}.
 Eyebrow: Licensed • Insured • Engineered Repairs
-
-=== TRUST BAR ===
-Heading: Trusted piering specialists
-Badges:
-- Licensed & Insured
-- Engineered Repair Plans
-- Transferable Warranties
-- Local Project Managers
 
 === SERVICE DETAILS ===
 Heading: What foundation piering solves

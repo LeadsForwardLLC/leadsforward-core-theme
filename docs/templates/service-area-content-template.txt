@@ -2,20 +2,12 @@
 Template: service-area
 Slug: your-area-slug
 Name: Schaumburg
-Notes: Match Slug to the WordPress service area post slug (Service Areas → edit post → permalink). Service cards and nearby-area links are theme-controlled.
+Notes: Match Slug to the WordPress service area post slug (Service Areas → edit post → permalink). Service cards, nearby-area links, and trust bar stats are theme-controlled.
 
 === HERO ===
 Headline: Foundation Repair in {city}
 Subheadline: Local structural specialists serving homeowners{city_line} with clear inspections and engineered repairs.
 Eyebrow: Licensed • Insured • Local Crews
-
-=== TRUST BAR ===
-Heading: Trusted local foundation repair
-Badges:
-- Licensed & Insured
-- Local Project Managers
-- Engineered Repair Plans
-- Responsive Scheduling
 
 === BENEFITS ===
 Heading: Why {city} homeowners choose {business}

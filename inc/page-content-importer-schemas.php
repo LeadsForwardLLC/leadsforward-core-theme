@@ -96,6 +96,7 @@ function lf_pci_build_schema(string $slug, string $label, array $order, array $o
 	$aliases = array_merge(lf_pci_common_section_aliases(), $options['section_aliases'] ?? []);
 	$locked = array_values(array_unique(array_merge(
 		function_exists('lf_pci_library_wired_section_types') ? lf_pci_library_wired_section_types() : ['process', 'faq_accordion'],
+		function_exists('lf_pci_theme_global_section_types') ? lf_pci_theme_global_section_types() : ['trust_bar'],
 		$options['locked'] ?? []
 	)));
 	$importable = [];
