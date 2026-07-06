@@ -475,6 +475,7 @@ function lf_ai_studio_assets(string $hook): void {
 		'jobStatusNonce' => wp_create_nonce('lf_ai_studio_job_status'),
 		'enabled' => !empty($airtable_settings['enabled']),
 		'publishSchedule' => lf_publish_schedule_get_items(),
+		'publishScheduleDefaults' => lf_publish_schedule_default_items(),
 			'scope' => [
 			'isHomepageOnly' => !empty($scope_for_scope_js['is_homepage_only']),
 			'servicePostsPublished' => (int) ( $scope_for_scope_js['service_posts_published'] ?? 0 ),
@@ -744,7 +745,7 @@ function lf_ai_studio_sync_legacy_blueprint_scope_from_gen_flags(): void {
 		$types[] = 'home';
 	}
 	if ($c) {
-		$types = array_merge($types, ['about', 'contact', 'reviews', 'blog']);
+		$types = array_merge($types, ['about', 'contact', 'reviews', 'blog', 'why_choose_us']);
 	}
 	if ($b && ! in_array('blog', $types, true)) {
 		$types[] = 'blog';
@@ -807,6 +808,22 @@ function lf_ai_studio_handle_scope_save(): void {
 	update_option('lf_ai_scope_service_slugs_mode', lf_ai_studio_normalize_scope_slug_mode($service_mode), false);
 	update_option('lf_ai_scope_service_area_slugs_mode', lf_ai_studio_normalize_scope_slug_mode($area_mode), false);
 
+	$core_slugs = [];
+	if (isset($_POST['lf_ai_scope_core_page_slugs']) && is_array($_POST['lf_ai_scope_core_page_slugs'])) {
+		foreach ($_POST['lf_ai_scope_core_page_slugs'] as $raw) {
+			$slug = sanitize_title((string) $raw);
+			if ($slug !== '') {
+				$core_slugs[] = $slug;
+			}
+		}
+	}
+	update_option('lf_ai_scope_core_page_slugs', array_values(array_unique($core_slugs)), false);
+
+	$core_mode = isset($_POST['lf_ai_scope_core_page_slugs_mode'])
+		? sanitize_key((string) wp_unslash((string) $_POST['lf_ai_scope_core_page_slugs_mode']))
+		: 'all';
+	update_option('lf_ai_scope_core_page_slugs_mode', lf_ai_studio_normalize_scope_slug_mode($core_mode), false);
+
 	if (isset($_POST['lf_ai_publish_schedule']) && is_array($_POST['lf_ai_publish_schedule'])) {
 		lf_publish_schedule_save_from_post(wp_unslash($_POST['lf_ai_publish_schedule']));
 	}
@@ -825,18 +842,50 @@ function lf_ai_studio_normalize_scope_slug_mode(string $mode): string {
 }
 
 /**
- * @param 'service'|'area' $kind
+ * @param 'service'|'area'|'core' $kind
  */
 function lf_ai_studio_get_scope_slug_mode(string $kind): string {
-	$key = $kind === 'area' ? 'lf_ai_scope_service_area_slugs_mode' : 'lf_ai_scope_service_slugs_mode';
+	if ($kind === 'core') {
+		$key = 'lf_ai_scope_core_page_slugs_mode';
+		$slug_key = 'lf_ai_scope_core_page_slugs';
+	} elseif ($kind === 'area') {
+		$key = 'lf_ai_scope_service_area_slugs_mode';
+		$slug_key = 'lf_ai_scope_service_area_slugs';
+	} else {
+		$key = 'lf_ai_scope_service_slugs_mode';
+		$slug_key = 'lf_ai_scope_service_slugs';
+	}
 	$mode = get_option($key, '');
 	if (is_string($mode) && in_array($mode, ['all', 'pick', 'none'], true)) {
 		return $mode;
 	}
-	$slug_key = $kind === 'area' ? 'lf_ai_scope_service_area_slugs' : 'lf_ai_scope_service_slugs';
 	$slugs = get_option($slug_key, []);
 	$slugs = is_array($slugs) ? array_values(array_filter(array_map('sanitize_title', $slugs))) : [];
 	return $slugs !== [] ? 'pick' : 'all';
+}
+
+/**
+ * Resolve a core-page scope slug to an existing WP page (tries fleet aliases).
+ */
+function lf_ai_studio_get_page_for_core_scope_slug(string $scope_slug): ?\WP_Post {
+	$scope_slug = sanitize_title($scope_slug);
+	if ($scope_slug === '') {
+		return null;
+	}
+	$path_map = [
+		'about' => ['about-us', 'about'],
+		'services' => ['services', 'our-services'],
+		'service-areas' => ['service-areas'],
+	];
+	$candidates = $path_map[ $scope_slug ] ?? [$scope_slug];
+	foreach ($candidates as $path) {
+		$page = get_page_by_path((string) $path);
+		if ($page instanceof \WP_Post) {
+			return $page;
+		}
+	}
+
+	return null;
 }
 
 /**
@@ -862,12 +911,18 @@ function lf_ai_studio_scope_slug_included(string $post_slug, string $mode, array
  * @param array<string, string> $slug_map slug => label
  * @param string[]              $stored_slugs
  */
-function lf_ai_studio_render_scope_slug_checklist(string $list_id, string $input_name, array $slug_map, array $stored_slugs, string $summary_label, string $stored_mode = 'all', string $schedule_prefix = 'lf_service'): void {
+function lf_ai_studio_render_scope_slug_checklist(string $list_id, string $input_name, array $slug_map, array $stored_slugs, string $summary_label, string $stored_mode = 'all', string $schedule_prefix = 'lf_service', string $lead = ''): void {
 	$stored_slugs = array_values(array_filter(array_map('sanitize_title', $stored_slugs)));
 	$mode = lf_ai_studio_normalize_scope_slug_mode($stored_mode);
 	$check_all = ($mode === 'all');
 	$check_none = ($mode === 'none');
-	$mode_field = str_contains($input_name, 'area') ? 'lf_ai_scope_service_area_slugs_mode' : 'lf_ai_scope_service_slugs_mode';
+	if (str_contains($input_name, 'core_page')) {
+		$mode_field = 'lf_ai_scope_core_page_slugs_mode';
+	} elseif (str_contains($input_name, 'area')) {
+		$mode_field = 'lf_ai_scope_service_area_slugs_mode';
+	} else {
+		$mode_field = 'lf_ai_scope_service_slugs_mode';
+	}
 	?>
 	<details class="lf-scope-filter" data-lf-scope-filter data-lf-scope-section="<?php echo esc_attr($list_id); ?>" <?php echo $slug_map !== [] ? 'open' : ''; ?>>
 		<summary class="lf-scope-filter__summary">
@@ -875,6 +930,9 @@ function lf_ai_studio_render_scope_slug_checklist(string $list_id, string $input
 			<span class="lf-scope-filter__count" data-lf-scope-count aria-live="polite"></span>
 		</summary>
 		<div class="lf-scope-filter__body">
+			<?php if ($lead !== '') : ?>
+				<p class="description lf-scope-filter__lead"><?php echo esc_html($lead); ?></p>
+			<?php endif; ?>
 			<input type="hidden" name="<?php echo esc_attr($mode_field); ?>" value="<?php echo esc_attr($mode); ?>" data-lf-scope-mode />
 			<div class="lf-scope-filter__toolbar">
 				<input type="search" class="lf-scope-filter__search" placeholder="<?php esc_attr_e('Filter list…', 'leadsforward-core'); ?>" data-lf-scope-search autocomplete="off" />
@@ -1764,10 +1822,16 @@ function lf_ai_studio_render_admin_page(string $mode = 'manifester'): void {
 
 	$stored_service_slugs = get_option('lf_ai_scope_service_slugs', []);
 	$stored_area_slugs = get_option('lf_ai_scope_service_area_slugs', []);
+	$stored_core_page_slugs = get_option('lf_ai_scope_core_page_slugs', []);
 	$stored_service_slugs = is_array($stored_service_slugs) ? array_values(array_filter(array_map('sanitize_title', $stored_service_slugs))) : [];
 	$stored_area_slugs = is_array($stored_area_slugs) ? array_values(array_filter(array_map('sanitize_title', $stored_area_slugs))) : [];
+	$stored_core_page_slugs = is_array($stored_core_page_slugs) ? array_values(array_filter(array_map('sanitize_title', $stored_core_page_slugs))) : [];
 	$stored_service_mode = lf_ai_studio_get_scope_slug_mode('service');
 	$stored_area_mode = lf_ai_studio_get_scope_slug_mode('area');
+	$stored_core_page_mode = lf_ai_studio_get_scope_slug_mode('core');
+	$core_page_scope_map = function_exists('lf_publish_schedule_core_scope_slug_map')
+		? lf_publish_schedule_core_scope_slug_map()
+		: [];
 	$services_for_picker = get_posts([
 		'post_type' => 'lf_service',
 		'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
@@ -2101,7 +2165,20 @@ function lf_ai_studio_render_admin_page(string $mode = 'manifester'): void {
 									<div class="lf-scope-narrow" id="lf-scope-areas-wrap" data-lf-scope-toggle="lf_ai_gen_service_areas">
 										<?php lf_ai_studio_render_scope_slug_checklist('lf-ai-scope-area-slugs', 'lf_ai_scope_service_area_slugs', $selected_area_slugs, $stored_area_slugs, __('Service areas', 'leadsforward-core'), $stored_area_mode, 'lf_service_area'); ?>
 									</div>
-									<?php lf_publish_schedule_render_page_types_panel(); ?>
+									<div class="lf-scope-narrow" id="lf-scope-core-wrap" data-lf-scope-toggle="lf_ai_gen_core_pages">
+										<?php
+										lf_ai_studio_render_scope_slug_checklist(
+											'lf-ai-scope-core-page-slugs',
+											'lf_ai_scope_core_page_slugs',
+											$core_page_scope_map,
+											$stored_core_page_slugs,
+											__('Core pages', 'leadsforward-core'),
+											$stored_core_page_mode,
+											'page',
+											__('Publish now, schedule, or keep draft per page. Reviews defaults to Publish now only when at least one testimonial exists (e.g. from Airtable).', 'leadsforward-core')
+										);
+										?>
+									</div>
 									<?php if (empty($scope_snap['enabled_labels'])) : ?>
 										<p class="lf-scope-panel__warn"><?php esc_html_e('Enable at least one page type.', 'leadsforward-core'); ?></p>
 									<?php endif; ?>
@@ -7362,31 +7439,45 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 	}
 
 	if ($scope['core_pages']) {
-		$about = get_page_by_path('about-us');
-		if ($about instanceof \WP_Post) {
-			$blueprint = lf_ai_studio_build_post_blueprint($about, 'about', 'about_overview', '');
+		$core_mode = lf_ai_studio_get_scope_slug_mode('core');
+		$core_picked = get_option('lf_ai_scope_core_page_slugs', []);
+		$core_picked = is_array($core_picked) ? array_values(array_filter(array_map('sanitize_title', $core_picked))) : [];
+
+		$scoped_core_pages = [
+			'about' => ['page' => 'about', 'intent' => 'about_overview', 'keyword' => ''],
+			'why-choose-us' => ['page' => 'why_choose_us', 'intent' => 'why_choose_us', 'keyword' => ''],
+			'contact' => ['page' => 'contact', 'intent' => 'contact', 'keyword' => ''],
+			'reviews' => ['page' => 'reviews', 'intent' => 'reviews', 'keyword' => ''],
+			'blog' => ['page' => 'blog', 'intent' => 'blog', 'keyword' => ''],
+			'services' => ['page' => 'services_overview', 'intent' => 'services_overview', 'keyword' => $overview_keyword],
+			'service-areas' => ['page' => 'service_areas_overview', 'intent' => 'service_areas_overview', 'keyword' => $overview_keyword],
+		];
+		foreach ($scoped_core_pages as $scope_slug => $meta) {
+			if (!lf_ai_studio_scope_slug_included((string) $scope_slug, $core_mode, $core_picked)) {
+				continue;
+			}
+			$page = lf_ai_studio_get_page_for_core_scope_slug((string) $scope_slug);
+			if (!$page instanceof \WP_Post) {
+				continue;
+			}
+			$blueprint = lf_ai_studio_build_post_blueprint(
+				$page,
+				(string) $meta['page'],
+				(string) $meta['intent'],
+				(string) $meta['keyword']
+			);
 			if (!empty($blueprint)) {
 				$blueprints[] = $blueprint;
 			}
 		}
 
-		$core_pages = [
-			'contact' => ['page' => 'contact', 'intent' => 'contact', 'keyword' => ''],
-			'reviews' => ['page' => 'reviews', 'intent' => 'reviews', 'keyword' => ''],
-			'blog' => ['page' => 'blog', 'intent' => 'blog', 'keyword' => ''],
-			'why-choose-us' => ['page' => 'why_choose_us', 'intent' => 'why_choose_us', 'keyword' => ''],
+		$utility_pages = [
 			'sitemap' => ['page' => 'sitemap', 'intent' => 'sitemap', 'keyword' => ''],
 			'thank-you' => ['page' => 'thank_you', 'intent' => 'thank_you', 'keyword' => ''],
 			'privacy-policy' => ['page' => 'privacy_policy', 'intent' => 'privacy_policy', 'keyword' => ''],
 			'terms-of-service' => ['page' => 'terms_of_service', 'intent' => 'terms_of_service', 'keyword' => ''],
 		];
-		if ($scope['services']) {
-			$core_pages['our-services'] = ['page' => 'services_overview', 'intent' => 'services_overview', 'keyword' => $overview_keyword];
-		}
-		if ($scope['service_areas']) {
-			$core_pages['service-areas'] = ['page' => 'service_areas_overview', 'intent' => 'service_areas_overview', 'keyword' => $overview_keyword];
-		}
-		foreach ($core_pages as $slug => $meta) {
+		foreach ($utility_pages as $slug => $meta) {
 			$page = get_page_by_path($slug);
 			if (!$page instanceof \WP_Post) {
 				continue;

@@ -329,6 +329,10 @@
 
   function publishScheduleDefaultTiming(scheduleKey) {
     var key = String(scheduleKey || '');
+    var defaults = (cfg && cfg.publishScheduleDefaults) ? cfg.publishScheduleDefaults : {};
+    if (defaults[key] && defaults[key].timing) {
+      return String(defaults[key].timing);
+    }
     if (key.indexOf('lf_service:') === 0 || key.indexOf('lf_service_area:') === 0) {
       return 'draft';
     }
@@ -512,7 +516,12 @@
     if (!listEl) return;
     var filterEl = listEl.closest('[data-lf-scope-filter]');
     var inputName = listEl.getAttribute('data-input-name') || 'lf_ai_scope_service_slugs';
-    var schedulePrefix = inputName.indexOf('area') !== -1 ? 'lf_service_area' : 'lf_service';
+    var schedulePrefix = 'lf_service';
+    if (inputName.indexOf('area') !== -1) {
+      schedulePrefix = 'lf_service_area';
+    } else if (inputName.indexOf('core_page') !== -1) {
+      schedulePrefix = 'page';
+    }
     var modeInput = filterEl ? filterEl.querySelector('[data-lf-scope-mode]') : null;
     var mode = (modeInput && modeInput.value) ? modeInput.value : (listEl.getAttribute('data-scope-mode') || 'all');
     var hasExisting = listEl.querySelectorAll('.lf-scope-filter__item').length > 0;
