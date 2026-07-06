@@ -156,6 +156,51 @@ function lf_fleet_dedupe_alias_pages(): array {
 }
 
 /**
+ * Utility/legal fleet pages that must always be published (never draft).
+ *
+ * @return list<string>
+ */
+function lf_fleet_always_publish_utility_page_slugs(): array {
+	return ['sitemap', 'privacy-policy', 'terms-of-service'];
+}
+
+/**
+ * Whether a fleet page slug is a utility page that must stay published.
+ */
+function lf_fleet_is_always_publish_utility_slug(string $slug): bool {
+	$slug = function_exists('lf_fleet_canonical_page_slug')
+		? lf_fleet_canonical_page_slug($slug)
+		: sanitize_title($slug);
+
+	return in_array($slug, lf_fleet_always_publish_utility_page_slugs(), true);
+}
+
+/**
+ * Publish utility/legal fleet pages if they exist but are not live.
+ *
+ * @return list<string> canonical slugs published
+ */
+function lf_fleet_publish_utility_pages(): array {
+	$published = [];
+	foreach (lf_fleet_always_publish_utility_page_slugs() as $slug) {
+		$page = lf_fleet_find_page_by_slug($slug);
+		if (!$page instanceof \WP_Post || $page->post_status === 'publish') {
+			continue;
+		}
+		wp_update_post([
+			'ID' => (int) $page->ID,
+			'post_status' => 'publish',
+		]);
+		$published[] = $slug;
+	}
+	if (function_exists('lf_ensure_legal_pages')) {
+		lf_ensure_legal_pages();
+	}
+
+	return $published;
+}
+
+/**
  * Publish fleet pages that should be live after initial build.
  *
  * @return list<string> slugs published

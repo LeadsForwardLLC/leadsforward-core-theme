@@ -51,15 +51,20 @@ function lf_leadgen_cross_niche_page_slugs(): array {
  * @return list<string>
  */
 function lf_wizard_default_publish_page_slugs(): array {
-	return [
-		'home',
-		'services',
-		'service-areas',
-		'about-us',
-		'why-choose-us',
-		'faq',
-		'contact',
-	];
+	return array_values(array_unique(array_merge(
+		[
+			'home',
+			'services',
+			'service-areas',
+			'about-us',
+			'why-choose-us',
+			'faq',
+			'contact',
+		],
+		function_exists('lf_fleet_always_publish_utility_page_slugs')
+			? lf_fleet_always_publish_utility_page_slugs()
+			: ['sitemap', 'privacy-policy', 'terms-of-service']
+	)));
 }
 
 /**

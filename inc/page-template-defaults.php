@@ -671,7 +671,7 @@ function lf_page_template_repair_core_pages_once(): void {
 	if (!is_admin() || !current_user_can('edit_theme_options')) {
 		return;
 	}
-	if (get_option('lf_page_template_repair_v4', '0') === '1') {
+	if (get_option('lf_page_template_repair_v4', '0') === '1' && get_option('lf_page_template_repair_v5', '0') === '1') {
 		return;
 	}
 	if (function_exists('lf_fleet_dedupe_alias_pages')) {
@@ -679,6 +679,9 @@ function lf_page_template_repair_core_pages_once(): void {
 	}
 	if (function_exists('lf_fleet_publish_build_pages')) {
 		lf_fleet_publish_build_pages();
+	}
+	if (function_exists('lf_fleet_publish_utility_pages')) {
+		lf_fleet_publish_utility_pages();
 	}
 	if (function_exists('lf_fleet_sync_reviews_page_status')) {
 		lf_fleet_sync_reviews_page_status();
@@ -703,6 +706,7 @@ function lf_page_template_repair_core_pages_once(): void {
 		}
 	}
 	update_option('lf_page_template_repair_v4', '1', true);
+	update_option('lf_page_template_repair_v5', '1', true);
 
 	if (function_exists('lf_header_menu_force_structure_repair')) {
 		delete_option('lf_header_menu_structure_version');
