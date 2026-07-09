@@ -1836,6 +1836,9 @@ function lf_header_menu_repair_nav_structure(int $menu_id, bool $apply_preferred
 	lf_nav_menu_repair_group_dropdown_children($menu_id);
 	lf_nav_menu_dedupe_duplicate_cta_items($menu_id);
 	lf_header_menu_dedupe_duplicate_about_menu_items($menu_id);
+	if (function_exists('lf_header_menu_dedupe_duplicate_more_menu_items')) {
+		lf_header_menu_dedupe_duplicate_more_menu_items($menu_id);
+	}
 	lf_header_menu_append_missing_core_top_levels($menu_id);
 	lf_nav_menu_dedupe_duplicate_cta_items($menu_id);
 

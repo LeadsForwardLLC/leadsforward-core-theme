@@ -45,6 +45,15 @@ expect(lf_google_maps_embed_src_is_allowed('https://www.google.com/maps?q=test&o
 expect(!lf_google_maps_embed_src_is_allowed('http://www.google.com/maps?q=x'), 'reject non-https');
 expect(!lf_google_maps_embed_src_is_allowed('https://evil.example/maps?q=x'), 'reject non-google host');
 
+$place_src = lf_google_maps_auto_embed_src([
+	'address' => '123 Main St, Tampa, FL',
+	'geo' => [],
+	'address_parts' => ['city' => '', 'state' => ''],
+	'place_id' => 'ChIJN1t_tDeuEmsRUsoyG83frY4',
+	'service_areas' => [],
+]);
+expect(str_contains($place_src, 'place_id:ChIJ'), 'place_id wins over street address');
+
 $addr_src = lf_google_maps_auto_embed_src([
 	'address' => '123 Main St, Tampa, FL',
 	'geo' => [],

@@ -692,7 +692,72 @@ function lf_header_menu_objects_apply_nav_rules(array $items, $args): array {
 }
 
 /**
- * Remove duplicate top-level About links from a stored menu (keeps about-us over legacy /about).
+ * Remove duplicate More dropdown children (same page ID or normalized title).
+ */
+function lf_header_menu_dedupe_duplicate_more_menu_items(int $menu_id): void {
+	if ($menu_id <= 0 || !function_exists('wp_get_nav_menu_items') || !function_exists('wp_delete_post')) {
+		return;
+	}
+
+	$items = wp_get_nav_menu_items($menu_id);
+	if (!is_array($items) || $items === []) {
+		return;
+	}
+
+	$more_parent_id = lf_header_menu_find_more_parent_id($items);
+	if ($more_parent_id <= 0) {
+		return;
+	}
+
+	$keepers_by_page = [];
+	$keepers_by_title = [];
+	$duplicates = [];
+	foreach ($items as $item) {
+		if (!$item instanceof \WP_Post || (int) ($item->menu_item_parent ?? 0) !== $more_parent_id) {
+			continue;
+		}
+		if (lf_header_menu_item_is_about($item)) {
+			$duplicates[] = (int) $item->ID;
+			continue;
+		}
+		$page = lf_header_menu_resolve_menu_item_page($item);
+		if ($page instanceof \WP_Post) {
+			$page_id = (int) $page->ID;
+			if (isset($keepers_by_page[$page_id])) {
+				$duplicates[] = (int) $item->ID;
+				continue;
+			}
+			$keepers_by_page[$page_id] = (int) $item->ID;
+			$norm = lf_header_menu_normalize_more_label((string) $page->post_title);
+			if ($norm !== '' && isset($keepers_by_title[$norm])) {
+				$duplicates[] = (int) $item->ID;
+				continue;
+			}
+			if ($norm !== '') {
+				$keepers_by_title[$norm] = (int) $item->ID;
+			}
+			continue;
+		}
+		$norm = lf_header_menu_normalize_more_label((string) ($item->title ?? ''));
+		if ($norm === '') {
+			continue;
+		}
+		if (isset($keepers_by_title[$norm])) {
+			$duplicates[] = (int) $item->ID;
+			continue;
+		}
+		$keepers_by_title[$norm] = (int) $item->ID;
+	}
+
+	foreach (array_unique($duplicates) as $dup_id) {
+		if ($dup_id > 0) {
+			wp_delete_post($dup_id, true);
+		}
+	}
+}
+
+/**
+ * Remove duplicate About links from a stored menu (keeps about-us over legacy /about).
  */
 function lf_header_menu_dedupe_duplicate_about_menu_items(int $menu_id): void {
 	if ($menu_id <= 0 || !function_exists('wp_get_nav_menu_items') || !function_exists('wp_delete_post')) {

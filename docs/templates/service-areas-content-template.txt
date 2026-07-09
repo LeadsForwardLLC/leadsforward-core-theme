@@ -14,4 +14,4 @@ Subheadline: Request a foundation inspection — we will confirm coverage and sc
 
 === SEO ===
 Title: Service Areas | {business}{city_line}
-Description: See where {business} provides foundation repair{city_line}. Local crews, fast scheduling, engineered solutions.
+Description: See where {business} provides service{city_line}. Browse neighborhoods we serve, confirm coverage, and schedule a local inspection.

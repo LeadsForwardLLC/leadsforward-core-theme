@@ -33,7 +33,14 @@ function lf_site_builder_run_from_manifest(array $manifest): array {
 	$scaffold = lf_ai_studio_scaffold_manifest($manifest);
 	if (empty($scaffold['success'])) {
 		$message = (string) ($scaffold['message'] ?? __('Manifest scaffold failed.', 'leadsforward-core'));
-		return ['ok' => false, 'error' => $message, 'scaffold' => $scaffold];
+		$home_page = function_exists('lf_fleet_find_page_by_slug')
+			? lf_fleet_find_page_by_slug('home')
+			: get_page_by_path('home', OBJECT, 'page');
+		if (!$home_page instanceof \WP_Post) {
+			return ['ok' => false, 'error' => $message, 'scaffold' => $scaffold];
+		}
+		$scaffold['success'] = true;
+		$scaffold['message'] = __('Setup completed with warnings.', 'leadsforward-core');
 	}
 
 	if (function_exists('lf_publish_schedule_seed_defaults_if_empty')) {

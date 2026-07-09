@@ -40,12 +40,37 @@ function lf_seo_default_intent_templates(): array {
 	];
 }
 
+/**
+ * Primary keyword for the service-areas hub page (distinct from homepage head term).
+ */
+function lf_seo_service_areas_hub_keyword(string $homepage_primary = ''): string {
+	unset($homepage_primary);
+	$city = function_exists('lf_seo_get_city_name') ? trim((string) lf_seo_get_city_name()) : '';
+	if ($city === '') {
+		$city = trim((string) get_option('lf_homepage_city', ''));
+	}
+	if ($city !== '') {
+		return trim($city . ' service areas');
+	}
+
+	return __('local service areas', 'leadsforward-core');
+}
+
 function lf_seo_detect_serp_intent(int $post_id, string $primary_keyword = ''): string {
 	$override = trim((string) get_post_meta($post_id, '_lf_seo_serp_intent', true));
 	if ($override !== '' && array_key_exists($override, lf_seo_serp_intent_options())) {
 		return $override;
 	}
 	$post_type = (string) get_post_type($post_id);
+	if ($post_type === 'page') {
+		$slug = (string) get_post_field('post_name', $post_id);
+		if ($slug === '' && (int) get_option('page_on_front') === $post_id) {
+			return 'transactional';
+		}
+		if (in_array($slug, ['service-areas', 'about-us', 'why-choose-us', 'contact', 'reviews', 'blog', 'faq', 'sitemap', 'services'], true)) {
+			return 'navigational';
+		}
+	}
 	if ($post_type === 'post') {
 		return 'informational';
 	}
@@ -246,10 +271,26 @@ function lf_seo_compose_structured_meta_description(int $post_id, string $primar
 
 	$text = '';
 	if ($intent === 'navigational') {
-		$text = sprintf(
-			__('Explore services, service areas, and contact options with %s. Fast answers and clear next steps.', 'leadsforward-core'),
-			$brand_short
-		);
+		$slug = $post_type === 'page' ? (string) get_post_field('post_name', $post_id) : '';
+		if ($slug === 'service-areas') {
+			$loc = $place !== '' ? $place : $city;
+			$text = sprintf(
+				__('See the cities and neighborhoods %1$s serves%2$s. Confirm coverage areas and schedule a local inspection.', 'leadsforward-core'),
+				$brand_short,
+				$loc !== '' ? sprintf(__(' near %s', 'leadsforward-core'), $loc) : ''
+			);
+		} elseif ($slug === 'services') {
+			$text = sprintf(
+				__('Browse every service %1$s offers%2$s. Compare options, timelines, and request an estimate.', 'leadsforward-core'),
+				$brand_short,
+				$city !== '' ? sprintf(__(' in %s', 'leadsforward-core'), $city) : ''
+			);
+		} else {
+			$text = sprintf(
+				__('Explore services, service areas, and contact options with %s. Fast answers and clear next steps.', 'leadsforward-core'),
+				$brand_short
+			);
+		}
 	} elseif ($intent === 'informational') {
 		$topic = $page_title !== '' ? lf_seo_title_case_display_phrase(lf_seo_truncate_heading_for_meta_title($page_title, 72)) : lf_seo_title_case_display_phrase($kernel);
 		$bite = lf_seo_structured_meta_excerpt_bite($post_id);
