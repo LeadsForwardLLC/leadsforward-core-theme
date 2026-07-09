@@ -156,6 +156,50 @@ function lf_fleet_dedupe_alias_pages(): array {
 }
 
 /**
+ * Trash duplicate core pages that share a fleet title but are not the canonical slug keeper.
+ *
+ * @return list<string> trashed post_name values
+ */
+function lf_fleet_dedupe_duplicate_core_pages(): array {
+	$core_slugs = function_exists('lf_wizard_required_page_slugs')
+		? lf_wizard_required_page_slugs()
+		: ['home', 'about-us', 'why-choose-us', 'services', 'service-areas', 'contact'];
+	$keepers = [];
+	foreach ($core_slugs as $slug) {
+		$page = lf_fleet_find_page_by_slug($slug);
+		if (!$page instanceof \WP_Post) {
+			continue;
+		}
+		$title_key = mb_strtolower(trim((string) $page->post_title), 'UTF-8');
+		if ($title_key === '') {
+			continue;
+		}
+		$keepers[$title_key] = (int) $page->ID;
+	}
+	if ($keepers === []) {
+		return [];
+	}
+
+	$trashed = [];
+	foreach (get_pages(['post_status' => 'publish,draft,private,pending']) as $page) {
+		if (!$page instanceof \WP_Post) {
+			continue;
+		}
+		$title_key = mb_strtolower(trim((string) $page->post_title), 'UTF-8');
+		if ($title_key === '' || !isset($keepers[$title_key])) {
+			continue;
+		}
+		if ((int) $page->ID === $keepers[$title_key]) {
+			continue;
+		}
+		wp_trash_post((int) $page->ID);
+		$trashed[] = (string) $page->post_name;
+	}
+
+	return $trashed;
+}
+
+/**
  * Utility/legal fleet pages that must always be published (never draft).
  *
  * @return list<string>

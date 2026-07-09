@@ -246,6 +246,35 @@ function lf_business_entity_service_areas(): array {
 	return $cached;
 }
 
+/**
+ * Normalize a stored Place ID or extract one from a GBP / Maps URL.
+ */
+function lf_business_entity_resolve_place_id(string $stored_place_id, string $gbp_url = ''): string {
+	$place_id = trim($stored_place_id);
+	if (stripos($place_id, 'place_id:') === 0) {
+		$place_id = trim(substr($place_id, strlen('place_id:')));
+	}
+	if ($place_id !== '' && strlen($place_id) >= 12 && preg_match('/\s/', $place_id) !== 1) {
+		return $place_id;
+	}
+
+	$gbp_url = trim($gbp_url);
+	if ($gbp_url === '') {
+		return '';
+	}
+	if (preg_match('/[?&](?:query_place_id|place_id)=([^&]+)/i', $gbp_url, $m) === 1) {
+		$candidate = trim(rawurldecode($m[1]));
+		if ($candidate !== '' && strlen($candidate) >= 12 && preg_match('/\s/', $candidate) !== 1) {
+			return $candidate;
+		}
+	}
+	if (preg_match('/(ChIJ[\w-]{10,})/', $gbp_url, $m) === 1) {
+		return $m[1];
+	}
+
+	return '';
+}
+
 function lf_business_entity_get(): array {
 	$get = function (string $key, $default = '') {
 		return function_exists('lf_get_business_info_value') ? lf_get_business_info_value($key, $default) : get_option('options_' . $key, $default);
@@ -286,7 +315,10 @@ function lf_business_entity_get(): array {
 	$category = (string) $get('lf_business_category', 'HomeAndConstructionBusiness');
 	$description = (string) $get('lf_business_short_description', '');
 	$primary_image_id = (int) $get('lf_business_primary_image', 0);
-	$place_id = (string) $get('lf_business_place_id', '');
+	$place_id = lf_business_entity_resolve_place_id(
+		(string) $get('lf_business_place_id', ''),
+		(string) $get('lf_business_gbp_url', '')
+	);
 	$place_name = (string) $get('lf_business_place_name', '');
 	$place_address = (string) $get('lf_business_place_address', '');
 	$map_embed = (string) $get('lf_business_map_embed', '');

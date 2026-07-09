@@ -440,18 +440,19 @@ function lf_seo_generate_meta_title_from_keywords(string $primary_keyword, int $
 		: trim((string) get_bloginfo('name'));
 	$brand = $brand !== '' ? $brand : trim((string) get_bloginfo('name'));
 
-	$core = ($city !== ''
-		&& !lf_seo_phrase_contains_place(mb_strtolower($disp, 'UTF-8'), mb_strtolower($city, 'UTF-8')))
-		? trim($disp . ' in ' . lf_seo_title_case_display_phrase($city))
-		: $disp;
+	$core = $disp;
 	$title_parts = [$core];
+	$city_lc = $city !== '' ? mb_strtolower($city, 'UTF-8') : '';
+	$core_lc = mb_strtolower($core, 'UTF-8');
+	$brand_lc = $brand !== '' ? mb_strtolower($brand, 'UTF-8') : '';
 	if ($city !== ''
-		&& !(function_exists('lf_seo_phrase_contains_place') && lf_seo_phrase_contains_place(mb_strtolower($disp, 'UTF-8'), mb_strtolower($city, 'UTF-8')))
+		&& !(function_exists('lf_seo_phrase_contains_place') && lf_seo_phrase_contains_place($core_lc, $city_lc))
 		&& stripos($core, $city) === false) {
-		$title_parts[] = $city;
+		$title_parts[] = lf_seo_title_case_display_phrase($city);
 	}
 	if ($brand !== ''
-		&& !(function_exists('lf_seo_phrase_contains_place') && lf_seo_phrase_contains_place(mb_strtolower($core, 'UTF-8'), mb_strtolower($brand, 'UTF-8')))) {
+		&& !(function_exists('lf_seo_phrase_contains_place') && lf_seo_phrase_contains_place($core_lc, $brand_lc))
+		&& stripos($core, $brand) === false) {
 		$title_parts[] = $brand;
 	}
 	$title = trim(implode(' | ', array_filter($title_parts)));

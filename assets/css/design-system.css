@@ -5394,7 +5394,6 @@ article a:not(.lf-btn):hover {
 	letter-spacing: -0.03em;
 	margin: 0;
 	color: #ffffff;
-	text-transform: uppercase;
 }
 
 .lf-block-hero--conversion.lf-block-hero--has-canvas-bg .lf-hero-conversion__subtitle {

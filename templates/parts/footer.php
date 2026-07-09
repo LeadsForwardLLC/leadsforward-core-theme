@@ -95,7 +95,7 @@ $show_footer_all_areas = count($all_areas) > count($areas);
 $company_links = [];
 foreach (['about-us', 'contact', 'reviews', 'blog'] as $slug) {
 	$page = get_page_by_path($slug);
-	if ($page instanceof \WP_Post) {
+	if ($page instanceof \WP_Post && $page->post_status === 'publish') {
 		$company_links[] = ['label' => get_the_title($page), 'url' => get_permalink($page)];
 	}
 }
@@ -118,7 +118,7 @@ if ($project_archive) {
 $resource_links = [];
 foreach (['sitemap', 'privacy-policy', 'terms-of-service'] as $slug) {
 	$page = get_page_by_path($slug);
-	if ($page instanceof \WP_Post) {
+	if ($page instanceof \WP_Post && $page->post_status === 'publish') {
 		$resource_links[] = ['label' => get_the_title($page), 'url' => get_permalink($page)];
 	}
 }

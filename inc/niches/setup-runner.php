@@ -31,6 +31,11 @@ function lf_run_setup(array $data): array {
 		return ['success' => false, 'message' => __('Invalid niche.', 'leadsforward-core'), 'created' => $log['created'], 'errors' => $log['errors']];
 	}
 
+	$biz_name_early = trim((string) ($data['business_name'] ?? ''));
+	if ($biz_name_early !== '') {
+		update_option('blogname', $biz_name_early);
+	}
+
 	// 1. Pages (idempotent): core + cross-niche + per-niche landing pages
 	$page_titles = array_merge(
 		lf_wizard_default_page_titles(),
@@ -83,6 +88,13 @@ function lf_run_setup(array $data): array {
 			'post_author'  => get_current_user_id(),
 		], true);
 		if (is_wp_error($pid)) {
+			$retry = function_exists('lf_fleet_find_page_by_slug')
+				? lf_fleet_find_page_by_slug($slug)
+				: get_page_by_path($slug, OBJECT, 'page');
+			if ($retry instanceof \WP_Post) {
+				$created_pages[$slug] = (int) $retry->ID;
+				continue;
+			}
 			$log['errors'][] = sprintf(__('Page %1$s: %2$s', 'leadsforward-core'), $title, $pid->get_error_message());
 			continue;
 		}
@@ -91,10 +103,29 @@ function lf_run_setup(array $data): array {
 		$log['created']['pages'][] = ['slug' => $slug, 'id' => $pid];
 	}
 
+	if (function_exists('lf_fleet_dedupe_alias_pages')) {
+		lf_fleet_dedupe_alias_pages();
+	}
+	if (function_exists('lf_fleet_dedupe_duplicate_core_pages')) {
+		lf_fleet_dedupe_duplicate_core_pages();
+	}
+	foreach ($slugs as $slug) {
+		$found = function_exists('lf_fleet_find_page_by_slug')
+			? lf_fleet_find_page_by_slug($slug)
+			: get_page_by_path($slug, OBJECT, 'page');
+		if ($found instanceof \WP_Post) {
+			$created_pages[$slug] = (int) $found->ID;
+		}
+	}
+
 	$home_id = $created_pages['home'] ?? null;
 	if ($home_id) {
 		update_option('show_on_front', 'page');
 		update_option('page_on_front', $home_id);
+		wp_update_post([
+			'ID' => (int) $home_id,
+			'post_name' => '',
+		]);
 	}
 
 	// 2. Service CPT entries (from niche or provided list; skip if slug exists)
@@ -1391,30 +1422,38 @@ function lf_wizard_seed_homepage_sections(array $section_order, string $options_
 }
 
 /**
+ * Return page ID only when the page is published (prevents ?page_id= menu/footer links).
+ */
+function lf_wizard_published_page_id($page_id): ?int {
+	if (!$page_id) {
+		return null;
+	}
+	$post = get_post((int) $page_id);
+	if (!$post instanceof \WP_Post || $post->post_status !== 'publish') {
+		return null;
+	}
+
+	return (int) $post->ID;
+}
+
+/**
  * Create Header and Footer menus; assign to theme locations; add items.
  */
 function lf_wizard_create_menus(array $created_pages, array $service_ids, array $area_ids, array $data = []): array {
 	$log = ['created' => [], 'errors' => []];
-	$home_id = $created_pages['home'] ?? null;
-	$about_id = $created_pages['about-us'] ?? null;
-	$why_choose_id = $created_pages['why-choose-us'] ?? null;
-	$contact_id = $created_pages['contact'] ?? null;
-	$reviews_id = $created_pages['reviews'] ?? null;
-	$blog_id = $created_pages['blog'] ?? null;
-	$financing_id = $created_pages['financing'] ?? null;
-	// Never link draft/unpublished pages in menus (prevents 404 menu items).
-	if ($financing_id) {
-		$financing_post = get_post((int) $financing_id);
-		if (!$financing_post instanceof \WP_Post || $financing_post->post_status !== 'publish') {
-			$financing_id = null;
-		}
-	}
-	$faq_page_id = $created_pages['faq'] ?? null;
-	$sitemap_id = $created_pages['sitemap'] ?? null;
-	$privacy_id = $created_pages['privacy-policy'] ?? null;
-	$terms_id = $created_pages['terms-of-service'] ?? null;
-	$services_page_id = $created_pages['services'] ?? $created_pages['our-services'] ?? null;
-	$areas_page_id = $created_pages['service-areas'] ?? null;
+	$home_id = lf_wizard_published_page_id($created_pages['home'] ?? null);
+	$about_id = lf_wizard_published_page_id($created_pages['about-us'] ?? null);
+	$why_choose_id = lf_wizard_published_page_id($created_pages['why-choose-us'] ?? null);
+	$contact_id = lf_wizard_published_page_id($created_pages['contact'] ?? null);
+	$reviews_id = lf_wizard_published_page_id($created_pages['reviews'] ?? null);
+	$blog_id = lf_wizard_published_page_id($created_pages['blog'] ?? null);
+	$financing_id = lf_wizard_published_page_id($created_pages['financing'] ?? null);
+	$faq_page_id = lf_wizard_published_page_id($created_pages['faq'] ?? null);
+	$sitemap_id = lf_wizard_published_page_id($created_pages['sitemap'] ?? null);
+	$privacy_id = lf_wizard_published_page_id($created_pages['privacy-policy'] ?? null);
+	$terms_id = lf_wizard_published_page_id($created_pages['terms-of-service'] ?? null);
+	$services_page_id = lf_wizard_published_page_id($created_pages['services'] ?? $created_pages['our-services'] ?? null);
+	$areas_page_id = lf_wizard_published_page_id($created_pages['service-areas'] ?? null);
 	$has_projects = false;
 	if (post_type_exists('lf_project')) {
 		$project_ids = get_posts([
@@ -1606,6 +1645,10 @@ function lf_wizard_create_menus(array $created_pages, array $service_ids, array 
 
 	$header_menu_id = lf_wizard_ensure_menu('Header Menu', 'header_menu', $header_items);
 	$footer_menu_id = lf_wizard_ensure_menu('Footer Menu', 'footer_menu', $footer_items);
+	if ($header_menu_id && function_exists('lf_header_menu_dedupe_duplicate_more_menu_items')) {
+		lf_header_menu_dedupe_duplicate_more_menu_items((int) $header_menu_id);
+		lf_header_menu_dedupe_duplicate_about_menu_items((int) $header_menu_id);
+	}
 	if ($header_menu_id) $log['created'][] = 'header_menu';
 	if ($footer_menu_id) $log['created'][] = 'footer_menu';
 	return $log;
@@ -1641,6 +1684,10 @@ function lf_wizard_ensure_menu(string $menu_name, string $location, array $items
 			$classes = is_array($item['classes']) ? implode(' ', $item['classes']) : (string) $item['classes'];
 		}
 		if ($item['type'] === 'page' && !empty($item['object_id'])) {
+			$page = get_post((int) $item['object_id']);
+			if (!$page instanceof \WP_Post || $page->post_status !== 'publish') {
+				continue;
+			}
 			$parent_id = wp_update_nav_menu_item($menu_id, 0, [
 				'menu-item-title'     => get_the_title($item['object_id']),
 				'menu-item-url'       => get_permalink($item['object_id']),
@@ -1694,6 +1741,10 @@ function lf_wizard_ensure_menu(string $menu_name, string $location, array $items
 					continue;
 				}
 				if ($child_type === 'page' && !empty($child['object_id'])) {
+					$child_page = get_post((int) $child['object_id']);
+					if (!$child_page instanceof \WP_Post || $child_page->post_status !== 'publish') {
+						continue;
+					}
 					wp_update_nav_menu_item($menu_id, 0, [
 						'menu-item-title'     => $child['title'] ?? get_the_title($child['object_id']),
 						'menu-item-url'       => get_permalink($child['object_id']),

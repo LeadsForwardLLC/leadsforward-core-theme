@@ -4921,10 +4921,16 @@ function lf_ai_studio_apply_manifest_to_site_options(array $manifest, ?array $se
 		'primary' => (string) ($manifest['homepage']['primary_keyword'] ?? ''),
 		'secondary' => $secondary_kw,
 	], true);
-	$home = get_page_by_path('home', OBJECT, 'page');
+	$home = function_exists('lf_fleet_find_page_by_slug')
+		? lf_fleet_find_page_by_slug('home')
+		: get_page_by_path('home', OBJECT, 'page');
 	if ($home instanceof \WP_Post) {
 		update_option('show_on_front', 'page');
 		update_option('page_on_front', $home->ID);
+		wp_update_post([
+			'ID' => (int) $home->ID,
+			'post_name' => '',
+		]);
 	}
 }
 
@@ -5020,7 +5026,13 @@ function lf_ai_studio_scaffold_manifest(array $manifest): array {
 	lf_ai_studio_ensure_header_menu_more_children();
 	lf_ai_studio_ensure_header_menu_primary_pages();
 	lf_ai_studio_apply_manifest_to_site_options($manifest, $data);
-	$home = get_page_by_path('home', OBJECT, 'page');
+	if (is_array($result) && empty($result['success']) && function_exists('lf_fleet_find_page_by_slug')) {
+		$home_page = lf_fleet_find_page_by_slug('home');
+		if ($home_page instanceof \WP_Post) {
+			$result['success'] = true;
+			$result['message'] = __('Setup completed with warnings.', 'leadsforward-core');
+		}
+	}
 	$scaffold_success = is_array($result) && !empty($result['success']);
 	if ($scaffold_success) {
 		$kw_state = lf_ai_studio_apply_manifest_seo_baseline($manifest);
@@ -5164,20 +5176,32 @@ function lf_ai_studio_ensure_header_menu_more_children(): void {
 	if (!$more_item) {
 		return;
 	}
+	$existing_page_ids = [];
 	$existing_children = [];
 	foreach ($items as $item) {
 		if ((int) $item->menu_item_parent === (int) $more_item->ID) {
+			$page_id = (int) ($item->object_id ?? 0);
+			if ($page_id > 0 && (string) ($item->object ?? '') === 'page') {
+				$existing_page_ids[$page_id] = true;
+			}
 			$existing_children[] = (string) $item->url;
 		}
 	}
-	$slugs = ['about-us', 'blog', 'contact'];
-	foreach ($slugs as $slug) {
-		$page = get_page_by_path($slug);
+	foreach (lf_header_menu_more_child_page_slugs() as $slug) {
+		if (in_array($slug, lf_header_menu_about_page_slugs(), true)) {
+			continue;
+		}
+		$page = function_exists('lf_header_menu_published_page_for_slug')
+			? lf_header_menu_published_page_for_slug($slug)
+			: null;
 		if (!$page instanceof \WP_Post) {
 			continue;
 		}
+		if (isset($existing_page_ids[(int) $page->ID])) {
+			continue;
+		}
 		$url = get_permalink($page->ID);
-		if ($url && in_array($url, $existing_children, true)) {
+		if (!$url) {
 			continue;
 		}
 		wp_update_nav_menu_item($menu_id, 0, [
@@ -5199,6 +5223,9 @@ function lf_ai_studio_ensure_header_menu_more_children(): void {
 			'menu-item-status' => 'publish',
 			'menu-item-parent-id' => (int) $more_item->ID,
 		]);
+	}
+	if (function_exists('lf_header_menu_dedupe_duplicate_more_menu_items')) {
+		lf_header_menu_dedupe_duplicate_more_menu_items((int) $menu_id);
 	}
 }
 
@@ -7216,6 +7243,9 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 	} else {
 		$overview_keyword = (string) ($homepage_payload['keywords']['primary'] ?? '');
 	}
+	$areas_hub_keyword = function_exists('lf_seo_service_areas_hub_keyword')
+		? lf_seo_service_areas_hub_keyword($overview_keyword)
+		: '';
 
 	$service_keyword_map = $use_manifest ? lf_ai_studio_manifest_keyword_map($manifest, 'services') : [];
 	$area_keyword_map = $use_manifest ? lf_ai_studio_manifest_keyword_map($manifest, 'service_areas') : [];
@@ -7450,7 +7480,7 @@ function lf_ai_studio_build_full_site_payload(bool $respect_manifest_scope = tru
 			'reviews' => ['page' => 'reviews', 'intent' => 'reviews', 'keyword' => ''],
 			'blog' => ['page' => 'blog', 'intent' => 'blog', 'keyword' => ''],
 			'services' => ['page' => 'services_overview', 'intent' => 'services_overview', 'keyword' => $overview_keyword],
-			'service-areas' => ['page' => 'service_areas_overview', 'intent' => 'service_areas_overview', 'keyword' => $overview_keyword],
+			'service-areas' => ['page' => 'service_areas_overview', 'intent' => 'service_areas_overview', 'keyword' => $areas_hub_keyword],
 		];
 		foreach ($scoped_core_pages as $scope_slug => $meta) {
 			if (!lf_ai_studio_scope_slug_included((string) $scope_slug, $core_mode, $core_picked)) {
