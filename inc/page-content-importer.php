@@ -817,6 +817,10 @@ function lf_pci_normalize_raw(string $raw): string {
 		return '=== ' . strtoupper(trim($m[1])) . ' ===';
 	}, $raw) ?? $raw;
 
+	// Writer guide lines (>> …) are for AI/human reference only — never import.
+	$raw = preg_replace('/^>>.*$/m', '', $raw) ?? $raw;
+	$raw = preg_replace("/\n{3,}/", "\n\n", $raw) ?? $raw;
+
 	return lf_pci_normalize_section_headers(trim($raw));
 }
 
@@ -2358,19 +2362,140 @@ function lf_pci_template_keyword_targets_block(array $ctx): string {
 	$primary = trim((string) ($ctx['primary_keyword'] ?? ''));
 	$secondary = trim((string) ($ctx['secondary_keywords'] ?? ''));
 	$intent = trim((string) ($ctx['serp_intent'] ?? 'transactional'));
-	if ($primary === '' && $secondary === '') {
-		return "KEYWORD TARGETS\nNot assigned yet. Set Primary Target Keyword on the post (or run Airtable Sitemap Sync / manifest assignment), then re-download this template.\n";
-	}
-	$lines = ["KEYWORD TARGETS"];
+	$lines = ['KEYWORD TARGETS'];
 	if ($primary !== '') {
 		$lines[] = 'Primary: ' . $primary;
+	} else {
+		$lines[] = 'Primary: (assign on the post or via Airtable sync, then re-download this template)';
 	}
 	if ($secondary !== '') {
 		$lines[] = 'Secondary: ' . $secondary;
 	}
 	$lines[] = 'SERP intent: ' . ($intent !== '' ? $intent : 'transactional');
-	$lines[] = 'Placement: Work the primary keyword into the hero headline (once, naturally), the first service-details paragraph, and the SEO title. Use secondary terms in subheads and body — never stuff or repeat awkwardly.';
+	$lines[] = '';
+	$lines[] = 'Placement rules (hard):';
+	$lines[] = '- Primary keyword in the first major section Heading (first H2 on the page).';
+	$lines[] = '- Primary keyword in the first or second sentence (hero Subheadline or first Intro).';
+	$lines[] = '- Primary keyword in one additional Heading — vary placement page to page.';
+	$lines[] = '- Spread secondary terms naturally in body copy; meet minimum density without stuffing.';
+	$lines[] = '- Use state name and abbreviation where appropriate for {city}.';
+	$lines[] = '- Do not start every Heading with the keyword.';
+	$lines[] = '- Company name ({business}): 2–3 times max on the full page.';
 	return implode("\n", $lines) . "\n";
+}
+
+/**
+ * Field length and list-count rules for writers and AI tools.
+ */
+function lf_pci_writer_field_specs_block(): string {
+	return <<<'SPECS'
+FIELD LENGTHS & LIST COUNTS
+Headline (H1): 6–12 words (~40–70 characters). One primary keyword, naturally. Specific to this URL.
+Subheadline: 1–2 sentences, 18–35 words. Real customer concern + how you help.
+Eyebrow: 3–6 words max (optional). Short trust cue — not a second headline.
+Chip bullets / checklist items: 4–6 items when a list is shown; 3–6 words each; parallel grammar.
+Section Heading (H2): 4–10 words. Unique on the page — not interchangeable with other sections.
+Section Intro: 1–2 sentences, 20–40 words. Sets up the section; no repetition from other sections.
+Section Body: 2–4 sentences, 60–120 words. Conversational contractor explaining to a homeowner.
+Benefits Items: 3–4 lines as Title || body. Title 3–6 words; body one sentence, 12–25 words.
+Service card descriptions (Cards:): one sentence each, 15–25 words; unique per service.
+CTA Headline: 6–12 words; must differ from every other CTA on the same page.
+CTA Subheadline: one sentence, 12–22 words; action-oriented, not generic.
+SEO Title: 50–60 characters (include primary keyword + {business} or {city}).
+SEO Description: 145–160 characters; benefit + location + soft CTA.
+SPECS;
+}
+
+/**
+ * Editorial quality rules from the content team.
+ */
+function lf_pci_writer_quality_block(): string {
+	return <<<'QUALITY'
+CONTENT QUALITY (non-negotiable)
+- Write like a knowledgeable contractor talking to a customer — not a marketer, blogger, or AI.
+- Every section must answer a different reader question. If two sections say the same thing, combine or rewrite.
+- Make each H2 unique and specific to this service and location — not reusable on another page.
+- Add new value in each section; do not paraphrase the same idea twice.
+- Avoid templated AI phrases ("In today's world", "When it comes to", "Look no further", "comprehensive solutions").
+- Vary CTA wording across the page — do not repeat the same CTA headline twice.
+- Read only the H1, all H2s, and CTAs: if they could fit any contractor site, rewrite for specificity.
+- Read the full page aloud before submitting — it must flow naturally for a real homeowner.
+QUALITY;
+}
+
+/**
+ * Inline hints inserted before empty fields in downloadable blank templates.
+ *
+ * @return array<string, string> field key prefix => hint line
+ */
+function lf_pci_writer_inline_field_hints(): array {
+	return [
+		'Headline:' => '>> H1. 6–12 words. Primary keyword once, naturally. Specific to this page.',
+		'Subheadline:' => '>> 1–2 sentences, 18–35 words. Customer concern + reassurance.',
+		'Eyebrow:' => '>> Optional. 3–6 words max. Short trust cue only.',
+		'Heading:' => '>> H2. 4–10 words. Unique on this page; first H2 should include primary keyword.',
+		'Intro:' => '>> 1–2 sentences, 20–40 words. New angle — do not repeat other sections.',
+		'Body:' => '>> 2–4 sentences, 60–120 words. Contractor voice; explain why it matters.',
+		'Chip bullets:' => '>> 3–4 items, 2–5 words each, one per line with a leading dash.',
+		'Checklist:' => '>> 4–6 items, 4–10 words each, parallel structure, one per line.',
+		'Items:' => '>> 3–4 benefit lines: Title || one-sentence body (one per line).',
+		'Cards:' => '>> One line per service: service-slug | unique 15–25 word description.',
+		'Financing text:' => '>> One short sentence about financing (optional).',
+		'Title:' => '>> SEO title. 50–60 characters with primary keyword.',
+		'Description:' => '>> Meta description. 145–160 characters; benefit + location.',
+	];
+}
+
+/**
+ * Insert >> hint lines before empty Key: fields in blank templates (download only).
+ */
+function lf_pci_apply_writer_field_hints(string $body): string {
+	$hints = lf_pci_writer_inline_field_hints();
+	if ($hints === []) {
+		return $body;
+	}
+	$out = [];
+	foreach (explode("\n", $body) as $line) {
+		$trimmed = trim($line);
+		$matched_hint = '';
+		foreach ($hints as $key => $hint) {
+			if (preg_match('/^' . preg_quote($key, '/') . '\s*$/i', $trimmed)) {
+				$matched_hint = $hint;
+				break;
+			}
+		}
+		if ($matched_hint !== '' && ($out === [] || !str_starts_with((string) end($out), '>>'))) {
+			$out[] = $matched_hint;
+		}
+		$out[] = $line;
+	}
+	return implode("\n", $out);
+}
+
+/**
+ * Sample user message for ChatGPT / Claude (paste below the system prompt).
+ */
+function lf_pci_ai_user_message_sample(string $page_label = 'this page'): string {
+	$label = trim($page_label) !== '' ? trim($page_label) : 'this page';
+
+	return <<<MSG
+Fill in every writer-editable field in the template below for {$label}.
+
+Before you write:
+1. Follow every rule in the system prompt (voice, keyword placement, field lengths, list counts).
+2. Keep all === SECTION === headers and Key: labels exactly as written.
+3. Put one Key: value per line — never merge Headline, Intro, Body, or Items onto one line.
+4. Leave {business}, {city}, and {city_line} tokens where the template shows them (they auto-fill on import).
+5. Do not add, remove, or rename sections.
+6. Each section must answer a different homeowner question — no repeated ideas.
+7. When finished, read the full page aloud. Rewrite anything that sounds generic or AI-generated.
+
+Output the completed template only — same structure, filled values, ready to save as .docx.
+
+--- TEMPLATE START ---
+[paste the downloaded .docx / template text here]
+--- TEMPLATE END ---
+MSG;
 }
 
 /**
@@ -2380,41 +2505,51 @@ function lf_pci_template_keyword_targets_block(array $ctx): string {
  */
 function lf_pci_ai_prompt_body(array $keyword_ctx = []): string {
 	$kw_block = lf_pci_template_keyword_targets_block($keyword_ctx);
+	$specs = lf_pci_writer_field_specs_block();
+	$quality = lf_pci_writer_quality_block();
 
 	return <<<PROMPT
 ROLE
-You are a senior local SEO copywriter for contractor and home-service companies ({business} in {city}). Write highly engaging, conversion-focused, SEO-smart copy that sounds human — never generic AI filler.
+You are a senior local SEO copywriter for contractor and home-service companies ({business} in {city}). Write conversion-focused, SEO-smart copy that sounds human — never generic AI filler. The reader should think: "This sounds like what I'm dealing with, and this is the company that can help."
 
 AUDIENCE & GOAL
-Homeowners who need trust fast: licensed crews, clear process, honest pricing, local proof. Every section should reduce anxiety and drive one action (call, form, inspection).
+Homeowners comparing contractors. They need trust, clarity, and a reason to call or request an inspection. Every section should reduce anxiety and move them one step closer to action.
 
 VOICE
-Confident, calm, specific. Short sentences. Real trade language. No hype, no "In today's world", no em-dash spam, no bullet-only pages.
+Confident, calm, specific. Short sentences. Real trade language. Explain what happens on the job and why it matters. No hype, no term-paper tone, no bullet-only pages that read like a feature list.
 
-{$kw_block}FORMAT RULES
-- Never delete the === PAGE === block (Slug: for site pages, or Template: service + Slug: for service/area posts). The importer needs it — or name finished files like about-us-filled.docx.
+{$kw_block}
+{$specs}
+
+{$quality}
+
+TECHNICAL FORMAT (importer will reject messy docs)
+- Never delete the === PAGE === block (Slug: for site pages, or Template: service + Slug: for service/area posts). Or name finished files like about-us-filled.docx.
 - Keep every === SECTION === header on its own line.
-- Put one Key: value per line — never merge Headline, Subheadline, Intro, Body, or Items onto a single line.
+- One Key: value per line — never merge fields onto a single line.
 - Benefits: Title || body on one line per item.
-- Do not add === PROCESS === or === FAQ === sections — those are managed in LeadsForward → Niche Content Library after site build.
-- Do not add === TRUST BAR === — stats and badges are global site settings (one edit updates every page).
-- Do not add Primary CTA / Secondary CTA labels — button text stays consistent in the theme.
-- Homepage hero: Headline, Subheadline, short Eyebrow (optional), and Chip bullets only — no proof-card fields.
+- Lines starting with >> are writer hints only — do not copy them into filled content.
+- Do not add === PROCESS === or === FAQ === (Niche Content Library after site build).
+- Do not add === TRUST BAR === (global site settings).
+- Do not add Primary CTA / Secondary CTA labels (theme button text is consistent).
+- Homepage hero: Headline, Subheadline, short Eyebrow, Chip bullets only — no proof-card fields.
+
+SELF-CHECK BEFORE YOU FINISH
+1. H1 + all H2s + CTAs: specific to this service/location, not generic.
+2. Primary keyword placement follows the hard rules above.
+3. No section repeats another section's main idea.
+4. List counts match the field specs (not 2 items when 4–6 are expected).
+5. SEO Title and Description are within character limits.
+6. {business} appears at most 2–3 times on the full page.
 
 WORKFLOW
-1. Download the .docx template for one page (or the full ZIP).
-2. Paste this entire AI Prompt as the system/custom instructions in your AI tool.
-3. Paste the template body and ask the AI to fill every writer-editable field for that URL.
-4. Export from Google Docs as Microsoft Word (.docx) — not PDF.
-5. Upload finished .docx files at LeadsForward → Import Page Content.
-
-BATCH TIPS
-- Work in groups (~10 site pages, then services, then service areas).
-- Keep the original === SECTION === headers exactly as written; only fill values below each Key: line.
-- Use {business}, {city}, and {city_line} tokens where the template shows them — they auto-fill on import.
+1. Copy this entire prompt into your AI tool as the system / custom instructions.
+2. Paste the downloaded template in the user message (see "Sample user message" in WordPress admin).
+3. Ask the AI to fill every field, then export as .docx (not PDF).
+4. Upload at LeadsForward → Import Page Content.
 
 Tokens auto-filled on import: {business}, {city}, {city_line}, {niche}, {phone}, {primary_keyword}
-Process + FAQ: managed in LeadsForward → Niche Content Library (not in writer templates).
+Process + FAQ: Niche Content Library (not in writer templates).
 Trust bar + CTA button labels: theme-controlled (not in writer templates).
 PROMPT;
 }
@@ -2437,7 +2572,7 @@ function lf_pci_ai_prompt_text(?array $vars = null, array $keyword_ctx = []): st
  * @param array{primary_keyword?: string, secondary_keywords?: string, serp_intent?: string} $keyword_ctx
  */
 function lf_pci_template_token_legend(array $keyword_ctx = []): string {
-	return "=== WRITER NOTES ===\n(Removed automatically on import — paste this entire block into your AI as the system brief.)\n\n"
+	return "=== WRITER NOTES ===\n(Removed automatically on import. Paste this block into ChatGPT/Claude as the SYSTEM prompt — not the user message.)\n\n"
 		. lf_pci_ai_prompt_body($keyword_ctx);
 }
 
@@ -2449,6 +2584,10 @@ function lf_pci_prepare_template_body(string $body, bool $include_legend = true,
 	$body = trim($body);
 	$vars = $vars ?? array_merge(lf_pci_template_vars(), $keyword_ctx);
 	$body = lf_pci_fill_tokens($body, $vars);
+	if ($include_legend) {
+		$body = lf_pci_apply_writer_field_hints($body);
+		$body = lf_pci_format_writer_template_text($body);
+	}
 	if (!$include_legend) {
 		return $body;
 	}

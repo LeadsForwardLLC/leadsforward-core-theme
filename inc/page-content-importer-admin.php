@@ -288,59 +288,89 @@ function lf_pci_admin_render_ai_prompt(array $vars): void {
 	$prompt = function_exists('lf_pci_ai_prompt_text')
 		? lf_pci_ai_prompt_text($vars, $keyword_ctx)
 		: '';
+	$user_message = function_exists('lf_pci_ai_user_message_sample')
+		? lf_pci_ai_user_message_sample(__('this page', 'leadsforward-core'))
+		: '';
 	if ($prompt === '') {
 		return;
 	}
 	?>
 	<div class="lf-pci-ai-prompt" style="margin:1rem 0 1.5rem;padding:1.25rem;background:#f0f6fc;border:1px solid #72aee6;border-radius:4px;max-width:960px;">
-		<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
-			<h2 style="margin:0;"><?php esc_html_e('AI Prompt', 'leadsforward-core'); ?></h2>
+		<h2 style="margin:0 0 0.75rem;"><?php esc_html_e('Writer AI workflow', 'leadsforward-core'); ?></h2>
+		<ol class="description" style="margin:0 0 1rem;padding-left:1.25rem;max-width:52rem;">
+			<li><?php esc_html_e('Download a .docx template (or the full ZIP) below.', 'leadsforward-core'); ?></li>
+			<li><?php esc_html_e('Copy the System prompt into ChatGPT or Claude → Custom instructions / Project instructions.', 'leadsforward-core'); ?></li>
+			<li><?php esc_html_e('Copy the User message, paste your template where indicated, and send.', 'leadsforward-core'); ?></li>
+			<li><?php esc_html_e('Export the filled doc as .docx and upload here (batch upload supported).', 'leadsforward-core'); ?></li>
+		</ol>
+
+		<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+			<h3 style="margin:0;"><?php esc_html_e('1. System prompt', 'leadsforward-core'); ?></h3>
 			<button type="button" class="button button-secondary" id="lf-pci-copy-ai-prompt">
-				<?php esc_html_e('Copy AI Prompt', 'leadsforward-core'); ?>
+				<?php esc_html_e('Copy system prompt', 'leadsforward-core'); ?>
 			</button>
 		</div>
 		<p class="description" style="margin-top:0;">
-			<?php esc_html_e('Copy this entire prompt into your AI tool (custom instructions / system prompt), then paste a downloaded template and ask it to fill every section. The same brief is included at the top of each downloadable .docx as WRITER NOTES.', 'leadsforward-core'); ?>
+			<?php esc_html_e('Same brief is prepended to each downloadable .docx as WRITER NOTES (stripped on import). Includes keyword rules, field lengths, list counts, and content-team quality standards.', 'leadsforward-core'); ?>
 		</p>
-		<textarea id="lf-pci-ai-prompt-text" readonly rows="22" class="large-text code" style="font-family:monospace;width:100%;max-width:100%;background:#fff;"><?php echo esc_textarea($prompt); ?></textarea>
+		<textarea id="lf-pci-ai-prompt-text" readonly rows="24" class="large-text code" style="font-family:monospace;width:100%;max-width:100%;background:#fff;"><?php echo esc_textarea($prompt); ?></textarea>
+
+		<?php if ($user_message !== '') : ?>
+		<div style="margin-top:1.25rem;">
+			<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+				<h3 style="margin:0;"><?php esc_html_e('2. Sample user message', 'leadsforward-core'); ?></h3>
+				<button type="button" class="button button-secondary" id="lf-pci-copy-ai-user-msg">
+					<?php esc_html_e('Copy user message', 'leadsforward-core'); ?>
+				</button>
+			</div>
+			<p class="description" style="margin-top:0;">
+				<?php esc_html_e('Paste into the chat after the system prompt. Replace the template placeholder with your downloaded .docx text. Customize the page name if helpful.', 'leadsforward-core'); ?>
+			</p>
+			<textarea id="lf-pci-ai-user-msg-text" readonly rows="14" class="large-text code" style="font-family:monospace;width:100%;max-width:100%;background:#fff;"><?php echo esc_textarea($user_message); ?></textarea>
+		</div>
+		<?php endif; ?>
 	</div>
 	<script>
 	(function () {
-		var btn = document.getElementById('lf-pci-copy-ai-prompt');
-		var field = document.getElementById('lf-pci-ai-prompt-text');
-		if (!btn || !field) {
-			return;
-		}
-		btn.addEventListener('click', function () {
-			var text = field.value || '';
-			if (!text) {
+		function bindCopy(btnId, fieldId, copiedLabel) {
+			var btn = document.getElementById(btnId);
+			var field = document.getElementById(fieldId);
+			if (!btn || !field) {
 				return;
 			}
-			function copied() {
-				var original = btn.textContent;
-				btn.textContent = <?php echo wp_json_encode(__('Copied!', 'leadsforward-core')); ?>;
-				window.setTimeout(function () {
-					btn.textContent = original;
-				}, 2000);
-			}
-			if (navigator.clipboard && navigator.clipboard.writeText) {
-				navigator.clipboard.writeText(text).then(copied).catch(function () {
-					field.focus();
-					field.select();
+			btn.addEventListener('click', function () {
+				var text = field.value || '';
+				if (!text) {
+					return;
+				}
+				function copied() {
+					var original = btn.textContent;
+					btn.textContent = copiedLabel;
+					window.setTimeout(function () {
+						btn.textContent = original;
+					}, 2000);
+				}
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					navigator.clipboard.writeText(text).then(copied).catch(function () {
+						field.focus();
+						field.select();
+						document.execCommand('copy');
+						copied();
+					});
+					return;
+				}
+				field.focus();
+				field.select();
+				try {
 					document.execCommand('copy');
 					copied();
-				});
-				return;
-			}
-			field.focus();
-			field.select();
-			try {
-				document.execCommand('copy');
-				copied();
-			} catch (e) {
-				window.prompt(<?php echo wp_json_encode(__('Copy this AI Prompt:', 'leadsforward-core')); ?>, text);
-			}
-		});
+				} catch (e) {
+					window.prompt(<?php echo wp_json_encode(__('Copy:', 'leadsforward-core')); ?>, text);
+				}
+			});
+		}
+		bindCopy('lf-pci-copy-ai-prompt', 'lf-pci-ai-prompt-text', <?php echo wp_json_encode(__('Copied!', 'leadsforward-core')); ?>);
+		bindCopy('lf-pci-copy-ai-user-msg', 'lf-pci-ai-user-msg-text', <?php echo wp_json_encode(__('Copied!', 'leadsforward-core')); ?>);
 	})();
 	</script>
 	<?php

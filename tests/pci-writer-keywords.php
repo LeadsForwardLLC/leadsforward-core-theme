@@ -12,5 +12,8 @@ function expect($cond, $msg) {
 expect(strpos($pci, 'function lf_pci_writer_keyword_context') !== false, 'writer keyword context helper exists');
 expect(strpos($pci, 'KEYWORD TARGETS') !== false, 'template includes keyword targets block');
 expect(strpos($pci, 'senior local SEO copywriter') !== false, 'template includes AI writer role prompt');
+expect(strpos($pci, 'function lf_pci_ai_user_message_sample') !== false, 'user message sample helper exists');
+expect(strpos($pci, 'CONTENT QUALITY') !== false, 'content quality block in prompt');
+expect(strpos($pci, 'function lf_pci_apply_writer_field_hints') !== false, 'inline field hints helper exists');
 expect(strpos($pci, '{primary_keyword}') !== false, 'primary_keyword token documented');
 expect(strpos($seo, 'Writer template') !== false, 'SEO keywords tab links writer templates');
