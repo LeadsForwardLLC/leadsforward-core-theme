@@ -4,8 +4,22 @@ body.lf-fluent-quote-open {
 	overflow: hidden;
 }
 
+.lf-fluent-quote-modal.is-open {
+	z-index: 10050;
+}
+
+.lf-fluent-quote-modal__overlay {
+	z-index: 0;
+}
+
 .lf-fluent-quote-modal__dialog {
+	position: relative;
+	z-index: 1;
 	background: var(--lf-surface-light, #fff);
+	display: flex;
+	flex-direction: column;
+	/* Keep actions reachable above iOS home indicator */
+	padding-bottom: 0;
 }
 
 .lf-fluent-quote-modal__scroll {
@@ -16,11 +30,14 @@ body.lf-fluent-quote-open {
 	max-width: 720px;
 	width: 100%;
 	margin: 0 auto;
-	padding-top: 0.5rem;
+	padding: 0.5rem clamp(1.25rem, 3vw, 2.75rem) 1.25rem;
+	box-sizing: border-box;
 }
 
 .lf-fluent-quote-modal__form {
 	width: 100%;
+	position: relative;
+	z-index: 1;
 }
 
 /* Strip Fluent chrome so theme tokens own the look. */
@@ -50,6 +67,8 @@ body.lf-fluent-quote-open {
 	font-size: 1rem;
 	line-height: 1.4;
 	box-shadow: none;
+	-webkit-appearance: none;
+	appearance: none;
 }
 
 .lf-fluent-quote-modal textarea.ff-el-form-control,
@@ -64,7 +83,7 @@ body.lf-fluent-quote-open {
 .lf-fluent-quote-modal select:focus {
 	outline: none;
 	border-color: var(--lf-primary, #2563eb);
-	box-shadow: 0 0 0 3px color-mix(in srgb, var(--lf-primary, #2563eb) 22%, transparent);
+	box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22);
 }
 
 .lf-fluent-quote-modal .ff-el-input--label label,
@@ -79,76 +98,96 @@ body.lf-fluent-quote-open {
 	margin-bottom: 1.15rem;
 }
 
-/* Choice cards (radio / checkbox). */
-.lf-fluent-quote-modal .ff-el-form-check,
-.lf-fluent-quote-modal .ff-el-form-check-label {
-	display: block;
-	width: 100%;
-}
-
+/*
+ * Choice cards — style the outer check wrapper only.
+ * Do not restyle nested label display aggressively (breaks Safari radio taps).
+ */
 .lf-fluent-quote-modal .ff-el-form-check {
 	margin: 0 0 0.65rem;
-}
-
-.lf-fluent-quote-modal .ff-el-form-check-label {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
 	padding: 1rem 1.1rem;
 	border: 1px solid rgba(15, 23, 42, 0.12);
 	border-radius: 14px;
 	background: #fff;
 	cursor: pointer;
-	font-weight: 650;
-	transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.lf-fluent-quote-modal .ff-el-form-check-label:hover {
-	border-color: color-mix(in srgb, var(--lf-primary, #2563eb) 55%, rgba(15, 23, 42, 0.2));
+.lf-fluent-quote-modal .ff-el-form-check:hover {
+	border-color: rgba(37, 99, 235, 0.45);
 	box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
 }
 
-.lf-fluent-quote-modal .ff-el-form-check input:checked + span,
-.lf-fluent-quote-modal .ff-el-form-check input:checked ~ span,
-.lf-fluent-quote-modal .ff-el-form-check:has(input:checked) .ff-el-form-check-label,
-.lf-fluent-quote-modal label.ff-el-form-check:has(input:checked) {
+.lf-fluent-quote-modal .ff-el-form-check:has(input:checked),
+.lf-fluent-quote-modal .ff-el-form-check.ff_item_selected {
 	border-color: var(--lf-primary, #2563eb);
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--lf-primary, #2563eb) 25%, transparent);
+	box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+
+.lf-fluent-quote-modal .ff-el-form-check-label {
+	display: inline;
+	padding: 0;
+	margin: 0;
+	border: 0;
+	background: transparent;
+	box-shadow: none;
+	font-weight: 650;
+	cursor: pointer;
+	color: var(--lf-text-primary, #0f172a);
 }
 
 .lf-fluent-quote-modal .ff-el-form-check input[type="radio"],
 .lf-fluent-quote-modal .ff-el-form-check input[type="checkbox"] {
 	width: 1.15rem;
 	height: 1.15rem;
+	margin: 0 0.65rem 0 0;
 	accent-color: var(--lf-primary, #2563eb);
 	flex: 0 0 auto;
+	pointer-events: auto;
+	position: relative;
+	z-index: 1;
+	-webkit-appearance: radio;
+	appearance: auto;
 }
 
-/* Progress bar */
+.lf-fluent-quote-modal .ff-el-form-check input[type="checkbox"] {
+	-webkit-appearance: checkbox;
+}
+
+/* Progress — thicker track so step fill is obvious */
 .lf-fluent-quote-modal .ff-step-header,
-.lf-fluent-quote-modal .ff-el-progress,
-.lf-fluent-quote-modal .ff-el-progress-status {
-	margin-bottom: 1.25rem;
-}
-
 .lf-fluent-quote-modal .ff-el-progress-bar,
-.lf-fluent-quote-modal .ff-el-progress .progress-bar {
-	background: var(--lf-primary, #2563eb) !important;
-}
-
 .lf-fluent-quote-modal .ff-el-progress {
-	height: 6px !important;
-	border-radius: 999px;
-	background: rgba(15, 23, 42, 0.08) !important;
-	overflow: hidden;
+	margin-bottom: 0.65rem;
 }
 
 .lf-fluent-quote-modal .ff-el-progress-status {
+	display: block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+	margin: 0 0 0.65rem;
 	font-weight: 700;
 	font-size: 0.9rem;
 	letter-spacing: 0.02em;
 	text-transform: uppercase;
 	color: var(--lf-text-muted, #64748b);
+	line-height: 1.3;
+}
+
+.lf-fluent-quote-modal .ff-el-progress {
+	height: 10px !important;
+	min-height: 10px !important;
+	border-radius: 999px;
+	background: rgba(15, 23, 42, 0.1) !important;
+	overflow: hidden;
+}
+
+.lf-fluent-quote-modal .ff-el-progress-bar,
+.lf-fluent-quote-modal .ff-el-progress .progress-bar,
+.lf-fluent-quote-modal .ff-el-progress > div {
+	background: var(--lf-primary, #2563eb) !important;
+	min-height: 10px !important;
+	height: 100% !important;
+	border-radius: 999px;
 }
 
 /* Step titles Fluent injects */
@@ -161,11 +200,44 @@ body.lf-fluent-quote-open {
 	color: var(--lf-text-primary, #0f172a);
 }
 
-/* Buttons → theme CTA language */
+/* Sticky action bar (theme-owned; buttons moved here via JS) */
+.lf-fluent-quote-modal__actions {
+	flex-shrink: 0;
+	display: flex;
+	gap: 0.75rem;
+	align-items: center;
+	justify-content: stretch;
+	width: 100%;
+	max-width: 720px;
+	margin: 0 auto;
+	padding: 0.85rem clamp(1.25rem, 3vw, 2.75rem);
+	padding-bottom: max(0.85rem, env(safe-area-inset-bottom));
+	box-sizing: border-box;
+	border-top: 1px solid rgba(15, 23, 42, 0.08);
+	background: var(--lf-surface-light, #fff);
+	box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.06);
+	position: relative;
+	z-index: 5;
+}
+
+.lf-fluent-quote-modal__actions:empty {
+	display: none;
+}
+
+.lf-fluent-quote-modal__actions .ff-btn,
+.lf-fluent-quote-modal__actions .ff-btn-next,
+.lf-fluent-quote-modal__actions .ff-btn-prev,
+.lf-fluent-quote-modal__actions .ff-btn-submit,
 .lf-fluent-quote-modal .ff-btn,
 .lf-fluent-quote-modal .ff-btn-next,
 .lf-fluent-quote-modal .ff-btn-prev,
 .lf-fluent-quote-modal .ff-btn-submit {
+	pointer-events: auto !important;
+	touch-action: manipulation;
+	-webkit-appearance: none;
+	appearance: none;
+	position: relative;
+	z-index: 2;
 	min-height: var(--lf-btn-min-height, 3.125rem);
 	padding: var(--lf-btn-pad-y, 0.9rem) var(--lf-btn-pad-x, 1.85rem);
 	border-radius: 12px;
@@ -173,27 +245,38 @@ body.lf-fluent-quote-open {
 	font-weight: var(--lf-btn-font-weight, 800);
 	letter-spacing: var(--lf-btn-letter-spacing, 0.03em);
 	text-transform: var(--lf-btn-text-transform, uppercase);
-	border: none;
 	cursor: pointer;
+	flex: 1 1 auto;
 }
 
+/* Match site primary button (not secondary/red) */
 .lf-fluent-quote-modal .ff-btn-next,
 .lf-fluent-quote-modal .ff-btn-submit,
-.lf-fluent-quote-modal button[type="submit"] {
-	background: var(--lf-color-secondary, var(--lf-secondary, #dc2626)) !important;
+.lf-fluent-quote-modal button[type="submit"],
+.lf-fluent-quote-modal__actions .ff-btn-next,
+.lf-fluent-quote-modal__actions .ff-btn-submit {
+	background-color: var(--lf-primary, #2563eb) !important;
+	background-image: none !important;
 	color: #fff !important;
-}
-
-.lf-fluent-quote-modal .ff-btn-prev {
-	background: transparent !important;
-	color: var(--lf-text-primary, #0f172a) !important;
-	border: 1px solid rgba(15, 23, 42, 0.16) !important;
+	border: 2px solid var(--lf-primary, #2563eb) !important;
+	box-shadow: none !important;
 }
 
 .lf-fluent-quote-modal .ff-btn-next:hover,
 .lf-fluent-quote-modal .ff-btn-submit:hover,
 .lf-fluent-quote-modal button[type="submit"]:hover {
-	filter: brightness(0.95);
+	background-color: color-mix(in srgb, var(--lf-primary, #2563eb) 88%, #000) !important;
+	border-color: color-mix(in srgb, var(--lf-primary, #2563eb) 88%, #000) !important;
+	color: #fff !important;
+}
+
+.lf-fluent-quote-modal .ff-btn-prev,
+.lf-fluent-quote-modal__actions .ff-btn-prev {
+	background: transparent !important;
+	color: var(--lf-text-primary, #0f172a) !important;
+	border: 2px solid rgba(15, 23, 42, 0.18) !important;
+	flex: 0 1 auto;
+	min-width: 7rem;
 }
 
 .lf-fluent-quote-modal .ff-step-container,
@@ -211,11 +294,28 @@ body.lf-fluent-quote-open {
 }
 
 @media (max-width: 767px) {
-	.lf-fluent-quote-modal .lf-quote-modal__dialog {
-		padding: 1.1rem 1rem calc(1.1rem + env(safe-area-inset-bottom));
+	.lf-fluent-quote-modal__scroll {
+		padding: 0.35rem 1rem 1rem;
 	}
 
-	.lf-fluent-quote-modal .ff-el-form-check-label {
+	.lf-fluent-quote-modal__actions {
+		padding-left: 1rem;
+		padding-right: 1rem;
+		padding-bottom: max(0.85rem, env(safe-area-inset-bottom));
+	}
+
+	.lf-fluent-quote-modal .ff-el-form-check {
 		padding: 0.95rem 1rem;
+	}
+
+	.lf-fluent-quote-modal__actions .ff-btn-next,
+	.lf-fluent-quote-modal__actions .ff-btn-submit {
+		width: 100%;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.lf-fluent-quote-modal .ff-el-form-check {
+		transition: none;
 	}
 }
