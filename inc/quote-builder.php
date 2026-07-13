@@ -1056,6 +1056,9 @@ function lf_quote_builder_integrations_handle_save(): void {
 		'ghl_source' => $source,
 	];
 	update_option(LF_QUOTE_BUILDER_INTEGRATIONS, $settings, true);
+	if (function_exists('lf_fluent_forms_bridge_save_form_id_from_request')) {
+		lf_fluent_forms_bridge_save_form_id_from_request();
+	}
 	delete_option('lf_quote_builder_integrations_error');
 	wp_safe_redirect(admin_url('admin.php?page=lf-quote-builder&section=integrations&saved=1'));
 	exit;
@@ -1364,6 +1367,9 @@ function lf_quote_builder_enqueue_assets(): void {
 	if (is_admin()) {
 		return;
 	}
+	if (function_exists('lf_fluent_quote_takeover_enabled') && lf_fluent_quote_takeover_enabled()) {
+		return;
+	}
 	$handle = 'lf-quote-builder';
 	$src = LF_THEME_URI . '/assets/js/quote-builder.js';
 	wp_enqueue_script($handle, $src, [], LF_THEME_VERSION, true);
@@ -1580,6 +1586,9 @@ function lf_quote_builder_render_review_preview(array $review, bool $compact = f
 
 function lf_quote_builder_render_modal(): void {
 	if (is_admin()) {
+		return;
+	}
+	if (function_exists('lf_fluent_quote_takeover_enabled') && lf_fluent_quote_takeover_enabled()) {
 		return;
 	}
 	$config = lf_quote_builder_get_config();
@@ -2047,6 +2056,9 @@ function lf_quote_builder_render_integrations(bool $embedded = false): void {
 	<form method="post">
 		<?php wp_nonce_field('lf_quote_builder_integrations_save', 'lf_quote_builder_integrations_nonce'); ?>
 		<table class="form-table" role="presentation">
+			<?php if (function_exists('lf_fluent_forms_bridge_render_admin_field')) : ?>
+				<?php lf_fluent_forms_bridge_render_admin_field(); ?>
+			<?php endif; ?>
 			<tr>
 				<th scope="row"><?php esc_html_e('Enable GHL integration', 'leadsforward-core'); ?></th>
 				<td><label><input type="checkbox" name="lf_qb_ghl_enabled" value="1" <?php checked(!empty($settings['ghl_enabled'])); ?> /> <?php esc_html_e('Send completed quotes to GoHighLevel', 'leadsforward-core'); ?></label></td>
