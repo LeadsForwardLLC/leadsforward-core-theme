@@ -100,6 +100,7 @@ function lf_fluent_forms_bridge_render_modal(): void {
 					<?php echo do_shortcode('[fluentform id="' . absint($form_id) . '"]'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 				</div>
 			</div>
+			<div class="lf-fluent-quote-modal__actions" aria-label="<?php esc_attr_e('Form actions', 'leadsforward-core'); ?>"></div>
 		</div>
 	</div>
 	<?php
