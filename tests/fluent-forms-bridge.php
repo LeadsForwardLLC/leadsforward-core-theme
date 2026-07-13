@@ -35,6 +35,8 @@ expect(strpos($menu, 'lf_fluent_forms_bridge_save_from_request') !== false, 'glo
 expect(strpos($js, 'syncActionBar') === false, 'no button relocation that dumps all steps');
 expect(strpos($css, 'lf-fluent-quote-modal__actions') !== false, 'actions bar forced hidden');
 expect(strpos($css, 'min-height: 12px') !== false, 'thicker progress bar');
+expect(strpos($css, 'position: fixed') !== false && strpos($css, '.step-nav') !== false, 'mobile app-style docked step-nav');
+expect(strpos($css, 'flex: 1 1 0') !== false, 'mobile prev/next share width 50/50');
 
 fwrite(STDOUT, "PASS: fluent-forms-bridge\n");
 
