@@ -278,28 +278,66 @@ body.lf-fluent-quote-open {
 	line-height: 1.55;
 }
 
-/* Mobile: sticky Next within the scroll area (active step only). */
+/* Mobile: app-style bottom action bar.
+   Next alone = full width; Previous + Next/Submit = 50/50. */
 @media (max-width: 767px) {
 	.lf-fluent-quote-modal__dialog {
-		padding: 1.1rem 1rem max(1.1rem, env(safe-area-inset-bottom));
+		padding: 1.1rem 1rem 0;
+	}
+
+	.lf-fluent-quote-modal__scroll {
+		padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
 	}
 
 	.lf-fluent-quote-modal .ff-el-form-check {
 		padding: 0.95rem 1rem;
 	}
 
-	.lf-fluent-quote-modal .ff-btn-next,
-	.lf-fluent-quote-modal .ff-btn-submit {
-		position: sticky;
-		bottom: 0.35rem;
-		width: 100%;
-		margin-top: 1rem;
-		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+	/* Defensive: never paint nav from inactive Fluent steps. */
+	.lf-fluent-quote-modal .fluentform-step:not(.active) .step-nav,
+	.lf-fluent-quote-modal .ff-el-form-step:not(.active) .step-nav {
+		display: none !important;
+		visibility: hidden !important;
+		pointer-events: none !important;
 	}
 
-	.lf-fluent-quote-modal .ff-btn-prev {
+	.lf-fluent-quote-modal .step-nav,
+	.lf-fluent-quote-modal .ff_step_nav_last {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 40;
+		display: flex !important;
+		flex-direction: row;
+		flex-wrap: nowrap;
+		align-items: stretch;
+		justify-content: stretch;
+		gap: 0.65rem;
 		width: 100%;
-		margin-bottom: 0.5rem;
+		max-width: 100%;
+		margin: 0 !important;
+		padding: 0.75rem 1rem max(0.85rem, env(safe-area-inset-bottom, 0px));
+		box-sizing: border-box;
+		background: var(--lf-surface-light, #fff);
+		border-top: 1px solid rgba(15, 23, 42, 0.08);
+		box-shadow: 0 -12px 32px rgba(15, 23, 42, 0.1);
+	}
+
+	.lf-fluent-quote-modal .step-nav .ff-btn,
+	.lf-fluent-quote-modal .step-nav .ff-btn-next,
+	.lf-fluent-quote-modal .step-nav .ff-btn-prev,
+	.lf-fluent-quote-modal .step-nav .ff-btn-submit,
+	.lf-fluent-quote-modal .step-nav button,
+	.lf-fluent-quote-modal .ff_step_nav_last .ff-btn,
+	.lf-fluent-quote-modal .ff_step_nav_last button {
+		flex: 1 1 0;
+		width: auto !important;
+		max-width: none;
+		min-width: 0;
+		margin: 0 !important;
+		position: static;
+		box-shadow: none;
 	}
 }
 
