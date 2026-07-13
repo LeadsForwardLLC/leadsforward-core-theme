@@ -707,6 +707,9 @@ function lf_ops_handle_global_settings_save(): void {
 		$heading_case_mode = 'normal';
 	}
 	update_option('options_lf_heading_case_mode', $heading_case_mode);
+	if (function_exists('lf_fluent_forms_bridge_save_from_request')) {
+		lf_fluent_forms_bridge_save_from_request();
+	}
 	$service_ids = [];
 	if (!empty($_POST['lf_menu_autobuild_include_services'])) {
 		$raw = $_POST['lf_menu_autobuild_include_services'];
@@ -1993,6 +1996,22 @@ function lf_ops_render_global_settings_page(): void {
 							<td><textarea class="large-text" id="lf_business_insurance_statement" name="lf_business_insurance_statement" rows="2"><?php echo esc_textarea($entity_insurance); ?></textarea></td>
 						</tr>
 					</table>
+				</div>
+			</div>
+			<div class="lf-settings-panel" data-section="fluent_quote">
+				<div class="lf-settings-panel-header">
+					<h2><?php esc_html_e('Quote Form (Fluent)', 'leadsforward-core'); ?></h2>
+					<button type="button" class="lf-settings-toggle" data-target="fluent_quote" aria-expanded="true">
+						<span class="lf-settings-toggle-icon">▾</span>
+						<span class="lf-settings-toggle-label"><?php esc_html_e('Collapse', 'leadsforward-core'); ?></span>
+					</button>
+				</div>
+				<div class="lf-settings-panel-body" data-parent="fluent_quote">
+					<?php if (function_exists('lf_fluent_forms_bridge_render_settings_fields')) : ?>
+						<?php lf_fluent_forms_bridge_render_settings_fields(true); ?>
+					<?php else : ?>
+						<p class="description"><?php esc_html_e('Fluent Forms bridge is not loaded.', 'leadsforward-core'); ?></p>
+					<?php endif; ?>
 				</div>
 			</div>
 			<div class="lf-settings-panel" data-section="global_design">

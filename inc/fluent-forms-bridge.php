@@ -15,6 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 const LF_FLUENT_QUOTE_FORM_OPTION = 'lf_fluent_quote_form_id';
+const LF_FLUENT_QUOTE_CSS_BRIDGE_OPTION = 'lf_fluent_quote_css_bridge';
 
 /**
  * Fluent Form ID used for the quote takeover (0 = disabled).
@@ -24,6 +25,17 @@ function lf_fluent_quote_form_id(): int {
 	$id = (int) apply_filters('lf_fluent_quote_form_id', $id);
 
 	return max(0, $id);
+}
+
+/**
+ * Whether theme CSS should restyle Fluent Forms with design-system tokens.
+ * Default on so brand changes cascade without Fluent Custom CSS.
+ */
+function lf_fluent_quote_css_bridge_enabled(): bool {
+	$raw = get_option(LF_FLUENT_QUOTE_CSS_BRIDGE_OPTION, '1');
+	$enabled = $raw === '1' || $raw === 1 || $raw === true;
+
+	return (bool) apply_filters('lf_fluent_quote_css_bridge_enabled', $enabled);
 }
 
 /**
@@ -51,15 +63,20 @@ function lf_fluent_forms_bridge_enqueue_assets(): void {
 		return;
 	}
 
-	$css = LF_THEME_URI . '/assets/css/fluent-forms-bridge.css';
 	$js = LF_THEME_URI . '/assets/js/fluent-forms-bridge.js';
-	$deps = wp_style_is('lf-design-system', 'enqueued') ? ['lf-design-system'] : [];
-
-	wp_enqueue_style('lf-fluent-forms-bridge', $css, $deps, LF_THEME_VERSION);
 	wp_enqueue_script('lf-fluent-forms-bridge', $js, [], LF_THEME_VERSION, true);
 	wp_localize_script('lf-fluent-forms-bridge', 'lfFluentQuote', [
 		'formId' => lf_fluent_quote_form_id(),
+		'cssBridge' => lf_fluent_quote_css_bridge_enabled(),
 	]);
+
+	if (!lf_fluent_quote_css_bridge_enabled()) {
+		return;
+	}
+
+	$css = LF_THEME_URI . '/assets/css/fluent-forms-bridge.css';
+	$deps = wp_style_is('lf-design-system', 'enqueued') ? ['lf-design-system'] : [];
+	wp_enqueue_style('lf-fluent-forms-bridge', $css, $deps, LF_THEME_VERSION);
 }
 
 /**
@@ -89,42 +106,81 @@ function lf_fluent_forms_bridge_render_modal(): void {
 }
 
 /**
- * Persist Fluent Form ID (called from Quote Builder integrations save).
+ * Persist Fluent bridge options from a settings form POST.
  */
-function lf_fluent_forms_bridge_save_form_id_from_request(): void {
-	if (!isset($_POST['lf_fluent_quote_form_id'])) {
-		return;
+function lf_fluent_forms_bridge_save_from_request(): void {
+	if (isset($_POST['lf_fluent_quote_form_id'])) {
+		$form_id = absint(wp_unslash((string) $_POST['lf_fluent_quote_form_id']));
+		update_option(LF_FLUENT_QUOTE_FORM_OPTION, $form_id, true);
 	}
-	$form_id = absint(wp_unslash((string) $_POST['lf_fluent_quote_form_id']));
-	update_option(LF_FLUENT_QUOTE_FORM_OPTION, $form_id, true);
+	// Checkbox: absent when unchecked.
+	if (isset($_POST['lf_fluent_quote_settings_present'])) {
+		$css_on = !empty($_POST['lf_fluent_quote_css_bridge']) ? '1' : '0';
+		update_option(LF_FLUENT_QUOTE_CSS_BRIDGE_OPTION, $css_on, true);
+	}
 }
 
 /**
- * Admin field HTML for the Fluent Form ID.
+ * @deprecated Use lf_fluent_forms_bridge_save_from_request().
+ */
+function lf_fluent_forms_bridge_save_form_id_from_request(): void {
+	lf_fluent_forms_bridge_save_from_request();
+}
+
+/**
+ * Compact fields for Quote Builder → Integrations (same options as Global Settings).
  */
 function lf_fluent_forms_bridge_render_admin_field(): void {
+	lf_fluent_forms_bridge_render_settings_fields(false);
+}
+
+/**
+ * Render Fluent Forms bridge settings fields.
+ *
+ * @param bool $for_global_settings When true, includes section intro copy for Global Settings.
+ */
+function lf_fluent_forms_bridge_render_settings_fields(bool $for_global_settings = true): void {
 	$form_id = lf_fluent_quote_form_id();
-	$enabled = lf_fluent_quote_takeover_enabled();
+	$takeover = lf_fluent_quote_takeover_enabled();
+	$css_bridge = lf_fluent_quote_css_bridge_enabled();
 	?>
-	<tr>
-		<th scope="row"><label for="lf_fluent_quote_form_id"><?php esc_html_e('Fluent Forms quote takeover', 'leadsforward-core'); ?></label></th>
-		<td>
-			<input type="number" min="0" step="1" class="small-text" id="lf_fluent_quote_form_id" name="lf_fluent_quote_form_id" value="<?php echo esc_attr((string) $form_id); ?>" />
-			<p class="description">
-				<?php
-				esc_html_e('Enter the Fluent Form ID to open that form full-screen from every Free Inspection / quote CTA. Set to 0 to use the native Quote Builder.', 'leadsforward-core');
-				?>
-			</p>
-			<?php if ($form_id > 0 && !$enabled) : ?>
-				<p class="description" style="color:#b32d2e;">
-					<?php esc_html_e('Fluent Forms does not appear to be active. Install/activate Fluent Forms for the takeover to work.', 'leadsforward-core'); ?>
+	<input type="hidden" name="lf_fluent_quote_settings_present" value="1" />
+	<?php if ($for_global_settings) : ?>
+		<p class="description">
+			<?php esc_html_e('Optional: open a Fluent Form full-screen from every Free Inspection / quote CTA instead of the native Quote Builder. Leave Form ID at 0 to keep the native builder.', 'leadsforward-core'); ?>
+		</p>
+	<?php endif; ?>
+	<table class="form-table" role="presentation">
+		<tr>
+			<th scope="row"><label for="lf_fluent_quote_form_id"><?php esc_html_e('Fluent Form ID', 'leadsforward-core'); ?></label></th>
+			<td>
+				<input type="number" min="0" step="1" class="small-text" id="lf_fluent_quote_form_id" name="lf_fluent_quote_form_id" value="<?php echo esc_attr((string) $form_id); ?>" />
+				<p class="description">
+					<?php esc_html_e('Find the ID in Fluent Forms → All Forms. Set to 0 to use the native Quote Builder.', 'leadsforward-core'); ?>
 				</p>
-			<?php elseif ($enabled) : ?>
-				<p class="description" style="color:#007017;">
-					<?php esc_html_e('Takeover active: header and quote CTAs open this Fluent Form full-screen.', 'leadsforward-core'); ?>
+				<?php if ($form_id > 0 && !$takeover) : ?>
+					<p class="description" style="color:#b32d2e;">
+						<?php esc_html_e('Fluent Forms does not appear to be active. Install/activate Fluent Forms for the takeover to work.', 'leadsforward-core'); ?>
+					</p>
+				<?php elseif ($takeover) : ?>
+					<p class="description" style="color:#007017;">
+						<?php esc_html_e('Takeover active: header and quote CTAs open this Fluent Form full-screen.', 'leadsforward-core'); ?>
+					</p>
+				<?php endif; ?>
+			</td>
+		</tr>
+		<tr>
+			<th scope="row"><?php esc_html_e('Theme CSS override', 'leadsforward-core'); ?></th>
+			<td>
+				<label>
+					<input type="checkbox" name="lf_fluent_quote_css_bridge" value="1" <?php checked($css_bridge); ?> />
+					<?php esc_html_e('Apply LeadsForward design-system styles to this Fluent Form', 'leadsforward-core'); ?>
+				</label>
+				<p class="description">
+					<?php esc_html_e('When on, theme tokens (colors, buttons, choice cards) style the form automatically. Leave Fluent Custom CSS blank. Turn off to use Fluent’s own styling only.', 'leadsforward-core'); ?>
 				</p>
-			<?php endif; ?>
-		</td>
-	</tr>
+			</td>
+		</tr>
+	</table>
 	<?php
 }
