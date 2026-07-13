@@ -32,9 +32,9 @@ expect(strpos($php, 'LF_FLUENT_QUOTE_CSS_BRIDGE_OPTION') !== false, 'css bridge 
 expect(strpos($menu, 'Quote Form (Fluent)') !== false || strpos($menu, 'fluent_quote') !== false, 'global settings panel');
 expect(strpos($menu, 'lf_fluent_forms_bridge_save_from_request') !== false, 'global settings saves bridge');
 
-expect(strpos($js, 'lf-fluent-quote-modal__actions') !== false || strpos($js, 'syncActionBar') !== false, 'js pins action bar');
-expect(strpos($css, 'height: 10px') !== false, 'thicker progress bar');
-expect(strpos($css, 'var(--lf-primary') !== false && strpos($css, 'ff-btn-next') !== false, 'next uses primary token');
+expect(strpos($js, 'syncActionBar') === false, 'no button relocation that dumps all steps');
+expect(strpos($css, 'lf-fluent-quote-modal__actions') !== false, 'actions bar forced hidden');
+expect(strpos($css, 'min-height: 12px') !== false, 'thicker progress bar');
 
 fwrite(STDOUT, "PASS: fluent-forms-bridge\n");
 
