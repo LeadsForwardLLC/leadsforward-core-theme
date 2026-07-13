@@ -1056,7 +1056,9 @@ function lf_quote_builder_integrations_handle_save(): void {
 		'ghl_source' => $source,
 	];
 	update_option(LF_QUOTE_BUILDER_INTEGRATIONS, $settings, true);
-	if (function_exists('lf_fluent_forms_bridge_save_form_id_from_request')) {
+	if (function_exists('lf_fluent_forms_bridge_save_from_request')) {
+		lf_fluent_forms_bridge_save_from_request();
+	} elseif (function_exists('lf_fluent_forms_bridge_save_form_id_from_request')) {
 		lf_fluent_forms_bridge_save_form_id_from_request();
 	}
 	delete_option('lf_quote_builder_integrations_error');
@@ -2055,10 +2057,13 @@ function lf_quote_builder_render_integrations(bool $embedded = false): void {
 	<?php endif; ?>
 	<form method="post">
 		<?php wp_nonce_field('lf_quote_builder_integrations_save', 'lf_quote_builder_integrations_nonce'); ?>
+		<?php if (function_exists('lf_fluent_forms_bridge_render_settings_fields')) : ?>
+			<h2><?php esc_html_e('Fluent Forms takeover', 'leadsforward-core'); ?></h2>
+			<?php lf_fluent_forms_bridge_render_settings_fields(false); ?>
+			<p class="description"><?php esc_html_e('These same controls also live under LeadsForward → Global Settings → Quote Form (Fluent).', 'leadsforward-core'); ?></p>
+		<?php endif; ?>
+		<h2><?php esc_html_e('GoHighLevel', 'leadsforward-core'); ?></h2>
 		<table class="form-table" role="presentation">
-			<?php if (function_exists('lf_fluent_forms_bridge_render_admin_field')) : ?>
-				<?php lf_fluent_forms_bridge_render_admin_field(); ?>
-			<?php endif; ?>
 			<tr>
 				<th scope="row"><?php esc_html_e('Enable GHL integration', 'leadsforward-core'); ?></th>
 				<td><label><input type="checkbox" name="lf_qb_ghl_enabled" value="1" <?php checked(!empty($settings['ghl_enabled'])); ?> /> <?php esc_html_e('Send completed quotes to GoHighLevel', 'leadsforward-core'); ?></label></td>
